@@ -1,0 +1,25 @@
+{
+  "valid": true,
+  "samples": 100,
+  "audited_splits": [
+    "train",
+    "dev",
+    "test"
+  ],
+  "templates": 18,
+  "labels": {
+    "SUPPORTED": 36,
+    "CONTRADICTED": 36,
+    "INSUFFICIENT": 28
+  },
+  "splits": {
+    "train": 67,
+    "dev": 33
+  },
+  "languages": {
+    "zh": 100
+  },
+  "manifest": "data\\releases\\controlled-v2-pilot100\\manifest.json",
+  "human_validation": "pending",
+  "proof_validation": "passed"
+}

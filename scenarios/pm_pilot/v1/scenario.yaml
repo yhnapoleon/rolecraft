@@ -1,0 +1,60 @@
+id: pm_pilot
+version: 1
+family_id: enterprise_knowledge_pilot
+template_id: capacity_staleness_resource_exception
+seed: 5002
+title: 企业知识助手试点决策
+brief_material_id: brief
+rubric_path: rubric.yaml
+roles:
+  - {id: supervisor, name: 主管, responsibility: 确定试点目标并审批人数、资源和时间调整}
+  - {id: tech_lead, name: 技术负责人, responsibility: 解释索引、容量与工作项成本并提供技术证据}
+  - {id: business_lead, name: 业务负责人, responsibility: 明确知识需求、动态政策风险与业务验收要求}
+constraints:
+  capacity: 30
+  dev_days: 3
+  realtime_sync_days: 5
+  index_delay_hours: 24
+  deadline_day: 7
+  minimum_participants: 1
+domains:
+  - {id: stable_faq, mutable: false, description: 低频变更的入职与办公常见问题}
+  - {id: policy, mutable: true, description: 高频变更的差旅报销政策}
+work_items:
+  - {id: scope_filter, dev_days: 1, description: 限制可回答知识域并支持政策转人工}
+  - {id: human_fallback, dev_days: 1, description: 为范围外、低置信与政策问题提供人工入口}
+  - {id: realtime_sync, dev_days: 5, description: 实现文档实时同步及适用域配置}
+materials:
+  - {id: brief, version: 1, title: 试点任务简报, path: materials/brief.md, visible_to: [learner, supervisor, tech_lead, business_lead]}
+  - {id: technical, version: 1, title: 技术约束与工作项, path: materials/technical.md, visible_to: [learner, supervisor, tech_lead]}
+  - {id: business, version: 1, title: 业务范围与验收, path: materials/business.md, visible_to: [learner, supervisor, business_lead]}
+  - {id: faq, version: 1, title: 稳定办公FAQ, path: materials/faq.md, visible_to: [learner, supervisor, tech_lead, business_lead]}
+  - {id: policy, version: 1, title: 差旅政策初始版, path: materials/policy-v1.md, visible_to: [learner, supervisor, tech_lead, business_lead]}
+  - {id: policy, version: 2, title: 差旅政策更新版, path: materials/policy-v2.md, visible_to: [learner, supervisor, tech_lead, business_lead], available_after_event: policy_updated}
+  - {id: approval_process, version: 1, title: 变更申请流程, path: materials/approval-process.md, visible_to: [learner, supervisor, tech_lead, business_lead]}
+  - {id: tech_private, version: 1, title: 技术负责人内部备忘, path: materials/tech-private.md, visible_to: [tech_lead]}
+facts:
+  - {id: capacity, value: 30, description: 未获批扩容时最多30名试点用户, visible_to: [learner, supervisor, tech_lead], material_id: technical, material_version: 1}
+  - {id: dev_days, value: 3, description: 初始可用开发资源3人日, visible_to: [learner, supervisor, tech_lead], material_id: technical, material_version: 1}
+  - {id: realtime_sync_days, value: 5, description: 实时同步本身需要5人日, visible_to: [learner, supervisor, tech_lead], material_id: technical, material_version: 1}
+  - {id: index_delay_hours, value: 24, description: 每日索引可能落后源文档24小时, visible_to: [learner, supervisor, tech_lead], material_id: technical, material_version: 1}
+  - {id: deadline_day, value: 7, description: 原始试点期限为第7天, visible_to: [learner, supervisor, tech_lead, business_lead], material_id: brief, material_version: 1}
+  - {id: policy_changes, value: true, description: 差旅政策可能在试点准备中更新, visible_to: [learner, supervisor, business_lead], material_id: business, material_version: 1}
+  - {id: tech_internal_risk, value: legacy_connector_unstable, description: 旧连接器在内部压测中不稳定，尚未成为对外承诺, visible_to: [tech_lead], material_id: tech_private, material_version: 1}
+event_rules:
+  - id: policy_updated
+    description: 完成第3次有效业务操作后，政策源文档升为v2；索引仍保留原版本直到显式更新
+    trigger: {kind: after_action_count, action_count: 3}
+    effects: {material_versions: [{material_id: policy, version: 2}]}
+    visible_to: [learner, supervisor, tech_lead, business_lead]
+  - id: capacity_approved
+    description: 用户申请并得到主管明确批准后，试点人数上限变为60人；提出请求本身无效
+    trigger: {kind: approved_request, request_tool: request_capacity, authorized_role: supervisor}
+    effects: {capacity: 60}
+    visible_to: [learner, supervisor, tech_lead, business_lead]
+  - id: resources_approved
+    description: 用户提供工作项与延期理由并获主管批准后，开发资源总量变为6人日且期限改为第10天
+    trigger: {kind: approved_request, request_tool: request_resources, authorized_role: supervisor}
+    effects: {dev_days: 6, deadline_day: 10}
+    visible_to: [learner, supervisor, tech_lead, business_lead]
+

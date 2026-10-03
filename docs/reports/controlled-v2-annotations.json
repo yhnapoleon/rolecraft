@@ -1,0 +1,10 @@
+{
+  "status": "pending",
+  "paired": 0,
+  "total": 100,
+  "raw_agreement": null,
+  "kappa": null,
+  "minutes": 0,
+  "disagreements": [],
+  "human_gold_released": false
+}

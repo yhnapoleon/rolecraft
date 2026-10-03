@@ -1,0 +1,84 @@
+{
+  "constant": {
+    "run_id": "e85a3e1a557e57826d39e102",
+    "manifest_path": "runs\\evals\\e85a3e1a557e57826d39e102\\manifest.json",
+    "metrics": {
+      "count": 30.0,
+      "accuracy": 0.3333333333333333,
+      "macro_f1": 0.16666666666666666,
+      "joint_correctness": 0.3333333333333333,
+      "false_deduction": 0.0,
+      "false_pass": 1.0,
+      "infrastructure_errors": 0.0,
+      "format_errors": 0.0,
+      "p95_seconds": 0.0
+    },
+    "slices": {
+      "approved_capacity": {
+        "count": 15.0,
+        "accuracy": 0.3333333333333333,
+        "macro_f1": 0.16666666666666666,
+        "joint_correctness": 0.3333333333333333,
+        "false_deduction": 0.0,
+        "false_pass": 1.0,
+        "infrastructure_errors": 0.0,
+        "format_errors": 0.0
+      },
+      "index_version": {
+        "count": 15.0,
+        "accuracy": 0.3333333333333333,
+        "macro_f1": 0.16666666666666666,
+        "joint_correctness": 0.3333333333333333,
+        "false_deduction": 0.0,
+        "false_pass": 1.0,
+        "infrastructure_errors": 0.0,
+        "format_errors": 0.0
+      }
+    },
+    "paired_diff_path": null,
+    "errors_path": "runs\\evals\\e85a3e1a557e57826d39e102\\errors.jsonl"
+  },
+  "failure": {
+    "run_id": "1bd6d5167095cd417f7807f9",
+    "manifest_path": "runs\\evals\\1bd6d5167095cd417f7807f9\\manifest.json",
+    "metrics": {
+      "count": 30.0,
+      "accuracy": 0.0,
+      "macro_f1": 0.0,
+      "joint_correctness": 0.0,
+      "false_deduction": 0.0,
+      "false_pass": 0.0,
+      "infrastructure_errors": 30.0,
+      "format_errors": 0.0,
+      "p95_seconds": 0.0
+    },
+    "slices": {
+      "approved_capacity": {
+        "count": 15.0,
+        "accuracy": 0.0,
+        "macro_f1": 0.0,
+        "joint_correctness": 0.0,
+        "false_deduction": 0.0,
+        "false_pass": 0.0,
+        "infrastructure_errors": 15.0,
+        "format_errors": 0.0
+      },
+      "index_version": {
+        "count": 15.0,
+        "accuracy": 0.0,
+        "macro_f1": 0.0,
+        "joint_correctness": 0.0,
+        "false_deduction": 0.0,
+        "false_pass": 0.0,
+        "infrastructure_errors": 15.0,
+        "format_errors": 0.0
+      }
+    },
+    "paired_diff_path": null,
+    "errors_path": "runs\\evals\\1bd6d5167095cd417f7807f9\\errors.jsonl"
+  },
+  "paired_diff": {
+    "pairs": 30,
+    "accuracy_delta": -0.3333333333333333
+  }
+}

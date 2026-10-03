@@ -1,0 +1,5 @@
+architecture: char_tfidf_logistic
+dataset_manifest: data/releases/v1/manifest.json
+seed: 5002
+training_split: train
+selection_split: dev

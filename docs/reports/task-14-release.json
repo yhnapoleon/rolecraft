@@ -1,0 +1,9 @@
+{
+  "archive": "dist\\career-lab-backend-v1.zip",
+  "bytes": 292082,
+  "sha256": "94c89908c9ef16f5d3dde0e9a2ca5699ee8ecafbd967fe4a79651eac2a52a0bc",
+  "files": 160,
+  "source_matches_clean_verified": true,
+  "credential_scan": "passed",
+  "clean_commands": 8
+}

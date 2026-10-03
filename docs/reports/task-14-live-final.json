@@ -1,0 +1,616 @@
+{
+  "health": {
+    "status": "ok",
+    "model": "deepseek-chat"
+  },
+  "session_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+  "approved_resources": {
+    "capacity": 60,
+    "dev_days": 6,
+    "deadline_day": 10
+  },
+  "test": {
+    "id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+    "request_hash": "93f49e4bb5388df993aaa1bdb9881e4ecf2d38c690e1641e759d9073b44d42f9",
+    "query": "住宿报销上限是多少？",
+    "answer": "# 差旅政策 v2\n\n政策更新事件生效后，模拟公司的国内出差住宿报销上限调整为每人每晚400元。超出上限仍需事前取得主管书面批准，并保留票据。此材料仅用于虚构训练场景。\n\n源文档发布v2不代表知识助手索引已经更新。继续回答500元可能说明索引仍在使用v1，应记录测试所用版本。\n\n",
+    "fallback": false,
+    "mode": "local-extractive",
+    "citations": [
+      {
+        "material_id": "policy",
+        "version": 2
+      }
+    ],
+    "source_versions": {
+      "brief": 1,
+      "technical": 1,
+      "business": 1,
+      "faq": 1,
+      "policy": 2,
+      "approval_process": 1,
+      "tech_private": 1
+    },
+    "indexed_versions": {
+      "brief": 1,
+      "technical": 1,
+      "business": 1,
+      "faq": 1,
+      "policy": 2,
+      "approval_process": 1,
+      "tech_private": 1
+    },
+    "config_version": 1,
+    "as_of_seq": 6,
+    "stale": false
+  },
+  "feedback": {
+    "as_of_seq": 8,
+    "items": [
+      {
+        "criterion_id": "R1.target",
+        "evidence_ids": [
+          "e7",
+          "e8",
+          "e9",
+          "e10"
+        ],
+        "label": "INSUFFICIENT",
+        "reason": "该项需要进一步语义核验。",
+        "review_required": true
+      },
+      {
+        "criterion_id": "R1.metrics",
+        "evidence_ids": [
+          "e7",
+          "e8",
+          "e9",
+          "e10"
+        ],
+        "label": "INSUFFICIENT",
+        "reason": "该项需要进一步语义核验。",
+        "review_required": true
+      },
+      {
+        "criterion_id": "R2.support",
+        "evidence_ids": [
+          "e7",
+          "e8",
+          "e9",
+          "e10"
+        ],
+        "label": "INSUFFICIENT",
+        "reason": "该项需要进一步语义核验。",
+        "review_required": true
+      },
+      {
+        "criterion_id": "R2.unknowns",
+        "evidence_ids": [
+          "e7",
+          "e8",
+          "e9",
+          "e10"
+        ],
+        "label": "INSUFFICIENT",
+        "reason": "该项需要进一步语义核验。",
+        "review_required": true
+      },
+      {
+        "criterion_id": "R3.capacity",
+        "evidence_ids": [
+          "e7",
+          "e8",
+          "e9",
+          "e10"
+        ],
+        "label": "MET",
+        "reason": "提交人数50，当前有效上限60。",
+        "review_required": false
+      },
+      {
+        "criterion_id": "R3.resources",
+        "evidence_ids": [
+          "e7",
+          "e8",
+          "e9",
+          "e10"
+        ],
+        "label": "MET",
+        "reason": "工作项成本6/6人日；上线日10/10；必要依赖已核验。",
+        "review_required": false
+      },
+      {
+        "criterion_id": "R4.functional_tests",
+        "evidence_ids": [
+          "e7",
+          "e8",
+          "e9",
+          "e10"
+        ],
+        "label": "PARTIAL",
+        "reason": "存在实际测试；问题覆盖与验收标准仍需语义核验。",
+        "review_required": true
+      },
+      {
+        "criterion_id": "R4.staleness_test",
+        "evidence_ids": [
+          "e7",
+          "e8",
+          "e9",
+          "e10"
+        ],
+        "label": "INSUFFICIENT",
+        "reason": "已有测试，仍需核验是否在政策更新后覆盖风险并用于决策。",
+        "review_required": true
+      },
+      {
+        "criterion_id": "R5.impact",
+        "evidence_ids": [
+          "e7",
+          "e8",
+          "e9",
+          "e10"
+        ],
+        "label": "INSUFFICIENT",
+        "reason": "该项需要进一步语义核验。",
+        "review_required": true
+      },
+      {
+        "criterion_id": "R5.adjustment",
+        "evidence_ids": [
+          "e7",
+          "e8",
+          "e9",
+          "e10"
+        ],
+        "label": "INSUFFICIENT",
+        "reason": "该项需要进一步语义核验。",
+        "review_required": true
+      },
+      {
+        "criterion_id": "R6.consistency",
+        "evidence_ids": [
+          "e7",
+          "e8",
+          "e9",
+          "e10"
+        ],
+        "label": "INSUFFICIENT",
+        "reason": "该项需要进一步语义核验。",
+        "review_required": true
+      },
+      {
+        "criterion_id": "R6.operations",
+        "evidence_ids": [
+          "e7",
+          "e8",
+          "e9",
+          "e10"
+        ],
+        "label": "INSUFFICIENT",
+        "reason": "该项需要进一步语义核验。",
+        "review_required": true
+      }
+    ],
+    "model_revision": "rules-v2",
+    "practice": [
+      "补做范围外与政策更新测试"
+    ],
+    "rubric_hash": "70b397fbe282ba8cb89deb2ff2f2b8b5c1e078fd44239621837691a85019411d",
+    "sources": {
+      "R1.metrics": {
+        "e10": {
+          "kind": "test_result",
+          "object_id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+          "observed_at_seq": 6,
+          "span_id": null,
+          "version": 1
+        },
+        "e7": {
+          "kind": "config",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e8": {
+          "kind": "artifact",
+          "object_id": "de2754c6974217152083d7e04fc8fdcf8f0efe56cac75f28c6d3189d11755e13",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e9": {
+          "kind": "event",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a:ledger",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 8
+        }
+      },
+      "R1.target": {
+        "e10": {
+          "kind": "test_result",
+          "object_id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+          "observed_at_seq": 6,
+          "span_id": null,
+          "version": 1
+        },
+        "e7": {
+          "kind": "config",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e8": {
+          "kind": "artifact",
+          "object_id": "de2754c6974217152083d7e04fc8fdcf8f0efe56cac75f28c6d3189d11755e13",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e9": {
+          "kind": "event",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a:ledger",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 8
+        }
+      },
+      "R2.support": {
+        "e10": {
+          "kind": "test_result",
+          "object_id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+          "observed_at_seq": 6,
+          "span_id": null,
+          "version": 1
+        },
+        "e7": {
+          "kind": "config",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e8": {
+          "kind": "artifact",
+          "object_id": "de2754c6974217152083d7e04fc8fdcf8f0efe56cac75f28c6d3189d11755e13",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e9": {
+          "kind": "event",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a:ledger",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 8
+        }
+      },
+      "R2.unknowns": {
+        "e10": {
+          "kind": "test_result",
+          "object_id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+          "observed_at_seq": 6,
+          "span_id": null,
+          "version": 1
+        },
+        "e7": {
+          "kind": "config",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e8": {
+          "kind": "artifact",
+          "object_id": "de2754c6974217152083d7e04fc8fdcf8f0efe56cac75f28c6d3189d11755e13",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e9": {
+          "kind": "event",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a:ledger",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 8
+        }
+      },
+      "R3.capacity": {
+        "e10": {
+          "kind": "test_result",
+          "object_id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+          "observed_at_seq": 6,
+          "span_id": null,
+          "version": 1
+        },
+        "e7": {
+          "kind": "config",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e8": {
+          "kind": "artifact",
+          "object_id": "de2754c6974217152083d7e04fc8fdcf8f0efe56cac75f28c6d3189d11755e13",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e9": {
+          "kind": "event",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a:ledger",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 8
+        }
+      },
+      "R3.resources": {
+        "e10": {
+          "kind": "test_result",
+          "object_id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+          "observed_at_seq": 6,
+          "span_id": null,
+          "version": 1
+        },
+        "e7": {
+          "kind": "config",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e8": {
+          "kind": "artifact",
+          "object_id": "de2754c6974217152083d7e04fc8fdcf8f0efe56cac75f28c6d3189d11755e13",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e9": {
+          "kind": "event",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a:ledger",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 8
+        }
+      },
+      "R4.functional_tests": {
+        "e10": {
+          "kind": "test_result",
+          "object_id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+          "observed_at_seq": 6,
+          "span_id": null,
+          "version": 1
+        },
+        "e7": {
+          "kind": "config",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e8": {
+          "kind": "artifact",
+          "object_id": "de2754c6974217152083d7e04fc8fdcf8f0efe56cac75f28c6d3189d11755e13",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e9": {
+          "kind": "event",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a:ledger",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 8
+        }
+      },
+      "R4.staleness_test": {
+        "e10": {
+          "kind": "test_result",
+          "object_id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+          "observed_at_seq": 6,
+          "span_id": null,
+          "version": 1
+        },
+        "e7": {
+          "kind": "config",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e8": {
+          "kind": "artifact",
+          "object_id": "de2754c6974217152083d7e04fc8fdcf8f0efe56cac75f28c6d3189d11755e13",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e9": {
+          "kind": "event",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a:ledger",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 8
+        }
+      },
+      "R5.adjustment": {
+        "e10": {
+          "kind": "test_result",
+          "object_id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+          "observed_at_seq": 6,
+          "span_id": null,
+          "version": 1
+        },
+        "e7": {
+          "kind": "config",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e8": {
+          "kind": "artifact",
+          "object_id": "de2754c6974217152083d7e04fc8fdcf8f0efe56cac75f28c6d3189d11755e13",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e9": {
+          "kind": "event",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a:ledger",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 8
+        }
+      },
+      "R5.impact": {
+        "e10": {
+          "kind": "test_result",
+          "object_id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+          "observed_at_seq": 6,
+          "span_id": null,
+          "version": 1
+        },
+        "e7": {
+          "kind": "config",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e8": {
+          "kind": "artifact",
+          "object_id": "de2754c6974217152083d7e04fc8fdcf8f0efe56cac75f28c6d3189d11755e13",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e9": {
+          "kind": "event",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a:ledger",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 8
+        }
+      },
+      "R6.consistency": {
+        "e10": {
+          "kind": "test_result",
+          "object_id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+          "observed_at_seq": 6,
+          "span_id": null,
+          "version": 1
+        },
+        "e7": {
+          "kind": "config",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e8": {
+          "kind": "artifact",
+          "object_id": "de2754c6974217152083d7e04fc8fdcf8f0efe56cac75f28c6d3189d11755e13",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e9": {
+          "kind": "event",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a:ledger",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 8
+        }
+      },
+      "R6.operations": {
+        "e10": {
+          "kind": "test_result",
+          "object_id": "0cc227e6fd8caaba7eae99734a20e2b722cbef1d6fcc01632ec2e3e69255c66c",
+          "observed_at_seq": 6,
+          "span_id": null,
+          "version": 1
+        },
+        "e7": {
+          "kind": "config",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e8": {
+          "kind": "artifact",
+          "object_id": "de2754c6974217152083d7e04fc8fdcf8f0efe56cac75f28c6d3189d11755e13",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 1
+        },
+        "e9": {
+          "kind": "event",
+          "object_id": "3a7499fc7a334dc5bd570a6ab1e9a49a:ledger",
+          "observed_at_seq": 8,
+          "span_id": null,
+          "version": 8
+        }
+      }
+    },
+    "submission_id": "9b6d8b220e5fed3e333d5983a1fcad036fcaad5cceb403f844fe7e4857577c1c",
+    "summary": {
+      "coverage": 0.2,
+      "dimensions": [
+        {
+          "coverage": 0.0,
+          "id": "R1",
+          "lower": 0.0,
+          "upper": 1.0,
+          "weight": 10
+        },
+        {
+          "coverage": 0.0,
+          "id": "R2",
+          "lower": 0.0,
+          "upper": 1.0,
+          "weight": 25
+        },
+        {
+          "coverage": 1.0,
+          "id": "R3",
+          "lower": 1.0,
+          "upper": 1.0,
+          "weight": 20
+        },
+        {
+          "coverage": 0.0,
+          "id": "R4",
+          "lower": 0.25,
+          "upper": 1.0,
+          "weight": 20
+        },
+        {
+          "coverage": 0.0,
+          "id": "R5",
+          "lower": 0.0,
+          "upper": 1.0,
+          "weight": 15
+        },
+        {
+          "coverage": 0.0,
+          "id": "R6",
+          "lower": 0.0,
+          "upper": 1.0,
+          "weight": 10
+        }
+      ],
+      "lower": 0.25,
+      "status": "pending_review",
+      "upper": 1.0
+    }
+  },
+  "job_status": "completed",
+  "replay_stable": true
+}

@@ -1,0 +1,81 @@
+{
+  "session_id": "6d903b7f00bb43e4bc0744602b35c58b",
+  "http_status": 200,
+  "elapsed_seconds": 1.4162043999967864,
+  "state_unchanged": true,
+  "replay_equal": true,
+  "private_and_future_filtered": true,
+  "result": {
+    "id": "bd55f08719c1749bdcc2d47092fd17292664545f321495d529cc73d47037c243",
+    "mode": "shadow",
+    "review_required": true,
+    "affects_score": false,
+    "request_hash": "964c8d62a4f0f7dcc745f989a23a15760da37b169bbb2c79146137c406293f20",
+    "input_hash": "d699b3d67bdbbe204b9851def057465074eaac1d751c019ac0f76e6b5ea67761",
+    "as_of_seq": 0,
+    "freeze_id": "e8e414df2e7020fa237c8af3c1e5be8eb38f91675756e5ccfd8062a79d9cd874",
+    "model_revision": "hybrid:restricted-rules-v2.1:ensemble:3e353378b2b1421e",
+    "decision": {
+      "task_type": "relation",
+      "label": "SUPPORTED",
+      "abstained": false,
+      "evidence_ids": [
+        "e1",
+        "e2",
+        "e3",
+        "e4",
+        "e5",
+        "e6",
+        "e7"
+      ],
+      "reason_code": "SUPERVISED_RELATION",
+      "explanation": "Relation classifier; all-candidate citation baseline, not learned evidence selection.",
+      "model_revision": "hybrid:restricted-rules-v2.1:ensemble:3e353378b2b1421e"
+    },
+    "sources": {
+      "e1": {
+        "kind": "document",
+        "object_id": "brief",
+        "version": 1,
+        "as_of_seq": 0
+      },
+      "e2": {
+        "kind": "document",
+        "object_id": "technical",
+        "version": 1,
+        "as_of_seq": 0
+      },
+      "e3": {
+        "kind": "document",
+        "object_id": "business",
+        "version": 1,
+        "as_of_seq": 0
+      },
+      "e4": {
+        "kind": "document",
+        "object_id": "faq",
+        "version": 1,
+        "as_of_seq": 0
+      },
+      "e5": {
+        "kind": "document",
+        "object_id": "policy",
+        "version": 1,
+        "as_of_seq": 0
+      },
+      "e6": {
+        "kind": "document",
+        "object_id": "approval_process",
+        "version": 1,
+        "as_of_seq": 0
+      },
+      "e7": {
+        "kind": "config",
+        "object_id": "pilot",
+        "version": 1,
+        "as_of_seq": 0
+      }
+    },
+    "limitation": "仅在受控合成语法上验证，当前自由文本输入可能分布不同；需要人工复核，不用于正式评分。"
+  }
+}

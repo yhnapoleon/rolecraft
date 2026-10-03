@@ -1,0 +1,19 @@
+{
+  "source_id": "contractnli",
+  "official_page": "https://stanfordnlp.github.io/contract-nli/",
+  "download_url": "https://stanfordnlp.github.io/contract-nli/resources/contract-nli.zip",
+  "download_date": "2026-10-02",
+  "archive_sha256": "e03fc77bbf8b53e2976a250e81d8a294bc3d5e5fb014521e477dee9340d6287b",
+  "license": "CC-BY-4.0",
+  "license_snapshot": "data\\raw\\contractnli\\LICENSE.txt",
+  "license_sha256": "9e5f1b3c610b9c2da5c313bf81d577a7d1acec686bdb0384edefa6df0f90cd94",
+  "source_split": "train",
+  "documents": 5,
+  "items": 85,
+  "language": "en",
+  "authors": "Yuta Koreeda and Christopher D. Manning",
+  "citation": "ContractNLI: A Dataset for Document-level Natural Language Inference for Contracts. Findings of EMNLP 2021.",
+  "manifest": "data\\releases\\contractnli-pilot-v1\\manifest.json",
+  "evidence_evaluable": false,
+  "note": "original spans preserved without treating them as minimal sufficient sets"
+}

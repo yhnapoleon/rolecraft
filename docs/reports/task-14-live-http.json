@@ -1,0 +1,17 @@
+{
+  "health": {
+    "status": "ok",
+    "model": "deepseek-chat"
+  },
+  "job_status": "completed",
+  "attempt": 1,
+  "result": {
+    "as_of_seq": 0,
+    "model_revision": "deepseek-chat",
+    "role_id": "tech_lead",
+    "status": "completed",
+    "text": "根据 technical 材料（版本 1），当前情况如下：\n\n**容量**\n- 默认容量：**30 名用户**\n- 主管明确批准扩容后可提高到 60 名（当前未有已获批扩容）\n\n**开发资源**\n- 当前开发资源：**3 人日**\n\n**相关约束**\n- 每日索引更新，源文档与索引可能相差 **24 小时**，源文档变化不会立即刷新索引\n- 各工作项成本（相加）：\n  - 实时同步：5 人日\n  - 范围过滤：1 人日\n  - 人工 fallback：1 人日\n- 实时同步 + 人工 fallback 共 **6 人日**，超出当前 3 人日，**必须申请额外资源**；主管批准资源变更后总资源可变为 6 人日，上线期限可改为第 10 天。\n\n需要我说明某项工作项或变更流程吗？",
+    "trace_id": "86223a67f11b12f97f70e44070215bc722cc64173b534cfc8236eb4b0dc1fd92"
+  },
+  "session_id": "965ef177bfdb4a3e9e3e20d0fbed88c7"
+}

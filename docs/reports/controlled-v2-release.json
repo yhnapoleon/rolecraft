@@ -1,0 +1,15 @@
+{
+  "source": {
+    "path": "dist\\career-lab-experiments-v2.zip",
+    "sha256": "5f30008bc826b0a1f90f264eed3183add8de01966002a7b24fd84529a2f226d8",
+    "bytes": 743870
+  },
+  "artifacts": {
+    "path": "dist\\controlled-v2-data-models.zip",
+    "sha256": "2ba638400e653cfb43eb9f06cfd7e685a770bf042d05919e540667748b5318a8",
+    "bytes": 6279095,
+    "files": 4714
+  },
+  "clean_reproduction": true,
+  "credential_scan": "passed"
+}

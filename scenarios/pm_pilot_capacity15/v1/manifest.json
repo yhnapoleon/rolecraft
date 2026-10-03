@@ -1,0 +1,16 @@
+{
+  "scenario_id": "pm_pilot_capacity15",
+  "version": 1,
+  "files": {
+    "materials/approval-process.md": "2a309786c8ba182292afd1d43f6f6768bd87379588cb687a1798c145f88b3b43",
+    "materials/brief.md": "de62aca3546ac5c90e784ece9d0fc59b0f2c26833da342885c98994a9e9d4a9a",
+    "materials/business.md": "4196c8ddedc7e7eab7b5306d3b2451803044123d648416771c6925348f8d9fb4",
+    "materials/faq.md": "6dc61052a8cf3c47cdbe378fd06a79816371189e39ea95a5b2d81bc9aa481070",
+    "materials/policy-v1.md": "5e69a6b32de39fa5ffca0f9d5357774a3a905c1003aeeadaac952cad7036ebc2",
+    "materials/policy-v2.md": "1c1ccdbc65b45c543805f845af3231a8088ecce2f62cfafb44d18a5afb5e3160",
+    "materials/tech-private.md": "4eedbd34225c68c5c65c721d7820dff1620080cd8edf66403aa56b84f443b6c2",
+    "materials/technical.md": "0d0c34557d2affae9eab0eba4ee0c0548353a16448883fac442e1c73368bf3d2",
+    "rubric.yaml": "ac1a2d03cf50a243aa46f31a384fdb75a63a13bfb6696ef27637ac0f71ad0790",
+    "scenario.yaml": "2c6b8349048998cb16d8c0025f807b15d1eb4390eead53d9dc21b93e66c431a0"
+  }
+}

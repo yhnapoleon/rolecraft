@@ -1,0 +1,71 @@
+{
+  "bundle_version": "0.1",
+  "illustrative_fixture": true,
+  "description": "用于接口和奖励单元测试的人工构造样例，不是实际用户数据或实验结果。",
+  "input": {
+    "item_id": "example_capacity_001",
+    "task_type": "relation",
+    "criterion_id": "R3.capacity_claim",
+    "claim": "50人试点没有超过当前获批上限。",
+    "as_of_seq": 12,
+    "completeness": "complete",
+    "candidate_evidence": [
+      {"id": "e1", "version": 1, "text": "基础试点人数上限为30人；有效扩容批准可覆盖此上限。"},
+      {"id": "e2", "version": 1, "text": "批准登记册截至事件12完整，本次没有有效扩容批准。"},
+      {"id": "e3", "version": 1, "text": "知识库索引每天凌晨更新。"}
+    ]
+  },
+  "gold_sidecar": {
+    "item_id": "example_capacity_001",
+    "label": "CONTRADICTED",
+    "label_tier": "G0",
+    "annotation_version": "example-v1",
+    "acceptable_evidence_sets": [["e1", "e2"]],
+    "evidence_evaluable": true,
+    "missing_requirement": null,
+    "verifier_id": "capacity_with_exception_v1"
+  },
+  "reward_cases": [
+    {
+      "name": "correct_and_sufficient",
+      "output": {"label": "CONTRADICTED", "evidence_ids": ["e1", "e2"], "reason_code": "CAPACITY_EXCEEDED", "explanation": "当前没有扩容批准，50人超过30人上限。"},
+      "expected_reward": 1.0
+    },
+    {
+      "name": "correct_but_incomplete_evidence",
+      "output": {"label": "CONTRADICTED", "evidence_ids": ["e1"], "reason_code": "CAPACITY_EXCEEDED", "explanation": "基础上限为30人。"},
+      "expected_reward": 0.7
+    },
+    {
+      "name": "correct_with_irrelevant_extra",
+      "output": {"label": "CONTRADICTED", "evidence_ids": ["e1", "e2", "e3"], "reason_code": "CAPACITY_EXCEEDED", "explanation": "人数超过上限。"},
+      "expected_reward": 0.9
+    },
+    {
+      "name": "wrong_label",
+      "output": {"label": "SUPPORTED", "evidence_ids": ["e1", "e2"], "reason_code": "OTHER", "explanation": "可以开放50人。"},
+      "expected_reward": -0.5
+    },
+    {
+      "name": "unknown_evidence_id",
+      "output": {"label": "CONTRADICTED", "evidence_ids": ["e99"], "reason_code": "CAPACITY_EXCEEDED", "explanation": "超过上限。"},
+      "expected_reward": -1.0
+    },
+    {
+      "name": "duplicate_evidence_id",
+      "output": {"label": "CONTRADICTED", "evidence_ids": ["e1", "e1", "e2"], "reason_code": "CAPACITY_EXCEEDED", "explanation": "超过上限。"},
+      "expected_reward": -1.0
+    },
+    {
+      "name": "malformed_output",
+      "raw_output": "这份方案很好，可以直接上线。",
+      "expected_reward": -1.0
+    }
+  ],
+  "counterfactual": {
+    "description": "事实改变后的独立样例，应改变判断；与原样例保持同一数据分区。",
+    "replacement_e2": {"id": "e2", "version": 2, "text": "截至事件12，本次已批准将试点上限提高至60人。"},
+    "expected_label": "SUPPORTED",
+    "acceptable_evidence_sets": [["e1", "e2"]]
+  }
+}

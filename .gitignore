@@ -1,0 +1,27 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.env
+.env.*
+!.env.example
+runs/
+data/releases/
+tmp/
+openai.txt
+ds.txt
+data/raw/
+data/annotation/
+*.db
+*.db-wal
+*.db-shm
+# Local course handouts and personal proposal/report documents
+/For FT students only (excluding Aramco students)/
+/unfiled/
+/*.pdf
+/*.docx
+/*.xlsx
+

@@ -1,0 +1,123 @@
+{
+  "linear": {
+    "run_id": "f29cb3901c88170aeb1e3e26",
+    "manifest_path": "runs\\evals\\f29cb3901c88170aeb1e3e26\\manifest.json",
+    "metrics": {
+      "count": 30.0,
+      "accuracy": 0.7666666666666667,
+      "macro_f1": 0.7660818713450293,
+      "joint_correctness": 0.7666666666666667,
+      "false_deduction": 0.4,
+      "false_pass": 0.3,
+      "infrastructure_errors": 0.0,
+      "format_errors": 0.0,
+      "p95_seconds": 0.01599999999598367
+    },
+    "slices": {
+      "approved_capacity": {
+        "count": 15.0,
+        "accuracy": 0.6666666666666666,
+        "macro_f1": 0.6336996336996337,
+        "joint_correctness": 0.6666666666666666,
+        "false_deduction": 0.8,
+        "false_pass": 0.2,
+        "infrastructure_errors": 0.0,
+        "format_errors": 0.0
+      },
+      "index_version": {
+        "count": 15.0,
+        "accuracy": 0.8666666666666667,
+        "macro_f1": 0.8611111111111112,
+        "joint_correctness": 0.8666666666666667,
+        "false_deduction": 0.0,
+        "false_pass": 0.4,
+        "infrastructure_errors": 0.0,
+        "format_errors": 0.0
+      }
+    },
+    "paired_diff_path": null,
+    "errors_path": "runs\\evals\\f29cb3901c88170aeb1e3e26\\errors.jsonl"
+  },
+  "encoder": {
+    "run_id": "d353ea78e0dea4cbac7f9df7",
+    "manifest_path": "runs\\evals\\d353ea78e0dea4cbac7f9df7\\manifest.json",
+    "metrics": {
+      "count": 30.0,
+      "accuracy": 0.6666666666666666,
+      "macro_f1": 0.6666666666666666,
+      "joint_correctness": 0.6666666666666666,
+      "false_deduction": 0.0,
+      "false_pass": 0.0,
+      "infrastructure_errors": 0.0,
+      "format_errors": 0.0,
+      "p95_seconds": 0.0
+    },
+    "slices": {
+      "approved_capacity": {
+        "count": 15.0,
+        "accuracy": 0.3333333333333333,
+        "macro_f1": 0.16666666666666666,
+        "joint_correctness": 0.3333333333333333,
+        "false_deduction": 0.0,
+        "false_pass": 0.0,
+        "infrastructure_errors": 0.0,
+        "format_errors": 0.0
+      },
+      "index_version": {
+        "count": 15.0,
+        "accuracy": 1.0,
+        "macro_f1": 1.0,
+        "joint_correctness": 1.0,
+        "false_deduction": 0.0,
+        "false_pass": 0.0,
+        "infrastructure_errors": 0.0,
+        "format_errors": 0.0
+      }
+    },
+    "paired_diff_path": null,
+    "errors_path": "runs\\evals\\d353ea78e0dea4cbac7f9df7\\errors.jsonl"
+  },
+  "ensemble": {
+    "run_id": "18e09a9beb4de6833b21376b",
+    "manifest_path": "runs\\evals\\18e09a9beb4de6833b21376b\\manifest.json",
+    "metrics": {
+      "count": 30.0,
+      "accuracy": 0.7666666666666667,
+      "macro_f1": 0.7660818713450293,
+      "joint_correctness": 0.7666666666666667,
+      "false_deduction": 0.4,
+      "false_pass": 0.3,
+      "infrastructure_errors": 0.0,
+      "format_errors": 0.0,
+      "p95_seconds": 0.01600000000325963
+    },
+    "slices": {
+      "approved_capacity": {
+        "count": 15.0,
+        "accuracy": 0.6666666666666666,
+        "macro_f1": 0.6336996336996337,
+        "joint_correctness": 0.6666666666666666,
+        "false_deduction": 0.8,
+        "false_pass": 0.2,
+        "infrastructure_errors": 0.0,
+        "format_errors": 0.0
+      },
+      "index_version": {
+        "count": 15.0,
+        "accuracy": 0.8666666666666667,
+        "macro_f1": 0.8611111111111112,
+        "joint_correctness": 0.8666666666666667,
+        "false_deduction": 0.0,
+        "false_pass": 0.4,
+        "infrastructure_errors": 0.0,
+        "format_errors": 0.0
+      }
+    },
+    "paired_diff_path": null,
+    "errors_path": "runs\\evals\\18e09a9beb4de6833b21376b\\errors.jsonl"
+  },
+  "paired_diff": {
+    "pairs": 30,
+    "accuracy_delta": 0.0
+  }
+}

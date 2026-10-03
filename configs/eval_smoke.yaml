@@ -1,0 +1,11 @@
+suite: pilot-smoke
+dataset_manifest: data/releases/v1/manifest.json
+candidate: constant-supported-v1
+prompt_version: evidence-v1
+input_mode: oracle
+decode: {}
+seeds: [0]
+concurrency: 1
+output_dir: runs/evals
+split: dev
+replicate_id: '0'

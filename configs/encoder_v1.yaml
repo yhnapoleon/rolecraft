@@ -1,0 +1,8 @@
+architecture: char_ngram_mlp
+hidden_layers: [32, 16]
+activation: tanh
+solver: lbfgs
+max_iter: 500
+seed: 5002
+pretrained: false
+note: CPU supervised encoder from scratch; not Transformer or SFT

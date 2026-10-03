@@ -1,0 +1,37 @@
+{
+  "result": {
+    "text": "当前开发资源为3人日；实时同步需要5人日（含同步与适用域配置，不含人工fallback），因此3人日无法覆盖，必须申请额外资源。",
+    "status": "completed",
+    "role_id": "tech_lead",
+    "model_revision": "deepseek-chat",
+    "as_of_seq": 0,
+    "trace_id": "093ec2822436f3c1b91dfacc5f31b17b5102bb738ef4ebd00a0f60d66c790fbd"
+  },
+  "elapsed_seconds": 1.8280000000013388,
+  "rounds": 2,
+  "usage": [
+    {
+      "completion_tokens": 39,
+      "prompt_cache_hit_tokens": 0,
+      "prompt_cache_miss_tokens": 880,
+      "prompt_tokens": 880,
+      "prompt_tokens_details": {
+        "cached_tokens": 0
+      },
+      "total_tokens": 919
+    },
+    {
+      "completion_tokens": 39,
+      "prompt_cache_hit_tokens": 896,
+      "prompt_cache_miss_tokens": 275,
+      "prompt_tokens": 1171,
+      "prompt_tokens_details": {
+        "cached_tokens": 896
+      },
+      "total_tokens": 1210
+    }
+  ],
+  "tools_used": [
+    "read_material"
+  ]
+}
