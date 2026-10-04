@@ -208,6 +208,7 @@ docs/            设计、计划、规范及验证报告
 
 ## 进度与后续
 
+- [最终目标技术框架 v2：A/B 并重、主动信息获取、技能记忆、自动优化与 Jev](docs/superpowers/specs/2026-10-04-rolecraft-target-architecture-design.md)（目标设计，非已实现能力清单）
 - [实施进度](docs/reports/implementation-progress.md)
 - [技术设计](docs/design/career-training-technical-design.md)
 - [后端实施计划](docs/plans/career-training-implementation-plan.md)
