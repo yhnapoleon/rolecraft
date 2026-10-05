@@ -12,6 +12,10 @@ import { testSetView, testSetPreview, caseState, testRunView } from './test-set-
 import './test-set.css';
 import { investigationView, investigationPreview, investigationSourceKey } from './investigation-view.js';
 import './investigation.css';
+import { createDocumentMotion } from './document-motion.js';
+import './document-motion.css';
+import { workFolderMarkup, installWorkFolders } from './work-folder.js';
+import './work-folder.css';
 
 const L = window.PracticeLive;
 const E = L.engine;
@@ -20,6 +24,7 @@ const sheet = document.getElementById('sheet');
 const toastEl = document.getElementById('toast');
 const KEY = 'rolecraft.open-work.ui.v1';
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+const documentMotion = createDocumentMotion();
 const ROLE_ID = { manager: 'supervisor', business: 'business_lead', technical: 'tech_lead' };
 const ROLE_OF = { supervisor: 'manager', business_lead: 'business', tech_lead: 'technical' };
 const INDEX_DELAY_HOURS = 24; // scenario constant; not yet part of the session state
@@ -48,7 +53,7 @@ const ui = {
   intake: { text: '', result: null, open: false }, busy: false, lastRun: null,
   importText: '', exportScope: { artifacts: true, materials: true, tests: true },
   labPrefill: '', compare: false, previous: {}, arriving: false, landing: false, editPending: null, previewWorkId: null,
-  investigationSources: {}, investigationErrors: {},
+  investigationSources: {}, investigationErrors: {}, investigationViews: {}, investigationComposing: false, investigationRefreshQueued: false,
   testOpen: {}, testHistory: {}, testModes: {}, testErrors: {}, configFromTestSet: false,
   synced: false, lastError: '', pendingRequestId: null, lastUndo: null, pendingCite: null
 };
@@ -119,6 +124,11 @@ function diffHtml(before, after) {
   const out = ops.map(([cls, t]) => t.split('\n').map(part => cls && part ? `<${cls}>${esc(part)}</${cls}>` : esc(part)).join('\n')).join('');
   return `<div class="diff">${out.split('\n').filter(l => l.replace(/<[^>]+>/g, '').trim() && !/^(<\w+>)?#\s/.test(l)).map(l => `<p>${l}</p>`).join('')}</div>`;
 }
+function investigationDiffHtml(before, after) {
+  const count = text => (String(text).match(/[一-鿿]|[A-Za-z0-9_.]+|\s+|[^\sA-Za-z0-9_一-鿿]/g) || []).length;
+  if (count(before) * count(after) > 4e6) return `<p class="inv-missing">${T('正文较长，未生成逐字差异。切换到“原文”分别核对，原文均完整保留。','These sources are too long for word-by-word comparison. Switch to Originals to read both complete texts.')}</p>`;
+  return diffHtml(before, after);
+}
 
 /* ---------- saving ---------- */
 function persist() {
@@ -141,9 +151,24 @@ function flush() {
   clearTimeout(saveTimer);
   if (!dirty) return false;
   const a = state.attempts.find(x => x.id === dirty.attemptId); const x = a && a.artifacts.find(y => y.id === dirty.id);
-  if (x) x.draft = { title: dirty.title || T('未命名', 'Untitled'), purpose: dirty.purpose, body: dirty.body, ...(dirty.cases ? { kind: 'test_set', cases: dirty.cases } : {}), ...(dirty.blocks ? {kind:'investigation',question:dirty.question,blocks:dirty.blocks} : {}) };
+  if (x) x.draft = { title: dirty.title || T('未命名', 'Untitled'), purpose: dirty.purpose, body: dirty.body, ...(dirty.cases ? { kind: 'test_set', cases: dirty.cases } : {}), ...(dirty.blocks ? {kind:'investigation',question:dirty.question,blocks:dirty.blocks,review:dirty.review} : {}) };
   dirty = null; persist();
   return !!x;
+}
+// All investigation fields share one draft so rapid edits and evidence refreshes
+// preserve each other. Reading options stay separate from the saved work.
+function queueInvestigationDraft(a, x, patch) {
+  const pending = dirty?.attemptId === a.id && dirty.id === x.id ? dirty : null;
+  const next = { ...shown(x), ...pending, ...patch, kind: 'investigation' };
+  const review = structuredClone(next.review || { focus: 'uncertain', note: '' });
+  dirty = { attemptId: a.id, id: x.id, kind: 'investigation', title: next.title,
+    purpose: next.purpose, question: next.question, blocks: structuredClone(next.blocks), review,
+    body: E.investigationSummary({ ...next, review }) };
+  updateSave(); clearTimeout(saveTimer); saveTimer = setTimeout(flush, 450);
+}
+function investigationViewState(a, x) {
+  const key = a.id + '|' + x.id;
+  return ui.investigationViews[key] ||= { modes: {}, open: {} };
 }
 function commit() {
   flush();
@@ -190,8 +215,9 @@ let activeTransition = null;
 function withTransition(fn) {
   if (activeTransition) { try { activeTransition.skipTransition(); } catch (_) { /* finished */ } }
   if (!document.startViewTransition || reduceMotion.matches) { fn(); return; }
-  activeTransition = document.startViewTransition(() => { fn(); });
-  activeTransition.finished.finally(() => { activeTransition = null; });
+  const transition = document.startViewTransition(() => { fn(); });
+  activeTransition = transition;
+  transition.finished.finally(() => { if (activeTransition === transition) activeTransition = null; });
 }
 // An undo belongs to the page it was offered on; leaving the page withdraws it.
 function dropUndo() { if (ui.lastUndo) { ui.lastUndo = null; toastEl.classList.remove('visible'); } }
@@ -199,10 +225,21 @@ function go(route, opts = {}) {
   commit(); dropUndo();
   if ((WS.includes(route) || route === 'review') && !current()) route = 'pm';
   const id = opts.id || null;
+  const from = ui.route, fromId = ui.routeId;
   const run = () => { if (sheet.open) closeSheet(true); ui.menu = null; ui.railOpen = false; ui.advice = null; ui.route = route; ui.routeId = id; history.pushState(null, '', hashOf(route, id)); render(); window.scrollTo(0, 0); document.getElementById('main')?.scrollTo?.(0, 0); };
-  if (opts.transition) withTransition(run); else run();
+  if ((from === 'work' && route === 'doc') || (from === 'doc' && route === 'work')) {
+    activeTransition?.skipTransition();
+    documentMotion.transition(from, route, route === 'doc' ? id : fromId, run);
+  } else { documentMotion.cancel(); if (opts.transition) withTransition(run); else run(); }
 }
-window.addEventListener('popstate', () => { commit(); dropUndo(); if (sheet.open) closeSheet(true); ui.menu = null; ui.advice = null; const p = parseRoute(); ui.route = p.r; ui.routeId = p.id; withTransition(render); });
+window.addEventListener('popstate', () => {
+  commit(); dropUndo(); if (sheet.open) closeSheet(true); ui.menu = null; ui.advice = null;
+  const from = ui.route, fromId = ui.routeId, p = parseRoute();
+  const update = () => { ui.route = p.r; ui.routeId = p.id; render(); if (p.r === 'doc') document.getElementById('main')?.scrollTo(0,0); };
+  if ((from === 'work' && p.r === 'doc') || (from === 'doc' && p.r === 'work')) {
+    activeTransition?.skipTransition(); documentMotion.transition(from, p.r, p.r === 'doc' ? p.id : fromId, update);
+  } else { documentMotion.cancel(); withTransition(update); }
+});
 
 /* ---------- render ---------- */
 function render() {
@@ -220,6 +257,9 @@ function render() {
   restoreFocus(key);
 }
 function afterRender() {
+  // Only the workbench's own scroll regions move; browser focus must not shift
+  // the entire fixed-height workspace (especially after viewport changes).
+  if (WS.includes(ui.route) && window.scrollY) window.scrollTo(0, 0);
   document.querySelectorAll('.segmented').forEach(layoutSegmented);
   const body = document.getElementById('editor-body'); if (body) autoGrow(body);
   document.querySelectorAll('.thread').forEach(t => { t.scrollTop = t.scrollHeight; });
@@ -228,6 +268,8 @@ function afterRender() {
   const activeWork = a && ui.obj?.type === 'work' ? artifact() : null; if(activeWork?.kind === 'investigation') loadInvestigationSources(a, shown(activeWork));
   document.title = (WS.includes(ui.route) || ui.route === 'review') && a ? CASE(a.scenarioId).title + ' · Practice' : T('Practice · 在真实的工作里练习', 'Practice · Learn on real work');
   const skip = document.querySelector('.skip-link'); if (skip) skip.textContent = T('跳到主要内容', 'Skip to content');
+  documentMotion.sync();
+  workFolders.sync();
 }
 function layoutSegmented(seg) {
   const active = seg.querySelector('[aria-pressed="true"]'); const thumb = seg.querySelector('.thumb');
@@ -244,8 +286,9 @@ function autoGrow(el) {
 }
 function focusKey() {
   const el = document.activeElement; if (!el || el === document.body) return null;
-  if (el.id && el.id !== 'main') return { id: el.id, pos: el.selectionStart ?? null };
-  const d = el.dataset || {}; const parts = ['action', 'id', 'view', 'role', 'rail', 'change', 'case', 'key', 'menu', 'lang', 'status'].filter(k => d[k] !== undefined).map(k => `[data-${k}="${CSS.escape(d[k])}"]`);
+  if (el.id && el.id !== 'main') return { id: el.id, pos: el.selectionStart ?? null, end: el.selectionEnd ?? null, direction: el.selectionDirection ?? 'none' };
+  if(el.tagName==='SUMMARY'&&el.parentElement?.dataset.key) return {sel:`.investigation-work details[data-key="${CSS.escape(el.parentElement.dataset.key)}"] > summary`};
+  const d = el.dataset || {}; const parts = ['action', 'id', 'view', 'role', 'rail', 'change', 'case', 'key', 'menu', 'lang', 'status', 'mode', 'investigationReview'].filter(k => d[k] !== undefined).map(k => `[data-${k.replace(/[A-Z]/g,c=>'-'+c.toLowerCase())}="${CSS.escape(d[k])}"]`);
   return parts.length ? { sel: el.tagName.toLowerCase() + parts.join('') } : null;
 }
 function restoreFocus(key) {
@@ -253,7 +296,7 @@ function restoreFocus(key) {
   const el = key.id ? document.getElementById(key.id) : document.querySelector(key.sel);
   if (!el || el === document.activeElement) return;
   el.focus({ preventScroll: true });
-  if (key.pos != null && el.setSelectionRange) try { el.setSelectionRange(key.pos, key.pos); } catch (_) { /* not a text field */ }
+  if (key.pos != null && el.setSelectionRange) try { el.setSelectionRange(key.pos, key.end ?? key.pos, key.direction || 'none'); } catch (_) { /* not a text field */ }
 }
 
 /* ---------- shared chrome ---------- */
@@ -595,6 +638,7 @@ function taskCard(a, t) {
       <span class="card-meta"><span title="${esc(T('作品', 'Work'))}">${icon('note', 'i-xs')}${list.length}</span><span title="${esc(T('测试', 'Tests'))}">${icon('flask', 'i-xs')}${tests.length}</span>${notes.length ? `<span class="card-notes" title="${esc(notes.map(n => PEOPLE[n.role].name).join(T('、', ', ')) + T(' 有提醒', ' left a reminder'))}">${[...new Set(notes.map(n => n.role))].map(r => avatar(r, 'xs')).join('')}</span>` : ''}</span>
       ${stale || toCheck ? `<span class="card-flags">${stale ? `<span class="flag-chip warn">${icon('stale', 'i-xs')}${T('测试早于政策更新', 'Tests predate the policy update')}</span>` : ''}${toCheck ? `<span class="flag-chip agent">${agentMark('xs')}${T(toCheck + ' 份回传待检查', toCheck + ' agent return(s) to check')}</span>` : ''}</span>` : ''}
     </button>
+    ${workFolderMarkup({taskId: t.id, title: taskTitle(t), works: list.map(shown)})}
     <button type="button" class="btn icon quiet small card-more" data-action="edit-task" data-id="${t.id}" aria-label="${esc(T('编辑「' + taskTitle(t) + '」', 'Edit “' + taskTitle(t) + '”'))}">${icon('more')}</button>
   </li>`;
 }
@@ -770,7 +814,7 @@ function structuredWorkView(a, t, x) {
 function structuredInvestigationView(a, t, x) {
   const mutable=canEditWork(a,x) && (x.adopted || ui.editPending === x.id);
   const prog=E.agentProgress(a,x);
-  return investigationView({work:shown(x),attempt:a,session:sessionOf(a),mutable,readOnly:!canEditWork(a,x),canRun:canWrite(a)&&!storageIssue&&!!a.backend.configured,busy:ui.busy||snap().busy,cache:ui.investigationSources,errors:ui.investigationErrors,controls:workControls(a,x,mutable,true),strip:prog?agentStrip(a,x,prog):'',md});
+  return investigationView({work:shown(x),attempt:a,session:sessionOf(a),mutable,readOnly:!canEditWork(a,x),canRun:canWrite(a)&&!storageIssue&&!!a.backend.configured,busy:ui.busy||snap().busy,cache:ui.investigationSources,errors:ui.investigationErrors,controls:workControls(a,x,mutable,true),strip:prog?agentStrip(a,x,prog):'',md,diffHtml:investigationDiffHtml,viewState:investigationViewState(a,x)});
 }
 async function loadInvestigationSources(a, work, onlyBlockId) {
   for(const block of work.blocks.filter(b=>b.type==='source_check'&&(!onlyBlockId||b.id===onlyBlockId))) {
@@ -782,7 +826,7 @@ async function loadInvestigationSources(a, work, onlyBlockId) {
       const selected=results[1].status==='fulfilled'?results[1].value:null;
       const failed=results.find(r=>r.status==='rejected');
       ui.investigationSources[key]={loading:false,citation,selected,error:failed?T('暂未取得全部证据，可以重新读取。','Some evidence is unavailable. You can try loading it again.'):''};
-      if(current()?.id===a.id&&ui.obj?.id===work.id) refreshWS(['stage']);
+      if(current()?.id===a.id&&ui.obj?.type==='work'&&ui.obj.id===work.id) refreshWS(['stage']);
     });
   }
 }
@@ -803,6 +847,7 @@ function openInvestigation(runId) {
     localWorkChange(a,()=>{work=E.createArtifact(a,{kind:'investigation',taskId:run.taskId||task()?.id||a.tasks[0].id,title:T('核对回答与资料','Check the answer against its sources'),question:T('这次回答用了哪版资料？当前条件下会怎样回答？','Which source version did this answer use, and what happens under the current settings?'),blocks,source:'user',adopted:true,ruleOrigin:'feedback'});work.investigationSeed=seed;});
   }
   openTask(work.taskId,{type:'work',id:work.id});
+  document.getElementById('main')?.scrollTo(0,0);
 }
 async function runInvestigationBlock(blockId) {
   if(ui.busy) return; commit(); const a=current(), work=artifact(), block=work?.blocks?.find(b=>b.id===blockId), baseline=block&&a.tests.find(r=>r.id===block.testId);
@@ -880,8 +925,8 @@ function docBody(a, id, inTask) {
   const zhOnly = locale() === 'en' && isChinese(m.content);
   const who = whoHas(m);
   return `<div class="${inTask ? 'obj-pad' : ''}">
-    <article class="paper document">
-      <header class="doc-head"><span class="doc-icon">${icon('doc')}</span><div class="grow"><h2 class="doc-title">${esc(materialTitle(m))}</h2><p class="doc-meta"><span class="stamp">v${m.version}</span>${m.id === 'policy' ? `<span class="${a.world.indexVersion < m.version ? 'warn' : ''}">${T('知识助手索引 v' + a.world.indexVersion, 'Assistant index v' + a.world.indexVersion)}</span>` : ''}${zhOnly ? `<span class="lang-tag" title="The server sends this document in Chinese until an English version exists.">Chinese source</span>` : ''}</p></div>
+    <article class="paper document" data-document-id="${esc(m.id)}">
+      <header class="doc-head"><span class="doc-icon">${icon('doc')}</span><div class="grow"><h2 class="doc-title" id="document-title-${esc(m.id)}" tabindex="-1">${esc(materialTitle(m))}</h2><p class="doc-meta"><span class="stamp">v${m.version}</span>${m.id === 'policy' ? `<span class="${a.world.indexVersion < m.version ? 'warn' : ''}">${T('知识助手索引 v' + a.world.indexVersion, 'Assistant index v' + a.world.indexVersion)}</span>` : ''}${zhOnly ? `<span class="lang-tag" title="The server sends this document in Chinese until an English version exists.">Chinese source</span>` : ''}</p></div>
         ${m.version > 1 ? `<button type="button" class="toggle" data-action="toggle-compare" aria-pressed="${!!compare}">${icon('layers', 'i-sm')}${T('对比 v' + (m.version - 1), 'Compare with v' + (m.version - 1))}</button>` : ''}</header>
       <div class="prose serif"${zhOnly ? ' lang="zh-CN"' : ''}>${compare ? diffHtml(prev.content, m.content) : md(m.content, { dropTitle: true })}</div>
       <footer class="doc-foot">${btn(icon('quote', 'i-sm') + (inTask ? T('引用到这件事的作品', 'Cite in this task’s work') : T('引用到作品', 'Cite in my work')), 'cite-material', 'small', `data-id="${esc(m.id)}"`)}${who.map(r => btn(avatar(r, 'xs') + T('问 ' + PEOPLE[r].name, 'Ask ' + PEOPLE[r].name), 'discuss-material', 'small quiet', `data-id="${esc(m.id)}" data-role="${r}"`)).join('')}</footer>
@@ -1392,6 +1437,10 @@ function markRead() {
 /* ---------- workspace refresh ---------- */
 function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
   const a = current(); if (!a || !WS.includes(ui.route)) { render(); return; }
+  // An asynchronous source reply must not tear down an active IME composition.
+  if (parts.includes('stage') && ui.investigationComposing) {
+    ui.investigationRefreshQueued = true; parts = parts.filter(p => p !== 'stage');
+  }
   if (parts.includes('stage') && dirty) flush();
   ui.notesCache = Coach.notes(a, E);
   const key = focusKey();
@@ -1526,6 +1575,18 @@ async function act(el) {
   switch (action) {
     case 'investigate-run': openInvestigation(id); break;
     case 'investigation-retest': await runInvestigationBlock(id); break;
+    case 'investigation-refresh-index': {
+      if(ui.busy)break; commit(); const x=artifact(),b=x?.blocks?.find(b=>b.id===id),r=b&&a.tests.find(t=>t.id===b.testId);
+      requireWorkMutation(a,x);
+      if(x?.kind!=='investigation'||!x.adopted||b?.type!=='retest'||!r?.citations?.some(c=>c.id==='policy')||!canWrite(a))throw new Error(T('这份调查当前不能刷新索引。','The index cannot be refreshed from this investigation right now.'));
+      if(x.draft||storageIssue||!persist())throw new Error(T('先保存调查判断，再刷新索引。','Save your investigation notes before refreshing the index.'));
+      ui.busy=true;refreshWS(['stage']);
+      try {await L.action(a,'refresh_index');persist();notify(T('索引已更新；可在这份调查里同题重测。','Index refreshed. Rerun the question in this investigation.'));}
+      finally {ui.busy=false;refreshWS(['stage','rail']);}
+      break;
+    }
+    case 'investigation-mode': { const x=artifact(); if(!x||x.kind!=='investigation'||!x.blocks.some(b=>b.id===id))break; const mode=el.dataset.mode; if(!['diff','original'].includes(mode))break; investigationViewState(a,x).modes[id]=mode; refreshWS(['stage']); break; }
+    case 'investigation-review-save': { const x=artifact(); requireWorkMutation(a,x); if(x.kind!=='investigation')break; commit(); if(x.draft||!persist())throw new Error(T('判断尚未保存，请保留页面并检查提示。','Your notes have not been saved. Keep this page open and check the message.')); refreshWS(['stage','rail']); notify(T('你的调查判断已保存','Your investigation notes are saved')); break; }
     case 'investigation-load': {const x=artifact(),b=x?.blocks?.find(b=>b.id===id);if(b){delete ui.investigationSources[investigationSourceKey(a.id,b)];loadInvestigationSources(a,x,id);refreshWS(['stage']);}break;}
     case 'investigation-move': {commit();const x=artifact();requireWorkMutation(a,x);const i=x.blocks.findIndex(b=>b.id===id),dir=Number(el.dataset.dir),before=dir<0?x.blocks[i-1]?.id:x.blocks[i+2]?.id;if(i<0||i+dir<0||i+dir>=x.blocks.length)break;localWorkChange(a,()=>E.moveInvestigationBlock(a,x.id,id,before));refreshWS(['stage']);announce(T('模块顺序已保存','Module order saved'));break;}
     case 'investigation-cite': {commit();const x=artifact(),r=a.tests.find(r=>r.id===id);requireWorkMutation(a,x);if(!x.adopted)throw new Error(T('先采用这份调查，再引用结果。','Adopt this investigation before citing results.'));if(r){E.addEvidence(a,x.id,{type:'test',id:r.id,version:r.configVersion});if(!persist())throw new Error(storageText());refreshWS(['stage','rail']);notify(T('这次运行已加入调查依据','This run is now evidence for the investigation'));}break;}
@@ -1707,8 +1768,20 @@ document.addEventListener('click', e => {
   ui.kbd = e.detail === 0; document.documentElement.dataset.input = ui.kbd ? 'keyboard' : 'pointer';
   Promise.resolve(act(el)).catch(err => notify(errText(err) || T('这一步没有完成，内容还在。', 'That did not go through. Nothing was lost.')));
 });
-document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details[data-intake]')) ui.intake.open = d.open; }, true);
-document.addEventListener('compositionend', e => { if (e.target.dataset && (e.target.dataset.edit || e.target.dataset.caseField || e.target.dataset.investigationQuestion !== undefined)) e.target.dispatchEvent(new Event('input', { bubbles: true })); });
+document.addEventListener('toggle', e => {
+  const d=e.target;
+  if(d.matches?.('details[data-intake]')) ui.intake.open=d.open;
+  if(d.isConnected&&d.matches?.('.investigation-work details[data-key]')) {
+    const a=current(),x=artifact(); if(a&&x?.kind==='investigation') investigationViewState(a,x).open[d.dataset.key]=d.open;
+  }
+},true);
+document.addEventListener('compositionstart', e => { if(e.target.closest?.('.investigation-work')) ui.investigationComposing=true; });
+document.addEventListener('compositionend', e => {
+  const investigation=e.target.closest?.('.investigation-work');
+  if(investigation) ui.investigationComposing=false;
+  if(e.target.dataset&&(e.target.dataset.edit||e.target.dataset.caseField||e.target.dataset.investigationQuestion!==undefined||e.target.dataset.investigationReview)) e.target.dispatchEvent(new Event('input',{bubbles:true}));
+  if(investigation&&ui.investigationRefreshQueued) { ui.investigationRefreshQueued=false; refreshWS(['stage']); }
+});
 document.addEventListener('input', e => {
   const el = e.target; const a = current();
   if (a && ['lab-q', 'lab-e', 'chat-input'].includes(el.id)) {
@@ -1720,9 +1793,15 @@ document.addEventListener('input', e => {
   }
   if (a && el.form?.dataset.form === 'live-deliver' && FIELDS.includes(el.name)) { L.store.update(a.id, { draft: { ...sessionOf(a).draft, [el.name]: el.value } }); const live = document.querySelector('[data-action="live-submit"]'); if (live) live.disabled = true; const save = document.querySelector('[data-action="live-save"]'); if (save) save.classList.remove('quiet'); }
   if (e.isComposing) return;
+  if(el.dataset.investigationReview && a) {
+    const x=artifact(); if(!x||x.kind!=='investigation'||!canEditWork(a,x))return;
+    const v=dirty?.attemptId===a.id&&dirty.id===x.id?dirty:shown(x);
+    const key=el.dataset.investigationReview; if(!['focus','note'].includes(key))return;
+    queueInvestigationDraft(a,x,{review:{...(v.review||{focus:'uncertain',note:''}),[key]:el.value}});return;
+  }
   if (el.dataset.investigationQuestion !== undefined && a) {
     const x=artifact(); if(!x||x.kind!=='investigation'||!canEditWork(a,x))return;
-    const v=shown(x); dirty={attemptId:a.id,id:x.id,title:v.title,purpose:v.purpose,question:el.value,blocks:structuredClone(v.blocks),body:E.investigationSummary({...v,question:el.value})}; updateSave();clearTimeout(saveTimer);saveTimer=setTimeout(flush,450);return;
+    queueInvestigationDraft(a,x,{question:el.value});return;
   }
   if (el.dataset.caseField && a) {
     const x = artifact(); if (!x || x.kind !== 'test_set' || statusOf(a) !== 'active' || !(x.adopted || ui.editPending === x.id)) return;
@@ -1751,6 +1830,7 @@ document.addEventListener('input', e => {
     return;
   }
   if (!el.dataset.edit) return; const x = artifact(); if (!a || !canEditWork(a,x)) return;
+  if(x.kind==='investigation') { queueInvestigationDraft(a,x,{[el.dataset.edit]:el.value});return; }
   dirty = { attemptId: a.id, id: x.id, title: document.getElementById('editor-title')?.value || x.title, purpose: document.querySelector('[data-edit="purpose"]')?.value || x.purpose, body: document.getElementById('editor-body')?.value ?? shown(x).body, ...(x.kind === 'test_set' ? { kind:'test_set', cases: structuredClone(shown(x).cases) } : {}), ...(x.kind==='investigation'?{kind:'investigation',question:shown(x).question,blocks:structuredClone(shown(x).blocks)}:{}) };
   updateSave(); clearTimeout(saveTimer);
   saveTimer = setTimeout(() => { flush(); const cur = artifact(); const row = cur && document.querySelector(`.ol-row[data-id="${cur.id}"] .ol-title`); if (row) row.textContent = shown(cur).title; }, 700);
@@ -1758,6 +1838,7 @@ document.addEventListener('input', e => {
 document.addEventListener('change', e => {
   const el = e.target; const a = current();
   try {
+    if(el.dataset.investigationReview){commit();updateSave();return;}
     if(el.dataset.investigationQuestion !== undefined){commit();updateSave();return;}
     if (el.dataset.caseHistory) { commit(); ui.testHistory[el.dataset.caseHistory] = el.value; refreshWS(['stage']); return; }
     if (el.dataset.caseField) { commit(); updateTestChrome(); return; }
@@ -1826,6 +1907,7 @@ document.addEventListener('keydown', e => {
     if (ui.menu) { ui.menu = null; if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']); else render(); return; }
     if (ui.railOpen) { ui.railOpen = false; refreshWS(['toolbar']); return; }
     if (ui.advice) { ui.advice = null; refreshWS(['stage']); return; }
+    if (ui.route === 'doc') { e.preventDefault(); go('work'); return; }
   }
   if (e.altKey && /^Arrow/.test(e.key) && e.target.classList && e.target.classList.contains('card-open')) {
     e.preventDefault();
@@ -1865,9 +1947,22 @@ document.addEventListener('focusout', e => {
 window.addEventListener('beforeunload', commit);
 window.addEventListener('scroll', () => document.documentElement.classList.toggle('scrolled', window.scrollY > 4), { passive: true });
 window.addEventListener('resize', () => { document.querySelectorAll('.segmented').forEach(layoutSegmented); syncPanels(); });
-onLocaleChange(() => { if (sheet.open) closeSheet(true); render(); });
+onLocaleChange(() => { flush(); if (sheet.open) closeSheet(true); render(); });
 
 /* ---------- boot ---------- */
+const workFolders = installWorkFolders(document, { onSelect: (taskId, workId, event) => {
+  ui.kbd = event?.detail === 0; document.documentElement.dataset.input = ui.kbd ? 'keyboard' : 'pointer';
+  openTask(taskId, { type: 'work', id: workId });
+  if (ui.kbd) {
+    const focusWork = () => document.getElementById('editor-title')?.focus({ preventScroll: true });
+    if (activeTransition) activeTransition.updateCallbackDone.then(focusWork); else focusWork();
+  }
+}, onInteract: () => {
+  if (!ui.menu) return;
+  ui.menu = null;
+  document.querySelectorAll('.menu, .popover').forEach(el => el.remove());
+  document.querySelectorAll('[data-menu][aria-expanded="true"]').forEach(el => el.setAttribute('aria-expanded', 'false'));
+} });
 L.attach(state, onLive);
 L.refresh(current()).then(() => { ui.synced = true; });
 setInterval(() => { if (!document.hidden) L.store.poll(); }, 1500);

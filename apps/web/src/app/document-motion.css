@@ -1,0 +1,18 @@
+[data-document-flight-hidden] { visibility: hidden !important; }
+.doc-card[data-document-flight-hidden] { visibility: visible !important; opacity: 0 !important; }
+/* Native snapshots must not swallow the next real navigation/control click. */
+::view-transition { pointer-events: none; }
+/* The workbench scrolls in #main; focusing a fanned paper must not scroll the
+   outer document and cut the toolbar off at narrow/zoomed viewports. */
+html:has(body[data-view="work"]) { overflow: clip; }
+body[data-view="work"] { position: fixed; inset: 0; overflow: clip; }
+.document-flight { position: fixed; inset: 0; z-index: 48; pointer-events: none; isolation: isolate; }
+.document-flight-surface { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; background: var(--paper); box-shadow: var(--shadow-paper); will-change: transform; }
+.document-flight-content, .document-flight-card { position: absolute !important; top: 0; left: 0; transform-origin: 0 0; border-radius: 0 !important; box-shadow: none !important; }
+.document-flight-title, .document-flight-icon { position: absolute; left: 0; top: 0; margin: 0; transform-origin: 0 0; }
+.document-flight-title { overflow-wrap: break-word; }
+.document-flight-icon { display: grid; place-items: center; color: var(--ink-3); }
+.document-flight-background { pointer-events: none; }
+.document-in-flight .page-pad, .document-in-flight .board { animation: none; }
+.document .doc-title:focus { outline: none; }
+.document .doc-title:focus-visible { outline: 2px solid var(--ink-3); outline-offset: 6px; border-radius: 4px; }

@@ -9,7 +9,7 @@
   const intentOf = purpose => INTENTS[purpose] || 'explore';
   const PRIORITIES = ['first', 'next', 'later'];
   const TEST_SET_LIMITS = Object.freeze({ cases: 20, question: 4000, intent: 2000, expectation: 2000 });
-  const INVESTIGATION_LIMITS = Object.freeze({ blocks: 8, question: 1000, noteTitle: 120, noteText: 2000, testIds: 4, label: 80 });
+  const INVESTIGATION_LIMITS = Object.freeze({ blocks: 8, question: 1000, noteTitle: 120, noteText: 2000, testIds: 4, label: 80, reviewNote: 4000 });
   const WORK_COSTS = { scope: 1, fallback: 1, realtime: 5 };
   const scenarios = [
     { id: 'pilot', title: '知识助手，准备好试点了吗？', kicker: 'AI 产品经理 · 主案例', description: '接手一个即将开放的内部知识助手，决定先服务谁、开放什么，以及如何保障。', duration: '约 20–30 分钟 · 可随时暂停', capacity: 30, deadline: 7 },
@@ -248,6 +248,16 @@
       if (!(test.citations || []).some(cite => (cite.id || cite.material_id) === block.material.id)) throw new Error('来源核对的资料必须是该次测试实际引用的资料');
     }
   }
+  // A learner's working judgement is separate from the agent-authored modules.
+  // Missing values are only accepted while reading records created before this field.
+  function investigationReview(value, allowMissing = false) {
+    if (value === undefined && allowMissing) return { focus: 'uncertain', note: '' };
+    allowedKeys(value, ['focus', 'note'], '调查判断');
+    return {
+      focus: choice(value.focus, ['index', 'source', 'uncertain', 'other'], '调查方向'),
+      note: str(value.note, '调查判断', INVESTIGATION_LIMITS.reviewNote, true)
+    };
+  }
   function investigationSummary(work) {
     const sections = ['## 调查问题\n\n' + (work.question || '待明确')];
     for (const block of work.blocks || []) {
@@ -256,13 +266,18 @@
       if (block.type === 'source_check') sections.push('### 来源核对\n\n测试 ' + block.testId + ' 的实际引用，对照资料 ' + block.material.id + '@v' + block.material.version + '。');
       if (block.type === 'retest') sections.push('### ' + (block.label || '同题重测') + '\n\n待用户操作：按测试 ' + block.testId + ' 的问题重新运行；本模块不代表已经执行。');
     }
+    const review = investigationReview(work.review, true);
+    if (review.focus !== 'uncertain' || review.note) {
+      const focus = { index: '索引是否更新', source: '资料本身是否有问题', uncertain: '尚不确定', other: '其他方向' }[review.focus];
+      sections.push('## 我的调查判断（待核对）\n\n关注方向：' + focus + (review.note ? '\n\n' + review.note : ''));
+    }
     return sections.join('\n\n');
   }
   function artifactSnapshot(artifact) {
     const result = { revision: artifact.revision, title: artifact.title, purpose: artifact.purpose, body: artifact.body, evidence: clone(artifact.evidence || []) };
     if (artifact.kind) result.kind = artifact.kind;
     if (artifact.kind === 'test_set') result.cases = clone(artifact.cases);
-    if (artifact.kind === 'investigation') { result.question = artifact.question; result.blocks = clone(artifact.blocks); }
+    if (artifact.kind === 'investigation') { result.question = artifact.question; result.blocks = clone(artifact.blocks); result.review = investigationReview(artifact.review, true); }
     if (artifact.ruleOrigin !== undefined) result.ruleOrigin = artifact.ruleOrigin;
     return safeJSON(result, 500000);
   }
@@ -275,9 +290,9 @@
     if (artifact.removedAt) throw new Error('作品已移除，请先从“已移除作品”恢复');
     return artifact;
   }
-  function assertLifecycleWritable(a) {
+  function assertLifecycleWritable(a, action = '移除或还原作品') {
     const status = (a.backend && a.backend.status) || a.world.status || 'active';
-    if (status !== 'active') throw new Error(status === 'paused' ? '练习已暂停，恢复后才能移除或还原作品' : '这次练习只读，不能移除或还原作品');
+    if (status !== 'active') throw new Error(status === 'paused' ? '练习已暂停，恢复后才能' + action : '这次练习只读，不能' + action);
   }
   function removeArtifact(a, id) {
     attempt(a); assertLifecycleWritable(a);
@@ -303,6 +318,7 @@
     if (typeof adopted !== 'boolean') throw new Error('采用状态无效');
     const stamp = now();
     if (input.kind !== undefined && !['text', 'test_set', 'investigation'].includes(input.kind)) throw new Error('不支持的作品类型');
+    if (own(input, 'review') && input.kind !== 'investigation') throw new Error('这份作品不能保存调查判断');
     const artifact = { id: uid('artifact'), taskId, title: str(input.title, '作品名称', 160), purpose: choice(input.purpose || (input.kind === 'test_set' ? '测试计划' : input.kind === 'investigation' ? '探索笔记' : '自由作品'), PURPOSES, '作品用途'), body: ['test_set', 'investigation'].includes(input.kind) ? '' : str(input.body === undefined ? '' : input.body, '作品正文', 50000, true), source: str(input.source === undefined ? 'user' : input.source, '作品来源', 100), adopted, adoptedAt: adopted ? stamp : null, revision: 1, createdAt: stamp, updatedAt: stamp, evidence: [] };
     if (input.kind === 'text') artifact.kind = 'text';
     if (input.kind === 'test_set') {
@@ -314,6 +330,9 @@
     }
     if (input.kind === 'investigation') {
       artifact.kind = 'investigation';
+      if (own(input, 'review') && artifact.source !== 'user') throw new Error('调查判断只能由用户记录');
+      if (own(input, 'review')) assertLifecycleWritable(a, '修改调查判断');
+      artifact.review = investigationReview(input.review, !own(input, 'review'));
       artifact.question = plainTestText(input.question, '调查问题', INVESTIGATION_LIMITS.question);
       artifact.blocks = investigationBlocks(input.blocks).map(block => ({ id: uid('block'), revision: 1, ...block }));
       assertInvestigationRefs(a, artifact.blocks, options && options.investigationScope);
@@ -333,6 +352,10 @@
     if (own(input, 'kind') && input.kind !== artifact.kind) throw new Error('不能通过保存改变作品类型');
     if (own(input, 'cases') && artifact.kind !== 'test_set') throw new Error('普通作品不能保存测试行');
     if ((own(input, 'question') || own(input, 'blocks')) && artifact.kind !== 'investigation') throw new Error('这份作品不能保存调查模块');
+    if (own(input, 'review')) {
+      if (artifact.kind !== 'investigation') throw new Error('这份作品不能保存调查判断');
+      assertLifecycleWritable(a, '修改调查判断');
+    }
     const next = {
       title: own(input, 'title') ? str(input.title, '作品名称', 160) : artifact.title,
       purpose: own(input, 'purpose') ? choice(input.purpose, PURPOSES, '作品用途') : artifact.purpose,
@@ -356,6 +379,7 @@
       next.body = testSetSummary(next);
     }
     if (artifact.kind === 'investigation') {
+      next.review = own(input, 'review') ? investigationReview(input.review) : investigationReview(artifact.review, true);
       next.question = own(input, 'question') ? plainTestText(input.question, '调查问题', INVESTIGATION_LIMITS.question, true) : artifact.question;
       const blocks = own(input, 'blocks') ? input.blocks : artifact.blocks;
       const content = investigationBlocks(blocks, true, true); const seen = new Set();
@@ -370,7 +394,7 @@
       });
       next.body = investigationSummary(next);
     }
-    if (next.title === artifact.title && next.purpose === artifact.purpose && next.body === artifact.body && (!next.cases || JSON.stringify(next.cases) === JSON.stringify(artifact.cases)) && (!next.blocks || (next.question === artifact.question && JSON.stringify(next.blocks) === JSON.stringify(artifact.blocks)))) return artifact;
+    if (next.title === artifact.title && next.purpose === artifact.purpose && next.body === artifact.body && (!next.cases || JSON.stringify(next.cases) === JSON.stringify(artifact.cases)) && (!next.blocks || (next.question === artifact.question && JSON.stringify(next.blocks) === JSON.stringify(artifact.blocks) && JSON.stringify(next.review) === JSON.stringify(artifact.review)))) return artifact;
     const previous = artifactSnapshot(artifact);
     const becameDecision = next.purpose !== artifact.purpose && intentOf(next.purpose) === 'commit';
     Object.assign(artifact, next);
@@ -728,6 +752,7 @@
       if (x.removedAt === undefined) x.removedAt = null;
       if (!Array.isArray(x.evidence)) x.evidence = [];
       if (typeof x.body !== 'string') x.body = '';
+      if (own(x, 'review') && x.kind !== 'investigation') throw new Error('这份作品不能保存调查判断');
       if (x.kind === 'test_set') {
         if (!Array.isArray(x.cases) || x.cases.length > TEST_SET_LIMITS.cases) throw new Error('测试作品存档无效');
         const ids = new Set();
@@ -740,6 +765,8 @@
         x.body = testSetSummary(x);
       }
       if (x.kind === 'investigation') {
+        x.review = investigationReview(x.review, true);
+        if (x.draft && own(x.draft, 'review')) x.draft.review = investigationReview(x.draft.review);
         x.question = plainTestText(x.question, '调查问题', INVESTIGATION_LIMITS.question, true);
         const content = investigationBlocks(x.blocks, true, true); const ids = new Set();
         x.blocks = x.blocks.map((block, index) => {
@@ -963,7 +990,7 @@
         const item = { artifactId: work.id, revision: work.revision, title: content.title, purpose: content.purpose, body: content.kind === 'test_set' ? testSetSummary(content) : content.kind === 'investigation' ? investigationSummary(content) : content.body };
         if (content.kind) item.kind = content.kind;
         if (content.kind === 'test_set') item.cases = clone(content.cases);
-        if (content.kind === 'investigation') { item.question = content.question; item.blocks = clone(content.blocks); }
+        if (content.kind === 'investigation') { item.question = content.question; item.blocks = clone(content.blocks); item.review = investigationReview(content.review, true); }
         if (work.draft) item.draft = clone(work.draft);
         return item;
       }),
@@ -982,6 +1009,9 @@
     for (const item of snapshot.artifacts || []) {
       const cur = a.artifacts.find(x => x.id === item.artifactId && !x.removedAt);
       const current = cur ? captureInputSnapshot(a, { artifacts: [cur] }).artifacts[0] : null;
+      // Adding an empty learner judgement to an older record is a migration,
+      // not a content change while the agent was working.
+      if (item.kind === 'investigation' && !own(item, 'review') && current?.review.focus === 'uncertain' && !current.review.note) delete current.review;
       if (JSON.stringify(current) !== JSON.stringify(item)) changes.push({ kind: 'artifact', artifactId: item.artifactId, revision: item.revision, currentRevision: cur ? cur.revision : null });
     }
     for (const ref of snapshot.materials || []) {
