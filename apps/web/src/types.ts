@@ -32,6 +32,17 @@ export interface TestRun {
   config_version: number; as_of_seq: number; stale: boolean;
   created_at?: string | null;
 }
+// Browser-owned provenance. These fields never enter the backend TestRequest.
+export interface TestRunOrigin {
+  taskId: string | null;
+  workId?: string; workRevision?: number; caseId?: string; caseRevision?: number;
+  investigationId?: string; investigationRevision?: number; blockId?: string; blockRevision?: number; baselineRunId?: string;
+  intent?: string; refs?: { id: string; version: number }[];
+}
+export interface LocalTestRun extends TestRunOrigin {
+  sessionId: string; requestId: string; query: string; expectation: string;
+  config: Pilot | null; createdAt: string;
+}
 export interface Deliverable {
   goal: string; owner: string; metrics: string; observation_window: string;
   exit_condition: string; rationale: string;
@@ -51,12 +62,14 @@ export interface Operation {
   path: string; body: Record<string, unknown>; kind: OperationKind;
   label: string; created: string; jobId?: string; job?: Job;
   localExpected?: string;
+  localRun?: LocalTestRun;
 }
 export interface LocalSession {
   id: string; token: string; scenario: Scenario; created: string;
   world: World; materials: Material[]; timeline: Timeline;
   draft: Deliverable; configDraft?: Pilot; tests: TestRun[];
   testNotes: Record<string, { expected: string; diagnosis: string }>;
+  testRunMeta?: Record<string, LocalTestRun>;
   inputs: { question: string; expected: string; messages: Partial<Record<RoleId, string>>; capacityReason: string; resourceReason: string };
   questions: Record<string, string>;
   artifact?: Artifact; submission?: Submission; feedback?: Feedback;

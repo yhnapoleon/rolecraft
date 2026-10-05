@@ -8,6 +8,10 @@ import * as Coach from './coach.js';
 import { PRI, STATUS, ROLE_TITLE, KNOWS, OPENER, CASE, SEED_KEYS, situationTask, taskTitle, taskNote, seedText, purposeLabel, purposeFromLabel, INTENT_HINT, UPDATE, FALLBACK, DOMAIN, WORK_ITEM, WORK_COST, materialTitle, criterionName, LABEL, FIELDS, FIELD, FIELD_HINT, errText } from './vocab.js';
 import { pendingTurnRole, serverText } from '../store';
 import { eventLine, isFeedEvent } from './events.js';
+import { testSetView, testSetPreview, caseState, testRunView } from './test-set-view.js';
+import './test-set.css';
+import { investigationView, investigationPreview, investigationSourceKey } from './investigation-view.js';
+import './investigation.css';
 
 const L = window.PracticeLive;
 const E = L.engine;
@@ -43,7 +47,9 @@ const ui = {
   rail: 'team', railTab: 'team', chatRole: null, railOpen: false, menu: null, scopeAll: false, advice: null, benchAll: false, reviewFor: null, notesCache: [],
   intake: { text: '', result: null, open: false }, busy: false, lastRun: null,
   importText: '', exportScope: { artifacts: true, materials: true, tests: true },
-  labPrefill: '', compare: false, previous: {}, arriving: false, landing: false, editPending: null,
+  labPrefill: '', compare: false, previous: {}, arriving: false, landing: false, editPending: null, previewWorkId: null,
+  investigationSources: {}, investigationErrors: {},
+  testOpen: {}, testHistory: {}, testModes: {}, testErrors: {}, configFromTestSet: false,
   synced: false, lastError: '', pendingRequestId: null, lastUndo: null, pendingCite: null
 };
 let dirty = null; let saveTimer = null; let toastTimer = null; let sheetReturn = null; let dragId = null;
@@ -54,10 +60,10 @@ const current = () => E.getAttempt(state);
 const sessionOf = a => (a ? L.session(a) : null);
 const snap = () => L.store.getSnapshot();
 const task = () => { const a = current(); return a && ui.route === 'task' ? a.tasks.find(t => t.id === ui.routeId) || null : null; };
-const artifact = () => { const a = current(); return a ? a.artifacts.find(x => x.id === ui.artifactId) || null : null; };
+const artifact = () => { const a = current(); return a ? a.artifacts.find(x => x.id === ui.artifactId && !x.removedAt) || null : null; };
 const works = a => E.currentArtifacts(a);
 const isEarlier = (a, x) => x.adopted && !works(a).some(y => y.id === x.id);
-const taskWorks = (a, id) => a.artifacts.filter(x => x.taskId === id && !isEarlier(a, x));
+const taskWorks = (a, id) => a.artifacts.filter(x => x.taskId === id && !x.removedAt && !isEarlier(a, x));
 const shown = x => (x.draft ? Object.assign({}, x, x.draft) : x);
 // What a piece of work is for: flask = a test plan, branch = options, stamp = the decision you will submit.
 const purposeGlyph = intent => ({ plan: 'flask', option: 'branch', commit: 'stamp' }[intent] ? icon({ plan: 'flask', option: 'branch', commit: 'stamp' }[intent], 'i-xs purpose-i') : '');
@@ -135,7 +141,7 @@ function flush() {
   clearTimeout(saveTimer);
   if (!dirty) return false;
   const a = state.attempts.find(x => x.id === dirty.attemptId); const x = a && a.artifacts.find(y => y.id === dirty.id);
-  if (x) x.draft = { title: dirty.title || T('未命名', 'Untitled'), purpose: dirty.purpose, body: dirty.body };
+  if (x) x.draft = { title: dirty.title || T('未命名', 'Untitled'), purpose: dirty.purpose, body: dirty.body, ...(dirty.cases ? { kind: 'test_set', cases: dirty.cases } : {}), ...(dirty.blocks ? {kind:'investigation',question:dirty.question,blocks:dirty.blocks} : {}) };
   dirty = null; persist();
   return !!x;
 }
@@ -143,7 +149,7 @@ function commit() {
   flush();
   let changed = false;
   state.attempts.forEach(a => a.artifacts.forEach(x => {
-    if (!x.draft) return;
+    if (!x.draft || x.removedAt) return;
     const d = x.draft; delete x.draft;
     try { const before = x.revision; E.saveArtifact(a, x.id, d); changed = changed || x.revision !== before; } catch (err) { x.draft = d; notify(errText(err)); }
   }));
@@ -219,6 +225,7 @@ function afterRender() {
   document.querySelectorAll('.thread').forEach(t => { t.scrollTop = t.scrollHeight; });
   updateSave(); syncPanels(); markRead();
   const a = current();
+  const activeWork = a && ui.obj?.type === 'work' ? artifact() : null; if(activeWork?.kind === 'investigation') loadInvestigationSources(a, shown(activeWork));
   document.title = (WS.includes(ui.route) || ui.route === 'review') && a ? CASE(a.scenarioId).title + ' · Practice' : T('Practice · 在真实的工作里练习', 'Practice · Learn on real work');
   const skip = document.querySelector('.skip-link'); if (skip) skip.textContent = T('跳到主要内容', 'Skip to content');
 }
@@ -620,7 +627,7 @@ function defaultObj(a, t) {
 }
 function taskView(a, t) {
   if (!ui.obj || ui.obj.task !== t.id) ui.obj = defaultObj(a, t);
-  if (ui.obj.type === 'work' && !a.artifacts.some(x => x.id === ui.obj.id && x.taskId === t.id)) ui.obj = defaultObj(a, t);
+  if (ui.obj.type === 'work' && !a.artifacts.some(x => x.id === ui.obj.id && x.taskId === t.id && !x.removedAt)) ui.obj = defaultObj(a, t);
   return `<div class="task-ws">
     <header class="task-head" style="view-transition-name: t-${vtName(t.id)}">
       <div class="th-row">${priPick(t.id, t.priority, taskTitle(t))}<h2 class="th-title">${esc(taskTitle(t))}</h2><span class="spacer"></span>
@@ -634,11 +641,13 @@ function taskView(a, t) {
   </div>`;
 }
 function outline(a, t) {
+  const removed = a.artifacts.filter(x => x.taskId === t.id && x.removedAt);
   const list = taskWorks(a, t.id); const docs = relatedDocs(a, t); const tests = a.tests.filter(r => r.taskId === t.id).slice().reverse();
   const on = (type, id) => ui.obj && ui.obj.type === type && (ui.obj.id || '') === (id || '');
   const head = (label, action, attrs, aria) => `<p class="ol-head"><span>${label}</span><button type="button" class="ol-add" data-action="${action}" ${attrs} aria-label="${esc(aria)}" title="${esc(aria)}">${icon('plus', 'i-xs')}</button></p>`;
   return `<div class="ol-sec">${head(T('作品', 'Work'), 'new-artifact', '', T('新作品', 'New piece of work'))}
       ${list.map(w => { const v = shown(w); return `<button type="button" class="ol-row ${on('work', w.id) ? 'on' : ''}" data-action="obj" data-type="work" data-id="${w.id}" ${on('work', w.id) ? 'aria-current="true"' : ''}>${w.source !== 'user' ? agentMark('xs') : icon('note', 'i-sm')}<span class="grow"><span class="ol-title">${esc(v.title)}</span><span class="ol-meta">${esc(purposeLabel(v.purpose))} · v${w.revision}${w.source !== 'user' && !w.adopted ? ' · ' + T('待检查', 'to check') : ''}</span></span></button>`; }).join('') || `<button type="button" class="ol-row ghost ${on('start') ? 'on' : ''}" data-action="obj" data-type="start">${icon('plus', 'i-sm')}<span class="grow">${T('开始写', 'Start writing')}</span></button>`}
+      ${removed.length ? `<button type="button" class="work-recycle-link" data-action="removed-works">${icon('history','i-xs')}${T('已移除作品（' + removed.length + '）', 'Removed work (' + removed.length + ')')}</button>` : ''}
     </div>
     <div class="ol-sec">${head(T('资料', 'Documents'), 'pick-doc', '', T('打开一份资料', 'Open a document'))}
       ${docs.map(m => `<button type="button" class="ol-row ${on('doc', m.id) ? 'on' : ''}" data-action="obj" data-type="doc" data-id="${esc(m.id)}">${icon('doc', 'i-sm')}<span class="grow"><span class="ol-title">${esc(materialTitle(m))}</span><span class="ol-meta">v${m.version}</span></span></button>`).join('') || `<p class="ol-empty">${T('打开或引用过的资料会列在这里', 'Documents you open or cite here appear in this list')}</p>`}
@@ -651,7 +660,7 @@ function objectView(a, t) {
   const o = ui.obj;
   if (o.type === 'doc') return docBody(a, o.id, true);
   if (o.type === 'bench') return bench(a, t);
-  if (o.type === 'work') { const x = a.artifacts.find(y => y.id === o.id); if (x) { ui.artifactId = x.id; return workView(a, t, x); } }
+  if (o.type === 'work') { const x = a.artifacts.find(y => y.id === o.id && !y.removedAt); if (x) { ui.artifactId = x.id; return workView(a, t, x); } }
   return startView(a, t);
 }
 // No tiles to click through: the page is already a sheet you can write on.
@@ -676,21 +685,64 @@ function startView(a, t) {
     </div>
   </div>`;
 }
+function canEditWork(a, x) {
+  return !!x && !x.removedAt && statusOf(a) === 'active' && !storageIssue && !snap().storageError;
+}
+function workControls(a, x, editable, structured = false) {
+  const mutable = canEditWork(a, x);
+  const pending = sessionOf(a)?.pending?.localRun?.workId === x.id || sessionOf(a)?.pending?.localRun?.investigationId === x.id;
+  const control = (glyph, label, action, tip, attrs = '') => {
+    const tipId = 'tip-' + action + '-' + x.id;
+    return `<span class="icon-control"><button type="button" class="btn icon quiet work-icon" data-action="${action}" data-id="${x.id}" aria-label="${esc(label)}" aria-describedby="${tipId}" ${attrs}>${icon(glyph)}</button><span class="action-tooltip" id="${tipId}" role="tooltip">${esc(tip)}</span></span>`;
+  };
+  return `<div class="work-controls work-controls-icons" role="group" aria-label="${esc(T('作品操作','Work actions'))}">
+    ${!structured ? control(editable?'eye':'edit',editable?T('预览作品','Preview work'):T('编辑作品','Edit work'),editable?'work-preview':'work-edit',editable?T('预览','Preview'):T('编辑','Edit'),`${!editable&&!mutable?'disabled':''} data-work-mode`) : ''}
+    ${control('save',T('保存修改','Save changes'),'save-work',T('保存','Save'),mutable&&editable?'':'disabled')}
+    <span class="work-control-divider" aria-hidden="true"></span>
+    ${control('trash',T('删除作品','Remove work'),'remove-work',pending?T('先恢复未确认的运行','Resolve the pending run first'):T('删除','Remove'),mutable&&!pending?'':'disabled')}
+  </div>`;
+}
+function requireWorkMutation(a, x) {
+  if (!canEditWork(a, x)) throw new Error(T('这份作品当前只读，或本地存储不可用。', 'This work is read-only or local storage is unavailable.'));
+}
+function localWorkChange(a, change) {
+  const backup = structuredClone(a);
+  change();
+  if (!persist()) {
+    for (const key of Object.keys(a)) delete a[key]; Object.assign(a, backup);
+    throw new Error(T('未能保存，作品保留原状。', 'Could not save. The work was kept unchanged.'));
+  }
+}
+function removedWorksSheet(scopeTaskId = task()?.id || null) {
+  const a = current(); if (!a) return;
+  const removed = a.artifacts.filter(w=>w.removedAt && (!scopeTaskId || w.taskId === scopeTaskId));
+  openSheet(T('已移除作品','Removed work'), `<p class="meta">${T('这里只保留工作台里的副本，电脑上的原文件没有改变。', 'These are workspace copies. Original files on your computer are unchanged.')}</p><div class="removed-work-list">${removed.map(w=>`<div class="removed-work-row"><div class="grow"><h3>${esc(shown(w).title)}</h3><p class="meta">${esc(purposeLabel(w.purpose))} · v${w.revision} · ${esc(when(w.removedAt))}</p></div>${btn(T('恢复','Restore'),'restore-work','small',`data-id="${w.id}" ${statusOf(a)==='active'&&!storageIssue&&!snap().storageError?'':'disabled'}`)}</div>`).join('') || `<p class="empty-line">${T('没有已移除的作品。','No removed work.')}</p>`}</div>`, btn(T('关闭','Close'),'close','quiet'), 'narrow');
+}
+function restoreWork(a, id) {
+  const x = a.artifacts.find(w=>w.id===id);
+  if (!x || statusOf(a) !== 'active' || storageIssue || snap().storageError) throw new Error(T('当前无法恢复作品。','Work cannot be restored right now.'));
+  localWorkChange(a, ()=>E.restoreArtifact(a,id));
+  closeSheet(true); openTask(x.taskId, {type:'work', id});
+  notify(T('已恢复《' + shown(x).title + '》', 'Restored “' + shown(x).title + '”'));
+}
 function workView(a, t, x) {
+  if (x.kind === 'test_set') return structuredWorkView(a, t, x);
+  if (x.kind === 'investigation') return structuredInvestigationView(a, t, x);
   const list = taskWorks(a, t.id);
   const view = shown(x); const intent = E.intentOf(view.purpose); const prog = E.agentProgress(a, x);
-  const editable = x.adopted || ui.editPending === x.id;
+  const editable = canEditWork(a, x) && ui.previewWorkId !== x.id;
   const notes = (ui.notesCache || []).filter(n => n.targetId === x.id || (!n.targetId && n.taskId === t.id));
   return `<div class="obj-pad ${notes.length ? 'with-margin' : ''}">
     <div class="work-grid">
       <article class="paper editor intent-${intent}">
         ${prog ? agentStrip(a, x, prog) : ''}
+        ${workControls(a, x, editable)}
         <label class="sr-only" for="editor-title">${T('标题', 'Title')}</label>
         <input id="editor-title" class="editor-title" data-edit="title" maxlength="160" value="${esc(view.title)}" ${editable ? '' : 'readonly'}>
         <div class="editor-meta">
           <label class="purpose" title="${esc(INTENT_HINT(intent))}"><span class="sr-only">${T('用途', 'Purpose')}</span>${purposeGlyph(intent)}<select data-edit="purpose" ${editable ? '' : 'disabled'}>${E.PURPOSES.map(p => `<option value="${p}" ${p === view.purpose ? 'selected' : ''}>${esc(purposeLabel(p))}</option>`).join('')}</select>${icon('down', 'i-xs')}</label>
           <span data-revision>v${x.revision}</span>
-          <span>${x.source === 'user' ? T('你写的', 'By you') : T('来自你的 Agent', 'From your agent')}</span>
+          <span>${x.source === 'user' ? T('你写的', 'By you') : (x.requestId ? T('来自你的 Agent', 'From your agent') : T('导入的作品', 'Imported work'))}</span>
           <span class="save" data-save title="${esc(T('作品保存在本机；交付时可合并进交付稿', 'Work stays on this device; fold it into your deliverable when you submit'))}"></span>
         </div>
         ${editable ? `<label class="sr-only" for="editor-body">${T('正文', 'Body')}</label><textarea id="editor-body" class="editor-body" data-edit="body" maxlength="50000" spellcheck="false" placeholder="${esc(T('写判断、问题，或直接起草方案。## 写小标题，- 写列表。', 'Write a judgement, questions or a draft plan. ## for headings, - for lists.'))}">${esc(view.body)}</textarea>` : `<div class="prose">${md(view.body)}</div>`}
@@ -709,6 +761,102 @@ function workView(a, t, x) {
     ${list.length > 1 ? '' : ''}
   </div>`;
 }
+function structuredWorkView(a, t, x) {
+  const view = shown(x); const prog = E.agentProgress(a, x);
+  const editable = (x.adopted || ui.editPending === x.id) && statusOf(a) === 'active' && !storageIssue;
+  const evidence = x.evidence.length ? `<div class="evidence-row test-set-evidence"><span class="meta">${T('这份计划的依据', 'Evidence for this plan')}</span>${x.evidence.map(ev => `<button type="button" class="chip" data-action="view-evidence" data-id="${esc(ev.id)}" data-version="${esc(ev.version ?? '')}">${icon(ev.type === 'test' ? 'flask' : 'doc', 'i-xs')}<span>${esc(evTitle(ev))}</span></button>`).join('')}</div>` : '';
+  return testSetView({ work: view, attempt: a, session: sessionOf(a), busy: ui.busy || snap().busy, canRun: canWrite(a) && !storageIssue && !!a.backend.configured, editable, opened: ui.testOpen[x.id], selectedRuns: ui.testHistory, modes: ui.testModes, errors: ui.testErrors, md, strip: (prog ? agentStrip(a, x, prog) : '') + workControls(a, x, editable, true), evidence });
+}
+function structuredInvestigationView(a, t, x) {
+  const mutable=canEditWork(a,x) && (x.adopted || ui.editPending === x.id);
+  const prog=E.agentProgress(a,x);
+  return investigationView({work:shown(x),attempt:a,session:sessionOf(a),mutable,readOnly:!canEditWork(a,x),canRun:canWrite(a)&&!storageIssue&&!!a.backend.configured,busy:ui.busy||snap().busy,cache:ui.investigationSources,errors:ui.investigationErrors,controls:workControls(a,x,mutable,true),strip:prog?agentStrip(a,x,prog):'',md});
+}
+async function loadInvestigationSources(a, work, onlyBlockId) {
+  for(const block of work.blocks.filter(b=>b.type==='source_check'&&(!onlyBlockId||b.id===onlyBlockId))) {
+    const key=investigationSourceKey(a.id,block);
+    if(ui.investigationSources[key]) continue;
+    ui.investigationSources[key]={loading:true};
+    Promise.allSettled([L.citationSource(a,block.testId,block.material.id),L.materialVersion(a,block.material.id,block.material.version)]).then(results=>{
+      const citation=results[0].status==='fulfilled'?results[0].value:null;
+      const selected=results[1].status==='fulfilled'?results[1].value:null;
+      const failed=results.find(r=>r.status==='rejected');
+      ui.investigationSources[key]={loading:false,citation,selected,error:failed?T('暂未取得全部证据，可以重新读取。','Some evidence is unavailable. You can try loading it again.'):''};
+      if(current()?.id===a.id&&ui.obj?.id===work.id) refreshWS(['stage']);
+    });
+  }
+}
+function openInvestigation(runId) {
+  commit(); const a=current(), run=a?.tests.find(r=>r.id===runId);
+  if(!run) throw new Error(T('这条实际测试记录暂不可用。','That actual test is unavailable.'));
+  if(statusOf(a)!=='active'||storageIssue) throw new Error(T('当前只读，不能新建调查。','This practice is read-only; a new investigation cannot be created.'));
+  const ref=run.citations.find(c=>c.id==='policy') || run.citations[0];
+  const material=ref && E.getMaterials(a).find(m=>m.id===ref.id);
+  const seed=[run.id,material?.version||0,a.configVersion].join('|');
+  let work=a.artifacts.find(w=>!w.removedAt&&w.kind==='investigation'&&w.ruleOrigin==='feedback'&&w.investigationSeed===seed);
+  if(!work) {
+    const blocks=[{type:'note',title:T('先核对实际依据','Start with the actual evidence'),text:T('先看这次回答实际引用的版本，再对照当前资料。是否调整设置或重测，由你决定。','Check the version this answer actually cited, then compare it with the current source. You decide whether to change settings or rerun.')}];
+    if(material) blocks.push({type:'source_check',testId:run.id,material:{id:material.id,version:material.version}});
+    const other=a.tests.filter(r=>r.question===run.question&&r.id!==run.id).at(-1);
+    if(other || !material) blocks.push({type:'test_compare',testIds:other?[run.id,other.id]:[run.id]});
+    blocks.push({type:'retest',testId:run.id});
+    localWorkChange(a,()=>{work=E.createArtifact(a,{kind:'investigation',taskId:run.taskId||task()?.id||a.tasks[0].id,title:T('核对回答与资料','Check the answer against its sources'),question:T('这次回答用了哪版资料？当前条件下会怎样回答？','Which source version did this answer use, and what happens under the current settings?'),blocks,source:'user',adopted:true,ruleOrigin:'feedback'});work.investigationSeed=seed;});
+  }
+  openTask(work.taskId,{type:'work',id:work.id});
+}
+async function runInvestigationBlock(blockId) {
+  if(ui.busy) return; commit(); const a=current(), work=artifact(), block=work?.blocks?.find(b=>b.id===blockId), baseline=block&&a.tests.find(r=>r.id===block.testId);
+  if(!a||!work||!baseline||block.type!=='retest') return;
+  if(work.draft||storageIssue||!persist()) throw new Error(T('先保存这份调查，再运行。','Save this investigation before running it.'));
+  ui.busy=true; delete ui.investigationErrors[blockId]; refreshWS(['stage']);
+  try { await L.test(a,{question:baseline.question,expectation:baseline.expectation||'',taskId:work.taskId,investigationId:work.id,investigationRevision:work.revision,blockId:block.id,blockRevision:block.revision,baselineRunId:baseline.id}); if(!persist()) throw new Error(T('结果已返回，本地视图尚未保存。','The result returned, but the local view has not been saved.')); announce(T('重测结果已返回，原始记录仍保留。','The rerun is back. The original record is kept.')); }
+  catch(err) {ui.investigationErrors[blockId]=errText(err);}
+  finally {ui.busy=false;refreshWS(['stage','rail']);}
+}
+
+// Save a field without replacing the node receiving the next pointer/Tab action.
+function updateTestChrome() {
+  const a = current(), x = artifact(); if (!a || !x || x.kind !== 'test_set') return;
+  const session = sessionOf(a); let completed = 0;
+  x.cases.forEach((c, i) => {
+    const status = caseState(x, c, a, session?.pending, ui.busy || snap().busy);
+    if (status.current) completed++;
+    const row = document.querySelector(`[data-case-row="${CSS.escape(c.id)}"]`); if (!row) return;
+    const question = row.querySelector('.test-case-question'), intent = row.querySelector('.test-case-intent'), badge = row.querySelector('.test-state');
+    if (question) question.textContent = c.question || T('写一个测试问题','Write a test question');
+    if (intent) intent.textContent = c.intent || T('这个问题想验证什么？','What should this question verify?');
+    if (badge) { badge.textContent = status.label; badge.classList.toggle('attention', !!status.tone); }
+    const version = row.querySelector('.test-case-foot > span'); if (version) version.textContent = 'v' + c.revision + ' · ' + T('每次重测另存结果','Every rerun keeps a new result');
+    const runButton = row.querySelector('[data-action="test-run"]'); if (runButton) runButton.disabled = !x.adopted || !canWrite(a) || !!storageIssue || !a.backend.configured || !c.question.trim() || !!status.waiting;
+    const run = status.runs.find(r=>r.id===ui.testHistory[c.id]) || status.runs[0];
+    const result = row.querySelector('.test-result');
+    if (result && run && !result.contains(document.activeElement)) result.outerHTML = testRunView({run,runs:status.runs,item:c,work:x,session,md});
+    document.querySelectorAll('.test-progress > span')[i]?.classList.toggle('recorded', !!status.current);
+  });
+  const count = document.querySelector('.test-count-results'); if (count) count.textContent = T(completed + ' / ' + x.cases.length + ' 问题有结果', completed + ' / ' + x.cases.length + ' questions have results');
+  const label = document.querySelector(`.ol-row[data-id="${CSS.escape(x.id)}"] .ol-meta`); if (label) label.textContent = purposeLabel(x.purpose) + ' · v' + x.revision;
+  updateSave();
+}
+function animateTestReveal(id) {
+  if (reduceMotion.matches || ui.kbd) return;
+  document.getElementById('case-panel-' + id)?.animate([{ opacity: 0, transform: 'translateY(-4px)' }, { opacity: 1, transform: 'none' }], { duration: 180, easing: 'cubic-bezier(.32,.72,0,1)' });
+}
+async function runTestCase(id) {
+  if (ui.busy) return;
+  commit(); const a = current(), x = artifact();
+  if (!a || !x || x.kind !== 'test_set') return;
+  if (x.draft || storageIssue || !persist()) throw new Error(T('先保存这份计划，再运行测试。', 'Save this plan before running a test.'));
+  const c = x.cases.find(c => c.id === id); if (!c) return;
+  ui.testOpen[x.id] = id; delete ui.testErrors[id]; ui.busy = true; refreshWS(['stage']);
+  try {
+    const r = await L.test(a, { question: c.question, expectation: c.expectation || '', intent: c.intent, refs: c.refs || [], taskId: x.taskId, workId: x.id, workRevision: x.revision, caseId: c.id, caseRevision: c.revision });
+    ui.lastRun = r.id; ui.testHistory[id] = r.id; ui.testModes[id] = 'result'; startWorking(a, task());
+    if (!persist()) throw new Error(T('测试已有结果，本地显示未保存。保留当前页面后重试保存。', 'The test returned a result, but the local view was not saved. Keep this page open and retry saving.'));
+    announce(T('这条问题已有回答，请检查结果。', 'This question has an answer. Review the result.'));
+  } catch (err) { ui.testErrors[id] = errText(err); }
+  finally { ui.busy = false; refreshWS(['stage','rail']); animateTestReveal(id); }
+}
+
 const KIND = k => ({ remind: T('提醒', 'Reminder'), object: T('异议', 'Objection'), correct: T('纠正', 'Correction'), help: T('帮忙', 'Offer') })[k] || '';
 function marginNote(n) {
   return `<div class="note ${n.kind} who-${n.role}" data-note="${esc(n.key)}">
@@ -719,8 +867,9 @@ function marginNote(n) {
 }
 const evTitle = ev => (ev.type === 'test' ? String(ev.title || '').replace(/^测试：/, '') : materialTitle({ id: ev.id, title: ev.title }));
 function agentStrip(a, x, prog) {
+  if (!['test_set','investigation'].includes(x.kind) && !x.requestId) return `<div class="import-work-status">${icon('doc','i-sm')}<div class="grow"><b>${x.adopted ? T('已采用','Adopted') : T('待检查','To check')}</b><span>${T('这是导入副本，修改不会影响原文件。','This is an imported copy. Edits leave the original file unchanged.')}</span></div>${!x.adopted && canEditWork(a,x) ? btn(T('采用为当前作品','Adopt this work'),'adopt','small primary',`data-id="${x.id}"`) : ''}</div>`;
   const steps = [['exported', T('已交出', 'Handed over')], ['returned', T('已带回', 'Returned')], ['adopted', T('已采用', 'Adopted')], ['linked', prog.linkedRuns ? T('关联测试 ' + prog.linkedRuns + ' 次', prog.linkedRuns + ' linked test' + (prog.linkedRuns > 1 ? 's' : '')) : T('未关联测试', 'No linked test')]];
-  return `<div class="agent-strip">${agentMark('xs')}<ol>${steps.map(([k, l]) => `<li class="${prog[k] ? 'done' : ''}">${l}</li>`).join('')}</ol>${!x.adopted ? `<span class="spacer"></span>${ui.editPending === x.id ? '' : btn(T('编辑', 'Edit'), 'edit-pending', 'small quiet', `data-id="${x.id}"`)}${btn(T('采用', 'Adopt'), 'adopt', 'small primary', `data-id="${x.id}"`)}` : ''}</div>${(x.staleInputs || []).length ? `<p class="warn-line">${icon('stale', 'i-sm')}${T('它基于你较早的版本，采用前先对照。', 'It was based on an earlier version of your work. Compare before adopting.')}</p>` : ''}`;
+  return `<div class="agent-strip">${agentMark('xs')}<ol>${steps.map(([k, l]) => `<li class="${prog[k] ? 'done' : ''}">${l}</li>`).join('')}</ol>${!x.adopted && canEditWork(a,x) ? `<span class="spacer"></span>${ui.editPending === x.id ? '' : btn(T('编辑', 'Edit'), 'edit-pending', 'small quiet', `data-id="${x.id}"`)}${btn(T('采用', 'Adopt'), 'adopt', 'small primary', `data-id="${x.id}"`)}` : ''}</div>${(x.staleInputs || []).length ? `<p class="warn-line">${icon('stale', 'i-sm')}${T('它基于你较早的版本，采用前先对照。', 'It was based on an earlier version of your work. Compare before adopting.')}</p>` : ''}`;
 }
 function docBody(a, id, inTask) {
   const list = E.getMaterials(a);
@@ -776,14 +925,14 @@ function runGroup(a, runs) {
       <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
       <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T('政策源 v' + x.policyVersion + ' · 索引 v' + x.indexVersion, 'Policy v' + x.policyVersion + ' · index v' + x.indexVersion)}</span>${x.citations.map(c => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div></div>`).join('')}</div>
     ${old(r) ? `<p class="flag">${icon('warn', 'i-sm')}${T('这次回答引用的版本已经不是最新。', 'This answer cites a version that is no longer current.')}</p>` : ''}
-    <div class="run-actions">${btn(icon('refresh', 'i-xs') + T('同题重测', 'Run again'), 'rerun', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('quote', 'i-xs') + T('作为依据', 'Use as evidence'), 'cite-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(avatar('technical', 'xs') + T('问 Daniel', 'Ask Daniel'), 'discuss-run', 'small quiet', `data-id="${esc(r.id)}"`)}</div>
+    <div class="run-actions">${btn(icon('layers','i-xs')+T('核对依据','Inspect evidence'),'investigate-run','small quiet',`data-id="${esc(r.id)}"`)}${btn(icon('refresh', 'i-xs') + T('同题重测', 'Run again'), 'rerun', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('quote', 'i-xs') + T('作为依据', 'Use as evidence'), 'cite-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(avatar('technical', 'xs') + T('问 Daniel', 'Ask Daniel'), 'discuss-run', 'small quiet', `data-id="${esc(r.id)}"`)}</div>
   </article>`;
 }
 
 /* the rail: talk, feedback, my agent, activity */
 function wsRail(a) {
   const tabs = [['team', T('讨论', 'Talk')], ['feedback', T('反馈', 'Feedback')], ['agent', 'Agent'], ['activity', T('动态', 'Activity')]];
-  const badge = { team: ROLES.reduce((n, r) => n + unread(a, r), 0) + (ui.notesCache || []).length, agent: a.artifacts.filter(x => x.source !== 'user' && !x.adopted).length };
+  const badge = { team: ROLES.reduce((n, r) => n + unread(a, r), 0) + (ui.notesCache || []).length, agent: a.artifacts.filter(x => !x.removedAt && x.source !== 'user' && !x.adopted).length };
   const t = routeTask(a);
   const scope = t && ['feedback', 'activity'].includes(ui.railTab) ? `<div class="scope"><div class="segmented" role="group" aria-label="${esc(T('范围', 'Scope'))}"><span class="thumb"></span><button type="button" aria-pressed="${!ui.scopeAll}" data-action="scope" data-all="0">${T('这件事', 'This task')}</button><button type="button" aria-pressed="${!!ui.scopeAll}" data-action="scope" data-all="1">${T('整件工作', 'Whole job')}</button></div></div>` : '';
   const body = ui.railTab === 'feedback' ? railFeedback(a, t) : ui.railTab === 'agent' ? railAgent(a, t) : ui.railTab === 'activity' ? railActivity(a, t) : ui.rail === 'chat' && ui.chatRole ? railChat(a, ui.chatRole) : railTeam(a, t);
@@ -805,7 +954,7 @@ function railTeam(a, t) {
   </div>`;
 }
 function agentLine(a) {
-  const exp = (a.exports || []).length; const back = a.artifacts.filter(x => x.source !== 'user').length;
+  const exp = (a.exports || []).length; const back = a.artifacts.filter(x => !x.removedAt && x.source !== 'user').length;
   if (!exp && !back) return T('还没交出任务', 'Nothing handed over yet');
   return T(`交出 ${exp} 次，带回 ${back} 份`, `${exp} handed over, ${back} returned`);
 }
@@ -834,7 +983,7 @@ function msgHtml(a, role, m) {
 function railFeedback(a, t) {
   const scoped = t && !ui.scopeAll;
   const items = Coach.observations(a, E, scoped ? t.id : null);
-  const x = t && ui.obj && ui.obj.type === 'work' ? a.artifacts.find(y => y.id === ui.obj.id) : null;
+  const x = t && ui.obj && ui.obj.type === 'work' ? a.artifacts.find(y => y.id === ui.obj.id && !y.removedAt) : null;
   const review = ui.reviewFor && x && ui.reviewFor === x.id ? Coach.checks(a, E, Object.assign({}, shown(x), { revision: x.revision })) : null;
   return `<div class="rail-pad fb-pad">
     ${x ? `<div class="fb-req"><div class="grow"><p class="fb-req-title">${esc(shown(x).title)}</p><p class="meta">${esc(purposeLabel(shown(x).purpose))} · v${x.revision}</p></div>${btn(icon('eye', 'i-sm') + T('请求评审', 'Request a review'), 'request-review', 'small')}</div>` : ''}
@@ -844,6 +993,7 @@ function railFeedback(a, t) {
   </div>`;
 }
 function fbItem(a, i, full = false) {
+  const candidate=(i.refs||[]).find(r=>r.type==='test')?.id || (i.actions||[]).find(x=>x.act==='rerun')?.id; const investigationRun=candidate&&a.tests.some(r=>r.id===candidate)?candidate:null;
   const tone = i.kind === 'contribution' ? 'star' : i.kind === 'order' ? 'branch' : { good: 'good', check: 'warn', unknown: 'question' }[i.tone];
   const key = (i.kind || i.tone) + '|' + i.title; const disputes = (a.disputes || []).filter(d => d.key === key);
   const task = i.taskId && a.tasks.find(t => t.id === i.taskId);
@@ -853,6 +1003,7 @@ function fbItem(a, i, full = false) {
     ${i.basis ? `<p><span class="fb-label-k">${T('当时可知', 'Knowable then')}</span>${esc(i.basis)}</p>` : ''}
     <p><span class="fb-label-k">${T('为什么重要', 'Why it matters')}</span>${esc(i.why)}</p>
     ${i.actions.length ? `<div class="fb-actions">${i.actions.map(x => `<button type="button" class="link" data-action="fb-act" data-act="${x.act}" data-id="${esc(x.id || '')}" data-role="${x.role || ''}" data-task="${i.taskId || ''}">${esc(x.label)}</button>`).join('')}</div>` : ''}
+    ${investigationRun ? `<div class="fb-actions"><button type="button" class="link" data-action="investigate-run" data-id="${esc(investigationRun)}">${icon('layers','i-xs')}${T('一起看证据','Inspect the evidence')}</button></div>`:''}
     ${full && task ? `<button type="button" class="fb-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : ''}
     <div class="fb-dispute">${ui.disputeOpen === key ? `<form class="dispute" data-form="dispute" data-key="${esc(key)}"><label class="sr-only" for="dispute-text">${T('你的不同看法', 'Your view')}</label><textarea id="dispute-text" class="textarea" name="text" rows="2" required maxlength="2000" placeholder="${esc(T('哪里不对？', 'What is wrong with it?'))}"></textarea><div class="row-actions"><button type="submit" class="btn small primary">${T('记下', 'Save')}</button>${btn(T('取消', 'Cancel'), 'dispute', 'small quiet', `data-key="${esc(key)}"`)}</div></form>` : `<button type="button" class="link quiet" data-action="dispute" data-key="${esc(key)}">${T('我有不同看法', 'I see it differently')}</button>`}${disputes.map(d => `<p class="dispute-note">${icon('bubble', 'i-xs')}<span${zhAttr(d.text)}>${esc(d.text)}</span></p>`).join('')}</div>
   </div></li>`;
@@ -869,7 +1020,7 @@ function railAgent(a, t) {
         <div class="way"><span class="way-dot off"></span><span class="grow">${T('MCP 直连', 'Direct MCP connection')}</span><span class="way-state">${T('后端未提供', 'Not on the server yet')}</span></div>
       </div>
     </section>
-    <section class="agent-step"><h3><span class="step-n">1</span>${T('交出去', 'Hand over')}</h3>
+    <section class="agent-step"><h3><span class="step-n">1</span>${T('交出去', 'Hand over')}</h3><p class="agent-test-hint">${T('把任务包交给 Codex 等外部 Agent。需要测试时，它可以带回测试计划，也可以选择并组合证据模块，形成调查视图。', 'Give the package to your external agent, such as Codex. It can return a runnable test plan or compose an investigation from evidence modules.')}</p>
       <div class="checks">
         <label class="check"><input type="checkbox" checked disabled><span>${t ? esc(T('这件事：' + taskTitle(t), 'This task: ' + taskTitle(t))) : T('整件工作', 'The whole job')}</span></label>
         <label class="check"><input type="checkbox" data-scope="artifacts" ${sc.artifacts ? 'checked' : ''}><span>${T('作品', 'Work')}</span><small>${scopeWorks}</small></label>
@@ -881,7 +1032,7 @@ function railAgent(a, t) {
     <section class="agent-step"><h3><span class="step-n">2</span>${T('带回来', 'Bring back')}</h3>
       <form data-form="import" id="import-form" class="stack">
         <label class="sr-only" for="import-content">${T('粘贴 Agent 的产出', 'Paste your agent’s output')}</label>
-        <textarea class="textarea" name="content" id="import-content" rows="3" required placeholder="${esc(T('粘贴 Markdown，或任务包说明的 JSON', 'Paste Markdown, or the JSON format described in the package'))}">${esc(ui.importText)}</textarea>
+        <textarea class="textarea" name="content" id="import-content" rows="3" required placeholder="${esc(T('粘贴 Agent 的文字、测试计划或调查…', 'Paste your agent’s writing, test plan or investigation…'))}">${esc(ui.importText)}</textarea>
         <div class="row-actions"><label class="file-pick">${icon('upload', 'i-sm')}<span>${T('选择文件', 'Choose a file')}</span><input type="file" id="import-file" accept=".md,.txt,.json,text/plain,application/json"></label><span class="spacer"></span><button type="submit" class="btn small primary">${T('预览', 'Preview')}</button></div>
       </form>
     </section>
@@ -900,8 +1051,8 @@ function agentLog(a, taskId) {
   const out = [];
   (a.exports || []).filter(x => !taskId || x.taskId === taskId).forEach(x => { const tk = a.tasks.find(t => t.id === x.taskId); out.push({ at: x.createdAt, icon: icon('upload', 'i-sm'), text: T('交出任务包', 'Handed over a package'), sub: (tk ? taskTitle(tk) + ' · ' : '') + T((x.inputVersions || []).length + ' 份作品', (x.inputVersions || []).length + ' work item(s)') }); });
   a.artifacts.filter(w => w.source !== 'user' && (!taskId || w.taskId === taskId)).forEach(w => {
-    out.push({ at: w.createdAt, icon: icon('download', 'i-sm'), text: T('带回《' + w.title + '》', 'Returned “' + w.title + '”'), sub: w.adopted ? T('已采用', 'Adopted') : T('待你检查', 'Waiting for your check') });
-    if (w.adoptedAt) out.push({ at: w.adoptedAt, icon: icon('check', 'i-sm'), text: T('你采用了《' + w.title + '》', 'You adopted “' + w.title + '”'), sub: (w.evidence || []).some(ev => ev.type === 'test') ? T('已关联测试', 'Linked to a test') : T('还没关联测试', 'Not linked to a test yet') });
+    out.push({ at: w.createdAt, icon: icon('download', 'i-sm'), text: T('带回《' + w.title + '》', 'Returned “' + w.title + '”'), sub: w.removedAt ? T('已移除，可恢复','Removed; can be restored') : w.adopted ? T('已采用', 'Adopted') : T('待你检查', 'Waiting for your check') });
+    if (w.adoptedAt) out.push({ at: w.adoptedAt, icon: icon('check', 'i-sm'), text: T('你采用了《' + w.title + '》', 'You adopted “' + w.title + '”'), sub: E.agentProgress(a,w)?.linked ? T('已关联测试', 'Linked to a test') : T('还没关联测试', 'Not linked to a test yet') });
   });
   return out.sort((x, y) => String(y.at).localeCompare(String(x.at)));
 }
@@ -924,6 +1075,8 @@ function activity(a, taskId) {
     if (taskId && (!tk || tk.id !== taskId)) return;
     const text = e.type === 'task_added' && tk ? T('新增事项「' + taskTitle(tk) + '」', 'Added the task “' + taskTitle(tk) + '”')
       : e.type === 'artifact_created' && work && work.source === 'user' ? T('开始写《' + shown(work).title + '》', 'Started “' + shown(work).title + '”')
+      : e.type === 'artifact_removed' && work ? T('移除《'+work.title+'》，可恢复','Removed “'+work.title+'”; can be restored')
+      : e.type === 'artifact_restored' && work ? T('恢复《'+work.title+'》','Restored “'+work.title+'”')
       : e.type === 'artifact_saved' && work ? T('《' + shown(work).title + '》存为 v' + d.revision, 'Saved “' + shown(work).title + '” as v' + d.revision)
       : e.type === 'task_updated' && tk && d.changes && d.changes.status ? T('「' + taskTitle(tk) + '」改为' + STATUS(d.changes.status), '“' + taskTitle(tk) + '” is now ' + STATUS(d.changes.status))
       : e.type === 'priority_adopted' ? T('采用了同事的排序建议', 'Took a colleague’s priority advice')
@@ -1135,7 +1288,9 @@ function sheetDeliver(readOnly = false) {
   </form>
   <aside class="deliver-side">
     <h3 class="mini-title">${T('附上的作品', 'Work to include')}</h3>
-    ${list.length ? `<div class="checks">${list.map(w => { const v = shown(w); return `<label class="check"><input type="checkbox" data-pick="${w.id}" ${readOnly ? 'disabled' : ''} ${ui.deliverPick.has(w.id) ? 'checked' : ''}><span>${esc(v.title)}</span><small>${esc(purposeLabel(v.purpose))}</small></label>`; }).join('')}</div>${readOnly ? '' : btn(icon('refresh', 'i-sm') + T('按勾选重写依据', 'Rewrite evidence from these'), 'live-collect', 'small quiet')}` : `<p class="muted">${T('还没有写过作品。', 'No work written yet.')}</p>`}
+    ${list.length ? `<div class="checks">${list.map(w => { const v = shown(w); return `<label class="check"><input type="checkbox" data-pick="${w.id}" ${readOnly ? 'disabled' : ''} ${ui.deliverPick.has(w.id) ? 'checked' : ''}><span>${esc(v.title)}</span><small>${esc(purposeLabel(v.purpose))}</small></label>`; }).join('')}</div>` : `<p class="muted">${T('没有可附上的作品。', 'No work to include.')}</p>`}
+    ${!readOnly && (list.length || now.draft.rationale) ? btn(icon('refresh', 'i-sm') + (list.length ? T('按勾选重写依据', 'Rewrite evidence from these') : T('清空方案与依据','Clear rationale and evidence')), 'live-collect', 'small quiet') : ''}
+    ${a.deliverRemovalNotice ? `<p class="warn-line">${icon('info','i-sm')}${T('有作品被移除，交付稿中的手写内容已保留。请核对，或按当前作品重新整理。','Some work was removed. Edited deliverable text was kept. Review it, or rebuild it from the current work.')}</p>` : ''}
     ${risk ? `<p class="warn-line">${icon('warn', 'i-sm')}${T('内容偏长：评审一次最多读约 16 KB 记录，超过后相关条目不会评审。精简依据或少附作品。', 'This is long. The review reads about 16 KB of records at most; items beyond that limit are left unreviewed. Trim the evidence or include fewer pieces.')}</p>` : ''}
     <p class="meta">${now.artifact ? (saved ? T('已保存为交付稿 v' + now.artifact.version, 'Saved as deliverable v' + now.artifact.version) : T('交付稿 v' + now.artifact.version + ' 之后有改动', 'Changed since deliverable v' + now.artifact.version)) : T('还没保存', 'Not saved yet')}</p>
   </aside></div>`,
@@ -1262,7 +1417,7 @@ function ensureArtifact() {
   if (!t) return null;
   let x = artifact();
   if (x && x.taskId === t.id && !isEarlier(a, x) && x.adopted) return x;
-  x = a.artifacts.filter(y => y.taskId === t.id && !isEarlier(a, y) && y.adopted).at(-1);
+  x = a.artifacts.filter(y => y.taskId === t.id && !y.removedAt && !isEarlier(a, y) && y.adopted).at(-1);
   if (!x) x = E.createArtifact(a, { taskId: t.id, title: T('关于「' + taskTitle(t) + '」的记录', 'Notes on “' + taskTitle(t) + '”'), purpose: '探索笔记', body: '' });
   ui.artifactId = x.id; ui.obj = { task: t.id, type: 'work', id: x.id }; return x;
 }
@@ -1369,6 +1524,27 @@ async function act(el) {
   const a = current(); const id = el.dataset.id; const action = el.dataset.action;
   if (action !== 'menu' && action !== 'set-lang' && action !== 'show-advice' && ui.menu) { ui.menu = null; if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']); else render(); }
   switch (action) {
+    case 'investigate-run': openInvestigation(id); break;
+    case 'investigation-retest': await runInvestigationBlock(id); break;
+    case 'investigation-load': {const x=artifact(),b=x?.blocks?.find(b=>b.id===id);if(b){delete ui.investigationSources[investigationSourceKey(a.id,b)];loadInvestigationSources(a,x,id);refreshWS(['stage']);}break;}
+    case 'investigation-move': {commit();const x=artifact();requireWorkMutation(a,x);const i=x.blocks.findIndex(b=>b.id===id),dir=Number(el.dataset.dir),before=dir<0?x.blocks[i-1]?.id:x.blocks[i+2]?.id;if(i<0||i+dir<0||i+dir>=x.blocks.length)break;localWorkChange(a,()=>E.moveInvestigationBlock(a,x.id,id,before));refreshWS(['stage']);announce(T('模块顺序已保存','Module order saved'));break;}
+    case 'investigation-cite': {commit();const x=artifact(),r=a.tests.find(r=>r.id===id);requireWorkMutation(a,x);if(!x.adopted)throw new Error(T('先采用这份调查，再引用结果。','Adopt this investigation before citing results.'));if(r){E.addEvidence(a,x.id,{type:'test',id:r.id,version:r.configVersion});if(!persist())throw new Error(storageText());refreshWS(['stage','rail']);notify(T('这次运行已加入调查依据','This run is now evidence for the investigation'));}break;}
+    case 'work-edit': { const x = artifact(); requireWorkMutation(a,x); ui.previewWorkId = null; ui.editPending = x.id; refreshWS(['stage']); document.getElementById('editor-body')?.focus(); break; }
+    case 'work-preview': commit(); ui.previewWorkId = id; refreshWS(['stage']); if(ui.kbd) document.querySelector('[data-work-mode]')?.focus({preventScroll:true}); break;
+    case 'save-work': { const x = artifact(); requireWorkMutation(a,x); commit(); if (x.draft || !persist()) throw new Error(T('修改尚未保存，请保留页面并检查提示。','Changes have not been saved. Keep this page open and check the message.')); refreshWS(['stage','rail']); notify(x.adopted ? T('修改已保存','Changes saved') : T('修改已保存，仍为待检查作品','Changes saved; still awaiting adoption')); break; }
+    case 'removed-works': commit(); removedWorksSheet(); break;
+    case 'remove-work': { const x = artifact(); requireWorkMutation(a,x); commit(); if (x.draft || !persist()) throw new Error(T('请先保存修改。','Save your changes first.')); openSheet(T('删除这份作品？','Remove this work?'), `<p class="work-remove-title">${esc(shown(x).title)}</p><p class="work-remove-note">${T('移入“已移除作品”，随时可以恢复。原文件和已保存的测试记录会保留。','Move it to Removed work. You can restore it later. The original file and saved test runs are kept.')}</p>${x.adopted && sessionOf(a)?.draft.rationale ? `<p class="work-remove-note">${T('交付稿中已有文字：自动汇总会更新，手写修改会保留并提示核对；已保存的交付版本不会撤回。','The deliverable already has text. Generated summaries will update; edited text stays for review. Saved deliverable versions are not withdrawn.')}</p>`:''}`, `${btn(T('保留','Keep'),'close','quiet')}<span class="spacer"></span>${btn(T('删除作品','Remove work'),'confirm-remove-work','primary',`data-id="${x.id}"`)}`, 'narrow'); break; }
+    case 'confirm-remove-work': { const x = a.artifacts.find(w=>w.id===id); requireWorkMutation(a,x); if (sessionOf(a)?.pending?.localRun?.workId === id || sessionOf(a)?.pending?.localRun?.investigationId === id) throw new Error(T('先确认这份作品的运行结果，再删除。','Resolve this work’s pending run before removing it.')); commit(); if (x.draft) throw new Error(T('请先保存修改。','Save your changes first.')); const before=sessionOf(a).draft.rationale; const selected=ui.deliverPick ? new Set(ui.deliverPick) : new Set(works(a).map(w=>w.id)); const wasGenerated=!!before && selected.has(id) && before===rationaleFrom(a,selected); localWorkChange(a,()=>{ E.removeArtifact(a,id); if(x.adopted && before) a.deliverRemovalNotice=true; }); if(wasGenerated) { const ss=sessionOf(a); if(L.store.update(a.id,{draft:{...ss.draft,rationale:rationaleFrom(a,selected)}})) { a.deliverRemovalNotice=false; persist(); } } const name=shown(x).title; ui.artifactId=null; ui.previewWorkId=null; ui.editPending=null; ui.reviewFor=null; closeSheet(true); const t=task(); if(t) ui.obj=defaultObj(a,t); refreshWS(); notify(T('已移除《'+name+'》','Removed “'+name+'”'), {undo:()=>restoreWork(a,id)}); break; }
+    case 'restore-work': restoreWork(a,id); break;
+    case 'test-toggle': { commit(); const x = artifact(); if (!x) break; const open = ui.testOpen[x.id] === undefined ? null : ui.testOpen[x.id]; ui.testOpen[x.id] = open === id ? null : id; refreshWS(['stage']); if (ui.testOpen[x.id]) animateTestReveal(id); break; }
+    case 'test-run': await runTestCase(id); break;
+    case 'test-mode': commit(); ui.testModes[id] = el.dataset.mode; refreshWS(['stage']); animateTestReveal(id); break;
+    case 'test-add': { commit(); const x = artifact(); if (!x || statusOf(a) !== 'active' || storageIssue) break; const c = E.addTestCase(a, x.id); ui.testOpen[x.id] = c.id; persist(); refreshWS(['stage']); animateTestReveal(c.id); document.getElementById('case-question-' + c.id)?.focus({ preventScroll: true }); break; }
+    case 'test-remove': { commit(); const x = artifact(); if (!x || statusOf(a) !== 'active' || storageIssue) break; E.removeTestCase(a, x.id, id); ui.testOpen[x.id] = x.cases[0]?.id ?? null; persist(); refreshWS(['stage']); notify(T('问题已移除，历史测试仍保留', 'Question removed. Its test history is kept.'), { undo: () => { if (statusOf(a) !== 'active' || storageIssue) return; E.restoreTestCase(a, x.id, id); persist(); ui.testOpen[x.id] = id; refreshWS(['stage']); } }); break; }
+    case 'test-cite': { commit(); const x = artifact(), run = a.tests.find(r => r.id === id); if (!x || !run || run.workId !== x.id || statusOf(a) !== 'active' || !x.adopted || storageIssue) break; E.addEvidence(a, x.id, { type: 'test', id: run.id, version: run.configVersion }); if (!persist()) throw new Error(storageText()); refreshWS(['stage','rail']); notify(T('这次运行已加入计划依据', 'This run is now evidence for the plan.')); break; }
+    case 'test-ref': { const m = E.getMaterials(a).find(m=>m.id===id); if (!m) throw new Error(T('当前会话没有这份资料。','This document is not available in this session.')); const v = Number(el.dataset.version); openSheet(materialTitle(m), `<p class="meta">${T('计划引用 v','Plan references v')}${v} · ${T('当前可见 v','Currently visible v')}${m.version}</p>${v!==m.version?`<p class="warn-line">${T('材料已变化，下面显示当前版本。','The document changed. The current version is shown below.')}</p>`:''}<div class="prose serif">${md(m.content || m.body)}</div>`, btn(T('好','OK'),'close','primary'),'wide'); break; }
+    case 'test-export': { commit(); const x = artifact(); if (!x) break; download({ schemaVersion: 1, returnId: 'export-' + crypto.randomUUID(), artifact: { kind: 'test_set', title: x.title, purpose: x.purpose, body: x.body, cases: x.cases.map(({question,intent,expectation,refs})=>({question,intent,expectation,refs})) } }, 'test-plan.json'); break; }
+
     case 'home': go('', { transition: true }); break;
     case 'open-career': go('pm', { transition: true }); break;
     case 'set-lang': ui.menu = null; setPreference(el.dataset.lang, localStorage); render(); break;
@@ -1382,17 +1558,17 @@ async function act(el) {
     case 'new-task': sheetTask(); break;
     case 'edit-task': sheetTask(id); break;
     case 'move-task': { const t = a.tasks.find(x => x.id === id); const i = a.tasks.indexOf(t); const dir = Number(el.dataset.dir); const target = a.tasks[i + dir]; if (!target) { notify(T('已经到头了', 'Already at the end')); break; } closeSheet(true); moveWithUndo(a, id, dir < 0 ? { priority: target.priority, beforeId: target.id } : { priority: target.priority, beforeId: a.tasks[i + 2] ? a.tasks[i + 2].id : null }, T('已调整顺序', 'Order changed')); break; }
-    case 'edit-pending': ui.editPending = id; refreshWS(['stage']); document.getElementById('editor-body')?.focus(); break;
+    case 'edit-pending': if (a.artifacts.find(w=>w.id===id)?.kind === 'test_set' && (statusOf(a) !== 'active' || storageIssue)) break; ui.editPending = id; refreshWS(['stage']); (document.querySelector('[data-case-field]') || document.getElementById('editor-body'))?.focus(); break;
     case 'cite-pick': sheetCitePicker(); break;
     case 'view-evidence': { const x = artifact(); const ev = x && x.evidence.find(e => e.id === id && String(e.version ?? '') === el.dataset.version); if (ev) openSheet(esc(evTitle(ev)), `<p class="meta">${T('引用时保存的内容', 'Saved when you cited it')}${ev.version ? ' · v' + esc(ev.version) : ''}</p><div class="prose serif quoteblock"${zhAttr(ev.body)}>${md(ev.body || '')}</div>`, btn(T('好', 'OK'), 'close', 'primary'), 'narrow'); break; }
     case 'run-source': {
-      const run = a.tests.find(t => t.id === el.dataset.run); if (!run) break;
-      const materials = await L.history(a, run.asOfSeq);
-      openSheet(T('这次回答用的来源', 'Sources behind this answer'), `<div class="answer">${assistantMark('sm')}<div class="answer-body"${zhAttr(run.answer)}>${md(run.answer, { dropTitle: true })}</div></div><p class="meta">${T(`测试时：事件 #${run.asOfSeq}，政策源 v${run.policyVersion}，索引 v${run.indexVersion}`, `At test time: event #${run.asOfSeq}, policy v${run.policyVersion}, index v${run.indexVersion}`)}</p>${materials.filter(m => run.citations.some(c => c.id === m.id)).map(m => `<article class="paper document small"><header class="doc-head">${icon('doc', 'i-sm')}<h3 class="doc-title">${esc(materialTitle(m))}</h3><span class="stamp">v${m.version}</span></header><div class="prose serif"${zhAttr(m.content)}>${md(m.content, { dropTitle: true })}</div></article>`).join('')}`, btn(T('好', 'OK'), 'close', 'primary'), 'wide');
+      const run=a.tests.find(r=>r.id===el.dataset.run); if(!run) break;
+      const sources=await Promise.allSettled(run.citations.map(c=>L.citationSource(a,run.id,c.id)));
+      openSheet(T('这次回答用的来源','Sources behind this answer'),`<div class="answer">${assistantMark('sm')}<div class="answer-body">${md(run.answer,{dropTitle:true})}</div></div>${run.citations.map((c,i)=>{const result=sources[i].status==='fulfilled'?sources[i].value:null;const m=result?.material;return `<article class="paper document small"><header class="doc-head">${icon('doc','i-sm')}<h3 class="doc-title">${esc(materialTitle(m||{id:c.id,title:c.title}))}</h3><span class="stamp">v${c.version}</span></header>${m?`<div class="prose serif">${md(m.content,{dropTitle:true})}</div>`:`<p class="muted">${T('本次引用 v'+c.version+'；这个版本的正文暂未取得。','This run cited v'+c.version+'. Its exact text is unavailable.')}</p>`}</article>`;}).join('')}`,btn(T('好','OK'),'close','primary'),'wide');
       break;
     }
     case 'rerun': { const r = a.tests.find(x => x.id === id); if (r) await runQuestion(r.question, r.expectation); break; }
-    case 'config': closeSheet(true); ui.menu = null; sheetConfig(); break;
+    case 'config': ui.configFromTestSet = ['test_set','investigation'].includes(artifact()?.kind) && ui.obj?.type === 'work'; closeSheet(true); ui.menu = null; sheetConfig(); break;
     case 'resend-turn': { const s = sessionOf(a); const op = s?.failedTurn; if (op) { await L.turn(a, ROLE_OF[op.body.role_id], String(op.body.text), { ...(op.body.task_id !== undefined ? { task_id: op.body.task_id } : {}), ...(op.body.work_id !== undefined ? { work_id: op.body.work_id } : {}), ...(op.body.attachments ? { attachments: op.body.attachments } : {}) }); L.store.update(a.id, { failedTurn: undefined }); refreshWS(['rail']); } break; }
     case 'discuss-run': { const r = a.tests.find(x => x.id === id); openChat('technical', T(`我测了“${r.question}”，助手答“${answerText(r.answer).slice(0, 300)}”（政策源 v${r.policyVersion}，索引 v${r.indexVersion}）。我想确认：`, `I asked “${r.question}” and the assistant said “${answerText(r.answer).slice(0, 300)}” (policy v${r.policyVersion}, index v${r.indexVersion}). I want to check: `)); break; }
     case 'prefill-artifact': { const x = artifact(); const input = document.getElementById('chat-input'); if (input && x) { if (!attachToTurn(a, { type: 'work', id: x.id, version: x.revision })) break; const v = shown(x); input.value = T(`这是我的「${v.title}」：\n${v.body.slice(0, 1500)}\n\n`, `Here is my “${v.title}”:\n${v.body.slice(0, 1500)}\n\n`) + input.value; input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); } break; }
@@ -1402,10 +1578,11 @@ async function act(el) {
     case 'download-package': download(pkgFor(a, true), 'practice-task.json'); persist(); notify(T('任务包已交给浏览器下载', 'Package handed to the browser to download')); refreshWS(['rail']); break;
     case 'submit': commit(); sheetDeliver(); break;
     case 'live-refresh': await L.refresh(a); refreshChrome(); notify(snap().connected ? T('已连接', 'Connected') : T('还是连不上后端', 'Still cannot reach the server')); break;
-    case 'live-retry': await L.retry(a); refreshChrome(); break;
+    case 'live-retry': { const meta = sessionOf(a)?.pending?.localRun; await L.retry(a); if(meta?.investigationId && meta?.blockId){if(snap().error)ui.investigationErrors[meta.blockId]=snap().error;else if(!sessionOf(a)?.pending)delete ui.investigationErrors[meta.blockId];}
+      if (meta?.caseId) { ui.testOpen[meta.workId] = meta.caseId; ui.testModes[meta.caseId] = 'result'; if (snap().error) ui.testErrors[meta.caseId] = snap().error; else if (!sessionOf(a)?.pending) { delete ui.testErrors[meta.caseId]; const restored = a.tests.find(r=>r.requestId===meta.requestId); if (restored) ui.testHistory[meta.caseId] = restored.id; } } refreshChrome(); if (meta?.caseId || meta?.investigationId) refreshWS(['stage']); break; }
     case 'live-session': { closeSheet(true); if (statusOf(a) === 'submitted') { go('review'); break; } await L.action(a, statusOf(a) === 'paused' ? 'resume' : 'pause'); refreshWS(); break; }
     case 'live-approval': try { await L.perform(a, () => L.store.approval(el.dataset.id)); } finally { sheetResources(); refreshWS(); } break;
-    case 'live-collect': { commit(); const f = document.getElementById('live-deliver'); if (f) saveDraftFields(a, f); deliverPick(a); L.store.update(a.id, { draft: { ...sessionOf(a).draft, rationale: rationaleFrom(a, ui.deliverPick) } }); sheetDeliver(); break; }
+    case 'live-collect': { a.deliverRemovalNotice=false; persist(); commit(); const f = document.getElementById('live-deliver'); if (f) saveDraftFields(a, f); deliverPick(a); L.store.update(a.id, { draft: { ...sessionOf(a).draft, rationale: rationaleFrom(a, ui.deliverPick) } }); sheetDeliver(); break; }
     case 'live-save': { const f = document.getElementById('live-deliver'); if (f) saveDraftFields(a, f); await L.save(a, sessionOf(a).draft); sheetDeliver(); notify(T('交付稿已保存', 'Deliverable saved')); break; }
     case 'live-submit': {
       await L.submit(a); if (!L.store.submissionId(sessionOf(a))) throw new Error(T('还没得到提交确认。', 'The submission has not been confirmed yet.'));
@@ -1444,7 +1621,7 @@ async function act(el) {
     case 'scope': ui.scopeAll = el.dataset.all === '1'; refreshWS(['rail']); break;
     case 'bench-scope': ui.benchAll = el.dataset.all === '1'; refreshWS(['stage']); break;
     case 'open-task': openTask(id); break;
-    case 'obj': setObj({ type: el.dataset.type, id: el.dataset.id }); break;
+    case 'obj': if (el.dataset.type === 'doc') { commit(); await openMaterial(el.dataset.id); } else setObj({ type: el.dataset.type, id: el.dataset.id }); break;
     case 'open-doc': case 'open-material': await openMaterial(id, el.dataset.compare === '1'); break;
     case 'open-bench': { const t = task(); if (t) setObj({ type: 'bench' }); else go('bench', { transition: true }); break; }
     case 'pick-doc': { const docs = E.getMaterials(a); openSheet(T('打开一份资料', 'Open a document'), `<div class="pick-list">${docs.map(m => `<button type="button" class="pick-row" data-action="open-doc" data-id="${esc(m.id)}">${icon('doc', 'i-sm')}<span class="grow">${esc(materialTitle(m))}</span><span class="ver">v${m.version}</span></button>`).join('')}</div>`, '', 'narrow'); break; }
@@ -1457,8 +1634,8 @@ async function act(el) {
     case 'ack': a.acks = [...new Set([...(a.acks || []), el.dataset.key])]; persist(); refreshWS(['stage', 'rail', 'toolbar']); break;
     case 'reply-note': { const n = (ui.notesCache || []).find(x => x.key === el.dataset.key); if (!n) break; a.acks = [...new Set([...(a.acks || []), 'note:' + n.key])]; persist(); openChat(n.role, T(`关于你说的“${n.text.slice(0, 60)}${n.text.length > 60 ? '…' : ''}”：`, `About what you said (“${n.text.slice(0, 60)}${n.text.length > 60 ? '…' : ''}”): `)); break; }
     case 'new-artifact': sheetNewArtifact(); break;
-    case 'open-artifact': { const x = a.artifacts.find(y => y.id === id); if (!x) break; if (task() && task().id === x.taskId) setObj({ type: 'work', id }); else openTask(x.taskId, { type: 'work', id }); break; }
-    case 'adopt': E.adoptArtifact(a, id); persist(); refreshWS(); notify(T('已采用。里面的结论仍要你检查和验证。', 'Adopted. Its claims still need your checking.')); break;
+    case 'open-artifact': { const x = a.artifacts.find(y => y.id === id); if (!x) break; if (x.removedAt) { removedWorksSheet(x.taskId); break; } if (task() && task().id === x.taskId) setObj({ type: 'work', id }); else openTask(x.taskId, { type: 'work', id }); break; }
+    case 'adopt': { const x=a.artifacts.find(w=>w.id===id); requireWorkMutation(a,x); commit(); if(x.draft) throw new Error(T('请先保存修改。','Save your changes first.')); } if (a.artifacts.find(w=>w.id===id)?.kind === 'test_set' && (statusOf(a) !== 'active' || storageIssue)) throw new Error(T('这份计划当前只读。','This plan is read-only.')); E.adoptArtifact(a, id); persist(); refreshWS(); notify(T('已采用。里面的结论仍要你检查和验证。', 'Adopted. Its claims still need your checking.')); break;
     case 'toggle-compare': ui.compare = !ui.compare; refreshWS(['stage']); break;
     case 'cite-material': { const m = E.getMaterials(a).find(x => x.id === id); if (m) cite({ id: m.id, title: m.title, version: m.version, body: m.body, type: 'material' }); refreshWS(['stage']); break; }
     case 'cite-run': { const r = a.tests.find(x => x.id === id); if (r) cite({ id: r.id, title: r.question, version: r.configVersion, body: r.answer, type: 'test' }); refreshWS(['stage']); break; }
@@ -1478,15 +1655,15 @@ async function act(el) {
       if (kind === 'config') { sheetConfig(); break; }
       if (kind === 'resources') { sheetResources(); break; }
       if (kind === 'material') { if (ui.route === 'review') go('work'); await openMaterial(el.dataset.id); break; }
-      if (kind === 'open-artifact') { const x = a.artifacts.find(y => y.id === id); if (x) openTask(x.taskId, { type: 'work', id }); break; }
+      if (kind === 'open-artifact') { const x = a.artifacts.find(y => y.id === id); if (x?.removedAt) removedWorksSheet(x.taskId); else if (x) openTask(x.taskId, { type: 'work', id }); break; }
       if (kind === 'new-decision') { const t = a.tasks.find(x => x.seed === 'decision') || a.tasks[0]; openTask(t.id, { type: 'start' }); setTimeout(() => sheetNewArtifact('试点决定'), 60); break; }
       break; }
     case 'dispute': ui.disputeOpen = ui.disputeOpen === el.dataset.key ? null : el.dataset.key; if (ui.route === 'review') render(); else refreshWS(['rail']); document.querySelector('.dispute textarea')?.focus(); break;
     case 'review-tab': ui.reviewTab = el.dataset.tab; render(); break;
     case 'confirm-import': {
       try {
-        const t = task(); const res = E.importReturn(a, normalizeImport(ui.importText), t ? t.id : null);
-        if (res.duplicate) { notify(T('这份回传已经导入过了', 'This return was already imported')); break; }
+        const t = task(); const parsed = E.validateImported(normalizeImport(ui.importText)); if ((statusOf(a) !== 'active' || storageIssue || snap().storageError)) throw new Error(T('这次练习只读或存储不可用，不能导入新作品。','This practice is read-only or storage is unavailable. New work cannot be imported.')); const res = E.importReturn(a, normalizeImport(ui.importText), t ? t.id : null);
+        if (res.duplicate) { if(res.removed) { closeSheet(true); removedWorksSheet(); notify(T('这份回传已经移除，可以在这里恢复。','This return was removed. Restore it here.'), {toast:true}); } else notify(T('这份回传已经导入过了', 'This return was already imported')); break; }
         if (!res.artifact.taskId) res.artifact.taskId = (t || a.tasks[0]).id;
         startWorking(a, a.tasks.find(x => x.id === res.artifact.taskId));
         if (res.artifact.title === '外部 Agent 回传作品') res.artifact.title = T('外部 Agent 回传作品', 'Returned by my agent');
@@ -1527,11 +1704,11 @@ document.addEventListener('click', e => {
   if (ui.menu && !e.target.closest('.menu-wrap')) { ui.menu = null; if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']); else render(); }
   const el = e.target.closest('[data-action]'); if (!el || el.disabled) return;
   if (el.tagName === 'A') e.preventDefault();
-  ui.kbd = e.detail === 0;
+  ui.kbd = e.detail === 0; document.documentElement.dataset.input = ui.kbd ? 'keyboard' : 'pointer';
   Promise.resolve(act(el)).catch(err => notify(errText(err) || T('这一步没有完成，内容还在。', 'That did not go through. Nothing was lost.')));
 });
 document.addEventListener('toggle', e => { const d = e.target; if (d.matches && d.matches('details[data-intake]')) ui.intake.open = d.open; }, true);
-document.addEventListener('compositionend', e => { if (e.target.dataset && e.target.dataset.edit) e.target.dispatchEvent(new Event('input', { bubbles: true })); });
+document.addEventListener('compositionend', e => { if (e.target.dataset && (e.target.dataset.edit || e.target.dataset.caseField || e.target.dataset.investigationQuestion !== undefined)) e.target.dispatchEvent(new Event('input', { bubbles: true })); });
 document.addEventListener('input', e => {
   const el = e.target; const a = current();
   if (a && ['lab-q', 'lab-e', 'chat-input'].includes(el.id)) {
@@ -1543,6 +1720,22 @@ document.addEventListener('input', e => {
   }
   if (a && el.form?.dataset.form === 'live-deliver' && FIELDS.includes(el.name)) { L.store.update(a.id, { draft: { ...sessionOf(a).draft, [el.name]: el.value } }); const live = document.querySelector('[data-action="live-submit"]'); if (live) live.disabled = true; const save = document.querySelector('[data-action="live-save"]'); if (save) save.classList.remove('quiet'); }
   if (e.isComposing) return;
+  if (el.dataset.investigationQuestion !== undefined && a) {
+    const x=artifact(); if(!x||x.kind!=='investigation'||!canEditWork(a,x))return;
+    const v=shown(x); dirty={attemptId:a.id,id:x.id,title:v.title,purpose:v.purpose,question:el.value,blocks:structuredClone(v.blocks),body:E.investigationSummary({...v,question:el.value})}; updateSave();clearTimeout(saveTimer);saveTimer=setTimeout(flush,450);return;
+  }
+  if (el.dataset.caseField && a) {
+    const x = artifact(); if (!x || x.kind !== 'test_set' || statusOf(a) !== 'active' || !(x.adopted || ui.editPending === x.id)) return;
+    const v = dirty?.id === x.id ? dirty : shown(x); const cases = structuredClone(v.cases); const c = cases.find(c=>c.id===el.dataset.caseId); if (!c) return;
+    c[el.dataset.caseField] = el.value;
+    dirty = { attemptId:a.id, id:x.id, title:v.title, purpose:v.purpose, kind:'test_set', cases, body:E.testSetSummary({...v,cases}) };
+    updateSave(); clearTimeout(saveTimer); saveTimer = setTimeout(flush, 450); return;
+  }
+  if (el.dataset.testNote && a) {
+    const s = sessionOf(a), id = el.dataset.testNote;
+    if (s && s.world.status === 'active') L.store.update(a.id, { testNotes: { ...s.testNotes, [id]: { ...(s.testNotes[id] || {expected:''}), diagnosis: el.value } } });
+    return;
+  }
   if (el.id === 'editor-body') autoGrow(el);
   if (el.id === 'import-content') ui.importText = el.value;
   if (el.id === 'intake-text') ui.intake.text = el.value;
@@ -1557,14 +1750,17 @@ document.addEventListener('input', e => {
     const next = document.getElementById(focusTitle ? 'editor-title' : 'editor-body'); if (next) { next.focus(); try { next.setSelectionRange(caret, caret); } catch (_) { /* not text */ } }
     return;
   }
-  if (!el.dataset.edit) return; const x = artifact(); if (!a || !x) return;
-  dirty = { attemptId: a.id, id: x.id, title: document.getElementById('editor-title')?.value || x.title, purpose: document.querySelector('[data-edit="purpose"]')?.value || x.purpose, body: document.getElementById('editor-body')?.value ?? x.body };
+  if (!el.dataset.edit) return; const x = artifact(); if (!a || !canEditWork(a,x)) return;
+  dirty = { attemptId: a.id, id: x.id, title: document.getElementById('editor-title')?.value || x.title, purpose: document.querySelector('[data-edit="purpose"]')?.value || x.purpose, body: document.getElementById('editor-body')?.value ?? shown(x).body, ...(x.kind === 'test_set' ? { kind:'test_set', cases: structuredClone(shown(x).cases) } : {}), ...(x.kind==='investigation'?{kind:'investigation',question:shown(x).question,blocks:structuredClone(shown(x).blocks)}:{}) };
   updateSave(); clearTimeout(saveTimer);
   saveTimer = setTimeout(() => { flush(); const cur = artifact(); const row = cur && document.querySelector(`.ol-row[data-id="${cur.id}"] .ol-title`); if (row) row.textContent = shown(cur).title; }, 700);
 });
 document.addEventListener('change', e => {
   const el = e.target; const a = current();
   try {
+    if(el.dataset.investigationQuestion !== undefined){commit();updateSave();return;}
+    if (el.dataset.caseHistory) { commit(); ui.testHistory[el.dataset.caseHistory] = el.value; refreshWS(['stage']); return; }
+    if (el.dataset.caseField) { commit(); updateTestChrome(); return; }
     if (el.dataset.change === 'triage') { const pick = el.closest('.pri-pick'); pick.outerHTML = priPick(el.dataset.id, el.value, el.closest('.seed')?.textContent.trim() || '', 'triage'); return; }
     if (el.dataset.change === 'priority') { commit(); const t = a.tasks.find(x => x.id === el.dataset.id); moveWithUndo(a, el.dataset.id, { priority: el.value }, T('「' + taskTitle(t) + '」改为' + PRI(el.value), '“' + taskTitle(t) + '” is now ' + PRI(el.value))); return; }
     if (el.dataset.edit === 'purpose') { el.dispatchEvent(new Event('input', { bubbles: true })); commit(); updateSave(); refreshWS(['toolbar', 'stage']); }
@@ -1606,20 +1802,23 @@ document.addEventListener('submit', async e => {
       case 'chat': { const text = String(f.get('text')).trim(); if (!text || !ui.chatRole) break; ui.chatTask = task() ? task().id : null; const x = ui.obj?.type === 'work' ? artifact() : null; const context = { ...(sessionOf(a).turnContexts?.[ROLE_ID[ui.chatRole]] || {}), ...(ui.chatTask ? { task_id: ui.chatTask } : {}), ...(x ? { work_id: x.id } : {}) }; await L.turn(a, ui.chatRole, text, context); refreshWS(['rail', 'toolbar']); document.getElementById('chat-input')?.focus(); break; }
       case 'config': {
         await L.config(a, { participants: Number(f.get('participants')), domains: f.getAll('domains'), update: String(f.get('update')), fallback: String(f.get('fallback')), workItems: f.getAll('workItems'), launchDay: Number(f.get('launchDay')) });
-        closeSheet(); { const t = task(); if (t) ui.obj = { task: t.id, type: 'bench' }; } refreshWS(); notify(T('试点设置 v' + a.configVersion + ' 已保存，下一次测试会用它。', 'Pilot settings v' + a.configVersion + ' saved. The next test uses them.'));
+        closeSheet(); { const t = task(); if (t && !ui.configFromTestSet) ui.obj = { task: t.id, type: 'bench' }; ui.configFromTestSet = false; } refreshWS(); notify(T('试点设置 v' + a.configVersion + ' 已保存，下一次测试会用它。', 'Pilot settings v' + a.configVersion + ' saved. The next test uses them.'));
         break;
       }
       case 'resources': await L.action(a, String(f.get('kind')), { reason: String(f.get('reason')).trim() }); sheetResources(); refreshWS(); notify(T('申请已提交给 Priya', 'Request sent to Priya')); break;
       case 'live-deliver': saveDraftFields(a, form); await L.save(a, sessionOf(a).draft); sheetDeliver(); break;
       case 'import': {
-        const text = String(f.get('content')); const data = E.validateImported(normalizeImport(text)); ui.importText = text; const t = task();
-        openSheet(T('检查带回的内容', 'Check what came back'), `<p class="meta">${esc(T(`来自你的 Agent，用途「${purposeLabel(data.purpose)}」，放在「${taskTitle(t || a.tasks[0])}」下`, `From your agent, purpose “${purposeLabel(data.purpose)}”, filed under “${taskTitle(t || a.tasks[0])}”`))}</p><article class="paper"><h3 class="paper-title">${esc(data.title)}</h3><div class="prose">${md(data.body)}</div></article>`, `${btn(T('返回', 'Back'), 'close', 'quiet')}<span class="spacer"></span>${btn(T('导入为待检查作品', 'Import as “to check”'), 'confirm-import', 'primary')}`, 'wide');
+        const text = String(f.get('content')); const data = E.validateImported(normalizeImport(text)); ui.importText = text; if ((statusOf(a) !== 'active' || storageIssue || snap().storageError)) throw new Error(T('这次练习只读或存储不可用，不能导入新作品。','This practice is read-only or storage is unavailable. New work cannot be imported.')); const t = task();
+        openSheet(T('检查带回的内容', 'Check what came back'), `<p class="meta">${esc(T(`来自你的 Agent，用途「${purposeLabel(data.purpose)}」，放在「${taskTitle(t || a.tasks[0])}」下`, `From your agent, purpose “${purposeLabel(data.purpose)}”, filed under “${taskTitle(t || a.tasks[0])}”`))}</p>${data.kind === 'investigation' ? investigationPreview(data) : data.kind === 'test_set' ? testSetPreview(data, E.getMaterials(a)) : `<article class="paper"><h3 class="paper-title">${esc(data.title)}</h3><div class="prose">${md(data.body)}</div></article>`}`, `${btn(T('返回', 'Back'), 'close', 'quiet')}<span class="spacer"></span>${btn(T('导入为待检查作品', 'Import as “to check”'), 'confirm-import', 'primary')}`, 'wide');
         break;
       }
     }
   } catch (err) { notify(errText(err) || T('请检查输入', 'Please check the input')); }
 });
+document.addEventListener('pointermove', () => document.documentElement.classList.remove('hide-tooltips'), {passive:true});
+document.addEventListener('focusin', () => document.documentElement.classList.remove('hide-tooltips'));
 document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') document.documentElement.classList.add('hide-tooltips');
   if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); const v = commit(); notify(storageIssue ? storageText() : v ? T('已存为新版本', 'Saved as a new version') : T('已保存', 'Saved')); updateSave(); }
   if ((e.metaKey || e.ctrlKey) && e.key === 'Enter' && (e.target.id === 'chat-input' || e.target.id === 'lab-q')) { e.preventDefault(); e.target.form.requestSubmit(); }
   if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'z' && ui.lastUndo && !/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) { e.preventDefault(); const u = ui.lastUndo; ui.lastUndo = null; u(); toastEl.classList.remove('visible'); notify(T('已撤销', 'Undone')); }
@@ -1658,6 +1857,8 @@ document.addEventListener('drop', e => {
 });
 document.addEventListener('dragend', () => { dragId = null; document.querySelector('.kanban')?.classList.remove('is-dragging'); document.querySelectorAll('.dragging, .drop-before, .col.drop').forEach(x => x.classList.remove('dragging', 'drop-before', 'drop')); });
 document.addEventListener('focusout', e => {
+  if(e.target.dataset.investigationQuestion !== undefined){commit();updateSave();return;}
+  if (e.target.dataset.caseField) { commit(); updateTestChrome(); return; }
   if (e.target.id !== 'editor-body' && e.target.id !== 'editor-title') return;
   setTimeout(() => { const a = current(); const x = artifact(); if (!a || !x) return; if (document.activeElement && (document.activeElement.id === 'editor-body' || document.activeElement.id === 'editor-title')) return; commit(); updateSave(); }, 0);
 });

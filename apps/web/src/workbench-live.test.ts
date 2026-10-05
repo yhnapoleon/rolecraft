@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApiError, type Transport } from './api';
 import { LiveWorkbench, fromPilot, toPilot } from './workbench-live';
 import { STORAGE_KEY, WorkspaceStore } from './store';
+import type { World } from './types';
 
 const mod = { exports: {} as any };
 runInThisContext('(function(module){' + readFileSync(new URL('../public/workbench-engine.js', import.meta.url), 'utf8') + '\n})')(mod);
@@ -60,6 +61,339 @@ describe('HTML workbench authority and mapping', () => {
   });
 });
 
+describe('test work execution provenance', () => {
+  async function setup() {
+    const storage = memory(), state = engine.newState();
+    const world: World = { session_id: 'work-session', version: 1, logical_time: 1, resources: { capacity: 30, dev_days: 3, deadline_day: 7 }, configs: { pilot: toPilot(config) }, material_versions: { policy: 1 }, indexed_versions: { policy: 1 }, applied_rules: [], pending_requests: [], action_count: 1, config_version: 1, status: 'active' };
+    const saved = new Map<string, any>();
+    const controls = { drop: false, conflict: false, gate: undefined as Promise<void> | undefined };
+    const materialHistory = new Map<number, any[]>();
+    const historyFailures = new Set<number>();
+    const transport = vi.fn<Transport>(async (path, body: any) => {
+      if (path === '/sessions') return { session_id: world.session_id, token: 'mock-token', state: structuredClone(world) };
+      if (path.includes('/materials?as_of_seq=')) {
+        const seq = Number(path.split('as_of_seq=')[1]);
+        if (historyFailures.has(seq)) throw new ApiError('temporary history failure');
+        if (!materialHistory.has(seq)) throw new ApiError('snapshot not found', 404);
+        return structuredClone(materialHistory.get(seq));
+      }
+      if (path.endsWith('/materials')) return [{ id: 'policy', version: 1, title: '政策', content: '500' }];
+      if (path.endsWith('/timeline')) return { events: [], turns: [], mode: 'saved_replay_no_model_calls' };
+      if (!body && path === '/sessions/' + world.session_id) return { state: structuredClone(world) };
+      if (body === undefined && path.endsWith('/tests')) return structuredClone([...saved.values()]);
+      if (body === undefined && /\/(artifacts|submissions)$/.test(path)) return [];
+      if (path.endsWith('/tests')) {
+        if (controls.conflict) { controls.conflict = false; world.config_version++; throw new ApiError('config version is not current', 409); }
+        if (controls.gate) await controls.gate;
+        if (!saved.has(body.request_id)) {
+          saved.set(body.request_id, { id: 'test-' + saved.size, query: body.query, answer: '实际回答', citations: [{ material_id: 'policy', version: 1 }], fallback: false, mode: 'local-extractive', stale: false, config_version: body.config_version, as_of_seq: world.version, source_versions: { policy: 1 }, indexed_versions: { policy: 1 } });
+          world.version++;
+        }
+        if (controls.drop) { controls.drop = false; throw new ApiError('lost response'); }
+        return structuredClone(saved.get(body.request_id));
+      }
+      throw new Error('Unexpected request: ' + path);
+    });
+    const live = new LiveWorkbench(engine, storage, transport); live.attach(state, () => {});
+    const a = await live.start('pilot');
+    const work = engine.createArtifact(a, { title: '政策测试', body: '测试计划', purpose: '测试计划', taskId: a.tasks[0].id });
+    // Fixture the already-validated local work. Import validation has its own engine tests.
+    Object.assign(work, { kind: 'test_set', cases: [
+      { id: 'case-a', revision: 1, question: '住宿上限？', intent: '核对政策', expectation: '引用政策', refs: [{ id: 'policy', version: 1 }] },
+      { id: 'case-b', revision: 1, question: '住宿上限？', intent: '检查回答', expectation: '引用政策', refs: [] },
+    ] });
+    const input = (index = 0) => { const row = work.cases[index]; return { question: row.question, expectation: row.expectation, taskId: work.taskId, workId: work.id, workRevision: work.revision, caseId: row.id, caseRevision: row.revision }; };
+    return { storage, state, world, saved, controls, transport, live, a, work, input, materialHistory, historyFailures };
+  }
+
+  function investigation(f: Awaited<ReturnType<typeof setup>>, runId: string) {
+    const work = engine.createArtifact(f.a, { title: '政策来源调查', body: '对照旧回答与资料', purpose: '自由作品', taskId: f.work.taskId });
+    Object.assign(work, { kind: 'investigation', question: '旧回答为什么不同？', blocks: [{ id: 'retest-block', revision: 1, type: 'retest', testId: runId }] });
+    const baseline = f.a.tests.find((t: any) => t.id === runId);
+    const input = () => ({ question: baseline.question, expectation: baseline.expectation, taskId: work.taskId, investigationId: work.id, investigationRevision: work.revision, blockId: work.blocks[0].id, blockRevision: work.blocks[0].revision, baselineRunId: runId });
+    return { work, input };
+  }
+
+  it('recovers a lost successful result into its original row after reload and later edits', async () => {
+    const f = await setup(); f.controls.drop = true;
+    await expect(f.live.test(f.a, f.input())).rejects.toThrow(/lost response/);
+    const pending = structuredClone(f.live.session(f.a)!.pending!);
+    expect(pending.localRun).toMatchObject({ workId: f.work.id, workRevision: 1, caseId: 'case-a', caseRevision: 1, intent: '核对政策', refs: [{ id: 'policy', version: 1 }] });
+    f.work.cases[0].question = '修改后的问题'; f.work.cases[0].revision++; f.work.revision++;
+    const restoredState = structuredClone(f.state);
+    const restored = new LiveWorkbench(engine, f.storage, f.transport); restored.attach(restoredState, () => {});
+    const a = restoredState.attempts.find((x: any) => x.id === f.a.id);
+    await restored.retry(a);
+    expect(f.saved.size).toBe(1);
+    const calls = f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined);
+    expect(calls).toHaveLength(2); expect(calls[1][1]).toEqual(calls[0][1]);
+    expect(a.tests).toHaveLength(1);
+    expect(a.tests[0]).toMatchObject({ question: '住宿上限？', taskId: f.work.taskId, workId: f.work.id, workRevision: 1, caseId: 'case-a', caseRevision: 1, expectation: '引用政策', intent: '核对政策', config });
+    expect(a.tests[0].createdAt).toBe(pending.localRun!.createdAt);
+    expect(a.artifacts.find((x: any) => x.id === f.work.id).cases[0].question).toBe('修改后的问题');
+    const restoredAgain = new LiveWorkbench(engine, f.storage, f.transport), stateAgain = structuredClone(restoredState);
+    restoredAgain.attach(stateAgain, () => {});
+    expect(stateAgain.attempts.find((x: any) => x.id === f.a.id).tests[0].caseId).toBe('case-a');
+  });
+
+  it('recovers server-listed tests without losing pending work provenance or authoritative timestamps', async () => {
+    const f = await setup(); f.controls.drop = true;
+    await expect(f.live.test(f.a, f.input())).rejects.toThrow(/lost response/);
+    const pending = structuredClone(f.live.session(f.a)!.pending!);
+    const server = f.saved.get(String(pending.body.request_id))!;
+    server.created_at = '2026-10-05T01:02:03.000000Z';
+    // Refresh can discover the successful server result before the lost POST is retried.
+    await f.live.store.sync(f.a.id);
+    expect(f.a.tests).toHaveLength(1);
+    expect(f.live.session(f.a)!.pending).toEqual(pending);
+    f.live.store.update(f.a.id, { testNotes: { [server.id]: { expected: '引用政策', diagnosis: '已核对原文' } } });
+    f.work.cases[0].question = '后续修改的问题'; f.work.cases[0].revision++; f.work.revision++;
+    const recovered = new LiveWorkbench(engine, f.storage, f.transport), state = structuredClone(f.state);
+    recovered.attach(state, () => {});
+    const a = state.attempts.find((item: any) => item.id === f.a.id);
+    await recovered.retry(a); await recovered.store.sync(a.id);
+    expect(a.tests).toHaveLength(1);
+    expect(a.tests[0]).toMatchObject({ createdAt: server.created_at, workId: f.work.id, workRevision: 1, caseId: 'case-a', caseRevision: 1, question: '住宿上限？', diagnosis: '已核对原文' });
+    expect(recovered.session(a)!.testRunMeta![server.id]).toEqual(pending.localRun);
+    expect(recovered.session(a)!.pending).toBeUndefined();
+    expect(f.transport.mock.calls.filter(([path, body]) => path.endsWith('/tests') && body !== undefined)).toHaveLength(2);
+  });
+
+  it('rejects a second click while pending and keeps in-flight edits out of the execution snapshot', async () => {
+    const f = await setup(); let finish!: () => void;
+    f.controls.gate = new Promise<void>(resolve => { finish = resolve; });
+    const running = f.live.test(f.a, f.input());
+    await expect(f.live.test(f.a, f.input())).rejects.toThrow(/上一请求/);
+    f.work.revision++; f.work.cases[0].revision++; f.work.cases[0].expectation = '新的预期';
+    finish(); const result = await running;
+    expect(result).toMatchObject({ caseRevision: 1, workRevision: 1, expectation: '引用政策' });
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined)).toHaveLength(1);
+  });
+
+  it('keeps identical questions in separate rows and appends a deliberate retest', async () => {
+    const f = await setup();
+    const one = await f.live.test(f.a, f.input(0)), two = await f.live.test(f.a, f.input(1)), again = await f.live.test(f.a, f.input(0));
+    expect(f.a.tests.map((x: any) => x.caseId)).toEqual(['case-a', 'case-b', 'case-a']);
+    expect(new Set([one.id, two.id, again.id]).size).toBe(3);
+    expect(new Set(f.a.tests.map((x: any) => x.requestId)).size).toBe(3);
+    const session = f.live.session(f.a)!;
+    f.live.store.update(f.a.id, { testNotes: { ...session.testNotes, [one.id]: { expected: '引用政策', diagnosis: '这个回答还需核对' } } });
+    expect(f.a.tests.find((x: any) => x.id === one.id).diagnosis).toBe('这个回答还需核对');
+  });
+
+  it('projects the returned version maps without substituting the world index', async () => {
+    const f = await setup(); const run = await f.live.test(f.a, f.input());
+    const session = f.live.session(f.a)!;
+    f.live.store.update(f.a.id, {
+      world: { ...session.world, material_versions: { policy: 2, faq: 1 }, indexed_versions: { policy: 1, faq: 1 } },
+      tests: session.tests.map(t => ({ ...t, source_versions: { policy: 2, faq: 1 }, indexed_versions: { policy: 2, faq: 1 } })),
+    });
+    const projected = f.a.tests.find((t: any) => t.id === run.id);
+    expect(projected.sourceVersions).toEqual({ policy: 2, faq: 1 });
+    expect(projected.indexedVersions).toEqual({ policy: 2, faq: 1 });
+    expect(f.a.world.indexVersion).toBe(1);
+    projected.sourceVersions.policy = 999;
+    expect(f.live.session(f.a)!.tests[0].source_versions.policy).toBe(2);
+  });
+
+  it('refuses test-work evidence changes when paused, submitted, unadopted or storage failed', async () => {
+    const f = await setup(); const run = await f.live.test(f.a, f.input());
+    const evidence = { id: run.id, version: run.configVersion, type: 'test' };
+    const activeWorld = f.live.session(f.a)!.world;
+    const initial = structuredClone(f.work);
+    for (const status of ['paused', 'submitted'] as const) {
+      f.live.store.update(f.a.id, { world: { ...activeWorld, status } });
+      expect(() => f.live.engine.addEvidence(f.a, f.work.id, evidence)).toThrow(/只读/);
+      expect(f.work).toEqual(initial);
+    }
+    f.live.store.update(f.a.id, { world: activeWorld });
+    f.work.adopted = false;
+    expect(() => f.live.engine.addEvidence(f.a, f.work.id, evidence)).toThrow(/采用/);
+    f.work.adopted = true;
+    f.storage.setItem = () => { throw new Error('quota'); };
+    f.live.store.update(f.a.id, {});
+    expect(() => f.live.engine.addEvidence(f.a, f.work.id, evidence)).toThrow(/存储/);
+    expect(f.work).toEqual(initial);
+    // Ordinary local notes retain their existing behavior.
+    const note = engine.createArtifact(f.a, { title: '普通作品', body: '笔记' });
+    expect(() => f.live.engine.addEvidence(f.a, note.id, evidence)).not.toThrow();
+    expect(note.evidence).toHaveLength(1);
+  });
+
+  it('refuses unadopted, mismatched or stale row associations without sending', async () => {
+    const f = await setup(); const original = f.input();
+    f.work.adopted = false; await expect(f.live.test(f.a, original)).rejects.toThrow(/采用/); f.work.adopted = true;
+    for (const changed of [{ workId: 'missing' }, { caseId: 'missing' }, { workRevision: 0 }, { caseRevision: 2 }, { question: '其他问题' }, { expectation: '其他预期' }, { taskId: f.a.tasks[1].id }]) {
+      await expect(f.live.test(f.a, { ...original, ...changed })).rejects.toThrow(/测试行/);
+    }
+    expect(f.transport.mock.calls.some(([p, body]) => p.endsWith('/tests') && body !== undefined)).toBe(false);
+  });
+
+  it('blocks new runs and evidence for removed work while keeping ordinary single tests usable', async () => {
+    const f = await setup(); const run = await f.live.test(f.a, f.input());
+    engine.removeArtifact(f.a, f.work.id);
+    const removed = structuredClone(f.work);
+    await expect(f.live.test(f.a, f.input())).rejects.toThrow(/已移除/);
+    expect(() => f.live.engine.addEvidence(f.a, f.work.id, { id: run.id, version: run.configVersion, type: 'test' })).toThrow(/已移除/);
+    expect(f.work).toEqual(removed);
+    const note = engine.createArtifact(f.a, { title: '待移除笔记', body: '普通正文' });
+    engine.removeArtifact(f.a, note.id);
+    expect(() => f.live.engine.addEvidence(f.a, note.id, { id: 'policy', version: 1, type: 'material' })).toThrow(/已移除/);
+    const ordinary = await f.live.test(f.a, { question: '普通问题' });
+    expect(ordinary.workId).toBeUndefined();
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined)).toHaveLength(2);
+    engine.restoreArtifact(f.a, f.work.id);
+    const restoredRun = await f.live.test(f.a, f.input());
+    expect(restoredRun.workId).toBe(f.work.id);
+  });
+
+  it('recovers an existing pending test after its work is removed without restoring the work', async () => {
+    const f = await setup(); f.controls.drop = true;
+    await expect(f.live.test(f.a, f.input())).rejects.toThrow(/lost response/);
+    const pending = structuredClone(f.live.session(f.a)!.pending!);
+    engine.removeArtifact(f.a, f.work.id);
+    const removed = structuredClone(f.work), state = structuredClone(f.state);
+    const live = new LiveWorkbench(engine, f.storage, f.transport); live.attach(state, () => {});
+    const a = state.attempts.find((x: any) => x.id === f.a.id);
+    await live.retry(a);
+    expect(f.saved.size).toBe(1);
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined)[1][1]).toEqual(pending.body);
+    expect(a.tests[0]).toMatchObject({ workId: f.work.id, workRevision: 1, caseId: 'case-a', caseRevision: 1 });
+    expect(a.artifacts.find((x: any) => x.id === f.work.id)).toEqual(removed);
+    expect(live.session(a)?.pending).toBeUndefined();
+    expect(engine.currentArtifacts(a).some((x: any) => x.id === f.work.id)).toBe(false);
+  });
+
+  it('excludes removed work and its draft from delivery and new task-package snapshots', async () => {
+    const f = await setup();
+    const note = engine.createArtifact(f.a, { title: '已移除独有标题', body: '已移除独有正文', taskId: f.work.taskId });
+    note.draft = { title: '已移除草稿标题', body: '已移除草稿正文', purpose: note.purpose };
+    engine.removeArtifact(f.a, note.id);
+    const delivery = f.live.draftFromWorks(f.a);
+    const pkg = f.live.package(f.a, null, { record: true, requestId: 'after-removal', artifactIds: [note.id, f.work.id] });
+    expect(pkg.artifacts.map((x: any) => x.id)).toEqual([f.work.id]);
+    expect(pkg.inputVersions.map((x: any) => x.artifactId)).toEqual([f.work.id]);
+    expect(pkg.inputSnapshot.artifacts.map((x: any) => x.artifactId)).toEqual([f.work.id]);
+    expect(f.a.exports.at(-1).inputSnapshot.artifacts.map((x: any) => x.artifactId)).toEqual([f.work.id]);
+    expect(delivery + JSON.stringify(pkg)).not.toMatch(/已移除独有|已移除草稿/);
+    expect(f.a.artifacts.find((x: any) => x.id === note.id).draft.body).toBe('已移除草稿正文');
+  });
+
+  it('retrieves the exact cited old index version instead of the newer source at test time', async () => {
+    const f = await setup(); const run = await f.live.test(f.a, f.input());
+    const session = f.live.session(f.a)!;
+    const newer = { id: 'policy', version: 2, title: '新政策', content: '400' }, older = { id: 'policy', version: 1, title: '旧政策', content: '500' };
+    f.live.store.update(f.a.id, { materials: [newer], tests: session.tests.map(t => ({ ...t, as_of_seq: 5, source_versions: { policy: 2 }, indexed_versions: { policy: 1 }, stale: true })) });
+    f.materialHistory.set(5, [newer]); f.materialHistory.set(0, [older]);
+    const result = await f.live.citationSource(f.a, run.id, 'policy');
+    expect(result).toEqual({ material: older, requestedVersion: 1 });
+    const calls = f.transport.mock.calls.filter(([p]) => p.includes('as_of_seq='));
+    expect(calls.map(([p]) => p)).toEqual(['/sessions/work-session/materials?as_of_seq=5', '/sessions/work-session/materials?as_of_seq=0']);
+    result.material!.content = 'altered locally';
+    expect((await f.live.citationSource(f.a, run.id, 'policy')).material!.content).toBe('500');
+    expect(f.transport.mock.calls.filter(([p]) => p.includes('as_of_seq='))).toHaveLength(2);
+  });
+
+  it('does not invent unknown source versions or permanently cache failed history reads', async () => {
+    const f = await setup(); const run = await f.live.test(f.a, f.input());
+    const newer = { id: 'policy', version: 2, title: '当前政策', content: '400' };
+    f.live.store.update(f.a.id, { materials: [newer] });
+    f.materialHistory.set(run.asOfSeq, [newer]); f.materialHistory.set(0, [newer]);
+    const unknown = await f.live.citationSource(f.a, run.id, 'policy');
+    expect(unknown.material).toBeNull(); expect(unknown.requestedVersion).toBe(1); expect(unknown.reason).toBeTruthy();
+    f.historyFailures.add(0);
+    expect(await f.live.materialVersion(f.a, 'policy', 1)).toBeNull();
+    f.historyFailures.delete(0);
+    f.materialHistory.set(0, [{ id: 'policy', version: 1, title: '旧政策', content: '500' }]);
+    expect((await f.live.citationSource(f.a, run.id, 'policy')).material?.version).toBe(1);
+  });
+
+  it('uses a visible activation snapshot for an intermediate version and rejects unreadable references', async () => {
+    const f = await setup(); const run = await f.live.test(f.a, f.input());
+    const session = f.live.session(f.a)!;
+    f.live.store.update(f.a.id, { world: { ...session.world, version: 9 }, materials: [{ id: 'policy', version: 3, title: '政策三版', content: '300' }], timeline: { ...session.timeline, events: [{ seq: 4, event_type: 'policy_updated', actor_id: 'learner', payload: { material_versions: [{ material_id: 'policy', version: 2 }] } }] } });
+    f.materialHistory.set(9, [{ id: 'policy', version: 3, title: '政策三版', content: '300' }]);
+    f.materialHistory.set(4, [{ id: 'policy', version: 2, title: '政策二版', content: '400' }]);
+    expect((await f.live.materialVersion(f.a, 'policy', 2))?.content).toBe('400');
+    const before = f.transport.mock.calls.length;
+    await expect(f.live.citationSource(f.a, 'another-session-run', 'policy')).rejects.toThrow(/当前会话/);
+    await expect(f.live.citationSource(f.a, run.id, 'tech_private')).rejects.toThrow(/引用/);
+    await expect(f.live.materialVersion(f.a, 'tech_private', 1)).rejects.toThrow(/不可读取/);
+    await expect(f.live.materialVersion(f.a, 'policy', 4)).rejects.toThrow(/不可读取/);
+    await expect(f.live.materialVersion({ ...f.a, id: 'other-session' }, 'policy', 1)).rejects.toThrow(/不可读取/);
+    expect(f.transport.mock.calls.length).toBe(before);
+  });
+
+  it('restores investigation retests to their original block after the view changes', async () => {
+    const f = await setup(); const baseline = await f.live.test(f.a, f.input());
+    const inv = investigation(f, baseline.id); f.controls.drop = true;
+    await expect(f.live.test(f.a, inv.input())).rejects.toThrow(/lost response/);
+    const pending = structuredClone(f.live.session(f.a)!.pending!);
+    expect(pending.localRun).toMatchObject({ investigationId: inv.work.id, investigationRevision: 1, blockId: 'retest-block', blockRevision: 1, baselineRunId: baseline.id });
+    expect(pending.localRun?.workId).toBeUndefined(); expect(pending.localRun?.caseId).toBeUndefined();
+    inv.work.revision++; inv.work.blocks[0].revision++; inv.work.blocks[0].label = '新的标签';
+    const state = structuredClone(f.state), restored = new LiveWorkbench(engine, f.storage, f.transport); restored.attach(state, () => {});
+    const a = state.attempts.find((x: any) => x.id === f.a.id); await restored.retry(a);
+    expect(f.saved.size).toBe(2);
+    expect(a.tests.at(-1)).toMatchObject({ investigationId: inv.work.id, investigationRevision: 1, blockId: 'retest-block', blockRevision: 1, baselineRunId: baseline.id, question: baseline.question });
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined).at(-1)?.[1]).toEqual(pending.body);
+    expect(a.artifacts.find((w: any) => w.id === inv.work.id).revision).toBe(2);
+  });
+
+  it('refuses stale, unadopted, removed or forged investigation retest associations', async () => {
+    const f = await setup(); const baseline = await f.live.test(f.a, f.input()); const inv = investigation(f, baseline.id);
+    for (const override of [{ investigationRevision: 0 }, { blockRevision: 2 }, { blockId: 'unknown' }, { baselineRunId: 'other-session-run' }, { question: 'different question' }, { taskId: f.a.tasks[1].id }]) await expect(f.live.test(f.a, { ...inv.input(), ...override })).rejects.toThrow(/调查视图/);
+    inv.work.adopted = false; await expect(f.live.test(f.a, inv.input())).rejects.toThrow(/调查视图/); inv.work.adopted = true;
+    inv.work.removedAt = 'removed'; await expect(f.live.test(f.a, inv.input())).rejects.toThrow(/调查视图/); inv.work.removedAt = null;
+    inv.work.blocks[0].type = 'note'; await expect(f.live.test(f.a, inv.input())).rejects.toThrow(/调查视图/); inv.work.blocks[0].type = 'retest';
+    await expect(f.live.test(f.a, { ...inv.input(), ...f.input() })).rejects.toThrow(/一个作品入口/);
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined)).toHaveLength(1);
+  });
+
+  it('exports only selected investigation materials with real current or cached exact bodies', async () => {
+    const f = await setup(); const baseline = await f.live.test(f.a, f.input()); const inv = investigation(f, baseline.id);
+    const newer = { id: 'policy', version: 2, title: '新政策', content: '400' };
+    f.live.store.update(f.a.id, { materials: [newer] });
+    inv.work.blocks.push({ id: 'source-current', revision: 1, type: 'source_check', testId: baseline.id, material: { id: 'policy', version: 2 } });
+    const selected = { artifactIds: [inv.work.id] };
+    expect(f.live.package(f.a, null, selected).materials.map((m: any) => m.version)).toEqual([2]);
+    expect(f.live.package(f.a, null, { ...selected, materialIds: [] }).materials).toEqual([]);
+    expect(f.live.package(f.a, null, { artifactIds: [] }).materials).toEqual([]);
+    inv.work.blocks[1].material.version = 1;
+    expect(f.live.package(f.a, null, selected).materials).toEqual([]);
+    f.materialHistory.set(0, [{ id: 'policy', version: 1, title: '旧政策', content: '500' }]);
+    await f.live.materialVersion(f.a, 'policy', 1);
+    const pkg = f.live.package(f.a, null, selected);
+    expect(pkg.materials).toEqual([{ id: 'policy', version: 1, title: '旧政策', content: '500' }]);
+    expect(pkg.inputSnapshot.materials).toEqual([{ id: 'policy', version: 1 }]);
+    inv.work.blocks.push({ id: 'private', revision: 1, type: 'source_check', testId: baseline.id, material: { id: 'tech_private', version: 1 } });
+    expect(JSON.stringify(f.live.package(f.a, null, selected).materials)).not.toContain('tech_private');
+  });
+
+  it('keeps the work intact after a configuration conflict and does not silently resubmit', async () => {
+    const f = await setup(), before = structuredClone(f.work); f.controls.conflict = true;
+    await expect(f.live.test(f.a, f.input())).rejects.toThrow(/重新操作/);
+    expect(f.live.session(f.a)?.pending).toBeUndefined(); expect(f.a.tests).toEqual([]); expect(f.work).toEqual(before);
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined)).toHaveLength(1);
+  });
+
+  it('retains the ordinary single-question path and blocks read-only or unavailable storage', async () => {
+    const f = await setup();
+    const run = await f.live.test(f.a, { question: '普通问题', expectation: '普通预期', taskId: f.work.taskId });
+    expect(run).toMatchObject({ question: '普通问题', expectation: '普通预期', taskId: f.work.taskId, config });
+    expect(run.workId).toBeUndefined();
+    const session = f.live.session(f.a)!;
+    f.live.store.update(f.a.id, { world: { ...session.world, status: 'submitted' } });
+    await expect(f.live.test(f.a, f.input())).rejects.toThrow(/锁定/);
+    f.live.store.update(f.a.id, { world: { ...session.world, status: 'active', configs: {} } });
+    await expect(f.live.test(f.a, f.input())).rejects.toThrow(/配置/);
+    f.live.store.update(f.a.id, { world: session.world });
+    f.storage.setItem = () => { throw new Error('quota'); };
+    await expect(f.live.test(f.a, f.input())).rejects.toThrow(/存储/);
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined)).toHaveLength(1);
+  });
+});
+
 const api=process.env.ROLECRAFT_TEST_API;
 describe.runIf(!!api)('real HTTP API + worker through the production frontend adapter',()=>{
   function setup(transport?:Transport,storage=memory(),state=engine.newState()) {
@@ -102,6 +436,26 @@ describe.runIf(!!api)('real HTTP API + worker through the production frontend ad
     for(const route of ['/actions','/tests','/turns','/artifacts','/submissions','/feedback','/approvals/resolve'])expect(seen.some(v=>v==='POST /sessions/:id'+route)).toBe(true);
     expect(seen.some(v=>v.includes('/materials?as_of_seq='))).toBe(true);expect(seen.some(v=>v.includes('/evidence/'))).toBe(true);
   },30000);
+  it('keeps test-work and investigation provenance together with server list recovery', async () => {
+    const { live, state, storage, real } = setup();
+    const a = await live.start('pilot'); await live.config(a, config);
+    const work = engine.createArtifact(a, { kind: 'test_set', title: '整合验证', purpose: '测试计划', taskId: a.tasks[1].id, cases: [{ question: '住宿报销上限是多少？', intent: '核对政策来源', expectation: '引用实际政策', refs: [] }] });
+    const row = work.cases[0];
+    const first = await live.test(a, { question: row.question, expectation: row.expectation, taskId: work.taskId, workId: work.id, workRevision: work.revision, caseId: row.id, caseRevision: row.revision });
+    const investigation = engine.createArtifact(a, { kind: 'investigation', title: '整合后的来源核对', purpose: '探索笔记', question: '回答用了哪一版？', taskId: work.taskId, blocks: [{ type: 'source_check', testId: first.id, material: { id: 'policy', version: a.world.policyVersion } }, { type: 'retest', testId: first.id }] });
+    const block = investigation.blocks[1];
+    const rerun = await live.test(a, { question: first.question, expectation: first.expectation, taskId: work.taskId, investigationId: investigation.id, investigationRevision: investigation.revision, blockId: block.id, blockRevision: block.revision, baselineRunId: first.id });
+    const restored = new LiveWorkbench(engine, storage, real), restoredState = structuredClone(state);
+    restored.attach(restoredState, () => {}); await restored.store.sync(a.id);
+    const recovered = restoredState.attempts.find((item: any) => item.id === a.id);
+    expect(recovered.tests).toHaveLength(2);
+    expect(recovered.tests.find((run: any) => run.id === first.id)).toMatchObject({ workId: work.id, caseId: row.id, question: row.question });
+    expect(recovered.tests.find((run: any) => run.id === rerun.id)).toMatchObject({ investigationId: investigation.id, blockId: block.id, baselineRunId: first.id });
+    expect(recovered.tests.every((run: any) => run.createdAt.endsWith('Z'))).toBe(true);
+    expect((await restored.citationSource(recovered, first.id, 'policy')).material?.version).toBe(first.citations.find((ref: any) => ref.id === 'policy').version);
+    expect(restored.store.getSnapshot().error).toBe('');
+  }, 20000);
+
   it('restores an uncertain successful request and retries identical content without duplicate effects',async()=>{
     const base=setup();let drop=false;
     const transport:Transport=async(path,body,session)=>{const value=await base.real(path,body,session);if(drop&&path.endsWith('/actions')){drop=false;throw new ApiError('controlled lost response');}return value;};
@@ -288,7 +642,7 @@ describe.runIf(!!api)('batch 1 real HTTP recovery', () => {
     for (let i = 0; i < 100 && live.session(a)!.pending; i++) { await live.store.poll(a.id); if (live.session(a)!.pending) await new Promise(r => setTimeout(r, 100)); }
     expect(live.session(a)!.pending).toBeUndefined();
     const session = structuredClone(live.session(a)!);
-    const minimal = { ...session, materials: [], tests: [], testNotes: {}, questions: {}, timeline: { events: [], turns: [], mode: '' } };
+    const minimal = { ...session, materials: [], tests: [], testNotes: {}, testRunMeta: {}, questions: {}, timeline: { events: [], turns: [], mode: '' } };
     const storage = memory(); storage.setItem(STORAGE_KEY, JSON.stringify({ schema: 1, active: a.id, sessions: [minimal] }));
     const restored = new LiveWorkbench(engine, storage, transport), state = engine.newState(); restored.attach(state, () => {}); await restored.store.sync(a.id);
     const recovered = state.attempts.find((x: any) => x.id === a.id);

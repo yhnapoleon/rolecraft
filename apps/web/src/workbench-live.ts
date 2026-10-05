@@ -1,7 +1,7 @@
 import { request, sessionPath, type Transport } from './api';
 import { T } from './app/i18n';
 import { blankPilot, WorkspaceStore } from './store';
-import type { Deliverable, LocalSession, Pilot, RoleId, Scenario, TurnContext } from './types';
+import type { Deliverable, LocalSession, Material, Pilot, RoleId, Scenario, TestRunOrigin, TurnContext } from './types';
 
 // The HTML workbench owns local notes; WorkspaceStore owns all server authority.
 // No credential is copied into an attempt, task package, screenshot or export.
@@ -24,7 +24,7 @@ export class LiveWorkbench {
   private state: any;
   private notify = (_changed: boolean) => {};
   private signature = '';
-  private metadata = new Map<string, { taskId?: string; config?: any; createdAt?: string }>();
+  private materialCache = new Map<string, Material>();
   constructor(readonly base: Engine, storage: Pick<Storage, 'getItem' | 'setItem'>, private transport: Transport = request) {
     this.store = new WorkspaceStore(storage, transport);
     this.engine = { ...base,
@@ -74,7 +74,7 @@ export class LiveWorkbench {
     if (!this.state) return;
     const snap = this.store.getSnapshot();
     for (const s of snap.workspace.sessions) this.project(this.ensureAttempt(s), s);
-    const signature = JSON.stringify(snap.workspace.sessions.map(s => [s.id, s.world, s.materials, s.timeline, s.tests, s.feedback, s.pending?.jobId, s.pending?.job?.status, !!s.pending, s.feedbackFailure, s.failedTurn]));
+    const signature = JSON.stringify(snap.workspace.sessions.map(s => [s.id, s.world, s.materials, s.timeline, s.tests, s.testNotes, s.testRunMeta, s.feedback, s.pending?.jobId, s.pending?.job?.status, !!s.pending, s.feedbackFailure, s.failedTurn]));
     const changed = signature !== this.signature; this.signature = signature;
     this.notify(changed);
   }
@@ -87,8 +87,9 @@ export class LiveWorkbench {
     a.nudges = [];
     a.tests = s.tests.map(t => {
       const previous = a.tests.find((p: any) => p.id === t.id) || {};
-      const meta = this.metadata.get(t.id) || previous;
-      return { id: t.id, question: t.query, answer: t.answer, citations: t.citations.map(c => ({ id: c.material_id, version: c.version, title: s.materials.find(m => m.id === c.material_id)?.title || c.material_id })), expectation: s.testNotes[t.id]?.expected || '', policyVersion: t.source_versions.policy, indexVersion: t.indexed_versions.policy, configVersion: t.config_version, config: meta.config || null, taskId: meta.taskId || null, createdAt: t.created_at || meta.createdAt || '', mode: t.mode, asOfSeq: t.as_of_seq, fallback: t.fallback, stale: t.stale };
+      const saved = s.testRunMeta?.[t.id];
+      const meta = saved || previous;
+      return { id: t.id, question: t.query, answer: t.answer, citations: t.citations.map(c => ({ id: c.material_id, version: c.version, title: s.materials.find(m => m.id === c.material_id)?.title || c.material_id })), expectation: s.testNotes[t.id]?.expected ?? saved?.expectation ?? '', diagnosis: s.testNotes[t.id]?.diagnosis || '', policyVersion: t.source_versions.policy, indexVersion: t.indexed_versions.policy, sourceVersions: { ...t.source_versions }, indexedVersions: { ...t.indexed_versions }, configVersion: t.config_version, config: saved ? (saved.config ? fromPilot(saved.config) : null) : previous.config || null, taskId: meta.taskId || null, createdAt: t.created_at || meta.createdAt || '', workId: meta.workId, workRevision: meta.workRevision, caseId: meta.caseId, caseRevision: meta.caseRevision, investigationId: meta.investigationId, investigationRevision: meta.investigationRevision, blockId: meta.blockId, blockRevision: meta.blockRevision, baselineRunId: meta.baselineRunId, requestId: meta.requestId, intent: meta.intent || '', refs: meta.refs || [], mode: t.mode, asOfSeq: t.as_of_seq, fallback: t.fallback, stale: t.stale };
     });
     a.turnTask ||= {};
     for (const t of s.timeline.turns) if (t.context?.task_id !== undefined) a.turnTask[t.trace_id] = t.context.task_id;
@@ -138,14 +139,41 @@ export class LiveWorkbench {
     await this.action(a, 'update_pilot', { plan });
   }
   async test(a: Attempt, input: any) {
-    if (!a.backend.configured) throw new Error(T('先打开“试点设置”并应用一次配置，再测试助手。', 'Save the pilot settings once before testing the assistant.'));
-    const s = this.session(a)!; const before = new Set(s.tests.map(t => t.id));
-    const config = structuredClone(a.config); const stamp = new Date().toISOString();
-    this.store.update(a.id, { inputs: { ...s.inputs, expected: input.expectation || '' } });
-    await this.perform(a, () => this.store.test(input.question));
+    const s = this.session(a);
+    if (!s?.world.configs.pilot) throw new Error(T('先打开“试点设置”并应用一次配置，再测试助手。', 'Save the pilot settings once before testing the assistant.'));
+    if (typeof input.question !== 'string' || !input.question.trim() || Array.from(input.question).length > 4000 || (input.expectation != null && typeof input.expectation !== 'string')) throw new Error(T('测试问题需要 1–4000 个字符，预期表现需要是文字。', 'The question needs 1–4,000 characters and its expectation must be text.'));
+    const origin: TestRunOrigin & { expectation: string } = { taskId: input.taskId || null, expectation: input.expectation || '' };
+    if (origin.taskId && !a.tasks.some((t: any) => t.id === origin.taskId)) throw new Error(T('找不到测试所属的事项。', 'The task for this test was not found.'));
+    const linked = ['workId', 'workRevision', 'caseId', 'caseRevision'].some(k => input[k] !== undefined);
+    const investigationLinked = ['investigationId', 'investigationRevision', 'blockId', 'blockRevision', 'baselineRunId'].some(k => input[k] !== undefined);
+    if (linked && investigationLinked) throw new Error(T('一次测试只能关联一个作品入口。', 'A test can be linked to only one work entry.'));
+    if (linked) {
+      const work = a.artifacts.find((w: any) => w.id === input.workId);
+      if (work?.removedAt) throw new Error(T('作品已移除，请恢复后再发起测试。', 'This work has been removed. Restore it before starting a test.'));
+      const row = work?.cases?.find((c: any) => c.id === input.caseId);
+      if (!work?.adopted || work.kind !== 'test_set' || !row || work.revision !== input.workRevision || row.revision !== input.caseRevision ||
+          !Number.isInteger(input.workRevision) || input.workRevision < 1 || !Number.isInteger(input.caseRevision) || input.caseRevision < 1 ||
+          (work.taskId || null) !== origin.taskId || row.question !== input.question || (row.expectation || '') !== origin.expectation) {
+        throw new Error(T('测试行或作品已经变化，或尚未采用。请保存并核对当前行后再运行。', 'The test row or work changed, or has not been adopted. Save and check the current row before running it.'));
+      }
+      Object.assign(origin, { workId: work.id, workRevision: work.revision, caseId: row.id, caseRevision: row.revision, intent: row.intent || '', refs: structuredClone(row.refs || []) });
+    }
+    if (investigationLinked) {
+      const work = a.artifacts.find((w: any) => w.id === input.investigationId);
+      const block = work?.blocks?.find((b: any) => b.id === input.blockId);
+      const baseline = s.tests.find(t => t.id === input.baselineRunId);
+      if (!work?.adopted || work.removedAt || work.kind !== 'investigation' || !block || block.type !== 'retest' || !baseline ||
+          block.testId !== baseline.id || baseline.query !== input.question || (work.taskId || null) !== origin.taskId ||
+          work.revision !== input.investigationRevision || block.revision !== input.blockRevision ||
+          !Number.isInteger(input.investigationRevision) || input.investigationRevision < 1 || !Number.isInteger(input.blockRevision) || input.blockRevision < 1) {
+        throw new Error(T('调查视图或重测入口已变化、未采用或不可用。请保存并核对当前入口后重测。', 'The investigation or retest entry changed, has not been adopted, or is unavailable. Save and check it before retesting.'));
+      }
+      Object.assign(origin, { investigationId: work.id, investigationRevision: work.revision, blockId: block.id, blockRevision: block.revision, baselineRunId: baseline.id, intent: work.question || '' });
+    }
+    const before = new Set(s.tests.map(t => t.id));
+    await this.perform(a, () => this.store.test(input.question, origin));
     const t = this.session(a)!.tests.find(t => !before.has(t.id));
     if (!t) throw new Error(T('测试尚未获确认，请重试原请求。', 'The test is not confirmed yet. Retry the same request.'));
-    this.metadata.set(t.id, { taskId: input.taskId, config, createdAt: stamp }); this.changed();
     return a.tests.find((x: any) => x.id === t.id);
   }
   async turn(a: Attempt, role: string, text: string, context?: TurnContext) {
@@ -167,6 +195,46 @@ export class LiveWorkbench {
     this.store.update(s.id, { feedback }); return feedback;
   }
   async history(a: Attempt, seq?: number) { const s = this.session(a)!; return this.transport(sessionPath(s, '/materials' + (seq === undefined ? '' : '?as_of_seq=' + seq)), undefined, s); }
+  private visibleMaterial(a: Attempt, id: string, version?: number) {
+    const s = this.session(a);
+    const current = s?.materials.find(m => m.id === id);
+    if (!s || !current || (version !== undefined && (!Number.isInteger(version) || version < 1 || version > current.version))) {
+      throw new Error(T('当前会话不可读取这个材料版本。', 'This material version is not readable in the current session.'));
+    }
+    return { s, current };
+  }
+  private cacheMaterial(sessionId: string, material: Material) {
+    this.materialCache.set(JSON.stringify([sessionId, material.id, material.version]), structuredClone(material));
+    return structuredClone(material);
+  }
+  private async exactMaterial(a: Attempt, id: string, version: number, asOfSeq: number): Promise<Material | null> {
+    const { s, current } = this.visibleMaterial(a, id, version);
+    if (current.version === version) return this.cacheMaterial(s.id, current);
+    const cached = this.materialCache.get(JSON.stringify([s.id, id, version]));
+    if (cached) return structuredClone(cached);
+    const activations = s.timeline.events.filter(e => e.seq <= asOfSeq && Array.isArray(e.payload.material_versions) && e.payload.material_versions.some((v: any) => v.material_id === id && v.version === version)).map(e => e.seq);
+    const candidates = [...new Set([asOfSeq, ...activations.reverse(), 0])].filter(seq => Number.isInteger(seq) && seq >= 0);
+    for (const seq of candidates) {
+      try {
+        const materials = await this.history(a, seq);
+        const exact = Array.isArray(materials) && materials.find((m: any) => m.id === id && m.version === version && typeof m.content === 'string');
+        if (exact) return this.cacheMaterial(s.id, exact);
+      } catch { /* A missing snapshot or temporary failure must not substitute another version. */ }
+    }
+    return null;
+  }
+  async citationSource(a: Attempt, runId: string, materialId: string) {
+    const s = this.session(a);
+    const run = s?.tests.find(t => t.id === runId);
+    const citation = run?.citations.find(c => c.material_id === materialId);
+    if (!s || !run || !citation) throw new Error(T('该引用不属于当前会话的真实测试。', 'This citation is not part of a real test in the current session.'));
+    const material = await this.exactMaterial(a, materialId, citation.version, run.as_of_seq);
+    return { material, requestedVersion: citation.version, ...(material ? {} : { reason: T('该引用版本的原文暂未取得；没有用其他版本替代。', 'The cited version could not be retrieved. No other version was substituted.') }) };
+  }
+  async materialVersion(a: Attempt, id: string, version: number): Promise<Material | null> {
+    const { s } = this.visibleMaterial(a, id, version);
+    return this.exactMaterial(a, id, version, s.world.version);
+  }
   async evidence(a: Attempt, criterion: string, id: string) { const s = this.session(a)!; return this.transport(sessionPath(s, '/evidence/' + [this.store.submissionId(s), criterion, id].map(encodeURIComponent).join('/')), undefined, s); }
   async relation(a: Attempt, claim: string) { await this.perform(a, () => this.store.relation(claim), true); }
   async retry(a: Attempt) { this.select(a); await this.store.execute(a.id); }
@@ -180,18 +248,43 @@ export class LiveWorkbench {
   }
   private addEvidence(a: Attempt, artifactId: string, ev: any) {
     const target = a.artifacts.find((x: any) => x.id === artifactId);
+    if (target?.removedAt) throw new Error(T('作品已移除，请恢复后再添加依据。', 'This work has been removed. Restore it before adding evidence.'));
+    if (target?.kind === 'test_set') {
+      if (this.session(a)?.world.status !== 'active') throw new Error(T('这次练习只读，不能修改测试作品的依据。', 'This practice is read-only; the test work evidence cannot be changed.'));
+      if (!target.adopted) throw new Error(T('先采用测试作品，再添加依据。', 'Adopt the test work before adding evidence.'));
+      if (this.store.getSnapshot().storageError) throw new Error(T('存储不可用，不能修改测试作品的依据。', 'Storage is unavailable; the test work evidence cannot be changed.'));
+    }
     const actual = ev.type === 'test' ? a.tests.find((x: any) => x.id === ev.id && x.configVersion === ev.version) : a.backend.materials.find((x: any) => x.id === ev.id && x.version === ev.version);
     if (!target || !actual) throw new Error(T('只能引用当前会话实际返回的资料或测试。', 'Only documents and tests returned in this session can be cited.'));
     const safe = { id: actual.id, title: ev.type === 'test' ? '测试：' + actual.question : actual.title, version: ev.version, body: ev.type === 'test' ? actual.answer : actual.body, type: ev.type };
-    if (!target.evidence.some((e: any) => e.id === safe.id && e.version === safe.version)) target.evidence.push(safe);
+    return this.base.addEvidence(a, artifactId, safe);
   }
   package(a: Attempt, taskId: string | null, scope: any = {}) {
     const read = new Set(['brief', ...a.events.filter((e: any) => e.server && e.type === 'material_read').map((e: any) => e.detail.materialId)]);
     const artifacts = this.base.currentArtifacts(a).filter((x: any) => (!taskId || x.taskId === taskId) && (!scope.artifactIds || scope.artifactIds.includes(x.id)));
+    const historicalMaterials: Material[] = [];
+    for (const work of artifacts.filter((x: any) => x.kind === 'investigation')) {
+      for (const block of (work.blocks || []).filter((b: any) => b.type === 'source_check')) {
+        const ref = block.material;
+        const citedRun = this.session(a)?.tests.find(t => t.id === block.testId);
+        if (!citedRun?.citations.some(c => c.material_id === ref?.id)) continue;
+        const current = a.backend.materials.find((m: any) => m.id === ref?.id);
+        if (!current || !Number.isInteger(ref.version) || ref.version < 1 || ref.version > current.version || (scope.materialIds && !scope.materialIds.includes(ref.id))) continue;
+        if (current.version === ref.version) read.add(ref.id);
+        else {
+          const cached = this.materialCache.get(JSON.stringify([a.id, ref.id, ref.version]));
+          if (cached && !historicalMaterials.some(m => m.id === cached.id && m.version === cached.version)) historicalMaterials.push(structuredClone(cached));
+        }
+      }
+    }
     const requestId = scope.requestId || crypto.randomUUID();
     const inputVersions = artifacts.map((x: any) => ({ artifactId: x.id, revision: x.revision }));
-    const result = structuredClone({ schema: 'practice-task-package/v1', requestId, mode: 'backend-evidence-local-notes', exportedAt: new Date().toISOString(), scenario: { id: a.scenarioId, title: a.title }, task: a.tasks.find((t: any) => t.id === taskId) || null, materials: a.backend.materials.filter((m: any) => read.has(m.id) && (!scope.materialIds || scope.materialIds.includes(m.id))), artifacts, tests: a.tests.filter((t: any) => !scope.testIds || scope.testIds.includes(t.id)), inputVersions, instructions: T('仅用本包可见资料。作品回传是本地草稿，不批准资源、不执行动作；结论必须核查。', 'Use only what this package contains. Returned work is a local draft: it approves nothing and runs nothing, and its claims must be checked.'), returnFormat: { requestId, artifact: { title: T('作品标题', 'Title'), purpose: T('自由作品', 'Free-form'), body: T('Markdown 正文', 'Markdown body') } } });
-    if (scope.record) { a.exports ||= []; a.exports.push({ requestId, taskId, inputVersions, createdAt: result.exportedAt }); }
+    const materials = [...a.backend.materials.filter((m: any) => read.has(m.id) && (!scope.materialIds || scope.materialIds.includes(m.id))), ...historicalMaterials];
+    const tests = a.tests.filter((t: any) => !scope.testIds || scope.testIds.includes(t.id));
+    const inputSnapshot = this.base.captureInputSnapshot(a, { artifacts, materials, tests });
+    const guide = this.base.buildReturnGuide(requestId);
+    const result = structuredClone({ schema: 'practice-task-package/v1', requestId, mode: 'backend-evidence-local-notes', exportedAt: new Date().toISOString(), scenario: { id: a.scenarioId, title: a.title }, task: a.tasks.find((t: any) => t.id === taskId) || null, materials, artifacts, tests, inputVersions, inputSnapshot, ...guide, instructions: T('仅用本包可见资料。作品回传是本地草稿，不批准资源、不执行动作；结论必须核查。', 'Use only what this package contains. Returned work is a local draft: it approves nothing and runs nothing, and its claims must be checked.') + '\n' + guide.instructions });
+    if (scope.record) { a.exports ||= []; a.exports.push({ requestId, taskId, inputVersions, inputSnapshot: structuredClone(inputSnapshot), createdAt: result.exportedAt }); }
     return result;
   }
 }

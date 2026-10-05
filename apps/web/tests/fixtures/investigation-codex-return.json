@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "returnId": "codex-020-investigation-policy-lag-20261005",
+  "requestId": "request-muv6a3y2-oj9f80",
+  "artifact": {
+    "kind": "investigation",
+    "title": "政策已更新，回答为什么还没变？",
+    "purpose": "探索笔记",
+    "question": "区分源文档已更新、索引已更新和回答已更新，判断是否需要调整试点设置。",
+    "blocks": [
+      {
+        "type": "source_check",
+        "testId": "779154d75833d795db8aa1d20cd3f32dc0d64fd8443a954bc06cee9ca9208cb5",
+        "material": {
+          "id": "policy",
+          "version": 2
+        }
+      },
+      {
+        "type": "note",
+        "title": "先定位版本差异",
+        "text": "这次重测的记录显示：源文档已到 v2，索引和引用仍是 v1。先核对上面的两份原文，再观察下面两次真实测试。仅重复提问不会证明索引已经更新；是否刷新索引、缩小开放范围或转人工，需要你结合试点目标决定。"
+      },
+      {
+        "type": "test_compare",
+        "testIds": [
+          "e3afba0a92acc892f28cc6632b9354629d20ecdeacd9603d37c16d5c90d9d7d6",
+          "779154d75833d795db8aa1d20cd3f32dc0d64fd8443a954bc06cee9ca9208cb5"
+        ]
+      },
+      {
+        "type": "retest",
+        "testId": "779154d75833d795db8aa1d20cd3f32dc0d64fd8443a954bc06cee9ca9208cb5",
+        "label": "按当前设置再验证一次"
+      }
+    ]
+  }
+}
