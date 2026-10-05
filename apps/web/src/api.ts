@@ -2,7 +2,7 @@ import type { LocalSession } from './types';
 import { T } from './app/i18n';
 
 export class ApiError extends Error {
-  constructor(message: string, public status = 0) { super(message); }
+  constructor(message: string, public status = 0, public code?: string, public details?: Record<string, any>) { super(message); }
 }
 export type Transport = (path: string, body?: unknown, session?: Pick<LocalSession, 'id' | 'token'>) => Promise<any>;
 export const request: Transport = async (path, body, session) => {
@@ -20,7 +20,7 @@ export const request: Transport = async (path, body, session) => {
   try { data = await response.json(); } catch { throw new ApiError(T('服务未返回可识别的结果，请检查 API 是否启动。', 'The server returned something unreadable. Check that the API is running.'), response.status >= 500 ? response.status : 0); }
   if (!response.ok) {
     const detail = data.detail ?? data.error ?? T('请求失败', 'Request failed');
-    throw new ApiError(typeof detail === 'string' ? detail : JSON.stringify(detail), response.status);
+    throw new ApiError(typeof detail === 'string' ? detail : JSON.stringify(detail), response.status, data.code, data.details);
   }
   return data;
 };

@@ -1,7 +1,7 @@
 import { request, sessionPath, type Transport } from './api';
 import { T } from './app/i18n';
 import { blankPilot, WorkspaceStore } from './store';
-import type { Deliverable, LocalSession, Pilot, RoleId, Scenario } from './types';
+import type { Deliverable, LocalSession, Pilot, RoleId, Scenario, TurnContext } from './types';
 
 // The HTML workbench owns local notes; WorkspaceStore owns all server authority.
 // No credential is copied into an attempt, task package, screenshot or export.
@@ -88,18 +88,25 @@ export class LiveWorkbench {
     a.tests = s.tests.map(t => {
       const previous = a.tests.find((p: any) => p.id === t.id) || {};
       const meta = this.metadata.get(t.id) || previous;
-      return { id: t.id, question: t.query, answer: t.answer, citations: t.citations.map(c => ({ id: c.material_id, version: c.version, title: s.materials.find(m => m.id === c.material_id)?.title || c.material_id })), expectation: s.testNotes[t.id]?.expected || '', policyVersion: t.source_versions.policy, indexVersion: t.indexed_versions.policy, configVersion: t.config_version, config: meta.config || null, taskId: meta.taskId || null, createdAt: meta.createdAt || '', mode: t.mode, asOfSeq: t.as_of_seq, fallback: t.fallback, stale: t.stale };
+      return { id: t.id, question: t.query, answer: t.answer, citations: t.citations.map(c => ({ id: c.material_id, version: c.version, title: s.materials.find(m => m.id === c.material_id)?.title || c.material_id })), expectation: s.testNotes[t.id]?.expected || '', policyVersion: t.source_versions.policy, indexVersion: t.indexed_versions.policy, configVersion: t.config_version, config: meta.config || null, taskId: meta.taskId || null, createdAt: t.created_at || meta.createdAt || '', mode: t.mode, asOfSeq: t.as_of_seq, fallback: t.fallback, stale: t.stale };
     });
-    a.conversations = Object.fromEntries(Object.entries(roleIds).map(([role, id]) => [role, s.timeline.turns.filter(t => t.role_id === id).flatMap(t => [
-      ...(s.questions[t.trace_id] ? [{ role: 'user', text: s.questions[t.trace_id], createdAt: '' }] : []),
-      { role: 'colleague', text: t.text, createdAt: '', model: t.model_revision, traceId: t.trace_id },
-    ])]));
+    a.turnTask ||= {};
+    for (const t of s.timeline.turns) if (t.context?.task_id !== undefined) a.turnTask[t.trace_id] = t.context.task_id;
+    a.conversations = Object.fromEntries(Object.entries(roleIds).map(([role, id]) => [role, s.timeline.turns.filter(t => t.role_id === id).flatMap(t => {
+      const question = t.question ?? s.questions[t.trace_id];
+      const common = { traceId: t.trace_id, createdAt: t.created_at || '', context: t.context };
+      return [...(question ? [{ ...common, role: 'user', text: question }] : []),
+        { ...common, role: 'colleague', text: t.text, model: t.model_revision }];
+    })]));
     // Server events are projected separately from local editing events. Local ordering
     // (applySuggestion, moveTask) stays allowed: it never touches server authority.
     a.events = a.events.filter((e: any) => !e.server && !['colleague_note', 'colleague_nudged', 'nudge'].includes(e.type));
-    for (const e of s.timeline.events) a.events.push({ id: 'server-' + e.seq, server: true, type: e.event_type === 'read_material' ? 'material_read' : e.event_type, text: '后端 · ' + e.event_type + ' · #' + e.seq, createdAt: '', detail: { ...e.payload, materialId: e.payload.material_id }, seq: e.seq });
+    for (const e of s.timeline.events) a.events.push({ id: 'server-' + e.seq, server: true, type: e.event_type === 'read_material' ? 'material_read' : e.event_type, text: '后端 · ' + e.event_type + ' · #' + e.seq, createdAt: e.created_at || '', detail: { ...e.payload, materialId: e.payload.material_id }, seq: e.seq });
+    a.approvalDenials = s.timeline.approval_denials || [];
+    for (const d of a.approvalDenials) a.events.push({ id: 'denial-' + d.id, server: true, type: 'approval_denied', seq: 'denial-' + d.id, createdAt: d.created_at || '', detail: d });
     a.requests = w.pending_requests.map(id => ({ id, status: 'pending', reason: id === 'capacity_approved' ? '扩容申请' : '资源与延期申请' }));
-    a.submissions = this.store.submissionId(s) ? [{ id: this.store.submissionId(s), createdAt: '', artifacts: [] }] : [];
+    a.submissions = this.store.submissionId(s) ? [{ id: this.store.submissionId(s), createdAt: s.submission?.created_at || '', artifacts: [] }] : [];
+    if (s.submission?.created_at) a.submittedAt = s.submission.created_at;
   }
   session(a?: Attempt) { return a ? this.store.getSnapshot().workspace.sessions.find(s => s.id === a.id) : this.store.active(); }
   async start(caseId: string, opts?: any) {
@@ -141,17 +148,17 @@ export class LiveWorkbench {
     this.metadata.set(t.id, { taskId: input.taskId, config, createdAt: stamp }); this.changed();
     return a.tests.find((x: any) => x.id === t.id);
   }
-  async turn(a: Attempt, role: string, text: string) {
+  async turn(a: Attempt, role: string, text: string, context?: TurnContext) {
     if (!roleIds[role] || !text.trim() || text.length > 4000) throw new Error(T('消息需要 1–4000 个字符。', 'Messages need 1–4,000 characters.'));
-    await this.perform(a, () => this.store.sendTurn(roleIds[role], text));
+    await this.perform(a, () => this.store.sendTurn(roleIds[role], text, context));
     const s = this.session(a)!;
-    this.store.update(a.id, { inputs: { ...s.inputs, messages: { ...s.inputs.messages, [roleIds[role]]: '' } } });
+    this.store.update(a.id, { inputs: { ...s.inputs, messages: { ...s.inputs.messages, [roleIds[role]]: '' } }, turnContexts: { ...s.turnContexts, [roleIds[role]]: undefined } });
   }
   async save(a: Attempt, draft: Deliverable) { this.store.update(a.id, { draft }); await this.perform(a, () => this.store.saveArtifact()); }
   async submit(a: Attempt) { await this.perform(a, () => this.store.submit()); }
-  async feedback(a: Attempt) {
+  async feedback(a: Attempt, retry = false) {
     if (!this.store.submissionId(this.session(a)!)) throw new Error(T('正式交付后才可生成后端反馈。', 'The review can only be generated after you submit.'));
-    await this.perform(a, () => this.store.feedback(), true);
+    await this.perform(a, () => this.store.feedback(retry), true);
   }
   async savedFeedback(a: Attempt) {
     const s = this.session(a)!; const id = this.store.submissionId(s);

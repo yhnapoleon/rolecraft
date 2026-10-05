@@ -6,6 +6,7 @@ import { T, locale, getPreference, setPreference, onLocaleChange, detect, when, 
 import { icon, priMark, statusMark, PEOPLE, ROLES, avatar, agentMark, assistantMark } from './art.js';
 import * as Coach from './coach.js';
 import { PRI, STATUS, ROLE_TITLE, KNOWS, OPENER, CASE, SEED_KEYS, situationTask, taskTitle, taskNote, seedText, purposeLabel, purposeFromLabel, INTENT_HINT, UPDATE, FALLBACK, DOMAIN, WORK_ITEM, WORK_COST, materialTitle, criterionName, LABEL, FIELDS, FIELD, FIELD_HINT, errText } from './vocab.js';
+import { pendingTurnRole, serverText } from '../store';
 import { eventLine, isFeedEvent } from './events.js';
 
 const L = window.PracticeLive;
@@ -66,7 +67,7 @@ const hasDecision = a => works(a).some(w => { const v = shown(w); return E.inten
 const scen = id => E.scenarios.find(s => s.id === id) || E.scenarios[0];
 const statusOf = a => (a && a.backend && a.backend.status) || 'active';
 const canWrite = a => { const s = sessionOf(a); const n = snap(); return !!s && s.world.status === 'active' && !n.busy && !s.pending && !n.storageError; };
-const typingRole = a => { const p = sessionOf(a)?.pending; return p && p.kind === 'turn' ? ROLE_OF[p.body.role_id] : null; };
+const typingRole = a => ROLE_OF[pendingTurnRole(sessionOf(a))] || null;
 const vtName = s => String(s).replace(/[^a-zA-Z0-9-]/g, '');
 const zhAttr = text => (locale() === 'en' && isChinese(text) ? ' lang="zh-CN"' : '');
 const zhTag = text => (locale() === 'en' && isChinese(text) ? '<span class="msg-local" title="The server has no English version of this text yet">Chinese source</span>' : '');
@@ -152,6 +153,7 @@ function commit() {
 
 /* ---------- toast & announcements ---------- */
 function notify(text, opts = {}) {
+  if (sheet.open && [...sheet.querySelectorAll('[data-approval-denial] span')].some(el => el.textContent === text)) { announce(text); return; }
   if (sheet.open && !sheet.classList.contains('closing') && !opts.undo && !opts.action && !opts.toast) {
     let el = sheet.querySelector('.inline-alert');
     if (!el) { el = document.createElement('div'); el.className = 'inline-alert'; el.setAttribute('role', 'alert'); sheet.querySelector('.sheet-body')?.prepend(el); }
@@ -824,10 +826,10 @@ function msgHtml(a, role, m) {
   const local = !mine && LOCAL_REPLY.test(m.text);
   const text = local ? m.text.replace(LOCAL_REPLY, '').split(/[；;]\s*/).filter(Boolean).map(s => '- ' + s).join('\n') : m.text;
   const t = (a.turnTimes || {})[m.traceId];
-  const time = t ? (mine ? t.asked : t.answered) : '';
-  const tk = (a.turnTask || {})[m.traceId]; const task = tk && a.tasks.find(x => x.id === tk);
+  const time = m.createdAt || (t ? (mine ? t.asked : t.answered) : '');
+  const tk = m.context?.task_id ?? (a.turnTask || {})[m.traceId]; const task = tk && a.tasks.find(x => x.id === tk);
   const tag = (mine ? '' : zhTag(m.text)) + (local ? `<span class="msg-local" title="${esc(T('后端以本地模式运行，没有接模型：这里列出的是这位同事掌握的事实，并没有读你的问题。', 'The server runs in local mode with no model: this lists facts the colleague holds and does not read your question.'))}">${T('本地模式', 'Local mode')}</span>` : '');
-  return `<div class="msg ${mine ? 'me' : 'them'}${local ? ' local' : ''}"><div class="bubble"${zhAttr(m.text)}>${mine ? esc(text) : md(text)}</div>${time || tag || (mine && task) ? `<span class="msg-foot">${tag}${mine && task ? `<button type="button" class="msg-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : ''}${time ? `<time>${when(time)}</time>` : ''}</span>` : ''}</div>`;
+  return `<div class="msg ${mine ? 'me' : 'them'}${local ? ' local' : ''}"><div class="bubble"${zhAttr(m.text)}>${mine ? esc(text) : md(text)}</div>${time || tag || (mine && tk) ? `<span class="msg-foot">${tag}${mine && tk ? (task ? `<button type="button" class="msg-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : `<span class="msg-task" title="${esc(tk)}">${esc(T('关联事项：', 'Linked task: ') + Array.from(String(tk)).slice(0, 8).join('') + (Array.from(String(tk)).length > 8 ? '…' : ''))}</span>`) : ''}${time ? `<time title="${esc(time)}">${when(time)}</time>` : ''}</span>` : ''}</div>`;
 }
 function railFeedback(a, t) {
   const scoped = t && !ui.scopeAll;
@@ -912,10 +914,10 @@ function activity(a, taskId) {
       let tid = null; let open = null;
       if (e.type === 'test_assistant') { const r = a.tests.find(x => x.id === (e.detail || {}).object_id); tid = r && r.taskId; open = r ? { action: 'open-run', id: r.id } : null; }
       if (e.type === 'material_read') open = { action: 'open-doc', id: (e.detail || {}).materialId };
-      const world = ['policy_updated', 'approve_request'].includes(e.type);
+      const world = ['policy_updated', 'approve_request', 'approval_denied'].includes(e.type);
       if (taskId && !world && tid !== taskId) return;
       const l = eventLine(a, e);
-      out.push({ at: times[e.seq] || '', order: i, icon: l.icon || 'info', tone: l.tone || (world ? 'world' : ''), text: l.text, open });
+      out.push({ at: e.createdAt || times[e.seq] || '', order: i, icon: l.icon || 'info', tone: l.tone || (world ? 'world' : ''), text: l.text, open });
       return;
     }
     const d = e.detail || {}; const work = d.artifactId && a.artifacts.find(x => x.id === d.artifactId); const tk = (d.taskId && a.tasks.find(t => t.id === d.taskId)) || (work && a.tasks.find(t => t.id === work.taskId));
@@ -947,7 +949,7 @@ function railActivity(a, t) {
 /* ---------- 4. review ---------- */
 function renderReview() {
   const a = current(); const s = sessionOf(a); const fb = s?.feedback; const submission = s ? L.store.submissionId(s) : '';
-  const pending = s?.pending && s.pending.kind === 'feedback';
+  const pending = s?.pending && (s.pending.job?.kind ?? s.pending.kind) === 'feedback';
   const head = topbar(backBtn('to-board', T('工作板', 'Board')));
   if (!submission) return `${head}<main id="main" class="page review" tabindex="-1"><div class="empty big"><h1 class="title-l">${T('交付之后，评审会出现在这里', 'The review appears here after you submit')}</h1>${btn(T('回到工作台', 'Back to the workspace'), 'to-work', 'primary')}</div></main>`;
   const items = fb ? fb.items : [];
@@ -972,12 +974,13 @@ function renderReview() {
         <div class="review-conds"><p class="meta">${T('交付时的条件', 'Conditions at submission')}</p>${conditions(a, 'compact')}</div>
       </header>
       <nav class="review-tabs segmented" role="group" aria-label="${esc(T('评审内容', 'Review content'))}"><span class="thumb"></span><button type="button" aria-pressed="${ui.reviewTab !== 'coach'}" data-action="review-tab" data-tab="rules">${T('上线检查（后端规则）', 'Launch checks (server rules)')}</button><button type="button" aria-pressed="${ui.reviewTab === 'coach'}" data-action="review-tab" data-tab="coach">${T('情境反馈（当时可知）', 'In context (what was knowable)')}</button></nav>
+      ${fb?.overflow && ui.reviewTab !== 'coach' ? `<p class="warn-line" data-feedback-overflow>${icon('warn', 'i-sm')}${T('证据超过长度上限，部分条目未评。', 'The evidence exceeds the length limit; some items were not reviewed.')}${btn(T('查看交付面板的作品选择', 'View work selection in the deliverable'), 'review-works', 'small quiet')}</p>` : ''}
       ${fb && ui.reviewTab !== 'coach' ? `<div class="tally" role="img" aria-label="${esc(groups.filter(([k]) => counts[k]).map(([k, l]) => l + ' ' + counts[k]).join(T('，', ', ')))}">${groups.filter(([k]) => counts[k]).map(([k, l, ic]) => `<span class="tally-seg ${k}" style="flex:${counts[k]}"><span class="tally-label">${icon(ic, 'i-xs')}${counts[k]}</span></span>`).join('')}</div>` : ''}
       ${fb && common.size && ui.reviewTab !== 'coach' ? `<div class="shared-evidence"><span class="meta">${T('评审读取的记录', 'Records the review read')}</span>${[...common].map(id => `<button type="button" class="chip" data-action="live-evidence" data-criterion="${esc(firstCrit)}" data-id="${esc(id)}">${icon(evidenceIcon(fb, id), 'i-xs')}<span>${esc(evidenceLabel(a, fb, id))}</span></button>`).join('')}</div>` : ''}
       <div class="review-grid">
         <div class="review-main">
           ${pending || (!fb && !s.feedbackFailure) ? `<div class="review-wait">${pending ? `<span class="spinner"></span><p>${T('评审正在生成…', 'The review is being written…')}</p>` : `<p>${T('交付已固定，评审还没生成。', 'Submitted; the review has not been generated yet.')}</p>${btn(T('生成评审', 'Generate the review'), 'live-feedback', 'primary', canWrite(a) || s.world.status === 'submitted' ? '' : 'disabled')}`}</div>` : ''}
-          ${s.feedbackFailure ? `<div class="review-wait bad">${icon('warn', 'i-sm')}<p>${esc(T('评审任务失败：', 'The review job failed: ') + (s.feedbackFailure.error || ''))}</p></div>` : ''}
+          ${s.feedbackFailure && !pending ? `<div class="review-wait bad">${icon('warn', 'i-sm')}<p>${esc(T('评审任务失败：', 'The review job failed: ') + (s.feedbackFailure.error || ''))}</p>${s.feedbackFailure.kind === 'feedback' ? btn(T('重新生成', 'Regenerate'), 'live-feedback', 'primary', 'data-retry="true"') : `<p>${T('当前服务不支持重新生成失败的评审。', 'This server cannot regenerate failed reviews.')}</p>`}</div>` : ''}
           ${ui.reviewTab === 'coach' ? coachSection(a) : ''}
           ${ui.reviewTab !== 'coach' && fb ? groups.map(([k, l, ic]) => { const list = items.filter(i => bucket(i) === k); return list.length ? `<section class="review-group ${k}"><h2 class="group-title">${icon(ic, 'i-sm')}${l}<span class="count">${list.length}</span></h2><ol class="criteria">${mergeSame(list).map(g => criterionItem(a, fb, g, common)).join('')}</ol></section>` : ''; }).join('') : ''}
           ${ui.reviewTab !== 'coach' && fb && fb.practice && fb.practice.length ? `<section class="review-group"><h2 class="group-title">${icon('branch', 'i-sm')}${T('建议补练', 'Suggested practice')}</h2><ul class="practice-list">${fb.practice.map(p => `<li${zhAttr(p)}>${esc(p)}</li>`).join('')}</ul></section>` : ''}
@@ -1088,7 +1091,10 @@ function sheetConfig() {
 function sheetResources() {
   const a = current(); const s = sessionOf(a);
   const pending = s?.world.pending_requests || [];
+  const denials = (s?.timeline.approval_denials || []).slice(-3).reverse();
+  if (s?.approvalError && !denials.some(d => d.rule_id === s.approvalError.rule_id && d.code === s.approvalError.code)) denials.unshift(s.approvalError);
   openSheet(T('资源与审批', 'Resources and approvals'), `<div class="res-now">${conditions(a, 'compact')}</div>
+    ${denials.map(d => `<p class="warn-line" data-approval-denial>${icon('hand', 'i-sm')}<span>${esc(serverText(d.error || '', d.code, d.details))}</span></p>`).join('')}
     <form data-form="resources" id="res-form" class="stack">
       <fieldset class="field"><legend>${T('申请什么', 'What you need')}</legend><div class="choices">${[['request_capacity', T('更多名额', 'More seats')], ['request_resources', T('更多开发资源或延期', 'More engineering time or a later date')]].map(([k, l], i) => `<label class="choice"><input type="radio" name="kind" value="${k}" ${i === 0 ? 'checked' : ''}><span>${l}</span></label>`).join('')}</div></fieldset>
       <label class="field"><span>${T('理由', 'Why')}</span><textarea class="textarea" name="reason" required maxlength="4000" rows="4" placeholder="${esc(T('要多少、做什么、为什么值得', 'How much, for what, and why it is worth it'))}"></textarea></label>
@@ -1109,30 +1115,31 @@ function rationaleFrom(a, ids) {
   return works(a).filter(w => ids.has(w.id)).map(x => { const v = shown(x); return '## ' + v.title + T('（' + purposeLabel(v.purpose) + '）', ' (' + purposeLabel(v.purpose) + ')') + '\n' + v.body.trim() + (x.evidence.length ? '\n' + T('依据：', 'Evidence: ') + x.evidence.map(e => evTitle(e) + (e.version ? ' v' + e.version : '')).join(T('；', '; ')) : ''); }).join('\n\n');
 }
 // The review reads one evidence bundle of at most 16,000 bytes; past that every item
-// degrades to "not enough evidence". Rough estimate from measurements on this backend.
+// is left unreviewed with an explicit overflow flag. Rough estimate from measurements on this backend.
 function bundleRisk(a, draft) {
   const bytes = s => new TextEncoder().encode(String(s || '')).length;
   const fields = FIELDS.reduce((n, k) => n + bytes(draft[k]), 0);
   return 7000 + fields + bytes(draft.rationale) + a.tests.length * 750 > 14500;
 }
-function sheetDeliver() {
+function sheetDeliver(readOnly = false) {
   const a = current(); const s = sessionOf(a);
-  if (s.world.status === 'submitted') { closeSheet(true); go('review'); return; }
+  if (s.world.status === 'submitted' && !readOnly) { closeSheet(true); go('review'); return; }
   const list = deliverPick(a);
-  if (!s.draft.rationale && list.length) L.store.update(a.id, { draft: { ...s.draft, rationale: rationaleFrom(a, ui.deliverPick) } });
+  if (!readOnly && !s.draft.rationale && list.length) L.store.update(a.id, { draft: { ...s.draft, rationale: rationaleFrom(a, ui.deliverPick) } });
   const now = sessionOf(a); const saved = now.artifact && JSON.stringify(now.artifact.content) === JSON.stringify(now.draft) && now.artifact.config_version === now.world.config_version;
   const risk = bundleRisk(a, now.draft);
+  const displayed = readOnly ? (s.artifact?.content || s.draft) : now.draft;
   openSheet(T('交付试点决定', 'Submit your pilot decision'), `<div class="deliver">
   <form data-form="live-deliver" id="live-deliver" class="deliver-doc paper">
-    ${FIELDS.map(k => `<section class="field-doc"><label for="d-${k}"><span class="fd-name">${FIELD(k)}</span><span class="fd-hint">${FIELD_HINT(k)}</span></label><textarea id="d-${k}" class="doc-input" name="${k}" rows="${k === 'rationale' ? 8 : 2}"${zhAttr(now.draft[k])}>${esc(now.draft[k])}</textarea></section>`).join('')}
+    ${FIELDS.map(k => `<section class="field-doc"><label for="d-${k}"><span class="fd-name">${FIELD(k)}</span><span class="fd-hint">${FIELD_HINT(k)}</span></label><textarea id="d-${k}" class="doc-input" name="${k}" ${readOnly ? 'readonly' : ''} rows="${k === 'rationale' ? 8 : 2}"${zhAttr(now.draft[k])}>${esc(displayed[k])}</textarea></section>`).join('')}
   </form>
   <aside class="deliver-side">
     <h3 class="mini-title">${T('附上的作品', 'Work to include')}</h3>
-    ${list.length ? `<div class="checks">${list.map(w => { const v = shown(w); return `<label class="check"><input type="checkbox" data-pick="${w.id}" ${ui.deliverPick.has(w.id) ? 'checked' : ''}><span>${esc(v.title)}</span><small>${esc(purposeLabel(v.purpose))}</small></label>`; }).join('')}</div>${btn(icon('refresh', 'i-sm') + T('按勾选重写依据', 'Rewrite evidence from these'), 'live-collect', 'small quiet')}` : `<p class="muted">${T('还没有写过作品。', 'No work written yet.')}</p>`}
-    ${risk ? `<p class="warn-line">${icon('warn', 'i-sm')}${T('内容偏长：评审一次最多读约 16 KB 记录，超过后所有项都会变成“证据不足”。精简依据或少附作品。', 'This is long. The review reads about 16 KB of records at most; beyond that every item becomes “not enough evidence”. Trim the evidence or include fewer pieces.')}</p>` : ''}
+    ${list.length ? `<div class="checks">${list.map(w => { const v = shown(w); return `<label class="check"><input type="checkbox" data-pick="${w.id}" ${readOnly ? 'disabled' : ''} ${ui.deliverPick.has(w.id) ? 'checked' : ''}><span>${esc(v.title)}</span><small>${esc(purposeLabel(v.purpose))}</small></label>`; }).join('')}</div>${readOnly ? '' : btn(icon('refresh', 'i-sm') + T('按勾选重写依据', 'Rewrite evidence from these'), 'live-collect', 'small quiet')}` : `<p class="muted">${T('还没有写过作品。', 'No work written yet.')}</p>`}
+    ${risk ? `<p class="warn-line">${icon('warn', 'i-sm')}${T('内容偏长：评审一次最多读约 16 KB 记录，超过后相关条目不会评审。精简依据或少附作品。', 'This is long. The review reads about 16 KB of records at most; items beyond that limit are left unreviewed. Trim the evidence or include fewer pieces.')}</p>` : ''}
     <p class="meta">${now.artifact ? (saved ? T('已保存为交付稿 v' + now.artifact.version, 'Saved as deliverable v' + now.artifact.version) : T('交付稿 v' + now.artifact.version + ' 之后有改动', 'Changed since deliverable v' + now.artifact.version)) : T('还没保存', 'Not saved yet')}</p>
   </aside></div>`,
-  `<span class="foot-note">${T('提交后这次练习只读，可以换个条件再练。', 'Once submitted, this practice is read-only. You can practise again with a new condition.')}</span><span class="spacer"></span>${btn(T('保存', 'Save'), 'live-save', saved ? 'quiet' : '')}${btn(icon('stamp', 'i-sm') + T('提交', 'Submit'), 'live-submit', 'primary', saved ? '' : 'disabled')}`, 'wide doc');
+  readOnly ? `<span class="foot-note">${T('本次交付已固定。下次交付可在这里少选作品、精简依据。', 'This submission is fixed. For the next submission, select fewer works here and trim the evidence.')}</span>${btn(T('关闭', 'Close'), 'close', 'primary')}` : `<span class="foot-note">${T('提交后这次练习只读，可以换个条件再练。', 'Once submitted, this practice is read-only. You can practise again with a new condition.')}</span><span class="spacer"></span>${btn(T('保存', 'Save'), 'live-save', saved ? 'quiet' : '')}${btn(icon('stamp', 'i-sm') + T('提交', 'Submit'), 'live-submit', 'primary', saved ? '' : 'disabled')}`, 'wide doc');
 }
 function sheetCitePicker() {
   const a = current(); const read = readSet(a); read.add('brief');
@@ -1186,19 +1193,20 @@ function noticeArrivals() {
   const s = sessionOf(a); if (!s) return;
   a.turnTimes = a.turnTimes || {}; a.eventTimes = a.eventTimes || {}; a.readTurns = a.readTurns || {};
   const first = !ui.synced;
-  const pend = s.pending && s.pending.kind === 'turn' ? s.pending : null;
-  if (pend) ui.pendingTurn = { role: ROLE_OF[pend.body.role_id], created: pend.created, taskId: ui.chatTask || null };
+  const pend = pendingTurnRole(s) ? s.pending : null;
+  if (pend) ui.pendingTurn = { role: ROLE_OF[pendingTurnRole(s)], created: pend.job?.queued_at || pend.created, taskId: pend.body.task_id ?? ui.chatTask ?? null };
   a.turnTask = a.turnTask || {};
   let dirtyRecord = false;
   for (const r of ROLES) {
     const msgs = (a.conversations[r] || []).filter(m => m.role !== 'user');
     if (a.readTurns[r] === undefined) { a.readTurns[r] = msgs.length; dirtyRecord = true; }
     for (const m of msgs) {
-      if (!m.traceId || a.turnTimes[m.traceId] !== undefined) continue;
-      if (first) { a.turnTimes[m.traceId] = null; continue; }
+      if (!m.traceId) continue;
+      if (a.turnTimes[m.traceId] !== undefined) { if (m.createdAt) a.turnTimes[m.traceId] = { asked: m.createdAt, answered: m.createdAt }; continue; }
+      if (first) { a.turnTimes[m.traceId] = m.createdAt ? { asked: m.createdAt, answered: m.createdAt } : null; continue; }
       const asked = ui.pendingTurn && ui.pendingTurn.role === r ? ui.pendingTurn.created : null;
-      a.turnTimes[m.traceId] = { asked, answered: new Date().toISOString() }; dirtyRecord = true;
-      if (ui.pendingTurn && ui.pendingTurn.role === r && ui.pendingTurn.taskId) a.turnTask[m.traceId] = ui.pendingTurn.taskId;
+      a.turnTimes[m.traceId] = { asked: m.createdAt || asked, answered: m.createdAt || new Date().toISOString() }; dirtyRecord = true;
+      if (m.context?.task_id === undefined && ui.pendingTurn && ui.pendingTurn.role === r && ui.pendingTurn.taskId) a.turnTask[m.traceId] = ui.pendingTurn.taskId;
       if (ui.pendingTurn && ui.pendingTurn.role === r) ui.pendingTurn = null;
       const visible = WS.includes(ui.route) && ui.railTab === 'team' && ui.rail === 'chat' && ui.chatRole === r && railVisible();
       if (!visible) notify(T(PEOPLE[r].name + ' 回复了', PEOPLE[r].name + ' replied'), { lead: avatar(r, 'sm'), action: { label: T('查看', 'View'), run: () => openChat(r) } });
@@ -1209,8 +1217,8 @@ function noticeArrivals() {
   if (was && !first) { const keys = ['capacity', 'devDays', 'deadline'].filter(k => was[k] !== a.world[k]); if (keys.length) ui.changed = { keys, until: Date.now() + 4000 }; }
   ui.lastWorld = { id: a.id, capacity: a.world.capacity, devDays: a.world.devDays, deadline: a.world.deadline };
   for (const e of a.events.filter(x => x.server)) {
-    if (a.eventTimes[e.seq] !== undefined) continue;
-    a.eventTimes[e.seq] = first ? null : new Date().toISOString(); dirtyRecord = true;
+    if (a.eventTimes[e.seq] !== undefined) { if (e.createdAt) a.eventTimes[e.seq] = e.createdAt; continue; }
+    a.eventTimes[e.seq] = e.createdAt || (first ? null : new Date().toISOString()); dirtyRecord = true;
     if (first) continue;
     const l = eventLine(a, e);
     if (l.announce) notify(l.text, l.announce === 'policy' ? { toast: true, lead: `<span class="toast-icon">${icon('bolt', 'i-sm')}</span>`, action: { label: T('看变化', 'See changes'), run: () => openMaterial('policy', true) } } : { toast: true, lead: `<span class="toast-icon">${icon(l.icon || 'info', 'i-sm')}</span>` });
@@ -1267,6 +1275,13 @@ function cite(ev) {
   }
   try { E.addEvidence(a, x.id, ev); persist(); closeSheet(true); notify(T('已加入「' + shown(x).title + '」的依据', 'Added to the evidence for “' + shown(x).title + '”')); }
   catch (err) { notify(errText(err)); }
+}
+function attachToTurn(a, item) {
+  const s = sessionOf(a), role = ROLE_ID[ui.chatRole]; if (!s || !role) return false;
+  const context = s.turnContexts?.[role] || {};
+  const attachments = (context.attachments || []).filter(x => !(x.type === item.type && x.id === item.id));
+  if (attachments.length >= 10) { notify(T('每条消息最多附上 10 个对象。', 'Attach up to 10 items per message.')); return false; }
+  return L.store.update(a.id, { turnContexts: { ...s.turnContexts, [role]: { ...context, attachments: [...attachments, item] } } });
 }
 function openChat(role, prefill = '') {
   const a = current(); ui.railTab = 'team'; ui.rail = 'chat'; ui.chatRole = role; ui.menu = null;
@@ -1378,10 +1393,10 @@ async function act(el) {
     }
     case 'rerun': { const r = a.tests.find(x => x.id === id); if (r) await runQuestion(r.question, r.expectation); break; }
     case 'config': closeSheet(true); ui.menu = null; sheetConfig(); break;
-    case 'resend-turn': { const s = sessionOf(a); const op = s?.failedTurn; if (op) { await L.turn(a, ROLE_OF[op.body.role_id], String(op.body.text)); L.store.update(a.id, { failedTurn: undefined }); refreshWS(['rail']); } break; }
+    case 'resend-turn': { const s = sessionOf(a); const op = s?.failedTurn; if (op) { await L.turn(a, ROLE_OF[op.body.role_id], String(op.body.text), { ...(op.body.task_id !== undefined ? { task_id: op.body.task_id } : {}), ...(op.body.work_id !== undefined ? { work_id: op.body.work_id } : {}), ...(op.body.attachments ? { attachments: op.body.attachments } : {}) }); L.store.update(a.id, { failedTurn: undefined }); refreshWS(['rail']); } break; }
     case 'discuss-run': { const r = a.tests.find(x => x.id === id); openChat('technical', T(`我测了“${r.question}”，助手答“${answerText(r.answer).slice(0, 300)}”（政策源 v${r.policyVersion}，索引 v${r.indexVersion}）。我想确认：`, `I asked “${r.question}” and the assistant said “${answerText(r.answer).slice(0, 300)}” (policy v${r.policyVersion}, index v${r.indexVersion}). I want to check: `)); break; }
-    case 'prefill-artifact': { const x = artifact(); const input = document.getElementById('chat-input'); if (input && x) { const v = shown(x); input.value = T(`这是我的「${v.title}」：\n${v.body.slice(0, 1500)}\n\n`, `Here is my “${v.title}”:\n${v.body.slice(0, 1500)}\n\n`) + input.value; input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); } break; }
-    case 'prefill-run': { const r = a.tests.at(-1); const input = document.getElementById('chat-input'); if (input && r) { input.value = T(`最近一次测试：“${r.question}” → “${answerText(r.answer).slice(0, 300)}”。`, `Latest test: “${r.question}” → “${answerText(r.answer).slice(0, 300)}”. `) + input.value; input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); } break; }
+    case 'prefill-artifact': { const x = artifact(); const input = document.getElementById('chat-input'); if (input && x) { if (!attachToTurn(a, { type: 'work', id: x.id, version: x.revision })) break; const v = shown(x); input.value = T(`这是我的「${v.title}」：\n${v.body.slice(0, 1500)}\n\n`, `Here is my “${v.title}”:\n${v.body.slice(0, 1500)}\n\n`) + input.value; input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); } break; }
+    case 'prefill-run': { const r = a.tests.at(-1); const input = document.getElementById('chat-input'); if (input && r) { if (!attachToTurn(a, { type: 'test', id: r.id, version: r.configVersion })) break; input.value = T(`最近一次测试：“${r.question}” → “${answerText(r.answer).slice(0, 300)}”。`, `Latest test: “${r.question}” → “${answerText(r.answer).slice(0, 300)}”. `) + input.value; input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); } break; }
     case 'package': openSheet(T('任务包', 'Task package'), `<p class="meta">${T('这是会交给你的 Agent 的内容，不含任何连接凭据。', 'This is what your agent receives. It contains no credentials.')}</p><label class="sr-only" for="package-text">${T('任务包内容', 'Package content')}</label><textarea id="package-text" class="textarea mono" rows="16" readonly>${esc(JSON.stringify(pkgFor(a, false), null, 2))}</textarea>`, `${btn(T('关闭', 'Close'), 'close', 'quiet')}<span class="spacer"></span>${btn(T('复制并记为已导出', 'Copy and mark as handed over'), 'copy-package', 'primary')}`, 'wide'); break;
     case 'copy-package': { const pkg = pkgFor(a, true); persist(); closeSheet(true); try { await navigator.clipboard.writeText(JSON.stringify(pkg, null, 2)); notify(T('任务包已复制，记为已导出', 'Package copied and marked as handed over')); } catch (_) { notify(T('浏览器不允许自动复制；已记为导出，可在“查看”里手动复制', 'The browser blocked copying. It is marked as handed over; copy it from Preview.')); } refreshWS(['rail']); break; }
     case 'download-package': download(pkgFor(a, true), 'practice-task.json'); persist(); notify(T('任务包已交给浏览器下载', 'Package handed to the browser to download')); refreshWS(['rail']); break;
@@ -1389,15 +1404,16 @@ async function act(el) {
     case 'live-refresh': await L.refresh(a); refreshChrome(); notify(snap().connected ? T('已连接', 'Connected') : T('还是连不上后端', 'Still cannot reach the server')); break;
     case 'live-retry': await L.retry(a); refreshChrome(); break;
     case 'live-session': { closeSheet(true); if (statusOf(a) === 'submitted') { go('review'); break; } await L.action(a, statusOf(a) === 'paused' ? 'resume' : 'pause'); refreshWS(); break; }
-    case 'live-approval': await L.perform(a, () => L.store.approval(el.dataset.id)); sheetResources(); refreshWS(); break;
+    case 'live-approval': try { await L.perform(a, () => L.store.approval(el.dataset.id)); } finally { sheetResources(); refreshWS(); } break;
     case 'live-collect': { commit(); const f = document.getElementById('live-deliver'); if (f) saveDraftFields(a, f); deliverPick(a); L.store.update(a.id, { draft: { ...sessionOf(a).draft, rationale: rationaleFrom(a, ui.deliverPick) } }); sheetDeliver(); break; }
     case 'live-save': { const f = document.getElementById('live-deliver'); if (f) saveDraftFields(a, f); await L.save(a, sessionOf(a).draft); sheetDeliver(); notify(T('交付稿已保存', 'Deliverable saved')); break; }
     case 'live-submit': {
       await L.submit(a); if (!L.store.submissionId(sessionOf(a))) throw new Error(T('还没得到提交确认。', 'The submission has not been confirmed yet.'));
-      a.submittedAt = new Date().toISOString(); ui.justSubmitted = a.id; persist();
+      a.submittedAt = sessionOf(a).submission?.created_at || new Date().toISOString(); ui.justSubmitted = a.id; persist();
       closeSheet(true); go('review', { transition: true }); await L.feedback(a); render(); break;
     }
-    case 'live-feedback': await L.feedback(a); render(); break;
+    case 'review-works': sheetDeliver(true); break;
+    case 'live-feedback': toastEl.classList.remove('visible'); await L.feedback(a, el.dataset.retry === 'true'); render(); break;
     case 'live-evidence': {
       const value = await L.evidence(a, el.dataset.criterion, id);
       openSheet(esc(evidenceLabel(a, sessionOf(a).feedback, id)), evidenceView(a, value), btn(T('好', 'OK'), 'close', 'primary'), 'narrow'); break;
@@ -1587,7 +1603,7 @@ document.addEventListener('submit', async e => {
       }
       case 'artifact': { const x = E.createArtifact(a, { title: String(f.get('title')).trim(), purpose: String(f.get('purpose')), taskId: String(f.get('taskId')), body: '' }); startWorking(a, a.tasks.find(y => y.id === x.taskId)); persist(); closeSheet(true); openTask(x.taskId, { type: 'work', id: x.id }); setTimeout(() => document.getElementById('editor-body')?.focus(), 80); break; }
       case 'run-test': runQuestion(String(f.get('question')), String(f.get('expectation') || '')); break;
-      case 'chat': { const text = String(f.get('text')).trim(); if (!text || !ui.chatRole) break; ui.chatTask = task() ? task().id : null; await L.turn(a, ui.chatRole, text); refreshWS(['rail', 'toolbar']); document.getElementById('chat-input')?.focus(); break; }
+      case 'chat': { const text = String(f.get('text')).trim(); if (!text || !ui.chatRole) break; ui.chatTask = task() ? task().id : null; const x = ui.obj?.type === 'work' ? artifact() : null; const context = { ...(sessionOf(a).turnContexts?.[ROLE_ID[ui.chatRole]] || {}), ...(ui.chatTask ? { task_id: ui.chatTask } : {}), ...(x ? { work_id: x.id } : {}) }; await L.turn(a, ui.chatRole, text, context); refreshWS(['rail', 'toolbar']); document.getElementById('chat-input')?.focus(); break; }
       case 'config': {
         await L.config(a, { participants: Number(f.get('participants')), domains: f.getAll('domains'), update: String(f.get('update')), fallback: String(f.get('fallback')), workItems: f.getAll('workItems'), launchDay: Number(f.get('launchDay')) });
         closeSheet(); { const t = task(); if (t) ui.obj = { task: t.id, type: 'bench' }; } refreshWS(); notify(T('试点设置 v' + a.configVersion + ' 已保存，下一次测试会用它。', 'Pilot settings v' + a.configVersion + ' saved. The next test uses them.'));

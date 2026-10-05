@@ -13,33 +13,39 @@ export interface World {
   config_version: number; status: 'active' | 'paused' | 'submitted';
 }
 export interface Material { id: string; version: number; title: string; content: string }
+export interface TurnContext { task_id?: string; work_id?: string; attachments?: { type: 'work' | 'test'; id: string; version?: number }[] }
+export interface ApprovalDenial { id: string; rule_id: string; request_id: string; code: string; details: Record<string, any>; created_at?: string | null }
 export interface Turn {
   text: string; status: string; role_id: RoleId; model_revision: string;
   as_of_seq: number; trace_id: string;
+  created_at?: string | null; question?: string | null; context?: TurnContext;
 }
 export interface EventRecord {
   seq: number; event_type: string; actor_id: string; payload: Record<string, unknown>;
+  created_at?: string | null;
 }
-export interface Timeline { events: EventRecord[]; turns: Turn[]; mode: string }
+export interface Timeline { events: EventRecord[]; turns: Turn[]; mode: string; approval_denials?: ApprovalDenial[] }
 export interface TestRun {
   id: string; query: string; answer: string; fallback: boolean; mode: string;
   citations: { material_id: string; version: number }[];
   source_versions: Record<string, number>; indexed_versions: Record<string, number>;
   config_version: number; as_of_seq: number; stale: boolean;
+  created_at?: string | null;
 }
 export interface Deliverable {
   goal: string; owner: string; metrics: string; observation_window: string;
   exit_condition: string; rationale: string;
 }
-export interface Artifact { id: string; content: Deliverable; config_version: number; version: number }
-export interface Submission { id: string; artifact_id: string; config_version: number; as_of_seq: number }
+export interface Artifact { id: string; content: Deliverable; config_version: number; version: number; created_at?: string | null; as_of_seq?: number }
+export interface Submission { id: string; artifact_id: string; config_version: number; as_of_seq: number; created_at?: string | null }
 export interface Feedback {
   submission_id: string; as_of_seq: number; model_revision: string;
   summary: { status: string; lower: number | null; upper: number | null; coverage: number };
-  items: { criterion_id: string; label: string; reason: string; evidence_ids: string[]; review_required: boolean }[];
+  items: { criterion_id: string; label: string; reason: string; evidence_ids: string[]; review_required: boolean; completeness?: 'complete' | 'missing' | 'overflow' }[];
+  overflow?: boolean;
   sources: Record<string, Record<string, unknown>>; practice: string[];
 }
-export interface Job { id: string; status: 'queued' | 'running' | 'completed' | 'failed'; attempt: number; result: Turn | Feedback | null; error: string | null }
+export interface Job { id: string; status: 'queued' | 'running' | 'completed' | 'failed'; attempt: number; result: Turn | Feedback | null; error: string | null; kind?: 'turn' | 'feedback'; role_id?: RoleId | null; queued_at?: string | null; started_at?: string | null; finished_at?: string | null }
 export type OperationKind = 'action' | 'turn' | 'test' | 'artifact' | 'submission' | 'feedback' | 'approval' | 'relation';
 export interface Operation {
   path: string; body: Record<string, unknown>; kind: OperationKind;
@@ -56,6 +62,8 @@ export interface LocalSession {
   artifact?: Artifact; submission?: Submission; feedback?: Feedback;
   pending?: Operation; failedTurn?: Operation;
   feedbackFailure?: Job;
+  turnContexts?: Partial<Record<RoleId, TurnContext>>;
+  approvalError?: { rule_id: string; code?: string; details?: Record<string, any>; error: string };
   relationResult?: Record<string, any>;
 }
 export interface Workspace {
