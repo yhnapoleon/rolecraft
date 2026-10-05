@@ -1,6 +1,6 @@
 import { ApiError, request, sessionPath, type Transport } from './api';
 import { T } from './app/i18n';
-import type { Artifact, Deliverable, Feedback, Job, LocalSession, Operation, Pilot, RoleId, Scenario, Submission, TestRun, Timeline, Turn, Workspace, World } from './types';
+import type { Artifact, Deliverable, Feedback, Job, LocalSession, LocalTestRun, Operation, Pilot, RoleId, Scenario, Submission, TestRun, TestRunOrigin, Timeline, Turn, Workspace, World } from './types';
 
 export const STORAGE_KEY = 'rolecraft.live.workspace.v1';
 export const emptyDraft = (): Deliverable => ({ goal: '', owner: '', metrics: '', observation_window: '', exit_condition: '', rationale: '' });
@@ -91,11 +91,11 @@ export class WorkspaceStore {
     return s.submission?.id || String(s.timeline.events.findLast(e => e.event_type === 'submit_plan')?.payload.object_id || '');
   }
   canWrite(s = this.active()) { return Boolean(s && s.world.status === 'active' && !s.pending && !this.state.busy && !this.state.storageError); }
-  async write(kind: Operation['kind'], suffix: string, body: Record<string, unknown>, label: string) {
+  async write(kind: Operation['kind'], suffix: string, body: Record<string, unknown>, label: string, localRun?: LocalTestRun) {
     const s = this.active();
     if (!s || this.state.busy || s.pending || this.state.storageError) return;
     if (!['feedback', 'action', 'relation'].includes(kind) && s.world.status !== 'active') return;
-    const operation: Operation = { kind, path: suffix, body, label, created: new Date().toISOString(), ...(kind === 'test' ? { localExpected: s.inputs.expected } : {}) };
+    const operation: Operation = { kind, path: suffix, body, label, created: new Date().toISOString(), ...(kind === 'test' ? { localExpected: localRun?.expectation ?? s.inputs.expected, ...(localRun ? { localRun: structuredClone(localRun) } : {}) } : {}) };
     if (!this.update(s.id, { pending: operation })) return;
     await this.execute(s.id);
   }
@@ -107,9 +107,16 @@ export class WorkspaceStore {
   sendTurn(role: RoleId, text: string) {
     return this.write('turn', '/turns', { role_id: role, text, request_id: crypto.randomUUID() }, T('同事回复', 'Colleague reply'));
   }
-  test(query: string) {
+  test(query: string, origin?: TestRunOrigin & { expectation?: string }) {
     const s = this.active(); if (!s) return;
-    return this.write('test', '/tests', { query, config_version: s.world.config_version, request_id: crypto.randomUUID() }, T('知识助手测试', 'Assistant test'));
+    if (!s.world.configs.pilot) { this.emit({ error: T('先保存试点设置，再测试助手。', 'Save the pilot settings before testing the assistant.') }); return; }
+    if (typeof query !== 'string' || !query.trim() || Array.from(query).length > 4000) { this.emit({ error: T('测试问题需要 1–4000 个字符。', 'The question needs 1–4,000 characters.') }); return; }
+    const requestId = crypto.randomUUID();
+    const localRun: LocalTestRun = {
+      ...structuredClone(origin || { taskId: null }), sessionId: s.id, requestId, query,
+      expectation: origin?.expectation ?? s.inputs.expected, config: structuredClone(s.world.configs.pilot || null), createdAt: new Date().toISOString(),
+    };
+    return this.write('test', '/tests', { query, config_version: s.world.config_version, request_id: requestId }, T('知识助手测试', 'Assistant test'), localRun);
   }
   saveArtifact() { const s = this.active(); if (!s) return; return this.write('artifact', '/artifacts', { content: s.draft, request_id: crypto.randomUUID() }, T('保存交付稿', 'Save deliverable')); }
   submit() {
@@ -124,7 +131,7 @@ export class WorkspaceStore {
   approval(rule: string) { const s = this.active(); if (!s) return; return this.write('approval', '/approvals/resolve', { rule_id: rule, request_id: crypto.randomUUID(), expected_version: s.world.version }, T('按场景规则审核申请', 'Approval')); }
   async execute(id = this.state.workspace.active) {
     const s = this.state.workspace.sessions.find(s => s.id === id);
-    if (!s?.pending || this.state.busy) return;
+    if (!s?.pending || this.state.busy || this.state.storageError) return;
     if (s.pending.jobId) { await this.poll(id); return; }
     this.emit({ busy: true, error: '', notice: '' });
     const op = s.pending;
@@ -137,14 +144,21 @@ export class WorkspaceStore {
         const latest = this.state.workspace.sessions.find(x => x.id === s.id)!;
         const patch: Partial<LocalSession> = { pending: undefined };
         if (op.kind === 'test') {
+          if (!validTestResult(result, op)) throw new ApiError(T('测试返回内容与原请求不符，已保留原请求，请核对后重试。', 'The test response did not match its request. The original request has been kept for recovery.'));
           patch.tests = [...latest.tests.filter(t => t.id !== result.id), result as TestRun];
-          patch.testNotes = { ...latest.testNotes, [result.id]: { expected: op.localExpected || '', diagnosis: '' } };
+          patch.testNotes = { ...latest.testNotes, [result.id]: latest.testNotes[result.id] || { expected: op.localRun?.expectation ?? op.localExpected ?? '', diagnosis: '' } };
+          if (op.localRun) patch.testRunMeta = { ...latest.testRunMeta, [result.id]: structuredClone(op.localRun) };
         }
         if (op.kind === 'artifact') patch.artifact = result as Artifact;
         if (op.kind === 'submission') patch.submission = result as Submission;
         if (op.kind === 'relation') patch.relationResult = result;
         if (op.kind === 'action' && op.body.tool === 'update_pilot') patch.configDraft = undefined;
-        this.update(s.id, patch);
+        if (!this.update(s.id, patch)) {
+          // The server may have succeeded, but the browser still needs the exact
+          // original operation to recover after storage becomes available.
+          this.state.workspace = { ...this.state.workspace, sessions: this.state.workspace.sessions.map(x => x.id === s.id ? { ...x, pending: op } : x) };
+          return;
+        }
         this.emit({ notice: op.label + T('已由后端保存。', ' saved.') });
         await this.sync(s.id);
       }
@@ -184,6 +198,17 @@ export class WorkspaceStore {
     } catch (e) { this.emit({ error: T('查询任务失败：', 'Could not check the job: ') + message(e) }); }
     finally { this.polling = false; }
   }
+}
+function validTestResult(value: any, operation: Operation): value is TestRun {
+  return !!value && typeof value.id === 'string' && !!value.id && value.query === operation.body.query &&
+    value.config_version === operation.body.config_version && typeof value.answer === 'string' &&
+    typeof value.mode === 'string' && typeof value.fallback === 'boolean' && typeof value.stale === 'boolean' &&
+    Number.isInteger(value.as_of_seq) && value.as_of_seq >= 0 &&
+    validVersions(value.source_versions) && validVersions(value.indexed_versions) && Array.isArray(value.citations) &&
+    value.citations.every((c: any) => typeof c.material_id === 'string' && Number.isInteger(c.version) && c.version > 0);
+}
+function validVersions(value: any) {
+  return !!value && typeof value === 'object' && !Array.isArray(value) && Object.values(value).every(v => Number.isInteger(v) && Number(v) > 0);
 }
 export function message(e: unknown) { return e instanceof ApiError ? serverText(e.message) : e instanceof Error ? e.message : String(e); }
 // Server details are English identifiers; say what happened in the interface language.

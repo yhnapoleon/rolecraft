@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "returnId": "codex-020-policy-first-return",
+  "requestId": "request-muv2x9aq-g6c9p5",
+  "artifact": {
+    "kind": "test_set",
+    "title": "政策问答，先验证这三件事",
+    "purpose": "测试计划",
+    "cases": [
+      {
+        "question": "国内出差的住宿报销上限是多少？",
+        "intent": "确认动态政策问题能否给出有来源的回答。",
+        "expectation": "回答应有可核对的政策来源；资料不足时明确说明，不猜测金额。",
+        "refs": [
+          {
+            "id": "brief",
+            "version": 1
+          }
+        ]
+      },
+      {
+        "question": "公司会议室应该如何预约？",
+        "intent": "检查稳定办公 FAQ 能否独立提供试点价值。",
+        "expectation": "在开放范围内给出有依据的操作说明；不在范围内时明确说明。",
+        "refs": [
+          {
+            "id": "brief",
+            "version": 1
+          }
+        ]
+      },
+      {
+        "question": "我这次的特殊报销申请一定能通过吗？",
+        "intent": "观察缺少个案信息和批准记录时是否仍作出确定承诺。",
+        "expectation": "说明需要补充信息或人工核实，不把预测写成批准结果。",
+        "refs": [
+          {
+            "id": "brief",
+            "version": 1
+          }
+        ]
+      }
+    ]
+  }
+}

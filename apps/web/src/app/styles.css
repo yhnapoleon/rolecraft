@@ -1138,3 +1138,38 @@ button.act-open:hover { color: var(--ink); }
 .sw-people, .sw-shape { display: inline-flex; align-items: center; gap: 3px; flex: none; }
 .sw-shape { gap: 5px; }
 .answer-tag { margin-top: 8px; }
+
+/* Work actions stay visible; editing and adoption are independent. */
+.work-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 0 16px; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
+.work-view-toggle { flex: none; }
+.work-view-toggle button { font-size: 12px; padding: 5px 12px; }
+.test-set-paper > .work-controls { padding: 14px 28px; margin: 0; }
+.import-work-status { display: flex; align-items: center; gap: 10px; padding: 12px 14px; margin-bottom: 16px; border-radius: var(--r-sm); background: var(--surface-2); color: var(--ink-2); }
+.import-work-status b { display: block; font-size: 12px; font-weight: 550; }
+.import-work-status .grow > span { display: block; margin-top: 3px; color: var(--ink-3); font-size: 11px; line-height: 1.65; }
+.work-recycle-link { display: flex; align-items: center; gap: 6px; margin-top: 6px; padding: 8px; border: 0; background: transparent; color: var(--ink-3); font-size: 11px; text-align: left; border-radius: var(--r-sm); }
+.work-recycle-link:hover { background: var(--fill); color: var(--ink); }
+.work-remove-title { font-size: 17px; font-weight: 550; margin-bottom: 10px; overflow-wrap: anywhere; }
+.work-remove-note { color: var(--ink-2); line-height: 1.75; }
+.removed-work-list { margin-top: 16px; }
+.removed-work-row { display: flex; align-items: center; gap: 16px; padding: 16px 0; border-top: 1px solid var(--line); }
+.removed-work-row h3 { font-size: 14px; font-weight: 550; overflow-wrap: anywhere; margin-bottom: 4px; }
+@media (max-width:700px) {
+  .work-controls .btn, .work-view-toggle button { min-height: 38px; }
+  .test-set-paper > .work-controls { padding: 12px 16px; }
+  .import-work-status { flex-wrap: wrap; }
+}
+
+/* Compact work controls: familiar symbols, names on hover/focus, no text toolbar. */
+.work-controls-icons { justify-content: flex-end; gap: 5px; padding-bottom: 10px; margin-bottom: 18px; }
+.icon-control { position: relative; display: inline-flex; }
+.work-icon { width: 36px; height: 36px; border-radius: 9px; color: var(--ink-2); }
+.work-icon .i { width: 18px; height: 18px; }
+.work-control-divider { width: 1px; height: 16px; background: var(--line-2); margin: 0 4px; }
+.action-tooltip { position: absolute; top: calc(100% + 6px); right: 0; width: max-content; max-width: 220px; z-index: 40; padding: 5px 9px; border-radius: 6px; background: var(--ink); color: var(--surface); font-size: 11px; line-height: 1.5; font-weight: 450; pointer-events: none; opacity: 0; visibility: hidden; transform: translateY(-2px); transition: opacity 120ms ease, transform 120ms var(--ease), visibility 120ms; }
+.icon-control:focus-within .action-tooltip { opacity: 1; visibility: visible; transform: none; transition-delay: 0ms; }
+@media (hover:hover) and (pointer:fine) { .icon-control:hover .action-tooltip { opacity: 1; visibility: visible; transform: none; transition-delay: 180ms; } }
+.work-controls-icons:has(.work-icon:focus-visible) .icon-control:not(:focus-within) .action-tooltip { opacity: 0; visibility: hidden; transition-delay: 0ms; }
+.hide-tooltips .action-tooltip { opacity: 0 !important; visibility: hidden !important; }
+@media (max-width:700px) { .work-controls-icons .work-icon { width: 42px; height: 42px; } }
+@media (prefers-reduced-motion:reduce) { .action-tooltip { transform: none; transition: opacity 80ms; } }

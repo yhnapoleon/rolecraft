@@ -3,6 +3,9 @@
 // picture carries information instead of decorating the page.
 
 const P = {
+  edit: '<path d="m15.5 4.5 4 4M4.5 19.5l4.5-1L20 7.5a2.8 2.8 0 0 0-4-4L5 14.5z"/>',
+  save: '<path d="M5 3.5h11l4.5 4.5v11.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M7 3.5V9h9V3.5M7 20.5v-7h10v7"/>',
+  trash: '<path d="M4 6.5h16M9 6.5v-3h6v3M6 6.5l.9 13h10.2l.9-13M10 10v6M14 10v6"/>',
   back: '<path d="M14.5 5.5 8 12l6.5 6.5"/>',
   chev: '<path d="m9.5 5.5 6.5 6.5-6.5 6.5"/>',
   down: '<path d="m6.5 9.5 5.5 5.5 5.5-5.5"/>',
