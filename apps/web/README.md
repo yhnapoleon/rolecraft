@@ -104,6 +104,8 @@ npm run preview -- --port 8510
 
 ## 代码位置
 
+改界面之前先读[前端风格](../../docs/design/frontend-style.md)：原则、现有参数和可以探索的方向都在那里。
+
 **主入口（v4）：**
 
 | 文件 | 内容 |
@@ -185,4 +187,4 @@ v2 截图：
 
 截图和数据库内容都是合成验收样例，不是正式用户实验。
 
-v4 的改动还在本机工作区，没有提交；`tests/screenshots/v3-*.jpg` 是上一版截图，已不再引用。[PR #1](https://github.com/yhnapoleon/rolecraft/pull/1) 对应的是 v2 连接版。本轮未配置、也未验证 PostgreSQL、外部 LLM、辅助关系判断的成功推断、云端部署和真人效果。后端代码没有改动。
+[PR #1](https://github.com/yhnapoleon/rolecraft/pull/1) 对应的是 v2 连接版。本轮未配置、也未验证 PostgreSQL、外部 LLM、辅助关系判断的成功推断、云端部署和真人效果。后端代码没有改动。

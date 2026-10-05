@@ -185,14 +185,16 @@ function withTransition(fn) {
   activeTransition = document.startViewTransition(() => { fn(); });
   activeTransition.finished.finally(() => { activeTransition = null; });
 }
+// An undo belongs to the page it was offered on; leaving the page withdraws it.
+function dropUndo() { if (ui.lastUndo) { ui.lastUndo = null; toastEl.classList.remove('visible'); } }
 function go(route, opts = {}) {
-  commit();
+  commit(); dropUndo();
   if ((WS.includes(route) || route === 'review') && !current()) route = 'pm';
   const id = opts.id || null;
   const run = () => { if (sheet.open) closeSheet(true); ui.menu = null; ui.railOpen = false; ui.advice = null; ui.route = route; ui.routeId = id; history.pushState(null, '', hashOf(route, id)); render(); window.scrollTo(0, 0); document.getElementById('main')?.scrollTo?.(0, 0); };
   if (opts.transition) withTransition(run); else run();
 }
-window.addEventListener('popstate', () => { commit(); if (sheet.open) closeSheet(true); ui.menu = null; ui.advice = null; const p = parseRoute(); ui.route = p.r; ui.routeId = p.id; withTransition(render); });
+window.addEventListener('popstate', () => { commit(); dropUndo(); if (sheet.open) closeSheet(true); ui.menu = null; ui.advice = null; const p = parseRoute(); ui.route = p.r; ui.routeId = p.id; withTransition(render); });
 
 /* ---------- render ---------- */
 function render() {
