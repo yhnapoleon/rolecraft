@@ -1,4 +1,5 @@
 import type { LocalSession } from './types';
+import { T } from './app/i18n';
 
 export class ApiError extends Error {
   constructor(message: string, public status = 0) { super(message); }
@@ -14,11 +15,11 @@ export const request: Transport = async (path, body, session) => {
       signal: AbortSignal.timeout(20000),
       cache: 'no-store',
     });
-  } catch { throw new ApiError('连接中断或请求超时。写入结果可能已保存，请用“重试原请求”核对，避免重复操作。'); }
+  } catch { throw new ApiError(T('连接中断或请求超时。写入结果可能已保存，请用“重试原请求”核对，避免重复操作。', 'The connection dropped or timed out. The write may have been saved; retry the same request to check instead of repeating it.')); }
   let data: any;
-  try { data = await response.json(); } catch { throw new ApiError('服务未返回可识别的结果，请检查 API 是否启动。', response.status >= 500 ? response.status : 0); }
+  try { data = await response.json(); } catch { throw new ApiError(T('服务未返回可识别的结果，请检查 API 是否启动。', 'The server returned something unreadable. Check that the API is running.'), response.status >= 500 ? response.status : 0); }
   if (!response.ok) {
-    const detail = data.detail ?? data.error ?? '请求失败';
+    const detail = data.detail ?? data.error ?? T('请求失败', 'Request failed');
     throw new ApiError(typeof detail === 'string' ? detail : JSON.stringify(detail), response.status);
   }
   return data;
