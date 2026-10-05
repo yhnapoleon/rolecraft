@@ -2,14 +2,15 @@ from copy import deepcopy
 
 from career_lab.contracts.actions import Action, Event, TransitionResult, WorldState
 from career_lab.contracts.scenario import PilotPlan, ScenarioSpec
+from career_lab.errors import CodedValueError
 
 
-class InvalidAction(ValueError):
+class InvalidAction(CodedValueError):
     pass
 
 
-class VersionConflict(ValueError):
-    pass
+class VersionConflict(CodedValueError):
+    code = "version_conflict"
 
 
 def initial_state(session_id: str, spec: ScenarioSpec) -> WorldState:
@@ -26,7 +27,7 @@ def apply_action(state: WorldState, action: Action, spec: ScenarioSpec) -> Trans
     if actor not in {r.id for r in spec.roles} | {"learner"}:
         raise InvalidAction("unknown actor")
     if state.status != "active" and action.tool != "resume":
-        raise InvalidAction(f"session is {state.status}")
+        raise InvalidAction(f"session is {state.status}", code=f"session_{state.status}")
     data = deepcopy(state.model_dump())
     args = action.arguments
     tool = action.tool
@@ -38,13 +39,13 @@ def apply_action(state: WorldState, action: Action, spec: ScenarioSpec) -> Trans
             raise InvalidAction("read_material requires material_id")
         material = next((m for m in spec.materials if m.id == args["material_id"] and m.version == state.material_versions.get(m.id)), None)
         if material is None or actor not in material.visible_to:
-            raise InvalidAction("material unavailable")
+            raise InvalidAction("material unavailable", code="material_unavailable")
     elif tool in {"request_capacity", "request_resources"}:
         if actor != "learner" or set(args) != {"reason"} or not isinstance(args["reason"], str) or not args["reason"].strip():
-            raise InvalidAction("learner request requires a reason")
+            raise InvalidAction("learner request requires a reason", code="reason_required")
         rule = next((r for r in spec.event_rules if r.trigger.request_tool == tool), None)
         if not rule or rule.id in state.applied_rules:
-            raise InvalidAction("request unavailable")
+            raise InvalidAction("request unavailable", code="request_unavailable")
         data["pending_requests"] = list(set(state.pending_requests) | {rule.id})
         visibility = ("learner", "supervisor")
     elif tool == "approve_request":
@@ -60,7 +61,7 @@ def apply_action(state: WorldState, action: Action, spec: ScenarioSpec) -> Trans
             raise InvalidAction("learner update requires plan")
         plan = PilotPlan.model_validate(args["plan"])
         if set(plan.knowledge_domains) - {d.id for d in spec.domains} or set(plan.work_items) - {w.id for w in spec.work_items}:
-            raise InvalidAction("unknown domain or work item")
+            raise InvalidAction("unknown domain or work item", code="unknown_domain_or_work_item")
         data["configs"] = {"pilot": plan.model_dump(mode="json")}
         data["config_version"] += 1
     elif tool == "refresh_index":
@@ -75,11 +76,11 @@ def apply_action(state: WorldState, action: Action, spec: ScenarioSpec) -> Trans
             raise InvalidAction("learner operation")
         if tool == "submit_plan":
             if not state.configs:
-                raise InvalidAction("configure pilot before submission")
+                raise InvalidAction("configure pilot before submission", code="config_required")
             data["status"] = "submitted"
     elif tool in {"pause", "resume"}:
         if actor != "learner" or args or (tool == "resume" and state.status != "paused"):
-            raise InvalidAction("invalid pause/resume")
+            raise InvalidAction("invalid pause/resume", code="invalid_pause_resume")
         data["status"] = "paused" if tool == "pause" else "active"
     else:
         raise InvalidAction(f"unsupported tool: {tool}")

@@ -1,9 +1,10 @@
 // Server events in plain language. Types come from GET /timeline; the live adapter
 // renames read_material to material_read and copies the payload into `detail`.
 import { T } from './i18n';
+import { serverText } from '../store';
 import { materialTitle } from './vocab.js';
 
-const WORLD = ['policy_updated', 'approve_request', 'update_pilot', 'refresh_index', 'request_capacity', 'request_resources', 'submit_plan'];
+const WORLD = ['policy_updated', 'approve_request', 'approval_denied', 'update_pilot', 'refresh_index', 'request_capacity', 'request_resources', 'submit_plan'];
 export const isFeedEvent = e => WORLD.includes(e.type);
 
 export function eventLine(a, e) {
@@ -18,6 +19,7 @@ export function eventLine(a, e) {
       return d.rule_id === 'capacity_approved'
         ? { text: T(`Priya 批准扩容：上限 ${w.capacity} 人`, `Priya approved more seats: up to ${w.capacity}`), icon: 'check', tone: 'good', announce: 'info' }
         : { text: T(`Priya 批准资源：${w.devDays} 人日，第 ${w.deadline} 天上线`, `Priya approved resources: ${w.devDays} person-days, launch on day ${w.deadline}`), icon: 'check', tone: 'good', announce: 'info' };
+    case 'approval_denied': return { text: serverText('', d.code, d.details), icon: 'hand' };
     case 'update_pilot': return { text: T('试点设置已保存', 'Pilot settings saved'), icon: 'gear' };
     case 'refresh_index': return { text: T('助手索引已刷新', 'Assistant index refreshed'), icon: 'refresh' };
     case 'request_capacity': return { text: T('你申请了更多名额', 'You asked for more seats'), icon: 'hand' };

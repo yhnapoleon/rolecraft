@@ -9,8 +9,10 @@
 
 完整背景见[前端接口需求与未实现功能](../design/frontend-interface-requirements.md)。
 
-**代码基线：**
-- 前端：工作台 v4，在分支 `feat/web-workbench-v4` 上。
+**状态：** 2026-10-05 已完成，T1–T8 的后端和前端接入都做了。实现在分支 `feat/backend-batch-1`，基于 `main` `efe5042`，分为后端、前端接入、文档三个提交。各项结果和剩余缺口见[接口需求](../design/frontend-interface-requirements.md)第 2、5 节，验证结果见 `apps/web/README.md`。下文保留为开工时的任务说明。
+
+**开工时的代码基线：**
+- 前端：工作台 v4，当时在分支 `feat/web-workbench-v4` 上，已经 PR #2 合入 `main`。
 - 后端：从 `1ebd3a7` 起没有改动。下文的文件位置都按这个版本核对过。
 
 ---

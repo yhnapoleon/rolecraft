@@ -6,9 +6,13 @@ from sqlalchemy import insert, select, update
 
 from career_lab.contracts.actions import Action, Event, TransitionResult, WorldState
 from career_lab.contracts.scenario import ScenarioSpec
-from career_lab.scenarios.reducer import apply_action, initial_state
+from career_lab.errors import CodedValueError
+from career_lab.scenarios.reducer import VersionConflict, apply_action, initial_state
 from career_lab.scenarios.visibility import project_view
-from career_lab.storage.database import Database, sessions, snapshots, events, actions, objects
+from career_lab.storage.database import (
+    Database, sessions, snapshots, events, actions, objects,
+    event_times, object_times, object_metadata, utc_timestamp,
+)
 
 
 def canonical(value) -> str:
@@ -19,8 +23,8 @@ def digest(value) -> str:
     return hashlib.sha256(canonical(value).encode()).hexdigest()
 
 
-class IdempotencyConflict(ValueError):
-    pass
+class IdempotencyConflict(CodedValueError):
+    code = "request_id_reused"
 
 
 class SessionStore:
@@ -82,14 +86,19 @@ class SessionStore:
             if action.tool in {"test_assistant", "save_artifact", "submit_plan", "record_turn"}:
                 if not object_record or object_record["id"] != action.arguments.get("object_id"):
                     raise ValueError("service operation needs atomically stored content")
+            if object_record and conn.execute(select(objects.c.id).where(objects.c.id == object_record["id"])).first():
+                raise IdempotencyConflict("derived output conflict")
             result = apply_action(WorldState.model_validate_json(row["state"]), action, ScenarioSpec.model_validate_json(row["spec"]))
+            created_at = utc_timestamp()
             conn.execute(update(sessions).where(sessions.c.id == session_id).values(state=result.state.model_dump_json()))
             for snapshot in result.snapshots:
                 conn.execute(insert(snapshots).values(session_id=session_id, seq=snapshot.version, state=snapshot.model_dump_json()))
             for event in result.events:
                 conn.execute(insert(events).values(session_id=session_id, seq=event.seq, content=event.model_dump_json()))
+                conn.execute(insert(event_times).values(session_id=session_id, seq=event.seq, created_at=created_at))
             if object_record:
                 conn.execute(insert(objects).values(id=object_record["id"], session_id=session_id, kind=object_record["kind"], content=canonical(object_record["content"])))
+                conn.execute(insert(object_times).values(session_id=session_id, id=object_record["id"], created_at=created_at))
             conn.execute(insert(actions).values(session_id=session_id, key=action.idempotency_key, request_hash=request_hash, result=result.model_dump_json()))
             return result
 
@@ -108,14 +117,35 @@ class SessionStore:
             rows = conn.execute(select(objects).where(objects.c.session_id == session_id, objects.c.kind == kind)).mappings()
             return [{"id": row["id"], **json.loads(row["content"])} for row in rows]
 
-    def save_derived(self, session_id, object_id, kind, content):
+    def object_created_at(self, session_id, object_id) -> str | None:
+        with self.db.engine.connect() as conn:
+            return conn.execute(select(object_times.c.created_at).where(object_times.c.session_id == session_id, object_times.c.id == object_id)).scalar_one_or_none()
+
+    def event_created_at(self, session_id, seq) -> str | None:
+        with self.db.engine.connect() as conn:
+            return conn.execute(select(event_times.c.created_at).where(event_times.c.session_id == session_id, event_times.c.seq == seq)).scalar_one_or_none()
+
+    def get_object_metadata(self, session_id, object_id) -> dict:
+        with self.db.engine.connect() as conn:
+            raw = conn.execute(select(object_metadata.c.content).where(object_metadata.c.session_id == session_id, object_metadata.c.id == object_id)).scalar_one_or_none()
+            return json.loads(raw) if raw is not None else {}
+
+    def save_derived(self, session_id, object_id, kind, content, *, metadata=None, expected_version=None):
         """Persist immutable derived output without creating a learner business event."""
         with self.db.transaction() as conn:
-            self._session(conn, session_id, lock=True)
+            session = self._session(conn, session_id, lock=True)
             previous = conn.execute(select(objects).where(objects.c.id == object_id)).mappings().first()
             if previous:
                 if previous["session_id"] != session_id or previous["kind"] != kind or previous["content"] != canonical(content):
                     raise IdempotencyConflict("derived output conflict")
+                saved_metadata = conn.execute(select(object_metadata.c.content).where(object_metadata.c.session_id == session_id, object_metadata.c.id == object_id)).scalar_one_or_none()
+                if (saved_metadata or canonical({})) != canonical(metadata or {}):
+                    raise IdempotencyConflict("derived output conflict")
                 return json.loads(previous["content"])
+            if expected_version is not None and WorldState.model_validate_json(session["state"]).version != expected_version:
+                raise VersionConflict("approval state changed; reload before resolving")
             conn.execute(insert(objects).values(id=object_id, session_id=session_id, kind=kind, content=canonical(content)))
+            conn.execute(insert(object_times).values(session_id=session_id, id=object_id, created_at=utc_timestamp()))
+            if metadata is not None:
+                conn.execute(insert(object_metadata).values(session_id=session_id, id=object_id, content=canonical(metadata)))
         return content

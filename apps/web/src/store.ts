@@ -1,6 +1,6 @@
 import { ApiError, request, sessionPath, type Transport } from './api';
 import { T } from './app/i18n';
-import type { Artifact, Deliverable, Feedback, Job, LocalSession, LocalTestRun, Operation, Pilot, RoleId, Scenario, Submission, TestRun, TestRunOrigin, Timeline, Turn, Workspace, World } from './types';
+import type { Artifact, Deliverable, Feedback, Job, LocalSession, LocalTestRun, Operation, Pilot, RoleId, Scenario, Submission, TestRun, TestRunOrigin, Timeline, Turn, TurnContext, Workspace, World } from './types';
 
 export const STORAGE_KEY = 'rolecraft.live.workspace.v1';
 export const emptyDraft = (): Deliverable => ({ goal: '', owner: '', metrics: '', observation_window: '', exit_condition: '', rationale: '' });
@@ -66,14 +66,24 @@ export class WorkspaceStore {
     const s = this.state.workspace.sessions.find(s => s.id === id);
     if (!s) return;
     try {
-      const [current, materials, timeline] = await Promise.all([
+      const optionalList = async (suffix: string) => {
+        try { return await this.transport(sessionPath(s, suffix), undefined, s); }
+        catch (e) { if (e instanceof ApiError && [404, 405].includes(e.status)) return undefined; throw e; }
+      };
+      const [current, materials, timeline, tests, artifacts, submissions] = await Promise.all([
         this.transport(sessionPath(s), undefined, s),
         this.transport(sessionPath(s, '/materials'), undefined, s),
         this.transport(sessionPath(s, '/timeline'), undefined, s),
+        optionalList('/tests'), optionalList('/artifacts'), optionalList('/submissions'),
       ]);
       const patch: Partial<LocalSession> = { world: current.state as World, materials, timeline: timeline as Timeline };
+      // Merge server records by identity without discarding local notes or task links.
+      if (Array.isArray(tests)) patch.tests = [...new Map([...s.tests, ...tests].map(t => [t.id, t])).values()]
+        .sort((a, b) => a.as_of_seq - b.as_of_seq || (a.created_at || '').localeCompare(b.created_at || ''));
+      if (!s.artifact && artifacts?.length) patch.artifact = artifacts.at(-1);
+      if (!s.submission && submissions?.length) patch.submission = submissions.at(-1);
       // Recover the submission reference from server events; never invent its body.
-      if (!s.submission && current.state.status === 'submitted') {
+      if (!s.submission && !s.pending && current.state.status === 'submitted') {
         const event = timeline.events.findLast((e: any) => e.event_type === 'submit_plan');
         if (event?.payload.object_id) {
           try { patch.feedback = await this.transport(sessionPath(s, '/feedback/' + event.payload.object_id), undefined, s); }
@@ -104,8 +114,8 @@ export class WorkspaceStore {
     const labels: Record<string, string> = { update_pilot: T('试点配置', 'Pilot settings'), refresh_index: T('索引更新', 'Index refresh'), read_material: T('阅读记录', 'Reading'), request_capacity: T('扩容申请', 'Seat request'), request_resources: T('资源申请', 'Resource request'), pause: T('暂停会话', 'Pause'), resume: T('恢复会话', 'Resume') };
     return this.write('action', '/actions', { tool, arguments: args, request_id: crypto.randomUUID(), expected_version: s.world.version }, labels[tool] || T('操作', 'Action'));
   }
-  sendTurn(role: RoleId, text: string) {
-    return this.write('turn', '/turns', { role_id: role, text, request_id: crypto.randomUUID() }, T('同事回复', 'Colleague reply'));
+  sendTurn(role: RoleId, text: string, context?: TurnContext) {
+    return this.write('turn', '/turns', { role_id: role, text, request_id: crypto.randomUUID(), ...context }, T('同事回复', 'Colleague reply'));
   }
   test(query: string, origin?: TestRunOrigin & { expectation?: string }) {
     const s = this.active(); if (!s) return;
@@ -126,7 +136,7 @@ export class WorkspaceStore {
     }
     return this.write('submission', '/submissions', { artifact_id: s.artifact.id, config_version: s.world.config_version, request_id: crypto.randomUUID() }, T('固定提交', 'Submission'));
   }
-  feedback() { const s = this.active(); if (!s) return; return this.write('feedback', '/feedback', { submission_id: this.submissionId(s) }, T('生成反馈', 'Review')); }
+  feedback(retry = false) { const s = this.active(); if (!s) return; return this.write('feedback', '/feedback', { submission_id: this.submissionId(s), ...(retry ? { retry: true } : {}) }, T('生成反馈', 'Review')); }
   relation(claim: string) { return this.write('relation', '/relation-checks', { claim, request_id: crypto.randomUUID() }, T('辅助关系判断', 'Evidence check')); }
   approval(rule: string) { const s = this.active(); if (!s) return; return this.write('approval', '/approvals/resolve', { rule_id: rule, request_id: crypto.randomUUID(), expected_version: s.world.version }, T('按场景规则审核申请', 'Approval')); }
   async execute(id = this.state.workspace.active) {
@@ -138,7 +148,7 @@ export class WorkspaceStore {
     try {
       const result = await this.transport(sessionPath(s, op.path), op.body, s);
       if (op.kind === 'turn' || op.kind === 'feedback') {
-        this.update(s.id, { pending: { ...op, jobId: result.job_id } });
+        this.update(s.id, { pending: { ...op, jobId: result.job_id }, ...(op.kind === 'feedback' ? { feedbackFailure: undefined } : {}) });
         this.emit({ notice: T('任务已入队，等待独立 worker。可以离开页面，返回后继续查询。', 'Queued. You can leave the page and come back.') });
       } else {
         const latest = this.state.workspace.sessions.find(x => x.id === s.id)!;
@@ -152,6 +162,7 @@ export class WorkspaceStore {
         if (op.kind === 'artifact') patch.artifact = result as Artifact;
         if (op.kind === 'submission') patch.submission = result as Submission;
         if (op.kind === 'relation') patch.relationResult = result;
+        if (op.kind === 'approval') { if (result.state) patch.world = result.state; patch.approvalError = undefined; }
         if (op.kind === 'action' && op.body.tool === 'update_pilot') patch.configDraft = undefined;
         if (!this.update(s.id, patch)) {
           // The server may have succeeded, but the browser still needs the exact
@@ -167,7 +178,7 @@ export class WorkspaceStore {
       // 4xx is a definite rejection; preserve drafts but do not rebase an old action silently.
       const unavailableStudy = op.kind === 'relation' && e instanceof ApiError && e.status === 503 && e.message === 'frozen relation study is not configured';
       if (e instanceof ApiError && ((e.status >= 400 && e.status < 500) || unavailableStudy)) {
-        this.update(s.id, { pending: undefined });
+        this.update(s.id, { pending: undefined, ...(op.kind === 'approval' ? { approvalError: { rule_id: String(op.body.rule_id), code: e.code, details: e.details, error: e.message } } : {}) });
         await this.sync(s.id);
       }
       this.emit({ error: unavailableStudy ? T('服务器尚未配置冻结实验，辅助关系判断不可用；其他功能可继续使用。', 'The evidence checker is not configured on the server. Everything else still works.') : message(e) + (e instanceof ApiError && e.status === 409 ? T(' 已刷新状态，请核对后重新操作；草稿仍保留。', ' The state was refreshed; check it and try again. Your draft is kept.') : '') });
@@ -180,21 +191,23 @@ export class WorkspaceStore {
     const op = s.pending;
     try {
       const job = await this.transport(sessionPath(s, '/jobs/' + op.jobId), undefined, s) as Job;
+      const kind = job.kind ?? op.kind;
+      const resolved = { ...op, kind, body: { ...op.body, ...(kind === 'turn' && job.role_id ? { role_id: job.role_id } : {}) }, job };
       if (job.status === 'completed') {
         const patch: Partial<LocalSession> = { pending: undefined, failedTurn: undefined };
-        if (op.kind === 'feedback') { patch.feedback = job.result as Feedback; patch.feedbackFailure = undefined; }
-        if (op.kind === 'turn') {
+        if (kind === 'feedback') { patch.feedback = job.result as Feedback; patch.feedbackFailure = undefined; }
+        if (kind === 'turn') {
           const turn = job.result as Turn;
-          patch.questions = { ...s.questions, [turn.trace_id]: String(op.body.text) };
+          patch.questions = { ...s.questions, [turn.trace_id]: turn.question ?? String(op.body.text || '') };
         }
         this.update(s.id, patch);
         this.emit({ error: '', notice: op.label + T('已完成。', ' done.') });
         await this.sync(s.id);
       } else if (job.status === 'failed') {
-        this.update(s.id, { pending: undefined, failedTurn: op.kind === 'turn' ? { ...op, job } : undefined, ...(op.kind === 'feedback' ? { feedbackFailure: job } : {}) });
-        this.emit({ error: T('任务已失败（' + job.error + '）。后端已尝试 ' + job.attempt + ' 次。', 'The job failed (' + job.error + ') after ' + job.attempt + ' attempts. ') + (op.kind === 'feedback' ? T('现有接口不支持重新执行终态失败的反馈任务，重复申请只会返回原任务。', 'The server cannot rerun a failed review job; asking again returns the same job.') : T('可保留原问题并重新发起一次新回合。', 'You can send the same message again as a new turn.')) });
+        this.update(s.id, { pending: undefined, failedTurn: kind === 'turn' ? resolved : undefined, ...(kind === 'feedback' ? { feedbackFailure: job } : {}) });
+        this.emit({ error: T('任务已失败（' + job.error + '）。后端已尝试 ' + job.attempt + ' 次。', 'The job failed (' + job.error + ') after ' + job.attempt + ' attempts. ') + (kind === 'feedback' ? (job.kind ? T('可选择重新生成评审。', 'You can regenerate the review.') : T('现有接口不支持重新执行终态失败的反馈任务，重复申请只会返回原任务。', 'The server cannot rerun a failed review job; asking again returns the same job.')) : T('可保留原问题并重新发起一次新回合。', 'You can send the same message again as a new turn.')) });
         await this.sync(s.id);
-      } else { this.update(s.id, { pending: { ...op, job } }); }
+      } else { this.update(s.id, { pending: resolved }); }
     } catch (e) { this.emit({ error: T('查询任务失败：', 'Could not check the job: ') + message(e) }); }
     finally { this.polling = false; }
   }
@@ -210,9 +223,53 @@ function validTestResult(value: any, operation: Operation): value is TestRun {
 function validVersions(value: any) {
   return !!value && typeof value === 'object' && !Array.isArray(value) && Object.values(value).every(v => Number.isInteger(v) && Number(v) > 0);
 }
-export function message(e: unknown) { return e instanceof ApiError ? serverText(e.message) : e instanceof Error ? e.message : String(e); }
+export function message(e: unknown) { return e instanceof ApiError ? serverText(e.message, e.code, e.details) : e instanceof Error ? e.message : String(e); }
 // Server details are English identifiers; say what happened in the interface language.
-export function serverText(detail: string) {
+export function pendingTurnRole(s?: LocalSession): RoleId | undefined {
+  const p = s?.pending;
+  return p && (p.job?.kind ?? p.kind) === 'turn' ? (p.job?.role_id ?? p.body.role_id) as RoleId : undefined;
+}
+export function serverText(detail: string, code?: string, details?: Record<string, any>) {
+  const texts: Record<string, string> = {
+    version_conflict: T('局面刚变过。', 'The situation just changed.'),
+    session_paused: T('练习已暂停，请先恢复。', 'The practice is paused. Resume it first.'),
+    session_submitted: T('已交付，这次练习只读。', 'Already submitted; this practice is read-only.'),
+    config_not_current: T('试点设置刚变过，请重新运行。', 'The pilot settings just changed. Run it again.'),
+    artifact_config_mismatch: T('交付稿保存后设置又变过，请先重新保存。', 'Settings changed after you saved the deliverable. Save it again first.'),
+    material_unavailable: T('这份资料现在不可读。', 'This document is not available now.'),
+    invalid_pause_resume: T('练习状态已变，现在不能暂停或恢复。', 'The practice state changed; it cannot be paused or resumed now.'),
+    config_required: T('先保存试点设置，再交付。', 'Save the pilot settings before submitting.'),
+    reason_required: T('请写明申请理由。', 'Give a reason for the request.'),
+    request_unavailable: T('这项申请当前不可用。', 'This request is not available now.'),
+    unknown_domain_or_work_item: T('未知知识范围或工作项。', 'Unknown knowledge area or work item.'),
+    request_id_reused: T('同一个请求编号对应了不同内容，已拒绝。', 'The same request id carried different content, so it was rejected.'),
+    query_length: T('问题需要 1–4000 个字符。', 'Questions need 1–4,000 characters.'),
+    unknown_scenario: T('服务器不认识这个情境。', 'The server does not know this situation.'),
+    unknown_role: T('找不到这位同事。', 'This colleague is not available.'),
+    token_required: T('会话凭据失效。请保留原浏览器数据。', 'Session credentials are no longer valid. Keep the original browser data.'),
+    token_invalid: T('会话凭据失效。请保留原浏览器数据。', 'Session credentials are no longer valid. Keep the original browser data.'),
+    relation_not_configured: T('辅助证据判断尚未在服务器上配置。', 'The evidence checker is not configured on the server.'),
+    not_found: T('找不到这条记录。', 'This record was not found.'),
+    invalid_request: T('请求未被接受，请检查输入。', 'The request was not accepted. Check the input.'),
+    approval_no_pending_request: T('没有等待处理的这项申请。', 'There is no pending request of this kind.'),
+    approval_needs_config: T('先保存要申请的试点设置，再请 Priya 处理。', 'Save the requested pilot settings before asking Priya to decide.'),
+    approval_plan_incomplete: T('Priya 没有批准：方案缺少必要工作或人工兜底。', 'Priya did not approve: required work or a human fallback is missing.'),
+    approval_unsupported_rule: T('Priya 暂不能处理这类申请。', 'Priya cannot handle this type of request.'),
+    approval_not_needed_or_over_limit: T('Priya 没有批准：当前设置不需要这项申请，或超出了可批范围。', 'Priya did not approve: the current settings do not need it, or it exceeds what she can approve.'),
+  };
+  if (code === 'approval_plan_incomplete' && details?.missing) {
+    const missing = details.missing;
+    const workNames: Record<string, string> = { human_fallback: T('人工兜底工作项', 'human fallback work'), scope_filter: T('范围过滤工作项', 'scope filtering'), realtime_sync: T('实时同步工作项', 'real-time sync') };
+    const reasons = (missing.work_items || []).map((w: string) => T('缺少', 'Missing ') + (workNames[w] || w));
+    if (missing.human_fallback) reasons.push(T('缺人工兜底', 'Missing human fallback'));
+    if (missing.minimum_participants) reasons.push(T('人数低于下限 ' + details.minimum_participants, 'Participants below the minimum of ' + details.minimum_participants));
+    if (reasons.length) return T('Priya 没有批准：', 'Priya did not approve: ') + reasons.join(T('；', '; ')) + T('。', '.');
+  }
+  if (code === 'approval_not_needed_or_over_limit' && details?.requested && details?.current && details?.limit) {
+    const names: Record<string, string> = { capacity: T('人数', 'Seats'), dev_days: T('人日', 'Person-days'), deadline_day: T('上线日', 'Launch day') };
+    return texts[code] + ' ' + Object.keys(details.requested).map(k => (names[k] || k) + T('：申请 ', ': requested ') + details.requested[k] + T('，当前 ', ', current ') + details.current[k] + T('，上限 ', ', limit ') + (details.limit[k] ?? T('未开放', 'unavailable'))).join(T('；', '; '));
+  }
+  if (code && texts[code]) return texts[code];
   const d = String(detail || '');
   if (/session is submitted/.test(d)) return T('已交付，这次练习只读。', 'Already submitted; this practice is read-only.');
   if (/config version is not current/.test(d)) return T('试点设置刚变过，请重新运行。', 'The pilot settings just changed. Run it again.');

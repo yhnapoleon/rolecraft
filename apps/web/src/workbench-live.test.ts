@@ -80,6 +80,8 @@ describe('test work execution provenance', () => {
       if (path.endsWith('/materials')) return [{ id: 'policy', version: 1, title: '政策', content: '500' }];
       if (path.endsWith('/timeline')) return { events: [], turns: [], mode: 'saved_replay_no_model_calls' };
       if (!body && path === '/sessions/' + world.session_id) return { state: structuredClone(world) };
+      if (body === undefined && path.endsWith('/tests')) return structuredClone([...saved.values()]);
+      if (body === undefined && /\/(artifacts|submissions)$/.test(path)) return [];
       if (path.endsWith('/tests')) {
         if (controls.conflict) { controls.conflict = false; world.config_version++; throw new ApiError('config version is not current', 409); }
         if (controls.gate) await controls.gate;
@@ -123,7 +125,7 @@ describe('test work execution provenance', () => {
     const a = restoredState.attempts.find((x: any) => x.id === f.a.id);
     await restored.retry(a);
     expect(f.saved.size).toBe(1);
-    const calls = f.transport.mock.calls.filter(([p]) => p.endsWith('/tests'));
+    const calls = f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined);
     expect(calls).toHaveLength(2); expect(calls[1][1]).toEqual(calls[0][1]);
     expect(a.tests).toHaveLength(1);
     expect(a.tests[0]).toMatchObject({ question: '住宿上限？', taskId: f.work.taskId, workId: f.work.id, workRevision: 1, caseId: 'case-a', caseRevision: 1, expectation: '引用政策', intent: '核对政策', config });
@@ -134,6 +136,29 @@ describe('test work execution provenance', () => {
     expect(stateAgain.attempts.find((x: any) => x.id === f.a.id).tests[0].caseId).toBe('case-a');
   });
 
+  it('recovers server-listed tests without losing pending work provenance or authoritative timestamps', async () => {
+    const f = await setup(); f.controls.drop = true;
+    await expect(f.live.test(f.a, f.input())).rejects.toThrow(/lost response/);
+    const pending = structuredClone(f.live.session(f.a)!.pending!);
+    const server = f.saved.get(String(pending.body.request_id))!;
+    server.created_at = '2026-10-05T01:02:03.000000Z';
+    // Refresh can discover the successful server result before the lost POST is retried.
+    await f.live.store.sync(f.a.id);
+    expect(f.a.tests).toHaveLength(1);
+    expect(f.live.session(f.a)!.pending).toEqual(pending);
+    f.live.store.update(f.a.id, { testNotes: { [server.id]: { expected: '引用政策', diagnosis: '已核对原文' } } });
+    f.work.cases[0].question = '后续修改的问题'; f.work.cases[0].revision++; f.work.revision++;
+    const recovered = new LiveWorkbench(engine, f.storage, f.transport), state = structuredClone(f.state);
+    recovered.attach(state, () => {});
+    const a = state.attempts.find((item: any) => item.id === f.a.id);
+    await recovered.retry(a); await recovered.store.sync(a.id);
+    expect(a.tests).toHaveLength(1);
+    expect(a.tests[0]).toMatchObject({ createdAt: server.created_at, workId: f.work.id, workRevision: 1, caseId: 'case-a', caseRevision: 1, question: '住宿上限？', diagnosis: '已核对原文' });
+    expect(recovered.session(a)!.testRunMeta![server.id]).toEqual(pending.localRun);
+    expect(recovered.session(a)!.pending).toBeUndefined();
+    expect(f.transport.mock.calls.filter(([path, body]) => path.endsWith('/tests') && body !== undefined)).toHaveLength(2);
+  });
+
   it('rejects a second click while pending and keeps in-flight edits out of the execution snapshot', async () => {
     const f = await setup(); let finish!: () => void;
     f.controls.gate = new Promise<void>(resolve => { finish = resolve; });
@@ -142,7 +167,7 @@ describe('test work execution provenance', () => {
     f.work.revision++; f.work.cases[0].revision++; f.work.cases[0].expectation = '新的预期';
     finish(); const result = await running;
     expect(result).toMatchObject({ caseRevision: 1, workRevision: 1, expectation: '引用政策' });
-    expect(f.transport.mock.calls.filter(([p]) => p.endsWith('/tests'))).toHaveLength(1);
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined)).toHaveLength(1);
   });
 
   it('keeps identical questions in separate rows and appends a deliberate retest', async () => {
@@ -201,7 +226,7 @@ describe('test work execution provenance', () => {
     for (const changed of [{ workId: 'missing' }, { caseId: 'missing' }, { workRevision: 0 }, { caseRevision: 2 }, { question: '其他问题' }, { expectation: '其他预期' }, { taskId: f.a.tasks[1].id }]) {
       await expect(f.live.test(f.a, { ...original, ...changed })).rejects.toThrow(/测试行/);
     }
-    expect(f.transport.mock.calls.some(([p]) => p.endsWith('/tests'))).toBe(false);
+    expect(f.transport.mock.calls.some(([p, body]) => p.endsWith('/tests') && body !== undefined)).toBe(false);
   });
 
   it('blocks new runs and evidence for removed work while keeping ordinary single tests usable', async () => {
@@ -216,7 +241,7 @@ describe('test work execution provenance', () => {
     expect(() => f.live.engine.addEvidence(f.a, note.id, { id: 'policy', version: 1, type: 'material' })).toThrow(/已移除/);
     const ordinary = await f.live.test(f.a, { question: '普通问题' });
     expect(ordinary.workId).toBeUndefined();
-    expect(f.transport.mock.calls.filter(([p]) => p.endsWith('/tests'))).toHaveLength(2);
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined)).toHaveLength(2);
     engine.restoreArtifact(f.a, f.work.id);
     const restoredRun = await f.live.test(f.a, f.input());
     expect(restoredRun.workId).toBe(f.work.id);
@@ -232,7 +257,7 @@ describe('test work execution provenance', () => {
     const a = state.attempts.find((x: any) => x.id === f.a.id);
     await live.retry(a);
     expect(f.saved.size).toBe(1);
-    expect(f.transport.mock.calls.filter(([p]) => p.endsWith('/tests'))[1][1]).toEqual(pending.body);
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined)[1][1]).toEqual(pending.body);
     expect(a.tests[0]).toMatchObject({ workId: f.work.id, workRevision: 1, caseId: 'case-a', caseRevision: 1 });
     expect(a.artifacts.find((x: any) => x.id === f.work.id)).toEqual(removed);
     expect(live.session(a)?.pending).toBeUndefined();
@@ -311,7 +336,7 @@ describe('test work execution provenance', () => {
     const a = state.attempts.find((x: any) => x.id === f.a.id); await restored.retry(a);
     expect(f.saved.size).toBe(2);
     expect(a.tests.at(-1)).toMatchObject({ investigationId: inv.work.id, investigationRevision: 1, blockId: 'retest-block', blockRevision: 1, baselineRunId: baseline.id, question: baseline.question });
-    expect(f.transport.mock.calls.filter(([p]) => p.endsWith('/tests')).at(-1)?.[1]).toEqual(pending.body);
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined).at(-1)?.[1]).toEqual(pending.body);
     expect(a.artifacts.find((w: any) => w.id === inv.work.id).revision).toBe(2);
   });
 
@@ -322,7 +347,7 @@ describe('test work execution provenance', () => {
     inv.work.removedAt = 'removed'; await expect(f.live.test(f.a, inv.input())).rejects.toThrow(/调查视图/); inv.work.removedAt = null;
     inv.work.blocks[0].type = 'note'; await expect(f.live.test(f.a, inv.input())).rejects.toThrow(/调查视图/); inv.work.blocks[0].type = 'retest';
     await expect(f.live.test(f.a, { ...inv.input(), ...f.input() })).rejects.toThrow(/一个作品入口/);
-    expect(f.transport.mock.calls.filter(([p]) => p.endsWith('/tests'))).toHaveLength(1);
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined)).toHaveLength(1);
   });
 
   it('exports only selected investigation materials with real current or cached exact bodies', async () => {
@@ -349,7 +374,7 @@ describe('test work execution provenance', () => {
     const f = await setup(), before = structuredClone(f.work); f.controls.conflict = true;
     await expect(f.live.test(f.a, f.input())).rejects.toThrow(/重新操作/);
     expect(f.live.session(f.a)?.pending).toBeUndefined(); expect(f.a.tests).toEqual([]); expect(f.work).toEqual(before);
-    expect(f.transport.mock.calls.filter(([p]) => p.endsWith('/tests'))).toHaveLength(1);
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined)).toHaveLength(1);
   });
 
   it('retains the ordinary single-question path and blocks read-only or unavailable storage', async () => {
@@ -365,7 +390,7 @@ describe('test work execution provenance', () => {
     f.live.store.update(f.a.id, { world: session.world });
     f.storage.setItem = () => { throw new Error('quota'); };
     await expect(f.live.test(f.a, f.input())).rejects.toThrow(/存储/);
-    expect(f.transport.mock.calls.filter(([p]) => p.endsWith('/tests'))).toHaveLength(1);
+    expect(f.transport.mock.calls.filter(([p, body]) => p.endsWith('/tests') && body !== undefined)).toHaveLength(1);
   });
 });
 
@@ -411,6 +436,26 @@ describe.runIf(!!api)('real HTTP API + worker through the production frontend ad
     for(const route of ['/actions','/tests','/turns','/artifacts','/submissions','/feedback','/approvals/resolve'])expect(seen.some(v=>v==='POST /sessions/:id'+route)).toBe(true);
     expect(seen.some(v=>v.includes('/materials?as_of_seq='))).toBe(true);expect(seen.some(v=>v.includes('/evidence/'))).toBe(true);
   },30000);
+  it('keeps test-work and investigation provenance together with server list recovery', async () => {
+    const { live, state, storage, real } = setup();
+    const a = await live.start('pilot'); await live.config(a, config);
+    const work = engine.createArtifact(a, { kind: 'test_set', title: '整合验证', purpose: '测试计划', taskId: a.tasks[1].id, cases: [{ question: '住宿报销上限是多少？', intent: '核对政策来源', expectation: '引用实际政策', refs: [] }] });
+    const row = work.cases[0];
+    const first = await live.test(a, { question: row.question, expectation: row.expectation, taskId: work.taskId, workId: work.id, workRevision: work.revision, caseId: row.id, caseRevision: row.revision });
+    const investigation = engine.createArtifact(a, { kind: 'investigation', title: '整合后的来源核对', purpose: '探索笔记', question: '回答用了哪一版？', taskId: work.taskId, blocks: [{ type: 'source_check', testId: first.id, material: { id: 'policy', version: a.world.policyVersion } }, { type: 'retest', testId: first.id }] });
+    const block = investigation.blocks[1];
+    const rerun = await live.test(a, { question: first.question, expectation: first.expectation, taskId: work.taskId, investigationId: investigation.id, investigationRevision: investigation.revision, blockId: block.id, blockRevision: block.revision, baselineRunId: first.id });
+    const restored = new LiveWorkbench(engine, storage, real), restoredState = structuredClone(state);
+    restored.attach(restoredState, () => {}); await restored.store.sync(a.id);
+    const recovered = restoredState.attempts.find((item: any) => item.id === a.id);
+    expect(recovered.tests).toHaveLength(2);
+    expect(recovered.tests.find((run: any) => run.id === first.id)).toMatchObject({ workId: work.id, caseId: row.id, question: row.question });
+    expect(recovered.tests.find((run: any) => run.id === rerun.id)).toMatchObject({ investigationId: investigation.id, blockId: block.id, baselineRunId: first.id });
+    expect(recovered.tests.every((run: any) => run.createdAt.endsWith('Z'))).toBe(true);
+    expect((await restored.citationSource(recovered, first.id, 'policy')).material?.version).toBe(first.citations.find((ref: any) => ref.id === 'policy').version);
+    expect(restored.store.getSnapshot().error).toBe('');
+  }, 20000);
+
   it('restores an uncertain successful request and retries identical content without duplicate effects',async()=>{
     const base=setup();let drop=false;
     const transport:Transport=async(path,body,session)=>{const value=await base.real(path,body,session);if(drop&&path.endsWith('/actions')){drop=false;throw new ApiError('controlled lost response');}return value;};
@@ -433,4 +478,183 @@ describe.runIf(!!api)('real HTTP API + worker through the production frontend ad
     await expect(live.relation(a,'容量为15人')).rejects.toThrow(/未配置/);expect(live.session(a)!.pending).toBeUndefined();await live.action(a,'read_material',{material_id:'brief'});
     const b=await live.start('urgent');expect(b.world.deadline).toBe(5);expect(live.session(a)!.world.status).toBe('active');
   });
+});
+
+describe('batch 1 server authority and legacy recovery', () => {
+  function fixture() {
+    const world: any = { session_id: 's', version: 0, logical_time: 0, resources: { capacity: 30, dev_days: 3, deadline_day: 7 }, configs: {}, material_versions: { policy: 1 }, indexed_versions: { policy: 1 }, applied_rules: [], pending_requests: [], action_count: 0, config_version: 1, status: 'active' };
+    const data: any = { timeline: { events: [], turns: [], mode: 'saved' }, tests: [], artifacts: [], submissions: [] };
+    const transport = vi.fn<Transport>(async (path, body) => {
+      if (path === '/sessions') return { session_id: 's', token: 'test-token', state: world };
+      if (path === '/sessions/s') return { state: world };
+      if (path.endsWith('/materials')) return [];
+      const key = path.split('/').at(-1)!;
+      if (body === undefined && key in data) return data[key];
+      throw new ApiError('not found', 404, 'not_found');
+    });
+    const storage = memory(), state = engine.newState(), live = new LiveWorkbench(engine, storage, transport);
+    live.attach(state, () => {});
+    return { live, state, storage, world, data, transport };
+  }
+  const timestamp = '2026-10-05T01:02:03.000000Z';
+  const testRecord = (id = 'test') => ({ id, query: '政策？', answer: '真实回答', fallback: false, mode: 'local', citations: [], source_versions: { policy: 1 }, indexed_versions: { policy: 1 }, config_version: 1, as_of_seq: 1, stale: false, created_at: timestamp });
+  it('restores server questions, timestamps and task contexts without local conversation records', async () => {
+    const { live, data } = fixture(); const a = await live.start('pilot');
+    data.timeline.turns = [{ role_id: 'tech_lead', trace_id: 'trace', text: '回答', question: '原提问', as_of_seq: 1, created_at: timestamp, context: { task_id: 'original-task', work_id: 'work', attachments: [{ type: 'test', id: 'test' }] } }];
+    data.timeline.events = [{ seq: 1, event_type: 'update_pilot', payload: {}, created_at: timestamp }];
+    await live.store.sync();
+    expect(a.conversations.technical).toHaveLength(2);
+    expect(a.conversations.technical[0]).toMatchObject({ text: '原提问', traceId: 'trace', createdAt: timestamp });
+    expect(a.turnTask.trace).toBe('original-task');
+    expect(a.events.find((e: any) => e.server).createdAt).toBe(timestamp);
+    live.store.update('s', { questions: { trace: 'outdated local question' } });
+    expect(a.conversations.technical[0].text).toBe('原提问');
+  });
+  it('keeps legacy local questions, task links and observed times when fields are missing or null', async () => {
+    const { live, data } = fixture(); const a = await live.start('pilot');
+    a.turnTask.trace = 'local-task'; a.turnTimes = { trace: { answered: timestamp } };
+    live.store.update('s', { questions: { trace: 'local question' } });
+    data.timeline.turns = [{ role_id: 'tech_lead', trace_id: 'trace', text: '回答', as_of_seq: 1, question: null, created_at: null }];
+    await live.store.sync();
+    expect(a.conversations.technical[0].text).toBe('local question');
+    expect(a.turnTask.trace).toBe('local-task');
+    expect(a.turnTimes.trace.answered).toBe(timestamp);
+  });
+  it('recovers lists without inventing task ownership and retains local notes for existing tests', async () => {
+    const { live, data } = fixture(); const a = await live.start('pilot');
+    live.store.update('s', { tests: [testRecord()], testNotes: { test: { expected: 'local expectation', diagnosis: 'local observation' } } });
+    a.tests[0].taskId = a.tasks[0].id;
+    data.tests = [testRecord('new'), { ...testRecord(), answer: 'server-authoritative' }];
+    data.artifacts = [{ id: 'draft', version: 2, config_version: 1, content: { goal: 'submitted goal' }, created_at: timestamp }];
+    data.submissions = [{ id: 'sub', artifact_id: 'draft', config_version: 1, as_of_seq: 5, created_at: timestamp }];
+    await live.store.sync(); await live.store.sync();
+    expect(a.tests).toHaveLength(2);
+    expect(a.tests.find((t: any) => t.id === 'new')).toMatchObject({ taskId: null, config: null, createdAt: timestamp });
+    expect(a.tests.find((t: any) => t.id === 'test')).toMatchObject({ taskId: a.tasks[0].id, expectation: 'local expectation', answer: 'server-authoritative' });
+    expect(live.session(a)!.testNotes.test.diagnosis).toBe('local observation');
+    expect(live.session(a)!.artifact!.id).toBe('draft');
+    expect(a.submittedAt).toBe(timestamp);
+  });
+  it('treats absent legacy list endpoints as optional but surfaces real network failures', async () => {
+    const { live, transport } = fixture(); const a = await live.start('pilot');
+    live.store.update('s', { tests: [testRecord()] });
+    const original = transport.getMockImplementation()!;
+    transport.mockImplementation(async (path, body, session) => { if (/\/(tests|artifacts|submissions)$/.test(path)) throw new ApiError('not found', 404); return original(path, body, session); });
+    await live.store.sync(); expect(live.store.getSnapshot().connected).toBe(true); expect(a.tests).toHaveLength(1);
+    transport.mockImplementation(async (path, body, session) => { if (path.endsWith('/tests')) throw new ApiError('offline'); return original(path, body, session); });
+    await live.store.sync(); expect(live.store.getSnapshot().error).toContain('offline'); expect(a.tests).toHaveLength(1);
+  });
+  it('uses job kind and role after reload, with a legacy fallback', async () => {
+    const { live, transport, storage } = fixture(); await live.start('pilot');
+    transport.mockImplementationOnce(async () => ({ job_id: 'job' })); await live.store.sendTurn('supervisor', 'Question');
+    const restored = new WorkspaceStore(storage, transport);
+    expect(pendingTurnRole(restored.active())).toBe('supervisor');
+    transport.mockImplementationOnce(async () => ({ id: 'job', status: 'running', attempt: 1, kind: 'turn', role_id: 'tech_lead', result: null, error: null }));
+    await restored.poll(); expect(pendingTurnRole(restored.active())).toBe('tech_lead');
+    const feedback: any = { submission_id: 'sub', items: [], overflow: true };
+    transport.mockImplementationOnce(async () => ({ id: 'job', status: 'completed', attempt: 1, kind: 'feedback', role_id: null, result: feedback, error: null }));
+    await restored.poll(); expect(restored.active()!.feedback).toEqual(feedback); expect(restored.active()!.questions).toEqual({});
+  });
+  it('updates approved resources immediately even if the subsequent refresh is interrupted', async () => {
+    const { live, transport, world } = fixture(); const a = await live.start('pilot');
+    transport.mockImplementationOnce(async () => ({ approved: true, state: { ...world, resources: { ...world.resources, capacity: 60 } } }));
+    transport.mockImplementationOnce(async () => { throw new ApiError('offline'); });
+    await live.store.approval('capacity_approved'); expect(a.world.capacity).toBe(60);
+  });
+  it('persists denial details without manufacturing events or successful approval', async () => {
+    const { live, transport, data } = fixture(); const a = await live.start('pilot');
+    const details = { missing: { human_fallback: true, work_items: ['human_fallback'] } };
+    data.timeline.approval_denials = [{ id: 'denied', rule_id: 'capacity_approved', request_id: 'r', code: 'approval_plan_incomplete', details, created_at: timestamp }];
+    transport.mockImplementationOnce(async () => { throw new ApiError('requested plan lacks necessary work or human fallback', 422, 'approval_plan_incomplete', details); });
+    await live.store.approval('capacity_approved');
+    expect(a.world.capacity).toBe(30); expect(a.backend.version).toBe(0);
+    expect(a.approvalDenials[0].details).toEqual(details);
+    expect(a.events.filter((e: any) => e.type === 'approval_denied')).toHaveLength(1);
+    expect(live.store.getSnapshot().error).toContain('缺人工兜底');
+  });
+  it('retries failed feedback explicitly and clears the old failure once queued', async () => {
+    const { live, transport } = fixture(); const a = await live.start('pilot');
+    live.store.update('s', { submission: { id: 'sub', artifact_id: 'a', config_version: 1, as_of_seq: 1 }, feedbackFailure: { id: 'job', kind: 'feedback', status: 'failed', attempt: 3, result: null, error: 'RuntimeError' } });
+    transport.mockImplementationOnce(async (_, body) => { expect(body).toEqual({ submission_id: 'sub', retry: true }); return { job_id: 'job' }; });
+    await live.feedback(a, true); expect(live.session(a)!.feedbackFailure).toBeUndefined(); expect(live.session(a)!.pending!.jobId).toBe('job');
+  });
+  it('restores submitted records without fetching nonexistent feedback while its job is pending', async () => {
+    const { live, transport, world, data } = fixture(); await live.start('pilot');
+    world.status = 'submitted';
+    data.timeline.events = [{ seq: 3, event_type: 'submit_plan', payload: { object_id: 'sub' } }];
+    data.submissions = [{ id: 'sub', artifact_id: 'a', config_version: 1, as_of_seq: 2 }];
+    live.store.update('s', { pending: { kind: 'feedback', path: '/feedback', body: { submission_id: 'sub' }, label: 'review', created: timestamp, jobId: 'job' } });
+    await live.store.sync();
+    expect(live.store.active()!.submission!.id).toBe('sub');
+    expect(transport.mock.calls.some(([path]) => path.includes('/feedback/sub'))).toBe(false);
+  });
+  it('journals turn context for identical retries and leaves legacy requests unchanged', async () => {
+    const { live, storage, transport } = fixture(); const a = await live.start('pilot');
+    const context = { task_id: 'task', work_id: 'work', attachments: [{ type: 'work' as const, id: 'work', version: 2 }] };
+    transport.mockImplementationOnce(async () => { throw new ApiError('offline'); });
+    await expect(live.turn(a, 'technical', 'Question', context)).rejects.toThrow('offline');
+    const original = structuredClone(live.session(a)!.pending!.body);
+    const restored = new WorkspaceStore(storage, transport);
+    transport.mockImplementationOnce(async (_, body) => { expect(body).toEqual(original); return { job_id: 'job' }; });
+    await restored.execute(); expect(restored.active()!.pending!.body).toMatchObject(context);
+    restored.update('s', { pending: undefined });
+    transport.mockImplementationOnce(async (_, body: any) => { expect(Object.keys(body).sort()).toEqual(['request_id', 'role_id', 'text']); return { job_id: 'legacy' }; });
+    await restored.sendTurn('supervisor', 'No context');
+  });
+});
+
+import { pendingTurnRole, serverText } from './store';
+import { request } from './api';
+import { setPreference } from './app/i18n';
+describe('batch 1 error transport and translations', () => {
+  it('preserves code and structured details through the production request function', async () => {
+    const details = { missing: { human_fallback: true } };
+    const fetcher = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ error: 'original message', code: 'approval_plan_incomplete', details }), { status: 422 }));
+    try { await expect(request('/test', {})).rejects.toMatchObject({ message: 'original message', status: 422, code: 'approval_plan_incomplete', details }); }
+    finally { fetcher.mockRestore(); }
+  });
+  it.each(['version_conflict','session_paused','session_submitted','config_not_current','artifact_config_mismatch','material_unavailable','invalid_pause_resume','config_required','reason_required','request_unavailable','unknown_domain_or_work_item','request_id_reused','query_length','unknown_scenario','unknown_role','token_required','token_invalid','relation_not_configured','not_found','invalid_request','approval_no_pending_request','approval_needs_config','approval_plan_incomplete','approval_unsupported_rule','approval_not_needed_or_over_limit'])('translates %s by code in both languages without relying on the server wording', code => {
+    try {
+      setPreference('zh'); expect(serverText('changed server wording', code)).toMatch(/[一-鿿]/);
+      setPreference('en'); expect(serverText('changed server wording', code)).not.toMatch(/[一-鿿]/); expect(serverText('changed server wording', code)).not.toBe('changed server wording');
+    } finally { setPreference('zh'); }
+  });
+  it('retains old text fallback and translates detailed denial limits', () => {
+    expect(serverText('expected 0; current 3')).toBe(serverText('changed', 'version_conflict'));
+    expect(serverText('unrecognized legacy detail')).toBe('unrecognized legacy detail');
+    const details = { requested: { capacity: 90 }, current: { capacity: 30 }, limit: { capacity: 60 } };
+    expect(serverText('', 'approval_not_needed_or_over_limit', details)).toContain('申请 90，当前 30，上限 60');
+  });
+});
+
+describe.runIf(!!api)('batch 1 real HTTP recovery', () => {
+  it('reopens a session with only credentials and restores questions, contexts, tests and submitted records', async () => {
+    const transport: Transport = async (path, body, session) => {
+      const response = await fetch(api + path, { method: body === undefined ? 'GET' : 'POST', headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...(session ? { Authorization: 'Bearer ' + session.token } : {}) }, body: body === undefined ? undefined : JSON.stringify(body) });
+      const data = await response.json(); if (!response.ok) throw new ApiError(data.error || data.detail, response.status, data.code, data.details); return data;
+    };
+    const live = new LiveWorkbench(engine, memory(), transport); live.attach(engine.newState(), () => {});
+    const a = await live.start('pilot'); await live.config(a, config);
+    await live.test(a, { question: '会议室怎么申请？', taskId: a.tasks[0].id });
+    await live.test(a, { question: '住宿报销上限？' });
+    const context = { task_id: a.tasks[0].id, work_id: 'work-original', attachments: [{ type: 'test' as const, id: a.tests[0].id, version: 1 }] };
+    await live.turn(a, 'technical', '原始问题：资料多久更新？', context);
+    for (let i = 0; i < 100 && live.session(a)!.pending; i++) { await live.store.poll(a.id); if (live.session(a)!.pending) await new Promise(r => setTimeout(r, 100)); }
+    expect(live.session(a)!.pending).toBeUndefined();
+    const session = structuredClone(live.session(a)!);
+    const minimal = { ...session, materials: [], tests: [], testNotes: {}, testRunMeta: {}, questions: {}, timeline: { events: [], turns: [], mode: '' } };
+    const storage = memory(); storage.setItem(STORAGE_KEY, JSON.stringify({ schema: 1, active: a.id, sessions: [minimal] }));
+    const restored = new LiveWorkbench(engine, storage, transport), state = engine.newState(); restored.attach(state, () => {}); await restored.store.sync(a.id);
+    const recovered = state.attempts.find((x: any) => x.id === a.id);
+    expect(recovered.tests).toHaveLength(2); expect(recovered.tests.every((t: any) => t.taskId === null && t.createdAt.endsWith('Z'))).toBe(true);
+    expect(recovered.conversations.technical[0]).toMatchObject({ text: '原始问题：资料多久更新？', context });
+    expect(recovered.conversations.technical[0].createdAt).toMatch(/Z$/);
+    expect(recovered.turnTask[recovered.conversations.technical[0].traceId]).toBe(context.task_id);
+    const draft = { goal: 'test', owner: 'PM', metrics: 'test', observation_window: '7 days', exit_condition: 'errors', rationale: '真实证据'.repeat(5000) };
+    await restored.save(recovered, draft); await restored.submit(recovered); await restored.feedback(recovered);
+    for (let i = 0; i < 100 && restored.session(recovered)!.pending; i++) { await restored.store.poll(a.id); if (restored.session(recovered)!.pending) await new Promise(r => setTimeout(r, 100)); }
+    const report = restored.session(recovered)!.feedback!;
+    expect(report.overflow).toBe(true); expect(report.items.every(i => i.completeness === 'overflow')).toBe(true);
+    expect(report.model_revision).toBe('rules-v3');
+  }, 30000);
 });

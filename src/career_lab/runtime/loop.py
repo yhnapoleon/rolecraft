@@ -2,6 +2,7 @@ import json
 import time
 
 from career_lab.contracts.actions import Action
+from career_lab.errors import CodedValueError
 from career_lab.runtime.tool_router import TOOLS, execute_tool
 from career_lab.storage.sessions import digest
 
@@ -12,19 +13,23 @@ class AgentRuntime:
             raise ValueError("max_tool_rounds must be 0..3")
         self.store, self.model, self.max_tool_rounds = store, model, max_tool_rounds
 
-    def run_turn(self, session_id, role_id, text, request_id):
-        fingerprint = digest({"session": session_id, "role": role_id, "text": text})
+    def run_turn(self, session_id, role_id, text, request_id, task_id=None, work_id=None, attachments=None):
+        turn_context = {key: value for key, value in {"task_id": task_id, "work_id": work_id, "attachments": attachments}.items() if value is not None}
+        request = {"session": session_id, "role": role_id, "text": text}
+        if turn_context:
+            request["context"] = turn_context
+        fingerprint = digest(request)
         object_id = digest([session_id, "turn", request_id])
         try:
             saved = self.store.get_object(session_id, object_id, "turn")
             if saved["request_hash"] != fingerprint:
-                raise ValueError("request_id reused for different turn")
+                raise CodedValueError("request_id reused for different turn", code="request_id_reused")
             return saved["result"]
         except KeyError:
             pass
         spec = self.store.get_spec(session_id)
         if role_id not in {r.id for r in spec.roles}:
-            raise ValueError("unknown role")
+            raise CodedValueError("unknown role", code="unknown_role")
         view = self.store.project_view(session_id, role_id)
         context = {"role": role_id, "facts": [f.model_dump(mode="json") for f in view.permitted_facts],
                    "materials": [{"id": m.id, "version": m.version, "title": m.title} for m in view.permitted_materials]}
@@ -46,7 +51,9 @@ class AgentRuntime:
                 messages.append({"role": "tool", "tool_call_id": call.id, "content": json.dumps(tool_result, ensure_ascii=False)})
                 trace[-1].setdefault("tools", []).append(tool_result)
         result = {"text": answer, "status": status, "role_id": role_id, "model_revision": self.model.revision,
-                  "as_of_seq": view.state_version, "trace_id": object_id}
+                  "as_of_seq": view.state_version, "trace_id": object_id, "question": text}
+        if turn_context:
+            result["context"] = turn_context
         record = {"id": object_id, "kind": "turn", "content": {"request_hash": fingerprint, "result": result, "trace": trace, "elapsed_seconds": time.monotonic() - started}}
         action = Action(id=object_id, idempotency_key="turn:" + request_id, expected_version=view.state_version,
                         actor_id=role_id, tool="record_turn", arguments={"object_id": object_id})

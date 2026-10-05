@@ -1,5 +1,6 @@
 from career_lab.assistant.retrieval import retrieve
 from career_lab.contracts.actions import Action
+from career_lab.errors import CodedValueError
 from career_lab.scenarios.reducer import InvalidAction, VersionConflict
 from career_lab.storage.sessions import digest
 
@@ -21,7 +22,7 @@ class TrainingService:
         except KeyError:
             return oid, None
         if saved["request_hash"] != digest(request):
-            raise ValueError("request_id reused with different content")
+            raise CodedValueError("request_id reused with different content", code="request_id_reused")
         return oid, saved
 
     def _save(self, sid, kind, key, request, data, state, tool):
@@ -34,14 +35,14 @@ class TrainingService:
 
     def run_assistant_test(self, session_id, query, config_version, request_id):
         if not query.strip() or len(query) > 4000:
-            raise ValueError("query length must be 1..4000")
+            raise CodedValueError("query length must be 1..4000", code="query_length")
         request = {"query": query, "config_version": config_version}
         _, saved = self._existing(session_id, "test", request_id, request)
         if saved:
             return saved
         state = self.store.get_state(session_id)
         if state.config_version != config_version or not state.configs:
-            raise VersionConflict("config version is not current")
+            raise VersionConflict("config version is not current", code="config_not_current")
         spec = self.store.get_spec(session_id)
         plan = state.configs["pilot"]
         domain_map = {"stable_faq": "faq", "policy": "policy"}
@@ -87,7 +88,7 @@ class TrainingService:
         state = self.store.get_state(session_id)
         artifact = self.store.get_object(session_id, artifact_id, "artifact")
         if state.config_version != config_version or artifact["config_version"] != config_version:
-            raise VersionConflict("artifact/config version mismatch; save a new artifact")
+            raise VersionConflict("artifact/config version mismatch; save a new artifact", code="artifact_config_mismatch")
         spec = self.store.get_spec(session_id)
         from career_lab.rubrics.checks import RULES_REVISION
         return self._save(session_id, "submission", request_id, request,

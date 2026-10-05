@@ -10,6 +10,7 @@ function fixture() {
   const transport = vi.fn<Transport>(async (path: string, body?: any) => {
     if (path === '/sessions') return { session_id: 's1', token: 'test-only-token', state: world };
     if (path.endsWith('/materials')) return [];
+    if (!body && /\/(tests|artifacts|submissions)$/.test(path)) return [];
     if (path.endsWith('/timeline')) return { events: [], turns: [], mode: 'saved_replay_no_model_calls' };
     if (path === '/sessions/s1' && !body) return { state: world };
     throw new Error('Unexpected call: ' + path);
@@ -155,7 +156,7 @@ describe('live workspace request and recovery boundaries', () => {
     const s = store.active()!;
     store.update('s1', { artifact: { id: 'a', content: s.draft, version: 1, config_version: 0 } });
     await store.submit();
-    expect(transport.mock.calls.filter(([path]) => path.endsWith('/submissions'))).toHaveLength(0);
+    expect(transport.mock.calls.filter(([path, body]) => body !== undefined && path.endsWith('/submissions'))).toHaveLength(0);
     expect(store.getSnapshot().error).toContain('先保存');
   });
 
@@ -168,7 +169,7 @@ describe('live workspace request and recovery boundaries', () => {
     await store.test('Question');
     await store.saveArtifact();
     expect(store.canWrite()).toBe(false);
-    expect(transport.mock.calls.some(([p]) => /\/(turns|tests|artifacts)$/.test(p))).toBe(false);
+    expect(transport.mock.calls.some(([p, body]) => body !== undefined && /\/(turns|tests|artifacts)$/.test(p))).toBe(false);
   });
 
   it('stops a mutation if its recovery journal cannot be saved', async () => {
