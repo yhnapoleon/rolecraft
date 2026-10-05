@@ -7,7 +7,8 @@
     "dev": "vite --host 127.0.0.1",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "vitest run"
+    "test": "vitest run && npm run test:workbench",
+    "test:workbench": "node tests/workbench-state.cjs"
   },
   "dependencies": { "react": "19.3.0", "react-dom": "19.3.0" },
   "devDependencies": {

@@ -40,7 +40,7 @@ export interface Feedback {
   sources: Record<string, Record<string, unknown>>; practice: string[];
 }
 export interface Job { id: string; status: 'queued' | 'running' | 'completed' | 'failed'; attempt: number; result: Turn | Feedback | null; error: string | null }
-export type OperationKind = 'action' | 'turn' | 'test' | 'artifact' | 'submission' | 'feedback' | 'approval';
+export type OperationKind = 'action' | 'turn' | 'test' | 'artifact' | 'submission' | 'feedback' | 'approval' | 'relation';
 export interface Operation {
   path: string; body: Record<string, unknown>; kind: OperationKind;
   label: string; created: string; jobId?: string; job?: Job;
@@ -56,6 +56,7 @@ export interface LocalSession {
   artifact?: Artifact; submission?: Submission; feedback?: Feedback;
   pending?: Operation; failedTurn?: Operation;
   feedbackFailure?: Job;
+  relationResult?: Record<string, any>;
 }
 export interface Workspace {
   schema: 1; active?: string; sessions: LocalSession[];

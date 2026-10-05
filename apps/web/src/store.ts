@@ -16,7 +16,8 @@ export class WorkspaceStore {
       const saved = storage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.schema !== 1 || !Array.isArray(parsed.sessions)) throw new Error();
+        if (parsed.schema !== 1 || !Array.isArray(parsed.sessions) || !parsed.sessions.every(validSession) ||
+            (parsed.active && !parsed.sessions.some((s: LocalSession) => s.id === parsed.active))) throw new Error();
         workspace = parsed;
       }
     } catch { error = '无法读取浏览器存档。请保留原浏览器数据；不要清理站点存储。'; }
@@ -41,7 +42,9 @@ export class WorkspaceStore {
     catch { this.emit({ connected: false, model: '' }); }
   }
   async create(scenario: Scenario) {
-    if (this.state.busy) return;
+    if (this.state.busy || this.state.storageError) return;
+    // Prove local persistence works before creating a non-idempotent session.
+    if (!this.persist()) return;
     this.emit({ busy: true, error: '', notice: '' });
     try {
       const result = await this.transport('/sessions', { scenario });
@@ -90,7 +93,7 @@ export class WorkspaceStore {
   async write(kind: Operation['kind'], suffix: string, body: Record<string, unknown>, label: string) {
     const s = this.active();
     if (!s || this.state.busy || s.pending || this.state.storageError) return;
-    if (!['feedback', 'action'].includes(kind) && s.world.status !== 'active') return;
+    if (!['feedback', 'action', 'relation'].includes(kind) && s.world.status !== 'active') return;
     const operation: Operation = { kind, path: suffix, body, label, created: new Date().toISOString(), ...(kind === 'test' ? { localExpected: s.inputs.expected } : {}) };
     if (!this.update(s.id, { pending: operation })) return;
     await this.execute(s.id);
@@ -116,6 +119,7 @@ export class WorkspaceStore {
     return this.write('submission', '/submissions', { artifact_id: s.artifact.id, config_version: s.world.config_version, request_id: crypto.randomUUID() }, '固定提交');
   }
   feedback() { const s = this.active(); if (!s) return; return this.write('feedback', '/feedback', { submission_id: this.submissionId(s) }, '生成反馈'); }
+  relation(claim: string) { return this.write('relation', '/relation-checks', { claim, request_id: crypto.randomUUID() }, '辅助关系判断'); }
   approval(rule: string) { const s = this.active(); if (!s) return; return this.write('approval', '/approvals/resolve', { rule_id: rule, request_id: crypto.randomUUID(), expected_version: s.world.version }, '按场景规则审核申请'); }
   async execute(id = this.state.workspace.active) {
     const s = this.state.workspace.sessions.find(s => s.id === id);
@@ -137,6 +141,7 @@ export class WorkspaceStore {
         }
         if (op.kind === 'artifact') patch.artifact = result as Artifact;
         if (op.kind === 'submission') patch.submission = result as Submission;
+        if (op.kind === 'relation') patch.relationResult = result;
         if (op.kind === 'action' && op.body.tool === 'update_pilot') patch.configDraft = undefined;
         this.update(s.id, patch);
         this.emit({ notice: op.label + '已由后端保存。' });
@@ -145,11 +150,12 @@ export class WorkspaceStore {
     } catch (e) {
       if (!(e instanceof ApiError) || e.status === 0 || e.status >= 500) this.emit({ connected: false });
       // 4xx is a definite rejection; preserve drafts but do not rebase an old action silently.
-      if (e instanceof ApiError && e.status >= 400 && e.status < 500) {
+      const unavailableStudy = op.kind === 'relation' && e instanceof ApiError && e.status === 503 && e.message === 'frozen relation study is not configured';
+      if (e instanceof ApiError && ((e.status >= 400 && e.status < 500) || unavailableStudy)) {
         this.update(s.id, { pending: undefined });
         await this.sync(s.id);
       }
-      this.emit({ error: message(e) + (e instanceof ApiError && e.status === 409 ? ' 已刷新状态，请核对后重新操作；草稿仍保留。' : '') });
+      this.emit({ error: unavailableStudy ? '服务器尚未配置冻结实验，辅助关系判断不可用；其他功能可继续使用。' : message(e) + (e instanceof ApiError && e.status === 409 ? ' 已刷新状态，请核对后重新操作；草稿仍保留。' : '') });
     } finally { this.emit({ busy: false }); }
   }
   async poll(id = this.state.workspace.active) {
@@ -179,3 +185,14 @@ export class WorkspaceStore {
   }
 }
 export function message(e: unknown) { return e instanceof Error ? e.message : String(e); }
+
+function validSession(s: any): s is LocalSession {
+  return !!s && typeof s.id === 'string' && typeof s.token === 'string' && !!s.token &&
+    ['pm_pilot', 'pm_pilot_urgent', 'pm_pilot_capacity15'].includes(s.scenario) &&
+    s.world?.session_id === s.id && ['active', 'paused', 'submitted'].includes(s.world?.status) &&
+    Number.isInteger(s.world?.version) && !!s.world.resources && !!s.world.configs &&
+    !!s.world.material_versions && !!s.world.indexed_versions && Array.isArray(s.world.pending_requests) &&
+    Array.isArray(s.materials) && Array.isArray(s.tests) && Array.isArray(s.timeline?.events) &&
+    Array.isArray(s.timeline?.turns) && !!s.inputs?.messages && !!s.questions && !!s.testNotes &&
+    Object.keys(emptyDraft()).every(k => typeof s.draft?.[k] === 'string');
+}
