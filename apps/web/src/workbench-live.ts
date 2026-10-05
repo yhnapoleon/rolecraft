@@ -1,4 +1,5 @@
 import { request, sessionPath, type Transport } from './api';
+import { T } from './app/i18n';
 import { blankPilot, WorkspaceStore } from './store';
 import type { Deliverable, LocalSession, Pilot, RoleId, Scenario } from './types';
 
@@ -11,13 +12,14 @@ export const roleIds: Record<string, RoleId> = { manager: 'supervisor', business
 const workIds: Record<string, string> = { scope: 'scope_filter', fallback: 'human_fallback', realtime: 'realtime_sync' };
 export const fromPilot = (p: Pilot) => ({ participants: p.participants, domains: p.knowledge_domains.map(d => d === 'stable_faq' ? 'faq' : d), update: p.update_strategy === 'manual_policy' ? 'manual' : p.update_strategy, fallback: p.fallback, workItems: p.work_items.map(w => Object.keys(workIds).find(k => workIds[k] === w) || w), launchDay: p.launch_day });
 export function toPilot(c: any): Pilot {
-  if (!['daily', 'realtime', 'manual'].includes(c.update) || !['human', 'none'].includes(c.fallback)) throw new Error('这项设置没有对应的后端接口。');
-  if (c.domains.some((d: string) => !['faq', 'policy'].includes(d)) || c.workItems.some((w: string) => !workIds[w])) throw new Error('未知知识范围或工作项。');
+  if (!['daily', 'realtime', 'manual'].includes(c.update) || !['human', 'none'].includes(c.fallback)) throw new Error(T('这项设置没有对应的后端接口。', 'This setting has no server equivalent.'));
+  if (c.domains.some((d: string) => !['faq', 'policy'].includes(d)) || c.workItems.some((w: string) => !workIds[w])) throw new Error(T('未知知识范围或工作项。', 'Unknown knowledge area or work item.'));
   return { participants: c.participants, knowledge_domains: c.domains.map((d: string) => d === 'faq' ? 'stable_faq' : d), launch_day: c.launchDay, update_strategy: c.update === 'manual' ? 'manual_policy' : c.update, fallback: c.fallback, work_items: c.workItems.map((w: string) => workIds[w]) };
 }
 
 export class LiveWorkbench {
   readonly store: WorkspaceStore;
+  readonly fromPilot = fromPilot;
   readonly engine: Engine;
   private state: any;
   private notify = (_changed: boolean) => {};
@@ -44,8 +46,8 @@ export class LiveWorkbench {
         return result;
       };
     }
-    for (const name of ['runTest', 'reply', 'updateConfig', 'refreshIndex', 'requestResources', 'resolveResources', 'triggerPolicyUpdate', 'submit', 'revise', 'suggestPriorities', 'readMaterial', 'applySuggestion']) {
-      this.engine[name] = () => { throw new Error('此操作必须由后端确认；没有切换为本地模拟。'); };
+    for (const name of ['runTest', 'reply', 'updateConfig', 'refreshIndex', 'requestResources', 'resolveResources', 'triggerPolicyUpdate', 'submit', 'revise', 'suggestPriorities', 'readMaterial']) {
+      this.engine[name] = () => { throw new Error(T('此操作必须由后端确认；没有切换为本地模拟。', 'This must be confirmed by the server; nothing was simulated locally.')); };
     }
     this.store.subscribe(() => this.changed());
   }
@@ -86,13 +88,14 @@ export class LiveWorkbench {
     a.tests = s.tests.map(t => {
       const previous = a.tests.find((p: any) => p.id === t.id) || {};
       const meta = this.metadata.get(t.id) || previous;
-      return { id: t.id, question: t.query, answer: t.answer, citations: t.citations.map(c => ({ id: c.material_id, version: c.version, title: s.materials.find(m => m.id === c.material_id)?.title || c.material_id })), expectation: s.testNotes[t.id]?.expected || '', policyVersion: t.source_versions.policy, indexVersion: t.indexed_versions.policy, configVersion: t.config_version, config: meta.config || null, taskId: meta.taskId || null, createdAt: meta.createdAt || '', mode: t.mode, asOfSeq: t.as_of_seq };
+      return { id: t.id, question: t.query, answer: t.answer, citations: t.citations.map(c => ({ id: c.material_id, version: c.version, title: s.materials.find(m => m.id === c.material_id)?.title || c.material_id })), expectation: s.testNotes[t.id]?.expected || '', policyVersion: t.source_versions.policy, indexVersion: t.indexed_versions.policy, configVersion: t.config_version, config: meta.config || null, taskId: meta.taskId || null, createdAt: meta.createdAt || '', mode: t.mode, asOfSeq: t.as_of_seq, fallback: t.fallback, stale: t.stale };
     });
     a.conversations = Object.fromEntries(Object.entries(roleIds).map(([role, id]) => [role, s.timeline.turns.filter(t => t.role_id === id).flatMap(t => [
       ...(s.questions[t.trace_id] ? [{ role: 'user', text: s.questions[t.trace_id], createdAt: '' }] : []),
       { role: 'colleague', text: t.text, createdAt: '', model: t.model_revision, traceId: t.trace_id },
     ])]));
-    // Server events are projected separately from local editing events.
+    // Server events are projected separately from local editing events. Local ordering
+    // (applySuggestion, moveTask) stays allowed: it never touches server authority.
     a.events = a.events.filter((e: any) => !e.server && !['colleague_note', 'colleague_nudged', 'nudge'].includes(e.type));
     for (const e of s.timeline.events) a.events.push({ id: 'server-' + e.seq, server: true, type: e.event_type === 'read_material' ? 'material_read' : e.event_type, text: '后端 · ' + e.event_type + ' · #' + e.seq, createdAt: '', detail: { ...e.payload, materialId: e.payload.material_id }, seq: e.seq });
     a.requests = w.pending_requests.map(id => ({ id, status: 'pending', reason: id === 'capacity_approved' ? '扩容申请' : '资源与延期申请' }));
@@ -100,26 +103,26 @@ export class LiveWorkbench {
   }
   session(a?: Attempt) { return a ? this.store.getSnapshot().workspace.sessions.find(s => s.id === a.id) : this.store.active(); }
   async start(caseId: string, opts?: any) {
-    if (!scenarios[caseId]) throw new Error('后端不支持这个情境。');
+    if (!scenarios[caseId]) throw new Error(T('后端不支持这个情境。', 'The server does not support this situation.'));
     const id = await this.store.create(scenarios[caseId]);
-    if (!id) throw new Error(this.store.getSnapshot().error || '会话未创建。');
+    if (!id) throw new Error(this.store.getSnapshot().error || T('会话未创建。', 'The session was not created.'));
     const a = this.ensureAttempt(this.store.active()!, opts); if (opts) Object.assign(a, opts);
     this.state.activeId = id; this.project(a, this.store.active()!); return a;
   }
-  select(a: Attempt) { if (!this.session(a)) throw new Error('找不到会话凭据，请保留原浏览器存档。'); this.store.select(a.id); }
+  select(a: Attempt) { if (!this.session(a)) throw new Error(T('找不到会话凭据，请保留原浏览器存档。', 'Session credentials are missing. Keep the original browser data.')); this.store.select(a.id); }
   async perform(a: Attempt, fn: () => Promise<unknown> | undefined, allowSubmitted = false) {
     this.select(a);
     const s = this.session(a)!; const snap = this.store.getSnapshot();
-    if (snap.busy || s.pending) throw new Error('上一请求还未确认，请先等待或重试原请求。');
-    if (snap.storageError) throw new Error('存储不可用，已暂停服务端写入。');
-    if (!allowSubmitted && s.world.status !== 'active') throw new Error(s.world.status === 'submitted' ? '这次交付已锁定。可以查看反馈，或新建练习。' : '练习已暂停，请先恢复。');
+    if (snap.busy || s.pending) throw new Error(T('上一请求还未确认，请先等待或重试原请求。', 'The previous request is not confirmed yet. Wait, or retry it.'));
+    if (snap.storageError) throw new Error(T('存储不可用，已暂停服务端写入。', 'Storage is unavailable, so server writes are paused.'));
+    if (!allowSubmitted && s.world.status !== 'active') throw new Error(s.world.status === 'submitted' ? T('这次交付已锁定。可以查看反馈，或新建练习。', 'This submission is locked. Read the review or start a new practice.') : T('练习已暂停，请先恢复。', 'The practice is paused. Resume it first.'));
     await fn(); this.changed();
     const after = this.store.getSnapshot();
     if (after.error) throw new Error(after.error);
   }
   async action(a: Attempt, tool: string, args: Record<string, unknown> = {}) { await this.perform(a, () => this.store.action(tool, args), tool === 'resume'); }
   async read(a: Attempt, materialId: string) {
-    if (!a.backend.materials.some((m: any) => m.id === materialId)) throw new Error('当前会话不可读取这份资料。');
+    if (!a.backend.materials.some((m: any) => m.id === materialId)) throw new Error(T('当前会话不可读取这份资料。', 'This document is not available in this session.'));
     if (this.session(a)!.world.status === 'active') await this.action(a, 'read_material', { material_id: materialId });
     else await this.store.sync(a.id); // Paused/submitted sessions remain readable; do not invent a read event.
   }
@@ -128,18 +131,18 @@ export class LiveWorkbench {
     await this.action(a, 'update_pilot', { plan });
   }
   async test(a: Attempt, input: any) {
-    if (!a.backend.configured) throw new Error('先打开“试点设置”并应用一次配置，再测试助手。');
+    if (!a.backend.configured) throw new Error(T('先打开“试点设置”并应用一次配置，再测试助手。', 'Save the pilot settings once before testing the assistant.'));
     const s = this.session(a)!; const before = new Set(s.tests.map(t => t.id));
     const config = structuredClone(a.config); const stamp = new Date().toISOString();
     this.store.update(a.id, { inputs: { ...s.inputs, expected: input.expectation || '' } });
     await this.perform(a, () => this.store.test(input.question));
     const t = this.session(a)!.tests.find(t => !before.has(t.id));
-    if (!t) throw new Error('测试尚未获确认，请重试原请求。');
+    if (!t) throw new Error(T('测试尚未获确认，请重试原请求。', 'The test is not confirmed yet. Retry the same request.'));
     this.metadata.set(t.id, { taskId: input.taskId, config, createdAt: stamp }); this.changed();
     return a.tests.find((x: any) => x.id === t.id);
   }
   async turn(a: Attempt, role: string, text: string) {
-    if (!roleIds[role] || !text.trim() || text.length > 4000) throw new Error('消息需要 1–4000 个字符。');
+    if (!roleIds[role] || !text.trim() || text.length > 4000) throw new Error(T('消息需要 1–4000 个字符。', 'Messages need 1–4,000 characters.'));
     await this.perform(a, () => this.store.sendTurn(roleIds[role], text));
     const s = this.session(a)!;
     this.store.update(a.id, { inputs: { ...s.inputs, messages: { ...s.inputs.messages, [roleIds[role]]: '' } } });
@@ -147,12 +150,12 @@ export class LiveWorkbench {
   async save(a: Attempt, draft: Deliverable) { this.store.update(a.id, { draft }); await this.perform(a, () => this.store.saveArtifact()); }
   async submit(a: Attempt) { await this.perform(a, () => this.store.submit()); }
   async feedback(a: Attempt) {
-    if (!this.store.submissionId(this.session(a)!)) throw new Error('正式交付后才可生成后端反馈。');
+    if (!this.store.submissionId(this.session(a)!)) throw new Error(T('正式交付后才可生成后端反馈。', 'The review can only be generated after you submit.'));
     await this.perform(a, () => this.store.feedback(), true);
   }
   async savedFeedback(a: Attempt) {
     const s = this.session(a)!; const id = this.store.submissionId(s);
-    if (!id) throw new Error('尚无正式交付。');
+    if (!id) throw new Error(T('尚无正式交付。', 'Nothing has been submitted yet.'));
     const feedback = await this.transport(sessionPath(s, '/feedback/' + encodeURIComponent(id)), undefined, s);
     this.store.update(s.id, { feedback }); return feedback;
   }
@@ -171,7 +174,7 @@ export class LiveWorkbench {
   private addEvidence(a: Attempt, artifactId: string, ev: any) {
     const target = a.artifacts.find((x: any) => x.id === artifactId);
     const actual = ev.type === 'test' ? a.tests.find((x: any) => x.id === ev.id && x.configVersion === ev.version) : a.backend.materials.find((x: any) => x.id === ev.id && x.version === ev.version);
-    if (!target || !actual) throw new Error('只能引用当前会话实际返回的资料或测试。');
+    if (!target || !actual) throw new Error(T('只能引用当前会话实际返回的资料或测试。', 'Only documents and tests returned in this session can be cited.'));
     const safe = { id: actual.id, title: ev.type === 'test' ? '测试：' + actual.question : actual.title, version: ev.version, body: ev.type === 'test' ? actual.answer : actual.body, type: ev.type };
     if (!target.evidence.some((e: any) => e.id === safe.id && e.version === safe.version)) target.evidence.push(safe);
   }
@@ -180,7 +183,7 @@ export class LiveWorkbench {
     const artifacts = this.base.currentArtifacts(a).filter((x: any) => (!taskId || x.taskId === taskId) && (!scope.artifactIds || scope.artifactIds.includes(x.id)));
     const requestId = scope.requestId || crypto.randomUUID();
     const inputVersions = artifacts.map((x: any) => ({ artifactId: x.id, revision: x.revision }));
-    const result = structuredClone({ schema: 'practice-task-package/v1', requestId, mode: 'backend-evidence-local-notes', exportedAt: new Date().toISOString(), scenario: { id: a.scenarioId, title: a.title }, task: a.tasks.find((t: any) => t.id === taskId) || null, materials: a.backend.materials.filter((m: any) => read.has(m.id) && (!scope.materialIds || scope.materialIds.includes(m.id))), artifacts, tests: a.tests.filter((t: any) => !scope.testIds || scope.testIds.includes(t.id)), inputVersions, instructions: '仅用本包可见资料。作品回传是本地草稿，不批准资源、不执行动作；结论必须核查。', returnFormat: { requestId, artifact: { title: '作品标题', purpose: '自由作品', body: 'Markdown 正文' } } });
+    const result = structuredClone({ schema: 'practice-task-package/v1', requestId, mode: 'backend-evidence-local-notes', exportedAt: new Date().toISOString(), scenario: { id: a.scenarioId, title: a.title }, task: a.tasks.find((t: any) => t.id === taskId) || null, materials: a.backend.materials.filter((m: any) => read.has(m.id) && (!scope.materialIds || scope.materialIds.includes(m.id))), artifacts, tests: a.tests.filter((t: any) => !scope.testIds || scope.testIds.includes(t.id)), inputVersions, instructions: T('仅用本包可见资料。作品回传是本地草稿，不批准资源、不执行动作；结论必须核查。', 'Use only what this package contains. Returned work is a local draft: it approves nothing and runs nothing, and its claims must be checked.'), returnFormat: { requestId, artifact: { title: T('作品标题', 'Title'), purpose: T('自由作品', 'Free-form'), body: T('Markdown 正文', 'Markdown body') } } });
     if (scope.record) { a.exports ||= []; a.exports.push({ requestId, taskId, inputVersions, createdAt: result.exportedAt }); }
     return result;
   }
