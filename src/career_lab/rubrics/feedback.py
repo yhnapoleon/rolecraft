@@ -21,4 +21,5 @@ def build_feedback(store, session_id, submission_id):
     return {"submission_id": submission_id, "as_of_seq": submission["as_of_seq"], "model_revision": RULES_REVISION,
             "rubric_hash": submission["rubric_hash"], "summary": summary,
             "items": [i.model_dump(mode="json") for i in items], "sources": sources,
+            "overflow": any(i.completeness == "overflow" for i in items),
             "practice": sorted({PRACTICE[i.criterion_id.split('.')[0]] for i in items if i.label in {"PARTIAL", "NOT_MET"}})}
