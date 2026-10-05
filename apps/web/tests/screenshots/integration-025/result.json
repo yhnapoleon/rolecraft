@@ -1,0 +1,11 @@
+{
+  "checks": [
+    "document expand, interrupted return, focus and no leftover layer",
+    "folder opens the exact investigation and loads source comparison",
+    "review draft survives mode change, save, reload and folder reopening",
+    "explicit refresh then retest keeps v2/400 result with judgment",
+    "390px folder and workpaper stay inside viewport",
+    "reduced motion skips document flight and folder keyboard recovers focus"
+  ],
+  "logs": []
+}

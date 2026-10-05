@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "requestId": "request-muv8v36w-5ya2wk",
+  "returnId": "codex-workpaper-023-1791204452223",
+  "artifact": {
+    "kind": "investigation",
+    "title": "政策更新后的回答核对",
+    "purpose": "探索笔记",
+    "question": "核对政策、索引与回答的变化，判断这次修复说明了什么、还需要验证什么。",
+    "blocks": [
+      {
+        "type": "source_check",
+        "testId": "7c84e6b48ddd5b7a398828a2ac38c88f12bbdfa558e7cd884ea0e9109f4b3b53",
+        "material": {
+          "id": "policy",
+          "version": 2
+        }
+      },
+      {
+        "type": "test_compare",
+        "testIds": [
+          "7c84e6b48ddd5b7a398828a2ac38c88f12bbdfa558e7cd884ea0e9109f4b3b53",
+          "44b215a4dc0ca96090e9bed48a5ab2a2daa7cac9f22753b36bcf09b157ef8389"
+        ]
+      },
+      {
+        "type": "note",
+        "title": "目前能确认什么",
+        "text": "你提出的“索引未更新”假设与这两次实际记录一致：第一条记录的源政策为 v2、索引为 v1；刷新后，第二条记录的索引与引用均为 v2，回答正文包含更新后的住宿上限。这里只能确认这一问题在这些条件下的表现，不能据此认定整个试点已通过。保留你的判断，再选择是否继续检查其他政策问题或收紧开放范围。"
+      },
+      {
+        "type": "retest",
+        "testId": "7c84e6b48ddd5b7a398828a2ac38c88f12bbdfa558e7cd884ea0e9109f4b3b53",
+        "label": "用当前条件再核对一次"
+      }
+    ]
+  }
+}

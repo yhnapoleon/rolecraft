@@ -1103,4 +1103,116 @@ test('新版text信封兼容普通编辑和幂等；旧Markdown与legacy JSON不
   assert.equal(E.validateImported('{"title":"legacy","body":"原来的JSON"}').body, '原来的JSON');
 });
 
+test('用户调查判断保存为作品修订，保留历史、导出、刷新与移除恢复', () => {
+  const a = investigationStart();
+  const x = E.importReturn(a, JSON.stringify(investigationReturn()), a.tasks[1].id).artifact;
+  E.adoptArtifact(a, x.id);
+  assert.deepEqual(x.review, { focus: 'uncertain', note: '' });
+  assert(!x.body.includes('我的调查判断'));
+  const blocks = JSON.parse(JSON.stringify(x.blocks));
+  const review = { focus: 'index', note: '我怀疑索引未更新，先核对旧引用，再重测。' };
+  E.saveArtifact(a, x.id, { review });
+  assert.equal(x.revision, 2); assert.deepEqual(x.review, review);
+  assert.deepEqual(x.blocks, blocks, '用户判断不改变Agent模块及其版本');
+  assert.match(x.body, /我的调查判断（待核对）/); assert.match(x.body, /索引是否更新/);
+  assert(x.body.includes(review.note));
+  assert.deepEqual(a.events.findLast(event => event.type === 'artifact_saved').detail.previous.review, { focus: 'uncertain', note: '' });
+  E.saveArtifact(a, x.id, { review: { ...review } }); assert.equal(x.revision, 2, '相同判断不制造修订');
+  const pkg = E.preparePackage(a, x.taskId, { record: true });
+  assert.deepEqual(pkg.artifacts[0].review, review); assert.deepEqual(pkg.inputSnapshot.artifacts[0].review, review);
+  const submission = E.submit(a); const frozen = JSON.stringify(submission);
+  E.saveArtifact(a, x.id, { review: { focus: 'source', note: '也要核对源资料是否写错。' } });
+  assert.deepEqual(a.events.findLast(event => event.type === 'artifact_saved').detail.previous.review, review);
+  assert.equal(JSON.stringify(submission), frozen); assert(Object.isFrozen(submission.artifacts[0].review));
+  const savedReview = JSON.parse(JSON.stringify(x.review));
+  E.removeArtifact(a, x.id);
+  const restored = JSON.parse(JSON.stringify(a)); E.normalizeAttempt(restored);
+  assert.deepEqual(restored.artifacts[0].review, savedReview);
+  E.restoreArtifact(restored, x.id);
+  assert.deepEqual(E.currentArtifacts(restored)[0].review, savedReview);
+  assert.equal(restored.artifacts[0].body, E.investigationSummary(restored.artifacts[0]));
+});
+
+test('旧调查默认未知方向；草稿判断保留并进入输入快照，旧包不误报迁移为内容变化', () => {
+  const a = investigationStart();
+  const x = E.importReturn(a, JSON.stringify(investigationReturn()), a.tasks[1].id).artifact;
+  E.adoptArtifact(a, x.id);
+  x.draft = { question: '旧存档中已有的草稿问题' };
+  E.preparePackage(a, x.taskId, { record: true });
+  delete x.review;
+  delete a.exports[0].inputSnapshot.artifacts[0].review;
+  const old = JSON.parse(JSON.stringify(a)); E.normalizeAttempt(old);
+  const restored = old.artifacts[0];
+  assert.deepEqual(restored.review, { focus: 'uncertain', note: '' }); assert.equal(restored.revision, 1);
+  const same = E.importReturn(old, JSON.stringify({ schemaVersion: 1, requestId: old.exports[0].requestId, returnId: 'after-migration', artifact: { kind: 'text', title: '建议', body: '核对原记录。' } }));
+  assert(!same.staleInputs.some(input => input.kind === 'artifact'));
+  restored.draft = { review: { focus: 'other', note: '尚未保存的其他解释' } };
+  const copy = JSON.parse(JSON.stringify(old)); E.normalizeAttempt(copy);
+  const snapshot = E.captureInputSnapshot(copy, { artifacts: [copy.artifacts[0]] });
+  assert.deepEqual(snapshot.artifacts[0].review, restored.draft.review);
+  assert.deepEqual(snapshot.artifacts[0].draft.review, restored.draft.review);
+  assert.match(snapshot.artifacts[0].body, /尚未保存的其他解释/);
+  assert.deepEqual(copy.artifacts[0].review, { focus: 'uncertain', note: '' }, '草稿不提前成为已保存判断');
+});
+
+test('调查判断变化使旧包回传标记过期，导入、模块编辑与重测记录不能改写用户判断', () => {
+  const a = investigationStart(); E.readMaterial(a, 'policy');
+  const x = E.importReturn(a, JSON.stringify(investigationReturn()), a.tasks[1].id).artifact;
+  E.adoptArtifact(a, x.id);
+  const pkg = E.preparePackage(a, x.taskId, { record: true });
+  const review = { focus: 'index', note: '这是我的待核对判断，重测后仍由我修改。' };
+  E.saveArtifact(a, x.id, { review });
+  const returned = E.importReturn(a, JSON.stringify(investigationReturn({ requestId: pkg.requestId, returnId: 'new-agent-investigation' })));
+  assert(returned.staleInputs.some(input => input.kind === 'artifact' && input.artifactId === x.id));
+  assert.deepEqual(returned.artifact.review, { focus: 'uncertain', note: '' }, 'Agent新作品不继承或声称用户已判断');
+  assert.deepEqual(x.review, review);
+  assert.equal(E.importReturn(a, JSON.stringify(investigationReturn())).artifact, x);
+  E.saveArtifact(a, x.id, { question: '重新检查同一个问题' });
+  E.moveInvestigationBlock(a, x.id, x.blocks[0].id);
+  const block = x.blocks.find(item => item.type === 'retest');
+  a.tests.push({ ...a.tests.find(run => run.id === block.testId), id: 'later-actual-run', investigationId: x.id, investigationRevision: x.revision, blockId: block.id, blockRevision: block.revision, baselineRunId: block.testId });
+  assert.equal(E.agentProgress(a, x).linkedRuns, 3);
+  E.addEvidence(a, x.id, { id: 'later-actual-run', type: 'test', version: 1 });
+  assert.deepEqual(x.review, review); assert(x.body.includes(review.note));
+  assert.equal(E.agentProgress(a, x).verified, false);
+});
+
+test('调查判断拒绝非法方向、非文本、长文本及外部伪造，不落到普通作品', () => {
+  const a = investigationStart();
+  const x = E.importReturn(a, JSON.stringify(investigationReturn())).artifact;
+  const invalid = [null, undefined, {}, { focus: 'verified', note: '' }, { focus: 'index', note: 1 }, { focus: 'index', note: 'x'.repeat(4001) }, { focus: 'index', note: '', source: 'user' }];
+  const before = JSON.stringify(x), count = a.events.length;
+  for (const review of invalid) assert.throws(() => E.saveArtifact(a, x.id, { review }), /调查/);
+  assert.equal(JSON.stringify(x), before); assert.equal(a.events.length, count);
+  E.saveArtifact(a, x.id, { review: { focus: 'uncertain', note: 'x'.repeat(4000) } });
+  assert.match(x.body, /我的调查判断/); assert.equal(x.review.note.length, 4000);
+  const review = { focus: 'index', note: '被伪造的用户判断' };
+  const fake = investigationReturn({ returnId: 'fake-review' }); fake.artifact.review = review;
+  assert.throws(() => E.importReturn(a, JSON.stringify(fake)), /不支持.*review/);
+  assert.throws(() => E.createArtifact(a, { ...investigationReturn().artifact, source: 'external-agent', review }), /只能由用户/);
+  const ordinary = work(a);
+  assert.throws(() => E.saveArtifact(a, ordinary.id, { review }), /不能保存调查判断/);
+  assert.throws(() => work(a, { review }), /不能保存调查判断/);
+  const corrupt = JSON.parse(JSON.stringify(a)); corrupt.artifacts.find(item => item.id === ordinary.id).review = review;
+  assert.throws(() => E.normalizeAttempt(corrupt), /不能保存调查判断/);
+});
+
+test('暂停、提交与移除状态拒绝调查判断写入，失败不改变版本和事件', () => {
+  const a = investigationStart(); const x = E.importReturn(a, JSON.stringify(investigationReturn())).artifact;
+  const review = { focus: 'index', note: '保留我的判断' };
+  E.saveArtifact(a, x.id, { review });
+  for (const status of ['paused', 'submitted']) {
+    a.backend.status = status;
+    const before = JSON.stringify(x), count = a.events.length;
+    assert.throws(() => E.saveArtifact(a, x.id, { review: { focus: 'other', note: '不应写入' } }), /暂停|只读/);
+    assert.throws(() => E.createArtifact(a, { ...investigationReturn().artifact, review }), /暂停|只读/);
+    assert.equal(JSON.stringify(x), before); assert.equal(a.events.length, count);
+  }
+  a.backend.status = 'active'; E.removeArtifact(a, x.id);
+  assert.throws(() => E.saveArtifact(a, x.id, { review: { focus: 'other', note: '不应写入' } }), /已移除/);
+  E.restoreArtifact(a, x.id); assert.deepEqual(x.review, review);
+  E.saveArtifact(a, x.id, { review: { focus: 'uncertain', note: '' } });
+  assert(!x.body.includes('我的调查判断'), '用户明确清空后才去掉可读判断');
+});
+
 console.log('\n' + passed + ' 个状态行为回归通过。范围：本地规则与记录隔离；不验证模型、后端、真人学习效果或浏览器视觉。');

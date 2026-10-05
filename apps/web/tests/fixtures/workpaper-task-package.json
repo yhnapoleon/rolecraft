@@ -1,0 +1,634 @@
+{
+  "schema": "practice-task-package/v1",
+  "requestId": "request-muv8v36w-5ya2wk",
+  "mode": "backend-evidence-local-notes",
+  "exportedAt": "2026-10-05T12:46:59.048Z",
+  "scenario": {
+    "id": "pilot",
+    "title": "知识助手，准备好试点了吗？"
+  },
+  "task": {
+    "id": "task-muv8kngc-4-03t2nkb",
+    "title": "回应政策问答的开放请求",
+    "note": "业务团队希望试点支持政策查询。请判断如何回应这个请求，以及需要哪些依据。",
+    "priority": "next",
+    "status": "working",
+    "createdAt": "2026-10-05T12:38:52.092Z",
+    "seed": "policy"
+  },
+  "materials": [
+    {
+      "id": "brief",
+      "version": 1,
+      "title": "试点任务简报",
+      "path": "materials/brief.md",
+      "visible_to": [
+        "learner",
+        "supervisor",
+        "tech_lead",
+        "business_lead"
+      ],
+      "available_after_event": null,
+      "content": "# 试点任务简报 v1\n\n你是新入职的 AI 产品经理。主管希望在第7天前，为内部员工启动知识助手试点，减少重复咨询并观察回答质量。初始试点容量30人，开发资源3人日；资源和期限变化必须有主管批准记录。\n\n你可以先阅读材料，再向主管、技术负责人、业务负责人澄清问题。必要约束可从材料直接获取，评价不强制要求询问某个角色。低频办公FAQ可以独立产生试点价值；动态报销政策风险更高。\n\n最终交付需包含：目标用户、业务目标、知识范围、试点人数、更新策略、fallback条件、工作项与成本、实际测试及验收标准、成功指标、观察窗口、负责人、退出条件和取舍理由。至少完成一次真实助手测试并关联记录；测试功能由后续模块提供。\n\n允许小范围先行，也允许申请资源后延期开放。延期方案必须取得批准，不能把希望获得的资源当成现有事实。完全拒绝全部功能且没有可执行试点，不算完成任务。\n\n",
+      "content_hash": "549846c0fea8e6996b2555e24dcd8d2b285130edf8b92646f9b9888f0d994395",
+      "body": "# 试点任务简报 v1\n\n你是新入职的 AI 产品经理。主管希望在第7天前，为内部员工启动知识助手试点，减少重复咨询并观察回答质量。初始试点容量30人，开发资源3人日；资源和期限变化必须有主管批准记录。\n\n你可以先阅读材料，再向主管、技术负责人、业务负责人澄清问题。必要约束可从材料直接获取，评价不强制要求询问某个角色。低频办公FAQ可以独立产生试点价值；动态报销政策风险更高。\n\n最终交付需包含：目标用户、业务目标、知识范围、试点人数、更新策略、fallback条件、工作项与成本、实际测试及验收标准、成功指标、观察窗口、负责人、退出条件和取舍理由。至少完成一次真实助手测试并关联记录；测试功能由后续模块提供。\n\n允许小范围先行，也允许申请资源后延期开放。延期方案必须取得批准，不能把希望获得的资源当成现有事实。完全拒绝全部功能且没有可执行试点，不算完成任务。\n\n"
+    },
+    {
+      "id": "policy",
+      "version": 2,
+      "title": "差旅政策更新版",
+      "path": "materials/policy-v2.md",
+      "visible_to": [
+        "learner",
+        "supervisor",
+        "tech_lead",
+        "business_lead"
+      ],
+      "available_after_event": "policy_updated",
+      "content": "# 差旅政策 v2\n\n政策更新事件生效后，模拟公司的国内出差住宿报销上限调整为每人每晚400元。超出上限仍需事前取得主管书面批准，并保留票据。此材料仅用于虚构训练场景。\n\n源文档发布v2不代表知识助手索引已经更新。继续回答500元可能说明索引仍在使用v1，应记录测试所用版本。\n\n",
+      "content_hash": "1c1ccdbc65b45c543805f845af3231a8088ecce2f62cfafb44d18a5afb5e3160",
+      "body": "# 差旅政策 v2\n\n政策更新事件生效后，模拟公司的国内出差住宿报销上限调整为每人每晚400元。超出上限仍需事前取得主管书面批准，并保留票据。此材料仅用于虚构训练场景。\n\n源文档发布v2不代表知识助手索引已经更新。继续回答500元可能说明索引仍在使用v1，应记录测试所用版本。\n\n"
+    }
+  ],
+  "artifacts": [
+    {
+      "id": "artifact-muv8owia-2-1f3jpmu",
+      "taskId": "task-muv8kngc-4-03t2nkb",
+      "title": "核对回答与资料",
+      "purpose": "探索笔记",
+      "body": "## 调查问题\n\n这次回答用了哪版资料？当前条件下会怎样回答？\n\n### 先核对实际依据\n\n先看这次回答实际引用的版本，再对照当前资料。是否调整设置或重测，由你决定。\n\n### 来源核对\n\n测试 e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e 的实际引用，对照资料 policy@v2。\n\n### 测试对照\n\n实际运行：e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e；ed7283a5e7cb02f74d6746e55c627dea4fab32e5ed213d75688193fd678c56a7\n\n### 同题重测\n\n待用户操作：按测试 e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e 的问题重新运行；本模块不代表已经执行。\n\n## 我的调查判断（待核对）\n\n关注方向：索引是否更新\n\n源文档已更新到 v2，但回答引用 v1。先保留索引未更新的假设，重测后再决定是否调整试点。",
+      "source": "user",
+      "adopted": true,
+      "adoptedAt": "2026-10-05T12:42:10.450Z",
+      "revision": 3,
+      "createdAt": "2026-10-05T12:42:10.450Z",
+      "updatedAt": "2026-10-05T12:43:12.104Z",
+      "evidence": [],
+      "kind": "investigation",
+      "review": {
+        "focus": "index",
+        "note": "源文档已更新到 v2，但回答引用 v1。先保留索引未更新的假设，重测后再决定是否调整试点。"
+      },
+      "question": "这次回答用了哪版资料？当前条件下会怎样回答？",
+      "blocks": [
+        {
+          "id": "block-muv8owia-3-l0vhof5",
+          "revision": 1,
+          "type": "note",
+          "text": "先看这次回答实际引用的版本，再对照当前资料。是否调整设置或重测，由你决定。",
+          "title": "先核对实际依据"
+        },
+        {
+          "id": "block-muv8owia-4-4wuz2qk",
+          "revision": 1,
+          "type": "source_check",
+          "testId": "e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e",
+          "material": {
+            "id": "policy",
+            "version": 2
+          }
+        },
+        {
+          "id": "block-muv8owia-5-g7j57tf",
+          "revision": 1,
+          "type": "test_compare",
+          "testIds": [
+            "e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e",
+            "ed7283a5e7cb02f74d6746e55c627dea4fab32e5ed213d75688193fd678c56a7"
+          ]
+        },
+        {
+          "id": "block-muv8owia-6-fvmmlbx",
+          "revision": 1,
+          "type": "retest",
+          "testId": "e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e"
+        }
+      ],
+      "ruleOrigin": "feedback",
+      "investigationSeed": "e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e|2|1",
+      "removedAt": null
+    }
+  ],
+  "tests": [
+    {
+      "id": "ed7283a5e7cb02f74d6746e55c627dea4fab32e5ed213d75688193fd678c56a7",
+      "question": "国内出差住宿报销，每人每晚的上限是多少？",
+      "answer": "# 差旅政策 v1\n\n模拟公司的国内出差住宿报销上限为每人每晚500元。超出上限需事前取得主管书面批准，并保留票据。此材料仅用于虚构训练场景。\n\n",
+      "citations": [
+        {
+          "id": "policy",
+          "version": 1,
+          "title": "差旅政策更新版"
+        }
+      ],
+      "expectation": "",
+      "diagnosis": "",
+      "policyVersion": 1,
+      "indexVersion": 1,
+      "sourceVersions": {
+        "approval_process": 1,
+        "brief": 1,
+        "business": 1,
+        "faq": 1,
+        "policy": 1,
+        "tech_private": 1,
+        "technical": 1
+      },
+      "indexedVersions": {
+        "approval_process": 1,
+        "brief": 1,
+        "business": 1,
+        "faq": 1,
+        "policy": 1,
+        "tech_private": 1,
+        "technical": 1
+      },
+      "configVersion": 1,
+      "config": {
+        "participants": 20,
+        "domains": [
+          "faq",
+          "policy"
+        ],
+        "update": "daily",
+        "fallback": "human",
+        "workItems": [
+          "scope",
+          "fallback"
+        ],
+        "launchDay": 7
+      },
+      "taskId": "task-muv8kngc-4-03t2nkb",
+      "createdAt": "2026-10-05T12:41:31.836151Z",
+      "requestId": "d5508734-d72b-4564-b038-9c69b692f64f",
+      "intent": "",
+      "refs": [],
+      "mode": "local-extractive",
+      "asOfSeq": 1,
+      "fallback": false,
+      "stale": false
+    },
+    {
+      "id": "e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e",
+      "question": "国内出差住宿报销，每人每晚的上限是多少？",
+      "answer": "# 差旅政策 v1\n\n模拟公司的国内出差住宿报销上限为每人每晚500元。超出上限需事前取得主管书面批准，并保留票据。此材料仅用于虚构训练场景。\n\n",
+      "citations": [
+        {
+          "id": "policy",
+          "version": 1,
+          "title": "差旅政策更新版"
+        }
+      ],
+      "expectation": "",
+      "diagnosis": "",
+      "policyVersion": 1,
+      "indexVersion": 1,
+      "sourceVersions": {
+        "approval_process": 1,
+        "brief": 1,
+        "business": 1,
+        "faq": 1,
+        "policy": 1,
+        "tech_private": 1,
+        "technical": 1
+      },
+      "indexedVersions": {
+        "approval_process": 1,
+        "brief": 1,
+        "business": 1,
+        "faq": 1,
+        "policy": 1,
+        "tech_private": 1,
+        "technical": 1
+      },
+      "configVersion": 1,
+      "config": {
+        "participants": 20,
+        "domains": [
+          "faq",
+          "policy"
+        ],
+        "update": "daily",
+        "fallback": "human",
+        "workItems": [
+          "scope",
+          "fallback"
+        ],
+        "launchDay": 7
+      },
+      "taskId": "task-muv8kngc-4-03t2nkb",
+      "createdAt": "2026-10-05T12:41:49.586591Z",
+      "requestId": "794ff6a7-e08b-4da8-8827-d1b174169126",
+      "intent": "",
+      "refs": [],
+      "mode": "local-extractive",
+      "asOfSeq": 2,
+      "fallback": false,
+      "stale": false
+    },
+    {
+      "id": "7c84e6b48ddd5b7a398828a2ac38c88f12bbdfa558e7cd884ea0e9109f4b3b53",
+      "question": "国内出差住宿报销，每人每晚的上限是多少？",
+      "answer": "# 差旅政策 v1\n\n模拟公司的国内出差住宿报销上限为每人每晚500元。超出上限需事前取得主管书面批准，并保留票据。此材料仅用于虚构训练场景。\n\n",
+      "citations": [
+        {
+          "id": "policy",
+          "version": 1,
+          "title": "差旅政策更新版"
+        }
+      ],
+      "expectation": "",
+      "diagnosis": "",
+      "policyVersion": 2,
+      "indexVersion": 1,
+      "sourceVersions": {
+        "approval_process": 1,
+        "brief": 1,
+        "business": 1,
+        "faq": 1,
+        "policy": 2,
+        "tech_private": 1,
+        "technical": 1
+      },
+      "indexedVersions": {
+        "approval_process": 1,
+        "brief": 1,
+        "business": 1,
+        "faq": 1,
+        "policy": 1,
+        "tech_private": 1,
+        "technical": 1
+      },
+      "configVersion": 1,
+      "config": {
+        "participants": 20,
+        "domains": [
+          "faq",
+          "policy"
+        ],
+        "update": "daily",
+        "fallback": "human",
+        "workItems": [
+          "scope",
+          "fallback"
+        ],
+        "launchDay": 7
+      },
+      "taskId": "task-muv8kngc-4-03t2nkb",
+      "createdAt": "2026-10-05T12:46:04.984260Z",
+      "investigationId": "artifact-muv8owia-2-1f3jpmu",
+      "investigationRevision": 3,
+      "blockId": "block-muv8owia-6-fvmmlbx",
+      "blockRevision": 1,
+      "baselineRunId": "e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e",
+      "requestId": "1808c87b-d53e-4536-bcf4-5d432307cb2a",
+      "intent": "这次回答用了哪版资料？当前条件下会怎样回答？",
+      "refs": [],
+      "mode": "local-extractive",
+      "asOfSeq": 4,
+      "fallback": false,
+      "stale": true
+    },
+    {
+      "id": "44b215a4dc0ca96090e9bed48a5ab2a2daa7cac9f22753b36bcf09b157ef8389",
+      "question": "国内出差住宿报销，每人每晚的上限是多少？",
+      "answer": "# 差旅政策 v2\n\n政策更新事件生效后，模拟公司的国内出差住宿报销上限调整为每人每晚400元。超出上限仍需事前取得主管书面批准，并保留票据。此材料仅用于虚构训练场景。\n\n源文档发布v2不代表知识助手索引已经更新。继续回答500元可能说明索引仍在使用v1，应记录测试所用版本。\n\n",
+      "citations": [
+        {
+          "id": "policy",
+          "version": 2,
+          "title": "差旅政策更新版"
+        }
+      ],
+      "expectation": "",
+      "diagnosis": "",
+      "policyVersion": 2,
+      "indexVersion": 2,
+      "sourceVersions": {
+        "approval_process": 1,
+        "brief": 1,
+        "business": 1,
+        "faq": 1,
+        "policy": 2,
+        "tech_private": 1,
+        "technical": 1
+      },
+      "indexedVersions": {
+        "approval_process": 1,
+        "brief": 1,
+        "business": 1,
+        "faq": 1,
+        "policy": 2,
+        "tech_private": 1,
+        "technical": 1
+      },
+      "configVersion": 1,
+      "config": {
+        "participants": 20,
+        "domains": [
+          "faq",
+          "policy"
+        ],
+        "update": "daily",
+        "fallback": "human",
+        "workItems": [
+          "scope",
+          "fallback"
+        ],
+        "launchDay": 7
+      },
+      "taskId": "task-muv8kngc-4-03t2nkb",
+      "createdAt": "2026-10-05T12:46:18.732739Z",
+      "investigationId": "artifact-muv8owia-2-1f3jpmu",
+      "investigationRevision": 3,
+      "blockId": "block-muv8owia-6-fvmmlbx",
+      "blockRevision": 1,
+      "baselineRunId": "e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e",
+      "requestId": "a91d5c6b-b498-41a5-8f04-90a22c447d37",
+      "intent": "这次回答用了哪版资料？当前条件下会怎样回答？",
+      "refs": [],
+      "mode": "local-extractive",
+      "asOfSeq": 6,
+      "fallback": false,
+      "stale": false
+    }
+  ],
+  "inputVersions": [
+    {
+      "artifactId": "artifact-muv8owia-2-1f3jpmu",
+      "revision": 3
+    }
+  ],
+  "inputSnapshot": {
+    "artifacts": [
+      {
+        "artifactId": "artifact-muv8owia-2-1f3jpmu",
+        "revision": 3,
+        "title": "核对回答与资料",
+        "purpose": "探索笔记",
+        "body": "## 调查问题\n\n这次回答用了哪版资料？当前条件下会怎样回答？\n\n### 先核对实际依据\n\n先看这次回答实际引用的版本，再对照当前资料。是否调整设置或重测，由你决定。\n\n### 来源核对\n\n测试 e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e 的实际引用，对照资料 policy@v2。\n\n### 测试对照\n\n实际运行：e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e；ed7283a5e7cb02f74d6746e55c627dea4fab32e5ed213d75688193fd678c56a7\n\n### 同题重测\n\n待用户操作：按测试 e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e 的问题重新运行；本模块不代表已经执行。\n\n## 我的调查判断（待核对）\n\n关注方向：索引是否更新\n\n源文档已更新到 v2，但回答引用 v1。先保留索引未更新的假设，重测后再决定是否调整试点。",
+        "kind": "investigation",
+        "question": "这次回答用了哪版资料？当前条件下会怎样回答？",
+        "blocks": [
+          {
+            "id": "block-muv8owia-3-l0vhof5",
+            "revision": 1,
+            "type": "note",
+            "text": "先看这次回答实际引用的版本，再对照当前资料。是否调整设置或重测，由你决定。",
+            "title": "先核对实际依据"
+          },
+          {
+            "id": "block-muv8owia-4-4wuz2qk",
+            "revision": 1,
+            "type": "source_check",
+            "testId": "e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e",
+            "material": {
+              "id": "policy",
+              "version": 2
+            }
+          },
+          {
+            "id": "block-muv8owia-5-g7j57tf",
+            "revision": 1,
+            "type": "test_compare",
+            "testIds": [
+              "e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e",
+              "ed7283a5e7cb02f74d6746e55c627dea4fab32e5ed213d75688193fd678c56a7"
+            ]
+          },
+          {
+            "id": "block-muv8owia-6-fvmmlbx",
+            "revision": 1,
+            "type": "retest",
+            "testId": "e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e"
+          }
+        ],
+        "review": {
+          "focus": "index",
+          "note": "源文档已更新到 v2，但回答引用 v1。先保留索引未更新的假设，重测后再决定是否调整试点。"
+        }
+      }
+    ],
+    "materials": [
+      {
+        "id": "brief",
+        "version": 1
+      },
+      {
+        "id": "policy",
+        "version": 2
+      }
+    ],
+    "tests": [
+      {
+        "id": "ed7283a5e7cb02f74d6746e55c627dea4fab32e5ed213d75688193fd678c56a7",
+        "configVersion": 1,
+        "policyVersion": 1,
+        "indexVersion": 1,
+        "asOfSeq": 1
+      },
+      {
+        "id": "e27d016224afafcf56af951d6e7b6e30a3597f9265b50dc1c742732358a63a2e",
+        "configVersion": 1,
+        "policyVersion": 1,
+        "indexVersion": 1,
+        "asOfSeq": 2
+      },
+      {
+        "id": "7c84e6b48ddd5b7a398828a2ac38c88f12bbdfa558e7cd884ea0e9109f4b3b53",
+        "configVersion": 1,
+        "policyVersion": 2,
+        "indexVersion": 1,
+        "asOfSeq": 4
+      },
+      {
+        "id": "44b215a4dc0ca96090e9bed48a5ab2a2daa7cac9f22753b36bcf09b157ef8389",
+        "configVersion": 1,
+        "policyVersion": 2,
+        "indexVersion": 2,
+        "asOfSeq": 6
+      }
+    ],
+    "configVersion": 1,
+    "config": {
+      "participants": 20,
+      "domains": [
+        "faq",
+        "policy"
+      ],
+      "update": "daily",
+      "fallback": "human",
+      "workItems": [
+        "scope",
+        "fallback"
+      ],
+      "launchDay": 7
+    },
+    "policyVersion": 2,
+    "indexVersion": 2,
+    "worldVersion": 7
+  },
+  "instructions": "仅用本包可见资料。作品回传是本地草稿，不批准资源、不执行动作；结论必须核查。\n仅用本任务包提供的资料和作品协助工作。根据问题选择 text、test_set 或 investigation；不必每次都生成表格，信息不足时说明缺口。test_set 是等待用户实际运行的测试计划；investigation 由你选择和排序 1–8 个 note、test_compare、source_check、retest 模块，可以省略或重复模块类型，不是固定页面模板。test_compare 仅引用本包 tests 的 1–4 个不同实际 ID。source_check 的资料 ID 必须属于该测试实际引用，目标 version 取本包 materials 的明确版本，可以不同于旧引用版本。retest 仅提出重测已有问题，不表示已经运行。示例中的占位 ID、版本必须替换，资料不足时省略相应模块。returnId 是本次回传独有标识，修改后使用新的 returnId，requestId 保持原任务包标识。不得回传答案正文、运行结果、通过状态、脚本、HTML 或 API 地址；实际内容由应用按有效 ID 读取。refs 仅引用本包 materials 的 id 和 version。问题/目的/预期是待验证计划；回传不会自动采用、运行、审批或改变场景。",
+  "supportedKinds": [
+    "text",
+    "test_set",
+    "investigation"
+  ],
+  "limits": {
+    "cases": 20,
+    "question": 4000,
+    "intent": 2000,
+    "expectation": 2000
+  },
+  "investigationLimits": {
+    "blocks": 8,
+    "question": 1000,
+    "noteTitle": 120,
+    "noteText": 2000,
+    "testIds": 4,
+    "label": 80,
+    "reviewNote": 4000
+  },
+  "returnFormat": {
+    "schemaVersion": 1,
+    "returnId": "为本次回传生成新的唯一标识",
+    "requestId": "request-muv8v36w-5ya2wk",
+    "artifact": {
+      "kind": "test_set",
+      "title": "待验证的测试计划",
+      "purpose": "测试计划",
+      "cases": [
+        {
+          "question": "根据当前事项提出一个实际问题",
+          "intent": "说明这个问题要验证什么",
+          "expectation": "可选：明确待验证的预期，不能假装已通过",
+          "refs": []
+        }
+      ]
+    }
+  },
+  "textReturnFormat": {
+    "schemaVersion": 1,
+    "returnId": "为本次回传生成新的唯一标识",
+    "requestId": "request-muv8v36w-5ya2wk",
+    "artifact": {
+      "kind": "text",
+      "title": "作品标题",
+      "purpose": "自由作品",
+      "body": "Markdown 正文"
+    }
+  },
+  "investigationReturnFormat": {
+    "schemaVersion": 1,
+    "returnId": "为本次回传生成新的唯一标识",
+    "requestId": "request-muv8v36w-5ya2wk",
+    "artifact": {
+      "kind": "investigation",
+      "title": "整理一次有依据的调查",
+      "purpose": "探索笔记",
+      "question": "当前真正需要弄清的问题",
+      "blocks": [
+        {
+          "type": "note",
+          "title": "调查思路",
+          "text": "说明尚未确认的解释或需要检查的条件"
+        },
+        {
+          "type": "test_compare",
+          "testIds": [
+            "替换为本包tests中的实际ID"
+          ]
+        },
+        {
+          "type": "source_check",
+          "testId": "替换为本包tests中的实际ID",
+          "material": {
+            "id": "替换为该测试确实引用、且本包materials提供的ID",
+            "version": 1
+          }
+        },
+        {
+          "type": "retest",
+          "testId": "替换为本包tests中的实际ID",
+          "label": "用相同问题再检查"
+        }
+      ]
+    }
+  },
+  "returnFormats": {
+    "text": {
+      "schemaVersion": 1,
+      "returnId": "为本次回传生成新的唯一标识",
+      "requestId": "request-muv8v36w-5ya2wk",
+      "artifact": {
+        "kind": "text",
+        "title": "作品标题",
+        "purpose": "自由作品",
+        "body": "Markdown 正文"
+      }
+    },
+    "test_set": {
+      "schemaVersion": 1,
+      "returnId": "为本次回传生成新的唯一标识",
+      "requestId": "request-muv8v36w-5ya2wk",
+      "artifact": {
+        "kind": "test_set",
+        "title": "待验证的测试计划",
+        "purpose": "测试计划",
+        "cases": [
+          {
+            "question": "根据当前事项提出一个实际问题",
+            "intent": "说明这个问题要验证什么",
+            "expectation": "可选：明确待验证的预期，不能假装已通过",
+            "refs": []
+          }
+        ]
+      }
+    },
+    "investigation": {
+      "schemaVersion": 1,
+      "returnId": "为本次回传生成新的唯一标识",
+      "requestId": "request-muv8v36w-5ya2wk",
+      "artifact": {
+        "kind": "investigation",
+        "title": "整理一次有依据的调查",
+        "purpose": "探索笔记",
+        "question": "当前真正需要弄清的问题",
+        "blocks": [
+          {
+            "type": "note",
+            "title": "调查思路",
+            "text": "说明尚未确认的解释或需要检查的条件"
+          },
+          {
+            "type": "test_compare",
+            "testIds": [
+              "替换为本包tests中的实际ID"
+            ]
+          },
+          {
+            "type": "source_check",
+            "testId": "替换为本包tests中的实际ID",
+            "material": {
+              "id": "替换为该测试确实引用、且本包materials提供的ID",
+              "version": 1
+            }
+          },
+          {
+            "type": "retest",
+            "testId": "替换为本包tests中的实际ID",
+            "label": "用相同问题再检查"
+          }
+        ]
+      }
+    }
+  },
+  "plainTextReturnFormat": {
+    "requestId": "request-muv8v36w-5ya2wk",
+    "artifact": {
+      "title": "作品标题",
+      "purpose": "自由作品",
+      "body": "Markdown 正文；也可以直接返回 Markdown"
+    }
+  }
+}
