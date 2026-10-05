@@ -5,3 +5,5 @@ coverage/
 test-results/
 .env*
 !.env.example
+# Local dependency directory or symlink.
+/node_modules
