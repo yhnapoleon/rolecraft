@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f5f5f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#161617" media="(prefers-color-scheme: dark)">
+  <title>Practice · 在真实的工作里练习</title>
+  <meta name="description" content="岗位实操训练的高仿真原型：先选岗位，再接手一项工作，在工作台里自主安排、动手验证、与同事和自己的 Agent 协作，最后复盘再练。角色、助手测试、提交与反馈连接 RoleCraft API；自由事项与笔记保存在本机。">
+  <link rel="stylesheet" href="/workbench.css?v=20261005c">
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到主要内容</a>
+  <div id="app" class="app"></div>
+  <dialog class="sheet" id="sheet" aria-labelledby="sheet-title"></dialog>
+  <div id="toast" class="toast"></div>
+  <div id="announcer" class="sr-only" aria-live="polite" aria-atomic="true"></div>
+  <script src="/workbench-engine.js?v=20261005c"></script>
+  <script type="module" src="/src/workbench-entry.ts"></script>
+</body>
+</html>
