@@ -56,7 +56,7 @@ def build_seed(root, case_records=None):
                 fact_ids=tuple(x[0] for x in assertions)))
             for fid,value,unit in assertions:
                 facts.append(FactV2(id=fid,version=version,value=value,unit=unit,source=ref,disclosure=policies[mode]))
-        path=f"materials/{mid}-v{version}.md";files[path]=text.encode()
+        path=f"materials/{mid}-v{version}.md";files[path]=(text.rstrip()+"\n").encode()
         material_files.setdefault(mid,{})[str(version)]=path
         materials.append(MaterialV2(id=mid,version=version,title=title,domain=domain,fragments=tuple(fragments)))
         if version==1:initial[mid]=version
