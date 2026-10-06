@@ -241,3 +241,16 @@ def test_generation_identity_and_hidden_retry_budget_are_checked_before_call(pac
     with pytest.raises(ProtocolError,match='role provider retry budget uncontrolled'):
         generate(snap,owner(),request(owner()),model)
     assert not model.calls
+
+
+def test_common_worker_transient_error_keeps_code_and_uses_common_budget(tmp_path,catalog):
+    store,auth=common_store(tmp_path,catalog)
+    cmd=Command(schema_version=2,request_id='queue-timeout',operation='turns.create',expected_version=0,expected_workspace_revision=0)
+    queued=store.execute(auth,cmd,lambda *_:Mutation(jobs=(JobRequest(name='v2.timeout_fixture',command=cmd.model_copy(update={'request_id':'timeout-effect'}),context_hash=digest('fixture')),)))
+    calls=[];registry=ExtensionRegistry()
+    def timeout(*_):calls.append('attempt');raise RoleModelTransient('role_model_timeout')
+    registry.register_job('v2.timeout_fixture',timeout);gateway=Gateway(store,registry);jobs=JobRepository(store.db)
+    worker=Worker(jobs,{'v2.timeout_fixture':ClaimedHandler(lambda payload,claim:gateway.run_job('v2.timeout_fixture',payload,claim=claim))})
+    for _ in range(4):worker.run_once()
+    row=jobs.get(queued.result['queued_jobs'][0])
+    assert len(calls)==3 and row['status']=='failed' and row['error']=='role_model_timeout'

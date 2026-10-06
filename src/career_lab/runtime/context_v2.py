@@ -282,21 +282,14 @@ class ContextPort:
     def __init__(self,catalog:ScenarioKnowledge,snapshot_port:RoleSnapshotPort|None=None):
         self.catalog,self.snapshot_port=catalog,snapshot_port
 
-    def capture(self,view,auth,turn,*,as_of=None):
-        # Current credentials/lifecycle are checked by Gateway before and after
-        # the job. This adapter only consumes the supplied immutable snapshot.
+    def validate_request(self,view,auth,turn):
         if auth.session_id!=view.state.session_id or not {"read","act"}<=set(auth.capabilities):
             raise ProtocolError("role_request_forbidden",status=403)
         if auth.allowed_actions is not None and "turns.create" not in auth.allowed_actions:
             raise ProtocolError("role_request_forbidden",status=403)
-        expected=point(view.state)
-        if as_of is not None and as_of!=expected:raise ProtocolError("context_stale",status=409)
         if view.bindings.scenario!=self.catalog.binding:raise ProtocolError("scenario_binding_mismatch",status=409)
         self.catalog.role(turn.role_id)
-        if self.snapshot_port is None:raise ProtocolError("role_snapshot_unavailable",status=409)
-        frame=self.snapshot_port.project_fixed(view,auth,turn.role_id)
-        if (frame.session_id,frame.role_id,frame.as_of,frame.binding)!=(auth.session_id,turn.role_id,expected,self.catalog.binding):
-            raise ProtocolError("role_snapshot_identity_invalid",status=409)
+        expected=point(view.state)
         new=[];heads=[]
         if turn.task is not None:
             if turn.task.kind!="task":raise ProtocolError("object_not_found",status=404)
@@ -320,8 +313,19 @@ class ContextPort:
                                        text=text,channel="received_share",verification="verified")
             new.append(ReceivedShare(ref,share.product,turn.role_id,expected,fragment))
             heads.extend((ref,latest.ref))
-        return assemble_context(self.catalog,frame,question=turn.text,new_shares=tuple(new),
-                                head_dependencies=tuple({canonical(r):r for r in heads}.values()))
+        return tuple(new),tuple({canonical(r):r for r in heads}.values())
+
+    def capture(self,view,auth,turn,*,as_of=None):
+        # Current auth and lifecycle are fenced by Gateway. Original input can be
+        # queued durably even while the private generation service is unavailable.
+        new,heads=self.validate_request(view,auth,turn)
+        expected=point(view.state)
+        if as_of is not None and as_of!=expected:raise ProtocolError("context_stale",status=409)
+        if self.snapshot_port is None:raise ProtocolError("role_snapshot_unavailable",status=409)
+        frame=self.snapshot_port.project_fixed(view,auth,turn.role_id)
+        if (frame.session_id,frame.role_id,frame.as_of,frame.binding)!=(auth.session_id,turn.role_id,expected,self.catalog.binding):
+            raise ProtocolError("role_snapshot_identity_invalid",status=409)
+        return assemble_context(self.catalog,frame,question=turn.text,new_shares=new,head_dependencies=heads)
 
 
 def decision_memory(catalog,role_id,record,as_of,events=()):

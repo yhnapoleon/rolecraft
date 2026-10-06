@@ -21,10 +21,10 @@ from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.v2_store import JobRequest, Mutation
 
 
-class RoleModelTransient(RuntimeError):
+class RoleModelTransient(ProtocolError):
     def __init__(self, code):
         self.error_code=code
-        super().__init__("role model temporarily unavailable")
+        super().__init__(code,"role model temporarily unavailable",status=503)
 
 
 class LocalRoleModel:
@@ -136,7 +136,7 @@ class RoleService:
 
     def enqueue(self,view,command,auth):
         turn=TurnInput.model_validate(command.payload)
-        snapshot=self.port.capture(view,auth,turn)
+        _,heads=self.port.validate_request(view,auth,turn)
         request=RoleTurn(id="turn-"+digest([auth.session_id,command.request_id])[:24],session_id=auth.session_id,
              input=turn,as_of=point(view.state),executor=auth.executor,
              origin_cycle=view.current_cycle.ref if view.current_cycle else None)
@@ -145,8 +145,9 @@ class RoleService:
             expected_version=command.expected_version,expected_workspace_revision=command.expected_workspace_revision,
             operation="turns.create",payload={"subject":write.ref.model_dump(mode="json")})
         return Mutation(writes=(write,),jobs=(JobRequest(name="v2.role_turn",command=job,sources=(write.ref,*turn.shares),
-            context_hash=digest(request),head_dependencies=snapshot.head_dependencies),),
-            result={"turn":write.ref.model_dump(mode="json"),"status":"queued"})
+            context_hash=digest(request),head_dependencies=heads),),
+            result={"turn":write.ref.model_dump(mode="json"),"status":"queued",
+                    "question":turn.text,"role_id":turn.role_id,"executor":auth.executor.model_dump(mode="json")})
 
     def generate(self,view,envelope,auth):
         if self.private_port is None:raise ProtocolError("role_private_storage_unavailable",status=409)
