@@ -1,0 +1,90 @@
+# W07 数据与标注模块
+
+本轮处理2026-10-07 Claude审阅，仍是 **implementation_only / partial**。真实源码、模块测试和本地CLI已实现；输入为032发布的不可变W01草案，尚未通过正式W01/02/05联调。没有生产新场景数据、调用真实标注模型、开启新封存test或开展真人实验。测试中的provider、批次和release均明确为fixture，不计真实运行样本。
+
+输入基准：`80cf1f6189cd25610d609f44283ff9668582d759`，合同 `draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e`。`contracts/v2`及`contracts/versioning.py`来自上游只读归档，**不属于W07交付**。原v1生成器、数据、freeze、接口及共享依赖不修改。
+
+## 已实现的处理过程
+
+1. `export.py`在一个固定business/workspace/storage版本上转换relation、criterion、trajectory、acquisition。只使用W01公共模型；校验来源对象、会话、权限、观察/生效时点、正文和原句。trajectory/acquisition每段observations必须逐段匹配该步时点可见的已引用原文或精确片段；source-map保存逐段绑定。无出处的自由概括不能被当作实际观察送入模型；缺来源整条记录进入quarantine，不靠全文黑名单保证隔离。输出中性引用ID，评测侧另存原始引用映射；保留c0、过期材料和未知/失败状态。重复导出不写源会话。
+2. `quality.py`按structure、component、fact root、session/run/branch、decision/candidate、派生和祖先连通关系检查分区。decision_id与candidate_id是跨副本保留的因果身份；生产者若使用局部编号，应先提供包含原决策作用域的全局ID，不能按新fork session重命名来拆开谱系。拒绝未知祖先、循环、精确/近重复跨区；输出实际条数、语言、来源、等级、状态、独立结构数和排除原因。词面近重复不能证明语义或因果独立，后续仍需W11审查。
+3. `g0.py`只验证明确数值语法，如`capacity <= 30`与当前JSON数值证据。缺数值、冲突、过期或不支持的语义分别处理；自由判断、理解程度、最优信息动作不因此成为G0。
+4. `labeling.py`先核对并冻结来源审查与原始文件hash；未approved、已撤销、缺许可/部门授权/真人同意的记录在可发送批次生成前隔离，fixture也不豁免。每次issue/run重核冻结策略和prompt manifest。使用独立SQLite outbox保存每次调用的原始输出、模型/provider、prompt、证据顺序、hash、时间、成本可知性和失败。两遍各自从model_input开始；分歧需真实第三遍，成功记录不会在resume时重复调用。空输出、格式错、无效引用和超时保留pending或disputed，不升级G1。真实provider由调用方显式注入，模块没有默认密钥或自动联网行为。
+5. `release.py`先审计再原子发布。inputs、labels、source-map、split manifest、来源审查和质量报告分开保存并逐文件hash。发布和回读同时解析每个pass的完整原始request/receipt，核对record/input/payload/prompt/执行者/model身份并重新验证decision引用、适用性，从有效原文重建一致或第三遍裁决；空凭据、原文/声明不一致及无效引用即使外层hash重算也不能放行。输出路径不可覆盖；缺许可/部门授权/个人同意的记录被排除，其标注原文也不打包。正式发布拒绝fixture；fixture发布明确标识且training_ready=false。缺训练类覆盖或标签待处理同样不能声称训练就绪。
+
+## 导出端口
+
+集成方实现`SnapshotPort.read_snapshot(session_id, VersionPoint)`，在一个只读一致事务中返回`FrozenSnapshot`。`export_from_port(port, session_id, point, build_units)`只读一次；`build_units`提供该快照对应的`ExportUnit`列表。内部dataclass是适配端口，序列化协议仍为W01的DatasetRecordV2、AnnotationV2、SplitManifest等。
+
+快照需提供可信session/actor、三个版本号、确切SourceObject文本与读取权限、真实源码digest及来源类别。`Provenance.actual_sources`必须指向可核验的本地固定文件。live端口不得从LLM文字生成业务事实。来源声明本身不能证明业务真实运行，最终需上游API/worker记录及独立验收。
+
+返回值`ExportResult`包含四切面记录、待标注AnnotationV2、评测侧source_maps和逐项quarantined原因。原始来源不得放进标注请求。新数据保留schema定义的label_tier，但pending不代表该等级标签已完成；统计分别报告status与已接受标签。
+
+## 本地模块命令
+
+从本包独立checkout使用自身虚拟环境：
+
+```sh
+.venv/bin/python -m career_lab.datasets.v3 --help
+.venv/bin/python -m career_lab.datasets.v3 export --snapshot <fixture-snapshot.json> --units <units.json> --output <new-export-dir>
+.venv/bin/python -m career_lab.datasets.v3 label prepare --export <export-dir> --source-root <fixed-source-root> --policies <source-reviews.json> --output <new-batch-dir> --annotation-version <version> --executor-id <actual-agent-id>
+.venv/bin/python -m career_lab.datasets.v3 label issue --batch <batch-dir> --record-id <id> --phase 1
+.venv/bin/python -m career_lab.datasets.v3 label receive --batch <batch-dir> --receipt <actual-receipt.json>
+.venv/bin/python -m career_lab.datasets.v3 label status --batch <batch-dir>
+.venv/bin/python -m career_lab.datasets.v3 publish --export <export-dir> --batch <batch-dir> --source-root <fixed-source-root> --policies <source-reviews.json> --output <new-release-dir>
+.venv/bin/python -m career_lab.datasets.v3 validate-data --release <release-dir>
+```
+
+离线JSON不能证明是live快照，因此`export`文件入口仅接受`origin=fixture`；真实来源通过上述可信端口接入。夹具发布必须显式`--fixture`，未标注开发夹具另加`--allow-pending`；二者不能产生正式实验结论。出错返回JSON错误与非零退出码。
+
+总`career-lab`入口尚未挂载。032可把已有argparse的subparsers传给`register_commands(commands)`，解析后仅对带`w07_handler`的参数调用该函数并输出JSON。现有命令无需重建。API、storage和主CLI的接线由032处理。
+
+## 标注调用与恢复
+
+`AnnotationBatch.create`必须显式提供source_root和policies，建立不可覆盖的批次；冻结source-policy.json，批次只存获准记录，quarantined只留记录ID和原因。Python调用`batch.run(executor)`，executor接收hash绑定的请求并返回`LabelResult(raw_output, model_revision, provider, usage)`。提供的OpenAICompatibleExecutor支持注入httpx client/明确endpoint/model/key；真实调用前由集成人安排资源和授权。本轮仅以明确的test double和MockTransport测试此适配器。
+
+离线`issue`输出与API相同的model_input、原input_hash、重排后payload_hash、request_hash和真实请求ID。`receive`要求原样回传这些签收字段、raw_output、真实model_revision/provider及已知usage，并回传batch_id/source_policy_hash/output_schema_hash。这里的hash签收不等于密码学身份签名，也不自动证明真人参与。成功回执同内容重放；改内容冲突。原结果文件及SQLite记录互相核验，漂移拒绝。
+
+网络请求前先记录dispatched。已经收到但缺model_revision/provider的结果保留raw/usage并标failed，可以正常retry_failed；不会冒充未知发送。进程在发送后中断时，恢复会报告`dispatch_outcome_unknown`，不会静默重新发出可能收费的请求。已知失败可通过`retry_failed=True`或离线`--retry-failed`显式补跑；未知结果需核对provider回执再由程序调用者明确选择`retry_unknown=True`。本地幂等不能保证远端provider只执行一次。每次尝试保留，不隐藏失败成本；未知成本不记为零。
+
+## 尚需上游接通
+
+- W01正式冻结、W02真实运行及隔离候选副本、W03/W05作品/提交/修订/反馈一致读取；现在的抽象端口和fixture不满足W07-AC11。
+- 至少一次真实API或真实离线Agent双遍/裁决、签收与恢复；本轮test double不能满足真人或模型实调验收。
+- 草案AnnotationV2要求两次evidence_order不同。零/单证据无法置换，轨迹又不能为了置换破坏时序；当前返回明确阻塞并保持pending。最小建议是新增或放宽独立上下文策略，并保留实际请求、prompt版本和不能置换的理由；W07不擅改契约。
+- W11最终结构及split manifest、统一test campaign。当前label和publication默认拒绝test；不能将此开发实现称为封存测试发布完成。由隔离上游提供已授权结构/评测端后再接入。
+- public_aux需URL、访问时间、许可、原文hash和approved审查；business_synth需authorization_ref；human_session需consent_ref。未获得的新部门/真人来源不填数字。
+
+## 验证与交付边界
+
+测试覆盖四切面转换、旧数据契约、c0/时点/权限、原句、连通泄漏、双遍/裁决、离线恢复、崩溃窗口、并发dispatch、标签隔离、原子发布和真实模块CLI进程。原始结果和失败保存在本包`runs/local/expansion-v3/W07/`，准确命令、退出码和源码hash见完成回执。
+
+mandatory AC仍按真实上游和实调条件逐项核验。局部测试通过仅支持本阶段partial；后续由031更新输入基准后补真实联调，再交独立review和组合验收。没有commit、push、merge、部署或新增费用。
+
+
+## r1修复与历史批次
+
+031的五项独立反例分别进入`test_w07_review_r1.py`，包含跨family反例、重新计算外层hash的攻击、来源在发送前隔离以及已收到失败回执的恢复。所有回归仍使用明确fixture/test double，不计真实场景或模型验收。
+
+r1阶段曾将内部证据协议升级为v2；本轮继续升级为v3。v1/v2目录、回执、patch和归档保持原字节；新代码拒绝将缺来源策略或完整原始回执的v1批次/release直接当作已验证证据。需要在新目录按v2规则重新核验和取得回执，不覆盖历史结果，也不通过补造旧回执升级证据。
+
+冻结的来源许可只证明批次生成时保存的审查依据；上线后的即时撤销/会话授权仍需W01真实读取及dispatch权限端接入，当前未声称真实服务权限联调完成。
+
+
+## 2026-10-07 新审阅修复
+
+两遍共识按规范化的引用集合与可接受集合比较，保留原始返回正文及顺序；顺序不同不再自动调用第三遍。pending/disputed统一保持未接受模型状态，不允许导出者声明G0/G1/G2v；质量报告的label_tiers只统计已接受annotation，pending数量另列，metadata中的accepted_label_tier为null。
+
+一次snapshot导出仍保留单一来源身份；新aggregate_exports与publish_exports支持多个session/结构/分区，各自保留capture point、snapshot digest、source代码身份、record成员和完整lineage。每个来源有自己的文件根和审查策略，同名source.json也按record核验，不能只拿第一个来源。手工拼入没有对应来源清单的记录会被拒绝。CLI使用`publish --sources <清单.json>`，清单为包含export、source_root、policies和可选batch的数组；各路径相对该清单目录解析。
+
+元数据使用record-metadata.json索引加metadata/<record_id>.json单条文件，保存语言、来源桶、完整谱系、snapshot身份和annotation状态，不带model_input、gold正文或模型解释。W08按分区读取对应metadata，避免读取混合records.json。release与标注批次均升级到v3，旧产物按原冻结运行时追溯，不原地重写。
+
+历史时点采用`historical-evidence-time-v1`：EvidencePackage.as_of绑定被评价主张/行为的参照点，snapshot.capture_point只表示采集时点。SourceObject须明确声明validity_known及原始有效区间；ExportUnit须明确evaluation_time_known。未知时点/有效范围保留待核验；不因None或字符串“false”被误当已知。已公开的未来生效材料和过期材料可以保留在输入中，但可接受引用必须在目标参照点适用；原历史判断不会套用后来规则。实际事件记录的事实有效范围与政策的生效范围由来源适配器分别声明，不能猜测。
+
+数值G0、模型标注、发布审计采用同一时间规则；W08按同一版本规则检查gold和输出。正式gold的每组可接受引用都必须合法，未知或当前已失效的集合不能发布为已接受标签。框架保留旧文本，改变的是它能否证明当前被评价的主张。
+
+候选编号按许可模型输入的稳定哈希置换，不依赖producer顺序或任何私有snapshot内容；私有事实变化不会改变公开model_input。词面检查改为语义文本char-5 shingle精确Jaccard位集，仍不证明因果独立或翻译独立，也不允许将同结构改数字后跨分区。
+
+批次冻结实际output schema，不因后续schema说明文字变化重构历史请求。HTTP失败保留状态、脱敏正文、request_id和已知usage；编程/数据错误不得被包装成模型一致。质量CLI返回具体record/原因。
+
+**当前共享阻塞：** 登记草稿的DatasetRecordV2.bucket尚无fixture。fixture-origin现在明确返回fixture_bucket_contract_unavailable，不再写env_run。032提供不可变扩展契约并由031update-context后，才能恢复真正的fixture导出和W07→W08合法fixture release样例。已有纯模块测试的模拟env输入不计真实env_run、正式数据或这条跨包验收。
