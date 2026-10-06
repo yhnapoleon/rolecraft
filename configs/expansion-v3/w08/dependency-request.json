@@ -1,0 +1,14 @@
+{
+  "owner": "rolecraft-035-data-models",
+  "integration_owner": "032",
+  "target": "Separate W08 training dependency lock/environment; do not add heavy training dependencies to default product installation",
+  "needed_packages": ["torch", "transformers", "safetensors"],
+  "tokenizer_dependent_optional_packages": ["sentencepiece"],
+  "versions": "032 to resolve and pin compatible versions; no unverified version numbers claimed",
+  "preferred_checkpoint": "FacebookAI/xlm-roberta-base",
+  "checkpoint_requirements": ["exact commit revision", "license review", "local weight/tokenizer file hashes", "approved local resource window"],
+  "current_environment": "ARM64 CPU, 16 GiB RAM, 10 CPU cores; W08 isolated base environment has NumPy/scikit-learn, no torch/transformers",
+  "implemented_without_new_dependencies": "Train-only LR and small contextual self-attention encoder with analytic gradients; synthetic pipeline checks only",
+  "pretrained_adapter_status": "Code present, dependency/weight path not executed; local_files_only, no remote code",
+  "external_download_or_fee_performed": false
+}
