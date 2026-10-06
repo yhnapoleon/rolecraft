@@ -1,6 +1,6 @@
 """Explicit installation point. No imports, code execution or model from user input."""
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Literal, get_args, get_origin
 from pydantic import BaseModel, ValidationError
 from career_lab.contracts.v2 import *
 from career_lab.storage.v2_store import V2Store,Mutation,TransactionResult
@@ -70,6 +70,23 @@ class ExtensionRegistry:
         if not issubclass(operation.request_model,V2):raise TypeError('v2 request model required')
         if operation.service_mode and operation.name not in {'delegations.create','delegations.revoke'}:raise ValueError('service mode reserved for auth control plane')
         self.operations[operation.name]=operation
+    def projector_for_action(self,action):
+        """Select only from installed registrations and a persisted action name.
+
+        Dynamic string fields are not proof of routing. Ambiguous registrations
+        fail closed rather than selecting another module's projector.
+        """
+        matches=[]
+        for op in self.operations.values():
+            if not op.mutates:continue
+            if op.action_field:
+                field=op.request_model.model_fields.get(op.action_field)
+                matched=field is not None and get_origin(field.annotation) is Literal and action in get_args(field.annotation)
+            else:matched=action==(op.action_name or op.name)
+            if matched:matches.append(op)
+        if len(matches)>1:raise ProtocolError('event_projection_ambiguous',status=503)
+        return matches[0].event_projector if matches else None
+
     def register_cli(self,name,configure_parser):
         if name in self.cli:raise ValueError('CLI already registered')
         self.cli[name]=configure_parser
@@ -125,7 +142,7 @@ class Gateway:
                 except ValidationError as exc:raise ProtocolError('module_response_invalid',status=503) from exc
                 return {'schema_version':2,'result':result.model_dump(mode='json')}
             result=self.store.execute(auth,command,op.handler,capability=op.capability,approval_policy=op.approval_policy)
-            return self.public_result(auth,result,op.event_projector)
+            return self.public_result(auth,result,self.registry.projector_for_action(command.operation) if result.replayed else op.event_projector)
         self.store.authorize(auth,op.capability,op.action_name or op.name)
         payload=op.request_model.model_validate(body or params)
         result=op.handler(self.store.view(auth),payload,auth)
@@ -139,15 +156,16 @@ class Gateway:
         meta,response,links=self.store.request_result(auth,request_id)
         jobs=[]
         for link in links:
-            effect=link.pop('effect')
-            jobs.append(RequestJobResult(**link,effect=PublicTransactionResult.model_validate(self.public_result(auth,effect)) if effect is not None else None))
+            effect=link.pop('effect');effect_operation=link.pop('effect_operation',None)
+            projector=self.registry.projector_for_action(effect_operation) if effect_operation is not None else None
+            jobs.append(RequestJobResult(**link,effect=PublicTransactionResult.model_validate(self.public_result(auth,effect,projector)) if effect is not None else None))
         status='completed'
         if any(j.status in {'queued','running'} for j in jobs):status='pending'
         elif any(j.status=='failed' for j in jobs):status='failed'
         elif any(j.status=='needs_context' for j in jobs):status='needs_context'
         elif any(j.effect is None for j in jobs):status='unresolved'
         return RequestResult(session_id=auth.session_id,request_id=request_id,operation=meta['operation'],executor=response.executor,
-            status=status,response=PublicTransactionResult.model_validate(self.public_result(auth,response)),jobs=tuple(jobs))
+            status=status,response=PublicTransactionResult.model_validate(self.public_result(auth,response,self.registry.projector_for_action(meta['operation']))),jobs=tuple(jobs))
 
     def public_result(self,auth,result,event_projector=None):
         readable='read' in auth.capabilities
@@ -184,14 +202,14 @@ class Gateway:
             raise ProtocolError('worker_lease_lost',status=409)
         auth=self.store.guard_job(envelope.context,envelope.capability,check_context=False)
         prior=self.store.replay(auth,envelope.command,envelope.capability)
-        if prior is not None:return self.public_result(auth,prior)
+        if prior is not None:return self.public_result(auth,prior,self.registry.projector_for_action(envelope.command.operation))
         self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
         derived_subject=self.store.fixed_feedback_subject(envelope.command)
         plan=handler(self.store.job_view(auth,envelope.context,command=envelope.command),envelope,auth)
         # External calls can repeat on transient failure; deterministic failures stop.
         self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
         result=self.store.execute(auth,envelope.command,lambda *_:plan,capability=envelope.capability,worker_fence=claim,derived_subject=derived_subject,job_context=envelope.context)
-        return self.public_result(auth,result)
+        return self.public_result(auth,result,self.registry.projector_for_action(envelope.command.operation))
 
 
 def make_step_result(transaction:TransactionResult,observation:Observation,step:ObservedStep,consumption:ActualConsumption,*,origin_request_id=None,model_attempts=()):

@@ -89,9 +89,11 @@ def export(root:Path,output:Path):
     manifest['review_fixes']['C-W01-04']='Ordinary jobs require an active open current cycle before handler and at commit. Explicit refresh preserves question/command while moving context to the current cycle; fixed-subject feedback remains allowed. Deterministic failures stop; parked reason/history is queryable; research writes denied.'
     manifest['publication_package']='W14'
     manifest['input_contract_revision']='draft-core-wiring-r6-20261007'
-    manifest['previous_contract_revision']='expansion-v3-84deab6a1b3102bc649ce192eef1a6c722cba7ea4cfd2b48c77a9ad77aad2633'
+    manifest['previous_contract_revision']='expansion-v3-2e4b5f05138ae995320db1ae21ca6f5d7a8d63bf5ec3e19346a088510cb0515c'
     manifest['integration_changes']={'W02-S06':'Opt-in contextual resolver gets authoritative persisted-window ScenarioState; legacy four-argument behavior retained.','W02-S07':'Verified command/result references are atomically anchored for read-request recovery.','W03-GR02-partial':'Validated LegacyProvenance.raw remains inert during reference/time traversal; receipt and preview interfaces remain pending.'}
     manifest['boundaries'].append('W02 runtime is still pinned to r3; controlled source-port regressions do not close actual ScenarioModule HTTP acceptance. Consumers must migrate through coordinator-fixed inputs.')
+    manifest['review_fixes']['031-W01-REPLAY-SCOPE-01']='execute, replay and request/job GET share current scope and visibility checks, including historical result-only/unanchored references; no handler/resolver rerun.'
+    manifest['review_fixes']['W02-S09']='Recovery and idempotent replay select event projector only by persisted action and trusted installed registration; preserve safe fields without handler/resolver rerun.'
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

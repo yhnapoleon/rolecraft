@@ -244,7 +244,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "f2631870816041fe0104cd1f5975b27a504f908ad4649db1697e00156cceb510"
+      "sha256": "dbcf5552c61e4527b3f4137023294b163b560c2a3680ed47a85c796eed7a2cfa"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -252,12 +252,12 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "71331154cd8fc4840bb197ec477233b61474435d6ef98897b2145824dec1a752"
+      "sha256": "f27dd712b1b8e352d28526311c079533cbaf802603fc2fc30b921224842192a1"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "f704895fe20064736aee0d8d337198a68745653b0e6d35856b7ec8a98777825f"
+    "sha256": "1c97e45724fde66f0a0a3a358c76fd4e6f81c619162133544d9c78af38381316"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
@@ -270,7 +270,7 @@
     "sha256": "8f10baf8552832ef7bf19c29f1d6aca01ba84d758339271bb34e657003bdf47d"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-84deab6a1b3102bc649ce192eef1a6c722cba7ea4cfd2b48c77a9ad77aad2633",
+  "previous_contract_revision": "expansion-v3-2e4b5f05138ae995320db1ae21ca6f5d7a8d63bf5ec3e19346a088510cb0515c",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -308,6 +308,7 @@
     "workspace_imports": "WorkspaceImport"
   },
   "review_fixes": {
+    "031-W01-REPLAY-SCOPE-01": "execute, replay and request/job GET share current scope and visibility checks, including historical result-only/unanchored references; no handler/resolver rerun.",
     "C-W01-01": "Snapshot-bound asynchronous inputs; declared head/state freshness, actual claim and current authorization checked atomically. needs_context parks once; explicit idempotent refresh preserves original subject/command and immutable context history.",
     "C-W01-02": "RoleContext reads reject non-research learner and historical reserved role IDs; only a trusted matching role reader or internal research capability can read. Reserved role credentials cannot be minted. New writes remain private.",
     "C-W01-03": "Withdrawn route-deleting candidate is not included. Public integration must use Gateway slots; W03 adapter remains separate integration work.",
@@ -321,7 +322,8 @@
     "R06": "Restore replay token must match a real usable saved owner credential.",
     "R07": "Built-in authenticated read-only request_id query returns real request/job/effect links.",
     "R08": "Received provider body/usage preserved independently of invalid/missing actual identity.",
-    "R09": "Accepted single-pass G2 final equals that actual successful decision."
+    "R09": "Accepted single-pass G2 final equals that actual successful decision.",
+    "W02-S09": "Recovery and idempotent replay select event projector only by persisted action and trusted installed registration; preserve safe fields without handler/resolver rerun."
   },
   "schema_version": 1,
   "schemas": {
@@ -2583,7 +2585,7 @@
   },
   "source_files": {
     "src/career_lab/api/app.py": "7d91e7e2161014dfadd98c7986dea531ca8a76a859e9172329789a351abc444c",
-    "src/career_lab/api/modules.py": "423542f608958bc4b9edcc58cb37e33c11cff3c101140ead8e39b33453bf10d6",
+    "src/career_lab/api/modules.py": "1a0707255e84e8ef961eef7f52d0d66e00ef46d60de64453ee9da1e36065b553",
     "src/career_lab/api/v2_routes.py": "2eeb7adfa9dfa368ecc86da9993bac9ce7b5f1602989a4592f6451e84950dab1",
     "src/career_lab/contracts/__init__.py": "10140c7ad16ce4744487b7e5f3418b726caa52979d662feda985b44986e2d7ac",
     "src/career_lab/contracts/actions.py": "835fbb62979891cbf97d0580e0843c2a8f97b8a8bcc08c8a01afecec36f919ac",
@@ -2597,7 +2599,7 @@
     "src/career_lab/contracts/v2/discovery.py": "1089a5682cb915ce4f095ec28f65014d88724e4e5a30e1b17a753bb358bc006c",
     "src/career_lab/contracts/v2/evaluation.py": "c8bc7004d8d14c54f1832eecc227ae45e7fe8492c1b584117ad1f8a372a5c631",
     "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
-    "src/career_lab/contracts/v2/export.py": "0bfd7391df8e3da8ad6c4b6bdb04e3ccd3abfc447081598b2710d479404912eb",
+    "src/career_lab/contracts/v2/export.py": "37809fe682b0a3cc233a994752341600d4bf73ff34e86ca080433b2f14a30120",
     "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
     "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
     "src/career_lab/contracts/v2/projection.py": "8740cf952268d8997610904224db37dcd7ce91886046653b46284be9583062ab",
@@ -2614,7 +2616,7 @@
     "src/career_lab/storage/v2_lifecycle.py": "77d0e275b4d18e68906fb42460518279a776a42b3860dfbdaf9ab8c56d6ce7a6",
     "src/career_lab/storage/v2_remap.py": "5fa7f55ce4fcf721b4b81978214698f83a4f0437ae397f94ad6bfc4c98cf769f",
     "src/career_lab/storage/v2_snapshot.py": "0c079af78ef90a36abdc69f8f1313223d9cbc4f951a56e8e14416c5399ab233f",
-    "src/career_lab/storage/v2_store.py": "95ec4ed79641e83bd21752d94ab95d64a2dd6946e292e7f583e2b183c476c534",
+    "src/career_lab/storage/v2_store.py": "6e76128f4a9ce83c457702420efd58206658bdc3780d4c3d361e6b1cbbca7540",
     "src/career_lab/storage/v2_tables.py": "cb15ae737542083abb5206378bec958939901b9343246ce4614e97c77bd27ff2"
   },
   "status": "frozen_candidate_pending_independent_review",

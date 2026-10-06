@@ -90,8 +90,8 @@ class ScenarioModule:
     def reference(self,auth,ref,as_of,bindings,*,scenario_state=None):
         """Pure resolver. Future-version references require authoritative context.
 
-        The current W01 r3 four-argument resolver port cannot supply this context.
-        Fail closed for non-initial versions until the integrator extends it.
+        The registered contextual resolver receives the authoritative snapshot from
+        the public store. Direct callers without it can only resolve initial versions.
         """
         self.check_bindings(bindings)
         if "read" not in auth.capabilities or ref.session_id!=auth.session_id or ref.kind!="material":
@@ -124,8 +124,8 @@ class ScenarioModule:
         bare=ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode="json").items() if k in ObjectRef.model_fields})
         return ExternalReference(ref=bare,source=file,content_hash=file.sha256)
 
-    def reference_resolver(self,auth,ref,as_of,bindings):
-        return self.reference(auth,ref,as_of,bindings)
+    def reference_resolver(self,auth,ref,as_of,bindings,*,scenario_state):
+        return self.reference(auth,ref,as_of,bindings,scenario_state=scenario_state)
 
     def check_evidence(self,view,auth,ref):
         if ref.session_id!=auth.session_id or ref.observed_at_seq>view.state.business_seq:
@@ -292,6 +292,6 @@ class ScenarioModule:
 
     def install(self,registry:ExtensionRegistry,name="pm_pilot_v2"):
         registry.register_scenario(name,self.registration())
-        registry.register_reference_resolver("material",self.reference_resolver)
+        registry.register_reference_resolver("material",self.reference_resolver,contextual=True)
         for operation in self.operations():registry.register(operation)
         return registry

@@ -175,17 +175,23 @@ def test_delegation_scope_and_revocation_are_real(api):
     assert revoked.status_code in {401,403}
 
 
-def test_current_r3_reference_port_fails_closed_for_activated_version(api):
-    app,_,_,_,_=api
+def test_contextual_port_persists_and_replays_activated_policy(api):
+    app,c,_,sid,h=api
     apply(api)
     refreshed=send(api,"actions","refresh","refresh_index",{"tool":"refresh_index"})
     assert refreshed.status_code==200,refreshed.text
+    request=body(api,"new-policy","tests.create",{"query":"住宿报销上限是多少？","config_version":1})
+    first=c.post(f"/sessions/{sid}/tests",headers=h,json=request)
+    assert first.status_code==200,first.text
+    test=first.json()["result"]["test"]
+    assert "400" in test["answer"] and test["citations"][0]["version"]==2
+    assert test["execution"]["indexed_versions"]["policy"]==2
     before=state(api)
-    blocked=send(api,"tests","new-policy","tests.create",{"query":"住宿报销上限是多少？","config_version":1})
-    assert blocked.status_code==503
-    assert blocked.json()["code"]=="reference_context_required"
-    assert state(api)==before
-    # This records an unclosed shared-port limitation, NOT a successful v2 retest.
+    replay=c.post(f"/sessions/{sid}/tests",headers=h,json=request)
+    assert replay.status_code==200 and replay.json()["replayed"]
+    assert replay.json()["result"]==first.json()["result"] and state(api)==before
+    lookup=c.get(f"/sessions/{sid}/requests/new-policy",headers=h)
+    assert lookup.status_code==200 and lookup.json()["response"]==first.json()
 
 
 def test_realtime_effective_config_changes_only_after_real_resource_grant(api):
@@ -203,4 +209,20 @@ def test_realtime_effective_config_changes_only_after_real_resource_grant(api):
     tested=send(api,"tests","real-effective","tests.create",{"query":"会议室预约","config_version":2})
     assert tested.status_code==200,tested.text
     assert tested.json()["result"]["test"]["config"]["effective"]["update_strategy"]=="realtime"
-    # A policy@2 citation itself remains blocked by the separately recorded resolver gap.
+    policy=send(api,"tests","realtime-policy","tests.create",{"query":"住宿报销上限是多少？","config_version":2})
+    assert policy.status_code==200,policy.text
+    assert "400" in policy.json()["result"]["test"]["answer"]
+    assert policy.json()["result"]["test"]["citations"][0]["version"]==2
+
+
+def test_material_reference_uses_the_exact_historical_state(api):
+    from career_lab.contracts.v2 import ObjectRef, ProtocolError
+    store=api[0].state.v2_store;owner=auth_context(api);sid=api[3]
+    old=ObjectRef(session_id=sid,kind="material",object_id="policy",version=1)
+    future=old.model_copy(update={"version":2})
+    apply(api)
+    assert store.resolve_reference(owner,old,storage_revision=0).ref.version==1
+    with pytest.raises(ProtocolError) as denied:
+        store.resolve_reference(owner,future,storage_revision=0)
+    assert denied.value.status==404
+    assert store.resolve_reference(owner,future).ref.version==2

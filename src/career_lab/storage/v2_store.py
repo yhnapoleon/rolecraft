@@ -353,7 +353,7 @@ class V2Store(JobStoreMixin):
             prior=c.execute(select(v2_transactions).where(v2_transactions.c.session_id==auth.session_id,v2_transactions.c.request_id==command.request_id)).mappings().first()
             if prior:
                 if not hmac.compare_digest(prior['fingerprint'],fp):raise ProtocolError('request_id_reused',status=409)
-                return TransactionResult.model_validate_json(prior['result']).model_copy(update={'replayed':True})
+                return self._authorized_request_result(c,auth,command.request_id,capability)[1].model_copy(update={'replayed':True})
             state=WorldStateV2.model_validate_json(row['state'])
             if expected_storage_revision is not None and state.storage_revision!=expected_storage_revision:raise ProtocolError('context_stale',status=409)
             bindings=SessionBindings.model_validate_json(row['bindings'])
@@ -556,44 +556,64 @@ class V2Store(JobStoreMixin):
             if subject not in write.dependencies:raise ProtocolError('derived_feedback_subject_missing')
         return True
 
+    def _authorized_request_result(self,c,auth,key,capability='read'):
+        """One current-authorization boundary for GET, execute replay and worker replay.
+
+        Historical result references supplement older scope metadata. An old
+        external projection can be replayed only under the same actor and a
+        currently registered external kind; it is not backfilled as a new anchor.
+        """
+        meta=c.execute(select(v2_request_meta).where(v2_request_meta.c.session_id==auth.session_id,v2_request_meta.c.request_id==key)).mappings().first()
+        txn=c.execute(select(v2_transactions).where(v2_transactions.c.session_id==auth.session_id,v2_transactions.c.request_id==key)).mappings().first()
+        if meta is None or txn is None:raise ProtocolError('request_not_found',status=404)
+        if not (auth.executor.kind=='human' and auth.actor_id=='learner'):
+            if meta['credential_id']!=auth.credential_id or meta['executor']!=canonical(auth.executor) or meta['actor_id']!=auth.actor_id:raise ProtocolError('request_not_found',status=404)
+        self._auth(c,auth,capability,meta['operation'])
+        result=TransactionResult.model_validate_json(txn['result'])
+        if result.boundary.request_id!=key or canonical(result.executor)!=meta['executor']:raise ProtocolError('request_record_invalid',status=409)
+        refs={canonical(r):r for r in (ObjectRef.model_validate(x) for x in json.loads(meta['scope_refs']))}
+        for r in result.objects:
+            if r.kind not in {'cycle','scenario_state','job_context','role_context'}:refs[canonical(r)]=r
+        # Internal bookkeeping is not a grant. Explicit result references and
+        # caller-visible event references must still pass visibility checks.
+        for r in references(result.result):refs[canonical(r)]=r
+        for event in result.events:
+            if auth.actor_id in event.visible_to:
+                for r in event.refs:refs[canonical(r)]=r
+        self._auth(c,auth,capability,object_ids=tuple(r.object_id for r in refs.values()))
+        records={canonical(x.ref):x for x in self._records(c,auth.session_id)}
+        external={canonical(x.ref) for x in self._external(c,auth.session_id)}
+        for ref in refs.values():
+            if ref.session_id!=auth.session_id:raise ProtocolError('request_not_found',status=404)
+            record=records.get(canonical(ref))
+            if record is not None:
+                if not self._visible(record,auth):raise ProtocolError('request_not_found',status=404)
+            elif canonical(ref) not in external:
+                # Pre-anchor records are historical projections, not a fresh read
+                # or proof that the source still exists. Fail closed if the kind
+                # is unavailable, or a different audience asks for that projection.
+                if ref.kind not in self.reference_resolvers or meta['actor_id']!=auth.actor_id:raise ProtocolError('request_not_found',status=404)
+        return dict(meta),result
+
     def request_result(self,auth,request_id):
         """Read-only authoritative lookup. Never invokes handlers, models or resolvers."""
         from career_lab.jobs.repository import jobs as queue
         with self.db.engine.connect() as c:
             self._auth(c,auth,'read');self._row(c,auth.session_id)
-            def fetch(key):
-                meta=c.execute(select(v2_request_meta).where(v2_request_meta.c.session_id==auth.session_id,v2_request_meta.c.request_id==key)).mappings().first()
-                txn=c.execute(select(v2_transactions).where(v2_transactions.c.session_id==auth.session_id,v2_transactions.c.request_id==key)).mappings().first()
-                if meta is None or txn is None:raise ProtocolError('request_not_found',status=404)
-                if not (auth.executor.kind=='human' and auth.actor_id=='learner'):
-                    if meta['credential_id']!=auth.credential_id or meta['executor']!=canonical(auth.executor) or meta['actor_id']!=auth.actor_id:
-                        raise ProtocolError('request_not_found',status=404)
-                self._auth(c,auth,'read',meta['operation'])
-                refs=tuple(ObjectRef.model_validate(r) for r in json.loads(meta['scope_refs']))
-                self._auth(c,auth,'read',object_ids=tuple(r.object_id for r in refs))
-                records={canonical(x.ref):x for x in self._records(c,auth.session_id)}
-                external={canonical(x.ref) for x in self._external(c,auth.session_id)}
-                for ref in refs:
-                    if ref.session_id!=auth.session_id:raise ProtocolError('request_not_found',status=404)
-                    record=records.get(canonical(ref))
-                    if record is not None:
-                        if not self._visible(record,auth):raise ProtocolError('request_not_found',status=404)
-                    elif canonical(ref) not in external:raise ProtocolError('request_not_found',status=404)
-                result=TransactionResult.model_validate_json(txn['result'])
-                if result.boundary.request_id!=key or canonical(result.executor)!=meta['executor']:raise ProtocolError('request_record_invalid',status=409)
-                return dict(meta),result
+            def fetch(key):return self._authorized_request_result(c,auth,key,'read')
             meta,result=fetch(request_id);links=[]
             for jid in json.loads(meta['job_ids']):
                 row=c.execute(select(queue).where(queue.c.id==jid)).mappings().first()
                 if row is None:raise ProtocolError('request_record_invalid',status=409)
                 payload=json.loads(row['payload'])
                 if payload.get('origin_request_id')!=request_id or payload.get('context',{}).get('session_id')!=auth.session_id:raise ProtocolError('request_record_invalid',status=409)
-                effect_id=payload['command']['request_id'];effect=None
-                try:_,effect=fetch(effect_id)
+                effect_id=payload['command']['request_id'];effect=None;effect_operation=None
+                try:
+                    effect_meta,effect=fetch(effect_id);effect_operation=effect_meta['operation']
                 except ProtocolError as exc:
                     if exc.code!='request_not_found':raise
                     # Missing effect metadata means unknown; an inaccessible effect must not leak through job.result.
-                links.append({'job_id':jid,'origin_request_id':request_id,'effect_request_id':effect_id,'status':row['status'],'effect':effect,'error_code':row['error'],'refresh_count':payload['context'].get('refresh_count',0),'refresh_history':payload['context'].get('refresh_history',[])})
+                links.append({'job_id':jid,'origin_request_id':request_id,'effect_request_id':effect_id,'status':row['status'],'effect':effect,'effect_operation':effect_operation,'error_code':row['error'],'refresh_count':payload['context'].get('refresh_count',0),'refresh_history':payload['context'].get('refresh_history',[])})
             return meta,result,links
 
     def replay(self,auth,command,capability='act'):
@@ -603,7 +623,7 @@ class V2Store(JobStoreMixin):
             prior=c.execute(select(v2_transactions).where(v2_transactions.c.session_id==auth.session_id,v2_transactions.c.request_id==command.request_id)).mappings().first()
             if prior is None:return None
             if not hmac.compare_digest(prior['fingerprint'],fp):raise ProtocolError('request_id_reused',status=409)
-            return TransactionResult.model_validate_json(prior['result']).model_copy(update={'replayed':True})
+            return self._authorized_request_result(c,auth,command.request_id,capability)[1].model_copy(update={'replayed':True})
 
 
 
