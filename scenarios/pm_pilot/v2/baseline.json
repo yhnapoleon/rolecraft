@@ -1,0 +1,23 @@
+{
+  "schema_version": 2,
+  "id": "pilot",
+  "session_id": "scenario:pm_pilot:v2",
+  "version": 1,
+  "config_version": 0,
+  "domains": [
+    "stable_faq",
+    "policy"
+  ],
+  "scope_filter": true,
+  "update_strategy": "daily",
+  "fallback": "human",
+  "chunk_size": 500,
+  "retrieval_limit": 1,
+  "prohibited_topics": [],
+  "work_items": [
+    "scope_filter",
+    "human_fallback"
+  ],
+  "participants": 20,
+  "launch_day": 7
+}

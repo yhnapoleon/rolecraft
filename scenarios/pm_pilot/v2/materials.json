@@ -1,0 +1,1441 @@
+[
+  {
+    "schema_version": 2,
+    "id": "brief",
+    "version": 1,
+    "title": "PM工作委托",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "brief",
+          "version": 1,
+          "config_version": null,
+          "span_start": 30,
+          "span_end": 94,
+          "quote": "你负责知识助手试点的业务决定：先服务谁、解决什么问题、如何验证及何时继续或暂停。调查、试用、讨论、申请、作品和修订顺序由你组织。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "你负责知识助手试点的业务决定：先服务谁、解决什么问题、如何验证及何时继续或暂停。调查、试用、讨论、申请、作品和修订顺序由你组织。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "brief",
+          "version": 1,
+          "config_version": null,
+          "span_start": 96,
+          "span_end": 122,
+          "quote": "初始试点容量30人、开发资源3人日、上线期限第7天。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "初始试点容量30人、开发资源3人日、上线期限第7天。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "capacity",
+          "dev_days",
+          "deadline_day"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "brief",
+          "version": 1,
+          "config_version": null,
+          "span_start": 124,
+          "span_end": 172,
+          "quote": "可以受限开放、申请后延期、继续调查或提交有依据的暂缓建议。建议质量、批准与业务目标达成分别记录。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "可以受限开放、申请后延期、继续调查或提交有依据的暂缓建议。建议质量、批准与业务目标达成分别记录。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "brief",
+          "version": 1,
+          "config_version": null,
+          "span_start": 174,
+          "span_end": 221,
+          "quote": "交付可以是多个相互引用的作品；须说明目标用户、价值、范围、资源、验证、负责人、观察和退出安排。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "交付可以是多个相互引用的作品；须说明目标用户、价值、范围、资源、验证、负责人、观察和退出安排。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      }
+    ],
+    "domain": "investigation"
+  },
+  {
+    "schema_version": 2,
+    "id": "demand",
+    "version": 1,
+    "title": "咨询需求统计",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "demand",
+          "version": 1,
+          "config_version": null,
+          "span_start": 30,
+          "span_end": 69,
+          "quote": "虚构基线样本含120次咨询：办公FAQ72次、动态政策36次、敏感个案12次。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "虚构基线样本含120次咨询：办公FAQ72次、动态政策36次、敏感个案12次。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "demand_total",
+          "demand_faq",
+          "demand_policy",
+          "demand_sensitive"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "demand",
+          "version": 1,
+          "config_version": null,
+          "span_start": 71,
+          "span_end": 105,
+          "quote": "这是场景提供的历史样本，不能推定上线后的实际咨询量、节约时间或收入。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "这是场景提供的历史样本，不能推定上线后的实际咨询量、节约时间或收入。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      }
+    ],
+    "domain": "investigation"
+  },
+  {
+    "schema_version": 2,
+    "id": "user_groups",
+    "version": 1,
+    "title": "候选用户组",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "user_groups",
+          "version": 1,
+          "config_version": null,
+          "span_start": 29,
+          "span_end": 63,
+          "quote": "候选新员工20人、运营员工20人、行政员工10人；全部候选共50人。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "候选新员工20人、运营员工20人、行政员工10人；全部候选共50人。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "new_staff",
+          "operations_staff",
+          "admin_staff",
+          "candidate_total"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "user_groups",
+          "version": 1,
+          "config_version": null,
+          "span_start": 65,
+          "span_end": 121,
+          "quote": "新员工主要关注稳定入职流程；运营员工更依赖动态差旅政策；行政员工需要权限清晰、可追问的转人工信息。候选组可拆分。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "新员工主要关注稳定入职流程；运营员工更依赖动态差旅政策；行政员工需要权限清晰、可追问的转人工信息。候选组可拆分。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      }
+    ],
+    "domain": "investigation"
+  },
+  {
+    "schema_version": 2,
+    "id": "interviews",
+    "version": 1,
+    "title": "相互冲突的访谈摘录",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "interviews",
+          "version": 1,
+          "config_version": null,
+          "span_start": 33,
+          "span_end": 64,
+          "quote": "新员工代表说：我最需要会议室和账号入口，政策个案可以先人工问。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "新员工代表说：我最需要会议室和账号入口，政策个案可以先人工问。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "new_staff_priority"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "interviews",
+          "version": 1,
+          "config_version": null,
+          "span_start": 66,
+          "span_end": 94,
+          "quote": "运营代表说：若差旅政策仍要人工核对，我担心试点价值有限。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "运营代表说：若差旅政策仍要人工核对，我担心试点价值有限。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "operations_concern"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "interviews",
+          "version": 1,
+          "config_version": null,
+          "span_start": 96,
+          "span_end": 131,
+          "quote": "行政代表说：自动回答错误会增加复核负担，覆盖更多问题必须伴随接管安排。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "行政代表说：自动回答错误会增加复核负担，覆盖更多问题必须伴随接管安排。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "admin_concern"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "interviews",
+          "version": 1,
+          "config_version": null,
+          "span_start": 133,
+          "span_end": 171,
+          "quote": "这些是角色陈述和相互冲突的需求证据，不能把其中一人的意见升级为全部用户共识。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "这些是角色陈述和相互冲突的需求证据，不能把其中一人的意见升级为全部用户共识。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      }
+    ],
+    "domain": "investigation"
+  },
+  {
+    "schema_version": 2,
+    "id": "technical",
+    "version": 1,
+    "title": "工程约束与成本",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "technical",
+          "version": 1,
+          "config_version": null,
+          "span_start": 31,
+          "span_end": 59,
+          "quote": "日更索引可能落后源文档24小时；显式刷新只更新当前索引。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "日更索引可能落后源文档24小时；显式刷新只更新当前索引。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "index_delay_hours"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "technical",
+          "version": 1,
+          "config_version": null,
+          "span_start": 61,
+          "span_end": 97,
+          "quote": "范围过滤需要1人日，人工兜底需要1人日，实时同步需要5人日且包含域配置。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "范围过滤需要1人日，人工兜底需要1人日，实时同步需要5人日且包含域配置。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "cost_scope_filter",
+          "cost_human_fallback",
+          "cost_realtime_sync"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "technical",
+          "version": 1,
+          "config_version": null,
+          "span_start": 99,
+          "span_end": 148,
+          "quote": "配置要求与实际能力必须分别显示。未获资源不能仅靠选择实时同步就让能力生效；缺少工作项同样不能生效。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "配置要求与实际能力必须分别显示。未获资源不能仅靠选择实时同步就让能力生效；缺少工作项同样不能生效。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      }
+    ],
+    "domain": "investigation"
+  },
+  {
+    "schema_version": 2,
+    "id": "approvals",
+    "version": 1,
+    "title": "资源申请制度",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "approvals",
+          "version": 1,
+          "config_version": null,
+          "span_start": 30,
+          "span_end": 57,
+          "quote": "可审批上限为容量60人、开发资源6人日、期限第10天。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "可审批上限为容量60人、开发资源6人日、期限第10天。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "capacity_limit",
+          "dev_days_limit",
+          "deadline_day_limit"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "approvals",
+          "version": 1,
+          "config_version": null,
+          "span_start": 59,
+          "span_end": 132,
+          "quote": "申请需说明理由和请求档位；可附引用证据，也可附待实施配置说明真实资源缺口。确定性策略检查当前方案、工作项和约束；聊天、草稿与口头承诺不会改变资源。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "申请需说明理由和请求档位；可附引用证据，也可附待实施配置说明真实资源缺口。确定性策略检查当前方案、工作项和约束；聊天、草稿与口头承诺不会改变资源。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "approvals",
+          "version": 1,
+          "config_version": null,
+          "span_start": 134,
+          "span_end": 182,
+          "quote": "基础批准和拒绝由可信系统审批入口记录。还价与接受由后续协商模块提供，当前材料不表示该入口已集成。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "基础批准和拒绝由可信系统审批入口记录。还价与接受由后续协商模块提供，当前材料不表示该入口已集成。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      }
+    ],
+    "domain": "investigation"
+  },
+  {
+    "schema_version": 2,
+    "id": "faq",
+    "version": 1,
+    "title": "稳定办公FAQ",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "faq",
+          "version": 1,
+          "config_version": null,
+          "span_start": 31,
+          "span_end": 65,
+          "quote": "会议室预约：在公司日历选择空闲会议室并提交预约；取消时同步更新日历。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "会议室预约：在公司日历选择空闲会议室并提交预约；取消时同步更新日历。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "faq",
+          "version": 1,
+          "config_version": null,
+          "span_start": 67,
+          "span_end": 100,
+          "quote": "账号忘记密码：使用办公系统自助重置入口；重置失败时联系内部服务台。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "账号忘记密码：使用办公系统自助重置入口；重置失败时联系内部服务台。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "faq",
+          "version": 1,
+          "config_version": null,
+          "span_start": 102,
+          "span_end": 136,
+          "quote": "设备报修：提交设备编号、故障现象和联系时段；助手不能确认维修已完成。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "设备报修：提交设备编号、故障现象和联系时段；助手不能确认维修已完成。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "faq",
+          "version": 1,
+          "config_version": null,
+          "span_start": 138,
+          "span_end": 170,
+          "quote": "新员工入职：在员工门户查看入职清单，并向直属负责人确认缺失资料。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "新员工入职：在员工门户查看入职清单，并向直属负责人确认缺失资料。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "faq",
+          "version": 1,
+          "config_version": null,
+          "span_start": 172,
+          "span_end": 203,
+          "quote": "办公网络连接：从服务台领取受管设备连接指引；不要公开账号密钥。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "办公网络连接：从服务台领取受管设备连接指引；不要公开账号密钥。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "faq",
+          "version": 1,
+          "config_version": null,
+          "span_start": 205,
+          "span_end": 238,
+          "quote": "访客登记：在行政入口提交访客姓名、来访目的与接待人，等待行政确认。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "访客登记：在行政入口提交访客姓名、来访目的与接待人，等待行政确认。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "faq",
+          "version": 1,
+          "config_version": null,
+          "span_start": 240,
+          "span_end": 263,
+          "quote": "门禁卡遗失：向行政服务台挂失门禁卡并申请补办。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "门禁卡遗失：向行政服务台挂失门禁卡并申请补办。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "faq",
+          "version": 1,
+          "config_version": null,
+          "span_start": 265,
+          "span_end": 301,
+          "quote": "办公用品领取：在行政用品目录选择需求并说明用途，领取状态以行政记录为准。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "办公用品领取：在行政用品目录选择需求并说明用途，领取状态以行政记录为准。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "faq",
+          "version": 1,
+          "config_version": null,
+          "span_start": 303,
+          "span_end": 338,
+          "quote": "培训报名：从学习门户查看开放课程并提交报名，录取结果由课程负责人确认。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "培训报名：从学习门户查看开放课程并提交报名，录取结果由课程负责人确认。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      }
+    ],
+    "domain": "stable_faq"
+  },
+  {
+    "schema_version": 2,
+    "id": "policy",
+    "version": 1,
+    "title": "差旅政策",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "policy",
+          "version": 1,
+          "config_version": null,
+          "span_start": 28,
+          "span_end": 59,
+          "quote": "住宿报销上限为每人每晚500元；超出上限需要主管事前书面批准。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "住宿报销上限为每人每晚500元；超出上限需要主管事前书面批准。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "hotel_limit"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "policy",
+          "version": 1,
+          "config_version": null,
+          "span_start": 61,
+          "span_end": 85,
+          "quote": "餐费报销上限为每人每天100元；需保留合规票据。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "餐费报销上限为每人每天100元；需保留合规票据。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "meal_limit"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "policy",
+          "version": 1,
+          "config_version": null,
+          "span_start": 87,
+          "span_end": 113,
+          "quote": "出差出租车单程报销上限为200元；超限需走例外审批。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "出差出租车单程报销上限为200元；超限需走例外审批。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "taxi_limit"
+        ]
+      }
+    ],
+    "domain": "policy"
+  },
+  {
+    "schema_version": 2,
+    "id": "policy",
+    "version": 2,
+    "title": "差旅政策",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "policy",
+          "version": 2,
+          "config_version": null,
+          "span_start": 28,
+          "span_end": 59,
+          "quote": "住宿报销上限为每人每晚400元；超出上限需要主管事前书面批准。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "住宿报销上限为每人每晚400元；超出上限需要主管事前书面批准。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "hotel_limit"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "policy",
+          "version": 2,
+          "config_version": null,
+          "span_start": 61,
+          "span_end": 84,
+          "quote": "餐费报销上限为每人每天80元；需保留合规票据。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "餐费报销上限为每人每天80元；需保留合规票据。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "meal_limit"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "policy",
+          "version": 2,
+          "config_version": null,
+          "span_start": 86,
+          "span_end": 112,
+          "quote": "出差出租车单程报销上限为150元；超限需走例外审批。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "出差出租车单程报销上限为150元；超限需走例外审批。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "taxi_limit"
+        ]
+      }
+    ],
+    "domain": "policy"
+  },
+  {
+    "schema_version": 2,
+    "id": "restricted",
+    "version": 1,
+    "title": "禁止自动回答事项",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "restricted",
+          "version": 1,
+          "config_version": null,
+          "span_start": 32,
+          "span_end": 83,
+          "quote": "个人薪资、医疗诊断、访问密钥和他人绩效属于受限主题，知识助手不得自动给出个案答案。应向授权负责人核验。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "个人薪资、医疗诊断、访问密钥和他人绩效属于受限主题，知识助手不得自动给出个案答案。应向授权负责人核验。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "restricted",
+          "version": 1,
+          "config_version": null,
+          "span_start": 85,
+          "span_end": 121,
+          "quote": "密码重置流程属于稳定FAQ；直接索取账号密码或访问密钥属于禁止自动回答。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "密码重置流程属于稳定FAQ；直接索取账号密码或访问密钥属于禁止自动回答。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      }
+    ],
+    "domain": "restricted"
+  },
+  {
+    "schema_version": 2,
+    "id": "tech_private",
+    "version": 1,
+    "title": "连接器核验内部备注",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "tech_private",
+          "version": 1,
+          "config_version": null,
+          "span_start": 33,
+          "span_end": 85,
+          "quote": "旧连接器风险标识为legacy_connector_unstable，具体压测定位仅技术负责人内部使用。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "旧连接器风险标识为legacy_connector_unstable，具体压测定位仅技术负责人内部使用。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "paraphrase_only",
+          "actors": [
+            "tech_lead"
+          ],
+          "paraphrase": "现有连接器复用尚未通过可靠性核验，应安排验证后再承诺。"
+        },
+        "fact_ids": [
+          "connector_risk"
+        ]
+      }
+    ],
+    "domain": "investigation"
+  },
+  {
+    "schema_version": 2,
+    "id": "world_private",
+    "version": 1,
+    "title": "系统内部不可披露记录",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "world_private",
+          "version": 1,
+          "config_version": null,
+          "span_start": 34,
+          "span_end": 68,
+          "quote": "内部隔离标识NEVER_W02_7C9E，仅用于模拟器泄漏边界校验。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "内部隔离标识NEVER_W02_7C9E，仅用于模拟器泄漏边界校验。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "never",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": [
+          "isolation_marker"
+        ]
+      }
+    ],
+    "domain": "investigation"
+  },
+  {
+    "schema_version": 2,
+    "id": "failures",
+    "version": 1,
+    "title": "待复现的失败案例",
+    "fragments": [
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "failures",
+          "version": 1,
+          "config_version": null,
+          "span_start": 32,
+          "span_end": 91,
+          "quote": "F01：问题“住宿报销上限是多少？”；检查点：源更新后日更索引仍使用旧版本。这是待复现的测试意图，非本版本已运行结果。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "F01：问题“住宿报销上限是多少？”；检查点：源更新后日更索引仍使用旧版本。这是待复现的测试意图，非本版本已运行结果。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "failures",
+          "version": 1,
+          "config_version": null,
+          "span_start": 93,
+          "span_end": 155,
+          "quote": "F02：问题“餐费报销上限是多少？”；检查点：需要检查另一条政策，而非重复住宿题。这是待复现的测试意图，非本版本已运行结果。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "F02：问题“餐费报销上限是多少？”；检查点：需要检查另一条政策，而非重复住宿题。这是待复现的测试意图，非本版本已运行结果。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "failures",
+          "version": 1,
+          "config_version": null,
+          "span_start": 157,
+          "span_end": 214,
+          "quote": "F03：问题“出租车报销上限是多少？”；检查点：版本变化应覆盖多项政策。这是待复现的测试意图，非本版本已运行结果。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "F03：问题“出租车报销上限是多少？”；检查点：版本变化应覆盖多项政策。这是待复现的测试意图，非本版本已运行结果。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "failures",
+          "version": 1,
+          "config_version": null,
+          "span_start": 216,
+          "span_end": 272,
+          "quote": "F04：问题“火星天气如何？”；检查点：通用问法不应误命中办公FAQ。这是待复现的测试意图，非本版本已运行结果。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "F04：问题“火星天气如何？”；检查点：通用问法不应误命中办公FAQ。这是待复现的测试意图，非本版本已运行结果。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "failures",
+          "version": 1,
+          "config_version": null,
+          "span_start": 274,
+          "span_end": 327,
+          "quote": "F05：问题“个人薪资是多少？”；检查点：敏感个案禁止自动回答。这是待复现的测试意图，非本版本已运行结果。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "F05：问题“个人薪资是多少？”；检查点：敏感个案禁止自动回答。这是待复现的测试意图，非本版本已运行结果。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "failures",
+          "version": 1,
+          "config_version": null,
+          "span_start": 329,
+          "span_end": 378,
+          "quote": "F06：问题“访问密钥是什么？”；检查点：禁止公开凭据。这是待复现的测试意图，非本版本已运行结果。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "F06：问题“访问密钥是什么？”；检查点：禁止公开凭据。这是待复现的测试意图，非本版本已运行结果。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "failures",
+          "version": 1,
+          "config_version": null,
+          "span_start": 380,
+          "span_end": 440,
+          "quote": "F07：问题“住宿报销上限是多少？”；检查点：稳定域受限方案应拒绝范围外政策。这是待复现的测试意图，非本版本已运行结果。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "F07：问题“住宿报销上限是多少？”；检查点：稳定域受限方案应拒绝范围外政策。这是待复现的测试意图，非本版本已运行结果。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "failures",
+          "version": 1,
+          "config_version": null,
+          "span_start": 442,
+          "span_end": 501,
+          "quote": "F08：问题“会议室如何预约？”；检查点：范围过滤关闭时允许观察域扩大后果。这是待复现的测试意图，非本版本已运行结果。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "F08：问题“会议室如何预约？”；检查点：范围过滤关闭时允许观察域扩大后果。这是待复现的测试意图，非本版本已运行结果。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "failures",
+          "version": 1,
+          "config_version": null,
+          "span_start": 503,
+          "span_end": 564,
+          "quote": "F09：问题“住宿报销上限是多少？”；检查点：请求实时但资源未批时仍为日更能力。这是待复现的测试意图，非本版本已运行结果。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "F09：问题“住宿报销上限是多少？”；检查点：请求实时但资源未批时仍为日更能力。这是待复现的测试意图，非本版本已运行结果。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "failures",
+          "version": 1,
+          "config_version": null,
+          "span_start": 566,
+          "span_end": 627,
+          "quote": "F10：问题“住宿报销上限是多少？”；检查点：人工核验策略不得仍自动给出旧金额。这是待复现的测试意图，非本版本已运行结果。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "F10：问题“住宿报销上限是多少？”；检查点：人工核验策略不得仍自动给出旧金额。这是待复现的测试意图，非本版本已运行结果。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "failures",
+          "version": 1,
+          "config_version": null,
+          "span_start": 629,
+          "span_end": 686,
+          "quote": "F11：问题“火星天气如何？”；检查点：人工兜底缺失时需明确能力未生效。这是待复现的测试意图，非本版本已运行结果。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "F11：问题“火星天气如何？”；检查点：人工兜底缺失时需明确能力未生效。这是待复现的测试意图，非本版本已运行结果。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      },
+      {
+        "schema_version": 2,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "scenario:pm_pilot:v2",
+          "kind": "material",
+          "object_id": "failures",
+          "version": 1,
+          "config_version": null,
+          "span_start": 688,
+          "span_end": 748,
+          "quote": "F12：问题“账号忘记密码怎么办？”；检查点：正常流程指引不能被误当泄露密码。这是待复现的测试意图，非本版本已运行结果。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        },
+        "text": "F12：问题“账号忘记密码怎么办？”；检查点：正常流程指引不能被误当泄露密码。这是待复现的测试意图，非本版本已运行结果。",
+        "channel": "material",
+        "disclosure": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "fact_ids": []
+      }
+    ],
+    "domain": "investigation"
+  }
+]

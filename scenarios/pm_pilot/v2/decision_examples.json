@@ -1,0 +1,18 @@
+[
+  {
+    "decision": "defer_with_conditions",
+    "evidence": [
+      "demand",
+      "interviews",
+      "technical"
+    ],
+    "proposal": "暂缓动态政策，先验证稳定FAQ与人工接管负担，再申请资源。",
+    "evaluation": "待W05按责任/证据评价，无预填分数"
+  },
+  {
+    "decision": "no_go",
+    "evidence": [],
+    "proposal": "不调查，全部放弃。",
+    "evaluation": "可保存并讨论，待指出具体证据与后续责任缺口；不按枚举自动判错"
+  }
+]

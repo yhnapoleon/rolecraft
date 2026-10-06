@@ -1,0 +1,64 @@
+approval_limits:
+  capacity: 60
+  deadline_day: 10
+  dev_days: 6
+approval_rule_revision: pm-v2-approval-2
+initial_material_versions:
+  approvals: 1
+  brief: 1
+  demand: 1
+  failures: 1
+  faq: 1
+  interviews: 1
+  policy: 1
+  restricted: 1
+  tech_private: 1
+  technical: 1
+  user_groups: 1
+  world_private: 1
+initial_plan_material_updates:
+  policy: 2
+mandatory_prohibited_topics:
+- 个人薪资
+- 医疗诊断
+- 访问密钥
+- 账号密码
+- 他人绩效
+material_files:
+  approvals:
+    '1': materials/approvals-v1.md
+  brief:
+    '1': materials/brief-v1.md
+  demand:
+    '1': materials/demand-v1.md
+  failures:
+    '1': materials/failures-v1.md
+  faq:
+    '1': materials/faq-v1.md
+  interviews:
+    '1': materials/interviews-v1.md
+  policy:
+    '1': materials/policy-v1.md
+    '2': materials/policy-v2.md
+  restricted:
+    '1': materials/restricted-v1.md
+  tech_private:
+    '1': materials/tech_private-v1.md
+  technical:
+    '1': materials/technical-v1.md
+  user_groups:
+    '1': materials/user_groups-v1.md
+  world_private:
+    '1': materials/world_private-v1.md
+not_simulated:
+- 真实运营咨询量
+- 投诉率
+- 收入
+- 未执行访谈
+revision: 2.0.1
+scenario_id: pm_pilot
+source_kind: hand_authored_synthetic
+work_costs:
+  human_fallback: 1
+  realtime_sync: 5
+  scope_filter: 1

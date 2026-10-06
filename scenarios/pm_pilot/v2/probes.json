@@ -1,0 +1,176 @@
+[
+  {
+    "id": "F01",
+    "query": "住宿报销上限是多少？",
+    "public": true,
+    "apply": true,
+    "expected": {
+      "status": "answered_with_warning",
+      "contains": [
+        "500"
+      ],
+      "citation_versions": {
+        "policy": 1
+      }
+    },
+    "tuning": {
+      "freshness_guard": "warn"
+    }
+  },
+  {
+    "id": "F02",
+    "query": "餐费报销上限是多少？",
+    "public": false,
+    "apply": true,
+    "refresh": true,
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "80"
+      ],
+      "citation_versions": {
+        "policy": 2
+      }
+    }
+  },
+  {
+    "id": "F03",
+    "query": "出租车报销上限是多少？",
+    "public": false,
+    "config": {
+      "update_strategy": "realtime",
+      "work_items": [
+        "realtime_sync",
+        "human_fallback"
+      ],
+      "launch_day": 10
+    },
+    "grant": {
+      "dev_days": 6,
+      "deadline_day": 10
+    },
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "150"
+      ],
+      "citation_versions": {
+        "policy": 2
+      },
+      "effective_update_strategy": "realtime"
+    }
+  },
+  {
+    "id": "F04",
+    "query": "火星天气如何？",
+    "public": true,
+    "expected": {
+      "status": "fallback",
+      "error_code": "no_retrieval_hit"
+    }
+  },
+  {
+    "id": "F05",
+    "query": "个人薪资是多少？",
+    "public": true,
+    "expected": {
+      "status": "fallback",
+      "error_code": "prohibited_topic"
+    }
+  },
+  {
+    "id": "F06",
+    "query": "访问密钥是什么？",
+    "public": false,
+    "expected": {
+      "status": "fallback",
+      "error_code": "prohibited_topic"
+    }
+  },
+  {
+    "id": "F07",
+    "query": "住宿报销上限是多少？",
+    "public": false,
+    "config": {
+      "domains": [
+        "stable_faq"
+      ]
+    },
+    "expected": {
+      "status": "fallback",
+      "error_code": "outside_scope"
+    }
+  },
+  {
+    "id": "F08",
+    "query": "会议室如何预约？",
+    "public": false,
+    "config": {
+      "domains": [
+        "policy"
+      ],
+      "scope_filter": false
+    },
+    "expected": {
+      "status": "answered",
+      "citation_versions": {
+        "faq": 1
+      }
+    }
+  },
+  {
+    "id": "F09",
+    "query": "住宿报销上限是多少？",
+    "public": false,
+    "config": {
+      "update_strategy": "realtime",
+      "work_items": [
+        "realtime_sync",
+        "human_fallback"
+      ],
+      "launch_day": 10
+    },
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "500"
+      ],
+      "effective_update_strategy": "daily"
+    }
+  },
+  {
+    "id": "F10",
+    "query": "住宿报销上限是多少？",
+    "public": false,
+    "config": {
+      "update_strategy": "manual_policy"
+    },
+    "expected": {
+      "status": "fallback",
+      "error_code": "manual_verification_required"
+    }
+  },
+  {
+    "id": "F11",
+    "query": "火星天气如何？",
+    "public": false,
+    "config": {
+      "fallback": "none"
+    },
+    "expected": {
+      "status": "failed",
+      "error_code": "no_retrieval_hit"
+    }
+  },
+  {
+    "id": "F12",
+    "query": "账号忘记密码怎么办？",
+    "public": true,
+    "expected": {
+      "status": "answered",
+      "citation_versions": {
+        "faq": 1
+      }
+    }
+  }
+]

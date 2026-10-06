@@ -1,0 +1,787 @@
+[
+  {
+    "schema_version": 2,
+    "id": "capacity",
+    "version": 1,
+    "value": 30,
+    "unit": "人",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "brief",
+      "version": 1,
+      "config_version": null,
+      "span_start": 96,
+      "span_end": 122,
+      "quote": "初始试点容量30人、开发资源3人日、上线期限第7天。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "dev_days",
+    "version": 1,
+    "value": 3,
+    "unit": "人日",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "brief",
+      "version": 1,
+      "config_version": null,
+      "span_start": 96,
+      "span_end": 122,
+      "quote": "初始试点容量30人、开发资源3人日、上线期限第7天。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "deadline_day",
+    "version": 1,
+    "value": 7,
+    "unit": "天",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "brief",
+      "version": 1,
+      "config_version": null,
+      "span_start": 96,
+      "span_end": 122,
+      "quote": "初始试点容量30人、开发资源3人日、上线期限第7天。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "demand_total",
+    "version": 1,
+    "value": 120,
+    "unit": "次",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "demand",
+      "version": 1,
+      "config_version": null,
+      "span_start": 30,
+      "span_end": 69,
+      "quote": "虚构基线样本含120次咨询：办公FAQ72次、动态政策36次、敏感个案12次。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "demand_faq",
+    "version": 1,
+    "value": 72,
+    "unit": "次",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "demand",
+      "version": 1,
+      "config_version": null,
+      "span_start": 30,
+      "span_end": 69,
+      "quote": "虚构基线样本含120次咨询：办公FAQ72次、动态政策36次、敏感个案12次。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "demand_policy",
+    "version": 1,
+    "value": 36,
+    "unit": "次",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "demand",
+      "version": 1,
+      "config_version": null,
+      "span_start": 30,
+      "span_end": 69,
+      "quote": "虚构基线样本含120次咨询：办公FAQ72次、动态政策36次、敏感个案12次。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "demand_sensitive",
+    "version": 1,
+    "value": 12,
+    "unit": "次",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "demand",
+      "version": 1,
+      "config_version": null,
+      "span_start": 30,
+      "span_end": 69,
+      "quote": "虚构基线样本含120次咨询：办公FAQ72次、动态政策36次、敏感个案12次。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "new_staff",
+    "version": 1,
+    "value": 20,
+    "unit": "人",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "user_groups",
+      "version": 1,
+      "config_version": null,
+      "span_start": 29,
+      "span_end": 63,
+      "quote": "候选新员工20人、运营员工20人、行政员工10人；全部候选共50人。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "operations_staff",
+    "version": 1,
+    "value": 20,
+    "unit": "人",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "user_groups",
+      "version": 1,
+      "config_version": null,
+      "span_start": 29,
+      "span_end": 63,
+      "quote": "候选新员工20人、运营员工20人、行政员工10人；全部候选共50人。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "admin_staff",
+    "version": 1,
+    "value": 10,
+    "unit": "人",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "user_groups",
+      "version": 1,
+      "config_version": null,
+      "span_start": 29,
+      "span_end": 63,
+      "quote": "候选新员工20人、运营员工20人、行政员工10人；全部候选共50人。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "candidate_total",
+    "version": 1,
+    "value": 50,
+    "unit": "人",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "user_groups",
+      "version": 1,
+      "config_version": null,
+      "span_start": 29,
+      "span_end": 63,
+      "quote": "候选新员工20人、运营员工20人、行政员工10人；全部候选共50人。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "new_staff_priority",
+    "version": 1,
+    "value": "会议室和账号入口",
+    "unit": "访谈陈述",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "interviews",
+      "version": 1,
+      "config_version": null,
+      "span_start": 33,
+      "span_end": 64,
+      "quote": "新员工代表说：我最需要会议室和账号入口，政策个案可以先人工问。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "operations_concern",
+    "version": 1,
+    "value": "试点价值有限",
+    "unit": "访谈陈述",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "interviews",
+      "version": 1,
+      "config_version": null,
+      "span_start": 66,
+      "span_end": 94,
+      "quote": "运营代表说：若差旅政策仍要人工核对，我担心试点价值有限。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "admin_concern",
+    "version": 1,
+    "value": "增加复核负担",
+    "unit": "访谈陈述",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "interviews",
+      "version": 1,
+      "config_version": null,
+      "span_start": 96,
+      "span_end": 131,
+      "quote": "行政代表说：自动回答错误会增加复核负担，覆盖更多问题必须伴随接管安排。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "index_delay_hours",
+    "version": 1,
+    "value": 24,
+    "unit": "小时",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "technical",
+      "version": 1,
+      "config_version": null,
+      "span_start": 31,
+      "span_end": 59,
+      "quote": "日更索引可能落后源文档24小时；显式刷新只更新当前索引。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "cost_scope_filter",
+    "version": 1,
+    "value": 1,
+    "unit": "人日",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "technical",
+      "version": 1,
+      "config_version": null,
+      "span_start": 61,
+      "span_end": 97,
+      "quote": "范围过滤需要1人日，人工兜底需要1人日，实时同步需要5人日且包含域配置。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "cost_human_fallback",
+    "version": 1,
+    "value": 1,
+    "unit": "人日",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "technical",
+      "version": 1,
+      "config_version": null,
+      "span_start": 61,
+      "span_end": 97,
+      "quote": "范围过滤需要1人日，人工兜底需要1人日，实时同步需要5人日且包含域配置。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "cost_realtime_sync",
+    "version": 1,
+    "value": 5,
+    "unit": "人日",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "technical",
+      "version": 1,
+      "config_version": null,
+      "span_start": 61,
+      "span_end": 97,
+      "quote": "范围过滤需要1人日，人工兜底需要1人日，实时同步需要5人日且包含域配置。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "capacity_limit",
+    "version": 1,
+    "value": 60,
+    "unit": "人",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "approvals",
+      "version": 1,
+      "config_version": null,
+      "span_start": 30,
+      "span_end": 57,
+      "quote": "可审批上限为容量60人、开发资源6人日、期限第10天。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "dev_days_limit",
+    "version": 1,
+    "value": 6,
+    "unit": "人日",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "approvals",
+      "version": 1,
+      "config_version": null,
+      "span_start": 30,
+      "span_end": 57,
+      "quote": "可审批上限为容量60人、开发资源6人日、期限第10天。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "deadline_day_limit",
+    "version": 1,
+    "value": 10,
+    "unit": "天",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "approvals",
+      "version": 1,
+      "config_version": null,
+      "span_start": 30,
+      "span_end": 57,
+      "quote": "可审批上限为容量60人、开发资源6人日、期限第10天。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "hotel_limit",
+    "version": 1,
+    "value": 500,
+    "unit": "元/人/晚",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "policy",
+      "version": 1,
+      "config_version": null,
+      "span_start": 28,
+      "span_end": 59,
+      "quote": "住宿报销上限为每人每晚500元；超出上限需要主管事前书面批准。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "meal_limit",
+    "version": 1,
+    "value": 100,
+    "unit": "元/人/天",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "policy",
+      "version": 1,
+      "config_version": null,
+      "span_start": 61,
+      "span_end": 85,
+      "quote": "餐费报销上限为每人每天100元；需保留合规票据。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "taxi_limit",
+    "version": 1,
+    "value": 200,
+    "unit": "元/单程",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "policy",
+      "version": 1,
+      "config_version": null,
+      "span_start": 87,
+      "span_end": 113,
+      "quote": "出差出租车单程报销上限为200元；超限需走例外审批。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "hotel_limit",
+    "version": 2,
+    "value": 400,
+    "unit": "元/人/晚",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "policy",
+      "version": 2,
+      "config_version": null,
+      "span_start": 28,
+      "span_end": 59,
+      "quote": "住宿报销上限为每人每晚400元；超出上限需要主管事前书面批准。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "meal_limit",
+    "version": 2,
+    "value": 80,
+    "unit": "元/人/天",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "policy",
+      "version": 2,
+      "config_version": null,
+      "span_start": 61,
+      "span_end": 84,
+      "quote": "餐费报销上限为每人每天80元；需保留合规票据。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "taxi_limit",
+    "version": 2,
+    "value": 150,
+    "unit": "元/单程",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "policy",
+      "version": 2,
+      "config_version": null,
+      "span_start": 86,
+      "span_end": 112,
+      "quote": "出差出租车单程报销上限为150元；超限需走例外审批。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "connector_risk",
+    "version": 1,
+    "value": "legacy_connector_unstable",
+    "unit": "内部记录",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "tech_private",
+      "version": 1,
+      "config_version": null,
+      "span_start": 33,
+      "span_end": 85,
+      "quote": "旧连接器风险标识为legacy_connector_unstable，具体压测定位仅技术负责人内部使用。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "paraphrase_only",
+      "actors": [
+        "tech_lead"
+      ],
+      "paraphrase": "现有连接器复用尚未通过可靠性核验，应安排验证后再承诺。"
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "isolation_marker",
+    "version": 1,
+    "value": "NEVER_W02_7C9E",
+    "unit": "内部标識",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot:v2",
+      "kind": "material",
+      "object_id": "world_private",
+      "version": 1,
+      "config_version": null,
+      "span_start": 34,
+      "span_end": 68,
+      "quote": "内部隔离标识NEVER_W02_7C9E，仅用于模拟器泄漏边界校验。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "never",
+      "actors": [],
+      "paraphrase": null
+    }
+  }
+]

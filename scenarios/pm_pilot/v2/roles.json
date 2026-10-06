@@ -1,0 +1,173 @@
+[
+  {
+    "schema_version": 2,
+    "id": "supervisor",
+    "name": "经理",
+    "responsibilities": [
+      "确定业务目标",
+      "审批资源与范围承诺"
+    ],
+    "goals": [
+      "可追问的试点决定",
+      "资源与责任匹配"
+    ],
+    "known_materials": [
+      "brief",
+      "demand",
+      "user_groups",
+      "interviews",
+      "technical",
+      "approvals",
+      "faq",
+      "policy",
+      "restricted",
+      "failures"
+    ],
+    "known_facts": [
+      "capacity",
+      "dev_days",
+      "deadline_day",
+      "capacity_limit",
+      "dev_days_limit",
+      "deadline_day_limit"
+    ],
+    "disclosure_policy": {
+      "default": {
+        "schema_version": 2,
+        "mode": "public",
+        "actors": [],
+        "paraphrase": null
+      }
+    },
+    "approval_authority": [
+      "approve_business"
+    ],
+    "event_subscriptions": [
+      "initial_plan_applied",
+      "business_decided"
+    ],
+    "acceptable_conditions": [
+      "有证据的范围、风险与后续责任",
+      "允许合理暂缓并继续修订"
+    ],
+    "unacceptable_conditions": [
+      "把未批准资源写成已有",
+      "把虚构结果写成真实运营"
+    ]
+  },
+  {
+    "schema_version": 2,
+    "id": "tech_lead",
+    "name": "技术负责人",
+    "responsibilities": [
+      "解释实现约束",
+      "设计可复现验证"
+    ],
+    "goals": [
+      "来源版本正确",
+      "未验证能力不承诺"
+    ],
+    "known_materials": [
+      "brief",
+      "technical",
+      "approvals",
+      "faq",
+      "policy",
+      "restricted",
+      "failures",
+      "tech_private"
+    ],
+    "known_facts": [
+      "capacity",
+      "dev_days",
+      "deadline_day",
+      "index_delay_hours",
+      "cost_realtime_sync",
+      "connector_risk"
+    ],
+    "disclosure_policy": {
+      "default": {
+        "schema_version": 2,
+        "mode": "public",
+        "actors": [],
+        "paraphrase": null
+      },
+      "connector_risk": {
+        "schema_version": 2,
+        "mode": "paraphrase_only",
+        "actors": [
+          "tech_lead"
+        ],
+        "paraphrase": "现有连接器复用尚未通过可靠性核验，应安排验证后再承诺。"
+      }
+    },
+    "approval_authority": [],
+    "event_subscriptions": [
+      "initial_plan_applied",
+      "business_decided"
+    ],
+    "acceptable_conditions": [
+      "有证据的范围、风险与后续责任",
+      "允许合理暂缓并继续修订"
+    ],
+    "unacceptable_conditions": [
+      "把未批准资源写成已有",
+      "把虚构结果写成真实运营"
+    ]
+  },
+  {
+    "schema_version": 2,
+    "id": "business_lead",
+    "name": "业务负责人",
+    "responsibilities": [
+      "说明需求分歧",
+      "讨论验收和接管负担"
+    ],
+    "goals": [
+      "用户价值有证据",
+      "敏感个案受控"
+    ],
+    "known_materials": [
+      "brief",
+      "demand",
+      "user_groups",
+      "interviews",
+      "approvals",
+      "faq",
+      "policy",
+      "restricted",
+      "failures"
+    ],
+    "known_facts": [
+      "capacity",
+      "dev_days",
+      "deadline_day",
+      "demand_total",
+      "demand_faq",
+      "demand_policy",
+      "demand_sensitive",
+      "admin_concern"
+    ],
+    "disclosure_policy": {
+      "default": {
+        "schema_version": 2,
+        "mode": "public",
+        "actors": [],
+        "paraphrase": null
+      }
+    },
+    "approval_authority": [],
+    "event_subscriptions": [
+      "initial_plan_applied",
+      "business_decided"
+    ],
+    "acceptable_conditions": [
+      "有证据的范围、风险与后续责任",
+      "允许合理暂缓并继续修订"
+    ],
+    "unacceptable_conditions": [
+      "把未批准资源写成已有",
+      "把虚构结果写成真实运营"
+    ]
+  }
+]

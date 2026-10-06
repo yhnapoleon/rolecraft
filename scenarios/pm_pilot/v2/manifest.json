@@ -1,0 +1,390 @@
+{
+  "schema_version": 2,
+  "id": "pm_pilot",
+  "revision": "2.0.1",
+  "structure_id": "index_scope_resource_dependency",
+  "files": [
+    {
+      "schema_version": 2,
+      "path": "baseline.json",
+      "sha256": "e4f1eedfab0350f8a0be69649239c1820d8b51e41ef88ff4af202272689f5998",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "decision_examples.json",
+      "sha256": "83c570c13ae4d2f630b5c9c0b38c1503dd28b47b48adb8635ee89a889f97db02",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "facts.json",
+      "sha256": "6274420ed62b4131a924002d94ccc83ccaa4b9559a4197c2646df7c15dfdf89e",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials.json",
+      "sha256": "4e0fe812211c77bcaea9bc93bc4847544e55944e74e9c59ce36cebb2892eefff",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/approvals-v1.md",
+      "sha256": "e052e0450b55aff55e2fc4f1f72139779c917ec7b4218797c07a3e5133a4af65",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/brief-v1.md",
+      "sha256": "9f61f3618ef1466483aca4d4b15f957680eacfe087e05b289d9f32907d968165",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/demand-v1.md",
+      "sha256": "0749b6f4fa58bd03e69f29edcc5edea701b5d9cf526955cd6487c50577d0d728",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/failures-v1.md",
+      "sha256": "12588d9df6557bcd68383d146ab1d9b8ec1d098a372b621900bfb28436d14ba4",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/faq-v1.md",
+      "sha256": "a3559ba66126683ae8ac72016978a0f6360aab070d159317fc27d33f552697d0",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/interviews-v1.md",
+      "sha256": "b2c038621f84bfc039af598bc6c3035454ff18e07a023bdce4048348f2f918c8",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/policy-v1.md",
+      "sha256": "60014dc35562ad89125bbaeb58b70eb076e82e8d9bf2144a258915e0efb3b2ca",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/policy-v2.md",
+      "sha256": "4a17a2081b58b3f3d656f6f0b0047f197d88430948f90c2701606a9cae3383e7",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/restricted-v1.md",
+      "sha256": "eeb9b18132da3c35f8148445eaff6a8a456d301341d01f8c8b060b37160354d2",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/tech_private-v1.md",
+      "sha256": "a0a9a792092fcd02f62cc552378e0b871f8dc8c9a00102019e06276aa10f468b",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/technical-v1.md",
+      "sha256": "1fc10175ae7b669f6a2c013667122178f1092b41fe2796537a3fdc8dd25344ce",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/user_groups-v1.md",
+      "sha256": "b3cdb452c84efda2a970b7665afa7b8e8a02a041b1e3db507343e0ce52276a9b",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/world_private-v1.md",
+      "sha256": "c1a316fa69161fe3fbef449a351f2b3b7c2a3bbbfccb4b539ebb8a74effdfa06",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "paths.json",
+      "sha256": "44646d48e1bf12f7388f94c817400af01791250ee5fce03d41e32861880d11df",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "probes.json",
+      "sha256": "635a93d2b1fde3b621887d3568b9b4167ef308175ac83eec868df2cdf87f97fd",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "roles.json",
+      "sha256": "16768c916652298d3de0b23075d29d2c06998e841ffc246bae941c47c114a45f",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "rubric-reference.json",
+      "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "scenario.yaml",
+      "sha256": "99c4f5d755835018e5a63ec085b7a144a0a2238b8716911dd7094410c656068b",
+      "media_type": "application/yaml"
+    }
+  ],
+  "public_files": [
+    "materials/approvals-v1.md",
+    "materials/brief-v1.md",
+    "materials/demand-v1.md",
+    "materials/failures-v1.md",
+    "materials/faq-v1.md",
+    "materials/interviews-v1.md",
+    "materials/policy-v1.md",
+    "materials/restricted-v1.md",
+    "materials/technical-v1.md",
+    "materials/user_groups-v1.md"
+  ],
+  "private_files": [
+    "baseline.json",
+    "decision_examples.json",
+    "facts.json",
+    "materials.json",
+    "materials/policy-v2.md",
+    "materials/tech_private-v1.md",
+    "materials/world_private-v1.md",
+    "paths.json",
+    "probes.json",
+    "roles.json",
+    "rubric-reference.json",
+    "scenario.yaml"
+  ],
+  "role_specs": [
+    {
+      "schema_version": 2,
+      "id": "supervisor",
+      "name": "经理",
+      "responsibilities": [
+        "确定业务目标",
+        "审批资源与范围承诺"
+      ],
+      "goals": [
+        "可追问的试点决定",
+        "资源与责任匹配"
+      ],
+      "known_materials": [
+        "brief",
+        "demand",
+        "user_groups",
+        "interviews",
+        "technical",
+        "approvals",
+        "faq",
+        "policy",
+        "restricted",
+        "failures"
+      ],
+      "known_facts": [
+        "capacity",
+        "dev_days",
+        "deadline_day",
+        "capacity_limit",
+        "dev_days_limit",
+        "deadline_day_limit"
+      ],
+      "disclosure_policy": {
+        "default": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        }
+      },
+      "approval_authority": [
+        "approve_business"
+      ],
+      "event_subscriptions": [
+        "initial_plan_applied",
+        "business_decided"
+      ],
+      "acceptable_conditions": [
+        "有证据的范围、风险与后续责任",
+        "允许合理暂缓并继续修订"
+      ],
+      "unacceptable_conditions": [
+        "把未批准资源写成已有",
+        "把虚构结果写成真实运营"
+      ]
+    },
+    {
+      "schema_version": 2,
+      "id": "tech_lead",
+      "name": "技术负责人",
+      "responsibilities": [
+        "解释实现约束",
+        "设计可复现验证"
+      ],
+      "goals": [
+        "来源版本正确",
+        "未验证能力不承诺"
+      ],
+      "known_materials": [
+        "brief",
+        "technical",
+        "approvals",
+        "faq",
+        "policy",
+        "restricted",
+        "failures",
+        "tech_private"
+      ],
+      "known_facts": [
+        "capacity",
+        "dev_days",
+        "deadline_day",
+        "index_delay_hours",
+        "cost_realtime_sync",
+        "connector_risk"
+      ],
+      "disclosure_policy": {
+        "default": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        },
+        "connector_risk": {
+          "schema_version": 2,
+          "mode": "paraphrase_only",
+          "actors": [
+            "tech_lead"
+          ],
+          "paraphrase": "现有连接器复用尚未通过可靠性核验，应安排验证后再承诺。"
+        }
+      },
+      "approval_authority": [],
+      "event_subscriptions": [
+        "initial_plan_applied",
+        "business_decided"
+      ],
+      "acceptable_conditions": [
+        "有证据的范围、风险与后续责任",
+        "允许合理暂缓并继续修订"
+      ],
+      "unacceptable_conditions": [
+        "把未批准资源写成已有",
+        "把虚构结果写成真实运营"
+      ]
+    },
+    {
+      "schema_version": 2,
+      "id": "business_lead",
+      "name": "业务负责人",
+      "responsibilities": [
+        "说明需求分歧",
+        "讨论验收和接管负担"
+      ],
+      "goals": [
+        "用户价值有证据",
+        "敏感个案受控"
+      ],
+      "known_materials": [
+        "brief",
+        "demand",
+        "user_groups",
+        "interviews",
+        "approvals",
+        "faq",
+        "policy",
+        "restricted",
+        "failures"
+      ],
+      "known_facts": [
+        "capacity",
+        "dev_days",
+        "deadline_day",
+        "demand_total",
+        "demand_faq",
+        "demand_policy",
+        "demand_sensitive",
+        "admin_concern"
+      ],
+      "disclosure_policy": {
+        "default": {
+          "schema_version": 2,
+          "mode": "public",
+          "actors": [],
+          "paraphrase": null
+        }
+      },
+      "approval_authority": [],
+      "event_subscriptions": [
+        "initial_plan_applied",
+        "business_decided"
+      ],
+      "acceptable_conditions": [
+        "有证据的范围、风险与后续责任",
+        "允许合理暂缓并继续修订"
+      ],
+      "unacceptable_conditions": [
+        "把未批准资源写成已有",
+        "把虚构结果写成真实运营"
+      ]
+    }
+  ],
+  "domains": {
+    "stable_faq": [
+      "faq"
+    ],
+    "policy": [
+      "policy"
+    ],
+    "restricted": [
+      "restricted"
+    ]
+  },
+  "capabilities": [
+    "apply_config",
+    "refresh_index",
+    "request_business",
+    "resolve_approval",
+    "read_material",
+    "test_assistant"
+  ],
+  "baseline_config": {
+    "schema_version": 2,
+    "id": "pilot",
+    "session_id": "scenario:pm_pilot:v2",
+    "version": 1,
+    "config_version": 0,
+    "domains": [
+      "stable_faq",
+      "policy"
+    ],
+    "scope_filter": true,
+    "update_strategy": "daily",
+    "fallback": "human",
+    "chunk_size": 500,
+    "retrieval_limit": 1,
+    "prohibited_topics": [],
+    "work_items": [
+      "scope_filter",
+      "human_fallback"
+    ],
+    "participants": 20,
+    "launch_day": 7
+  },
+  "initial_resources": {
+    "capacity": 30,
+    "dev_days": 3,
+    "deadline_day": 7
+  },
+  "lineage": [
+    "pm_pilot-v1"
+  ],
+  "split": "train"
+}
