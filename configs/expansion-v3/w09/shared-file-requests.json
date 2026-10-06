@@ -1,0 +1,114 @@
+[
+  {
+    "id": "W09-SR01",
+    "target_files": [
+      "src/career_lab/api/modules.py",
+      "src/career_lab/api/v2_routes.py",
+      "src/career_lab/contracts/v2/research.py"
+    ],
+    "reason": "draft尚无StepResult/HTTP结果协议；W09通过HttpBindings和内部ActionOutcome消费，不猜测正式wire。",
+    "contract_revision": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
+    "consumers": [
+      "W06",
+      "W09"
+    ],
+    "minimal_suggested_diff": "在W06集成模块构造 HttpBindings(observation_path, command_path, job_path, decode_observation, decode_outcome)，注入 HttpEnvironment；decode_outcome 将正式响应解析为 ActionOutcome(status, observation, step, boundary, job_id, error_code)。将服务端可信executor、Command.request_id、完整ActionBoundary及ObservedStep对应到响应。公共StepResult字段如采用新增，由W01发布新revision，036跟随迁移。 R2补充：成功响应必须提供可信request_id或ActionBoundary；保留ObservedStep.id，另存Command.request_id，不能猜测两者相同。提供只读请求结果查询，绑定HttpBindings.request_result_path(session_id, request_id)；查询不能触发新动作或模型调用，404/未知仍保持unresolved。 R3补充：候选所有结果（含pending）须具可信request_id/boundary；异步续查响应须提供与已接纳绑定一致的job_id，保留服务端step ID与原command分别存档。",
+    "compatibility_tests": [
+      "tests/integration/test_w09_http.py",
+      "真实session的read/act/submit/过期吊销/跨session/409/已完成请求复取",
+      "真实HTTP+独立worker恢复"
+    ],
+    "integration_order": "W01定公共结果、W06提供投影与解码、W09注入，随后真实联调",
+    "status": "open"
+  },
+  {
+    "id": "W09-SR02",
+    "target_files": [
+      "src/career_lab/storage/v2_*.py",
+      "src/career_lab/api/modules.py"
+    ],
+    "reason": "隔离候选执行需要W01的真实快照服务；W09不复制世界引擎。",
+    "contract_revision": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
+    "consumers": [
+      "W09",
+      "W10"
+    ],
+    "minimal_suggested_diff": "提供 SnapshotPort.export(session_id, VersionPoint)->SnapshotExport、restore(snapshot, isolated_session_id, request_id)->RestoreResult、remap_action(ActionProposal, RestoreResult)->ActionProposal、environment(restored)->EnvironmentPort、parent_digest(session_id)->str 的集成适配；只供research权限内部调用。restore必须禁用外部副作用并按storage_revision纳入派生对象，外部调用为0；重映射由公共对象类型实现，不做任意字符串替换。 R2补充：SnapshotPort.prefix_digest(snapshot)提供公共规范化前缀hash；restore必须精确返回指定session与匹配的state/prefix，候选之间不得复用会话。 2026-10-07限定修复：消费者已识别r3 qualified identity_key及规范parent prefix，无需为旧消费假设另加prefix_digest方法；正式迁移仍由031指定输入。",
+    "compatibility_tests": [
+      "tests/unit/test_w09_copies.py",
+      "完整动作边界/同seq派生对象/跨对象引用/父hash不变/真实恢复零模型调用"
+    ],
+    "integration_order": "W01恢复语义验收后装配W09；W10随后消费相同基础",
+    "status": "consumer_r3_compatibility_fixed_formal_integration_pending"
+  },
+  {
+    "id": "W09-SR03",
+    "target_files": [
+      "src/career_lab/runtime/model_adapter.py",
+      "src/career_lab/contracts/v2/research.py",
+      "src/career_lab/contracts/v2/core.py"
+    ],
+    "reason": "旧模型适配器固定512输出、缺seed/decode控制；角色工具可能另调模型，当前draft StepResult未包含这些成本。只计策略模型不足以证明E4全成本。",
+    "contract_revision": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
+    "consumers": [
+      "W04",
+      "W06",
+      "W09",
+      "W12"
+    ],
+    "minimal_suggested_diff": "公共provider增加显式deadline/output_limit/decode与每attempt ModelAttemptUsage的端口，保留原complete兼容入口；不得内部隐藏重试。W06结果提供环境侧模型attempt和成本未知状态，W09与策略attempt去重合计。当前AdapterModel只包装retries=0现有对象，seed_supported=False如实保留；实际模型revision、解码参数与tools schema digest由集成factory核对冻结文件后注入。",
+    "compatibility_tests": [
+      "tests/unit/test_w09_core.py 中 model/bridge/budget 用例",
+      "真实模型超时/丢响应/worker重试各次usage与统一预算",
+      "冻结model/decode在普通/主动策略一致"
+    ],
+    "integration_order": "W01字段与provider端口冻结，W04/W06回传真实成本，再执行E4",
+    "status": "open"
+  },
+  {
+    "id": "W09-SR04",
+    "target_files": [
+      "src/career_lab/api/modules.py",
+      "src/career_lab/cli.py"
+    ],
+    "reason": "终态成功不能从模型stop、固定路线或no_go枚举推断；全局CLI和实际factory由集成人挂载。",
+    "contract_revision": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
+    "consumers": [
+      "W05",
+      "W09",
+      "W12",
+      "W14"
+    ],
+    "minimal_suggested_diff": "CLI创建commands后调用 career_lab.reference_agent.cli.register_commands(commands, factory=w09_factory)；parse_args后若有w09_handler则 return args.w09_handler(args)。w09_factory根据冻结policy_config和RunManifest构造ReferenceRunner，绑定W06 transport/真实模型/W05 evaluator及expected_tools_digest。evaluator(manifest, observation, steps)返回绑定同一evaluation FileRef的accepted=true/false/null与依据；公共形状由W01/W05定稿后替换内部适配。",
+    "compatibility_tests": [
+      "tests/unit/test_w09_suite.py 中CLI和冻结验证",
+      "路径外有效终态/no_go/未调查放弃/同EvaluationBundle比较",
+      "全局career-lab agent-suite --help和非零失败JSON"
+    ],
+    "integration_order": "先W05/W06真实接口，后CLI factory，最后连续HTTP/worker流程",
+    "status": "open"
+  },
+  {
+    "id": "W09-SR05",
+    "target_files": [
+      "docs/contracts/expansion-v3/manifest.json",
+      "src/career_lab/contracts/v2/world.py"
+    ],
+    "reason": "Observation.visible_sources尚不包含实际披露核验等级，预算/运行状态也未完全进入公共RunManifest；需要明确业务语义，避免把观察过的陈述当G0真值。",
+    "contract_revision": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
+    "consumers": [
+      "W04",
+      "W06",
+      "W07",
+      "W09",
+      "W10"
+    ],
+    "minimal_suggested_diff": "冻结Observation只包含本主体已实际获得的片段（目录与prompt-only不作为visible_sources），实际披露经原句及核验等级另行引用。W09目前BeliefFact.known仅表示已观察到的原句，conflict仅为同fact_id不同原句的待核对候选。正式RunManifest如需policy/tool_schema/started/ended/status/actual_consumption，统一由W01增字段；当前模块只在私有checkpoint/result sidecar保留，不擅改shared schema。 R2补充：集成端通过source_authorizer提供learner_known/role_private/prompt_only/unknown的来源判定。合法学员memory可用；未知memory隔离、私有及prompt-only拒绝，规则同时用于最终provider messages。该回调是本包适配接口，正式provenance对象请统一冻结。 R3补充：来源授权必须覆盖成功step正文、引用quote及历史摘要；W09以已授权观察片段构造独立model-facing history/belief，无法证实来源的摘要暂隔离，合法历史披露以disclosed_sources保留。 后续研究恢复时需冻结显式unknowns/hypotheses/current_plan及有效时点策略；目前仅观察事实重组，不能视为完整主动信念管理。",
+    "compatibility_tests": [
+      "tests/unit/test_w09_core.py 中belief/prompt/stale/observation用例",
+      "真实角色prompt未披露不得增加获得率；分区导出保留核验等级"
+    ],
+    "integration_order": "W01/W04确认投影语义后W06消费；W07导出前复核",
+    "status": "open"
+  }
+]
