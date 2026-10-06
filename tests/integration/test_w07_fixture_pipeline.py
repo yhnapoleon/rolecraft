@@ -11,6 +11,7 @@ def test_fixture_release_is_published_and_audited_from_twelve_snapshots(tmp_path
     assert manifest['fixture'] and not manifest['training_ready'] and not manifest['confirmatory']
     assert manifest['records']==12 and manifest['splits']=={'train':6,'dev':6}
     assert manifest['source_snapshot_count']==12
+    assert sum(not r['evidence_evaluable'] for r in report['expected_records'].values())==2
     for path in (root/'metadata').glob('*.json'):
         metadata=DatasetMetadataV2.model_validate_json(path.read_text())
         assert len(metadata.source_snapshots)==1 and metadata.bucket=='fixture'

@@ -98,3 +98,12 @@ r1阶段曾将内部证据协议升级为v2；本轮继续升级为v3。v1/v2目
 ```
 
 输出publication.json提供发布/分区hash与producer commit，runtime-identity.json保存实际源码身份。新交付绑定各自commit，旧回执与失败原件保持不变。输入候选未获正式验收，真实业务源适配、真实标注批次、W11结构及产品QA仍待后续实现与独立审阅。rule_context/动作参数的深层白名单公共投影尚待接线，现有schema加黑名单不能作为完整泄漏证明。
+
+
+## c4审阅补充：最终引用、纯标签与来源验证
+
+可评final引用必须与至少一组合法acceptable集合相等；不一致会在标注、发布和审计阶段拒绝，不能作为有效证据监督。INSUFFICIENT/NOT_APPLICABLE的合法空目标保留。不可评记录不伪造引用；数值G0纯标签路径仍重新运行受限数值验证器，只取消定位监督，不把不可评当作标签正确的依据。真实非G0纯标签发布与回读还需独立label_only_authority确认语义来源，未接该端口时拒绝。
+
+发布端将record.bucket与snapshot.origin、源session和lineage配对，读取并核对实际源文件hash；源文件明确声明fixture时，移除transformations标记也不能转成业务来源。非fixture还强制注入source_authority，按独立真实源读取给出record/session/lineage/snapshot/source/files绑定；无此权威端口时明确失败。回读审计重新要求该端口，不能依靠release内自报凭据认证来源。当前只接fixture和明确测试替身，没有完成真实业务来源验证。
+
+每条来源绑定保存为`origins/<record_id>.json`并进入release文件hash清单；它是评测侧内部收据，不是公共schema或密码学签名，不进入model_input。W08按请求分区读取并重核，非fixture再经独立来源验证。当前联合样例的12条G0记录中，train/dev各1条SUPPORTED只有已验证的数值标签、没有定位监督，用于证明证据训练和指标分母正确排除。

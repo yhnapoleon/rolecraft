@@ -223,7 +223,7 @@ def verify_annotation_artifacts(record, annotation, artifacts):
         return annotation
     if annotation.label_tier == "G0":
         from .g0 import verify_numeric
-        expected = verify_numeric(record, annotation_version=annotation.annotation_version)
+        expected = verify_numeric(record, annotation_version=annotation.annotation_version,evidence_evaluable=annotation.final.evidence_evaluable)
     else:
         verified = []
         for declared in annotation.passes:

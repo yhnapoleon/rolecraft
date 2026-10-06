@@ -48,7 +48,7 @@ def make_case(tmp_path, *, origin="fixture"):
     evidence = package("relation", point=point)
     sources = tuple(SourceObject(ObjectRef.model_validate({k: c.ref.model_dump(mode="json")[k] for k in ObjectRef.model_fields}),
         c.text, VersionPoint(business_seq=1, workspace_revision=0, storage_revision=1), ("learner",),validity_known=True) for c in evidence.candidate_evidence)
-    (tmp_path / "source.json").write_bytes(json_bytes({"origin": "unit-fixture", "session": "session1"}))
+    (tmp_path / "source.json").write_bytes(json_bytes({"origin": "unit-fixture" if origin=="fixture" else origin, "session": "session1", "test_double":True}))
     source_ref = FileRef(path="source.json", sha256=sha((tmp_path / "source.json").read_bytes()))
     identity = SourceIdentity(base_commit=BASE, source_digest=digest("fixture-source"))
     provenance = Provenance(command="unit fixture; not a business execution", source=identity,
@@ -412,7 +412,7 @@ def test_unapproved_sources_excluded_while_valid_records_continue(tmp_path, buck
     result = export_snapshot(snapshot, units[:2])
     approved={"source.json":policies["source.json"] | {"url":"https://unit.invalid", "accessed_at":"2026-10-07", "license":"MIT", "original_hash":policies["source.json"]["sha256"], "authorization_ref":"unit-double", "consent_ref":"unit-double"}}
     contexts={r.record_id:{"root":tmp_path,"policies":policies if i==0 else approved} for i,r in enumerate(result.records)}
-    publish_release(tmp_path / "release", result, source_root=tmp_path, policies=policies, source_contexts=contexts, allow_pending=True)
+    publish_release(tmp_path / "release", result, source_root=tmp_path, policies=policies, source_contexts=contexts, allow_pending=True, source_authority=lambda r,s,refs: __import__("career_lab.datasets.v3.origin",fromlist=["binding"]).binding(r,s))
     report = json.loads((tmp_path / "release/quality-report.json").read_text())
     assert report["records"] == 1 and report["excluded"][0]["reason"] == reason
 

@@ -45,3 +45,5 @@ def validate_time_citations(item,decision):
         raise ProtocolError("annotation_no_legal_joint_target")
     if decision.evidence_evaluable and decision.label in {"SUPPORTED","CONTRADICTED","MET","PARTIAL","NOT_MET"}:
         if not cited or any(not group for group in alternatives):raise ProtocolError("positive_label_requires_nonempty_joint_evidence")
+    if decision.evidence_evaluable and cited not in [set(group) for group in alternatives]:
+        raise ProtocolError("final_evidence_not_an_acceptable_target")

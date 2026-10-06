@@ -58,9 +58,9 @@ def build_fixture_release(output,*,workspace):
                 unit=ExportUnit('relation',RelationInput(evidence=evidence),lineage,provenance,split=split,language='en',evaluation_time_known=True)
                 result=export_snapshot(snapshot,[unit])
                 if result.quarantined or len(result.records)!=1:raise ValueError(result.quarantined)
-                annotations=[verify_numeric(r) for r in result.records]
+                annotations=[verify_numeric(r,evidence_evaluable=not(group==1 and label=="SUPPORTED")) for r in result.records]
                 if annotations[0].final.label!=label:raise ValueError('fixture expectation mismatch')
-                expected[result.records[0].record_id]={'label':label,'reference_seq':point.business_seq,'capture_seq':capture.business_seq,'split':split}
+                expected[result.records[0].record_id]={'label':label,'reference_seq':point.business_seq,'capture_seq':capture.business_seq,'split':split,'evidence_evaluable':annotations[0].final.evidence_evaluable}
                 contributions.append({'export':result,'source_root':root,'policies':{'snapshot.json':{'sha256':file_ref.sha256,'review_status':'approved','scope':'synthetic fixture only'}},'annotations':annotations})
     release=output/'release';manifest=publish_exports(release,contributions,fixture=True)
     report={'scope':'synthetic fixture; no formal E1/E2 or research test','producer_commit':commit,'producer_runtime_digest':identity.source_digest,

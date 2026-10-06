@@ -17,6 +17,12 @@ from career_lab.datasets.v3.labeling import AnnotationBatch,LabelResult
 from career_lab.datasets.v3.attestation import validate_decision
 from career_lab.datasets.v3.quality import duplicate_pairs,QualityError
 from career_lab.datasets.v3.g0 import verify_numeric
+from career_lab.datasets.v3.origin import binding
+
+def simulated_source_authority(record,snapshot,refs):
+    """Explicit unit double; never a production source authority."""
+    return binding(record,snapshot)
+
 
 
 def simulated_export(root,sid="unit-a",split="train",field="capacity"):
@@ -65,8 +71,8 @@ def test_multiple_snapshots_keep_all_provenance_and_roots(tmp_path):
     contributions=[]
     for name,entry in [("a",a),("b",b)]:
         r=entry[3];contributions.append({"export":r,"source_root":tmp_path/name,"policies":entry[2],"annotations":[verify_numeric(x) for x in r.records]})
-    manifest=publish_exports(tmp_path/"release",contributions)
-    assert manifest["source_snapshot_count"]==2 and audit_release(tmp_path/"release")["records"]==2
+    manifest=publish_exports(tmp_path/"release",contributions,source_authority=simulated_source_authority)
+    assert manifest["source_snapshot_count"]==2 and audit_release(tmp_path/"release",source_authority=simulated_source_authority)["records"]==2
     snapshots=json.loads((tmp_path/"release/source-snapshots.json").read_text())
     assert {x["snapshot_digest"] for x in snapshots}=={a[3].snapshot_digest,b[3].snapshot_digest}
     reviews=json.loads((tmp_path/"release/source-reviews.json").read_text())
@@ -82,8 +88,8 @@ def test_pending_cannot_impersonate_g1_and_counts_are_separate(tmp_path):
     assert not rejected.records and rejected.quarantined[0]["reason"]=="export_tier_must_be_pending_model"
     fake=result.annotations[0].model_copy(update={"label_tier":"G1"})
     with pytest.raises(ProtocolError,match="pending"):
-        publish_release(tmp_path/"bad",result,source_root=tmp_path/"source",policies=pol,annotations=[fake],allow_pending=True)
-    publish_release(tmp_path/"pending",result,source_root=tmp_path/"source",policies=pol,allow_pending=True)
+        publish_release(tmp_path/"bad",result,source_root=tmp_path/"source",policies=pol,annotations=[fake],allow_pending=True,source_authority=simulated_source_authority)
+    publish_release(tmp_path/"pending",result,source_root=tmp_path/"source",policies=pol,allow_pending=True,source_authority=simulated_source_authority)
     q=json.loads((tmp_path/"pending/quality-report.json").read_text())
     assert q["label_tiers"]=={} and q["annotation_status"]=={"pending":1}
 

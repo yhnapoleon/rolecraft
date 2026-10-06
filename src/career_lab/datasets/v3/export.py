@@ -315,7 +315,7 @@ def validate_source_membership(result):
         desc=descriptors[membership[rid]];mapping=result.source_maps[rid]
         if mapping.get("snapshot_digest")!=membership[rid] or record.lineage.session_id!=desc["session_id"]:
             raise ProtocolError("snapshot_record_source_mismatch")
-        if desc["origin"]=="fixture" and record.bucket!="fixture":raise ProtocolError("fixture_bucket_identity_mismatch")
+        if desc["origin"]!=record.bucket:raise ProtocolError("source_origin_bucket_mismatch")
         if record.provenance.source.source_digest!=desc["source_digest"]:
             raise ProtocolError("snapshot_code_identity_mismatch")
     if len(descriptors)==1:

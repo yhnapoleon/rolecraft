@@ -8,6 +8,7 @@ from .quality import audit_records, fixture_record, source_policy_error
 from .export import ExportResult,aggregate_exports,validate_source_membership
 from .attestation import verify_annotation_artifacts
 from . import EXPORTER_REVISION
+from .origin import binding,verify_sources
 
 
 def save_export(target, result):
@@ -36,7 +37,7 @@ def load_export(root):
 
 
 def publish_release(target, result, *, source_root, policies, annotations=None,
-                    annotation_artifacts=None, fixture=False, allow_pending=False,source_contexts=None):
+                    annotation_artifacts=None, fixture=False, allow_pending=False,source_contexts=None,source_authority=None,label_only_authority=None):
     membership=validate_source_membership(result)
     snapshot_by_digest={d["snapshot_digest"]:d for d in result.source_snapshots}
     contexts=source_contexts or {r.record_id:{"root":source_root,"policies":policies} for r in result.records}
@@ -57,6 +58,7 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
         raise ProtocolError("annotation_identity_set_mismatch")
     artifacts = annotation_artifacts or {}
     accepted, selected_labels, excluded = [], [], list(result.quarantined)
+    origins={}
     for record in result.records:
         context=contexts[record.record_id]
         reason = source_policy_error(record, context["policies"])
@@ -77,11 +79,13 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
         if reason:
             excluded.append({"record_id": record.record_id, "reason": reason})
             continue
-        for source in record.provenance.actual_sources:
-            read_file(Path(context["root"]), source)
+        origins[record.record_id]=verify_sources(record,snapshot_by_digest[membership[record.record_id]],Path(context["root"]),source_authority)
         if record.record_id not in result.source_maps:
             raise ProtocolError("missing_source_map")
         verify_annotation_artifacts(record, annotation, artifacts)
+        if annotation.final and not annotation.final.evidence_evaluable and record.bucket!="fixture" and annotation.label_tier!="G0":
+            if label_only_authority is None or label_only_authority(record,annotation) is not True:
+                raise ProtocolError("label_only_semantic_review_required")
         if annotation.adjudication_ref:
             ref = annotation.adjudication_ref
             if ref.path not in artifacts or sha(artifacts[ref.path]) != ref.sha256:
@@ -121,6 +125,7 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
         for record, annotation in zip(accepted, selected_labels, strict=True):
             write_new(root / f"inputs/{record.record_id}.json", record.model_input)
             write_new(root / record.label_ref.path, annotation)
+            write_new(root / f"origins/{record.record_id}.json",origins[record.record_id])
         needed_passes = {f"labels/passes/{p.id}.json" for a in selected_labels for p in a.passes}
         if needed_passes - artifacts.keys():
             raise ProtocolError("missing_annotation_attempt_evidence")
@@ -170,11 +175,11 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
             "confirmatory": False,"metadata":FileRef(path="record-metadata.json",sha256=files["record-metadata.json"]).model_dump(mode="json")}
         manifest["id"] = digest(manifest)
         write_new(root / "manifest.json", manifest)
-        audit_release(root)
+        audit_release(root,source_authority=source_authority,label_only_authority=label_only_authority)
     return manifest
 
 
-def audit_release(root):
+def audit_release(root,*,source_authority=None,label_only_authority=None):
     root = Path(root)
     manifest = read_json(root / "manifest.json")
     if manifest.get("protocol") != "expansion-v3-w07-release-v3":
@@ -223,6 +228,14 @@ def audit_release(root):
         expected=metadata_projection(record,annotation,capture_point=snap.capture_point,source_snapshots=(snap,))
         meta_ref=FileRef.model_validate(metadata["records"][record.record_id])
         if files.get(meta_ref.path)!=meta_ref.sha256:raise ProtocolError("metadata_hash_mismatch")
+        origin_name=f"origins/{record.record_id}.json"
+        if origin_name not in files:raise ProtocolError("source_origin_binding_missing")
+        if read_json(root/origin_name)!=binding(record,descriptor):raise ProtocolError("source_origin_binding_mismatch")
+        if not manifest['fixture']:
+            if source_authority is None or source_authority(record,descriptor,tuple(record.provenance.actual_sources))!=binding(record,descriptor):
+                raise ProtocolError('authoritative_source_reader_required')
+            if annotation.final and not annotation.final.evidence_evaluable and annotation.label_tier!='G0' and (label_only_authority is None or label_only_authority(record,annotation) is not True):
+                raise ProtocolError('label_only_semantic_review_required')
         actual=DatasetMetadataV2.model_validate_json(read_file(root,meta_ref))
         if actual!=expected:raise ProtocolError("metadata_record_mismatch")
     pass_paths = {f"labels/passes/{p.id}.json" for a in labels for p in a.passes}
@@ -244,7 +257,7 @@ def audit_release(root):
     return report
 
 
-def publish_exports(target,contributions,*,fixture=False,allow_pending=False):
+def publish_exports(target,contributions,*,fixture=False,allow_pending=False,source_authority=None,label_only_authority=None):
     """Public multi-export publishing API. Each source retains its own root/reviews.
 
     contributions: {export: ExportResult, source_root: Path, policies: mapping,
@@ -265,4 +278,4 @@ def publish_exports(target,contributions,*,fixture=False,allow_pending=False):
             if name in artifacts and artifacts[name]!=raw:raise ProtocolError("annotation_artifact_collision")
             artifacts[name]=raw
     return publish_release(target,result,source_root=None,policies=None,source_contexts=contexts,
-                           annotations=annotations,annotation_artifacts=artifacts,fixture=fixture,allow_pending=allow_pending)
+                           annotations=annotations,annotation_artifacts=artifacts,fixture=fixture,allow_pending=allow_pending,source_authority=source_authority,label_only_authority=label_only_authority)
