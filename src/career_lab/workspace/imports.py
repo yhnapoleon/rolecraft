@@ -5,7 +5,8 @@ from career_lab.contracts.v2.core import AuthContext, Command, ProtocolError, ca
 from career_lab.contracts.v2.legacy import normalize_legacy_product
 from career_lab.contracts.v2.workspace import (
     WorkspaceImport, ImportResult, ImportReference, WorkspaceTask, WorkProductVersion,
-    TestPlanPayload, TestCase, Adoption, LegacyProvenance,
+    TestPlanPayload, TestCase, Adoption, LegacyProvenance, InvestigationPayload, InvestigationBlock,
+    ImportConflict, ImportVersionMap,
 )
 from .ports import Snapshot, Mutation
 from .domain import stored, reference, _new_scope
@@ -61,12 +62,60 @@ def _history(item):
     return sorted(images.items())
 
 
+def _legacy_structure(snapshot,auth,p,item,image,kind):
+    """Keep legacy content; only link actual same-session authorized records.
+
+    Unknown old references remain in legacy.raw and ImportResult.unresolved.
+    Empty links never claim that a test ran or a source was read.
+    """
+    def test_ref(oid):
+        if not isinstance(oid,str) or p.source_session_id!=auth.session_id:return None
+        try:
+            rec=snapshot.get('test',oid)
+            if snapshot.reference_allowed(rec.ref):return rec.ref
+        except ProtocolError as e:
+            if e.status not in {403,404}:raise
+        return None
+    def source_ref(raw):
+        if not isinstance(raw,dict) or p.source_session_id!=auth.session_id:return None
+        for record in snapshot.heads('test'):
+            for citation in record.content.get('citations',[]):
+                if citation.get('object_id')==raw.get('id') and citation.get('version')==raw.get('version'):
+                    from career_lab.contracts.v2.core import EvidenceRefV2
+                    ref=EvidenceRefV2.model_validate(citation)
+                    if snapshot.reference_allowed(ref):return ref
+        return None
+    if kind=='test_plan':
+        rows=image.get('cases',[])
+        if not isinstance(rows,list) or len(rows)>20:raise ProtocolError('invalid_legacy_cases')
+        payload=TestPlanPayload(cases=tuple(TestCase(id=str(r['id']),revision=r.get('revision',1),query=r.get('question',''),
+            intent=r.get('intent',''),declared_expected=r.get('expectation'),
+            refs=tuple(ref for old in r.get('refs',[]) if (ref:=source_ref(old)) is not None)) for r in rows))
+        if len({r.id for r in payload.cases})!=len(payload.cases):raise ProtocolError('duplicate_child_id')
+        return payload
+    if kind=='investigation':
+        raw_blocks=image.get('blocks',[])
+        if not isinstance(raw_blocks,list) or len(raw_blocks)>8:raise ProtocolError('invalid_legacy_blocks')
+        blocks=[]
+        for index,block in enumerate(raw_blocks):
+            block_type=block.get('type')
+            if block_type not in {'note','text','test_compare','source_check','retest'}:raise ProtocolError('invalid_legacy_block_type')
+            blocks.append(InvestigationBlock(id=str(block.get('id') or digest([item.original_id,'legacy-block',index])),
+                revision=block.get('revision',1),type=block_type,title=block.get('title',block.get('label','')),
+                text=block.get('text',''),test_ref=test_ref(block.get('testId')),source_ref=source_ref(block.get('material')),
+                test_refs=tuple(ref for oid in block.get('testIds',[]) if (ref:=test_ref(oid)) is not None)))
+        if len({b.id for b in blocks})!=len(blocks):raise ProtocolError('duplicate_child_id')
+        review=image.get('review') or {}
+        return InvestigationPayload(question=image.get('question',''),blocks=tuple(blocks),
+            review_note=review.get('note',''),review_focus=review.get('focus','uncertain'),review_direction='unknown')
+    return None
+
+
 def import_workspace(snapshot: Snapshot, auth: AuthContext, command: Command, now: datetime) -> Mutation:
     reject_credentials(command.payload)
     p = WorkspaceImport.model_validate(command.payload)
     _new_scope(auth)
-    expected_mode = command.operation.rsplit('.', 1)[-1]
-    if p.mode != expected_mode: raise ProtocolError('import_mode_mismatch')
+    if command.operation != 'workspace_imports': raise ProtocolError('import_mode_mismatch')
     if not p.items or len(p.items) > 500 or len(canonical(p).encode()) > 2_000_000:
         raise ProtocolError('import_size')
     if len({i.original_id for i in p.items}) != len(p.items): raise ProtocolError('duplicate_import_id')
@@ -102,7 +151,7 @@ def import_workspace(snapshot: Snapshot, auth: AuthContext, command: Command, no
         else:
             fixed = r.model_copy(update={'status': 'unverified_local', 'resolved': None})
         unresolved[(fixed.original_session_id, fixed.original_id)] = fixed
-    writes = []
+    writes = [];conflicts=[];version_map=[]
     for item in p.items:
         raw = item.raw; ref = id_map[item.original_id]
         if item.original_kind == 'task':
@@ -127,17 +176,14 @@ def import_workspace(snapshot: Snapshot, auth: AuthContext, command: Command, no
             lost = ImportReference(original_id=str(raw['taskId']), original_session_id=p.source_session_id, status='missing')
             unresolved[(lost.original_session_id, lost.original_id)] = lost
         images=_history(item)
+        found_versions={version for version,_ in images}
+        for missing_version in sorted(set(range(1,max(found_versions)+1))-found_versions):
+            conflicts.append(ImportConflict(original_id=item.original_id,original_version=missing_version,reason='missing_history'))
+            version_map.append(ImportVersionMap(original_session_id=p.source_session_id,original_id=item.original_id,
+                original_version=missing_version,target=None,status='unresolved'))
         for version,(source_revision,image) in enumerate(images,1):
-            structure = None
             image_kind=normalize_legacy_product({**image,'id':item.original_id,'kind':image.get('kind',raw.get('kind','text'))},p.source_session_id,p.source_schema)
-            if image_kind.kind == 'test_plan':
-                rows = image.get('cases', [])
-                if not isinstance(rows, list) or len(rows) > 20: raise ProtocolError('invalid_legacy_cases')
-                structure = TestPlanPayload(cases=tuple(TestCase(id=str(r['id']), revision=r.get('revision',1),
-                    query=r.get('question',''), declared_expected=r.get('expectation')) for r in rows))
-                if len({r.id for r in structure.cases}) != len(structure.cases): raise ProtocolError('duplicate_child_id')
-            # test_compare/focus cannot be safely translated to the current
-            # draft. Exact structure stays in legacy.raw, without fake execution.
+            structure=_legacy_structure(snapshot,auth,p,item,image,image_kind.kind)
             content=image.get('body','')
             if not isinstance(content,str) or len(content)>50000:raise ProtocolError('invalid_legacy_content')
             provenance=item if version==len(images) else LegacyProvenance(
@@ -155,10 +201,15 @@ def import_workspace(snapshot: Snapshot, auth: AuthContext, command: Command, no
             alias=item.original_id+'@v'+str(source_revision)
             if alias in id_map:raise ProtocolError('import_id_alias_conflict')
             id_map[alias]=reference(snapshot,'product',ref.object_id,version)
+            version_map.append(ImportVersionMap(original_session_id=p.source_session_id,original_id=item.original_id,
+                original_version=source_revision,target=id_map[alias],status='unverified_local'))
         id_map[item.original_id]=reference(snapshot,'product',ref.object_id,len(images))
+    for unresolved_ref in unresolved.values():
+        conflicts.append(ImportConflict(original_id=unresolved_ref.original_id,
+            reason='foreign_session' if unresolved_ref.status=='foreign_session' else 'unresolved_reference'))
     point = snapshot.point if p.mode == 'preview' else snapshot.next_point
     result = ImportResult(package_id=p.package_id, mode=p.mode, id_map=id_map,
-        unresolved=tuple(unresolved.values()), as_of=point, applied=p.mode=='apply')
+        unresolved=tuple(unresolved.values()), as_of=point, applied=p.mode=='apply',conflicts=tuple(conflicts),version_map=tuple(version_map))
     if p.mode == 'preview': return Mutation((), result.model_dump(mode='json'), command.operation)
     writes.append(stored(snapshot,'workspace_import',import_id,1,
                          {'fingerprint':fingerprint,'result':result.model_dump(mode='json')}))

@@ -8,7 +8,7 @@ from dataclasses import dataclass, field, replace
 
 from career_lab.contracts.v2.core import AuthContext, Command, ObjectRef, ProtocolError, VersionPoint, digest
 from career_lab.contracts.v2.requests import ActionInput, ApprovalInput
-from career_lab.contracts.v2.world import AssistantConfig, BusinessRequest, WorldStateV2
+from career_lab.contracts.v2.world import AssistantConfig, BusinessRequest, WorldStateV2, BusinessBasis, assistant_config_content_hash
 from .policy import effective_config, evaluate_request, validate_config
 
 
@@ -73,7 +73,8 @@ class ScenarioEngine:
             raise ProtocolError("material_unavailable", status=404)
         if auth.allowed_objects is not None and ref.object_id not in auth.allowed_objects:
             raise ProtocolError("object_forbidden", status=403)
-        if snapshot.source_versions.get(ref.object_id) != ref.version:
+        activation=snapshot.material_activation.get(f"{ref.object_id}:{ref.version}")
+        if activation is None or activation>snapshot.world.business_seq:
             raise ProtocolError("material_unavailable", status=404)
         result = self.package.project(ref.object_id, ref.version, auth.actor_id,
             snapshot.world.business_seq, snapshot.world.session_id)
@@ -83,6 +84,54 @@ class ScenarioEngine:
             "observed_at_seq": snapshot.world.business_seq,
             "valid_from_seq": snapshot.material_activation.get(f"{ref.object_id}:{ref.version}", 0)
         })}) for f in result)
+
+    def material_evidence_valid(self,snapshot,ref):
+        """Default standalone verifier for scenario materials; no invented DB objects."""
+        if ref.session_id!=snapshot.world.session_id or ref.kind!="material":return False
+        activation=snapshot.material_activation.get(f"{ref.object_id}:{ref.version}")
+        if activation is None or activation>snapshot.world.business_seq or ref.observed_at_seq>snapshot.world.business_seq or ref.observed_at_seq<activation:return False
+        try:fragments=self.package.project(ref.object_id,ref.version,"learner",snapshot.world.business_seq,snapshot.world.session_id)
+        except ProtocolError:return False
+        if not fragments:return False
+        if ref.quote is not None or ref.span_start is not None:
+            return any(f.ref.span_start is not None and ref.span_start is not None and ref.span_end is not None
+                and f.ref.span_start<=ref.span_start<ref.span_end<=f.ref.span_end
+                and f.text[ref.span_start-f.ref.span_start:ref.span_end-f.ref.span_start]==ref.quote for f in fragments)
+        return True
+
+    def role_knowledge(self,snapshot,role_auth,known_versions=None):
+        """Internal role baseline knowledge, independent of the questioner's scope.
+
+        W04 supplies a server-issued role reader and actual received version map.
+        Missing received versions default to the initial window, not current world.
+        """
+        self.authorize(role_auth,snapshot,"read_material","read")
+        if role_auth.executor.kind!="system" or role_auth.actor_id=="learner":raise ProtocolError("role_reader_required",status=403)
+        role=next(r for r in self.package.bundle.role_specs if r.id==role_auth.actor_id)
+        versions=known_versions if known_versions is not None else self.package.rules["initial_material_versions"]
+        result=[]
+        for fact in self.package.facts:
+            if fact.id not in role.known_facts or versions.get(fact.source.object_id)!=fact.source.version:continue
+            if role_auth.allowed_objects is not None and fact.source.object_id not in role_auth.allowed_objects:continue
+            activation=snapshot.material_activation.get(f"{fact.source.object_id}:{fact.source.version}")
+            if activation is None or activation>snapshot.world.business_seq:continue
+            for fragment in self.package.project(fact.source.object_id,fact.source.version,role.id,snapshot.world.business_seq,snapshot.world.session_id):
+                if fact.id in fragment.fact_ids and not any(f.ref==fragment.ref for f in result):result.append(fragment)
+        return tuple(result)
+
+    def business_followups(self,snapshot,trigger):
+        """Preset business notices tied to explicit business milestones only."""
+        state=deepcopy(snapshot);events=[]
+        for rule in self.package.rules.get("business_events",[]):
+            if rule["on"]!=trigger or rule["id"] in state.world.applied_milestones:continue
+            before=dict(state.source_versions);after={**before,**rule["material_updates"]}
+            seq=state.world.business_seq+1
+            state=replace(state,source_versions=after,
+                material_activation={**state.material_activation,**{f"{mid}:{version}":seq for mid,version in rule["material_updates"].items()}},
+                world=state.world.model_copy(update={"business_seq":seq,"applied_milestones":(*state.world.applied_milestones,rule["id"])}))
+            events.append({"session_id":state.world.session_id,"seq":seq,"event_type":rule["id"],
+                "visible_to":rule["visible_to"],"payload":{"trigger":trigger,"before_versions":before,"after_versions":after}})
+        return state,tuple(events)
 
     def plan(self, snapshot, command, auth, evidence_check=None):
         capability = "approve" if command.operation == "resolve_approval" else "act"
@@ -98,6 +147,7 @@ class ScenarioEngine:
         state = deepcopy(snapshot)
         txid = digest([snapshot.world.session_id, command.request_id, command.model_dump(mode="json"), auth.executor.model_dump(mode="json")])
         events, result = [], None
+        followup_trigger=None
         def emit(kind, payload, recipients):
             nonlocal state
             seq = state.world.business_seq + 1
@@ -118,7 +168,7 @@ class ScenarioEngine:
                 raise ProtocolError("request_unavailable", status=404)
             if req.version != args.expected_request_revision or ref.version != req.version:
                 raise ProtocolError("request_revision_conflict", status=409)
-            decision = evaluate_request(self.package, req, state, evidence_check or (lambda ref: False))
+            decision = evaluate_request(self.package, req, state, evidence_check or (lambda ref: self.material_evidence_valid(state,ref)))
             emit("business_decided", {"decision_id": decision.id, "request_id": req.id,
                  "status": decision.status, "reason_code": decision.reason_code, "granted": decision.granted},
                  ("learner", "supervisor", "tech_lead", "business_lead"))
@@ -129,6 +179,7 @@ class ScenarioEngine:
                 requests=tuple(x.model_copy(update={"status": decision.status, "version": x.version + 1}) if x.id==req.id else x for x in state.requests),
                 decisions=(*state.decisions, decision))
             result = decision
+            if decision.status=="approved" and "capacity" in decision.granted:followup_trigger="capacity_approved"
         else:
             args = ActionInput.model_validate(command.payload)
             if args.tool != command.operation:
@@ -173,10 +224,6 @@ class ScenarioEngine:
                 rid=digest(["w02-request",state.world.session_id,command.request_id])
                 if any(r.id==rid for r in state.requests):
                     raise ProtocolError("request_id_reused",status=409)
-                req=BusinessRequest(id=rid,session_id=state.world.session_id,version=1,
-                    requested=args.terms,reason=args.reason,evidence_refs=args.evidence_refs,
-                    as_of=VersionPoint(business_seq=state.world.business_seq,workspace_revision=state.world.workspace_revision,storage_revision=state.world.storage_revision),
-                    executor=auth.executor)
                 basis = args.config if args.config is not None else state.config
                 validate_config(self.package, basis, state.world.session_id)
                 if basis.id != state.config.id:
@@ -184,6 +231,14 @@ class ScenarioEngine:
                 proposed = basis.model_dump(mode="json") != state.config.model_dump(mode="json")
                 if proposed and (basis.version != state.config.version + 1 or basis.config_version != state.config.config_version + 1):
                     raise ProtocolError("proposed_config_revision_conflict", status=409)
+                basis_record=BusinessBasis(mode="proposed" if proposed else "applied",config=basis,
+                    config_ref=None if proposed else ObjectRef(session_id=state.world.session_id,kind="config",
+                        object_id=basis.id,version=basis.version,config_version=basis.config_version),
+                    content_hash=assistant_config_content_hash(basis))
+                req=BusinessRequest(id=rid,session_id=state.world.session_id,version=1,basis=basis_record,
+                    requested=args.terms,reason=args.reason,evidence_refs=args.evidence_refs,
+                    as_of=VersionPoint(business_seq=state.world.business_seq,workspace_revision=state.world.workspace_revision,storage_revision=state.world.storage_revision),
+                    executor=auth.executor)
                 # Pin the exact proposal when requesting. It remains unapplied;
                 # later edits to active config do not change this request's basis.
                 state=replace(state,requests=(*state.requests,req),
@@ -191,6 +246,7 @@ class ScenarioEngine:
                 emit("business_requested", {"request_id":rid,"requested":args.terms,"reason":args.reason,
                      "basis_kind":"proposed_config" if proposed else "current_config", "basis_hash":digest(basis)}, ("learner","supervisor"))
                 result=req
+                if args.terms and set(args.terms)<=self.package.rules["approval_limits"].keys():followup_trigger="first_resource_request"
             elif args.tool == "read_material":
                 if args.material is None:
                     raise ProtocolError("material_unavailable",status=404)
@@ -203,6 +259,9 @@ class ScenarioEngine:
                 emit(args.tool,{},(auth.actor_id,))
             else:
                 raise ProtocolError("capability_not_installed",status=503)
+        if followup_trigger:
+            state,notices=self.business_followups(state,followup_trigger)
+            events.extend({**notice,"transaction_id":txid,"executor":auth.executor.model_dump(mode="json")} for notice in notices)
         state=replace(state,world=state.world.model_copy(update={"storage_revision":snapshot.world.storage_revision+1}))
         return PlannedTransition(state,tuple(events),txid,snapshot.world.business_seq+1,state.world.business_seq,result)
 
@@ -223,7 +282,7 @@ class ScenarioEngine:
             if subject:
                 if payload.get(subject) not in objects:
                     return None
-            elif event["event_type"] not in {"index_refreshed", "initial_plan_applied"}:
+            elif not ("before_versions" in payload and "after_versions" in payload):
                 # Session-level requests, decisions and lifecycle events have no
                 # independently defined object-scope projection in this draft.
                 return None

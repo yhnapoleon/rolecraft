@@ -5,6 +5,8 @@ import { WorkspacePanel, ImportPreview } from './WorkspacePanel';
 import { buildBrowserImport, canonical, hash } from './import-browser';
 import type { WorkProductVersion, ImportResult } from './contract-types';
 import { memoryClient } from './test-support';
+import { purposeText,recipientText } from './native-slots';
+import { setPreference } from '../../app/i18n';
 
 function memory() { const values = new Map<string,string>(); return { getItem:(k:string)=>values.get(k) ?? null, setItem:(k:string,v:string)=>{ values.set(k,v); } }; }
 function work(): WorkProductVersion {
@@ -104,6 +106,42 @@ describe('W03 independent workspace feature (explicit transport double)',()=>{
     await expect(f.client.loadShares('p1')).rejects.toThrow('Invalid share response');
     expect(f.client.snapshot().shares).toEqual({});
   });
+  it('sends formal schema-version and dedicated adoption payload without copying work content',async()=>{
+    const f=fixture();await f.client.refresh();const p=f.server.products[0];await f.client.adopt(p);
+    const command=f.transport.mock.calls.find(([,body])=>!!body)![1] as any;
+    expect(command.schema_version).toBe(2);expect(command.operation).toBe('work_products.adopt');
+    expect(command.payload).toEqual({product_id:'p1',product_version:1,expected_head:1,status:'adopted'});
+    expect(command.payload.content).toBeUndefined();
+  });
+  it('uses the formal POST share-change route while retaining exact versions',async()=>{
+    const f=fixture();await f.client.refresh();
+    await f.client.updateShare({product_id:'p1',share_id:'share1',expected_revision:2,operation:'revoke'});
+    const call=f.transport.mock.calls.find(([,body])=>!!body)!;
+    expect(call[0]).toBe('/sessions/s/work-products/p1/shares/share1');expect(call[2]).toBe('POST');
+    expect((call[1] as any).operation).toBe('work_products.shares.change');
+  });
+  it('requires explicit token-bound draft discard before removing work',async()=>{
+    const f=fixture();await f.client.refresh();const p=f.server.products[0];
+    await f.client.keepDraft('p1',{...draftOf(p),content:'retain until explicit choice'});
+    await expect(f.client.remove(p)).rejects.toThrow('草稿');
+    await expect(f.client.discardDraft('p1','stale-token')).rejects.toThrow('新输入');
+    expect(f.client.snapshot().journal.drafts.p1.content).toBe('retain until explicit choice');
+    await f.client.discardDraft('p1',f.client.snapshot().journal.draftTokens.p1);
+    expect(f.client.snapshot().journal.drafts.p1).toBeUndefined();expect(f.server.products[0].content).toBe('初稿');
+  });
+  it('retries one coherent read when independent list calls straddle a transaction',async()=>{
+    const f=fixture();let reads=0;
+    f.transport.mockImplementation(async(path,body:any)=>{
+      if(body)throw Error('not a write test');reads++;
+      return {items:path.includes('work-items')?[]:f.server.products,next_cursor:null,
+        as_of:{business_seq:7,workspace_revision:reads===1?1:2,storage_revision:reads===1?11:12}};
+    });
+    await f.client.refresh();expect(reads).toBe(4);expect(f.client.snapshot().asOf?.workspace_revision).toBe(2);
+  });
+  it('uses existing v4 T() labels in native slot helpers',()=>{
+    setPreference('en');expect(purposeText('freeform')).toBe('Freeform work');expect(recipientText('tech_lead')).toBe('Technical lead');
+    setPreference('zh');expect(purposeText('freeform')).toBe('自由作品');expect(recipientText('tech_lead')).toBe('技术负责人');
+  });
 });
 
 describe('W03 selected legacy import',()=>{
@@ -137,5 +175,14 @@ describe('W03 selected legacy import',()=>{
     const apply=vi.fn();const html=renderToStaticMarkup(<ImportPreview input={input} preview={preview} onApply={apply} locale="en"/>);
     expect(html).toContain('old tests will not become runs');expect(html).toContain('old-test');
     expect(html).toContain('original browser copy stays intact');expect(apply).not.toHaveBeenCalled();
+  });
+  it('shows formal history gaps and blocks application of conflicting content',async()=>{
+    const input=await buildBrowserImport(attempt,{taskIds:[],productIds:['p']},'package');
+    const preview:ImportResult={package_id:'package',mode:'preview',id_map:{},as_of:{business_seq:7,workspace_revision:1,storage_revision:11},applied:false,unresolved:[],
+      conflicts:[{original_id:'p',reason:'content_conflict'},{original_id:'p',original_version:2,reason:'missing_history'}],
+      version_map:[{original_id:'p',original_session_id:'old',original_version:2,target:null,status:'unresolved'}]};
+    const html=renderToStaticMarkup(<ImportPreview input={input} preview={preview} onApply={()=>{}} locale="en"/>);
+    expect(html).toContain('Content conflict');expect(html).toContain('Historical version missing');expect(html).toContain('Missing; not reconstructed');
+    expect(html).toMatch(/button[^>]*disabled/);
   });
 });

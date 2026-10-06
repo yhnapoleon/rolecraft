@@ -8,7 +8,9 @@
     "schema_version": 2
   },
   "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "head_dependencies": [],
   "name": "v2.example",
   "schema_version": 2,
-  "sources": []
+  "sources": [],
+  "state_dependencies": []
 }

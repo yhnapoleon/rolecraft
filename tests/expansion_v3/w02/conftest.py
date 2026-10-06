@@ -21,7 +21,7 @@ def auth(sid="session", actor="learner", *, capabilities=("read","act"), objects
 
 
 def command(snapshot, tool, key, **payload):
-    return Command(request_id=key,expected_version=snapshot.world.business_seq,
+    return Command(schema_version=2,request_id=key,expected_version=snapshot.world.business_seq,
         expected_workspace_revision=snapshot.world.workspace_revision,operation=tool,
         payload=payload if tool=="resolve_approval" else {"tool":tool,**payload})
 

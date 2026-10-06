@@ -19,20 +19,20 @@ function fixture() {
     if(control.gate)await control.gate;
     if(control.reject){const status=control.reject;control.reject=0;throw error(status,control.code||'rejected');}
     if(receipts.has(body.request_id))return structuredClone(receipts.get(body.request_id));
-    if(body.operation==='workspace_imports.preview')return {package_id:body.payload.package_id,mode:'preview',id_map:{},unresolved:[],as_of:{...server.as_of},applied:false};
+    if(body.operation==='workspace_imports' && body.payload.mode==='preview')return {package_id:body.payload.package_id,mode:'preview',id_map:{},unresolved:[],as_of:{...server.as_of},applied:false};
     if(body.expected_version!==server.as_of.business_seq||body.expected_workspace_revision!==server.as_of.workspace_revision)throw error(409,'version_conflict');
     let object:any;
-    if(body.operation==='work_products.edit'){
+    if(body.operation==='work_products.versions.create'){
       const index=server.products.findIndex(p=>p.product_id===body.payload.product_id);const p=server.products[index];
       if(body.payload.expected_head!==p.version)throw error(409,'object_version_conflict');
       object={...p,...body.payload,version:p.version+1};server.products[index]=object;
     }else if(body.operation==='work_items.create'){
       object={id:'t'+next,session_id:'s',revision:1,...body.payload};server.tasks.push(object);
-    }else if(body.operation==='workspace_imports.apply'){
+    }else if(body.operation==='workspace_imports' && body.payload.mode==='apply'){
       if(body.payload.preview_storage_revision!==server.as_of.storage_revision)throw error(409,'import_preview_stale');
     }else object={session_id:'s',id:'result',...body.payload};
     server.as_of.workspace_revision++;server.as_of.storage_revision++;
-    const result=body.operation==='workspace_imports.apply'?{package_id:body.payload.package_id,mode:'apply',id_map:{},unresolved:[],as_of:{...server.as_of},applied:true}:{object:structuredClone(object),as_of:{...server.as_of}};
+    const result=body.operation==='workspace_imports' && body.payload.mode==='apply'?{package_id:body.payload.package_id,mode:'apply',id_map:{},unresolved:[],as_of:{...server.as_of},applied:true}:{object:structuredClone(object),as_of:{...server.as_of}};
     receipts.set(body.request_id,result);if(control.lose){control.lose=false;throw Error('lost response');}return result;
   };
   const client=()=>new WorkspaceClient('s',storage,transport,()=>`request-${++next}`,{coordinator});
@@ -162,7 +162,7 @@ describe('R3 known rejection versus unknown execution outcome',()=>{
     await expect(c.resubmitRejected(id)).rejects.toThrow('重新预览');
     const recovery=await c.repreviewRejectedImport(id);expect(recovery.preview.as_of.storage_revision).toBe(f.server.as_of.storage_revision);
     await c.applyImport(recovery.input,recovery.preview,id);
-    const applies=f.sent.filter(x=>x.operation==='workspace_imports.apply');expect(applies).toHaveLength(2);
+    const applies=f.sent.filter(x=>x.operation==='workspace_imports' && x.payload.mode==='apply');expect(applies).toHaveLength(2);
     expect(applies[0].request_id).not.toBe(applies[1].request_id);expect(c.snapshot().journal.rejected[id].request.command.payload?.items).toEqual(input.items);
   });
   it('keeps the same key after unknown success, even if a later retry is denied before lookup',async()=>{

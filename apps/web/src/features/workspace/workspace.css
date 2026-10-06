@@ -15,9 +15,9 @@
 .rc-workspace textarea { resize: vertical; line-height: 1.7; }
 .rc-workspace fieldset, .rc-workspace-import fieldset { margin-top: 1.2rem; padding: .8rem; border: 1px solid var(--line, #d6d7dc); min-width: 0; }
 .rc-workspace-meta, .rc-workspace-muted, .rc-workspace-empty { color: var(--ink-2, #666); font-size: .85rem; line-height: 1.6; }
-.rc-workspace-conflict { border-left: 3px solid #9a6700; padding: .5rem .8rem; margin: .8rem 0; }
+.rc-workspace-conflict { border-left: 3px solid var(--warn); padding: .5rem .8rem; margin: .8rem 0; }
 .rc-workspace-conflict pre { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; }
-.rc-workspace-error { color: #b42318; }
+.rc-workspace-error { color: var(--bad); }
 .rc-workspace-tasks { padding: 0; list-style: none; }
 .rc-workspace-tasks li { display: flex; align-items: center; gap: .7rem; border-bottom: 1px solid var(--line, #d6d7dc); padding: .5rem 0; }
 .rc-workspace-tasks li > span { flex: 1; overflow-wrap: anywhere; }

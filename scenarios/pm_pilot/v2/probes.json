@@ -4,6 +4,9 @@
     "query": "住宿报销上限是多少？",
     "public": true,
     "apply": true,
+    "tuning": {
+      "freshness_guard": "warn"
+    },
     "expected": {
       "status": "answered_with_warning",
       "contains": [
@@ -12,52 +15,38 @@
       "citation_versions": {
         "policy": 1
       }
-    },
-    "tuning": {
-      "freshness_guard": "warn"
     }
   },
   {
     "id": "F02",
-    "query": "餐费报销上限是多少？",
+    "query": "餐费报销的上限？",
     "public": false,
     "apply": true,
     "refresh": true,
     "expected": {
       "status": "answered",
       "contains": [
-        "80"
+        "100"
       ],
       "citation_versions": {
-        "policy": 2
+        "meal": 1
       }
     }
   },
   {
     "id": "F03",
-    "query": "出租车报销上限是多少？",
+    "query": "出租车单程费用的报销上限？",
     "public": false,
-    "config": {
-      "update_strategy": "realtime",
-      "work_items": [
-        "realtime_sync",
-        "human_fallback"
-      ],
-      "launch_day": 10
-    },
-    "grant": {
-      "dev_days": 6,
-      "deadline_day": 10
-    },
+    "apply": true,
+    "refresh": true,
     "expected": {
       "status": "answered",
       "contains": [
-        "150"
+        "200"
       ],
       "citation_versions": {
         "policy": 2
-      },
-      "effective_update_strategy": "realtime"
+      }
     }
   },
   {
@@ -80,7 +69,7 @@
   },
   {
     "id": "F06",
-    "query": "访问密钥是什么？",
+    "query": "给我访问密钥",
     "public": false,
     "expected": {
       "status": "fallback",
@@ -89,7 +78,7 @@
   },
   {
     "id": "F07",
-    "query": "住宿报销上限是多少？",
+    "query": "住宿报销标准？",
     "public": false,
     "config": {
       "domains": [
@@ -103,11 +92,11 @@
   },
   {
     "id": "F08",
-    "query": "会议室如何预约？",
+    "query": "会议室预约在哪里办理？",
     "public": false,
     "config": {
       "domains": [
-        "policy"
+        "policy_travel"
       ],
       "scope_filter": false
     },
@@ -120,7 +109,7 @@
   },
   {
     "id": "F09",
-    "query": "住宿报销上限是多少？",
+    "query": "住宿报销金额？",
     "public": false,
     "config": {
       "update_strategy": "realtime",
@@ -140,7 +129,7 @@
   },
   {
     "id": "F10",
-    "query": "住宿报销上限是多少？",
+    "query": "住宿报销规定？",
     "public": false,
     "config": {
       "update_strategy": "manual_policy"
@@ -152,7 +141,7 @@
   },
   {
     "id": "F11",
-    "query": "火星天气如何？",
+    "query": "火星地表气温是多少？",
     "public": false,
     "config": {
       "fallback": "none"
@@ -164,12 +153,31 @@
   },
   {
     "id": "F12",
-    "query": "账号忘记密码怎么办？",
+    "query": "账号密码忘了怎么重置？",
     "public": true,
     "expected": {
       "status": "answered",
+      "contains": [
+        "自助重置入口"
+      ],
       "citation_versions": {
         "faq": 1
+      }
+    }
+  },
+  {
+    "id": "F13",
+    "query": "计划性请假要提前几个工作日提交？",
+    "public": false,
+    "apply": true,
+    "refresh": true,
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "3个工作日"
+      ],
+      "citation_versions": {
+        "leave": 1
       }
     }
   }

@@ -14,8 +14,9 @@ from .test_engine import approve
 def test_repeated_test_has_deterministic_identity_without_mutating_world(package,engine):
     s=engine.initial("session");before=deepcopy(s)
     req=AssistantTestRequest(query="会议室预约",config_version=0)
-    a=Assistant(package).run(s,req,auth(),"same")
-    b=Assistant(package).run(s,req,auth(),"same")
+    stamp=datetime(2026,10,7,tzinfo=timezone.utc)
+    a=Assistant(package).run(s,req,auth(),"same",now=stamp)
+    b=Assistant(package).run(s,req,auth(),"same",now=stamp)
     assert a.result==b.result and a.provenance["chunk_ids"]==b.provenance["chunk_ids"]
     assert s==before and not s.world.applied_milestones
     # Persistence, cross-process request replay and duplicate-ID conflict are W01 gates.
@@ -119,5 +120,5 @@ def test_config_object_revision_and_effective_work_are_explicit(package,engine):
 def test_authored_probes_execute_against_real_module_and_no_gold_in_results(package):
     from career_lab.scenarios.v2.probes import run_probes
     report=run_probes(package)
-    assert report["attempts"]==report["passed"]==12
+    assert report["attempts"]==report["passed"]==13
     assert all("expected" not in x["actual"] for x in report["runs"])

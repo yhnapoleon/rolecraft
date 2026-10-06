@@ -1,7 +1,7 @@
 from career_lab.contracts.v2.core import AuthContext, Command, ProtocolError, PageRequest
 from career_lab.contracts.v2.workspace import ProductShare
 from career_lab.contracts.v2.workspace import WorkspaceImport
-from career_lab.contracts.v2.requests import TaskCreate, TaskPatch, ProductCreate, ProductEdit, ShareCreate, ShareUpdate
+from career_lab.contracts.v2.requests import TaskCreate, TaskPatch, TaskBatch, ProductCreate, ProductEdit, ProductAdopt, ShareCreate, ShareUpdate
 from .domain import OPERATIONS, handle, visible_product
 from .ports import authorize, object_scope
 
@@ -13,18 +13,18 @@ class WorkspaceService:
     def execute(self, auth: AuthContext, command: Command):
         if command.operation not in OPERATIONS: raise ProtocolError('capability_not_installed', status=503)
         from .imports import reject_credentials
-        if command.operation.startswith('workspace_imports.'): reject_credentials(command.payload)
-        types = {'work_items.create':TaskCreate,'work_items.patch':TaskPatch,
-                 'work_products.create':ProductCreate,'work_products.edit':ProductEdit,'work_products.adopt':ProductEdit,
-                 'work_products.shares.create':ShareCreate,'work_products.shares.update':ShareUpdate,
-                 'workspace_imports.preview':WorkspaceImport,'workspace_imports.apply':WorkspaceImport}
+        if command.operation=='workspace_imports': reject_credentials(command.payload)
+        types = {'work_items.create':TaskCreate,'work_items.update':TaskPatch,'work_items.batch':TaskBatch,
+                 'work_products.create':ProductCreate,'work_products.versions.create':ProductEdit,'work_products.adopt':ProductAdopt,
+                 'work_products.shares.create':ShareCreate,'work_products.shares.change':ShareUpdate,
+                 'workspace_imports':WorkspaceImport}
         # v2 fingerprints use typed defaults. v1 canonicalizers are untouched.
         parsed = types[command.operation].model_validate(command.payload)
         # TaskPatch uses null for unchanged; clear_parent is its explicit removal
         # operation. Preserve that distinction when materializing typed defaults.
-        payload = parsed.model_dump(mode='json',exclude_none=command.operation=='work_items.patch')
+        payload = parsed.model_dump(mode='json',exclude_none=command.operation=='work_items.update')
         command = command.model_copy(update={'payload':payload})
-        if command.operation == 'workspace_imports.preview':
+        if command.operation == 'workspace_imports' and payload['mode']=='preview':
             authorize(auth, self.repository.clock())
             if auth.actor_id != 'learner': raise ProtocolError('capability_denied', status=403)
             return self.repository.read(auth, lambda snap: handle(snap, auth, command, self.repository.clock()).result)
@@ -56,12 +56,12 @@ class WorkspaceService:
                     elif obj.ref.kind=='share':
                         share=ProductShare.model_validate(obj.content)
                         if product_id and share.product.object_id!=product_id: continue
-                        object_scope(auth,share.product.object_id)
+                        object_scope(auth,share.product.object_id,snap)
                         if auth.actor_id!='learner':
                             if share.recipient_role!=auth.actor_id or share.revoked_at is not None: continue
                             visible_product(snap,auth,share.product.object_id,share.product.version)
                     else:
-                        object_scope(auth,obj.ref.object_id)
+                        object_scope(auth,obj.ref.object_id,snap)
                         if auth.actor_id!='learner': continue
                     visible.append(self._product_output(auth,obj.content) if obj.ref.kind=='product' else obj.content)
                 except ProtocolError as error:
@@ -74,6 +74,5 @@ class WorkspaceService:
         return self.repository.read(auth,query)
 
 
-def create_service(engine, authority, *, clock=None):
-    from career_lab.storage.workspace_v2 import WorkspaceRepository
-    return WorkspaceService(WorkspaceRepository(engine,authority,clock))
+def create_service(*args, **kwargs):
+    raise RuntimeError('Use install_workspace_operations on the existing W01 Gateway; private W03 persistence is retired')

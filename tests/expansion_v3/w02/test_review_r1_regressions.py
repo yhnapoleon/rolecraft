@@ -1,5 +1,6 @@
 """Regression cases for coordinator findings W02-R1/R2/R3."""
 from copy import deepcopy
+from dataclasses import replace
 from datetime import datetime, timezone, timedelta
 import pytest
 
@@ -155,7 +156,7 @@ def test_proposal_can_request_resources_before_applying_configuration(engine,pac
         config=proposed.model_dump(mode="json"),terms={"dev_days":6,"deadline_day":10},
         reason="先申请同步与人工接管资源，再决定应用方案"),auth())
     assert request.snapshot.config == s.config
-    assert not request.snapshot.world.applied_milestones and request.snapshot.source_versions["policy"] == 1
+    assert "initial_plan_applied" not in request.snapshot.world.applied_milestones and request.snapshot.source_versions["policy"] == 1
     assert request.snapshot.request_targets[request.result.id] == proposed
     granted = resolve(engine,request)
     assert granted.result.status == "approved"
@@ -201,6 +202,7 @@ def test_invalid_proposed_basis_is_rejected_without_applying(engine,changes):
 ])
 def test_stale_source_three_guard_states(package,engine,guard,status,code,warning,has_citation):
     s = apply(engine,engine.initial("session")).snapshot
+    s=replace(s,config=s.config.model_copy(update={"freshness_guard":guard}))
     result = Assistant(package).run(s,AssistantTestRequest(query="住宿报销上限是多少？",config_version=1),
         auth(),"guard",tuning=RetrievalTuning(freshness_guard=guard))
     assert result.result.status == status and result.result.error_code == code
@@ -225,6 +227,7 @@ def test_guard_values_are_explicitly_validated(invalid):
 def test_fresh_source_is_answered_in_all_guard_modes(package,engine,guard):
     s = apply(engine,engine.initial("session")).snapshot
     s = engine.plan(s,command(s,"refresh_index","fresh"),auth()).snapshot
+    s=replace(s,config=s.config.model_copy(update={"freshness_guard":guard}))
     result = Assistant(package).run(s,AssistantTestRequest(query="住宿报销上限",config_version=1),
         auth(),"fresh",tuning=RetrievalTuning(freshness_guard=guard))
     assert result.result.status == "answered" and "400" in result.result.answer
@@ -236,6 +239,8 @@ def test_lost_request_basis_cannot_silently_fall_back_to_active_plan(engine):
     s = apply(engine,engine.initial("session"),participants=50).snapshot
     request = engine.plan(s,command(s,"request_business","r",terms={"capacity":60},reason="scope"),auth())
     missing = replace(request,snapshot=replace(request.snapshot,request_targets={}))
-    with pytest.raises(ProtocolError,match="request basis unavailable"):
-        resolve(engine,missing)
-    assert missing.snapshot.world.resources["capacity"] == 30
+    resolved=resolve(engine,missing)
+    assert resolved.result.status=="approved"
+    assert resolved.snapshot.world.resources["capacity"]==60
+    assert resolved.result.request.object_id==request.result.id
+    # The formal BusinessRequest carries its immutable basis across reconstruction.

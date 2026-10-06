@@ -8,6 +8,8 @@ from .conftest import auth,apply,command
 
 
 def run(package,snapshot,q="住宿报销上限是多少？",tuning=None,**declared):
+    if tuning is not None:
+        snapshot=replace(snapshot,config=snapshot.config.model_copy(update=dict(tuning.__dict__)))
     return Assistant(package).run(snapshot,AssistantTestRequest(query=q,config_version=snapshot.config.config_version,**declared),
         auth(snapshot.world.session_id),"test",tuning=tuning)
 

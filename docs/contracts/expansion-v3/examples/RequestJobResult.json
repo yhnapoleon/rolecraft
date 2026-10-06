@@ -4,6 +4,8 @@
   "error_code": null,
   "job_id": "example",
   "origin_request_id": "example",
+  "refresh_count": 0,
+  "refresh_history": [],
   "schema_version": 2,
   "status": "queued"
 }

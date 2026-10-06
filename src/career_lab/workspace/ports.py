@@ -5,31 +5,12 @@ boundary use the immutable W01 draft. No adapter silently creates a world.
 """
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Callable, Protocol
+from typing import Callable
 
-from sqlalchemy.engine import Connection
 
 from career_lab.contracts.v2.core import AuthContext, ObjectRef, ProtocolError, VersionPoint
 from career_lab.contracts.v2.research import StoredObject
 from career_lab.contracts.v2.world import WorldStateV2
-
-
-class WorkspaceAuthority(Protocol):
-    def validate(self, conn: Connection, auth: AuthContext) -> None:
-        """Recheck credential revocation/expiry on this transaction, including replay."""
-
-    def state(self, conn: Connection, auth: AuthContext, *, lock: bool) -> WorldStateV2:
-        """Read authoritative state; lock for mutation. Never trust client state."""
-
-    def advance_workspace(self, conn: Connection, auth: AuthContext,
-                          before: WorldStateV2, after: VersionPoint) -> None:
-        """CAS workspace/storage revisions in this SAME transaction, not business state."""
-
-    def can_reference(self, conn: Connection, auth: AuthContext, ref: ObjectRef) -> bool:
-        """Exact, session/permission-filtered upstream evidence lookup; no LLM calls."""
-
-    def roles(self, conn: Connection, auth: AuthContext) -> tuple[str, ...]:
-        """Scenario role IDs valid as share recipients."""
 
 
 @dataclass(frozen=True)
@@ -38,6 +19,7 @@ class Snapshot:
     objects: tuple[StoredObject, ...]
     reference_allowed: Callable[[ObjectRef], bool]
     roles: tuple[str, ...]
+    object_allowed: Callable[[str], bool] | None = None
 
     @property
     def point(self) -> VersionPoint:
@@ -83,6 +65,10 @@ def authorize(auth: AuthContext, now: datetime, operation: str | None = None) ->
         raise ProtocolError('action_denied', status=403)
 
 
-def object_scope(auth: AuthContext, oid: str) -> None:
-    if auth.allowed_objects is not None and oid not in auth.allowed_objects:
+def object_scope(auth: AuthContext, oid: str, snapshot: Snapshot | None = None) -> None:
+    if snapshot is not None and snapshot.object_allowed is not None:
+        allowed = snapshot.object_allowed(oid)
+    else:
+        allowed = auth.allowed_objects is None or oid in auth.allowed_objects
+    if not allowed:
         raise ProtocolError('not_found', status=404)

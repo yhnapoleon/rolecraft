@@ -10,12 +10,14 @@ from .conftest import auth,command
 
 
 def test_bundle_manifest_content_and_reproducibility(package,tmp_path):
-    replica=load_package(build_seed(tmp_path/"replica"))
+    records=json.loads((package.root/"research/public-case-records.json").read_text())
+    replica=load_package(build_seed(tmp_path/"replica",records))
     assert replica.content_hash==package.content_hash
-    assert len(package.facts)==29
+    assert len(package.facts)==50
     assert len(package.material("faq",1).fragments)==9
-    assert len(package.material("failures",1).fragments)==12
+    assert len(records["records"])==12
     assert len(package.material("policy",1).fragments)==len(package.material("policy",2).fragments)==3
+    assert package.material("meal",1).version==1 and package.material("leave",1).version==1
     assert set(f.path for f in package.bundle.files)==set(package.bundle.public_files)|set(package.bundle.private_files)
     assert "probes.json" in package.bundle.private_files
     assert "materials/policy-v2.md" in package.bundle.private_files
@@ -50,8 +52,8 @@ def test_fact_contradiction_detected_even_after_hash_reseal(package,tmp_path):
 def test_roles_get_only_authorized_paraphrase_and_no_never(package,engine):
     snapshot=engine.initial("session")
     tech=package.project("tech_private",1,"tech_lead",0,"session")
-    assert len(tech)==1 and "可靠性核验" in tech[0].text
-    assert tech[0].ref.quote is None and tech[0].ref.span_start is None
+    assert tech and all("可靠性核验" in f.text for f in tech)
+    assert all(f.ref.quote is None and f.ref.span_start is None for f in tech)
     for actor in ("learner","supervisor","business_lead"):
         assert "tech_private" not in {m.id for m,_ in package.visible_materials(snapshot.source_versions,actor,0,"session")}
     for actor in ("learner","supervisor","tech_lead","business_lead"):

@@ -67,13 +67,14 @@ export function WorkspacePanel({ client, locale = 'zh' }: { client: WorkspaceCli
           <p>{t('你的修改和服务端版本都已保留。核对后可以另存作品。','Your edits and the server version are both kept. Compare them or save a separate work.')}</p>
           <details><summary>{t('查看服务端内容','View server content')}</summary><pre>{conflict.server?.content ?? t('尚未取得，请重新读取','Not retrieved yet; refresh to compare')}</pre></details>
           <button disabled={blocked} onClick={() => act(client.saveCopy(product.product_id))}>{t('将我的文字另存','Save my text separately')}</button>
+          <button disabled={blocked} onClick={() => act(client.discardDraft(product.product_id,state.journal.draftTokens[product.product_id]))}>{t('放弃我的草稿，使用服务端版本','Discard my draft; use the server version')}</button>
           {conflict.server && <button disabled={blocked} onClick={() => act(client.confirmMerge(product.product_id,draft,conflict.server!.version,state.journal.draftTokens[product.product_id]).then(() => client.save(client.snapshot().products.find(p => p.product_id === product.product_id)!)))}>{t('已比较，保存合并稿','Compared: save merged text')}</button>}
         </section>}
         {(state.journal.alternatives[product.product_id] ?? []).length > 0 && <details><summary>{t('保留的其他草稿','Other preserved drafts')}</summary>{state.journal.alternatives[product.product_id].map(alt => <section key={alt.token}><p>{alt.base ? 'v'+alt.base.product.version : t('基准待核对','Base unknown')}</p><pre style={{whiteSpace:'pre-wrap'}}>{alt.draft.content}</pre></section>)}</details>}
         <div className="rc-workspace-actions">
           <button disabled={blocked || !!product.removed_at || !!conflict} onClick={() => act(client.save(product))}>{t('保存版本','Save version')}</button>
           <button disabled={blocked || !!product.removed_at || !!state.journal.drafts[product.product_id]} onClick={() => act(client.adopt(product))}>{t('采用此版本','Adopt this version')}</button>
-          <button disabled={blocked} onClick={() => act(client.remove(product, !product.removed_at))}>{product.removed_at ? t('恢复作品','Restore work') : t('移除作品','Remove work')}</button>
+          <button disabled={blocked || !!state.journal.drafts[product.product_id]} onClick={() => act(client.remove(product, !product.removed_at))}>{product.removed_at ? t('恢复作品','Restore work') : t('移除作品','Remove work')}</button>
         </div>
         <fieldset disabled={blocked || !!product.removed_at}><legend>{t('分享已保存的确切版本','Share the exact saved version')} v{product.version}</legend>
           <label>{t('同事','Colleague')}<select value={recipient} onChange={e => setRecipient(e.target.value)}><option value="tech_lead">{t('技术负责人','Technical lead')}</option><option value="business_lead">{t('业务负责人','Business lead')}</option><option value="supervisor">{t('经理','Manager')}</option></select></label>
@@ -89,11 +90,21 @@ export function WorkspacePanel({ client, locale = 'zh' }: { client: WorkspaceCli
 
 export function ImportPreview({ input, preview, onApply, busy = false, locale = 'zh' }: { input: WorkspaceImport; preview: ImportResult; onApply: () => void; busy?: boolean; locale?: Locale }) {
   const t = words(locale);
+  const conflictText = {
+    missing_history:t('缺少历史版本，保留缺口','Historical version missing; the gap is kept'),
+    version_conflict:t('版本冲突，请先核对','Version conflict; review before importing'),
+    content_conflict:t('内容冲突，请先核对','Content conflict; review before importing'),
+    foreign_session:t('属于另一份练习，尚未关联','Belongs to another session; not linked'),
+    unresolved_reference:t('引用尚未对应','Reference not resolved'),
+  };
+  const blocked=(preview.conflicts ?? []).some(c=>c.reason==='content_conflict'||c.reason==='version_conflict');
   return <section className="rc-workspace-import" aria-label={t('导入预览','Import preview')}>
     <h3>{t('核对所选内容','Check selected content')}</h3><p>{input.items.length} {t('项；原浏览器副本会保留。','items; the original browser copy stays intact.')}</p>
     <ul>{input.items.map(i => <li key={i.original_id}>{String(i.raw.title ?? i.original_id)} · {i.original_kind}</li>)}</ul>
     {preview.unresolved.length > 0 && <div role="status"><p>{t('这些关联尚未接通；正文会保留，旧测试不会变成新会话的执行记录。','These references are unresolved. Text is kept; old tests will not become runs in this session.')}</p><ul>{preview.unresolved.map(r => <li key={r.original_session_id + ':' + r.original_id}>{r.original_id} · {r.status}</li>)}</ul></div>}
-    <button disabled={busy || input.package_id !== preview.package_id || preview.mode !== 'preview'} onClick={onApply}>{t('导入这些内容','Import this selection')}</button>
+    {(preview.conflicts ?? []).length>0 && <ul aria-label={t('待核对项','Items to check')}>{preview.conflicts!.map((c,i)=><li key={i}>{c.original_id}{c.original_version ? ' v'+c.original_version : ''} · {conflictText[c.reason]}</li>)}</ul>}
+    {(preview.version_map ?? []).length>0 && <details><summary>{t('查看版本对应','View version mapping')}</summary><ul>{preview.version_map!.map((v,i)=><li key={i}>{v.original_id} v{v.original_version} → {v.target ? 'v'+v.target.version : t('缺失，未补造','Missing; not reconstructed')}{v.status==='unverified_local' ? ' · '+t('原来源待核验','Original provenance unverified') : ''}</li>)}</ul></details>}
+    <button disabled={busy || blocked || preview.applied || input.package_id !== preview.package_id || preview.mode !== 'preview'} onClick={onApply}>{preview.applied ? t('这些内容已导入','This selection is already imported') : t('导入这些内容','Import this selection')}</button>
   </section>;
 }
 

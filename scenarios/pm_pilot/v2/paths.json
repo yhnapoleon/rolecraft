@@ -2,7 +2,8 @@
   {
     "id": "stable_narrow",
     "domains": [
-      "stable_faq"
+      "stable_faq",
+      "onboarding"
     ],
     "participants": 20,
     "update_strategy": "daily",
@@ -17,7 +18,9 @@
     "id": "delayed_realtime",
     "domains": [
       "stable_faq",
-      "policy"
+      "policy_travel",
+      "policy_meal",
+      "policy_leave"
     ],
     "participants": 20,
     "update_strategy": "realtime",
@@ -51,7 +54,8 @@
     "id": "manual_policy",
     "domains": [
       "stable_faq",
-      "policy"
+      "policy_travel",
+      "policy_meal"
     ],
     "participants": 20,
     "update_strategy": "manual_policy",

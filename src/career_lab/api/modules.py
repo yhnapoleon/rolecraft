@@ -53,10 +53,11 @@ PUBLIC_OPERATIONS={
 
 class ExtensionRegistry:
     def __init__(self):
-        self.scenarios={};self.operations={};self.cli={};self.job_handlers={};self.reference_resolvers={}
-    def register_reference_resolver(self,kind,resolver):
+        self.scenarios={};self.operations={};self.cli={};self.job_handlers={};self.reference_resolvers={};self.contextual_reference_resolvers=set()
+    def register_reference_resolver(self,kind,resolver,*,contextual=False):
         if kind in self.reference_resolvers:raise ValueError('reference resolver already registered')
         self.reference_resolvers[kind]=resolver
+        if contextual:self.contextual_reference_resolvers.add(kind)
     def register_scenario(self,name,scenario:ScenarioRegistration):
         if name in self.scenarios:raise ValueError('scenario already registered')
         self.scenarios[name]=scenario
@@ -94,6 +95,11 @@ class Gateway:
         state,token=self.store.create_session(scenario.bindings,scenario.baseline_config,scenario.resources,scenario_state=scenario.scenario_state)
         return {'schema_version':2,'session_id':state.session_id,'token':token,'state':public_state(state)}
     def dispatch(self,auth,name,body=None,route_params=None):
+        if name=='jobs.refresh':
+            command=Command.model_validate(body)
+            if command.operation!='jobs.refresh' or command.payload!={'job_id':(route_params or {}).get('job_id')}:raise ProtocolError('operation_route_mismatch',status=403)
+            result=self.store.refresh_job(auth,command,command.payload['job_id'])
+            return self.public_result(auth,result)
         if name=='requests.read':
             query=RequestResultQuery.model_validate(body or route_params)
             return self.request_result(auth,query.request_id).model_dump(mode='json')
@@ -138,6 +144,7 @@ class Gateway:
         status='completed'
         if any(j.status in {'queued','running'} for j in jobs):status='pending'
         elif any(j.status=='failed' for j in jobs):status='failed'
+        elif any(j.status=='needs_context' for j in jobs):status='needs_context'
         elif any(j.effect is None for j in jobs):status='unresolved'
         return RequestResult(session_id=auth.session_id,request_id=request_id,operation=meta['operation'],executor=response.executor,
             status=status,response=PublicTransactionResult.model_validate(self.public_result(auth,response)),jobs=tuple(jobs))
@@ -178,17 +185,12 @@ class Gateway:
         auth=self.store.guard_job(envelope.context,envelope.capability,check_context=False)
         prior=self.store.replay(auth,envelope.command,envelope.capability)
         if prior is not None:return self.public_result(auth,prior)
-        self.store.guard_job(envelope.context,envelope.capability)
-        derived_subject=None
-        if 'subject' in envelope.command.payload:
-            candidate=ObjectRef.model_validate(envelope.command.payload['subject'])
-            if candidate.kind in {'submission','review'}:
-                self.store.read(auth,candidate)
-                derived_subject=candidate
-        plan=handler(self.store.view(auth),envelope,auth)
-        # External calls can repeat on failure; modules retain each actual usage attempt.
-        self.store.guard_job(envelope.context,envelope.capability)
-        result=self.store.execute(auth,envelope.command,lambda *_:plan,capability=envelope.capability,expected_storage_revision=envelope.context.as_of.storage_revision,worker_fence=claim,derived_subject=derived_subject)
+        self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
+        derived_subject=self.store.fixed_feedback_subject(envelope.command)
+        plan=handler(self.store.job_view(auth,envelope.context,command=envelope.command),envelope,auth)
+        # External calls can repeat on transient failure; deterministic failures stop.
+        self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
+        result=self.store.execute(auth,envelope.command,lambda *_:plan,capability=envelope.capability,worker_fence=claim,derived_subject=derived_subject,job_context=envelope.context)
         return self.public_result(auth,result)
 
 

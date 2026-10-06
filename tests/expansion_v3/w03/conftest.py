@@ -7,8 +7,8 @@ from sqlalchemy import create_engine, MetaData, Table, Column, String, Text, ins
 
 from career_lab.contracts.v2.core import AuthContext, Executor, Command, ProtocolError
 from career_lab.contracts.v2.world import WorldStateV2
-from career_lab.storage.workspace_v2 import register_tables
-from career_lab.workspace.service import create_service
+from legacy_repository_fixture import register_tables, WorkspaceRepository
+from career_lab.workspace.service import WorkspaceService
 
 test_metadata=MetaData()
 test_states=Table('w03_test_authority',test_metadata,Column('id',String,primary_key=True),Column('state',Text))
@@ -45,7 +45,7 @@ def env(tmp_path):
             conn.execute(insert(test_states).values(id=sid,state=state.model_dump_json()))
     auth=AuthContext(session_id='s',actor_id='learner',executor=Executor(id='human-1',kind='human'),
         capabilities=('read','act'),credential_id='trusted-human')
-    service=create_service(engine,authority,clock=lambda:datetime(2026,10,6,13,tzinfo=timezone.utc))
+    service=WorkspaceService(WorkspaceRepository(engine,authority,clock=lambda:datetime(2026,10,6,13,tzinfo=timezone.utc)))
     yield {'engine':engine,'authority':authority,'auth':auth,'service':service}
     engine.dispose()
 
@@ -53,7 +53,7 @@ def env(tmp_path):
 def command(env,operation,payload,*,request_id=None,auth=None):
     auth=auth or env['auth']
     with env['engine'].connect() as conn: state=env['authority'].state(conn,auth,lock=False)
-    return Command(request_id=request_id or uuid4().hex,expected_version=state.business_seq,
+    return Command(schema_version=2,request_id=request_id or uuid4().hex,expected_version=state.business_seq,
         expected_workspace_revision=state.workspace_revision,operation=operation,payload=payload)
 
 

@@ -1,5 +1,5 @@
 import type { Command, ProductEdit, ProductCreate, WorkProductVersion, WorkspaceTask,
-  ProductShare, TaskCreate, TaskPatch, ShareCreate, ShareUpdate, VersionPoint, WorkspaceImport, ImportResult } from './contract-types';
+  ProductShare, TaskCreate, TaskPatch, TaskBatch, ShareCreate, ShareUpdate, VersionPoint, WorkspaceImport, ImportResult } from './contract-types';
 import { JournalStore, browserCoordinator, emptyJournal, type Draft, type DraftBase, type Pending,
   type Journal, type LocalStorage, type JournalCoordinator, type RejectedRequest } from './journal';
 export type { Draft, LocalStorage, JournalCoordinator } from './journal';
@@ -19,8 +19,8 @@ export function editOf(product: WorkProductVersion, draft: Draft): ProductEdit {
     legacy: product.legacy ?? null, removed: product.removed_at != null };
 }
 export function draftOf(product: WorkProductVersion): Draft {
-  const { task, kind = 'text', purpose, title, content, structured_payload, evidence_refs, legacy } = product;
-  return { task, kind, purpose, title, content, structured_payload, evidence_refs, legacy };
+  const { task, kind = 'text', purpose, title, content, structured_payload, evidence_refs, legacy, source_return_id } = product;
+  return { task, kind, purpose, title, content, structured_payload, evidence_refs, legacy, source_return_id };
 }
 
 /** Credentials stay in transport. Local journal writes merge under an origin
@@ -132,8 +132,17 @@ export class WorkspaceClient {
   async refresh() {
     await this.flushLocal();
     try {
-      const [tasks,products]=await Promise.all([this.pages<WorkspaceTask>('/work-items'),this.pages<WorkProductVersion>('/work-products')]);
-      if(!same(tasks.as_of,products.as_of))throw Error('工作区已变化，请重新读取。');
+      let tasks:Page<WorkspaceTask>|undefined,products:Page<WorkProductVersion>|undefined;
+      for(let attempt=0;attempt<2;attempt++) {
+        try {
+          [tasks,products]=await Promise.all([this.pages<WorkspaceTask>('/work-items'),this.pages<WorkProductVersion>('/work-products')]);
+          if(!same(tasks.as_of,products.as_of))throw Error('工作区已变化，请重新读取。');
+          break;
+        } catch(error) {
+          if(attempt===1 || !(error instanceof Error) || !error.message.includes('工作区已变化'))throw error;
+        }
+      }
+      if(!tasks||!products)throw Error('工作区读取尚未完成。');
       this.emit({tasks:tasks.items,products:products.items,asOf:products.as_of});
       const current=this.readJournal();const changed=structuredClone(current);this.markConflicts(changed,products.items);
       if(!same(changed.conflicts,current.conflicts))await this.transaction(latest=>this.markConflicts(latest,products.items));
@@ -141,7 +150,7 @@ export class WorkspaceClient {
   }
   private command(operation:string,payload:object):Command {
     if(!this.value.asOf)throw Error('先读取服务端工作区。');
-    return {request_id:this.id(),expected_version:this.value.asOf.business_seq,
+    return {schema_version:2,request_id:this.id(),expected_version:this.value.asOf.business_seq,
       expected_workspace_revision:this.value.asOf.workspace_revision,operation,payload:payload as Command['payload']};
   }
   async mutate(operation:string,suffix:string,payload:object,method='POST',draftId?:string,replaces?:string,expectedDraftToken?:string) {
@@ -190,7 +199,7 @@ export class WorkspaceClient {
             await this.transaction(journal=>{
               if(journal.pending?.command.request_id!==expected)throw new JournalRefusal('请求记录已变化，请重新读取。');
               journal.rejected[expected]={request:{...pending,attempts:pending.attempts+1},status:status!,code,
-                nextAction:pending.command.operation==='workspace_imports.apply'?'repreview':
+                nextAction:pending.command.operation==='workspace_imports' && pending.command.payload?.mode==='apply'?'repreview':
                   status===401||status===403?'reauthorize':status===409?'refresh':'edit'};
               delete journal.pending;
               if(pending.draftId && journal.drafts[pending.draftId])journal.conflicts[pending.draftId]={
@@ -209,7 +218,7 @@ export class WorkspaceClient {
             if(journal.pending?.command.request_id!==expected)throw new JournalRefusal('请求记录已变化，请重新读取。');
             const id=pending.draftId;
             const bound=id && pending.base && pending.draft && pending.draftToken &&
-              pending.command.operation==='work_products.edit' &&
+              pending.command.operation==='work_products.versions.create' &&
               same(editOf(pending.base.product,pending.draft),pending.command.payload);
             if(id && bound && journal.draftTokens[id]===pending.draftToken && same(journal.drafts[id],pending.draft)) {
               delete journal.drafts[id];delete journal.draftBases[id];delete journal.draftTokens[id];
@@ -232,7 +241,8 @@ export class WorkspaceClient {
     });
   }
   createTask(input:TaskCreate){return this.mutate('work_items.create','/work-items',input);}
-  patchTask(input:TaskPatch){return this.mutate('work_items.patch','/work-items/'+encodeURIComponent(input.item_id),input,'PATCH');}
+  patchTask(input:TaskPatch){return this.mutate('work_items.update','/work-items/'+encodeURIComponent(input.item_id),input,'PATCH');}
+  batchTasks(input:TaskBatch){return this.mutate('work_items.batch','/work-items/batch',input);}
   createProduct(input:ProductCreate){return this.mutate('work_products.create','/work-products',input);}
   async save(product:WorkProductVersion) {
     await this.flushLocal();
@@ -243,7 +253,7 @@ export class WorkspaceClient {
       await this.transaction(latest=>this.markConflicts(latest,this.value.products));
       throw Error('草稿基准与当前版本不一致，请先比较、合并或另存。');
     }
-    return this.mutate('work_products.edit','/work-products/'+encodeURIComponent(product.product_id)+'/versions',
+    return this.mutate('work_products.versions.create','/work-products/'+encodeURIComponent(product.product_id)+'/versions',
       editOf(base.product,journal.drafts[product.product_id]),'POST',product.product_id,undefined,journal.draftTokens[product.product_id]);
   }
   async confirmMerge(productId:string,merged:Draft,expectedHead:number,expectedDraftToken:string) {
@@ -267,7 +277,16 @@ export class WorkspaceClient {
     if(!draft)throw Error('没有待另存的文字。');
     const refs=[...(draft.evidence_refs??[])];
     if(base)refs.push({session_id:this.sessionId,kind:'product',object_id:productId,version:base.product.version,observed_at_seq:base.asOf.business_seq});
-    return this.createProduct({...draft,legacy:null,evidence_refs:refs});
+    return this.createProduct({...draft,legacy:null,source_return_id:null,evidence_refs:refs});
+  }
+  async discardDraft(productId:string,expectedDraftToken:string) {
+    await this.flushLocal();
+    await this.transaction(journal=>{
+      if(journal.pending?.draftId===productId)throw new JournalRefusal('先确认这份作品上一请求的结果。');
+      if(journal.draftTokens[productId]!==expectedDraftToken)throw new JournalRefusal('草稿已有新输入，请重新核对后决定。');
+      delete journal.drafts[productId];delete journal.draftBases[productId];delete journal.draftTokens[productId];
+      delete journal.draftWriters[productId];delete journal.draftAncestors[productId];delete journal.conflicts[productId];
+    });
   }
   async dismissRejected(requestId:string) {
     await this.transaction(journal=>{if(journal.rejected[requestId])journal.rejected[requestId].dismissed=true;});
@@ -291,15 +310,19 @@ export class WorkspaceClient {
     return {input,preview:await this.previewImport(input)};
   }
   share(input:ShareCreate){return this.mutate('work_products.shares.create','/work-products/'+encodeURIComponent(input.product_id)+'/shares',input);}
-  updateShare(input:ShareUpdate){return this.mutate('work_products.shares.update','/work-products/'+encodeURIComponent(input.product_id)+'/shares/'+encodeURIComponent(input.share_id),input,'PATCH');}
+  updateShare(input:ShareUpdate){return this.mutate('work_products.shares.change','/work-products/'+encodeURIComponent(input.product_id)+'/shares/'+encodeURIComponent(input.share_id),input,'POST');}
   async loadShares(productId:string){
     const page=await this.pages<ProductShare>('/work-products/'+encodeURIComponent(productId)+'/shares');
     if(page.items.some(s=>!s.product||s.product.object_id!==productId||!Number.isInteger(s.product.version)||s.product.version<1))throw Error('Invalid share response');
     this.emit({shares:{...this.value.shares,[productId]:page.items}});return page.items;
   }
-  adopt(product:WorkProductVersion){return this.mutate('work_products.adopt','/work-products/'+encodeURIComponent(product.product_id)+'/adoption',editOf(product,draftOf(product)));}
-  remove(product:WorkProductVersion,removed=true){return this.mutate('work_products.edit','/work-products/'+encodeURIComponent(product.product_id)+'/versions',{...editOf(product,draftOf(product)),removed});}
-  async previewImport(input:WorkspaceImport):Promise<ImportResult>{if(input.mode!=='preview')throw Error('先预览所选存档。');return this.transport(this.path('/workspace-imports'),this.command('workspace_imports.preview',input),'POST');}
-  applyImport(input:WorkspaceImport,preview:ImportResult,replaces?:string){if(input.package_id!==preview.package_id||preview.mode!=='preview')throw Error('导入包与预览不匹配。');return this.mutate('workspace_imports.apply','/workspace-imports',{...input,mode:'apply',preview_storage_revision:preview.as_of.storage_revision},'POST',undefined,replaces);}
+  adopt(product:WorkProductVersion){return this.mutate('work_products.adopt','/work-products/'+encodeURIComponent(product.product_id)+'/adoption',{product_id:product.product_id,product_version:product.version,expected_head:product.version,status:'adopted'});}
+  async remove(product:WorkProductVersion,removed=true){
+    await this.flushLocal();
+    if(this.value.journal.drafts[product.product_id])throw Error('先保存或明确放弃草稿，再移除作品。');
+    return this.mutate('work_products.versions.create','/work-products/'+encodeURIComponent(product.product_id)+'/versions',{...editOf(product,draftOf(product)),removed});
+  }
+  async previewImport(input:WorkspaceImport):Promise<ImportResult>{if(input.mode!=='preview')throw Error('先预览所选存档。');return this.transport(this.path('/workspace-imports'),this.command('workspace_imports',input),'POST');}
+  applyImport(input:WorkspaceImport,preview:ImportResult,replaces?:string){if(input.package_id!==preview.package_id||preview.mode!=='preview')throw Error('导入包与预览不匹配。');return this.mutate('workspace_imports','/workspace-imports',{...input,mode:'apply',preview_storage_revision:preview.as_of.storage_revision},'POST',undefined,replaces);}
 }
 class JournalRefusal extends Error {}

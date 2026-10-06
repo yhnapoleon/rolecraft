@@ -10,9 +10,9 @@ def run_probes(package):
     engine=ScenarioEngine(package);assistant=Assistant(package);runs=[]
     for probe in json.loads((package.root/"probes.json").read_text()):
         sid="probe-"+probe["id"];s=engine.initial(sid);trace=[]
-        if probe.get("config") or probe.get("apply"):
+        if probe.get("config") or probe.get("apply") or probe.get("tuning"):
             cfg=s.config.model_dump(mode="json")
-            cfg.update(probe.get("config",{}));cfg.update(version=2,config_version=1)
+            cfg.update(probe.get("config",{}));cfg.update(probe.get("tuning",{}));cfg.update(version=2,config_version=1)
             t=plan(engine,s,"apply_config","config",config=cfg);s=t.snapshot;trace.extend(t.events)
         if probe.get("grant"):
             t=plan(engine,s,"request_business","ask",terms=probe["grant"],reason="按探针配置验证合法资源路径")
@@ -24,7 +24,7 @@ def run_probes(package):
         if probe.get("refresh"):
             t=plan(engine,s,"refresh_index","refresh");s=t.snapshot;trace.extend(t.events)
         output=assistant.run(s,TestRequestV2(query=probe["query"],config_version=s.config.config_version),
-            auth(sid),"query",tuning=RetrievalTuning(**probe.get("tuning",{})))
+            auth(sid),"query")
         expected=probe["expected"];actual=output.result
         checks={"status":actual.status==expected["status"],"error_code":actual.error_code==expected.get("error_code"),
             "contains":all(text in actual.answer for text in expected.get("contains",[])),
@@ -39,3 +39,13 @@ def run_probes(package):
     return {"mode":"authoring_probe_execution","scenario_hash":package.content_hash,
         "executor":"local_deterministic_module","api_integrated":False,
         "attempts":len(runs),"passed":sum(x["result"]=="pass" for x in runs),"runs":runs}
+
+
+def export_public_probes(package):
+    """Only explicitly public authored probes can enter an engineering handoff.
+
+    This never returns hidden queries/expectations or the full probe file. The
+    learner material API does not use authoring probe files at all.
+    """
+    rows=json.loads((package.root/"probes.json").read_text())
+    return tuple(dict(row) for row in rows if row.get("public") is True)

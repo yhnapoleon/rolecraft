@@ -2,13 +2,14 @@
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import math
+import re
 from typing import Literal
 
 from career_lab.assistant.retrieval import tokens
-from career_lab.contracts.v2.core import ProtocolError, VersionPoint, digest
-from career_lab.contracts.v2.world import TestResultV2
+from career_lab.contracts.v2.core import ProtocolError, VersionPoint, ObjectRef, digest
+from career_lab.contracts.v2.world import TestResultV2, TestExecutionMetadata, RetrievedChunk
 from career_lab.scenarios.v2.engine import ScenarioEngine
-from career_lab.scenarios.v2.policy import effective_config
+from career_lab.scenarios.v2.policy import effective_config, canonical_domains
 
 
 @dataclass(frozen=True)
@@ -68,12 +69,12 @@ class Assistant:
     def __init__(self, package):
         self.package=package
 
-    def run(self, snapshot, request, auth, request_id, *, tuning=None, now=None):
+    def run(self, snapshot, request, auth, request_id, *, tuning=None, now=None, operation_name="test_assistant"):
         engine=ScenarioEngine(self.package)
-        engine.authorize(auth,snapshot,"test_assistant")
+        engine.authorize(auth,snapshot,operation_name)
         # TestResultV2 contains the complete requested/effective config. Reading
         # that execution dependency requires an explicit config grant.
-        engine.authorize(auth,snapshot,"test_assistant","read")
+        engine.authorize(auth,snapshot,operation_name,"read")
         if auth.allowed_objects is not None and snapshot.config.id not in auth.allowed_objects:
             raise ProtocolError("config_forbidden",status=403)
         if snapshot.world.status!="active":
@@ -82,8 +83,11 @@ class Assistant:
             raise ProtocolError("config_not_current",status=409)
         if not request.query.strip():
             raise ProtocolError("query_empty")
-        tuning=tuning or RetrievalTuning()
-        if set(tuning.manual_domains)-self.package.bundle.domains.keys():
+        configured_tuning=RetrievalTuning(snapshot.config.min_score,snapshot.config.freshness_guard,snapshot.config.manual_domains)
+        if tuning is not None and tuning!=configured_tuning:
+            raise ProtocolError("config_tuning_mismatch", "apply tuning as an explicit configuration version",409)
+        tuning=configured_tuning
+        if set(canonical_domains(self.package,tuning.manual_domains))-self.package.bundle.domains.keys():
             raise ProtocolError("unknown_manual_domain")
         conf=effective_config(self.package,snapshot.config,snapshot.world.resources)
         cfg=conf.effective
@@ -103,7 +107,7 @@ class Assistant:
         scored.sort(key=lambda x:(-x[0],x[1].id))
         selected=[]; status="fallback"; code=None; answer=""; selected_stale=False
         forbidden=tuple(self.package.rules["mandatory_prohibited_topics"])+tuple(cfg.prohibited_topics)
-        if any(term.casefold() in request.query.casefold() for term in forbidden):
+        if any(term.casefold() in request.query.casefold() for term in forbidden) or any(re.search(pattern,request.query) for pattern in self.package.rules.get("credential_request_patterns",())):
             code="prohibited_topic"
         elif not scored:
             code="no_retrieval_hit"
@@ -113,7 +117,7 @@ class Assistant:
             else:
                 selected=[c for _,c in scoped[:cfg.retrieval_limit]]
                 selected_stale=any(c.version!=snapshot.source_versions[c.material_id] for c in selected)
-                manual=set(tuning.manual_domains)|({"policy"} if cfg.update_strategy=="manual_policy" else set())
+                manual=set(canonical_domains(self.package,tuning.manual_domains))|(set(self.package.rules.get("mutable_domains",["policy"])) if cfg.update_strategy=="manual_policy" else set())
                 if any(c.domain in manual for c in selected):
                     code="manual_verification_required";selected=[]
                 elif selected_stale and tuning.freshness_guard == "fallback":
@@ -138,7 +142,19 @@ class Assistant:
                 "valid_from_seq":snapshot.material_activation.get(f"{c.material_id}:{c.version}",0)}) for c in selected)
         point=VersionPoint(business_seq=seq,workspace_revision=snapshot.world.workspace_revision,storage_revision=snapshot.world.storage_revision)
         rid=digest(["w02-test",sid,request_id,request.model_dump(mode="json"),cfg.model_dump(mode="json"),point.model_dump(mode="json"),tuning.__dict__,digest(auth)])
-        result=TestResultV2(id=rid,session_id=sid,query=request.query,config=conf,status=status,answer=answer,
+        source_visible={m.id for m,_ in self.package.visible_materials(snapshot.source_versions,auth.actor_id,seq,sid,kb_only=True)}
+        if auth.allowed_objects is not None:source_visible &= set(auth.allowed_objects)
+        executed_at=now or datetime.now(timezone.utc)
+        if executed_at.tzinfo is None or executed_at.utcoffset() is None:raise ProtocolError("execution_timezone_required")
+        scores={chunk.id:score for score,chunk in scored}
+        execution=TestExecutionMetadata(executed_at=executed_at,executor=auth.executor,
+            source_versions={k:v for k,v in snapshot.source_versions.items() if k in source_visible},
+            indexed_versions={k:v for k,v in snapshot.indexed_versions.items() if k in source_visible},
+            used_versions={k:v for k,v in versions.items() if k in source_visible},
+            chunks=tuple(RetrievedChunk(id=c.id,material_id=c.material_id,version=c.version,ref=ref,score=scores[c.id]) for c,ref in zip(selected,refs)),
+            projection_actor=auth.actor_id,attempts=(),cost_complete=True)
+        config_ref=ObjectRef(session_id=sid,kind="config",object_id=snapshot.config.id,version=snapshot.config.version,config_version=snapshot.config.config_version)
+        result=TestResultV2(id=rid,execution=execution,config_ref=config_ref,session_id=sid,query=request.query,config=conf,status=status,answer=answer,
             citations=refs,as_of=point,declared_category=request.declared_category,
             declared_expected=request.declared_expected,observed_coverage=tuple(sorted({c.domain for c in selected})),
             error_code=code)
@@ -146,7 +162,7 @@ class Assistant:
         if auth.allowed_objects is not None:source_visible &= set(auth.allowed_objects)
         return TestExecution(result, {
             "mode":"local-extractive-v2", "scenario_hash":self.package.content_hash,
-            "created_at":(now or datetime.now(timezone.utc)).isoformat(),
+            "created_at":executed_at.isoformat(),
             "source_versions":{k:v for k,v in snapshot.source_versions.items() if k in source_visible},
             "indexed_versions":{k:v for k,v in snapshot.indexed_versions.items() if k in source_visible},
             "used_versions":{k:v for k,v in versions.items() if k in source_visible},

@@ -2,13 +2,14 @@
 from dataclasses import dataclass
 import json
 import hashlib
+import re
 from pathlib import Path
 from typing import Mapping
 
 import yaml
 
 from career_lab.contracts.v2.core import EvidenceRefV2, ProtocolError, digest, read_file
-from career_lab.contracts.v2.world import ScenarioBundle, MaterialV2, FactV2
+from career_lab.contracts.v2.world import ScenarioBundle, MaterialV2, FactV2, AssistantConfig
 from career_lab.contracts.v2.projection import project_fragments
 
 
@@ -55,8 +56,20 @@ class ScenarioPackage:
                 continue
             if ref.valid_until_seq is not None and as_of_seq >= ref.valid_until_seq:
                 continue
+            if actor in roles:
+                for fid in fragment.fact_ids:
+                    override=roles[actor].disclosure_policy.get(fid)
+                    if override is None:continue
+                    if override.mode=="never":policy=override;break
+                    if override.actors and actor not in override.actors:policy=override;break
+                    if override.mode=="paraphrase_only":
+                        if policy.mode=="paraphrase_only" and override.paraphrase!=policy.paraphrase:
+                            raise ProtocolError("disclosure_override_invalid")
+                        policy=override
+                    elif override.mode=="role_only" and policy.mode=="public":policy=override
+            if policy.mode=="never" or (policy.actors and actor not in policy.actors):continue
             rebound = ref.model_copy(update={"session_id": session_id})
-            fragments.append(fragment.model_copy(update={"ref": rebound}))
+            fragments.append(fragment.model_copy(update={"ref": rebound,"disclosure":policy}))
         return project_fragments(fragments, actor, as_of_seq)
 
     def visible_materials(self, versions: Mapping[str, int], actor, seq, sid, *, kb_only=False):
@@ -92,7 +105,7 @@ def load_package(root: Path) -> ScenarioPackage:
             raise ProtocolError("scenario_identity_mismatch")
         if json.loads(contents["roles.json"]) != [r.model_dump(mode="json") for r in bundle.role_specs]:
             raise ProtocolError("role_manifest_mismatch")
-        if json.loads(contents["baseline.json"]) != bundle.baseline_config.model_dump(mode="json"):
+        if AssistantConfig.model_validate_json(contents["baseline.json"]) != bundle.baseline_config:
             raise ProtocolError("baseline_manifest_mismatch")
         materials = tuple(MaterialV2.model_validate(x) for x in json.loads(contents["materials.json"]))
         facts = tuple(FactV2.model_validate(x) for x in json.loads(contents["facts.json"]))
@@ -150,6 +163,29 @@ def load_package(root: Path) -> ScenarioPackage:
             raise ProtocolError("demand_total_mismatch")
         if by_fact[("candidate_total",1)].value != sum(by_fact[(key,1)].value for key in ("new_staff","operations_staff","admin_staff")):
             raise ProtocolError("candidate_total_mismatch")
+        role_ids={role.id for role in bundle.role_specs}|{"learner"}
+        for role in bundle.role_specs:
+            if set(role.disclosure_policy)-{f.id for f in facts}:
+                raise ProtocolError("role_disclosure_fact_missing")
+            if any(set(policy.actors)-role_ids for policy in role.disclosure_policy.values()):
+                raise ProtocolError("role_disclosure_actor_unknown")
+        for rule in rules.get("business_events",[]):
+            if any((mid,version) not in by_material for mid,version in rule["material_updates"].items()):
+                raise ProtocolError("business_event_material_missing")
+        probes=json.loads(contents["probes.json"])
+        if any(type(probe.get("public")) is not bool for probe in probes):
+            raise ProtocolError("probe_visibility_missing")
+        normalized=lambda text:re.sub(r"\W","",text).casefold()
+        public_text=normalized("\n".join(contents[path].decode() for path in bundle.public_files))
+        if any(normalized(probe["query"]) in public_text for probe in probes if not probe["public"]):
+            raise ProtocolError("hidden_probe_in_public_material")
+        material_by_path={rules["material_files"][m.id][str(m.version)]:m for m in materials}
+        for path in bundle.public_files:
+            material=material_by_path.get(path)
+            if material is None or any(f.disclosure.mode!="public" or f.disclosure.actors for f in material.fragments):
+                raise ProtocolError("private_raw_file_published")
+            if rules["initial_material_versions"].get(material.id)!=material.version:
+                raise ProtocolError("future_raw_file_published")
         return ScenarioPackage(root, bundle, hashlib.sha256(raw).hexdigest(), materials, facts, rules)
     except ProtocolError:
         raise

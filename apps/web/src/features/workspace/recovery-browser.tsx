@@ -2,6 +2,7 @@
 import { createRoot } from 'react-dom/client';
 import { WorkspacePanel } from './WorkspacePanel';
 import { WorkspaceClient, draftOf, type Transport } from './client';
+import '../../app/styles.css';
 const session=new URLSearchParams(location.search).get('session');
 if(!session?.startsWith('w03-r2-test-'))throw Error('A unique test session is required');
 const key='w03-r2-synthetic-server:'+session;
@@ -22,7 +23,7 @@ const transport:Transport=async(path,body:any)=>{
     if(s.receipts[body.request_id]){localStorage.setItem(key,JSON.stringify(s));return s.receipts[body.request_id];}
     if(body.expected_version!==s.as_of.business_seq||body.expected_workspace_revision!==s.as_of.workspace_revision)return fail(409,'version_conflict');
     let object:any;
-    if(body.operation==='work_products.edit'){
+    if(body.operation==='work_products.versions.create'){
       const index=s.products.findIndex((p:any)=>p.product_id===body.payload.product_id),p=s.products[index];
       if(body.payload.expected_head!==p.version)return fail(409,'object_version_conflict');
       object={...p,...body.payload,version:p.version+1};s.products[index]=object;

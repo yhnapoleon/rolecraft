@@ -17,7 +17,7 @@ def auth(sid,approval=False):
 
 
 def plan(engine,s,operation,key,approval=False,**payload):
-    return engine.plan(s,Command(request_id=key,expected_version=s.world.business_seq,
+    return engine.plan(s,Command(schema_version=2,request_id=key,expected_version=s.world.business_seq,
         expected_workspace_revision=s.world.workspace_revision,operation=operation,
         payload=payload if approval else {"tool":operation,**payload}),auth(s.world.session_id,approval))
 
@@ -36,7 +36,8 @@ def paths_report(package):
         transition=plan(engine,s,"apply_config","apply",config=config);s=transition.snapshot
         trace=list(transition.events);decision=None
         if path["request"]:
-            t=plan(engine,s,"request_business","ask",terms=path["request"],reason="根据方案范围和工程工作项申请");s=t.snapshot;trace.extend(t.events)
+            refs=engine.read(s,__import__("career_lab.contracts.v2.core",fromlist=["ObjectRef"]).ObjectRef(session_id=sid,kind="material",object_id="user_groups",version=1),auth(sid))
+            t=plan(engine,s,"request_business","ask",terms=path["request"],reason="根据候选用户材料和方案工作项申请",evidence_refs=[refs[0].ref.model_dump(mode="json")]);s=t.snapshot;trace.extend(t.events)
             ref={"session_id":sid,"kind":"business_request","object_id":t.result.id,"version":1}
             t=plan(engine,s,"resolve_approval","approve",approval=True,request=ref,expected_request_revision=1)
             s=t.snapshot;trace.extend(t.events);decision=t.result.model_dump(mode="json")
@@ -52,12 +53,25 @@ def paths_report(package):
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description="W02 module validation and local deterministic execution (not public API).")
-    parser.add_argument("command",choices=["validate","paths","probes"])
+    parser.add_argument("command",choices=["validate","paths","probes","public-probes","serve"])
     parser.add_argument("root",type=Path)
+    parser.add_argument("--database-url")
+    parser.add_argument("--port",type=int,default=19832)
     args=parser.parse_args(argv)
     try:
+        if args.command=="serve":
+            if not args.database_url:raise ProtocolError("database_url_required")
+            from career_lab.api.app import create_app
+            from career_lab.api.modules import ExtensionRegistry
+            from .module import ScenarioModule
+            import uvicorn
+            module=ScenarioModule(args.root)
+            uvicorn.run(create_app(args.database_url,extensions=module.install(ExtensionRegistry())),host="127.0.0.1",port=args.port)
+            return 0
         package=load_package(args.root)
-        from .probes import run_probes
+        from .probes import run_probes, export_public_probes
+        if args.command=="public-probes":
+            print(json.dumps({"audience":"public","probes":list(export_public_probes(package)),"hidden_included":False},ensure_ascii=False,indent=2));return 0
         result={"valid":True,"scenario":package.bundle.id,"revision":package.bundle.revision,"hash":package.content_hash,
                 "materials":len(package.materials),"facts":len(package.facts)} if args.command=="validate" else paths_report(package) if args.command=="paths" else run_probes(package)
         print(json.dumps(result,ensure_ascii=False,indent=2));return 0 if result.get("passed",0)==result.get("attempts",0) else 1
