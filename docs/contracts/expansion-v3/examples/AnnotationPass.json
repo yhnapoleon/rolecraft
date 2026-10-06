@@ -1,0 +1,22 @@
+{
+  "context_id": null,
+  "decision": null,
+  "evidence_order": [],
+  "evidence_order_mode": "permutable",
+  "executor": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "id": "example",
+  "independence_method": null,
+  "independence_reason": null,
+  "input_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "invocation_id": null,
+  "model_revision": null,
+  "prompt_revision": null,
+  "raw_output": null,
+  "schema_version": 2,
+  "status": "pending"
+}

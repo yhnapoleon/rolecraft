@@ -1,0 +1,111 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "branch_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Branch Id"
+    },
+    "candidate_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Candidate Id"
+    },
+    "component_id": {
+      "minLength": 1,
+      "title": "Component Id",
+      "type": "string"
+    },
+    "decision_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Decision Id"
+    },
+    "derivation_ids": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Derivation Ids",
+      "type": "array"
+    },
+    "fact_root_ids": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Fact Root Ids",
+      "type": "array"
+    },
+    "run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Run Id"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "session_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Session Id"
+    },
+    "source_record_ids": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Source Record Ids",
+      "type": "array"
+    },
+    "structure_id": {
+      "minLength": 1,
+      "title": "Structure Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "structure_id",
+    "component_id"
+  ],
+  "title": "Lineage",
+  "type": "object"
+}

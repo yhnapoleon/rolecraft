@@ -1,0 +1,78 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "applied_milestones": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Applied Milestones",
+      "type": "array"
+    },
+    "business_seq": {
+      "minimum": 0,
+      "title": "Business Seq",
+      "type": "integer"
+    },
+    "config_version": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Config Version",
+      "type": "integer"
+    },
+    "cycle_id": {
+      "minLength": 1,
+      "title": "Cycle Id",
+      "type": "string"
+    },
+    "resources": {
+      "additionalProperties": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "title": "Resources",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "session_id": {
+      "minLength": 1,
+      "title": "Session Id",
+      "type": "string"
+    },
+    "status": {
+      "default": "active",
+      "enum": [
+        "active",
+        "paused",
+        "submitted"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "storage_revision": {
+      "minimum": 0,
+      "title": "Storage Revision",
+      "type": "integer"
+    },
+    "workspace_revision": {
+      "minimum": 0,
+      "title": "Workspace Revision",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "business_seq",
+    "workspace_revision",
+    "storage_revision",
+    "session_id",
+    "cycle_id",
+    "resources"
+  ],
+  "title": "WorldStateV2",
+  "type": "object"
+}

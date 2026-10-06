@@ -1,0 +1,18 @@
+{
+  "expected_version": 0,
+  "expected_workspace_revision": 0,
+  "operation": "work_products.create",
+  "payload": {
+    "content": "草稿",
+    "evidence_refs": [],
+    "kind": "text",
+    "legacy": null,
+    "purpose": "exploration",
+    "schema_version": 2,
+    "structured_payload": null,
+    "task": null,
+    "title": ""
+  },
+  "request_id": "request",
+  "schema_version": 2
+}

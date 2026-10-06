@@ -1,0 +1,491 @@
+{
+  "$defs": {
+    "ActionBoundary": {
+      "additionalProperties": false,
+      "properties": {
+        "end_seq": {
+          "minimum": 0,
+          "title": "End Seq",
+          "type": "integer"
+        },
+        "request_id": {
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "start_seq": {
+          "minimum": 0,
+          "title": "Start Seq",
+          "type": "integer"
+        },
+        "storage_revision": {
+          "minimum": 0,
+          "title": "Storage Revision",
+          "type": "integer"
+        },
+        "transaction_id": {
+          "minLength": 1,
+          "title": "Transaction Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "transaction_id",
+        "request_id",
+        "start_seq",
+        "end_seq",
+        "storage_revision"
+      ],
+      "title": "ActionBoundary",
+      "type": "object"
+    },
+    "Executor": {
+      "additionalProperties": false,
+      "properties": {
+        "delegation_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delegation Id"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "human",
+            "external_agent",
+            "reference_agent",
+            "system"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "Executor",
+      "type": "object"
+    },
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "ObjectRef": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version"
+      ],
+      "title": "ObjectRef",
+      "type": "object"
+    },
+    "SessionBindings": {
+      "additionalProperties": false,
+      "properties": {
+        "evaluation": {
+          "$ref": "#/$defs/FileRef"
+        },
+        "evidence_revision": {
+          "default": "evidence-v2",
+          "title": "Evidence Revision",
+          "type": "string"
+        },
+        "rubric_revision": {
+          "default": "rubric-v2",
+          "title": "Rubric Revision",
+          "type": "string"
+        },
+        "rules_revision": {
+          "const": "rules-v4",
+          "default": "rules-v4",
+          "title": "Rules Revision",
+          "type": "string"
+        },
+        "runtime": {
+          "$ref": "#/$defs/FileRef"
+        },
+        "scenario": {
+          "$ref": "#/$defs/FileRef"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "scenario",
+        "runtime",
+        "evaluation"
+      ],
+      "title": "SessionBindings",
+      "type": "object"
+    },
+    "StoredEvent": {
+      "additionalProperties": false,
+      "properties": {
+        "data": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "default": {},
+          "title": "Data",
+          "type": "object"
+        },
+        "executor": {
+          "$ref": "#/$defs/Executor"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "refs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "title": "Refs",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "seq": {
+          "exclusiveMinimum": 0,
+          "title": "Seq",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "transaction_id": {
+          "minLength": 1,
+          "title": "Transaction Id",
+          "type": "string"
+        },
+        "type": {
+          "minLength": 1,
+          "title": "Type",
+          "type": "string"
+        },
+        "visible_to": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Visible To",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "seq",
+        "transaction_id",
+        "type",
+        "executor",
+        "visible_to"
+      ],
+      "title": "StoredEvent",
+      "type": "object"
+    },
+    "StoredObject": {
+      "additionalProperties": false,
+      "properties": {
+        "content": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Content",
+          "type": "object"
+        },
+        "created_storage_revision": {
+          "minimum": 0,
+          "title": "Created Storage Revision",
+          "type": "integer"
+        },
+        "dependencies": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "title": "Dependencies",
+          "type": "array"
+        },
+        "ref": {
+          "$ref": "#/$defs/ObjectRef"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "visible_to": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Visible To",
+          "type": "array"
+        }
+      },
+      "required": [
+        "ref",
+        "content",
+        "visible_to",
+        "created_storage_revision"
+      ],
+      "title": "StoredObject",
+      "type": "object"
+    },
+    "WorldStateV2": {
+      "additionalProperties": false,
+      "properties": {
+        "applied_milestones": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Applied Milestones",
+          "type": "array"
+        },
+        "business_seq": {
+          "minimum": 0,
+          "title": "Business Seq",
+          "type": "integer"
+        },
+        "config_version": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Config Version",
+          "type": "integer"
+        },
+        "cycle_id": {
+          "minLength": 1,
+          "title": "Cycle Id",
+          "type": "string"
+        },
+        "resources": {
+          "additionalProperties": {
+            "minimum": 0,
+            "type": "integer"
+          },
+          "title": "Resources",
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "paused",
+            "submitted"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "storage_revision": {
+          "minimum": 0,
+          "title": "Storage Revision",
+          "type": "integer"
+        },
+        "workspace_revision": {
+          "minimum": 0,
+          "title": "Workspace Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "business_seq",
+        "workspace_revision",
+        "storage_revision",
+        "session_id",
+        "cycle_id",
+        "resources"
+      ],
+      "title": "WorldStateV2",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "bindings": {
+      "$ref": "#/$defs/SessionBindings"
+    },
+    "boundaries": {
+      "items": {
+        "$ref": "#/$defs/ActionBoundary"
+      },
+      "title": "Boundaries",
+      "type": "array"
+    },
+    "events": {
+      "items": {
+        "$ref": "#/$defs/StoredEvent"
+      },
+      "title": "Events",
+      "type": "array"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "objects": {
+      "items": {
+        "$ref": "#/$defs/StoredObject"
+      },
+      "title": "Objects",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "session_id": {
+      "minLength": 1,
+      "title": "Session Id",
+      "type": "string"
+    },
+    "snapshot_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Snapshot Hash",
+      "type": "string"
+    },
+    "source_digest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Source Digest",
+      "type": "string"
+    },
+    "state": {
+      "$ref": "#/$defs/WorldStateV2"
+    }
+  },
+  "required": [
+    "id",
+    "session_id",
+    "bindings",
+    "state",
+    "objects",
+    "events",
+    "boundaries",
+    "source_digest",
+    "snapshot_hash"
+  ],
+  "title": "SnapshotExport",
+  "type": "object"
+}

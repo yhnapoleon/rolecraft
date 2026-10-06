@@ -1,0 +1,10 @@
+{
+  "config": null,
+  "evidence_refs": [],
+  "material": null,
+  "reason": "",
+  "request": null,
+  "schema_version": 2,
+  "terms": {},
+  "tool": "apply_config"
+}

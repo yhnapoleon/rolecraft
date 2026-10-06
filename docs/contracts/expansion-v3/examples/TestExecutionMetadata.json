@@ -1,0 +1,17 @@
+{
+  "attempts": [],
+  "chunks": [],
+  "cost_complete": false,
+  "executed_at": "2026-10-06T12:00:00Z",
+  "executor": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "indexed_versions": {},
+  "projection_actor": "example",
+  "schema_version": 2,
+  "source_versions": {},
+  "used_versions": {}
+}

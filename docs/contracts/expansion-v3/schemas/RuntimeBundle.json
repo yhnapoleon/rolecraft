@@ -1,0 +1,150 @@
+{
+  "$defs": {
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    },
+    "SourceIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "base_commit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Base Commit",
+          "type": "string"
+        },
+        "dependency_locks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FileRef"
+          },
+          "title": "Dependency Locks",
+          "type": "array"
+        },
+        "overlay": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FileRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "base_commit",
+        "source_digest"
+      ],
+      "title": "SourceIdentity",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "acquisition": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "decision": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "model": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "prompts": {
+      "items": {
+        "$ref": "#/$defs/FileRef"
+      },
+      "title": "Prompts",
+      "type": "array"
+    },
+    "retrieval": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "revision": {
+      "minLength": 1,
+      "title": "Revision",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "skills": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FileRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "source": {
+      "$ref": "#/$defs/SourceIdentity"
+    },
+    "tools": {
+      "$ref": "#/$defs/FileRef"
+    }
+  },
+  "required": [
+    "id",
+    "revision",
+    "model",
+    "prompts",
+    "acquisition",
+    "retrieval",
+    "decision",
+    "tools",
+    "source"
+  ],
+  "title": "RuntimeBundle",
+  "type": "object"
+}

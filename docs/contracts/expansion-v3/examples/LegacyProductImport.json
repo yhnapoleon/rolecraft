@@ -1,0 +1,17 @@
+{
+  "execute_pending": false,
+  "kind": "text",
+  "purpose": "example",
+  "run_verification": "unverified_local",
+  "schema_version": 2,
+  "source": {
+    "original_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+    "original_id": "example",
+    "original_kind": "example",
+    "original_purpose": null,
+    "raw": {},
+    "schema_version": 2,
+    "source_schema": "example",
+    "source_session_id": "example"
+  }
+}

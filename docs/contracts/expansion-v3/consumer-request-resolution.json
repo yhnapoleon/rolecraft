@@ -1,0 +1,83 @@
+{
+  "scope": "W01公共输入/端口收口；不是各消费者整包通过",
+  "requests": {
+    "W02-S01": {
+      "status": "foundation_resolved",
+      "implementation": "AssistantConfig三态guard/min_score/manual_domains；TestResult.execution/config_ref及chunk/版本/执行身份；0.35为未校准初值"
+    },
+    "W02-S02": {
+      "status": "foundation_resolved_module_adapter_pending",
+      "implementation": "私有ScenarioStateV2、纯Mutation、可信AuthContext/审批policy、外部引用resolver；033须将PlannedTransition转换，不可直接写第二套权威状态"
+    },
+    "W02-S03": {
+      "status": "foundation_resolved_module_install_pending",
+      "implementation": "ExtensionRegistry/真实API槽位/CLI注册端口；实际W02安装和CLI factory待031放行接线，不计入W01业务通过"
+    },
+    "W02-S04": {
+      "status": "resolved",
+      "implementation": "paraphrase_only actors显式收紧；过期历史include_expired且保留时点，不解除actor权限"
+    },
+    "W02-S05": {
+      "status": "resolved",
+      "implementation": "BusinessBasis配置快照+hash同事务持久化；proposed不apply，版本更新不得改变basis"
+    },
+    "W03-SR01": {
+      "status": "foundation_resolved_adapter_pending",
+      "implementation": "统一V2Store/ObjectWrite/Mutation/外部引用can_reference；选择转换方案，不采用并存的第二套权威版本"
+    },
+    "W03-SR02": {
+      "status": "foundation_resolved_module_install_pending",
+      "implementation": "可信auth+版本分派+事项/作品/采用/分享/导入槽位；不重复挂同URL router"
+    },
+    "W03-SR03": {
+      "status": "deferred_to_shared_integration",
+      "implementation": "前端共享接线需031指令和W03修复后源码；W01禁止修改apps/web，未声称其UI已连接"
+    },
+    "W03-SR04": {
+      "status": "resolved",
+      "implementation": "TestCase intent/refs、test_compare/review_focus、ProductAdopt/source_return_id、ImportConflict/ImportVersionMap、TaskBatch；旧raw继续无损"
+    },
+    "W07-S01": {
+      "status": "interface_resolved_install_pending",
+      "implementation": "register_cli/install_cli已可调用；全局CLI接线待模块整合，不把模块命令称全局命令"
+    },
+    "W07-S02": {
+      "status": "resolved",
+      "implementation": "SnapshotPortAdapter.read_snapshot(session,VersionPoint)真实读取；W07映射其FrozenSnapshot/ExportUnit，W02/W05业务输入另验"
+    },
+    "W07-S03": {
+      "status": "resolved",
+      "implementation": "独立invocation/context/prompt；0/1证据与语义保序可合法G2v，显式method/reason；相同调用或上下文拒绝"
+    },
+    "W07-S04": {
+      "status": "interface_resolved_resource_pending",
+      "implementation": "SplitManifest/TestCampaign/require_confirmatory及FileRef受控读取；W11结构及真实隔离campaign由031/W11/W07落实"
+    },
+    "W07-S05": {
+      "status": "coordinator_owned",
+      "implementation": "035机器路由属于031共享导航登记；W01不重复更改其工作区"
+    },
+    "W09-SR01": {
+      "status": "resolved",
+      "implementation": "r3新增真实只读GET /sessions/{session_id}/requests/{request_id}及RequestResult；原请求/job/effect绑定、权限和未知态有回归证据。StepResult既有源ID不改写。"
+    },
+    "W09-SR02": {
+      "status": "foundation_resolved_environment_pending",
+      "implementation": "SnapshotPortAdapter export/restore/remap_action/parent_digest/read_snapshot真实实现；environment_factory由W06实际投影环境提供，缺失明确503"
+    },
+    "W09-SR03": {
+      "status": "port_resolved_real_provider_pending",
+      "implementation": "ProviderRequest/Result/Capabilities+SingleAttemptProvider无隐藏重试，deadline/output/seed/decode明确；旧complete不变，真实供应商/解码支持仍未验证"
+    },
+    "W09-SR04": {
+      "status": "interface_resolved_module_install_pending",
+      "implementation": "TerminalEvaluation/FileRef固定评价身份、CLI注册接口；W05评估器和W09 factory实际挂载属于后续组合验收"
+    },
+    "W09-SR05": {
+      "status": "resolved",
+      "implementation": "ObservedFragment要求实际获取/学员audience与核验等级；catalog、角色私有和模型专用分离；RunManifest运行状态/策略/tool摘要与实际消耗字段"
+    }
+  },
+  "module_review_boundary": "031指出的W02/W03/W07/W09模块缺陷由各原作者修复；未直接集成其未验收r1。",
+  "review_revision": "r3修复031-review-r1的R01—R09，实际模块仍需后续接线。"
+}

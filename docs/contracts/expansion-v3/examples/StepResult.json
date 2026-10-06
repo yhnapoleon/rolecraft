@@ -1,0 +1,30 @@
+{
+  "actual_consumption": {
+    "actions": 0,
+    "cost": null,
+    "cost_complete": false,
+    "input_tokens": null,
+    "model_attempt_count": 0,
+    "output_tokens": null,
+    "schema_version": 2,
+    "usage_complete": false,
+    "wall_seconds": 0.0
+  },
+  "boundary": null,
+  "effect_request_id": null,
+  "error_code": "synthetic_unavailable",
+  "executor": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "job_id": null,
+  "model_attempts": [],
+  "observation": null,
+  "replayed": false,
+  "request_id": "example",
+  "schema_version": 2,
+  "status": "failed",
+  "step": null
+}

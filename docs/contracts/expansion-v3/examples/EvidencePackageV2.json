@@ -1,0 +1,23 @@
+{
+  "applicability": "applicable",
+  "as_of": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "candidate_evidence": [],
+  "claim": "example",
+  "completeness": "complete",
+  "criterion": null,
+  "dropped_refs": [],
+  "input_hash": "775dcbcb1620d866b8ec33b92423d919a6dd4efb447072a34dc520acf751bf25",
+  "item_id": "example",
+  "missing_refs": [],
+  "purpose": "example",
+  "rule_bound": null,
+  "rule_context": {},
+  "schema_version": 2,
+  "subjects": [],
+  "task_type": "relation"
+}
