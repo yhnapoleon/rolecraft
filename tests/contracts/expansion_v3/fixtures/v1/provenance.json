@@ -1,0 +1,20 @@
+{
+  "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
+  "source": "W00-20261006-032-baseline; generated before any W01 implementation",
+  "files": {
+    "evidence.json": "cda5d3f0227ec1bb717809e9a96d35a517f7b34be381aa2018fde37f33668af4",
+    "sqlite-schema.json": "bc0c7cc21f968954c5271cb1733b4627d58178b98ee4b089c3e86edfdc26854b",
+    "action.json": "d970c728985a6308e33b3e58013c9088a7ed69aed6e53ef3094fabab420c93bb",
+    "action-ledger.json": "7473e744bc20346064f5056bcbd0683da5e89d6d61fac266d7a61b753a8c3880",
+    "event.json": "3c8c72790415c5475128497c4e92b4a48096554a42b4dd71ccabdd62bdf45759",
+    "legacy.sqlite3": "b7961e0f3a171425c879cd979c8f2c447ce49e24841e24900fb82dd791aa282f",
+    "evidence-sources.json": "7a1b6491bba09872a0911fe46aade545b97bd930b8163744a2049b59892e9c52",
+    "scenario.json": "c89cf0e886c7f5a0a2cdab17dfaf8685ffc5e79589768f4af8b33e5255964375",
+    "world-initial.json": "9e707267e6c73f9791876b7f3be632945dd75e7f314a94168027730288ac418b",
+    "submission.json": "4a403fad932c47e5c8d5c89a8218a8a955d8c87b21aec8ff1ae1c4f1e1a4362f",
+    "action-request-hash.json": "5cc446d1419bddf0df0df3edeab96adf420c59bd46b9922a8280c5d8e7112de9",
+    "feedback.json": "84209979ab0f86521896eb857dcc77055df64d9a7e248c1c4c262300cee09f78",
+    "transition.json": "0fb1b82f1500eb43702f208c1b37119127f0062fd9af868a7cb33f228b95b618",
+    "artifact.json": "6bc3f31ade52eccd075c90ee5753edf1595fceb26e5685ff4aa46f3ae840c23e"
+  }
+}

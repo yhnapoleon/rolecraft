@@ -1,0 +1,30 @@
+{
+  "content": {
+    "created_at": "2026-10-06T12:00:00Z",
+    "goal": "",
+    "id": "example",
+    "order": 0,
+    "parent": null,
+    "priority": 0,
+    "relations": [],
+    "revision": 1,
+    "schema_version": 2,
+    "session_id": "example",
+    "status": "open",
+    "title": "example",
+    "updated_at": "2026-10-06T12:00:00Z"
+  },
+  "created_storage_revision": 0,
+  "creator": null,
+  "dependencies": [],
+  "ref": {
+    "config_version": null,
+    "kind": "task",
+    "object_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "schema_version": 2,
+  "visible_to": []
+}

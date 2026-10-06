@@ -1,0 +1,66 @@
+{
+  "boundary": {
+    "end_seq": 0,
+    "request_id": "example",
+    "schema_version": 2,
+    "start_seq": 0,
+    "storage_revision": 0,
+    "transaction_id": "example"
+  },
+  "evaluation": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "executor": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "fork": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "id": "example",
+  "id_map": {},
+  "intervention": {
+    "arguments": {},
+    "expected_cost": null,
+    "id": "example",
+    "purpose": "example",
+    "schema_version": 2,
+    "tool": "example"
+  },
+  "lineage": {
+    "branch_id": null,
+    "candidate_id": null,
+    "component_id": "example",
+    "decision_id": null,
+    "derivation_ids": [],
+    "fact_root_ids": [],
+    "run_id": null,
+    "schema_version": 2,
+    "session_id": null,
+    "source_record_ids": [],
+    "structure_id": "example"
+  },
+  "parent_run": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "prefix_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+  "runtime": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "schema_version": 2,
+  "split": "train"
+}

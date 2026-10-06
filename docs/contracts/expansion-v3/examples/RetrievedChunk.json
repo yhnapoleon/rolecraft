@@ -1,0 +1,21 @@
+{
+  "id": "example",
+  "material_id": "example",
+  "ref": {
+    "config_version": null,
+    "kind": "document",
+    "object_id": "example",
+    "observed_at_seq": 0,
+    "quote": null,
+    "schema_version": 2,
+    "session_id": "example",
+    "span_end": null,
+    "span_start": null,
+    "valid_from_seq": 0,
+    "valid_until_seq": null,
+    "version": 1
+  },
+  "schema_version": 2,
+  "score": 1.0,
+  "version": 1
+}

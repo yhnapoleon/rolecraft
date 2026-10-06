@@ -1,0 +1,21 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "delegation_id": {
+      "minLength": 1,
+      "title": "Delegation Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "delegation_id"
+  ],
+  "title": "DelegationRevoke",
+  "type": "object"
+}

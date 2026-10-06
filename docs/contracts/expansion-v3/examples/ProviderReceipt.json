@@ -1,0 +1,11 @@
+{
+  "actual_model_revision": null,
+  "actual_provider": null,
+  "cost": null,
+  "input_tokens": null,
+  "output_tokens": null,
+  "raw_response": null,
+  "received_text": null,
+  "schema_version": 2,
+  "validation_errors": []
+}

@@ -1,0 +1,47 @@
+{
+  "adoption": {
+    "adopted_at": null,
+    "adopter": null,
+    "schema_version": 2,
+    "status": "unadopted"
+  },
+  "author": {
+    "delegation_id": null,
+    "id": "human:example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "content": "尚需验证的试点假设",
+  "content_hash": "284847cca40816e1d8a24b34dae13adb1912510802af4c695a66c71f10454eeb",
+  "created_at": "2026-10-06T12:20:00Z",
+  "cycle": {
+    "config_version": null,
+    "kind": "cycle",
+    "object_id": "cycle",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "draft": true,
+  "evidence_refs": [],
+  "executor": {
+    "delegation_id": null,
+    "id": "human:example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "kind": "text",
+  "legacy": null,
+  "product_id": "work",
+  "purpose": "exploration",
+  "removed_at": null,
+  "schema_version": 2,
+  "session_id": "example",
+  "shares": [],
+  "source_return_id": null,
+  "structured_payload": null,
+  "task": null,
+  "title": "",
+  "version": 1,
+  "visibility": "private"
+}

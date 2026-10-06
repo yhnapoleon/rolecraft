@@ -81,6 +81,10 @@ class JobRepository:
     def fail(self, job, error, now=None):
         self._change_leased(job["id"], job["lease_token"], {"status": "failed" if job["attempt"] >= 3 else "queued", "error": error}, now)
 
+    def needs_context(self, job, error, now=None):
+        """Park v2 work without spending three identical retries; explicit refresh resumes it."""
+        self._change_leased(job['id'], job['lease_token'], {'status': 'needs_context', 'error': error}, now)
+
     def retry_failed(self, jid, now=None):
         """Explicit retries start a fresh attempt budget, fenced from prior leases."""
         with self.db.transaction() as conn:
