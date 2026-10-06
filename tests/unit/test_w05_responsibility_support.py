@@ -142,3 +142,11 @@ def test_unknown_purpose_cannot_hide_a_verified_incurred_responsibility(env):
     env['authority'].incurred={'R3.capacity'};env['authority'].participants=40
     item=package(env,purpose='随意命名的作品',decision='no_go')
     assert run_rules(item).label=='NOT_MET' and item.applicability=='applicable'
+
+
+def test_expired_no_prior_action_evidence_cannot_waive_current_responsibility(env):
+    a=env['authority'];snapshot=a.collect(None,env['auth'],(product_ref(),),INITIAL,'no_go')[0]
+    expired=a.add('event','earlier-no-action',1,'截至该时点未开始执行。',created=INITIAL.model_copy(update={'business_seq':3}),valid_until_seq=4)
+    snapshot=replace(snapshot,responsibilities=(ResponsibilityFact('R3.capacity',False,(expired,)),))
+    item=package(env,purpose='result',decision='no_go',snapshot=snapshot)
+    assert item.applicability=='undetermined' and run_rules(item).source=='pending'

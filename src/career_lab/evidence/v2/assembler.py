@@ -127,7 +127,7 @@ class EvidenceAssemblerV2:
             responsibility_ids.add(fact.criterion)
             if fact.criterion != policy.id:continue
             proofs=[add(r) for r in fact.sources]
-            if proofs and all(proofs):
+            if proofs and all(proofs) and all(r.valid_until_seq is None or as_of.business_seq<r.valid_until_seq for r in proofs):
                 responsibility=fact.incurred
                 responsibility_refs=[r.model_dump(mode='json') for r in proofs]
         response=''
