@@ -1,7 +1,7 @@
 from typing import Literal
 from pydantic import Field, JsonValue, model_validator
 from .core import *
-from .world import Observation, SessionBindings, WorldStateV2, PublicState, PublicEvent
+from .world import Observation, SessionBindings, WorldStateV2, PublicState, PublicEvent, JobRefreshRecord
 from .data import Lineage, ActionProposal, ObservedStep
 
 class RuntimeBundle(V2):
@@ -356,16 +356,18 @@ class RequestJobResult(V2):
     job_id: Identifier
     origin_request_id: Identifier
     effect_request_id: Identifier
-    status: Literal['queued','running','completed','failed']
+    status: Literal['queued','running','completed','failed','needs_context']
     effect: PublicTransactionResult | None = None
     error_code: str | None = None
+    refresh_count: NonNegativeInt = 0
+    refresh_history: tuple[JobRefreshRecord,...] = ()
 
 class RequestResult(V2):
     session_id: Identifier
     request_id: Identifier
     operation: Identifier
     executor: Executor
-    status: Literal['completed','pending','failed','unresolved']
+    status: Literal['completed','pending','failed','unresolved','needs_context']
     response: PublicTransactionResult
     jobs: tuple[RequestJobResult,...] = ()
     read_only: Literal[True] = True

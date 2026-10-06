@@ -1764,11 +1764,143 @@
         "title": "CriterionInput",
         "type": "object"
       },
+      "DatasetMetadataV2": {
+        "additionalProperties": false,
+        "description": "A sidecar for audit/stratification. Never part of model_input(record).",
+        "properties": {
+          "accepted_label_tier": {
+            "anyOf": [
+              {
+                "enum": [
+                  "G0",
+                  "G1",
+                  "G2",
+                  "G2v"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Accepted Label Tier"
+          },
+          "annotation_status": {
+            "enum": [
+              "unloaded",
+              "pending",
+              "accepted",
+              "disputed",
+              "failed"
+            ],
+            "title": "Annotation Status",
+            "type": "string"
+          },
+          "bucket": {
+            "enum": [
+              "fixture",
+              "env_run",
+              "human_session",
+              "public_aux",
+              "business_synth"
+            ],
+            "title": "Bucket",
+            "type": "string"
+          },
+          "capture_point": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionPoint"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "input_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "language": {
+            "minLength": 1,
+            "title": "Language",
+            "type": "string"
+          },
+          "lineage": {
+            "$ref": "#/components/schemas/Lineage"
+          },
+          "metadata_only": {
+            "const": true,
+            "default": true,
+            "title": "Metadata Only",
+            "type": "boolean"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "record_id": {
+            "minLength": 1,
+            "title": "Record Id",
+            "type": "string"
+          },
+          "requested_label_tier": {
+            "enum": [
+              "G0",
+              "G1",
+              "G2",
+              "G2v"
+            ],
+            "title": "Requested Label Tier",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_snapshots": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DatasetSnapshotMetadata"
+            },
+            "title": "Source Snapshots",
+            "type": "array"
+          },
+          "split": {
+            "enum": [
+              "train",
+              "dev",
+              "test",
+              "regression"
+            ],
+            "title": "Split",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "input_hash",
+          "language",
+          "bucket",
+          "split",
+          "lineage",
+          "provenance",
+          "requested_label_tier",
+          "annotation_status"
+        ],
+        "title": "DatasetMetadataV2",
+        "type": "object"
+      },
       "DatasetRecordV2": {
         "additionalProperties": false,
         "properties": {
           "bucket": {
             "enum": [
+              "fixture",
               "env_run",
               "human_session",
               "public_aux",
@@ -1878,6 +2010,62 @@
           "input_hash"
         ],
         "title": "DatasetRecordV2",
+        "type": "object"
+      },
+      "DatasetSnapshotMetadata": {
+        "additionalProperties": false,
+        "properties": {
+          "capture_point": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "origin": {
+            "enum": [
+              "fixture",
+              "env_run",
+              "human_session",
+              "public_aux",
+              "business_synth"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Session Id"
+          },
+          "snapshot_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Snapshot Digest",
+            "type": "string"
+          },
+          "source_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source Digest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_digest",
+          "source_digest",
+          "capture_point",
+          "origin"
+        ],
+        "title": "DatasetSnapshotMetadata",
         "type": "object"
       },
       "DecisionPointInput": {
@@ -4011,6 +4199,28 @@
             "title": "Credential Id",
             "type": "string"
           },
+          "head_dependencies": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Head Dependencies",
+            "type": "array"
+          },
+          "refresh_count": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Refresh Count",
+            "type": "integer"
+          },
+          "refresh_history": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/JobRefreshRecord"
+            },
+            "title": "Refresh History",
+            "type": "array"
+          },
           "request_id": {
             "minLength": 1,
             "title": "Request Id",
@@ -4032,6 +4242,21 @@
               "$ref": "#/components/schemas/ObjectRef"
             },
             "title": "Sources",
+            "type": "array"
+          },
+          "state_dependencies": {
+            "default": [],
+            "items": {
+              "enum": [
+                "config_version",
+                "resources",
+                "applied_milestones",
+                "status",
+                "cycle_id"
+              ],
+              "type": "string"
+            },
+            "title": "State Dependencies",
             "type": "array"
           }
         },
@@ -4100,6 +4325,82 @@
         "title": "JobEnvelope",
         "type": "object"
       },
+      "JobRefreshRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt": {
+            "minimum": 0,
+            "title": "Attempt",
+            "type": "integer"
+          },
+          "parked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Parked At"
+          },
+          "previous_as_of": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "queued_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Queued At"
+          },
+          "reason": {
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "refreshed_at": {
+            "format": "date-time",
+            "title": "Refreshed At",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Started At"
+          }
+        },
+        "required": [
+          "previous_as_of",
+          "reason",
+          "attempt",
+          "refreshed_at"
+        ],
+        "title": "JobRefreshRecord",
+        "type": "object"
+      },
       "JobRequest": {
         "additionalProperties": false,
         "properties": {
@@ -4110,6 +4411,14 @@
             "pattern": "^[0-9a-f]{64}$",
             "title": "Context Hash",
             "type": "string"
+          },
+          "head_dependencies": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Head Dependencies",
+            "type": "array"
           },
           "name": {
             "minLength": 1,
@@ -4128,6 +4437,21 @@
               "$ref": "#/components/schemas/ObjectRef"
             },
             "title": "Sources",
+            "type": "array"
+          },
+          "state_dependencies": {
+            "default": [],
+            "items": {
+              "enum": [
+                "config_version",
+                "resources",
+                "applied_milestones",
+                "status",
+                "cycle_id"
+              ],
+              "type": "string"
+            },
+            "title": "State Dependencies",
             "type": "array"
           }
         },
@@ -6792,6 +7116,20 @@
             "title": "Origin Request Id",
             "type": "string"
           },
+          "refresh_count": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Refresh Count",
+            "type": "integer"
+          },
+          "refresh_history": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/JobRefreshRecord"
+            },
+            "title": "Refresh History",
+            "type": "array"
+          },
           "schema_version": {
             "const": 2,
             "default": 2,
@@ -6803,7 +7141,8 @@
               "queued",
               "running",
               "completed",
-              "failed"
+              "failed",
+              "needs_context"
             ],
             "title": "Status",
             "type": "string"
@@ -6867,7 +7206,8 @@
               "completed",
               "pending",
               "failed",
-              "unresolved"
+              "unresolved",
+              "needs_context"
             ],
             "title": "Status",
             "type": "string"
@@ -11333,6 +11673,67 @@
           }
         ],
         "summary": "Job"
+      }
+    },
+    "/sessions/{session_id}/jobs/{job_id}/refresh": {
+      "post": {
+        "operationId": "refresh_job_sessions__session_id__jobs__job_id__refresh_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "title": "Job Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Refresh Job"
       }
     },
     "/sessions/{session_id}/materials": {

@@ -57,7 +57,30 @@
 
 `Mutation.jobs`中的JobRequest与对象/状态原子入队，sources及可信身份形成JobContextSnapshot。`registry.register_job("v2.<name>", handler)`与既有独立worker相接，handler接收`(TransactionView, JobEnvelope, AuthContext)`，可在事务外调用其获授权的模型，返回Mutation。
 
-执行前及提交前检查授权和固定context版本，提交事务内检查worker租约token及到期时间。租约被接管的旧worker不能提交。若业务结果已提交而job确认丢失，重试先读取已提交幂等结果，不再调用handler/模型。尚未提交时外部模型调用仍可能重复，W09/W12必须逐attempt记录真实usage和预算；缺失usage写unknown，W01没有声称外部计费恰好一次。相关状态变化产生`context_stale`，模块须明确重新取得上下文并创建新的请求，不能静默换证据。
+handler 的 TransactionView 来自入队或显式刷新后的固定 storage snapshot，并按当前授权过滤。sources 和 command 中的精确引用固定输入；无关草稿或另一反馈完成不使它失效。普通job另有不可省略的生命周期条件：会话必须active、当前周期open，并且与快照周期一致。仅 operation=`feedback.create` 且 subject 为 submission/review 的job是固定主体派生反馈；公共提交仍强制它只创建新FeedbackV2、绑定原subject/evaluation，不能带事件、资源、状态或其他对象写入。
+
+| job类别与当前情况 | handler前行为 | refresh与写回 |
+|---|---|---|
+| 普通job，active且原周期仍open | 通过身份/来源/相关依赖检查后生成 | 每个输出expected_head必检；作品cycle必须是当前open周期，job不能写cycle对象 |
+| 普通job，paused或submitted | needs_context / job_session_inactive，0次handler调用 | 此时refresh拒绝；恢复或开启修订后才可显式刷新 |
+| 普通job，已开启另一个周期 | needs_context / job_cycle_changed，0次handler调用 | 显式refresh取新周期快照；原question、command/request_id与精确来源保留，不能偷偷写旧周期 |
+| handler开始后发生提交/修订 | 提交前再次检查，拒绝旧结果并停放 | 已发生的外部调用如实计费；不继续三次相同调用，用户明确刷新后可续跑 |
+| 固定主体派生反馈，原提交或新修订已存在 | 当前身份/来源仍有效时可完成 | 只追加原subject的不可变FeedbackV2；不重开周期、不改旧提交，即使新周期paused也允许纯反馈 |
+| 业务结果已提交但ACK丢失 | 先回放原幂等结果，不调用handler | 已生效任务不能refresh；当前scope和实际claim仍核对 |
+
+模块还可声明 JobRequest.head_dependencies 和 state_dependencies（config_version/resources/applied_milestones/status/cycle_id）。这些是额外的新鲜度条件；空集合也不能关闭上述普通job生命周期条件。执行前、模型返回后和事务内均核对相关条件、当前credential/action/object scope、实际WorkerClaim/租约和输出expected_head。
+
+context_stale、可刷新对象头冲突及生命周期暂不可提交使Worker置needs_context，保留原问题和稳定错误码。RequestResult.status直接返回needs_context，不再混为unresolved；后者只表示缺失可核对的effect等不完整结果。固定新对象ID已占用返回job_result_identity_conflict并立即failed，不能无限refresh；模块须使用唯一结果ID。写旧周期返回job_output_cycle_closed并立即failed。其他确定性ProtocolError（4xx及明确模块/对象契约错误）也只尝试一次；仅ProtocolError.code作为稳定协议码，未知异常归job_execution_failed并沿有限瞬时重试预算。v1仍保留旧异常类名处理。
+
+调用者明确POST `/sessions/{session_id}/jobs/{job_id}/refresh`，发送显式v2 Command（operation=jobs.refresh，payload含同路径job_id和当前业务/工作区版本），经Gateway/公共事务重取快照及声明的head。原逻辑command/request_id、精确sources/subject/evaluation不变；旧job_context保留，refresh_count递增，旧claim失效。JobRefreshRecord保存每次停放原因、attempt、queued/started/parked时间和refreshed_at，并由RequestJobResult.refresh_history提供可恢复查询。原credential失效/越权、普通job当前会话非active或周期非open、永久失败或已有effect时均拒绝刷新，不重排注定失败的任务。学员可刷新所属agent job，但原agent凭据必须有效；agent自行刷新还需allowed_actions含jobs.refresh及原动作。
+
+context_hash保留原入队模块输入身份，不代表刷新后prompt；模块根据新as_of/refresh_count重建并记录真实prompt/hash与usage。尚未提交时外部模型调用仍可能重复，缺失usage写unknown，不声称外部计费恰好一次。旧r3已queued任务的缺省字段可消费；r3已failed且只保留通用ProtocolError的任务不能可靠推断失败原因，本版本不自动复活，保留历史并由业务模块为用户显式新建关联请求。
+
+RoleContext受众只允许system与自身真实role_id，普通learner不可读；保留字role_id也不授予权限。visible_to必须包含自身role_id才能供role_reader读取；仅system受众的内部记录只供research审计。当前RoleContext是每次capture的新ID快照：caller只能创建私有v1，不能更新旧ID，也不能把私有context当作公开产物依赖。合法方向是私有context引用安全回复；向学员展示走PublicDisclosureRecord/公开回复。W04可信派生产物与更新/事件读取通道另按S01—S06集成，不借research权限绕过。
+
+同一Mutation允许按顺序写同一对象v1…vN，每个expected_head对已有或前序planned版本递进；版本、依赖、头和事务结果全部原子提交。中间版本不连续或后续失败时全量回滚；重复请求回放同一结果。导入可利用此能力保留真实历史，不可补造缺失版本。research_context新凭据只读，且公共授权层也拒绝旧research凭据的act/submit/delegate写入；内部研究读取仍无自动到期/撤销通道，调用方需控制句柄生命周期。SnapshotExport含私有原句，不得把它直接送进面向学员的生成或公开输出。
+
+execute(expected_storage_revision=...)保留为已有内部调用的显式同步CAS兼容参数；job路径不再传它。当前没有内置模块依赖它，不把全session storage_revision重新引入异步有效性判断。
 
 ## 研究隔离恢复
 
@@ -118,3 +141,48 @@ r2未通过独立验收；R01—R09的修复由新source digest、manifest及回
 8. **单次G2绑定**：accepted G2必须恰好一个成功pass，final与其实际判断一致（引用集合按已有规范比较）。无记录的人工覆盖不能作为G2；裁决/人工结果须使用有对应来源的标注记录。
 
 W09更新request_result_path及RequestResult解码；W04/W06更新公开披露投影；W09/W10更新kind/namespace映射及typed action model；W05使用固定subject的反馈job；W07/W08/W09/W12处理实回模型身份为空和独立审计收据。不得因本轮基础修复把尚未安装的业务或真实模型QA标为通过。
+
+
+## W14 首个公共接线候选：权威引用上下文与读取恢复
+
+候选基于W01 r6与031固定的W02—W05 owned输入，只提供公共接口增量；W02的runtime目前仍锁定r3构造条件，须由033按本候选重新绑定并交付后，才可完成真实ScenarioModule的S06/S07验收。下面的端口验证不冒充该模块整体验收。
+
+新注册方式为 `registry.register_reference_resolver(kind, resolver, contextual=True)`。回调签名是 `(auth, ref, as_of, bindings, *, scenario_state)`；未声明contextual时保留原四参数调用及当前时点语义。API创建的V2Store同步该声明。回调必须是纯验证，不访问数据库、不缓存可变session状态；scenario_state由公共层在同一事务从真实snapshot窗口取得，绝不采信客户端自报激活数据。
+
+普通ObjectRef用当前事务窗口。EvidenceRefV2的observed_at_seq早于当前时，公共层选择该seq对应、且不晚于当前storage_revision的真实已完成snapshot，再提供其ScenarioStateV2；不存在完整窗口则reference_window_unavailable，未来观察则future_evidence。seq增大本身不等于来源已激活。当前credential、object scope与跨session边界始终重新核对，历史窗口不能撤销当前授权限制。底层不将私有ScenarioState加入公共响应。
+
+W02消费者迁移可以将其现有 `reference` 作为contextual回调，或让 `reference_resolver` 显式接收并传递scenario_state，再以contextual=True注册；同时更新runtime的真实foundation绑定。禁止临时替换旧manifest骗过构造校验。
+
+合法已执行动作的command、对象content与result中外部引用，经同一resolver验证后在同一事务保存不可变ExternalReference锚点。没有ObjectWrite的材料读取也能按原request_id恢复原响应；验证失败时锚点、事件、事务与结果一起回滚。恢复查询只读取已记录信息并复核当前授权，不再次调用resolver或模型。相同对象版本的源文件/hash漂移仍拒绝。经验证的LegacyProvenance.raw为惰性原稿，不参与活引用或未来时点扫描；真实引用字段仍受校验。
+
+`V2Store.resolve_reference(auth, ref, storage_revision=...)` 是独立只读验证入口，返回ExternalReference；省略revision取当前上限，给出revision必须对应真实snapshot。不要在Mutation回调内嵌套调用它；事务中的验证由公共execute负责。W03纯domain所需的操作内view权限predicate及导入回执另行提供，不能自行调用私有_records。当前restore未携完整历史snapshot序列；已复制锚点保持源身份，但缺失的历史窗口不会被虚构，需历史窗口的调用会明确不可用。
+
+
+## 原键重放的统一权限边界
+
+execute命中旧事务、worker replay及GET requests/jobs恢复，共用当前凭据、原动作权限、对象scope与精确记录可见性校验。不会仅因fingerprint相等返回旧正文，不会为重放再调用handler、resolver或模型，也不推进事件/版本。显式结果或可见事件里的私有引用不享受内部记账豁免。
+
+旧scope_refs可能没有记录result-only引用，因此恢复合并已保存结果/对象及可见事件里的引用再次检查。缺外部锚点的历史投影，仅在元数据完整、原actor一致、外部类型仍已注册且当前scope允许时回放原内容；这不等于重新验证来源或补造锚点。元数据缺失、未知引用类型、跨session、缩权/撤销/过期或不可见引用均关闭返回。原权限合法的重试仍返回同一事务；同key不同command仍为request_id_reused。
+
+
+恢复与重放事件按已持久化的operation选择当前安装注册中的projector：静态operation/action_name或明确Literal动作字段可唯一匹配；不能由读取请求自报projector。派生effect使用自己的持久化动作。未知动态字符串匹配不授予投影，继续默认脱敏；歧义匹配返回event_projection_ambiguous，不借另一模块函数泄露原始事件。可见性先过滤，projector仍校验PublicEvent身份。GET恢复、POST同键重试及worker ACK恢复不重跑业务handler/resolver，并保持合法原投影字段。
+
+
+## W07/W08 小数据契约切片
+
+DatasetRecordV2.bucket明确允许fixture。带fixture:not-business-run变换声明的记录必须仍是fixture；metadata侧记中的fixture快照也不能被env_run等记录冒领。fixture用于管线与契约验证，不计为真实业务运行、真人会话或模型效果证据。
+
+`model_input(record)`仍只返回四类业务输入，外层language、bucket、lineage、provenance、label_ref及标签方法均不进入该载荷。`metadata_projection(record, annotation=None, capture_point=..., source_snapshots=...)`输出独立DatasetMetadataV2侧记，保留完整lineage、来源文件/代码身份、语言、来源桶、各snapshot_digest及capture_point；不能把此侧记拼进模型prompt。未提供annotation时状态为unloaded，accepted_label_tier为空。
+
+record.label_tier表示该标签流声明的方法，单独字段不能证明标签被接受。`validate_record_annotation`重验AnnotationV2结构并核对record_id/input_hash/tier/task；require_accepted=True时pending/disputed/failed拒绝进入已接受发布。metadata侧记分别保存requested_label_tier、annotation_status和accepted_label_tier。pending的G1计划不等于新G1；accepted G1仍须已有两名独立human成功记录和裁决引用。实际文件hash、调用/人工身份真实性与源记录事实由W07发布验证器核验，schema不能代替现场证据。
+
+relation/criterion的as_of是被评价主张/行为的历史参照点，capture_point是后来读取快照的时点，不改写as_of。已接受配对必须有rule_context.evidence_time_context：policy=historical-evidence-time-v1，status=known，reference_seq等于as_of.business_seq，validity_known_ids恰好覆盖所有候选。valid_until_seq=None仅在源适配明确声明known时代表已知开放区间；未声明或undetermined仍pending，不能推成当前有效。引用与可接受证据集合须满足observed_at≤as_of、valid_from≤as_of<valid_until（known开放上界除外）；evidence_evaluable要求存在合法联合目标。过期旧政策可证明旧时点事实，未来政策不能倒扣历史行为。每个已记录capture_point不得早于该参照点。
+
+这是公共契约与验证函数；W07/W08须按固定候选迁移，执行真正fixture release→W08消费的跨包回归。当前没有下载模型、训练或把脚本标注计为正式实验。新增manifest会改变严格foundation绑定：W07/W08需迁移，W02即使未用这些模型也须按其runtime精确绑定规则重新确认；不能拿前一manifest冒充当前实现。
+
+
+### 已接受标签的联合证据目标
+
+公共配对验证与W08训练入口采用同一门槛：当evidence_evaluable=True时，必须提供acceptable_evidence_sets；除INSUFFICIENT和NOT_APPLICABLE外，其中每个集合都必须非空。SUPPORTED、CONTRADICTED、MET、PARTIAL和NOT_MET不能用空集合充当可接受的证据输出，也不能把一个空集合混进其他有效集合来绕过。所有引用仍须属于历史时点可用候选。INSUFFICIENT/NOT_APPLICABLE可使用显式空目标((),)；evidence_evaluable=False时允许没有证据目标，不为满足格式编造引用。pending仍不等于accepted。
+
+此规则修正c3 helper对空集合的漏检；它不证明语义标签正确，也不替代真实标注来源核验。只影响公共数据接受/metadata投影门槛，不改变W02业务schema。c2业务绑定及独立HTTP证据继续保留，累计业务联调前由031统一固定新foundation输入，不因每个data-only候选要求立即重打场景包。

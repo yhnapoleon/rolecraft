@@ -25,10 +25,14 @@
     "conflict_policy": "reject_and_refresh",
     "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
     "credential_id": "example",
+    "head_dependencies": [],
+    "refresh_count": 0,
+    "refresh_history": [],
     "request_id": "example",
     "schema_version": 2,
     "session_id": "example",
-    "sources": []
+    "sources": [],
+    "state_dependencies": []
   },
   "job_id": "example",
   "operation": "example",

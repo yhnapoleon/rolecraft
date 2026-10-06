@@ -1029,6 +1029,7 @@
   "properties": {
     "bucket": {
       "enum": [
+        "fixture",
         "env_run",
         "human_session",
         "public_aux",
