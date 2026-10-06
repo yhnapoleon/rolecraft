@@ -141,3 +141,13 @@ r2未通过独立验收；R01—R09的修复由新source digest、manifest及回
 8. **单次G2绑定**：accepted G2必须恰好一个成功pass，final与其实际判断一致（引用集合按已有规范比较）。无记录的人工覆盖不能作为G2；裁决/人工结果须使用有对应来源的标注记录。
 
 W09更新request_result_path及RequestResult解码；W04/W06更新公开披露投影；W09/W10更新kind/namespace映射及typed action model；W05使用固定subject的反馈job；W07/W08/W09/W12处理实回模型身份为空和独立审计收据。不得因本轮基础修复把尚未安装的业务或真实模型QA标为通过。
+
+
+## 原键重放的统一权限边界
+
+execute命中旧事务、worker replay及GET requests/jobs恢复，共用当前凭据、原动作权限、对象scope与精确记录可见性校验。不会仅因fingerprint相等返回旧正文，不会为重放再调用handler、resolver或模型，也不推进事件/版本。显式结果或可见事件里的私有引用不享受内部记账豁免。
+
+旧scope_refs可能没有记录result-only引用，因此恢复合并已保存结果/对象及可见事件里的引用再次检查。缺外部锚点的历史投影，仅在元数据完整、原actor一致、外部类型仍已注册且当前scope允许时回放原内容；这不等于重新验证来源或补造锚点。元数据缺失、未知引用类型、跨session、缩权/撤销/过期或不可见引用均关闭返回。原权限合法的重试仍返回同一事务；同key不同command仍为request_id_reused。
+
+
+恢复与重放事件按已持久化的operation选择当前安装注册中的projector：静态operation/action_name或明确Literal动作字段可唯一匹配；不能由读取请求自报projector。派生effect使用自己的持久化动作。未知动态字符串匹配不授予投影，继续默认脱敏；歧义匹配返回event_projection_ambiguous，不借另一模块函数泄露原始事件。可见性先过滤，projector仍校验PublicEvent身份。GET恢复、POST同键重试及worker ACK恢复不重跑业务handler/resolver，并保持合法原投影字段。
