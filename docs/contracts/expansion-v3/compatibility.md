@@ -19,3 +19,5 @@ W01验证的是公共协议、事务、隔离与旧版兼容。未安装业务�
 r3只针对独立审阅反例修复。jobs/worker.py对v1仍调用原payload-only handler；v2显式传递claim。原v1协议、请求hash、旧反馈、冻结fixture不改。v2的request-meta为新增表，不回填无法证明的历史记录。公开披露、RestoreResult.id_map key语义和provider未知身份有明确迁移要求，见接线说明；不能给旧r2换hash冒充已修复。
 
 r4对v2异步输入改为固定快照，并增加显式声明的当前head/世界字段依赖。新增needs_context状态与jobs.refresh；旧r3已排队payload缺省新增字段仍可消费，原逻辑command与幂等身份不变。v1 worker仍保留原异常类名和payload-only处理。RoleContext新增私有受众强制校验，旧错误受众记录的读路径同时防护。候选W03删路由桥接已撤回并单独保全，不属于本冻结版本；后续真实业务集成须经Gateway再验证。
+
+r5仅关闭r4复核剩余历史RoleContext读边界：非research learner、保留字role_id均不能读取内部上下文，合法同角色读取和内部research审计保持。r4及其证据保全；新增W03/W04/W05/W07请求不属于本次窄修复。

@@ -84,6 +84,7 @@
     "revision_parent_not_current",
     "role_context_identity_immutable",
     "role_context_private",
+    "role_reader_reserved",
     "route_object_mismatch",
     "rules_engine_unavailable",
     "scenario_binding_mismatch",

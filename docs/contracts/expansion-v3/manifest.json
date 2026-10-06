@@ -238,7 +238,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "76d98465feb03b7fa70777209734c11d6d0b7e9f8a6d48cc385b32745c6dc852"
+      "sha256": "23e482a4bc1f9178830b972c845a2ea2e793d15d75d2faab10a6e7d5c18b624b"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -246,12 +246,12 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "034c7df0e5c7af80a483e8a169fca16c63ab23510750dc6accc1af9f72db401d"
+      "sha256": "eaed6d140ae8d60b521e1875166b36b954a1186bd4145eefcba1038af23d5d81"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "19f6c31ce0218dea760df4e29d1b011abea6fd3b93d43155af8d353aa5ce8f91"
+    "sha256": "f99b1dfb056f474fc50045a4cfc3634dfa47f8d1e60d8f31cb4dcd1918d99348"
   },
   "input_contract_revision": "preflight",
   "openapi": {
@@ -259,7 +259,7 @@
     "sha256": "24a5eb0ad428c8a2d2ba81021e1116049dc6ae27ec80bf0c03345d7097f1c98f"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-df634361108035579f72dd9238665cea3e86f564effcd00e918290c82f3a1b66",
+  "previous_contract_revision": "expansion-v3-7ff68a878fbfd58770ccb31a51d955b39ef568fee817a8991ef0b66613bb7947",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "request_payloads": {
     "actions": "ActionInput",
@@ -297,7 +297,7 @@
   },
   "review_fixes": {
     "C-W01-01": "Snapshot-bound asynchronous inputs; declared head/state freshness, actual claim and current authorization checked atomically. needs_context parks once; explicit idempotent refresh preserves original subject/command and immutable context history.",
-    "C-W01-02": "RoleContext audiences are restricted to system and its owning role, with a defensive read filter for historical bad visibility.",
+    "C-W01-02": "RoleContext reads reject non-research learner and historical reserved role IDs; only a trusted matching role reader or internal research capability can read. Reserved role credentials cannot be minted. New writes remain private.",
     "C-W01-03": "Withdrawn route-deleting candidate is not included. Public integration must use Gateway slots; W03 adapter remains separate integration work.",
     "P2-related": "Stable worker error codes; scoped v2 jobs GET; reverse-order object/resolver collision rejected.",
     "R01": "Actual WorkerClaim is passed and fenced at entry/commit; no lease borrowing.",
@@ -2566,7 +2566,7 @@
     "src/career_lab/contracts/v2/discovery.py": "1089a5682cb915ce4f095ec28f65014d88724e4e5a30e1b17a753bb358bc006c",
     "src/career_lab/contracts/v2/evaluation.py": "c8bc7004d8d14c54f1832eecc227ae45e7fe8492c1b584117ad1f8a372a5c631",
     "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
-    "src/career_lab/contracts/v2/export.py": "1f56b2d2dde84e09732d90d83af18c4f84322278a9997fc237c08d85000a22c4",
+    "src/career_lab/contracts/v2/export.py": "a480031501ba534bfc887009ab8171455158cb4827cff126698d635c54a36824",
     "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
     "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
     "src/career_lab/contracts/v2/projection.py": "8740cf952268d8997610904224db37dcd7ce91886046653b46284be9583062ab",
@@ -2583,7 +2583,7 @@
     "src/career_lab/storage/v2_lifecycle.py": "77d0e275b4d18e68906fb42460518279a776a42b3860dfbdaf9ab8c56d6ce7a6",
     "src/career_lab/storage/v2_remap.py": "5fa7f55ce4fcf721b4b81978214698f83a4f0437ae397f94ad6bfc4c98cf769f",
     "src/career_lab/storage/v2_snapshot.py": "0c079af78ef90a36abdc69f8f1313223d9cbc4f951a56e8e14416c5399ab233f",
-    "src/career_lab/storage/v2_store.py": "4c97e2a1de59ee73c3609214bd9fec40eae2c9eb5f26853eb0e3e5a84b14e6e0",
+    "src/career_lab/storage/v2_store.py": "63424af60a5f25d80fdfaedc50c8823da02ca352acfeea1eec7b4bee22499054",
     "src/career_lab/storage/v2_tables.py": "cb15ae737542083abb5206378bec958939901b9343246ce4614e97c77bd27ff2"
   },
   "status": "frozen_candidate_pending_independent_review",

@@ -65,7 +65,7 @@ handler 的 TransactionView 来自入队时的完整固定 storage snapshot，�
 
 若业务结果已提交而 job 确认丢失，重试先读取已提交幂等结果，不再调用 handler/模型；已生效任务不能刷新。尚未提交时模型调用仍可能重复，模块必须逐 attempt 记录真实 usage 和预算，缺失 usage 写 unknown。本公共层不声称外部计费恰好一次。
 
-RoleContext 是内部对象：visible_to 只允许 system 与自身 role_id，拒绝 learner/其他角色。即使旧记录错误声明 learner 可见，新读取层也会过滤。学员展示须使用 PublicDisclosureRecord/公开回复投影，不能直接暴露 RoleContext.sources 或 actual_disclosures。
+RoleContext 是内部对象：visible_to 只允许 system 与自身 role_id，拒绝 learner/其他角色。即使旧记录错误声明 learner 可见或把 role_id 写成 learner/system/research，新读取层也会过滤；这些保留字不能通过 role_reader 取得角色凭据。非 research 读取须为服务端创建的对应角色身份，普通 learner 无法读取任何 RoleContext。research capability 是内部审计授权，不由记录自报 role_id 授予。学员展示须使用 PublicDisclosureRecord/公开回复投影，不能直接暴露 RoleContext.sources 或 actual_disclosures。
 
 ## 研究隔离恢复
 

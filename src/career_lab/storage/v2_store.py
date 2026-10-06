@@ -212,6 +212,7 @@ class V2Store(JobStoreMixin):
 
     def role_reader(self,sid,role_id):
         """Internal context builder for an installed role; no public credential route."""
+        if role_id in {'learner','system','research'}:raise ProtocolError('role_reader_reserved',status=403)
         context=AuthContext(session_id=sid,actor_id=role_id,executor=Executor(id='role:'+role_id,kind='system'),capabilities=('read',),credential_id=uuid4().hex)
         with self.db.transaction() as c:self._row(c,sid);self._credential(c,context,secrets.token_urlsafe(32))
         return context
@@ -231,8 +232,13 @@ class V2Store(JobStoreMixin):
         return tuple(StoredObject.model_validate_json(x) for x in c.execute(q).scalars())
 
     def _visible(self,record,auth):
-        if record.ref.kind=='role_context' and auth.actor_id!=record.content['role_id'] and 'research' not in auth.capabilities:return False
-        return 'research' in auth.capabilities or auth.actor_id in record.visible_to
+        if 'research' in auth.capabilities:return True
+        if record.ref.kind=='role_context':
+            role_id=record.content['role_id']
+            # Historical content cannot turn a reserved actor into a role reader.
+            if role_id in {'learner','system','research'} or auth.actor_id in {'learner','system','research'}:return False
+            if auth.actor_id!=role_id or auth.executor.kind!='system' or auth.executor.id!='role:'+role_id:return False
+        return auth.actor_id in record.visible_to
 
     def view(self,auth):
         with self.db.transaction() as c:
