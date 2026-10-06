@@ -111,6 +111,14 @@
       "title": "Context Hash",
       "type": "string"
     },
+    "head_dependencies": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ObjectRef"
+      },
+      "title": "Head Dependencies",
+      "type": "array"
+    },
     "name": {
       "minLength": 1,
       "title": "Name",
@@ -128,6 +136,21 @@
         "$ref": "#/$defs/ObjectRef"
       },
       "title": "Sources",
+      "type": "array"
+    },
+    "state_dependencies": {
+      "default": [],
+      "items": {
+        "enum": [
+          "config_version",
+          "resources",
+          "applied_milestones",
+          "status",
+          "cycle_id"
+        ],
+        "type": "string"
+      },
+      "title": "State Dependencies",
       "type": "array"
     }
   },

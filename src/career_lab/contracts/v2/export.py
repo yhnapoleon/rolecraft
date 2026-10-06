@@ -39,6 +39,8 @@ CONSUMERS['W09'] += ['RequestResultQuery','RequestJobResult','RequestResult','Pr
 CONSUMERS['W07'] += ['ProviderReceipt']
 CONSUMERS['W08'] += ['ProviderReceipt']
 CONSUMERS['W12'] += ['ProviderReceipt']
+for consumer in ('W04','W05','W06','W09','W14'):
+    CONSUMERS[consumer] += ['JobRefreshRecord']
 
 def dump(path,data):
     path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(data,ensure_ascii=False,sort_keys=True,indent=2)+'\n')
@@ -58,15 +60,16 @@ def export(root:Path,output:Path):
     app=create_app('sqlite:///:memory:');dump(output/'openapi.json',app.openapi());app.state.store.close()
     # Only implementation files here: the complete source tree is identified by the delivery receipt.
     files=set((root/'src/career_lab/contracts').rglob('*.py'))
-    files|={root/p for p in ['src/career_lab/api/app.py','src/career_lab/api/modules.py','src/career_lab/api/v2_routes.py','src/career_lab/storage/v2_tables.py','src/career_lab/storage/v2_store.py','src/career_lab/storage/v2_snapshot.py','src/career_lab/storage/v2_lifecycle.py','src/career_lab/storage/v2_remap.py','src/career_lab/jobs/worker.py','src/career_lab/rubrics/registry.py']}
+    files|={root/p for p in ['src/career_lab/api/app.py','src/career_lab/api/modules.py','src/career_lab/api/v2_routes.py','src/career_lab/storage/v2_tables.py','src/career_lab/storage/v2_store.py','src/career_lab/storage/v2_jobs.py','src/career_lab/storage/v2_snapshot.py','src/career_lab/storage/v2_lifecycle.py','src/career_lab/storage/v2_remap.py','src/career_lab/jobs/worker.py','src/career_lab/jobs/repository.py','src/career_lab/rubrics/registry.py']}
     source={str(p.relative_to(root)):sha(p) for p in sorted(files)}
     errors=[]
     import re
     for p in files:
         errors.extend(re.findall(r"ProtocolError\(['\"]([^'\"]+)",p.read_text()))
+    errors.extend(['job_result_identity_conflict','job_execution_failed'])
     dump(output/'errors.json',{'schema_version':2,'codes':sorted(set(errors)),'http_policy':{'401':'missing/invalid authentication','403':'capability/scope denied','404':'not found or unauthorized object','409':'version/hash/identity conflict','422':'invalid request/business precondition','503':'uninstalled/unavailable module or invalid server result'}})
     manifest={'schema_version':1,'status':'frozen_candidate_pending_independent_review','owner':'rolecraft-032-foundation','base_commit':'80cf1f6189cd25610d609f44283ff9668582d759','input_contract_revision':'preflight','v1_dirty_included':False,'source_files':source,'schemas':entries,'consumer_interfaces':CONSUMERS,'request_payloads':REQUEST_MODELS,'openapi':{'path':'openapi.json','sha256':sha(output/'openapi.json')},'errors':{'path':'errors.json','sha256':sha(output/'errors.json')},'boundaries':['This is W01 common foundation, not implemented W02-W15 business modules.','v4 semantic engine, paid provider/model quality, full product QA and research results are not claimed.','Existing v1 remains separate; internal snapshot/restore never appears in learner routes.'],'documents':{name:{'path':name,'sha256':sha(output/name)} for name in ['compatibility.md','module-interfaces.md','consumer-request-resolution.json'] if (output/name).is_file()},'previous_draft':'draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e','changes_since_draft':['Command.schema_version and CreateSessionV2.schema_version are now required for explicit envelopes.','Added ModelPrediction; ModelBundle validates ordered task label vocabulary.','G2v compares evidence sets independent of ordering, requires reordered evidence only when more than one item exists.','API/storage/atomic job queue/isolated restore implementations and their public models are now included.','AssistantConfig adds finite min_score (initial 0.35, uncalibrated), freshness_guard none/warn/fallback and manual_domains; TestResultV2 requires execution metadata and exact config_ref.', 'BusinessRequest requires immutable proposed/applied BusinessBasis. ScenarioStateV2 is private transaction state, not an observation.', 'Observation.visible_sources now requires ObservedFragment with explicit learner acquisition/audience; catalog is separate. StepResult/ObservedStep bind actual request identities, points and executor.', 'AnnotationPass successful passes require actual invocation identity; G2v also requires separate context IDs, independence method/reason and truthful evidence order policy.', 'AuthContext/DelegationGrant adds explicit create_under_tasks; derived results remain tied to the actual executor, unrelated existing artifacts are not inherited.', 'SnapshotExport now includes immutable external source references; restore supports exact target/idempotency and structured action remapping. Regenerate draft snapshots under the new revision.', 'WorkProduct/import DTOs retain intent/refs, test_compare, review_focus distinct from direction, source return identity, adoption and version conflicts.', 'PublicTransactionResult is the HTTP/worker wire result; TransactionResult remains the internal authoritative record.']}
-    manifest['previous_contract_revision']='expansion-v3-aa2cd8a43707d380f2128f19d3061e73ef82efd3c26becd50297d2ad8393a8ff'
+    manifest['previous_contract_revision']='expansion-v3-5a117a51493f5bb5d8f96f711d78466f82550935d803c312d277cfac045ff6a4'
     manifest['review_fixes']={
         'R01':'Actual WorkerClaim is passed and fenced at entry/commit; no lease borrowing.',
         'R02':'Fixed-subject derived FeedbackV2 may persist on submitted; ordinary writes stay forbidden.',
@@ -77,6 +80,18 @@ def export(root:Path,output:Path):
         'R07':'Built-in authenticated read-only request_id query returns real request/job/effect links.',
         'R08':'Received provider body/usage preserved independently of invalid/missing actual identity.',
         'R09':'Accepted single-pass G2 final equals that actual successful decision.'}
+    manifest['review_fixes'].update({
+        'C-W01-01':'Snapshot-bound asynchronous inputs; declared head/state freshness, actual claim and current authorization checked atomically. needs_context parks once; explicit idempotent refresh preserves original subject/command and immutable context history.',
+        'C-W01-02':'RoleContext reads reject non-research learner and historical reserved role IDs; only a trusted matching role reader or internal research capability can read. Reserved role credentials cannot be minted. New writes remain private.',
+        'C-W01-03':'Withdrawn route-deleting candidate is not included. Public integration must use Gateway slots; W03 adapter remains separate integration work.',
+        'P2-related':'Stable worker error codes; scoped v2 jobs GET; reverse-order object/resolver collision rejected.',
+    })
+    manifest['review_fixes']['C-W01-04']='Ordinary jobs require an active open current cycle before handler and at commit. Explicit refresh preserves question/command while moving context to the current cycle; fixed-subject feedback remains allowed. Deterministic failures stop; parked reason/history is queryable; research writes denied.'
+    manifest['publication_package']='W14'
+    manifest['input_contract_revision']='draft-core-wiring-r6-20261007'
+    manifest['previous_contract_revision']='expansion-v3-84deab6a1b3102bc649ce192eef1a6c722cba7ea4cfd2b48c77a9ad77aad2633'
+    manifest['integration_changes']={'W02-S06':'Opt-in contextual resolver gets authoritative persisted-window ScenarioState; legacy four-argument behavior retained.','W02-S07':'Verified command/result references are atomically anchored for read-request recovery.','W03-GR02-partial':'Validated LegacyProvenance.raw remains inert during reference/time traversal; receipt and preview interfaces remain pending.'}
+    manifest['boundaries'].append('W02 runtime is still pinned to r3; controlled source-port regressions do not close actual ScenarioModule HTTP acceptance. Consumers must migrate through coordinator-fixed inputs.')
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

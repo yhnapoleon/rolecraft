@@ -13,6 +13,19 @@ export function memory() { const values = new Map<string,string>(); return { get
 const config = {participants:20,domains:['faq','policy'],update:'daily',fallback:'human',workItems:['scope','fallback'],launchDay:7};
 
 describe('HTML workbench authority and mapping', () => {
+  it('binds Gateway credentials to the selected attempt without copying them into work data', async () => {
+    const live = new LiveWorkbench(engine, memory()); const attempt = { id: 's' };
+    let token = 'first';
+    vi.spyOn(live, 'session').mockImplementation(a => a?.id === 's' ? { id: 's', token } as any : undefined);
+    const fetcher = vi.fn<typeof fetch>(async () => new Response(JSON.stringify({ schema_version: 2, result: { items: [] } })));
+    const send = live.gatewayTransport(attempt, fetcher);
+    await send('/sessions/s/work-items'); token = 'second'; await send('/sessions/s/work-items');
+    expect(fetcher.mock.calls[0][1]?.headers).toEqual({ Authorization: 'Bearer first' });
+    expect(fetcher.mock.calls[1][1]?.headers).toEqual({ Authorization: 'Bearer second' });
+    expect(attempt).toEqual({ id: 's' });
+    await expect(send('/sessions/other/work-items')).rejects.toMatchObject({ code: 'session_route_mismatch' });
+  });
+
   it('maps every old API configuration field in both directions, including manual policy and launch day', () => {
     for (const update of ['daily','realtime','manual']) expect(fromPilot(toPilot({...config,update}))).toEqual({...config,update});
     expect(toPilot({...config,update:'realtime',workItems:['realtime','fallback']})).toMatchObject({update_strategy:'realtime',work_items:['realtime_sync','human_fallback']});
