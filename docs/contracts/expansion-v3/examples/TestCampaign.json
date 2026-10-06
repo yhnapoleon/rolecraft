@@ -1,0 +1,46 @@
+{
+  "candidates": [
+    {
+      "budget": {
+        "actions": 1,
+        "currency_limit": null,
+        "model_calls": 1,
+        "schema_version": 2,
+        "tokens": null,
+        "wall_seconds": 1.0
+      },
+      "evaluation": {
+        "media_type": "application/json",
+        "path": "files/payload.json",
+        "schema_version": 2,
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      "id": "example",
+      "runtime": {
+        "media_type": "application/json",
+        "path": "files/payload.json",
+        "schema_version": 2,
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      },
+      "schema_version": 2,
+      "source": {
+        "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
+        "dependency_locks": [],
+        "overlay": null,
+        "schema_version": 2,
+        "source_digest": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    }
+  ],
+  "frozen_at": "2026-10-06T12:00:00Z",
+  "id": "example",
+  "opened_at": null,
+  "output_audience": [],
+  "schema_version": 2,
+  "split_manifest": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "config_version": {
+      "minimum": 0,
+      "title": "Config Version",
+      "type": "integer"
+    },
+    "declared_category": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Declared Category"
+    },
+    "declared_expected": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Declared Expected"
+    },
+    "query": {
+      "maxLength": 4000,
+      "minLength": 1,
+      "title": "Query",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "query",
+    "config_version"
+  ],
+  "title": "TestRequestV2",
+  "type": "object"
+}

@@ -1,0 +1,77 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "acceptable_evidence_sets": {
+      "default": [],
+      "items": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Acceptable Evidence Sets",
+      "type": "array"
+    },
+    "applicability": {
+      "default": "undetermined",
+      "enum": [
+        "applicable",
+        "not_applicable",
+        "undetermined"
+      ],
+      "title": "Applicability",
+      "type": "string"
+    },
+    "evidence_evaluable": {
+      "title": "Evidence Evaluable",
+      "type": "boolean"
+    },
+    "evidence_ids": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Ids",
+      "type": "array"
+    },
+    "label": {
+      "title": "Label",
+      "type": "string"
+    },
+    "missing_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Missing Reason"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task_type": {
+      "enum": [
+        "relation",
+        "criterion",
+        "trajectory_diagnosis",
+        "acquisition"
+      ],
+      "title": "Task Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "task_type",
+    "label",
+    "evidence_evaluable"
+  ],
+  "title": "AnnotationDecision",
+  "type": "object"
+}

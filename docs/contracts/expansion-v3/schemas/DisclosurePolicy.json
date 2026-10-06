@@ -1,0 +1,46 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "actors": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Actors",
+      "type": "array"
+    },
+    "mode": {
+      "enum": [
+        "public",
+        "role_only",
+        "paraphrase_only",
+        "never"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "paraphrase": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Paraphrase"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "mode"
+  ],
+  "title": "DisclosurePolicy",
+  "type": "object"
+}

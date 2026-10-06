@@ -1,0 +1,9 @@
+{
+  "effect": null,
+  "effect_request_id": "example",
+  "error_code": null,
+  "job_id": "example",
+  "origin_request_id": "example",
+  "schema_version": 2,
+  "status": "queued"
+}

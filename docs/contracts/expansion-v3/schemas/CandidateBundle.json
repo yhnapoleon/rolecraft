@@ -1,0 +1,190 @@
+{
+  "$defs": {
+    "Budget": {
+      "additionalProperties": false,
+      "properties": {
+        "actions": {
+          "minimum": 0,
+          "title": "Actions",
+          "type": "integer"
+        },
+        "currency_limit": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Currency Limit"
+        },
+        "model_calls": {
+          "minimum": 0,
+          "title": "Model Calls",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Tokens"
+        },
+        "wall_seconds": {
+          "exclusiveMinimum": 0,
+          "title": "Wall Seconds",
+          "type": "number"
+        }
+      },
+      "required": [
+        "model_calls",
+        "actions",
+        "wall_seconds"
+      ],
+      "title": "Budget",
+      "type": "object"
+    },
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "allowed_data": {
+      "items": {
+        "$ref": "#/$defs/FileRef"
+      },
+      "title": "Allowed Data",
+      "type": "array"
+    },
+    "budget": {
+      "$ref": "#/$defs/Budget"
+    },
+    "changes": {
+      "additionalProperties": {
+        "$ref": "#/$defs/FileRef"
+      },
+      "propertyNames": {
+        "enum": [
+          "agent_prompt",
+          "acquisition_parameters",
+          "retrieval_parameters"
+        ]
+      },
+      "title": "Changes",
+      "type": "object"
+    },
+    "evaluation": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "evaluations": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/FileRef"
+      },
+      "title": "Evaluations",
+      "type": "array"
+    },
+    "hypothesis": {
+      "title": "Hypothesis",
+      "type": "string"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "parent": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "runtime": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "selection_reason": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Selection Reason"
+    },
+    "source_splits": {
+      "items": {
+        "enum": [
+          "train",
+          "dev"
+        ],
+        "type": "string"
+      },
+      "title": "Source Splits",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "parent",
+    "runtime",
+    "evaluation",
+    "changes",
+    "hypothesis",
+    "allowed_data",
+    "source_splits",
+    "budget"
+  ],
+  "title": "CandidateBundle",
+  "type": "object"
+}

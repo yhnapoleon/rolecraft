@@ -1,0 +1,16 @@
+{
+  "data": {},
+  "executor": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "id": "example",
+  "refs": [],
+  "schema_version": 2,
+  "seq": 1,
+  "session_id": "example",
+  "transaction_id": "example",
+  "type": "example"
+}

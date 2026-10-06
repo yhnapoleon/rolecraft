@@ -1,0 +1,60 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "additionalProperties": false,
+  "properties": {
+    "eligible_as_new_g1": {
+      "const": false,
+      "default": false,
+      "title": "Eligible As New G1",
+      "type": "boolean"
+    },
+    "original": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Original",
+      "type": "object"
+    },
+    "original_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Original Hash",
+      "type": "string"
+    },
+    "original_schema": {
+      "const": 1,
+      "default": 1,
+      "title": "Original Schema",
+      "type": "integer"
+    },
+    "original_tier": {
+      "enum": [
+        "G0",
+        "G1",
+        "G2"
+      ],
+      "title": "Original Tier",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "semantics": {
+      "const": "legacy_source_semantics_unrevalidated",
+      "default": "legacy_source_semantics_unrevalidated",
+      "title": "Semantics",
+      "type": "string"
+    }
+  },
+  "required": [
+    "original_tier",
+    "original",
+    "original_hash"
+  ],
+  "title": "LegacyAnnotation",
+  "type": "object"
+}

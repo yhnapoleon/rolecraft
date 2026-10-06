@@ -1,0 +1,8 @@
+{
+  "arguments": {},
+  "expected_cost": null,
+  "id": "example",
+  "purpose": "example",
+  "schema_version": 2,
+  "tool": "example"
+}

@@ -1,0 +1,69 @@
+{
+  "actual_consumption": null,
+  "attempts": [],
+  "budget": {
+    "actions": 1,
+    "currency_limit": null,
+    "model_calls": 1,
+    "schema_version": 2,
+    "tokens": null,
+    "wall_seconds": 1.0
+  },
+  "campaign": null,
+  "ended_at": null,
+  "evaluation": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "executor": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "id": "example",
+  "lineage": {
+    "branch_id": null,
+    "candidate_id": null,
+    "component_id": "example",
+    "decision_id": null,
+    "derivation_ids": [],
+    "fact_root_ids": [],
+    "run_id": null,
+    "schema_version": 2,
+    "session_id": null,
+    "source_record_ids": [],
+    "structure_id": "example"
+  },
+  "model_revision": "example",
+  "policy": null,
+  "provider": "example",
+  "runtime": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "scenario": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "schema_version": 2,
+  "seed": 1,
+  "session_id": "example",
+  "source": {
+    "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
+    "dependency_locks": [],
+    "overlay": null,
+    "schema_version": 2,
+    "source_digest": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "split": "train",
+  "started_at": null,
+  "status": "created",
+  "tools_schema_digest": null
+}

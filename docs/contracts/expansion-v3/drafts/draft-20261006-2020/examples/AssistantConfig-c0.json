@@ -1,0 +1,20 @@
+{
+  "chunk_size": 500,
+  "config_version": 0,
+  "domains": [
+    "faq",
+    "policy"
+  ],
+  "fallback": "human",
+  "id": "config",
+  "launch_day": 7,
+  "participants": 0,
+  "prohibited_topics": [],
+  "retrieval_limit": 3,
+  "schema_version": 2,
+  "scope_filter": true,
+  "session_id": "example",
+  "update_strategy": "daily",
+  "version": 1,
+  "work_items": []
+}
