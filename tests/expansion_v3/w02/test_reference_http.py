@@ -247,3 +247,37 @@ def test_material_read_recovery_preserves_event_payload(live):
     recovered = live.http('GET', f'/sessions/{live.sid}/requests/event-recovery', headers=live.headers)
     assert recovered.status_code == 200 and (live.state(), live.counters()) == before
     assert recovered.json()['response'] == original.json(), 'Gateway request recovery must preserve the authorized module event payload'
+
+
+@pytest.mark.parametrize('method', ['GET', 'POST'])
+def test_expired_credential_blocks_both_recovery_paths(live, method):
+    _, auth, headers = live.delegate()
+    request = live.body('expired-read', 'read_material', {'tool': 'read_material', 'material': live.material()})
+    assert live.http('POST', f'/sessions/{live.sid}/actions', headers=headers, json=request).status_code == 200
+    # Admin clock-boundary fixture, using the same authoritative stored identity.
+    expired = auth.model_copy(update={'expires_at': datetime.now(timezone.utc) - timedelta(seconds=1)})
+    with live.store.db.transaction() as connection:
+        connection.execute(update(v2_credentials).where(v2_credentials.c.id == auth.credential_id).values(context=canonical(expired)))
+    before = live.state(), live.counters()
+    path = f'/sessions/{live.sid}/requests/expired-read' if method == 'GET' else f'/sessions/{live.sid}/actions'
+    response = live.http(method, path, headers=headers, **({'json': request} if method == 'POST' else {}))
+    assert response.status_code == 403 and response.json()['code'] == 'credential_expired'
+    assert '500' not in response.text and (live.state(), live.counters()) == before
+
+
+def test_recovered_milestone_events_preserve_only_public_payloads(live):
+    first, _ = live.post('tests', 'c0-config', 'tests.create', {'query': '会议室预约入口', 'config_version': 0})
+    assert first.status_code == 200
+    config = first.json()['result']['test']['config']['requested'] | {'version': 2, 'config_version': 1}
+    applied, body = live.post('actions', 'public-milestone', 'apply_config', {'tool': 'apply_config', 'config': config})
+    assert applied.status_code == 200
+    assert [event['type'] for event in applied.json()['events']] == ['config_applied', 'initial_plan_applied']
+    before = live.state(), live.counters()
+    recovery = live.http('GET', f'/sessions/{live.sid}/requests/public-milestone', headers=live.headers)
+    assert recovery.status_code == 200 and recovery.json()['response'] == applied.json()
+    replay = live.http('POST', f'/sessions/{live.sid}/actions', headers=live.headers, json=body)
+    assert replay.status_code == 200 and replay.json()['events'] == applied.json()['events']
+    for text in (applied.text, recovery.text, replay.text):
+        for private in ('world_private', 'tech_private', 'NEVER_W02_7C9E', 'legacy_connector_unstable'):
+            assert private not in text
+    assert (live.state(), live.counters()) == before

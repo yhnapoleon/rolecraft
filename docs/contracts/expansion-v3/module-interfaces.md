@@ -156,3 +156,13 @@ W02消费者迁移可以将其现有 `reference` 作为contextual回调，或让
 合法已执行动作的command、对象content与result中外部引用，经同一resolver验证后在同一事务保存不可变ExternalReference锚点。没有ObjectWrite的材料读取也能按原request_id恢复原响应；验证失败时锚点、事件、事务与结果一起回滚。恢复查询只读取已记录信息并复核当前授权，不再次调用resolver或模型。相同对象版本的源文件/hash漂移仍拒绝。经验证的LegacyProvenance.raw为惰性原稿，不参与活引用或未来时点扫描；真实引用字段仍受校验。
 
 `V2Store.resolve_reference(auth, ref, storage_revision=...)` 是独立只读验证入口，返回ExternalReference；省略revision取当前上限，给出revision必须对应真实snapshot。不要在Mutation回调内嵌套调用它；事务中的验证由公共execute负责。W03纯domain所需的操作内view权限predicate及导入回执另行提供，不能自行调用私有_records。当前restore未携完整历史snapshot序列；已复制锚点保持源身份，但缺失的历史窗口不会被虚构，需历史窗口的调用会明确不可用。
+
+
+## 原键重放的统一权限边界
+
+execute命中旧事务、worker replay及GET requests/jobs恢复，共用当前凭据、原动作权限、对象scope与精确记录可见性校验。不会仅因fingerprint相等返回旧正文，不会为重放再调用handler、resolver或模型，也不推进事件/版本。显式结果或可见事件里的私有引用不享受内部记账豁免。
+
+旧scope_refs可能没有记录result-only引用，因此恢复合并已保存结果/对象及可见事件里的引用再次检查。缺外部锚点的历史投影，仅在元数据完整、原actor一致、外部类型仍已注册且当前scope允许时回放原内容；这不等于重新验证来源或补造锚点。元数据缺失、未知引用类型、跨session、缩权/撤销/过期或不可见引用均关闭返回。原权限合法的重试仍返回同一事务；同key不同command仍为request_id_reused。
+
+
+恢复与重放事件按已持久化的operation选择当前安装注册中的projector：静态operation/action_name或明确Literal动作字段可唯一匹配；不能由读取请求自报projector。派生effect使用自己的持久化动作。未知动态字符串匹配不授予投影，继续默认脱敏；歧义匹配返回event_projection_ambiguous，不借另一模块函数泄露原始事件。可见性先过滤，projector仍校验PublicEvent身份。GET恢复、POST同键重试及worker ACK恢复不重跑业务handler/resolver，并保持合法原投影字段。

@@ -27,6 +27,7 @@
     "disclosure_time_mismatch",
     "environment_adapter_unavailable",
     "evaluation_binding_mismatch",
+    "event_projection_ambiguous",
     "event_projection_identity_mismatch",
     "executor_spoofed",
     "external_reference_drift",

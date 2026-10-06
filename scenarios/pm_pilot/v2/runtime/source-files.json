@@ -4,7 +4,7 @@
     "src/career_lab/assistant/v2/__init__.py": "b92a51d4eb2478af5f8c8e0232cfdbfd9669457b02609653d62e16258ababa2b",
     "src/career_lab/scenarios/v2/policy.py": "1687f2502bb0a4d333631505a2b55c85062290faafcc3558ec44bed980f0a50c",
     "src/career_lab/scenarios/v2/__init__.py": "98b6e25225f811b7f622f538b886dba657d4c809ed5d5c30405a95f5c751792f",
-    "src/career_lab/scenarios/v2/seed.py": "ebd235b473aa29d342537230a45b7257bf1f3c5d6f2a64588a9a56ba4fe65660",
+    "src/career_lab/scenarios/v2/seed.py": "aac7018493d479c7011225f161ddb87ee78b9279c660ff5d6c8222529316848c",
     "src/career_lab/scenarios/v2/engine.py": "2897ee6547b1b5b786483050bda7cbf8542c90049d3004abb359b6322e591106",
     "src/career_lab/scenarios/v2/content.py": "aeef16a318468f210cd35dccf8ae74beec177d16a1811ee6df7973e9664b253b",
     "src/career_lab/scenarios/v2/loader.py": "29f0e337ed6b4dace46bb0a3f82f8d2cd1dd5e6c89b38b070db1b3c5f54c2038",
@@ -13,5 +13,5 @@
     "src/career_lab/scenarios/v2/probes.py": "2456b54fa3995cab375e3a6155e2ea4764a168001f96cb7b7faf1e323b30414b",
     "src/career_lab/scenarios/v2/__main__.py": "070c2cb4c753e698a654813f45287e97a3bae193abaae1a7b55be7b2277954a2"
   },
-  "foundation_contract_sha256": "2e4b5f05138ae995320db1ae21ca6f5d7a8d63bf5ec3e19346a088510cb0515c"
+  "foundation_contract_sha256": "d5aa8ca0d6532afe1165511e1403455cde39026f7d555decdd1840038849e0bb"
 }

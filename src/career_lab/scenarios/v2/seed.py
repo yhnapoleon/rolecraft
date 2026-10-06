@@ -78,7 +78,7 @@ def build_seed(root, case_records=None):
         domains=("stable_faq","onboarding","policy_travel","policy_meal","policy_leave"),
         work_items=("scope_filter","human_fallback"),participants=20,launch_day=7,retrieval_limit=1)
     rules={
-        "scenario_id":"pm_pilot","revision":"2.3.0","source_kind":"authored_synthetic_business_with_actual_module_QA",
+        "scenario_id":"pm_pilot","revision":"2.3.1","source_kind":"authored_synthetic_business_with_actual_module_QA",
         "work_costs":{"scope_filter":1,"human_fallback":1,"realtime_sync":5},
         "approval_limits":{"capacity":60,"dev_days":6,"deadline_day":10},
         "approval_rule_revision":"pm-v2-approval-3",
@@ -158,7 +158,7 @@ def build_seed(root, case_records=None):
         "evaluation-protocol":{"mode":"advisory","installed":False,"owner":"W05"}
     }.items():put("runtime/"+name+".json",value)
     def file_ref(path):return FileRef(path=path,sha256=hashlib.sha256(files[path]).hexdigest())
-    runtime=RuntimeBundle(id="w02-runtime",revision="reference-port-c1",model=file_ref("runtime/model.json"),prompts=(),
+    runtime=RuntimeBundle(id="w02-runtime",revision="reference-port-c2",model=file_ref("runtime/model.json"),prompts=(),
         acquisition=file_ref("runtime/acquisition.json"),retrieval=file_ref("runtime/retrieval.json"),
         decision=file_ref("runtime/decision.json"),tools=file_ref("runtime/tools.json"),
         source=SourceIdentity(base_commit="80cf1f6189cd25610d609f44283ff9668582d759",source_digest=digest(code_files),
@@ -169,7 +169,7 @@ def build_seed(root, case_records=None):
     put("runtime/evaluation.json",evaluation.model_dump(mode="json"))
     public_paths={p for p in files if p.startswith("materials/") and not any(x in p for x in ("private","tech_diagnostics","policy-v2","demo-v2","scope_note-v2"))}
     if case_records is None:public_paths.discard("materials/failures-v1.md")
-    bundle=ScenarioBundle(id="pm_pilot",revision="2.3.0",structure_id="index_scope_resource_dependency",
+    bundle=ScenarioBundle(id="pm_pilot",revision="2.3.1",structure_id="index_scope_resource_dependency",
         files=tuple(FileRef(path=p,sha256=hashlib.sha256(raw).hexdigest(),media_type="text/markdown" if p.endswith(".md") else "application/json") for p,raw in sorted(files.items())),
         public_files=tuple(sorted(public_paths)),private_files=tuple(sorted(set(files)-public_paths)),
         role_specs=tuple(roles),domains={"stable_faq":("faq",),"onboarding":("onboarding",),"policy_travel":("policy",),"policy_meal":("meal",),"policy_leave":("leave",)},
