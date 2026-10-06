@@ -1,10 +1,12 @@
 # 职业任务训练场技术设计
 
-版本：0.1　日期：2026-09-26　状态：供团队评审与实施的设计稿
+版本：0.3　日期：2026-10-06　状态：现行工程设计；实现边界核对至 PR #5／main `2e1e4ff`
 
-本项目让学生在一个可操作的模拟公司中，完成 AI 产品经理的知识助手试点决策任务。用户与不同角色沟通、阅读材料、测试系统、修改方案，并获得可追溯到材料和行为的反馈。技术核心是有状态的 Agent 运行环境、证据驱动的评价系统，以及通过监督微调和强化学习改善评价模型的判断质量。
+本项目让学生在一个可自主行动、犯错与修订的工作模拟空间中，承担 AI 产品经理的知识助手试点决策。用户自行发现问题、组织工作、与不同角色协作、使用工具并形成多种作品；系统根据当时情境及可见行为提供有依据的回应与评价。技术核心是有状态的 Agent 运行环境、证据驱动的情境化评价，以及通过监督学习、SFT 和 GRPO 检验评价模型的判断质量。
 
-本文将已经讨论确定的产品目标与建议的工程参数分开。所有数据规模、阈值、训练参数和成本预算都是初始设计值，不是实测结果或课程规定。没有开展模型训练、用户研究或工程实现。配套实施计划见 [分阶段实施计划](../plans/career-training-implementation-plan.md)，可核对的输入、gold、奖励边界及反事实样例见 [评价样例包](../examples/judge-case-bundle.json)。
+产品原则见[仓库 README](../../README.md#已确认的产品原则)：开放工作、三同事情境协作、通用外部 Agent 和情境化反馈。本文维护其工程契约；当前工作台与手动 Agent 链路已实现，服务端开放作品、持续角色记忆、正式关联修订和完整情境化 Judge 仍为后续工作。新增架构提议的来源与未采纳边界见 README。
+
+后端、CPU 监督实验与工作台 v4 已有实施记录；Agent 测试作品、调查工作纸、资料与作品动效已随 PR #1–#5 合入 main。任务包和手动回传链路已验证；MCP／直连、跨轮角色记忆、提交后关联修订、完整情境化 Judge 与 SFT／GRPO 尚未实现。实际结果见[仓库说明](../../README.md)、[连接版边界](../../apps/web/README.md)和[受控实验报告](../reports/controlled-v2-results.md)。本文的未执行数据规模、阈值、训练参数和成本仍是设计值。配套执行范围见[分阶段实施计划](../plans/career-training-implementation-plan.md)，现有原子评价基线的输入、gold、奖励边界及反事实样例见[评价样例包](../examples/judge-case-bundle.json)。
 
 ## 目录
 
@@ -35,7 +37,9 @@
 
 ### 1.1 用户可以完成什么
 
-用户扮演新入职 AI 产品经理，完成一次约 20–30 分钟的试点决策任务。一次有效使用包含：接收任务、获取必要信息、至少一次实际测试、提交配置与方案、查看带证据的反馈。随后提供条件不同的补练任务。完成时间是体验设计目标，应根据试用调整。
+用户扮演新入职 AI 产品经理，接手试点决策工作，自行定义问题、拆分事项、调整优先级并选择行动路径。阅读、对话、写作、测试、求助和修订可以反复交错；用户可以先作出错误判断或暂时没有方向，系统保留真实结果并给予适当回应。最终决定需有与承诺相称的证据；未来计划不能冒充已运行的测试，有依据的延期也可以成立。
+
+约 20–30 分钟仅为原短案例的体验估计，需试用验证，不设训练倒计时。业务期限属于场景条件，与用户实际练习时间分开；当前支持暂停／恢复和换条件再练；反馈后关联修订属于目标能力，已提交会话目前保持只读。
 
 ### 1.2 功能成功与研究成功
 
@@ -51,9 +55,10 @@
 
 - 一个岗位：AI 产品经理。
 - 一个核心任务族：企业知识助手试点决策。
-- 三个主要角色：主管、技术负责人、业务负责人；试用员工反馈先作为材料提供。
+- 三个同事角色：经理（后端当前标识为主管）、业务负责人、技术负责人；各自具有职责、诉求、可见信息和行动权限。试用员工反馈先作为材料提供。
 - 一个主任务和两个可体验变体；后台训练数据可包含更多独立微场景。
-- 一个可运行的知识助手与可配置的测试环境。
+- 一个可运行的知识助手与可配置的测试环境；任务调整与开放中间作品已在浏览器实现，服务端同步及提交后关联修订的契约和验收仍需补齐。
+- 用户自己的外部 Agent 是工作区通用协作入口需求，可读获准情境、回传产物并取得反馈。当前已采用任务包与手动回传，MCP／直连的权限、兼容性和排期待定；不自动提前工程师岗位或任意代码执行。
 - 三类核心机器学习任务：事实关系分类、证据选择、原子评价项判断。
 - 规则驱动的补练推荐。
 - 单机运行的服务、任务队列与评测 runner；单卡或租卡完成小模型 SFT 和 RL 试验。
@@ -83,7 +88,7 @@
 
 课程整体项目占 50%，包括首次汇报 5%、最终汇报 10%、报告 15%、系统 15%、互评 5%。FT 文件列出 proposal 9 月 30 日、首次汇报 10 月 6 日、最终交付 10 月 31 日。仅在团队确属 FT 非 Aramco 时采用；PT/Stackable 日期另有材料。最终交付还需数据、代码、模型文件、两次 slides、10–15 分钟视频及各成员 1–2 页个人报告。
 
-来源：[FT 项目说明](../../For%20FT%20students%20only%20%28excluding%20Aramco%20students%29/PRS-PatternRecognitionSystems-Practice-Module%207.0%20-%20FT.pdf)，第 5、6、8、9、15、16 页。
+来源：课程原件《PRS-PatternRecognitionSystems-Practice-Module 7.0 - FT.pdf》第 5、6、8、9、15、16 页。课程原件不在源码仓库分发；上述日期为既有归档记录，临提交前由团队在对应班型 Canvas 核对。本文不把历史日期视为此次线上复核结果。
 
 ### 2.2 求职重点与个人证据
 
@@ -108,9 +113,9 @@
 
 ### 3.2 结构化交付
 
-最终成果包含：目标用户、知识范围、人数、更新策略、fallback 条件、开发工作项、验收测试、成功指标、观察窗口、退出条件、简短取舍说明。每一项允许关联材料版本或测试记录。
+最终决定保留 Proposal 的九项业务语义：用户范围、知识范围、容量、更新政策、兜底方式、工作项、验收测试、成功指标与退出条件；责任、观察窗口和取舍说明按相应语义关联。每项结论可以引用材料、作品片段、配置或测试版本。
 
-结构化表单降低模型抽取难度；自由文本用于表达理由。不能因为用户没有重复某个术语就扣分：已提交配置、工具结果和等价表达都应计入。
+这些语义供交付完整性核验与数据映射使用，不规定九格界面、创作顺序或中间作品类型。用户可以先写探索笔记、需求假设、问题清单、测试计划、风险比较或反对上线的建议，再形成最终决定。识别或抽取的用途与映射需保留来源，无法确定时请求澄清；不能因为用户没有重复某个术语就扣分。现有后端六个成果字段与独立试点配置是已实现接口，映射见[连接版边界](../../apps/web/README.md)，开放作品编辑和版本已在浏览器实现，后端目前仍只接收固定六字段交付稿及其多个保存版本。
 
 ### 3.3 任务结果分两层
 
@@ -118,6 +123,14 @@
 2. 开放判断：是否识别主要取舍、解释是否得到证据支持。保留多种可接受方案及人工复核路径。
 
 模拟得到的是该场景规则下的覆盖、失败与成本，不是真实企业 ROI，也不是用户将来胜任岗位的预测。
+
+### 3.4 开放工作与可观察结果
+
+平台提供业务目标、事实、约束、工具及可理解的结果，用户决定工作顺序。案例中的事项可新增、拆分、排序、关联作品，用户也可向同事询问优先级。训练入口、工作区、复盘沿用同一事项与证据身份；轻量、清楚、不过度打断探索是呈现要求。现有工作板、事项工作台、调查纸和动效见[前端说明](../../apps/web/README.md)；事项与作品记录仍保存在浏览器。
+
+每项受支持动作必须明确读取的情境、权限、输入、结果、状态变化和完成证据。起草只产生作品版本；采纳记录使用决定；验证产生真实运行证据；资源申请通过场景规则获批后才改变资源。Agent 的文字声明不能替代这些记录。
+
+用户能够从第一步就犯错，也能提出预置事项之外的合理问题。系统应辨别探索假设、备选方案和正式承诺，以实际用途评价，并保存帮助与修订过程。平台能力之外的请求应说明边界，不能伪造执行或任意扩充场景事实。
 
 ## 4 系统架构与技术选型
 
@@ -191,25 +204,27 @@ flowchart TD
 - 在线评价回答“这位用户这次做得怎样”；离线 Eval infra 回答“评价模型和 Agent 系统是否可靠”。两者共享输入契约与证据格式，离线验证依赖独立 gold，而不能让同一个 Judge 为自己证明正确。
 - RL 首版训练对象是 Judge。训练集 gold 提供奖励，开发集用于调试与选型，封存测试集用于最终确认；角色同事、用户补练推荐不在首版 RL 范围。线上失败进入候选池须经核验，不能自动把 Judge 自身判断当成真值。
 
-### 4.1 默认实现
+### 4.1 当前实现与候选栈
 
-| 层 | 首版建议 | 选择理由 |
+| 层 | 当前实现 | 后续设计边界 |
 |---|---|---|
-| UI | React + TypeScript，Vite | 工作台、时间线与配置表单直接实现 |
-| API | Python 3.11，FastAPI，Pydantic | 共享模型与数据 schema |
-| 状态 | PostgreSQL；最初纯逻辑测试可用内存实现 | 事务、JSONB、行级并发控制 |
-| 后台任务 | PostgreSQL jobs 表 + 单独 Python worker | 先支持 lease/retry，不立即引入 Redis |
-| 文件 | 本地内容寻址目录 | 文档、模型、报告用 sha256 引用；后续可换对象存储 |
-| 检索 | SQLite FTS/BM25 或 PostgreSQL 全文检索 | 小材料库先保证可解释；向量检索作为对照扩展 |
-| Agent 编排 | 显式 Python 状态机与 model adapter | 接口可控，不同时堆多种编排框架 |
-| ML | scikit-learn、PyTorch、Transformers | 线性与神经基线 |
-| SFT / RL | 独立 Linux Python 3.11 环境，TRL + PEFT | 与产品服务隔离，记录实际兼容锁文件 |
-| 追踪 | 结构化 JSONL + SQL 索引；可选 OpenTelemetry 导出 | 原始轨迹可查、可重评分 |
-| 运行 | Docker Compose；Windows 前端开发，训练用 Linux/WSL2 或租卡 | 不把原生 Windows GPU 兼容性作为项目研究内容 |
+| UI | 主工作台为原生 JavaScript／CSS，Vite 与 TypeScript 适配器连接 API；React 页保留在 `/connected/` | 不假定已有完整 React 组件库或通用生成界面 SDK |
+| API | Python、FastAPI、Pydantic；依赖锁定在 `uv.lock`，项目要求 Python ≥3.11，现有验收使用 3.12 | 后续依赖升级需独立验证 |
+| 状态 | SQLAlchemy 事务存储，支持 SQLite 与 PostgreSQL；事件、快照、对象、幂等结果与时间元数据 | 开放事项／作品同步仍需设计；PostgreSQL 历史通过不代表新机器已配置 |
+| 后台任务 | 同库 jobs 表与独立 Python worker，lease、heartbeat、有限重试 | 未引入 Redis 或多机调度 |
+| 检索 | Python BM25 文本检索；源文档与索引版本分开 | 生成式助手、语义重排和证据集合选择须另行验证 |
+| 角色 Agent | Python 单回合工具循环，授权材料工具及模型适配器 | 跨回合记忆、主动行为与事件获知未完成 |
+| 外部 Agent | 浏览器任务包、手动回传、结构化测试／调查及显式执行 | MCP／直连、临时任意代码画布未实现 |
+| ML | scikit-learn 的 TF-IDF／逻辑回归、字符特征 MLP、概率融合及规则混合 | XLM-R、生成式 Judge 与证据选择模型仍为候选 |
+| SFT / RL | 未实施 | 独立训练环境中的 PyTorch／Transformers／TRL／PEFT，版本、GPU 与预算待冒烟验证 |
+| 证据与追踪 | 保存回合轨迹、事件、固定提交和实验文件；模型／数据／报告使用 hash 身份 | OpenTelemetry 与统一多层追踪为设计选项 |
+| 本机运行 | 每个 checkout 自有 `.venv` 和 Node 依赖，API／worker 共用本地数据库；PostgreSQL 可选 Compose | 云端部署与跨机器状态同步尚未完成 |
 
-以上是候选栈，不是假定已验证的依赖组合。首次 20 个训练 step 冒烟测试后，将实际 Python/PyTorch/CUDA/Transformers/TRL/PEFT 版本写入锁文件与 run manifest。若依赖要求更新 Python，仅训练容器独立调整并记录。避免引用 `latest` 作为实验身份。
+模型训练候选栈未经过此次验证。首次训练冒烟后再记录实际 Python／PyTorch／CUDA／Transformers／TRL／PEFT 与模型 revision，不能把候选参数写成已可运行的环境。
 
 ### 4.2 产品与训练分离
+
+以下为产品与后训练的设计约束。当前角色回合保存实际模型版本，正式反馈固定规则版本；尚无 SFT／RL 模型部署。
 
 - 产品中的角色 LLM 可使用固定 API 模型；被训练的是独立 Judge。
 - 基线、SFT、RL Judge 使用同一个可本地训练的底座，以隔离训练方法影响。
@@ -220,19 +235,18 @@ flowchart TD
 
 ### 5.1 核心对象
 
-| 对象 | 必需字段 | 用途 |
+| 对象 | 当前落点 | 边界 |
 |---|---|---|
-| ScenarioSpec | scenario_id, family_id, version, seed, roles, facts, documents, events, constraints | 定义场景 |
-| Session | session_id, scenario_version, actor_id, status, state_version | 用户的一次任务 |
-| WorldState | session_id, version, logical_time, resources, configs, material_versions | 当前权威状态 |
-| Action | action_id, idempotency_key, expected_version, actor_id, tool, arguments | 写操作入口 |
-| Event | event_id, seq, event_type, actor_id, payload, before_version, after_version | 已发生的事实 |
-| Artifact | artifact_id, session_id, version, content_hash, media_type, created_at | 文档与交付 |
-| EvidenceRef | kind, object_id, version, span_id, observed_at_seq | 精确定位证据 |
-| JudgeInput | item_id, input_hash, as_of_seq, criterion, claim, candidate_evidence | 模型可见输入 |
-| GoldAnnotation | item_id, annotation_version, label, acceptable_evidence_sets, adjudication | 训练与独立评分标签 |
-| JudgeDecision | label, evidence_ids, reason_code, explanation, model_revision | 模型输出 |
-| EvalRun | run_id, dataset_hash, grader_version, model_revision, decode_config, seeds | 可追溯评测 |
+| ScenarioSpec / WorldState | `contracts`、场景文件与存储层；资源、配置、源版本、索引版本和状态版本 | 权威状态由后端维护 |
+| Action / Event / Snapshot | 动作、版本校验、事件与历史快照 | 历史事件与状态在同一事务保存 |
+| 对话 turn | 问题、回复、模型版本、时点、工具轨迹、context ID；另有时间元数据 | 不等于推理时读取历史对话；context ID 不是附件正文 |
+| 浏览器事项／作品 | `workbench-engine.js` 与工作台 localStorage；用途、作者、草稿、版本、引用、采纳、模块及观察 | 尚无后端 tasks／开放 works API |
+| 后端 artifact | `Deliverable` 六字段，内容 hash、配置版本及保存版本 | 可以保存多条同构版本；不等于浏览器自由作品 |
+| submission / feedback | 固定 artifact、配置、场景、rubric 与规则版本；证据、条目结论、待核验项 | 提交后只读；后续修订需要新契约 |
+| EvidencePackage / JudgeDecision | 指定时点与候选证据、输入 hash、标签及理由 | 产品规则反馈与实验关系分类分开解释 |
+| GoldAnnotation / EvalRun | 标注来源、划分、模型／数据／规则身份、预测与指标 | gold 不进入产品输入；完整语义评价仍待人工验证 |
+
+精确字段以[契约源码](../../src/career_lab/contracts)与[HTTP 模型](../../src/career_lab/api/app.py)为准；后续增量见 5.4，不能仅凭设计字段向现有 API 写入。
 
 ### 5.2 四种可见范围
 
@@ -250,6 +264,19 @@ GoldAnnotation 不能被序列化进模型 prompt、RAG 索引、角色工具返
 一次可复现运行的身份至少包括：代码 commit/源文件 hash、容器 digest、场景 hash、数据 manifest hash、rubric hash、reward hash、模型与 tokenizer revision、adapter hash、prompt template hash、seed、解码配置、工具缓存模式。
 
 历史 label 不因 rubric 更新被覆盖。重新评分产生新的 run_id，保存旧结果；rubric 或 verifier 修订后，所有待比较模型必须在同版规则上重跑。
+
+### 5.4 开放工作与情境化评价的增量契约
+
+下表描述完整目标语义。事项、作品版本与 Agent 手动回传已有浏览器实现；后端目前只保存对话关联 ID 与固定交付对象，尚未提供以下完整服务端契约。
+
+| 对象或记录 | 需要承载的语义 | 边界 |
+|---|---|---|
+| 工作事项 | 用户定义的问题、优先级及变更、关联材料／作品／操作、阻塞与完成依据 | 工作事项与后台 job 分开；排序不等于预置正确步骤 |
+| 作品版本 | 用途、草稿或正式承诺、作者／协作来源、输入版本、引用、采纳及修订关系 | 允许多种中间作品；用途不明时保留不确定性 |
+| 角色情境 | 职责、诉求、授权视图、获知事件、相关记忆、未解决提议 | 私有上下文隔离，共享事实同源，摘要可回溯原记录 |
+| 外部 Agent 委托 | 获准读取与执行范围、任务和输入版本、回传身份与回执 | 已回传、已采纳、已验证分别记录；未知外部过程不补造 |
+| 评价请求 | 用户意图或明确的未知、内容用途、评价时点、当时可得与已见信息、行动／帮助／修订证据、适用规则版本 | 沿用 gold 隔离；允许证据不足、用途待确认和转人工 |
+| 评价结果 | 对应原文／动作、适用依据、判断、后果、改进建议及复核记录 | 不从作品质量反推全部个人能力，不用单次判断贴能力标签 |
 
 ## 6 数据来源与使用策略
 
@@ -280,7 +307,7 @@ ContractNLI 包含固定的 17 个假设，因此报告主要说明跨文档判�
 
 ### 6.3 语言策略
 
-产品和主要领域测试使用中文；保留英语公开集用于基础训练/外部检查。使用多语言编码器或中英模型，不宣称英文分数能代表中文。
+首轮正式领域评测沿已采用 Proposal 使用英文。现有中文界面、中文合成 pilot／v2 数据与实验保留其来源和验证边界，不能替代英文人工核验数据，也不能据此宣称中文用户评价已经有效。公开辅助集与领域集、不同语言结果分别报告；实际产品语言与跨语言体验继续明确。
 
 如翻译公开样本：保留 parent_id 与原文、记录翻译模型 revision、人工抽检否定/数量/时间/例外、源文与译文放在同一 split。翻译数据单列指标，不能宣称为独立中文人工 gold。
 
@@ -308,7 +335,7 @@ ContractNLI 包含固定的 17 个假设，因此报告主要说明跨文档判�
 ### 7.2 样本生成流水线
 
 1. 场景作者写事实账本，确认预算和事件的可行性。
-2. 从固定 rubric 中选择一个原子 item，不把整个“PM 能力”作为单标签。
+2. 在指定版本的场景与作品用途下选择适用原子 item，不把整个“PM 能力”作为单标签；新型合理贡献可先进入人工审阅样例，再版本化评价依据。
 3. 构建一个或多个可接受方案，以及明确的局部错误。
 4. 程序生成数值/时序/权限等可验证标签；语义标签由人工确认。
 5. LLM 只负责自然语言表达和干扰材料，不负责最终确立 gold。
@@ -431,27 +458,37 @@ gold/test 仅 evaluator 进程挂载；产品、生成脚本和 trainer 不可�
 接收用户消息
 → 验证 session / actor / action id
 → 从当前版本生成该角色可见视图
-→ 组装角色指令、已确认事实与近期对话
+→ 组装本次问题、角色指令、当前可见事实与材料目录（不加载历史对话）
 → 调用模型
 → 若提出工具调用，校验参数与权限并执行
 → 把真实工具结果返回模型，最多 3 次工具循环
-→ 保存最终回复及引用
+→ 保存问题、最终回复、工具轨迹、模型版本与可选 context ID
 → 返回 UI
 ```
 
 每个用户请求最多 4 次模型调用（含工具循环后的最终回复），默认单次 provider timeout 45 秒、传输失败最多 2 次重试，均作为可配置初值。回合达到上限时返回可理解的阶段状态，不伪造已完成。
 
-角色回复中的承诺不是数据库状态。`propose_change` 只产生提议；明确的用户动作或场景规则才触发 `apply_change`。角色可有不同立场，但不能擅自篡改事实。
+当前角色仅有 `list_materials` 与 `read_material` 两个工具，不提供配置、审批或提交工具。角色回复中的承诺不改变数据库；明确的用户 API 动作或场景规则才改变权威状态。`propose_change`／`apply_change` 不是现有工具名称。
 
 ### 9.2 状态与并发
 
 状态修改请求必须包含 expected_version；冲突返回 409 与最新版本摘要。以 `(session_id, idempotency_key)` 唯一约束避免重复写入。事件和状态快照在同一事务提交。
 
-后台 job 使用 lease、attempt、lease_expires_at 与 heartbeat。worker 崩溃后可重新领取；job completion 以 output hash 和幂等键提交。第三方模型请求不能承诺 exactly-once；本地确保一次业务提交，重复 API 成本单独记录。
+后台 job 使用 `lease_until`、`lease_token`、`attempt` 与 heartbeat；有效租约内才允许完成，过期 worker 被拒绝。worker 崩溃后可重新领取，业务对象按请求指纹与幂等键提交。第三方模型请求可能重试，本地业务幂等不保证外部模型只被调用一次。
 
 ### 9.3 记忆与角色隔离
 
-权威事实来自 world state，不从聊天摘要反向写回。角色记忆包括稳定身份、已见事实引用、未解决提议与短对话摘要；摘要保留原始 event refs。上下文压缩不删除尚未解决约束。
+当前后端已持久保存问题、回复、时间和 task／work／attachment 关联 ID，前端可恢复对话。运行器每轮只根据本次问题和角色当前可见事实／材料建立 prompt，不传递历史聊天、摘要或附件对象；关联 ID 也不进入提示词和评审证据。下表及后续记忆机制为目标设计。
+
+| 同事 | 主要情境与立场 | 帮助、质疑与行动 |
+|---|---|---|
+| 经理（主管） | 业务目标、资源与组织要求 | 讨论优先级、追问承诺，在场景权限内处理申请 |
+| 业务负责人 | 用户需求、业务流程与政策 | 检查实际价值、补充情境、指出遗漏和误解 |
+| 技术负责人 | 系统状态、可行性、开发约束与风险 | 解释限制、提供证据、纠正技术误解 |
+
+三者都可以提供帮助或反对方案，不各自绑定一个评分维度。逐角色的系统指令、工具权限、未知边界、事件获知条件和可保留记忆须共同定义；共享事实来自同一版本。角色在何时知晓变化要有记录，不能通过全量上下文抹除信息差。
+
+权威事实来自 world state，不从聊天摘要反向写回。待实现的角色记忆应包含稳定身份、已见事实引用、未解决提议与短对话摘要，并保留原始 event refs；上下文压缩不能删除尚未解决约束。
 
 过滤在检索前执行，不能只靠提示词写“不要泄露”。向量/全文索引命中后仍二次检查访问权限及版本。另一角色的私有事实、rubric gold 和未来事件不进入 prompt。
 
@@ -475,25 +512,34 @@ gold/test 仅 evaluator 进程挂载；产品、生成脚本和 trainer 不可�
 
 有恢复机制并不意味着错误被抹去：首次失败与最终状态分别统计。
 
+### 9.6 用户自己的外部 Agent
+
+当前链路是用户选择范围后复制／下载任务包，交给外部 Agent，再把 Markdown 或受支持 JSON 手动带回工作台。任务包只包含实际可见材料和选定作品／测试，不包含会话凭据。回传经校验与预览后进入待检查作品，由用户采用，再显式触发受支持测试或调查重测。
+
+`text`、`test_set`、`investigation` 的身份、版本、引用和执行归属由应用管理；Agent 不得回传伪造的运行答案、通过状态、材料原文或脚本。任务包、回传、采用与本地模块记录仍保存在浏览器，真实测试结果保存在后端。详细格式与验收见[Agent UI 计划](../plans/agent-ui-exploration-plan.md)。
+
+MCP／直连、服务端委托与回传记录、自动反馈回送、内置生成 Agent 和临时任意代码画布尚未实现。后续若接入，读取与执行范围需经过鉴权、版本和幂等校验，并沿用同一事项／作品身份。使用 Agent 本身不扣分，未观察到的外部操作保持未知。
+
 ## 10 任务工具与知识助手
 
-### 10.1 工具集合
+### 10.1 已实现动作与调用者
 
-| 工具 | 输入 | 输出 | 是否修改状态 |
-|---|---|---|---|
-| list_materials | actor_id, as_of_seq | 当前可见文档列表 | 否 |
-| read_material | document_id, version | 段落与 evidence refs | 否 |
-| ask_role | role_id, message | 角色回复与引用 | 记录交互 |
-| test_assistant | query, assistant_config_version | answer, citations, indexed_versions, trace_id | 生成测试记录 |
-| update_pilot | patch, expected_version | 新配置与版本 | 是 |
-| submit_plan | artifact_version, config_version | immutable submission | 是 |
-| request_feedback | submission_id | feedback_job_id | 创建任务 |
+| 调用者／入口 | 输入与输出 | 状态影响 |
+|---|---|---|
+| 角色工具 `list_materials`／`read_material` | 当前角色可见目录，或 `material_id` 对应原文 | 只读；回合完成另存 turn |
+| 用户 `POST …/actions` | 阅读、配置、申请、刷新索引、暂停／恢复 | 后端校验角色、状态及版本，记录事件；业务阅读当前也计数 |
+| 用户 `POST …/turns` | 角色、问题、可选 context ID → job ID | worker 保存对话，不能替代正式批准 |
+| 用户 `POST …/tests` | 问题与配置版本 → 答案、引用、源／索引版本 | 生成真实测试记录 |
+| 用户 `POST …/artifacts`／`submissions` | 六字段交付稿 → 保存版本；选定 artifact → 固定提交 | 提交将会话变为只读 |
+| 用户 `POST …/feedback` | submission ID 与可选 retry → job ID | 生成对应规则版本的反馈，保留旧结果 |
+
+外部 Agent 当前通过手动回传提出作品，应用内显式执行使用上述用户入口；尚无开放给外部 Agent 的在线工具服务。
 
 ### 10.2 知识助手要真的可测试
 
 至少支持稳定 FAQ、刚更新的政策、超出知识范围的问题三类。源文档版本与索引版本独立：文档更新不自动更新索引，使“更新延迟”成为实际可观察行为。可以通过缩小领域、更新时间提示、特定类别转人工等配置改变结果。
 
-本地可运行路径使用文本检索和可替换生成接口。CI 使用固定检索/回答夹具保证状态测试确定性；产品演示使用真实检索和模型。两种模式在界面和 run manifest 明示，不能把夹具演示当真实模型效果。
+本地可运行路径使用文本检索和可替换生成接口。自动测试使用确定性本地模式及测试夹具；仓库尚未配置远端 CI。演示须标明实际运行模式。当前连接版助手测试采用 BM25／抽取，角色接入外部模型不会自动把助手测试变成生成式 RAG；后续生成路径需独立实测。真实执行、抽取模式与固定夹具在界面和 run manifest 中区分。
 
 测试失败首先来自可验证的来源版本、内容覆盖或配置检查，不需要让一个自由生成 LLM 凭感觉判“过期”。真实回答的语义正确性另由 gold 问答和人工/模型 grader 评价。
 
@@ -502,7 +548,7 @@ gold/test 仅 evaluator 进程挂载；产品、生成脚本和 trainer 不可�
 ### 11.1 Rubric 设计原则
 
 - 评具体成果和行为，不推断人格、潜力或就业适配。
-- 一项 rubric 只对应一个可观察要求；抽象能力由多个原子项组成。
+- 一项 rubric 对应一个可观察要求；原子项提供局部表现证据，不能凭固定条目相加概括全部个人能力。
 - 写明适用条件、可接受证据、等价路径、例外与信息缺失处理。
 - 行为过程与最终方案互补，避免同一错误在多个维度重复扣分。
 - 判断当时合理性使用当时信息；评价提交方案使用提交时有效约束。
@@ -510,6 +556,8 @@ gold/test 仅 evaluator 进程挂载；产品、生成脚本和 trainer 不可�
 - 反馈以证据和下一步练习为主，不输出未经验证的“职业能力百分位”。
 
 ### 11.2 六个维度
+
+下表是已有 PM 案例的版本化评价基线，供历史结果解释与模型实验使用。它不规定工作步骤、不要求每次观察到全部维度，也不是永久穷尽 AIPM 能力的框架。新情境、内容用途或合理贡献超出既有条目时，先记录适用性与人工判断，再审核规则和样本版本。
 
 | ID | 维度 | 初始权重 | 原子项例子 | 主要证据 |
 |---|---|---:|---|---|
@@ -520,9 +568,11 @@ gold/test 仅 evaluator 进程挂载；产品、生成脚本和 trainer 不可�
 | R5 | 变化后的调整 | 15 | 事件后更新受影响决策，未受影响项无需无意义改写 | before/after、事件、提交 |
 | R6 | 可执行交付 | 10 | 方案、配置、责任人/观察窗口/退出条件一致 | 最终成果与配置 |
 
-这些权重是产品设计初值，不是行业公认标准。首版每维 2–3 个原子项，合计约 12–18 个。没有变化事件的场景，R5 为 NOT_APPLICABLE，按适用维度重新归一化。
+这些权重和每维 2–3 个原子项、合计约 12–18 项的设置，属于既有版本化案例／实验基线，不是行业标准或新产品的默认总分框架。基线中没有变化事件时，R5 为 NOT_APPLICABLE，按适用维度重新归一化。新情境的适用性与聚合方式须另行校准。
 
 ### 11.3 标签与评分
+
+以下保留既有原子评价实验与接口的聚合定义，用于解释相应版本结果；不据此冻结新产品的评分界面或要求开放作品均有总分。
 
 MET=2，PARTIAL=1，NOT_MET=0。NOT_APPLICABLE 从分母排除。INSUFFICIENT 不直接当作 0 分，也不悄悄从分母删除后给高分。
 
@@ -530,7 +580,7 @@ MET=2，PARTIAL=1，NOT_MET=0。NOT_APPLICABLE 从分母排除。INSUFFICIENT �
 
 `lower = s / (2*n)`；`upper = (s + 2*u) / (2*n)`；`coverage = (n-u)/n`。
 
-总分上下界为各适用维度的加权和。首版 UI 在存在未知项时优先显示“已确认表现 + 待核验项”，不把下界当正式总分。全部可判时再给辅助分数。日志完整且明确要求交付的字段确实未提交，可判 NOT_MET；日志因故障缺失则为 INSUFFICIENT，两者不同。若所有项都不适用或未生成有效 rubric，返回 unscorable 并提示检查任务，不计算除以零，也不显示满分。
+本基线的总分上下界为各适用维度的加权和，区间不能冒充最终总分。新产品的反馈应解释已确认表现与待核验项；开放情境是否需要数值总分、何时可以汇总及如何呈现，待校准和后续前端讨论确定。记录完整且明确要求的业务信息在相关作品、配置及等价证据中均缺失，可判 NOT_MET；日志因故障缺失则为 INSUFFICIENT，两者不同。若所有项都不适用或未生成有效 rubric，返回 unscorable 并提示检查任务，不计算除以零，也不显示满分。
 
 ### 11.4 完整原子项示例
 
@@ -563,22 +613,30 @@ forbidden_shortcuts:
 
 ### 11.5 评价流水线
 
-1. 固定 submission 与 as_of_seq。
-2. 构建可评价证据包，记录是否完整和 token 裁剪。
-3. 对数值、引用存在性、版本先执行确定性检查。
-4. 对自由文本执行 claim 抽取与原子 item 判断。
-5. 校验模型引用；冲突与不确定项进入 review queue。
-6. 根据已确认 item 计算维度结果与覆盖率。
-7. 生成简短反馈：观察到什么、证据在哪里、影响什么、可以怎样改进。
-8. 按薄弱维度映射到预先审核的补练任务。
+1. 固定待评作品／提交版本与 as_of_seq，辨明用户意图、内容用途和承诺程度；不明时澄清或暂缓。
+2. 构建包括当时可得信息、已观察行为、协作帮助与修订关系的证据包，记录缺失和 token 裁剪。
+3. 选择有版本且适用于本次情境的评价依据；未覆盖的合理贡献进入人工审阅，不能强塞旧维度或临时自造计分标准。
+4. 对数值、引用存在性、版本先执行确定性检查，再对自由文本、行为与结果的关系作语义判断。
+5. 校验模型引用；冲突、上下文缺失和不确定项进入 review queue。
+6. 仅对已校准且适用的原子项聚合结果与覆盖率，探索建议与正式评分分别呈现。
+7. 生成简短反馈：对应什么原句或动作、依据是什么、影响什么、可以怎样改进；允许用户异议、修订和重验。
+8. 根据具体已观察问题选择审核过的变体或继续原案修订；缺少观察不自动推断为能力不足。
 
-抽取 claim 的错误单独评估；首版表单提供明确“关键判断与依据”字段，减少无控制的长文抽取。LLM 反馈生成不能修改上游 label、证据或分数；输出不符合结构时采用模板反馈。
+用途识别与 claim 抽取的错误分别评估。作品中的假设、计划和已验证结论须保留区别，用户可修正抽取结果；不能以表单填写取代开放创作。LLM 反馈生成不能修改已确认的 label、证据或分数；输出不符合结构时采用模板反馈。以上情境化扩展尚需契约、样本和实现验证，现有 rules-v1／v2 与固定提交证据包只能覆盖其中部分。
 
 ### 11.6 Rubric 的 meta-evaluation
 
 准备包含合理替代方案、信息缺失、日志故障和时间变化的 gold 子集。让人工按 rubric 评分，再看 Judge 是否一致；再看人工是否认为 rubric 本身误伤合理方案。若标准有问题，修 rubric 和数据版本，不通过训练强迫模型复现错误标准。
 
 证据出现“主管已批准增加人数”时，30 人旧上限不再绝对生效。预算类 rubric 必须检索例外和批准状态，不能只看单一文档关键词。
+
+### 11.7 情境化 Judge 的校准与学习解释
+
+Judge 评价用户在具体工作中表现出的判断、行动及修正，作品、对话和操作记录是证据。评审需区分探索假设、备选方案、正式承诺和已执行结果；先错后改、未按建议顺序行动或作出合理替代方案本身不构成失败。普通探索不持续打分，反馈时机以主动求助、关键交付和情境变化为原则，具体交互另议。
+
+扩展数据应包含不同起点与顺序、同一文本的不同用途、信息受限时的合理判断、无效尝试后修正、跨角色建议冲突，以及人／外部 Agent 共同产出的作品。人工先核对评价依据及其适用性，再核对 Judge 结论；记录不同合理意见与裁决，保留可复核来源。若系统本身缺上下文或记录，就暂缓结论。
+
+交付质量、工具协作中可见的个人判断、辅助后修订和新条件下的表现分开解释。若要测无辅助能力，需另设事先说明条件的任务；不能从 Agent 产物倒推出用户独立完成，不能从一次错误推出广泛能力缺陷。
 
 ## 12 Judge 模型与融合
 
@@ -600,7 +658,7 @@ forbidden_shortcuts:
 
 ### 12.2 输入预算
 
-Judge v0 使用证据给定、单条原子 item 的输入。最大 prompt 初值 2,048 tokens，输出 256 tokens；长上下文切片可扩至 4,096，但必须另做显存和吞吐测试。
+Judge v0 使用证据给定、单条原子 item 的输入，是既有可控实验基线。情境化评价需要另外验证用途识别、过程证据组织、适用标准选择和跨轮修订判断；原子分类器与 SFT／GRPO 可作为组成部分，不能把现有基线宣称为完整的人类工作评价。最大 prompt 初值 2,048 tokens，输出 256 tokens；长上下文切片可扩至 4,096，但必须另做显存和吞吐测试。
 
 输入超长不能静默截掉决定性证据。assembler 按结构保留 criterion、claim、时间与证据；截断后若无法维持充分材料，标注 assembly_status=overflow，转分段评测或待核验。训练与测试使用同一 assembler，oracle 与 retrieved 模式分别记录。
 
@@ -622,7 +680,7 @@ Judge v0 使用证据给定、单条原子 item 的输入。最大 prompt 初值
 - 编码器：cross-entropy，标签不平衡时在训练集内选择 class weight；所有预处理只拟合训练集。
 - SFT：assistant completion loss，输入 prompt 不计目标 loss；先以少量样本核对 chat template 与 mask，再训练。
 - 训练标签与说明由 G0/G1 来源组成；可只训练 label/evidence 的短输出，不需要人为编造长推理过程。
-- 公共 NLI 辅助数据与领域数据分桶，分别报告混合前后效果；不允许大规模英文样本淹没中文领域分布。
+- 公共 NLI 辅助数据与领域数据分桶，分别报告混合前后效果；控制辅助样本比例，保留本项目领域与语言分布的独立评价。
 - 第一版 1–2 epoch 起步，在 dev 上选 checkpoint。训练模型与部署模型的 tokenizer、chat template 保持一致。
 
 ### 12.5 有意义的集成
@@ -724,7 +782,7 @@ runs/eval/<run_id>/
 
 RL 更新证据驱动 Judge 的模型参数，使其更准确地判断原子评价项、选择有效证据，并减少措辞与顺序带来的错误。角色 Agent、场景世界和用户补练策略首版不做 RL。
 
-主实验是单次 Judge 请求的 contextual generation：输入固定的 rubric 与候选证据，模型生成结构化判断。它是 LLM 的 RL 后训练实验，不应包装成已经实现多轮 Agent RL。将来让 Judge 自主检索是后续独立扩展。
+主实验是单次 Judge 请求的 contextual generation：输入固定的 rubric 与候选证据，模型生成结构化判断。它是 LLM 的 RL 后训练实验，不应包装成已经实现多轮 Agent RL。产品需要理解跨轮工作过程，不自动改变本实验的训练单位；可以先以有版本的过程证据包评估适用性。让 Judge 自主检索、选择后续行动或接受多步奖励仍是独立扩展，需新定义训练环境与验证方法。
 
 J1 展示了通过判断标签和一致性构建奖励来训练 Judge 的方法。本文采用更窄的领域与短输出，是工程设计选择，不是对其完整实验的复现。[J1](https://arxiv.org/abs/2505.10320)
 
@@ -922,35 +980,45 @@ continued-SFT 不能完美等价 RL 的 token 成本，需报告各自 GPU 时�
 
 ## 19 API 存储与运行
 
-### 19.1 最小 API
+### 19.1 已实现 API
 
-| API | 关键请求 | 响应 |
-|---|---|---|
-| POST /sessions | scenario_id, version | session_id, state_version |
-| GET /sessions/{id} | 当前身份 | 可见状态，不含未来事件与 gold |
-| POST /sessions/{id}/messages | role_id, text, idempotency_key | turn_id / job_id |
-| POST /sessions/{id}/actions | tool, arguments, expected_version, idempotency_key | event refs 或冲突 |
-| POST /sessions/{id}/submissions | artifact_version, config_version | submission_id |
-| POST /submissions/{id}/feedback | rubric_version | feedback_job_id |
-| GET /jobs/{id} | 无 | queued/running/succeeded/failed/cancelled |
-| GET /sessions/{id}/timeline | cursor | 可见事件与操作结果 |
-| GET /feedback/{id} | 无 | 维度结果、证据、待核验项、补练 |
+当前有 19 个 HTTP 操作，精确模型以[API 源码](../../src/career_lab/api/app.py)与运行服务 Swagger 为准。除健康检查与创建会话外，业务入口使用 session ID 和 bearer token；尚无用户账号体系。
 
-API 中的 actor_id 来自服务端身份，不信任用户可任意填写的角色。产品账户仅用于区分 session 所属，不引入与研究无关的组织权限系统。
+| API | 主要作用 |
+|---|---|
+| `GET /health`、`POST /sessions` | 查看服务模式；创建指定场景会话并取得凭据 |
+| `GET /sessions/{id}`、`GET …/materials` | 当前可见状态；当前或 `as_of_seq` 历史材料 |
+| `POST …/actions`、`POST …/approvals/resolve` | 业务动作；显式按场景规则处理申请 |
+| `POST …/turns`、`GET …/jobs/{job_id}` | 角色回合入队；查询类型、角色、状态与时间 |
+| `POST/GET …/tests` | 运行与恢复版本化测试 |
+| `POST/GET …/artifacts` | 保存和恢复六字段交付稿的多个版本 |
+| `POST/GET …/submissions` | 固定与恢复提交，提交后只读 |
+| `POST …/feedback`、`GET …/feedback/{submission_id}` | 生成／失败后显式重试；读取保存反馈 |
+| `GET …/timeline` | 读取事件、对话问题／回复、时间、context ID 和拒绝记录 |
+| `GET …/evidence/{submission_id}/{criterion_id}/{evidence_id}` | 读取固定时点证据 |
+| `POST …/relation-checks` | 配置冻结实验后提供 shadow 关系判断；不影响正式评分 |
 
-### 19.2 数据表
+动作与审批使用 `request_id`／`expected_version`；其他写入按各自请求身份和版本校验，创建会话目前没有幂等键。开放 tasks／works、关联修订和外部 Agent 服务端接口仍为[待实现契约](frontend-interface-requirements.md)。
 
-`scenario_versions`、`sessions`、`world_snapshots`、`events`、`role_messages`、`material_versions`、`artifacts`、`submissions`、`test_runs`、`feedback_items`、`jobs`、`eval_runs`、`model_registry`、`review_queue`。
+### 19.2 数据表与存档
 
-events 唯一键 `(session_id, seq)`；actions 唯一键 `(session_id, idempotency_key)`；artifacts 不可变版本；反馈引用 submission 与 model/rubric，不只保存一段文本。大文本和权重用内容 hash 路径，SQL 保存元数据。
+当前 SQL 表为 `sessions`、`snapshots`、`events`、`actions`、`objects`、`event_times`、`object_times`、`object_metadata`、`jobs`、`job_times`。场景规格保存在会话中；turn、test、artifact、submission、feedback 等以对象类型区分。实际定义见[数据库层](../../src/career_lab/storage/database.py)与[jobs 表](../../src/career_lab/jobs/repository.py)。
+
+events 唯一键为 `(session_id, seq)`，actions 唯一键为 `(session_id, key)`。保存交付稿产生独立版本；反馈引用固定 submission、规则与 rubric 身份。数据、模型和实验报告另按文件及 hash 管理。
+
+浏览器 `rolecraft.open-work.ui.v1` 保存事项、开放作品、版本、个人判断与 Agent 记录，`rolecraft.live.workspace.v1` 保存会话凭据和请求日志；它们不是服务端事务或跨设备存档。新增工作区持久化需要单独 schema、迁移及恢复测试。
 
 ### 19.3 可观测性
+
+下述统一追踪层级为目标设计；现有回合轨迹、事件与时间元数据已保存，完整 OpenTelemetry 链路尚未实施。
 
 trace 层级为 session → turn → model_call/tool_call → event_commit；评价为 submission → assembly → grader → feedback。记录 request_id、parent_span_id、actor、模型版本、token、延迟、重试、工具状态与错误类型。API key 不进入日志。
 
 可参考 OpenTelemetry 的 GenAI 语义约定，但将本项目事件 schema 保持稳定，避免上游规范变化破坏实验文件。[OpenTelemetry](https://opentelemetry.io/docs/specs/semconv/gen-ai/)
 
 ### 19.4 缓存与并发
+
+以下为扩展设计要求，不代表已经部署 GPU Judge、SFT 回退或跨设备缓存。当前产品默认本地规则反馈，实验模型接入仍受配置和质量门槛约束。
 
 材料与检索缓存 key 包含内容 hash、权限范围、as_of_seq、检索版本。评价缓存再包含 rubric/model/decode/input hash。评测默认 cold 或 fresh namespace，warm 性能另测；不能跨 test/train 命中带标签或答案的缓存。
 
@@ -975,6 +1043,8 @@ trace 层级为 session → turn → model_call/tool_call → event_commit；评
 这是约五周日历窗口的建议，不等于已经确认团队有五周全职开发。课程写约 10 天工作量，因此完整 v2、教学 RL 与多机 infra 应后置。
 
 ### 20.2 五人职责建议
+
+此标题保留原计划引用；下表表示五类工作职责，不能据此推定当前团队人数或实名分工。成员与投入沿项目登记核对，一人可承担多类职责。
 
 | 负责人 | 主责 | 必须与谁对齐 |
 |---|---|---|
@@ -1013,7 +1083,7 @@ trace 层级为 session → turn → model_call/tool_call → event_commit；评
 
 ### 21.3 文档中的待实测事项
 
-实际 GPU 显存、团队人数与可投入时间、真实用户招募数量、API 预算、标注速度、依赖锁文件、模型 checkpoint revision 与可接受产品错误率，需要在对应实施任务中测量或确定。它们不影响当前文档规定接口和首个可运行切片。
+实际 GPU 显存、团队可投入时间、真实用户招募数量、API 预算、标注速度、训练依赖和模型 revision、可接受产品错误率，仍需在对应实施任务中核实。剩余契约包括开放作品与任务的服务端同步、三角色记忆与事件获知、提交后关联修订、外部 Agent 直连及情境化 Judge。现有前端布局、调查工作纸和动效已实现，其使用与历史验收见前端 README；环境重新建立后的可运行状态须另行验证。
 
 ### 21.4 可以诚实用于求职的叙事
 
