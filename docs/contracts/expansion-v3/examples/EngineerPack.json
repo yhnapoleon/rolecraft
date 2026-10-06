@@ -1,0 +1,21 @@
+{
+  "config": {
+    "config_version": null,
+    "kind": "document",
+    "object_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "failures": [],
+  "id": "example",
+  "public_probes": [],
+  "requirements": [],
+  "scenario": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "schema_version": 2
+}

@@ -1,0 +1,43 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "expected_head": {
+      "exclusiveMinimum": 0,
+      "title": "Expected Head",
+      "type": "integer"
+    },
+    "product_id": {
+      "minLength": 1,
+      "title": "Product Id",
+      "type": "string"
+    },
+    "product_version": {
+      "exclusiveMinimum": 0,
+      "title": "Product Version",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "unadopted",
+        "adopted",
+        "rejected"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "product_id",
+    "product_version",
+    "expected_head",
+    "status"
+  ],
+  "title": "ProductAdopt",
+  "type": "object"
+}

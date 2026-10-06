@@ -1,0 +1,113 @@
+{
+  "$defs": {
+    "JsonValue": {},
+    "LegacyProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "original_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Original Hash",
+          "type": "string"
+        },
+        "original_id": {
+          "minLength": 1,
+          "title": "Original Id",
+          "type": "string"
+        },
+        "original_kind": {
+          "title": "Original Kind",
+          "type": "string"
+        },
+        "original_purpose": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Purpose"
+        },
+        "raw": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Raw",
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_schema": {
+          "minLength": 1,
+          "title": "Source Schema",
+          "type": "string"
+        },
+        "source_session_id": {
+          "minLength": 1,
+          "title": "Source Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_schema",
+        "source_session_id",
+        "original_id",
+        "original_kind",
+        "raw",
+        "original_hash"
+      ],
+      "title": "LegacyProvenance",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "execute_pending": {
+      "const": false,
+      "default": false,
+      "title": "Execute Pending",
+      "type": "boolean"
+    },
+    "kind": {
+      "enum": [
+        "text",
+        "test_plan",
+        "investigation"
+      ],
+      "title": "Kind",
+      "type": "string"
+    },
+    "purpose": {
+      "title": "Purpose",
+      "type": "string"
+    },
+    "run_verification": {
+      "const": "unverified_local",
+      "default": "unverified_local",
+      "title": "Run Verification",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source": {
+      "$ref": "#/$defs/LegacyProvenance"
+    }
+  },
+  "required": [
+    "kind",
+    "purpose",
+    "source"
+  ],
+  "title": "LegacyProductImport",
+  "type": "object"
+}

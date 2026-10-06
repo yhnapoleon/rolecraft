@@ -1,0 +1,82 @@
+{
+  "bucket": "env_run",
+  "family": "acquisition",
+  "input_hash": "9b6b59b98e282bf533ca89dc0c4836189f648ee8a9877967477087030c118c00",
+  "label_ref": {
+    "media_type": "application/json",
+    "path": "labels/acquisition.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "label_tier": "G2",
+  "language": "zh",
+  "lineage": {
+    "branch_id": null,
+    "candidate_id": null,
+    "component_id": "same-root",
+    "decision_id": null,
+    "derivation_ids": [],
+    "fact_root_ids": [],
+    "run_id": null,
+    "schema_version": 2,
+    "session_id": null,
+    "source_record_ids": [],
+    "structure_id": "contract-example"
+  },
+  "model_input": {
+    "as_of": {
+      "business_seq": 0,
+      "schema_version": 2,
+      "storage_revision": 0,
+      "workspace_revision": 0
+    },
+    "candidates": [
+      {
+        "arguments": {
+          "material_id": "brief"
+        },
+        "expected_cost": null,
+        "id": "candidate",
+        "purpose": "核对目标",
+        "schema_version": 2,
+        "tool": "read_material"
+      }
+    ],
+    "observed_steps": [],
+    "question": "接下来需要什么信息？",
+    "schema_version": 2,
+    "task": "示例获取",
+    "task_type": "acquisition"
+  },
+  "provenance": {
+    "actual_sources": [
+      {
+        "media_type": "application/json",
+        "path": "files/payload.json",
+        "schema_version": 2,
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      }
+    ],
+    "captured_at": "2026-10-06T12:20:00Z",
+    "command": "synthetic contract example; not executed business data",
+    "executor": {
+      "delegation_id": null,
+      "id": "human:example",
+      "kind": "human",
+      "schema_version": 2
+    },
+    "license": null,
+    "schema_version": 2,
+    "source": {
+      "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
+      "dependency_locks": [],
+      "overlay": null,
+      "schema_version": 2,
+      "source_digest": "f5bded2aec55106eecf953aada2eab7dda5ecaf8aa11c271320042d7d886900d"
+    },
+    "transformations": []
+  },
+  "record_id": "acquisition",
+  "schema_version": 2,
+  "split": "train"
+}

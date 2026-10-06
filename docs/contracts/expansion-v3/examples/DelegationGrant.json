@@ -1,0 +1,20 @@
+{
+  "actor_id": "example",
+  "allowed_actions": null,
+  "allowed_objects": null,
+  "capabilities": [
+    "read"
+  ],
+  "create_under_tasks": [],
+  "executor": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "expires_at": "2026-10-06T12:00:00Z",
+  "id": "example",
+  "revoked": false,
+  "schema_version": 2,
+  "session_id": "example"
+}

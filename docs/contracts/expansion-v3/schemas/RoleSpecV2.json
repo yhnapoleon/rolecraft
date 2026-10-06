@@ -1,0 +1,146 @@
+{
+  "$defs": {
+    "DisclosurePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "actors": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Actors",
+          "type": "array"
+        },
+        "mode": {
+          "enum": [
+            "public",
+            "role_only",
+            "paraphrase_only",
+            "never"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "paraphrase": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paraphrase"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "title": "DisclosurePolicy",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "acceptable_conditions": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Acceptable Conditions",
+      "type": "array"
+    },
+    "approval_authority": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Approval Authority",
+      "type": "array"
+    },
+    "disclosure_policy": {
+      "additionalProperties": {
+        "$ref": "#/$defs/DisclosurePolicy"
+      },
+      "title": "Disclosure Policy",
+      "type": "object"
+    },
+    "event_subscriptions": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Event Subscriptions",
+      "type": "array"
+    },
+    "goals": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Goals",
+      "type": "array"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "known_facts": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Known Facts",
+      "type": "array"
+    },
+    "known_materials": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Known Materials",
+      "type": "array"
+    },
+    "name": {
+      "title": "Name",
+      "type": "string"
+    },
+    "responsibilities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Responsibilities",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "unacceptable_conditions": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Unacceptable Conditions",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "name",
+    "responsibilities",
+    "goals",
+    "known_materials",
+    "known_facts",
+    "disclosure_policy"
+  ],
+  "title": "RoleSpecV2",
+  "type": "object"
+}

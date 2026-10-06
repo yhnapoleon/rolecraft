@@ -1,0 +1,15 @@
+{
+  "ancestors": [],
+  "component_id": "example",
+  "file": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "record_id": "example",
+  "schema_version": 2,
+  "seen_test": false,
+  "split": "train",
+  "structure_id": "example"
+}

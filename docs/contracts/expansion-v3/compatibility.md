@@ -1,0 +1,19 @@
+# v1/v2 兼容边界
+
+v1 Action、Event、WorldState、ScenarioSpec、EvidencePackage、GoldAnnotation与CandidateEvidence保持原始字段、extra=forbid、model_dump和canonical函数。`contracts.versioning.decode`仅把没有schema_version的历史对象解释为v1；v2使用显式版本2，未知版本拒绝。
+
+v1请求hash继续由原`storage.sessions.digest`计算，包含原默认字段、Action和object_record；旧turn省略可选字段的处理未改。v2规范化先验证类型并物化默认值，再按键排序、保留数组顺序；类型声明中等价的缺省与默认值相同，普通mapping的未提供/null/空数组仍不同。TaskPatch的null表示不修改，clear_parent显式清空父关系；不要用null隐含删除操作。
+
+`api/app.py`只在明确v2会话及envelope时分派新处理；旧错误code及detail.loc已按旧客户端形状保持。旧六字段artifact和submitted终态不变。v1旧反馈可读取，待生成v3仍由原规则真实执行。RulesRegistry默认只装真实v3，v4由W05注入独立实现；没有旧引擎或未装v4会明确失败，不能套用另一版本。
+
+所有新数据表以v2_命名；没有修改旧列、回填旧JSON或改旧冻结hash。新表创建与旧库原列/行不变、旧请求重启重放及待生成反馈均有实际验收。原controlled-v2文件字节保留；它的绝对路径/源码hash复跑限制仍存在，本包不重签旧研究冻结。新研究使用独立命名空间和文件式bundle。
+
+旧浏览器text/test_set/investigation经`legacy.normalize_legacy_product`映射：test_set→test_plan，中文用途映射为exploration/test_plan/comparison/commitment/freeform，未知用途文字原样保留。原raw、draft、cases/blocks/review、removedAt、采用状态、return/request ID等作为LegacyProvenance保存，restore可逐字段还原。凭据拒绝进入导入包；旧运行保持unverified_local，不执行pending、不改挂真实测试。实际preview/apply与前端存档保留由W03实现。
+
+固定旧夹具位于`tests/contracts/expansion_v3/fixtures/v1`，来源为W00在任何W01修改前生成的合成会话与SQLite库。provenance.json保存原始指纹。测试只复制该库到自身临时目录再读写；不得改原夹具使回归变绿。
+
+W01验证的是公共协议、事务、隔离与旧版兼容。未安装业务模块明确503；真实模型质量、研究实验、开放工作完整体验和独立产品实操QA不在本包冒称通过，按W02—W15及产品实操QA规范继续验收。
+
+新r2明确限定旧v1保持兼容；未集成的v2草稿不是历史生产协议。新增必需的执行元数据、BusinessBasis、观察/调用身份及外部来源快照字段后，消费者须按新revision重建并重新验证，不把旧draft snapshot改hash冒充新结果。旧draft和第一候选源码包均保留。
+
+r3只针对独立审阅反例修复。jobs/worker.py对v1仍调用原payload-only handler；v2显式传递claim。原v1协议、请求hash、旧反馈、冻结fixture不改。v2的request-meta为新增表，不回填无法证明的历史记录。公开披露、RestoreResult.id_map key语义和provider未知身份有明确迁移要求，见接线说明；不能给旧r2换hash冒充已修复。

@@ -1,0 +1,17 @@
+{
+  "actor_id": "example",
+  "allowed_actions": null,
+  "allowed_objects": null,
+  "capabilities": [],
+  "create_under_tasks": [],
+  "credential_id": "example",
+  "executor": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "expires_at": null,
+  "schema_version": 2,
+  "session_id": "example"
+}

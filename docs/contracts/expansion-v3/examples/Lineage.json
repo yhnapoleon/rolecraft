@@ -1,0 +1,13 @@
+{
+  "branch_id": null,
+  "candidate_id": null,
+  "component_id": "example",
+  "decision_id": null,
+  "derivation_ids": [],
+  "fact_root_ids": [],
+  "run_id": null,
+  "schema_version": 2,
+  "session_id": null,
+  "source_record_ids": [],
+  "structure_id": "example"
+}

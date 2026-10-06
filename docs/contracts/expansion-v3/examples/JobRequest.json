@@ -1,0 +1,14 @@
+{
+  "command": {
+    "expected_version": 1,
+    "expected_workspace_revision": 1,
+    "operation": "example",
+    "payload": {},
+    "request_id": "example",
+    "schema_version": 2
+  },
+  "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "name": "v2.example",
+  "schema_version": 2,
+  "sources": []
+}

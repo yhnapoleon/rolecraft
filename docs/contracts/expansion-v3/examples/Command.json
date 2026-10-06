@@ -1,0 +1,8 @@
+{
+  "expected_version": 1,
+  "expected_workspace_revision": 1,
+  "operation": "example",
+  "payload": {},
+  "request_id": "example",
+  "schema_version": 2
+}

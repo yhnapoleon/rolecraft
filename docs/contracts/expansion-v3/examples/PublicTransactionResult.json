@@ -1,0 +1,32 @@
+{
+  "boundary": {
+    "end_seq": 1,
+    "request_id": "example",
+    "schema_version": 2,
+    "start_seq": 1,
+    "storage_revision": 1,
+    "transaction_id": "example"
+  },
+  "events": [],
+  "executor": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "objects": [],
+  "replayed": false,
+  "result": {},
+  "schema_version": 2,
+  "state": {
+    "business_seq": 1,
+    "config_version": 1,
+    "cycle_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "status": "active",
+    "storage_revision": 1,
+    "workspace_revision": 1
+  },
+  "transaction_id": "example"
+}

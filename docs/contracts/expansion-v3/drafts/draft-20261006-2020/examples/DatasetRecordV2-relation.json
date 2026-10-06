@@ -1,0 +1,99 @@
+{
+  "bucket": "env_run",
+  "family": "relation",
+  "input_hash": "085aadf8fdf3c4440f0ba3c9a85417ea1b96b86580194edc3b4654e4ff8fc78a",
+  "label_ref": {
+    "media_type": "application/json",
+    "path": "labels/relation.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "label_tier": "G2",
+  "language": "zh",
+  "lineage": {
+    "branch_id": null,
+    "candidate_id": null,
+    "component_id": "same-root",
+    "decision_id": null,
+    "derivation_ids": [],
+    "fact_root_ids": [],
+    "run_id": null,
+    "schema_version": 2,
+    "session_id": null,
+    "source_record_ids": [],
+    "structure_id": "contract-example"
+  },
+  "model_input": {
+    "evidence": {
+      "applicability": "undetermined",
+      "as_of": {
+        "business_seq": 0,
+        "schema_version": 2,
+        "storage_revision": 0,
+        "workspace_revision": 0
+      },
+      "candidate_evidence": [],
+      "claim": "这是合成契约样例",
+      "completeness": "missing",
+      "criterion": null,
+      "dropped_refs": [],
+      "input_hash": "8a2d08a2829803f3fcfc5ae1eb33578a2f92333ff1fbe05cf640fac2ae07836e",
+      "item_id": "sample-relation",
+      "missing_refs": [],
+      "purpose": "exploration",
+      "rule_bound": null,
+      "rule_context": {},
+      "schema_version": 2,
+      "subjects": [
+        {
+          "config_version": 0,
+          "kind": "config",
+          "object_id": "config",
+          "observed_at_seq": 0,
+          "quote": null,
+          "schema_version": 2,
+          "session_id": "example",
+          "span_end": null,
+          "span_start": null,
+          "valid_from_seq": 0,
+          "valid_until_seq": null,
+          "version": 1
+        }
+      ],
+      "task_type": "relation"
+    },
+    "schema_version": 2,
+    "task_type": "relation"
+  },
+  "provenance": {
+    "actual_sources": [
+      {
+        "media_type": "application/json",
+        "path": "files/payload.json",
+        "schema_version": 2,
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+      }
+    ],
+    "captured_at": "2026-10-06T12:20:00Z",
+    "command": "synthetic contract example; not executed business data",
+    "executor": {
+      "delegation_id": null,
+      "id": "human:example",
+      "kind": "human",
+      "schema_version": 2
+    },
+    "license": null,
+    "schema_version": 2,
+    "source": {
+      "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
+      "dependency_locks": [],
+      "overlay": null,
+      "schema_version": 2,
+      "source_digest": "f5bded2aec55106eecf953aada2eab7dda5ecaf8aa11c271320042d7d886900d"
+    },
+    "transformations": []
+  },
+  "record_id": "relation",
+  "schema_version": 2,
+  "split": "train"
+}

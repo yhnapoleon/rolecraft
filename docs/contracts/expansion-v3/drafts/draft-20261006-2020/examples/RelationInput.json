@@ -1,0 +1,42 @@
+{
+  "evidence": {
+    "applicability": "undetermined",
+    "as_of": {
+      "business_seq": 0,
+      "schema_version": 2,
+      "storage_revision": 0,
+      "workspace_revision": 0
+    },
+    "candidate_evidence": [],
+    "claim": "这是合成契约样例",
+    "completeness": "missing",
+    "criterion": null,
+    "dropped_refs": [],
+    "input_hash": "8a2d08a2829803f3fcfc5ae1eb33578a2f92333ff1fbe05cf640fac2ae07836e",
+    "item_id": "sample-relation",
+    "missing_refs": [],
+    "purpose": "exploration",
+    "rule_bound": null,
+    "rule_context": {},
+    "schema_version": 2,
+    "subjects": [
+      {
+        "config_version": 0,
+        "kind": "config",
+        "object_id": "config",
+        "observed_at_seq": 0,
+        "quote": null,
+        "schema_version": 2,
+        "session_id": "example",
+        "span_end": null,
+        "span_start": null,
+        "valid_from_seq": 0,
+        "valid_until_seq": null,
+        "version": 1
+      }
+    ],
+    "task_type": "relation"
+  },
+  "schema_version": 2,
+  "task_type": "relation"
+}

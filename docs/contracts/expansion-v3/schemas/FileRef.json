@@ -1,0 +1,32 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "media_type": {
+      "default": "application/json",
+      "title": "Media Type",
+      "type": "string"
+    },
+    "path": {
+      "minLength": 1,
+      "title": "Path",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sha256": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Sha256",
+      "type": "string"
+    }
+  },
+  "required": [
+    "path",
+    "sha256"
+  ],
+  "title": "FileRef",
+  "type": "object"
+}

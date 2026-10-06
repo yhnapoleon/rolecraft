@@ -1,8 +1,28 @@
 import threading
+from dataclasses import dataclass
+from typing import Callable
 from uuid import uuid4
 
 from career_lab.jobs.repository import LeaseLost
 
+
+@dataclass(frozen=True)
+class WorkerClaim:
+    job_id: str
+    lease_token: str
+    worker_id: str
+    attempt: int
+
+    @classmethod
+    def from_job(cls, job):
+        return cls(job['id'], job['lease_token'], job['worker_id'], job['attempt'])
+
+@dataclass(frozen=True)
+class ClaimedHandler:
+    callback: Callable
+
+    def __call__(self, payload, claim):
+        return self.callback(payload, claim)
 
 class Worker:
     def __init__(self, jobs, handlers):
@@ -24,7 +44,11 @@ class Worker:
         thread = threading.Thread(target=heartbeat, daemon=True)
         thread.start()
         try:
-            result = self.handlers[job["kind"]](job["payload"])
+            handler = self.handlers[job["kind"]]
+            if isinstance(handler, ClaimedHandler):
+                result = handler(job["payload"], WorkerClaim.from_job(job))
+            else:
+                result = handler(job["payload"])
             self.jobs.complete(job["id"], job["lease_token"], result)
         except LeaseLost:
             pass

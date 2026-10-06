@@ -1,0 +1,2585 @@
+{
+  "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
+  "boundaries": [
+    "This is W01 common foundation, not implemented W02-W15 business modules.",
+    "v4 semantic engine, paid provider/model quality, full product QA and research results are not claimed.",
+    "Existing v1 remains separate; internal snapshot/restore never appears in learner routes."
+  ],
+  "changes_since_draft": [
+    "Command.schema_version and CreateSessionV2.schema_version are now required for explicit envelopes.",
+    "Added ModelPrediction; ModelBundle validates ordered task label vocabulary.",
+    "G2v compares evidence sets independent of ordering, requires reordered evidence only when more than one item exists.",
+    "API/storage/atomic job queue/isolated restore implementations and their public models are now included.",
+    "AssistantConfig adds finite min_score (initial 0.35, uncalibrated), freshness_guard none/warn/fallback and manual_domains; TestResultV2 requires execution metadata and exact config_ref.",
+    "BusinessRequest requires immutable proposed/applied BusinessBasis. ScenarioStateV2 is private transaction state, not an observation.",
+    "Observation.visible_sources now requires ObservedFragment with explicit learner acquisition/audience; catalog is separate. StepResult/ObservedStep bind actual request identities, points and executor.",
+    "AnnotationPass successful passes require actual invocation identity; G2v also requires separate context IDs, independence method/reason and truthful evidence order policy.",
+    "AuthContext/DelegationGrant adds explicit create_under_tasks; derived results remain tied to the actual executor, unrelated existing artifacts are not inherited.",
+    "SnapshotExport now includes immutable external source references; restore supports exact target/idempotency and structured action remapping. Regenerate draft snapshots under the new revision.",
+    "WorkProduct/import DTOs retain intent/refs, test_compare, review_focus distinct from direction, source return identity, adoption and version conflicts.",
+    "PublicTransactionResult is the HTTP/worker wire result; TransactionResult remains the internal authoritative record."
+  ],
+  "consumer_interfaces": {
+    "W02": [
+      "ScenarioBundle",
+      "RoleSpecV2",
+      "FactV2",
+      "MaterialV2",
+      "SourceFragment",
+      "AssistantConfig",
+      "EffectiveConfig",
+      "TestRequestV2",
+      "TestResultV2",
+      "BusinessRequest",
+      "BusinessDecision",
+      "ActionInput",
+      "ObjectWrite",
+      "EventDraft",
+      "Command",
+      "BusinessBasis",
+      "ScenarioStateV2",
+      "MaterialMetadata",
+      "TestExecutionMetadata",
+      "RetrievedChunk",
+      "ExternalReference"
+    ],
+    "W03": [
+      "WorkspaceTask",
+      "WorkProductVersion",
+      "ProductShare",
+      "WorkspaceImport",
+      "ImportResult",
+      "LegacyProductImport",
+      "TaskCreate",
+      "TaskPatch",
+      "ProductCreate",
+      "ProductEdit",
+      "ShareCreate",
+      "ShareUpdate",
+      "ObjectWrite",
+      "Command",
+      "ProductAdopt",
+      "TaskBatch",
+      "ImportConflict",
+      "ImportVersionMap",
+      "PublicTransactionResult"
+    ],
+    "W04": [
+      "RoleContext",
+      "DisclosureRecord",
+      "SourceFragment",
+      "JobContextSnapshot",
+      "TurnInput",
+      "ApprovalInput",
+      "BusinessRequest",
+      "BusinessDecision",
+      "ProductShare",
+      "ObservedFragment",
+      "ProviderRequest",
+      "ProviderResult",
+      "ProviderCapabilities",
+      "ActualConsumption",
+      "PublicDisclosureSource",
+      "PublicDisclosureRecord"
+    ],
+    "W05": [
+      "EvidencePackageV2",
+      "FeedbackV2",
+      "ReviewRequest",
+      "RevisionCycle",
+      "SubmissionV2",
+      "ReviewInput",
+      "SubmitInput",
+      "BeginRevisionInput",
+      "EvaluationBundle",
+      "RuleBound",
+      "TerminalEvaluation",
+      "JobRequest",
+      "JobEnvelope"
+    ],
+    "W06": [
+      "AuthContext",
+      "Executor",
+      "DelegationInput",
+      "DelegationGrant",
+      "DelegationRevoke",
+      "Observation",
+      "ToolSchema",
+      "Command",
+      "JobEnvelope",
+      "ResourcePage",
+      "StepResult",
+      "ObservedFragment",
+      "PublicState",
+      "PublicEvent",
+      "PublicTransactionResult",
+      "ActualConsumption",
+      "PublicDisclosureSource",
+      "PublicDisclosureRecord",
+      "RequestResultQuery",
+      "RequestJobResult",
+      "RequestResult"
+    ],
+    "W07": [
+      "DatasetRecordV2",
+      "AnnotationV2",
+      "AnnotationPass",
+      "LegacyAnnotation",
+      "SplitManifest",
+      "Lineage",
+      "Provenance",
+      "RelationInput",
+      "CriterionInput",
+      "TrajectoryInput",
+      "DecisionPointInput",
+      "SnapshotExport",
+      "ExternalReference",
+      "ObservedFragment",
+      "ActualConsumption",
+      "ProviderReceipt"
+    ],
+    "W08": [
+      "ModelBundle",
+      "ModelPrediction",
+      "RuntimeBundle",
+      "EvaluationBundle",
+      "CandidateBundle",
+      "FileRef",
+      "SourceIdentity",
+      "TestCampaign",
+      "ProviderRequest",
+      "ProviderReply",
+      "ProviderResult",
+      "ProviderCapabilities",
+      "ProviderReceipt"
+    ],
+    "W09": [
+      "ActionProposal",
+      "Observation",
+      "BeliefState",
+      "RunManifest",
+      "Budget",
+      "ModelAttemptUsage",
+      "Trajectory",
+      "SnapshotExport",
+      "RestoreResult",
+      "JobContextSnapshot",
+      "StepResult",
+      "ProviderRequest",
+      "ProviderResult",
+      "ProviderCapabilities",
+      "ActualConsumption",
+      "PublicTransactionResult",
+      "RequestResultQuery",
+      "RequestJobResult",
+      "RequestResult",
+      "ProviderReceipt"
+    ],
+    "W10": [
+      "ActionBoundary",
+      "BranchManifest",
+      "SnapshotExport",
+      "RestoreResult",
+      "Trajectory",
+      "Diagnosis",
+      "TerminalEvaluation",
+      "ExternalReference",
+      "ObservedFragment"
+    ],
+    "W11": [
+      "ScenarioBundle",
+      "SplitManifest",
+      "Lineage",
+      "TestCampaign",
+      "FileRef"
+    ],
+    "W12": [
+      "DecisionRequest",
+      "DecisionResult",
+      "SkillSpec",
+      "SkillBundle",
+      "CandidateBundle",
+      "RuntimeBundle",
+      "EvaluationBundle",
+      "TestCampaign",
+      "ProviderRequest",
+      "ProviderResult",
+      "ProviderCapabilities",
+      "ActualConsumption",
+      "ProviderReceipt"
+    ],
+    "W13": [
+      "EngineerPack",
+      "EngineerSubmission",
+      "RegressionReport",
+      "AssistantConfig",
+      "ObjectRef",
+      "TestExecutionMetadata",
+      "RetrievedChunk",
+      "BusinessBasis"
+    ],
+    "W14": [
+      "Command",
+      "AuthContext",
+      "TransactionResult",
+      "ErrorResponse",
+      "V2Response",
+      "PublicState",
+      "PublicEvent",
+      "PublicTransactionResult"
+    ],
+    "W15": [
+      "AnnotationV2",
+      "FeedbackV2",
+      "EvaluationBundle",
+      "Provenance"
+    ]
+  },
+  "documents": {
+    "compatibility.md": {
+      "path": "compatibility.md",
+      "sha256": "32c1a4b22df72022d507a2006ef29a09bc30e267362510ca38c42b87a6d169ce"
+    },
+    "consumer-request-resolution.json": {
+      "path": "consumer-request-resolution.json",
+      "sha256": "fe388a221162a6b213225b8579db4b43368d97412d3e18dd8cd3a16f2ba31d54"
+    },
+    "module-interfaces.md": {
+      "path": "module-interfaces.md",
+      "sha256": "a446cd44777d0c8ec140cc67e764984624f97421f9bbe20847120bd955f56008"
+    }
+  },
+  "errors": {
+    "path": "errors.json",
+    "sha256": "32b5e92c445f558b55aca76e3749bddc55074af6663edef52317aac9a89228ec"
+  },
+  "input_contract_revision": "preflight",
+  "openapi": {
+    "path": "openapi.json",
+    "sha256": "524c6e31303db15de758f841d6c9eb622c4d46fe725fe848ed372783e707dfd7"
+  },
+  "owner": "rolecraft-032-foundation",
+  "previous_contract_revision": "expansion-v3-aa2cd8a43707d380f2128f19d3061e73ef82efd3c26becd50297d2ad8393a8ff",
+  "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
+  "request_payloads": {
+    "actions": "ActionInput",
+    "approvals.resolve": "ApprovalInput",
+    "delegations.create": "DelegationInput",
+    "delegations.revoke": "DelegationRevoke",
+    "evidence.read": "EvidenceRead",
+    "feedback.create": "FeedbackInput",
+    "feedback.read": "ResourcePage",
+    "materials.list": "ResourcePage",
+    "observation": "ResourcePage",
+    "requests.read": "RequestResultQuery",
+    "reviews.create": "ReviewInput",
+    "reviews.read": "ResourcePage",
+    "revision_cycles": "BeginRevisionInput",
+    "submissions.create": "SubmitInput",
+    "submissions.list": "ResourcePage",
+    "tests.create": "TestRequestV2",
+    "tests.list": "ResourcePage",
+    "timeline": "ResourcePage",
+    "tools": "ResourcePage",
+    "turns.create": "TurnInput",
+    "work_items.batch": "TaskBatch",
+    "work_items.create": "TaskCreate",
+    "work_items.list": "ResourcePage",
+    "work_items.update": "TaskPatch",
+    "work_products.adopt": "ProductAdopt",
+    "work_products.create": "ProductCreate",
+    "work_products.list": "ResourcePage",
+    "work_products.shares.change": "ShareUpdate",
+    "work_products.shares.create": "ShareCreate",
+    "work_products.versions.create": "ProductEdit",
+    "work_products.versions.list": "ResourcePage",
+    "workspace_imports": "WorkspaceImport"
+  },
+  "review_fixes": {
+    "R01": "Actual WorkerClaim is passed and fenced at entry/commit; no lease borrowing.",
+    "R02": "Fixed-subject derived FeedbackV2 may persist on submitted; ordinary writes stay forbidden.",
+    "R03": "Model-directed remapping leaves arbitrary text and legacy provenance unchanged.",
+    "R04": "Kind/namespace ID keys distinguish local and external objects; mapped graph is validated.",
+    "R05": "PublicDisclosureRecord strips/rejects raw source quote/span and checks scope/time.",
+    "R06": "Restore replay token must match a real usable saved owner credential.",
+    "R07": "Built-in authenticated read-only request_id query returns real request/job/effect links.",
+    "R08": "Received provider body/usage preserved independently of invalid/missing actual identity.",
+    "R09": "Accepted single-pass G2 final equals that actual successful decision."
+  },
+  "schema_version": 1,
+  "schemas": {
+    "ActionBoundary": {
+      "consumers": [
+        "W10"
+      ],
+      "example": "examples/ActionBoundary.json",
+      "example_sha256": "b7dfbe096435d9f640a7909e8957dda8c2cdbfdbe9113a862472ccf28c458f51",
+      "owner": "W01",
+      "schema": "schemas/ActionBoundary.json",
+      "schema_sha256": "45ef459fcea03064b0f381be9134f9cdd0b52b97c68592b4240039802fd700a9",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ActionInput": {
+      "consumers": [
+        "W02"
+      ],
+      "example": "examples/ActionInput.json",
+      "example_sha256": "d9f2e6dfa634d671cb3de2812f8c8249def0267f7368e89e2f69aab8e960bf87",
+      "owner": "W01",
+      "schema": "schemas/ActionInput.json",
+      "schema_sha256": "b803de4069b2c2385f12aa42402f8e3408709c5fac886d21b9b889056c4db1a3",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ActionProposal": {
+      "consumers": [
+        "W09"
+      ],
+      "example": "examples/ActionProposal.json",
+      "example_sha256": "bd27df2b9b994a1a68d9674c8ac357150ad45f6cd7ee9b4450c3dcfe16f2bbef",
+      "owner": "W01",
+      "schema": "schemas/ActionProposal.json",
+      "schema_sha256": "3e74bc717b8aaee7852e142daf736a65b12d327a21a3f386715737a15bb65575",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ActualConsumption": {
+      "consumers": [
+        "W04",
+        "W06",
+        "W07",
+        "W09",
+        "W12"
+      ],
+      "example": "examples/ActualConsumption.json",
+      "example_sha256": "2c69b29461a42f46bca70ac37a8a09b41072f723c628c0aaa6f5a5e0394690f8",
+      "owner": "W01",
+      "schema": "schemas/ActualConsumption.json",
+      "schema_sha256": "1b87d05a7aeab91ef270ab31e3a804aa79a2798c731c81ae21c37b42f5f527fe",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "Adoption": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/Adoption.json",
+      "example_sha256": "7f071ed5d03ab321136cb8b5c0cc0077cee2f0bdc69b0397ac9147ecad0957e1",
+      "owner": "W01",
+      "schema": "schemas/Adoption.json",
+      "schema_sha256": "ba17f7c6c04fab725cb6fb006e08c93faaee11e2011266e1cabf258f02cc323c",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "AnnotationDecision": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/AnnotationDecision.json",
+      "example_sha256": "2c18359bcf13bffad9e01816634a5b3f5477bdeb0d44a29a43aafe94453ed57e",
+      "owner": "W01",
+      "schema": "schemas/AnnotationDecision.json",
+      "schema_sha256": "29fc90d328b65600603ca6c0057f90d6b269c87e57202b6943f2e280adbe5f69",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "AnnotationPass": {
+      "consumers": [
+        "W07"
+      ],
+      "example": "examples/AnnotationPass.json",
+      "example_sha256": "39f1ea941cdd813aac4ada2a188e7003fc8e3a776e7fc62d51bbb99ae590ef50",
+      "owner": "W01",
+      "schema": "schemas/AnnotationPass.json",
+      "schema_sha256": "63f80cdb71a32ad209014e13a12810b44322fabc9f94d1a44be4a31ee3c62946",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "AnnotationV2": {
+      "consumers": [
+        "W07",
+        "W15"
+      ],
+      "example": "examples/AnnotationV2.json",
+      "example_sha256": "361589644fcf4e12086bfd7a4f5da4dca6fd3fa4cd30a63db3399d08762b9c37",
+      "owner": "W01",
+      "schema": "schemas/AnnotationV2.json",
+      "schema_sha256": "aefde988c8d0de4edadd246b0e139aad9cc7d3f685a633d042082f2a82589dbd",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ApprovalInput": {
+      "consumers": [
+        "W04"
+      ],
+      "example": "examples/ApprovalInput.json",
+      "example_sha256": "4272bdb9a334cf98b9d7c3d0b9e2c740d75a7e24d3d51a108831fdeba162b3b2",
+      "owner": "W01",
+      "schema": "schemas/ApprovalInput.json",
+      "schema_sha256": "4feed8dd1c98d30619b1e4779a69cf3fec446add4482ca1723974b8c5ce2bf0b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "AssistantConfig": {
+      "consumers": [
+        "W02",
+        "W13"
+      ],
+      "example": "examples/AssistantConfig.json",
+      "example_sha256": "1ef567fdb53c1a41df05ef9f64e5e0dc1de0052c4f7771fa87328fde3e9ad7f5",
+      "owner": "W01",
+      "schema": "schemas/AssistantConfig.json",
+      "schema_sha256": "adaf9554ca493a68bdbde3d1fbeaf9eb950b9d0c00b6f257fa00392701c6bda1",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "AuthContext": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/AuthContext.json",
+      "example_sha256": "d18da5c471ac34c834eda6224bad42e05db20848ce99efeb8a51d34a864bb0a1",
+      "owner": "W01",
+      "schema": "schemas/AuthContext.json",
+      "schema_sha256": "8a1489549e52e2a263ca585c216ca583cc9ec4ff3fddece770d2f8764d1357cc",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "BeginRevisionInput": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/BeginRevisionInput.json",
+      "example_sha256": "86747527126664706fc3424655f7ab0d9bdff4d543691bb832003ea701a0e66c",
+      "owner": "W01",
+      "schema": "schemas/BeginRevisionInput.json",
+      "schema_sha256": "0ee5de6536b80628b220af1c0c1ca1a488bb3cab88921e9928610cd181515a44",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "BeliefFact": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/BeliefFact.json",
+      "example_sha256": "3622acabc9a4e534f0e5554d166097e46b8a6241f4b3af8424c42443cd802163",
+      "owner": "W01",
+      "schema": "schemas/BeliefFact.json",
+      "schema_sha256": "aa203b4b72ae881d6d400e34928ccc948758eefaccef95651b4cca231fb9b1bf",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "BeliefState": {
+      "consumers": [
+        "W09"
+      ],
+      "example": "examples/BeliefState.json",
+      "example_sha256": "94df7a5234d9deaad1bcf057ed730253f2e5e923ff17f0de00e069b57f6e1f10",
+      "owner": "W01",
+      "schema": "schemas/BeliefState.json",
+      "schema_sha256": "9a1b49b84eedcd3c6feac49ae9d2d4c42294c3e42e2a64f6868cab4d5ecc78c0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "BranchManifest": {
+      "consumers": [
+        "W10"
+      ],
+      "example": "examples/BranchManifest.json",
+      "example_sha256": "2a1be1218ecbaa7e7fc9949237c3581aa6d4d1cde99b91c12fcc944c3a934af6",
+      "owner": "W01",
+      "schema": "schemas/BranchManifest.json",
+      "schema_sha256": "fa22ffae976fad531c5f8cb3513df603c462711239962e59a0462cd50e43274b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "Budget": {
+      "consumers": [
+        "W09"
+      ],
+      "example": "examples/Budget.json",
+      "example_sha256": "ccdf33f9ea1d220f99c86ac924c4f48355cf433e63309c38a7046a7409e98870",
+      "owner": "W01",
+      "schema": "schemas/Budget.json",
+      "schema_sha256": "5a9f8405f2a8b472deecb41fbbe189d434d3b46394e26b1b80eec4922cd1cc96",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "BusinessBasis": {
+      "consumers": [
+        "W02",
+        "W13"
+      ],
+      "example": "examples/BusinessBasis.json",
+      "example_sha256": "571941bc53aafc650b37205e483d38b7dd382a95df841ffe4e67cd1e87bbd45c",
+      "owner": "W01",
+      "schema": "schemas/BusinessBasis.json",
+      "schema_sha256": "df1d7f5c7b7e548c9b626cafcac3b30d0052f306f1f028df698819ceb7a07aaa",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "BusinessDecision": {
+      "consumers": [
+        "W02",
+        "W04"
+      ],
+      "example": "examples/BusinessDecision.json",
+      "example_sha256": "2ae4db953d5e87e44a796f21a31e95c9c26a7878baa970e98a08a8f0c1b0fa6f",
+      "owner": "W01",
+      "schema": "schemas/BusinessDecision.json",
+      "schema_sha256": "86b8f54ed3f6600ec09f3ebd36bce340699cee46b33720e76729dc4b15fcddc2",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "BusinessRequest": {
+      "consumers": [
+        "W02",
+        "W04"
+      ],
+      "example": "examples/BusinessRequest.json",
+      "example_sha256": "6af514383dfb3c54b234e3f6dc82988534102c01d9c84bb41e34bacff19f8bc5",
+      "owner": "W01",
+      "schema": "schemas/BusinessRequest.json",
+      "schema_sha256": "bc877787f2fbbdbc186236c118986f840f698d388aa6bd963bbae5f3ddc03bdb",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "CampaignCandidate": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/CampaignCandidate.json",
+      "example_sha256": "ad110eb58891edb9fc49d6c4a40a0d56c500e2703245417ca8480f9015623cb9",
+      "owner": "W01",
+      "schema": "schemas/CampaignCandidate.json",
+      "schema_sha256": "08e8fcf9f766691ef95317db81a2724fb1633db75f65856d315cffc830840647",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "CandidateBundle": {
+      "consumers": [
+        "W08",
+        "W12"
+      ],
+      "example": "examples/CandidateBundle.json",
+      "example_sha256": "723de8bbaa4e67024f0fc2feafc63d4c942d21a3e172886ca433dce6e3566ca5",
+      "owner": "W01",
+      "schema": "schemas/CandidateBundle.json",
+      "schema_sha256": "5fc33fa8fb16405b9c1eb7fe2ed395e300d57f9c4c9ac3338b43844c37bf5308",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "CandidateEvidenceV2": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/CandidateEvidenceV2.json",
+      "example_sha256": "2a8aa75787f0fe6776bb6623034620533226f5d88924243548591a8b6bd28928",
+      "owner": "W01",
+      "schema": "schemas/CandidateEvidenceV2.json",
+      "schema_sha256": "ae30ae258d3bc65ad9197b055a2da24a26357b76e1c28ce5394871874abebca7",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "Command": {
+      "consumers": [
+        "W02",
+        "W03",
+        "W06",
+        "W14"
+      ],
+      "example": "examples/Command.json",
+      "example_sha256": "36a4d257498943fca9fbee7a0e1aa78dd7ea454fd373c045ced672035d2252b6",
+      "owner": "W01",
+      "schema": "schemas/Command.json",
+      "schema_sha256": "a2a3b857abe89f95e2855418c3f8c20562fce12d5e8f5919b31df7729df69da0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "CreateSessionV2": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/CreateSessionV2.json",
+      "example_sha256": "2b62c4c840a7ddbc21929446cf08646e0dc839d84cf091a9035d8ddbb495ecef",
+      "owner": "W01",
+      "schema": "schemas/CreateSessionV2.json",
+      "schema_sha256": "4143f0dbf85d9ece7f1bfd0ab5184a814a4df2d6e748353c7753ae021cb78a53",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "CriterionInput": {
+      "consumers": [
+        "W07"
+      ],
+      "example": "examples/CriterionInput.json",
+      "example_sha256": "158086f727bbe336eb8b6614cea59dfd4748c5ce15b27a128813af7c1b55cd32",
+      "owner": "W01",
+      "schema": "schemas/CriterionInput.json",
+      "schema_sha256": "d7f51f0441515072ab6b060f456e7e83c92cdb6cc55aac217d5e62a9afdfbbd6",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DatasetRecordV2": {
+      "consumers": [
+        "W07"
+      ],
+      "example": "examples/DatasetRecordV2.json",
+      "example_sha256": "d095c2cd4b123341ee2693ce7a0a528d15ed14279775fe9f032adfedb7e4f776",
+      "owner": "W01",
+      "schema": "schemas/DatasetRecordV2.json",
+      "schema_sha256": "2b9274fc31b5f6f6c98f2ee626413eba5bb783c707f63139bdee4ee91fba238b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DecisionPointInput": {
+      "consumers": [
+        "W07"
+      ],
+      "example": "examples/DecisionPointInput.json",
+      "example_sha256": "1f608e41a67f325dc1ff362e7633fd86f64588e46e4c90519dd0e26b31d8eb74",
+      "owner": "W01",
+      "schema": "schemas/DecisionPointInput.json",
+      "schema_sha256": "5074c0e81b049757e1a20b5f720d0ea7ef83928437c1f77e43fcff9cbc68c17f",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DecisionQuestion": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/DecisionQuestion.json",
+      "example_sha256": "24d9435a8f7fe8af837aa0cba624837b2e4ae7f0638215d3550a5cf11728ffb2",
+      "owner": "W01",
+      "schema": "schemas/DecisionQuestion.json",
+      "schema_sha256": "9bd2f263789bb1f6e7b0fc26ee1cb74554b568c9aa12a17a96bfffda21ce6440",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DecisionRequest": {
+      "consumers": [
+        "W12"
+      ],
+      "example": "examples/DecisionRequest.json",
+      "example_sha256": "4598fd907dcc4693216b576d34ebb70c87e0c928c9a03a5e8b106968e7d0ebd4",
+      "owner": "W01",
+      "schema": "schemas/DecisionRequest.json",
+      "schema_sha256": "9c81df387f38f6f05b6e78dbb844fa63a102e7d883479766c0ed16c1843ab121",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DecisionResult": {
+      "consumers": [
+        "W12"
+      ],
+      "example": "examples/DecisionResult.json",
+      "example_sha256": "fc4fb5e813e9097c43919c34cb43af96ac37ae28e8bda1d41c11a7c40c9216b6",
+      "owner": "W01",
+      "schema": "schemas/DecisionResult.json",
+      "schema_sha256": "2f7d05a7628ef15433e130329f722872104bd588ec0c6536618bc11b816369f9",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DelegationGrant": {
+      "consumers": [
+        "W06"
+      ],
+      "example": "examples/DelegationGrant.json",
+      "example_sha256": "b7cfa289abe9c548281c56b50a36faa4f1aa929b34f8ac88c454edf82fb6ee79",
+      "owner": "W01",
+      "schema": "schemas/DelegationGrant.json",
+      "schema_sha256": "08a74366b7e2125f3957c89b362ace5bf8df93c9e9cce5a0847b74e4f2864ba2",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DelegationInput": {
+      "consumers": [
+        "W06"
+      ],
+      "example": "examples/DelegationInput.json",
+      "example_sha256": "9a2dca1107ba90ede6a1848fec5355ef834dce79f55e87b6332a5ce3017ff028",
+      "owner": "W01",
+      "schema": "schemas/DelegationInput.json",
+      "schema_sha256": "93cc53b897006c9263cc4af0efefe0375df515d088ed8a833174967500db644a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DelegationRevoke": {
+      "consumers": [
+        "W06"
+      ],
+      "example": "examples/DelegationRevoke.json",
+      "example_sha256": "7b7f6b3ece8ecd6bfee907ad838cda6e489c610efdba74296ce3bec73e33ef8f",
+      "owner": "W01",
+      "schema": "schemas/DelegationRevoke.json",
+      "schema_sha256": "a98b9b35983a936940e09c9bb32b1e3fa667506d161b274a7a86d5a694641729",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "Diagnosis": {
+      "consumers": [
+        "W10"
+      ],
+      "example": "examples/Diagnosis.json",
+      "example_sha256": "160948d9f4afccdb8a4803c128221ba3f229917fcb5622f7989baa1796a95637",
+      "owner": "W01",
+      "schema": "schemas/Diagnosis.json",
+      "schema_sha256": "abd66a003f002877203c09e9f565e3e18765b5ec16feb84e1947934f4309d7b3",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DisclosedFragment": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/DisclosedFragment.json",
+      "example_sha256": "637d58108ef268f8e6ecacb849c7888712df22a78f19db41404856519f7ee5b0",
+      "owner": "W01",
+      "schema": "schemas/DisclosedFragment.json",
+      "schema_sha256": "e23b6545792cb389a995a2d1aa6fd5b60d86b2078adae3fa1c72863ac0f7cd3e",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DisclosurePolicy": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/DisclosurePolicy.json",
+      "example_sha256": "60fcd49bf0763623f2dfae866574e37771d8a07db000e3f2b47c54cfc15a21bf",
+      "owner": "W01",
+      "schema": "schemas/DisclosurePolicy.json",
+      "schema_sha256": "76af5e1bf6ba81eddf424b75e8671b494ed5dab6d49b074eae8890d4f2e17129",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DisclosureRecord": {
+      "consumers": [
+        "W04"
+      ],
+      "example": "examples/DisclosureRecord.json",
+      "example_sha256": "fa02d22405c0fe7e57cef9cbe3647db516c3374d3b7a6b7cc5a6789db41b55cc",
+      "owner": "W01",
+      "schema": "schemas/DisclosureRecord.json",
+      "schema_sha256": "136d35d082c8c4b3d5c364031b9f0a98f8bf31561324d1acf210f1f074af56fc",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "EffectiveConfig": {
+      "consumers": [
+        "W02"
+      ],
+      "example": "examples/EffectiveConfig.json",
+      "example_sha256": "1d849ad99301929d9ba7da0016c4c588477e94a045c907b4d7ba49c53e7abb2a",
+      "owner": "W01",
+      "schema": "schemas/EffectiveConfig.json",
+      "schema_sha256": "95b37a005df2fbf8c09eab37fdd6467b119656050be514bc90f999a66c0334be",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "EngineerPack": {
+      "consumers": [
+        "W13"
+      ],
+      "example": "examples/EngineerPack.json",
+      "example_sha256": "6cb219b97659fb110442246565f13427d9863606794a048f950bfe0be03b4834",
+      "owner": "W01",
+      "schema": "schemas/EngineerPack.json",
+      "schema_sha256": "66436de75ec456b3da0e2b1ca4e21b0554d357c1ca913c27027e66fc945f64b8",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "EngineerSubmission": {
+      "consumers": [
+        "W13"
+      ],
+      "example": "examples/EngineerSubmission.json",
+      "example_sha256": "12691f48a380354a3210f388b94c2f91b5817388fe88c90eead7e23e1486e395",
+      "owner": "W01",
+      "schema": "schemas/EngineerSubmission.json",
+      "schema_sha256": "16b957cc48ae5179ad90e775821a374e64d46b820aa062da890d9e43aa966c30",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ErrorResponse": {
+      "consumers": [
+        "W14"
+      ],
+      "example": "examples/ErrorResponse.json",
+      "example_sha256": "382c74b2862709b5ef0bd0dc735e6be5365634f4e167cb15229dc955d36ce6e3",
+      "owner": "W01",
+      "schema": "schemas/ErrorResponse.json",
+      "schema_sha256": "54cee1ec82defc2d91a442556c630640e0a5c34c097c3e0b92c6694c1bb0fec3",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "EvaluationBundle": {
+      "consumers": [
+        "W05",
+        "W08",
+        "W12",
+        "W15"
+      ],
+      "example": "examples/EvaluationBundle.json",
+      "example_sha256": "db624f89a802ff378aeb9b22f2d1081693d416d564f9e5c2aeef80ef163ad8b4",
+      "owner": "W01",
+      "schema": "schemas/EvaluationBundle.json",
+      "schema_sha256": "5c347e2b70706282141dd70ce1a01483176b5c84fdf8dbc69168357fb03f8b2d",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "EventDraft": {
+      "consumers": [
+        "W02"
+      ],
+      "example": "examples/EventDraft.json",
+      "example_sha256": "9fdc84203ad67a7c254f16b2d3559231b0fa5d7979160338bbeb2435b2fa54f7",
+      "owner": "W01",
+      "schema": "schemas/EventDraft.json",
+      "schema_sha256": "29e2e6322a6d85ffcb464a12cc39bbb06ed504c8c742681a0d2a44ee3a748010",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "EvidencePackageV2": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/EvidencePackageV2.json",
+      "example_sha256": "d8663baa49d4d0057887f24389a28b6f3f4a825b5caa45d4529ad06bd645c6e1",
+      "owner": "W01",
+      "schema": "schemas/EvidencePackageV2.json",
+      "schema_sha256": "18d632cb303beefbadf6128a6df8f5d7199fe8f4849c3512749b2de9f58b82c5",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "EvidenceRead": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/EvidenceRead.json",
+      "example_sha256": "3038b8565766b8af207184b00b9a8c16368b90698424b0fc8536b2386010d604",
+      "owner": "W01",
+      "schema": "schemas/EvidenceRead.json",
+      "schema_sha256": "a74457598e26deea9f771fe30821574d1ee52a5a2eed973d22f716503e4cdcd9",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "EvidenceRefV2": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/EvidenceRefV2.json",
+      "example_sha256": "57d66a70011d25c70785cdf716610142cee9eab704f874b0f47ef27d4f01a79c",
+      "owner": "W01",
+      "schema": "schemas/EvidenceRefV2.json",
+      "schema_sha256": "2407afa3d5c9a72ac583957ed28bef736645d6a548840d625ff9a50825b4b6d2",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "Executor": {
+      "consumers": [
+        "W06"
+      ],
+      "example": "examples/Executor.json",
+      "example_sha256": "80504ebf665ba7a6f5f19f09dd2a914f38ad2e2050d2dad6020b95176b4fe9bc",
+      "owner": "W01",
+      "schema": "schemas/Executor.json",
+      "schema_sha256": "f9593687281fcc835b695185dcbda3ac3e8a4f0a8954a1f11e75b3f18403f8a2",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ExternalReference": {
+      "consumers": [
+        "W02",
+        "W07",
+        "W10"
+      ],
+      "example": "examples/ExternalReference.json",
+      "example_sha256": "c91137b8e261123d57e226e5ffeb1e043b65a38d453c620c400c1da9a76496ee",
+      "owner": "W01",
+      "schema": "schemas/ExternalReference.json",
+      "schema_sha256": "a0de6bfbc772036d1e512969bc73f83c41ab9f8dea659891e9eb94144ee03330",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FactV2": {
+      "consumers": [
+        "W02"
+      ],
+      "example": "examples/FactV2.json",
+      "example_sha256": "40280e43c510086bee8e6b6e55696c96a4b4ad781f356daab111111a5473e765",
+      "owner": "W01",
+      "schema": "schemas/FactV2.json",
+      "schema_sha256": "13f4805db9617d8ba5d52207f4b93f37a77b0e4efd8d34ffe76cc57bc5702d4c",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FeedbackInput": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/FeedbackInput.json",
+      "example_sha256": "b173bbd29a17bce74d960edbfcdab31389f887776d2c2a5787e83a8352c5755d",
+      "owner": "W01",
+      "schema": "schemas/FeedbackInput.json",
+      "schema_sha256": "a02dc28b366f8e14c6dd64c69243a3d93b5bc5af4c6c8b89a351202842ea8cfd",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FeedbackItem": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/FeedbackItem.json",
+      "example_sha256": "d0eb2f8a909a31e9b7d6fa2e4c001c1b5b9b00f6cdeffb88e77f75a4f63a9171",
+      "owner": "W01",
+      "schema": "schemas/FeedbackItem.json",
+      "schema_sha256": "035125a1a319e0cabaa69a802d6b8acb56333372da9d1e72e7f9ec0fa6a7f05b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FeedbackV2": {
+      "consumers": [
+        "W05",
+        "W15"
+      ],
+      "example": "examples/FeedbackV2.json",
+      "example_sha256": "3d449dd4d996075358b64a5d9ee28f141405a4906179d479671b856747dfa713",
+      "owner": "W01",
+      "schema": "schemas/FeedbackV2.json",
+      "schema_sha256": "1d82d93a0479a6abf9183bc95dc51e54a2debc9bf6f210e4eeb2e0482e698aa6",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FileRef": {
+      "consumers": [
+        "W08",
+        "W11"
+      ],
+      "example": "examples/FileRef.json",
+      "example_sha256": "e38d595bfbdebb89723cf4105df85537fca2e5955f8c16114252a14ac7fffd35",
+      "owner": "W01",
+      "schema": "schemas/FileRef.json",
+      "schema_sha256": "be951fe618674a09191b9fb7af493092161eb1e6691a6e578d9c11835488cb33",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ImportConflict": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/ImportConflict.json",
+      "example_sha256": "5071dd962da96c3768487fde48e2e98c8b50ee37c56cd711f3298796b27c08fa",
+      "owner": "W01",
+      "schema": "schemas/ImportConflict.json",
+      "schema_sha256": "f8475dceb8e0abeeebfe773ec8304b533d236d73775c28af0db77343921f75bf",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ImportReference": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/ImportReference.json",
+      "example_sha256": "58ca6959eb5d0b53d77e321ca84d5101d69352c624cdb266ac7333484adc078f",
+      "owner": "W01",
+      "schema": "schemas/ImportReference.json",
+      "schema_sha256": "dca765e8ceba7cff64747da16e82e67f3b4150f02074e58850b84126f4dc291a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ImportResult": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/ImportResult.json",
+      "example_sha256": "2ea79c98fde9bb7378f3fcc41b80c613029165595c28c6083d50da682e0ff179",
+      "owner": "W01",
+      "schema": "schemas/ImportResult.json",
+      "schema_sha256": "37be95253dbe60bc88935ff843568b58eeaf82af384813e0dcbfc2d115fa3be6",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ImportVersionMap": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/ImportVersionMap.json",
+      "example_sha256": "c4ce0709aa81feebf3e8c9e74634068043829cac5130eb23dec3d1c28d671b2a",
+      "owner": "W01",
+      "schema": "schemas/ImportVersionMap.json",
+      "schema_sha256": "b0289e2a5f7e1114182ad9c3b1d02742c67065d1819e1ed6139a47c8271284c3",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "InvestigationBlock": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/InvestigationBlock.json",
+      "example_sha256": "2d1577bb32b92cba227ca610f01b3d547aaad081574776947d326a3349cb8f87",
+      "owner": "W01",
+      "schema": "schemas/InvestigationBlock.json",
+      "schema_sha256": "6500e617f9fc777465e7ee6a46c9ec0d3a7d70fb8ecbadabbd989448f2f518c6",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "InvestigationPayload": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/InvestigationPayload.json",
+      "example_sha256": "336159b012aca95477a1d08d6ed969a41919b21ec168ab2ee04b97c732c88782",
+      "owner": "W01",
+      "schema": "schemas/InvestigationPayload.json",
+      "schema_sha256": "1def352ca71c6396ab3125f9cfb3bda3bc09375329fae1fb0142c0a27d4fe20b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "JobContextSnapshot": {
+      "consumers": [
+        "W04",
+        "W09"
+      ],
+      "example": "examples/JobContextSnapshot.json",
+      "example_sha256": "29a4f247c6693ee8df39bd1f9e2f435c8aec1c6ef5714d0de26378c2c0f7011f",
+      "owner": "W01",
+      "schema": "schemas/JobContextSnapshot.json",
+      "schema_sha256": "b030dfe6ce803888d17ce102afd844a0ce37d631a78e7b6ad4364a561d5d3038",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "JobEnvelope": {
+      "consumers": [
+        "W05",
+        "W06"
+      ],
+      "example": "examples/JobEnvelope.json",
+      "example_sha256": "0d628b18dbb622f21dd4330756c81feaaf320210c866b30d4d071bd7329ed6c4",
+      "owner": "W01",
+      "schema": "schemas/JobEnvelope.json",
+      "schema_sha256": "62f54b2466319f61806b71910f440ef93005eef6c53e5b4d7bc06a08cb5ad7d9",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "JobRequest": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/JobRequest.json",
+      "example_sha256": "2fbe5140148936ac0ed3ec004852a014a96298cc52f2e9b14cfca8a27b61d327",
+      "owner": "W01",
+      "schema": "schemas/JobRequest.json",
+      "schema_sha256": "aacd9ffe69e59935a0582b52e666852e44593ce00ad4129c8e28c288826a40f7",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "LegacyAnnotation": {
+      "consumers": [
+        "W07"
+      ],
+      "example": "examples/LegacyAnnotation.json",
+      "example_sha256": "c721a0dd751a6ab89b29961eddb10bfc8a6ee591011607ac541beb137df3c549",
+      "owner": "W01",
+      "schema": "schemas/LegacyAnnotation.json",
+      "schema_sha256": "6173811a9584aad978882878dfab06b0d1a9dac452c8f3f9ba243beef8907418",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "LegacyProductImport": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/LegacyProductImport.json",
+      "example_sha256": "cd6de178081873e267c7738d37de3e215e0f5256fd83b06eb832c932a8121886",
+      "owner": "W01",
+      "schema": "schemas/LegacyProductImport.json",
+      "schema_sha256": "edb13ff9851859ef41c1a816aab46dc6fa5eeb06f820484f8e69ef3a38b51bd1",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "LegacyProvenance": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/LegacyProvenance.json",
+      "example_sha256": "32e1c4789db0a78b74cb5d169cb6f7a9b14ce4eb74a8d59cb436c5f544c0a797",
+      "owner": "W01",
+      "schema": "schemas/LegacyProvenance.json",
+      "schema_sha256": "238aae3baa27026c2a3a665d95719a985217f1268259ae8c9ca4026fb2a00db2",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "Lineage": {
+      "consumers": [
+        "W07",
+        "W11"
+      ],
+      "example": "examples/Lineage.json",
+      "example_sha256": "dd0c394a034f7161aab2c9112102fa8529a1d10aae52ab7fea89c09e67281e91",
+      "owner": "W01",
+      "schema": "schemas/Lineage.json",
+      "schema_sha256": "5dc17a3126aa100134e57bbb64332899cf4c8f386b16e245daea0b2269254e02",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "MaterialMetadata": {
+      "consumers": [
+        "W02"
+      ],
+      "example": "examples/MaterialMetadata.json",
+      "example_sha256": "8f513bab18016e4b75b3bb02421a0572421cd5f4decc27076625e69f028f5f14",
+      "owner": "W01",
+      "schema": "schemas/MaterialMetadata.json",
+      "schema_sha256": "c5541e10979c83131db200d544b320047d04d3bf26c30f78d8fa2ee22a67ab1d",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "MaterialV2": {
+      "consumers": [
+        "W02"
+      ],
+      "example": "examples/MaterialV2.json",
+      "example_sha256": "16d2c9fe31667ef33903c093c7493a20e32228ee3f974b54be76c0f39274be91",
+      "owner": "W01",
+      "schema": "schemas/MaterialV2.json",
+      "schema_sha256": "856162fc4419c29772533e41800e244cda565a70a200297767239fe94e67945e",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ModelAttemptUsage": {
+      "consumers": [
+        "W09"
+      ],
+      "example": "examples/ModelAttemptUsage.json",
+      "example_sha256": "1ad6eb1fb6a46f50e93ee0979f2cc7b0077cea74c67b64cc30091314640a3834",
+      "owner": "W01",
+      "schema": "schemas/ModelAttemptUsage.json",
+      "schema_sha256": "5ea160cb9eb89681eb8c4e657b8341522490265319619d867a05e9fa9f6d3c75",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ModelBundle": {
+      "consumers": [
+        "W08"
+      ],
+      "example": "examples/ModelBundle.json",
+      "example_sha256": "46ff1379bad5ba27a82fad0f889746fb0cac68cfb7720ddef5be22fc419c0f49",
+      "owner": "W01",
+      "schema": "schemas/ModelBundle.json",
+      "schema_sha256": "9f32bc4a9d0ce6190c21791c7a5e46b0b71192ca30a9c7f1b948ce9a250f3d6b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ModelPrediction": {
+      "consumers": [
+        "W08"
+      ],
+      "example": "examples/ModelPrediction.json",
+      "example_sha256": "07184897dc12c50c2f725aa111d3b269e47fa004d0b30c859bef80bde591d80a",
+      "owner": "W01",
+      "schema": "schemas/ModelPrediction.json",
+      "schema_sha256": "8bdb8bf5d1341896d698ec5a20cd16061d7722ec4032d44c3517895534f40778",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ObjectRead": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/ObjectRead.json",
+      "example_sha256": "ba4d31267086fea732ae2ab3d753138708e9e71941da1d07ccf1a57e9180095c",
+      "owner": "W01",
+      "schema": "schemas/ObjectRead.json",
+      "schema_sha256": "11b98f2a8768e135fb6a488fba9612e06793ceeb7ddf80cf5993e5b3158fa7f0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ObjectRef": {
+      "consumers": [
+        "W13"
+      ],
+      "example": "examples/ObjectRef.json",
+      "example_sha256": "07b41eca0202f3cebc5a70d21b47e0e11db0f3ea386ade92d62032b6c7c5d9d0",
+      "owner": "W01",
+      "schema": "schemas/ObjectRef.json",
+      "schema_sha256": "98ca4c2d395719c07640fcb5edfb1a50f9bd550bd6e69ce2b657443defd5de27",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ObjectWrite": {
+      "consumers": [
+        "W02",
+        "W03"
+      ],
+      "example": "examples/ObjectWrite.json",
+      "example_sha256": "d99ae32b29dbb8b3b68dbdd17c09f7bc3d93f2d2027f8fc0735473bf00cd5df7",
+      "owner": "W01",
+      "schema": "schemas/ObjectWrite.json",
+      "schema_sha256": "a67a5895bd2c6f2e164fd1b161413024f379ea6e2766b0398f18b6c86e4cbcfa",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "Observation": {
+      "consumers": [
+        "W06",
+        "W09"
+      ],
+      "example": "examples/Observation.json",
+      "example_sha256": "07fd7b3ff01eee6870dd74220e9e161fc617394ee7452d7b55f6042558874755",
+      "owner": "W01",
+      "schema": "schemas/Observation.json",
+      "schema_sha256": "a5f04c77d2714a6a425e067efe8bb580d2ff1c4827b39af0d4ba9146aca0bd78",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ObservedFragment": {
+      "consumers": [
+        "W04",
+        "W06",
+        "W07",
+        "W10"
+      ],
+      "example": "examples/ObservedFragment.json",
+      "example_sha256": "af8dddda24b83e8624108b99db4164d42f9fed3b73f3702dd0839ecd0dc49ad4",
+      "owner": "W01",
+      "schema": "schemas/ObservedFragment.json",
+      "schema_sha256": "e040213ea00d3834d874a0ce3201d28623b49b1aac00cb33688397827664d808",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ObservedStep": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/ObservedStep.json",
+      "example_sha256": "7992b9066c89a73d6eef187a33dece33c7b5816747d6a65910ba3fa85c0e1074",
+      "owner": "W01",
+      "schema": "schemas/ObservedStep.json",
+      "schema_sha256": "d8a1c44e30df2686cc4b89b4198f89c3fb976b0ec125167d82c6b2c5bd189779",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "Option": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/Option.json",
+      "example_sha256": "fd4ff5d5644724fe8425e22b39d74860a924140fd8ff080fdbc0a91c132650e3",
+      "owner": "W01",
+      "schema": "schemas/Option.json",
+      "schema_sha256": "0b6fea4705511332de159e6fab921276b0e695f28f4ac75e57371a816b3df55a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "OptionsPayload": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/OptionsPayload.json",
+      "example_sha256": "7e6ecd01997241927c9814abbe378bb985c53a4959a88362fdf93c4e19425f53",
+      "owner": "W01",
+      "schema": "schemas/OptionsPayload.json",
+      "schema_sha256": "c7ca076c61b34885d842c86b291adbbd71e92f795d6339f8a367007ea676c6db",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PageRequest": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/PageRequest.json",
+      "example_sha256": "076fcb5e36f4cdaa14ac455e724149516ef4d095aae33a3d9c89cfe507f76d7f",
+      "owner": "W01",
+      "schema": "schemas/PageRequest.json",
+      "schema_sha256": "440b07bce4c885e5bb499a933e0ca920f22ab373f55b8c611f626e4b7e01f3f6",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PlanPayload": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/PlanPayload.json",
+      "example_sha256": "135a358c4c003a585d4e157e2355f87adc2717a30db0862390cda04d8c4af34e",
+      "owner": "W01",
+      "schema": "schemas/PlanPayload.json",
+      "schema_sha256": "2eabc57d2cc156da052f3dc0c862c92654482e7067f125d523267885c1b0197a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ProductAdopt": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/ProductAdopt.json",
+      "example_sha256": "61399b1fad08161ecac790eb28437552517729eada7bce62914b942124cbd2c5",
+      "owner": "W01",
+      "schema": "schemas/ProductAdopt.json",
+      "schema_sha256": "52ebe1a292b40a4d3fd96c0a056d47c46db3a290ec2a7d07e2717e735473e219",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ProductCreate": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/ProductCreate.json",
+      "example_sha256": "5265d4d23c120acccedbb337136910271e4b7e9b168c3eccbbd6e9fe1055c56c",
+      "owner": "W01",
+      "schema": "schemas/ProductCreate.json",
+      "schema_sha256": "f711bdfb84cc255ce06c75e98c855cb01bd51d11ad2bbe32f40c6b93d1ef420b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ProductEdit": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/ProductEdit.json",
+      "example_sha256": "320742dfa0f19e703b40a61e61700d7ab8268df795f7a969f1fc26a19b1f6085",
+      "owner": "W01",
+      "schema": "schemas/ProductEdit.json",
+      "schema_sha256": "e41fad0a3c08fc0def07799a2cc11318484febbbebae0a1ac57aac79bb45ecf1",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ProductShare": {
+      "consumers": [
+        "W03",
+        "W04"
+      ],
+      "example": "examples/ProductShare.json",
+      "example_sha256": "4b1116eacad3428a2e4231e579d003d2fb86f70952f48e0753f398dea51dec94",
+      "owner": "W01",
+      "schema": "schemas/ProductShare.json",
+      "schema_sha256": "9da31c2cb8f1f6e84deae68a16f5a2829678c52617dfe8c112539b60923ca2ad",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "Provenance": {
+      "consumers": [
+        "W07",
+        "W15"
+      ],
+      "example": "examples/Provenance.json",
+      "example_sha256": "fb32c1967c726766deb6808939a5b0d2d141b05d07726f486c048eb42692fc8c",
+      "owner": "W01",
+      "schema": "schemas/Provenance.json",
+      "schema_sha256": "88d8d181b392528cc4c6c2692a7ad3627176ce6250a182337840ed47ee11d38e",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ProviderCapabilities": {
+      "consumers": [
+        "W04",
+        "W08",
+        "W09",
+        "W12"
+      ],
+      "example": "examples/ProviderCapabilities.json",
+      "example_sha256": "65c513db6421abf22b27659b0d02967e1740ac7e8dae88fca7deeb6f9693cc08",
+      "owner": "W01",
+      "schema": "schemas/ProviderCapabilities.json",
+      "schema_sha256": "72096d6b72cad62274218b00ba31d2f650fd0fb767979f1d9b9945f8161064a2",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ProviderMessage": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/ProviderMessage.json",
+      "example_sha256": "c8bc324101088359363e2d85e34ee8fe6ecee23a5475d2e1a8274dcd8317e682",
+      "owner": "W01",
+      "schema": "schemas/ProviderMessage.json",
+      "schema_sha256": "d45c405ca50ef3637188987fe25591d1d1a3ae1d8f40b716af8c647e1698bbdf",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ProviderReceipt": {
+      "consumers": [
+        "W07",
+        "W08",
+        "W09",
+        "W12"
+      ],
+      "example": "examples/ProviderReceipt.json",
+      "example_sha256": "76c99c2df8eceda3d3edfed76756aed650fb81902848d2e3450b725ea7337375",
+      "owner": "W01",
+      "schema": "schemas/ProviderReceipt.json",
+      "schema_sha256": "bce679fbe49cc4b037069d63690e73344ec8fa5486219f06afbe21d25169a0ec",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ProviderReply": {
+      "consumers": [
+        "W08"
+      ],
+      "example": "examples/ProviderReply.json",
+      "example_sha256": "f6b3ca336a99f80778094bc5dc12a6f17b5eb421192b97730b56800f81bc2ff4",
+      "owner": "W01",
+      "schema": "schemas/ProviderReply.json",
+      "schema_sha256": "84dcb8433fbcbdad6a8e2f35314be7d1114c795988edb4509b52b0531e331f8f",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ProviderRequest": {
+      "consumers": [
+        "W04",
+        "W08",
+        "W09",
+        "W12"
+      ],
+      "example": "examples/ProviderRequest.json",
+      "example_sha256": "1f23409659bfac20efb6cba92e35041057bb3ea994f0aabfa5676ca4ea57925f",
+      "owner": "W01",
+      "schema": "schemas/ProviderRequest.json",
+      "schema_sha256": "29cddb10171610a0299b4a20c0b7e803c41a3f7e3ac4ebf4d6b3600af69d2386",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ProviderResult": {
+      "consumers": [
+        "W04",
+        "W08",
+        "W09",
+        "W12"
+      ],
+      "example": "examples/ProviderResult.json",
+      "example_sha256": "951a31b411ecd3109a61847f559ef22e37ec32295a5856d4abf9ed1f783c8f27",
+      "owner": "W01",
+      "schema": "schemas/ProviderResult.json",
+      "schema_sha256": "7a792849efe5e5d816a52fcb206ceb4607486477c1e88d7aa1188c922496c756",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ProviderTool": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/ProviderTool.json",
+      "example_sha256": "3de8c9b7ddd081961e54dcb1692b4cc7e4a1999b005cbaffc6f68ef70ed9e751",
+      "owner": "W01",
+      "schema": "schemas/ProviderTool.json",
+      "schema_sha256": "5d5dcf74cd4cedd3fc08f9746a6885f62f0a154c09d7240b60587b51a67e7750",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PublicDisclosureRecord": {
+      "consumers": [
+        "W04",
+        "W06"
+      ],
+      "example": "examples/PublicDisclosureRecord.json",
+      "example_sha256": "0dabba619a1fd16d6fffcffd41a58923959c4b9f2598ac06fd638e009e091921",
+      "owner": "W01",
+      "schema": "schemas/PublicDisclosureRecord.json",
+      "schema_sha256": "9354e6da97137b2e0626b56cc010e0427628d847f7bdd5c4f317386f42e3a7df",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PublicDisclosureSource": {
+      "consumers": [
+        "W04",
+        "W06"
+      ],
+      "example": "examples/PublicDisclosureSource.json",
+      "example_sha256": "54616537e126ebdea81c8a627d7629e254dbe3ac5caaea1299f98fb7cdab99f2",
+      "owner": "W01",
+      "schema": "schemas/PublicDisclosureSource.json",
+      "schema_sha256": "47b281f7a9b319cbcef4ac7397f358615bdb0447ef0c0bb08f790ecd1c49a1fd",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PublicEvent": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/PublicEvent.json",
+      "example_sha256": "f77e7d652e84d7867826da99cab725b83893917b725886842338646fa461b059",
+      "owner": "W01",
+      "schema": "schemas/PublicEvent.json",
+      "schema_sha256": "6449a1d81b9d5cf0833a98c3a142d5a2846d954bb6efd0be9b4c877b42342009",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PublicState": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/PublicState.json",
+      "example_sha256": "b5a4a64617136cc1ad976c326b945ea157b15a70386928ff83b741699c4a2a04",
+      "owner": "W01",
+      "schema": "schemas/PublicState.json",
+      "schema_sha256": "2596b789fb2f831b4374cb385c2eabd248ae01276bcdc0c0b5f95d1aa576d461",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PublicTransactionResult": {
+      "consumers": [
+        "W03",
+        "W06",
+        "W09",
+        "W14"
+      ],
+      "example": "examples/PublicTransactionResult.json",
+      "example_sha256": "bef47ac4e7277dc1fc830bcf2c7e9284b6c379480877a369e2107f888749a5c2",
+      "owner": "W01",
+      "schema": "schemas/PublicTransactionResult.json",
+      "schema_sha256": "5c72d0600971937ef0ee20481a5d5e3ca540ebd6d470fccf0b17cbd94651e2cf",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RegressionReport": {
+      "consumers": [
+        "W13"
+      ],
+      "example": "examples/RegressionReport.json",
+      "example_sha256": "38bd0f78dc210bb27db6f3b03f2e1cf129a6c194d479b2ab270bfb807aa4fc09",
+      "owner": "W01",
+      "schema": "schemas/RegressionReport.json",
+      "schema_sha256": "a998ea4ddbc7c7779ab36b7ee9b71cb390fc7f58899e229ca609ccd2814cf125",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RelationInput": {
+      "consumers": [
+        "W07"
+      ],
+      "example": "examples/RelationInput.json",
+      "example_sha256": "81dba5989aea1f310c6dc8b50fef8f4c036638a8206f2cac97af6c7afa50aca4",
+      "owner": "W01",
+      "schema": "schemas/RelationInput.json",
+      "schema_sha256": "ba085cfb006e4e8dbf5a789513ae712eb67e0a9b838876d9289d0996f2cdb705",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RequestJobResult": {
+      "consumers": [
+        "W06",
+        "W09"
+      ],
+      "example": "examples/RequestJobResult.json",
+      "example_sha256": "9c8b1a476614b9112eb17c9ff57efed4dd70890a05c1652fabf29a39b2ffd4e8",
+      "owner": "W01",
+      "schema": "schemas/RequestJobResult.json",
+      "schema_sha256": "7e5ecfb5eb9325fe14cfa517f3aadfa12a35de1a2feccb46f6e8060dea69aae6",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RequestResult": {
+      "consumers": [
+        "W06",
+        "W09"
+      ],
+      "example": "examples/RequestResult.json",
+      "example_sha256": "c9108a21216c2ba5538c7613901df1491b21fc53bf1b8b699df87b92984e3e80",
+      "owner": "W01",
+      "schema": "schemas/RequestResult.json",
+      "schema_sha256": "75b594eb907b6d69c4ac6a9d178968e269c8ed14268840afdc5c8af28f278961",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RequestResultQuery": {
+      "consumers": [
+        "W06",
+        "W09"
+      ],
+      "example": "examples/RequestResultQuery.json",
+      "example_sha256": "70a8e8222e685448a1f2f36799b93e50ee30e3269ea9dd15eda5ca30ac8a4a35",
+      "owner": "W01",
+      "schema": "schemas/RequestResultQuery.json",
+      "schema_sha256": "58ac5cd22b5b06dfff910216728a96946e3a9c95bc3cf0e4bc385b408a6048e3",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ResourcePage": {
+      "consumers": [
+        "W06"
+      ],
+      "example": "examples/ResourcePage.json",
+      "example_sha256": "a03a667662f3e3034aa88350a312969f0bf9f030c8e05a2ad71529896e290ef0",
+      "owner": "W01",
+      "schema": "schemas/ResourcePage.json",
+      "schema_sha256": "d575f21dc71b9741f52c1bf191eb388a05156cd4ceb379ae398132347e53b93b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RestoreResult": {
+      "consumers": [
+        "W09",
+        "W10"
+      ],
+      "example": "examples/RestoreResult.json",
+      "example_sha256": "85c951dd4878c8036bed38d3953893e85cd8a02ac52fc44e1c145065a70a45a8",
+      "owner": "W01",
+      "schema": "schemas/RestoreResult.json",
+      "schema_sha256": "786d0aaf75677c0a3e751afd4364931bb61c181a35678d7d82b14eadfb170db6",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RetrievedChunk": {
+      "consumers": [
+        "W02",
+        "W13"
+      ],
+      "example": "examples/RetrievedChunk.json",
+      "example_sha256": "85d2db9a2334d9dec4bc192b67141f784fcc196832ce35f6b5270ca8246c5878",
+      "owner": "W01",
+      "schema": "schemas/RetrievedChunk.json",
+      "schema_sha256": "5af5f719239794512e56032fc3bafe5ebe198281c2f28e698f5fee267dfd3f83",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ReviewInput": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/ReviewInput.json",
+      "example_sha256": "1eae241fd1e17d0ec13d9febef3bba23e538ac2abf0799ac828ad2745be67070",
+      "owner": "W01",
+      "schema": "schemas/ReviewInput.json",
+      "schema_sha256": "e9c30b7f35ace9c2591fa5f62f4b1bc3692bf9260cc89844259aae400944154a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ReviewRequest": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/ReviewRequest.json",
+      "example_sha256": "f8039a5079cf61022133f234c5924895215781816285d37d3581872667ad5030",
+      "owner": "W01",
+      "schema": "schemas/ReviewRequest.json",
+      "schema_sha256": "88e99630b2c9383505b4290247d32bec0c036bf49ffaebc75f57ae031544d631",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RevisionCycle": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/RevisionCycle.json",
+      "example_sha256": "3d76ac57a4b34e13d0b31d0e7f8f8ce131629456764977028754f437bc13ac39",
+      "owner": "W01",
+      "schema": "schemas/RevisionCycle.json",
+      "schema_sha256": "a32e440a1580c6efc62096ab8cd02bf5917a3c0aa6c8eb8dafa4c38caf2199a0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RoleContext": {
+      "consumers": [
+        "W04"
+      ],
+      "example": "examples/RoleContext.json",
+      "example_sha256": "ce361d01d970a2e927ec645f04c9d6f0922d2390aafe06aa78ca2f0c3b959083",
+      "owner": "W01",
+      "schema": "schemas/RoleContext.json",
+      "schema_sha256": "83b28a552fd5db01636417c8875fbe577609f22e7eabd5b1fc1813a2b0c4fb55",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RoleSpecV2": {
+      "consumers": [
+        "W02"
+      ],
+      "example": "examples/RoleSpecV2.json",
+      "example_sha256": "6ddbbf9c556cc066a9f28875715b6784b9fa46ad958ee3289110db8923280ca8",
+      "owner": "W01",
+      "schema": "schemas/RoleSpecV2.json",
+      "schema_sha256": "cde36f42cabe70888985f18824656230674465a1dd7a2d103e625c14b8905922",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RuleBound": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/RuleBound.json",
+      "example_sha256": "d5550eba58edfbbb455b3691f8259937a3da931443e11c3a23890ba2ea9f6a89",
+      "owner": "W01",
+      "schema": "schemas/RuleBound.json",
+      "schema_sha256": "4a6996d621b3f89122a79acb045551eb25617e9f9d76ede21666c1f4c5a33756",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RunManifest": {
+      "consumers": [
+        "W09"
+      ],
+      "example": "examples/RunManifest.json",
+      "example_sha256": "fb5454384dc21e068b5d40be48018e8cdc0f3266205c7309d2bcd77e544f0155",
+      "owner": "W01",
+      "schema": "schemas/RunManifest.json",
+      "schema_sha256": "56723a8aa6e4c3702518d5a438cac81ada0d033fed3f3026555c6d5087575c07",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RuntimeBundle": {
+      "consumers": [
+        "W08",
+        "W12"
+      ],
+      "example": "examples/RuntimeBundle.json",
+      "example_sha256": "930ae1f7f483d312e782fff5896f1630b72b397e71ad87a4f5b9def2f7a65ede",
+      "owner": "W01",
+      "schema": "schemas/RuntimeBundle.json",
+      "schema_sha256": "05b9d3bb686cb438a05ca728ada3f7922119e1abaa8aa8e1d2e08337a8c2eafe",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ScenarioBundle": {
+      "consumers": [
+        "W02",
+        "W11"
+      ],
+      "example": "examples/ScenarioBundle.json",
+      "example_sha256": "b6f2e48da29004392e052b42ddd27a3bb1b6cd3d239b3991bc7248eb8de35c99",
+      "owner": "W01",
+      "schema": "schemas/ScenarioBundle.json",
+      "schema_sha256": "470c84d3d3fd598a8804d00e1cef7fc8097a15725df3a0adb07ac24cca83d69f",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ScenarioStateV2": {
+      "consumers": [
+        "W02"
+      ],
+      "example": "examples/ScenarioStateV2.json",
+      "example_sha256": "ad6dc1220447855f4ec6d122ec1c441235b174fe1f04b342567fdf8c85457f10",
+      "owner": "W01",
+      "schema": "schemas/ScenarioStateV2.json",
+      "schema_sha256": "29cddaa6dbcb5239f767a252b510fdf12216a3bb8f63aa0689ef24e54b90be3f",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "SessionBindings": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/SessionBindings.json",
+      "example_sha256": "7725b306a75eb61dd5f80933dc60a9048191c186bf56ecb540c22705300d15c6",
+      "owner": "W01",
+      "schema": "schemas/SessionBindings.json",
+      "schema_sha256": "587c7b06e2eb09cb3dff29b53901cb758ad84c13c81b282d6b3174fa22a56d0e",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ShareChange": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/ShareChange.json",
+      "example_sha256": "b51690f4962fa45d451559fec4aa6cc2e14c2491615a8eaf019608ada46bd710",
+      "owner": "W01",
+      "schema": "schemas/ShareChange.json",
+      "schema_sha256": "4519b27a3da12f6b8cdbcd0ea9c7b321fed3aa007cd2889d41e46749b5b2053b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ShareCreate": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/ShareCreate.json",
+      "example_sha256": "b3c98685074bd29f5cb2778ae440f0f790be05e68903cf4fa4c77066748d5911",
+      "owner": "W01",
+      "schema": "schemas/ShareCreate.json",
+      "schema_sha256": "1bee254aebdb862fcfcfd51904a6d68fd15be3af75a4c23b78cbc49ad1b01d3e",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ShareUpdate": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/ShareUpdate.json",
+      "example_sha256": "e33ee34e56dbaa4c77fde90d356527589ced2b940323990abf3b319bfb792518",
+      "owner": "W01",
+      "schema": "schemas/ShareUpdate.json",
+      "schema_sha256": "3559dcc5b976e8a63e114fbd6d22b630c3daf9856901da91adf469f1c764d76d",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "SkillBundle": {
+      "consumers": [
+        "W12"
+      ],
+      "example": "examples/SkillBundle.json",
+      "example_sha256": "b6e7119d383115a93ee641b60e67457a74daf752839c753d99f7df18be57b65b",
+      "owner": "W01",
+      "schema": "schemas/SkillBundle.json",
+      "schema_sha256": "6f446538850d20643cf46606f69906cec0e5c6e9a6991814f15541437fd3448b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "SkillSpec": {
+      "consumers": [
+        "W12"
+      ],
+      "example": "examples/SkillSpec.json",
+      "example_sha256": "9c6cf747e1e4bee77659f84607d397af6d92b2285ce33e6646ad907d524c3146",
+      "owner": "W01",
+      "schema": "schemas/SkillSpec.json",
+      "schema_sha256": "95272d30542a52de5c36e4b25103656cdfe82c6b9c3c2730922d9ad3e7aee971",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "SnapshotExport": {
+      "consumers": [
+        "W07",
+        "W09",
+        "W10"
+      ],
+      "example": "examples/SnapshotExport.json",
+      "example_sha256": "b4c4b34dbfaabef023d0ccabe6582e18d805a0e27fecacb217019e6eb60ce6de",
+      "owner": "W01",
+      "schema": "schemas/SnapshotExport.json",
+      "schema_sha256": "1c83736685ba7d0ed72504a55270daa3e491a27d8ff2e77c94caf48cb7736700",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "SourceFragment": {
+      "consumers": [
+        "W02",
+        "W04"
+      ],
+      "example": "examples/SourceFragment.json",
+      "example_sha256": "58cdf859e624250448a2c48fca6bf574feed9aa910e9819adb97c599291cc3db",
+      "owner": "W01",
+      "schema": "schemas/SourceFragment.json",
+      "schema_sha256": "7c462a707b1b504049807c1e00d85fa0be4654073e778b95259add99a1f0de35",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "SourceIdentity": {
+      "consumers": [
+        "W08"
+      ],
+      "example": "examples/SourceIdentity.json",
+      "example_sha256": "c45d7b24f792076f1d775a3c2922677818c9f2ec1375b9155634dd7f1087ba3d",
+      "owner": "W01",
+      "schema": "schemas/SourceIdentity.json",
+      "schema_sha256": "682aeba9c918203f22972e617167f9c9544b3376971e7c032e8ae3fbdcccf531",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "SplitEntry": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/SplitEntry.json",
+      "example_sha256": "f1615a3b5c24bfae7ea8b1459d2186f5e0298f1831ccfcce734f65e0041d9d38",
+      "owner": "W01",
+      "schema": "schemas/SplitEntry.json",
+      "schema_sha256": "63a46b2e7f7289d98b6fff7008e13a4e5f29b9c89b8c3afbb8d157cfba96a029",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "SplitManifest": {
+      "consumers": [
+        "W07",
+        "W11"
+      ],
+      "example": "examples/SplitManifest.json",
+      "example_sha256": "b30eb1156f43ecfb896349a49e634f120d1dc6e0aa4c8d3ba41bf2a729782244",
+      "owner": "W01",
+      "schema": "schemas/SplitManifest.json",
+      "schema_sha256": "83abc85e0586e06335fe628275e78da482450c5e6e5fdf2e57f54ea5bc74f519",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "StepResult": {
+      "consumers": [
+        "W06",
+        "W09"
+      ],
+      "example": "examples/StepResult.json",
+      "example_sha256": "1bc6793eb4e6118ac876363d61aff344a181c630ee5df497573229e7415f9da7",
+      "owner": "W01",
+      "schema": "schemas/StepResult.json",
+      "schema_sha256": "b5c268c995d0f62cb4a46bf4d18cefcc6589e103db5937548ed5e75410205bd9",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "StoredEvent": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/StoredEvent.json",
+      "example_sha256": "99519aa76b894d61720a841ba585a461c47740330053f0f4ece8073a3ff61109",
+      "owner": "W01",
+      "schema": "schemas/StoredEvent.json",
+      "schema_sha256": "612faf33fb67f6e20303abaa7be040bd2b21f3233ef74f252ae9074dfef72632",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "StoredObject": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/StoredObject.json",
+      "example_sha256": "a2ed2a1d0722d8ea4227df5b0cfd96fb1487e3f720a3ba9669107144791ad6c4",
+      "owner": "W01",
+      "schema": "schemas/StoredObject.json",
+      "schema_sha256": "674c30d05dac6d800fc75bdc862ec4c2d407837fadce4ff66589227812891f35",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "SubmissionV2": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/SubmissionV2.json",
+      "example_sha256": "368956ae696df20a3f9ffaf6c7b9ad1f6e3fa50c584accf9ca927c7240b1a0d1",
+      "owner": "W01",
+      "schema": "schemas/SubmissionV2.json",
+      "schema_sha256": "16d0743087bde060a6b2e431afd37ddd49015b709f043bf466c00f49ec5ac901",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "SubmitInput": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/SubmitInput.json",
+      "example_sha256": "8cc756a1982ecb89982ff2c5259ac345b2589d5bda5cb9043203d779522f672d",
+      "owner": "W01",
+      "schema": "schemas/SubmitInput.json",
+      "schema_sha256": "cd231dea98912ee5f9eef2b397832fe167a831f404776247a309e8dae902603d",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TaskBatch": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/TaskBatch.json",
+      "example_sha256": "a5793efedea5fb7039923d05220262e03abce1e1ac54a53d6b6865ebdce68ae3",
+      "owner": "W01",
+      "schema": "schemas/TaskBatch.json",
+      "schema_sha256": "957861c4d2f588526912db92493e72d71b10c6ab81db06ec3129569096849773",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TaskCreate": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/TaskCreate.json",
+      "example_sha256": "053b277f97ef1b174bd1aab4080db787c5e399735610b8b722ffa290501355ef",
+      "owner": "W01",
+      "schema": "schemas/TaskCreate.json",
+      "schema_sha256": "fcc4d871c811eb966356af113018b089c6b77a6c60d31216622d42e44d9cbae7",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TaskPatch": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/TaskPatch.json",
+      "example_sha256": "f3bbf01516c31263cdabbf1f67b3fdfd274dd7cbb6ebd2c7bd88e487725dafe8",
+      "owner": "W01",
+      "schema": "schemas/TaskPatch.json",
+      "schema_sha256": "02e291d6c2d9a9fe1fc3fb8bce937e4ce2b9100119d7f45ac4a45817efada0c8",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TerminalEvaluation": {
+      "consumers": [
+        "W05",
+        "W10"
+      ],
+      "example": "examples/TerminalEvaluation.json",
+      "example_sha256": "0a9891c2148e3f0dabaffe116f266c94b2b6637e27d8b058d4683f268fc227a6",
+      "owner": "W01",
+      "schema": "schemas/TerminalEvaluation.json",
+      "schema_sha256": "e942c4b217507fea95f032f0887186d3b056d437d1e937db4e26cdd66eeee643",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TestCampaign": {
+      "consumers": [
+        "W08",
+        "W11",
+        "W12"
+      ],
+      "example": "examples/TestCampaign.json",
+      "example_sha256": "ac01e673f8ab19897a23b99766c1bad907e33cd6ec87365f3844597c3835e2e2",
+      "owner": "W01",
+      "schema": "schemas/TestCampaign.json",
+      "schema_sha256": "3d3d6f60dcb1637ed94361fe3b283edc3f994142be9e7bcb7d7844466bb4b16d",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TestCase": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/TestCase.json",
+      "example_sha256": "2824cfb2321b471a1c19b23a0ca67746978637235f5917f4f8ed103ce3969c19",
+      "owner": "W01",
+      "schema": "schemas/TestCase.json",
+      "schema_sha256": "ec37bcae7fa612f83a4f40e568006fe1995504aefc8c11e07d5515ec4d2120fd",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TestExecutionMetadata": {
+      "consumers": [
+        "W02",
+        "W13"
+      ],
+      "example": "examples/TestExecutionMetadata.json",
+      "example_sha256": "b89715ffad6437e7509402be9bb5c855e784b12aafc863ce8f43ddd5514af702",
+      "owner": "W01",
+      "schema": "schemas/TestExecutionMetadata.json",
+      "schema_sha256": "1900309806d85da84f80daef8378be8bedb8ef95932a3402db20076535116a48",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TestPlanPayload": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/TestPlanPayload.json",
+      "example_sha256": "7b1281dd297ee62ca77b4e62295ca592aaacfa8d96f9c7f98028832543bf95a4",
+      "owner": "W01",
+      "schema": "schemas/TestPlanPayload.json",
+      "schema_sha256": "9ab86ba63fdcaeb0461270c7abd367ef2386e2d5662ba40b5052ab0c954202e5",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TestRequestV2": {
+      "consumers": [
+        "W02"
+      ],
+      "example": "examples/TestRequestV2.json",
+      "example_sha256": "e0081d18dba6b7dbb734137cce3a6a8b96699bc9acce17cf9b533c2bca645f09",
+      "owner": "W01",
+      "schema": "schemas/TestRequestV2.json",
+      "schema_sha256": "6f9b84f22cdb15c2a89977a59df520a776b266d85d30fb087457e3458e13f0b2",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TestResultV2": {
+      "consumers": [
+        "W02"
+      ],
+      "example": "examples/TestResultV2.json",
+      "example_sha256": "b759a125bdffb31774a6a92be39fa73e17c6a67ccbd0e295fc47fc13ac6587ee",
+      "owner": "W01",
+      "schema": "schemas/TestResultV2.json",
+      "schema_sha256": "9e30ab1734c96612012a473184119e7b02ead0e8d5613f94551081f33b7138ac",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TextPayload": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/TextPayload.json",
+      "example_sha256": "a440f76013edce7055513ce79146f385635686438ac49bde58a2c10ab7464148",
+      "owner": "W01",
+      "schema": "schemas/TextPayload.json",
+      "schema_sha256": "3a3d6bbb8d6984df02731d5b5a35b40dd5df7adc637ec505b72661f6136410d0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ToolSchema": {
+      "consumers": [
+        "W06"
+      ],
+      "example": "examples/ToolSchema.json",
+      "example_sha256": "386e93a17f22775eeef0979944c791097d33f06597fab326164bddcab8619cf5",
+      "owner": "W01",
+      "schema": "schemas/ToolSchema.json",
+      "schema_sha256": "0f1d98c08b2ea24e98acb8a8e08ea91c60b7e176f8d3d7e93a98479cd19fd3c0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "Trajectory": {
+      "consumers": [
+        "W09",
+        "W10"
+      ],
+      "example": "examples/Trajectory.json",
+      "example_sha256": "d573488e70245670624f3f83f3e7eceb0effe9c98e94645c511759578b71aa4a",
+      "owner": "W01",
+      "schema": "schemas/Trajectory.json",
+      "schema_sha256": "44fa67aa85844d08409a33074c3d68b1f65b720cb3eb6e665e93242924a20731",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TrajectoryInput": {
+      "consumers": [
+        "W07"
+      ],
+      "example": "examples/TrajectoryInput.json",
+      "example_sha256": "eaee214b5534e4eaf65d2b3e506e8993347225dac8592c4b8780e0fb4db57392",
+      "owner": "W01",
+      "schema": "schemas/TrajectoryInput.json",
+      "schema_sha256": "f2626e58e2fd3be894e0df51fcdf044d8844cfe75691b40d0862c3b13da80811",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TransactionResult": {
+      "consumers": [
+        "W14"
+      ],
+      "example": "examples/TransactionResult.json",
+      "example_sha256": "c294f07af48b377cd90405d6b0d0b3303b4230d308e8b7cd82decfea02f3626c",
+      "owner": "W01",
+      "schema": "schemas/TransactionResult.json",
+      "schema_sha256": "43439a1bf421f19ad5e5a9be8d85fc6acb9f8f44c20d8eba1174fafd0b5a1486",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "TurnInput": {
+      "consumers": [
+        "W04"
+      ],
+      "example": "examples/TurnInput.json",
+      "example_sha256": "4c46528e447b1c1c60f387eb279faaedc739f3eb52cc7a9331de2c9b8b0cde93",
+      "owner": "W01",
+      "schema": "schemas/TurnInput.json",
+      "schema_sha256": "b80d0ce5d144a158becf912509355c44887d2f1ec1c958be272ca669c0fc1dca",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "V2": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/V2.json",
+      "example_sha256": "45424871e24c9c98586f913bbb5949692a5a92b4c4123b64d4f273ad45c6deac",
+      "owner": "W01",
+      "schema": "schemas/V2.json",
+      "schema_sha256": "009269db34f3c1d62b885bedaa61be533ccbd2ccc4064bcb875b0e91d1bea9f0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "V2Response": {
+      "consumers": [
+        "W14"
+      ],
+      "example": "examples/V2Response.json",
+      "example_sha256": "e307203d07282c2c71bc5af99e95827ea26e996804df96005afd636110874beb",
+      "owner": "W01",
+      "schema": "schemas/V2Response.json",
+      "schema_sha256": "2ef0267a7d22086fb08c1159057a4a2e97f3dcf287e21af3c25981337b4d8e5f",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "VersionPoint": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/VersionPoint.json",
+      "example_sha256": "8dffcf84cc2460b6a0765d94cb68ac92e40193fd307c6f58b136c979119c47c0",
+      "owner": "W01",
+      "schema": "schemas/VersionPoint.json",
+      "schema_sha256": "4d7eb3c9314203a05c572fbe45c04cf83e908375d38dc76422cb6be318ad8cc1",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "WorkProductVersion": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/WorkProductVersion.json",
+      "example_sha256": "767ec12ee6b70293394545ae51b07ede7f1b663be33332074a0ca181a41ccbfc",
+      "owner": "W01",
+      "schema": "schemas/WorkProductVersion.json",
+      "schema_sha256": "4121000577ed32072958f7fda129985a810784ccd0838f9c1f5bedd319b95c6c",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "WorkspaceImport": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/WorkspaceImport.json",
+      "example_sha256": "b0f0e539431e698567c8949d7b090459bac2bd08b4e38aef8ca84ed410ea1675",
+      "owner": "W01",
+      "schema": "schemas/WorkspaceImport.json",
+      "schema_sha256": "b10420fd8a4b3ef49d08ddbeb60681f11560e4bb7f114d900693cb07d13133a0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "WorkspaceTask": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/WorkspaceTask.json",
+      "example_sha256": "97cd255cfdf1099df5013238aeaed2a769f206d1b6f8e36e9fd89e17e9fdd4ac",
+      "owner": "W01",
+      "schema": "schemas/WorkspaceTask.json",
+      "schema_sha256": "0dfa90d01fc94ea381b34c560bf7f141a9c6434873fd2b1d9f134b399de46a30",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "WorldStateV2": {
+      "consumers": [
+        "shared-primitive"
+      ],
+      "example": "examples/WorldStateV2.json",
+      "example_sha256": "f9391aff92f13887329589d07d2d2a4b7559211a2b85ef30d340459c0732f946",
+      "owner": "W01",
+      "schema": "schemas/WorldStateV2.json",
+      "schema_sha256": "4a1ae20d2414d73ac32597eed3b4a5afb2812c4d3ecb2bd2f618a782087f1688",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    }
+  },
+  "source_files": {
+    "src/career_lab/api/app.py": "8f0615ed9627e865cde00de10400907503e4021bb423fb9909493e6e19227f42",
+    "src/career_lab/api/modules.py": "35ecd0d1df400c98ea2c790ad9c33082901d4ad3d90f1a09d9e5751640a86c02",
+    "src/career_lab/api/v2_routes.py": "2eeb7adfa9dfa368ecc86da9993bac9ce7b5f1602989a4592f6451e84950dab1",
+    "src/career_lab/contracts/__init__.py": "10140c7ad16ce4744487b7e5f3418b726caa52979d662feda985b44986e2d7ac",
+    "src/career_lab/contracts/actions.py": "835fbb62979891cbf97d0580e0843c2a8f97b8a8bcc08c8a01afecec36f919ac",
+    "src/career_lab/contracts/base.py": "e62af2f4c8d827a994ae7f69d2022d50b5a42581d885348aab070fa407de2a77",
+    "src/career_lab/contracts/deliverables.py": "0455a250f84c4008a823c0e54af7dc69cde277cca594d177e59b91cd7333a6f9",
+    "src/career_lab/contracts/evaluation.py": "6dc4969cf02222543fa96ddffbd4d9fd19f4813ee1f9b85ea3d193797ac4ea23",
+    "src/career_lab/contracts/scenario.py": "b191244dd1356503b153abf3a31921ce7911ec19b66534378b369b35d135e3b0",
+    "src/career_lab/contracts/v2/__init__.py": "bcb066dbbe937f00a366d9fd836a1411afef069472cb2c8765988f771bee55e7",
+    "src/career_lab/contracts/v2/core.py": "50e521c7d7ea22d5ec4a60134917fe827361bf898ff8b5d7bf2ab8509ea34ea8",
+    "src/career_lab/contracts/v2/data.py": "cf238959645892d07902b388616ef3cbb0fe6b5c0d2a19e617511066ace53952",
+    "src/career_lab/contracts/v2/discovery.py": "1089a5682cb915ce4f095ec28f65014d88724e4e5a30e1b17a753bb358bc006c",
+    "src/career_lab/contracts/v2/evaluation.py": "c8bc7004d8d14c54f1832eecc227ae45e7fe8492c1b584117ad1f8a372a5c631",
+    "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
+    "src/career_lab/contracts/v2/export.py": "64404e6cb440f3ca56037320584e819bf4e58a38faf40fe9a1365489d865b572",
+    "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
+    "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
+    "src/career_lab/contracts/v2/projection.py": "8740cf952268d8997610904224db37dcd7ce91886046653b46284be9583062ab",
+    "src/career_lab/contracts/v2/provider.py": "8ef69da0f37b0e91ec235ab6ac039b2c81d1be14c7affb1eb8e71dda3c815306",
+    "src/career_lab/contracts/v2/requests.py": "08c7675ba8bb031e7d0e01f220533d727b70e86d1ccc73185590c2e266423452",
+    "src/career_lab/contracts/v2/research.py": "f8d353e7f3281feaa22b6119d2f835f5ca1e0c4c0a1f281d4a2d94ce87c25536",
+    "src/career_lab/contracts/v2/workspace.py": "6e7a43cad83d29a3e299a5b6bee915744dfdc6d40d1a2ac9cbaf84d0543b1007",
+    "src/career_lab/contracts/v2/world.py": "cd4f97b72d3f78b026c4989b1d9f092e85d0f508103c7097f603579a8967f740",
+    "src/career_lab/contracts/versioning.py": "da1fc0d7a3bb7b1110cc33d1b7a7f68dcc6dbb8c061f81f3778a113a7ae809fb",
+    "src/career_lab/jobs/worker.py": "ff7e9a6881c46d4e19c435cf658ce526e7fd3fe9ed44795d7f20f58af8a54920",
+    "src/career_lab/rubrics/registry.py": "204f90efa1b93bc010d638f7310ef396148caf2aed3af132c7a5e064442700de",
+    "src/career_lab/storage/v2_lifecycle.py": "77d0e275b4d18e68906fb42460518279a776a42b3860dfbdaf9ab8c56d6ce7a6",
+    "src/career_lab/storage/v2_remap.py": "5fa7f55ce4fcf721b4b81978214698f83a4f0437ae397f94ad6bfc4c98cf769f",
+    "src/career_lab/storage/v2_snapshot.py": "0c079af78ef90a36abdc69f8f1313223d9cbc4f951a56e8e14416c5399ab233f",
+    "src/career_lab/storage/v2_store.py": "6427ebf884a99217a121aae14a79893695ad70fd17aa1c4b034fc58381a6d786",
+    "src/career_lab/storage/v2_tables.py": "cb15ae737542083abb5206378bec958939901b9343246ce4614e97c77bd27ff2"
+  },
+  "status": "frozen_candidate_pending_independent_review",
+  "v1_dirty_included": false
+}

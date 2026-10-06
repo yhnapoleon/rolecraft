@@ -1,0 +1,121 @@
+{
+  "bindings": {
+    "evaluation": {
+      "media_type": "application/json",
+      "path": "files/payload.json",
+      "schema_version": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    "evidence_revision": "evidence-v2",
+    "rubric_revision": "rubric-v2",
+    "rules_revision": "rules-v4",
+    "runtime": {
+      "media_type": "application/json",
+      "path": "files/payload.json",
+      "schema_version": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    "scenario": {
+      "media_type": "application/json",
+      "path": "files/payload.json",
+      "schema_version": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    "schema_version": 2
+  },
+  "boundaries": [],
+  "events": [],
+  "external_references": [],
+  "id": "example",
+  "objects": [
+    {
+      "content": {
+        "base_state_ref": "e5ec7c7b66e5278e85f6cd475557c5be1aa416a05ecf019ea248b0531b50183d",
+        "id": "cycle",
+        "opened_at": {
+          "business_seq": 0,
+          "schema_version": 2,
+          "storage_revision": 0,
+          "workspace_revision": 0
+        },
+        "parent_submission": null,
+        "reason": "",
+        "schema_version": 2,
+        "session_id": "example",
+        "status": "open",
+        "version": 1
+      },
+      "created_storage_revision": 0,
+      "creator": null,
+      "dependencies": [],
+      "ref": {
+        "config_version": null,
+        "kind": "cycle",
+        "object_id": "cycle",
+        "schema_version": 2,
+        "session_id": "example",
+        "version": 1
+      },
+      "schema_version": 2,
+      "visible_to": [
+        "learner"
+      ]
+    },
+    {
+      "content": {
+        "chunk_size": 500,
+        "config_version": 0,
+        "domains": [
+          "faq"
+        ],
+        "fallback": "human",
+        "freshness_guard": "none",
+        "id": "config",
+        "launch_day": 7,
+        "manual_domains": [],
+        "min_score": 0.35,
+        "min_score_calibration": null,
+        "participants": 0,
+        "prohibited_topics": [],
+        "retrieval_limit": 3,
+        "schema_version": 2,
+        "scope_filter": true,
+        "session_id": "example",
+        "update_strategy": "daily",
+        "version": 1,
+        "work_items": []
+      },
+      "created_storage_revision": 0,
+      "creator": null,
+      "dependencies": [],
+      "ref": {
+        "config_version": 0,
+        "kind": "config",
+        "object_id": "config",
+        "schema_version": 2,
+        "session_id": "example",
+        "version": 1
+      },
+      "schema_version": 2,
+      "visible_to": [
+        "learner"
+      ]
+    }
+  ],
+  "schema_version": 2,
+  "session_id": "example",
+  "snapshot_hash": "e55f12077dd54355deef55824014f67dd825b3cf1ef300a39b3c48084bdfa99b",
+  "source_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+  "state": {
+    "applied_milestones": [],
+    "business_seq": 0,
+    "config_version": 0,
+    "cycle_id": "cycle",
+    "resources": {},
+    "schema_version": 2,
+    "session_id": "example",
+    "status": "active",
+    "storage_revision": 0,
+    "workspace_revision": 0
+  }
+}
