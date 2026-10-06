@@ -1,0 +1,29 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "sections": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Sections",
+      "type": "object"
+    },
+    "type": {
+      "const": "plan",
+      "default": "plan",
+      "title": "Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "sections"
+  ],
+  "title": "PlanPayload",
+  "type": "object"
+}

@@ -1,0 +1,65 @@
+{
+  "$defs": {
+    "JsonValue": {}
+  },
+  "additionalProperties": false,
+  "properties": {
+    "available": {
+      "title": "Available",
+      "type": "boolean"
+    },
+    "capability": {
+      "enum": [
+        "read",
+        "act",
+        "submit"
+      ],
+      "title": "Capability",
+      "type": "string"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "parameters": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Parameters",
+      "type": "object"
+    },
+    "parameters_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Parameters Hash",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "unavailable_code": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Unavailable Code"
+    }
+  },
+  "required": [
+    "name",
+    "capability",
+    "parameters",
+    "parameters_hash",
+    "available"
+  ],
+  "title": "ToolSchema",
+  "type": "object"
+}

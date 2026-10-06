@@ -1,0 +1,426 @@
+{
+  "$defs": {
+    "CandidateEvidenceV2": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/EvidenceRefV2"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "text",
+        "ref"
+      ],
+      "title": "CandidateEvidenceV2",
+      "type": "object"
+    },
+    "EvidencePackageV2": {
+      "additionalProperties": false,
+      "properties": {
+        "applicability": {
+          "enum": [
+            "applicable",
+            "not_applicable",
+            "undetermined"
+          ],
+          "title": "Applicability",
+          "type": "string"
+        },
+        "as_of": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "candidate_evidence": {
+          "items": {
+            "$ref": "#/$defs/CandidateEvidenceV2"
+          },
+          "title": "Candidate Evidence",
+          "type": "array"
+        },
+        "claim": {
+          "title": "Claim",
+          "type": "string"
+        },
+        "completeness": {
+          "enum": [
+            "complete",
+            "missing",
+            "text_overflow"
+          ],
+          "title": "Completeness",
+          "type": "string"
+        },
+        "criterion": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Criterion"
+        },
+        "dropped_refs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "title": "Dropped Refs",
+          "type": "array"
+        },
+        "input_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Input Hash",
+          "type": "string"
+        },
+        "item_id": {
+          "minLength": 1,
+          "title": "Item Id",
+          "type": "string"
+        },
+        "missing_refs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "title": "Missing Refs",
+          "type": "array"
+        },
+        "purpose": {
+          "title": "Purpose",
+          "type": "string"
+        },
+        "rule_bound": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuleBound"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "rule_context": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Rule Context",
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "subjects": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRefV2"
+          },
+          "title": "Subjects",
+          "type": "array"
+        },
+        "task_type": {
+          "enum": [
+            "relation",
+            "criterion"
+          ],
+          "title": "Task Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "item_id",
+        "task_type",
+        "claim",
+        "subjects",
+        "purpose",
+        "as_of",
+        "applicability",
+        "candidate_evidence",
+        "rule_context",
+        "completeness",
+        "input_hash"
+      ],
+      "title": "EvidencePackageV2",
+      "type": "object"
+    },
+    "EvidenceRefV2": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "observed_at_seq": {
+          "minimum": 0,
+          "title": "Observed At Seq",
+          "type": "integer"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quote"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "span_end": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span End"
+        },
+        "span_start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Start"
+        },
+        "valid_from_seq": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Valid From Seq",
+          "type": "integer"
+        },
+        "valid_until_seq": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until Seq"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version",
+        "observed_at_seq"
+      ],
+      "title": "EvidenceRefV2",
+      "type": "object"
+    },
+    "JsonValue": {},
+    "ObjectRef": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version"
+      ],
+      "title": "ObjectRef",
+      "type": "object"
+    },
+    "RuleBound": {
+      "additionalProperties": false,
+      "properties": {
+        "lower": {
+          "enum": [
+            "NOT_MET",
+            "PARTIAL",
+            "MET"
+          ],
+          "title": "Lower",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "upper": {
+          "enum": [
+            "NOT_MET",
+            "PARTIAL",
+            "MET"
+          ],
+          "title": "Upper",
+          "type": "string"
+        }
+      },
+      "required": [
+        "lower",
+        "upper"
+      ],
+      "title": "RuleBound",
+      "type": "object"
+    },
+    "VersionPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "business_seq": {
+          "minimum": 0,
+          "title": "Business Seq",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "storage_revision": {
+          "minimum": 0,
+          "title": "Storage Revision",
+          "type": "integer"
+        },
+        "workspace_revision": {
+          "minimum": 0,
+          "title": "Workspace Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "business_seq",
+        "workspace_revision",
+        "storage_revision"
+      ],
+      "title": "VersionPoint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "evidence": {
+      "$ref": "#/$defs/EvidencePackageV2"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "task_type": {
+      "const": "criterion",
+      "default": "criterion",
+      "title": "Task Type",
+      "type": "string"
+    }
+  },
+  "required": [
+    "evidence"
+  ],
+  "title": "CriterionInput",
+  "type": "object"
+}

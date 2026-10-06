@@ -1,0 +1,94 @@
+{
+  "$defs": {
+    "Executor": {
+      "additionalProperties": false,
+      "properties": {
+        "delegation_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delegation Id"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "human",
+            "external_agent",
+            "reference_agent",
+            "system"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "Executor",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "adopted_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Adopted At"
+    },
+    "adopter": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Executor"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "status": {
+      "default": "unadopted",
+      "enum": [
+        "unadopted",
+        "adopted",
+        "rejected"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "title": "Adoption",
+  "type": "object"
+}

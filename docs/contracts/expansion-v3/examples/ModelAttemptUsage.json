@@ -1,0 +1,15 @@
+{
+  "attempt_id": "example",
+  "cost": null,
+  "elapsed_seconds": 1.0,
+  "expected_model_revision": null,
+  "expected_provider": null,
+  "input_tokens": null,
+  "model_revision": "example",
+  "output_tokens": null,
+  "provider": "example",
+  "request_id": "example",
+  "schema_version": 2,
+  "status": "success",
+  "usage_known": false
+}

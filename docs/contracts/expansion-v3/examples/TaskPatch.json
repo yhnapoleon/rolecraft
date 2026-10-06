@@ -1,0 +1,13 @@
+{
+  "clear_parent": false,
+  "expected_revision": 1,
+  "goal": null,
+  "item_id": "example",
+  "order": null,
+  "parent": null,
+  "priority": null,
+  "relations": null,
+  "schema_version": 2,
+  "status": null,
+  "title": null
+}

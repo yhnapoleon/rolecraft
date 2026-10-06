@@ -1,0 +1,22 @@
+{
+  "external_calls": 0,
+  "id_map": {},
+  "parent_session_id": "example",
+  "prefix_digest": "0000000000000000000000000000000000000000000000000000000000000000",
+  "replayed": false,
+  "schema_version": 2,
+  "session_id": "example",
+  "source_snapshot_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "state": {
+    "applied_milestones": [],
+    "business_seq": 0,
+    "config_version": 0,
+    "cycle_id": "example",
+    "resources": {},
+    "schema_version": 2,
+    "session_id": "example",
+    "status": "active",
+    "storage_revision": 0,
+    "workspace_revision": 0
+  }
+}

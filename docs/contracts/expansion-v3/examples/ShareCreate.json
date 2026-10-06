@@ -1,0 +1,8 @@
+{
+  "product_id": "example",
+  "product_version": 1,
+  "purpose": "discussion",
+  "question": "",
+  "recipient_role": "example",
+  "schema_version": 2
+}

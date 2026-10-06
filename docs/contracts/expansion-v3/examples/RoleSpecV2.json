@@ -1,0 +1,14 @@
+{
+  "acceptable_conditions": [],
+  "approval_authority": [],
+  "disclosure_policy": {},
+  "event_subscriptions": [],
+  "goals": [],
+  "id": "example",
+  "known_facts": [],
+  "known_materials": [],
+  "name": "example",
+  "responsibilities": [],
+  "schema_version": 2,
+  "unacceptable_conditions": []
+}

@@ -1,0 +1,15 @@
+{
+  "content": "",
+  "evidence_refs": [],
+  "expected_head": 1,
+  "kind": "text",
+  "legacy": null,
+  "product_id": "example",
+  "purpose": "exploration",
+  "removed": false,
+  "schema_version": 2,
+  "source_return_id": null,
+  "structured_payload": null,
+  "task": null,
+  "title": ""
+}

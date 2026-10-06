@@ -1,0 +1,69 @@
+[
+  {
+    "id": "stable_narrow",
+    "domains": [
+      "stable_faq",
+      "onboarding"
+    ],
+    "participants": 20,
+    "update_strategy": "daily",
+    "work_items": [
+      "scope_filter",
+      "human_fallback"
+    ],
+    "launch_day": 7,
+    "request": {}
+  },
+  {
+    "id": "delayed_realtime",
+    "domains": [
+      "stable_faq",
+      "policy_travel",
+      "policy_meal",
+      "policy_leave"
+    ],
+    "participants": 20,
+    "update_strategy": "realtime",
+    "work_items": [
+      "realtime_sync",
+      "human_fallback"
+    ],
+    "launch_day": 10,
+    "request": {
+      "dev_days": 6,
+      "deadline_day": 10
+    }
+  },
+  {
+    "id": "capacity_expanded",
+    "domains": [
+      "stable_faq"
+    ],
+    "participants": 50,
+    "update_strategy": "daily",
+    "work_items": [
+      "scope_filter",
+      "human_fallback"
+    ],
+    "launch_day": 7,
+    "request": {
+      "capacity": 60
+    }
+  },
+  {
+    "id": "manual_policy",
+    "domains": [
+      "stable_faq",
+      "policy_travel",
+      "policy_meal"
+    ],
+    "participants": 20,
+    "update_strategy": "manual_policy",
+    "work_items": [
+      "scope_filter",
+      "human_fallback"
+    ],
+    "launch_day": 7,
+    "request": {}
+  }
+]

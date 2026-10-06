@@ -1,0 +1,584 @@
+{
+  "schema_version": 2,
+  "id": "pm_pilot",
+  "revision": "2.2.0",
+  "structure_id": "index_scope_resource_dependency",
+  "files": [
+    {
+      "schema_version": 2,
+      "path": "baseline.json",
+      "sha256": "1c45262e93aa5c9ec7c64d20f0c20eef775c8f61653e8ae152087de5f07fb754",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "decision_examples.json",
+      "sha256": "955090ee0308cea119af74d6d3314b766c6da57c831410d73ac91e438021a107",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "facts.json",
+      "sha256": "2f49dcd21891bd717d7c1ed9ccab6b6023b1df3bb3f6a90a65a145419c3d562e",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials.json",
+      "sha256": "fb7594f61b738066a643d93ba949e6bc22c5f133cd9c63f75208302c4595b6c9",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/approvals-v1.md",
+      "sha256": "b8e1e70d0a9f5e73873adc7c150840da1159a2795c58178be7e13903a52a2aae",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/brief-v1.md",
+      "sha256": "95070c762d25a71d861c32a8b4ddaefea8c2162811c5089671ed8809f61f713d",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/business_private-v1.md",
+      "sha256": "05fadfe3955e3ab42d979bc5168aa68bb0aa48bf32871d78f1a94e87a72d95ee",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/demand-v1.md",
+      "sha256": "b50842cbece46a1adbe71cdec9d5a6975e066b53744069294c8176f369bf3ef9",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/demo-v1.md",
+      "sha256": "36f3f10ae1681f6d422d489b7e6ab4a38505e894dc7fa901d00735de11b6bb38",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/demo-v2.md",
+      "sha256": "c3b4d8a828676208d1936362a3ff4b25c955ecd22caa2a0cc3d001127c324a3d",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/failures-v1.md",
+      "sha256": "64da01115793f7f50863ae1e9004e32c7112239234f752175217560929644048",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/faq-v1.md",
+      "sha256": "62799317b848fc8d472b2066f0071f32e20ef6e49290137aa14ce8a0ca2e1511",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/interviews-v1.md",
+      "sha256": "04cbb36d37eb7459e12f0ea77e0b5c77a7bdec6a01f315b0a01129f4afccedd5",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/leave-v1.md",
+      "sha256": "9557a2d9e7cd56be64a0a1bb16b646052a06fbb6534d10147012cae14e82a222",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/manager_private-v1.md",
+      "sha256": "bd45d2e8dac47d0647b805eb05f27cd04f9128df55446324011da712491ea7b1",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/meal-v1.md",
+      "sha256": "ed98dafc712c9f989a4253b94120c24b4bdbda968bcfe3d24880441c33e497c2",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/onboarding-v1.md",
+      "sha256": "4327728d48fc50898033f8c783877f27358c6e5c037044fa297e033eb81cb680",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/policy-v1.md",
+      "sha256": "a4bc12549d629a00247cecbf215a8a6d1be761f14bdf809b7b301bc292a074d8",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/policy-v2.md",
+      "sha256": "ac8713ccbd2eda17c75454dfd13191482f1ea64a62513fb7c7f5458a20c9cc6d",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/restricted-v1.md",
+      "sha256": "8389e61b54bc6ebd98a3c094c9a7f365ff76638e17258818b85021e091068e52",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/scope_note-v1.md",
+      "sha256": "78a0c88b708328976d21db6a05e0c48457c7d831334599bf6fdbc20a770daa3a",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/scope_note-v2.md",
+      "sha256": "0590d326eb379967ea93d045541cee2ca42d3613c471c1294eee65d73ac94917",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/tech_diagnostics-v1.md",
+      "sha256": "76882a4efe4f4c32831aac0aae08cf15c22dd008cfff7a0dd0a2500687ff4529",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/tech_private-v1.md",
+      "sha256": "ad00d339f17ab2286f0b434815550a9a87d466050686f288260b115c12dcdd6c",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/technical-v1.md",
+      "sha256": "38152dbfeec5f8d80fbbfa84b4547ecaa502f58f742341e7c280f9a0e1997e6c",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/user_groups-v1.md",
+      "sha256": "94c1b71d33e0ccb5500efce458a1c7372aae75108f5743804e26e52d55c26e29",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/world_private-v1.md",
+      "sha256": "fc14a01312703d3a00f8f8f509608d43dc652e3d183c448ab3ff192f8a127661",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "paths.json",
+      "sha256": "42510b731cb45b1162e1898796ce7487564f65fe34300d932e6cb6bcf56c97ba",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "probes.json",
+      "sha256": "eba852705dcddedc418559032e3c36f5275ee8a906a1feaa1572f5cdcd021e04",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "research/public-case-records.json",
+      "sha256": "daba590ef3b43c10a35cbf2293cf4ef7cffb802dfad4ae4d9dfcb5b69fec4048",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "roles.json",
+      "sha256": "b6f0e6c33628b36abc781b69ca95b8ee3b1e9af49b2c7bde16117fe67295da1d",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "rubric-reference.json",
+      "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/acquisition.json",
+      "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/bundle.json",
+      "sha256": "ce0babd8861ccf90cadbdc9c8e6e3010583995778e0830687569e7a977d621d2",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/decision.json",
+      "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/evaluation-protocol.json",
+      "sha256": "b12fc508cc9c336a0b72e3c747c6cc8b66258bebaf01689658a912de56c7c5af",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/evaluation.json",
+      "sha256": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/model.json",
+      "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/retrieval.json",
+      "sha256": "3f48e5f463ef76edc5196630788c3f4860ea88a9ed837e7add38d7fe886df12a",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/source-files.json",
+      "sha256": "0c5febf9b0fc312d84ce46cf33db6117b54be3e2df413d4606a27a2e40349e9e",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/tools.json",
+      "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "scenario.yaml",
+      "sha256": "c52175fdf50e69f44040a23c870e5c6f71070f05965ea09f328c2bc1d6f5886f",
+      "media_type": "application/json"
+    }
+  ],
+  "public_files": [
+    "materials/approvals-v1.md",
+    "materials/brief-v1.md",
+    "materials/demand-v1.md",
+    "materials/demo-v1.md",
+    "materials/failures-v1.md",
+    "materials/faq-v1.md",
+    "materials/interviews-v1.md",
+    "materials/leave-v1.md",
+    "materials/meal-v1.md",
+    "materials/onboarding-v1.md",
+    "materials/policy-v1.md",
+    "materials/restricted-v1.md",
+    "materials/scope_note-v1.md",
+    "materials/technical-v1.md",
+    "materials/user_groups-v1.md"
+  ],
+  "private_files": [
+    "baseline.json",
+    "decision_examples.json",
+    "facts.json",
+    "materials.json",
+    "materials/business_private-v1.md",
+    "materials/demo-v2.md",
+    "materials/manager_private-v1.md",
+    "materials/policy-v2.md",
+    "materials/scope_note-v2.md",
+    "materials/tech_diagnostics-v1.md",
+    "materials/tech_private-v1.md",
+    "materials/world_private-v1.md",
+    "paths.json",
+    "probes.json",
+    "research/public-case-records.json",
+    "roles.json",
+    "rubric-reference.json",
+    "runtime/acquisition.json",
+    "runtime/bundle.json",
+    "runtime/decision.json",
+    "runtime/evaluation-protocol.json",
+    "runtime/evaluation.json",
+    "runtime/model.json",
+    "runtime/retrieval.json",
+    "runtime/source-files.json",
+    "runtime/tools.json",
+    "scenario.yaml"
+  ],
+  "role_specs": [
+    {
+      "schema_version": 2,
+      "id": "supervisor",
+      "name": "经理",
+      "responsibilities": [
+        "明确业务目标与承诺",
+        "审批容量、开发资源和期限",
+        "对演示与试点的取舍负责"
+      ],
+      "goals": [
+        "得到有证据、可追问的建议",
+        "演示可解释但不夸大完成状态",
+        "资源申请有真实缺口"
+      ],
+      "known_materials": [
+        "brief",
+        "technical",
+        "approvals",
+        "demo",
+        "scope_note",
+        "manager_private",
+        "demand",
+        "user_groups",
+        "restricted",
+        "failures"
+      ],
+      "known_facts": [
+        "capacity",
+        "dev_days",
+        "deadline_day",
+        "capacity_limit",
+        "dev_days_limit",
+        "deadline_day_limit",
+        "demo_day",
+        "manager_priority"
+      ],
+      "disclosure_policy": {
+        "manager_priority": {
+          "schema_version": 2,
+          "mode": "paraphrase_only",
+          "actors": [
+            "supervisor"
+          ],
+          "paraphrase": "经理更重视可信承诺；演示与试点开放需分别说明依据。"
+        }
+      },
+      "approval_authority": [
+        "approve_business"
+      ],
+      "event_subscriptions": [
+        "initial_plan_applied",
+        "demo_schedule_changed",
+        "business_decided",
+        "business_scope_requested"
+      ],
+      "acceptable_conditions": [
+        "承诺与实际资源相符",
+        "先说明证据和取舍再申请",
+        "如需暂停，明确后续责任与复核条件"
+      ],
+      "unacceptable_conditions": [
+        "把聊天支持当成批准",
+        "用演示成功代替试点验证",
+        "无缺口也索要最大资源"
+      ]
+    },
+    {
+      "schema_version": 2,
+      "id": "business_lead",
+      "name": "业务负责人",
+      "responsibilities": [
+        "解释用户需求和业务流程",
+        "协调政策解释与个案核验",
+        "讨论人工接管和业务验收"
+      ],
+      "goals": [
+        "优先解决有影响的问题",
+        "不把转人工或用户沉默都当成功",
+        "区分统计口径与业务价值"
+      ],
+      "known_materials": [
+        "brief",
+        "demand",
+        "user_groups",
+        "interviews",
+        "policy",
+        "meal",
+        "leave",
+        "onboarding",
+        "restricted",
+        "scope_note",
+        "business_private",
+        "approvals",
+        "failures"
+      ],
+      "known_facts": [
+        "demand_total",
+        "demand_faq",
+        "demand_policy",
+        "demand_sensitive",
+        "total_minutes",
+        "total_repeats",
+        "new_staff_priority",
+        "operations_concern",
+        "admin_concern",
+        "business_caveat",
+        "hotel_limit",
+        "meal_limit",
+        "leave_notice_days",
+        "additional_candidates",
+        "support_observation_minutes"
+      ],
+      "disclosure_policy": {
+        "business_caveat": {
+          "schema_version": 2,
+          "mode": "paraphrase_only",
+          "actors": [
+            "business_lead"
+          ],
+          "paraphrase": "业务方关注政策咨询价值，也承认耗时统计包含等待，收益需要另行验证。"
+        }
+      },
+      "approval_authority": [],
+      "event_subscriptions": [
+        "initial_plan_applied",
+        "business_scope_requested"
+      ],
+      "acceptable_conditions": [
+        "业务价值有可检查的依据",
+        "自动回答与人工接管各自有责任人",
+        "听到反例后愿意修改判断"
+      ],
+      "unacceptable_conditions": [
+        "只报告自动回答率",
+        "把等待时长全算成节省劳动",
+        "声称人工已经处理却没有记录"
+      ]
+    },
+    {
+      "schema_version": 2,
+      "id": "tech_lead",
+      "name": "技术负责人",
+      "responsibilities": [
+        "解释检索、版本与工程成本",
+        "提供可复现验证方法",
+        "指出未生效配置与技术风险"
+      ],
+      "goals": [
+        "回答能追溯到实际来源",
+        "关键配置有正反验证",
+        "工程承诺不超出已批准资源"
+      ],
+      "known_materials": [
+        "brief",
+        "technical",
+        "approvals",
+        "faq",
+        "onboarding",
+        "policy",
+        "meal",
+        "leave",
+        "restricted",
+        "demo",
+        "tech_private",
+        "tech_diagnostics",
+        "failures"
+      ],
+      "known_facts": [
+        "capacity",
+        "dev_days",
+        "cost_scope_filter",
+        "cost_human_fallback",
+        "cost_realtime_sync",
+        "index_delay_hours",
+        "connector_risk",
+        "tech_debug_code"
+      ],
+      "disclosure_policy": {
+        "connector_risk": {
+          "schema_version": 2,
+          "mode": "paraphrase_only",
+          "actors": [
+            "tech_lead"
+          ],
+          "paraphrase": "连接器复用尚未完成可靠性核验，需要验证后再承诺。"
+        },
+        "tech_debug_code": {
+          "schema_version": 2,
+          "mode": "paraphrase_only",
+          "actors": [
+            "tech_lead"
+          ],
+          "paraphrase": "连接器重试边界还需核验，不能把可复用性当作已有能力。"
+        }
+      },
+      "approval_authority": [],
+      "event_subscriptions": [
+        "initial_plan_applied",
+        "demo_schedule_changed",
+        "business_decided"
+      ],
+      "acceptable_conditions": [
+        "先复现问题再判断修复",
+        "区分源、索引和配置版本",
+        "保留失败和未验证边界"
+      ],
+      "unacceptable_conditions": [
+        "只凭配置名称认定能力已生效",
+        "把文档发布当成索引已更新",
+        "省掉必要保障却承诺可靠"
+      ]
+    }
+  ],
+  "domains": {
+    "stable_faq": [
+      "faq"
+    ],
+    "onboarding": [
+      "onboarding"
+    ],
+    "policy_travel": [
+      "policy"
+    ],
+    "policy_meal": [
+      "meal"
+    ],
+    "policy_leave": [
+      "leave"
+    ]
+  },
+  "capabilities": [
+    "apply_config",
+    "refresh_index",
+    "request_business",
+    "resolve_approval",
+    "read_material",
+    "test_assistant"
+  ],
+  "baseline_config": {
+    "schema_version": 2,
+    "id": "pilot",
+    "session_id": "scenario:pm_pilot:v2",
+    "version": 1,
+    "config_version": 0,
+    "domains": [
+      "stable_faq",
+      "onboarding",
+      "policy_travel",
+      "policy_meal",
+      "policy_leave"
+    ],
+    "scope_filter": true,
+    "update_strategy": "daily",
+    "fallback": "human",
+    "chunk_size": 500,
+    "retrieval_limit": 1,
+    "min_score": 0.35,
+    "min_score_calibration": null,
+    "freshness_guard": "none",
+    "manual_domains": [],
+    "prohibited_topics": [],
+    "work_items": [
+      "scope_filter",
+      "human_fallback"
+    ],
+    "participants": 20,
+    "launch_day": 7
+  },
+  "initial_resources": {
+    "capacity": 30,
+    "dev_days": 3,
+    "deadline_day": 7
+  },
+  "lineage": [
+    "pm_pilot-v1"
+  ],
+  "split": "train"
+}

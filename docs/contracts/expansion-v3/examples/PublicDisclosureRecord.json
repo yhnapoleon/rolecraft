@@ -1,0 +1,29 @@
+{
+  "displayed_at_seq": 1,
+  "fact_id": "example",
+  "quote": "example",
+  "reply_ref": {
+    "config_version": null,
+    "kind": "turn",
+    "object_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "schema_version": 2,
+  "source": {
+    "config_version": null,
+    "kind": "example",
+    "object_id": "example",
+    "observed_at_seq": 1,
+    "quote": null,
+    "schema_version": 2,
+    "session_id": "example",
+    "span_end": null,
+    "span_start": null,
+    "valid_from_seq": 0,
+    "valid_until_seq": null,
+    "version": 1
+  },
+  "verification": "model_extracted"
+}

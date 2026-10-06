@@ -1,0 +1,8 @@
+{
+  "logs_complete": false,
+  "question": "记录不足时保持未知",
+  "schema_version": 2,
+  "steps": [],
+  "task": "示例诊断",
+  "task_type": "trajectory_diagnosis"
+}

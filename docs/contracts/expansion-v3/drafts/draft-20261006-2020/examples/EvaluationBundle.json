@@ -1,0 +1,35 @@
+{
+  "adoption_record": null,
+  "calibration": null,
+  "graders": [
+    {
+      "media_type": "application/json",
+      "path": "files/payload.json",
+      "schema_version": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    }
+  ],
+  "id": "evaluation",
+  "mode": "advisory",
+  "model": null,
+  "protocol": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "revision": "draft",
+  "rubric": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "rules": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "schema_version": 2
+}

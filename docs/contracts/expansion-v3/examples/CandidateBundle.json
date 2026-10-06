@@ -1,0 +1,36 @@
+{
+  "allowed_data": [],
+  "budget": {
+    "actions": 1,
+    "currency_limit": null,
+    "model_calls": 1,
+    "schema_version": 2,
+    "tokens": null,
+    "wall_seconds": 1.0
+  },
+  "changes": {},
+  "evaluation": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "evaluations": [],
+  "hypothesis": "example",
+  "id": "example",
+  "parent": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "runtime": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "schema_version": 2,
+  "selection_reason": null,
+  "source_splits": []
+}
