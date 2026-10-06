@@ -177,6 +177,8 @@ class AttentionEncoder:
             "pretrained":False,"post_training":False,"fixture_quality_claim":False,"fit_split":"train","seed":self.seed,
             "epochs":epochs,"learning_rate":learning_rate,"losses":losses,"fit_seconds":time.perf_counter()-start,
             "before_weights":before,"after_weights":after,"weight_delta_l2":delta,"max_abs_gradient":max_gradient,
+            "evidence_train_ids":[r.record_id for r in rows if r.annotation.final.evidence_evaluable],
+            "label_only_train_ids":[r.record_id for r in rows if not r.annotation.final.evidence_evaluable],
             "train_records":len(rows),"train_ids":[r.record_id for r in rows],"input_hashes":[r.annotation.input_hash for r in rows],
             "parameters":sum(v.size for v in self.params.values()),"device":"CPU","truncation":"reject; never silently drop necessary evidence"}
         return self.training_report

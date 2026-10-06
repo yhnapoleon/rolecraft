@@ -86,3 +86,14 @@ HuggingFace本地目录不凭40位revision字符串认定身份。加载还需�
 ReleaseReader读取公共DatasetMetadataV2，依据实际model_input.task_type取得family；不再依赖私有metadata.family或source_snapshot_digest。每条侧记只含自身snapshot，核对语言、来源、完整谱系、capture_point及accepted状态，再用公共record/annotation配对及metadata_projection重建比较。自身正标签空证据/时点严校验保留。
 
 W07以12个合成快照实际发布6 train与6 dev，W08用独立进程直接读取同一release/split hash，执行LR、旧字符MLP、微型attention pack/pair及融合选择，保存并重载模型。原始fit、权重变化、预测、错误、冻结、CLI输出和两端源码身份保存在本轮交付证据。没有模型下载、付费调用或封存研究test。fixture不能冒充真实业务release；本次仍不满足正式E1/E2、W11六结构、模型质量或产品调用验收。
+
+
+## c4审阅补充：证据监督与来源身份
+
+`evidence_evaluable=False`允许保留有独立依据的分类标签，但证据训练目标为None，LR不生成证据pair、attention不计算证据loss，evidence/joint指标均排除该行。训练报告列出evidence_train_ids与label_only_train_ids；分类损失与分类分母保留。不可评不表示标签正确：真实非G0纯标签记录还需独立label_only_authority核验，fixture只用于已知合成流程，不能推断语义真值。
+
+可评记录的final.evidence_ids必须等于至少一组合法acceptable集合。证据监督统一从已完整校验的acceptable集合中选确定性最小集合，其他合法集合仍在评价时接受；合法INSUFFICIENT/NOT_APPLICABLE可以为空。不一致记录拒绝并带record_id，不静默修标签。
+
+每条记录额外读取`origins/<record_id>.json`，绑定来源桶、session、完整lineage摘要、snapshot/source摘要及实际原文件FileRef；与DatasetMetadataV2和输入记录重建比较。删marker、改桶、重算外层hash仍不能将fixture变成业务输入。非fixture消费者除总体metadata_approval外，还必须注入独立source_authority逐条返回可信来源绑定；只接收release自报内容的回调不构成真实授权。该端口尚未接真实业务源，正式数据仍blocked。
+
+来源绑定是验证用内部侧记，未修改冻结公共schema；新reader拒绝缺少来源绑定的旧release。旧release按原冻结源码追溯，不原地改写。

@@ -16,7 +16,9 @@ class RecordReadError(ProtocolError):
 
 
 class ReleaseReader:
-    def __init__(self,root,release_ref:FileRef,split_ref:FileRef,*,metadata_approval=None,allow_fixture=False):
+    def __init__(self,root,release_ref:FileRef,split_ref:FileRef,*,metadata_approval=None,allow_fixture=False,source_authority=None,label_only_authority=None):
+        self.source_authority=source_authority;self.label_only_authority=label_only_authority
+        self.label_only_records=[]
         self.root=Path(root);self.release_ref=release_ref;self.split_ref=split_ref;self.access_log=[];self.excluded=[]
         self.manifest=json.loads(self._read(release_ref,"metadata-index"))
         if self.manifest.get("id")!=digest({k:v for k,v in self.manifest.items() if k!="id"}):raise ProtocolError("release_manifest_drift")
@@ -73,7 +75,25 @@ class ReleaseReader:
                 record=DatasetRecordV2(record_id=metadata.record_id,input_hash=metadata.input_hash,family=family,
                     label_tier=metadata.requested_label_tier,bucket=metadata.bucket,language=metadata.language,lineage=metadata.lineage,
                     split=metadata.split,provenance=metadata.provenance,model_input=item,label_ref=label_ref)
+                snapshot=metadata.source_snapshots[0]
+                if snapshot.origin!=record.bucket:raise ProtocolError("source_origin_bucket_mismatch")
+                expected_origin={'protocol':'w07-source-origin-v1','record_id':record.record_id,'origin':record.bucket,
+                    'session_id':record.lineage.session_id,'lineage_hash':digest(record.lineage),
+                    'snapshot_digest':snapshot.snapshot_digest,'source_digest':record.provenance.source.source_digest,
+                    'source_files':[x.model_dump(mode='json') for x in record.provenance.actual_sources]}
+                origin_path=f"origins/{record.record_id}.json"
+                if origin_path not in self.manifest['files']:raise ProtocolError('source_origin_binding_missing')
+                origin=json.loads(self._read(FileRef(path=origin_path,sha256=self.manifest['files'][origin_path]),partition+':origin'))
+                if origin!=expected_origin:raise ProtocolError('source_origin_binding_mismatch')
+                if not self.fixture:
+                    if self.source_authority is None or self.source_authority(metadata,tuple(record.provenance.actual_sources))!=expected_origin:
+                        raise ProtocolError('independent_source_authority_required')
                 validate_record_annotation(record,annotation,require_accepted=True)
+                if not annotation.final.evidence_evaluable:
+                    if not self.fixture and annotation.label_tier!='G0' and (self.label_only_authority is None or self.label_only_authority(record,annotation) is not True):
+                        raise ProtocolError('label_only_semantic_review_required')
+                    self.label_only_records.append({'record_id':record.record_id,'evidence_training':False,'evidence_metrics':False,
+                        'label_basis':'fixture only; no semantic truth claim' if self.fixture else 'upstream numeric verifier' if annotation.label_tier=='G0' else 'independent semantic review'})
                 projected=metadata_projection(record,annotation,capture_point=metadata.capture_point,source_snapshots=metadata.source_snapshots)
                 if projected!=metadata:raise ProtocolError("metadata_annotation_status_mismatch")
                 row=Example(entry.record_id,item,annotation,partition,entry.structure_id,entry.component_id,
@@ -88,5 +108,5 @@ class ReleaseReader:
         return {"release":self.release_ref.model_dump(mode="json"),"split_manifest":self.split_ref.model_dump(mode="json"),
                 "fixture":self.fixture,"declared_structure_count":self.split.independent_structure_count,
                 "independence_claim":"none for synthetic fixture" if self.fixture else "requires upstream W11 approval",
-                "accesses":list(self.access_log),"excluded_or_invalid_records":list(self.excluded),"test_content_opened":False,
+                "label_only_records":list(self.label_only_records),"accesses":list(self.access_log),"excluded_or_invalid_records":list(self.excluded),"test_content_opened":False,
                 "metadata_scope":"only requested train/dev per-record sidecars; no mixed records.json or test metadata body"}

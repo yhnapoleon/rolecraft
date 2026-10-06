@@ -78,6 +78,8 @@ class Example:
         if final.evidence_evaluable:
             if not final.acceptable_evidence_sets:
                 raise ProtocolError("training_evidence_targets_missing")
+            if set(final.evidence_ids) not in [set(group) for group in final.acceptable_evidence_sets]:
+                raise ProtocolError("final_evidence_not_an_acceptable_target")
             if any(not s for s in final.acceptable_evidence_sets) and final.label not in {"INSUFFICIENT", "NOT_APPLICABLE"}:
                 raise ProtocolError("unsupported_empty_gold_evidence")
         return self
@@ -103,6 +105,7 @@ def training_examples(examples, task, *, split="train", require_all_classes=True
 
 
 def evidence_target(row):
+    row.validate()
     final = row.annotation.final
     if not final.evidence_evaluable:
         return None

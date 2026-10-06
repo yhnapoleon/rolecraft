@@ -64,6 +64,11 @@ def release_fixture(root):
         meta=metadata_projection(record,row.annotation,capture_point=snapshot.capture_point,source_snapshots=(snapshot,)).model_dump(mode="json")
         meta_path=f"metadata/{row.record_id}.json";(root/meta_path).parent.mkdir(exist_ok=True);(root/meta_path).write_bytes(json_bytes(meta));files[meta_path]=sha((root/meta_path).read_bytes())
         metadata[row.record_id]=FileRef(path=meta_path,sha256=files[meta_path]).model_dump(mode="json")
+        origin={'protocol':'w07-source-origin-v1','record_id':record.record_id,'origin':record.bucket,
+            'session_id':lineage.session_id,'lineage_hash':digest(lineage),'snapshot_digest':snapshot.snapshot_digest,
+            'source_digest':provenance.source.source_digest,'source_files':[x.model_dump(mode='json') for x in provenance.actual_sources]}
+        origin_path=f"origins/{record.record_id}.json";(root/origin_path).parent.mkdir(exist_ok=True)
+        (root/origin_path).write_bytes(json_bytes(origin));files[origin_path]=sha((root/origin_path).read_bytes())
         entries.append(SplitEntry(record_id=row.record_id,structure_id=row.structure_id,component_id=row.component_id,split=row.split,file=FileRef(path=input_path,sha256=files[input_path])))
     split=SplitManifest(id="synthetic-split",entries=tuple(entries),independent_structure_count=3)
     (root/"split-manifest.json").write_bytes(json_bytes(split));files["split-manifest.json"]=sha((root/"split-manifest.json").read_bytes())

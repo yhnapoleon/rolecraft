@@ -66,6 +66,8 @@ class LinearCandidate:
         self.training_report = {"fit_seconds": time.perf_counter()-start, "seed": self.seed, "train_records": len(rows),
             "fit_split": "train", "architecture": "character TF-IDF + multinomial LR + binary evidence LR", "pretrained": False,
             "train_ids": [r.record_id for r in rows], "input_hashes": [r.annotation.input_hash for r in rows],
+            "evidence_train_ids":[r.record_id for r in rows if r.annotation.final.evidence_evaluable],
+            "label_only_train_ids":[r.record_id for r in rows if not r.annotation.final.evidence_evaluable],
             "optimizer_iterations": classifier.n_iter_.tolist(), "evidence_pairs": len(pairs)}
         return self.training_report
 
