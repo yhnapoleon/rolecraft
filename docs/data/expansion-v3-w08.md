@@ -1,6 +1,6 @@
 # W08 模型与实验管线
 
-当前为 **implementation_only / partial**，消费W01草稿`draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e`。本模块已实现可运行代码及小数据管线验证；W07审计release、W11真实多结构、正式接口和产品加载均未接齐，不能据此宣称新E1/E2、模型质量或课程交付完成。
+当前为 **implementation_only / partial**，消费031固定的c4公共候选`expansion-v3-81f4855d5cdf8c601c6b09d7b350b11dcda5ed156e2d801d8e542fa197718c85`（commit `b55b4c260867ba04ca8ecac7232c9f5d3bcbc41f`）。本模块已实现可运行代码及小数据管线验证；W07合法fixture发布已实际消费；正式业务release、W11真实多结构和产品加载仍未接齐，不能据此宣称新E1/E2、模型质量或课程交付完成。
 
 所有候选输出固定为advisory、affects_score=false。G2v只代表模型复核标签；独立人工语义校准与正式scoring采用不由本模块自动开启。
 
@@ -66,7 +66,7 @@ LR、旧MLP、微型编码器及概率融合通过W01 ModelBundle保存为JSON+N
 
 预训练适配遵循官方的[本地权重与revision加载接口](https://huggingface.co/docs/transformers/main_classes/model)及[Tokenizer接口](https://huggingface.co/docs/transformers/main_classes/tokenizer)，强制local_files_only、固定提交revision、禁用remote code。接口代码存在不代表依赖、许可证、权重和设备已验证。
 
-下一步按正式W01的update-context调整输入，取得W07审计数据与W11结构证据后跑真实E1/E2；选择并锁定编码器资源，再完成产品加载和逐项AC。HF真实训练/重载、正式数据与test、三seed稳定性、真实检索损失、SFT/GRPO及正式产品调用均不得用本轮smoke代替。W07若有返工反馈仍优先处理。
+下一步取得W07业务源审计数据与W11结构证据后跑正式E1/E2；选择并锁定编码器资源，再完成产品加载和逐项AC。HF真实训练/重载、正式数据与test、三seed稳定性、真实检索损失、SFT/GRPO及正式产品调用均不得用本轮smoke代替。W07若有返工反馈仍优先处理。
 
 
 ## 2026-10-07 共同证据与新审阅边界
@@ -81,4 +81,8 @@ HuggingFace本地目录不凭40位revision字符串认定身份。加载还需�
 
 参考策略sft_identity由base与active adapter的完整FileRef集合哈希派生；任意自由字符串不再可用。该函数只核冻结机制，没有执行SFT/GRPO，也不自行证明输入确由SFT训练得到。set-F1仍保持独立v3实现，公共函数收敛待032确定共同落点；两者数学规则的回归需继续保留。
 
-当前fixture来源桶仍等待032发布公共扩展并由031update-context。W07已经拒绝把fixture写env_run，因此本轮真正的W07合法fixture release→W08完整样例在输入到位前仍blocked。W08自身的已知schema fixtures用于模块回归，不能替代这条样例、W11六结构或正式研究结果。
+## c4元数据与跨包验证
+
+ReleaseReader读取公共DatasetMetadataV2，依据实际model_input.task_type取得family；不再依赖私有metadata.family或source_snapshot_digest。每条侧记只含自身snapshot，核对语言、来源、完整谱系、capture_point及accepted状态，再用公共record/annotation配对及metadata_projection重建比较。自身正标签空证据/时点严校验保留。
+
+W07以12个合成快照实际发布6 train与6 dev，W08用独立进程直接读取同一release/split hash，执行LR、旧字符MLP、微型attention pack/pair及融合选择，保存并重载模型。原始fit、权重变化、预测、错误、冻结、CLI输出和两端源码身份保存在本轮交付证据。没有模型下载、付费调用或封存研究test。fixture不能冒充真实业务release；本次仍不满足正式E1/E2、W11六结构、模型质量或产品调用验收。

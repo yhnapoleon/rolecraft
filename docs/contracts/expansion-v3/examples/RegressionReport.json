@@ -1,0 +1,32 @@
+{
+  "config": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "hidden_result_summary": "example",
+  "id": "example",
+  "input_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "public_results": [],
+  "reviewer": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "scenario": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "schema_version": 2,
+  "submission": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "unresolved": []
+}

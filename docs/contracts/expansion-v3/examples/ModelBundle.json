@@ -1,0 +1,48 @@
+{
+  "adapter_revision": null,
+  "id": "example",
+  "inference_entrypoint": "example",
+  "labels": [
+    "SUPPORTED",
+    "CONTRADICTED",
+    "INSUFFICIENT"
+  ],
+  "mode": "advisory",
+  "model_revision": "example",
+  "preprocessing": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "schema_version": 2,
+  "source": {
+    "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
+    "dependency_locks": [],
+    "overlay": null,
+    "schema_version": 2,
+    "source_digest": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "split_manifest": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "task_type": "relation",
+  "tokenizer_revision": "example",
+  "training_release": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "weights": [
+    {
+      "media_type": "application/json",
+      "path": "files/payload.json",
+      "schema_version": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    }
+  ]
+}

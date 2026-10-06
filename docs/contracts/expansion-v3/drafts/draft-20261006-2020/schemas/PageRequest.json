@@ -1,0 +1,26 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "cursor": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Cursor",
+      "type": "integer"
+    },
+    "limit": {
+      "default": 50,
+      "maximum": 100,
+      "minimum": 1,
+      "title": "Limit",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "title": "PageRequest",
+  "type": "object"
+}

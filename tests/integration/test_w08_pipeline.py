@@ -7,6 +7,8 @@ import sys
 import numpy as np
 import pytest
 
+# Permit isolated integration invocation, independent of pytest collection order.
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'unit'))
 from test_w08_models import examples,release_fixture
 from career_lab.contracts.v2.core import FileRef,SourceIdentity,Budget,ProtocolError,digest
 from career_lab.contracts.v2.data import TestCampaign as Campaign,CampaignCandidate

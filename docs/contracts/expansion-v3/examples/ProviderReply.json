@@ -1,0 +1,10 @@
+{
+  "cost": null,
+  "input_tokens": null,
+  "model_revision": "example",
+  "output_tokens": null,
+  "provider": "example",
+  "schema_version": 2,
+  "text": "example",
+  "tool_calls": []
+}

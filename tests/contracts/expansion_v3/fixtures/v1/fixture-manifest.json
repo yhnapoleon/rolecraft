@@ -1,0 +1,138 @@
+{
+  "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
+  "checks": {
+    "F3": {
+      "original_db_present": false,
+      "status": "original 27-step run not rechecked; assembler overflow path remains; current regression test_feedback_batch1 passed"
+    },
+    "F4_policy": {
+      "action_count": 3,
+      "events": [
+        "read_material",
+        "update_pilot",
+        "test_assistant",
+        "policy_updated"
+      ]
+    },
+    "F5_local_disclosure": {
+      "private_value_disclosed": true,
+      "provider": "local-extractive-v1",
+      "text": "本地事实模式：未获批扩容时最多30名试点用户（当前值：30）；初始可用开发资源3人日（当前值：3）；实时同步本身需要5人日（当前值：5）；每日索引可能落后源文档24小时（当前值：24）；原始试点期限为第7天（当前值：7）；旧连接器在内部压测中不稳定，尚未成为对外承诺（当前值：legacy_connector_unstable）"
+    },
+    "F6_probe": {
+      "answer": "# 办公FAQ v1\n\n## 如何申请会议室？\n在公司日历选择空闲会议室并提交预约，变更后及时取消原预约。\n\n## 忘记办公系统密码怎么办？\n使用账号自助重置入口；无法重置时联系内部服务台。\n\n## 办公设备故障怎么报修？\n向内部服务台提交设备编号、故障现象和可联系时段。知识助手不能替代服务台确认报修状态。\n\n",
+      "citation": [
+        {
+          "material_id": "faq",
+          "version": 1
+        }
+      ],
+      "fallback": false,
+      "mode": "local-extractive",
+      "question": "帮我查报修单处理到哪一步"
+    },
+    "F9_variants": {
+      "pm_pilot": {
+        "capacity": 30,
+        "deadline_day": 7,
+        "dev_days": 3,
+        "index_delay_hours": 24,
+        "minimum_participants": 1,
+        "realtime_sync_days": 5
+      },
+      "pm_pilot_capacity15": {
+        "capacity": 15,
+        "deadline_day": 7,
+        "dev_days": 3,
+        "index_delay_hours": 24,
+        "minimum_participants": 1,
+        "realtime_sync_days": 5
+      },
+      "pm_pilot_urgent": {
+        "capacity": 30,
+        "deadline_day": 5,
+        "dev_days": 3,
+        "index_delay_hours": 24,
+        "minimum_participants": 1,
+        "realtime_sync_days": 5
+      }
+    },
+    "baseline_c0": "config_not_current",
+    "checked_fixed_retry_after_restart": true,
+    "constraint_fields": [
+      "capacity",
+      "dev_days",
+      "realtime_sync_days",
+      "index_delay_hours",
+      "deadline_day",
+      "minimum_participants"
+    ],
+    "deliverable_fields": [
+      "goal",
+      "owner",
+      "metrics",
+      "observation_window",
+      "exit_condition",
+      "rationale"
+    ],
+    "rules_revision": "rules-v3",
+    "same_key_different_content": "request_id_reused",
+    "v1_submitted_resume": "invalid_pause_resume",
+    "v1_unknown_fields": "extra_forbidden"
+  },
+  "fixtures": {
+    "Action": {
+      "path": "action.json",
+      "sha256": "d970c728985a6308e33b3e58013c9088a7ed69aed6e53ef3094fabab420c93bb"
+    },
+    "Event": {
+      "path": "event.json",
+      "sha256": "3c8c72790415c5475128497c4e92b4a48096554a42b4dd71ccabdd62bdf45759"
+    },
+    "EvidencePackage": {
+      "path": "evidence.json",
+      "sha256": "cda5d3f0227ec1bb717809e9a96d35a517f7b34be381aa2018fde37f33668af4"
+    },
+    "EvidenceSourceMap": {
+      "path": "evidence-sources.json",
+      "sha256": "7a1b6491bba09872a0911fe46aade545b97bd930b8163744a2049b59892e9c52"
+    },
+    "ScenarioSpec": {
+      "path": "scenario.json",
+      "sha256": "c89cf0e886c7f5a0a2cdab17dfaf8685ffc5e79589768f4af8b33e5255964375"
+    },
+    "TransitionResult": {
+      "path": "transition.json",
+      "sha256": "0fb1b82f1500eb43702f208c1b37119127f0062fd9af868a7cb33f228b95b618"
+    },
+    "WorldState": {
+      "path": "world-initial.json",
+      "sha256": "9e707267e6c73f9791876b7f3be632945dd75e7f314a94168027730288ac418b"
+    },
+    "all_action_hashes": {
+      "path": "action-ledger.json",
+      "sha256": "7473e744bc20346064f5056bcbd0683da5e89d6d61fac266d7a61b753a8c3880"
+    },
+    "artifact": {
+      "path": "artifact.json",
+      "sha256": "6bc3f31ade52eccd075c90ee5753edf1595fceb26e5685ff4aa46f3ae840c23e"
+    },
+    "feedback": {
+      "path": "feedback.json",
+      "sha256": "84209979ab0f86521896eb857dcc77055df64d9a7e248c1c4c262300cee09f78"
+    },
+    "request_hash": {
+      "path": "action-request-hash.json",
+      "sha256": "5cc446d1419bddf0df0df3edeab96adf420c59bd46b9922a8280c5d8e7112de9"
+    },
+    "sql_schema": {
+      "path": "sqlite-schema.json",
+      "sha256": "bc0c7cc21f968954c5271cb1733b4627d58178b98ee4b089c3e86edfdc26854b"
+    },
+    "submission": {
+      "path": "submission.json",
+      "sha256": "4a403fad932c47e5c8d5c89a8218a8a955d8c87b21aec8ff1ae1c4f1e1a4362f"
+    }
+  },
+  "note": "Generated from unchanged W00 baseline before W01. Frozen synthetic compatibility data, no user database copied. Not W01 implementation."
+}

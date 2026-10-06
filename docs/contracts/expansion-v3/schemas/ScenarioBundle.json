@@ -1,0 +1,440 @@
+{
+  "$defs": {
+    "AssistantConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "chunk_size": {
+          "default": 500,
+          "exclusiveMinimum": 0,
+          "title": "Chunk Size",
+          "type": "integer"
+        },
+        "config_version": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Config Version",
+          "type": "integer"
+        },
+        "domains": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Domains",
+          "type": "array"
+        },
+        "fallback": {
+          "default": "human",
+          "enum": [
+            "human",
+            "none"
+          ],
+          "title": "Fallback",
+          "type": "string"
+        },
+        "freshness_guard": {
+          "default": "none",
+          "enum": [
+            "none",
+            "warn",
+            "fallback"
+          ],
+          "title": "Freshness Guard",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "launch_day": {
+          "default": 7,
+          "exclusiveMinimum": 0,
+          "title": "Launch Day",
+          "type": "integer"
+        },
+        "manual_domains": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Manual Domains",
+          "type": "array"
+        },
+        "min_score": {
+          "default": 0.35,
+          "minimum": 0,
+          "title": "Min Score",
+          "type": "number"
+        },
+        "min_score_calibration": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FileRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "participants": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Participants",
+          "type": "integer"
+        },
+        "prohibited_topics": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Prohibited Topics",
+          "type": "array"
+        },
+        "retrieval_limit": {
+          "default": 3,
+          "exclusiveMinimum": 0,
+          "title": "Retrieval Limit",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "scope_filter": {
+          "default": true,
+          "title": "Scope Filter",
+          "type": "boolean"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "update_strategy": {
+          "default": "daily",
+          "enum": [
+            "daily",
+            "realtime",
+            "manual_policy"
+          ],
+          "title": "Update Strategy",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        },
+        "work_items": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Work Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "domains"
+      ],
+      "title": "AssistantConfig",
+      "type": "object"
+    },
+    "DisclosurePolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "actors": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Actors",
+          "type": "array"
+        },
+        "mode": {
+          "enum": [
+            "public",
+            "role_only",
+            "paraphrase_only",
+            "never"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "paraphrase": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Paraphrase"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "title": "DisclosurePolicy",
+      "type": "object"
+    },
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    },
+    "RoleSpecV2": {
+      "additionalProperties": false,
+      "properties": {
+        "acceptable_conditions": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Acceptable Conditions",
+          "type": "array"
+        },
+        "approval_authority": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Approval Authority",
+          "type": "array"
+        },
+        "disclosure_policy": {
+          "additionalProperties": {
+            "$ref": "#/$defs/DisclosurePolicy"
+          },
+          "title": "Disclosure Policy",
+          "type": "object"
+        },
+        "event_subscriptions": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Event Subscriptions",
+          "type": "array"
+        },
+        "goals": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Goals",
+          "type": "array"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "known_facts": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Known Facts",
+          "type": "array"
+        },
+        "known_materials": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Known Materials",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "responsibilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Responsibilities",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "unacceptable_conditions": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Unacceptable Conditions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "responsibilities",
+        "goals",
+        "known_materials",
+        "known_facts",
+        "disclosure_policy"
+      ],
+      "title": "RoleSpecV2",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "baseline_config": {
+      "$ref": "#/$defs/AssistantConfig"
+    },
+    "capabilities": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    },
+    "domains": {
+      "additionalProperties": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "title": "Domains",
+      "type": "object"
+    },
+    "files": {
+      "items": {
+        "$ref": "#/$defs/FileRef"
+      },
+      "title": "Files",
+      "type": "array"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "initial_resources": {
+      "additionalProperties": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "title": "Initial Resources",
+      "type": "object"
+    },
+    "lineage": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Lineage",
+      "type": "array"
+    },
+    "private_files": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Private Files",
+      "type": "array"
+    },
+    "public_files": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Public Files",
+      "type": "array"
+    },
+    "revision": {
+      "minLength": 1,
+      "title": "Revision",
+      "type": "string"
+    },
+    "role_specs": {
+      "items": {
+        "$ref": "#/$defs/RoleSpecV2"
+      },
+      "title": "Role Specs",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "split": {
+      "enum": [
+        "train",
+        "dev",
+        "test",
+        "regression"
+      ],
+      "title": "Split",
+      "type": "string"
+    },
+    "structure_id": {
+      "minLength": 1,
+      "title": "Structure Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "revision",
+    "structure_id",
+    "files",
+    "public_files",
+    "private_files",
+    "role_specs",
+    "domains",
+    "capabilities",
+    "baseline_config",
+    "initial_resources",
+    "split"
+  ],
+  "title": "ScenarioBundle",
+  "type": "object"
+}

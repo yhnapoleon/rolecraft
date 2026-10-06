@@ -1,0 +1,181 @@
+{
+  "$defs": {
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    },
+    "SourceIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "base_commit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Base Commit",
+          "type": "string"
+        },
+        "dependency_locks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FileRef"
+          },
+          "title": "Dependency Locks",
+          "type": "array"
+        },
+        "overlay": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FileRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "base_commit",
+        "source_digest"
+      ],
+      "title": "SourceIdentity",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "adapter_revision": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Adapter Revision"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "inference_entrypoint": {
+      "minLength": 1,
+      "title": "Inference Entrypoint",
+      "type": "string"
+    },
+    "labels": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Labels",
+      "type": "array"
+    },
+    "mode": {
+      "const": "advisory",
+      "default": "advisory",
+      "title": "Mode",
+      "type": "string"
+    },
+    "model_revision": {
+      "minLength": 1,
+      "title": "Model Revision",
+      "type": "string"
+    },
+    "preprocessing": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source": {
+      "$ref": "#/$defs/SourceIdentity"
+    },
+    "split_manifest": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "task_type": {
+      "enum": [
+        "relation",
+        "criterion",
+        "trajectory_diagnosis",
+        "acquisition"
+      ],
+      "title": "Task Type",
+      "type": "string"
+    },
+    "tokenizer_revision": {
+      "minLength": 1,
+      "title": "Tokenizer Revision",
+      "type": "string"
+    },
+    "training_release": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "weights": {
+      "items": {
+        "$ref": "#/$defs/FileRef"
+      },
+      "minItems": 1,
+      "title": "Weights",
+      "type": "array"
+    }
+  },
+  "required": [
+    "id",
+    "task_type",
+    "labels",
+    "model_revision",
+    "tokenizer_revision",
+    "weights",
+    "preprocessing",
+    "inference_entrypoint",
+    "training_release",
+    "split_manifest",
+    "source"
+  ],
+  "title": "ModelBundle",
+  "type": "object"
+}

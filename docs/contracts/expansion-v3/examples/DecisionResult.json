@@ -1,0 +1,13 @@
+{
+  "answers": {},
+  "attempts": [],
+  "elapsed_seconds": 1.0,
+  "error_code": null,
+  "input_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "model_revision": "example",
+  "provider": "example",
+  "raw_distribution": null,
+  "request_id": "example",
+  "schema_version": 2,
+  "status": "success"
+}

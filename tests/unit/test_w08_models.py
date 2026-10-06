@@ -5,9 +5,9 @@ import json
 import numpy as np
 import pytest
 
-from career_lab.contracts.v2.core import FileRef,SourceIdentity,EvidenceRefV2,VersionPoint,digest,ProtocolError
+from career_lab.contracts.v2.core import FileRef,SourceIdentity,EvidenceRefV2,VersionPoint,Executor,digest,ProtocolError
 from career_lab.contracts.v2.evaluation import EvidencePackageV2,CandidateEvidenceV2
-from career_lab.contracts.v2.data import RelationInput,CriterionInput,AnnotationDecision,AnnotationV2,SplitEntry,SplitManifest,Lineage
+from career_lab.contracts.v2.data import RelationInput,CriterionInput,AnnotationDecision,AnnotationV2,SplitEntry,SplitManifest,Lineage,Provenance,DatasetRecordV2,DatasetSnapshotMetadata,metadata_projection
 from career_lab.models.v3.core import Example,LABELS,Prediction
 from career_lab.models.v3.linear import LinearCandidate,ConstantCandidate
 from career_lab.models.v3.encoder import AttentionEncoder,array_digest
@@ -52,9 +52,16 @@ def release_fixture(root):
         input_path=f"inputs/{row.record_id}.json";label_path=f"labels/{row.record_id}.json"
         for name,value in [(input_path,row.item),(label_path,row.annotation)]:
             p=root/name;p.parent.mkdir(exist_ok=True);p.write_bytes(json_bytes(value));files[name]=sha(p.read_bytes())
-        meta={"record_id":row.record_id,"input_hash":row.annotation.input_hash,"family":row.item.task_type,"language":row.language,"bucket":row.bucket,
-            "lineage":Lineage(structure_id=row.structure_id,component_id=row.component_id,session_id="synthetic-session-"+row.record_id).model_dump(mode="json"),
-            "annotation_status":row.annotation.status,"accepted_label_tier":row.annotation.label_tier,"source_snapshot_digest":digest(row.record_id),"provenance":{}}
+        lineage=Lineage(structure_id=row.structure_id,component_id=row.component_id,session_id="synthetic-session-"+row.record_id)
+        provenance=Provenance(command="W08 schema fixture only",source=SourceIdentity(base_commit="a"*40,source_digest=digest("schema-fixture-runtime")),
+            executor=Executor(id="unit-fixture",kind="system"),actual_sources=(FileRef(path="fixture-source.json",sha256=digest(row.record_id)),),
+            transformations=("fixture:not-business-run",),captured_at="2026-10-07T00:00:00Z")
+        record=DatasetRecordV2(record_id=row.record_id,input_hash=row.annotation.input_hash,family=row.item.task_type,
+            label_tier=row.annotation.label_tier,bucket="fixture",language=row.language,lineage=lineage,split=row.split,provenance=provenance,
+            model_input=row.item,label_ref=FileRef(path=label_path,sha256=files[label_path]))
+        snapshot=DatasetSnapshotMetadata(snapshot_digest=digest(row.record_id),source_digest=provenance.source.source_digest,
+            session_id=lineage.session_id,capture_point=row.item.evidence.as_of,origin="fixture")
+        meta=metadata_projection(record,row.annotation,capture_point=snapshot.capture_point,source_snapshots=(snapshot,)).model_dump(mode="json")
         meta_path=f"metadata/{row.record_id}.json";(root/meta_path).parent.mkdir(exist_ok=True);(root/meta_path).write_bytes(json_bytes(meta));files[meta_path]=sha((root/meta_path).read_bytes())
         metadata[row.record_id]=FileRef(path=meta_path,sha256=files[meta_path]).model_dump(mode="json")
         entries.append(SplitEntry(record_id=row.record_id,structure_id=row.structure_id,component_id=row.component_id,split=row.split,file=FileRef(path=input_path,sha256=files[input_path])))

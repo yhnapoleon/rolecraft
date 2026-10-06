@@ -1,0 +1,20 @@
+{
+  "actual_disclosures": [],
+  "as_of": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "conversations": [],
+  "known_events": [],
+  "omitted_sources": [],
+  "prompt_fact_ids": [],
+  "role_id": "example",
+  "schema_version": 2,
+  "session_id": "example",
+  "shared_products": [],
+  "sourced_memory": [],
+  "sources": []
+}

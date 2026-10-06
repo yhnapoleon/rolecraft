@@ -1,0 +1,80 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "actions": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Actions",
+      "type": "integer"
+    },
+    "cost": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cost"
+    },
+    "cost_complete": {
+      "default": false,
+      "title": "Cost Complete",
+      "type": "boolean"
+    },
+    "input_tokens": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Input Tokens"
+    },
+    "model_attempt_count": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Model Attempt Count",
+      "type": "integer"
+    },
+    "output_tokens": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Output Tokens"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "usage_complete": {
+      "default": false,
+      "title": "Usage Complete",
+      "type": "boolean"
+    },
+    "wall_seconds": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Wall Seconds",
+      "type": "number"
+    }
+  },
+  "title": "ActualConsumption",
+  "type": "object"
+}

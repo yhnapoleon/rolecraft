@@ -4,7 +4,7 @@ from pathlib import Path
 import json
 
 from career_lab.contracts.v2.core import FileRef,ProtocolError,digest,read_file
-from career_lab.contracts.v2.data import SplitManifest,AnnotationV2,Lineage,FAMILY_TASK,require_training_split
+from career_lab.contracts.v2.data import SplitManifest,AnnotationV2,Lineage,FAMILY_TASK,DatasetRecordV2,DatasetMetadataV2,metadata_projection,validate_record_annotation,require_training_split
 from career_lab.models.v3.core import INPUT,Example,LABELS
 
 
@@ -51,27 +51,33 @@ class ReleaseReader:
             try:
                 meta_ref=FileRef.model_validate(self.metadata[entry.record_id])
                 if self.manifest["files"].get(meta_ref.path)!=meta_ref.sha256:raise ProtocolError("metadata_file_hash_mismatch")
-                metadata=json.loads(self._read(meta_ref,partition+":metadata"))
-                if metadata["record_id"]!=entry.record_id:raise ProtocolError("metadata_record_identity_mismatch")
-                if not isinstance(metadata.get("language"),str) or not metadata["language"].strip():raise ProtocolError("metadata_language_invalid")
-                if metadata.get("bucket") not in {"fixture","env_run","human_session","public_aux","business_synth"}:raise ProtocolError("metadata_bucket_invalid")
-                lineage=Lineage.model_validate(metadata["lineage"])
+                metadata=DatasetMetadataV2.model_validate_json(self._read(meta_ref,partition+":metadata"))
+                if metadata.record_id!=entry.record_id or metadata.split!=partition:raise ProtocolError("metadata_record_identity_mismatch")
+                lineage=metadata.lineage
                 if lineage.structure_id!=entry.structure_id:raise ProtocolError("metadata_structure_mismatch")
-                if self.fixture and metadata["bucket"]!="fixture":raise ProtocolError("fixture_bucket_identity_mismatch")
-                if not self.fixture and metadata["bucket"]=="fixture":raise ProtocolError("fixture_research_mix_forbidden")
+                if self.fixture and metadata.bucket!="fixture":raise ProtocolError("fixture_bucket_identity_mismatch")
+                if not self.fixture and metadata.bucket=="fixture":raise ProtocolError("fixture_research_mix_forbidden")
+                if len(metadata.source_snapshots)!=1 or metadata.capture_point!=metadata.source_snapshots[0].capture_point:
+                    raise ProtocolError("record_snapshot_binding_required")
                 if self.manifest["files"].get(entry.file.path)!=entry.file.sha256:raise ProtocolError("release_input_hash_mismatch")
                 item=INPUT.validate_json(self._read(entry.file,partition+":input"))
-                if FAMILY_TASK.get(metadata.get("family"))!=item.task_type:raise ProtocolError("metadata_family_mismatch")
-                if metadata["input_hash"]!=digest(item):raise ProtocolError("metadata_input_hash_mismatch")
+                family=next((name for name,task in FAMILY_TASK.items() if task==item.task_type),None)
+                if family is None:raise ProtocolError("input_family_unknown")
+                if metadata.input_hash!=digest(item):raise ProtocolError("metadata_input_hash_mismatch")
                 if item.task_type!=task_type:
                     self.excluded.append({"record_id":entry.record_id,"task_type":item.task_type,"reason":"different_task"});continue
                 name=f"labels/{entry.record_id}.json"
                 if name not in self.manifest["files"]:raise ProtocolError("release_label_missing")
-                annotation=AnnotationV2.model_validate_json(self._read(FileRef(path=name,sha256=self.manifest["files"][name]),partition+":label"))
-                if metadata["annotation_status"]!=annotation.status or metadata["accepted_label_tier"]!=(annotation.label_tier if annotation.status=="accepted" else None):
-                    raise ProtocolError("metadata_annotation_status_mismatch")
+                label_ref=FileRef(path=name,sha256=self.manifest["files"][name])
+                annotation=AnnotationV2.model_validate_json(self._read(label_ref,partition+":label"))
+                record=DatasetRecordV2(record_id=metadata.record_id,input_hash=metadata.input_hash,family=family,
+                    label_tier=metadata.requested_label_tier,bucket=metadata.bucket,language=metadata.language,lineage=metadata.lineage,
+                    split=metadata.split,provenance=metadata.provenance,model_input=item,label_ref=label_ref)
+                validate_record_annotation(record,annotation,require_accepted=True)
+                projected=metadata_projection(record,annotation,capture_point=metadata.capture_point,source_snapshots=metadata.source_snapshots)
+                if projected!=metadata:raise ProtocolError("metadata_annotation_status_mismatch")
                 row=Example(entry.record_id,item,annotation,partition,entry.structure_id,entry.component_id,
-                            language=metadata["language"],bucket=metadata["bucket"],fixture=self.fixture)
+                            language=metadata.language,bucket=metadata.bucket,fixture=self.fixture)
                 row.validate();rows.append(row)
             except (ValueError,KeyError,TypeError,OSError) as exc:
                 error=RecordReadError(entry.record_id,partition,exc);self.excluded.append(error.report);raise error from exc

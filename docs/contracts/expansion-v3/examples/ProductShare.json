@@ -1,0 +1,24 @@
+{
+  "id": "example",
+  "product": {
+    "config_version": null,
+    "kind": "product",
+    "object_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "purpose": "discussion",
+  "question": "",
+  "recipient_role": "example",
+  "revoked_at": null,
+  "schema_version": 2,
+  "session_id": "example",
+  "shared_at": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "version": 1
+}

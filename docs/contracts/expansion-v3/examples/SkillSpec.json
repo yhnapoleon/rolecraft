@@ -1,0 +1,18 @@
+{
+  "applicable_structures": [],
+  "content_hash": "f66d58fa47a0509a9028110c5fafe2e69a37e33892a2806ca692569d24d521a3",
+  "counterexamples": [],
+  "failure_conditions": [],
+  "goal": "example",
+  "id": "example",
+  "postconditions": [],
+  "preconditions": [],
+  "schema_version": 2,
+  "source_splits": [],
+  "source_trajectories": [],
+  "status": "candidate",
+  "steps": [],
+  "tool_versions": {},
+  "validation_records": [],
+  "version": 1
+}

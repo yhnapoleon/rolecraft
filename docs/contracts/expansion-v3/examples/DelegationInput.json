@@ -1,0 +1,11 @@
+{
+  "agent_label": "example",
+  "allowed_actions": null,
+  "allowed_objects": null,
+  "capabilities": [
+    "read"
+  ],
+  "create_under_tasks": [],
+  "expires_at": "2026-10-06T12:00:00Z",
+  "schema_version": 2
+}

@@ -1,0 +1,10 @@
+{
+  "acceptable_evidence_sets": [],
+  "applicability": "undetermined",
+  "evidence_evaluable": false,
+  "evidence_ids": [],
+  "label": "SUPPORTED",
+  "missing_reason": null,
+  "schema_version": 2,
+  "task_type": "relation"
+}

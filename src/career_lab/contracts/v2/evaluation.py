@@ -41,7 +41,7 @@ class EvidencePackageV2(V2):
         if self.applicability!='applicable' and self.rule_bound is not None:raise ValueError('inapplicable/undetermined cannot be scored')
         ids=[x.id for x in self.candidate_evidence]
         if len(set(ids))!=len(ids):raise ValueError('duplicate candidate id')
-        if any(x.ref.observed_at_seq>self.as_of.business_seq for x in self.candidate_evidence):raise ValueError('future evidence')
+        if any(x.observed_at_seq>self.as_of.business_seq for x in self.subjects) or any(x.ref.observed_at_seq>self.as_of.business_seq for x in self.candidate_evidence):raise ValueError('future evidence')
         data=self.model_dump(mode='json',exclude={'input_hash'})
         if digest(data)!=self.input_hash:raise ValueError('evidence input hash mismatch')
         return self
