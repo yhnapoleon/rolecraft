@@ -186,3 +186,21 @@ def test_current_r3_reference_port_fails_closed_for_activated_version(api):
     assert blocked.json()["code"]=="reference_context_required"
     assert state(api)==before
     # This records an unclosed shared-port limitation, NOT a successful v2 retest.
+
+
+def test_realtime_effective_config_changes_only_after_real_resource_grant(api):
+    requested={"update_strategy":"realtime","work_items":["realtime_sync","human_fallback"],"launch_day":10}
+    before=apply(api,**requested)
+    assert before["result"]["config"]["effective"]["update_strategy"]=="daily"
+    req=send(api,"actions","dev-request","request_business",{"tool":"request_business","terms":{"dev_days":6,"deadline_day":10},"reason":"实时同步和人工兜底的实际工作缺口"})
+    assert req.status_code==200,req.text
+    approved=send(api,"approvals/resolve","dev-approve","resolve_approval",{"request":req.json()["result"]["request"],"expected_request_revision":1})
+    assert approved.status_code==200,approved.text
+    assert approved.json()["result"]["decision"]["granted"]=={"dev_days":6,"deadline_day":10}
+    after=apply(api,**requested)
+    assert after["result"]["config"]["effective"]["update_strategy"]=="realtime"
+    assert "work_items" not in after["result"]["config"]["differences"]
+    tested=send(api,"tests","real-effective","tests.create",{"query":"会议室预约","config_version":2})
+    assert tested.status_code==200,tested.text
+    assert tested.json()["result"]["test"]["config"]["effective"]["update_strategy"]=="realtime"
+    # A policy@2 citation itself remains blocked by the separately recorded resolver gap.
