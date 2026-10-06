@@ -9,7 +9,7 @@
 
 完整背景见[前端接口需求与未实现功能](../design/frontend-interface-requirements.md)。
 
-**状态：** 2026-10-05 已完成，T1–T8 的后端和前端接入都做了。实现在分支 `feat/backend-batch-1`，基于 `main` `efe5042`，分为后端、前端接入、文档三个提交。各项结果和剩余缺口见[接口需求](../design/frontend-interface-requirements.md)第 2、5 节，验证结果见 `apps/web/README.md`。下文保留为开工时的任务说明。
+**状态：** 2026-10-05，T1–T8 后端与前端接入已随 [PR #3](https://github.com/yhnapoleon/rolecraft/pull/3) 合入 main，并与 Agent UI 及 PR #5 调查／动效整合。各项结果和剩余缺口见[接口需求](../design/frontend-interface-requirements.md)第 2、5 节，运行与既有验证见[前端说明](../../apps/web/README.md)。下文保留开工时的任务说明；不要据旧分支、端口或未勾选项判断当前能力。
 
 **开工时的代码基线：**
 - 前端：工作台 v4，当时在分支 `feat/web-workbench-v4` 上，已经 PR #2 合入 `main`。
@@ -23,7 +23,7 @@
 
 - 从 `origin/feat/web-workbench-v4` 建独立的 git worktree 和新分支，例如 `feat/batch-1`。如果 v4 已经合进 `main`，就从 `origin/main` 建。
 - 现有 checkout 里有别人未提交的文档改动。不要在那个 checkout 里切分支、stash、reset 或提交。
-- 本机已有一套 API（8502）、worker 和前端预览（8510）在运行。不要停止或改动它们。验证时，自己用新端口和临时 SQLite 数据库起一套：
+- 当时本机使用 API 8502、worker 和预览 8510；此处是历史环境说明，不表示这些服务当前在线。新的独立验收先核对端口与进程，使用当前 checkout 自有环境和专用 SQLite，通用步骤见[启动说明](../../apps/web/README.md#启动)：
 
   ```sh
   uv run career-lab serve --host 127.0.0.1 --port <API 端口> --database-url sqlite:///<临时库> --provider local

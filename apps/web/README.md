@@ -1,6 +1,6 @@
 # RoleCraft 工作区前端
 
-**2026-10-05 工作台 v4 + 调查工作纸 + 资料与作品动效 + 第一批后端接口。** 主入口是一个连接现有 RoleCraft API 的工作台，界面支持中文和英文。
+**工作台 v4 + 调查工作纸 + 资料与作品动效 + 第一批后端接口。** 已随 PR #1–#5 合入 main `2e1e4ff`；本页启动说明于 2026-10-06 对齐。 主入口是一个连接现有 RoleCraft API 的工作台，界面支持中文和英文。
 
 **页面顺序：** 岗位选择（`#/`）→ AI 产品经理入口（`#/pm`）→ 工作板（`#/work`）→ 事项工作台（`#/task/<id>`）、资料（`#/doc/<id>`）、测试台（`#/bench`）→ 上线评审（`#/review`）。返回按层级走：工作板上是“离开”，其余页面是“工作板”。
 
@@ -40,7 +40,7 @@
 
 **如何体验：** 在事项中打开右侧 Agent，复制任务包给 Codex 等外部 Agent。任务包已包含可选测试作品的格式与限制；Agent 可以返回普通文字或 `test_set`。粘贴或上传返回内容，预览后导入为待检查作品，再采用。逐条展开可以编辑问题、验证目的和预期；运行调用真实 API，结果与问题版本绑定，可重测、查看历史、记观察及引用为依据。
 
-**本机整合预览：** <http://127.0.0.1:18540/>，连接 API `18542`。这是 025 验证工作区的本机入口；其他机器按下方通用命令启动，不依赖该端口或既有浏览器存档。
+**本机启动约定：** 前端 <http://127.0.0.1:18560/>，API `18562`。需按下方命令从当前 checkout 启动；此地址不表示服务一直在线。新库使用新端口，避免旧 025 的 18540 浏览器存档指向新数据库；025 的旧 API 为 18542，其验收保留为历史记录，新环境需重新检查。
 
 **已实现：**
 - `schemaVersion: 1`、`returnId`、可选 `requestId`、`artifact.kind: test_set`、`cases`；格式/来源/规模检查、重复回传与冲突检查、普通 Markdown 兼容。最多 20 行，问题 4,000 字符，目的/预期各 2,000 字符。
@@ -141,7 +141,7 @@
 [组合走查脚本](tests/walkthrough/walk-integrated.mjs)可使用独立 API/worker 与前端复跑；脚本只创建合成练习，并使用独立临时浏览器资料。`BASE` 指向待测前端，`OUT` 指定证据目录：
 
 ```sh
-CHROME_BIN=/path/to/chrome-headless-shell BASE=http://127.0.0.1:5173/ OUT=/tmp/rolecraft-integration-check node tests/walkthrough/walk-integrated.mjs
+CHROME_BIN=/path/to/chrome-headless-shell BASE=http://127.0.0.1:18560/ OUT=../../runs/local/integration-check node tests/walkthrough/walk-integrated.mjs
 ```
 
 [结果摘要](tests/screenshots/integration-025/result.json) · [桌面调查](tests/screenshots/integration-025/investigation-desktop.jpg) · [窄屏作品](tests/screenshots/integration-025/folder-mobile.jpg)。截图中包含合成中文内容及英文界面。
@@ -159,28 +159,47 @@ CHROME_BIN=/path/to/chrome-headless-shell BASE=http://127.0.0.1:5173/ OUT=/tmp/r
 
 ## 启动
 
-需要 Node.js >= 22.12、npm，以及按仓库 `uv.lock` 安装的 Python 环境。在仓库根目录完成 `uv sync --locked`，分别启动 API 与 worker；两个进程必须使用同一数据库：
+需要 Python 3.12、[uv](https://docs.astral.sh/uv/getting-started/installation/)、Node.js ≥22.12 和 npm。每个 checkout 使用自己的 `.venv` 与 `apps/web/node_modules`；不把其他 worktree 的环境路径或 `PYTHONPATH` 当作运行前提。
+
+在仓库根目录安装锁定依赖并准备本机运行目录：
 
 ```sh
-uv run career-lab serve --host 127.0.0.1 --port 8502 --database-url sqlite:////tmp/rolecraft-web-preview.db --provider local
+uv sync --locked --python 3.12
+mkdir -p runs/local
+```
+
+`runs/` 已由 Git 忽略。以下 `runs/local/rolecraft.db` 是本机新环境的独立数据库；不会导入或覆盖旧预览数据。若此文件已被使用，沿用前先确认用途，独立验收应另选新文件名。不要复制密钥、旧数据库或虚拟环境作为安装步骤。
+
+macOS/Linux 若终端曾设置指向旧 checkout 的 `PYTHONPATH`，先执行 `unset PYTHONPATH`。`uv run` 使用当前仓库的 `.venv`；可以用 `uv run --locked python -c "import career_lab; print(career_lab.__file__)"` 核对源码入口确实属于当前 checkout。
+
+分别打开两个终端，均停留在仓库根目录。先启动 API，确认完成初始化后再启动 worker，避免首次建库争用：
+
+```sh
+# 终端 1：API
+uv run --locked career-lab serve --host 127.0.0.1 --port 18562 --database-url sqlite:///runs/local/rolecraft.db --provider local
 ```
 
 ```sh
-uv run career-lab worker --database-url sqlite:////tmp/rolecraft-web-preview.db --provider local
+# 终端 2：worker
+uv run --locked career-lab worker --database-url sqlite:///runs/local/rolecraft.db --provider local
 ```
 
-启动前端：
+第三个终端进入 `apps/web`，安装、构建并启动：
 
 ```sh
 cd apps/web
 npm ci
 npm run build
-npm run preview -- --port 8510
+ROLECRAFT_API_TARGET=http://127.0.0.1:18562 npm run preview -- --port 18560
 ```
 
-打开 <http://127.0.0.1:8510/>。开发使用 `npm run dev`，地址为 <http://127.0.0.1:5173/>。Vite 开发与预览将 `/api/*` 转发至 `http://127.0.0.1:8502/*`，可用 `ROLECRAFT_API_TARGET` 指定其他 API 地址。正式托管仍需配置同源 `/api` 转发。
+打开 <http://127.0.0.1:18560/>；Swagger 为 <http://127.0.0.1:18562/docs>。开发模式可将最后一行替换为 `ROLECRAFT_API_TARGET=http://127.0.0.1:18562 npm run dev -- --port 18560`。如使用 PowerShell，先设置 `$env:ROLECRAFT_API_TARGET='http://127.0.0.1:18562'`，再运行 npm 命令。
 
-`local` 是后端抽取模式，不调用外部大模型。API 与 worker 的 provider、数据库配置需一致；前端不接收模型密钥。真实模型按仓库已有 CLI 配置，本轮没有新增外部模型调用。
+Vite 开发／预览把 `/api/*` 转发至 `ROLECRAFT_API_TARGET`；未设置时仍采用配置中的默认 `8502`，因此使用本页端口时应明确设置。正式托管需另配同源 `/api` 转发，当前步骤不包含部署。
+
+`local` 使用后端抽取模式，不调用外部大模型。API 与 worker 的 provider 和数据库配置必须一致；前端不接收模型密钥。真实模型另按仓库 CLI 配置与授权验证，启用角色模型不会自动把助手测试变为生成式 RAG。
+
+这些命令是复现说明，不是新环境已通过验证的声明。安装后至少完成下方构建、后端契约、含真实 HTTP／worker 的前端检查及相应浏览器走查，再记录实际结果。
 
 ## 三个入口与存档
 
@@ -225,7 +244,7 @@ npm run preview -- --port 8510
 - 会话创建没有幂等键，失败时不自动重复；先验证浏览器可保存，避免在已知存储故障下创建无法恢复的会话。
 - 角色与反馈使用独立 worker。排队时保留 job ID，刷新只查询；终态失败如实显示。新后端终态失败显示“重新生成”，发送 `retry: true`。旧任务响应没有 kind 时仍按旧能力提示。
 - 配置保存与审批分开。可保存超过当前资源的申请方案，但保存不代表已经获批；原型的自动批准、定时假回复和本地政策触发在连接版被禁止。
-- 自由作品仍保存在本地。正式交付先核对六字段并保存，再固定提交；刚编辑就交付时会同步保存最新正文。已固定版本不可由页面“修订”解锁。
+- 自由事项、作品、草稿、版本链、调查判断及 Agent 记录仍保存在本地。后端六字段交付稿可保存多个版本；正式交付先核对六字段并保存，再固定提交；刚编辑就交付时会同步保存最新正文。已固定版本不可由页面“修订”解锁。
 - Agent 任务包只导出实际可见且已打开的后端材料和选择的本地作品/测试；引用正文取实际结果，不能由回传作品伪造。
 - **评审证据包上限：** 后端评审把全部资料、配置、交付稿和测试拼成一个证据包，超过 16,000 字节的条目标记 `completeness: overflow` 并保持未评，顶层 `overflow: true`。评审页说明超长并链接交付面板的作品选择；已固定提交保持只读。交付面板让用户选择附上的作品，并在估算接近上限时提醒。这只是缓解，根本修复见接口需求 P0-5。
 - **时间与问题：** 新事件、测试、交付稿、提交、回合和审批保存 UTC 时间；对话和动态优先使用服务端时间及提问原文。旧库没有时间的记录返回 null，继续使用本机观察时间；没有观察记录则留空。
@@ -274,20 +293,19 @@ npm run build
 启动 API、worker 和前端预览后，可执行真实 HTTP 集成测试。使用专门的验证数据库；测试创建新会话，不清空已有记录：
 
 ```sh
-ROLECRAFT_TEST_API=http://127.0.0.1:8510/api npm test
+ROLECRAFT_TEST_API=http://127.0.0.1:18560/api npm test
 ```
 
-浏览器走查脚本在 `tests/walkthrough/`：`walk.mjs` 跑完整经历，`walk-flows.mjs` 跑申请审批、Agent 带回、新建事项。需要设置 `CHROME_BIN`（Chrome 或 chrome-headless-shell），可选 `BASE`（默认 `http://127.0.0.1:8510/`）和 `OUT`（截图目录）：
+浏览器走查脚本在 `tests/walkthrough/`：`walk.mjs` 跑完整经历，`walk-flows.mjs` 跑申请审批、Agent 带回、新建事项。需要设置 `CHROME_BIN`（Chrome 或 chrome-headless-shell），`BASE` 指定当前前端（脚本原默认仍为 `http://127.0.0.1:8510/`），`OUT` 指定证据目录：
 
 ```sh
-CHROME_BIN=/path/to/chrome node tests/walkthrough/walk.mjs 1440 900 zh
+CHROME_BIN=/path/to/chrome BASE=http://127.0.0.1:18560/ OUT=../../runs/local/walkthrough node tests/walkthrough/walk.mjs 1440 900 zh
 ```
 
-`src/workbench-live.test.ts` 的 5 项真实 HTTP 集成测试在没有 `ROLECRAFT_TEST_API` 时跳过。其余测试随普通命令执行。仓库根的后端检查：
+`src/workbench-live.test.ts` 的 6 项真实 HTTP 集成测试在没有 `ROLECRAFT_TEST_API` 时跳过。其余测试随普通命令执行。仓库根的后端检查：
 
 ```sh
-uv run pytest -q
-uv run pytest apps/web/tests/test_existing_backend.py -q
+uv run --locked pytest tests apps/web/tests/test_existing_backend.py -q
 ```
 
 2026-10-05 第一批 T1–T8 全栈接入，本机 SQLite / local 结果（基于 main `efe5042`）：
