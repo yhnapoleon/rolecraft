@@ -131,6 +131,7 @@
     "token_invalid",
     "training_split_forbidden",
     "undeclared_object_reference",
+    "unsupported_empty_gold_evidence",
     "v1_envelope_required",
     "v2_envelope_required",
     "v2_session_required",

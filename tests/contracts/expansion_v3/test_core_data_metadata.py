@@ -89,3 +89,41 @@ def test_each_capture_snapshot_must_not_precede_the_historical_reference():
     r=record();point=C.VersionPoint(business_seq=1,workspace_revision=1,storage_revision=1)
     snapshot=C.DatasetSnapshotMetadata(snapshot_digest='d'*64,source_digest=r.provenance.source.source_digest,session_id=r.lineage.session_id,capture_point=point,origin='fixture')
     with pytest.raises(C.ProtocolError,match='capture precedes reference'):metadata_projection(r,source_snapshots=(snapshot,))
+
+
+# The shared gate matches W08's legal joint-target rule. Empty alternatives are
+# a legal target only for INSUFFICIENT/NOT_APPLICABLE, or when evidence is not
+# being evaluated; one empty alternative must not bypass nonempty alternatives.
+EVIDENCE_REQUIRED=[('relation','SUPPORTED'),('relation','CONTRADICTED'),('criterion','MET'),('criterion','PARTIAL'),('criterion','NOT_MET')]
+EMPTY_TARGET_ALLOWED=[('relation','INSUFFICIENT'),('criterion','INSUFFICIENT'),('criterion','NOT_APPLICABLE')]
+
+def with_decision(annotation,*,label,evaluable,ids=(),alternatives=()):
+    decision=annotation.final.model_copy(update={'label':label,'evidence_evaluable':evaluable,'evidence_ids':ids,'acceptable_evidence_sets':alternatives,'applicability':'not_applicable' if label=='NOT_APPLICABLE' else 'applicable','missing_reason':None if evaluable else 'Synthetic non-evaluable boundary'})
+    return annotation.model_copy(update={'final':decision,'passes':tuple(p.model_copy(update={'decision':decision}) for p in annotation.passes)})
+
+@pytest.mark.parametrize('family,label',EVIDENCE_REQUIRED)
+@pytest.mark.parametrize('mixed',[False,True])
+def test_accepted_evaluable_conclusions_reject_any_empty_joint_target(family,label,mixed):
+    r=record(family);candidate=r.model_input.evidence.candidate_evidence[0].id
+    alternatives=((candidate,),()) if mixed else ((),)
+    annotation=with_decision(accepted(r),label=label,evaluable=True,ids=(candidate,) if mixed else (),alternatives=alternatives)
+    annotation=C.AnnotationV2.model_validate(annotation.model_dump(mode='json'))
+    for check in (lambda:validate_record_annotation(r,annotation,require_accepted=True),lambda:metadata_projection(r,annotation)):
+        with pytest.raises(C.ProtocolError,match='unsupported empty gold evidence'):check()
+
+@pytest.mark.parametrize('family,label',EVIDENCE_REQUIRED)
+def test_nonempty_legal_joint_target_still_accepts_supported_conclusions(family,label):
+    r=record(family);candidate=r.model_input.evidence.candidate_evidence[0].id
+    annotation=with_decision(accepted(r),label=label,evaluable=True,ids=(candidate,),alternatives=((candidate,),))
+    assert validate_record_annotation(r,annotation,require_accepted=True)==annotation
+    assert metadata_projection(r,annotation).accepted_label_tier=='G2'
+
+@pytest.mark.parametrize('family,label',EMPTY_TARGET_ALLOWED)
+def test_explicit_empty_target_remains_legal_for_insufficient_or_not_applicable(family,label):
+    r=record(family);annotation=with_decision(accepted(r),label=label,evaluable=True,alternatives=((),))
+    assert validate_record_annotation(r,annotation,require_accepted=True)==annotation
+
+@pytest.mark.parametrize('family,label',EVIDENCE_REQUIRED+EMPTY_TARGET_ALLOWED)
+def test_nonevaluable_annotations_do_not_require_fabricated_evidence(family,label):
+    r=record(family);annotation=with_decision(accepted(r),label=label,evaluable=False)
+    assert validate_record_annotation(r,annotation,require_accepted=True)==annotation

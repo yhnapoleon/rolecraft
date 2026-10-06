@@ -248,7 +248,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "15f657d81fea6af8f71da109aac8c64bb0a3308188a7255349ae7ce3af7d834d"
+      "sha256": "e2c917bb051a7ca2032f9594f627e28c852465f7b04b1ebe8879cd39b48fc8b3"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -256,26 +256,27 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "752bd252a650c4bee2b3f9c8cd93fc92bb9928f71967fa9f99ccc9f3f549e40d"
+      "sha256": "d34a73eb365e02bdc0b42ca0e845d79ef3e20b51e1b978ab9fdad9da6e5efd3a"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "ecf02047f5b202c62f568157f6cdef79cb578956dcad5ea029757f2064fceb71"
+    "sha256": "6c4b0ec3ce5561d8640aa1c95b6d8d1b1a10cdd04c74f59fe730be6fbf08cc42"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
     "W02-S06": "Opt-in contextual resolver gets authoritative persisted-window ScenarioState; legacy four-argument behavior retained.",
     "W02-S07": "Verified command/result references are atomically anchored for read-request recovery.",
     "W03-GR02-partial": "Validated LegacyProvenance.raw remains inert during reference/time traversal; receipt and preview interfaces remain pending.",
-    "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation."
+    "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.",
+    "W07-W08-empty-joint-target": "Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence."
   },
   "openapi": {
     "path": "openapi.json",
     "sha256": "a6bdfc780629d8a8127b70517e3494e626b6f221440ac348a37733d4764d7578"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-d5aa8ca0d6532afe1165511e1403455cde39026f7d555decdd1840038849e0bb",
+  "previous_contract_revision": "expansion-v3-722c39cc0906f1b1a8e741ad234321491ee85198e6714b5a52d99e1e9262dd37",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -2630,11 +2631,11 @@
     "src/career_lab/contracts/scenario.py": "b191244dd1356503b153abf3a31921ce7911ec19b66534378b369b35d135e3b0",
     "src/career_lab/contracts/v2/__init__.py": "bcb066dbbe937f00a366d9fd836a1411afef069472cb2c8765988f771bee55e7",
     "src/career_lab/contracts/v2/core.py": "50e521c7d7ea22d5ec4a60134917fe827361bf898ff8b5d7bf2ab8509ea34ea8",
-    "src/career_lab/contracts/v2/data.py": "a2b8ff4da8acf93b74d52742db3b2954088b80298ffb7e90f983a9b567a1c062",
+    "src/career_lab/contracts/v2/data.py": "b5849a66811dd2026e14d90814633cc42fd5d4f5ef2374d1ff71b660eac1923f",
     "src/career_lab/contracts/v2/discovery.py": "1089a5682cb915ce4f095ec28f65014d88724e4e5a30e1b17a753bb358bc006c",
     "src/career_lab/contracts/v2/evaluation.py": "c8bc7004d8d14c54f1832eecc227ae45e7fe8492c1b584117ad1f8a372a5c631",
     "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
-    "src/career_lab/contracts/v2/export.py": "64ec6af91fae57cb8d1c3c69f2734006386fc4fea5e72832e7212bbc86798ff9",
+    "src/career_lab/contracts/v2/export.py": "1e7ccd78d463d50b98672104a1a03257a43d6a58b69148b6b70edac10392a848",
     "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
     "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
     "src/career_lab/contracts/v2/projection.py": "8740cf952268d8997610904224db37dcd7ce91886046653b46284be9583062ab",

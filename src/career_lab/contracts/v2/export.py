@@ -96,6 +96,8 @@ def export(root:Path,output:Path):
     manifest['review_fixes']['W02-S09']='Recovery and idempotent replay select event projector only by persisted action and trusted installed registration; preserve safe fields without handler/resolver rerun.'
     manifest['previous_contract_revision']='expansion-v3-d5aa8ca0d6532afe1165511e1403455cde39026f7d555decdd1840038849e0bb'
     manifest['integration_changes']['W07-W08-data-slice']='Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.'
+    manifest['previous_contract_revision']='expansion-v3-722c39cc0906f1b1a8e741ad234321491ee85198e6714b5a52d99e1e9262dd37'
+    manifest['integration_changes']['W07-W08-empty-joint-target']='Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.'
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

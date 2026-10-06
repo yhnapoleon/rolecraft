@@ -316,6 +316,7 @@ def validate_record_annotation(record: DatasetRecordV2, annotation: AnnotationV2
         final=annotation.final
         if set(final.evidence_ids)-legal or any(set(group)-legal for group in final.acceptable_evidence_sets):raise ProtocolError('annotation_evidence_not_applicable_at_reference_time',status=409)
         if final.evidence_evaluable and not final.acceptable_evidence_sets:raise ProtocolError('annotation_no_legal_joint_target',status=409)
+        if final.evidence_evaluable and final.label not in {'INSUFFICIENT','NOT_APPLICABLE'} and any(not group for group in final.acceptable_evidence_sets):raise ProtocolError('unsupported_empty_gold_evidence',status=409)
     return annotation
 
 
