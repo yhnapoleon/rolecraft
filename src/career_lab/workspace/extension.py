@@ -37,7 +37,7 @@ def snapshot_from_view(view,auth,roles,resolvers):
         if resolver is None:return False
         result=resolver(auth,reference,view.state,view.bindings)
         return result.ref==bare
-    return Snapshot(view.state,tuple(objects),can_reference,tuple(roles),permitted)
+    return Snapshot(view.state,tuple(objects),can_reference,tuple(roles),permitted,auth.allowed_objects is None)
 
 
 def workspace_plan(view,command,auth,*,roles,resolvers,clock=None):

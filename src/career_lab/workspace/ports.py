@@ -1,7 +1,7 @@
-"""Private W03 adapter boundary until W01 publishes its transaction implementation.
+"""Pure W03 plans and authorized snapshots for the public Gateway adapter.
 
-These are Python ports, not replacement public contracts. Objects crossing the
-boundary use the immutable W01 draft. No adapter silently creates a world.
+The historical repository is test-only. Production transactions and clocks are
+owned by V2Store; this module neither persists nor authorizes new data sources.
 """
 from dataclasses import dataclass
 from datetime import datetime
@@ -20,6 +20,7 @@ class Snapshot:
     reference_allowed: Callable[[ObjectRef], bool]
     roles: tuple[str, ...]
     object_allowed: Callable[[str], bool] | None = None
+    shares_complete: bool = True
 
     @property
     def point(self) -> VersionPoint:
@@ -47,7 +48,7 @@ class Snapshot:
 
 @dataclass(frozen=True)
 class Mutation:
-    """Private plan translated to W01 ObjectWrite/Mutation by the future adapter."""
+    """Pure domain plan translated to W01 ObjectWrite/Mutation by extension.py."""
     writes: tuple[StoredObject, ...]
     result: dict
     event_type: str
