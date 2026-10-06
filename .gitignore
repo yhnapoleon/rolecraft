@@ -24,4 +24,8 @@ data/annotation/
 /*.pdf
 /*.docx
 /*.xlsx
+# Presentation decks, speaker scripts and their build artifacts
+/pre/
+/proposal_presentaion/
+/*.pptx
 
