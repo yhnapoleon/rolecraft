@@ -10,7 +10,7 @@ from career_lab.api.modules import Operation
 from career_lab.contracts.v2 import (
     ActionInput, ApprovalInput, AssistantConfig, BusinessBasis, BusinessDecision,
     BusinessRequest, Command, ObjectRef, ProtocolError, assistant_config_content_hash,
-    digest,
+    digest, TurnInput,
 )
 from career_lab.storage.role_memory import object_write
 from career_lab.storage.v2_lifecycle import point
@@ -73,6 +73,11 @@ def test_counter_accept_and_successful_resource_commit_have_separate_evidence(tm
     assert rt[0].view(auth).state.resources["capacity"]==60
     assert rt[2].dispatch(auth,"actions",body)["replayed"]
     assert len([o for o in rt[0].view(auth).objects if o.ref.kind=="business_decision"])==2
+    manager=rt[4].port.capture(auth,TurnInput(role_id="supervisor",text="资源到底是否到位"))
+    assert any('"granted":{"capacity":60}' in m.text for m in manager.context.sourced_memory)
+    assert any('"status":"countered"' in m.text for m in manager.context.sourced_memory)
+    tech=rt[4].port.capture(auth,TurnInput(role_id="tech_lead",text="有没有经理新决定"))
+    assert not any("authoritative_business_decision" in m.text for m in tech.context.sourced_memory)
 
 
 def test_failed_accept_is_atomic_and_counteroffer_remains_recoverable(tmp_path):

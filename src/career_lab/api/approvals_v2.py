@@ -129,7 +129,7 @@ class NegotiationService:
         updated = BusinessRequest.model_validate(request.model_dump(mode="json") | {
             "version": request.version + 1, "status": decision.status})
         request_write = object_write("business_request", updated)
-        decision_write = object_write("business_decision", decision)
+        decision_write = object_write("business_decision", decision, visible_to=("learner", decision.decider))
         events = [EventDraft(type="resource_counteroffer_accepted" if accepted else "resource_" + decision.status,
                             visible_to=("learner", "supervisor"), refs=(decision_write.ref, request_write.ref))]
         if decision.status in {"approved", "accepted"}:

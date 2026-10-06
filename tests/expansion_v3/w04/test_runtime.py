@@ -109,6 +109,8 @@ def test_two_shares_revoke_new_policy_and_restart_preserve_old_reply(tmp_path):
     assert worker.run_once()
     job=worker.jobs.get(first["result"]["queued_jobs"][0]);assert job["status"]=="completed",job
     old=read_replies(store.view(auth))[0].model_dump(mode="json")
+    assert old["prompt_hash"]==digest(model.calls[0])
+    assert [m["content"] for m in old["prompt_messages"]]==[m["content"] for m in model.calls[0]]
     assert "方案V1" in json.dumps(model.calls[0],ensure_ascii=False)
     assert store.view(auth).state.resources=={"capacity":30,"dev_days":3}
     assert job["result"]["result"]["disclosures"]==[] and job["result"]["result"]["display_ack_required"]

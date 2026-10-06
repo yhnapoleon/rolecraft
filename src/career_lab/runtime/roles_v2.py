@@ -5,7 +5,7 @@ from uuid import uuid4
 from career_lab.api.modules import Operation
 from career_lab.contracts.v2 import (
     Command, DisclosureRecord, ModelAttemptUsage, ObjectRef, ProtocolError,
-    ResourcePage, TurnInput, V2, ObjectRead, digest,
+    ResourcePage, TurnInput, V2, ObjectRead, ProviderMessage, digest,
 )
 from career_lab.contracts.v2.projection import project_disclosures
 from career_lab.runtime.context_v2 import ContextPort, bare, clean_ref, in_scope
@@ -157,6 +157,8 @@ class RoleService:
         reply = RoleReply(id=oid, session_id=auth.session_id, role_id=request.input.role_id,
                           request=ref, question=snapshot.scrub(request.input.text), text=text,
                           status="completed", context_hash=snapshot.context.context_hash,
+                          prompt_hash=digest(messages),
+                          prompt_messages=tuple(ProviderMessage.model_validate(m) for m in messages),
                           history_revision=snapshot.history_revision, as_of=snapshot.context.as_of,
                           model_revision=self.model.revision, source_versions=sources,
                           spoken_evidence=tuple(SpokenEvidence(label=x.fact_id, source=x.source,

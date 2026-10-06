@@ -8,7 +8,7 @@ from typing import Literal
 from career_lab.contracts.v2 import (
     V2, Identifier, ObjectRef, TurnInput, VersionPoint, Executor, Hash,
     NonNegativeInt, PositiveInt, DisclosedFragment, EvidenceRefV2,
-    PublicDisclosureRecord, ModelAttemptUsage, ProtocolError, canonical,
+    PublicDisclosureRecord, ModelAttemptUsage, ProtocolError, BusinessDecision, ProviderMessage, canonical,
 )
 from career_lab.storage.v2_store import ObjectWrite, references
 
@@ -40,6 +40,8 @@ class RoleReply(V2):
     status: Literal["completed", "unavailable", "blocked"]
     error_code: str | None = None
     context_hash: Hash
+    prompt_hash: Hash
+    prompt_messages: tuple[ProviderMessage, ...]
     history_revision: Hash
     as_of: VersionPoint
     model_revision: str
@@ -79,6 +81,16 @@ def read_role_memory(view, role_id):
     """Historical words prove what was said, never that the claim is world truth."""
     memories = []
     for record in sorted(view.objects, key=lambda x: (x.created_storage_revision, x.ref.object_id)):
+        if record.ref.kind == "business_decision":
+            decision = BusinessDecision.model_validate(record.content)
+            if decision.decider == role_id:
+                text = canonical({"record_kind": "authoritative_business_decision",
+                    "status": decision.status, "granted": decision.granted, "countered": decision.countered,
+                    "reason": decision.reason,
+                    "meaning": "这是已保存的决定。approved/accepted 的 granted 已随事务生效；初始材料中的资源数字不能覆盖此结果。"})
+                memories.append(DisclosedFragment(ref=EvidenceRefV2(**record.ref.model_dump(),
+                    observed_at_seq=view.state.business_seq), text=text, channel="memory", verification="verified"))
+            continue
         if record.ref.kind != "role_reply":
             continue
         reply = RoleReply.model_validate(record.content)
