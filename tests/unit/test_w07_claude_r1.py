@@ -7,7 +7,7 @@ import json
 import time
 import pytest
 
-from test_w07_pipeline import make_case,FakeModel,decision
+from test_w07_pipeline import make_case,FakeModel,decision,label_result
 from career_lab.contracts.v2.core import FileRef,Executor,digest,ProtocolError
 from career_lab.contracts.v2.data import AnnotationV2,DatasetRecordV2
 from career_lab.datasets.v3.common import json_bytes,sha
@@ -50,7 +50,7 @@ def test_set_order_consensus_uses_two_calls_and_preserves_raw(tmp_path):
         d=decision(request).model_dump(mode="json")
         ids=[x["id"] for x in request["model_input"]["evidence"]["candidate_evidence"]]
         d["evidence_ids"]=ids;d["acceptable_evidence_sets"]=[ids,list(reversed(ids))]
-        return LabelResult(json.dumps(d),"test-double","unit-test",{})
+        return label_result(request,json.dumps(d),"test-double","unit-test",{})
     out=batch.run(model);a=out["annotations"][0]
     assert len(calls)==2 and a.status=="accepted" and a.label_tier=="G2v" and a.adjudication_ref is None
     assert a.passes[0].raw_output!=a.passes[1].raw_output

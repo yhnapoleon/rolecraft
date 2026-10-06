@@ -1,0 +1,8 @@
+{
+  "logs_complete": false,
+  "question": "example",
+  "schema_version": 2,
+  "steps": [],
+  "task": "example",
+  "task_type": "trajectory_diagnosis"
+}

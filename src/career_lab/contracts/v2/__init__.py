@@ -6,3 +6,4 @@ from .data import *
 from .research import *
 from .requests import *
 from .legacy import *
+from .provider import *

@@ -1,0 +1,91 @@
+{
+  "$defs": {
+    "VersionPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "business_seq": {
+          "minimum": 0,
+          "title": "Business Seq",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "storage_revision": {
+          "minimum": 0,
+          "title": "Storage Revision",
+          "type": "integer"
+        },
+        "workspace_revision": {
+          "minimum": 0,
+          "title": "Workspace Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "business_seq",
+        "workspace_revision",
+        "storage_revision"
+      ],
+      "title": "VersionPoint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "capture_point": {
+      "$ref": "#/$defs/VersionPoint"
+    },
+    "origin": {
+      "enum": [
+        "fixture",
+        "env_run",
+        "human_session",
+        "public_aux",
+        "business_synth"
+      ],
+      "title": "Origin",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "session_id": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Session Id"
+    },
+    "snapshot_digest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Snapshot Digest",
+      "type": "string"
+    },
+    "source_digest": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Source Digest",
+      "type": "string"
+    }
+  },
+  "required": [
+    "snapshot_digest",
+    "source_digest",
+    "capture_point",
+    "origin"
+  ],
+  "title": "DatasetSnapshotMetadata",
+  "type": "object"
+}

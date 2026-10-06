@@ -1,8 +1,11 @@
 """Local module CLI integration using synthetic fixtures; no live API/model claims."""
 import json
 import subprocess
+from pathlib import Path
 import sys
 
+# Permit isolated integration invocation, independent of pytest collection order.
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'unit'))
 from test_w07_pipeline import make_case
 from career_lab.datasets.v3.common import json_bytes
 
@@ -16,10 +19,10 @@ def test_cli_export_label_and_validate_fixture_release(tmp_path):
     data = {"session_id": snapshot.session_id, "actor_id": snapshot.actor_id,
         "point": snapshot.point.model_dump(mode="json"), "source_digest": snapshot.source_digest, "origin": snapshot.origin,
         "objects": [{"ref": x.ref.model_dump(mode="json"), "text": x.text, "available_at": x.available_at.model_dump(mode="json"),
-                     "readers": list(x.readers), "usage": x.usage} for x in snapshot.objects]}
+                     "readers": list(x.readers), "usage": x.usage,"validity_known":x.validity_known,"valid_from_seq":x.valid_from_seq,"valid_until_seq":x.valid_until_seq} for x in snapshot.objects]}
     (tmp_path / "snapshot.json").write_bytes(json_bytes(data))
     (tmp_path / "units.json").write_bytes(json_bytes([{"family": u.family, "model_input": u.model_input.model_dump(mode="json"),
-        "lineage": u.lineage.model_dump(mode="json"), "provenance": u.provenance.model_dump(mode="json")} for u in units]))
+        "lineage": u.lineage.model_dump(mode="json"), "provenance": u.provenance.model_dump(mode="json"),"evaluation_time_known":u.evaluation_time_known} for u in units]))
     (tmp_path / "policies.json").write_bytes(json_bytes(policies))
     out = run("export", "--snapshot", tmp_path / "snapshot.json", "--units", tmp_path / "units.json", "--output", tmp_path / "export")
     assert out.returncode == 0, out.stdout + out.stderr

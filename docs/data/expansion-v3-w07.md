@@ -1,8 +1,8 @@
 # W07 数据与标注模块
 
-本轮处理2026-10-07 Claude审阅，仍是 **implementation_only / partial**。真实源码、模块测试和本地CLI已实现；输入为032发布的不可变W01草案，尚未通过正式W01/02/05联调。没有生产新场景数据、调用真实标注模型、开启新封存test或开展真人实验。测试中的provider、批次和release均明确为fixture，不计真实运行样本。
+本轮完成2026-10-07 c4数据契约迁移，仍是 **implementation_only / partial**。真实源码、模块测试和本地CLI已实现；输入为031固定的032 c4公共候选，尚未通过正式W01/02/05联调。没有生产新场景数据、调用真实标注模型、开启新封存test或开展真人实验。测试中的provider、批次和release均明确为fixture，不计真实运行样本。
 
-输入基准：`80cf1f6189cd25610d609f44283ff9668582d759`，合同 `draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e`。`contracts/v2`及`contracts/versioning.py`来自上游只读归档，**不属于W07交付**。原v1生成器、数据、freeze、接口及共享依赖不修改。
+输入基准：`80cf1f6189cd25610d609f44283ff9668582d759`，合同 `expansion-v3-81f4855d5cdf8c601c6b09d7b350b11dcda5ed156e2d801d8e542fa197718c85`（候选commit `b55b4c260867ba04ca8ecac7232c9f5d3bcbc41f`）。1066份公共源码来自上游不可变归档，完整继承且逐文件核hash，**不属于W07独占产出**。原v1生成器、数据、freeze、接口及共享依赖不修改。
 
 ## 已实现的处理过程
 
@@ -41,9 +41,9 @@
 
 ## 标注调用与恢复
 
-`AnnotationBatch.create`必须显式提供source_root和policies，建立不可覆盖的批次；冻结source-policy.json，批次只存获准记录，quarantined只留记录ID和原因。Python调用`batch.run(executor)`，executor接收hash绑定的请求并返回`LabelResult(raw_output, model_revision, provider, usage)`。提供的OpenAICompatibleExecutor支持注入httpx client/明确endpoint/model/key；真实调用前由集成人安排资源和授权。本轮仅以明确的test double和MockTransport测试此适配器。
+`AnnotationBatch.create`必须显式提供source_root和policies，建立不可覆盖的批次；冻结source-policy.json，批次只存获准记录，quarantined只留记录ID和原因。Python调用`batch.run(executor)`，executor接收hash绑定的请求并返回`LabelResult(raw_output, model_revision, provider, usage, invocation_id, context_id, independence_method)`。提供的OpenAICompatibleExecutor支持注入httpx client/明确endpoint/model/key；真实调用前由集成人安排资源和授权。本轮仅以明确的test double和MockTransport测试此适配器。
 
-离线`issue`输出与API相同的model_input、原input_hash、重排后payload_hash、request_hash和真实请求ID。`receive`要求原样回传这些签收字段、raw_output、真实model_revision/provider及已知usage，并回传batch_id/source_policy_hash/output_schema_hash。这里的hash签收不等于密码学身份签名，也不自动证明真人参与。成功回执同内容重放；改内容冲突。原结果文件及SQLite记录互相核验，漂移拒绝。
+离线`issue`输出与API相同的model_input、原input_hash、重排后payload_hash、request_hash和真实请求ID。`receive`要求原样回传这些签收字段、raw_output、真实model_revision/provider、实际invocation_id/context_id/fresh_context及已知usage，并回传batch_id/source_policy_hash/output_schema_hash。这里的hash签收不等于密码学身份签名，也不自动证明真人参与。成功回执同内容重放；改内容冲突。原结果文件及SQLite记录互相核验，漂移拒绝。
 
 网络请求前先记录dispatched。已经收到但缺model_revision/provider的结果保留raw/usage并标failed，可以正常retry_failed；不会冒充未知发送。进程在发送后中断时，恢复会报告`dispatch_outcome_unknown`，不会静默重新发出可能收费的请求。已知失败可通过`retry_failed=True`或离线`--retry-failed`显式补跑；未知结果需核对provider回执再由程序调用者明确选择`retry_unknown=True`。本地幂等不能保证远端provider只执行一次。每次尝试保留，不隐藏失败成本；未知成本不记为零。
 
@@ -51,7 +51,7 @@
 
 - W01正式冻结、W02真实运行及隔离候选副本、W03/W05作品/提交/修订/反馈一致读取；现在的抽象端口和fixture不满足W07-AC11。
 - 至少一次真实API或真实离线Agent双遍/裁决、签收与恢复；本轮test double不能满足真人或模型实调验收。
-- 草案AnnotationV2要求两次evidence_order不同。零/单证据无法置换，轨迹又不能为了置换破坏时序；当前返回明确阻塞并保持pending。最小建议是新增或放宽独立上下文策略，并保留实际请求、prompt版本和不能置换的理由；W07不擅改契约。
+- 真实模型双遍/裁决仍未执行。c4下已实现invocation_id、context_id和fresh_context回执；零/单证据保留顺序，轨迹保留时序，记录不可置换的原因，普通证据第二遍置换。离线执行者必须回传实际身份，单靠请求中的建议context_id不构成真实执行证明。
 - W11最终结构及split manifest、统一test campaign。当前label和publication默认拒绝test；不能将此开发实现称为封存测试发布完成。由隔离上游提供已授权结构/评测端后再接入。
 - public_aux需URL、访问时间、许可、原文hash和approved审查；business_synth需authorization_ref；human_session需consent_ref。未获得的新部门/真人来源不填数字。
 
@@ -87,4 +87,14 @@ r1阶段曾将内部证据协议升级为v2；本轮继续升级为v3。v1/v2目
 
 批次冻结实际output schema，不因后续schema说明文字变化重构历史请求。HTTP失败保留状态、脱敏正文、request_id和已知usage；编程/数据错误不得被包装成模型一致。质量CLI返回具体record/原因。
 
-**当前共享阻塞：** 登记草稿的DatasetRecordV2.bucket尚无fixture。fixture-origin现在明确返回fixture_bucket_contract_unavailable，不再写env_run。032提供不可变扩展契约并由031update-context后，才能恢复真正的fixture导出和W07→W08合法fixture release样例。已有纯模块测试的模拟env输入不计真实env_run、正式数据或这条跨包验收。
+## c4迁移与跨包样例
+
+发布与回读均使用公共`validate_record_annotation`及`metadata_projection`；每条DatasetMetadataV2仅带所属snapshot，历史as_of与capture_point独立。需证据的正标签拒绝任何空acceptable集合，包括非空与空混合；保留明确INSUFFICIENT/NOT_APPLICABLE空目标及不可评边界。发布端严校验继续保留，pending不计accepted/G1。
+
+`fixture_pipeline`用真实export_snapshot、G0数值验证、publish_exports和audit_release生成12条明确fixture：6 train、6 dev，各自独立来源文件，包含历史/当前时点。来源与结构均为合成，没有真人记录、实际场景执行或封存test。W08已直接读取该发布hash完成CPU训练、预测、模型保存和重载；只能证明跨包流程可运行。
+
+```sh
+.venv/bin/python -m career_lab.datasets.v3.fixture_pipeline --output <new-output-dir> --workspace .
+```
+
+输出publication.json提供发布/分区hash与producer commit，runtime-identity.json保存实际源码身份。新交付绑定各自commit，旧回执与失败原件保持不变。输入候选未获正式验收，真实业务源适配、真实标注批次、W11结构及产品QA仍待后续实现与独立审阅。rule_context/动作参数的深层白名单公共投影尚待接线，现有schema加黑名单不能作为完整泄漏证明。

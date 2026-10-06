@@ -1,0 +1,71 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "agent_label": {
+      "title": "Agent Label",
+      "type": "string"
+    },
+    "allowed_actions": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Allowed Actions"
+    },
+    "allowed_objects": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Allowed Objects"
+    },
+    "capabilities": {
+      "default": [
+        "read"
+      ],
+      "items": {
+        "enum": [
+          "read",
+          "act",
+          "submit"
+        ],
+        "type": "string"
+      },
+      "title": "Capabilities",
+      "type": "array"
+    },
+    "expires_at": {
+      "format": "date-time",
+      "title": "Expires At",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "expires_at",
+    "agent_label"
+  ],
+  "title": "DelegationInput",
+  "type": "object"
+}

@@ -1,0 +1,77 @@
+{
+  "$defs": {
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "evaluation": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "evidence_revision": {
+      "default": "evidence-v2",
+      "title": "Evidence Revision",
+      "type": "string"
+    },
+    "rubric_revision": {
+      "default": "rubric-v2",
+      "title": "Rubric Revision",
+      "type": "string"
+    },
+    "rules_revision": {
+      "const": "rules-v4",
+      "default": "rules-v4",
+      "title": "Rules Revision",
+      "type": "string"
+    },
+    "runtime": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "scenario": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "scenario",
+    "runtime",
+    "evaluation"
+  ],
+  "title": "SessionBindings",
+  "type": "object"
+}

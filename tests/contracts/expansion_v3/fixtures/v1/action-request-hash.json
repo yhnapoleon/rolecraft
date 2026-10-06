@@ -1,0 +1,1 @@
+{"canonical":"{\"action\":{\"actor_id\":\"learner\",\"arguments\":{\"material_id\":\"brief\"},\"expected_version\":0,\"id\":\"baseline-a\",\"idempotency_key\":\"baseline-k\",\"tool\":\"read_material\"},\"object\":null}","sha256":"29c669fb11bc9cc8e4a56adca4aed3e2b7c25378c907a2292b96b43b8b4c2209"}

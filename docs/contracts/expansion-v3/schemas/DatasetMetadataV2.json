@@ -1,0 +1,518 @@
+{
+  "$defs": {
+    "DatasetSnapshotMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "capture_point": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "origin": {
+          "enum": [
+            "fixture",
+            "env_run",
+            "human_session",
+            "public_aux",
+            "business_synth"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "snapshot_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Snapshot Digest",
+          "type": "string"
+        },
+        "source_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "snapshot_digest",
+        "source_digest",
+        "capture_point",
+        "origin"
+      ],
+      "title": "DatasetSnapshotMetadata",
+      "type": "object"
+    },
+    "Executor": {
+      "additionalProperties": false,
+      "properties": {
+        "delegation_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delegation Id"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "human",
+            "external_agent",
+            "reference_agent",
+            "system"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "Executor",
+      "type": "object"
+    },
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    },
+    "Lineage": {
+      "additionalProperties": false,
+      "properties": {
+        "branch_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Branch Id"
+        },
+        "candidate_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Candidate Id"
+        },
+        "component_id": {
+          "minLength": 1,
+          "title": "Component Id",
+          "type": "string"
+        },
+        "decision_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Decision Id"
+        },
+        "derivation_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Derivation Ids",
+          "type": "array"
+        },
+        "fact_root_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Fact Root Ids",
+          "type": "array"
+        },
+        "run_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Run Id"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Session Id"
+        },
+        "source_record_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Record Ids",
+          "type": "array"
+        },
+        "structure_id": {
+          "minLength": 1,
+          "title": "Structure Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "structure_id",
+        "component_id"
+      ],
+      "title": "Lineage",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_sources": {
+          "items": {
+            "$ref": "#/$defs/FileRef"
+          },
+          "title": "Actual Sources",
+          "type": "array"
+        },
+        "captured_at": {
+          "format": "date-time",
+          "title": "Captured At",
+          "type": "string"
+        },
+        "command": {
+          "title": "Command",
+          "type": "string"
+        },
+        "executor": {
+          "$ref": "#/$defs/Executor"
+        },
+        "license": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "License"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source": {
+          "$ref": "#/$defs/SourceIdentity"
+        },
+        "transformations": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Transformations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "command",
+        "source",
+        "executor",
+        "actual_sources",
+        "captured_at"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "SourceIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "base_commit": {
+          "pattern": "^[0-9a-f]{40}$",
+          "title": "Base Commit",
+          "type": "string"
+        },
+        "dependency_locks": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FileRef"
+          },
+          "title": "Dependency Locks",
+          "type": "array"
+        },
+        "overlay": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FileRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_digest": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Source Digest",
+          "type": "string"
+        }
+      },
+      "required": [
+        "base_commit",
+        "source_digest"
+      ],
+      "title": "SourceIdentity",
+      "type": "object"
+    },
+    "VersionPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "business_seq": {
+          "minimum": 0,
+          "title": "Business Seq",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "storage_revision": {
+          "minimum": 0,
+          "title": "Storage Revision",
+          "type": "integer"
+        },
+        "workspace_revision": {
+          "minimum": 0,
+          "title": "Workspace Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "business_seq",
+        "workspace_revision",
+        "storage_revision"
+      ],
+      "title": "VersionPoint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "A sidecar for audit/stratification. Never part of model_input(record).",
+  "properties": {
+    "accepted_label_tier": {
+      "anyOf": [
+        {
+          "enum": [
+            "G0",
+            "G1",
+            "G2",
+            "G2v"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Accepted Label Tier"
+    },
+    "annotation_status": {
+      "enum": [
+        "unloaded",
+        "pending",
+        "accepted",
+        "disputed",
+        "failed"
+      ],
+      "title": "Annotation Status",
+      "type": "string"
+    },
+    "bucket": {
+      "enum": [
+        "fixture",
+        "env_run",
+        "human_session",
+        "public_aux",
+        "business_synth"
+      ],
+      "title": "Bucket",
+      "type": "string"
+    },
+    "capture_point": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "input_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Input Hash",
+      "type": "string"
+    },
+    "language": {
+      "minLength": 1,
+      "title": "Language",
+      "type": "string"
+    },
+    "lineage": {
+      "$ref": "#/$defs/Lineage"
+    },
+    "metadata_only": {
+      "const": true,
+      "default": true,
+      "title": "Metadata Only",
+      "type": "boolean"
+    },
+    "provenance": {
+      "$ref": "#/$defs/Provenance"
+    },
+    "record_id": {
+      "minLength": 1,
+      "title": "Record Id",
+      "type": "string"
+    },
+    "requested_label_tier": {
+      "enum": [
+        "G0",
+        "G1",
+        "G2",
+        "G2v"
+      ],
+      "title": "Requested Label Tier",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_snapshots": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/DatasetSnapshotMetadata"
+      },
+      "title": "Source Snapshots",
+      "type": "array"
+    },
+    "split": {
+      "enum": [
+        "train",
+        "dev",
+        "test",
+        "regression"
+      ],
+      "title": "Split",
+      "type": "string"
+    }
+  },
+  "required": [
+    "record_id",
+    "input_hash",
+    "language",
+    "bucket",
+    "split",
+    "lineage",
+    "provenance",
+    "requested_label_tier",
+    "annotation_status"
+  ],
+  "title": "DatasetMetadataV2",
+  "type": "object"
+}

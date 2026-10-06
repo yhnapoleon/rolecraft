@@ -26,6 +26,9 @@ class LabelResult:
     model_revision: str | None
     provider: str
     usage: dict
+    invocation_id: str | None = None
+    context_id: str | None = None
+    independence_method: str | None = None
 
 
 class ProviderHTTPFailure(RuntimeError):
@@ -62,7 +65,9 @@ class OpenAICompatibleExecutor:
                                       body.get("model") if isinstance(body,dict) else None)
         body = response.json()
         return LabelResult(body["choices"][0]["message"]["content"], body.get("model"),
-                           "openai-compatible", body.get("usage") or {})
+                           "openai-compatible", body.get("usage") or {},
+                           invocation_id=body.get("id") or "client-http:"+request["request_id"],
+                           context_id=request["requested_context_id"],independence_method="fresh_context")
 
 
 class AnnotationBatch:
@@ -247,7 +252,8 @@ class AnnotationBatch:
                 try:
                     response = executor(request)
                     receipt.update(raw_output=response.raw_output, model_revision=response.model_revision,
-                                   provider=response.provider, usage=response.usage)
+                                   provider=response.provider, usage=response.usage,invocation_id=response.invocation_id,
+                                   context_id=response.context_id,independence_method=response.independence_method)
                 except ProviderHTTPFailure as exc:
                     receipt.update(raw_output=exc.details["response_body"],error_code=f"provider_http_{exc.details['http_status']}",
                         provider="openai-compatible",model_revision=exc.model_revision,usage=exc.usage,error_details=exc.details)

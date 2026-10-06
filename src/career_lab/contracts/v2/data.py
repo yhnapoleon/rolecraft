@@ -42,6 +42,7 @@ class CriterionInput(V2):
         return self
 
 class ObservedStep(V2):
+    request_id: Identifier
     id: Identifier
     action: str
     as_of: VersionPoint
@@ -79,7 +80,7 @@ class DatasetRecordV2(V2):
     record_id: Identifier
     family: Literal['relation','criterion','trajectory','acquisition']
     label_tier: Literal['G0','G1','G2','G2v']
-    bucket: Literal['env_run','human_session','public_aux','business_synth']
+    bucket: Literal['fixture','env_run','human_session','public_aux','business_synth']
     language: Identifier
     lineage: Lineage
     split: Literal['train','dev','test','regression']
@@ -92,6 +93,7 @@ class DatasetRecordV2(V2):
         if self.model_input.task_type!=FAMILY_TASK[self.family]:raise ValueError('family/task_type mismatch')
         if digest(self.model_input)!=self.input_hash:raise ValueError('input hash mismatch')
         if self.label_ref.path.split('/')[0]!='labels':raise ValueError('labels must live in separate labels/ directory')
+        if 'fixture:not-business-run' in self.provenance.transformations and self.bucket!='fixture':raise ValueError('fixture provenance requires fixture bucket')
         return self
 
 def model_input(record: DatasetRecordV2) -> dict:
@@ -114,6 +116,11 @@ class AnnotationDecision(V2):
         return self
 
 class AnnotationPass(V2):
+    invocation_id: Identifier | None = None
+    context_id: Identifier | None = None
+    independence_method: Literal['fresh_context','isolated_human','deterministic_verifier'] | None = None
+    independence_reason: str | None = None
+    evidence_order_mode: Literal['permutable','semantic_order','singleton_or_empty'] = 'permutable'
     id: Identifier
     executor: Executor
     status: Literal['pending','success','failed','empty']
@@ -125,7 +132,8 @@ class AnnotationPass(V2):
     decision: AnnotationDecision | None = None
     @model_validator(mode='after')
     def result(self):
-        if self.status=='success' and (self.decision is None or not self.raw_output):raise ValueError('successful pass needs raw output and parsed result')
+        if self.status=='success' and (self.decision is None or not self.raw_output or not self.invocation_id):raise ValueError('successful pass needs raw output and parsed result')
+        if len(set(self.evidence_order))!=len(self.evidence_order):raise ValueError('duplicate evidence order entry')
         if self.status!='success' and self.decision is not None:raise ValueError('failed pass cannot supply a label')
         return self
 
@@ -148,19 +156,32 @@ class AnnotationV2(V2):
             return self
         if self.final is None:raise ValueError('accepted annotation needs decision')
         successful=[p for p in self.passes if p.status=='success']
+        if len({p.invocation_id for p in successful})!=len(successful):raise ValueError('duplicate invocation identity')
+        if any(p.decision.task_type!=self.final.task_type for p in successful):raise ValueError('annotation task mismatch')
         if self.label_tier=='G0' and not self.verifier_id:raise ValueError('G0 needs deterministic verifier')
         if self.label_tier=='G1':
             humans={p.executor.id for p in successful if p.executor.kind=='human'}
             if len(humans)<2 or not self.adjudication_ref:raise ValueError('new G1 requires two independent humans and adjudication')
         if self.label_tier in {'G2','G2v'}:
             if not successful or any(not p.model_revision or not p.prompt_revision for p in successful):raise ValueError('model label needs actual model/prompt identities')
+        if self.label_tier=='G2':
+            if len(successful)!=1 or decision_key(self.final)!=decision_key(successful[0].decision):raise ValueError('G2 final must match its single successful model pass')
         if self.label_tier=='G2v':
             if len(successful)<2:raise ValueError('G2v needs two successful independent passes')
             a,b=successful[:2]
-            if a.prompt_revision==b.prompt_revision or a.evidence_order==b.evidence_order:raise ValueError('G2v needs distinct prompt revisions and evidence orders')
-            if a.decision!=b.decision:
-                if len(successful)<3 or not self.adjudication_ref or self.final!=successful[2].decision:raise ValueError('disagreement requires actual third-pass adjudication')
-            elif self.final!=a.decision:raise ValueError('consensus label differs')
+            if a.prompt_revision==b.prompt_revision:raise ValueError('G2v needs distinct prompt revisions')
+            if not a.context_id or not b.context_id or a.context_id==b.context_id or any(p.independence_method!='fresh_context' for p in (a,b)):raise ValueError('G2v needs separate actual contexts')
+            if set(a.evidence_order)!=set(b.evidence_order):raise ValueError('G2v passes must receive the same evidence set')
+            if a.evidence_order_mode!=b.evidence_order_mode:raise ValueError('inconsistent evidence order policy')
+            mode=a.evidence_order_mode
+            if len(a.evidence_order)<2 and mode!='singleton_or_empty':raise ValueError('zero/single evidence must not fabricate permutation')
+            if mode=='singleton_or_empty' and len(a.evidence_order)>1:raise ValueError('not a singleton evidence list')
+            if mode=='permutable' and a.evidence_order==b.evidence_order:raise ValueError('permutable evidence requires different order')
+            if mode!='permutable':
+                if a.evidence_order!=b.evidence_order or not a.independence_reason or not b.independence_reason:raise ValueError('preserve semantic order with an explicit independence reason')
+            if decision_key(a.decision)!=decision_key(b.decision):
+                if len(successful)<3 or not self.adjudication_ref or decision_key(self.final)!=decision_key(successful[2].decision):raise ValueError('disagreement requires actual third-pass adjudication')
+            elif decision_key(self.final)!=decision_key(a.decision):raise ValueError('consensus label differs')
         return self
 
 class LegacyAnnotation(V2):
@@ -231,3 +252,85 @@ def require_confirmatory(campaign: TestCampaign, candidate: CampaignCandidate, s
 
 def require_training_split(split: str):
     if split not in {'train','dev'}:raise ProtocolError('training_split_forbidden',status=403)
+
+
+def decision_key(decision: AnnotationDecision):
+    raw=decision.model_dump(mode='json')
+    raw['evidence_ids']=sorted(raw['evidence_ids'])
+    raw['acceptable_evidence_sets']=sorted(sorted(set(x)) for x in raw['acceptable_evidence_sets'])
+    return digest(raw)
+
+
+class DatasetSnapshotMetadata(V2):
+    snapshot_digest: Hash
+    source_digest: Hash
+    session_id: Identifier | None = None
+    capture_point: VersionPoint
+    origin: Literal['fixture','env_run','human_session','public_aux','business_synth']
+
+class DatasetMetadataV2(V2):
+    """A sidecar for audit/stratification. Never part of model_input(record)."""
+    record_id: Identifier
+    input_hash: Hash
+    language: Identifier
+    bucket: Literal['fixture','env_run','human_session','public_aux','business_synth']
+    split: Literal['train','dev','test','regression']
+    lineage: Lineage
+    provenance: Provenance
+    requested_label_tier: Literal['G0','G1','G2','G2v']
+    annotation_status: Literal['unloaded','pending','accepted','disputed','failed']
+    accepted_label_tier: Literal['G0','G1','G2','G2v'] | None = None
+    capture_point: VersionPoint | None = None
+    source_snapshots: tuple[DatasetSnapshotMetadata,...] = ()
+    metadata_only: Literal[True] = True
+    @model_validator(mode='after')
+    def label_state(self):
+        if (self.annotation_status=='accepted')!=(self.accepted_label_tier is not None):raise ValueError('accepted tier requires accepted annotation')
+        if self.accepted_label_tier is not None and self.accepted_label_tier!=self.requested_label_tier:raise ValueError('accepted tier mismatch')
+        if len({s.snapshot_digest for s in self.source_snapshots})!=len(self.source_snapshots):raise ValueError('duplicate snapshot metadata')
+        if self.bucket=='fixture' and any(s.origin!='fixture' for s in self.source_snapshots):raise ValueError('fixture metadata cannot claim business snapshot')
+        if self.bucket!='fixture' and any(s.origin=='fixture' for s in self.source_snapshots):raise ValueError('fixture snapshot requires fixture bucket')
+        return self
+
+
+def validate_record_annotation(record: DatasetRecordV2, annotation: AnnotationV2, *, require_accepted=False):
+    """Bind separate artifacts; tier alone is never proof of acceptance.
+
+    File hashes, real invocation/human identity and source truth still require the
+    producer's artifact verifier. This function checks the parsed contract pair.
+    """
+    record=DatasetRecordV2.model_validate(record.model_dump(mode='json'))
+    annotation=AnnotationV2.model_validate(annotation.model_dump(mode='json'))
+    if (record.record_id,record.input_hash,record.label_tier)!=(annotation.record_id,annotation.input_hash,annotation.label_tier):raise ProtocolError('annotation_record_mismatch',status=409)
+    if annotation.final is not None and annotation.final.task_type!=FAMILY_TASK[record.family]:raise ProtocolError('annotation_task_mismatch',status=409)
+    if require_accepted and annotation.status!='accepted':raise ProtocolError('annotation_not_accepted',status=409)
+    if annotation.status=='accepted' and record.family in {'relation','criterion'}:
+        package=record.model_input.evidence
+        context=package.rule_context.get('evidence_time_context')
+        if not isinstance(context,dict) or context.get('policy')!='historical-evidence-time-v1' or context.get('status')!='known':raise ProtocolError('temporal_scope_undetermined',status=409)
+        if context.get('reference_seq')!=package.as_of.business_seq:raise ProtocolError('temporal_reference_mismatch',status=409)
+        ids={c.id for c in package.candidate_evidence};known=context.get('validity_known_ids')
+        if not isinstance(known,list) or len(known)!=len(set(known)) or set(known)!=ids:raise ProtocolError('evidence_validity_undetermined',status=409)
+        at=package.as_of.business_seq
+        legal={c.id for c in package.candidate_evidence if c.ref.observed_at_seq<=at and c.ref.valid_from_seq<=at and (c.ref.valid_until_seq is None or at<c.ref.valid_until_seq)}
+        final=annotation.final
+        if set(final.evidence_ids)-legal or any(set(group)-legal for group in final.acceptable_evidence_sets):raise ProtocolError('annotation_evidence_not_applicable_at_reference_time',status=409)
+        if final.evidence_evaluable and not final.acceptable_evidence_sets:raise ProtocolError('annotation_no_legal_joint_target',status=409)
+        if final.evidence_evaluable and final.label not in {'INSUFFICIENT','NOT_APPLICABLE'} and any(not group for group in final.acceptable_evidence_sets):raise ProtocolError('unsupported_empty_gold_evidence',status=409)
+    return annotation
+
+
+def metadata_projection(record: DatasetRecordV2, annotation: AnnotationV2 | None = None, *, capture_point=None, source_snapshots=()):
+    """Return safe audit metadata separately from the unchanged model payload."""
+    record=DatasetRecordV2.model_validate(record.model_dump(mode='json'))
+    annotation=validate_record_annotation(record,annotation) if annotation is not None else None
+    at=record.model_input.evidence.as_of if record.family in {'relation','criterion'} else record.model_input.as_of if record.family=='acquisition' else None
+    if capture_point is not None:
+        capture_point=VersionPoint.model_validate(capture_point.model_dump(mode='json') if hasattr(capture_point,'model_dump') else capture_point)
+        if at is not None and any(getattr(at,key)>getattr(capture_point,key) for key in ('business_seq','workspace_revision','storage_revision')):raise ProtocolError('capture_precedes_reference',status=409)
+    snapshots=tuple(DatasetSnapshotMetadata.model_validate(x.model_dump(mode='json') if hasattr(x,'model_dump') else x) for x in source_snapshots)
+    for snapshot in snapshots:
+        if at is not None and any(getattr(at,key)>getattr(snapshot.capture_point,key) for key in ('business_seq','workspace_revision','storage_revision')):raise ProtocolError('capture_precedes_reference',status=409)
+        if snapshot.source_digest!=record.provenance.source.source_digest:raise ProtocolError('snapshot_source_mismatch',status=409)
+        if record.lineage.session_id is not None and snapshot.session_id!=record.lineage.session_id:raise ProtocolError('snapshot_session_mismatch',status=409)
+    return DatasetMetadataV2(record_id=record.record_id,input_hash=record.input_hash,language=record.language,bucket=record.bucket,split=record.split,lineage=record.lineage,provenance=record.provenance,requested_label_tier=record.label_tier,annotation_status=annotation.status if annotation else 'unloaded',accepted_label_tier=annotation.label_tier if annotation and annotation.status=='accepted' else None,capture_point=capture_point,source_snapshots=snapshots)

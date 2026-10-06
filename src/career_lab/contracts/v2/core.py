@@ -98,6 +98,7 @@ class AuthContext(V2):
     capabilities: tuple[Literal['read', 'act', 'submit', 'approve', 'delegate', 'research'], ...]
     allowed_actions: tuple[str, ...] | None = None
     allowed_objects: tuple[str, ...] | None = None
+    create_under_tasks: tuple[str,...] = ()
     expires_at: Timestamp | None = None
     credential_id: Identifier
 
@@ -109,6 +110,7 @@ class DelegationGrant(V2):
     capabilities: tuple[Literal['read', 'act', 'submit'], ...] = ('read',)
     allowed_actions: tuple[str, ...] | None = None
     allowed_objects: tuple[str, ...] | None = None
+    create_under_tasks: tuple[str,...] = ()
     expires_at: Timestamp
     revoked: bool = False
 
@@ -118,6 +120,7 @@ class VersionPoint(V2):
     storage_revision: NonNegativeInt
 
 class Command(V2):
+    schema_version: Literal[2]
     request_id: Identifier
     expected_version: NonNegativeInt
     expected_workspace_revision: NonNegativeInt
@@ -154,8 +157,10 @@ class Budget(V2):
 class ModelAttemptUsage(V2):
     request_id: Identifier
     attempt_id: Identifier
-    provider: Identifier
-    model_revision: Identifier
+    expected_provider: Identifier | None = None
+    expected_model_revision: Identifier | None = None
+    provider: Identifier | None
+    model_revision: Identifier | None
     status: Literal['success', 'failed', 'timeout', 'unknown']
     input_tokens: NonNegativeInt | None = None
     output_tokens: NonNegativeInt | None = None
@@ -167,3 +172,21 @@ class ModelAttemptUsage(V2):
         if self.usage_known and (self.input_tokens is None or self.output_tokens is None):
             raise ValueError('known usage requires token counts')
         return self
+
+
+class ActualConsumption(V2):
+    model_attempt_count: NonNegativeInt = 0
+    actions: NonNegativeInt = 0
+    input_tokens: NonNegativeInt | None = None
+    output_tokens: NonNegativeInt | None = None
+    cost: Annotated[float,Field(ge=0)] | None = None
+    wall_seconds: Annotated[float,Field(ge=0)] = 0
+    usage_complete: bool = False
+    cost_complete: bool = False
+
+
+class ExternalReference(V2):
+    """Immutable scenario-file reference; authorization is rechecked by the provider."""
+    ref: ObjectRef
+    source: FileRef
+    content_hash: Hash

@@ -1,0 +1,10 @@
+{
+  "business_seq": 1,
+  "config_version": 1,
+  "cycle_id": "example",
+  "schema_version": 2,
+  "session_id": "example",
+  "status": "active",
+  "storage_revision": 1,
+  "workspace_revision": 1
+}

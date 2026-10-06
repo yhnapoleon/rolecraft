@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "id": "w05-not-installed",
+  "revision": "pending",
+  "rubric": {
+    "schema_version": 2,
+    "path": "rubric-reference.json",
+    "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
+    "media_type": "application/json"
+  },
+  "rules": {
+    "schema_version": 2,
+    "path": "rubric-reference.json",
+    "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
+    "media_type": "application/json"
+  },
+  "graders": [],
+  "calibration": null,
+  "model": null,
+  "protocol": {
+    "schema_version": 2,
+    "path": "runtime/evaluation-protocol.json",
+    "sha256": "b12fc508cc9c336a0b72e3c747c6cc8b66258bebaf01689658a912de56c7c5af",
+    "media_type": "application/json"
+  },
+  "mode": "advisory",
+  "adoption_record": null
+}

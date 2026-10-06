@@ -43,3 +43,5 @@ def validate_time_citations(item,decision):
         raise ProtocolError("annotation_evidence_not_applicable_at_reference_time")
     if decision.evidence_evaluable and not alternatives:
         raise ProtocolError("annotation_no_legal_joint_target")
+    if decision.evidence_evaluable and decision.label in {"SUPPORTED","CONTRADICTED","MET","PARTIAL","NOT_MET"}:
+        if not cited or any(not group for group in alternatives):raise ProtocolError("positive_label_requires_nonempty_joint_evidence")

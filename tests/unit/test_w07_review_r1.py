@@ -128,7 +128,7 @@ def test_r2_audit_rechecks_semantics_after_outer_hashes_are_rebuilt(tmp_path, ch
         path.write_text('{}\n')
     elif change == "rejected_policy":
         reviews = json.loads((root / "source-reviews.json").read_text())
-        reviews["source.json"]["review_status"] = "rejected"
+        reviews[result.records[0].record_id]["source.json"]["review_status"] = "rejected"
         (root / "source-reviews.json").write_bytes(json_bytes(reviews))
     else:
         if change == "missing_identity":
@@ -212,7 +212,7 @@ def test_r5_received_missing_identity_is_failed_preserved_and_retryable(tmp_path
 
 
 def test_r4_mixed_batch_freezes_only_authorized_record_bodies(tmp_path):
-    snapshot, units, policies = make_case(tmp_path)
+    snapshot, units, policies = make_case(tmp_path, origin="env_run")
     result = export_snapshot(snapshot, units[:2])
     unauthorized = result.records[0].model_copy(update={"bucket": "human_session"})
     batch = AnnotationBatch.create(tmp_path / "batch", [unauthorized, result.records[1]], annotation_version="v1",

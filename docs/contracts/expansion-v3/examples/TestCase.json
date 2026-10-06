@@ -1,0 +1,11 @@
+{
+  "declared_category": null,
+  "declared_expected": null,
+  "id": "example",
+  "intent": "",
+  "query": "example",
+  "refs": [],
+  "revision": 1,
+  "run": null,
+  "schema_version": 2
+}

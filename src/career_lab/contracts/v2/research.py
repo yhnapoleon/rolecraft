@@ -1,7 +1,7 @@
 from typing import Literal
 from pydantic import Field, JsonValue, model_validator
 from .core import *
-from .world import Observation, SessionBindings, WorldStateV2
+from .world import Observation, SessionBindings, WorldStateV2, PublicState, PublicEvent, JobRefreshRecord
 from .data import Lineage, ActionProposal, ObservedStep
 
 class RuntimeBundle(V2):
@@ -59,6 +59,32 @@ class ModelBundle(V2):
     split_manifest: FileRef
     source: SourceIdentity
     mode: Literal['advisory'] = 'advisory'
+    @model_validator(mode='after')
+    def label_order(self):
+        validate_labels(self.task_type,self.labels)
+        return self
+
+class ModelPrediction(V2):
+    task_type: Literal['relation','criterion','trajectory_diagnosis','acquisition']
+    input_hash: Hash
+    model_revision: Identifier
+    status: Literal['success','unavailable','invalid','timeout']
+    labels: tuple[str,...]
+    probabilities: tuple[Annotated[float,Field(ge=0,le=1)],...] | None = None
+    evidence_ids: tuple[str,...] = ()
+    error_code: str | None = None
+    @model_validator(mode='after')
+    def probability_space(self):
+        validate_labels(self.task_type,self.labels)
+        if self.status=='success':
+            if self.probabilities is None or len(self.probabilities)!=len(self.labels) or abs(sum(self.probabilities)-1)>1e-6:
+                raise ValueError('probabilities must align with ordered task labels and sum to one')
+        elif self.probabilities is not None:raise ValueError('unavailable prediction cannot invent probabilities')
+        return self
+
+def validate_labels(task_type,labels):
+    spaces={'relation':{'SUPPORTED','CONTRADICTED','INSUFFICIENT'},'criterion':{'MET','PARTIAL','NOT_MET','INSUFFICIENT','NOT_APPLICABLE'},'trajectory_diagnosis':{'diagnosed','no_issue','insufficient'},'acquisition':{'effective','ineffective','undetermined'}}
+    if len(labels)!=len(set(labels)) or set(labels)!=spaces[task_type]:raise ValueError('model labels do not match task type')
 
 class RunManifest(V2):
     id: Identifier
@@ -76,6 +102,12 @@ class RunManifest(V2):
     lineage: Lineage
     attempts: tuple[ModelAttemptUsage, ...] = ()
     campaign: FileRef | None = None
+    policy: FileRef | None = None
+    tools_schema_digest: Hash | None = None
+    started_at: Timestamp | None = None
+    ended_at: Timestamp | None = None
+    status: Literal['created','running','completed','failed','cancelled','blocked'] = 'created'
+    actual_consumption: ActualConsumption | None = None
 
 class BeliefFact(V2):
     id: Identifier
@@ -209,6 +241,7 @@ class BranchManifest(V2):
         return self
 
 class StoredObject(V2):
+    creator: Executor | None = None
     ref: ObjectRef
     content: dict[str, JsonValue]
     visible_to: tuple[str, ...]
@@ -227,6 +260,7 @@ class StoredEvent(V2):
     data: dict[str, JsonValue] = {}
 
 class SnapshotExport(V2):
+    external_references: tuple[ExternalReference,...] = ()
     id: Identifier
     session_id: Identifier
     bindings: SessionBindings
@@ -242,6 +276,8 @@ class SnapshotExport(V2):
         return self
 
 class RestoreResult(V2):
+    parent_session_id: Identifier
+    replayed: bool = False
     session_id: Identifier
     source_snapshot_hash: Hash
     id_map: dict[str,str]
@@ -275,3 +311,63 @@ class RegressionReport(V2):
     unresolved: tuple[str, ...]
     reviewer: Executor
     input_hash: Hash
+
+
+class StepResult(V2):
+    effect_request_id: Identifier | None = None
+    request_id: Identifier
+    status: Literal['success','failed','pending']
+    executor: Executor
+    observation: Observation | None = None
+    step: ObservedStep | None = None
+    boundary: ActionBoundary | None = None
+    job_id: Identifier | None = None
+    error_code: Identifier | None = None
+    replayed: bool = False
+    model_attempts: tuple[ModelAttemptUsage,...] = ()
+    actual_consumption: ActualConsumption
+    @model_validator(mode='after')
+    def outcome(self):
+        if self.status=='pending' and self.job_id is None:raise ValueError('pending requires job id')
+        if self.status=='failed' and self.error_code is None:raise ValueError('failure requires error code')
+        if self.status=='success' and (self.observation is None or self.step is None):raise ValueError('success requires actual observation and step')
+        if self.status=='success':
+            if self.step.as_of!=self.observation.as_of or self.observation.actor!=self.executor:raise ValueError('step observation/executor mismatch')
+            if self.boundary is not None and (self.boundary.end_seq!=self.observation.as_of.business_seq or self.boundary.storage_revision!=self.observation.as_of.storage_revision):raise ValueError('step observation boundary mismatch')
+            effect=self.effect_request_id or self.request_id
+            if self.step.request_id!=effect or (self.boundary is not None and self.boundary.request_id!=effect):raise ValueError('step/request/boundary association mismatch')
+        ids=[(a.request_id,a.attempt_id,a.provider,a.model_revision) for a in self.model_attempts]
+        if len(set(ids))!=len(ids):raise ValueError('duplicate model attempt cost')
+        return self
+
+
+class PublicTransactionResult(V2):
+    transaction_id: Identifier
+    boundary: ActionBoundary
+    executor: Executor
+    state: PublicState
+    objects: tuple[ObjectRef,...]
+    events: tuple[PublicEvent,...]
+    result: dict[str,JsonValue]
+    replayed: bool = False
+
+
+class RequestJobResult(V2):
+    job_id: Identifier
+    origin_request_id: Identifier
+    effect_request_id: Identifier
+    status: Literal['queued','running','completed','failed','needs_context']
+    effect: PublicTransactionResult | None = None
+    error_code: str | None = None
+    refresh_count: NonNegativeInt = 0
+    refresh_history: tuple[JobRefreshRecord,...] = ()
+
+class RequestResult(V2):
+    session_id: Identifier
+    request_id: Identifier
+    operation: Identifier
+    executor: Executor
+    status: Literal['completed','pending','failed','unresolved','needs_context']
+    response: PublicTransactionResult
+    jobs: tuple[RequestJobResult,...] = ()
+    read_only: Literal[True] = True

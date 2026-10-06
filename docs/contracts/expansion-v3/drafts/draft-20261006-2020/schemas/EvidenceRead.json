@@ -1,0 +1,33 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "criterion_id": {
+      "minLength": 1,
+      "title": "Criterion Id",
+      "type": "string"
+    },
+    "evidence_id": {
+      "minLength": 1,
+      "title": "Evidence Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "submission_id": {
+      "minLength": 1,
+      "title": "Submission Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "submission_id",
+    "criterion_id",
+    "evidence_id"
+  ],
+  "title": "EvidenceRead",
+  "type": "object"
+}

@@ -20,7 +20,9 @@ class TaskPatch(V2):
     status: Literal['open','active','paused','blocked','done','removed'] | None = None
     parent: ObjectRef | None = None
     clear_parent: bool = False
+    relations: tuple[ObjectRef,...] | None = None
 class ProductCreate(V2):
+    source_return_id: str | None = None
     task: ObjectRef | None = None
     kind: Literal['text','plan','test_plan','options','investigation']
     purpose: str = 'exploration'
@@ -78,6 +80,7 @@ class DelegationInput(V2):
     capabilities: tuple[Literal['read','act','submit'],...] = ('read',)
     allowed_actions: tuple[str,...] | None = None
     allowed_objects: tuple[str,...] | None = None
+    create_under_tasks: tuple[str,...] = ()
     expires_at: Timestamp
     agent_label: str
 class DelegationRevoke(V2):
@@ -94,3 +97,18 @@ class ActionInput(V2):
     reason: str = ''
     evidence_refs: tuple[EvidenceRefV2,...] = ()
     material: ObjectRef | None = None
+
+
+class ProductAdopt(V2):
+    product_id: Identifier
+    product_version: PositiveInt
+    expected_head: PositiveInt
+    status: Literal['unadopted','adopted','rejected']
+
+class TaskBatch(V2):
+    creates: tuple[TaskCreate,...] = ()
+    updates: tuple[TaskPatch,...] = ()
+
+
+class RequestResultQuery(V2):
+    request_id: Identifier

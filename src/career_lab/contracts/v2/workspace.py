@@ -20,6 +20,8 @@ class TestCase(V2):
     id: Identifier
     revision: PositiveInt = 1
     query: str
+    intent: str = ""
+    refs: tuple[EvidenceRefV2,...] = ()
     declared_category: str | None = None
     declared_expected: str | None = None
     run: ObjectRef | None = None
@@ -27,7 +29,9 @@ class TestCase(V2):
 class InvestigationBlock(V2):
     id: Identifier
     revision: PositiveInt = 1
-    type: Literal['text','source_check','retest']
+    type: Literal['text','note','source_check','retest','test_compare']
+    title: str = ''
+    test_refs: tuple[ObjectRef,...] = ()
     text: str = ''
     test_ref: ObjectRef | None = None
     source_ref: EvidenceRefV2 | None = None
@@ -59,6 +63,7 @@ class InvestigationPayload(V2):
     question: str = ''
     blocks: tuple[InvestigationBlock, ...] = ()
     review_note: str = ''
+    review_focus: Literal['index','source','uncertain','other'] = 'uncertain'
     review_direction: Literal['unknown','supports','contradicts','mixed'] = 'unknown'
 
 ProductPayload = Annotated[Union[TextPayload,PlanPayload,TestPlanPayload,OptionsPayload,InvestigationPayload], Field(discriminator='type')]
@@ -217,3 +222,22 @@ class ImportResult(V2):
     unresolved: tuple[ImportReference, ...]
     as_of: VersionPoint
     applied: bool
+    conflicts: tuple["ImportConflict",...] = ()
+    version_map: tuple["ImportVersionMap",...] = ()
+
+
+class ImportConflict(V2):
+    original_id: Identifier
+    original_version: PositiveInt | None = None
+    reason: Literal['missing_history','version_conflict','content_conflict','foreign_session','unresolved_reference']
+    existing: ObjectRef | None = None
+    source_content_hash: Hash | None = None
+
+class ImportVersionMap(V2):
+    original_session_id: Identifier
+    original_id: Identifier
+    original_version: PositiveInt
+    target: ObjectRef | None = None
+    status: Literal['resolved','unresolved','unverified_local']
+
+ImportResult.model_rebuild()

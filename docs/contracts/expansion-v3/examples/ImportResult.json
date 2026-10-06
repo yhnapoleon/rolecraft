@@ -1,0 +1,16 @@
+{
+  "applied": false,
+  "as_of": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "conflicts": [],
+  "id_map": {},
+  "mode": "preview",
+  "package_id": "example",
+  "schema_version": 2,
+  "unresolved": [],
+  "version_map": []
+}

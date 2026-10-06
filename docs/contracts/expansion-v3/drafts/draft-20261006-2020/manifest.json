@@ -1,0 +1,616 @@
+{
+  "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
+  "binding_rules": [
+    "Base v1 stays unchanged. Import only this immutable contracts tar against fixed base; do not import changing W01 worktree.",
+    "Command contains request_id and both expected business/workspace versions; payload uses contracts/v2/requests.py. executor is server-owned.",
+    "kind test_set maps to test_plan via legacy.normalize_legacy_product; exact raw source retained, pending operations never executed.",
+    "Four family inputs are separate types; old G1 remains LegacyAnnotation, not new double-human G1.",
+    "W02 registers deterministic scenario policies through W01 public transaction layer; W03 uses ObjectWrite/Mutation plans; these storage/API implementations are not included or frozen in this draft.",
+    "W09 snapshot/restore is internal and not a learner tool; interface implementation still under W01 test.",
+    "No API/model/product QA or W01 completion implied by this draft."
+  ],
+  "changes_after_draft": "Only publish a new draft/revision; coordinate changed fields/affected consumers through031; never rewrite this draft.",
+  "draft_id": "draft-20261006-2020",
+  "examples": {
+    "AssistantConfig-c0": {
+      "path": "examples/AssistantConfig-c0.json",
+      "sha256": "cc562b86fd1dabfb0d27e38b53140ec1616778ee1c912d9cbf4ebd47ccecca60",
+      "type": "AssistantConfig"
+    },
+    "AuthContext": {
+      "path": "examples/AuthContext.json",
+      "sha256": "6089f14cea177d7e876122047655dae7860b29e98c47e32b0ee518d95e6572d4",
+      "type": "AuthContext"
+    },
+    "Command": {
+      "path": "examples/Command.json",
+      "sha256": "524b0dec97b75afb37eab3d68d25af937165c11f92f32839d9beb129c6ad1c3f",
+      "type": "Command"
+    },
+    "CriterionInput": {
+      "path": "examples/CriterionInput.json",
+      "sha256": "0b18803d59827933042f6b1544ac7e1b71a5e1671c3d09865665f5b9bfed88e5",
+      "type": "CriterionInput"
+    },
+    "DatasetRecordV2-acquisition": {
+      "path": "examples/DatasetRecordV2-acquisition.json",
+      "sha256": "0cf81e2cfba1e6210d97a35c72c1f56401a05ec1397124d8749e2a4e0f5998a0",
+      "type": "DatasetRecordV2"
+    },
+    "DatasetRecordV2-criterion": {
+      "path": "examples/DatasetRecordV2-criterion.json",
+      "sha256": "edc7434d457d7f4b7bd8cee06e77cd784fb92ab66e81e22478435574e2f11e27",
+      "type": "DatasetRecordV2"
+    },
+    "DatasetRecordV2-relation": {
+      "path": "examples/DatasetRecordV2-relation.json",
+      "sha256": "78c2c8bf6d8f94ab684f851349fefaa1359d18a0ff3ac645cf033bc5d79cea9f",
+      "type": "DatasetRecordV2"
+    },
+    "DatasetRecordV2-trajectory": {
+      "path": "examples/DatasetRecordV2-trajectory.json",
+      "sha256": "32b957685ed34d1745907534269c9855c36b53cec7142660019a7ff95fc30694",
+      "type": "DatasetRecordV2"
+    },
+    "DecisionPointInput": {
+      "path": "examples/DecisionPointInput.json",
+      "sha256": "588ba149e73aa5c559aed5a6078ea405fbb9ee831a0fb2f67d266efa3022f927",
+      "type": "DecisionPointInput"
+    },
+    "EvaluationBundle": {
+      "path": "examples/EvaluationBundle.json",
+      "sha256": "cb8e70d93e35d9389242886c95b7f321944f3aac3ba46380d8b8dae1372312d5",
+      "type": "EvaluationBundle"
+    },
+    "EvidenceRefV2-c0": {
+      "path": "examples/EvidenceRefV2-c0.json",
+      "sha256": "7bdf87ed486d4e3887fffe1e6007d0f21565b652ff326cc96f3eb16730c4fe92",
+      "type": "EvidenceRefV2"
+    },
+    "Observation": {
+      "path": "examples/Observation.json",
+      "sha256": "0281a1a2a72e1fa3458ae6edaab88b20613e3d6fa3eec89217c3e240315a3362",
+      "type": "Observation"
+    },
+    "RelationInput": {
+      "path": "examples/RelationInput.json",
+      "sha256": "3da0eafc9fb6aedcba9d24fcf3a60898386abbf143657a91255ff0bd529f0052",
+      "type": "RelationInput"
+    },
+    "ReviewRequest": {
+      "path": "examples/ReviewRequest.json",
+      "sha256": "e5e0363ee47fcf03c68f7b7e0f72a127e8fb266dd6c35b10d02936f338dc2fae",
+      "type": "ReviewRequest"
+    },
+    "RoleContext": {
+      "path": "examples/RoleContext.json",
+      "sha256": "cdef28d00b10c75ee920d7a4dad4f30b4206248cb7f19e048a5deaa5f6792a76",
+      "type": "RoleContext"
+    },
+    "RuntimeBundle": {
+      "path": "examples/RuntimeBundle.json",
+      "sha256": "910ad2a52b9591d48a51c71d55791354fd4ce456ccfa5a13e8aad6b41fa7cda0",
+      "type": "RuntimeBundle"
+    },
+    "SessionBindings": {
+      "path": "examples/SessionBindings.json",
+      "sha256": "7725b306a75eb61dd5f80933dc60a9048191c186bf56ecb540c22705300d15c6",
+      "type": "SessionBindings"
+    },
+    "TrajectoryInput": {
+      "path": "examples/TrajectoryInput.json",
+      "sha256": "00e57f6ecacfe8c4b3858d811f9176ad1cc961baea0f37e9d69488d7bc967242",
+      "type": "TrajectoryInput"
+    },
+    "WorkProductVersion": {
+      "path": "examples/WorkProductVersion.json",
+      "sha256": "5d1617269a4117bfeea97f8056d1ef419a8df232603fb6981f4d61ad7705aff7",
+      "type": "WorkProductVersion"
+    },
+    "WorkspaceTask": {
+      "path": "examples/WorkspaceTask.json",
+      "sha256": "6128e0854e42eda21819852c872aca4eadced493819c02dfa4425195e5a752ea",
+      "type": "WorkspaceTask"
+    }
+  },
+  "input_contract_revision": "preflight",
+  "models": {
+    "ActionBoundary": {
+      "schema": "schemas/ActionBoundary.json",
+      "sha256": "45ef459fcea03064b0f381be9134f9cdd0b52b97c68592b4240039802fd700a9"
+    },
+    "ActionInput": {
+      "schema": "schemas/ActionInput.json",
+      "sha256": "0d4baf571883227890e2fc53e9edc12da748ecdb6c34c787a11e4be8a8ed01ef"
+    },
+    "ActionProposal": {
+      "schema": "schemas/ActionProposal.json",
+      "sha256": "3e74bc717b8aaee7852e142daf736a65b12d327a21a3f386715737a15bb65575"
+    },
+    "Adoption": {
+      "schema": "schemas/Adoption.json",
+      "sha256": "ba17f7c6c04fab725cb6fb006e08c93faaee11e2011266e1cabf258f02cc323c"
+    },
+    "AnnotationDecision": {
+      "schema": "schemas/AnnotationDecision.json",
+      "sha256": "29fc90d328b65600603ca6c0057f90d6b269c87e57202b6943f2e280adbe5f69"
+    },
+    "AnnotationPass": {
+      "schema": "schemas/AnnotationPass.json",
+      "sha256": "66ea4e6465e069c1beae51db1998854bd3f9c01c9ec3478757edb5fa6a5ae673"
+    },
+    "AnnotationV2": {
+      "schema": "schemas/AnnotationV2.json",
+      "sha256": "a2c6a65ddfa348cc2b08090e5583b4449f8f67032b808fa8a9794d2550c032cb"
+    },
+    "ApprovalInput": {
+      "schema": "schemas/ApprovalInput.json",
+      "sha256": "4feed8dd1c98d30619b1e4779a69cf3fec446add4482ca1723974b8c5ce2bf0b"
+    },
+    "AssistantConfig": {
+      "schema": "schemas/AssistantConfig.json",
+      "sha256": "cfec1ffba29af86856c612e7c49090de37699d713fa1069b12740966a437ad92"
+    },
+    "AuthContext": {
+      "schema": "schemas/AuthContext.json",
+      "sha256": "5bf79bd9cba95f31b3f8d24648bfe2819c0f4ac99a4cf9bd8686ad9ece729c45"
+    },
+    "BeginRevisionInput": {
+      "schema": "schemas/BeginRevisionInput.json",
+      "sha256": "0ee5de6536b80628b220af1c0c1ca1a488bb3cab88921e9928610cd181515a44"
+    },
+    "BeliefFact": {
+      "schema": "schemas/BeliefFact.json",
+      "sha256": "aa203b4b72ae881d6d400e34928ccc948758eefaccef95651b4cca231fb9b1bf"
+    },
+    "BeliefState": {
+      "schema": "schemas/BeliefState.json",
+      "sha256": "9a1b49b84eedcd3c6feac49ae9d2d4c42294c3e42e2a64f6868cab4d5ecc78c0"
+    },
+    "BranchManifest": {
+      "schema": "schemas/BranchManifest.json",
+      "sha256": "fa22ffae976fad531c5f8cb3513df603c462711239962e59a0462cd50e43274b"
+    },
+    "Budget": {
+      "schema": "schemas/Budget.json",
+      "sha256": "5a9f8405f2a8b472deecb41fbbe189d434d3b46394e26b1b80eec4922cd1cc96"
+    },
+    "BusinessDecision": {
+      "schema": "schemas/BusinessDecision.json",
+      "sha256": "86b8f54ed3f6600ec09f3ebd36bce340699cee46b33720e76729dc4b15fcddc2"
+    },
+    "BusinessRequest": {
+      "schema": "schemas/BusinessRequest.json",
+      "sha256": "8d0b3f826533ce622447ea74a51e37ae74c193b202f83ad97d16515ca88866c1"
+    },
+    "CampaignCandidate": {
+      "schema": "schemas/CampaignCandidate.json",
+      "sha256": "08e8fcf9f766691ef95317db81a2724fb1633db75f65856d315cffc830840647"
+    },
+    "CandidateBundle": {
+      "schema": "schemas/CandidateBundle.json",
+      "sha256": "5fc33fa8fb16405b9c1eb7fe2ed395e300d57f9c4c9ac3338b43844c37bf5308"
+    },
+    "CandidateEvidenceV2": {
+      "schema": "schemas/CandidateEvidenceV2.json",
+      "sha256": "ae30ae258d3bc65ad9197b055a2da24a26357b76e1c28ce5394871874abebca7"
+    },
+    "Command": {
+      "schema": "schemas/Command.json",
+      "sha256": "322debbcb0f61c3fa5c604e4702a2795f5189a7eda39b73ce153b9d11e11efff"
+    },
+    "CriterionInput": {
+      "schema": "schemas/CriterionInput.json",
+      "sha256": "d7f51f0441515072ab6b060f456e7e83c92cdb6cc55aac217d5e62a9afdfbbd6"
+    },
+    "DatasetRecordV2": {
+      "schema": "schemas/DatasetRecordV2.json",
+      "sha256": "00993674676f67c823c29895783f062567ac6a98a1c226a93198d091f8c27993"
+    },
+    "DecisionPointInput": {
+      "schema": "schemas/DecisionPointInput.json",
+      "sha256": "a8bcc2664bca30047e54e7a242203bfd451a367921b02bea2889c307c6c1df5f"
+    },
+    "DecisionQuestion": {
+      "schema": "schemas/DecisionQuestion.json",
+      "sha256": "9bd2f263789bb1f6e7b0fc26ee1cb74554b568c9aa12a17a96bfffda21ce6440"
+    },
+    "DecisionRequest": {
+      "schema": "schemas/DecisionRequest.json",
+      "sha256": "dd028ef7925c707f3e6daa38456b810eae758ec715696bf4ddf494269bc3d08f"
+    },
+    "DecisionResult": {
+      "schema": "schemas/DecisionResult.json",
+      "sha256": "386159ef485fe92ab7fb6ea424b8b706637ab6e494c3726cbc225c8b4bdc08a0"
+    },
+    "DelegationGrant": {
+      "schema": "schemas/DelegationGrant.json",
+      "sha256": "6880bbf7ab98c35350d5ed730d3ddec23eca16ee4e4a2734b00b2b18a1bf58da"
+    },
+    "DelegationInput": {
+      "schema": "schemas/DelegationInput.json",
+      "sha256": "7ea0e6101cc5469c9428b15cec718016d61e42ba99582b53433c632a41b8f48d"
+    },
+    "DelegationRevoke": {
+      "schema": "schemas/DelegationRevoke.json",
+      "sha256": "a98b9b35983a936940e09c9bb32b1e3fa667506d161b274a7a86d5a694641729"
+    },
+    "Diagnosis": {
+      "schema": "schemas/Diagnosis.json",
+      "sha256": "abd66a003f002877203c09e9f565e3e18765b5ec16feb84e1947934f4309d7b3"
+    },
+    "DisclosedFragment": {
+      "schema": "schemas/DisclosedFragment.json",
+      "sha256": "34a6b20b37c1b00bfc846c34b55d9ba12f782c4323e9363ab5d705e9fe7966ae"
+    },
+    "DisclosurePolicy": {
+      "schema": "schemas/DisclosurePolicy.json",
+      "sha256": "76af5e1bf6ba81eddf424b75e8671b494ed5dab6d49b074eae8890d4f2e17129"
+    },
+    "DisclosureRecord": {
+      "schema": "schemas/DisclosureRecord.json",
+      "sha256": "136d35d082c8c4b3d5c364031b9f0a98f8bf31561324d1acf210f1f074af56fc"
+    },
+    "EffectiveConfig": {
+      "schema": "schemas/EffectiveConfig.json",
+      "sha256": "75b4f4f8bf98eaf614c51c2fc41a1d72e8e18e0bc03d7d3e406dcf284723d666"
+    },
+    "EngineerPack": {
+      "schema": "schemas/EngineerPack.json",
+      "sha256": "66436de75ec456b3da0e2b1ca4e21b0554d357c1ca913c27027e66fc945f64b8"
+    },
+    "EngineerSubmission": {
+      "schema": "schemas/EngineerSubmission.json",
+      "sha256": "16b957cc48ae5179ad90e775821a374e64d46b820aa062da890d9e43aa966c30"
+    },
+    "ErrorResponse": {
+      "schema": "schemas/ErrorResponse.json",
+      "sha256": "54cee1ec82defc2d91a442556c630640e0a5c34c097c3e0b92c6694c1bb0fec3"
+    },
+    "EvaluationBundle": {
+      "schema": "schemas/EvaluationBundle.json",
+      "sha256": "5c347e2b70706282141dd70ce1a01483176b5c84fdf8dbc69168357fb03f8b2d"
+    },
+    "EvidencePackageV2": {
+      "schema": "schemas/EvidencePackageV2.json",
+      "sha256": "18d632cb303beefbadf6128a6df8f5d7199fe8f4849c3512749b2de9f58b82c5"
+    },
+    "EvidenceRead": {
+      "schema": "schemas/EvidenceRead.json",
+      "sha256": "a74457598e26deea9f771fe30821574d1ee52a5a2eed973d22f716503e4cdcd9"
+    },
+    "EvidenceRefV2": {
+      "schema": "schemas/EvidenceRefV2.json",
+      "sha256": "2407afa3d5c9a72ac583957ed28bef736645d6a548840d625ff9a50825b4b6d2"
+    },
+    "Executor": {
+      "schema": "schemas/Executor.json",
+      "sha256": "f9593687281fcc835b695185dcbda3ac3e8a4f0a8954a1f11e75b3f18403f8a2"
+    },
+    "FactV2": {
+      "schema": "schemas/FactV2.json",
+      "sha256": "13f4805db9617d8ba5d52207f4b93f37a77b0e4efd8d34ffe76cc57bc5702d4c"
+    },
+    "FeedbackInput": {
+      "schema": "schemas/FeedbackInput.json",
+      "sha256": "a02dc28b366f8e14c6dd64c69243a3d93b5bc5af4c6c8b89a351202842ea8cfd"
+    },
+    "FeedbackItem": {
+      "schema": "schemas/FeedbackItem.json",
+      "sha256": "035125a1a319e0cabaa69a802d6b8acb56333372da9d1e72e7f9ec0fa6a7f05b"
+    },
+    "FeedbackV2": {
+      "schema": "schemas/FeedbackV2.json",
+      "sha256": "1d82d93a0479a6abf9183bc95dc51e54a2debc9bf6f210e4eeb2e0482e698aa6"
+    },
+    "FileRef": {
+      "schema": "schemas/FileRef.json",
+      "sha256": "be951fe618674a09191b9fb7af493092161eb1e6691a6e578d9c11835488cb33"
+    },
+    "ImportReference": {
+      "schema": "schemas/ImportReference.json",
+      "sha256": "dca765e8ceba7cff64747da16e82e67f3b4150f02074e58850b84126f4dc291a"
+    },
+    "ImportResult": {
+      "schema": "schemas/ImportResult.json",
+      "sha256": "b4a71ad3e35765b286f7555aa3ea9518d5feac71080046ce51aa0cbe97fcdbf6"
+    },
+    "InvestigationBlock": {
+      "schema": "schemas/InvestigationBlock.json",
+      "sha256": "3a4f6d0fc29ffdc457856b5d53973114b697317190b01516e44d8b6145117b02"
+    },
+    "InvestigationPayload": {
+      "schema": "schemas/InvestigationPayload.json",
+      "sha256": "48e76357cd73937fc4122cf5eab77e0155666d0d39d6f4b6f46f96c3bdd03664"
+    },
+    "JobContextSnapshot": {
+      "schema": "schemas/JobContextSnapshot.json",
+      "sha256": "b030dfe6ce803888d17ce102afd844a0ce37d631a78e7b6ad4364a561d5d3038"
+    },
+    "LegacyAnnotation": {
+      "schema": "schemas/LegacyAnnotation.json",
+      "sha256": "6173811a9584aad978882878dfab06b0d1a9dac452c8f3f9ba243beef8907418"
+    },
+    "LegacyProductImport": {
+      "schema": "schemas/LegacyProductImport.json",
+      "sha256": "edb13ff9851859ef41c1a816aab46dc6fa5eeb06f820484f8e69ef3a38b51bd1"
+    },
+    "LegacyProvenance": {
+      "schema": "schemas/LegacyProvenance.json",
+      "sha256": "238aae3baa27026c2a3a665d95719a985217f1268259ae8c9ca4026fb2a00db2"
+    },
+    "Lineage": {
+      "schema": "schemas/Lineage.json",
+      "sha256": "5dc17a3126aa100134e57bbb64332899cf4c8f386b16e245daea0b2269254e02"
+    },
+    "MaterialV2": {
+      "schema": "schemas/MaterialV2.json",
+      "sha256": "856162fc4419c29772533e41800e244cda565a70a200297767239fe94e67945e"
+    },
+    "ModelAttemptUsage": {
+      "schema": "schemas/ModelAttemptUsage.json",
+      "sha256": "40c4a5e288f72896dc8c317fd949d2ef53dcc51b5692b1821bc618c50d257a32"
+    },
+    "ModelBundle": {
+      "schema": "schemas/ModelBundle.json",
+      "sha256": "9f32bc4a9d0ce6190c21791c7a5e46b0b71192ca30a9c7f1b948ce9a250f3d6b"
+    },
+    "ObjectRead": {
+      "schema": "schemas/ObjectRead.json",
+      "sha256": "11b98f2a8768e135fb6a488fba9612e06793ceeb7ddf80cf5993e5b3158fa7f0"
+    },
+    "ObjectRef": {
+      "schema": "schemas/ObjectRef.json",
+      "sha256": "98ca4c2d395719c07640fcb5edfb1a50f9bd550bd6e69ce2b657443defd5de27"
+    },
+    "Observation": {
+      "schema": "schemas/Observation.json",
+      "sha256": "b57e6f93301a71cacaaae49a85c73321a817d8c1092111457a91caa3e52ce1b3"
+    },
+    "ObservedStep": {
+      "schema": "schemas/ObservedStep.json",
+      "sha256": "f335b2d43b966f008f6320b01b0abdbb31943175784d510afb86066bb5a3d0f5"
+    },
+    "Option": {
+      "schema": "schemas/Option.json",
+      "sha256": "0b6fea4705511332de159e6fab921276b0e695f28f4ac75e57371a816b3df55a"
+    },
+    "OptionsPayload": {
+      "schema": "schemas/OptionsPayload.json",
+      "sha256": "c7ca076c61b34885d842c86b291adbbd71e92f795d6339f8a367007ea676c6db"
+    },
+    "PageRequest": {
+      "schema": "schemas/PageRequest.json",
+      "sha256": "440b07bce4c885e5bb499a933e0ca920f22ab373f55b8c611f626e4b7e01f3f6"
+    },
+    "PlanPayload": {
+      "schema": "schemas/PlanPayload.json",
+      "sha256": "2eabc57d2cc156da052f3dc0c862c92654482e7067f125d523267885c1b0197a"
+    },
+    "ProductCreate": {
+      "schema": "schemas/ProductCreate.json",
+      "sha256": "e69a9962b48881c9b6b1a4d3e03518eae71188843200f43efc3c8128e1fa04b5"
+    },
+    "ProductEdit": {
+      "schema": "schemas/ProductEdit.json",
+      "sha256": "a2107192ee4b77a5605c823b9009fed9c5465ac92dc44f8b1dbec6f06281d880"
+    },
+    "ProductShare": {
+      "schema": "schemas/ProductShare.json",
+      "sha256": "9da31c2cb8f1f6e84deae68a16f5a2829678c52617dfe8c112539b60923ca2ad"
+    },
+    "Provenance": {
+      "schema": "schemas/Provenance.json",
+      "sha256": "88d8d181b392528cc4c6c2692a7ad3627176ce6250a182337840ed47ee11d38e"
+    },
+    "RegressionReport": {
+      "schema": "schemas/RegressionReport.json",
+      "sha256": "a998ea4ddbc7c7779ab36b7ee9b71cb390fc7f58899e229ca609ccd2814cf125"
+    },
+    "RelationInput": {
+      "schema": "schemas/RelationInput.json",
+      "sha256": "ba085cfb006e4e8dbf5a789513ae712eb67e0a9b838876d9289d0996f2cdb705"
+    },
+    "ResourcePage": {
+      "schema": "schemas/ResourcePage.json",
+      "sha256": "d575f21dc71b9741f52c1bf191eb388a05156cd4ceb379ae398132347e53b93b"
+    },
+    "RestoreResult": {
+      "schema": "schemas/RestoreResult.json",
+      "sha256": "4a79e42a5b3aa154dfbf69d0c5cc3f3792ecabc23d3a4951f54a6f5159af8b43"
+    },
+    "ReviewInput": {
+      "schema": "schemas/ReviewInput.json",
+      "sha256": "e9c30b7f35ace9c2591fa5f62f4b1bc3692bf9260cc89844259aae400944154a"
+    },
+    "ReviewRequest": {
+      "schema": "schemas/ReviewRequest.json",
+      "sha256": "88e99630b2c9383505b4290247d32bec0c036bf49ffaebc75f57ae031544d631"
+    },
+    "RevisionCycle": {
+      "schema": "schemas/RevisionCycle.json",
+      "sha256": "a32e440a1580c6efc62096ab8cd02bf5917a3c0aa6c8eb8dafa4c38caf2199a0"
+    },
+    "RoleContext": {
+      "schema": "schemas/RoleContext.json",
+      "sha256": "0c4697b5cc31a4366fb791671627489b4a6b77bbcb1f84389d5cbee78831cad1"
+    },
+    "RoleSpecV2": {
+      "schema": "schemas/RoleSpecV2.json",
+      "sha256": "cde36f42cabe70888985f18824656230674465a1dd7a2d103e625c14b8905922"
+    },
+    "RuleBound": {
+      "schema": "schemas/RuleBound.json",
+      "sha256": "4a6996d621b3f89122a79acb045551eb25617e9f9d76ede21666c1f4c5a33756"
+    },
+    "RunManifest": {
+      "schema": "schemas/RunManifest.json",
+      "sha256": "7d8472bcb53eb9c72f464d149f7dabea0cdf36b9060860011c5fb551d6705368"
+    },
+    "RuntimeBundle": {
+      "schema": "schemas/RuntimeBundle.json",
+      "sha256": "05b9d3bb686cb438a05ca728ada3f7922119e1abaa8aa8e1d2e08337a8c2eafe"
+    },
+    "ScenarioBundle": {
+      "schema": "schemas/ScenarioBundle.json",
+      "sha256": "0710f63611d081bbf7535b4d648baababfe7b554df697d5da478f08073067543"
+    },
+    "SessionBindings": {
+      "schema": "schemas/SessionBindings.json",
+      "sha256": "587c7b06e2eb09cb3dff29b53901cb758ad84c13c81b282d6b3174fa22a56d0e"
+    },
+    "ShareChange": {
+      "schema": "schemas/ShareChange.json",
+      "sha256": "4519b27a3da12f6b8cdbcd0ea9c7b321fed3aa007cd2889d41e46749b5b2053b"
+    },
+    "ShareCreate": {
+      "schema": "schemas/ShareCreate.json",
+      "sha256": "1bee254aebdb862fcfcfd51904a6d68fd15be3af75a4c23b78cbc49ad1b01d3e"
+    },
+    "ShareUpdate": {
+      "schema": "schemas/ShareUpdate.json",
+      "sha256": "3559dcc5b976e8a63e114fbd6d22b630c3daf9856901da91adf469f1c764d76d"
+    },
+    "SkillBundle": {
+      "schema": "schemas/SkillBundle.json",
+      "sha256": "6f446538850d20643cf46606f69906cec0e5c6e9a6991814f15541437fd3448b"
+    },
+    "SkillSpec": {
+      "schema": "schemas/SkillSpec.json",
+      "sha256": "95272d30542a52de5c36e4b25103656cdfe82c6b9c3c2730922d9ad3e7aee971"
+    },
+    "SnapshotExport": {
+      "schema": "schemas/SnapshotExport.json",
+      "sha256": "f06662a2b86488c10747baf3d758af87c353546689540d7956d916da94da76cf"
+    },
+    "SourceFragment": {
+      "schema": "schemas/SourceFragment.json",
+      "sha256": "7c462a707b1b504049807c1e00d85fa0be4654073e778b95259add99a1f0de35"
+    },
+    "SourceIdentity": {
+      "schema": "schemas/SourceIdentity.json",
+      "sha256": "682aeba9c918203f22972e617167f9c9544b3376971e7c032e8ae3fbdcccf531"
+    },
+    "SplitEntry": {
+      "schema": "schemas/SplitEntry.json",
+      "sha256": "63a46b2e7f7289d98b6fff7008e13a4e5f29b9c89b8c3afbb8d157cfba96a029"
+    },
+    "SplitManifest": {
+      "schema": "schemas/SplitManifest.json",
+      "sha256": "83abc85e0586e06335fe628275e78da482450c5e6e5fdf2e57f54ea5bc74f519"
+    },
+    "StoredEvent": {
+      "schema": "schemas/StoredEvent.json",
+      "sha256": "612faf33fb67f6e20303abaa7be040bd2b21f3233ef74f252ae9074dfef72632"
+    },
+    "StoredObject": {
+      "schema": "schemas/StoredObject.json",
+      "sha256": "59caa4415537be0eb7d88505ef80335cacac6e239506ce86f28c1bf6293f2ecd"
+    },
+    "SubmissionV2": {
+      "schema": "schemas/SubmissionV2.json",
+      "sha256": "16d0743087bde060a6b2e431afd37ddd49015b709f043bf466c00f49ec5ac901"
+    },
+    "SubmitInput": {
+      "schema": "schemas/SubmitInput.json",
+      "sha256": "cd231dea98912ee5f9eef2b397832fe167a831f404776247a309e8dae902603d"
+    },
+    "TaskCreate": {
+      "schema": "schemas/TaskCreate.json",
+      "sha256": "fcc4d871c811eb966356af113018b089c6b77a6c60d31216622d42e44d9cbae7"
+    },
+    "TaskPatch": {
+      "schema": "schemas/TaskPatch.json",
+      "sha256": "393632394fb523406c2675e99c8f8e60e7dae77a242f4445a9eb8d5b261bf0a7"
+    },
+    "TerminalEvaluation": {
+      "schema": "schemas/TerminalEvaluation.json",
+      "sha256": "e942c4b217507fea95f032f0887186d3b056d437d1e937db4e26cdd66eeee643"
+    },
+    "TestCampaign": {
+      "schema": "schemas/TestCampaign.json",
+      "sha256": "3d3d6f60dcb1637ed94361fe3b283edc3f994142be9e7bcb7d7844466bb4b16d"
+    },
+    "TestCase": {
+      "schema": "schemas/TestCase.json",
+      "sha256": "bab0c1b0e7c69edcbfe8c7826dfeb18ec9c9054517e47231a9d05d20d1015fcb"
+    },
+    "TestPlanPayload": {
+      "schema": "schemas/TestPlanPayload.json",
+      "sha256": "0f35d2905c7d7117953e5daa7e088d5875fab4a7332e0541753157f3b30eef53"
+    },
+    "TestRequestV2": {
+      "schema": "schemas/TestRequestV2.json",
+      "sha256": "6f9b84f22cdb15c2a89977a59df520a776b266d85d30fb087457e3458e13f0b2"
+    },
+    "TestResultV2": {
+      "schema": "schemas/TestResultV2.json",
+      "sha256": "7b9a02ea29822265f50141994a20b709f74b275c9da7e2db7888b160ec5f3df4"
+    },
+    "TextPayload": {
+      "schema": "schemas/TextPayload.json",
+      "sha256": "3a3d6bbb8d6984df02731d5b5a35b40dd5df7adc637ec505b72661f6136410d0"
+    },
+    "ToolSchema": {
+      "schema": "schemas/ToolSchema.json",
+      "sha256": "0f1d98c08b2ea24e98acb8a8e08ea91c60b7e176f8d3d7e93a98479cd19fd3c0"
+    },
+    "Trajectory": {
+      "schema": "schemas/Trajectory.json",
+      "sha256": "17e12ca55745856f680f23d7360ed83c2ec1ee21b68d443d9b4b0ba3504a0949"
+    },
+    "TrajectoryInput": {
+      "schema": "schemas/TrajectoryInput.json",
+      "sha256": "528844cb24648342e6483418b915ad9b9b9f1936b0bec8cfbc82f8bacbe45a12"
+    },
+    "TurnInput": {
+      "schema": "schemas/TurnInput.json",
+      "sha256": "b80d0ce5d144a158becf912509355c44887d2f1ec1c958be272ca669c0fc1dca"
+    },
+    "V2": {
+      "schema": "schemas/V2.json",
+      "sha256": "009269db34f3c1d62b885bedaa61be533ccbd2ccc4064bcb875b0e91d1bea9f0"
+    },
+    "VersionPoint": {
+      "schema": "schemas/VersionPoint.json",
+      "sha256": "4d7eb3c9314203a05c572fbe45c04cf83e908375d38dc76422cb6be318ad8cc1"
+    },
+    "WorkProductVersion": {
+      "schema": "schemas/WorkProductVersion.json",
+      "sha256": "6057562d33d7aa4ba1c3b64fec32c82830ffd6dddb9b2b9b0fdfc7400f259679"
+    },
+    "WorkspaceImport": {
+      "schema": "schemas/WorkspaceImport.json",
+      "sha256": "b10420fd8a4b3ef49d08ddbeb60681f11560e4bb7f114d900693cb07d13133a0"
+    },
+    "WorkspaceTask": {
+      "schema": "schemas/WorkspaceTask.json",
+      "sha256": "0dfa90d01fc94ea381b34c560bf7f141a9c6434873fd2b1d9f134b399de46a30"
+    },
+    "WorldStateV2": {
+      "schema": "schemas/WorldStateV2.json",
+      "sha256": "4a1ae20d2414d73ac32597eed3b4a5afb2812c4d3ecb2bd2f618a782087f1688"
+    }
+  },
+  "owner": "rolecraft-032-foundation",
+  "schema_version": 1,
+  "source_archive": {
+    "path": "contracts-source.tar",
+    "sha256": "4139a97114288719ec0c8785be8c02bd19455dd5ef593ac6035fc15d9423d6a8"
+  },
+  "source_files": {
+    "src/career_lab/contracts/v2/__init__.py": "1bc3afa8dab6c0108073ef863467875506f85bff7f906b011b8b5dc085d4d8c9",
+    "src/career_lab/contracts/v2/core.py": "b98402839c969d2758a06fe89a7a7b3879f3f7942f7b88b0e5508730a47db995",
+    "src/career_lab/contracts/v2/data.py": "e43d5cd114af09c4a44d022397c248253f8fa0281e601a01730abbfa4cd32bab",
+    "src/career_lab/contracts/v2/evaluation.py": "5ee081ec4faccd3232da459c10edec9609f67945419aa5a4229820abbf619974",
+    "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
+    "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
+    "src/career_lab/contracts/v2/projection.py": "17e6da9b1c39c56ccbb0161a8ab910552ea37b52f97a0883d660fb3a5ce22f3d",
+    "src/career_lab/contracts/v2/requests.py": "6c0d14236cebae6ba2a2522d83bf0a7274569f92372fab611227e25be8e10051",
+    "src/career_lab/contracts/v2/research.py": "eede12f76537e4721c8a29a9c2e767be3538a2be2f4f1dda1e2620d8d64fcc3e",
+    "src/career_lab/contracts/v2/workspace.py": "d8ae80a77f12b0a9ce8b903ffb42a815cb141ee6dd7b95e47121c063b0d4d54c",
+    "src/career_lab/contracts/v2/world.py": "518bf8b10f9fe9af3ea80ca36b0e304bb63f1c9681b7b66c77e968f7dd031e0a",
+    "src/career_lab/contracts/versioning.py": "da1fc0d7a3bb7b1110cc33d1b7a7f68dcc6dbb8c061f81f3778a113a7ae809fb"
+  },
+  "status": "draft_not_integrated"
+}

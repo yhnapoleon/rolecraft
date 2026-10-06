@@ -1,0 +1,123 @@
+{
+  "$defs": {
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "adoption_record": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FileRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "calibration": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FileRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "graders": {
+      "items": {
+        "$ref": "#/$defs/FileRef"
+      },
+      "title": "Graders",
+      "type": "array"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "mode": {
+      "default": "advisory",
+      "enum": [
+        "advisory",
+        "scoring"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FileRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "protocol": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "revision": {
+      "minLength": 1,
+      "title": "Revision",
+      "type": "string"
+    },
+    "rubric": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "rules": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "id",
+    "revision",
+    "rubric",
+    "rules",
+    "graders",
+    "protocol"
+  ],
+  "title": "EvaluationBundle",
+  "type": "object"
+}

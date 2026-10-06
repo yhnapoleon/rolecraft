@@ -1,0 +1,45 @@
+{
+  "baseline_config": {
+    "chunk_size": 500,
+    "config_version": 0,
+    "domains": [],
+    "fallback": "human",
+    "freshness_guard": "none",
+    "id": "example",
+    "launch_day": 7,
+    "manual_domains": [],
+    "min_score": 0.35,
+    "min_score_calibration": null,
+    "participants": 0,
+    "prohibited_topics": [],
+    "retrieval_limit": 3,
+    "schema_version": 2,
+    "scope_filter": true,
+    "session_id": "example",
+    "update_strategy": "daily",
+    "version": 1,
+    "work_items": []
+  },
+  "capabilities": [],
+  "domains": {},
+  "files": [
+    {
+      "media_type": "application/json",
+      "path": "files/payload.json",
+      "schema_version": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    }
+  ],
+  "id": "example",
+  "initial_resources": {},
+  "lineage": [],
+  "private_files": [],
+  "public_files": [
+    "files/payload.json"
+  ],
+  "revision": "example",
+  "role_specs": [],
+  "schema_version": 2,
+  "split": "train",
+  "structure_id": "example"
+}

@@ -47,7 +47,7 @@ def make_case(tmp_path, *, origin="fixture"):
     point = VersionPoint(business_seq=4, workspace_revision=2, storage_revision=7)
     evidence = package("relation", point=point)
     sources = tuple(SourceObject(ObjectRef.model_validate({k: c.ref.model_dump(mode="json")[k] for k in ObjectRef.model_fields}),
-        c.text, VersionPoint(business_seq=1, workspace_revision=0, storage_revision=1), ("learner",)) for c in evidence.candidate_evidence)
+        c.text, VersionPoint(business_seq=1, workspace_revision=0, storage_revision=1), ("learner",),validity_known=True) for c in evidence.candidate_evidence)
     (tmp_path / "source.json").write_bytes(json_bytes({"origin": "unit-fixture", "session": "session1"}))
     source_ref = FileRef(path="source.json", sha256=sha((tmp_path / "source.json").read_bytes()))
     identity = SourceIdentity(base_commit=BASE, source_digest=digest("fixture-source"))
@@ -58,15 +58,15 @@ def make_case(tmp_path, *, origin="fixture"):
                       run_id="fixture-run", fact_root_ids=("fixture-root",))
     observation_ref = EvidenceRefV2(session_id="session1", kind="event", object_id="observed-test-result", version=1, observed_at_seq=4)
     sources += (SourceObject(ObjectRef(session_id="session1", kind="event", object_id="observed-test-result", version=1),
-                            "actual fixture observation", point, ("learner",)),)
-    step = ObservedStep(id="step-source", action="test", as_of=point, observations=("actual fixture observation",),
+                            "actual fixture observation", point, ("learner",),validity_known=True),)
+    step = ObservedStep(request_id="fixture-step-request",id="step-source", action="test", as_of=point, observations=("actual fixture observation",),
                         evidence_refs=(*tuple(c.ref for c in evidence.candidate_evidence), observation_ref), outcome="success")
     models = [RelationInput(evidence=evidence), CriterionInput(evidence=package("criterion", claim="可以有依据暂缓或no_go", purpose="draft")),
         TrajectoryInput(task="inspect sequence", steps=(step,), question="what is observed?", logs_complete=True),
         DecisionPointInput(task="choose information", as_of=point, observed_steps=(step,), candidates=(
             ActionProposal(id="a1", tool="read_material", arguments={"material_id": "brief"}, purpose="clarify"),
             ActionProposal(id="a2", tool="test", arguments={}, purpose="verify")), question="what changes?")]
-    units = [ExportUnit(family, model, lineage, provenance) for family, model in zip(("relation", "criterion", "trajectory", "acquisition"), models, strict=True)]
+    units = [ExportUnit(family, model, lineage, provenance,evaluation_time_known=True) for family, model in zip(("relation", "criterion", "trajectory", "acquisition"), models, strict=True)]
     snapshot = FrozenSnapshot("session1", "learner", point, sources, identity.source_digest, origin)
     policies = {"source.json": {"sha256": source_ref.sha256, "review_status": "approved"}}
     return snapshot, units, policies
@@ -80,6 +80,12 @@ def decision(request, label="SUPPORTED"):
         evidence_evaluable=task == "relation", missing_reason="not observed" if task in {"acquisition", "trajectory_diagnosis"} else None)
 
 
+
+def label_result(request,raw,revision="test-double-model-v1",provider="unit-test-double",usage=None):
+    return LabelResult(raw,revision,provider,{} if usage is None else usage,
+        invocation_id="test-invocation:"+request["request_id"],context_id=request["requested_context_id"],independence_method="fresh_context")
+
+
 class FakeModel:
     """Test double, explicitly named in all receipt model/provider identities."""
     def __init__(self, labels=None):
@@ -89,7 +95,7 @@ class FakeModel:
     def __call__(self, request):
         self.calls.append(request)
         d = decision(request, self.labels.get(request["phase"], "SUPPORTED"))
-        return LabelResult(d.model_dump_json(), "test-double-model-v1", "unit-test-double", {"cost": 0.0})
+        return label_result(request,d.model_dump_json(),usage={"cost":0.0})
 
 
 
@@ -110,7 +116,8 @@ def signed(request, raw=None):
     from career_lab.datasets.v3.attestation import RECEIPT_FIELDS
     result = {k: request[k] for k in (*RECEIPT_FIELDS, "request_hash")}
     return result | {"raw_output": raw if raw is not None else decision(request).model_dump_json(),
-        "model_revision": "offline-test-double-v1", "provider": "offline-unit-test", "usage": {}}
+        "model_revision": "offline-test-double-v1", "provider": "offline-unit-test", "usage": {},
+        "invocation_id":"offline-test:"+request["request_id"],"context_id":request["requested_context_id"],"independence_method":"fresh_context"}
 
 
 def test_four_family_export_is_stable_and_does_not_modify_snapshot(tmp_path):
@@ -126,7 +133,7 @@ def test_four_family_export_is_stable_and_does_not_modify_snapshot(tmp_path):
     record = first.records[0]
     assert "capacity-positive-authoring" not in json_bytes(record.model_input).decode()
     assert record.model_input.evidence.candidate_evidence[0].id == "e1"
-    assert first.source_maps[record.record_id]["candidate_ids"]["e1"] == "answer-supported"
+    assert set(first.source_maps[record.record_id]["candidate_ids"].values()) == {"answer-supported","candidate2"}
     assert snapshot.objects[0].ref.object_id == "capacity-positive-authoring"
 
 
@@ -134,7 +141,7 @@ def test_four_family_export_is_stable_and_does_not_modify_snapshot(tmp_path):
     ("private", "unauthorized_source_reference"), ("future_object", "future_source_reference"),
     ("cross_session", "cross_session_reference"), ("missing", "unresolved_source_reference"),
     ("wrong_text", "candidate_text_source_mismatch"), ("leak", "model_input_metadata_leak"),
-    ("mixed_point", "mixed_snapshot_point"), ("future_subject", "future_evidence_reference"),
+    ("mixed_point", "future_evaluation_frame"), ("future_subject", "invalid_source_or_schema"),
 ])
 def test_export_quarantines_bad_source(tmp_path, mutation, reason):
     snapshot, units, _ = make_case(tmp_path)
@@ -155,7 +162,7 @@ def test_export_quarantines_bad_source(tmp_path, mutation, reason):
     elif mutation == "leak":
         data["evidence"]["rule_context"] = {"nested": {"gold_label": "SUPPORTED"}}
     elif mutation == "mixed_point":
-        data["evidence"]["as_of"]["workspace_revision"] = 1
+        data["evidence"]["as_of"]["workspace_revision"] = 3
     elif mutation == "future_subject":
         data["evidence"]["subjects"][0]["observed_at_seq"] = 5
     data["evidence"]["input_hash"] = digest({k: v for k, v in data["evidence"].items() if k != "input_hash"})
@@ -169,12 +176,12 @@ def test_config_c0_and_stale_reference_retained(tmp_path):
     ref = EvidenceRefV2(session_id="session1", kind="config", object_id="cfg", version=1, config_version=0,
                          observed_at_seq=1, valid_until_seq=3)
     source = SourceObject(ObjectRef(session_id="session1", kind="config", object_id="cfg", version=1, config_version=0),
-                          '{"capacity": 30}', snapshot.objects[0].available_at, ("learner",))
+                          '{"capacity": 30}', snapshot.objects[0].available_at, ("learner",),validity_known=True,valid_until_seq=3)
     refs = [ref, units[0].model_input.evidence.candidate_evidence[1].ref]
     unit = replace(units[0], model_input=RelationInput(evidence=package("relation", refs=refs)))
     result = export_snapshot(replace(snapshot, objects=(source, snapshot.objects[1])), [unit])
     assert not result.quarantined
-    output = result.records[0].model_input.evidence.candidate_evidence[0].ref
+    output = next(c.ref for c in result.records[0].model_input.evidence.candidate_evidence if c.ref.kind=="config")
     assert output.config_version == 0 and output.version == 1 and output.valid_until_seq == 3
     annotation = verify_numeric(result.records[0])
     assert annotation.final.label == "INSUFFICIENT"  # stale is retained, not current proof
@@ -333,11 +340,13 @@ def test_concurrent_claim_does_not_duplicate_dispatch(tmp_path):
     assert "dispatch_outcome_unknown" in results
 
 
-def test_draft_trajectory_order_gap_is_explicit(tmp_path):
+def test_c4_trajectory_preserves_order_with_independent_contexts(tmp_path):
     batch, _, _ = batch_for(tmp_path, "trajectory")
     output = batch.run(FakeModel())
-    assert output["annotations"][0].status == "pending"
-    assert output["blocked"][0]["code"] == "independence_order_unavailable"
+    assert output["annotations"][0].status == "accepted"
+    assert not output["blocked"]
+    passes=output["annotations"][0].passes
+    assert passes[0].evidence_order==passes[1].evidence_order and passes[0].context_id!=passes[1].context_id
 
 
 def test_batch_does_not_open_test_or_impersonate_human(tmp_path):
@@ -397,11 +406,13 @@ def test_accepted_adjudicated_release_and_file_drift(tmp_path):
 
 @pytest.mark.parametrize("bucket,reason", [("public_aux", "public_source_license_or_review_missing"), ("business_synth", "department_authorization_missing"), ("human_session", "human_consent_missing")])
 def test_unapproved_sources_excluded_while_valid_records_continue(tmp_path, bucket, reason):
-    snapshot, units, policies = make_case(tmp_path)
+    # Schema unit doubles exercise source authorization; never research data.
+    snapshot, units, policies = make_case(tmp_path, origin=bucket)
+    units=[replace(u,provenance=u.provenance.model_copy(update={"license":"MIT"})) for u in units]
     result = export_snapshot(snapshot, units[:2])
-    invalid = result.records[0].model_copy(update={"bucket": bucket})
-    result = replace(result, records=(invalid, result.records[1]))
-    publish_release(tmp_path / "release", result, source_root=tmp_path, policies=policies, fixture=True, allow_pending=True)
+    approved={"source.json":policies["source.json"] | {"url":"https://unit.invalid", "accessed_at":"2026-10-07", "license":"MIT", "original_hash":policies["source.json"]["sha256"], "authorization_ref":"unit-double", "consent_ref":"unit-double"}}
+    contexts={r.record_id:{"root":tmp_path,"policies":policies if i==0 else approved} for i,r in enumerate(result.records)}
+    publish_release(tmp_path / "release", result, source_root=tmp_path, policies=policies, source_contexts=contexts, allow_pending=True)
     report = json.loads((tmp_path / "release/quality-report.json").read_text())
     assert report["records"] == 1 and report["excluded"][0]["reason"] == reason
 
@@ -508,10 +519,9 @@ def test_excluded_label_artifacts_do_not_leak_into_release(tmp_path):
     result = export_snapshot(snapshot, units[:2])
     batch = create_fixture_batch(tmp_path, tmp_path / "batch", result.records, annotation_version="v1", executor=Executor(id="fake", kind="external_agent"))
     annotations = batch.run(FakeModel())["annotations"]
-    denied = result.records[0].model_copy(update={"bucket": "public_aux"})
-    result = replace(result, records=(denied, result.records[1]))
+    contexts={r.record_id:{"root":tmp_path,"policies":{} if i==0 else policies} for i,r in enumerate(result.records)}
     publish_release(tmp_path / "release", result, source_root=tmp_path, policies=policies,
-                    annotations=annotations, annotation_artifacts=batch.artifacts(), fixture=True)
+                    annotations=annotations, annotation_artifacts=batch.artifacts(), fixture=True, source_contexts=contexts)
     passes = list((tmp_path / "release/labels/passes").glob("*.json"))
     assert len(passes) == 2
     for path in passes:
@@ -529,7 +539,7 @@ def test_no_unproven_g0_label_can_be_published(tmp_path):
     assert not (tmp_path / "release").exists()
 
 
-def test_single_evidence_model_review_stays_pending(tmp_path):
+def test_single_evidence_model_review_uses_fresh_contexts_without_fake_order(tmp_path):
     snapshot, units, _ = make_case(tmp_path)
     data = units[0].model_input.model_dump(mode="json")
     data["evidence"]["candidate_evidence"] = data["evidence"]["candidate_evidence"][:1]
@@ -537,8 +547,8 @@ def test_single_evidence_model_review_stays_pending(tmp_path):
     result = export_snapshot(snapshot, [replace(units[0], model_input=data)])
     batch = create_fixture_batch(tmp_path, tmp_path / "batch", result.records, annotation_version="v1", executor=Executor(id="fake", kind="external_agent"))
     out = batch.run(FakeModel())
-    assert out["blocked"][0]["code"] == "independence_order_unavailable"
-    assert out["annotations"][0].status == "pending"
+    assert not out["blocked"] and out["annotations"][0].status=="accepted"
+    assert all(p.evidence_order_mode=="singleton_or_empty" for p in out["annotations"][0].passes)
 
 
 def test_publication_never_opens_sealed_test(tmp_path):

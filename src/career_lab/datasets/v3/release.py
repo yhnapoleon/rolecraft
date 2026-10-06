@@ -2,7 +2,7 @@
 from pathlib import Path
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_file
-from career_lab.contracts.v2.data import DatasetRecordV2, AnnotationV2, SplitEntry, SplitManifest
+from career_lab.contracts.v2.data import DatasetRecordV2, AnnotationV2, SplitEntry, SplitManifest, DatasetSnapshotMetadata, DatasetMetadataV2, metadata_projection, validate_record_annotation
 from .common import json_bytes, sha, write_new, read_json, immutable_directory
 from .quality import audit_records, fixture_record, source_policy_error
 from .export import ExportResult,aggregate_exports,validate_source_membership
@@ -37,7 +37,8 @@ def load_export(root):
 
 def publish_release(target, result, *, source_root, policies, annotations=None,
                     annotation_artifacts=None, fixture=False, allow_pending=False,source_contexts=None):
-    validate_source_membership(result)
+    membership=validate_source_membership(result)
+    snapshot_by_digest={d["snapshot_digest"]:d for d in result.source_snapshots}
     contexts=source_contexts or {r.record_id:{"root":source_root,"policies":policies} for r in result.records}
     if set(contexts)!={r.record_id for r in result.records}:raise ProtocolError("source_context_identity_mismatch")
     if result.origin == "fixture" and not fixture:
@@ -90,6 +91,7 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
         record = DatasetRecordV2.model_validate(record.model_dump(mode="json") | {
             "label_tier": annotation.label_tier,
             "label_ref": FileRef(path=f"labels/{record.record_id}.json", sha256=sha(json_bytes(annotation))).model_dump(mode="json")})
+        validate_record_annotation(record,annotation,require_accepted=annotation.status=="accepted" or not allow_pending)
         accepted.append(record)
         selected_labels.append(annotation)
     if not accepted:
@@ -134,12 +136,11 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
         write_new(root / "records.json", records_file)
         # Safe metadata-only projection. No model_input, raw label, reason or
         # acceptable sets are included. Consumers never need records.json.
-        metadata={r.record_id:{"record_id":r.record_id,"input_hash":r.input_hash,"family":r.family,
-            "language":r.language,"bucket":r.bucket,"lineage":r.lineage.model_dump(mode="json"),
-            "provenance":r.provenance.model_dump(mode="json"),"annotation_status":a.status,
-            "accepted_label_tier":a.label_tier if a.status=="accepted" else None,
-            "source_snapshot_digest":result.source_maps[r.record_id]["snapshot_digest"]}
-            for r,a in zip(accepted,selected_labels,strict=True)}
+        metadata={}
+        for r,a in zip(accepted,selected_labels,strict=True):
+            descriptor=snapshot_by_digest[membership[r.record_id]]
+            snap=DatasetSnapshotMetadata(**{k:descriptor[k] for k in DatasetSnapshotMetadata.model_fields if k!="schema_version"})
+            metadata[r.record_id]=metadata_projection(r,a,capture_point=snap.capture_point,source_snapshots=(snap,)).model_dump(mode="json")
         metadata_refs={}
         for rid,value in metadata.items():
             path=f"metadata/{rid}.json";write_new(root/path,value)
@@ -214,15 +215,16 @@ def audit_release(root):
     capture=ExportResult(tuple(rows),tuple(labels),source_maps,(),snapshots[0]["snapshot_digest"] if len(snapshots)==1 else None,
                          "fixture" if manifest["fixture"] else "mixed",tuple(snapshots))
     validate_source_membership(capture)
+    membership=validate_source_membership(capture);snapshot_by_digest={x["snapshot_digest"]:x for x in snapshots}
     for record,annotation in zip(rows,labels,strict=True):
-        expected={"record_id":record.record_id,"input_hash":record.input_hash,"family":record.family,"language":record.language,
-            "bucket":record.bucket,"lineage":record.lineage.model_dump(mode="json"),"provenance":record.provenance.model_dump(mode="json"),
-            "annotation_status":annotation.status,"accepted_label_tier":annotation.label_tier if annotation.status=="accepted" else None,
-            "source_snapshot_digest":source_maps[record.record_id]["snapshot_digest"]}
+        validate_record_annotation(record,annotation,require_accepted=annotation.status=="accepted")
+        descriptor=snapshot_by_digest[membership[record.record_id]]
+        snap=DatasetSnapshotMetadata(**{k:descriptor[k] for k in DatasetSnapshotMetadata.model_fields if k!="schema_version"})
+        expected=metadata_projection(record,annotation,capture_point=snap.capture_point,source_snapshots=(snap,))
         meta_ref=FileRef.model_validate(metadata["records"][record.record_id])
         if files.get(meta_ref.path)!=meta_ref.sha256:raise ProtocolError("metadata_hash_mismatch")
-        import json
-        if json.loads(read_file(root,meta_ref))!=expected:raise ProtocolError("metadata_record_mismatch")
+        actual=DatasetMetadataV2.model_validate_json(read_file(root,meta_ref))
+        if actual!=expected:raise ProtocolError("metadata_record_mismatch")
     pass_paths = {f"labels/passes/{p.id}.json" for a in labels for p in a.passes}
     if pass_paths != {name for name in files if name.startswith("labels/passes/")}:
         raise ProtocolError("annotation_artifact_set_mismatch")

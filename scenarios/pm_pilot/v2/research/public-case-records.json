@@ -1,0 +1,2426 @@
+{
+  "schema_version": 1,
+  "source_kind": "actual_deterministic_module_run_on_synthetic_scenario",
+  "captured_at": "2026-10-06T18:43:09.945193+00:00",
+  "input_bundle_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+  "executor": "system:w02-public-case-recorder",
+  "http_or_human_trial": false,
+  "expected_answers_included": false,
+  "records": [
+    {
+      "label": "Q01",
+      "result": {
+        "schema_version": 2,
+        "id": "82eec287885fadc147ec8570f5306d6d5059faf03124b7d461caedd562f1cd5d",
+        "session_id": "public-qa-run",
+        "version": 1,
+        "query": "会议室预约入口在什么地方",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-06T18:43:09.934887Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-public-case-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "ee3fdacd263df0f351f5251112946800b2c769bd4e01113e22391014169eabc3",
+              "material_id": "faq",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "public-qa-run",
+                "kind": "material",
+                "object_id": "faq",
+                "version": 1,
+                "config_version": null,
+                "span_start": 31,
+                "span_end": 91,
+                "quote": "会议室预约：在公司日历选择空闲会议室并提交预约，填写主题、时间和参与人。改期后同步取消原预约；助手不能确认房间已被锁定。",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.5
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "public-qa-run",
+          "kind": "config",
+          "object_id": "pilot",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "会议室预约：在公司日历选择空闲会议室并提交预约，填写主题、时间和参与人。改期后同步取消原预约；助手不能确认房间已被锁定。",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "public-qa-run",
+            "kind": "material",
+            "object_id": "faq",
+            "version": 1,
+            "config_version": null,
+            "span_start": 31,
+            "span_end": 91,
+            "quote": "会议室预约：在公司日历选择空闲会议室并提交预约，填写主题、时间和参与人。改期后同步取消原预约；助手不能确认房间已被锁定。",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "stable_faq"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+        "created_at": "2026-10-06T18:43:09.934887+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "ee3fdacd263df0f351f5251112946800b2c769bd4e01113e22391014169eabc3"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-public-case-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "authorization_digest": "2f5b948382118d2088ac837e6d81c4cdea4f6a82e0f977dd87495f91359131be",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "label": "Q02",
+      "result": {
+        "schema_version": 2,
+        "id": "6d369c524394c73820737ccaa08a18eade668c96357972019d909e1afc8c8105",
+        "session_id": "public-qa-run",
+        "version": 1,
+        "query": "我的账号密码忘记了，需要重置",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-06T18:43:09.935998Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-public-case-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "2d668270b7610d388b2a7b10e88d5fb6a2c66945c67953bca2ca7fc8f44ca7f9",
+              "material_id": "faq",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "public-qa-run",
+                "kind": "material",
+                "object_id": "faq",
+                "version": 1,
+                "config_version": null,
+                "span_start": 93,
+                "span_end": 172,
+                "quote": "账号密码忘记或需要重置：通过办公系统的自助重置入口完成身份核验。无法通过时联系内部服务台；不要把密码或验证码发给助手。这里提供流程，不会告知任何人的现有密码。",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.7272727272727273
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "public-qa-run",
+          "kind": "config",
+          "object_id": "pilot",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "账号密码忘记或需要重置：通过办公系统的自助重置入口完成身份核验。无法通过时联系内部服务台；不要把密码或验证码发给助手。这里提供流程，不会告知任何人的现有密码。",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "public-qa-run",
+            "kind": "material",
+            "object_id": "faq",
+            "version": 1,
+            "config_version": null,
+            "span_start": 93,
+            "span_end": 172,
+            "quote": "账号密码忘记或需要重置：通过办公系统的自助重置入口完成身份核验。无法通过时联系内部服务台；不要把密码或验证码发给助手。这里提供流程，不会告知任何人的现有密码。",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "stable_faq"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+        "created_at": "2026-10-06T18:43:09.935998+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "2d668270b7610d388b2a7b10e88d5fb6a2c66945c67953bca2ca7fc8f44ca7f9"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-public-case-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "authorization_digest": "2f5b948382118d2088ac837e6d81c4cdea4f6a82e0f977dd87495f91359131be",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "label": "Q03",
+      "result": {
+        "schema_version": 2,
+        "id": "d0f63d7244d398672039b7f4df4997c21abf3cffe36a768801b4ade63e3ffa46",
+        "session_id": "public-qa-run",
+        "version": 1,
+        "query": "入职账号没有开通通知该怎么办",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-06T18:43:09.936823Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-public-case-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "3a8a99912fa27c732f9b2ec50ad861b77a8c677111d8d08408d008ee359ca187",
+              "material_id": "onboarding",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "public-qa-run",
+                "kind": "material",
+                "object_id": "onboarding",
+                "version": 1,
+                "config_version": null,
+                "span_start": 105,
+                "span_end": 174,
+                "quote": "办公账号：收到开通通知后先尝试登录，确认所属组织及可访问范围。没有通知不代表已经开通；登录失败时记录错误信息并联系服务台，不反复猜测密码。",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.45454545454545453
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "public-qa-run",
+          "kind": "config",
+          "object_id": "pilot",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "办公账号：收到开通通知后先尝试登录，确认所属组织及可访问范围。没有通知不代表已经开通；登录失败时记录错误信息并联系服务台，不反复猜测密码。",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "public-qa-run",
+            "kind": "material",
+            "object_id": "onboarding",
+            "version": 1,
+            "config_version": null,
+            "span_start": 105,
+            "span_end": 174,
+            "quote": "办公账号：收到开通通知后先尝试登录，确认所属组织及可访问范围。没有通知不代表已经开通；登录失败时记录错误信息并联系服务台，不反复猜测密码。",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "onboarding"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+        "created_at": "2026-10-06T18:43:09.936823+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "3a8a99912fa27c732f9b2ec50ad861b77a8c677111d8d08408d008ee359ca187"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-public-case-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "authorization_digest": "2f5b948382118d2088ac837e6d81c4cdea4f6a82e0f977dd87495f91359131be",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "label": "Q04",
+      "result": {
+        "schema_version": 2,
+        "id": "e33e4aff1784001316008321a5e3fb33faddcefbed21ce399d809039640592c0",
+        "session_id": "public-qa-run",
+        "version": 1,
+        "query": "设备坏了想报修应该提供哪些信息",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-06T18:43:09.937646Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-public-case-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "public-qa-run",
+          "kind": "config",
+          "object_id": "pilot",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "fallback",
+        "answer": "未检索到可靠依据，请转人工核验。",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "no_retrieval_hit"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+        "created_at": "2026-10-06T18:43:09.937646+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-public-case-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "authorization_digest": "2f5b948382118d2088ac837e6d81c4cdea4f6a82e0f977dd87495f91359131be",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "label": "Q05",
+      "result": {
+        "schema_version": 2,
+        "id": "6fa817c4a1b38e0ee365b0a2a0d50d4696c067c346a1cb307a142710560708eb",
+        "session_id": "public-qa-run",
+        "version": 1,
+        "query": "出差住宿报销一晚能报多少",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-06T18:43:09.938462Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-public-case-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "8e0e434099f5b20aa5421dba281b2ce812c58341a6483750a8fdd048d60061d0",
+              "material_id": "policy",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "public-qa-run",
+                "kind": "material",
+                "object_id": "policy",
+                "version": 1,
+                "config_version": null,
+                "span_start": 34,
+                "span_end": 78,
+                "quote": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.5555555555555556
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "public-qa-run",
+          "kind": "config",
+          "object_id": "pilot",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "public-qa-run",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": 34,
+            "span_end": 78,
+            "quote": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_travel"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+        "created_at": "2026-10-06T18:43:09.938462+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "8e0e434099f5b20aa5421dba281b2ce812c58341a6483750a8fdd048d60061d0"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-public-case-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "authorization_digest": "2f5b948382118d2088ac837e6d81c4cdea4f6a82e0f977dd87495f91359131be",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "label": "Q06",
+      "result": {
+        "schema_version": 2,
+        "id": "f72284c58b22f353b515b837976dfac888d757469efc82d57eb7f807562e38c9",
+        "session_id": "public-qa-run",
+        "version": 1,
+        "query": "出差住宿报销一晚能报多少",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-06T18:43:09.939465Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-public-case-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 2
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "8e0e434099f5b20aa5421dba281b2ce812c58341a6483750a8fdd048d60061d0",
+              "material_id": "policy",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "public-qa-run",
+                "kind": "material",
+                "object_id": "policy",
+                "version": 1,
+                "config_version": null,
+                "span_start": 34,
+                "span_end": 78,
+                "quote": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+                "observed_at_seq": 2,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.5555555555555556
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "public-qa-run",
+          "kind": "config",
+          "object_id": "pilot",
+          "version": 2,
+          "config_version": 1
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 2,
+            "config_version": 1,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 2,
+            "config_version": 1,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "public-qa-run",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": 34,
+            "span_end": 78,
+            "quote": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+            "observed_at_seq": 2,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 2,
+          "workspace_revision": 0,
+          "storage_revision": 1
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_travel"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+        "created_at": "2026-10-06T18:43:09.939465+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 2
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "8e0e434099f5b20aa5421dba281b2ce812c58341a6483750a8fdd048d60061d0"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-public-case-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "authorization_digest": "2f5b948382118d2088ac837e6d81c4cdea4f6a82e0f977dd87495f91359131be",
+        "retrieved_source_stale": true,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "label": "Q07",
+      "result": {
+        "schema_version": 2,
+        "id": "36bbad061e2e391fb0159d0572fe0a4d7531ce85827c60edc50bc8112ce22717",
+        "session_id": "public-qa-run",
+        "version": 1,
+        "query": "今天餐费报销每天按什么额度",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-06T18:43:09.940297Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-public-case-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 2
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "9df1d7b3c0b3caf9b0c72b1c054b26c0104d75e974d298d8f1d6f22bee5b894f",
+              "material_id": "meal",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "public-qa-run",
+                "kind": "material",
+                "object_id": "meal",
+                "version": 1,
+                "config_version": null,
+                "span_start": 31,
+                "span_end": 72,
+                "quote": "餐费报销上限为每人每天100元；需保留合规票据，重复报销和个人个案由负责同事核验。",
+                "observed_at_seq": 2,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.4444444444444444
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "public-qa-run",
+          "kind": "config",
+          "object_id": "pilot",
+          "version": 2,
+          "config_version": 1
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 2,
+            "config_version": 1,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 2,
+            "config_version": 1,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "餐费报销上限为每人每天100元；需保留合规票据，重复报销和个人个案由负责同事核验。",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "public-qa-run",
+            "kind": "material",
+            "object_id": "meal",
+            "version": 1,
+            "config_version": null,
+            "span_start": 31,
+            "span_end": 72,
+            "quote": "餐费报销上限为每人每天100元；需保留合规票据，重复报销和个人个案由负责同事核验。",
+            "observed_at_seq": 2,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 2,
+          "workspace_revision": 0,
+          "storage_revision": 1
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_meal"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+        "created_at": "2026-10-06T18:43:09.940297+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 2
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "9df1d7b3c0b3caf9b0c72b1c054b26c0104d75e974d298d8f1d6f22bee5b894f"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-public-case-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "authorization_digest": "2f5b948382118d2088ac837e6d81c4cdea4f6a82e0f977dd87495f91359131be",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "label": "Q08",
+      "result": {
+        "schema_version": 2,
+        "id": "b7fca9ce9f58a6bbeff47669328085f5bfa969f36a43468623188020233a2059",
+        "session_id": "public-qa-run",
+        "version": 1,
+        "query": "计划性请假提交申请需要提前多久",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-06T18:43:09.941133Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-public-case-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 2
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "74c11485c0188601fbaafd7887ba03eeb0df81d447273f69df12b9d5f7374f2a",
+              "material_id": "leave",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "public-qa-run",
+                "kind": "material",
+                "object_id": "leave",
+                "version": 1,
+                "config_version": null,
+                "span_start": 33,
+                "span_end": 75,
+                "quote": "计划性请假原则上提前3个工作日提交申请，并说明交接安排；紧急情况及时联系直属负责人。",
+                "observed_at_seq": 2,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.5714285714285714
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "public-qa-run",
+          "kind": "config",
+          "object_id": "pilot",
+          "version": 2,
+          "config_version": 1
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 2,
+            "config_version": 1,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 2,
+            "config_version": 1,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "计划性请假原则上提前3个工作日提交申请，并说明交接安排；紧急情况及时联系直属负责人。",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "public-qa-run",
+            "kind": "material",
+            "object_id": "leave",
+            "version": 1,
+            "config_version": null,
+            "span_start": 33,
+            "span_end": 75,
+            "quote": "计划性请假原则上提前3个工作日提交申请，并说明交接安排；紧急情况及时联系直属负责人。",
+            "observed_at_seq": 2,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 2,
+          "workspace_revision": 0,
+          "storage_revision": 1
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_leave"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+        "created_at": "2026-10-06T18:43:09.941133+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 2
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "74c11485c0188601fbaafd7887ba03eeb0df81d447273f69df12b9d5f7374f2a"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-public-case-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "authorization_digest": "2f5b948382118d2088ac837e6d81c4cdea4f6a82e0f977dd87495f91359131be",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "label": "Q09",
+      "result": {
+        "schema_version": 2,
+        "id": "71197903bf82f4ac007e5ad7ac56fd12efaef5624b7c04fb2eec1504510dcc46",
+        "session_id": "public-qa-run",
+        "version": 1,
+        "query": "出差住店报销金额按什么规则",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-06T18:43:09.942083Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-public-case-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 2
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "public-qa-run",
+          "kind": "config",
+          "object_id": "pilot",
+          "version": 3,
+          "config_version": 2
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 3,
+            "config_version": 2,
+            "domains": [
+              "stable_faq",
+              "onboarding"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 3,
+            "config_version": 2,
+            "domains": [
+              "stable_faq",
+              "onboarding"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "fallback",
+        "answer": "未检索到可靠依据，请转人工核验。",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 3,
+          "workspace_revision": 0,
+          "storage_revision": 2
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "no_retrieval_hit"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+        "created_at": "2026-10-06T18:43:09.942083+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 2
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-public-case-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "authorization_digest": "2f5b948382118d2088ac837e6d81c4cdea4f6a82e0f977dd87495f91359131be",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "label": "Q10",
+      "result": {
+        "schema_version": 2,
+        "id": "2e32f31d7cb82498fba766d47f661c3bde7b3c246dbf3c0040a0551ce8febcec",
+        "session_id": "public-qa-run",
+        "version": 1,
+        "query": "出差住宿的报销额度",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-06T18:43:09.943059Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-public-case-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 2
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "8e0e434099f5b20aa5421dba281b2ce812c58341a6483750a8fdd048d60061d0",
+              "material_id": "policy",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "public-qa-run",
+                "kind": "material",
+                "object_id": "policy",
+                "version": 1,
+                "config_version": null,
+                "span_start": 34,
+                "span_end": 78,
+                "quote": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+                "observed_at_seq": 4,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.5
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "public-qa-run",
+          "kind": "config",
+          "object_id": "pilot",
+          "version": 4,
+          "config_version": 3
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 4,
+            "config_version": 3,
+            "domains": [
+              "policy_travel",
+              "policy_meal"
+            ],
+            "scope_filter": true,
+            "update_strategy": "realtime",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "realtime_sync",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 10
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 4,
+            "config_version": 3,
+            "domains": [
+              "policy_travel",
+              "policy_meal"
+            ],
+            "scope_filter": false,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 10
+          },
+          "differences": {
+            "work_items": "requested_work_exceeds_approved_budget",
+            "update_strategy": "realtime_sync_not_provisioned",
+            "scope_filter": "scope_filter_not_provisioned",
+            "launch_day": "requested_launch_exceeds_approved_deadline"
+          }
+        },
+        "status": "answered",
+        "answer": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "public-qa-run",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": 34,
+            "span_end": 78,
+            "quote": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+            "observed_at_seq": 4,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 4,
+          "workspace_revision": 0,
+          "storage_revision": 3
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_travel"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+        "created_at": "2026-10-06T18:43:09.943059+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 2
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "8e0e434099f5b20aa5421dba281b2ce812c58341a6483750a8fdd048d60061d0"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-public-case-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "authorization_digest": "2f5b948382118d2088ac837e6d81c4cdea4f6a82e0f977dd87495f91359131be",
+        "retrieved_source_stale": true,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "label": "Q11",
+      "result": {
+        "schema_version": 2,
+        "id": "eee275a144e67f55823c4d718c771baa8d91e03970ea6b2ab0a13b72fbcc48a3",
+        "session_id": "public-qa-run",
+        "version": 1,
+        "query": "住宿费用要按哪个报销标准",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-06T18:43:09.944073Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-public-case-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 2
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "public-qa-run",
+          "kind": "config",
+          "object_id": "pilot",
+          "version": 5,
+          "config_version": 4
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 5,
+            "config_version": 4,
+            "domains": [
+              "policy_travel",
+              "policy_meal"
+            ],
+            "scope_filter": true,
+            "update_strategy": "manual_policy",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 5,
+            "config_version": 4,
+            "domains": [
+              "policy_travel",
+              "policy_meal"
+            ],
+            "scope_filter": true,
+            "update_strategy": "manual_policy",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "fallback",
+        "answer": "未检索到可靠依据，请转人工核验。",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 5,
+          "workspace_revision": 0,
+          "storage_revision": 4
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "no_retrieval_hit"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+        "created_at": "2026-10-06T18:43:09.944073+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 2
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-public-case-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "authorization_digest": "2f5b948382118d2088ac837e6d81c4cdea4f6a82e0f977dd87495f91359131be",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "label": "Q12",
+      "result": {
+        "schema_version": 2,
+        "id": "b05ab95972b8c95a2a3e0b87ec0953898f131f2d408e9f2a389f12c4f796c68d",
+        "session_id": "public-qa-run",
+        "version": 1,
+        "query": "餐费每日可以报销多少钱",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-06T18:43:09.944959Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-public-case-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 2
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "9df1d7b3c0b3caf9b0c72b1c054b26c0104d75e974d298d8f1d6f22bee5b894f",
+              "material_id": "meal",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "public-qa-run",
+                "kind": "material",
+                "object_id": "meal",
+                "version": 1,
+                "config_version": null,
+                "span_start": 31,
+                "span_end": 72,
+                "quote": "餐费报销上限为每人每天100元；需保留合规票据，重复报销和个人个案由负责同事核验。",
+                "observed_at_seq": 5,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.4
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "public-qa-run",
+          "kind": "config",
+          "object_id": "pilot",
+          "version": 5,
+          "config_version": 4
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 5,
+            "config_version": 4,
+            "domains": [
+              "policy_travel",
+              "policy_meal"
+            ],
+            "scope_filter": true,
+            "update_strategy": "manual_policy",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "pilot",
+            "session_id": "public-qa-run",
+            "version": 5,
+            "config_version": 4,
+            "domains": [
+              "policy_travel",
+              "policy_meal"
+            ],
+            "scope_filter": true,
+            "update_strategy": "manual_policy",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "餐费报销上限为每人每天100元；需保留合规票据，重复报销和个人个案由负责同事核验。",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "public-qa-run",
+            "kind": "material",
+            "object_id": "meal",
+            "version": 1,
+            "config_version": null,
+            "span_start": 31,
+            "span_end": 72,
+            "quote": "餐费报销上限为每人每天100元；需保留合规票据，重复报销和个人个案由负责同事核验。",
+            "observed_at_seq": 5,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 5,
+          "workspace_revision": 0,
+          "storage_revision": 4
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_meal"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "4068cff1924721de2d2ff280068cf10c3157581f2329735b9144279f8e2b4ae3",
+        "created_at": "2026-10-06T18:43:09.944959+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 2
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "9df1d7b3c0b3caf9b0c72b1c054b26c0104d75e974d298d8f1d6f22bee5b894f"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-public-case-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "authorization_digest": "2f5b948382118d2088ac837e6d81c4cdea4f6a82e0f977dd87495f91359131be",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    }
+  ],
+  "input_archive_sha256": "3e6f123e1c06295c80eeba09f1ff85d2ea33294ed6bc39ae141b81f254238bd8",
+  "input_archive_note": "Exact input snapshot retained with this build receipt."
+}

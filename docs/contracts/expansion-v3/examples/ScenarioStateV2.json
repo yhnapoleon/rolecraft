@@ -1,0 +1,17 @@
+{
+  "current_config": {
+    "config_version": null,
+    "kind": "document",
+    "object_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "id": "example",
+  "indexed_versions": {},
+  "material_activation": {},
+  "schema_version": 2,
+  "session_id": "example",
+  "source_versions": {},
+  "version": 1
+}

@@ -1,0 +1,424 @@
+{
+  "$defs": {
+    "EvidenceRefV2": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "observed_at_seq": {
+          "minimum": 0,
+          "title": "Observed At Seq",
+          "type": "integer"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quote"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "span_end": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span End"
+        },
+        "span_start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Start"
+        },
+        "valid_from_seq": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Valid From Seq",
+          "type": "integer"
+        },
+        "valid_until_seq": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until Seq"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version",
+        "observed_at_seq"
+      ],
+      "title": "EvidenceRefV2",
+      "type": "object"
+    },
+    "Executor": {
+      "additionalProperties": false,
+      "properties": {
+        "delegation_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delegation Id"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "human",
+            "external_agent",
+            "reference_agent",
+            "system"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "Executor",
+      "type": "object"
+    },
+    "ModelAttemptUsage": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_id": {
+          "minLength": 1,
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost"
+        },
+        "elapsed_seconds": {
+          "minimum": 0,
+          "title": "Elapsed Seconds",
+          "type": "number"
+        },
+        "expected_model_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Model Revision"
+        },
+        "expected_provider": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Provider"
+        },
+        "input_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Tokens"
+        },
+        "model_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Model Revision"
+        },
+        "output_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Tokens"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Provider"
+        },
+        "request_id": {
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "failed",
+            "timeout",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "usage_known": {
+          "title": "Usage Known",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "request_id",
+        "attempt_id",
+        "provider",
+        "model_revision",
+        "status",
+        "elapsed_seconds",
+        "usage_known"
+      ],
+      "title": "ModelAttemptUsage",
+      "type": "object"
+    },
+    "RetrievedChunk": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "material_id": {
+          "minLength": 1,
+          "title": "Material Id",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/EvidenceRefV2"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "score": {
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "material_id",
+        "version",
+        "ref",
+        "score"
+      ],
+      "title": "RetrievedChunk",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "attempts": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ModelAttemptUsage"
+      },
+      "title": "Attempts",
+      "type": "array"
+    },
+    "chunks": {
+      "items": {
+        "$ref": "#/$defs/RetrievedChunk"
+      },
+      "title": "Chunks",
+      "type": "array"
+    },
+    "cost_complete": {
+      "default": false,
+      "title": "Cost Complete",
+      "type": "boolean"
+    },
+    "executed_at": {
+      "format": "date-time",
+      "title": "Executed At",
+      "type": "string"
+    },
+    "executor": {
+      "$ref": "#/$defs/Executor"
+    },
+    "indexed_versions": {
+      "additionalProperties": {
+        "exclusiveMinimum": 0,
+        "type": "integer"
+      },
+      "title": "Indexed Versions",
+      "type": "object"
+    },
+    "projection_actor": {
+      "minLength": 1,
+      "title": "Projection Actor",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_versions": {
+      "additionalProperties": {
+        "exclusiveMinimum": 0,
+        "type": "integer"
+      },
+      "title": "Source Versions",
+      "type": "object"
+    },
+    "used_versions": {
+      "additionalProperties": {
+        "exclusiveMinimum": 0,
+        "type": "integer"
+      },
+      "title": "Used Versions",
+      "type": "object"
+    }
+  },
+  "required": [
+    "executed_at",
+    "executor",
+    "source_versions",
+    "indexed_versions",
+    "used_versions",
+    "chunks",
+    "projection_actor"
+  ],
+  "title": "TestExecutionMetadata",
+  "type": "object"
+}
