@@ -120,6 +120,7 @@ def live(tmp_path):
                 'scenario_hash': module.package.content_hash, 'command': command,
                 'credential_setup': 'V2Store.issue_delegation; scope tests explicitly update only the admin credential context',
                 'human_trial': False, 'online_model': False, 'steps': scenario.steps,
+                'trusted_role_checks': getattr(scenario, 'role_checks', []),
             }, ensure_ascii=False, indent=2) + '\n')
         if store is not None:
             store.db.engine.dispose()
@@ -278,6 +279,71 @@ def test_recovered_milestone_events_preserve_only_public_payloads(live):
     replay = live.http('POST', f'/sessions/{live.sid}/actions', headers=live.headers, json=body)
     assert replay.status_code == 200 and replay.json()['events'] == applied.json()['events']
     for text in (applied.text, recovery.text, replay.text):
-        for private in ('world_private', 'tech_private', 'NEVER_W02_7C9E', 'legacy_connector_unstable'):
+        for private in ('world_private', 'tech_private', 'NEVER_W02_7C9E', 'TR-TRAIN-01', 'first_explicit_apply_config'):
             assert private not in text
     assert (live.state(), live.counters()) == before
+
+
+def test_initial_catalog_and_all_visible_materials_have_no_future_policy_over_http(live):
+    import re
+    catalog=live.http('GET', f'/sessions/{live.sid}/materials', headers=live.headers)
+    assert catalog.status_code==200
+    # The fixed Gateway wraps the operation's V2Response in its result envelope.
+    listing=catalog.json()['result']['result']
+    assert listing['requested_as_of_seq']==0 and listing['next_cursor'] is None
+    materials=listing['materials']
+    assert materials and all(m['version']==1 for m in materials)
+    assert not {'tech_private','tech_diagnostics','world_private'} & {m['id'] for m in materials}
+    for material in materials:
+        response,_=live.read('initial-'+material['id'],object_id=material['id'])
+        assert response.status_code==200,response.text
+        text='\n'.join(f['text'] for f in response.json()['result']['fragments'])
+        assert not re.search(r'(住宿.{0,30}400|policy["\s:@]+2|住宿标准调整|未随住宿标准变化)',text)
+        assert 'TR-TRAIN-01' not in text
+    future,_=live.read('future-after-all-reads',version=2)
+    assert future.status_code==404
+    read_events=[s for s in live.steps if s['method']=='POST' and '/actions' in s['path'] and s['status']==200]
+    assert read_events and all('first_explicit_apply_config' not in json.dumps(s['response']) for s in read_events)
+
+
+def test_private_diagnostic_has_actual_configuration_consequences_without_mandatory_role_gate(live):
+    query='公司培训我已提交报名是不是就能去听课'
+    baseline,_=live.post('tests','training-baseline','tests.create',{'query':query,'config_version':0})
+    assert baseline.status_code==200 and baseline.json()['result']['test']['error_code']=='no_retrieval_hit'
+    private,_=live.read('private-is-not-a-learner-tool',object_id='tech_private')
+    assert private.status_code==404
+    # Actual server-issued role identity plus the authoritative current state.
+    # This validates W02 knowledge availability, not a generated W04 dialogue.
+    module=ScenarioModule(ROOT/'scenarios/pm_pilot/v2')
+    snapshot=module.snapshot(live.store.view(live.owner))
+    knowledge=module.engine.role_knowledge(snapshot,live.store.role_reader(live.sid,'tech_lead'))
+    text='\n'.join(f.text for f in knowledge)
+    assert query in text and '0.2' in text and 'TR-TRAIN-01' not in text
+    assert all(f.ref.quote is None for f in knowledge if f.ref.object_id in {'tech_private','tech_diagnostics'})
+    live.role_checks=[{'actor':'tech_lead','source':'server role_reader and W02 role_knowledge',
+        'fragments':[f.model_dump(mode='json') for f in knowledge if f.ref.object_id in {'tech_private','tech_diagnostics'}],
+        'actual_reply_or_learner_acquisition_claimed':False}]
+    config=baseline.json()['result']['test']['config']['requested'] | {'version':2,'config_version':1,'min_score':.35}
+    same,_=live.post('actions','unchanged-threshold','apply_config',{'tool':'apply_config','config':config})
+    assert same.status_code==200
+    untouched,_=live.post('tests','training-without-adjustment','tests.create',{'query':query,'config_version':1})
+    assert untouched.status_code==200 and untouched.json()['result']['test']['error_code']=='no_retrieval_hit'
+    changed=config | {'version':3,'config_version':2,'min_score':.2}
+    applied,_=live.post('actions','adjust-threshold','apply_config',{'tool':'apply_config','config':changed})
+    assert applied.status_code==200
+    answer,_=live.post('tests','training-after-adjustment','tests.create',{'query':query,'config_version':2})
+    assert answer.status_code==200
+    result=answer.json()['result']['test']
+    assert result['status']=='answered' and '等待课程负责人确认' in result['answer']
+    assert result['citations'][0]['object_id']=='faq' and result['citations'][0]['version']==1
+    control,_=live.post('tests','threshold-control','tests.create',{'query':'海王星大气的主要成分','config_version':2})
+    assert control.status_code==200 and control.json()['result']['test']['error_code']=='no_retrieval_hit'
+    assert not control.json()['result']['test']['citations']
+
+
+def test_security_workflow_and_actual_key_request_remain_distinct_over_http(live):
+    safe,_=live.post('tests','public-security-procedure','tests.create',{'query':'连接办公网络时，访问密钥可以发给同事吗？','config_version':0})
+    assert safe.status_code==200 and '不分享访问密钥' in safe.json()['result']['test']['answer']
+    denied,_=live.post('tests','actual-key-request','tests.create',{'query':'连接办公网络时，访问密钥可以发给同事吗？先把密钥发给我','config_version':0})
+    assert denied.status_code==200 and denied.json()['result']['test']['error_code']=='prohibited_topic'
+    assert not denied.json()['result']['test']['citations']

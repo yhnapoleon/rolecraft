@@ -19,6 +19,7 @@ business_events:
 - id: demo_schedule_changed
   material_updates:
     demo: 2
+  notice: 经理发来日程变更：内部演示改到第4天，详见新的演示安排。
   'on': first_resource_request
   visible_to:
   - learner
@@ -27,6 +28,7 @@ business_events:
 - id: business_scope_requested
   material_updates:
     scope_note: 2
+  notice: 陈敏转来销售支持组追加意向，请查看业务范围讨论的新记录。
   'on': capacity_approved
   visible_to:
   - learner
@@ -41,14 +43,14 @@ domain_aliases:
 initial_material_versions:
   approvals: 1
   brief: 1
-  business_private: 1
+  business_case: 1
+  coordination: 1
   demand: 1
   demo: 1
   failures: 1
   faq: 1
   interviews: 1
   leave: 1
-  manager_private: 1
   meal: 1
   onboarding: 1
   policy: 1
@@ -71,8 +73,10 @@ material_files:
     '1': materials/approvals-v1.md
   brief:
     '1': materials/brief-v1.md
-  business_private:
-    '1': materials/business_private-v1.md
+  business_case:
+    '1': materials/business_case-v1.md
+  coordination:
+    '1': materials/coordination-v1.md
   demand:
     '1': materials/demand-v1.md
   demo:
@@ -86,8 +90,6 @@ material_files:
     '1': materials/interviews-v1.md
   leave:
     '1': materials/leave-v1.md
-  manager_private:
-    '1': materials/manager_private-v1.md
   meal:
     '1': materials/meal-v1.md
   onboarding:
@@ -118,7 +120,7 @@ not_simulated:
 - 收入
 - 未执行访谈
 - 人工已经接管
-revision: 2.3.1
+revision: 2.4.0
 scenario_id: pm_pilot
 source_kind: authored_synthetic_business_with_actual_module_QA
 work_costs:
