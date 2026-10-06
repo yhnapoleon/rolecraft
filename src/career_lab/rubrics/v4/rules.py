@@ -9,10 +9,12 @@ def pending(item,reason):
 
 def run_rules(item):
     if item.applicability=='not_applicable':
+        reason=('本次作品是停止或暂缓建议，不按上线成功条件验收；历史行动与承诺另列核对。'
+                if item.rule_context.get('decision') in {'no_go','defer_with_conditions'}
+                else '本次作品用途不承担这一项上线验收责任；历史记录另列核对。')
         return FeedbackItem(criterion=item.criterion,label='NOT_APPLICABLE',applicability=item.applicability,
-            source='verified_rule',explanation=('当时记录确认未产生这一项既往责任，本次停止/暂缓建议不承担上线义务。' if item.rule_context.get('responsibility_incurred') is False and item.rule_context.get('decision') in {'no_go','defer_with_conditions'} else '本次作品用途和评价时点暂不要求完成这一项。'),
-            citations=tuple(EvidenceRefV2.model_validate(r) for r in item.rule_context.get('responsibility_refs',())))
-    if item.applicability=='undetermined':return pending(item,'用途或既往行动、承诺、验证声明的责任尚未核清；需核对当时记录，暂不判未达标。')
+            source='verified_rule',explanation=reason,citations=())
+    if item.applicability=='undetermined':return pending(item,'用途或本次决定尚未明确，不能默认上线；历史记录与引用核验另列。')
     ctx=item.rule_context;facts=ctx['facts'];proofs=ctx['fact_refs'];kind=ctx['mechanism']
     def numeric(names):
         if any(n not in facts or type(facts[n]) not in (int,float) or facts[n]<0 or not proofs.get(n) for n in names):return None

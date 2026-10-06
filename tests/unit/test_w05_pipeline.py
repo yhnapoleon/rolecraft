@@ -75,7 +75,7 @@ class UpstreamDouble:
             'participants':self.participants,'capacity':self.capacity,'required_dev_days':2,'available_dev_days':3,
             'requested_launch_day':7,'deadline_day':7,'test_ledger_complete':True}.items())
         return RuleSnapshot(as_of,facts,self.logs_complete,self.tests,self.test_refs,0,self.technical,
-            responsibilities=tuple(ResponsibilityFact(p.id,p.id in self.incurred,(ledger,)) for p in self.selected_policies if p.launch_only) if self.responsibility_known else ()),()
+            responsibilities=tuple(ResponsibilityFact(p.id,'actual_action',INITIAL,INITIAL,(product_ref(),),(ledger,)) for p in self.selected_policies if p.id in self.incurred) if self.responsibility_known else ()),()
     def policies(self,conn,evaluation):return self.selected_policies
     def commit_transition(self,conn,auth,before,after,operation):
         assert before.resources==after.resources and before.applied_milestones==after.applied_milestones
@@ -119,7 +119,7 @@ def test_purpose_and_stop_decision_keep_different_responsibilities(env):
     env['authority'].participants=50
     assert run_rules(package(env,purpose='draft')).label=='NOT_APPLICABLE'
     assert run_rules(package(env,purpose='commitment')).label=='NOT_MET'
-    assert run_rules(package(env,purpose='result')).label=='NOT_MET'
+    assert run_rules(package(env,purpose='result')).label=='NOT_APPLICABLE'
     assert run_rules(package(env,purpose='没有明确用途')).label=='INSUFFICIENT'
     assert run_rules(package(env,decision='no_go')).label=='NOT_APPLICABLE'
     assert package(env,criterion='decision.rationale',decision='no_go').applicability=='applicable'
@@ -225,9 +225,11 @@ def test_review_is_nonterminal_and_worker_uses_fixed_historical_input(env):
     assert env['service'].run_once()
     job=env['service'].job(env['auth'],created['job_id']);assert job['status']=='completed'
     report=env['service'].get(env['auth'],'feedback',job['feedback_id'])
-    assert report['as_of']['business_seq']==5 and report['items'][0]['label']=='MET'
+    assert report['as_of']['business_seq']==5 and report['items'][0]['label']=='INSUFFICIENT'
     assert report['mode']=='advisory' and report['independent_understanding']=='unobserved'
-    assert '30' in report['items'][0]['explanation']
+    with env['service'].repository.transaction() as conn:
+        frozen=env['service'].repository.get(conn,'s','review',created['review']['id'])['frozen']
+    assert frozen['packages'][0]['rule_context']['facts']['capacity']==30
 
 
 def test_submit_feedback_revision_resubmit_keeps_old_snapshots_and_replays(env):
@@ -416,7 +418,10 @@ def test_oversize_question_header_keeps_rules_and_never_calls_model(env):
     created=execute(env,'reviews.create',{'subjects':[product_ref().model_dump(mode='json')],'purpose':'commitment','scope':['R3.capacity','R6.comparison'],'question':'问题'*400})
     assert env['service'].run_once()
     job=env['service'].job(env['auth'],created['job_id']);report=env['service'].get(env['auth'],'feedback',job['feedback_id'])
-    assert report['items'][0]['label']=='MET' and report['items'][1]['label']=='INSUFFICIENT'
+    assert report['items'][0]['label']=='INSUFFICIENT' and report['items'][1]['label']=='INSUFFICIENT'
+    with env['service'].repository.transaction() as conn:
+        frozen=env['service'].repository.get(conn,'s','review',created['review']['id'])['frozen']
+    assert frozen['packages'][0]['rule_context']['facts']['capacity']==30
     assert model.calls==[]
 
 
@@ -428,10 +433,11 @@ def test_active_session_cannot_silently_change_evaluation_bundle(env):
 
 
 def test_evidence_links_resolve_exact_versions_and_missing_history_does_not_substitute_latest(env):
-    created=review(env,purpose='commitment',scope=('R3.capacity',));env['service'].run_once()
+    submitted=execute(env,'submissions.create',{'decision':'launch','products':[product_ref().model_dump(mode='json')]})['submission']
+    created=execute(env,'feedback.request',{'subject':ref('s','submission',submitted['id']).model_dump(mode='json')});env['service'].run_once()
     job=env['service'].job(env['auth'],created['job_id']);links=env['service'].evidence_links(env['auth'],job['feedback_id'])
-    assert links and all(x['criterion']=='R3.capacity' for x in links)
-    selected=next(x for x in links if x['ref']['object_id']=='ledger')
+    assert links and any(x['criterion']=='R3.capacity' for x in links)
+    selected=next(x for x in links if x['ref']['object_id']=='ledger' and x['criterion']=='R3.capacity')
     result=env['service'].read_evidence(env['auth'],job['feedback_id'],selected['criterion'],selected['evidence_id'])
     assert result['ref']['version']==1 and '30' in result['content']
     env['authority'].sources.pop(('event','ledger',1,None));env['authority'].add('event','ledger',2,'后来容量改为10')
@@ -467,7 +473,10 @@ print(json.dumps({'processed':service.run_once()}));engine.dispose()
     assert json.loads(result.stdout)['processed'] is True
     job=env['service'].job(env['auth'],created['job_id']);assert job['status']=='completed'
     report=env['service'].get(env['auth'],'feedback',job['feedback_id'])
-    assert report['items'][0]['label']=='MET' and '30' in report['items'][0]['explanation']
+    assert report['items'][0]['label']=='INSUFFICIENT'
+    with env['service'].repository.transaction() as conn:
+        frozen=env['service'].repository.get(conn,'s','review',created['review']['id'])['frozen']
+    assert frozen['packages'][0]['rule_context']['facts']['capacity']==30
     assert not env['service'].run_once()
 
 

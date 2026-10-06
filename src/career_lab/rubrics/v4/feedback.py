@@ -50,6 +50,8 @@ class FeedbackEngine:
             model_coverage=model/denominator if denominator else 0,mode='advisory',independent_understanding='unobserved')
         return report,{'model_revision':self.judge.revision,'criterion_attempts':attempts,
                        'input_hashes':[p.input_hash for p in packages],
+                       'verified_facts':list({digest(f):f for p in packages for f in p.rule_context.get('verified_facts',[])}.values()),
+                       'historical_responsibilities':[h for p in packages for h in p.rule_context.get('historical_responsibilities',[])],
                        'rule_items':[i.model_dump(mode='json') for i in rule_items],
                        'score_bounds':score_bounds(rule_items)}
 
