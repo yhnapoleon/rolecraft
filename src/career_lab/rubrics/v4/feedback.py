@@ -25,7 +25,8 @@ class FeedbackEngine:
                 result=self.judge.evaluate(EvidencePackageV2.model_validate(bounded),expected_model_revision)
                 attempts.append({'criterion':package.criterion,'attempts':list(result.attempts)})
                 if result.item.source=='model_advice' and result.item.label!='INSUFFICIENT':
-                    items.append(result.item.model_copy(update={'explanation':rule.explanation+'\n模型建议：'+result.item.explanation}))
+                    items.append(result.item.model_copy(update={'explanation':f'规则已核验区间：{rule.rule_bound.lower}—{rule.rule_bound.upper}。'+rule.explanation+'\n模型建议（不改变规则区间）：'+result.item.explanation,
+                        'citations':tuple({r.model_dump_json():r for r in [*rule.citations,*result.item.citations]}.values())}))
                 else:items.append(rule)
             elif rule.source=='verified_rule' or package.applicability!='applicable' or package.rule_context['mechanism']!='semantic':items.append(rule)
             else:

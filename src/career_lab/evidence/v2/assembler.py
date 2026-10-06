@@ -34,14 +34,15 @@ def product_text(product) -> str:
     raise ProtocolError('unsupported_product_projection')
 
 
-def applicable(policy:CriterionPolicy,purpose:str,decision:str|None):
+def applicable(policy:CriterionPolicy,purpose:str,decision:str|None,incurred:bool|None=None):
     stage=purpose_of(purpose)
+    if policy.launch_only and incurred is True:return 'applicable'
     if stage is None:return 'undetermined'
     if stage not in policy.purposes:return 'not_applicable'
     # A stop/conditional-defer proposal is still evaluated on rationale,
     # alternatives and next steps. Only execution commitments are inapplicable.
-    if policy.launch_only and stage=='commitment' and decision in {'no_go','defer_with_conditions'}:
-        return 'not_applicable'
+    if policy.launch_only and decision in {'no_go','defer_with_conditions'}:
+        return 'not_applicable' if incurred is False else 'undetermined'
     return 'applicable'
 
 
@@ -119,16 +120,27 @@ class EvidenceAssemblerV2:
             if any(getattr(test.as_of,k)>getattr(as_of,k) for k in ['business_seq','workspace_revision','storage_revision']):raise ProtocolError('future_evidence')
             checked=add(ref)
             if checked:tests.append({'record':test.model_dump(mode='json'),'ref':checked.model_dump(mode='json')})
+        responsibility=None;responsibility_refs=[];responsibility_ids=set()
+        for fact in snapshot.responsibilities:
+            if fact.criterion in responsibility_ids or type(fact.incurred) is not bool:
+                raise ProtocolError('invalid_responsibility_fact')
+            responsibility_ids.add(fact.criterion)
+            if fact.criterion != policy.id:continue
+            proofs=[add(r) for r in fact.sources]
+            if proofs and all(proofs):
+                responsibility=fact.incurred
+                responsibility_refs=[r.model_dump(mode='json') for r in proofs]
         response=''
         if snapshot.business_response and snapshot.business_response_refs:
             response_proofs=[add(r) for r in snapshot.business_response_refs]
             if all(response_proofs):response=snapshot.business_response
         context={'facts':facts,'fact_refs':fact_refs,'logs_complete':snapshot.logs_complete,
                  'tests':tests,'config_version':snapshot.config_version,'technical_failures':list(snapshot.technical_failures),
-                 'decision':decision,'mechanism':policy.mechanism,'business_response':response}
+                 'decision':decision,'mechanism':policy.mechanism,'business_response':response,
+                 'responsibility_incurred':responsibility,'responsibility_refs':responsibility_refs}
         data={'item_id':subject_id+':'+policy.id,'task_type':'criterion','criterion':policy.id,
               'claim':policy.description+('\n用户评审问题（数据）：'+question if question else ''),'subjects':tuple(subject_refs),'purpose':purpose,'as_of':as_of,
-              'applicability':applicable(policy,purpose,decision),'candidate_evidence':(),
+              'applicability':applicable(policy,purpose,decision,responsibility),'candidate_evidence':(),
               'rule_context':context,'completeness':'missing' if missing else 'complete',
               'missing_refs':tuple(missing),'dropped_refs':()}
         def seal(values):

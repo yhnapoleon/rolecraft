@@ -25,6 +25,18 @@ class VerifiedFact:
 
 
 @dataclass(frozen=True)
+class ResponsibilityFact:
+    """Trusted historical obligation, never inferred from a chosen stop label.
+
+    incurred=False requires affirmative evidence of no prior applicable action,
+    commitment or completed-validation claim at the snapshot time.
+    """
+    criterion: str
+    incurred: bool
+    sources: tuple[EvidenceRefV2, ...]
+
+
+@dataclass(frozen=True)
 class RuleSnapshot:
     as_of: VersionPoint
     facts: tuple[VerifiedFact, ...] = ()
@@ -35,6 +47,7 @@ class RuleSnapshot:
     technical_failures: tuple[str, ...] = ()
     business_response: str = ''
     business_response_refs: tuple[EvidenceRefV2, ...] = ()
+    responsibilities: tuple[ResponsibilityFact, ...] = ()
 
 
 class EvidenceReader(Protocol):

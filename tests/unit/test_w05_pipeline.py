@@ -20,7 +20,7 @@ from career_lab.contracts.v2.core import AuthContext,Executor,ObjectRef,Evidence
 from career_lab.contracts.v2.world import WorldStateV2,SessionBindings,AssistantConfig,EffectiveConfig,TestResultV2 as AssistantTestResult
 from career_lab.contracts.v2.evaluation import FeedbackItem
 from career_lab.contracts.v2.workspace import RevisionCycle,WorkProductVersion,OptionsPayload,Option
-from career_lab.evidence.v2.ports import SourceRecord,VerifiedFact,RuleSnapshot,DEFAULT_POLICIES,CriterionPolicy
+from career_lab.evidence.v2.ports import SourceRecord,VerifiedFact,RuleSnapshot,DEFAULT_POLICIES,CriterionPolicy,ResponsibilityFact
 from career_lab.evidence.v2.assembler import EvidenceAssemblerV2,model_input,product_text
 from career_lab.rubrics.v4.rules import run_rules
 from career_lab.rubrics.v4.judge import AdvisoryJudge
@@ -40,6 +40,7 @@ class UpstreamDouble:
         self.sources={};self.revoked=False;self.protocol_value='v2';self.failure=False
         self.capacity=30;self.participants=20;self.logs_complete=True;self.tests=();self.test_refs=();self.technical=()
         self.denied=set();self.revoked_ids=set();self.selected_policies=DEFAULT_POLICIES
+        self.incurred=set();self.responsibility_known=True
         self.bundle=SessionBindings(scenario=FileRef(path='scenario.json',sha256='1'*64),runtime=FileRef(path='runtime.json',sha256='2'*64),evaluation=FileRef(path='evaluation.json',sha256='3'*64))
         self.add('product','p1',1,'先比较稳定域开放与人工处理；缺少真实需求前，可有依据地暂缓并继续访谈。')
         self.add('event','ledger',1,'当时有效容量30；资源3人日；期限7天。完整测试账本。')
@@ -73,7 +74,8 @@ class UpstreamDouble:
         facts=tuple(VerifiedFact(k,v,(config if k in {'participants','required_dev_days','requested_launch_day'} else ledger,)) for k,v in {
             'participants':self.participants,'capacity':self.capacity,'required_dev_days':2,'available_dev_days':3,
             'requested_launch_day':7,'deadline_day':7,'test_ledger_complete':True}.items())
-        return RuleSnapshot(as_of,facts,self.logs_complete,self.tests,self.test_refs,0,self.technical),()
+        return RuleSnapshot(as_of,facts,self.logs_complete,self.tests,self.test_refs,0,self.technical,
+            responsibilities=tuple(ResponsibilityFact(p.id,p.id in self.incurred,(ledger,)) for p in self.selected_policies if p.launch_only) if self.responsibility_known else ()),()
     def policies(self,conn,evaluation):return self.selected_policies
     def commit_transition(self,conn,auth,before,after,operation):
         assert before.resources==after.resources and before.applied_milestones==after.applied_milestones
@@ -95,7 +97,7 @@ def env(tmp_path):
 
 def command(env,operation,payload,request_id=None):
     with env['engine'].connect() as conn:state=env['authority'].state(conn,env['auth'],lock=False)
-    return Command(request_id=request_id or uuid4().hex,expected_version=state.business_seq,expected_workspace_revision=state.workspace_revision,operation=operation,payload=payload)
+    return Command(schema_version=2,request_id=request_id or uuid4().hex,expected_version=state.business_seq,expected_workspace_revision=state.workspace_revision,operation=operation,payload=payload)
 
 
 def execute(env,operation,payload,request_id=None):return env['service'].execute(env['auth'],command(env,operation,payload,request_id))
@@ -527,7 +529,9 @@ def test_semantic_judge_can_choose_within_non_point_rule_interval(env):
     assert json.loads(model.calls[0][1]['content'])['rule_bound']['lower']=='PARTIAL'
     assert diagnostics['rule_items'][0]['label']=='PARTIAL'
     assert diagnostics['score_bounds']['lower']==0.5 and diagnostics['score_bounds']['upper']==1
-    assert report.items[0].rule_bound is None
+    assert report.items[0].rule_bound is None  # Public draft forbids model advice tightening bounds.
+    assert '规则已核验区间：PARTIAL—MET' in report.items[0].explanation
+    assert {json.dumps(r,sort_keys=True) for r in diagnostics['rule_items'][0]['citations']} <= {json.dumps(r.model_dump(mode='json'),sort_keys=True) for r in report.items[0].citations}
 
 
 def test_production_cannot_start_the_retired_private_store_or_router():
