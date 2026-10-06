@@ -1,31 +1,57 @@
-"""Executable blocked-case evidence, not assertions that these are fixed.
-
-Replace these expected failures with positive tests only after the formal W01
-input upgrade. They document why W04 cannot yet claim full delivery.
-"""
-from datetime import datetime, timedelta, timezone
+"""c4 blocked-port regressions; old filename retained without rewriting r1 evidence."""
+from pathlib import Path
+import subprocess
+import types
 
 import pytest
-from career_lab.contracts.v2 import DelegationGrant, Executor, ProtocolError
-from test_runtime import build_runtime, session, send
+from career_lab.contracts.v2 import AssistantConfig,SessionBindings,Command,ObjectRef,ProtocolError,ProviderMessage
+from career_lab.scenarios.v2.module import ScenarioModule
+from career_lab.storage.v2_store import V2Store,Mutation,ObjectWrite
+from career_lab.storage.v2_lifecycle import point
+from career_lab.storage.role_memory import install_role_storage,object_write,parse_public_reply
+from test_context import package,catalog
 
 
-def test_r3_still_blocks_scoped_role_turn_creation(tmp_path):
-    rt=build_runtime("sqlite:///"+str(tmp_path/"blocked-scope.db"));owner,_=session(rt)
-    grant=DelegationGrant(id="restricted",session_id=owner.session_id,actor_id="learner",
-        executor=Executor(id="agent",kind="external_agent",delegation_id="restricted"),
-        capabilities=("read","act"),allowed_objects=("faq",),allowed_actions=("turns.create",),
-        expires_at=datetime.now(timezone.utc)+timedelta(hours=1))
-    token=rt[0].issue_delegation(owner,grant);restricted=rt[0].authenticate(owner.session_id,token)
-    with pytest.raises(ProtocolError,match="object not found"):
-        send(rt,restricted,"turns.create","scope",{"role_id":"tech_lead","text":"请帮忙判断"})
+def test_frozen_w02_runtime_binding_is_not_forged(package):
+    with pytest.raises(ProtocolError,match='runtime contract mismatch'):
+        ScenarioModule(package.root)
 
 
-def test_r3_unrelated_edit_still_blocks_fixed_job(tmp_path):
-    rt=build_runtime("sqlite:///"+str(tmp_path/"blocked-stale.db"));auth,_=session(rt)
-    started,_=send(rt,auth,"turns.create","turn",{"role_id":"tech_lead","text":"风险如何"})
-    send(rt,auth,"work_products.create","unrelated",{"kind":"text","content":"与本次角色上下文无关的私人草稿"})
-    for _ in range(3):rt[3].run_once()
-    job=rt[3].jobs.get(started["result"]["queued_jobs"][0])
-    assert job["status"]=="failed" and job["error"]=="ProtocolError"
-    assert job["result"] is None
+def make_legacy_database(tmp_path,catalog):
+    # The actual immutable r1 definitions create this historical fixture in an
+    # isolated DB. They are never registered in a production service.
+    import legacy_r1_fixture as module
+    url='sqlite:///'+str(tmp_path/'legacy.db');old=V2Store(url)
+    old.register_object('role_turn',module.RoleTurn);old.register_object('role_reply',module.RoleReply)
+    bindings=SessionBindings(scenario=catalog.binding,runtime=catalog.binding,evaluation=catalog.binding)
+    state,token=old.create_session(bindings,AssistantConfig(id='c0',session_id='template',domains=('fixture',)),{})
+    auth=old.authenticate(state.session_id,token)
+    from career_lab.contracts.v2 import TurnInput
+    req=module.RoleTurn(id='old-turn',session_id=auth.session_id,input=TurnInput(role_id='tech_lead',text='原提问'),as_of=point(state),executor=auth.executor)
+    reqwrite=object_write('role_turn',req)
+    reply=module.RoleReply(id='old-reply',session_id=auth.session_id,role_id='tech_lead',request=reqwrite.ref,
+          question='原提问',text='我还需要核对。',status='completed',context_hash='0'*64,prompt_hash='1'*64,
+          prompt_messages=(ProviderMessage(role='system',content='UNSAID_R1_PRIVATE_PROMPT'),),history_revision='2'*64,
+          as_of=point(state),model_revision='historical-fixture',executor=auth.executor)
+    write=object_write('role_reply',reply,visible_to=('learner','tech_lead'))
+    old.execute(auth,Command(schema_version=2,request_id='legacy-save',operation='fixture',expected_version=0,expected_workspace_revision=0),
+                lambda *_:Mutation(writes=(reqwrite,write)))
+    fresh=V2Store(url);install_role_storage(fresh)
+    return fresh,auth,write.ref
+
+
+def test_owned_legacy_decoder_rejects_real_r1_record(tmp_path,catalog):
+    store,auth,ref=make_legacy_database(tmp_path,catalog)
+    with pytest.raises(ProtocolError,match='role legacy reply requires projection'):
+        parse_public_reply(store.read(auth,ref).content)
+
+
+@pytest.mark.xfail(strict=True,reason='BLOCKED c4 common read/view lacks historical role_reply projection; P0 cannot be closed by W04 alone')
+@pytest.mark.parametrize('path',['read','view'])
+def test_common_historical_role_reply_guard_still_required(tmp_path,catalog,path):
+    store,auth,ref=make_legacy_database(tmp_path,catalog)
+    try:
+        values=[store.read(auth,ref)] if path=='read' else list(store.view(auth).objects)
+    except ProtocolError:
+        return
+    assert all('prompt_messages' not in record.content for record in values if record.ref.kind=='role_reply')
