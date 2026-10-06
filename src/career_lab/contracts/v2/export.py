@@ -36,8 +36,8 @@ CONSUMERS['W14'] += ['PublicState','PublicEvent','PublicTransactionResult']
 CONSUMERS['W04'] += ['PublicDisclosureSource','PublicDisclosureRecord']
 CONSUMERS['W06'] += ['PublicDisclosureSource','PublicDisclosureRecord','RequestResultQuery','RequestJobResult','RequestResult']
 CONSUMERS['W09'] += ['RequestResultQuery','RequestJobResult','RequestResult','ProviderReceipt']
-CONSUMERS['W07'] += ['ProviderReceipt']
-CONSUMERS['W08'] += ['ProviderReceipt']
+CONSUMERS['W07'] += ['ProviderReceipt','DatasetMetadataV2','DatasetSnapshotMetadata']
+CONSUMERS['W08'] += ['ProviderReceipt','DatasetMetadataV2','DatasetSnapshotMetadata']
 CONSUMERS['W12'] += ['ProviderReceipt']
 for consumer in ('W04','W05','W06','W09','W14'):
     CONSUMERS[consumer] += ['JobRefreshRecord']
@@ -94,6 +94,8 @@ def export(root:Path,output:Path):
     manifest['boundaries'].append('W02 runtime is still pinned to r3; controlled source-port regressions do not close actual ScenarioModule HTTP acceptance. Consumers must migrate through coordinator-fixed inputs.')
     manifest['review_fixes']['031-W01-REPLAY-SCOPE-01']='execute, replay and request/job GET share current scope and visibility checks, including historical result-only/unanchored references; no handler/resolver rerun.'
     manifest['review_fixes']['W02-S09']='Recovery and idempotent replay select event projector only by persisted action and trusted installed registration; preserve safe fields without handler/resolver rerun.'
+    manifest['previous_contract_revision']='expansion-v3-d5aa8ca0d6532afe1165511e1403455cde39026f7d555decdd1840038849e0bb'
+    manifest['integration_changes']['W07-W08-data-slice']='Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.'
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

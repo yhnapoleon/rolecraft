@@ -140,7 +140,9 @@
       "ExternalReference",
       "ObservedFragment",
       "ActualConsumption",
-      "ProviderReceipt"
+      "ProviderReceipt",
+      "DatasetMetadataV2",
+      "DatasetSnapshotMetadata"
     ],
     "W08": [
       "ModelBundle",
@@ -155,7 +157,9 @@
       "ProviderReply",
       "ProviderResult",
       "ProviderCapabilities",
-      "ProviderReceipt"
+      "ProviderReceipt",
+      "DatasetMetadataV2",
+      "DatasetSnapshotMetadata"
     ],
     "W09": [
       "ActionProposal",
@@ -244,7 +248,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "dbcf5552c61e4527b3f4137023294b163b560c2a3680ed47a85c796eed7a2cfa"
+      "sha256": "15f657d81fea6af8f71da109aac8c64bb0a3308188a7255349ae7ce3af7d834d"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -252,25 +256,26 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "f27dd712b1b8e352d28526311c079533cbaf802603fc2fc30b921224842192a1"
+      "sha256": "752bd252a650c4bee2b3f9c8cd93fc92bb9928f71967fa9f99ccc9f3f549e40d"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "1c97e45724fde66f0a0a3a358c76fd4e6f81c619162133544d9c78af38381316"
+    "sha256": "ecf02047f5b202c62f568157f6cdef79cb578956dcad5ea029757f2064fceb71"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
     "W02-S06": "Opt-in contextual resolver gets authoritative persisted-window ScenarioState; legacy four-argument behavior retained.",
     "W02-S07": "Verified command/result references are atomically anchored for read-request recovery.",
-    "W03-GR02-partial": "Validated LegacyProvenance.raw remains inert during reference/time traversal; receipt and preview interfaces remain pending."
+    "W03-GR02-partial": "Validated LegacyProvenance.raw remains inert during reference/time traversal; receipt and preview interfaces remain pending.",
+    "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation."
   },
   "openapi": {
     "path": "openapi.json",
-    "sha256": "8f10baf8552832ef7bf19c29f1d6aca01ba84d758339271bb34e657003bdf47d"
+    "sha256": "a6bdfc780629d8a8127b70517e3494e626b6f221440ac348a37733d4764d7578"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-2e4b5f05138ae995320db1ae21ca6f5d7a8d63bf5ec3e19346a088510cb0515c",
+  "previous_contract_revision": "expansion-v3-d5aa8ca0d6532afe1165511e1403455cde39026f7d555decdd1840038849e0bb",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -691,15 +696,45 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "DatasetMetadataV2": {
+      "consumers": [
+        "W07",
+        "W08"
+      ],
+      "example": "examples/DatasetMetadataV2.json",
+      "example_sha256": "9ee647458cd79427a2fdd20e7d0561fd2ddedbbe9a510a36f2dbbc51057a55d9",
+      "owner": "W01",
+      "schema": "schemas/DatasetMetadataV2.json",
+      "schema_sha256": "cff632f9ec60bd28ff7b87613560a4f9912799416516e9e97b3024d4f1d8308a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "DatasetRecordV2": {
       "consumers": [
         "W07"
       ],
       "example": "examples/DatasetRecordV2.json",
-      "example_sha256": "d095c2cd4b123341ee2693ce7a0a528d15ed14279775fe9f032adfedb7e4f776",
+      "example_sha256": "2e31013d19f70d2bd3d9940b74e4b2f2f1e450fef6844f336ef66a8938da64c9",
       "owner": "W01",
       "schema": "schemas/DatasetRecordV2.json",
-      "schema_sha256": "2b9274fc31b5f6f6c98f2ee626413eba5bb783c707f63139bdee4ee91fba238b",
+      "schema_sha256": "3da95ef9ab471adf620598c76fe9bd4d4700a706478071cd4401b7b7b5acb15b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DatasetSnapshotMetadata": {
+      "consumers": [
+        "W07",
+        "W08"
+      ],
+      "example": "examples/DatasetSnapshotMetadata.json",
+      "example_sha256": "6971cea2989dbd1f55f98e60ec765569a2f92a036549ef1b942a13376c20c01c",
+      "owner": "W01",
+      "schema": "schemas/DatasetSnapshotMetadata.json",
+      "schema_sha256": "c633b4d580b3455535ccec5940e2bdd5958d403eebd4b69d93755d886893a025",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -2595,11 +2630,11 @@
     "src/career_lab/contracts/scenario.py": "b191244dd1356503b153abf3a31921ce7911ec19b66534378b369b35d135e3b0",
     "src/career_lab/contracts/v2/__init__.py": "bcb066dbbe937f00a366d9fd836a1411afef069472cb2c8765988f771bee55e7",
     "src/career_lab/contracts/v2/core.py": "50e521c7d7ea22d5ec4a60134917fe827361bf898ff8b5d7bf2ab8509ea34ea8",
-    "src/career_lab/contracts/v2/data.py": "cf238959645892d07902b388616ef3cbb0fe6b5c0d2a19e617511066ace53952",
+    "src/career_lab/contracts/v2/data.py": "a2b8ff4da8acf93b74d52742db3b2954088b80298ffb7e90f983a9b567a1c062",
     "src/career_lab/contracts/v2/discovery.py": "1089a5682cb915ce4f095ec28f65014d88724e4e5a30e1b17a753bb358bc006c",
     "src/career_lab/contracts/v2/evaluation.py": "c8bc7004d8d14c54f1832eecc227ae45e7fe8492c1b584117ad1f8a372a5c631",
     "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
-    "src/career_lab/contracts/v2/export.py": "37809fe682b0a3cc233a994752341600d4bf73ff34e86ca080433b2f14a30120",
+    "src/career_lab/contracts/v2/export.py": "64ec6af91fae57cb8d1c3c69f2734006386fc4fea5e72832e7212bbc86798ff9",
     "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
     "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
     "src/career_lab/contracts/v2/projection.py": "8740cf952268d8997610904224db37dcd7ce91886046653b46284be9583062ab",

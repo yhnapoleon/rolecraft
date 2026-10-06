@@ -1764,11 +1764,143 @@
         "title": "CriterionInput",
         "type": "object"
       },
+      "DatasetMetadataV2": {
+        "additionalProperties": false,
+        "description": "A sidecar for audit/stratification. Never part of model_input(record).",
+        "properties": {
+          "accepted_label_tier": {
+            "anyOf": [
+              {
+                "enum": [
+                  "G0",
+                  "G1",
+                  "G2",
+                  "G2v"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Accepted Label Tier"
+          },
+          "annotation_status": {
+            "enum": [
+              "unloaded",
+              "pending",
+              "accepted",
+              "disputed",
+              "failed"
+            ],
+            "title": "Annotation Status",
+            "type": "string"
+          },
+          "bucket": {
+            "enum": [
+              "fixture",
+              "env_run",
+              "human_session",
+              "public_aux",
+              "business_synth"
+            ],
+            "title": "Bucket",
+            "type": "string"
+          },
+          "capture_point": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionPoint"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "input_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "language": {
+            "minLength": 1,
+            "title": "Language",
+            "type": "string"
+          },
+          "lineage": {
+            "$ref": "#/components/schemas/Lineage"
+          },
+          "metadata_only": {
+            "const": true,
+            "default": true,
+            "title": "Metadata Only",
+            "type": "boolean"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "record_id": {
+            "minLength": 1,
+            "title": "Record Id",
+            "type": "string"
+          },
+          "requested_label_tier": {
+            "enum": [
+              "G0",
+              "G1",
+              "G2",
+              "G2v"
+            ],
+            "title": "Requested Label Tier",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_snapshots": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DatasetSnapshotMetadata"
+            },
+            "title": "Source Snapshots",
+            "type": "array"
+          },
+          "split": {
+            "enum": [
+              "train",
+              "dev",
+              "test",
+              "regression"
+            ],
+            "title": "Split",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "input_hash",
+          "language",
+          "bucket",
+          "split",
+          "lineage",
+          "provenance",
+          "requested_label_tier",
+          "annotation_status"
+        ],
+        "title": "DatasetMetadataV2",
+        "type": "object"
+      },
       "DatasetRecordV2": {
         "additionalProperties": false,
         "properties": {
           "bucket": {
             "enum": [
+              "fixture",
               "env_run",
               "human_session",
               "public_aux",
@@ -1878,6 +2010,62 @@
           "input_hash"
         ],
         "title": "DatasetRecordV2",
+        "type": "object"
+      },
+      "DatasetSnapshotMetadata": {
+        "additionalProperties": false,
+        "properties": {
+          "capture_point": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "origin": {
+            "enum": [
+              "fixture",
+              "env_run",
+              "human_session",
+              "public_aux",
+              "business_synth"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Session Id"
+          },
+          "snapshot_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Snapshot Digest",
+            "type": "string"
+          },
+          "source_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source Digest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_digest",
+          "source_digest",
+          "capture_point",
+          "origin"
+        ],
+        "title": "DatasetSnapshotMetadata",
         "type": "object"
       },
       "DecisionPointInput": {
