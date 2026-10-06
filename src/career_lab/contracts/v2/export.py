@@ -39,6 +39,8 @@ CONSUMERS['W09'] += ['RequestResultQuery','RequestJobResult','RequestResult','Pr
 CONSUMERS['W07'] += ['ProviderReceipt']
 CONSUMERS['W08'] += ['ProviderReceipt']
 CONSUMERS['W12'] += ['ProviderReceipt']
+for consumer in ('W04','W05','W06','W09','W14'):
+    CONSUMERS[consumer] += ['JobRefreshRecord']
 
 def dump(path,data):
     path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(data,ensure_ascii=False,sort_keys=True,indent=2)+'\n')
@@ -64,9 +66,10 @@ def export(root:Path,output:Path):
     import re
     for p in files:
         errors.extend(re.findall(r"ProtocolError\(['\"]([^'\"]+)",p.read_text()))
+    errors.extend(['job_result_identity_conflict','job_execution_failed'])
     dump(output/'errors.json',{'schema_version':2,'codes':sorted(set(errors)),'http_policy':{'401':'missing/invalid authentication','403':'capability/scope denied','404':'not found or unauthorized object','409':'version/hash/identity conflict','422':'invalid request/business precondition','503':'uninstalled/unavailable module or invalid server result'}})
     manifest={'schema_version':1,'status':'frozen_candidate_pending_independent_review','owner':'rolecraft-032-foundation','base_commit':'80cf1f6189cd25610d609f44283ff9668582d759','input_contract_revision':'preflight','v1_dirty_included':False,'source_files':source,'schemas':entries,'consumer_interfaces':CONSUMERS,'request_payloads':REQUEST_MODELS,'openapi':{'path':'openapi.json','sha256':sha(output/'openapi.json')},'errors':{'path':'errors.json','sha256':sha(output/'errors.json')},'boundaries':['This is W01 common foundation, not implemented W02-W15 business modules.','v4 semantic engine, paid provider/model quality, full product QA and research results are not claimed.','Existing v1 remains separate; internal snapshot/restore never appears in learner routes.'],'documents':{name:{'path':name,'sha256':sha(output/name)} for name in ['compatibility.md','module-interfaces.md','consumer-request-resolution.json'] if (output/name).is_file()},'previous_draft':'draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e','changes_since_draft':['Command.schema_version and CreateSessionV2.schema_version are now required for explicit envelopes.','Added ModelPrediction; ModelBundle validates ordered task label vocabulary.','G2v compares evidence sets independent of ordering, requires reordered evidence only when more than one item exists.','API/storage/atomic job queue/isolated restore implementations and their public models are now included.','AssistantConfig adds finite min_score (initial 0.35, uncalibrated), freshness_guard none/warn/fallback and manual_domains; TestResultV2 requires execution metadata and exact config_ref.', 'BusinessRequest requires immutable proposed/applied BusinessBasis. ScenarioStateV2 is private transaction state, not an observation.', 'Observation.visible_sources now requires ObservedFragment with explicit learner acquisition/audience; catalog is separate. StepResult/ObservedStep bind actual request identities, points and executor.', 'AnnotationPass successful passes require actual invocation identity; G2v also requires separate context IDs, independence method/reason and truthful evidence order policy.', 'AuthContext/DelegationGrant adds explicit create_under_tasks; derived results remain tied to the actual executor, unrelated existing artifacts are not inherited.', 'SnapshotExport now includes immutable external source references; restore supports exact target/idempotency and structured action remapping. Regenerate draft snapshots under the new revision.', 'WorkProduct/import DTOs retain intent/refs, test_compare, review_focus distinct from direction, source return identity, adoption and version conflicts.', 'PublicTransactionResult is the HTTP/worker wire result; TransactionResult remains the internal authoritative record.']}
-    manifest['previous_contract_revision']='expansion-v3-7ff68a878fbfd58770ccb31a51d955b39ef568fee817a8991ef0b66613bb7947'
+    manifest['previous_contract_revision']='expansion-v3-5a117a51493f5bb5d8f96f711d78466f82550935d803c312d277cfac045ff6a4'
     manifest['review_fixes']={
         'R01':'Actual WorkerClaim is passed and fenced at entry/commit; no lease borrowing.',
         'R02':'Fixed-subject derived FeedbackV2 may persist on submitted; ordinary writes stay forbidden.',
@@ -83,6 +86,7 @@ def export(root:Path,output:Path):
         'C-W01-03':'Withdrawn route-deleting candidate is not included. Public integration must use Gateway slots; W03 adapter remains separate integration work.',
         'P2-related':'Stable worker error codes; scoped v2 jobs GET; reverse-order object/resolver collision rejected.',
     })
+    manifest['review_fixes']['C-W01-04']='Ordinary jobs require an active open current cycle before handler and at commit. Explicit refresh preserves question/command while moving context to the current cycle; fixed-subject feedback remains allowed. Deterministic failures stop; parked reason/history is queryable; research writes denied.'
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

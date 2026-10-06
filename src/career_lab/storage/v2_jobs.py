@@ -5,6 +5,7 @@ credential or idempotency namespace of its own.
 """
 import json
 import time
+from datetime import datetime, timezone
 from sqlalchemy import select, update
 from career_lab.contracts.v2 import *
 from .v2_tables import v2_credentials, v2_snapshots, v2_transactions
@@ -29,7 +30,29 @@ class JobStoreMixin:
         if VersionPoint(**state.model_dump(include={'business_seq','workspace_revision','storage_revision'}))!=context.as_of:raise ProtocolError('job_snapshot_mismatch',status=409)
         return state
 
-    def _check_job_context(self,c,context):
+    def fixed_feedback_subject(self,command):
+        if command is None or command.operation!='feedback.create' or 'subject' not in command.payload:return None
+        subject=ObjectRef.model_validate(command.payload['subject'])
+        return subject if subject.kind in {'submission','review'} else None
+
+    def _check_job_lifecycle(self,c,context,command=None,*,refresh=False):
+        # Only fixed-subject feedback may finish after submission or a new cycle.
+        subject=self.fixed_feedback_subject(command)
+        if subject is not None:
+            if subject.session_id!=context.session_id:raise ProtocolError('object_not_found',status=404)
+            auth=self._job_auth(c,context,'read')
+            self._auth(c,auth,'read',object_ids=(subject.object_id,))
+            record=next((x for x in self._records(c,context.session_id) if x.ref==subject),None)
+            if record is None or not self._visible(record,auth):raise ProtocolError('object_not_found',status=404)
+            return
+        current=WorldStateV2.model_validate_json(self._row(c,context.session_id)['state'])
+        if current.status!='active':raise ProtocolError('job_session_inactive',status=409)
+        cycle=self._current_cycle(c,context.session_id)
+        if cycle is None or cycle.content['status']!='open':raise ProtocolError('job_cycle_closed',status=409)
+        if not refresh and current.cycle_id!=self._job_snapshot(c,context).cycle_id:raise ProtocolError('job_cycle_changed',status=409)
+
+    def _check_job_context(self,c,context,command=None):
+        self._check_job_lifecycle(c,context,command)
         original=self._job_snapshot(c,context)
         current=WorldStateV2.model_validate_json(self._row(c,context.session_id)['state'])
         if any(getattr(current,key)!=getattr(original,key) for key in context.state_dependencies):raise ProtocolError('context_stale',status=409)
@@ -38,19 +61,19 @@ class JobStoreMixin:
             versions=[x.ref for x in records if x.ref.kind==ref.kind and x.ref.object_id==ref.object_id]
             if not versions or max(versions,key=lambda x:x.version)!=ref:raise ProtocolError('context_stale',status=409)
 
-    def guard_job(self,context,capability='act',check_context=True):
+    def guard_job(self,context,capability='act',check_context=True,*,command=None):
         with self.db.transaction() as c:
             auth=self._job_auth(c,context,capability)
-            if check_context:self._check_job_context(c,context)
+            if check_context:self._check_job_context(c,context,command)
             return auth
 
-    def job_view(self,auth,context):
+    def job_view(self,auth,context,*,command=None):
         """Read the exact queued/refreshed snapshot, filtered by current permission."""
         from .v2_store import TransactionView
         with self.db.transaction() as c:
             current_auth=self._job_auth(c,context,'read')
             if current_auth!=auth:raise ProtocolError('credential_revoked_or_invalid',status=403)
-            self._check_job_context(c,context)
+            self._check_job_context(c,context,command)
             state=self._job_snapshot(c,context)
             row=self._row(c,auth.session_id)
             records=self._records(c,auth.session_id,context.as_of.storage_revision)
@@ -70,7 +93,7 @@ class JobStoreMixin:
         payload=json.loads(row['payload'])
         if JobContextSnapshot.model_validate(payload['context'])!=context or payload['command']!=command.model_dump(mode='json') or payload['capability']!=capability:raise ProtocolError('job_identity_mismatch',status=409)
         if self._job_auth(c,context,capability)!=auth:raise ProtocolError('credential_revoked_or_invalid',status=403)
-        self._check_job_context(c,context)
+        self._check_job_context(c,context,command)
 
     def refresh_job(self,auth,command,job_id):
         from .v2_store import Mutation
@@ -88,6 +111,7 @@ class JobStoreMixin:
         # Caller permission never grants a revoked/narrowed original actor new authority.
         self._auth(c,auth,'act',context.action,[x.object_id for x in context.sources])
         if row['status']!='needs_context':raise ProtocolError('job_refresh_not_available',status=409)
+        self._check_job_lifecycle(c,context,Command.model_validate(payload['command']),refresh=True)
         if c.execute(select(v2_transactions.c.request_id).where(v2_transactions.c.session_id==auth.session_id,v2_transactions.c.request_id==context.request_id)).first():raise ProtocolError('job_effect_already_committed',status=409)
         records=self._records(c,auth.session_id)
         heads=[]
@@ -97,7 +121,10 @@ class JobStoreMixin:
             heads.append(latest.ref)
         # Explicit source refs, subject, evaluation and logical command remain unchanged.
         # Only the declared current-context guards and snapshot move forward.
-        refreshed=context.model_copy(update={'as_of':VersionPoint(**new_state.model_dump(include={'business_seq','workspace_revision','storage_revision'})), 'head_dependencies':tuple(heads),'refresh_count':context.refresh_count+1})
+        timestamps=c.execute(select(job_times).where(job_times.c.id==job_id)).mappings().first() or {}
+        history=JobRefreshRecord(previous_as_of=context.as_of,reason=row['error'] or 'context_refresh',attempt=row['attempt'],
+            queued_at=timestamps.get('queued_at'),started_at=timestamps.get('started_at'),parked_at=timestamps.get('finished_at'),refreshed_at=datetime.now(timezone.utc))
+        refreshed=context.model_copy(update={'refresh_history':(*context.refresh_history,history),'as_of':VersionPoint(**new_state.model_dump(include={'business_seq','workspace_revision','storage_revision'})), 'head_dependencies':tuple(heads),'refresh_count':context.refresh_count+1})
         payload['context']=refreshed.model_dump(mode='json')
         prior=[x for x in records if x.ref.kind=='job_context' and x.ref.object_id==job_id]
         version=max(x.ref.version for x in prior)+1

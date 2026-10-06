@@ -89,7 +89,7 @@ def test_relevant_head_change_parks_once_and_http_refresh_resumes(foundation):
     assert w.run_once() and not w.run_once()
     jid=result.result['queued_jobs'][0];blocked=q.get(jid)
     assert blocked['status']=='needs_context' and blocked['attempt']==1 and blocked['error']=='context_stale'
-    assert not seen and g.request_result(auth,'turn').status=='unresolved'
+    assert not seen and g.request_result(auth,'turn').status=='needs_context'
     app=create_app(database_url=str(store.db.engine.url),extensions=registry)
     client=TestClient(app);headers={'Authorization':'Bearer '+token}
     cmd=command(store.view(auth),'refresh','jobs.refresh').model_copy(update={'payload':{'job_id':jid}})
@@ -126,7 +126,7 @@ def test_expected_output_head_still_fences_async_write(foundation):
     g,q,w,result,_=queue_reply(store,auth,registry)
     store.execute(auth,command(store.view(auth),'conflict'),lambda v,c,a:product_plan(v,c,a,oid='reply'))
     assert w.run_once();job=q.get(result.result['queued_jobs'][0])
-    assert job['status']=='needs_context' and job['error']=='object_version_conflict'
+    assert job['status']=='failed' and job['error']=='job_result_identity_conflict'
     assert sum(x.ref.object_id=='reply' for x in store.view(auth).objects)==1
 
 

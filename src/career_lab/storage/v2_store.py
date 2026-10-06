@@ -136,6 +136,7 @@ class V2Store(JobStoreMixin):
         if r is None or r['revoked'] or canonical(auth)!=r['context']:
             raise ProtocolError('credential_revoked_or_invalid',status=403)
         if auth.expires_at is not None and auth.expires_at<=datetime.now(timezone.utc):raise ProtocolError('credential_expired',status=403)
+        if 'research' in auth.capabilities and capability not in {None,'read','research'}:raise ProtocolError('research_read_only',status=403)
         if capability and capability not in auth.capabilities:raise ProtocolError('capability_forbidden',status=403)
         if operation and auth.allowed_actions is not None and operation not in auth.allowed_actions:raise ProtocolError('action_forbidden',status=403)
         if auth.allowed_objects is not None and any(not self._object_in_scope(c,auth,x) for x in object_ids):raise ProtocolError('object_not_found',status=404)
@@ -192,7 +193,7 @@ class V2Store(JobStoreMixin):
     def research_context(self,sid):
         """Internal trusted research runner only; never mounted in learner HTTP/tools."""
         token=secrets.token_urlsafe(32)
-        context=AuthContext(session_id=sid,actor_id='research',executor=Executor(id='research:'+sid,kind='system'),capabilities=('read','act','research'),credential_id=uuid4().hex)
+        context=AuthContext(session_id=sid,actor_id='research',executor=Executor(id='research:'+sid,kind='system'),capabilities=('read','research'),credential_id=uuid4().hex)
         with self.db.transaction() as c:self._row(c,sid);self._credential(c,context,token)
         return context
 
@@ -336,13 +337,21 @@ class V2Store(JobStoreMixin):
                 if any(x.ref.object_id==ref.object_id and x.ref.kind!=ref.kind for x in (*records,*planned)):raise ProtocolError('object_identity_conflict',status=409)
                 existing=[x for x in (*records,*planned) if x.ref.kind==ref.kind and x.ref.object_id==ref.object_id]
                 head=max([x.ref.version for x in existing],default=0)
-                if head!=write.expected_head or ref.version!=head+1:raise ProtocolError('object_version_conflict',status=409)
+                if head!=write.expected_head or ref.version!=head+1:
+                    code='job_result_identity_conflict' if job_context is not None and write.expected_head==0 and head>0 else 'object_version_conflict'
+                    raise ProtocolError(code,status=409)
                 if existing and ref.kind!='scenario_state' and not self._visible(max(existing,key=lambda x:x.ref.version),auth):raise ProtocolError('object_not_found',status=404)
                 model=self.object_models.get(ref.kind)
                 if model is None:raise ProtocolError('object_kind_unavailable',status=503)
                 try:obj=model.model_validate(write.content)
                 except ValidationError as exc:raise ProtocolError('module_object_invalid',status=503) from exc
                 content=obj.model_dump(mode='json')
+                if job_context is not None:
+                    if ref.kind=='cycle':raise ProtocolError('async_cycle_write_forbidden',status=403)
+                    cycle_data=content.get('cycle')
+                    if ref.kind=='product' or (isinstance(cycle_data,dict) and cycle_data.get('kind')=='cycle'):
+                        target_cycle=ObjectRef.model_validate(cycle_data);current_cycle=self._current_cycle(c,auth.session_id)
+                        if current_cycle is None or target_cycle!=current_cycle.ref or current_cycle.content['status']!='open':raise ProtocolError('job_output_cycle_closed',status=409)
                 if structural_cycle and existing:
                     original=max(existing,key=lambda x:x.ref.version).content
                     if any(content[k]!=original[k] for k in original if k not in {'version','status'}) or content['status']!='submitted':raise ProtocolError('cycle_scope_invalid',status=403)
@@ -538,7 +547,7 @@ class V2Store(JobStoreMixin):
                 except ProtocolError as exc:
                     if exc.code!='request_not_found':raise
                     # Missing effect metadata means unknown; an inaccessible effect must not leak through job.result.
-                links.append({'job_id':jid,'origin_request_id':request_id,'effect_request_id':effect_id,'status':row['status'],'effect':effect,'error_code':row['error']})
+                links.append({'job_id':jid,'origin_request_id':request_id,'effect_request_id':effect_id,'status':row['status'],'effect':effect,'error_code':row['error'],'refresh_count':payload['context'].get('refresh_count',0),'refresh_history':payload['context'].get('refresh_history',[])})
             return meta,result,links
 
     def replay(self,auth,command,capability='act'):

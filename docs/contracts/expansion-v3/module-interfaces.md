@@ -57,15 +57,30 @@
 
 `Mutation.jobs`中的JobRequest与对象/状态原子入队，sources及可信身份形成JobContextSnapshot。`registry.register_job("v2.<name>", handler)`与既有独立worker相接，handler接收`(TransactionView, JobEnvelope, AuthContext)`，可在事务外调用其获授权的模型，返回Mutation。
 
-handler 的 TransactionView 来自入队时的完整固定 storage snapshot，并按当前授权过滤。`sources` 和 command 中的精确引用固定输入主体及版本；无关草稿、另一个反馈完成或新修订不会使它失效。提交反馈继续使用原 submission/review 与 evaluation，不重开旧提交、不覆盖旧反馈。后台 Mutation 仅追加或按 expected_head 写对象与事件，不承担世界状态/资源审批或再入队。
+handler 的 TransactionView 来自入队或显式刷新后的固定 storage snapshot，并按当前授权过滤。sources 和 command 中的精确引用固定输入；无关草稿或另一反馈完成不使它失效。普通job另有不可省略的生命周期条件：会话必须active、当前周期open，并且与快照周期一致。仅 operation=`feedback.create` 且 subject 为 submission/review 的job是固定主体派生反馈；公共提交仍强制它只创建新FeedbackV2、绑定原subject/evaluation，不能带事件、资源、状态或其他对象写入。
 
-模块若需要“写回时仍为当前”的上下文，必须声明 `JobRequest.head_dependencies` 和 `state_dependencies`。前者绑定对象当前 head；后者可选 config_version、resources、applied_milestones、status、cycle_id。默认空集合表示使用固定输入快照。不能将动态依赖留在闭包或自行读取活动数据库。执行前、模型返回后及提交事务内均核对这些相关条件；当前 credential、action/object scope、实际 WorkerClaim、租约及每个 ObjectWrite.expected_head 仍必检，不以全 session 版本取代相关性检查。
+| job类别与当前情况 | handler前行为 | refresh与写回 |
+|---|---|---|
+| 普通job，active且原周期仍open | 通过身份/来源/相关依赖检查后生成 | 每个输出expected_head必检；作品cycle必须是当前open周期，job不能写cycle对象 |
+| 普通job，paused或submitted | needs_context / job_session_inactive，0次handler调用 | 此时refresh拒绝；恢复或开启修订后才可显式刷新 |
+| 普通job，已开启另一个周期 | needs_context / job_cycle_changed，0次handler调用 | 显式refresh取新周期快照；原question、command/request_id与精确来源保留，不能偷偷写旧周期 |
+| handler开始后发生提交/修订 | 提交前再次检查，拒绝旧结果并停放 | 已发生的外部调用如实计费；不继续三次相同调用，用户明确刷新后可续跑 |
+| 固定主体派生反馈，原提交或新修订已存在 | 当前身份/来源仍有效时可完成 | 只追加原subject的不可变FeedbackV2；不重开周期、不改旧提交，即使新周期paused也允许纯反馈 |
+| 业务结果已提交但ACK丢失 | 先回放原幂等结果，不调用handler | 已生效任务不能refresh；当前scope和实际claim仍核对 |
 
-`context_stale` 或输出对象头冲突使 Worker 将任务置为 `needs_context`，保留稳定错误码，不耗尽三个相同重试。调用者明确 POST `/sessions/{session_id}/jobs/{job_id}/refresh`，发送 schema_version=2 的 Command（operation=`jobs.refresh`，payload={`job_id`:同路径ID}，使用当前业务/工作区版本），经 Gateway/公共事务重取 snapshot 和声明的当前 head 后回到 queued。请求幂等；原逻辑 command/request_id、精确 sources/subject/evaluation 不变；旧 job_context 版本保留，refresh_count 递增，旧租约作废。原 credential 撤销或越权时不能刷新。`context_hash` 保留模块入队时提供的原输入身份；它不是刷新后 prompt 的哈希，模块须依据新的 as_of/refresh_count 构建并记录真实上下文/模型调用身份，不把原 hash 当新 prompt 已验证的证据。
+模块还可声明 JobRequest.head_dependencies 和 state_dependencies（config_version/resources/applied_milestones/status/cycle_id）。这些是额外的新鲜度条件；空集合也不能关闭上述普通job生命周期条件。执行前、模型返回后和事务内均核对相关条件、当前credential/action/object scope、实际WorkerClaim/租约和输出expected_head。
 
-若业务结果已提交而 job 确认丢失，重试先读取已提交幂等结果，不再调用 handler/模型；已生效任务不能刷新。尚未提交时模型调用仍可能重复，模块必须逐 attempt 记录真实 usage 和预算，缺失 usage 写 unknown。本公共层不声称外部计费恰好一次。
+context_stale、可刷新对象头冲突及生命周期暂不可提交使Worker置needs_context，保留原问题和稳定错误码。RequestResult.status直接返回needs_context，不再混为unresolved；后者只表示缺失可核对的effect等不完整结果。固定新对象ID已占用返回job_result_identity_conflict并立即failed，不能无限refresh；模块须使用唯一结果ID。写旧周期返回job_output_cycle_closed并立即failed。其他确定性ProtocolError（4xx及明确模块/对象契约错误）也只尝试一次；仅ProtocolError.code作为稳定协议码，未知异常归job_execution_failed并沿有限瞬时重试预算。v1仍保留旧异常类名处理。
 
-RoleContext 是内部对象：visible_to 只允许 system 与自身 role_id，拒绝 learner/其他角色。即使旧记录错误声明 learner 可见或把 role_id 写成 learner/system/research，新读取层也会过滤；这些保留字不能通过 role_reader 取得角色凭据。非 research 读取须为服务端创建的对应角色身份，普通 learner 无法读取任何 RoleContext。research capability 是内部审计授权，不由记录自报 role_id 授予。学员展示须使用 PublicDisclosureRecord/公开回复投影，不能直接暴露 RoleContext.sources 或 actual_disclosures。
+调用者明确POST `/sessions/{session_id}/jobs/{job_id}/refresh`，发送显式v2 Command（operation=jobs.refresh，payload含同路径job_id和当前业务/工作区版本），经Gateway/公共事务重取快照及声明的head。原逻辑command/request_id、精确sources/subject/evaluation不变；旧job_context保留，refresh_count递增，旧claim失效。JobRefreshRecord保存每次停放原因、attempt、queued/started/parked时间和refreshed_at，并由RequestJobResult.refresh_history提供可恢复查询。原credential失效/越权、普通job当前会话非active或周期非open、永久失败或已有effect时均拒绝刷新，不重排注定失败的任务。学员可刷新所属agent job，但原agent凭据必须有效；agent自行刷新还需allowed_actions含jobs.refresh及原动作。
+
+context_hash保留原入队模块输入身份，不代表刷新后prompt；模块根据新as_of/refresh_count重建并记录真实prompt/hash与usage。尚未提交时外部模型调用仍可能重复，缺失usage写unknown，不声称外部计费恰好一次。旧r3已queued任务的缺省字段可消费；r3已failed且只保留通用ProtocolError的任务不能可靠推断失败原因，本版本不自动复活，保留历史并由业务模块为用户显式新建关联请求。
+
+RoleContext受众只允许system与自身真实role_id，普通learner不可读；保留字role_id也不授予权限。visible_to必须包含自身role_id才能供role_reader读取；仅system受众的内部记录只供research审计。当前RoleContext是每次capture的新ID快照：caller只能创建私有v1，不能更新旧ID，也不能把私有context当作公开产物依赖。合法方向是私有context引用安全回复；向学员展示走PublicDisclosureRecord/公开回复。W04可信派生产物与更新/事件读取通道另按S01—S06集成，不借research权限绕过。
+
+同一Mutation允许按顺序写同一对象v1…vN，每个expected_head对已有或前序planned版本递进；版本、依赖、头和事务结果全部原子提交。中间版本不连续或后续失败时全量回滚；重复请求回放同一结果。导入可利用此能力保留真实历史，不可补造缺失版本。research_context新凭据只读，且公共授权层也拒绝旧research凭据的act/submit/delegate写入；内部研究读取仍无自动到期/撤销通道，调用方需控制句柄生命周期。SnapshotExport含私有原句，不得把它直接送进面向学员的生成或公开输出。
+
+execute(expected_storage_revision=...)保留为已有内部调用的显式同步CAS兼容参数；job路径不再传它。当前没有内置模块依赖它，不把全session storage_revision重新引入异步有效性判断。
 
 ## 研究隔离恢复
 

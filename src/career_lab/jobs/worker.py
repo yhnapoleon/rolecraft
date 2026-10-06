@@ -4,6 +4,7 @@ from typing import Callable
 from uuid import uuid4
 
 from career_lab.jobs.repository import LeaseLost
+from career_lab.contracts.v2.core import ProtocolError
 
 
 @dataclass(frozen=True)
@@ -55,11 +56,15 @@ class Worker:
             pass
         except Exception as exc:
             try:
-                code = getattr(exc, 'code', type(exc).__name__) if isinstance(handler, ClaimedHandler) else type(exc).__name__
-                if isinstance(handler, ClaimedHandler) and code in {'context_stale', 'object_version_conflict'}:
-                    self.jobs.needs_context(job, code)
+                if isinstance(handler, ClaimedHandler):
+                    code=exc.code if isinstance(exc,ProtocolError) else 'job_execution_failed'
+                    if code in {'context_stale','object_version_conflict','job_session_inactive','job_cycle_closed','job_cycle_changed'}:
+                        self.jobs.needs_context(job,code)
+                    else:
+                        deterministic=isinstance(exc,ProtocolError) and (exc.status<500 or code in {'module_unavailable','module_object_invalid','module_response_invalid','object_kind_unavailable'})
+                        self.jobs.fail(job,code,retry=not deterministic)
                 else:
-                    self.jobs.fail(job, code)
+                    self.jobs.fail(job,type(exc).__name__)
             except LeaseLost:
                 pass
         finally:

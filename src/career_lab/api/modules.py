@@ -143,6 +143,7 @@ class Gateway:
         status='completed'
         if any(j.status in {'queued','running'} for j in jobs):status='pending'
         elif any(j.status=='failed' for j in jobs):status='failed'
+        elif any(j.status=='needs_context' for j in jobs):status='needs_context'
         elif any(j.effect is None for j in jobs):status='unresolved'
         return RequestResult(session_id=auth.session_id,request_id=request_id,operation=meta['operation'],executor=response.executor,
             status=status,response=PublicTransactionResult.model_validate(self.public_result(auth,response)),jobs=tuple(jobs))
@@ -183,16 +184,11 @@ class Gateway:
         auth=self.store.guard_job(envelope.context,envelope.capability,check_context=False)
         prior=self.store.replay(auth,envelope.command,envelope.capability)
         if prior is not None:return self.public_result(auth,prior)
-        self.store.guard_job(envelope.context,envelope.capability)
-        derived_subject=None
-        if 'subject' in envelope.command.payload:
-            candidate=ObjectRef.model_validate(envelope.command.payload['subject'])
-            if candidate.kind in {'submission','review'}:
-                self.store.read(auth,candidate)
-                derived_subject=candidate
-        plan=handler(self.store.job_view(auth,envelope.context),envelope,auth)
-        # External calls can repeat on failure; modules retain each actual usage attempt.
-        self.store.guard_job(envelope.context,envelope.capability)
+        self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
+        derived_subject=self.store.fixed_feedback_subject(envelope.command)
+        plan=handler(self.store.job_view(auth,envelope.context,command=envelope.command),envelope,auth)
+        # External calls can repeat on transient failure; deterministic failures stop.
+        self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
         result=self.store.execute(auth,envelope.command,lambda *_:plan,capability=envelope.capability,worker_fence=claim,derived_subject=derived_subject,job_context=envelope.context)
         return self.public_result(auth,result)
 

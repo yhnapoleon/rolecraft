@@ -306,6 +306,15 @@ class Observation(V2):
         if any(x.displayed_at_seq is None or x.displayed_at_seq>self.as_of.business_seq for x in self.actual_disclosures):raise ValueError('observation cannot claim undisplayed role disclosure')
         return self
 
+class JobRefreshRecord(V2):
+    previous_as_of: VersionPoint
+    reason: Identifier
+    attempt: NonNegativeInt
+    queued_at: Timestamp | None = None
+    started_at: Timestamp | None = None
+    parked_at: Timestamp | None = None
+    refreshed_at: Timestamp
+
 class JobContextSnapshot(V2):
     session_id: Identifier
     request_id: Identifier
@@ -319,6 +328,7 @@ class JobContextSnapshot(V2):
     head_dependencies: tuple[ObjectRef, ...] = ()
     state_dependencies: tuple[Literal['config_version','resources','applied_milestones','status','cycle_id'], ...] = ()
     refresh_count: NonNegativeInt = 0
+    refresh_history: tuple[JobRefreshRecord,...] = ()
     conflict_policy: Literal['reject_and_refresh'] = 'reject_and_refresh'
 
 

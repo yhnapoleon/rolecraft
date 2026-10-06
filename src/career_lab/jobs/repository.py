@@ -68,7 +68,7 @@ class JobRepository:
             result = conn.execute(update(jobs).where(jobs.c.id == jid, jobs.c.lease_token == token, jobs.c.status == "running", jobs.c.lease_until > now).values(**values))
             if result.rowcount != 1:
                 raise LeaseLost("worker lease no longer valid")
-            if values.get("status") in {"completed", "failed"}:
+            if values.get("status") in {"completed", "failed", "needs_context"}:
                 self._record_times(conn, jid, finished_at=utc_timestamp(now))
 
     def heartbeat(self, jid, token, now=None, lease_seconds=60):
@@ -78,8 +78,8 @@ class JobRepository:
     def complete(self, jid, token, result, now=None):
         self._change_leased(jid, token, {"status": "completed", "result": canonical({"output_hash": digest(result), "value": result})}, now)
 
-    def fail(self, job, error, now=None):
-        self._change_leased(job["id"], job["lease_token"], {"status": "failed" if job["attempt"] >= 3 else "queued", "error": error}, now)
+    def fail(self, job, error, now=None, *, retry=True):
+        self._change_leased(job["id"], job["lease_token"], {"status": "failed" if not retry or job["attempt"] >= 3 else "queued", "error": error}, now)
 
     def needs_context(self, job, error, now=None):
         """Park v2 work without spending three identical retries; explicit refresh resumes it."""
