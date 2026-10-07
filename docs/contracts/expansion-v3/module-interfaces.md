@@ -260,3 +260,8 @@ W06公共排队容量：issue_delegation新增仅服务端max_active_jobs参数�
 当前尚待031释放jobs/repository.py，给原生direct v2 enqueue与retry_failed（failed→queued）增加相同边界；该文件仍属不可变继承，不能称所有原生入口已封口。HTTP/MCP尚无v2 retry挂载，W06必须使用共同V2Store/Gateway，不自行调旧原生重试或自建计数器。失败重试共享请求与具体边界随候选保存。
 
 OperationAvailability明确installed/ready/capability/unavailable_code，注册不等于业务可用。Operation.ready=False在公共dispatch入队之前503拒绝；角色工厂默认关闭时，真实Actor不能借HTTP/MCP注册名触发生成或积压新任务。公开requests.read/jobs.refresh为既有能力；未挂载的observation/tools、内部research名字不会被假定ready。该信号不替代AuthContext的read/act/submit与对象范围检查。MCP协议、CLI/UI/worker总装和新入口隐私回归仍待W06固定实现，未声称这些已完成。
+
+
+公开RoleReply兼容守卫按固定公开DTO做完整JSON树校验，不信任可被替换的ObjectModel注册validator，也不只比较顶层字段名。as_of、executor、request等合法字段内嵌入私有audit，或其他嵌套extra/类型不符，均作为不安全公开形态拒绝；旧原件仍可内部审计读取，错误不回显private input。
+
+字段已有声明trace时，无论citations/sources是否非空，内容hash与完整依赖都必须满足。可见引文只证明该引文本身可读，不能短路解释依赖A+B中的B。原文/规则/历史解释均逐项处理；合法可见引文及有独立完整证明的段落保留。最具体路径的完整trace控制该字段，不以更宽路径的可读性绕过具体失配；父段包含更多输入、子段确实独立时必须分别明确声明，不能用引文列表替代子段来源证明。

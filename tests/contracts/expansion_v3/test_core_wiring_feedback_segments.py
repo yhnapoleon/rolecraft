@@ -27,6 +27,9 @@ def traced_report(foundation,*,agent_writer=False):
         traces.extend((FeedbackReadTrace(ref,f'/{group}/0/explanation',(case['visible'],)),FeedbackReadTrace(ref,f'/{group}/1/explanation',(case['hidden'],))))
     for path in ('/business_response','/next_options','/independent_understanding'):traces.append(FeedbackReadTrace(ref,path,(case['visible'],)))
     traces.extend((FeedbackReadTrace(ref,'/verified_facts/0',both),FeedbackReadTrace(ref,'/historical_responsibilities/0',both)))
+    # The aggregate has A+B inputs; these independently built entry texts have
+    # narrower complete traces and must declare that fact explicitly.
+    traces.extend((FeedbackReadTrace(ref,'/historical_responsibilities/0/entries/0/explanation',(case['visible'],)),FeedbackReadTrace(ref,'/historical_responsibilities/0/entries/1/explanation',(case['hidden'],))))
     write=ObjectWrite(ref=ref,expected_head=0,content=report.model_dump(mode='json'),dependencies=references(report.model_dump(mode='json')))
     cmd=command(store.view(auth),'publish-traced','feedback.create').model_copy(update={'payload':C.FeedbackInput(subject=case['review']).model_dump(mode='json')})
     store.execute(auth,cmd,lambda *_:Mutation(writes=(write,),result={'feedback':ref.model_dump(mode='json')},feedback_read_traces=tuple(traces)))

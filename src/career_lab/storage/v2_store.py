@@ -18,15 +18,15 @@ from .v2_jobs import JobStoreMixin
 ROLE_REPLY_PRIVATE_FIELDS=frozenset({'prompt_messages','prompt_hash','context_hash','history_revision','source_versions','omitted_sources','attempts','actual_disclosures','received_shares','internal_disclosures','context'})
 
 def role_reply_has_private_fields(content):
-    """Recognize legacy audit fields without rejecting the new public quote DTO."""
+    """Validate the entire fixed public DTO, independent of registry replacement."""
     from career_lab.storage.role_memory import RoleReply
-    # Only the pinned public DTO can define public top-level reply fields; a
-    # permissive historical/custom registration never widens this boundary.
-    if set(content)-set(RoleReply.model_fields):return True
-    if ROLE_REPLY_PRIVATE_FIELDS.intersection(content):return True
-    spoken=content.get('spoken_evidence',())
-    if not isinstance(spoken,(list,tuple)):return True
-    return any(not isinstance(item,dict) or set(item)-{'schema_version','label','quote','verification'} for item in spoken)
+    if not isinstance(content,dict) or ROLE_REPLY_PRIVATE_FIELDS.intersection(content):return True
+    try:
+        # JSON round-trip prevents a preconstructed nested model from avoiding
+        # recursive validation. Never return the private validation input.
+        RoleReply.model_validate_json(canonical(content))
+    except (ValidationError,TypeError,ValueError):return True
+    return False
 
 
 OBJECT_MODELS={

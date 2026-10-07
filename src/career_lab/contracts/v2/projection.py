@@ -50,12 +50,15 @@ def feedback_segment(content,path):
 def _feedback_boundary_reader(content,source_readable):
     from .core import digest
     def allowed(path):
-        for proof in content.get('read_boundaries') or ():
-            if path!=proof['path'] and not path.startswith(proof['path']+'/'):continue
+        covered=[proof for proof in content.get('read_boundaries') or () if path==proof['path'] or path.startswith(proof['path']+'/')]
+        if not covered:return False
+        specificity=max(len(proof['path'].split('/')) for proof in covered)
+        selected=[proof for proof in covered if len(proof['path'].split('/'))==specificity]
+        for proof in selected:
             try:value=feedback_segment(content,proof['path'])
-            except ProtocolError:continue
-            if proof.get('attestation')=='common_store_trace_v1' and proof['content_hash']==digest(value) and proof['dependencies'] and all(source_readable(ref) for ref in proof['dependencies']):return True
-        return False
+            except ProtocolError:return False
+            if proof.get('attestation')!='common_store_trace_v1' or proof['content_hash']!=digest(value) or not proof['dependencies'] or not all(source_readable(ref) for ref in proof['dependencies']):return False
+        return True
     return allowed
 
 
@@ -74,14 +77,14 @@ def project_feedback_content(content, source_readable, *, limited_scope=False):
             for part in value:yield from refs(part)
     hidden=any(not source_readable(ref) for ref in refs(original))
     proof=_feedback_boundary_reader(original,source_readable)
-    def text_allowed(path):
-        declared=any(path==boundary['path'] or path.startswith(boundary['path']+'/') for boundary in original.get('read_boundaries') or ())
-        return proof(path) or (not limited_scope and not hidden and not declared)
+    def declared(path):return any(path==boundary['path'] or path.startswith(boundary['path']+'/') for boundary in original.get('read_boundaries') or ())
+    def text_allowed(path):return proof(path) or (not limited_scope and not hidden and not declared(path))
     message='当前权限下部分支持依据不可核验，相关判断待核验。'
     for name in ('items','rule_items'):
         for index,item in enumerate(data.get(name) or ()):
             citations=item.get('citations',[]);available=[ref for ref in citations if source_readable(ref)]
-            if len(available)!=len(citations) or (not citations and not text_allowed(f'/{name}/{index}/explanation')):
+            path=f'/{name}/{index}/explanation'
+            if len(available)!=len(citations) or (declared(path) and not proof(path)) or (not citations and not text_allowed(path)):
                 item.update(label='INSUFFICIENT',applicability='undetermined',source='pending',explanation=message,citations=available,rule_bound=None)
     for index,facts in enumerate(data.get('verified_facts') or ()):
         base=f'/verified_facts/{index}';changed=False
@@ -106,7 +109,8 @@ def project_feedback_content(content, source_readable, *, limited_scope=False):
         base=f'/historical_responsibilities/{index}';changed=False
         for number,row in enumerate(history.get('entries',[])):
             sources=row.get('sources',[]);kept=[ref for ref in sources if source_readable(ref)];scope=[ref for ref in row.get('scope',[]) if source_readable(ref)]
-            if len(kept)!=len(sources) or len(scope)!=len(row.get('scope',[])) or (not sources and not text_allowed(base+f'/entries/{number}/explanation')):
+            path=base+f'/entries/{number}/explanation'
+            if len(kept)!=len(sources) or len(scope)!=len(row.get('scope',[])) or (declared(path) and not proof(path)) or (not sources and not text_allowed(path)):
                 row.update(kind='unknown',state='unknown',occurred_at=None,finding='unknown',explanation=message,sources=kept,scope=scope or [history['subject']],actor_id=None,executor=None);changed=True
         if changed or not text_allowed(base+'/coverage'):history.update(completeness='unknown',coverage=None)
         if not text_allowed(base+'/source_snapshot_hash'):history['source_snapshot_hash']=None
