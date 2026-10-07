@@ -9,7 +9,7 @@ import secrets
 import time
 from pydantic import ValidationError
 
-from sqlalchemy import insert, select, update, func, cast
+from sqlalchemy import insert, select, update
 from career_lab.storage.database import Database
 from career_lab.contracts.v2 import *
 from .v2_tables import *
@@ -256,20 +256,9 @@ class V2Store(JobStoreMixin):
         return token
 
     def _delegation_capacity(self,c,auth):
-        from career_lab.jobs.repository import jobs
-        if auth.executor.kind!='external_agent' and auth.executor.delegation_id is None:return None
-        # All capacity decisions occur after locking the same real credential.
+        from career_lab.jobs.repository import delegation_capacity
         self._auth(c,auth)
-        limit=c.execute(select(v2_delegation_job_limits.c.max_active_jobs).where(v2_delegation_job_limits.c.credential_id==auth.credential_id,v2_delegation_job_limits.c.session_id==auth.session_id)).scalar_one_or_none()
-        limit=2 if limit is None else limit
-        if type(limit) is not int or not 1<=limit<=2:raise ProtocolError('delegation_job_policy_invalid',status=503)
-        if self.db.engine.dialect.name=='postgresql':
-            from sqlalchemy.dialects.postgresql import JSONB
-            credential=cast(jobs.c.payload,JSONB)['context']['credential_id'].astext
-        elif self.db.engine.dialect.name=='sqlite':credential=func.json_extract(jobs.c.payload,'$.context.credential_id')
-        else:raise ProtocolError('delegation_job_backend_unavailable',status=503)
-        active=c.execute(select(func.count()).select_from(jobs).where(jobs.c.kind.like('v2.%'),jobs.c.status.in_(('queued','running')),credential==auth.credential_id)).scalar_one()
-        return DelegationJobCapacity(delegation_id=auth.executor.delegation_id or auth.credential_id,max_active_jobs=limit,active_jobs=active,available_slots=max(0,limit-active),observed_at=datetime.now(timezone.utc))
+        return delegation_capacity(c,auth)
 
     def delegation_job_capacity(self,auth):
         with self.db.transaction() as c:
@@ -277,11 +266,9 @@ class V2Store(JobStoreMixin):
             return self._delegation_capacity(c,auth)
 
     def _ensure_delegation_capacity(self,c,auth,additional):
-        capacity=self._delegation_capacity(c,auth)
-        if capacity is not None and capacity.active_jobs+additional>capacity.max_active_jobs:
-            error=ProtocolError('delegation_job_limit_reached','委托后台任务已达到并发上限。',status=429)
-            error.details={'max_active_jobs':capacity.max_active_jobs,'active_jobs':capacity.active_jobs,'requested_jobs':additional}
-            raise error
+        from career_lab.jobs.repository import require_delegation_capacity
+        self._auth(c,auth)
+        require_delegation_capacity(c,auth,additional)
 
     def revoke_delegation(self,owner,credential_id):
         with self.db.transaction() as c:

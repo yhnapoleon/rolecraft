@@ -272,7 +272,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "3dc84d657def35ce3316fcdf0017601bff55bd99e784d1feac075a09c82f19b9"
+      "sha256": "59b6fc8cd1603f32010b1a7f682dbfa9bd6c9eabf89371418fe6f2fa81365609"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -280,12 +280,12 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "a7912010f60cb727a59dd66fd58882a65c275b938517c0b71be56ea3c8afdff5"
+      "sha256": "4f13e172e8193ce899ed9e23185344ab66a3d4d3caf636c6e58a07f8e4706731"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "53a36bd20fd117b14c0a6163deb8a5d0cdd8273f4f3868473d7b380df9f49727"
+    "sha256": "13a5031dc310ea9e2ed10fe17e14e4017d962818ab0f09cffb05bd6a96bc95e2"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
@@ -302,6 +302,7 @@
     "W04-private-writer": "Actual worker-bound private port, atomic public reply/private audit, fenced internal attempt journal, original Agent attribution without scope expansion; factory stays closed by default pending repaired W04 input.",
     "W05-W03-remapping": "FeedbackResponseCreate.feedback_id and ResourcePage feedback/response/import identities remap by declared kind, leaving text and historical opaque provenance unchanged.",
     "W05-factual-persistence": "Optional typed factual/history/rule sections persist in FeedbackV2; legacy absent means not recorded. Exact feedback follow-ups append immutable objects without changing submitted/paused business state; new reviews link prior responses and explicit decisions.",
+    "W06-native-queue-capacity": "Native session-v2 enqueue/failed retry and V2Store share the same credential lock, SQL active-job count and persisted policy; idempotent replay does not reserve again; legacy v1 unchanged.",
     "W06-public-queue-capacity": "Persisted per-credential 1–2 job policy; existing jobs counted in locked transactions for public enqueue/refresh, not process memory. Native repository enqueue/failed retry still requires coordinator scope release.",
     "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.",
     "W07-W08-empty-joint-target": "Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.",
@@ -319,7 +320,7 @@
     "sha256": "d804551185491f4bcc7d51f37f3ddff53dab87fb027957d4919fc48ffb1152a3"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-a9f27fe80aead0f69080b23ece63773ab3e50131e77e41532581958b0a4fa3f4",
+  "previous_contract_revision": "expansion-v3-d04601c2f279d3940e6b6e1cb452664585faa0b289f2a0c985b06aa28b9e3d24",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -2983,7 +2984,7 @@
     "src/career_lab/contracts/v2/discovery.py": "302fffa41141a5adbe5037eeca3e4dc7b30761957cd1565309fe01845996934b",
     "src/career_lab/contracts/v2/evaluation.py": "0697b8f77246da064a43b31596acb12e7943405e6d5ea3b084c376e22dc37307",
     "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
-    "src/career_lab/contracts/v2/export.py": "4d90b836909c4ba800033baa11065d9b5a1297ae4d56275e0adc22081a82332d",
+    "src/career_lab/contracts/v2/export.py": "acb1e590f8feb2ab13ad35505b0eacc9c5e673bfc37f221e247a81c7a4dcc31d",
     "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
     "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
     "src/career_lab/contracts/v2/projection.py": "24dd56480f1de6f8489241e9bd4d65cd7bf533427b2dbc91768318f1d733f896",
@@ -2993,14 +2994,14 @@
     "src/career_lab/contracts/v2/workspace.py": "32662a94bb7e728f1def9fdfe11c4570f8f0651afff4fbab8b16f78bfdc6e878",
     "src/career_lab/contracts/v2/world.py": "afa8e26e1e27200260d61ade7eb987a5ea70a38e99af4cb89e658ad8de6ad03a",
     "src/career_lab/contracts/versioning.py": "da1fc0d7a3bb7b1110cc33d1b7a7f68dcc6dbb8c061f81f3778a113a7ae809fb",
-    "src/career_lab/jobs/repository.py": "8b6bf7dcfe438347670b160f069cb6cfbd0cb8aadbf911b866de6bd4c073128d",
+    "src/career_lab/jobs/repository.py": "dbf999faadb779f386fa3661acf51f335fdbb7426d024a70416102e8d2f04283",
     "src/career_lab/jobs/worker.py": "75f733c2f7610db49f42ef7b9646d468dd0661a288abbf9a622d1592cc94ca30",
     "src/career_lab/rubrics/registry.py": "204f90efa1b93bc010d638f7310ef396148caf2aed3af132c7a5e064442700de",
     "src/career_lab/storage/v2_jobs.py": "4a3165f4b270fbe1adfcfc22bad95a8a0537edb4dd833937a7ea795d02c9006c",
     "src/career_lab/storage/v2_lifecycle.py": "820df180088bd3c09a550912aab838f4586042955b3220553ae294167a97c857",
     "src/career_lab/storage/v2_remap.py": "05ded384d8682e2cef5a14828c7418eeb427ad9ee1e9b5614846c74b786debee",
     "src/career_lab/storage/v2_snapshot.py": "e4d295e54c3ffe9813bb93ebd90d57a9b65368d91f1e83d4dda502e902108f0f",
-    "src/career_lab/storage/v2_store.py": "c643af41bb46b44f34366bf1a18026707c3ec39432b459a2d6af6aaa4c90281b",
+    "src/career_lab/storage/v2_store.py": "03bc76c844baa63dafee4cbab7d38f0bda18c297da0f273997a1afd4efeb65e1",
     "src/career_lab/storage/v2_tables.py": "db85ef5684efbee9dd0788d41377801eecd8acd1c7802c591f54e0688e02fcac"
   },
   "status": "frozen_candidate_pending_independent_review",

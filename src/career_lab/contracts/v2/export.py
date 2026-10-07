@@ -170,6 +170,8 @@ def export(root:Path,output:Path):
     manifest['previous_contract_revision']='expansion-v3-a9f27fe80aead0f69080b23ece63773ab3e50131e77e41532581958b0a4fa3f4'
     manifest['integration_changes']['recursive-public-reply-validation']='Fixed RoleReply DTO validates the entire JSON tree independently of permissive registrations; nested private metadata is rejected on write and historical public reads.'
     manifest['integration_changes']['authoritative-segment-traces']='A declared trace always constrains text hash and complete dependencies, including cited explanations and history; visible citations do not bypass it. The most-specific complete trace is authoritative for a field.'
+    manifest['previous_contract_revision']='expansion-v3-d04601c2f279d3940e6b6e1cb452664585faa0b289f2a0c985b06aa28b9e3d24'
+    manifest['integration_changes']['W06-native-queue-capacity']='Native session-v2 enqueue/failed retry and V2Store share the same credential lock, SQL active-job count and persisted policy; idempotent replay does not reserve again; legacy v1 unchanged.'
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

@@ -67,6 +67,7 @@
     "future_evidence",
     "import_mode_mismatch",
     "import_receipt_immutable",
+    "job_context_invalid",
     "job_cycle_changed",
     "job_cycle_closed",
     "job_effect_already_committed",

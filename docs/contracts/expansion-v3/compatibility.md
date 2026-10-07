@@ -117,3 +117,8 @@ OperationAvailability明确installed/ready/capability/unavailable_code，注册�
 公开RoleReply兼容守卫按固定公开DTO做完整JSON树校验，不信任可被替换的ObjectModel注册validator，也不只比较顶层字段名。as_of、executor、request等合法字段内嵌入私有audit，或其他嵌套extra/类型不符，均作为不安全公开形态拒绝；旧原件仍可内部审计读取，错误不回显private input。
 
 字段已有声明trace时，无论citations/sources是否非空，内容hash与完整依赖都必须满足。可见引文只证明该引文本身可读，不能短路解释依赖A+B中的B。原文/规则/历史解释均逐项处理；合法可见引文及有独立完整证明的段落保留。最具体路径的完整trace控制该字段，不以更宽路径的可读性绕过具体失配；父段包含更多输入、子段确实独立时必须分别明确声明，不能用引文列表替代子段来源证明。
+
+
+原生配额续接：JobRepository.enqueue/retry_failed中的会话v2任务先从真实凭据核session、actor、到期/撤销、能力和动作，再与V2Store共享同一个SQL容量函数；不复制第二份计数状态。重复enqueue/已重排retry不新占槽，failed→queued需在同一凭据锁/任务事务内重新取得容量；满额拒绝且不改任务或时间元数据。v1行为保持；历史内部空payload的v2诊断任务不具有session/delegate身份，也不是可执行Gateway JobEnvelope，不能由MCP当业务工具暴露。原生入队本身不代替Gateway对源对象、世界状态、WorkerClaim和结果的完整校验。
+
+每个真正session-v2入口的容量均按原delegate维度，任意新HTTP/MCP/worker适配仍须消费共同方法并验证公开能力ready。当前已固定W05r7 e249622，旧r6验收不改签；实际MCP/原生UI完整组合与移除行为门槛仍待后续。
