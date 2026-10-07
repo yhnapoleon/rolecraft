@@ -1,6 +1,6 @@
 # W08 模型与实验管线
 
-## 048现行职责与验证边界（2026-10-07）
+## 现行职责与验证边界（2026-10-07）
 
 我方仅推进运行导出、注册接入与独立复核；负责方承担数据生成/标注/划分、全部训练融合、SFT/GRPO、评价项五分类、E2/Jev及预算算力。以下既有训练/标注命令保留供负责方和历史复现使用，不表示本轮已执行或我方继续训练。v2-r1交接ZIP与数据保持原样。
 
@@ -9,6 +9,46 @@
 当前为 **implementation_only / partial**，消费031固定的c5公共候选`expansion-v3-deb8023ca664946f45c52692c65e3524703d77194c5100e0ee42939ae26cff4b`（commit `d82d7fe690ed0491744cb716df377a77bc2ed4b4`）。本模块已实现可运行代码及小数据管线验证；W07合法fixture发布已实际消费；正式业务release、W11真实多结构和产品加载仍未接齐，不能据此宣称新E1/E2、模型质量或课程交付完成。
 
 所有候选输出固定为advisory、affects_score=false。G2v只代表模型复核标签；独立人工语义校准与正式scoring采用不由本模块自动开启。
+
+## 043 M3：冻结模型注册、调用回执与回传复算（2026-10-07）
+
+当前完成的是接入机制，未安装到正式v4，也未收到负责方真实训练模型。所有本轮测试使用固定synthetic权重，不调用fit、不训练、不下载、不访问线上provider。既有v2-r1交接包不重包。
+
+### 注册与冻结身份
+
+`models/v3/registry.py`只接已有W01 ModelBundle，通过原load_bundle校验任务、固定标签顺序、权重/预处理/训练来源/依赖引用与允许的推理入口；仅复制实际引用的文件，支持原有NumPy、线性、旧MLP和概率融合产物。注册项按内容命名且不可覆盖，移动registry目录仍可重载；权重/注册文件/当前career_lab源码或NumPy、scikit-learn、Pydantic版本变化均拒绝旧注册。不同运行时应新建准确注册，不改旧manifest或补hash。
+
+来源标记为`synthetic_fixture`或`external_candidate`。前者不能改名为后者；后者也只表示待复核外部候选，不能自动升级质量、正式scoring或整体验收。HF/SFT/GRPO/Jev等尚未回传且当前加载器不支持的格式保持未接入，不承诺任意checkpoint可加载。
+
+### 单次调用与产品接线
+
+`RegisteredAdvisory.predict`只读取checked ModelInput，输出已有Prediction及W01 ModelPrediction公共投影、登记版本、输入hash、工作语言与实际状态；不把gold/annotation送入推理。默认拒绝synthetic产物进入产品调用。显式测试模式可计算fixture预测，但公共DTO仍为unavailable，不能把fixture包装成用户语义建议。
+
+调用前持久化同一真实模型尝试ID及输入/注册/语言绑定；同ID再次请求只恢复已有结果。中断pending保持unconfirmed，失败不自动重调，不自动转INSUFFICIENT。确需重试时由上游明确用户动作给新尝试ID和`retry_of`，保留旧失败及关联；编程、协议、基础设施失败分开。
+
+这些文件是**服务端模型调用回执**，不是第二套用户Command或客户端恢复流程。032的公共host/Gateway仍负责唯一会话、授权、Command和用户恢复；模块不会创建token、UI恢复按钮或前端日志。公共装配须把既有真实模型attempt ID传给适配器，并将回执接回同一任务结果。当前仅有本包CLI/局部机制验证，公共worker、W05/v4原位挂载和真实产品调用未验。
+
+W05/032后续在原模型建议段消费`public_prediction`、登记`model_revision`及scope；未接入或synthetic必须显示“等待模型接入”。真实规则事实使用自身规则结果和“规则核实”，不能从本模型scope推断规则有效性。结果始终advisory、affects_score=false；质量验证和采用由独立总验收决定。
+
+### 回传复算
+
+`experiments/v3/training/review.py`独立重载两份同注册产物，对相同输入重新预测并核重载一致；从独立提供的Example/标签重算固定标签顺序、macro-F1、证据F1、joint及分母，中英分别报告，缺一语明确缺失。可对负责方逐条预测做身份/标签顺序校验及差异报告，不直接相信其汇总指标。技术失败单列，不重试或伪造INSUFFICIENT；首次失败不再做第二次推理冒充恢复。
+
+本入口只接受train/dev/regression，不自行打开test；确认性test仍需既有冻结/授权流程。CLI复用ReleaseReader权限、来源与split门槛，不能用--fixture祝福真实数据；正式源缺metadata/source authority仍拒绝，后续由固定live适配器提供。指标复算与外部数据/标签的语义真实性、真实模型质量分别报告。
+
+### 可复现入口
+
+从本W08工作区使用自身`.venv`；参数中的hash来自实际已固定产物，不手写补造。以下入口不包含训练：
+
+```sh
+.venv/bin/python -m career_lab.models.v3.registry_cli --help
+.venv/bin/python -m career_lab.models.v3.registry_cli register --registry <独立注册目录> --bundle-root <已回传或明确fixture的ModelBundle目录> --bundle-hash <真实sha256> --scope synthetic_fixture
+.venv/bin/python -m career_lab.models.v3.registry_cli predict --registry <注册目录> --registration-path <注册返回相对路径> --registration-hash <真实sha256> --journal <服务端调用证据目录> --request-id <真实尝试ID> --language en --input <允许的ModelInput文件> --allow-synthetic
+.venv/bin/python -m career_lab.models.v3.registry_cli recover --registry <注册目录> --registration-path <原相对路径> --registration-hash <原sha256> --journal <原调用证据目录> --request-id <原尝试ID>
+.venv/bin/python -m career_lab.models.v3.registry_cli review --registry <注册目录> --registration-path <原相对路径> --registration-hash <原sha256> --release-root <冻结release> --release-hash <真实sha256> --split-hash <真实sha256> --partition dev --task relation --fixture
+```
+
+真实候选register使用`external_candidate`且predict不传`--allow-synthetic`。参数只是本机服务器/审核者入口，不直接暴露为学员授权能力；真实产品仍走已鉴权的公共Gateway。实际测试日志与命令在本包`runs/local/expansion-v3/W08/20261007-043-registry/`。12项定向检查通过，包括真实CLI注册/调用/只读恢复、篡改拒绝、模型零隐式重调、重载与中英指标；不等于正式v4或模型质量通过。
 
 ## 中英文评测为必需覆盖（2026-10-07确认）
 
