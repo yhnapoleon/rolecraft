@@ -238,3 +238,46 @@ def test_english_prompt_does_not_claim_actual_language_verified():
     public,audit=generate(snap,owner(),req_for(snap,'Answer in English.'),ScriptedModel([ModelReply(text='这是一条故意违反语言要求的受控回复。')]))
     assert public.text.startswith('这是一条') and audit.work_language=='en'
     assert audit.language_consistency=='unverified'  # selection is not model-quality evidence
+
+
+@pytest.mark.parametrize('language',['zh','en'])
+def test_capture_reads_language_from_trusted_fixed_port(package,language):
+    c,f,_,_=bilingual_fixture(language);view=make_view(package,c)
+    class LanguagePort:
+        def read_fixed(self,v,a):
+            assert v is view and a.session_id==f.session_id
+            return language
+    port=ContextPort(c,FixedFrameFixture(f),language_port=LanguagePort())
+    snap=port.capture(view,owner(),TurnInput(role_id=f.role_id,text='Original text remains unchanged.'))
+    assert snap.work_language==language
+    public,audit=generate(snap,owner(),req_for(snap,'Original text remains unchanged.'),LocalRoleModel())
+    assert role_text(language,'local_mode') in public.text
+    assert audit.work_language==language and audit.language_consistency=='unverified'
+    assert public.question=='Original text remains unchanged.'
+
+
+def test_capture_rejects_mismatched_fixed_language_before_model(package):
+    c,f,_,_=bilingual_fixture();view=make_view(package,c)
+    class LanguagePort:
+        def read_fixed(self,v,a):return 'zh'
+    with pytest.raises(ProtocolError) as exc:
+        ContextPort(c,FixedFrameFixture(f),language_port=LanguagePort()).capture(view,owner(),TurnInput(role_id=f.role_id,text='Continue.'))
+    assert exc.value.code=='role_language_binding_mismatch'
+
+
+def test_package_language_is_hash_bound_and_cannot_be_relabelled(tmp_path,package):
+    from types import SimpleNamespace
+    from career_lab.contracts.v2 import FileRef
+    raw=b'{"locale":"en"}'
+    (tmp_path/'locale.json').write_bytes(raw)
+    import hashlib
+    ref=FileRef(path='locale.json',sha256=hashlib.sha256(raw).hexdigest())
+    bundle=package.bundle.model_copy(update={'files':(*package.bundle.files,ref)})
+    body=bundle.model_dump_json().encode();(tmp_path/'manifest.json').write_bytes(body)
+    reference=SimpleNamespace(root=tmp_path,content_hash=hashlib.sha256(body).hexdigest(),bundle=bundle,
+        materials=package.materials,facts=package.facts,rules=package.rules,locale='en')
+    assert ScenarioKnowledge.from_package(reference).work_language=='en'
+    reference.locale='zh'
+    with pytest.raises(ProtocolError):ScenarioKnowledge.from_package(reference)
+    reference.locale='en';(tmp_path/'locale.json').write_text('{"locale":"zh"}')
+    with pytest.raises(ProtocolError):ScenarioKnowledge.from_package(reference)

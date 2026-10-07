@@ -88,7 +88,7 @@ def _usage(raw,key):
 
 
 def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,refresh_count=0,
-                  max_context_chars=24000,record_attempt,stance_verifier=None):
+                  max_context_chars=24000,record_attempt,stance_verifier=None,stance_producer=None,begin_call=None):
     """One model invocation. The caller supplies W01's protected attempt sink."""
     if (request.session_id!=auth.session_id or request.executor!=auth.executor
         or snapshot.context.role_id!=request.input.role_id or reply_ref.kind!='role_reply'
@@ -98,11 +98,18 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
     if getattr(model,'retries',0):raise ProtocolError("role_provider_retry_budget_uncontrolled",status=409)
     stance=snapshot.stance_state;resolutions=[]
     if stance is None:raise ProtocolError('role_stance_context_invalid',status=409)
-    for proposal in snapshot.stance_proposals:
-        resolution=resolve_stance(stance,proposal,snapshot.stance_facts,snapshot.context.as_of,stance_verifier)
+    proposals=snapshot.stance_proposals
+    if stance_producer is not None:
+        if getattr(stance_producer,'retries',0)!=0:raise ProtocolError('role_provider_retry_budget_uncontrolled',status=409)
+        proposals=(*proposals,*stance_producer.propose(snapshot,auth,request,
+            record_attempt=record_attempt,begin_call=begin_call))
+    for proposal in proposals:
+        resolution=resolve_stance(stance,proposal,snapshot.stance_facts,snapshot.context.as_of,stance_verifier,
+            before_check=(lambda verifier,p:begin_call('stance_support:'+p.id,getattr(verifier,'revision',type(verifier).__name__))) if begin_call else None)
         resolutions.append(resolution);stance=resolution.state
     effective=replace(snapshot,stance_state=stance,question=request.input.text)
     messages,omitted,source_aliases=effective.build_prompt(auth,max_chars=max_context_chars)
+    if begin_call is not None:begin_call("role_reply",model.revision)
     started=monotonic();raw=None;status="success";error=None
     try:
         raw=model.complete(messages,[])
@@ -157,10 +164,10 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
 
 
 class RoleService:
-    def __init__(self,context_port,model=None,*,max_context_chars=24000,private_port=None,stance_verifier=None):
+    def __init__(self,context_port,model=None,*,max_context_chars=24000,private_port=None,stance_verifier=None,stance_producer=None):
         self.port,self.model=context_port,model or LocalRoleModel()
         self.max_context_chars,self.private_port=max_context_chars,private_port
-        self.stance_verifier=stance_verifier
+        self.stance_verifier,self.stance_producer=stance_verifier,stance_producer
 
     def enqueue(self,view,command,auth):
         turn=TurnInput.model_validate(command.payload)
@@ -186,10 +193,19 @@ class RoleService:
         if request.executor!=auth.executor:raise ProtocolError("role_executor_mismatch",status=403)
         snapshot=self.port.capture(view,auth,request.input,as_of=envelope.context.as_of)
         reply_ref=ObjectRef(session_id=auth.session_id,kind='role_reply',object_id="reply-"+digest([auth.session_id,envelope.origin_request_id])[:24],version=1)
+        claim=getattr(self.private_port,'claim_model_call',None)
+        if claim is None and (type(self.model) is not LocalRoleModel or self.stance_producer is not None or self.stance_verifier is not None):
+            raise ProtocolError('role_attempt_guard_unavailable',status=409)
+        def begin_call(phase,revision):
+            # The common port owns a durable at-most-once claim per explicit user
+            # retry cycle. Worker leases, HTTP recovery and restarts cannot renew it.
+            if claim is not None and claim(envelope,auth,phase,revision) is not True:
+                raise ProtocolError('role_model_call_already_claimed',status=409)
         reply,private=generate_plan(snapshot,auth,request,reply_ref,self.model,
             generation_cycle=view.current_cycle.ref if view.current_cycle else None,
             refresh_count=envelope.context.refresh_count,max_context_chars=self.max_context_chars,
-            record_attempt=lambda attempt,error:self.private_port.record_attempt(envelope,auth,attempt,error),stance_verifier=self.stance_verifier)
+            record_attempt=lambda attempt,error:self.private_port.record_attempt(envelope,auth,attempt,error),stance_verifier=self.stance_verifier,
+            stance_producer=self.stance_producer,begin_call=begin_call)
         # Only official RoleContext carrier(s) are accepted; do not install a new
         # private kind or conceal a prompt in a learner-readable DTO.
         private_writes=self.private_port.prepare(view,envelope,auth,private)
@@ -210,7 +226,61 @@ class RoleService:
         registry.register_job('v2.role_turn',self.generate)
 
 
-def create_role_service(store,catalog,model=None,*,snapshot_port=None,private_port=None):
+def create_role_service(store,catalog,model=None,*,snapshot_port=None,private_port=None,language_port=None,stance_verifier=None,stance_producer=None):
     from career_lab.storage.role_memory import install_role_storage
     install_role_storage(store)
-    return RoleService(ContextPort(catalog,snapshot_port),model,private_port=private_port)
+    return RoleService(ContextPort(catalog,snapshot_port,language_port=language_port),model,private_port=private_port,
+        stance_verifier=stance_verifier,stance_producer=stance_producer)
+
+
+class ModelStanceProducer:
+    """Optional one-call proposal extraction. Never a support verifier or approval.
+
+    The factory must explicitly install a provider with retries=0. The default
+    local service has no producer and makes no additional model calls.
+    """
+    retries=0
+    def __init__(self,model):
+        if getattr(model,'retries',0)!=0:raise ProtocolError('role_provider_retry_budget_uncontrolled',status=409)
+        self.model=model
+
+    def propose(self,snapshot,auth,request,*,record_attempt,begin_call=None):
+        import json
+        from career_lab.storage.role_memory import StanceProposal,StanceBasisRef
+        if getattr(self.model,'retries',0)!=0:raise ProtocolError('role_provider_retry_budget_uncontrolled',status=409)
+        messages,_,_=replace(snapshot,question=request.input.text).build_prompt(auth)
+        # Exact fact identities stay server-side; indices map only selected sources.
+        selected,_=snapshot.select_sources(auth,24000)
+        facts=tuple(f for f in snapshot.stance_facts if any(clean_ref(s.ref)==clean_ref(f.source) for s in selected))
+        allowed=[{'index':i,'text':next(s.text for s in selected if clean_ref(s.ref)==clean_ref(f.source))} for i,f in enumerate(facts)]
+        positions=[{'key':p.key,'text':p.text} for p in snapshot.stance_state.positions]
+        messages=[*messages,{'role':'user','content':json.dumps({'task':
+            'Extract at most one proposed change; this does not approve it. Return JSON null if none. Otherwise return exactly position_key, proposed_text, basis_indices, reason. Use the bound work language; preserve original source quotations. Never invent facts.',
+            'work_language':snapshot.work_language,'positions':positions,'basis':allowed},ensure_ascii=False)}]
+        if begin_call is not None:begin_call('stance_proposal',self.model.revision)
+        started=monotonic();raw=None;error=None
+        try:
+            raw=self.model.complete(messages,[])
+            response=ModelReply.model_validate(raw.model_dump(mode='json') if isinstance(raw,ModelReply) else raw)
+            if response.tool_calls:raise ValueError('tool response')
+            value=json.loads(response.text)
+            if value is None:result=()
+            else:
+                if not isinstance(value,dict) or set(value)!={'position_key','proposed_text','basis_indices','reason'}:raise ValueError('shape')
+                if any(type(value[k]) is not str for k in ('position_key','proposed_text','reason')):raise ValueError('text')
+                indices=value['basis_indices']
+                if not isinstance(indices,list) or any(type(i) is not int or not 0<=i<len(facts) for i in indices):raise ValueError('basis')
+                from career_lab.runtime.context_v2 import bare
+                result=(StanceProposal('stance-'+digest([request.id,value])[:24],auth.session_id,snapshot.role.id,
+                    snapshot.stance_state.revision,value['position_key'],value['proposed_text'],
+                    tuple(StanceBasisRef(facts[i].fact_id,bare(facts[i].source)) for i in dict.fromkeys(indices)),
+                    snapshot.context.as_of,value['reason']),)
+        except (TimeoutError,httpx.TimeoutException):error='role_stance_producer_timeout'
+        except Exception:error='role_stance_producer_invalid'
+        attempt=ModelAttemptUsage(request_id=request.id,attempt_id=uuid4().hex,expected_model_revision=self.model.revision,provider=None,model_revision=None,
+            status='timeout' if error=='role_stance_producer_timeout' else 'failed' if error else 'success',
+            input_tokens=_usage(raw,'prompt_tokens'),output_tokens=_usage(raw,'completion_tokens'),elapsed_seconds=monotonic()-started,
+            usage_known=_usage(raw,'prompt_tokens') is not None and _usage(raw,'completion_tokens') is not None)
+        record_attempt(attempt,error)
+        if error:raise ProtocolError(error,status=422)
+        return result

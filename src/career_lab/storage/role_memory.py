@@ -142,6 +142,14 @@ class PrivateGenerationPort(Protocol):
     the public reply. The audit may reference the reply; reverse edges are banned.
     """
     def require_available(self) -> None: ...
+    def claim_model_call(self, envelope, auth, phase: str, model_revision: str) -> bool:
+        """Durably reserve once before transport. The key binds session, original
+        request, explicit user retry generation and phase; exclude worker leases.
+        A timeout/crash leaves it consumed. Recovery only reads the original
+        result; only an authorized explicit retry may open a new generation.
+        Provider/model configuration changes do not reset the reservation.
+        """
+        ...
     def prepare(self, view, envelope, auth, generation: PrivateGeneration) -> tuple[ObjectWrite, ...]: ...
     def record_attempt(self, envelope, auth, attempt: ModelAttemptUsage, error_code: str | None) -> None: ...
 
@@ -346,7 +354,7 @@ def initial_stance(session_id,role,binding,as_of,facts):
     return RoleStanceState(session_id,role.id,binding,1,positions,as_of,tuple(sorted({f.key for f in facts})))
 
 
-def resolve_stance(state,proposal,known_facts,as_of,verifier=None):
+def resolve_stance(state,proposal,known_facts,as_of,verifier=None,*,before_check=None):
     """Mechanical guard. With no trusted semantic support, a proposal stays pending.
 
     Caller pressure, quoted rationale, duplicate refs and newer version numbers
@@ -391,6 +399,8 @@ def resolve_stance(state,proposal,known_facts,as_of,verifier=None):
     if not any(order=='after' for order in novelty_orders):
         return result('rejected','stance_new_fact_required',resolved)
     if verifier is None:return result('pending','stance_support_unverified',resolved)
+    if getattr(verifier,'retries',0)!=0:return result('pending','stance_support_retry_budget_uncontrolled',resolved)
+    if before_check is not None:before_check(verifier,proposal)
     try:support=verifier.check(state,proposal,tuple(resolved))
     except Exception:return result('pending','stance_support_unavailable',resolved)
     if (not isinstance(support,StanceSupport) or not isinstance(support.method,str)
@@ -410,3 +420,72 @@ def resolve_stance(state,proposal,known_facts,as_of,verifier=None):
                     if f.source.session_id==state.session_id and f.verification=='source_verified' and f.acquired_at_seq==f.source.observed_at_seq and f.acquired_at is not None and point_at_or_before(f.acquired_at,as_of)})))
     change=StanceChange(state.revision,new.revision,old.key,old.text,proposal.proposed_text,tuple(resolved),as_of,support)
     return result('changed','stance_change_supported',resolved,support,new,change)
+
+
+@dataclass(frozen=True)
+class RoleStanceMemory:
+    """Owned private payload; never a new public/storage DTO or a truth label."""
+    reply: ObjectRef
+    as_of: VersionPoint
+    work_language: Literal['zh','en']
+    state: RoleStanceState
+    resolutions: tuple[StanceResolution,...]
+    schema_version: Literal[1] = 1
+    language_consistency: Literal['unverified'] = 'unverified'
+    learner_penalty_allowed: Literal[False] = False
+
+
+def stance_memory_payload(generation):
+    """The common private writer persists this beside the existing audit atomically."""
+    if generation.stance_state is None or generation.work_language not in {'zh','en'}:
+        raise ProtocolError('role_stance_memory_invalid',status=409)
+    return _stance_json(RoleStanceMemory(generation.reply_ref,generation.context.as_of,
+        generation.work_language,generation.stance_state,generation.stance_resolutions))
+
+
+def restore_stance_memory(records,*,session_id,role_id,binding,as_of,work_language):
+    """Read trusted private records without inferring state from historical reply text.
+
+    The caller supplies only records from the fixed job snapshot. Omitted records
+    are not reconstructed here, and a malformed record never resets the stance.
+    """
+    from pydantic import TypeAdapter
+    adapter=TypeAdapter(RoleStanceMemory);decoded=[]
+    try:
+        for record in records:
+            item=adapter.validate_json(canonical(record));state=item.state
+            if ((state.session_id,state.role_id,state.source_binding)!=(session_id,role_id,binding)
+                or item.reply.session_id!=session_id or item.reply.kind!='role_reply'
+                or item.work_language!=work_language or state.revision<1
+                or not point_at_or_before(state.established_at,item.as_of)
+                or not point_at_or_before(item.as_of,as_of)):
+                raise ValueError('identity or time mismatch')
+            previous=None
+            for resolution in item.resolutions:
+                if previous is not None and resolution.previous_state!=previous:raise ValueError('broken resolution chain')
+                if ((resolution.state.session_id,resolution.state.role_id,resolution.state.source_binding)
+                    !=(session_id,role_id,binding)):raise ValueError('foreign resolution')
+                if resolution.status=='changed':
+                    if (resolution.change is None or resolution.support is None
+                        or resolution.state.revision!=resolution.previous_state.revision+1):raise ValueError('missing change evidence')
+                elif resolution.state!=resolution.previous_state:raise ValueError('unverified state change')
+                previous=resolution.state
+            if previous is not None and previous!=state:raise ValueError('state does not match resolutions')
+            decoded.append(item)
+        if not decoded:return None
+        latest=[x for x in decoded if all(point_at_or_before(y.as_of,x.as_of) for y in decoded)]
+        if not latest or any(x.state!=latest[0].state for x in latest):raise ValueError('ambiguous latest state')
+        selected=latest[0]
+        if any(x.state.revision>selected.state.revision for x in decoded):raise ValueError('state rollback')
+        return selected.state
+    except (ValidationError,TypeError,ValueError,KeyError):
+        raise ProtocolError('role_stance_memory_invalid',status=409) from None
+
+
+class PendingStanceVerifier:
+    """Explicit disconnected production default. It never asserts semantic support."""
+    retries=0
+    revision='stance-support-waiting-v1'
+    def check(self,state,proposal,basis):
+        return StanceSupport('undetermined',None,stance_digest(state),stance_digest(proposal),
+            stance_digest(basis),proposal.proposed_at,None,'waiting_for_model_connection')

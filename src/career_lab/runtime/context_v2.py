@@ -4,6 +4,7 @@ A worker must supply its fixed TransactionView plus the official role snapshot
 port. No live store reads, private SQL, owner-token substitution or queue lives
 here. The pure assembler also serves boundary tests with explicit fixtures.
 """
+import json
 from dataclasses import dataclass
 from typing import Protocol, Literal
 import re
@@ -118,10 +119,15 @@ class ScenarioKnowledge:
         from career_lab.contracts.v2 import read_file
         binding = FileRef(path="manifest.json", sha256=package.content_hash)
         read_file(package.root, binding)
+        # Language comes from the hashed content package, never UI locale or prose.
+        locale_ref=next((r for r in package.bundle.files if r.path=='locale.json'),None)
+        language=require_work_language(json.loads(read_file(package.root,locale_ref))['locale']) if locale_ref else 'zh'
+        if getattr(package,'locale',language)!=language:
+            raise ProtocolError('role_language_binding_mismatch',status=409)
         return cls(binding, package.bundle.role_specs, package.materials, package.facts,
                    tuple((mid,int(version),path) for mid,versions in package.rules.get("material_files",{}).items()
                          for version,path in versions.items()),
-                   public_terms=tuple(sorted(set(package.rules.get("work_costs",{}))|set(package.rules.get("approval_limits",{})))))
+                   work_language=language, public_terms=tuple(sorted(set(package.rules.get("work_costs",{}))|set(package.rules.get("approval_limits",{})))))
 
     def __post_init__(self):
         require_work_language(self.work_language)
@@ -351,6 +357,8 @@ class RoleFrame:
     stance_state: RoleStanceState | None = None
     stance_proposals: tuple[StanceProposal, ...] = ()
     work_language: WorkLanguage = "zh"  # Owned projection metadata, not a wire field.
+    stance_records: tuple[dict, ...] = ()  # Trusted private carrier payloads only.
+
 
 
 class RoleSnapshotPort(Protocol):
@@ -573,7 +581,12 @@ def assemble_context(catalog, frame, *, question="", new_shares=(), head_depende
             receipt_ref=clean_ref(source.ref).model_copy(update={'observed_at_seq':acquired_seq})
             receipt=StanceFactReceipt(fid,semantic,receipt_ref,acquired_seq,acquired_at=acquired)
             if receipt not in stance_facts:stance_facts.append(receipt)
-    stance=frame.stance_state or initial_stance(frame.session_id,role,catalog.binding,frame.as_of,stance_facts)
+    from career_lab.storage.role_memory import restore_stance_memory
+    recovered=restore_stance_memory(frame.stance_records,session_id=frame.session_id,role_id=role.id,
+        binding=catalog.binding,as_of=frame.as_of,work_language=frame.work_language)
+    if recovered is not None and frame.stance_state is not None and recovered!=frame.stance_state:
+        raise ProtocolError('role_stance_context_invalid',status=409)
+    stance=recovered or frame.stance_state or initial_stance(frame.session_id,role,catalog.binding,frame.as_of,stance_facts)
     if ((stance.session_id,stance.role_id,stance.source_binding)!=(frame.session_id,role.id,catalog.binding)
         or stance.revision<1 or not point_at_or_before(stance.established_at,frame.as_of)
         or len({p.key for p in stance.positions})!=len(stance.positions)):
@@ -589,8 +602,10 @@ def assemble_context(catalog, frame, *, question="", new_shares=(), head_depende
 
 
 class ContextPort:
-    def __init__(self,catalog:ScenarioKnowledge,snapshot_port:RoleSnapshotPort|None=None):
+    def __init__(self,catalog:ScenarioKnowledge,snapshot_port:RoleSnapshotPort|None=None,*,language_port=None):
         self.catalog,self.snapshot_port=catalog,snapshot_port
+        # Optional server-installed reader of the same job's immutable session binding.
+        self.language_port=language_port
 
     def validate_request(self,view,auth,turn):
         if auth.session_id!=view.state.session_id or not {"read","act"}<=set(auth.capabilities):
@@ -635,10 +650,15 @@ class ContextPort:
         frame=self.snapshot_port.project_fixed(view,auth,turn.role_id)
         if (frame.session_id,frame.role_id,frame.as_of,frame.binding)!=(auth.session_id,turn.role_id,expected,self.catalog.binding):
             raise ProtocolError("role_snapshot_identity_invalid",status=409)
-        if frame.work_language!='zh' or self.catalog.work_language!='zh':
-            # c7 lacks the official SessionBindings language carrier. English
-            # pure plans are ready, but production capture awaits a fixed input.
-            raise ProtocolError("role_language_binding_unavailable",status=409)
+        language=getattr(view.bindings,'work_language',None)
+        if language is None and self.language_port is not None:
+            language=self.language_port.read_fixed(view,auth)
+        if language is None:
+            if frame.work_language!='zh' or self.catalog.work_language!='zh':
+                raise ProtocolError('role_language_binding_unavailable',status=409)
+            language='zh'  # Existing c7 sessions have only the original Chinese package.
+        if require_work_language(language)!=frame.work_language or language!=self.catalog.work_language:
+            raise ProtocolError('role_language_binding_mismatch',status=409)
         return assemble_context(self.catalog,frame,question=turn.text,new_shares=new,head_dependencies=heads)
 
 

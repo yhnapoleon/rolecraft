@@ -30,8 +30,13 @@ class ControlledSnapshot:
 
 class ControlledPrivatePort:
     def __init__(self,audience=('system','tech_lead'),empty=False,wrong_role=False):
-        self.audience,self.empty,self.wrong_role=audience,empty,wrong_role;self.attempts=[];self.generations=[];self.plans=[]
+        self.audience,self.empty,self.wrong_role=audience,empty,wrong_role;self.attempts=[];self.generations=[];self.plans=[];self.claims=set()
     def require_available(self):pass
+    def claim_model_call(self,envelope,auth,phase,revision):
+        key=(auth.session_id,envelope.origin_request_id,phase)
+        if key in self.claims:return False
+        self.claims.add(key);return True
+
     def record_attempt(self,envelope,auth,attempt,error):self.attempts.append((attempt,error))
     def prepare(self,view,envelope,auth,generation):
         self.generations.append(generation)
@@ -99,3 +104,37 @@ def test_controlled_missing_or_wrong_role_audit_is_rejected(tmp_path,package,cat
     worker.run_once();job=worker.jobs.get(jid)
     assert job['status']=='failed' and job['error']==error
     assert not [x for x in store.view(auth).objects if x.ref.kind=='role_reply']
+
+
+def test_provider_stays_closed_without_durable_claim_port(tmp_path,package,catalog):
+    port=ControlledPrivatePort();port.claim_model_call=None
+    store,auth,model,worker,jid,_=wired_case(tmp_path,package,catalog,port)
+    try:
+        worker.run_once();job=worker.jobs.get(jid)
+        assert job['error']=='role_attempt_guard_unavailable' and not model.calls
+    finally:store.db.engine.dispose()
+
+
+def test_model_claim_survives_worker_reconstruction_before_commit(tmp_path,package,catalog):
+    """A controlled durable port exercises the new production callback contract."""
+    import sqlite3
+    from career_lab.api.modules import JobEnvelope
+    class DurablePort(ControlledPrivatePort):
+        def claim_model_call(self,envelope,auth,phase,revision):
+            con=sqlite3.connect(tmp_path/'model-claims.db')
+            try:
+                con.execute('create table if not exists calls (session text, request text, phase text, primary key(session,request,phase))')
+                try:con.execute('insert into calls values (?,?,?)',(auth.session_id,envelope.origin_request_id,phase));con.commit();return True
+                except sqlite3.IntegrityError:return False
+            finally:con.close()
+    port=DurablePort();store,auth,model,worker,jid,service=wired_case(tmp_path,package,catalog,port)
+    try:
+        envelope=JobEnvelope.model_validate(worker.jobs.get(jid)['payload'])
+        # Direct handler evaluation models a process loss after provider return,
+        # before public/private mutation commit. No shared worker code is changed.
+        view=store.view(auth)
+        service.generate(view,envelope,auth)
+        replacement=RoleService(service.port,model,private_port=DurablePort())
+        with pytest.raises(ProtocolError) as exc:replacement.generate(view,envelope,auth)
+        assert exc.value.code=='role_model_call_already_claimed' and len(model.calls)==1
+    finally:store.db.engine.dispose()
