@@ -288,6 +288,19 @@
       "title": "Kind",
       "type": "string"
     },
+    "read_projection": {
+      "anyOf": [
+        {
+          "const": "partial",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Read Projection"
+    },
     "recorded_at": {
       "$ref": "#/$defs/VersionPoint"
     },

@@ -1,8 +1,7 @@
-"""Convert owned factual output to the fixed c8 public feedback sections.
+"""Convert owned factual output to the fixed c9 public feedback sections.
 
-No guessed source identity, occurrence time, actor or log completeness. Internal
-unknown rows whose safe timestamp is unavailable are represented by section
-incompleteness and a generic pending message, not a fabricated dated finding.
+No guessed source identity, occurrence time, actor or log completeness. Unknown historical occurrence times remain None in the official c9 finding;
+no timestamp or source metadata is fabricated.
 """
 from career_lab.contracts import v2 as C
 from .availability import SAFE_REASON
@@ -50,7 +49,6 @@ def sections(reader,auth,subject,requested_at,facts,history):
         if raw['occurred_at'] is None:
             message=raw['criterion']+'：'+SAFE_REASON
             if message not in pending:pending.append(message)
-            continue
         data={k:v for k,v in raw.items() if k in C.HistoricalResponsibilityFinding.model_fields}
         entries.append(C.HistoricalResponsibilityFinding.model_validate(data))
     historical=C.HistoricalResponsibilitiesSnapshot(**base,completeness='partial' if entries or pending else 'unknown',entries=tuple(entries))

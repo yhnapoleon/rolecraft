@@ -25,6 +25,8 @@ def test_hidden_history_sources_are_generic_pending_without_source_metadata(tmp_
     hidden_rows=[h for h in result['historical_responsibilities'] if h['criterion']=='R3.capacity']
     assert len(hidden_rows)==1 and hidden_rows[0]['kind']=='unknown' and hidden_rows[0]['occurred_at'] is None
     assert hidden_rows[0]['sources']==[]
+    typed=next(h for h in result['feedback']['historical_responsibilities'][0]['entries'] if h['criterion']=='R3.capacity')
+    assert typed['occurred_at'] is None and typed['sources']==[] and typed['finding']=='unknown'
     assert any(h['finding']=='verified_breach' for h in result['historical_responsibilities'])
     text=json.dumps(result);assert 'SECRET-PRIVATE-REASON' not in text and oid not in text
 

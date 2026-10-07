@@ -402,9 +402,16 @@
           "type": "string"
         },
         "submitted_reference_hash": {
-          "pattern": "^[0-9a-f]{64}$",
-          "title": "Submitted Reference Hash",
-          "type": "string"
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Submitted Reference Hash"
         },
         "valid_at_subject": {
           "anyOf": [
@@ -524,9 +531,16 @@
           "type": "integer"
         },
         "source_snapshot_hash": {
-          "pattern": "^[0-9a-f]{64}$",
-          "title": "Source Snapshot Hash",
-          "type": "string"
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Snapshot Hash"
         },
         "subject": {
           "$ref": "#/$defs/ObjectRef"
@@ -606,7 +620,14 @@
           "type": "string"
         },
         "occurred_at": {
-          "$ref": "#/$defs/VersionPoint"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionPoint"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "const": 2,
@@ -894,9 +915,16 @@
           "type": "integer"
         },
         "source_snapshot_hash": {
-          "pattern": "^[0-9a-f]{64}$",
-          "title": "Source Snapshot Hash",
-          "type": "string"
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Snapshot Hash"
         },
         "status": {
           "enum": [
@@ -1057,6 +1085,19 @@
       },
       "title": "Next Options",
       "type": "array"
+    },
+    "read_projection": {
+      "anyOf": [
+        {
+          "const": "partial",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Read Projection"
     },
     "rule_items": {
       "anyOf": [
