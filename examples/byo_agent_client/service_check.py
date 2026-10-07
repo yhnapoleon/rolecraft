@@ -32,8 +32,23 @@ def require(condition, code):
         raise RemoteFailure(code)
 
 
+def check_public_fragments(fragments, ref, expected=None):
+    require(isinstance(fragments, list) and bool(fragments), 'material_fragments_missing')
+    signatures = []
+    for item in fragments:
+        require(isinstance(item, dict) and 'fact_ids' not in item, 'material_private_metadata')
+        fragment = C.DisclosedFragment.model_validate(item)
+        require(fragment.ref.session_id == ref.session_id and fragment.ref.object_id == ref.object_id
+                and fragment.ref.version == ref.version and bool(fragment.text), 'material_reference_changed')
+        signatures.append({'ref': {k: v for k, v in item['ref'].items() if k not in ('observed_at_seq', 'valid_from_seq')},
+                           'text': fragment.text})
+    if expected is not None:
+        require(signatures == check_public_fragments(expected, ref), 'material_text_or_citation_changed')
+    return signatures
+
+
 class ServiceCheck:
-    def __init__(self, api_url, run_dir, *, transport='http', cwd=None):
+    def __init__(self, api_url, run_dir, *, transport='http', cwd=None, verify_material_boundary=False):
         url = urlsplit(api_url)
         require(url.hostname in {'127.0.0.1', 'localhost', '::1'} and url.scheme == 'http'
                 and not (url.username or url.password or url.query or url.fragment or url.path.strip('/')),
@@ -43,6 +58,7 @@ class ServiceCheck:
         self.directory.mkdir(mode=0o700, parents=True, exist_ok=False)
         self.http = httpx.Client(base_url=api_url.rstrip('/'), timeout=15, follow_redirects=False, trust_env=False)
         self.api_url, self.transport = api_url.rstrip('/'), transport
+        self.verify_material_boundary = verify_material_boundary
         self.cwd = cwd or Path(__file__).resolve().parents[2]
         self.trace = {'status': 'running', 'transport': transport, 'api_url': self.api_url,
                       'provider': None, 'model': None, 'model_turn_started': False, 'client_uses_history_bridge': False,
@@ -112,6 +128,43 @@ class ServiceCheck:
         require(result.status == 'completed', 'request_requires_followup')
         return response, command
 
+    def raw_material_check(self, ref):
+        """Check the actual server wires, without the client's defensive filter."""
+        command = self.command('read_material', {'tool': 'read_material', 'material': ref.model_dump(mode='json')})
+        step = {'executor': 'external_agent', 'operation': 'read_material', 'command': command,
+                'status': 'unconfirmed', 'raw_public_boundary': True}
+        self.trace['steps'].append(step); self.persist()
+        prefix = '/sessions/' + self.sid
+        def request(method, suffix, token, **kwargs):
+            response = self.http.request(method, prefix + suffix, headers={'Authorization': 'Bearer ' + token}, **kwargs)
+            require(response.status_code == 200, 'material_boundary_request_failed')
+            return response.json()
+        read = request('POST', '/actions', self.delegate_token, json=command)
+        step['response'] = read; self.persist()
+        fragments = read['result']['fragments']
+        check_public_fragments(fragments, ref)
+        step['boundary_results'] = {}
+        state = self.owner('GET', prefix)
+        for who, token in [('human', self.token), ('external_agent', self.delegate_token)]:
+            recovered = request('GET', '/requests/' + safe_id(command['request_id']), token)
+            step['boundary_results'][who + '_recovery'] = recovered; self.persist()
+            parsed = C.RequestResult.model_validate(recovered)
+            require(parsed.request_id == command['request_id'] and parsed.status == 'completed'
+                    and parsed.executor.kind == 'external_agent', 'material_recovery_identity_mismatch')
+            check_public_fragments(recovered['response']['result']['fragments'], ref, fragments)
+            obj = request('GET', '/objects/material/' + safe_id(ref.object_id) + '/' + str(ref.version), token)
+            step['boundary_results'][who + '_object'] = obj; self.persist()
+            check_public_fragments(obj['content']['fragments'], ref, fragments)
+        replay = request('POST', '/actions', self.delegate_token, json=command)
+        step['boundary_results']['replay'] = replay; self.persist()
+        require(replay.get('replayed') is True and self.owner('GET', prefix) == state, 'material_replay_changed_state')
+        check_public_fragments(replay['result']['fragments'], ref, fragments)
+        # Still exercise the selected public HTTP/MCP client recovery path.
+        recovered = self.call('requests.read', {'session_id': self.sid, 'query': {'request_id': command['request_id']}})
+        check_public_fragments(recovered['response']['result']['fragments'], ref, fragments)
+        step.update(status='completed', recovered=recovered, public_boundary_verified=True); self.persist()
+        return read, command
+
     def run(self, *, scenario, query, config_version, material_id=None, work_language=None):
         try:
             create = {'schema_version': 2, 'scenario': scenario}
@@ -140,7 +193,8 @@ class ServiceCheck:
             require(bool(candidates), 'public_material_missing')
             material = candidates[0]
             ref = C.ObjectRef(session_id=self.sid, kind='material', object_id=material.id, version=material.version)
-            read, _ = self.agent_command('read_material', {'tool': 'read_material', 'material': ref.model_dump(mode='json')})
+            read, _ = (self.raw_material_check(ref) if self.verify_material_boundary else
+                       self.agent_command('read_material', {'tool': 'read_material', 'material': ref.model_dump(mode='json')}))
             after = self.observe()
             texts = [f['text'] for f in read['result']['fragments']]
             require(bool(texts) and all(any(f.ref.object_id == material.id and f.ref.version == material.version
@@ -335,6 +389,7 @@ def main(argv=None):
     parser.add_argument('--config-version', type=int)
     parser.add_argument('--material-id')
     parser.add_argument('--work-language', choices=('zh', 'en'))
+    parser.add_argument('--verify-material-boundary', action='store_true', help='Check raw service read/recovery/replay/object projections')
     args = parser.parse_args(argv)
     if args.revoke_run:
         if args.api_url or args.run_dir or args.recover_run:
@@ -358,7 +413,8 @@ def main(argv=None):
     if not args.api_url or not args.run_dir or args.query is None or args.config_version is None:
         parser.error('new runs require --api-url, --run-dir, --query and --config-version')
     try:
-        check = ServiceCheck(args.api_url, args.run_dir, transport=args.transport)
+        check = ServiceCheck(args.api_url, args.run_dir, transport=args.transport,
+                             verify_material_boundary=args.verify_material_boundary)
         check.run(scenario=args.scenario, query=args.query, config_version=args.config_version,
                   material_id=args.material_id, work_language=args.work_language)
     except Exception:
