@@ -89,10 +89,10 @@ class ReviewEvaluator:
                 'boundary':'Each exact work uses its formation point; local source gaps do not erase other verified output.'}
 
     def handle(self,auth,request,requested_at,*,decision=UNSET):
-        """Pure handler, prepared for the optional decision in the future DTO.
+        """Pure handler consuming the fixed c9 decision/followup fields.
 
-        Today the explicit keyword is available to the trusted adapter. Frozen
-        ReviewInput is unchanged; an omitted field falls back to vetted structure,
+        The explicit keyword remains available to the trusted adapter. An
+        omitted ReviewInput field falls back to vetted structure,
         and an explicit None preserves uncertainty without forcing a form.
         """
         if decision is UNSET:
@@ -109,4 +109,11 @@ class ReviewEvaluator:
                            question=request.question,requested_at=requested_at,decision=decision)
         result['followup_of']=[r.model_dump(mode='json') for r in getattr(request,'followup_of',())]
         result['followup_status']='linked_not_resolved' if result['followup_of'] else None
+        result['followup_evidence_status']='not_evaluated' if result['followup_of'] else None
+        if result['followup_of']:
+            note='关联异议或补证已记录；其中引文默认未核实，需按实际源版本、原文、时点与支持关系重新核验，关联本身不代表采信或解决。'
+            for entry in result['reviews']:
+                if entry['feedback'] is not None:
+                    raw=entry['feedback'];raw['next_options']=list(dict.fromkeys([*raw['next_options'],note]))
+                    entry['feedback']=C.FeedbackV2.model_validate(raw).model_dump(mode='json')
         return result

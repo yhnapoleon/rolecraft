@@ -42,7 +42,7 @@ def prepare_review_feedback(evaluator,auth,request):
         raw.update(subject=subject.model_dump(mode='json'),id=C.digest([subject.model_dump(mode='json'),entry['subject'],request.evaluation.model_dump(mode='json'),'w05-c8-feedback']))
         reports.append(C.FeedbackV2.model_validate(raw))
     return {'request':request,'request_hash':C.digest(request),'reports':tuple(reports),
-            'followup_of':request.followup_of,'followup_status':result['followup_status']}
+            'followup_of':request.followup_of,'followup_status':result['followup_status'],'followup_evidence_status':result['followup_evidence_status']}
 
 
 def review_feedback_plan(view,command,auth,prepared):
@@ -67,4 +67,4 @@ def review_feedback_plan(view,command,auth,prepared):
         writes.append(ObjectWrite(ref=ref,expected_head=0,content=content,dependencies=references(content)))
     return Mutation(writes=tuple(writes),result={'feedbacks':[w.ref.model_dump(mode='json') for w in writes],
         'followup_of':[r.model_dump(mode='json') for r in request.followup_of],
-        'followup_status':prepared['followup_status']})
+        'followup_status':prepared['followup_status'],'followup_evidence_status':prepared['followup_evidence_status']})

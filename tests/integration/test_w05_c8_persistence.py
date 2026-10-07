@@ -132,7 +132,7 @@ def test_w05_private_process_carrier_guard_is_not_bypassed(prepared_env):
         e['store'].execute(e['auth'],cmd(e['store'],e['auth'],'feedback.request',{'subject':e['review'].model_dump(mode='json')},'private-input'),lambda *_:Mutation(writes=(ObjectWrite(ref=r,expected_head=0,content=value.model_dump(mode='json'),visible_to=('system',)),)))
 
 
-def test_w05_c8_feedback_only_permission_boundary_requires_shared_fix(prepared_env):
+def test_w05_feedback_only_permission_boundary_keeps_c8_failure_as_c9_regression(prepared_env):
     """Original c8 failure must pass on c9 without widening the grant."""
     e=prepared_env;owner=e['auth'];g=C.DelegationGrant(id='feedback-only',session_id=owner.session_id,actor_id='learner',executor=C.Executor(id='limited',kind='external_agent',delegation_id='feedback-only'),capabilities=('read',),allowed_objects=(e['feedback'].object_id,),expires_at=datetime.now(timezone.utc)+timedelta(hours=1))
     token=e['store'].issue_delegation(owner,g);auth=e['store'].authenticate(owner.session_id,token)

@@ -3,6 +3,7 @@ from career_lab.contracts.v2.core import digest, ProtocolError
 from career_lab.contracts.v2.evaluation import FeedbackV2, FeedbackItem, RuleBound, EvidencePackageV2
 from .judge import AdvisoryJudge
 from .rules import run_rules
+from career_lab.evidence.v2.assembler import purpose_of
 
 
 class FeedbackEngine:
@@ -39,8 +40,14 @@ class FeedbackEngine:
         model=sum(i.source=='model_advice' and i.label!='INSUFFICIENT' for i in applicable)
         business=list(dict.fromkeys(p.rule_context.get('business_response','') for p in packages if p.rule_context.get('business_response')))
         next_options=[]
-        if any(i.applicability=='undetermined' for i in items):next_options.append('说明作品用途或需要评审的责任范围。')
-        if any(i.source=='pending' for i in items):next_options.append('补充缺失依据、核对引用，或在模型可用后发起新的评审。')
+        if any(p.applicability=='undetermined' and purpose_of(p.purpose) is None for p in packages):
+            next_options.append('作品用途尚未明确；可说明希望评审的内容，已核验事实仍保留。')
+        elif any(p.applicability=='undetermined' and p.rule_context.get('decision') is None for p in packages):
+            next_options.append('作品用途已记录，本次决定尚未声明；可补充决定，也可保留未定状态继续查看事实反馈。')
+        if any(p.rule_context.get('decision') is not None for p in packages):
+            next_options.append('你的决定声明已记录；审批与执行不会由声明自动确认，仍按各自可核验记录展示。')
+        if any(i.source=='pending' for i in items):
+            next_options.append('待核验项尚未形成结论；已核验事实可继续查看，需要时可补证或另发评审。')
         if any(i.label in {'NOT_MET','PARTIAL'} for i in items):next_options.append('按具体依据补证、调整承诺或重测，并在新修订周期再次交付。')
         next_options.append('可以提出不同看法；反馈不代表业务批准，也不推断未观察到的独立掌握。')
         report=FeedbackV2(id=digest([session_id,subject.model_dump(mode='json'),evaluation.model_dump(mode='json'),'feedback-v2']),
