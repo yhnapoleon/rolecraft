@@ -12,7 +12,7 @@ from career_lab.contracts.v2 import (
     ObjectRef, ProtocolError, ProviderMessage, RoleContext, TurnInput, digest,
 )
 from career_lab.contracts.v2.projection import project_disclosures
-from career_lab.runtime.context_v2 import ContextPort, clean_ref, identifier_in, internal_alias_in, role_text, require_work_language, ROLE_PROMPT_REVISION
+from career_lab.runtime.context_v2 import ContextPort, clean_ref, internal_alias_in, role_text, require_work_language, ROLE_PROMPT_REVISION
 from career_lab.runtime.model_adapter import ModelReply
 from career_lab.storage.role_memory import (
     PrivateGeneration, PublicSpokenEvidence, RoleStanceEvidence, RoleTurn, RoleReply, RoleDisplay,
@@ -102,7 +102,6 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
         resolution=resolve_stance(stance,proposal,snapshot.stance_facts,snapshot.context.as_of,stance_verifier)
         resolutions.append(resolution);stance=resolution.state
     effective=replace(snapshot,stance_state=stance,question=request.input.text)
-    opaque_input=effective.opaque_input_identifiers(request.input.text,auth)
     messages,omitted,source_aliases=effective.build_prompt(auth,max_chars=max_context_chars)
     started=monotonic();raw=None;status="success";error=None
     try:
@@ -119,7 +118,7 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
         private_ids={f.id for f in snapshot.private_facts if f.disclosure.mode!='public'}
         private_metadata=('prompt_messages','prompt_fact_ids','context_hash','acceptable_conditions','unacceptable_conditions')
         if (snapshot.scrub(response.text)!=response.text or snapshot.has_private_identifier(response.model_dump(mode='json')) or internal_alias_in(response.text)
-            or any(identifier_in(response.text,value) for value in opaque_input) or any(fid in response.text for fid in private_ids)
+            or any(fid in response.text for fid in private_ids)
             or messages[0]['content'] in response.text or any(key in response.text for key in private_metadata)):
             status,error="failed","role_output_blocked"
     input_tokens,output_tokens=_usage(raw,'prompt_tokens'),_usage(raw,'completion_tokens')

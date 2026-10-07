@@ -96,7 +96,7 @@ def test_ordinary_english_compounds_survive_question_reply_and_memory(language,p
 
 @pytest.mark.parametrize('language',['zh','en'])
 @pytest.mark.parametrize('encoding',['plain','double_url'])
-def test_private_and_nonexistent_english_queries_have_identical_public_outcomes(language,encoding):
+def test_private_and_user_defined_queries_remain_askable(language,encoding):
     c,f,_,_=bilingual_fixture(language);snap=assemble_context(c,f)
     queries=['Explain material:'+x+'@1.' for x in ('tech_lead_private','nope_lead_unknown')]
     if encoding=='double_url':queries=[quote(quote(q,safe=''),safe='') for q in queries]
@@ -106,11 +106,15 @@ def test_private_and_nonexistent_english_queries_have_identical_public_outcomes(
         public,audit=generate(snap,owner(),req_for(snap,query),model)
         assert public.question==query and public.status=='completed' and public.error_code is None
         rendered.append(audit.prompt_messages[-1].content)
-        assert role_text(language,'source_reference') in rendered[-1]
-        with pytest.raises(ProtocolError) as exc:
-            generate(snap,owner(),req_for(snap,query),ScriptedModel([ModelReply(text=query)]))
-        assert exc.value.code=='role_output_blocked'
-    assert rendered[0]==rendered[1]
+        if query==queries[0]:
+            assert role_text(language,'source_reference') in rendered[-1]
+            with pytest.raises(ProtocolError) as exc:
+                generate(snap,owner(),req_for(snap,query),ScriptedModel([ModelReply(text=query)]))
+            assert exc.value.code=='role_output_blocked'
+        else:
+            echoed,_=generate(snap,owner(),req_for(snap,query),ScriptedModel([ModelReply(text=query)]))
+            assert echoed.text==query
+    assert rendered[1]==queries[1]
 
 
 @pytest.mark.parametrize('language',['zh','en'])

@@ -12,7 +12,7 @@ from html import unescape
 from urllib.parse import unquote
 
 from career_lab.contracts.v2 import (
-    DisclosedFragment, EvidenceRefV2, FactV2, FileRef, MaterialV2, ObjectRef, AssistantConfig,
+    DisclosedFragment, EvidenceRefV2, FactV2, FileRef, MaterialV2, ObjectRef,
     ProductShare, ProtocolError, RoleContext, RoleSpecV2, ScenarioStateV2,
     VersionPoint, WorkProductVersion, canonical, digest,
 )
@@ -300,9 +300,6 @@ def identifier_projection(text):
     return ''.join(c for c,_,_ in folded),folded
 
 
-# Only explicit refs/files, snake_case IDs and the reserved alias namespace.
-# Hyphenated prose, dates, ranges and milestones are not reference syntax.
-_INPUT_REFERENCE=re.compile(r'(?<![a-zA-Z0-9_])(?:[a-zA-Z][a-zA-Z0-9_]*\s*:\s*[a-zA-Z0-9_./-]+\s*@\s*[0-9]+|(?:[a-zA-Z0-9_-]+/)*[a-zA-Z0-9_-]+\.(?:md|json|yaml|yml|txt|csv|pdf)|[a-zA-Z0-9]+(?:_[a-zA-Z0-9]+)+|private-source-[0-9]+)(?![a-zA-Z0-9_])',re.IGNORECASE)
 _INTERNAL_ALIAS=re.compile(r'(?<![a-zA-Z0-9_])private-source-[0-9]+(?![a-zA-Z0-9_])')
 
 
@@ -404,28 +401,12 @@ class ContextSnapshot:
     def require_public(self,value):
         if self.has_private_identifier(value):raise ProtocolError('role_output_blocked',status=422)
 
-    def opaque_input_identifiers(self,text,auth):
-        public={_identifier_fold(x) for x in self.public_identifiers}|set(AssistantConfig.model_fields)|{'historical_question','historical_reply'}
-        for source in self.generation_sources(auth):
-            if source.channel not in {'memory','received_share','attachment'} or self.private_ref(source.ref):continue
-            public.add(_identifier_fold(source.ref.object_id))
-            public.add(_identifier_fold(f'{source.ref.kind}:{source.ref.object_id}@{source.ref.version}'))
-        for receipt in self.received_shares:
-            if learner_allowed(auth,(receipt.product,)):
-                for ref in (receipt.share,receipt.product):
-                    if not self.private_ref(ref):
-                        public.add(_identifier_fold(ref.object_id))
-                        public.add(_identifier_fold(f'{ref.kind}:{ref.object_id}@{ref.version}'))
-        decoded=decoded_identifier_text(text)
-        return tuple(dict.fromkeys(m.group() for m in _INPUT_REFERENCE.finditer(decoded)
-                     if re.sub(r'\s+','',_identifier_fold(m.group())) not in public))
-
-    def prompt_text(self,text,*,opaque=()):
-        # Redact private sources and narrowly recognized unresolved references.
-        # Ordinary parameters, dates and business notation remain usable.
+    def prompt_text(self,text):
+        # Only known protected sources are redacted. User-defined names are
+        # ordinary data; their spelling alone does not establish confidentiality.
         result=self.scrub(text)
         ids=set(self.private_file_names)|{oid for _,oid in self.private_objects}|{
-            f.id for f in self.private_facts if f.disclosure.mode!='public'}|set(opaque)
+            f.id for f in self.private_facts if f.disclosure.mode!='public'}
         if any(identifier_in(result,identifier) for identifier in ids):
             projected,spans=identifier_projection(result);intervals=[]
             for identifier in ids:
@@ -462,7 +443,7 @@ class ContextSnapshot:
         ordered+=[s for s in sources if s.channel not in {"attachment","received_share","memory"}]
         selected=[];omitted=[];used=0
         for source in ordered:
-            cost=len(self.prompt_text(source.text,opaque=self.opaque_input_identifiers(source.text,auth) if source.channel=="memory" else ()))
+            cost=len(self.prompt_text(source.text))
             if used+cost>max_chars:omitted.append(bare(source.ref))
             else:selected.append(source);used+=cost
         return tuple(selected),tuple(omitted)
@@ -492,7 +473,7 @@ class ContextSnapshot:
                 aliases[key]=(bare(ref),label)
             return {"object":aliases[key][1],"identity":"private"}
         for i,source in enumerate(selected):
-            entry={"display_name":self.source_label(source),"text":self.prompt_text(source.text,opaque=self.opaque_input_identifiers(source.text,auth) if source.channel=="memory" else ()),
+            entry={"display_name":self.source_label(source),"text":self.prompt_text(source.text),
                    "channel":source.channel,"observed_at_seq":source.ref.observed_at_seq}
             if self.private_ref(source.ref):entry["source"]=reference(source.ref)
             else:entry["version"]=source.ref.version
@@ -517,7 +498,7 @@ class ContextSnapshot:
                  "omissions":{"budget":len(omitted),"learner_scope":self.permission_omissions(auth)}}
         instructions=role_text(self.work_language,'instructions')
         messages=[{"role":"system","content":instructions+"\nCONTEXT\n"+self.prompt_text(canonical(payload))},
-                  {"role":"user","content":self.prompt_text(self.question,opaque=self.opaque_input_identifiers(self.question,auth))}]
+                  {"role":"user","content":self.prompt_text(self.question)}]
         self.require_public(messages)
         return messages,omitted,tuple(aliases.values())
 

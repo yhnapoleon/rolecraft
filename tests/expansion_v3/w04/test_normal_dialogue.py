@@ -39,6 +39,23 @@ def test_local_adapter_shows_material_titles_and_versions_instead_of_s_ids(packa
         else:assert snap.source_label(source)==role_text('zh','colleague_note')
 
 
+CUSTOM_TERMS=('success_metric','weekly_hours_saved','pilot_followup_task','stage2_owner_notes')
+
+
+@pytest.mark.parametrize('term',CUSTOM_TERMS)
+def test_user_defined_names_survive_question_reply_and_next_memory(package,catalog,term):
+    from dataclasses import replace
+    from career_lab.storage.role_memory import memory_from_generation
+    question=f'把 {term} 定为每周节省工时可以吗？'
+    snap=assemble_context(catalog,frame(package,catalog));req=request(owner())
+    req=req.model_copy(update={'input':TurnInput(role_id=snap.role.id,text=question)})
+    public,audit=generate(snap,owner(),req,ScriptedModel([ModelReply(text=question)]))
+    assert public.question==public.text==audit.prompt_messages[-1].content==question
+    memory=memory_from_generation(public,audit)
+    next_snap=assemble_context(catalog,replace(frame(package,catalog),memories=(memory,)))
+    assert question in memory.fragment.text and question in next_snap.messages(owner())[0][0]['content']
+
+
 CLAUDE_TERMS=('35-45','3-5万','2026-10-31','2026-11-15','M1-M3','follow-up','scope_filter','human_fallback')
 
 
@@ -67,6 +84,7 @@ def test_claude_p1_terms_survive_actual_worker_store_readback_and_next_memory(tm
             write=writes[0].model_copy(update={'ref':writes[0].ref.model_copy(update={'object_id':'audit-'+generation.reply_ref.object_id})})
             self.plans[-1]=write;return (write,)
     question='人数35-45，预算3-5万，上线日期2026-10-31→2026-11-15，里程碑M1-M3，follow-up以及scope_filter和human_fallback如何安排？'
+    question+=' 另定义 '+', '.join(CUSTOM_TERMS)+'。'
     answer='关于'+question+'我需要先看更多证据。'
     model=ScriptedModel([ModelReply(text=answer),ModelReply(text='继续核对上一轮保留的条件。')])
     store,auth=common_store(tmp_path,catalog);projection=ReadbackSnapshot(package,catalog);private=PerReplyAudit()
@@ -90,7 +108,7 @@ def test_claude_p1_terms_survive_actual_worker_store_readback_and_next_memory(tm
     memory=memory_from_generation(persisted,private.generations[0]);projection.memories=(memory,)
     run('请接续上一轮讨论，保留已经提过的具体条件。','normal-next')
     first_prompt=model.calls[0][-1]['content'];next_prompt=model.calls[1][0]['content']
-    for term in CLAUDE_TERMS:
+    for term in (*CLAUDE_TERMS,*CUSTOM_TERMS):
         assert term in question and term in first_prompt and term in persisted.text
         assert term in memory.fragment.text and term in next_prompt
     assert '[来源引用]' not in first_prompt

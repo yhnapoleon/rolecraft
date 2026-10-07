@@ -46,7 +46,7 @@ def run_pair(snap,query,kind):
 ])
 @pytest.mark.parametrize('encoding',['plain','double_url','unicode','fullwidth'])
 @pytest.mark.parametrize('kind',['constant','echo_prompt','echo_raw'])
-def test_same_shape_queries_do_not_expose_private_membership(package,catalog,pair,encoding,kind):
+def test_private_and_user_defined_queries_preserve_input_with_real_private_guard(package,catalog,pair,encoding,kind):
     snap=assemble_context(catalog,frame(package,catalog))
     def encode(value):
         if encoding=='double_url':return quote(quote(value,safe=''),safe='')
@@ -56,10 +56,15 @@ def test_same_shape_queries_do_not_expose_private_membership(package,catalog,pai
     queries=['请解释 '+encode(x)+'. 的内容' for x in pair]
     (a,pa),(b,pb)=[run_pair(snap,q,kind) for q in queries]
     assert a['question']==queries[0] and b['question']==queries[1]
-    assert {k:v for k,v in a.items() if k!='question'}=={k:v for k,v in b.items() if k!='question'}
-    assert pa==pb and '[来源引用]' in pa
-    if kind!='echo_raw':assert a['status']=='completed' and a['error'] is None
-    else:assert a['error']=='role_output_blocked'
+    # SQ-01 covers identifier-existence parity. Do not block arbitrary user
+    # names to obtain that parity; real private references remain protected.
+    alias=pair[0].startswith('private-source-')
+    if kind=='constant' or (kind=='echo_prompt' and not alias):
+        assert a['status']==b['status']=='completed' and a['error'] is b['error'] is None
+    else:
+        assert a['error']=='role_output_blocked'
+        if alias:assert b['error']=='role_output_blocked'
+        else:assert b['status']=='completed' and b['error'] is None
 
 
 @pytest.mark.parametrize('value',['private-source-1','private-source-999',quote(quote('private-source-1',safe='-'),safe=''),
@@ -145,7 +150,7 @@ def test_pair_survives_real_store_worker_and_public_replay(tmp_path,package,cata
         assert replay['result']['question']==query
         turns=[x for x in store.view(auth).objects if x.ref.kind=='role_turn']
         assert len(turns)==1 and turns[0].content['input']['text']==query
-        if echo_raw:
+        if echo_raw and i==0:
             assert job['status']=='failed' and job['error']=='role_output_blocked'
             assert not [x for x in store.view(auth).objects if x.ref.kind=='role_reply']
             outcomes.append((job['status'],job['error'],None))
@@ -155,4 +160,5 @@ def test_pair_survives_real_store_worker_and_public_replay(tmp_path,package,cata
             assert store.read(auth,reply.ref).content['question']==query
             assert reply.content['question']==query and reply.content['error_code'] is None
             outcomes.append((job['status'],job['error'],reply.content['text']))
-    assert outcomes[0]==outcomes[1]
+    if echo_raw:assert outcomes[0][0]=='failed' and outcomes[1][0]=='completed'
+    else:assert outcomes[0]==outcomes[1]
