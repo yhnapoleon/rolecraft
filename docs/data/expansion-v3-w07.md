@@ -119,3 +119,6 @@ quality-report的evidence_supervision列出可评与label-only数量、ID、来�
 
 
 当前c5仅将公共a/b共识改为语义比较，final完整绑定未放宽。W07在线run、离线claim和artifact rebuild共用same_semantics；冗余phase3（包括只保留首遍final的伪造第三遍）在生产端仍拒绝。线上、恢复、离线、发布和重算外层hash后的审计均已回归；原c4的6项阻塞在c5已关闭。该结论只覆盖模块自验，真实provider双遍、业务authority及正式研究/产品验收仍未完成。
+
+
+W07的semantic_key现直接绑定c5公共semantic_decision_key，保留本地same_semantics调用边界与完整合法性/attestation校验。48个固定合法判定的2304对比较锁定语义字段、等价集合、措辞与代表引用差异，避免私有语义算法后续漂移；origin-binding-v1字段形状及实际跨包读取回归保持，无公共schema或新authority变更。

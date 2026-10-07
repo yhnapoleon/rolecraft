@@ -9,7 +9,7 @@ import re
 from pydantic import ValidationError
 
 from career_lab.contracts.v2.core import Executor, FileRef, ProtocolError, digest
-from career_lab.contracts.v2.data import AnnotationDecision, AnnotationPass, AnnotationV2
+from career_lab.contracts.v2.data import AnnotationDecision, AnnotationPass, AnnotationV2, semantic_decision_key
 from .common import json_bytes, sha, check_payload
 from .quality import verify_policy_approval
 from .export import INPUT
@@ -57,8 +57,7 @@ def semantic_key(decision):
 
     Raw ↔ parsed equality and the final attestation equality stay full-field.
     """
-    return (decision.task_type,decision.label,decision.applicability,decision.evidence_evaluable,
-            tuple(sorted({tuple(sorted(set(group))) for group in decision.acceptable_evidence_sets})))
+    return semantic_decision_key(decision)
 
 
 def same_semantics(left,right):
