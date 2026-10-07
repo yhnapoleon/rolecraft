@@ -106,6 +106,8 @@ def test_w05_real_material_read_event_and_test_object_enter_activity_ledger(prep
     assert [row.kind for row in ledger.records]==['material_read','test_run']
     assert reader.read(auth,ledger.records[0].ref,reader.captured_at).activity_target==material
     assert reader.read(auth,ledger.records[1].ref,reader.captured_at).executor==auth.executor
+    assert reader.read(auth,ledger.records[1].ref,reader.captured_at).quote_scope=='explicit_only'
+    assert reader.read(auth,ledger.records[0].ref,reader.captured_at).quote_scope=='explicit_only'
     assert all(complete is False for _,complete in ledger.completeness)
 
 
@@ -118,3 +120,55 @@ def test_w05_real_provider_slot_is_configuration_only_until_execution(monkeypatc
     configured=create_feedback_engine(api_key='synthetic-key-not-a-real-credential',base_url='https://provider.invalid/v1',model='configured-judge',support_model='configured-support')
     assert configured.judge.model.retries==0 and configured.judge.support_check.model.retries==0
     assert configured.judge.revision!=placeholder.judge.revision
+
+
+def test_w05_delegates_public_business_events_without_treating_them_as_objects(prepared_env):
+    from career_lab.evidence.v2.ports import SourceRecord
+    e=prepared_env;store=e['store'];auth=e['auth'];at=point(store.view(auth).state);seen=[]
+    ref=C.EvidenceRefV2(session_id=auth.session_id,kind='event',object_id='public-policy-update',version=1,observed_at_seq=at.business_seq)
+    def resolve(actor,requested,window):
+        seen.append((actor,requested,window));return SourceRecord(ref,'Authorized public event',at)
+    reader=StoreEvidenceReader(store,auth,policies=DEFAULT_POLICIES,source_reader=resolve)
+    assert reader.read(auth,ref,at).text=='Authorized public event'
+    assert seen==[(auth,ref,at)]
+    with pytest.raises(C.ProtocolError):reader.read(auth.model_copy(update={'credential_id':'invalid'}),ref,at)
+    assert len(seen)==1
+
+
+@pytest.mark.parametrize('bad',['version','future','scope'])
+def test_w05_delegated_sources_keep_identity_window_and_scope(prepared_env,bad):
+    from career_lab.evidence.v2.ports import SourceRecord
+    e=prepared_env;store=e['store'];auth=e['auth'];at=point(store.view(auth).state)
+    ref=C.EvidenceRefV2(session_id=auth.session_id,kind='event',object_id='policy-event',version=1,observed_at_seq=at.business_seq)
+    def resolve(actor,requested,window):
+        if bad=='scope':raise C.ProtocolError('object_scope_denied',status=404)
+        result=ref.model_copy(update={'version':2}) if bad=='version' else ref
+        born=at.model_copy(update={'storage_revision':at.storage_revision+1}) if bad=='future' else at
+        return SourceRecord(result,'Never expose mismatched/future source',born)
+    reader=StoreEvidenceReader(store,auth,policies=DEFAULT_POLICIES,source_reader=resolve)
+    with pytest.raises(C.ProtocolError):reader.read(auth,ref,at)
+
+
+def test_w05_existing_config_uses_authorized_source_port_when_installed(prepared_env):
+    from career_lab.evidence.v2.ports import SourceRecord
+    e=prepared_env;store=e['store'];auth=e['auth'];base=StoreEvidenceReader(store,auth,policies=DEFAULT_POLICIES)
+    ref=next(r.ref for r in store.view(auth).objects if r.ref.kind=='config')
+    local=base.read(auth,ref,base.captured_at);calls=[]
+    def resolve(actor,requested,window):calls.append(requested);return local
+    reader=StoreEvidenceReader(store,auth,policies=DEFAULT_POLICIES,source_reader=resolve)
+    resolved=reader.read(auth,ref,reader.captured_at)
+    assert resolved.text==local.text and resolved.ref==local.ref and resolved.quote_scope=='explicit_only' and calls==[ref]
+
+
+def test_w05_external_source_does_not_invent_a_whole_document_quote(prepared_env):
+    from career_lab.evidence.v2.ports import SourceRecord
+    from career_lab.evidence.v2.assembler import EvidenceAssemblerV2
+    e=prepared_env;store=e['store'];auth=e['auth'];at=point(store.view(auth).state)
+    ref=C.EvidenceRefV2(session_id=auth.session_id,kind='event',object_id='authorized-event',version=1,observed_at_seq=at.business_seq)
+    reader=StoreEvidenceReader(store,auth,policies=DEFAULT_POLICIES,source_reader=lambda *_:SourceRecord(ref,'Heading\nOriginal sentence',at))
+    assembler=EvidenceAssemblerV2(reader)
+    bare=assembler.resolve(auth,ref,at)
+    assert bare.ref.quote is None and bare.text=='Heading\nOriginal sentence'
+    explicit=ref.model_copy(update={'quote':'Original sentence','span_start':8,'span_end':25})
+    located=assembler.resolve(auth,explicit,at)
+    assert located.ref.quote=='Original sentence' and located.text=='Original sentence'

@@ -93,7 +93,7 @@ class EvidenceAssemblerV2:
             elif chosen.quote not in text:raise ProtocolError('evidence_quote_mismatch')
             text=chosen.quote
         else:
-            chosen=source.ref.model_copy(update={'span_start':0,'span_end':len(text),'quote':text}) if text else source.ref
+            chosen=source.ref.model_copy(update={'span_start':0,'span_end':len(text),'quote':text}) if text and source.quote_scope=='whole_text' else source.ref
         return SourceCandidate(chosen,text,source.created_at)
 
     def assemble(self,*,auth:AuthContext,subject_id:str,subjects:tuple[ObjectRef,...],
