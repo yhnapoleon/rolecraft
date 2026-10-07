@@ -1,0 +1,624 @@
+{
+  "schema_version": 2,
+  "id": "pm_pilot",
+  "revision": "2.9.5",
+  "structure_id": "index_scope_resource_dependency",
+  "files": [
+    {
+      "schema_version": 2,
+      "path": "baseline.json",
+      "sha256": "362bb5e2550f3746c29f9a5ac3dc8b5e2d8321ddb82408f600e570c76dd0b4f0",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "decision_examples.json",
+      "sha256": "3c4fefc84987ad3fcdfbb387ac73544ec384b67696b8057cea4eb637f8857819",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "evaluation/rubric-v2-candidate-2.json",
+      "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "evaluation/rules-v4-rubric-v2-c2.json",
+      "sha256": "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "facts.json",
+      "sha256": "de50de1c385a2062aa18be6f516900a772a6a3071f561cd4968c2979cfc35d04",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "locale.json",
+      "sha256": "7fdcffe876804b6528d98b385b4c914a051bad04105cfe7693039cb385cde387",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials.json",
+      "sha256": "6ec899100eaec32c008bd7f0f6a7ad8a3a736de8fec3ea3ca7c78b01a60bf49c",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/approvals-v1.md",
+      "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/brief-v1.md",
+      "sha256": "3e14692b1102820ba3042a5e7711427d593c6581e5a3e8e317b26163e06c7135",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/business_case-v1.md",
+      "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/coordination-v1.md",
+      "sha256": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/demand-v1.md",
+      "sha256": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/demo-v1.md",
+      "sha256": "a12476b68fe52aedfb1ddef8e3523a2cc1a9b831707d23da9bdf35a2cdb584ec",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/demo-v2.md",
+      "sha256": "a2640df69d07055524ba50b0bbabfb84322c758de67f5830466ddecb51650660",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/failures-v1.md",
+      "sha256": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/faq-v1.md",
+      "sha256": "b8fad283036c2ba68a8b20e537d11457908f8a8921b741c9ba0e758a1e24bd88",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/interviews-v1.md",
+      "sha256": "345705f33270e338444f4a9a92cc8b0f03c77a0d16b6b5c2833bda4eb0b5418d",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/leave-v1.md",
+      "sha256": "d287651b1f47f46ca1f6a39744121b7eb01ea9be93795a04637766d36b563320",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/meal-v1.md",
+      "sha256": "459abcb2c620d75b0caf62ff0328fa83f67908a8c154a6d998d0351f5966e0e8",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/onboarding-v1.md",
+      "sha256": "906d5dcecb028f616741bbeba4dd58ad2251257329564b699fbb6356999dc7d8",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/policy-v1.md",
+      "sha256": "b29b349fc19da70717ba7405586dd2760ee40ce344477bfe776eed1d7fb4281f",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/policy-v2.md",
+      "sha256": "d4b820c6700b21de6af5f7170aedb0f2bf76b7d91bccf926efd3f4cb0c9975ad",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/restricted-v1.md",
+      "sha256": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/scope_note-v1.md",
+      "sha256": "d6eff2910a2e0f39dd773a5e28d257bb56e2c41c12471263b05df8c2d23ea112",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/scope_note-v2.md",
+      "sha256": "f7af830782ac84614662e312ba6181fbd8917fc8b436abc8ed2fff8aa5dcd5d4",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/tech_diagnostics-v1.md",
+      "sha256": "b17e99f786664e4105e01fde3e251a65f0715016359cae11900175dcd0ed6b52",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/tech_private-v1.md",
+      "sha256": "88cfa90b7080a450b1975744aa60d9e46dd06ab22c6082c1063d521e4c74051e",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/technical-v1.md",
+      "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/trial_details-v1.md",
+      "sha256": "e4cfe0846cb846fe93ade0d517258d3c0261f848d4b04ffac94ff6758ae48f29",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/user_groups-v1.md",
+      "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "materials/world_private-v1.md",
+      "sha256": "6a5ef0f1e5b42d0bcdcb7faf8dc3a5d880beb48972714f182bb55ae56023d58c",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
+      "path": "paths.json",
+      "sha256": "42510b731cb45b1162e1898796ce7487564f65fe34300d932e6cb6bcf56c97ba",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "probes.json",
+      "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "research/private-diagnostic.json",
+      "sha256": "2ac688e60facb7f5d1e6adfb3e054e8f2fdc3f7e06d772bf9540fe60ed324ab8",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "research/public-case-records.json",
+      "sha256": "67985f20bad11c4ceb7aed04e8c540f6b8a20dd50eb85dc4de6a4e61f040470a",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "research/retrieval-calibration.json",
+      "sha256": "31bae8060b92cb09bc272db327c3650f5422f2d7803da171fb1aace472eda842",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "roles.json",
+      "sha256": "671281d24ea4be57738bfc86fd8a44d3e10873699d530e55cae605a9572ed29b",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "rubric-reference.json",
+      "sha256": "e7ac22535e849561eb06675154fd971ff1e36ceb612a49dc5e359898c96f30a9",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/acquisition.json",
+      "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/bundle.json",
+      "sha256": "742675967987ca57d885448744a3640370fd275a2cdc3bbe0fe2ea505b7ad4cd",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/decision.json",
+      "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/evaluation-protocol.json",
+      "sha256": "7f830f0a2953ddeeb4bc0af7ae142076880041623ba78d850de28237faab8dc9",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/evaluation.json",
+      "sha256": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/model.json",
+      "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/retrieval.json",
+      "sha256": "6bcc03f28fa46e6f5dfbd9689df0502ddd086eb240258c31bdb13fbf692a945d",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/source-files.json",
+      "sha256": "08b093586d86522bd27f37d53b8854d1fb915f79bad87972af7b0cc27d22427a",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "runtime/tools.json",
+      "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "scenario.yaml",
+      "sha256": "39ee79e85b7888a79e99a33e8d486417b5abeef476cb6903431b0014ec85d98c",
+      "media_type": "application/json"
+    }
+  ],
+  "public_files": [
+    "materials/approvals-v1.md",
+    "materials/brief-v1.md",
+    "materials/business_case-v1.md",
+    "materials/coordination-v1.md",
+    "materials/demand-v1.md",
+    "materials/demo-v1.md",
+    "materials/failures-v1.md",
+    "materials/faq-v1.md",
+    "materials/interviews-v1.md",
+    "materials/leave-v1.md",
+    "materials/meal-v1.md",
+    "materials/onboarding-v1.md",
+    "materials/policy-v1.md",
+    "materials/restricted-v1.md",
+    "materials/scope_note-v1.md",
+    "materials/technical-v1.md",
+    "materials/trial_details-v1.md",
+    "materials/user_groups-v1.md"
+  ],
+  "private_files": [
+    "baseline.json",
+    "decision_examples.json",
+    "evaluation/rubric-v2-candidate-2.json",
+    "evaluation/rules-v4-rubric-v2-c2.json",
+    "facts.json",
+    "locale.json",
+    "materials.json",
+    "materials/demo-v2.md",
+    "materials/policy-v2.md",
+    "materials/scope_note-v2.md",
+    "materials/tech_diagnostics-v1.md",
+    "materials/tech_private-v1.md",
+    "materials/world_private-v1.md",
+    "paths.json",
+    "probes.json",
+    "research/private-diagnostic.json",
+    "research/public-case-records.json",
+    "research/retrieval-calibration.json",
+    "roles.json",
+    "rubric-reference.json",
+    "runtime/acquisition.json",
+    "runtime/bundle.json",
+    "runtime/decision.json",
+    "runtime/evaluation-protocol.json",
+    "runtime/evaluation.json",
+    "runtime/model.json",
+    "runtime/retrieval.json",
+    "runtime/source-files.json",
+    "runtime/tools.json",
+    "scenario.yaml"
+  ],
+  "role_specs": [
+    {
+      "schema_version": 2,
+      "id": "supervisor",
+      "name": "Manager",
+      "responsibilities": [
+        "Set business goals and commitments",
+        "Approve capacity, developer-days and deadlines",
+        "Own the tradeoff between demonstration and pilot"
+      ],
+      "goals": [
+        "Receive evidence-backed, inspectable recommendations",
+        "Make the demonstration explainable without overstating completion",
+        "Allocate resources against genuine shortfalls"
+      ],
+      "known_materials": [
+        "brief",
+        "technical",
+        "approvals",
+        "demo",
+        "scope_note",
+        "demand",
+        "user_groups",
+        "restricted",
+        "business_case",
+        "coordination",
+        "failures",
+        "trial_details"
+      ],
+      "known_facts": [
+        "capacity",
+        "dev_days",
+        "deadline_day",
+        "capacity_limit",
+        "dev_days_limit",
+        "deadline_day_limit",
+        "demo_day"
+      ],
+      "disclosure_policy": {},
+      "approval_authority": [
+        "approve_business"
+      ],
+      "event_subscriptions": [
+        "initial_plan_applied",
+        "demo_schedule_changed",
+        "business_decided",
+        "business_scope_requested"
+      ],
+      "acceptable_conditions": [
+        "Commitments fit actual resources",
+        "Evidence and tradeoffs precede requests",
+        "A pause has follow-up ownership and review conditions"
+      ],
+      "unacceptable_conditions": [
+        "Treating conversational support as approval",
+        "Treating a successful demonstration as pilot validation",
+        "Requesting the maximum allocation without a shortfall"
+      ]
+    },
+    {
+      "schema_version": 2,
+      "id": "business_lead",
+      "name": "Business lead",
+      "responsibilities": [
+        "Explain user needs and business processes",
+        "Coordinate policy explanations and case reviews",
+        "Discuss human handoff and business acceptance",
+        "Help examine Lu Wen and Xu Qing material using available records; never claim contact or a new reply without an actual handoff or reply record"
+      ],
+      "goals": [
+        "Prioritize consequential problems",
+        "Do not count handoffs or silence as success",
+        "Distinguish measurement definitions from business value",
+        "Initially advocate the 429-minute BC-01 estimate without having checked every SD-120 field",
+        "Acknowledge and revise the estimate when the learner supplies specific field evidence; do not deny BC-01 or blame the learner for accurately citing it"
+      ],
+      "known_materials": [
+        "brief",
+        "demand",
+        "user_groups",
+        "interviews",
+        "policy",
+        "meal",
+        "leave",
+        "onboarding",
+        "restricted",
+        "scope_note",
+        "approvals",
+        "business_case",
+        "coordination",
+        "failures",
+        "trial_details"
+      ],
+      "known_facts": [
+        "demand_total",
+        "demand_faq",
+        "demand_policy",
+        "demand_sensitive",
+        "total_minutes",
+        "total_repeats",
+        "new_staff_priority",
+        "operations_concern",
+        "admin_concern",
+        "hotel_limit",
+        "meal_limit",
+        "leave_notice_days",
+        "additional_candidates",
+        "support_observation_minutes",
+        "saving_claim"
+      ],
+      "disclosure_policy": {},
+      "approval_authority": [],
+      "event_subscriptions": [
+        "initial_plan_applied",
+        "business_scope_requested"
+      ],
+      "acceptable_conditions": [
+        "Business value has inspectable support",
+        "Automated answers and human handoff have owners",
+        "Counterevidence can change a judgment"
+      ],
+      "unacceptable_conditions": [
+        "Reporting only the automated-answer rate",
+        "Continuing to count all waiting time as labor saved after receiving explicit field counterevidence",
+        "Claiming a person handled a case without a record"
+      ]
+    },
+    {
+      "schema_version": 2,
+      "id": "tech_lead",
+      "name": "Technical lead",
+      "responsibilities": [
+        "Explain retrieval, versions and engineering costs",
+        "Provide reproducible verification methods",
+        "Identify ineffective settings and technical risks"
+      ],
+      "goals": [
+        "Trace answers to the sources actually used",
+        "Verify critical settings with positive and negative cases",
+        "Keep engineering commitments within approved resources"
+      ],
+      "known_materials": [
+        "brief",
+        "technical",
+        "approvals",
+        "faq",
+        "onboarding",
+        "policy",
+        "meal",
+        "leave",
+        "restricted",
+        "demo",
+        "tech_private",
+        "tech_diagnostics",
+        "failures",
+        "trial_details"
+      ],
+      "known_facts": [
+        "capacity",
+        "dev_days",
+        "cost_scope_filter",
+        "cost_human_fallback",
+        "cost_realtime_sync",
+        "index_delay_hours",
+        "retrieval_probe_query",
+        "retrieval_threshold_candidate",
+        "retrieval_debug_code"
+      ],
+      "disclosure_policy": {
+        "retrieval_probe_query": {
+          "schema_version": 2,
+          "mode": "paraphrase_only",
+          "actors": [
+            "tech_lead"
+          ],
+          "paraphrase": "A preparation-stage test reproduced this question: I've already signed up for company training. Does that mean I can simply turn up to attend the class? At thresholds 0.35 and the current default 0.3 it retrieved no supported passage. At 0.2 it returned Device repair, which does not answer the training question. Lowering the threshold did not solve this case. An unrelated control still retrieved nothing. This is an observed English diagnostic, not a recommended threshold."
+        },
+        "retrieval_threshold_candidate": {
+          "schema_version": 2,
+          "mode": "paraphrase_only",
+          "actors": [
+            "tech_lead"
+          ],
+          "paraphrase": "A preparation-stage test reproduced this question: I've already signed up for company training. Does that mean I can simply turn up to attend the class? At thresholds 0.35 and the current default 0.3 it retrieved no supported passage. At 0.2 it returned Device repair, which does not answer the training question. Lowering the threshold did not solve this case. An unrelated control still retrieved nothing. This is an observed English diagnostic, not a recommended threshold."
+        },
+        "retrieval_debug_code": {
+          "schema_version": 2,
+          "mode": "paraphrase_only",
+          "actors": [
+            "tech_lead"
+          ],
+          "paraphrase": "The technical diagnostic retains the original training question, three thresholds and an unrelated control. Its internal register ID is not for disclosure."
+        }
+      },
+      "approval_authority": [],
+      "event_subscriptions": [
+        "initial_plan_applied",
+        "demo_schedule_changed",
+        "business_decided"
+      ],
+      "acceptable_conditions": [
+        "Reproduce a problem before judging the repair",
+        "Distinguish source, index and configuration versions",
+        "Retain failures and unverified limits"
+      ],
+      "unacceptable_conditions": [
+        "Assuming a feature works because its name is selected",
+        "Treating document publication as an index refresh",
+        "Promising reliability without required safeguards"
+      ]
+    }
+  ],
+  "domains": {
+    "stable_faq": [
+      "faq"
+    ],
+    "onboarding": [
+      "onboarding"
+    ],
+    "policy_travel": [
+      "policy"
+    ],
+    "policy_meal": [
+      "meal"
+    ],
+    "policy_leave": [
+      "leave"
+    ]
+  },
+  "capabilities": [
+    "apply_config",
+    "refresh_index",
+    "request_business",
+    "resolve_approval",
+    "read_material",
+    "test_assistant"
+  ],
+  "baseline_config": {
+    "schema_version": 2,
+    "id": "pilot",
+    "session_id": "scenario:pm_pilot:v2",
+    "version": 1,
+    "config_version": 0,
+    "domains": [
+      "stable_faq",
+      "onboarding",
+      "policy_travel",
+      "policy_meal",
+      "policy_leave"
+    ],
+    "scope_filter": true,
+    "update_strategy": "daily",
+    "fallback": "human",
+    "chunk_size": 500,
+    "retrieval_limit": 1,
+    "min_score": 0.3,
+    "min_score_calibration": null,
+    "freshness_guard": "none",
+    "manual_domains": [],
+    "prohibited_topics": [],
+    "work_items": [
+      "scope_filter",
+      "human_fallback"
+    ],
+    "participants": 20,
+    "launch_day": 7
+  },
+  "initial_resources": {
+    "capacity": 30,
+    "dev_days": 3,
+    "deadline_day": 7
+  },
+  "lineage": [
+    "pm_pilot-v1"
+  ],
+  "split": "train"
+}
