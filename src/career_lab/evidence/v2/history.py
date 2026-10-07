@@ -24,6 +24,10 @@ def unique_sources(sources):
 
 
 def assess_responsibilities(records,policy,subjects,at,resolve,resolve_at,*,work_language='zh'):
+    from dataclasses import replace
+    if policy.mechanism.startswith('v2.'):
+        mechanism=policy.mechanism[3:]
+        policy=replace(policy,mechanism='tests' if mechanism in {'functional_tests','staleness_test','adjustment'} else mechanism)
     output=[]
     for record in records:
         if record.kind not in {'actual_action','commitment','completion_claim','unknown'} or record.state not in {'active','withdrawn','unknown'}:

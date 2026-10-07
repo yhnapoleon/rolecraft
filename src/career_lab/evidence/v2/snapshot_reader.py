@@ -37,7 +37,7 @@ class SnapshotEvidenceReader:
                 author=Executor.model_validate(data['author']) if data.get('author') else None,
                 executor=Executor.model_validate(data['executor']) if data.get('executor') else None,
                 adopter=Executor.model_validate(data['adopter']) if data.get('adopter') else None,
-                activity_kind=data.get('activity_kind'),activity_target=ObjectRef.model_validate(data['activity_target']) if data.get('activity_target') else None,actor_id=data.get('actor_id'),structured_decision=decision)
+                activity_kind=data.get('activity_kind'),activity_target=ObjectRef.model_validate(data['activity_target']) if data.get('activity_target') else None,actor_id=data.get('actor_id'),structured_decision=decision,quote_scope=data.get('quote_scope','whole_text'))
         log=value.get('activity_ledger',{})
         self.ledger=ActivityLedger(records=tuple(ActivityRecord(
             ref=EvidenceRefV2.model_validate(a['ref']),kind=a['kind'],occurred_at=VersionPoint.model_validate(a['occurred_at']),

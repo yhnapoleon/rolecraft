@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "revision": "practice-content-2.9.0",
-  "review_status": "pending_targeted_revision_review",
+  "review_status": "accepted_content_only",
   "read_scope": "W05 may project only public_description and constraints; bindings are server assembly data",
   "selection_policy": "optional_user_choice_or_decline; start a new session; never rewrite the source submission or feedback",
   "progress_claim": "No automatic learning gain claim from a recommendation or a single completed practice",
@@ -74,5 +74,14 @@
         }
       }
     }
-  ]
+  ],
+  "independent_content_review": {
+    "schema_version": 2,
+    "path": "reviews/content-approval-2.9.0.json",
+    "sha256": "06ac5ac71e63d98bf73a0bb14730c2c6bc248354e134844e7c95240094a4dc10",
+    "media_type": "application/json"
+  },
+  "normal_entry_enabled": false,
+  "current_runtime_catalog": "reviewed-options-2.9.4.json",
+  "content_review_scope": "authored content accepted at 2.9.0; evaluation-only composition recorded separately"
 }

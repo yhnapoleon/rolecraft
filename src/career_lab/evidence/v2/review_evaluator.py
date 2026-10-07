@@ -70,6 +70,7 @@ class ReviewEvaluator:
                 evidence_refs=source.declared_refs,purpose=purpose,decision=chosen,as_of=at,policy=policy,snapshot=snapshot,
                 question=question,anchor_mode='product_version',requested_at=requested_at) for policy in selected)
             report,diagnostics=self.engine.evaluate(auth.session_id,subject,self.reader.evaluation,at,packages,work_language=work_language)
+            facts={**facts,'change_facts':diagnostics.get('change_facts',[]),'summary':[*facts['summary'],*[row['summary'] for row in diagnostics.get('change_facts',[])]]}
             history=diagnostics['historical_responsibilities']
             record_status=[]
             if purpose_of(purpose)=='result':

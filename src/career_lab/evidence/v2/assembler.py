@@ -52,7 +52,11 @@ def applicable(policy:CriterionPolicy,purpose:str,decision:str|None):
 
 def model_input(item:EvidencePackageV2) -> dict:
     """Strict allowlist: never send rule_context or arbitrary metadata to a model."""
-    return {'criterion':item.criterion,'claim':item.claim,'purpose':item.purpose,
+    public_context={}
+    if item.rule_context.get('mechanism','').startswith('v2.'):
+        decision=item.rule_context.get('decision')
+        public_context={'declared_decision':decision if decision in {'launch','launch_narrow','no_go','defer_with_conditions'} else None}
+    return {**public_context,'criterion':item.criterion,'claim':item.claim,'purpose':item.purpose,
         'as_of':item.as_of.model_dump(mode='json'),'applicability':item.applicability,
         'subjects':[base_ref(r).model_dump(mode='json') for r in item.subjects],
         'candidate_evidence':[{'id':c.id,'text':c.text,
@@ -89,7 +93,7 @@ class EvidenceAssemblerV2:
             elif chosen.quote not in text:raise ProtocolError('evidence_quote_mismatch')
             text=chosen.quote
         else:
-            chosen=source.ref.model_copy(update={'span_start':0,'span_end':len(text),'quote':text}) if text else source.ref
+            chosen=source.ref.model_copy(update={'span_start':0,'span_end':len(text),'quote':text}) if text and source.quote_scope=='whole_text' else source.ref
         return SourceCandidate(chosen,text,source.created_at)
 
     def assemble(self,*,auth:AuthContext,subject_id:str,subjects:tuple[ObjectRef,...],

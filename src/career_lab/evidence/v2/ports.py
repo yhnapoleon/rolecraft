@@ -35,6 +35,9 @@ class SourceRecord:
     activity_target: ObjectRef | None = None
     actor_id: str | None = None
     structured_decision: StructuredDecision | None = None
+    # External source ports may authorize an object without authorizing a
+    # synthetic quote spanning its whole serialized/document representation.
+    quote_scope: Literal['whole_text', 'explicit_only'] = 'whole_text'
 
 
 @dataclass(frozen=True)
@@ -123,8 +126,9 @@ class CriterionPolicy:
                 'purposes':list(self.purposes),'launch_only':self.launch_only}
 
 
-# Implementation defaults, supplied through the evaluation adapter in production.
-# They are not a claim that W02's final rubric has already been frozen.
+# Legacy seven-item policy set retained for existing fixtures and bindings.
+# New rubric-v2 sessions must explicitly install/load rubrics.v4.rubric_v2;
+# never substitute this set for that 14-item frozen candidate.
 DEFAULT_POLICIES = (
     CriterionPolicy('R3.capacity','正式开放人数是否符合当时有效容量','capacity',('commitment','result'),True),
     CriterionPolicy('R3.resources','正式承诺的资源和时间是否有依据','resources',('commitment','result'),True),
