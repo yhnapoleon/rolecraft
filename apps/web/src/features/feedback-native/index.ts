@@ -84,6 +84,7 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
   const root=el('section','','native-feedback');root.setAttribute('aria-label',T("交付与反馈","Submission and feedback"));root.lang=language;
   const hiddenStyle=doc.createElement('style');hiddenStyle.textContent='.native-feedback [hidden]{display:none!important}.native-feedback{min-width:0;overflow-wrap:anywhere}.native-feedback section,.native-feedback article{min-width:0}.native-feedback>section,.native-feedback article>section{margin-block:20px}.native-feedback .btn{white-space:normal;height:auto;min-height:34px;max-width:100%;margin:3px 5px 3px 0}.native-feedback .field-row{display:flex;align-items:flex-start;gap:8px;margin:8px 0}.native-feedback .field-row input{flex:none;margin-top:5px}.native-feedback blockquote{margin:10px 0;padding:8px 12px;border-inline-start:2px solid var(--line);color:var(--ink-2)}.native-feedback .group-title{margin-block:20px 10px}.native-feedback .row-title{margin-block:14px 8px}.native-feedback p{line-height:1.6}.native-feedback .textarea,.native-feedback .select{max-width:100%}';root.append(hiddenStyle);
   const notice=el('p','','muted');notice.setAttribute('role','status');notice.setAttribute('aria-live','polite');
+  let lastReadError:string|undefined;
   const failure=el('p','','inline-alert');failure.setAttribute('role','alert');failure.hidden=true;
   const submissions=el('section');submissions.append(el('h2',T("确认这次交付","Confirm this submission")));
   const selectedSummary=el('div');selectedSummary.setAttribute('aria-label',T("本次将提交的版本","Versions to submit"));
@@ -125,7 +126,7 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
   function responseForm(report:Report,criterion?:string,section:'general'|'verified_facts'|'historical_responsibilities'|'rule_items'|'model_advice'='general') {
     const id=[report.id,report.version,section,criterion??''].join(':');
     let draft=draftResponses.get(id);if(!draft){draft=adapter.readDraft(id)??{text:'',evidence:[]};draftResponses.set(id,draft);}
-    const form=el('details');form.append(el('summary',T("提出异议或补充依据","Challenge or supplement the evidence")));
+    const form=el('details');form.dataset.responseId=id;form.append(el('summary',T("提出异议或补充依据","Challenge or supplement the evidence")));
     const body=el('textarea','','textarea');body.rows=3;body.value=draft.text;body.setAttribute('aria-label',T("异议或补证内容","Challenge or additional evidence"));
     body.addEventListener('input',()=>{draft!.text=body.value;void persist(id,draft!);});
     const evidence=el('p','','muted');evidence.textContent=draft.evidence.length?selectedRefs(draft.evidence.length):T("补证引用尚未选择","No supporting references selected");
@@ -189,11 +190,17 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
     receipt.replaceChildren();if(state.submission){receipt.append(el('h3',T("已保存的提交快照","Saved submission snapshot")));refs(receipt,state.submission.products);}
     // Do not rebuild the response editor while it holds focus. Its content is
     // retained in the per-report draft even when the shared client refreshes.
-    if(!reports.contains(doc.activeElement))reports.replaceChildren(...[...state.reports].sort((a,b)=>Number(b.subject.object_id===state.submission?.ref.object_id)-Number(a.subject.object_id===state.submission?.ref.object_id)).map(reportPanel));
+    if(!reports.contains(doc.activeElement)){
+      const expanded=new Set([...reports.querySelectorAll<HTMLDetailsElement>('details[data-response-id][open]')].map(n=>n.dataset.responseId));
+      reports.replaceChildren(...[...state.reports].sort((a,b)=>Number(b.subject.object_id===state.submission?.ref.object_id)-Number(a.subject.object_id===state.submission?.ref.object_id)).map(reportPanel));
+      for(const detail of reports.querySelectorAll<HTMLDetailsElement>('details[data-response-id]'))detail.open=expanded.has(detail.dataset.responseId);
+    }
     responseHistory.replaceChildren();if(state.responses?.length){responseHistory.append(el('h3',T("已记录的异议与补证","Recorded challenges and additional evidence")));for(const response of state.responses){responseHistory.append(el('p',(response.kind==='objection'?T("异议已记录","Challenge recorded"):T("补证已记录","Additional evidence recorded"))+T(" · 等待核验"," · Awaiting verification")),el('blockquote',response.text));}}
     revisions.hidden=state.status!=='submitted';revise.disabled=state.busy||!!state.pending||!!state.awaitingFeedback||!state.submission;
     reports.hidden=!!state.error&&!state.reports.length;submissions.hidden=!!state.error&&!state.products.length;
     if(state.error){failure.textContent=state.error;failure.hidden=false;}
+    else if(lastReadError && failure.textContent===lastReadError){failure.hidden=true;failure.textContent="";}
+    lastReadError=state.error;
   }
   const unsubscribe=adapter.subscribe(render);render();
   return {refresh:()=>act(()=>adapter.refresh()),destroy:()=>{destroyed=true;unsubscribe();reviewControls?.destroy();root.remove();}};
