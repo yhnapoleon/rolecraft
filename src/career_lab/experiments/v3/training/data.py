@@ -6,6 +6,7 @@ import json
 from career_lab.contracts.v2.core import FileRef,ProtocolError,digest,read_file
 from career_lab.contracts.v2.data import SplitManifest,AnnotationV2,Lineage,FAMILY_TASK,DatasetRecordV2,DatasetMetadataV2,metadata_projection,validate_record_annotation,require_training_split
 from career_lab.models.v3.core import INPUT,Example,LABELS
+from .languages import validate_translation_index,validate_translation_member
 
 
 class RecordReadError(ProtocolError):
@@ -19,6 +20,8 @@ class ReleaseReader:
     def __init__(self,root,release_ref:FileRef,split_ref:FileRef,*,metadata_approval=None,allow_fixture=False,source_authority=None,label_only_authority=None):
         self.source_authority=source_authority;self.label_only_authority=label_only_authority
         self._label_only_records={}
+        self._loaded_record_ids=set()
+        self.translation_metadata=None
         self.root=Path(root);self.release_ref=release_ref;self.split_ref=split_ref;self.access_log=[];self.excluded=[]
         self.manifest=json.loads(self._read(release_ref,"metadata-index"))
         if self.manifest.get("id")!=digest({k:v for k,v in self.manifest.items() if k!="id"}):raise ProtocolError("release_manifest_drift")
@@ -40,6 +43,10 @@ class ReleaseReader:
         if metadata.get("protocol")!="w07-record-metadata-index-v1" or set(metadata.get("records",{}))!={e.record_id for e in self.split.entries}:
             raise ProtocolError("metadata_index_identity_mismatch")
         self.metadata=metadata["records"]
+        if self.manifest.get('translation_metadata'):
+            translated=FileRef.model_validate(self.manifest['translation_metadata'])
+            if self.manifest['files'].get(translated.path)!=translated.sha256:raise ProtocolError('translation_metadata_hash_mismatch')
+            self.translation_metadata=validate_translation_index(json.loads(self._read(translated,'metadata-index')),self.split.entries)
 
     def _read(self,ref,purpose):
         raw=read_file(self.root,ref);self.access_log.append({"path":ref.path,"sha256":ref.sha256,"purpose":purpose});return raw
@@ -110,6 +117,8 @@ class ReleaseReader:
                 row=Example(entry.record_id,item,annotation,partition,entry.structure_id,entry.component_id,
                             language=metadata.language,bucket=metadata.bucket,fixture=self.fixture)
                 row.validate()
+                if self.translation_metadata is not None:validate_translation_member(record,self.translation_metadata['pairs'])
+                self._loaded_record_ids.add(record.record_id)
                 if label_only is not None:
                     self._label_only_records[(self.release_ref.sha256,partition,record.record_id)]=label_only
                 rows.append(row)
@@ -126,5 +135,7 @@ class ReleaseReader:
         return {"release":self.release_ref.model_dump(mode="json"),"split_manifest":self.split_ref.model_dump(mode="json"),
                 "fixture":self.fixture,"declared_structure_count":self.split.independent_structure_count,
                 "independence_claim":"none for synthetic fixture" if self.fixture else "requires upstream W11 approval",
+                "translation_provenance_status":"present_mechanical_only" if self.translation_metadata and self.translation_metadata['pairs'] else "missing",
+                "translation_pairs":[p for p in self.translation_metadata['pairs'] if p['original']['record_id'] in self._loaded_record_ids and p['translated']['record_id'] in self._loaded_record_ids] if self.translation_metadata else [],
                 "label_only_records":list(self.label_only_records),"accesses":list(self.access_log),"excluded_or_invalid_records":list(self.excluded),"test_content_opened":False,
                 "metadata_scope":"only requested train/dev per-record sidecars; no mixed records.json or test metadata body"}

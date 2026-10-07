@@ -15,6 +15,7 @@ from career_lab.models.v3.bundle import save_bundle,load_bundle,write_json,json_
 from .metrics import grade,summarize,sliced,paired_cluster_delta
 from .freeze import freeze_selection
 from .selection import SelectionPolicy,choose_dev,rank_key,tune_evidence_threshold
+from .languages import bilingual_report
 
 
 def source_snapshot(workspace,output):
@@ -118,7 +119,9 @@ def run_development(reader,output,*,workspace,task="relation",seed=5002,epochs=4
             "elapsed_seconds":time.perf_counter()-started,"external_model_calls":0,"test_evaluation":"not_run",
             "pretrained_encoder":"not_run: requires separately locked dependencies and pinned approved local checkpoint",
             "SFT":"not_run","GRPO":"not_run","product_integration":"not_run",
-            "paired_vs_linear":{n:paired_cluster_delta(evaluations["linear"]["rows"],value["rows"],seed=seed) for n,value in evaluations.items() if n!="linear"},
+            "paired_vs_linear":{n:paired_cluster_delta(evaluations["linear"]["rows"],value["rows"],seed=seed,metric="joint_correct") for n,value in evaluations.items() if n!="linear"},
+            "paired_label_vs_linear":{n:paired_cluster_delta(evaluations["linear"]["rows"],value["rows"],seed=seed,metric="label_correct") for n,value in evaluations.items() if n!="linear"},
+            "language_evaluation":bilingual_report(train,dev,evaluations,reports,reader.scope_report(),task),
             "limitations":["synthetic smoke is not E1/E2 or model-quality evidence" if reader.fixture else "independent test/structure gates remain",
                             "single seed; no stable improvement claim","all predictions advisory","no new sealed test content opened"]}
         write_json(output/"reports/development.json",report)

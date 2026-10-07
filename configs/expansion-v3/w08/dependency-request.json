@@ -2,13 +2,53 @@
   "owner": "rolecraft-035-data-models",
   "integration_owner": "032",
   "target": "Separate W08 training dependency lock/environment; do not add heavy training dependencies to default product installation",
-  "needed_packages": ["torch", "transformers", "safetensors"],
-  "tokenizer_dependent_optional_packages": ["sentencepiece"],
+  "needed_packages": [
+    "torch",
+    "transformers",
+    "safetensors"
+  ],
+  "tokenizer_dependent_optional_packages": [
+    "sentencepiece"
+  ],
   "versions": "032 to resolve and pin compatible versions; no unverified version numbers claimed",
   "preferred_checkpoint": "FacebookAI/xlm-roberta-base",
-  "checkpoint_requirements": ["exact commit revision", "license review", "local weight/tokenizer file hashes", "approved local resource window"],
+  "checkpoint_requirements": [
+    "exact commit revision",
+    "license review",
+    "local weight/tokenizer file hashes",
+    "approved local resource window"
+  ],
   "current_environment": "ARM64 CPU, 16 GiB RAM, 10 CPU cores; W08 isolated base environment has NumPy/scikit-learn, no torch/transformers",
   "implemented_without_new_dependencies": "Train-only LR and small contextual self-attention encoder with analytic gradients; synthetic pipeline checks only",
   "pretrained_adapter_status": "Code present, dependency/weight path not executed; local_files_only, no remote code",
-  "external_download_or_fee_performed": false
+  "external_download_or_fee_performed": false,
+  "data_and_evaluation_requirements": {
+    "kind": "resource/data planning request only; not runtime fields or a c5 schema extension",
+    "decision_date": "2026-10-07",
+    "mandatory_scope": "Chinese and English must both be usable; English demo confirmed. English evaluation is mandatory and prioritized per Proposal; absent English evidence remains mandatory blocked.",
+    "public_language_contract": "032 owns fixed work_language=zh|en and locale/translation provenance. Consumers do not invent fields or mutate c5.",
+    "input_owner": "033 bilingual same-fact content; 032 fixed contract/source authority; W07 audited release",
+    "input_requirements": [
+      "same facts, quantities, permissions, event timing and action consequences in zh/en; preserve information asymmetry",
+      "actual original/translation file hashes, object versions, each text own span/quote, source/target locale, translator/version and review provenance",
+      "original and translation keep structure_id, fact_root_ids, component_id, derivation links and connected group in the same split",
+      "language is never a random split defense; count unique causal structures separately from translated rows",
+      "accepted labels, class/evaluable coverage and source permissions verified in each language; translation does not automatically confer gold validity"
+    ],
+    "evaluation_requirements": [
+      "record actual train-language composition and report all metrics/denominators separately for zh and en; missing mandatory locale explicitly blocked",
+      "same-language model pairing retains exact input_hash checks; cross-language pairs retain their different hashes and use verified translation/fact groups",
+      "map localized evidence IDs back to actual source/translation anchors; paired agreement alone is not correctness",
+      "record label/applicability/evidence disagreement, retrieval/truncation effects, coverage/failures/cost by language; cluster paired uncertainty by shared causal group"
+    ],
+    "pending_real_work": [
+      "fixed bilingual source and translation metadata",
+      "audited paired zh/en data and language-specific gold",
+      "real per-language model/retrieval evaluation",
+      "English normal-product-path demo/QA",
+      "approved local HF runtime/checkpoint smoke"
+    ],
+    "evidence_boundary": "TF-IDF English execution, numeric fixtures and a multilingual model name are not English quality evidence.",
+    "resource_policy": "Existing read-only audit remains point-in-time evidence; no installation, download, fee, model run or sealed test authorized by this plan."
+  }
 }

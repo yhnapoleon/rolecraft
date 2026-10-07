@@ -1,8 +1,40 @@
 # W08 模型与实验管线
 
+## 048现行职责与验证边界（2026-10-07）
+
+我方仅推进运行导出、注册接入与独立复核；负责方承担数据生成/标注/划分、全部训练融合、SFT/GRPO、评价项五分类、E2/Jev及预算算力。以下既有训练/标注命令保留供负责方和历史复现使用，不表示本轮已执行或我方继续训练。v2-r1交接ZIP与数据保持原样。
+
+本轮接续原035双语增量，新增检查只用合成记录或已保全产物，均标synthetic。语言、hash/span、译本同split和分别统计只证明机制；真实中英v4运行、外部真实回传和质量仍独立验收。未接真实模型的产品位置显示“等待模型接入”，事实规则显示“规则核实”；注册输出仅advisory，真实调用及外层恢复均零自动重试。
+
 当前为 **implementation_only / partial**，消费031固定的c5公共候选`expansion-v3-deb8023ca664946f45c52692c65e3524703d77194c5100e0ee42939ae26cff4b`（commit `d82d7fe690ed0491744cb716df377a77bc2ed4b4`）。本模块已实现可运行代码及小数据管线验证；W07合法fixture发布已实际消费；正式业务release、W11真实多结构和产品加载仍未接齐，不能据此宣称新E1/E2、模型质量或课程交付完成。
 
 所有候选输出固定为advisory、affects_score=false。G2v只代表模型复核标签；独立人工语义校准与正式scoring采用不由本模块自动开启。
+
+## 中英文评测为必需覆盖（2026-10-07确认）
+
+中文和英文均须可用，英文演示确定；Proposal英文优先评估继续执行。正式E1/E2、模型advisory与产品验收必须有zh、en各自实际证据，缺英文数据或真实运行时明确mandatory blocked，不能以中文结果替代，也不能把“TF-IDF能处理英文字符”或“XLM-R是多语模型”写成英文质量已验证。以下为待执行计划，不改变旧交付的accepted范围或旧指标。
+
+### 必需输入
+
+消费W07固定hash的双语release，以及033/032提供的同事实语言版本、工作语言和翻译来源契约。业务入口采用032统一的`work_language='zh'|'en'`；本包不改c5 schema，也不另加一套业务语言字段。当前DatasetMetadataV2.language可用于现有报表，但与新工作语言/材料locale的映射和旧会话兼容仍待固定输入。未知或混合语言须明确标记并核查，不能自动归为zh；界面语言不能代替源语言。
+
+每个逻辑样本保留两端locale、record_id/input_hash、真实原文hash/span、译文定位、翻译执行/版本与复核状态。原文及译文共用structure/fact_root/component与连接组并保持同split；翻译数量不计作新增独立结构。训练只读train，候选/阈值/语言策略仅从dev选择；不通过将一种语言放train、另一种语言放test制造“未见”假象，不开启未登记的封存test。
+
+relation三类和criterion五类的实际类别覆盖、evidence_evaluable与独立结构分母按zh/en分别检查。记录真实train语言构成和每种eval语言；本计划不预先承诺额外三套训练实验，也不假定中文训练可泛化到英文。现有G0英文数值fixture仅证明管线，不能作为英文自然语言/岗位语义质量数据。
+
+### 成对验证与分语言报告
+
+模型A/B对比须使用同语言、同record/input_hash、同源证据与预算，保留当前精确身份校验。中文/英文语义配对采用固定的翻译/事实连接组，保留不同的两端input_hash，不能伪造相同hash绕过模型配对检查。中文/英文的中性引用须映射回实际来源与翻译锚点后比较。配对一致不等于标签正确，还须有各语言经过核验的标签和适用性依据。
+
+每种语言分别给样本/类别/结构数、macro-F1、逐类P/R/F1与混淆矩阵、误扣/误放及分母、格式/引用/时点失败、弃权、覆盖、evidence-F1和joint及分母、label-only排除、截断与检索损失、耗时/调用成本。缺分母填null并解释；缺必需语言显示未评/blocked，不静默省略该语言，也不以总体平均掩盖英文缺口。现有slices.language仅按现有行统计，不是双语覆盖通过标志。
+
+另列同源zh/en完整配对数与未配对原因、标签/适用性分歧、证据定位分歧、检索与翻译偏差，并按共享component/事实根聚类保留相关性。N-W08-04现有paired_vs_linear仍是label_correct差，不能直接冒称joint或跨语言差；下一实际报告增量需明确指标名称并补joint/分语言配对口径，旧结果不改签。
+
+### 待真实实验与下一片
+
+依次取得固定双语输入/translation provenance和authority，完成分区与成对审计，再做各语言真实标签与模型评测；资源获准后才做批准HF checkpoint的真实smoke、全label-only门槛与checkpoint重载。英文演示还需正常产品路径的英文检索、同事/助手、反馈与修订验证，数值fixture、离线指标或翻译完工均不能代替。当前HF运行时、训练锁、批准模型与真实source/model-advisory接口的阻塞不变；资源核对保持只读，没有新增下载、安装或费用。
+
+旧v9/v7接受及回执保持原样。下一实际模块/公共输入增量再一并处理既有低风险P2，提交新commit/receipt；W07 applicability/label一致性按当前契约边界保留，真实criterion发布前由031/032统一，不自行重标旧数据。
 
 ## 模型与真实验证边界
 
@@ -85,7 +117,7 @@ PY
 
 预训练适配遵循官方的[本地权重与revision加载接口](https://huggingface.co/docs/transformers/main_classes/model)及[Tokenizer接口](https://huggingface.co/docs/transformers/main_classes/tokenizer)，强制local_files_only、固定提交revision、禁用remote code。接口代码存在不代表依赖、许可证、权重和设备已验证。
 
-下一步取得W07业务源审计数据与W11结构证据后跑正式E1/E2；选择并锁定编码器资源，再完成产品加载和逐项AC。HF真实训练/重载、正式数据与test、三seed稳定性、真实检索损失、SFT/GRPO及正式产品调用均不得用本轮smoke代替。W07若有返工反馈仍优先处理。
+下一步由负责方回传业务源数据、结构证据与正式E1/E2；我方完成注册、重载复现、指标复核及真实产品调用。HF真实训练/重载、正式数据与test、三seed稳定性、真实检索损失、SFT/GRPO及正式产品调用均不得用本轮smoke代替。W07若有返工反馈仍优先处理。
 
 
 ## 2026-10-07 共同证据与新审阅边界

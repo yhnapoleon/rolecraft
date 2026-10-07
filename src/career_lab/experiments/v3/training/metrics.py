@@ -91,16 +91,21 @@ def sliced(rows,task):
             for field in ("label_tier","language","bucket","structure_id")}
 
 
-def paired_cluster_delta(left,right,*,seed=5002,resamples=200):
+def paired_cluster_delta(left,right,*,seed=5002,resamples=200,metric="joint_correct"):
+    if metric not in {"joint_correct","label_correct"}:raise ProtocolError("paired_metric_unsupported")
     a={r["record_id"]:r for r in left};b={r["record_id"]:r for r in right}
     if len(a)!=len(left) or len(b)!=len(right) or a.keys()!=b.keys():raise ProtocolError("paired_identity_mismatch")
     if any(a[k]["input_hash"]!=b[k]["input_hash"] or a[k]["component_id"]!=b[k]["component_id"] for k in a):raise ProtocolError("paired_input_mismatch")
-    groups=defaultdict(list)
-    for k in a:groups[a[k]["component_id"]].append(int(b[k]["label_correct"])-int(a[k]["label_correct"]))
-    if not groups:return {"pairs":0,"delta":None,"interval":None}
+    groups=defaultdict(list);excluded=[]
+    for k in a:
+        if (a[k][metric] is None)!=(b[k][metric] is None):raise ProtocolError("paired_metric_eligibility_mismatch")
+        if a[k][metric] is None:excluded.append(k);continue
+        groups[a[k]["component_id"]].append(int(b[k][metric])-int(a[k][metric]))
+    base={"metric":metric,"requested_pairs":len(a),"excluded_record_ids":excluded}
+    if not groups:return base|{"pairs":0,"groups":0,"delta":None,"interval":None}
     rng=np.random.default_rng(seed);keys=list(groups);samples=[]
     for _ in range(resamples):
         vals=[v for i in rng.integers(0,len(keys),len(keys)) for v in groups[keys[i]]]
         samples.append(float(np.mean(vals)))
-    return {"pairs":len(a),"groups":len(groups),"delta":float(np.mean([x for vals in groups.values() for x in vals])),
+    return base|{"pairs":len(a)-len(excluded),"groups":len(groups),"delta":float(np.mean([x for vals in groups.values() for x in vals])),
             "interval":[float(x) for x in np.quantile(samples,[.025,.975])],"warning":"descriptive small-sample interval; not evidence of stable improvement" if len(groups)<10 else None}
