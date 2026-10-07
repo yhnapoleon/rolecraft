@@ -1,0 +1,331 @@
+{
+  "$defs": {
+    "ImportConflict": {
+      "additionalProperties": false,
+      "properties": {
+        "existing": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "original_id": {
+          "minLength": 1,
+          "title": "Original Id",
+          "type": "string"
+        },
+        "original_version": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Version"
+        },
+        "reason": {
+          "enum": [
+            "missing_history",
+            "version_conflict",
+            "content_conflict",
+            "foreign_session",
+            "unresolved_reference"
+          ],
+          "title": "Reason",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_content_hash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Content Hash"
+        }
+      },
+      "required": [
+        "original_id",
+        "reason"
+      ],
+      "title": "ImportConflict",
+      "type": "object"
+    },
+    "ImportReference": {
+      "additionalProperties": false,
+      "properties": {
+        "original_id": {
+          "minLength": 1,
+          "title": "Original Id",
+          "type": "string"
+        },
+        "original_session_id": {
+          "minLength": 1,
+          "title": "Original Session Id",
+          "type": "string"
+        },
+        "resolved": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "resolved",
+            "missing",
+            "foreign_session",
+            "unverified_local"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "original_id",
+        "original_session_id",
+        "status"
+      ],
+      "title": "ImportReference",
+      "type": "object"
+    },
+    "ImportVersionMap": {
+      "additionalProperties": false,
+      "properties": {
+        "original_id": {
+          "minLength": 1,
+          "title": "Original Id",
+          "type": "string"
+        },
+        "original_session_id": {
+          "minLength": 1,
+          "title": "Original Session Id",
+          "type": "string"
+        },
+        "original_version": {
+          "exclusiveMinimum": 0,
+          "title": "Original Version",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "resolved",
+            "unresolved",
+            "unverified_local"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "original_session_id",
+        "original_id",
+        "original_version",
+        "status"
+      ],
+      "title": "ImportVersionMap",
+      "type": "object"
+    },
+    "ObjectRef": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version"
+      ],
+      "title": "ObjectRef",
+      "type": "object"
+    },
+    "VersionPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "business_seq": {
+          "minimum": 0,
+          "title": "Business Seq",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "storage_revision": {
+          "minimum": 0,
+          "title": "Storage Revision",
+          "type": "integer"
+        },
+        "workspace_revision": {
+          "minimum": 0,
+          "title": "Workspace Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "business_seq",
+        "workspace_revision",
+        "storage_revision"
+      ],
+      "title": "VersionPoint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "applied": {
+      "title": "Applied",
+      "type": "boolean"
+    },
+    "as_of": {
+      "$ref": "#/$defs/VersionPoint"
+    },
+    "conflicts": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ImportConflict"
+      },
+      "title": "Conflicts",
+      "type": "array"
+    },
+    "id_map": {
+      "additionalProperties": {
+        "$ref": "#/$defs/ObjectRef"
+      },
+      "title": "Id Map",
+      "type": "object"
+    },
+    "mode": {
+      "enum": [
+        "preview",
+        "apply"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "package_id": {
+      "minLength": 1,
+      "title": "Package Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "unresolved": {
+      "items": {
+        "$ref": "#/$defs/ImportReference"
+      },
+      "title": "Unresolved",
+      "type": "array"
+    },
+    "version_map": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ImportVersionMap"
+      },
+      "title": "Version Map",
+      "type": "array"
+    }
+  },
+  "required": [
+    "package_id",
+    "mode",
+    "id_map",
+    "unresolved",
+    "as_of",
+    "applied"
+  ],
+  "title": "ImportResult",
+  "type": "object"
+}

@@ -1,0 +1,41 @@
+{
+  "capability": "act",
+  "command": {
+    "expected_version": 1,
+    "expected_workspace_revision": 1,
+    "operation": "example",
+    "payload": {},
+    "request_id": "example",
+    "schema_version": 2
+  },
+  "context": {
+    "action": "example",
+    "actor": {
+      "delegation_id": null,
+      "id": "example",
+      "kind": "human",
+      "schema_version": 2
+    },
+    "as_of": {
+      "business_seq": 0,
+      "schema_version": 2,
+      "storage_revision": 0,
+      "workspace_revision": 0
+    },
+    "conflict_policy": "reject_and_refresh",
+    "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+    "credential_id": "example",
+    "head_dependencies": [],
+    "refresh_count": 0,
+    "refresh_history": [],
+    "request_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "sources": [],
+    "state_dependencies": []
+  },
+  "job_id": "example",
+  "operation": "example",
+  "origin_request_id": "example",
+  "schema_version": 2
+}

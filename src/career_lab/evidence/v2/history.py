@@ -32,6 +32,8 @@ def assess_responsibilities(records,policy,subjects,at,resolve,resolve_at):
             if pending not in output:output.append(pending)
             continue
         entry['sources']=[r.model_dump(mode='json') for r in proofs]
+        entry['actor_id']=record.actor_id
+        entry['executor']=record.executor.model_dump(mode='json') if record.executor else None
         valid=(record.valid_until is None or not before(record.valid_until,at)) and all(r.valid_until_seq is None or at.business_seq<r.valid_until_seq for r in proofs)
         entry['sources_valid_at_subject']=valid
         if not valid:

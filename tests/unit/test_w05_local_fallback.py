@@ -121,3 +121,16 @@ def test_trusted_structured_decision_is_exactly_bound_and_explicit_none_remains_
     raw['records'][0]['structured_decision']['declared_at']=point(4).model_dump(mode='json')
     _,bad_reader,auth,p=default_review(tmp_path,raw,name='bad-declaration')  # explicit None skips the invalid fallback
     with pytest.raises(ProtocolError,match='structured decision binding mismatch'):create_review_evaluator(bad_reader).handle(auth,req,point(5))
+
+
+def test_saved_review_decision_and_followup_are_consumed_without_claiming_resolution(tmp_path):
+    from career_lab.contracts.v2.workspace import ReviewRequest
+    from career_lab.contracts.v2.core import ObjectRef
+    _,reader,auth,p=default_review(tmp_path,history_payload())
+    prior=ObjectRef(session_id='s',kind='feedback_response',object_id='prior-response',version=1)
+    saved=ReviewRequest(id='saved-review',session_id='s',subjects=(p,),purpose='commitment',as_of=point(5),scope=(),question='',evaluation=reader.evaluation,executor=auth.executor,decision='no_go',followup_of=(prior,))
+    result=create_review_evaluator(reader).handle(auth,saved,point(5))
+    assert result['followup_of']==[prior.model_dump(mode='json')] and result['followup_status']=='linked_not_resolved'
+    assert result['reviews'][0]['decision']=='no_go'
+    report=result['reviews'][0]['feedback']
+    assert report['verified_facts'] is not None and report['historical_responsibilities'] is not None and report['rule_items'] is not None

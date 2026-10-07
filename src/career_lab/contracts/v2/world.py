@@ -25,6 +25,23 @@ class DisclosedFragment(V2):
     text: str
     channel: str
     fact_ids: tuple[str, ...] = ()
+    verification: Literal['unverified','model_extracted','verified','rejected'] = 'unverified'
+
+class ObservedFragment(DisclosedFragment):
+    audience: Literal['learner','role_private','model_only']
+    acquired_via: Literal['material_read','tool_result','role_reply','displayed']
+    acquired_at_seq: NonNegativeInt
+    disclosure_ref: ObjectRef | None = None
+    @model_validator(mode='after')
+    def actual_reply(self):
+        if self.acquired_via=='role_reply' and self.disclosure_ref is None:raise ValueError('role reply needs actual disclosure record')
+        return self
+
+class MaterialMetadata(V2):
+    id: Identifier
+    version: PositiveInt
+    title: str
+    domain: Identifier
 
 class FactV2(V2):
     id: Identifier
@@ -65,6 +82,10 @@ class AssistantConfig(V2):
     fallback: Literal['human', 'none'] = 'human'
     chunk_size: PositiveInt = 500
     retrieval_limit: PositiveInt = 3
+    min_score: Annotated[float,Field(ge=0)] = 0.35
+    min_score_calibration: FileRef | None = None
+    freshness_guard: Literal['none','warn','fallback'] = 'none'
+    manual_domains: tuple[str,...] = ()
     prohibited_topics: tuple[str, ...] = ()
     work_items: tuple[str, ...] = ()
     participants: NonNegativeInt = 0
@@ -81,11 +102,31 @@ class TestRequestV2(V2):
     declared_category: str | None = None
     declared_expected: str | None = None
 
+class RetrievedChunk(V2):
+    id: Identifier
+    material_id: Identifier
+    version: PositiveInt
+    ref: EvidenceRefV2
+    score: Annotated[float,Field(ge=0)]
+
+class TestExecutionMetadata(V2):
+    executed_at: Timestamp
+    executor: Executor
+    source_versions: dict[str,PositiveInt]
+    indexed_versions: dict[str,PositiveInt]
+    used_versions: dict[str,PositiveInt]
+    chunks: tuple[RetrievedChunk,...]
+    projection_actor: Identifier
+    attempts: tuple[ModelAttemptUsage,...] = ()
+    cost_complete: bool = False
+
 class TestResultV2(V2):
     id: Identifier
     session_id: Identifier
     version: PositiveInt = 1
     query: str
+    execution: TestExecutionMetadata
+    config_ref: ObjectRef
     config: EffectiveConfig
     status: Literal['answered', 'answered_with_warning', 'fallback', 'failed']
     answer: str
@@ -135,7 +176,33 @@ class WorldStateV2(VersionPoint):
     resources: dict[str, NonNegativeInt]
     applied_milestones: tuple[str, ...] = ()
 
+class ScenarioStateV2(V2):
+    id: Identifier
+    session_id: Identifier
+    version: PositiveInt
+    current_config: ObjectRef
+    source_versions: dict[str,PositiveInt]
+    indexed_versions: dict[str,PositiveInt]
+    material_activation: dict[str,NonNegativeInt]
+
+def assistant_config_content_hash(config:AssistantConfig):
+    return digest(config.model_dump(mode='json',exclude={'id','session_id','version','config_version'}))
+
+class BusinessBasis(V2):
+    mode: Literal['proposed','applied']
+    config: AssistantConfig
+    config_ref: ObjectRef | None = None
+    based_on: ObjectRef | None = None
+    content_hash: Hash
+    @model_validator(mode='after')
+    def immutable_basis(self):
+        if self.content_hash!=assistant_config_content_hash(self.config):raise ValueError('request configuration basis hash mismatch')
+        if self.mode=='applied' and (self.config_ref is None or self.config_ref.kind!='config'):raise ValueError('applied basis requires exact config reference')
+        if self.mode=='proposed' and self.config_ref is not None:raise ValueError('proposed basis is not an applied config')
+        return self
+
 class BusinessRequest(V2):
+    basis: BusinessBasis
     id: Identifier
     session_id: Identifier
     version: PositiveInt
@@ -176,6 +243,19 @@ class DisclosureRecord(V2):
     displayed_at_seq: NonNegativeInt | None = None
     # Actual disclosure is not evidence of understanding.
 
+class PublicDisclosureSource(EvidenceRefV2):
+    quote: None = None
+    span_start: None = None
+    span_end: None = None
+
+class PublicDisclosureRecord(V2):
+    fact_id: Identifier
+    source: PublicDisclosureSource
+    reply_ref: ObjectRef
+    quote: Annotated[str, Field(min_length=1)]
+    verification: Literal['model_extracted','verified','rejected']
+    displayed_at_seq: NonNegativeInt
+
 class RoleContext(V2):
     session_id: Identifier
     role_id: Identifier
@@ -207,7 +287,9 @@ class Observation(V2):
     session_id: Identifier
     actor: Executor
     as_of: VersionPoint
-    visible_sources: tuple[DisclosedFragment, ...]
+    visible_sources: tuple[ObservedFragment, ...]
+    catalog: tuple[MaterialMetadata,...] = ()
+    actual_disclosures: tuple[PublicDisclosureRecord,...] = ()
     read_versions: tuple[ObjectRef, ...] = ()
     events: tuple[ObjectRef, ...] = ()
     tools: tuple[ToolSchema, ...] = ()
@@ -215,6 +297,23 @@ class Observation(V2):
     tests: tuple[ObjectRef, ...] = ()
     next_seq: NonNegativeInt
     budget: Budget | None = None
+    @model_validator(mode='after')
+    def actual_learner_knowledge(self):
+        if any(x.ref.session_id!=self.session_id or x.ref.observed_at_seq>self.as_of.business_seq for x in self.visible_sources):raise ValueError('observation source session/time mismatch')
+        if any(r.session_id!=self.session_id for r in (*self.read_versions,*self.events,*self.products,*self.tests)):raise ValueError('observation reference session mismatch')
+        if any(x.audience!='learner' or x.acquired_at_seq>self.as_of.business_seq for x in self.visible_sources):raise ValueError('observation requires actual learner-acquired sources')
+        if any(x.source.session_id!=self.session_id or x.reply_ref.session_id!=self.session_id or x.source.observed_at_seq>x.displayed_at_seq for x in self.actual_disclosures):raise ValueError('disclosure source/reply session or time mismatch')
+        if any(x.displayed_at_seq is None or x.displayed_at_seq>self.as_of.business_seq for x in self.actual_disclosures):raise ValueError('observation cannot claim undisplayed role disclosure')
+        return self
+
+class JobRefreshRecord(V2):
+    previous_as_of: VersionPoint
+    reason: Identifier
+    attempt: NonNegativeInt
+    queued_at: Timestamp | None = None
+    started_at: Timestamp | None = None
+    parked_at: Timestamp | None = None
+    refreshed_at: Timestamp
 
 class JobContextSnapshot(V2):
     session_id: Identifier
@@ -225,4 +324,26 @@ class JobContextSnapshot(V2):
     as_of: VersionPoint
     context_hash: Hash
     sources: tuple[ObjectRef, ...]
+    # sources are immutable inputs. These additional refs/fields require current freshness.
+    head_dependencies: tuple[ObjectRef, ...] = ()
+    state_dependencies: tuple[Literal['config_version','resources','applied_milestones','status','cycle_id'], ...] = ()
+    refresh_count: NonNegativeInt = 0
+    refresh_history: tuple[JobRefreshRecord,...] = ()
     conflict_policy: Literal['reject_and_refresh'] = 'reject_and_refresh'
+
+
+class PublicState(VersionPoint):
+    session_id: Identifier
+    status: Literal['active','paused','submitted']
+    cycle_id: Identifier
+    config_version: NonNegativeInt
+
+class PublicEvent(V2):
+    id: Identifier
+    session_id: Identifier
+    seq: PositiveInt
+    transaction_id: Identifier
+    type: Identifier
+    executor: Executor
+    refs: tuple[ObjectRef,...] = ()
+    data: dict[str,JsonValue] = {}

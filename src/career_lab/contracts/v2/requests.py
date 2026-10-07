@@ -20,7 +20,9 @@ class TaskPatch(V2):
     status: Literal['open','active','paused','blocked','done','removed'] | None = None
     parent: ObjectRef | None = None
     clear_parent: bool = False
+    relations: tuple[ObjectRef,...] | None = None
 class ProductCreate(V2):
+    source_return_id: str | None = None
     task: ObjectRef | None = None
     kind: Literal['text','plan','test_plan','options','investigation']
     purpose: str = 'exploration'
@@ -45,6 +47,9 @@ class ShareUpdate(V2):
     expected_revision: PositiveInt
     operation: Literal['revoke','restore']
 class ResourcePage(PageRequest):
+    feedback_id: Identifier | None = None
+    response_id: Identifier | None = None
+    import_id: str | None = None
     product_id: str | None = None
     review_id: str | None = None
     submission_id: str | None = None
@@ -63,6 +68,18 @@ class ReviewInput(V2):
     purpose: str
     scope: tuple[str,...]
     question: str = ''
+    decision: Literal['launch','launch_narrow','defer_with_conditions','no_go'] | None = None
+    followup_of: tuple[ObjectRef,...] = ()
+
+class FeedbackResponseCreate(V2):
+    feedback_id: Identifier
+    feedback_version: PositiveInt
+    kind: Literal['objection','supplement']
+    section: Literal['general','verified_facts','historical_responsibilities','rule_items','model_advice'] = 'general'
+    criterion: Identifier | None = None
+    text: Annotated[str,Field(min_length=1,max_length=12000)]
+    evidence: tuple[EvidenceRefV2,...] = ()
+
 class TurnInput(V2):
     role_id: Identifier
     text: Annotated[str,Field(min_length=1,max_length=4000)]
@@ -78,6 +95,7 @@ class DelegationInput(V2):
     capabilities: tuple[Literal['read','act','submit'],...] = ('read',)
     allowed_actions: tuple[str,...] | None = None
     allowed_objects: tuple[str,...] | None = None
+    create_under_tasks: tuple[str,...] = ()
     expires_at: Timestamp
     agent_label: str
 class DelegationRevoke(V2):
@@ -94,3 +112,18 @@ class ActionInput(V2):
     reason: str = ''
     evidence_refs: tuple[EvidenceRefV2,...] = ()
     material: ObjectRef | None = None
+
+
+class ProductAdopt(V2):
+    product_id: Identifier
+    product_version: PositiveInt
+    expected_head: PositiveInt
+    status: Literal['unadopted','adopted','rejected']
+
+class TaskBatch(V2):
+    creates: tuple[TaskCreate,...] = ()
+    updates: tuple[TaskPatch,...] = ()
+
+
+class RequestResultQuery(V2):
+    request_id: Identifier

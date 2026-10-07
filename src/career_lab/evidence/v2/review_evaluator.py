@@ -4,6 +4,8 @@ Public DTOs, persisted identities, worker registration and objections remain W01
 contracts. This owned boundary returns separately timed, inspectable sections.
 """
 from career_lab.contracts.v2.core import ProtocolError
+from career_lab.contracts import v2 as C
+from .formal_feedback import attach_sections
 from .assembler import EvidenceAssemblerV2,base_ref,purpose_of
 from .factual import factual_feedback
 from .history import before
@@ -45,9 +47,15 @@ class ReviewEvaluator:
             if base_ref(source.ref)!=subject:raise ProtocolError('subject_identity_mismatch')
             at=source.created_at
             if at is None:
+                facts={'section':'verified_facts','status':'unknown','as_of':None,'summary':['作品形成时点未知，未用请求时点补造历史判断。']}
+                items=tuple(C.FeedbackItem(criterion=p.id,label='INSUFFICIENT',applicability='undetermined',source='pending',
+                    explanation='作品形成时点未知，历史责任待核验。',citations=()) for p in selected)
+                report=C.FeedbackV2(id=C.digest([subject.model_dump(mode='json'),self.reader.evaluation.model_dump(mode='json'),'unknown-subject-time']),session_id=auth.session_id,
+                    subject=subject,evaluation=self.reader.evaluation,as_of=requested_at,items=items,business_response='未核对业务决定。',
+                    next_options=('补全可信形成时点后重新评审，原作品保留。',),verified_coverage=0,model_coverage=0)
+                report=attach_sections(report,self.reader,auth,subject,requested_at,facts,[],[i.model_dump(mode='json') for i in items])
                 results.append({'subject':subject.model_dump(mode='json'),'evaluated_at':None,'requested_at':requested_at.model_dump(mode='json'),
-                    'verified_facts':{'section':'verified_facts','status':'unknown','summary':['作品形成时点未知，未用请求时点补造历史判断。']},
-                    'historical_responsibilities':[],'feedback':None,'pending_reason':'subject_point_unknown'})
+                    'verified_facts':facts,'historical_responsibilities':[],'feedback':report.model_dump(mode='json'),'pending_reason':'subject_point_unknown'})
                 continue
             if not before(at,requested_at):raise ProtocolError('future_subject_anchor')
             chosen,origin=self._decision(auth,subject,source,at,decision)
@@ -68,6 +76,8 @@ class ReviewEvaluator:
                     record_status.append({'criterion':policy.id,'status':'provided' if available else 'pending',
                         'reason':'已提供可核验的实际行动或明确完成声明，见历史层具体结果。' if available else '未提供可核验的实际行动或明确完成声明记录；该报告事项待核验，不代表没有发生。'})
             diagnostics['result_record_status']=record_status
+            report=attach_sections(report,self.reader,auth,subject,requested_at,facts,history,diagnostics['rule_items'],
+                tuple(item['criterion']+'：'+item['reason'] for item in record_status if item['status']=='pending'))
             result={'subject':subject.model_dump(mode='json'),'evaluated_at':at.model_dump(mode='json'),
                 'requested_at':requested_at.model_dump(mode='json'),'decision':chosen,'decision_origin':origin,'verified_facts':facts,
                 'historical_responsibilities':history,'result_record_status':record_status,
@@ -90,5 +100,13 @@ class ReviewEvaluator:
             if fields is not None:
                 if 'decision' in fields and 'decision' in request.model_fields_set:decision=request.decision
             elif hasattr(request,'decision'):decision=request.decision
-        return self.review(auth,request.subjects,purpose=request.purpose,scope=request.scope,
+        if isinstance(request,C.ReviewRequest):
+            if request.session_id!=auth.session_id or request.as_of!=requested_at or request.evaluation!=self.reader.evaluation:
+                raise ProtocolError('review_binding_mismatch')
+            # Saved None is an intentional recorded value, never re-inferred.
+            if decision is UNSET:decision=request.decision
+        result=self.review(auth,request.subjects,purpose=request.purpose,scope=request.scope,
                            question=request.question,requested_at=requested_at,decision=decision)
+        result['followup_of']=[r.model_dump(mode='json') for r in getattr(request,'followup_of',())]
+        result['followup_status']='linked_not_resolved' if result['followup_of'] else None
+        return result

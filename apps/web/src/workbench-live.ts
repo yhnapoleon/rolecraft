@@ -1,3 +1,4 @@
+import { createGatewayTransport } from './gateway-transport';
 import { request, sessionPath, type Transport } from './api';
 import { T } from './app/i18n';
 import { blankPilot, WorkspaceStore } from './store';
@@ -110,6 +111,14 @@ export class LiveWorkbench {
     if (s.submission?.created_at) a.submittedAt = s.submission.created_at;
   }
   session(a?: Attempt) { return a ? this.store.getSnapshot().workspace.sessions.find(s => s.id === a.id) : this.store.active(); }
+  gatewayTransport(a: Attempt, fetcher: typeof fetch = fetch) {
+    const id = a.id;
+    return createGatewayTransport(() => {
+      const session = this.session({ id });
+      if (!session) throw new Error(T('找不到会话凭据，请保留原浏览器存档。', 'Session credentials are missing. Keep the original browser data.'));
+      return { sessionId: session.id, token: session.token };
+    }, fetcher);
+  }
   async start(caseId: string, opts?: any) {
     if (!scenarios[caseId]) throw new Error(T('后端不支持这个情境。', 'The server does not support this situation.'));
     const id = await this.store.create(scenarios[caseId]);

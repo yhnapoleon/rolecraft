@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 from sqlalchemy import Column,String,Text,Table,MetaData,create_engine,insert,select,update,func
 
 from career_lab.contracts.v2.core import AuthContext,Executor,ObjectRef,EvidenceRefV2,VersionPoint,FileRef,Command,ProtocolError,digest,canonical
-from career_lab.contracts.v2.world import WorldStateV2,SessionBindings,AssistantConfig,EffectiveConfig,TestResultV2 as AssistantTestResult
+from career_lab.contracts.v2.world import WorldStateV2,SessionBindings,AssistantConfig,EffectiveConfig,TestExecutionMetadata as ExecutionMetadata,TestResultV2 as AssistantTestResult
 from career_lab.contracts.v2.evaluation import FeedbackItem
 from career_lab.contracts.v2.workspace import RevisionCycle,WorkProductVersion,OptionsPayload,Option
 from career_lab.evidence.v2.ports import SourceRecord,VerifiedFact,RuleSnapshot,DEFAULT_POLICIES,CriterionPolicy,ResponsibilityFact
@@ -145,10 +145,13 @@ def test_missing_logs_and_technical_failure_do_not_become_user_failure(env):
 
 
 def test_declared_categories_and_repeated_faq_do_not_grant_coverage_met(env):
-    config=AssistantConfig(id='c0',session_id='s',domains=('stable_faq',))
+    config=AssistantConfig(id='config',session_id='s',domains=('stable_faq',),participants=20)
     tests=[];refs=[]
     for n,category in enumerate(['normal','dynamic']):
-        oid='test'+str(n);t=AssistantTestResult(id=oid,session_id='s',query='同一个FAQ',config=EffectiveConfig(requested=config,effective=config),status='answered',answer='相同答案',citations=(),as_of=INITIAL,declared_category=category)
+        oid='test'+str(n);t=AssistantTestResult(id=oid,session_id='s',query='同一个未命中问题',config=EffectiveConfig(requested=config,effective=config),
+            config_ref=ObjectRef(session_id='s',kind='config',object_id=config.id,version=1,config_version=0),
+            execution=ExecutionMetadata(executed_at=datetime(2026,10,6,13,tzinfo=timezone.utc),executor=env['auth'].executor,source_versions={},indexed_versions={},used_versions={},chunks=(),projection_actor='learner',attempts=(),cost_complete=False),
+            status='fallback',answer='受控记录：无知识条目命中，转人工。',citations=(),as_of=INITIAL,declared_category=category)
         tests.append(t);refs.append(env['authority'].add('test',oid,1,t.model_dump_json()))
     env['authority'].tests=tuple(tests);env['authority'].test_refs=tuple(refs)
     result=run_rules(package(env,criterion='R4.functional_tests'))
@@ -165,13 +168,16 @@ def test_references_reject_wrong_identity_time_or_quote(env,case):
         env['authority'].sources[('event','ledger',2,None)]=env['authority'].sources[('event','ledger',1,None)]
         source=source.model_copy(update={'version':2})
     if case=='quote':source=source.model_copy(update={'quote':'未出现的原句','span_start':0,'span_end':6})
-    with pytest.raises(ProtocolError):package(env,refs=(source,))
+    item=package(env,refs=(source,))
+    assert item.completeness=='missing' and item.rule_context['source_issues']
+    assert all(c.ref!=source for c in item.candidate_evidence) if case in {'foreign','version','quote','future'} else True
 
 
 def test_missing_optional_object_is_explicit_and_stale_fact_cannot_tighten_bound(env):
     absent=EvidenceRefV2(session_id='s',kind='test',object_id='missing',version=1,observed_at_seq=5)
-    with pytest.raises(ProtocolError,match='subject missing'):package(env,refs=(absent,))
-    item=package(env,expected_refs=(absent,));assert item.completeness=='missing' and item.missing_refs[0].object_id=='missing'
+    explicit=package(env,refs=(absent,));assert explicit.completeness=='missing' and explicit.missing_refs[0].object_id=='missing'
+    item=package(env,expected_refs=(absent,));assert item.completeness=='missing' and item.rule_context['source_issues']
+    assert not item.missing_refs  # Internal unavailable-source identifiers are not echoed.
     a=env['authority'];old=a.sources[('event','ledger',1,None)];a.sources[('event','ledger',1,None)]=replace(old,ref=old.ref.model_copy(update={'valid_until_seq':5}))
     assert run_rules(package(env)).label=='INSUFFICIENT'
 
@@ -528,9 +534,11 @@ def test_model_cites_neutral_ids_without_reprinting_long_quotes(env):
 
 
 def test_semantic_judge_can_choose_within_non_point_rule_interval(env):
-    config=AssistantConfig(id='c0',session_id='s',domains=('stable_faq',))
-    run=AssistantTestResult(id='actual-test',session_id='s',query='范围内问题',config=EffectiveConfig(requested=config,effective=config),
-        status='answered',answer='实际答案',citations=(),as_of=INITIAL)
+    config=AssistantConfig(id='config',session_id='s',domains=('stable_faq',),participants=20)
+    run=AssistantTestResult(id='controlled-test',session_id='s',query='未命中问题',config=EffectiveConfig(requested=config,effective=config),
+        config_ref=ObjectRef(session_id='s',kind='config',object_id=config.id,version=1,config_version=0),
+        execution=ExecutionMetadata(executed_at=datetime(2026,10,6,13,tzinfo=timezone.utc),executor=env['auth'].executor,source_versions={},indexed_versions={},used_versions={},chunks=(),projection_actor='learner',attempts=(),cost_complete=False),
+        status='fallback',answer='受控记录：无知识条目命中，转人工。',citations=(),as_of=INITIAL)
     env['authority'].tests=(run,);env['authority'].test_refs=(env['authority'].add('test',run.id,1,run.model_dump_json()),)
     item=package(env,criterion='R4.functional_tests');model=ScriptedModel([ModelReply(text=advice(item,'MET'))])
     report,diagnostics=FeedbackEngine(AdvisoryJudge(model,lambda p,a:'supported')).evaluate('s',ref('s','review','r'),env['authority'].bundle.evaluation,INITIAL,(item,))

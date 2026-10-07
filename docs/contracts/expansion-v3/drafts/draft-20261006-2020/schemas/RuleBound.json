@@ -1,0 +1,35 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "lower": {
+      "enum": [
+        "NOT_MET",
+        "PARTIAL",
+        "MET"
+      ],
+      "title": "Lower",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "upper": {
+      "enum": [
+        "NOT_MET",
+        "PARTIAL",
+        "MET"
+      ],
+      "title": "Upper",
+      "type": "string"
+    }
+  },
+  "required": [
+    "lower",
+    "upper"
+  ],
+  "title": "RuleBound",
+  "type": "object"
+}

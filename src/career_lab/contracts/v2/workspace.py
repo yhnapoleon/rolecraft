@@ -20,6 +20,8 @@ class TestCase(V2):
     id: Identifier
     revision: PositiveInt = 1
     query: str
+    intent: str = ""
+    refs: tuple[EvidenceRefV2,...] = ()
     declared_category: str | None = None
     declared_expected: str | None = None
     run: ObjectRef | None = None
@@ -27,7 +29,9 @@ class TestCase(V2):
 class InvestigationBlock(V2):
     id: Identifier
     revision: PositiveInt = 1
-    type: Literal['text','source_check','retest']
+    type: Literal['text','note','source_check','retest','test_compare']
+    title: str = ''
+    test_refs: tuple[ObjectRef,...] = ()
     text: str = ''
     test_ref: ObjectRef | None = None
     source_ref: EvidenceRefV2 | None = None
@@ -59,6 +63,7 @@ class InvestigationPayload(V2):
     question: str = ''
     blocks: tuple[InvestigationBlock, ...] = ()
     review_note: str = ''
+    review_focus: Literal['index','source','uncertain','other'] = 'uncertain'
     review_direction: Literal['unknown','supports','contradicts','mixed'] = 'unknown'
 
 ProductPayload = Annotated[Union[TextPayload,PlanPayload,TestPlanPayload,OptionsPayload,InvestigationPayload], Field(discriminator='type')]
@@ -169,6 +174,9 @@ class ReviewRequest(V2):
     evaluation: FileRef
     executor: Executor
 
+    decision: Literal['launch','launch_narrow','defer_with_conditions','no_go'] | None = None
+    followup_of: tuple[ObjectRef,...] = ()
+
 class SubmissionV2(V2):
     id: Identifier
     session_id: Identifier
@@ -217,3 +225,87 @@ class ImportResult(V2):
     unresolved: tuple[ImportReference, ...]
     as_of: VersionPoint
     applied: bool
+    conflicts: tuple["ImportConflict",...] = ()
+    version_map: tuple["ImportVersionMap",...] = ()
+
+
+class ImportConflict(V2):
+    original_id: Identifier
+    original_version: PositiveInt | None = None
+    reason: Literal['missing_history','version_conflict','content_conflict','foreign_session','unresolved_reference']
+    existing: ObjectRef | None = None
+    source_content_hash: Hash | None = None
+
+class ImportVersionMap(V2):
+    original_session_id: Identifier
+    original_id: Identifier
+    original_version: PositiveInt
+    target: ObjectRef | None = None
+    status: Literal['resolved','unresolved','unverified_local']
+
+ImportResult.model_rebuild()
+
+
+class ImportedTaskSource(V2):
+    task: ObjectRef
+    source: LegacyProvenance
+    @model_validator(mode='after')
+    def identity(self):
+        if self.task.kind!='task' or self.source.original_kind!='task':raise ValueError('task provenance kind mismatch')
+        return self
+
+class WorkspaceImportReceipt(V2):
+    id: Identifier
+    session_id: Identifier
+    version: PositiveInt = 1
+    package_id: Identifier
+    package_hash: Hash
+    source_schema: Identifier
+    source_session_id: Identifier
+    fingerprint: Hash
+    result: ImportResult
+    task_sources: tuple[ImportedTaskSource,...] = ()
+    executor: Executor
+    created_at: Timestamp
+    @model_validator(mode='after')
+    def identity(self):
+        if self.version!=1 or self.result.mode!='apply' or not self.result.applied:raise ValueError('receipt requires one applied import')
+        if self.result.package_id!=self.package_id:raise ValueError('import package identity mismatch')
+        refs=tuple(self.result.id_map.values())+tuple(x.target for x in self.result.version_map if x.target is not None)+tuple(x.task for x in self.task_sources)
+        if any(r.session_id!=self.session_id for r in refs):raise ValueError('import receipt session mismatch')
+        if len({x.task.object_id for x in self.task_sources})!=len(self.task_sources):raise ValueError('duplicate task provenance')
+        if any(x.source.source_schema!=self.source_schema or x.source.source_session_id!=self.source_session_id for x in self.task_sources):raise ValueError('import source identity mismatch')
+        return self
+
+
+class WorkspaceProductRead(WorkProductVersion):
+    # Unknown sharing completeness must not default to a private assertion.
+    visibility: Literal['private','shared'] | None = None
+
+class WorkspaceProductPage(V2):
+    items: tuple[WorkspaceProductRead,...]
+    shares: tuple[ProductShare,...]
+    sharing_complete: bool
+    as_of: VersionPoint
+    next_cursor: NonNegativeInt | None = None
+    @model_validator(mode='after')
+    def projection(self):
+        if len({s.id for s in self.shares})!=len(self.shares):raise ValueError('duplicate share page entry')
+        ids={p.product_id for p in self.items}
+        if any(s.product.object_id not in ids for s in self.shares):raise ValueError('share outside product page')
+        for product in self.items:
+            active=any(s.product.object_id==product.product_id and s.product.version==product.version and s.revoked_at is None for s in self.shares)
+            if active and product.visibility!='shared':raise ValueError('active exact-version share must be shared')
+            if not active and self.sharing_complete and product.visibility!='private':raise ValueError('complete unshared version must be private')
+            if not active and not self.sharing_complete and product.visibility is not None:raise ValueError('incomplete sharing is unknown')
+        return self
+
+class WorkspaceSharePage(V2):
+    items: tuple[ProductShare,...]
+    sharing_complete: bool
+    as_of: VersionPoint
+    next_cursor: NonNegativeInt | None = None
+    @model_validator(mode='after')
+    def unique(self):
+        if len({s.id for s in self.items})!=len(self.items):raise ValueError('duplicate share page entry')
+        return self

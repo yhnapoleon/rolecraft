@@ -61,6 +61,8 @@ class ResponsibilityFact:
     facts: tuple[VerifiedFact, ...] = ()
     valid_until: VersionPoint | None = None
     state: Literal['active', 'withdrawn', 'unknown'] = 'active'
+    actor_id: str | None = None
+    executor: Executor | None = None
 
 
 @dataclass(frozen=True)

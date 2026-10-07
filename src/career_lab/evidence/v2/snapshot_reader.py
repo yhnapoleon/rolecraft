@@ -85,7 +85,7 @@ class SnapshotEvidenceReader:
         duties=tuple(ResponsibilityFact(criterion=r['criterion'],kind=r['kind'],occurred_at=VersionPoint.model_validate(r['occurred_at']),
             valid_from=VersionPoint.model_validate(r['valid_from']),valid_until=VersionPoint.model_validate(r['valid_until']) if r.get('valid_until') else None,
             scope=tuple(ObjectRef.model_validate(v) for v in r['scope']),sources=tuple(EvidenceRefV2.model_validate(v) for v in r['sources']),
-            facts=tuple(fact(v) for v in r.get('facts',[])),state=r.get('state','active')) for r in row.get('responsibilities',[]))
+            facts=tuple(fact(v) for v in r.get('facts',[])),state=r.get('state','active'),actor_id=r.get('actor_id'),executor=Executor.model_validate(r['executor']) if r.get('executor') else None) for r in row.get('responsibilities',[]))
         from career_lab.contracts.v2.world import TestResultV2
         return RuleSnapshot(as_of=as_of,facts=tuple(fact(f) for f in row.get('facts',[])),logs_complete=row.get('logs_complete',False),
             tests=tuple(TestResultV2.model_validate(t) for t in row.get('tests',[])),test_refs=tuple(EvidenceRefV2.model_validate(t) for t in row.get('test_refs',[])),

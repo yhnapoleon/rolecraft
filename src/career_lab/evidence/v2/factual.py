@@ -90,5 +90,6 @@ def factual_feedback(reader,auth,subject,at,requested_at):
             'effective_source_count':len(effective_sources),'expired_source_count':len(expired_sources),
             'verified_source_count_basis':'exact_text_and_version_only',
             'references':refs,'activity_records':rows,'activity_totals':totals,'summary':summary,
+            'activity_window':{'covered_from':ledger.covered_from.model_dump(mode='json'),'covered_through':ledger.covered_through.model_dump(mode='json'),'captured_at':ledger.captured_at.model_dump(mode='json')} if ledger.covered_from is not None and ledger.covered_through is not None and ledger.captured_at is not None else None,
             'authorship':{k:getattr(record,k).model_dump(mode='json') if getattr(record,k) else None for k in ['author','executor','adopter']},
             'independent_understanding':'unobserved','conclusion_quality':'not_scored'}
