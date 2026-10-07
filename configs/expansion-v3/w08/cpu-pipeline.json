@@ -1,0 +1,15 @@
+{
+  "status": "development_pipeline_only",
+  "task_type": "relation",
+  "seed": 5002,
+  "attention_variants": ["pack", "pair"],
+  "attention_dimension": 8,
+  "max_tokens": 128,
+  "epochs": 4,
+  "pretrained": false,
+  "sft_or_grpo": false,
+  "alpha_grid": [0, 0.25, 0.5, 0.75, 1],
+  "selection_split": "dev",
+  "held_out_test": "closed_without_coordinator_campaign",
+  "mode": "advisory"
+}
