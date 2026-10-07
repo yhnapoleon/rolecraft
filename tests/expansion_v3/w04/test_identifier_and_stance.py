@@ -145,7 +145,7 @@ def test_pressure_old_citations_and_version_only_never_change_state(package,cata
     check=ControlledSupport();result=resolve_stance(state,repeated,after.stance_facts,after.context.as_of,check)
     assert result.state==state and result.reason_code=='stance_new_fact_required' and not check.calls
     # A new document version/acquisition time with unchanged factual content is not a new fact.
-    version_only=replace(old,source=old.source.model_copy(update={'version':99,'observed_at_seq':4}),acquired_at_seq=4)
+    version_only=replace(old,source=old.source.model_copy(update={'version':99,'observed_at_seq':4}),acquired_at_seq=4,acquired_at=after.context.as_of)
     check=ControlledSupport();result=resolve_stance(state,proposal_for(after,version_only),(version_only,),after.context.as_of,check)
     assert result.state==state and result.reason_code=='stance_new_fact_required' and not check.calls
 
@@ -179,9 +179,9 @@ def test_supported_change_is_exactly_bound_and_preserves_old_state(package,catal
 def test_future_missing_and_model_utterance_are_not_fact_basis(package,catalog):
     from career_lab.storage.role_memory import resolve_stance
     before,after,fact=stance_scenario(package,catalog)
-    future=replace(fact,source=fact.source.model_copy(update={'observed_at_seq':5}),acquired_at_seq=5)
+    future=replace(fact,source=fact.source.model_copy(update={'observed_at_seq':5}),acquired_at_seq=5,acquired_at=after.context.as_of.model_copy(update={'business_seq':5}))
     result=resolve_stance(before.stance_state,proposal_for(after,future),(future,),after.context.as_of,ControlledSupport())
-    assert result.reason_code=='stance_basis_not_known' and result.state==before.stance_state
+    assert result.reason_code=='stance_acquisition_time_unverified' and result.state==before.stance_state and result.status=='pending'
     model_reason=replace(fact,source=fact.source.model_copy(update={'kind':'role_reply','object_id':'model-claim'}))
     result=resolve_stance(before.stance_state,proposal_for(after,model_reason),(model_reason,),after.context.as_of,ControlledSupport())
     assert result.reason_code=='stance_basis_not_known' and result.state==before.stance_state

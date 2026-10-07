@@ -74,7 +74,7 @@ def frame(package,catalog,role='tech_lead',updated=False,events=(),memories=(),s
 def notice(seq=4,recipients=('business_lead','tech_lead'),version=2):
     source=EvidenceRefV2(session_id='s',kind='material',object_id='policy',version=version,observed_at_seq=seq)
     return KnowledgeEvent(ObjectRef(session_id='s',kind='event',object_id='policy-event',version=1),
-                          'initial_plan_applied',seq,recipients,(source,))
+                          'initial_plan_applied',seq,recipients,(source,),occurred_at=point(seq))
 
 def memory(text='上轮已说明索引与源发布是不同动作。',learner_refs=()):
     ref=EvidenceRefV2(session_id='s',kind='role_reply',object_id='previous',version=1,observed_at_seq=0)

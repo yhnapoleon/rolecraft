@@ -204,6 +204,26 @@ def memory_from_generation(reply, generation):
     return RoleMemory(fragment,reply.role_id,tuple({canonical(r):r for r in learner}.values()),provenance)
 
 
+VERSION_AXES=('business_seq','workspace_revision','storage_revision')
+
+
+def version_point_relation(left,right):
+    """Partial order; never lexicographically compare independent revision axes."""
+    if not isinstance(left,VersionPoint) or not isinstance(right,VersionPoint):return 'unknown'
+    try:
+        left=VersionPoint.model_validate(left.model_dump(mode='json'))
+        right=VersionPoint.model_validate(right.model_dump(mode='json'))
+    except (ValidationError,TypeError,ValueError):return 'unknown'
+    a=tuple(getattr(left,k) for k in VERSION_AXES);b=tuple(getattr(right,k) for k in VERSION_AXES)
+    if a==b:return 'equal'
+    if all(x<=y for x,y in zip(a,b)):return 'before'
+    if all(x>=y for x,y in zip(a,b)):return 'after'
+    return 'incomparable'
+
+
+def point_at_or_before(left,right):return version_point_relation(left,right) in {'before','equal'}
+
+
 @dataclass(frozen=True)
 class StanceFactReceipt:
     """Verified receipt of a ledger entry, not a claim of G0 or semantic support."""
@@ -212,6 +232,7 @@ class StanceFactReceipt:
     source: EvidenceRefV2
     acquired_at_seq: int
     verification: Literal['source_verified'] = 'source_verified'
+    acquired_at: VersionPoint | None = None
 
     @property
     def key(self):return self.fact_id,self.semantic_hash
@@ -331,15 +352,18 @@ def resolve_stance(state,proposal,known_facts,as_of,verifier=None):
         return StanceResolution(state,proposal,new or state,status,code,tuple(basis),support,change)
     if ((proposal.session_id,proposal.role_id)!=(state.session_id,state.role_id)
         or proposal.parent_revision!=state.revision):return result('rejected','stance_identity_or_revision_mismatch')
-    if (proposal.proposed_at.business_seq>as_of.business_seq or proposal.proposed_at.storage_revision>as_of.storage_revision
-        or state.established_at.storage_revision>as_of.storage_revision or state.established_at.business_seq>as_of.business_seq):return result('rejected','stance_future_proposal')
+    proposal_order=version_point_relation(proposal.proposed_at,as_of)
+    established_order=version_point_relation(state.established_at,proposal.proposed_at)
+    if proposal_order=='after':return result('rejected','stance_future_proposal')
+    if proposal_order not in {'before','equal'} or established_order not in {'before','equal'}:
+        return result('pending','stance_time_unverified')
     old=next((p for p in state.positions if p.key==proposal.position_key),None)
     if old is None or not proposal.proposed_text.strip():return result('rejected','stance_position_invalid')
     if proposal.proposed_text==old.text:return result('unchanged','same_stance')
     receipts={}
     for fact in known_facts:
         if (fact.verification!='source_verified' or fact.source.kind not in {'material','test','business_decision'} or fact.source.session_id!=state.session_id
-            or fact.acquired_at_seq!=fact.source.observed_at_seq or fact.acquired_at_seq>proposal.proposed_at.business_seq):continue
+            or fact.acquired_at_seq!=fact.source.observed_at_seq):continue
         key=(fact.fact_id,canonical(ObjectRef.model_validate({k:v for k,v in fact.source.model_dump(mode='json').items() if k in ObjectRef.model_fields})))
         if key in receipts and receipts[key]!=fact:return result('rejected','stance_ambiguous_basis')
         receipts[key]=fact
@@ -349,19 +373,28 @@ def resolve_stance(state,proposal,known_facts,as_of,verifier=None):
         if fact is None:return result('rejected','stance_basis_not_known')
         if fact not in resolved:resolved.append(fact)
     if not resolved:return result('rejected','stance_new_fact_required')
-    # content fingerprints exclude version, receipt time and citation ordering.
-    novel=[f for f in resolved if f.key not in set(state.considered_facts) and f.acquired_at_seq>state.established_at.business_seq]
+    # Content fingerprints exclude version, receipt time and citation ordering.
+    novel=[f for f in resolved if f.key not in set(state.considered_facts)]
     if not novel:return result('rejected','stance_new_fact_required',resolved)
+    for fact in resolved:
+        if (not isinstance(fact.acquired_at,VersionPoint) or fact.acquired_at.business_seq!=fact.acquired_at_seq
+            or not point_at_or_before(fact.acquired_at,proposal.proposed_at)):
+            return result('pending','stance_acquisition_time_unverified',resolved)
+    novelty_orders=[version_point_relation(f.acquired_at,state.established_at) for f in novel]
+    if any(order in {'unknown','incomparable'} for order in novelty_orders):
+        return result('pending','stance_acquisition_time_unverified',resolved)
+    if not any(order=='after' for order in novelty_orders):
+        return result('rejected','stance_new_fact_required',resolved)
     if verifier is None:return result('pending','stance_support_unverified',resolved)
     try:support=verifier.check(state,proposal,tuple(resolved))
     except Exception:return result('pending','stance_support_unavailable',resolved)
     if (not isinstance(support,StanceSupport) or not isinstance(support.method,str)
         or support.method not in {'deterministic_rule','independent_review'}
-        or not isinstance(support.checked_at,VersionPoint) or not isinstance(support.verification_ref,FileRef) or support.previous_state_hash!=stance_digest(state)
-        or support.proposal_hash!=stance_digest(proposal) or support.basis_hash!=stance_digest(tuple(resolved))
-        or support.checked_at.business_seq>as_of.business_seq or support.checked_at.storage_revision>as_of.storage_revision
-        or support.checked_at.business_seq<proposal.proposed_at.business_seq or support.checked_at.storage_revision<proposal.proposed_at.storage_revision):
+        or not isinstance(support.verification_ref,FileRef) or support.previous_state_hash!=stance_digest(state)
+        or support.proposal_hash!=stance_digest(proposal) or support.basis_hash!=stance_digest(tuple(resolved))):
         return result('pending','stance_support_unverified',resolved)
+    if not point_at_or_before(proposal.proposed_at,support.checked_at) or not point_at_or_before(support.checked_at,as_of):
+        return result('pending','stance_support_time_unverified',resolved,support)
     if support.decision=='unsupported' or support.semantic_novelty is False:
         return result('rejected','stance_support_rejected',resolved,support)
     if support.decision!='supported' or support.semantic_novelty is not True:
@@ -369,6 +402,6 @@ def resolve_stance(state,proposal,known_facts,as_of,verifier=None):
     positions=tuple(StancePosition(p.key,proposal.proposed_text) if p.key==old.key else p for p in state.positions)
     new=replace(state,revision=state.revision+1,positions=positions,established_at=as_of,
                 considered_facts=tuple(sorted(set(state.considered_facts)|{f.key for f in known_facts
-                    if f.source.session_id==state.session_id and f.verification=='source_verified' and f.acquired_at_seq==f.source.observed_at_seq and f.acquired_at_seq<=as_of.business_seq})))
+                    if f.source.session_id==state.session_id and f.verification=='source_verified' and f.acquired_at_seq==f.source.observed_at_seq and f.acquired_at is not None and point_at_or_before(f.acquired_at,as_of)})))
     change=StanceChange(state.revision,new.revision,old.key,old.text,proposal.proposed_text,tuple(resolved),as_of,support)
     return result('changed','stance_change_supported',resolved,support,new,change)

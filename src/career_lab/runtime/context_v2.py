@@ -17,7 +17,7 @@ from career_lab.contracts.v2 import (
     VersionPoint, WorkProductVersion, canonical, digest,
 )
 from career_lab.storage.v2_lifecycle import point
-from career_lab.storage.role_memory import (ReceivedShare, RoleMemory, StanceFactReceipt, RoleStanceState, StanceProposal, initial_stance)
+from career_lab.storage.role_memory import (ReceivedShare, RoleMemory, StanceFactReceipt, RoleStanceState, StanceProposal, initial_stance, point_at_or_before, version_point_relation)
 
 
 def bare(ref):
@@ -40,6 +40,7 @@ class KnowledgeEvent:
     occurred_at_seq: int
     recipients: tuple[str, ...]
     sources: tuple[EvidenceRefV2, ...]
+    occurred_at: VersionPoint | None = None
 
 
 @dataclass(frozen=True)
@@ -48,6 +49,7 @@ class ScenarioKnowledge:
     roles: tuple[RoleSpecV2, ...]
     materials: tuple[MaterialV2, ...]
     facts: tuple[FactV2, ...] = ()
+    material_files: tuple[tuple[str,int,str], ...] = ()
 
     @classmethod
     def from_package(cls, package):
@@ -56,7 +58,9 @@ class ScenarioKnowledge:
         from career_lab.contracts.v2 import read_file
         binding = FileRef(path="manifest.json", sha256=package.content_hash)
         read_file(package.root, binding)
-        return cls(binding, package.bundle.role_specs, package.materials, package.facts)
+        return cls(binding, package.bundle.role_specs, package.materials, package.facts,
+                   tuple((mid,int(version),path) for mid,versions in package.rules.get("material_files",{}).items()
+                         for version,path in versions.items()))
 
     def __post_init__(self):
         for values, key in ((self.roles, lambda x:x.id), (self.materials, lambda x:(x.id,x.version)), (self.facts, lambda x:(x.id,x.version))):
@@ -100,6 +104,7 @@ class ScenarioKnowledge:
             if (event.ref.session_id != state.session_id or event.ref.kind != "event"
                 or not 0 < event.occurred_at_seq <= as_of.business_seq
                 or role.id not in event.recipients or event.event_type not in role.event_subscriptions):continue
+            if event.occurred_at is not None and (event.occurred_at.business_seq!=event.occurred_at_seq or not point_at_or_before(event.occurred_at,as_of)):continue
             valid = []
             for source in event.sources:
                 activation = state.material_activation.get(f"{source.object_id}:{source.version}")
@@ -108,7 +113,7 @@ class ScenarioKnowledge:
                 if not any((m.id,m.version)==(source.object_id,source.version) for m in self.materials):continue
                 observations.setdefault(source.object_id, []).append((event.occurred_at_seq,source.version))
                 valid.append(source)
-            if valid:accepted.append(KnowledgeEvent(event.ref,event.event_type,event.occurred_at_seq,event.recipients,tuple(valid)))
+            if valid:accepted.append(KnowledgeEvent(event.ref,event.event_type,event.occurred_at_seq,event.recipients,tuple(valid),event.occurred_at))
         selected = {}
         for mid, values in observations.items():
             latest = max(seq for seq, _ in values)
@@ -181,16 +186,45 @@ class ScenarioKnowledge:
         return tuple(key for key,public in visibility.items() if not public)
 
 
-def normalized_identifier_text(text):
-    value=unicodedata.normalize('NFKC',unescape(unquote(text))).casefold()
+MAX_IDENTIFIER_DECODE_ROUNDS=4
+_BACKSLASH=re.escape(chr(92))
+_ENCODED_IDENTIFIER=re.compile(r'%[0-9a-fA-F]{2}|'+_BACKSLASH+r'+[uU][0-9a-fA-F]{4}|'+_BACKSLASH+r'+x[0-9a-fA-F]{2}|&#(?:x[0-9a-fA-F]+|[0-9]+);|&[a-zA-Z]+;')
+
+
+def _identifier_fold(value):
+    value=unicodedata.normalize('NFKC',value).casefold()
     return ''.join(c for c in value if unicodedata.category(c)!='Cf')
 
 
+def identifier_variants(text):
+    """Bounded URL/HTML/JSON-escape normalization, never arbitrary evaluation."""
+    current=text;variants=[_identifier_fold(current)]
+    for _ in range(MAX_IDENTIFIER_DECODE_ROUNDS):
+        decoded=unescape(unquote(current))
+        # Decode only bounded unicode/hex escape runs; no eval/codec execution.
+        decoded=re.sub(_BACKSLASH+r'+[uU]([0-9a-fA-F]{4})',lambda m:chr(int(m.group(1),16)),decoded)
+        decoded=re.sub(_BACKSLASH+r'+x([0-9a-fA-F]{2})',lambda m:chr(int(m.group(1),16)),decoded)
+        folded=_identifier_fold(decoded)
+        if folded not in variants:variants.append(folded)
+        if decoded==current:return tuple(variants),True
+        current=decoded
+    return tuple(variants),not bool(_ENCODED_IDENTIFIER.search(current))
+
+
+def normalized_identifier_text(text):
+    variants,complete=identifier_variants(text)
+    if not complete:raise ProtocolError('role_output_blocked',status=422)
+    return variants[-1]
+
+
 def identifier_in(text,identifier):
-    # Whole identifiers, including references/URLs/JSON values; don't block a
-    # longer legitimate object merely because it has the same prefix.
-    return re.search(r'(?<![a-zA-Z0-9_.-])'+re.escape(normalized_identifier_text(identifier))+r'(?![a-zA-Z0-9_.-])',
-                     normalized_identifier_text(text)) is not None
+    # Dot and hyphen delimit a source token in punctuation/known filenames.
+    # A longer underscore/alphanumeric identifier remains a separate identifier.
+    variants,complete=identifier_variants(text)
+    if not complete:return True
+    needles,_=identifier_variants(identifier)
+    return any(re.search(r'(?<![a-zA-Z0-9_])'+re.escape(needle)+r'(?![a-zA-Z0-9_])',value)
+               for needle in needles for value in variants)
 
 
 @dataclass(frozen=True)
@@ -225,6 +259,7 @@ class ContextSnapshot:
     private_facts: tuple[FactV2, ...] = ()
     source_binding: FileRef | None = None
     private_objects: tuple[tuple[str,str], ...] = ()
+    private_file_names: tuple[str, ...] = ()
     stance_facts: tuple[StanceFactReceipt, ...] = ()
     stance_state: RoleStanceState | None = None
     stance_proposals: tuple[StanceProposal, ...] = ()
@@ -244,7 +279,7 @@ class ContextSnapshot:
 
     def has_private_identifier(self,value):
         if isinstance(value,str):
-            ids={oid for _,oid in self.private_objects}|{f.id for f in self.private_facts if f.disclosure.mode!='public'}
+            ids={oid for _,oid in self.private_objects}|set(self.private_file_names)|{f.id for f in self.private_facts if f.disclosure.mode!='public'}
             return any(identifier_in(value,identifier) for identifier in ids)
         if isinstance(value,dict):return any(self.has_private_identifier(k) or self.has_private_identifier(v) for k,v in value.items())
         if isinstance(value,(tuple,list)):return any(self.has_private_identifier(x) for x in value)
@@ -256,10 +291,12 @@ class ContextSnapshot:
     def prompt_text(self,text):
         # Preserve approved knowledge, neutralize only private identifiers.
         result=self.scrub(text)
+        for name in sorted(self.private_file_names,key=len,reverse=True):
+            result=re.sub(r'(?<![a-zA-Z0-9_])'+re.escape(name)+r'(?![a-zA-Z0-9_])','[私有来源]',result,flags=re.IGNORECASE)
         for kind,oid in self.private_objects:
             escaped=re.escape(oid)
-            result=re.sub(r'(?<![a-zA-Z0-9_.-])'+re.escape(kind)+r'\s*:\s*'+escaped+r'\s*@\s*\d+(?![a-zA-Z0-9_.-])','[私有来源]',result,flags=re.IGNORECASE)
-            result=re.sub(r'(?<![a-zA-Z0-9_.-])'+escaped+r'(?:\s*@\s*\d+)?(?![a-zA-Z0-9_.-])','[私有来源]',result,flags=re.IGNORECASE)
+            result=re.sub(r'(?<![a-zA-Z0-9_])'+re.escape(kind)+r'\s*:\s*'+escaped+r'\s*@\s*\d+(?![a-zA-Z0-9_])','[私有来源]',result,flags=re.IGNORECASE)
+            result=re.sub(r'(?<![a-zA-Z0-9_])'+escaped+r'(?:\s*@\s*\d+)?(?![a-zA-Z0-9_])','[私有来源]',result,flags=re.IGNORECASE)
         # Canonical/encoded variants that were not cleanly neutralized never get
         # passed through as an exception detail or an accidental debug fragment.
         if self.has_private_identifier(result):raise ProtocolError('role_prompt_identifier_invalid',status=422)
@@ -360,13 +397,14 @@ def assemble_context(catalog, frame, *, question="", new_shares=(), head_depende
     for r in (*frame.received_shares,*new_shares):
         if r.role_id!=role.id or r.product.session_id!=frame.session_id:
             raise ProtocolError("role_memory_source_invalid")
-        if r.received_at.storage_revision>frame.as_of.storage_revision or r.received_at.business_seq>frame.as_of.business_seq:
+        if not point_at_or_before(r.received_at,frame.as_of):
             raise ProtocolError("role_memory_time_invalid")
         receipts.setdefault((canonical(r.share),canonical(r.product)),r)
     known=list(e.ref for e in events if any(bare(s.ref)==bare(r) for s in sources for r in e.sources))
     for e in frame.events:
         if (e.ref.session_id==frame.session_id and e.event_type in role.event_subscriptions
             and role.id in e.recipients and 0<e.occurred_at_seq<=frame.as_of.business_seq
+            and (e.occurred_at is None or (e.occurred_at.business_seq==e.occurred_at_seq and point_at_or_before(e.occurred_at,frame.as_of)))
             and any(bare(source)==bare(proof) and proof.observed_at_seq<=e.occurred_at_seq
                     for source in e.sources for memory in memories for proof in memory.provenance)):
             known.append(e.ref)
@@ -384,21 +422,34 @@ def assemble_context(catalog, frame, *, question="", new_shares=(), head_depende
     private_objects=tuple(dict.fromkeys((*catalog.private_source_objects(),
         *((ref.kind,ref.object_id) for ref in frame.private_source_refs),
         *((ref.kind,ref.object_id) for ref in referenced if ref.kind in {'role_context','scenario_state'}))))
+    private_files=tuple(dict.fromkeys(name for mid,version,path in catalog.material_files
+        if ('material',mid) in private_objects for name in (path,path.rsplit('/',1)[-1])))
     stance_facts=[]
     for source in sources:
         for fid in source.fact_ids:
             fact=next(f for f in catalog.facts if f.id==fid and
                       (f.source.object_id,f.source.version)==(source.ref.object_id,source.ref.version))
             semantic=digest({"fact_id":fact.id,"value":fact.value,"unit":fact.unit})
-            receipt=StanceFactReceipt(fid,semantic,clean_ref(source.ref),source.ref.observed_at_seq)
+            acquired_seq=source.ref.observed_at_seq;acquired=None
+            if acquired_seq==0 and frame.state.material_activation.get(f"{source.ref.object_id}:{source.ref.version}")==0:
+                acquired=VersionPoint(business_seq=0,workspace_revision=0,storage_revision=0)
+            else:
+                matching=[e for e in events if any(bare(r)==bare(source.ref) for r in e.sources)]
+                if matching:
+                    acquired_seq=min(e.occurred_at_seq for e in matching)
+                    first=[e.occurred_at for e in matching if e.occurred_at_seq==acquired_seq]
+                    if first and all(p is not None and point_at_or_before(p,frame.as_of) for p in first):
+                        candidates=[p for p in first if all(point_at_or_before(p,q) for q in first)]
+                        if candidates:acquired=candidates[0]
+            receipt_ref=clean_ref(source.ref).model_copy(update={'observed_at_seq':acquired_seq})
+            receipt=StanceFactReceipt(fid,semantic,receipt_ref,acquired_seq,acquired_at=acquired)
             if receipt not in stance_facts:stance_facts.append(receipt)
     stance=frame.stance_state or initial_stance(frame.session_id,role,catalog.binding,frame.as_of,stance_facts)
     if ((stance.session_id,stance.role_id,stance.source_binding)!=(frame.session_id,role.id,catalog.binding)
-        or stance.revision<1 or stance.established_at.storage_revision>frame.as_of.storage_revision
-        or stance.established_at.business_seq>frame.as_of.business_seq
+        or stance.revision<1 or not point_at_or_before(stance.established_at,frame.as_of)
         or len({p.key for p in stance.positions})!=len(stance.positions)):
         raise ProtocolError('role_stance_context_invalid',status=409)
-    return ContextSnapshot(context,role,catalog.protected_texts(role),question,tuple(memories),tuple(receipts.values()),tuple(head_dependencies),catalog.facts,catalog.binding,private_objects,tuple(stance_facts),stance,frame.stance_proposals)
+    return ContextSnapshot(context,role,catalog.protected_texts(role),question,tuple(memories),tuple(receipts.values()),tuple(head_dependencies),catalog.facts,catalog.binding,private_objects,private_files,tuple(stance_facts),stance,frame.stance_proposals)
 
 
 class ContextPort:
@@ -429,7 +480,7 @@ class ContextPort:
             versions=[x for x in view.objects if x.ref.kind=="product" and x.ref.object_id==share.product.object_id]
             latest=max(versions,key=lambda x:x.ref.version)
             if latest.content.get("removed_at") is not None:raise ProtocolError("product_unavailable",status=409)
-            if share.shared_at.storage_revision>expected.storage_revision:raise ProtocolError("share_not_yet_received",status=409)
+            if not point_at_or_before(share.shared_at,expected):raise ProtocolError("share_not_yet_received",status=409)
             text=canonical({"title":product.title,"content":product.content,"purpose":product.purpose,
                             "structured_payload":product.structured_payload.model_dump(mode="json") if product.structured_payload else None})
             fragment=DisclosedFragment(ref=EvidenceRefV2(**share.product.model_dump(),observed_at_seq=expected.business_seq),
