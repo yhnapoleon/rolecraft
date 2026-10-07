@@ -196,14 +196,64 @@ def _identifier_fold(value):
     return ''.join(c for c in value if unicodedata.category(c)!='Cf')
 
 
+def _decode_identifier_once(text):
+    text=unescape(unquote(text))
+    text=re.sub(_BACKSLASH+r'+[uU]([0-9a-fA-F]{4})',lambda m:chr(int(m.group(1),16)),text)
+    return re.sub(_BACKSLASH+r'+x([0-9a-fA-F]{2})',lambda m:chr(int(m.group(1),16)),text)
+
+
+def decoded_identifier_text(text):
+    # Preserve ordinary prose/case while canonicalizing only encoding syntax.
+    for _ in range(MAX_IDENTIFIER_DECODE_ROUNDS):
+        decoded=_decode_identifier_once(text)
+        if decoded==text:break
+        text=decoded
+    else:
+        if _ENCODED_IDENTIFIER.search(text):raise ProtocolError('role_prompt_identifier_invalid',status=422)
+    return ''.join(c for c in unicodedata.normalize('NFKC',text) if unicodedata.category(c)!='Cf')
+
+
+def identifier_projection(text):
+    """Normalized lookup text with original spans; never rewrite nearby prose."""
+    items=[(c,i,i+1) for i,c in enumerate(text)]
+    def transform(items,pattern,convert):
+        current=''.join(c for c,_,_ in items);out=[];start=0
+        for match in re.finditer(pattern,current):
+            replacement=convert(match)
+            out.extend(items[start:match.start()])
+            span=(items[match.start()][1],items[match.end()-1][2])
+            out.extend((c,*span) for c in replacement);start=match.end()
+        return out+items[start:]
+    for _ in range(MAX_IDENTIFIER_DECODE_ROUNDS):
+        previous=''.join(c for c,_,_ in items)
+        items=transform(items,r'(?:%[0-9a-fA-F]{2})+',lambda m:unquote(m.group()))
+        items=transform(items,r'&#(?:x[0-9a-fA-F]+|[0-9]+);|&[a-zA-Z]+;',lambda m:unescape(m.group()))
+        items=transform(items,_BACKSLASH+r'+[uU]([0-9a-fA-F]{4})',lambda m:chr(int(m.group(1),16)))
+        items=transform(items,_BACKSLASH+r'+x([0-9a-fA-F]{2})',lambda m:chr(int(m.group(1),16)))
+        if ''.join(c for c,_,_ in items)==previous:break
+    else:
+        if _ENCODED_IDENTIFIER.search(''.join(c for c,_,_ in items)):
+            raise ProtocolError('role_prompt_identifier_invalid',status=422)
+    folded=[(char,start,end) for c,start,end in items for char in _identifier_fold(c)]
+    return ''.join(c for c,_,_ in folded),folded
+
+
+# A reference-shaped learner token is opaque unless independently public or
+# authorized. This grammar never consults private catalog membership.
+_INPUT_REFERENCE=re.compile(r'(?<![a-zA-Z0-9_])(?:[a-zA-Z][a-zA-Z0-9_]*\s*:\s*[a-zA-Z0-9_./-]+\s*@\s*[0-9]+|(?:[a-zA-Z0-9_-]+/)*[a-zA-Z0-9_-]+\.(?:md|json|yaml|yml|txt|csv|pdf)|[a-zA-Z0-9]+(?:[_-][a-zA-Z0-9]+)+)(?![a-zA-Z0-9_])',re.IGNORECASE)
+_INTERNAL_ALIAS=re.compile(r'(?<![a-zA-Z0-9_])private-source-[0-9]+(?![a-zA-Z0-9_])')
+
+
+def internal_alias_in(text):
+    variants,complete=identifier_variants(text)
+    return not complete or any(_INTERNAL_ALIAS.search(value) for value in variants)
+
+
 def identifier_variants(text):
     """Bounded URL/HTML/JSON-escape normalization, never arbitrary evaluation."""
     current=text;variants=[_identifier_fold(current)]
     for _ in range(MAX_IDENTIFIER_DECODE_ROUNDS):
-        decoded=unescape(unquote(current))
-        # Decode only bounded unicode/hex escape runs; no eval/codec execution.
-        decoded=re.sub(_BACKSLASH+r'+[uU]([0-9a-fA-F]{4})',lambda m:chr(int(m.group(1),16)),decoded)
-        decoded=re.sub(_BACKSLASH+r'+x([0-9a-fA-F]{2})',lambda m:chr(int(m.group(1),16)),decoded)
+        decoded=_decode_identifier_once(current)
         folded=_identifier_fold(decoded)
         if folded not in variants:variants.append(folded)
         if decoded==current:return tuple(variants),True
@@ -263,6 +313,7 @@ class ContextSnapshot:
     stance_facts: tuple[StanceFactReceipt, ...] = ()
     stance_state: RoleStanceState | None = None
     stance_proposals: tuple[StanceProposal, ...] = ()
+    public_identifiers: tuple[str, ...] = ()
 
     @property
     def history_revision(self):
@@ -288,17 +339,40 @@ class ContextSnapshot:
     def require_public(self,value):
         if self.has_private_identifier(value):raise ProtocolError('role_output_blocked',status=422)
 
-    def prompt_text(self,text):
-        # Preserve approved knowledge, neutralize only private identifiers.
+    def opaque_input_identifiers(self,text,auth):
+        public={_identifier_fold(x) for x in self.public_identifiers}
+        for source in self.generation_sources(auth):
+            if source.channel not in {'memory','received_share','attachment'} or self.private_ref(source.ref):continue
+            public.add(_identifier_fold(source.ref.object_id))
+            public.add(_identifier_fold(f'{source.ref.kind}:{source.ref.object_id}@{source.ref.version}'))
+        for receipt in self.received_shares:
+            if learner_allowed(auth,(receipt.product,)):
+                for ref in (receipt.share,receipt.product):
+                    if not self.private_ref(ref):
+                        public.add(_identifier_fold(ref.object_id))
+                        public.add(_identifier_fold(f'{ref.kind}:{ref.object_id}@{ref.version}'))
+        decoded=decoded_identifier_text(text)
+        return tuple(dict.fromkeys(m.group() for m in _INPUT_REFERENCE.finditer(decoded)
+                     if re.sub(r'\s+','',_identifier_fold(m.group())) not in public))
+
+    def prompt_text(self,text,*,opaque=()):
+        # Internal known identifiers and unresolved learner references share one
+        # placeholder. Never expose whether a learner guessed a real private ID.
         result=self.scrub(text)
-        for name in sorted(self.private_file_names,key=len,reverse=True):
-            result=re.sub(r'(?<![a-zA-Z0-9_])'+re.escape(name)+r'(?![a-zA-Z0-9_])','[私有来源]',result,flags=re.IGNORECASE)
-        for kind,oid in self.private_objects:
-            escaped=re.escape(oid)
-            result=re.sub(r'(?<![a-zA-Z0-9_])'+re.escape(kind)+r'\s*:\s*'+escaped+r'\s*@\s*\d+(?![a-zA-Z0-9_])','[私有来源]',result,flags=re.IGNORECASE)
-            result=re.sub(r'(?<![a-zA-Z0-9_])'+escaped+r'(?:\s*@\s*\d+)?(?![a-zA-Z0-9_])','[私有来源]',result,flags=re.IGNORECASE)
-        # Canonical/encoded variants that were not cleanly neutralized never get
-        # passed through as an exception detail or an accidental debug fragment.
+        ids=set(self.private_file_names)|{oid for _,oid in self.private_objects}|{
+            f.id for f in self.private_facts if f.disclosure.mode!='public'}|set(opaque)
+        if any(identifier_in(result,identifier) for identifier in ids):
+            projected,spans=identifier_projection(result);intervals=[]
+            for identifier in ids:
+                escaped=re.escape(_identifier_fold(decoded_identifier_text(identifier)))
+                pattern=r'(?<![a-zA-Z0-9_])(?:[a-zA-Z_]+\s*:\s*)?'+escaped+r'(?:\s*@\s*\d+)?(?![a-zA-Z0-9_])'
+                for match in re.finditer(pattern,projected):
+                    intervals.append((spans[match.start()][1],spans[match.end()-1][2]))
+            merged=[]
+            for start,end in sorted(intervals):
+                if merged and start<=merged[-1][1]:merged[-1]=(merged[-1][0],max(end,merged[-1][1]))
+                else:merged.append((start,end))
+            for start,end in reversed(merged):result=result[:start]+'[来源引用]'+result[end:]
         if self.has_private_identifier(result):raise ProtocolError('role_prompt_identifier_invalid',status=422)
         return result
 
@@ -323,7 +397,7 @@ class ContextSnapshot:
         ordered+=[s for s in sources if s.channel not in {"attachment","received_share","memory"}]
         selected=[];omitted=[];used=0
         for source in ordered:
-            cost=len(self.prompt_text(source.text))
+            cost=len(self.prompt_text(source.text,opaque=self.opaque_input_identifiers(source.text,auth) if source.channel=="memory" else ()))
             if used+cost>max_chars:omitted.append(bare(source.ref))
             else:selected.append(source);used+=cost
         return tuple(selected),tuple(omitted)
@@ -342,7 +416,7 @@ class ContextSnapshot:
                 aliases[key]=(bare(ref),label)
             return {"object":aliases[key][1],"identity":"private"}
         for i,source in enumerate(selected):
-            entry={"id":f"S{i+1}","text":self.prompt_text(source.text),
+            entry={"id":f"S{i+1}","text":self.prompt_text(source.text,opaque=self.opaque_input_identifiers(source.text,auth) if source.channel=="memory" else ()),
                    "channel":source.channel,"observed_at_seq":source.ref.observed_at_seq}
             if self.private_ref(source.ref):entry["source"]=reference(source.ref)
             else:entry["version"]=source.ref.version
@@ -372,7 +446,7 @@ class ContextSnapshot:
             "部分学员作品因授权省略时明确说明限制，不能假装从未讨论过；也不能据记忆补全被省略的作品内容。"
             "聊天/草稿/建议不等于批准；资源以已提交的实际决定为准。未执行的访谈或操作只能作为待办建议，不能虚构完成。")
         messages=[{"role":"system","content":instructions+"\nCONTEXT\n"+self.prompt_text(canonical(payload))},
-                  {"role":"user","content":self.prompt_text(self.question)}]
+                  {"role":"user","content":self.prompt_text(self.question,opaque=self.opaque_input_identifiers(self.question,auth))}]
         self.require_public(messages)
         return messages,omitted,tuple(aliases.values())
 
@@ -449,7 +523,13 @@ def assemble_context(catalog, frame, *, question="", new_shares=(), head_depende
         or stance.revision<1 or not point_at_or_before(stance.established_at,frame.as_of)
         or len({p.key for p in stance.positions})!=len(stance.positions)):
         raise ProtocolError('role_stance_context_invalid',status=409)
-    return ContextSnapshot(context,role,catalog.protected_texts(role),question,tuple(memories),tuple(receipts.values()),tuple(head_dependencies),catalog.facts,catalog.binding,private_objects,private_files,tuple(stance_facts),stance,frame.stance_proposals)
+    public_ids={f.id for f in catalog.facts if f.disclosure.mode=='public'}
+    for material in catalog.materials:
+        if ('material',material.id) not in private_objects:
+            public_ids.update((material.id,f'material:{material.id}@{material.version}'))
+    for mid,version,path in catalog.material_files:
+        if ('material',mid) not in private_objects:public_ids.update((path,path.rsplit('/',1)[-1]))
+    return ContextSnapshot(context,role,catalog.protected_texts(role),question,tuple(memories),tuple(receipts.values()),tuple(head_dependencies),catalog.facts,catalog.binding,private_objects,private_files,tuple(stance_facts),stance,frame.stance_proposals,tuple(sorted(public_ids)))
 
 
 class ContextPort:

@@ -12,7 +12,7 @@ from career_lab.contracts.v2 import (
     ObjectRef, ProtocolError, ProviderMessage, RoleContext, TurnInput, digest,
 )
 from career_lab.contracts.v2.projection import project_disclosures
-from career_lab.runtime.context_v2 import ContextPort, clean_ref
+from career_lab.runtime.context_v2 import ContextPort, clean_ref, identifier_in, internal_alias_in
 from career_lab.runtime.model_adapter import ModelReply
 from career_lab.storage.role_memory import (
     PrivateGeneration, PublicSpokenEvidence, RoleStanceEvidence, RoleTurn, RoleReply, RoleDisplay,
@@ -97,7 +97,8 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
     for proposal in snapshot.stance_proposals:
         resolution=resolve_stance(stance,proposal,snapshot.stance_facts,snapshot.context.as_of,stance_verifier)
         resolutions.append(resolution);stance=resolution.state
-    effective=replace(snapshot,stance_state=stance)
+    effective=replace(snapshot,stance_state=stance,question=request.input.text)
+    opaque_input=effective.opaque_input_identifiers(request.input.text,auth)
     messages,omitted,source_aliases=effective.build_prompt(auth,max_chars=max_context_chars)
     started=monotonic();raw=None;status="success";error=None
     try:
@@ -113,7 +114,8 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
     if error is None:
         private_ids={f.id for f in snapshot.private_facts if f.disclosure.mode!='public'}
         private_metadata=('prompt_messages','prompt_fact_ids','context_hash','acceptable_conditions','unacceptable_conditions')
-        if (snapshot.scrub(response.text)!=response.text or snapshot.has_private_identifier(response.model_dump(mode='json')) or any(fid in response.text for fid in private_ids)
+        if (snapshot.scrub(response.text)!=response.text or snapshot.has_private_identifier(response.model_dump(mode='json')) or internal_alias_in(response.text)
+            or any(identifier_in(response.text,value) for value in opaque_input) or any(fid in response.text for fid in private_ids)
             or messages[0]['content'] in response.text or any(key in response.text for key in private_metadata)):
             status,error="failed","role_output_blocked"
     input_tokens,output_tokens=_usage(raw,'prompt_tokens'),_usage(raw,'completion_tokens')
@@ -134,7 +136,7 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
                  for i,x in enumerate(internal))
     reply=RoleReply(id=reply_ref.object_id,session_id=auth.session_id,role_id=request.input.role_id,
         request=ObjectRef(session_id=auth.session_id,kind="role_turn",object_id=request.id,version=request.version),
-        question=snapshot.prompt_text(request.input.text),text=response.text,status="completed",as_of=snapshot.context.as_of,
+        question=request.input.text,text=response.text,status="completed",as_of=snapshot.context.as_of,
         executor=auth.executor,origin_cycle=request.origin_cycle,generation_cycle=generation_cycle,
         spoken_evidence=public,omission_count=len(omitted)+snapshot.permission_omissions(auth))
     context=snapshot.context.model_copy(update={'actual_disclosures':internal})
@@ -144,7 +146,9 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
         memories=snapshot.memories,refresh_count=refresh_count,attempts=(attempt,),used_sources=selected,
         opinions=actual_opinions(snapshot,reply_ref,response.text),source_aliases=source_aliases,
         stance_state=stance,stance_resolutions=tuple(resolutions))
-    snapshot.require_public(reply.model_dump(mode="json"))
+    # The question is immutable learner-authored input, not generated disclosure.
+    # All generated fields still pass the guard; do not selectively redact input.
+    snapshot.require_public(reply.model_dump(mode="json",exclude={'question'}))
     return reply,private
 
 
