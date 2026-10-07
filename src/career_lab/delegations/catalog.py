@@ -14,6 +14,7 @@ class Route:
 
 ROUTES={
  'observation':Route('GET','/observation'),'tools':Route('GET','/tools'),
+ 'objects.read':Route('GET','/objects/{kind}/{object_id}/{version}'),
  'requests.read':Route('GET','/requests/{request_id}',('request_id',)),
  'work_items.list':Route('GET','/work-items'),'work_items.create':Route('POST','/work-items'),
  'work_items.update':Route('PATCH','/work-items/{item_id}',('item_id',)),
