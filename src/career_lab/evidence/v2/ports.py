@@ -35,6 +35,9 @@ class SourceRecord:
     activity_target: ObjectRef | None = None
     actor_id: str | None = None
     structured_decision: StructuredDecision | None = None
+    # External source ports may authorize an object without authorizing a
+    # synthetic quote spanning its whole serialized/document representation.
+    quote_scope: Literal['whole_text', 'explicit_only'] = 'whole_text'
 
 
 @dataclass(frozen=True)

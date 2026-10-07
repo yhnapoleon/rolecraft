@@ -198,7 +198,7 @@ class Gateway:
                 except ValidationError as exc:raise ProtocolError('module_response_invalid',status=503) from exc
                 return {'schema_version':2,'result':result.model_dump(mode='json')}
             result=self.store.execute(auth,command,op.handler,capability=op.capability,approval_policy=op.approval_policy)
-            return self.public_result(auth,result,self.registry.projector_for_action(command.operation) if result.replayed else op.event_projector)
+            return self.public_result(auth,result,self.registry.projector_for_action(command.operation) if result.replayed else op.event_projector,operation=command.operation)
         self.store.authorize(auth,op.capability,op.action_name or op.name)
         payload=op.request_model.model_validate(body or params)
         result=self.store.query(auth,lambda view:op.handler(view,payload,auth),operation=op.action_name or op.name)
@@ -207,23 +207,25 @@ class Gateway:
             result=op.response_model.model_validate(result.model_dump(mode='json') if isinstance(result,BaseModel) else result)
         except ValidationError as exc:
             raise ProtocolError('module_response_invalid',status=503) from exc
-        return {'schema_version':2,'result':result.model_dump(mode='json')}
+        payload=result.model_dump(mode='json',exclude={'visible_sources':{'__all__':{'fact_ids'}}}) if name=='observation' else result.model_dump(mode='json')
+        return {'schema_version':2,'result':payload}
     def request_result(self,auth,request_id):
         meta,response,links=self.store.request_result(auth,request_id)
         jobs=[]
         for link in links:
             effect=link.pop('effect');effect_operation=link.pop('effect_operation',None)
             projector=self.registry.projector_for_action(effect_operation) if effect_operation is not None else None
-            jobs.append(RequestJobResult(**link,effect=PublicTransactionResult.model_validate(self.public_result(auth,effect,projector)) if effect is not None else None))
+            jobs.append(RequestJobResult(**link,effect=PublicTransactionResult.model_validate(self.public_result(auth,effect,projector,operation=effect_operation)) if effect is not None else None))
         status='completed'
         if any(j.status in {'queued','running'} for j in jobs):status='pending'
         elif any(j.status=='failed' for j in jobs):status='failed'
         elif any(j.status=='needs_context' for j in jobs):status='needs_context'
         elif any(j.effect is None for j in jobs):status='unresolved'
         return RequestResult(session_id=auth.session_id,request_id=request_id,operation=meta['operation'],executor=response.executor,
-            status=status,response=PublicTransactionResult.model_validate(self.public_result(auth,response,self.registry.projector_for_action(meta['operation']))),jobs=tuple(jobs))
+            status=status,response=PublicTransactionResult.model_validate(self.public_result(auth,response,self.registry.projector_for_action(meta['operation']),operation=meta['operation'])),jobs=tuple(jobs))
 
-    def public_result(self,auth,result,event_projector=None):
+    def public_result(self,auth,result,event_projector=None,*,operation=None):
+        from career_lab.api.public_materials import material_result
         readable='read' in auth.capabilities
         visible={canonical(x.ref) for x in self.store.view(auth).objects} if readable else set()
         events=[]
@@ -239,7 +241,7 @@ class Gateway:
                 # Default output contains no unfiltered scenario payload. W02 installs a scoped projector.
                 projected=PublicEvent.model_validate(event.model_dump(mode='json',exclude={'visible_to','data'})|{'data':{}})
             events.append(projected)
-        public=PublicTransactionResult(transaction_id=result.transaction_id,boundary=result.boundary,executor=result.executor,state=PublicState.model_validate(public_state(result.state)),objects=tuple(x for x in result.objects if canonical(x) in visible),events=tuple(events),result=result.result if readable else {},replayed=result.replayed)
+        public=PublicTransactionResult(transaction_id=result.transaction_id,boundary=result.boundary,executor=result.executor,state=PublicState.model_validate(public_state(result.state)),objects=tuple(x for x in result.objects if canonical(x) in visible),events=tuple(events),result=material_result(operation,result.result) if readable else {},replayed=result.replayed)
         return public.model_dump(mode='json')
 
     def run_job(self,name,payload,*,claim=None):
@@ -258,7 +260,7 @@ class Gateway:
             raise ProtocolError('worker_lease_lost',status=409)
         auth=self.store.guard_job(envelope.context,envelope.capability,check_context=False)
         prior=self.store.replay(auth,envelope.command,envelope.capability)
-        if prior is not None:return self.public_result(auth,prior,self.registry.projector_for_action(envelope.command.operation))
+        if prior is not None:return self.public_result(auth,prior,self.registry.projector_for_action(envelope.command.operation),operation=envelope.command.operation)
         self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
         derived_subject=self.store.fixed_feedback_subject(envelope.command)
         view=self.store.job_view(auth,envelope.context,command=envelope.command,worker_claim=claim,capability=envelope.capability)
@@ -266,7 +268,7 @@ class Gateway:
         # External calls can repeat on transient failure; deterministic failures stop.
         self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
         result=self.store.execute(auth,envelope.command,lambda *_:plan,capability=envelope.capability,worker_fence=claim,derived_subject=derived_subject,job_context=envelope.context)
-        return self.public_result(auth,result,self.registry.projector_for_action(envelope.command.operation))
+        return self.public_result(auth,result,self.registry.projector_for_action(envelope.command.operation),operation=envelope.command.operation)
 
 
 def make_step_result(transaction:TransactionResult,observation:Observation,step:ObservedStep,consumption:ActualConsumption,*,origin_request_id=None,model_attempts=()):

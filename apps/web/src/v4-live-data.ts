@@ -13,6 +13,7 @@ export class V4LiveData {
   constructor(private store: WorkspaceStore, private storage: Pick<Storage, 'getItem' | 'setItem'>) {
     store.installV2({ sync: s => this.sync(s), write: (s, kind, body, origin) => this.write(s, kind, body, origin), poll: s => this.poll(s) });
   }
+  hasUnpersistedDrafts() { return [...this.hosts.values()].some(host => host.hasUnpersistedDrafts()); }
   private current(id: string) {
     const s = this.store.getSnapshot().workspace.sessions.find(s => s.id === id);
     if (!s || s.protocol !== 2 || !s.v2Binding) throw new Error('V2 session unavailable');

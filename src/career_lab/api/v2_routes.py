@@ -5,6 +5,7 @@ from .modules import SessionAccess
 
 ROUTES=[
  ('POST','/configuration','configuration.apply'),
+ ('GET','/reviews','reviews.read'),
  ('GET','/workbench','workbench.read'),
  ('POST','/turns/display','turns.display'),
  ('GET','/feedback-records/{feedback_id}','feedback.records.read'),

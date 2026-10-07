@@ -1292,10 +1292,10 @@
     }
   },
   "W03": {
-    "commit": "0dced2887f38e234124b5a69d05cb4028fb0e3c0",
+    "commit": "0a1496372569e14ca556ecefe231cb03cb3193e4",
     "workspace": "/Users/jefmacmini/Projects/rolecraft-worktrees/034-w03",
-    "source_digest": "9c0e0f1285c949c940ffd5a0349feec2f083d597e639190d8aed003a6a805c55",
-    "receipt": "Immutable slot commit; owner reports public-host input approval blocked, no full component acceptance claimed.",
+    "source_digest": "e1216cb30138c4a7d8d6defa4979792e4ead189c4d8b0de37d25d0a1a551668d",
+    "receipt": "047 authorized interface message: 0a14963 exact committed owned delta; final receipt pending author handoff.",
     "files": {
       "apps/web/src/features/workspace/WorkspacePanel.tsx": {
         "sha256": "b6cea98fdd09a98875ba5471811315f617ca00b6a530b20fe8f594a7906daf05",
@@ -1345,6 +1345,18 @@
         "sha256": "747180fb9dd10df5b8148fc96ac4d9c0ec925b80985ef186adbedc0e526be495",
         "size": 2432
       },
+      "apps/web/src/features/workspace/native-v4/form-slot.ts": {
+        "sha256": "0b471d8ee81e6e6ce49d7d5e2a73aea11e17aa2500dffa2435164792208ce682",
+        "size": 7209
+      },
+      "apps/web/src/features/workspace/native-v4/form-values.test.ts": {
+        "sha256": "f0fb558de510d544cd1f7e28595c1d6651abdc7fefc1ea1b5f52b3973cc2d188",
+        "size": 1429
+      },
+      "apps/web/src/features/workspace/native-v4/form-values.ts": {
+        "sha256": "bcfa9d4cc2f177c831da759f672cc48b51a20dd2b8d5c5aa909224208810517b",
+        "size": 2032
+      },
       "apps/web/src/features/workspace/native-v4/import-slot.test.ts": {
         "sha256": "a4f6ad9a71e7d4730ca518bfc54aee5b0fcdf4ce6a78d2b3aa0ec25541622100",
         "size": 1951
@@ -1358,28 +1370,28 @@
         "size": 14904
       },
       "apps/web/src/features/workspace/native-v4/slot-controller.test.ts": {
-        "sha256": "7ee43a8522d7a6c4d0197913381acd739d57f58b630818b1e7f9c01aa41d5401",
-        "size": 11470
+        "sha256": "3e19e0973ed9993898e8446f37fee205a3525b9836cdf9ea87d8db0d474e7035",
+        "size": 12965
       },
       "apps/web/src/features/workspace/native-v4/slot-controller.ts": {
-        "sha256": "d6e50672f2dbfc75a49722796b15e0b236ca787065c1b23a7bff40198f5da39b",
-        "size": 16896
+        "sha256": "c02d5a36e449b5be97f382225e6589626d4ca03762a0733bd75994eec4476fa8",
+        "size": 18472
       },
       "apps/web/src/features/workspace/native-v4/slot-fixture.ts": {
-        "sha256": "3aa7c1fe996529156cb06f0683794a065da9a32dad8d1abe8ae26b6a070ef82a",
-        "size": 10172
+        "sha256": "f6b81bb585fcbf06b2816f3cd2b2aeaa42351c4757614a2eddf57ba6ec77589d",
+        "size": 13686
       },
       "apps/web/src/features/workspace/native-v4/v4-slot.css": {
         "sha256": "97bb3a6de3d6ff6ab23bb89f5d8433fe663795e84bf102cd6a38a48d23861be5",
         "size": 823
       },
       "apps/web/src/features/workspace/native-v4/v4-slot.md": {
-        "sha256": "94e1441c567e4c9c01f3197a70bb33539fcd4b98cc024735cb594a1222f3f10b",
-        "size": 6952
+        "sha256": "987856fd5397fdd0eb0529290a77b7b28586af157eb711d2585765f51a8fd5ae",
+        "size": 8686
       },
       "apps/web/src/features/workspace/native-v4/v4-slot.ts": {
-        "sha256": "391c550fd0bdb7d93560e33201aa0d19605bc9abcd31db52796cbed1928c1c18",
-        "size": 23527
+        "sha256": "0498c63fe62368b6d64730241f72f146a775636a600e4c3227e7f45749413b9b",
+        "size": 26882
       },
       "apps/web/src/features/workspace/native-v4/workspace.css": {
         "sha256": "041fda639fd0b77550123f02b236981bf7d01a82055d5560de9a3e85ac0293c3",
@@ -1480,6 +1492,10 @@
       "tests/expansion_v3/w03/test_imports_router.py": {
         "sha256": "4edb32c14e0370bad1d603edec0171dab3f70ec1747fb9e850f2d3b8cbd2a92d",
         "size": 8696
+      },
+      "tests/expansion_v3/w03/test_m2_work_choices.py": {
+        "sha256": "20ec21bbeeb57d881fa99674dd1049fee420c3a1a6011e3b60417e478d2d2eea",
+        "size": 4955
       },
       "tests/expansion_v3/w03/test_workspace.py": {
         "sha256": "8b88ad49101d926b64b149b3f80ebe2f6b8fa3766f1c51dffc32fe2b26484215",
@@ -1588,10 +1604,10 @@
     }
   },
   "W05": {
-    "commit": "81828f69d60f6ad222e7cce3234211cac9fcaac7",
+    "commit": "9550087a0665a799cf186ff7f2e78267b109e92f",
     "workspace": "/Users/jefmacmini/Projects/rolecraft-worktrees/034-w05",
-    "source_digest": "bce5f3fb63609123b4a1b7a2627ddf1db48292ddd2a38a3ea3588613f34630fd",
-    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W05/W05-20261007-040-semantic-surface-r12.json",
+    "source_digest": "10e040496ffb3914e78934fcef1c1bbe170245d2a07d945e504b48506108eaf4",
+    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W05/W05-20261007-040-real-sources-v4-slot-r13.json",
     "files": {
       "apps/web/src/features/feedback-native/demo.html": {
         "sha256": "0b9b3bdc4c9251eea0d6e3d3f3580ee763dce4a54099122c3de6ebe27b988d2a",
@@ -1602,8 +1618,8 @@
         "size": 4569
       },
       "apps/web/src/features/feedback-native/index.ts": {
-        "sha256": "157ba7f4fc8be4bcc2ea8978537f3c6c81cbc5b8f83b1c00aa17f30bc4e00312",
-        "size": 23112
+        "sha256": "18ac3f7523ac4d06daadb0808cbf78e2dbc5dbbda7265516e4e6e3caab6d570c",
+        "size": 23741
       },
       "apps/web/src/features/feedback-native/localization.ts": {
         "sha256": "58ba77e905b5af659cffd3ff4349c2f0f166d4f343f9878ef0e9edad23e72e09",
@@ -1613,9 +1629,17 @@
         "sha256": "b873ef7300abb84013886454a618c48e5e97ac102d5fd1232d576ba6b5e388b9",
         "size": 1827
       },
+      "apps/web/src/features/feedback-native/v4-slot.test.ts": {
+        "sha256": "fc9e5cfb28d4b7115f3f019c2b931b342920460a83f40b8d683254a24e10efc0",
+        "size": 8784
+      },
+      "apps/web/src/features/feedback-native/v4-slot.ts": {
+        "sha256": "6c993266b14f611bb830491799f15753791fb28fe2954b306d9b80471f02be22",
+        "size": 13949
+      },
       "docs/modules/expansion-v3/W05.md": {
-        "sha256": "fbdbd7c91919f3ec9b5cadc5a5776aa5040659e4b5fb962312842d254f71817b",
-        "size": 33875
+        "sha256": "28450ee09c1ce75d4196b150ba5cb1cdad6b819db0e514fd96724bfdee2c5990",
+        "size": 38570
       },
       "src/career_lab/api/reviews_v2.py": {
         "sha256": "31ca651c248b1e28f7bc131061a5128f3dc708b5d37ba76a0e20ee882d41b90d",
@@ -1626,8 +1650,8 @@
         "size": 181
       },
       "src/career_lab/evidence/v2/assembler.py": {
-        "sha256": "53eac63716b99eb2a7d882816f856f5a82467946be3ca677db87f15fbca970fa",
-        "size": 14100
+        "sha256": "9e4296a6493facc3c6f41145ad4cce2545886ea22516770822b927f273cae327",
+        "size": 14137
       },
       "src/career_lab/evidence/v2/availability.py": {
         "sha256": "aea8ce5ff16f4af1ea956296afdf1430538c113ff25af34c31e8d10b829975ed",
@@ -1650,8 +1674,8 @@
         "size": 123052
       },
       "src/career_lab/evidence/v2/ports.py": {
-        "sha256": "a977718b403e5ade26eb96920805f79d9f02e07bfc773ca6a5fc095db9569cff",
-        "size": 5364
+        "sha256": "972160076b74497a3b71e55d66df302775b0d2b3c933dc02628ce29faf0cdafe",
+        "size": 5586
       },
       "src/career_lab/evidence/v2/review_evaluator.py": {
         "sha256": "aa1b1a18a7983a465efc9f94baffc35f6f0362ce0ae66cdba6726a10c18bdfcb",
@@ -1662,12 +1686,12 @@
         "size": 2068
       },
       "src/career_lab/evidence/v2/snapshot_reader.py": {
-        "sha256": "e560c7b411c85664850d19c7f265e2d711aa9928f3bd392da188cdcfcb6b1154",
-        "size": 7165
+        "sha256": "de1dc2a2aee126d6b9025aa0e67561cd55b1545bd5b4c0bcd63aec06e8e09669",
+        "size": 7214
       },
       "src/career_lab/evidence/v2/store_reader.py": {
-        "sha256": "7b2faf35fcfd004db8586a478fae9c920297dc10eac1133e70e3681de8346c6d",
-        "size": 11214
+        "sha256": "32b02186d5e8191874c74f08617411a134ace84820b5c1d208f6988cf85f6d6e",
+        "size": 12256
       },
       "src/career_lab/evidence/v2/submission_evaluator.py": {
         "sha256": "026b4d2ee24952dacc2a68aa5d8f7c32ed0ba32f3fd8b299a056afd0bb14675b",
@@ -1737,13 +1761,17 @@
         "sha256": "01dd46243acb3d10a667185ad26e16ba70c387357527efb8b85e0a321b1cd710",
         "size": 17973
       },
+      "tests/integration/test_w05_frozen_w02.py": {
+        "sha256": "329b26924f0271ce54967ecea5ba9f3d243524eed727d9e77711dc164e334608",
+        "size": 12320
+      },
       "tests/integration/test_w05_rubric_v2_persistence.py": {
         "sha256": "d8c6ccb7eba0c67994ce4ea559fe69108be3cf36019b0e5a2b21ad38759fe28c",
         "size": 6926
       },
       "tests/integration/test_w05_store_reader.py": {
-        "sha256": "6e02270c98e3cabc84253668cb363aee20c659fca782c76791547fc9ec5e182a",
-        "size": 10403
+        "sha256": "b1f21a4dc386b8d5bca0a94c27e31bfb08160430de9e433754b72f4ba7b41132",
+        "size": 14121
       },
       "tests/unit/test_w05_bilingual.py": {
         "sha256": "a12d079ee17e513948b1bfbac43389c7b123fffd855cd61fa0e330b241b4ac76",
@@ -1788,10 +1816,10 @@
     }
   },
   "W06": {
-    "commit": "8e8a63d8671d00a6ca52bae3d2e8b0688c487203",
+    "commit": "0b3788105a1e53a50425781ba48c7afdd4bf9986",
     "workspace": "/Users/jefmacmini/Projects/rolecraft-worktrees/036-w06",
-    "source_digest": "8e99e586530508dc6a92e4ef83cfec4b39c75701766fe74c247d681825f87611",
-    "receipt": "Immutable slot commit; owner reports public-host input approval blocked, no full component acceptance claimed.",
+    "source_digest": "7b3dae679a62cfed8132cd62f7cd5047a861dff6586e4a607e366eca0a96012d",
+    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W06/W06-20261007-044-v4-slot-r7.json",
     "files": {
       "apps/web/src/features/agent-native/README.md": {
         "sha256": "c9d3d6802b3d72427a67b0ee61f38c9d768efaccafebccd4adf010eb51c3fe36",

@@ -1,17 +1,17 @@
 {
   "schema_version": 2,
   "id": "w05-local-advisory",
-  "revision": "native-r12-899a978e25d4d13d",
+  "revision": "native-r12-f1250a1c82f0bf4b",
   "rubric": {
     "schema_version": 2,
     "path": "runtime/evaluation-protocol.json",
-    "sha256": "227484ffdae93a423b6e9454bba196853ab7314b4dea3264a7744ecb9695e2e5",
+    "sha256": "c2d3ed288e165f8066c399f8fc7c8467e4728a31bbd1d3fa78a3f471e44616a9",
     "media_type": "application/json"
   },
   "rules": {
     "schema_version": 2,
     "path": "runtime/evaluation-protocol.json",
-    "sha256": "227484ffdae93a423b6e9454bba196853ab7314b4dea3264a7744ecb9695e2e5",
+    "sha256": "c2d3ed288e165f8066c399f8fc7c8467e4728a31bbd1d3fa78a3f471e44616a9",
     "media_type": "application/json"
   },
   "graders": [],
@@ -20,7 +20,7 @@
   "protocol": {
     "schema_version": 2,
     "path": "runtime/evaluation-protocol.json",
-    "sha256": "227484ffdae93a423b6e9454bba196853ab7314b4dea3264a7744ecb9695e2e5",
+    "sha256": "c2d3ed288e165f8066c399f8fc7c8467e4728a31bbd1d3fa78a3f471e44616a9",
     "media_type": "application/json"
   },
   "mode": "advisory",

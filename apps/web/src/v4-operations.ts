@@ -21,11 +21,11 @@ export function readRoute(operation: string, input: Input = {}): string {
   if (operation === 'objects.read') path = '/objects/' + id(input, 'kind') + '/' + id(input, 'object_id') + '/' + id({ version: String(input.version) }, 'version');
   if (operation === 'work_products.versions.list') path = '/work-products/' + id(input, 'product_id') + '/versions';
   if (operation === 'work_products.shares.list') path = '/work-products/' + id(input, 'product_id') + '/shares';
-  if (operation === 'feedback.read') path = '/feedback/' + id(input, 'submission_id');
+  if (operation === 'feedback.read') path = '/feedback/' + id(input, input.review_id != null ? 'review_id' : 'submission_id');
   if (operation === 'feedback.records.read') path = '/feedback-records/' + id(input, 'feedback_id');
   if (operation === 'feedback.responses.list') path = '/feedback/' + id(input, 'feedback_id') + '/responses';
   if (operation === 'feedback.responses.read') path = '/feedback-responses/' + id(input, 'response_id');
-  if (operation === 'reviews.read') path = '/reviews/' + id(input, 'review_id');
+  if (operation === 'reviews.read') path = input.review_id == null ? '/reviews' : '/reviews/' + id(input, 'review_id');
   if (operation === 'workspace_imports.read') path = '/workspace-imports/' + id(input, 'import_id');
   if (!path) return fail();
   const query = new URLSearchParams();

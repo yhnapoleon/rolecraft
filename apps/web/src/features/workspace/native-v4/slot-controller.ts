@@ -1,13 +1,14 @@
 import type { V4HostAdapter, V4CommandResult, V4HostSnapshot } from '../../../v4-host';
 import type { ObjectRef, ProductCreate, ProductEdit, WorkspaceProductRead, WorkspaceTask, ProductShare, VersionPoint, InvestigationPayload } from '../contract-types';
 
+import {canonicalPurpose} from './form-values';
 const object=(x:unknown):x is Record<string,any>=>!!x&&typeof x==='object'&&!Array.isArray(x);
 const integer=(x:unknown)=>Number.isInteger(x)&&Number(x)>=0;
 const point=(x:unknown):x is VersionPoint=>object(x)&&integer(x.business_seq)&&integer(x.workspace_revision)&&integer(x.storage_revision);
 const same=(a:unknown,b:unknown)=>JSON.stringify(a)===JSON.stringify(b);
 export const productRef=(p:WorkspaceProductRead):ObjectRef=>({session_id:p.session_id,kind:'product',object_id:p.product_id,version:p.version});
 export const taskRef=(t:WorkspaceTask):ObjectRef=>({session_id:t.session_id,kind:'task',object_id:t.id,version:t.revision});
-export const productInput=(p:WorkspaceProductRead):ProductCreate=>({kind:p.kind??'text',title:p.title??'',content:p.content??'',purpose:p.purpose??'',task:p.task??null,structured_payload:structuredClone(p.structured_payload??null),evidence_refs:structuredClone(p.evidence_refs??[]),legacy:structuredClone(p.legacy??null),source_return_id:p.source_return_id??null});
+export const productInput=(p:WorkspaceProductRead):ProductCreate=>({kind:p.kind??'text',title:p.title??'',content:p.content??'',purpose:canonicalPurpose(p.purpose??''),task:p.task??null,structured_payload:structuredClone(p.structured_payload??null),evidence_refs:structuredClone(p.evidence_refs??[]),legacy:structuredClone(p.legacy??null),source_return_id:p.source_return_id??null});
 export type SlotDraft={schema:1;sessionId:string;productId:string;baseVersion:number;token:string;value:ProductCreate;status:'dirty'|'saved'};
 export type RequestPointer={requestId:string;status:V4CommandResult['status'];sessionId:string;operation?:string;productId?:string;draftToken?:string};
 type Page<T>={items:T[];as_of:VersionPoint;next_cursor:number|null;shares?:ProductShare[];sharing_complete?:boolean};
@@ -81,7 +82,7 @@ export class WorkspaceSlotController {
     const prior=this.draft(p);
     const value={...(prior?.value??productInput(p)),...structuredClone(patch)};
     // Editing text never changes an existing kind or clears unrelated structured data.
-    value.kind=p.kind??'text';
+    value.kind=p.kind??'text';if(value.purpose!==undefined)value.purpose=canonicalPurpose(value.purpose);
     await this.persist(this.key(p.product_id),{schema:1,sessionId:p.session_id,productId:p.product_id,baseVersion:prior?.baseVersion??p.version,token:crypto.randomUUID(),value,status:'dirty'});
   }
   async editInvestigation(field:'question'|'review_focus'|'review_note',value:string){
@@ -133,14 +134,20 @@ export class WorkspaceSlotController {
       const key=this.key(pointer.productId,pointer.sessionId),draft=this.drafts.get(key)??this.host.draft<SlotDraft>('workspace',key);
       if(!object(p)||p.session_id!==pointer.sessionId||p.product_id!==pointer.productId||!integer(p.version))throw Error('unconfirmed_saved_product');
       if(draft?.token===pointer.draftToken){
-        if(p.version<=draft.baseVersion||!same(productInput(p as WorkspaceProductRead),draft.value))throw Error('unconfirmed_saved_content');
+        if(p.version<=draft.baseVersion||!same(productInput(p as WorkspaceProductRead),{...draft.value,...(draft.value.purpose===undefined?{}:{purpose:canonicalPurpose(draft.value.purpose)})}))throw Error('unconfirmed_saved_content');
         await this.persist(key,{...draft,baseVersion:p.version,status:'saved'});
       }
     }
     this.state.error='';await this.storePointer({...pointer,status:'confirmed'});
     if(this.snapshot().session?.sessionId!==pointer.sessionId)return;
     await this.refresh();
-    if(object(p)&&p.session_id===pointer.sessionId&&typeof p.product_id==='string'&&integer(p.version))this.host.selectProduct(productRef(p as WorkspaceProductRead));
+
+  }
+  selectConfirmedProduct(result:V4CommandResult){
+    const pointer=this.state.receipt;
+    if(this.disposed||result.status!=='confirmed'||!pointer||pointer.requestId!==result.requestId||pointer.sessionId!==this.snapshot().session?.sessionId)return;
+    const product=mutationResult(result.result,pointer).object;
+    if(object(product)&&product.session_id===pointer.sessionId&&typeof product.product_id==='string'&&integer(product.version))this.host.selectProduct(productRef(product as WorkspaceProductRead));
   }
   async command(operation:string,input:Record<string,unknown>,draft?:SlotDraft){
     if(!this.can(operation)||this.blocked())throw Error('action_unavailable');
@@ -163,9 +170,9 @@ export class WorkspaceSlotController {
       d={...d,baseVersion:latest.version};await this.persist(this.key(p.product_id),d);
     }
     if(d.baseVersion!==this.selected()?.version)throw Error('draft_conflict');
-    return this.command('work_products.versions.create',{...d.value,product_id:p.product_id,expected_head:d.baseVersion,removed:false} as ProductEdit,d);
+    return this.command('work_products.versions.create',{...d.value,...(d.value.purpose===undefined?{}:{purpose:canonicalPurpose(d.value.purpose)}),product_id:p.product_id,expected_head:d.baseVersion,removed:false} as ProductEdit,d);
   }
-  async create(input:ProductCreate){return this.command('work_products.create',input);}
+  async create(input:ProductCreate){return this.command('work_products.create',{...input,...(input.purpose===undefined?{}:{purpose:canonicalPurpose(input.purpose)})});}
   async saveCopy(){const p=this.selected(),d=this.draft(p);if(!p||!d)throw Error('no_draft');return this.create({...d.value,legacy:null,source_return_id:null});}
   share(role:string,question:string){const p=this.selected();if(!p||p.removed_at||this.draft(p))throw Error('save_before_sharing');return this.command('work_products.shares.create',{product_id:p.product_id,product_version:p.version,recipient_role:role,question,purpose:'discussion'});}
   revoke(share:ProductShare){return this.command('work_products.shares.change',{product_id:share.product.object_id,share_id:share.id,expected_revision:share.version,operation:'revoke'});}
@@ -174,7 +181,17 @@ export class WorkspaceSlotController {
     const p=this.state.receipt;if(!p||p.sessionId!==this.session()||this.inFlight)throw Error('no_host_request');
     this.inFlight=true;this.emit();try{const result=await(retry?this.host.retry(p.requestId):this.host.recover(p.requestId));if(!retry&&result.requestId!==p.requestId)throw Error('wrong_recovered_request');await this.confirm(result,{...p,requestId:result.requestId});return result;}finally{this.inFlight=false;this.emit();}
   }
-  createTask(title:string,goal=''){if(!title.trim())throw Error('task_title_required');return this.command('work_items.create',{title:title.trim(),goal});}
+  createTask(title:string,goal='',priority=0){if(!title.trim())throw Error('task_title_required');return this.command('work_items.create',{title:title.trim(),goal,priority});}
+  saveTaskForm(input:{id:string;title:string;goal:string;priority:number;baseRevision?:number;split:string}){
+    if(!input.id)return this.createTask(input.title,input.goal,input.priority);
+    const task=this.state.tasks.find(t=>t.id===input.id);
+    if(!input.baseRevision)throw Error('task_revision_missing');
+    if(!task||task.revision!==input.baseRevision)throw Error('task_conflict');
+    const update={item_id:task.id,expected_revision:input.baseRevision,title:input.title.trim(),goal:input.goal,priority:input.priority};
+    if(!update.title)throw Error('task_title_required');
+    if(input.split.trim())return this.command('work_items.batch',{updates:[update],creates:[{title:input.split.trim(),parent:taskRef(task),priority:input.priority}]});
+    return this.command('work_items.update',update);
+  }
   patchTask(task:WorkspaceTask,patch:Partial<WorkspaceTask>){return this.command('work_items.update',{item_id:task.id,expected_revision:task.revision,...patch});}
   moveTask(task:WorkspaceTask,direction:-1|1){
     const siblings=this.state.tasks.filter(t=>t.status!=='removed'&&t.priority===task.priority).sort((a,b)=>(a.order??0)-(b.order??0)||a.id.localeCompare(b.id));

@@ -108,6 +108,7 @@ export class V4DataHost implements V4HostAdapter {
     const result: any = await this.raw(this.path(readRoute(operation, input)));
     if (operation === 'session.read') return result.state;
     if (operation === 'objects.read') return result;
+    if (operation === 'observation' && obj(result.result) && Array.isArray(result.result.visible_sources)) return result.result;
     if (!obj(result.result) || !obj(result.result.result)) throw unconfirmed();
     const value = result.result.result;
     if (operation === 'workbench.read') {
@@ -167,6 +168,16 @@ export class V4DataHost implements V4HostAdapter {
       return copy(entry.outcome);
     } finally { this.busy = false; this.emit(); }
   }
+  async reflectSelection(task: ObjectRef | null, product: ObjectRef | null) {
+    if (task) this.checkRef(task); if (product) this.checkRef(product);
+    await this.exclusive(async () => {
+      this.reload();
+      if (this.storageError) throw new ApiError('Keep the original browser data', 0, 'storage_unavailable');
+      if (JSON.stringify([this.local.currentTask,this.local.currentProduct]) === JSON.stringify([task,product])) return;
+      this.local.currentTask = copy(task); this.local.currentProduct = copy(product); this.save(); this.emit();
+    });
+  }
+  hasUnpersistedDrafts() { return this.storageError || this.unsavedDrafts.size > 0; }
   pendingRequests() { return Object.values(this.local.requests).filter(e => ['pending', 'unconfirmed'].includes(e.outcome.status)).map(e => copy(e.outcome)); }
   async recover(requestId: string): Promise<V4CommandResult> {
     return this.exclusive(async () => {

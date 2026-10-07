@@ -4,10 +4,10 @@
 
 ## 当前实际结果
 
-- 正常根入口创建固定工作语言的v2会话，凭据仍只由WorkspaceStore管理；`protocol`明确区分旧v1与新v2。旧v1会话及本机作品保留原路径，未自动迁移。
+- 正常根入口创建固定工作语言的v2会话，凭据仍只由WorkspaceStore管理；`protocol`明确区分旧v1与新v2。旧v1会话及本机作品保留原路径，未自动迁移。新练习先经统一host批量保存入口上显示的三件事项，再标记v2NativeWorkspace启用原生投影；c17中间版未标记的本机作品继续保全，不用空服务端列表覆盖。
 - LiveWorkbench/V4LiveData把真实v2材料、配置、试用投影到原v4。设置在服务器验证base并产生下一版本，客户端不加版本、不预填测试问题、不替用户选择工作项。
 - V4DataHost是v2唯一Command/恢复journal及模块draft服务；模块不拿token/raw transport。recover只GET，retry是主动新尝试；网络/5xx保留未确认，存储失败不发送命令并保全草稿。workspace_imports preview经原只读handler，不能借query执行apply。
-- objects.read走Gateway；workbench.read在一个授权view返回固定语言、三轴点、独立roles/feedback/assistant语义状态、材料和timeline。当前provider local，模型语义均“等待模型接入”。
+- objects.read走Gateway；read_material、原请求恢复/重放和材料对象公开读取去除内部fact_ids，原持久记录与原文/span/版本不改。GET /reviews复用reviews.read返回授权历史列表，host可无review_id分页。workbench.read在一个授权view返回固定语言、三轴点、独立roles/feedback/assistant语义状态、材料和timeline。当前provider local，模型语义均“等待模型接入”。
 - W02真实ScenarioFactAdapter已接W05完整14项规则/反馈和实际历史，提交→worker反馈→修订回归通过。全文证明只接受原文件每个片段均公开、身份/时间/原文全部吻合的确切全文；不删除或缩短证明规避验证。
 - W06已在标准serve/worker装配，PublicHistoryWindow在当前查询事务内读实际公开事件和材料读取回执；目录不冒充已获取知识。端口离开事务后失效。v4授权状态列表、凭据一次性配置导出与真实Codex实操尚未接通。host将delegations.create/revoke明确置为不可用并在派发前拒绝：W06控制面返回含私密token且尚无统一事务回执，不能当普通Command发送后误报失败、再重试签发第二份授权。
 
@@ -16,8 +16,8 @@
 原c15数据库完整保留。本批通过SQLite backup建了新副本，旧v1记录随副本可读；未改签旧v2场景。实际进程：
 
 ```sh
-.venv/bin/career-lab serve --host 127.0.0.1 --port 18832 --database-url sqlite:///runs/local/expansion-v3/W14/20261007-032-v4-host/v4-host.db --provider local
-.venv/bin/career-lab worker --database-url sqlite:///runs/local/expansion-v3/W14/20261007-032-v4-host/v4-host.db --provider local
+.venv/bin/career-lab serve --host 127.0.0.1 --port 18832 --database-url sqlite:///runs/local/expansion-v3/W14/20261007-032-native-slots/c18.db --provider local
+.venv/bin/career-lab worker --database-url sqlite:///runs/local/expansion-v3/W14/20261007-032-native-slots/c18.db --provider local
 ```
 
 在apps/web运行`ROLECRAFT_API_TARGET=http://127.0.0.1:18832 npm run dev -- --port 18830`，打开`http://127.0.0.1:18830/`。独立QA使用自己的端口/浏览器profile和数据库，避免同源练习选择互相影响。当前只装了中文运行包；英文请求明确返回work_language_unavailable，不静默改成中文。
@@ -61,17 +61,20 @@ snapshot新增独立`semantic.roles/feedback/assistant`状态，值为waiting_mo
 
 ## 固定输入与验证边界
 
-准确模块输入及逐文件SHA见[v4-fixed-inputs.json](v4-fixed-inputs.json)。W02 a8ec5b8、W03 0dced28、W04 a5a94fa、W05 81828f6、W06 8e8a63d；仅复制各自owned文件，没有复制他人的公共层或未提交活动树。W03/W06新slot已继承，尚未挂进正常v4。
+准确模块输入及逐文件SHA见[v4-fixed-inputs.json](v4-fixed-inputs.json)。W02 a8ec5b8、W03 0a14963、W04 a5a94fa、W05 9550087、W06 0b37881；仅复制各自owned文件，没有复制他人的公共层或未提交活动树。W03原工作板、纸面与表单薄挂载已实现，实操新建三事项和作品v1→v2；完整W03交互未验。W06 slot已继承，尚未挂进正常v4。
 
 原位已实操：创建中文v2练习；打开真实委托；测试c0取得500元原文；从练习列表重开并刷新后保留测试；原设置将人数20改为12，服务器产生config v1、政策源v2/索引v1，原c0测试保持500元。旧v1调查作品仍可见。截图、操作记录与数据库核对进入`runs/local/expansion-v3/W14/20261007-032-v4-host/`，不是七步验收。
 
-本批后端组合/契约16项通过；前端与状态回归结果见同目录日志。Vite打包通过，但完整npm build当前被W03 slot-controller.test.ts三处Mock返回status被推宽为string的TypeScript错误阻挡（15、23、24行）。未改owner文件、排除测试或放宽V4CommandResult掩盖错误。W03/W06作者另报告公共host继承受自动审批阻挡；其状态不由032伪造更改。
+本批后端组合/契约18项、前端207项（7跳过）、原v4状态72项通过；完整npm build通过。原W03三处Mock类型错误已通过作者bab8870解除；再继承0a14963的原表单/迟到确认修复。截图与数据库证明在`runs/local/expansion-v3/W14/20261007-032-native-slots/`。浏览器发现并修复stage外层不换、内部换纸面时的旧绑定问题；重试浏览器审批一次后已看到真实作品v2，但不声明完整纵切通过。
 
 ## 接下来
 
-1. 完成W03原位薄挂载、确切任务/作品选择和草稿生命周期；只有插槽接管对应写路径后才启用v4-workspace-projection，避免用服务端空列表覆盖尚在本机的作品。原本机作品编辑当前继续保全，不能称服务端作品保存已完成。
+1. 从本批W03基本挂载继续验表单、文件夹、调查、分享/撤回、草稿与迟到响应。原任务标题区优先级/状态等未接管的旧同步写入口目前受guard拒写；接手线需完成这些原位入口，不能删guard改成本机假成功。
 2. 继承039/040的准确slot提交，完成同事/申请、作品提交到反馈/补证/修订；中文七步A/B截图与操作记录。
 3. 完成W06授权列表/控制面恢复/一次性私密配置导出，补W04真实模型持久调用端口；英文真实重绑、AC15补练、干净环境和小屏验证。
 4. 外部真实模型配置到位后只改配置复验，核对单次调用与全部AC；当前不新增线上费用、不声称模型质量已验证。
 
 只在本人分支本地commit。没有push、merge、PR或部署。整包reviewed/integrated留最终独立验收。
+
+
+2026-10-07 20:06—20:07后按用户决定收束此partial检查点，由046分发新①v4主流程接手。当前不开始下一里程碑，不标七步、M1或整包通过；实际任务状态和交接从项目登记及032交接页进入。

@@ -51,7 +51,7 @@ def test_history_port_uses_persisted_receipts_same_transaction_and_expiry(tmp_pa
         actual=send('actions','read','read_material',{'tool':'read_material','material':ref})
         window,reader=store.query(auth,lambda view:(view.public_history(C.ResourcePage(limit=1),auth),view.public_history))
         assert window.acquisitions_complete and len(window.material_reads)==1
-        assert [f.model_dump(mode='json') for f in window.material_reads[0].fragments]==actual['result']['fragments']
+        assert [f.model_dump(mode='json',exclude={'fact_ids'}) for f in window.material_reads[0].fragments]==actual['result']['fragments']
         assert window.next_seq==min(window.as_of.business_seq,1)
         import pytest
         with pytest.raises(C.ProtocolError) as expired:reader(C.ResourcePage(),auth)
@@ -74,4 +74,49 @@ def test_whole_public_source_span_is_exact_and_private_file_is_denied(tmp_path):
         with pytest.raises(C.ProtocolError):store.query(auth,lambda view:view.reference_allowed(ref.model_copy(update={'quote':text[:-1]+'x'})))
         private=C.ObjectRef(session_id=sid,kind='material',object_id='world_private',version=1)
         with pytest.raises(C.ProtocolError):store.query(auth,lambda view:view.reference_allowed(private))
+    finally:app.state.store.close()
+
+
+def test_public_material_recovery_redacts_only_internal_fact_links(tmp_path):
+    import json
+    from sqlalchemy import select
+    from career_lab.storage.v2_tables import v2_transactions
+    app,c,sid,h,send=connect(tmp_path)
+    try:
+        material=C.ObjectRef(session_id=sid,kind='material',object_id='brief',version=1).model_dump(mode='json')
+        before=c.get('/sessions/'+sid,headers=h).json()['state']
+        actual=send('actions','source','read_material',{'tool':'read_material','material':material})
+        recovered=c.get('/sessions/'+sid+'/requests/source',headers=h).json()['response']
+        direct=c.get('/sessions/'+sid+'/objects/material/brief/1',headers=h).json()
+        with app.state.v2_store.db.engine.connect() as conn:
+            raw=json.loads(conn.execute(select(v2_transactions.c.result).where(v2_transactions.c.session_id==sid,v2_transactions.c.request_id=='source')).scalar_one())
+        assert any(f['fact_ids'] for f in raw['result']['fragments'])
+        expected=[{k:v for k,v in f.items() if k!='fact_ids'} for f in raw['result']['fragments']]
+        assert actual['result']['fragments']==expected==recovered['result']['fragments']
+        assert all('fact_ids' not in f for f in direct['content']['fragments'])
+        replay=c.post('/sessions/'+sid+'/actions',headers=h,json={'schema_version':2,'request_id':'source','operation':'read_material','expected_version':before['business_seq'],'expected_workspace_revision':before['workspace_revision'],'payload':{'tool':'read_material','material':material}})
+        assert replay.status_code==200,replay.text
+        again=replay.json()
+        assert again['replayed'] and again['result']['fragments']==expected
+        observation=c.get('/sessions/'+sid+'/observation',headers=h).json()['result']
+        assert all('fact_ids' not in f for f in observation['visible_sources'])
+        # An identically named user field in an unrelated payload is untouched.
+        from career_lab.api.public_materials import material_result
+        own={'legacy':{'raw':{'fact_ids':['user-authored-label']}}}
+        assert material_result('work_products.create',own)==own
+    finally:app.state.store.close()
+
+
+def test_reviews_are_discoverable_without_private_request_journals(tmp_path):
+    app,c,sid,h,send=connect(tmp_path)
+    try:
+        product=send('work-products','note','work_products.create',{'kind':'text','purpose':'exploration','title':'Open question','content':'Investigate before deciding'})['result']['ref']
+        review=send('reviews','review','reviews.create',{'subjects':[product],'purpose':'exploration','scope':['evidence'],'question':'What remains unknown?'})['result']['review']
+        response=c.get('/sessions/'+sid+'/reviews',headers=h)
+        assert response.status_code==200,response.text
+        page=response.json()['result']['result']
+        assert len(page['items'])==1 and page['items'][0]['id']==review['object_id']
+        assert page['items'][0]['subjects']==[product]
+        assert c.get('/sessions/'+sid+'/reviews/'+review['object_id'],headers=h).json()['result']['result']['items']==page['items']
+        assert c.get('/sessions/'+sid+'/feedback/'+review['object_id'],headers=h).status_code==200
     finally:app.state.store.close()

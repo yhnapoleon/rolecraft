@@ -6,7 +6,7 @@ import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/
 type SelectedProduct = Pick<WorkProductVersion,'session_id'|'product_id'|'version'|'title'|'removed_at'|'author'>;
 type Item = { criterion: string; explanation: string; source: string; label: string; rule_bound?:{lower:string;upper:string}|null; citations: EvidenceRefV2[] };
 export type FeedbackSemanticStatus = 'waiting_for_model' | 'available' | 'pending' | 'failed';
-type Report = {
+export type Report = {
   semantic_status?: FeedbackSemanticStatus;
   id: string; version: number; subject: ObjectRef; items: Item[]; rule_items?: Item[] | null;
   verified_facts?: { status?:'verified'|'partial'|'unknown'; summary: string[]; references: {verified_ref?:EvidenceRefV2|null}[] }[] | null;
@@ -16,6 +16,8 @@ type Report = {
 export interface FeedbackNativeState {
   /** Fixed session language supplied by the shared adapter; never browser locale. */
   workLanguage?: FeedbackLanguage;
+  /** UI preference only; stored feedback keeps its original language. */
+  uiLanguage?: FeedbackLanguage;
   products: SelectedProduct[];
   submission?: {ref:ObjectRef;products:ObjectRef[];decision:string} | null;
   reports: Report[];
@@ -27,6 +29,8 @@ export interface FeedbackNativeState {
   status: 'active'|'paused'|'submitted';
   busy: boolean;
   pending?: boolean;
+  /** Presentation only; request identity and recovery remain in the host journal. */
+  awaitingFeedback?: boolean;
   error?: string;
 }
 export interface FeedbackNativeAdapter {
@@ -55,7 +59,7 @@ export type FeedbackMountOptions = {surface?:'all'|'submission'|'feedback'};
 
 export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapter,options:FeedbackMountOptions={}) {
   const doc=host.ownerDocument;
-  const language=adapter.snapshot().workLanguage??'zh';
+  const language=adapter.snapshot().uiLanguage??adapter.snapshot().workLanguage??'zh';
   const T=(zh:string,en:string)=>feedbackText(language,zh,en);
   const versionLabel=(n:number)=>language==='en'?'v'+n:'第 '+n+' 版';
   const selectedRefs=(n:number)=>language==='en'?`${n} original references selected`:`已选 ${n} 处原始引用`;
@@ -101,6 +105,7 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
   const refresh=button(T("查看最新反馈","Refresh feedback"),()=>adapter.refresh());
   root.append(failure,notice);
   if(options.surface!=='feedback')root.append(submissions);
+  if(options.surface==='feedback')root.append(recover);
   if(options.surface!=='submission')root.append(refresh,reports,responseHistory,revisions);
   host.replaceChildren(root);
   function refs(parent:HTMLElement,values:(ObjectRef|EvidenceRefV2)[]) {
@@ -158,7 +163,7 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
   }
   function render(){
     if(destroyed)return;const state=adapter.snapshot();
-    notice.textContent=state.busy?T("正在等待服务端确认…","Waiting for server confirmation…"):state.pending?T("上一请求结果尚未确认，请先恢复。","The previous request is unresolved. Recover its result first."):state.status==='submitted'?(state.reports.some(r=>r.subject.object_id===state.submission?.ref.object_id)?T("本次提交已保存，可以看反馈、提出异议或开始修订。","Submission saved. Review feedback, raise a challenge or start revising."):T("本次提交已保存，反馈正在准备。","Submission saved. Feedback is being prepared.")):T("可以继续工作，选择准备交付的版本。","Continue your work and select versions for submission.");
+    notice.textContent=state.busy?T("正在等待服务端确认…","Waiting for server confirmation…"):state.pending?T("上一请求结果尚未确认，请先恢复。","The previous request is unresolved. Recover its result first."):state.status==='submitted'?(state.reports.some(r=>r.subject.object_id===state.submission?.ref.object_id)?T("本次提交已保存，可以看反馈、提出异议或开始修订。","Submission saved. Review feedback, raise a challenge or start revising."):T("本次提交已保存，反馈尚未就绪。","Submission saved. Feedback is not ready yet.")):T("可以继续工作，选择准备交付的版本。","Continue your work and select versions for submission.");
     selection.replaceChildren(...state.products.map(product=>{
       const ref:ObjectRef={session_id:product.session_id,kind:'product',object_id:product.product_id,version:product.version};const id=key(ref);
       const row=el('label','','field-row');const checkbox=el('input');checkbox.type='checkbox';checkbox.checked=selected.has(id);
@@ -169,13 +174,14 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
     renderSelected();selectedSummary.hidden=state.status==='submitted';
     if(state.status==='submitted' && state.submission)choice.value=state.submission.decision;
     submit.disabled=state.status!=='active'||state.busy||!!state.pending||adapter.canSubmit===false;choice.disabled=submit.disabled;
-    recover.hidden=!state.pending || !adapter.recover;recover.disabled=state.busy;
+    recover.hidden=(!state.pending&&!state.awaitingFeedback) || !adapter.recover;recover.disabled=state.busy;recover.textContent=state.awaitingFeedback?T('查看反馈进度','Check feedback progress'):T('确认上一请求','Check the previous request');
     receipt.replaceChildren();if(state.submission){receipt.append(el('h3',T("已保存的提交快照","Saved submission snapshot")));refs(receipt,state.submission.products);}
     // Do not rebuild the response editor while it holds focus. Its content is
     // retained in the per-report draft even when the shared client refreshes.
     if(!reports.contains(doc.activeElement))reports.replaceChildren(...[...state.reports].sort((a,b)=>Number(b.subject.object_id===state.submission?.ref.object_id)-Number(a.subject.object_id===state.submission?.ref.object_id)).map(reportPanel));
     responseHistory.replaceChildren();if(state.responses?.length){responseHistory.append(el('h3',T("已记录的异议与补证","Recorded challenges and additional evidence")));for(const response of state.responses){responseHistory.append(el('p',(response.kind==='objection'?T("异议已记录","Challenge recorded"):T("补证已记录","Additional evidence recorded"))+T(" · 等待核验"," · Awaiting verification")),el('blockquote',response.text));}}
-    revisions.hidden=state.status!=='submitted';revise.disabled=state.busy||!!state.pending||!state.submission;
+    revisions.hidden=state.status!=='submitted';revise.disabled=state.busy||!!state.pending||!!state.awaitingFeedback||!state.submission;
+    reports.hidden=!!state.error&&!state.reports.length;submissions.hidden=!!state.error&&!state.products.length;
     if(state.error){failure.textContent=state.error;failure.hidden=false;}
   }
   const unsubscribe=adapter.subscribe(render);render();

@@ -55,7 +55,8 @@ class StoreEvidenceReader:
                     text=C.canonical(row.content);executor=row.creator
                 if text is None:continue
                 ref=C.EvidenceRefV2(**row.ref.model_dump(),observed_at_seq=born.business_seq if born else 0)
-                record=SourceRecord(ref,text,born,refs,author,executor,adopter,activity,target,auth.actor_id)
+                record=SourceRecord(ref,text,born,refs,author,executor,adopter,activity,target,auth.actor_id,
+                    quote_scope='whole_text' if row.ref.kind=='product' and product.content.strip() else 'explicit_only')
                 self.records[self.key(ref)]=record
                 if activity and born is not None and executor is not None:
                     self.activities.append(ActivityRecord(ref,activity,born,executor,auth.actor_id,target,other))
@@ -71,7 +72,7 @@ class StoreEvidenceReader:
                 if born is None:continue
                 ref=C.EvidenceRefV2(session_id=auth.session_id,kind='event',object_id=event.id,version=1,observed_at_seq=event.seq)
                 text='Material read: '+target.object_id+' v'+str(target.version)
-                self.records[self.key(ref)]=SourceRecord(ref,text,born,executor=event.executor,activity_kind='material_read',activity_target=target,actor_id=auth.actor_id)
+                self.records[self.key(ref)]=SourceRecord(ref,text,born,executor=event.executor,activity_kind='material_read',activity_target=target,actor_id=auth.actor_id,quote_scope='explicit_only')
                 self.event_targets[event.id]=target
                 self.activities.append(ActivityRecord(ref,'material_read',born,event.executor,auth.actor_id,target))
             # Complete ledger assertions remain the caller's frozen source policy;
@@ -106,12 +107,23 @@ class StoreEvidenceReader:
         if not before(as_of,self.captured_at):raise C.ProtocolError('snapshot_window_unavailable')
         if ref.kind=='event' and ref.object_id in self.event_targets:
             self.store.can_reference(auth,self.event_targets[ref.object_id])
-        elif ref.kind=='material':
-            self.store.can_reference(auth,ref)
+        elif ref.kind=='material' or (self.source_reader is not None and ref.kind in {'config','business_decision','event'}):
+            if ref.kind=='material':
+                self.store.can_reference(auth,ref)
+            elif ref.kind=='event':
+                # Events are not V2 objects. The trusted W02 source port must
+                # resolve them only from the caller's projected public window.
+                # Current credential/object scope still applies before entry.
+                self.store.authorize(auth,'read',object_ids=(ref.object_id,))
+            else:
+                self.store.read(auth,base_ref(ref),storage_revision=as_of.storage_revision)
             if self.source_reader is None:raise C.ProtocolError('source_unavailable',status=404)
             record=self.source_reader(auth,ref,as_of)
             if base_ref(record.ref)!=base_ref(ref):raise C.ProtocolError('evidence_version_mismatch')
-            return record
+            if ((record.created_at is not None and not before(record.created_at,as_of))
+                    or record.ref.observed_at_seq>as_of.business_seq or record.ref.valid_from_seq>as_of.business_seq):
+                raise C.ProtocolError('future_evidence')
+            return replace(record,quote_scope='explicit_only')
         else:self.store.read(auth,base_ref(ref),storage_revision=self.captured_at.storage_revision)
         record=self.records.get(self.key(ref))
         if record is None:raise KeyError(self.key(ref))

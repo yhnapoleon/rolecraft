@@ -2,6 +2,8 @@ import { createGatewayTransport } from './gateway-transport';
 import { request, sessionPath, type Transport } from './api';
 import { T, locale } from './app/i18n';
 import { V4LiveData } from './v4-live-data';
+import { V4Mounts } from './v4-mounts';
+import { projectNativeWorkspace } from './v4-workspace-projection';
 import { blankPilot, WorkspaceStore } from './store';
 import type { Deliverable, LocalSession, Material, Pilot, RoleId, Scenario, TestRunOrigin, TurnContext } from './types';
 
@@ -25,6 +27,7 @@ export class LiveWorkbench {
   readonly engine: Engine;
   private state: any;
   private readonly v4: V4LiveData;
+  private readonly mounts = new V4Mounts();
   private notify = (_changed: boolean) => {};
   private signature = '';
   private materialCache = new Map<string, Material>();
@@ -53,13 +56,20 @@ export class LiveWorkbench {
     for (const name of ['runTest', 'reply', 'updateConfig', 'refreshIndex', 'requestResources', 'resolveResources', 'triggerPolicyUpdate', 'submit', 'revise', 'suggestPriorities', 'readMaterial']) {
       this.engine[name] = () => { throw new Error(T('此操作必须由后端确认；没有切换为本地模拟。', 'This must be confirmed by the server; nothing was simulated locally.')); };
     }
+    for (const name of ['addTask','updateTask','splitTask','moveTask','restoreOrder','createArtifact','saveArtifact','adoptArtifact','removeArtifact','restoreArtifact','addTestCase','updateTestCase','removeTestCase','moveInvestigationBlock','addEvidence']) {
+      const local = this.engine[name];
+      this.engine[name] = (a: Attempt, ...args: any[]) => {
+        if (this.session(a)?.v2NativeWorkspace) throw new Error(T('此操作尚未保存，请保留输入并使用当前作品的保存控件。', 'This action has not been saved. Keep your input and use the current work’s save control.'));
+        return local(a, ...args);
+      };
+    }
     this.store.subscribe(() => this.changed());
   }
   attach(state: any, notify: (changed: boolean) => void) {
     this.state = state; this.notify = notify;
     const snap = this.store.getSnapshot();
     for (const s of snap.workspace.sessions) this.ensureAttempt(s);
-    if (!state.activeId && snap.workspace.active) state.activeId = snap.workspace.active;
+    if (snap.workspace.active) state.activeId = snap.workspace.active;
     if (state.activeId && snap.workspace.sessions.some(s => s.id === state.activeId)) this.store.select(state.activeId);
     this.changed();
   }
@@ -84,6 +94,7 @@ export class LiveWorkbench {
   }
   project(a: Attempt, s: LocalSession) {
     const w = s.world;
+    projectNativeWorkspace(a, s);
     a.world = { capacity: w.resources.capacity, devDays: w.resources.dev_days, deadline: w.resources.deadline_day, policyVersion: w.material_versions.policy, indexVersion: w.indexed_versions.policy };
     a.config = fromPilot(w.configs.pilot || blankPilot()); a.configVersion = w.config_version;
     a.configDraft = s.configDraft ? fromPilot(s.configDraft) : null;
@@ -93,7 +104,7 @@ export class LiveWorkbench {
       const previous = a.tests.find((p: any) => p.id === t.id) || {};
       const saved = s.testRunMeta?.[t.id];
       const meta = saved || previous;
-      return { id: t.id, question: t.query, answer: (s.protocol === 2 && t.mode === 'waiting_model' ? T('等待模型接入（当前为原文检索结果）\n\n', 'Waiting for model connection (source retrieval result)\n\n') : '') + t.answer, citations: t.citations.map(c => ({ id: c.material_id, version: c.version, title: s.v2MaterialTitles?.[c.material_id + ':' + c.version] || s.materials.find(m => m.id === c.material_id && m.version === c.version)?.title || c.material_id })), expectation: s.testNotes[t.id]?.expected ?? saved?.expectation ?? '', diagnosis: s.testNotes[t.id]?.diagnosis || '', policyVersion: t.source_versions.policy, indexVersion: t.indexed_versions.policy, sourceVersions: { ...t.source_versions }, indexedVersions: { ...t.indexed_versions }, configVersion: t.config_version, config: saved ? (saved.config ? fromPilot(saved.config) : null) : previous.config || null, taskId: meta.taskId || null, createdAt: t.created_at || meta.createdAt || '', workId: meta.workId, workRevision: meta.workRevision, caseId: meta.caseId, caseRevision: meta.caseRevision, investigationId: meta.investigationId, investigationRevision: meta.investigationRevision, blockId: meta.blockId, blockRevision: meta.blockRevision, baselineRunId: meta.baselineRunId, requestId: meta.requestId, intent: meta.intent || '', refs: meta.refs || [], mode: t.mode, asOfSeq: t.as_of_seq, fallback: t.fallback, stale: t.stale };
+      return { id: t.id, question: t.query, answer: (s.protocol === 2 && t.mode === 'waiting_model' ? T('等待模型接入（当前为原文检索结果）\n\n', 'Waiting for model connection (source retrieval result)\n\n') : '') + t.answer, citations: t.citations.map(c => ({ id: c.material_id, version: c.version, title: (s.protocol === 2 ? s.v2MaterialTitles?.[c.material_id + ':' + c.version] : s.materials.find(m => m.id === c.material_id)?.title) || c.material_id })), expectation: s.testNotes[t.id]?.expected ?? saved?.expectation ?? '', diagnosis: s.testNotes[t.id]?.diagnosis || '', policyVersion: t.source_versions.policy, indexVersion: t.indexed_versions.policy, sourceVersions: { ...t.source_versions }, indexedVersions: { ...t.indexed_versions }, configVersion: t.config_version, config: saved ? (saved.config ? fromPilot(saved.config) : null) : previous.config || null, taskId: meta.taskId || null, createdAt: t.created_at || meta.createdAt || '', workId: meta.workId, workRevision: meta.workRevision, caseId: meta.caseId, caseRevision: meta.caseRevision, investigationId: meta.investigationId, investigationRevision: meta.investigationRevision, blockId: meta.blockId, blockRevision: meta.blockRevision, baselineRunId: meta.baselineRunId, requestId: meta.requestId, intent: meta.intent || '', refs: meta.refs || [], mode: t.mode, asOfSeq: t.as_of_seq, fallback: t.fallback, stale: t.stale };
     });
     a.turnTask ||= {};
     for (const t of s.timeline.turns) if (t.context?.task_id !== undefined) a.turnTask[t.trace_id] = t.context.task_id;
@@ -122,6 +133,11 @@ export class LiveWorkbench {
       return { sessionId: session.id, token: session.token };
     }, fetcher);
   }
+  nativeWorkspace(a: Attempt) { return this.session(a)?.v2NativeWorkspace === true; }
+  hasUnsavedV4() { return this.v4.hasUnpersistedDrafts(); }
+  mountV4(a: Attempt | null, selection: { taskId: string | null; productId: string | null }) {
+    void this.mounts.sync(document, a ? this.session(a) : undefined, a ? this.v4Host(a) : null, selection).catch(error => this.store.report({ error: error.message }));
+  }
   configDomains(a: Attempt) { const s = this.session(a); return s?.protocol === 2 ? (s.v2Domains ?? []).map(d => d === 'stable_faq' ? 'faq' : d) : ['faq','policy']; }
   v4Host(a?: Attempt) { const s = this.session(a); return s?.protocol === 2 ? this.v4.host(s) : null; }
   async start(caseId: string, opts?: any) {
@@ -129,7 +145,17 @@ export class LiveWorkbench {
     const id = await this.store.create(scenarios[caseId], this.options.newSessionProtocol === 2 ? locale() : undefined);
     if (!id) throw new Error(this.store.getSnapshot().error || T('会话未创建。', 'The session was not created.'));
     const a = this.ensureAttempt(this.store.active()!, opts); if (opts) Object.assign(a, opts);
-    this.state.activeId = id; this.project(a, this.store.active()!); return a;
+    this.state.activeId = id;
+    if (this.store.active()!.protocol === 2) {
+      const source = opts?.initialTasks ?? a.tasks.map((t: any) => ({ title: t.title, goal: t.note }));
+      const result = await this.v4.host(this.store.active()!).command('work_items.batch', { creates: source.map((t: any, i: number) => ({
+        title: t.title, goal: t.goal ?? '', order: i, priority: ['first','next','later'].indexOf(opts?.priorities?.[i] ?? 'next'),
+      })) });
+      if (result.status !== 'confirmed') throw new Error(T('起始事项尚未确认，练习和原请求已保留，请恢复原请求。', 'Initial tasks are unconfirmed. The practice and original request are retained.'));
+      await this.v4.sync(this.store.active()!);
+      this.store.update(id, { v2NativeWorkspace: true });
+    }
+    this.project(a, this.store.active()!); return a;
   }
   select(a: Attempt) { if (!this.session(a)) throw new Error(T('找不到会话凭据，请保留原浏览器存档。', 'Session credentials are missing. Keep the original browser data.')); this.store.select(a.id); }
   async perform(a: Attempt, fn: () => Promise<unknown> | undefined, allowSubmitted = false) {

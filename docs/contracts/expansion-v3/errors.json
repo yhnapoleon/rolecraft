@@ -116,6 +116,7 @@
     "product_required",
     "product_requires_share",
     "protocol_version_unsupported",
+    "public_material_projection_invalid",
     "read_capability_cannot_write",
     "reference_context_required",
     "reference_provider_unavailable",

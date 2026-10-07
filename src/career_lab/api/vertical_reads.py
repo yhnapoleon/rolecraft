@@ -44,7 +44,7 @@ def history_reader(registry):
                 if since<event.seq<=through:events.append(projected)
                 if event.type=='material_read' and operation=='read_material':
                     fragments=tuple(DisclosedFragment.model_validate(f) for f in result.result.get('fragments',()))
-                    fragments=tuple(f for f in fragments if permitted(f.ref))
+                    fragments=tuple(f.model_copy(update={'fact_ids':()}) for f in fragments if permitted(f.ref))
                     if fragments:receipts.append(MaterialReadReceipt(projected,fragments))
         return PublicHistoryWindow(at,tuple(sorted(events,key=lambda e:e.seq)),tuple(sorted(receipts,key=lambda r:r.event.seq)),through,scanned==expected)
     return read
@@ -130,7 +130,7 @@ def install_native_reads(registry, module, *, role_mode="local_reference",feedba
             fragments=module.package.project(ref.object_id,ref.version,auth.actor_id,view.state.business_seq,auth.session_id)
             material=module.package.material(ref.object_id,ref.version)
             activation=view.private_scenario_state.material_activation[f'{ref.object_id}:{ref.version}']
-            content={'title':material.title,'fragments':[f.model_copy(update={'ref':f.ref.model_copy(update={'observed_at_seq':view.state.business_seq,'valid_from_seq':activation})}).model_dump(mode='json') for f in fragments]}
+            content={'title':material.title,'fragments':[f.model_copy(update={'ref':f.ref.model_copy(update={'observed_at_seq':view.state.business_seq,'valid_from_seq':activation})}).model_dump(mode='json',exclude={'fact_ids'}) for f in fragments]}
         elif ref.kind=='event':
             events=public_event_history(store_provider(),registry,auth,point(view.state),view=view)
             event=next((e for e in events if e.id==ref.object_id),None)
