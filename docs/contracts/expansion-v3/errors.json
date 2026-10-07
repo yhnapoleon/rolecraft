@@ -103,6 +103,7 @@
     "role_context_identity_immutable",
     "role_context_private",
     "role_reader_reserved",
+    "role_reply_private_fields_forbidden",
     "route_object_mismatch",
     "rules_engine_unavailable",
     "scenario_binding_mismatch",

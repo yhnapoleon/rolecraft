@@ -15,6 +15,15 @@ from career_lab.contracts.v2 import *
 from .v2_tables import *
 from .v2_jobs import JobStoreMixin
 
+ROLE_REPLY_PRIVATE_FIELDS=frozenset({'prompt_messages','prompt_hash','context_hash','history_revision','source_versions','omitted_sources'})
+
+def role_reply_has_private_fields(content):
+    """Recognize legacy audit fields without rejecting the new public quote DTO."""
+    if ROLE_REPLY_PRIVATE_FIELDS.intersection(content):return True
+    spoken=content.get('spoken_evidence',())
+    if not isinstance(spoken,(list,tuple)):return True
+    return any(not isinstance(item,dict) or set(item)-{'schema_version','label','quote','verification'} for item in spoken)
+
 OBJECT_MODELS={
     'task':WorkspaceTask,'product':WorkProductVersion,'share':ProductShare,'cycle':RevisionCycle,
     'review':ReviewRequest,'submission':SubmissionV2,'feedback':FeedbackV2,'config':AssistantConfig,
@@ -236,6 +245,9 @@ class V2Store(JobStoreMixin):
 
     def _visible(self,record,auth):
         if 'research' in auth.capabilities:return True
+        if record.ref.kind=='role_reply' and role_reply_has_private_fields(record.content):
+            role=record.content.get('role_id')
+            if role in {None,'learner','system','research'} or auth.actor_id!=role or auth.executor.kind!='system' or auth.executor.id!='role:'+role:return False
         if record.ref.kind=='role_context':
             role_id=record.content['role_id']
             # Historical content cannot turn a reserved actor into a role reader.
@@ -404,6 +416,8 @@ class V2Store(JobStoreMixin):
                     original=max(existing,key=lambda x:x.ref.version).content
                     if any(content[k]!=original[k] for k in original if k not in {'version','status'}) or content['status']!='submitted':raise ProtocolError('cycle_scope_invalid',status=403)
                 if ref.kind=='product' and set(write.visible_to)!={'learner'}:raise ProtocolError('product_requires_share',status=403)
+                if ref.kind=='role_reply' and role_reply_has_private_fields(content):
+                    raise ProtocolError('role_reply_private_fields_forbidden',status=403)
                 if ref.kind=='role_context':
                     if content['role_id'] in {'learner','system','research'} or not write.visible_to or not set(write.visible_to)<={'system',content['role_id']}:raise ProtocolError('role_context_private',status=403)
                     if existing and any(x.content['role_id']!=content['role_id'] for x in existing):raise ProtocolError('role_context_identity_immutable',status=409)

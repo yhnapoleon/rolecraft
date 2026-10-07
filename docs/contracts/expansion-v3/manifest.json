@@ -248,7 +248,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "250258f3f749d7807504727b7a78499f35d83752170f68bce65d8a8dd70da977"
+      "sha256": "6d7cfee5630aeea0c80582d6906a5d1721c8a033a253ddb0d154ce29b091cdbc"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -256,18 +256,19 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "dfc3d8e47586a2aafa23324f8a5e32c7fc7f6f3acf93dee79d21848cd90ceb51"
+      "sha256": "868376e26f43b3b4c07a3656a25fc0c71660d1e66aed9045bfa0fb63bcc80867"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "6c4b0ec3ce5561d8640aa1c95b6d8d1b1a10cdd04c74f59fe730be6fbf08cc42"
+    "sha256": "1149e3ed42fc87e9bc2a19b925425f8555064a80d23c559cca812d5eb518536a"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
     "W02-S06": "Opt-in contextual resolver gets authoritative persisted-window ScenarioState; legacy four-argument behavior retained.",
     "W02-S07": "Verified command/result references are atomically anchored for read-request recovery.",
     "W03-GR02-partial": "Validated LegacyProvenance.raw remains inert during reference/time traversal; receipt and preview interfaces remain pending.",
+    "W04-S02-P0": "Legacy role_reply audit fields are denied to learner/Agent on common reads and replay; new public spoken evidence remains readable; research audit preserves history. No role generation activation is implied.",
     "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.",
     "W07-W08-empty-joint-target": "Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.",
     "W07-W08-semantic-consensus": "Only independent-pass consensus uses semantic_decision_key; G2/G2v final remains bound by the full normalized decision_key to the actual selected pass."
@@ -277,7 +278,7 @@
     "sha256": "a6bdfc780629d8a8127b70517e3494e626b6f221440ac348a37733d4764d7578"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-81f4855d5cdf8c601c6b09d7b350b11dcda5ed156e2d801d8e542fa197718c85",
+  "previous_contract_revision": "expansion-v3-deb8023ca664946f45c52692c65e3524703d77194c5100e0ee42939ae26cff4b",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -2636,7 +2637,7 @@
     "src/career_lab/contracts/v2/discovery.py": "1089a5682cb915ce4f095ec28f65014d88724e4e5a30e1b17a753bb358bc006c",
     "src/career_lab/contracts/v2/evaluation.py": "c8bc7004d8d14c54f1832eecc227ae45e7fe8492c1b584117ad1f8a372a5c631",
     "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
-    "src/career_lab/contracts/v2/export.py": "23e8f8aca6879f4afacd61daba0a6072a87e074db1217075f79a55498fe7c3bd",
+    "src/career_lab/contracts/v2/export.py": "b92654d59f39b32fcd29799d3de5bcf08b5a9058d458c42abc85c277c0942781",
     "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
     "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
     "src/career_lab/contracts/v2/projection.py": "8740cf952268d8997610904224db37dcd7ce91886046653b46284be9583062ab",
@@ -2653,7 +2654,7 @@
     "src/career_lab/storage/v2_lifecycle.py": "77d0e275b4d18e68906fb42460518279a776a42b3860dfbdaf9ab8c56d6ce7a6",
     "src/career_lab/storage/v2_remap.py": "5fa7f55ce4fcf721b4b81978214698f83a4f0437ae397f94ad6bfc4c98cf769f",
     "src/career_lab/storage/v2_snapshot.py": "0c079af78ef90a36abdc69f8f1313223d9cbc4f951a56e8e14416c5399ab233f",
-    "src/career_lab/storage/v2_store.py": "6e76128f4a9ce83c457702420efd58206658bdc3780d4c3d361e6b1cbbca7540",
+    "src/career_lab/storage/v2_store.py": "75773ad91678bc1019db1e340a53bf1b312d2bd2045dd116ad4830ef4a600a44",
     "src/career_lab/storage/v2_tables.py": "cb15ae737542083abb5206378bec958939901b9343246ce4614e97c77bd27ff2"
   },
   "status": "frozen_candidate_pending_independent_review",
