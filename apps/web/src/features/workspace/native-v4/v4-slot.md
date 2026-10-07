@@ -1,6 +1,6 @@
 # W03 v4 插槽接线
 
-接口输入：032 已提交的 `a276074949ab7d2a367d6ac06f5b15363cdf3dae`，`apps/web/src/v4-host.ts` SHA-256 `fcad815cfc89576bc727bf30e3230bc1273adbf45013b50e8db732a5655d62d1`。以该文件及项目固定容器约定为准；本文件只明确 W03 实际 nodes 和本线语义，不另建公共类型。
+接口输入：032 已提交的 `d34d695fbee243aa3038616ba0c91d795ba87ff5`；`v4-host.ts` SHA-256 `2accb79fc978461596b88279bafd6ce574a8e49d4d3d2f15d637884b159cf64b`，blob `6e674dcccd94a9fd5258d7c6fb6f354dc9aef2a2`；`contracts-v2.ts` SHA-256 `4b051f97000611a03959f6b193186f68d3f9ee1e327ee18c1ad775a576d2255a`，blob `f213ff1c216ef32862ffc6a6b624dc9528adb680`。两文件均原字节inherited，非W03 owned；后端仍为本包固定c9。本文件只明确W03 nodes和本线语义，不另建公共类型。
 
 `mount({host, nodes})` 返回 `update(snapshot)` / `destroy()`，别名 `mountWorkspaceSlot`。原 v4 决定布局、导航、纸面、文件夹动效和会话；本槽只绑定传入节点。没有凭据、raw transport、Command 构造、全局 root 或独立恢复日志。不要再同时挂 r9 的独立 `mount(container, WorkspaceClient)`，也不要挂 React 面板。
 
@@ -16,12 +16,18 @@
 | sharing | 原作品分享/同事可见说明区域的内部容器；确切版本、接收者、问题和当前分享/撤回 |
 | versions | 原作品历史区域；按需读取已保存版本，正文只读，引用交 `host.openReference` |
 | investigation | 原 investigation workpaper 的节点；绑定原 question/review 控件和 `investigation-review-save`。`data-w03-block-text=<确切块ID>` 可绑定已有块的文字输入；保留其他块、ID、引用和原版结构，不另建调查表单 |
-| taskTitle / taskGoal / newTask | 原新增事项控件及确认按钮；输入先存 host draft，明确点击后才写服务端 |
+| taskForm | 原 `#task-form` 整表单；直接读取 name=title/note/priority/split、data-id。编辑须在挂载前由宿主把所展示的真实task.revision写入data-revision，或提供同任务的确切currentTask ref；不推算版本。外部form=task-form提交按钮可用，优先级first/next/later映射0/1/2，编辑＋拆分用同一batch。 |
+| productForm | 原 `#artifact-form` 整表单；直接读取title、purpose radio组及taskId select，绑定所选实际事项ref，保持普通文字作品。 |
+| taskTitle / taskGoal / taskPriority / newTask | 没有taskForm时的散装控件；taskPriority可为原radio容器或select；输入先存host draft。两个入口不能重复执行同一提交。 |
 | tasks0 / tasks1 / tasks2 | 原三个优先级列中的 `.cards`；只给对应列表内部，不给整个工作板。按实际 task 数据渲染本列卡片与排序/暂放操作 |
 | taskList | 单个列表 surface 的替代入口；与上述三个列入口二选一，不能同时传入重复列表 |
-| newTitle / newBody / newPurpose / newKind / newProduct | 原作品起草控件和明确新建按钮；kind 沿 text/plan/test_plan/options/investigation，保存内容不因 kind 丢弃；缺失 kind 取 text |
+| newTitle / newBody / newPurpose / newKind / newTaskId / newProduct | 原作品起草控件和明确新建按钮；kind 沿 text/plan/test_plan/options/investigation，保存内容不因 kind 丢弃；缺失kind取text；newPurpose可为原select或radio容器，newTaskId可显式指定归属，否则用currentTask。startView由宿主在原editor-meta提供明确newProduct按钮。 |
 | folder | 原 work-folder 事件面；只把实际 `data-folder-card` 对应的服务端作品传给 host.selectProduct，不新建作品导航或文件夹壳 |
 | import | 原旧存档导入区域的内部容器；选择文件/练习/对象 → 只读 preview → 明确 apply，不自动全选 |
+
+整表单绑定发出 `w03:form-confirmed`，detail为 `{form:'task'|'product', requestId, changedWhileWaiting}`。仅changedWhileWaiting=false时可关闭sheet；true时保留正在输入的位置。controller通用确认、保存和recover不自动导航；新建/另存的UI层只在仍活跃且原输入未变化时显式选择新作品。destroy后的迟到结果不得带走界面。
+
+原v4中文用途值在本槽边界映射：探索笔记→exploration、测试计划→test_plan、方案比较→option、试点决定→commitment、自由作品→freeform。回显映射回原控件已有值，原radio/select值和历史原文不全局改写；未知用途保留，不强迫使用模板。ACK比较采用同一canonical规则。新建文字草稿按session＋task隔离，原请求token与等待期间新输入token分开。
 
 宿主对 v2 区域应停止旧 v1 写入事件路由；本槽在自身输入、按钮上阻止已接管事件继续冒泡。原有 v1 练习继续由原路径处理。原渲染器在替换节点前应 `flushDrafts`，保存焦点/选区，再 `destroy` 旧槽。不要把整个 `.paper.editor` 传为 actions/sharing，不要覆盖宿主输入节点。
 
@@ -46,4 +52,4 @@
 
 只读核对了032的 `44d6df0`：query当前返回已拆出的owned DTO；recover返回完整只读RequestResult，其中 `response.result` 为原事务结果。W03同时校验请求ID、会话、operation、completed与read_only，再处理保存确认；不会把RequestResult壳当作已保存正文。
 
-`44d6df0` 的 readRoute 尚不支持 `workspace_imports` 的只读preview。M3需要032补这一真实host能力；W03保持现有Operation及preview_handler语义，不用command预览伪造事务成功、不自造路由。普通作品/事项与分享不依赖此导入补齐。共享类型后续迁移到contracts-v2属于032；W03不创作该公共文件。
+`d34d695` 已提供 `host.query('workspace_imports', mode:preview)` 的只读预览映射，并将共享wire类型迁入contracts-v2；两份类型已按准确输入原字节继承。真实host/后端/v4的导入组合仍须在接手后的M3完成，不以源码存在称已验证。

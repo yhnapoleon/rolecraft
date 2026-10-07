@@ -52,7 +52,7 @@ describe('W03 slot through the single host adapter',()=>{
     const pending=f.c.save();await vi.waitFor(()=>expect(f.host.command).toHaveBeenCalledTimes(1));
     await f.c.edit({content:'newer unsent text'});f.setProduct(product({version:2,content:'sent text'}));
     finish({requestId:'host-request',status:'confirmed',result:{object:f.product,as_of:at}});await pending;
-    expect(f.c.draft()?.value.content).toBe('newer unsent text');expect(f.c.conflict()).toBe(true);
+    expect(f.c.draft()?.value.content).toBe('newer unsent text');expect(f.c.conflict()).toBe(true);expect(f.host.selectProduct).not.toHaveBeenCalled();
   });
   it('never automatically recovers or retries a pending command',async()=>{
     const f=fixture();await f.c.refresh();await f.c.edit({content:'awaiting response'});
@@ -112,4 +112,16 @@ it('orders tasks using their actual revisions and pauses without changing produc
   f.c.state.tasks=[first,second];await f.c.moveTask(second,-1);
   expect(f.host.command).toHaveBeenCalledWith('work_items.batch',{updates:[{item_id:'second',expected_revision:11,order:0},{item_id:'first',expected_revision:7,order:1}]});
   await f.c.patchTask(first,{status:'paused'});expect(f.host.command).toHaveBeenLastCalledWith('work_items.update',{item_id:'first',expected_revision:7,status:'paused'});expect(f.product.content).toBe('original');
+});
+
+it('acknowledges a canonical purpose after editing an original Chinese-valued control',async()=>{
+  const f=fixture();f.setProduct(product({purpose:'探索笔记'}));await f.c.refresh();await f.c.edit({purpose:'试点决定',content:'same text survives'});await f.c.save();
+  expect(f.host.command).toHaveBeenCalledWith('work_products.versions.create',expect.objectContaining({purpose:'commitment',content:'same text survives'}));expect(f.c.draft()).toBeUndefined();
+});
+
+it('saves the original task form priority and splits atomically using the shown revision',async()=>{
+  const f=fixture();await f.c.refresh();const task={session_id:'s',id:'t',revision:4,title:'Original',goal:'note',priority:1,status:'open' as const,created_at:'now',updated_at:'now'};f.c.state.tasks=[task];
+  await f.c.saveTaskForm({id:'t',baseRevision:4,title:'Renamed',goal:'kept note',priority:2,split:'New child'});
+  expect(f.host.command).toHaveBeenCalledWith('work_items.batch',{updates:[{item_id:'t',expected_revision:4,title:'Renamed',goal:'kept note',priority:2}],creates:[{title:'New child',parent:{session_id:'s',kind:'task',object_id:'t',version:4},priority:2}]});
+  expect(()=>f.c.saveTaskForm({id:'t',baseRevision:3,title:'stale',goal:'',priority:0,split:''})).toThrow('task_conflict');expect(f.host.command).toHaveBeenCalledTimes(1);
 });

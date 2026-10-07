@@ -3,6 +3,8 @@ import type { WorkspaceTask, WorkspaceProductRead, ProductCreate, InvestigationP
 import { WorkspaceSlotController, productRef, taskRef } from './slot-controller';
 import './v4-slot.css';
 import {mountImport} from './import-slot';
+import {canonicalPurpose,controlValue,writePurpose,disableControl,taskPriority} from './form-values';
+import {bindWorkspaceForm} from './form-slot';
 
 /** Bind only nodes assigned by the v4 host. See v4-slot.md for exact node keys.
  * No application root, navigation, credentials, transport or request journal. */
@@ -14,6 +16,7 @@ export function mount(context:V4SlotContext):V4SlotHandle {
   let destroyed=false,rendered='',renderedVersion:number|undefined,readKey='',history:WorkspaceProductRead[]=[],historyKey='';
   let draftRendering=false,removeConfirmation=false,comparison:{head:number;token:string}|undefined;
   const controller=new WorkspaceSlotController(host,()=>{if(!draftRendering)render();});
+  const forms:ReturnType<typeof bindWorkspaceForm>[]=[];
   const T=(zh:string,en:string)=>host.snapshot().uiLanguage==='en'?en:zh;
   const el=<K extends keyof HTMLElementTagNameMap>(tag:K,text='',cls='')=>{const n=doc.createElement(tag);n.textContent=text;n.className=cls;return n;};
   const on=(node:HTMLElement|undefined,event:string,fn:(e:Event)=>void)=>{if(!node)return;node.addEventListener(event,fn);listeners.push(()=>node.removeEventListener(event,fn));};
@@ -39,7 +42,7 @@ export function mount(context:V4SlotContext):V4SlotHandle {
   // Permanent editor controls; never replace the host's original input nodes.
   const controls=el('div','','row-actions');
   const save=button('保存这版','Save this version',()=>controller.save(),'primary small');
-  const copy=button('另存草稿','Save draft as a copy',()=>controller.saveCopy());
+  const copy=button('另存草稿','Save draft as a copy',async()=>{const token=controller.draft()?.token;const result=await controller.saveCopy();if(!destroyed&&controller.draft()?.token===token)controller.selectConfirmedProduct(result);});
   const refresh=button('读取工作区更新','Refresh workspace',()=>controller.refresh());
   const reference=button('引用这版','Reference this version',()=>{const p=controller.selected();if(p)return host.openReference(productRef(p));});
   const recover=button('查看上一请求结果','Check previous request',()=>controller.recover());
@@ -69,7 +72,7 @@ export function mount(context:V4SlotContext):V4SlotHandle {
     const update=(event:Event)=>{
       event.stopPropagation();
       if((event as InputEvent).isComposing)return;
-      draftRendering=true;void controller.edit({[field]:n.value}).catch(error=>host.announce(message(error.message),'error')).finally(()=>{draftRendering=false;render();});
+      draftRendering=true;void controller.edit({[field]:field==='purpose'?canonicalPurpose(controlValue(nodes[name])??''):n.value}).catch(error=>host.announce(message(error.message),'error')).finally(()=>{draftRendering=false;render();});
     };
     on(n,name==='purpose'?'change':'input',update);on(n,'compositionend',update);on(n,'focusout',e=>e.stopPropagation());
   }
@@ -88,27 +91,34 @@ export function mount(context:V4SlotContext):V4SlotHandle {
   on(nodes.investigation,'click',event=>{const target=(event.target as Element).closest<HTMLElement>('[data-action="investigation-review-save"]');if(target){event.preventDefault();event.stopPropagation();void act(()=>controller.save());}});
   const rememberShare=()=>{const p=controller.selected();if(p)void host.keepDraft('workspace',p.session_id+':share-question:'+p.product_id,{question:question.value,recipient:recipient.value}).catch(()=>host.announce(message('draft_storage_failed'),'error'));};
   on(question,'input',rememberShare);on(recipient,'change',rememberShare);
-  let formSession=host.snapshot().session?.sessionId;
-  const formFields=['taskTitle','taskGoal','newTitle','newBody','newPurpose','newKind'] as const;
-  const formKey=(name:string)=>host.snapshot().session?.sessionId+':form:'+name;
-  for(const name of formFields){const node=input(name);if(!node)continue;
-    const restored=host.draft<string>('workspace',formKey(name));if(restored!==undefined)node.value=restored;
-    const keep=(event:Event)=>{event.stopPropagation();void host.keepDraft('workspace',formKey(name),node.value).catch(()=>host.announce(message('draft_storage_failed'),'error'));};
+  let formSession=JSON.stringify([host.snapshot().session?.sessionId,host.snapshot().currentTask?.object_id]);
+  const formFields=['taskTitle','taskGoal','taskPriority','newTitle','newBody','newPurpose','newKind','newTaskId'] as const;
+  const formKey=(name:string)=>host.snapshot().session?.sessionId+':form:'+(name.startsWith('new')?(host.snapshot().currentTask?.object_id??'unassigned')+':':'')+name;
+  for(const name of formFields){if((name.startsWith('task')&&nodes.taskForm)||(name.startsWith('new')&&nodes.productForm))continue;const node=input(name);if(!node)continue;
+    const restored=host.draft<string>('workspace',formKey(name));if(restored!==undefined){if(name==='newPurpose')writePurpose(nodes[name],restored);else node.value=restored;}
+    const keep=(event:Event)=>{event.stopPropagation();void host.keepDraft('workspace',formKey(name),controlValue(nodes[name])??'').catch(()=>host.announce(message('draft_storage_failed'),'error'));};
     on(node,'input',keep);on(node,'change',keep);on(node,'focusout',event=>event.stopPropagation());
   }
-  on(nodes.newTask,'click',event=>{event.preventDefault();event.stopPropagation();void act(async()=>{
+  on(nodes.taskForm?undefined:nodes.newTask,'click',event=>{event.preventDefault();event.stopPropagation();void act(async()=>{
     const sid=host.snapshot().session?.sessionId;
     const values={taskTitle:input('taskTitle')?.value??'',taskGoal:input('taskGoal')?.value??''};
-    const result=await controller.createTask(values.taskTitle,values.taskGoal);
+    const result=await controller.createTask(values.taskTitle,values.taskGoal,taskPriority(controlValue(nodes.taskPriority)??'0'));
     if(result.status==='confirmed'&&host.snapshot().session?.sessionId===sid){
       for(const name of ['taskTitle','taskGoal'] as const){const node=input(name);if(node&&node.value===values[name]){node.value='';await host.keepDraft('workspace',sid+':form:'+name,'');}}
     }
   });});
-  on(nodes.newProduct,'click',event=>{event.preventDefault();event.stopPropagation();void act(async()=>{
-    const task=host.snapshot().currentTask;
+  on(nodes.productForm?undefined:nodes.newProduct,'click',event=>{event.preventDefault();event.stopPropagation();void act(async()=>{
+    const selectedTaskId=controlValue(nodes.newTaskId);
+    const chosenTask=selectedTaskId?controller.state.tasks.find(t=>t.id===selectedTaskId&&t.status!=='removed'):undefined;
+    if(selectedTaskId&&!chosenTask)throw Error('task_not_available');
+    const task=nodes.newTaskId?(chosenTask?taskRef(chosenTask):null):host.snapshot().currentTask;
     const kind=(input('newKind')?.value??'text') as ProductCreate['kind'];
     if(!['text','plan','test_plan','options','investigation'].includes(kind))throw Error('invalid_kind');
-    await controller.create({kind,title:input('newTitle')?.value??'',content:input('newBody')?.value??'',purpose:input('newPurpose')?.value??'exploration',task});
+    const captured={title:input('newTitle')?.value??'',content:input('newBody')?.value??'',purpose:controlValue(nodes.newPurpose),kind:input('newKind')?.value,taskId:controlValue(nodes.newTaskId),context:host.snapshot().currentTask?.object_id};
+    const result=await controller.create({kind,title:captured.title,content:captured.content,purpose:canonicalPurpose(captured.purpose??'exploration'),task});
+    const unchanged=!destroyed&&captured.title===(input('newTitle')?.value??'')&&captured.content===(input('newBody')?.value??'')&&captured.purpose===controlValue(nodes.newPurpose)&&captured.kind===input('newKind')?.value&&captured.taskId===controlValue(nodes.newTaskId)&&captured.context===host.snapshot().currentTask?.object_id;
+    if(result.status==='confirmed'&&unchanged){for(const name of ['newTitle','newBody']){if(input(name)){input(name)!.value='';await host.keepDraft('workspace',formKey(name),'');}}controller.selectConfirmedProduct(result);}
+    else if(result.status==='confirmed')host.announce(T('此前作品已保存；新增文字仍在原处。','The earlier product was saved; newer text remains here.'));
   });});
   // Existing folder owns layout/animation. Only its actual saved product is selected.
   on(nodes.folder,'click',event=>{
@@ -148,7 +158,7 @@ export function mount(context:V4SlotContext):V4SlotHandle {
     const identity=(p?.session_id??'')+':'+(p?.product_id??'');
     if((p||!snap.currentProduct)&&(rendered!==identity||(!d&&renderedVersion!==p?.version))){
       rendered=identity;renderedVersion=p?.version;removeConfirmation=false;
-      for(const [key,field] of [['title','title'],['body','content'],['purpose','purpose']] as const){const n=input(key),next=value?.[field]??'';if(n&&n.value!==next)n.value=next;}
+      for(const [key,field] of [['title','title'],['body','content'],['purpose','purpose']] as const){const n=input(key),next=value?.[field]??'';if(key==='purpose')writePurpose(nodes.purpose,next);else if(n&&n.value!==next)n.value=next;}
       if(nodes.investigation&&p?.kind==='investigation'){
         const payload=(d?.value.structured_payload??p.structured_payload) as InvestigationPayload;
         const pairs:[string,string|undefined][]=[['[data-investigation-question]',payload?.question],['[data-investigation-review="focus"]',payload?.review_focus],['[data-investigation-review="note"]',payload?.review_note]];
@@ -159,7 +169,7 @@ export function mount(context:V4SlotContext):V4SlotHandle {
     }
     const readonly=!p||!!p.removed_at||!controller.can('work_products.versions.create'),blocked=controller.blocked();
     for(const key of ['title','body']){const n=input(key) as HTMLInputElement|undefined;if(n)n.readOnly=readonly;}
-    if(input('purpose'))input('purpose')!.disabled=readonly;
+    disableControl(nodes.purpose,readonly);
     const conflict=controller.conflict(p);
     if(status){status.setAttribute('role','status');status.textContent=snap.storageError?message('draft_storage_failed'):controller.state.error?message(controller.state.error):controller.state.receipt&&controller.state.receipt.status!=='confirmed'?T('请求尚未完成；输入已保留，请查看原请求结果。','The request is not complete. Your input is retained; check its recorded result.'):conflict?message('draft_conflict'):d?T('草稿已保留，尚未保存为工作区版本','Draft retained; not yet saved as a workspace version'):p?T('已保存到工作区','Saved to workspace'):T('选择或新建一份作品','Select or create a work product');}
     save.textContent=T('保存这版','Save this version');copy.textContent=T('另存草稿','Save draft as a copy');refresh.textContent=T('读取工作区更新','Refresh workspace');reference.textContent=T('引用这版','Reference this version');
@@ -185,7 +195,7 @@ export function mount(context:V4SlotContext):V4SlotHandle {
     historyCaption.textContent=T('已保存版本','Saved versions');loadHistory.textContent=T('读取已保存版本','Load saved versions');loadHistory.disabled=!p||controller.state.loading;
     if(historyKey!==versionKey())history=[];
     historyRows.replaceChildren(...history.map(v=>{const row=el('details');row.append(el('summary','v'+v.version+' · '+v.title),el('pre',v.content,'w03-slot-text'),button('打开这个版本','Open this version',()=>host.openReference(productRef(v))));return row;}));
-    const tk=JSON.stringify([controller.state.tasks,snap.uiLanguage,blocked,snap.available]);
+    const tk=JSON.stringify([controller.state.tasks,controller.state.products.map(p=>[p.product_id,p.version,p.task?.object_id,p.title,p.removed_at,p.created_at]),snap.uiLanguage,blocked,snap.available]);
     if(tk!==taskRenderingKey){
       const focused=doc.activeElement as HTMLElement|null,card=focused?.closest<HTMLElement>('[data-task-id]');
       if(card&&focused?.dataset.w03TaskControl)taskFocus={id:card.dataset.taskId!,control:focused.dataset.w03TaskControl};
@@ -200,18 +210,29 @@ export function mount(context:V4SlotContext):V4SlotHandle {
       }
       if(!blocked)taskFocus=undefined;
     }
-    if(nodes.newTask)(nodes.newTask as HTMLButtonElement).disabled=blocked||!controller.can('work_items.create');
-    if(nodes.newProduct)(nodes.newProduct as HTMLButtonElement).disabled=blocked||!controller.can('work_products.create');
+    forms.forEach(form=>form.update());
+    if(!nodes.taskForm&&nodes.newTask)(nodes.newTask as HTMLButtonElement).disabled=blocked||!controller.can('work_items.create');
+    if(!nodes.productForm&&nodes.newProduct)(nodes.newProduct as HTMLButtonElement).disabled=blocked||!controller.can('work_products.create');
   }
   const update=(snapshot:Readonly<V4HostSnapshot>)=>{
     if(destroyed)return;
-    if(formSession!==snapshot.session?.sessionId){formSession=snapshot.session?.sessionId;for(const name of formFields){const n=input(name);if(n)n.value=host.draft<string>('workspace',formKey(name))??'';}}
+    const nextFormSession=JSON.stringify([snapshot.session?.sessionId,snapshot.currentTask?.object_id]);
+    if(formSession!==nextFormSession){formSession=nextFormSession;for(const name of formFields){
+      if((name.startsWith('task')&&nodes.taskForm)||(name.startsWith('new')&&nodes.productForm))continue;
+      const n=input(name);if(!n)continue;const saved=host.draft<string>('workspace',formKey(name));
+      if(name==='newPurpose'&&saved!==undefined)writePurpose(nodes[name],saved);
+      else if(saved!==undefined)n.value=saved;
+      else if(n.tagName==='SELECT'){const select=n as HTMLSelectElement;select.value=[...select.options].find(o=>o.defaultSelected)?.value??select.options[0]?.value??'';}
+      else if(['INPUT','TEXTAREA'].includes(n.tagName))n.value=(n as HTMLInputElement).defaultValue??'';
+      else n.querySelectorAll<HTMLInputElement>('input[type=radio]').forEach(radio=>{radio.checked=radio.defaultChecked;});
+    }}
     controller.update(snapshot);
     const key=JSON.stringify([snapshot.session,snapshot.asOf]);
     if(snapshot.session?.protocol===2&&key!==readKey){readKey=key;void act(()=>controller.refresh());}else render();
   };
+  for(const [kind,node] of [['task',nodes.taskForm],['product',nodes.productForm]] as const){if(node?.tagName==='FORM')forms.push(bindWorkspaceForm(kind,node as HTMLFormElement,host,controller));}
   const importer=nodes.import?mountImport(host,nodes.import,controller):undefined;
   const unsubscribe=host.subscribe(()=>update(host.snapshot()));update(host.snapshot());
-  return {update,destroy:()=>{destroyed=true;unsubscribe();importer?.destroy();listeners.forEach(off=>off());owned.forEach(node=>node.remove());controller.destroy();}};
+  return {update,destroy:()=>{destroyed=true;unsubscribe();importer?.destroy();forms.forEach(form=>form.destroy());listeners.forEach(off=>off());owned.forEach(node=>node.remove());controller.destroy();}};
 }
 export { mount as mountWorkspaceSlot };

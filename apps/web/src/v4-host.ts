@@ -1,12 +1,13 @@
 /** v4 host contract for module-owned native slots. This declares the seam;
  * it does not provide a mock runtime, credentials or another application root. */
-import type { ObjectRef, EvidenceRefV2, VersionPoint } from './features/workspace/contract-types';
+import type { ObjectRef, EvidenceRefV2, VersionPoint } from './contracts-v2';
 
 export type WorkLanguage = 'zh' | 'en';
 export type V4SessionBinding =
   | { protocol: 1; sessionId: string; workLanguage: WorkLanguage | null }
   | { protocol: 2; sessionId: string; workLanguage: WorkLanguage; scenarioHash: string };
 
+export type SemanticStatus = 'waiting_model' | 'model' | 'unavailable';
 export interface V4HostSnapshot {
   session: V4SessionBinding | null;
   uiLanguage: WorkLanguage;
@@ -14,9 +15,11 @@ export interface V4HostSnapshot {
   asOf: VersionPoint | null;
   currentTask: ObjectRef | null;
   currentProduct: ObjectRef | null;
+  /** Independent server capabilities; never infer feedback status from colleague mode. */
+  semantic?: Readonly<Record<'roles' | 'feedback' | 'assistant', SemanticStatus>>;
   busy: boolean;
   storageError: boolean;
-  /** Exact public operation availability, refreshed from the server. */
+  /** Server-confirmed operations supported by this host; incomplete adapters stay false. */
   available: Readonly<Record<string, boolean>>;
 }
 
