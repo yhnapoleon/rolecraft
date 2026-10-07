@@ -28,6 +28,8 @@ def paths_report(package):
     paths=json.loads((package.root/"paths.json").read_text())
     paths.append({"id":"unlisted-combination","domains":["stable_faq","policy"],"participants":35,
         "update_strategy":"manual_policy","work_items":["scope_filter","human_fallback"],"launch_day":7,"request":{"capacity":45}})
+    from .variants import practice_paths
+    paths=practice_paths(paths,package.bundle.id)
     report=[]
     for path in paths:
         s=engine.initial("module-"+path["id"]);sid=s.world.session_id

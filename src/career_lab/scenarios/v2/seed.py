@@ -13,7 +13,8 @@ from .case_records import render_public_cases, render_case_details, validate_pub
 from .localization import require_locale, metadata as locale_metadata, text, runtime_source_files
 
 
-def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, calibration=None):
+def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, calibration=None, scenario_id="pm_pilot", revision="2.6.0"):
+    from .variants import material_definitions, resources, practice_paths
     require_locale(locale)
     min_score=.35 if locale=="zh" else english_min_score
     if locale=="en":
@@ -21,6 +22,8 @@ def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, c
         definitions=list(materials(min_score));role_data=localized_roles()
     else:
         definitions=list(business_materials());role_data=role_definitions()
+    definitions=material_definitions(locale,min_score,scenario_id)
+    scenario_session=f"scenario:{scenario_id}:v2"
     root=Path(root)
     if root.exists() and any(root.iterdir()):raise ValueError("refuse to overwrite scenario release")
     root.mkdir(parents=True,exist_ok=True)
@@ -44,7 +47,7 @@ def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, c
         for row in rows:
             sentence,assertions=row if isinstance(row,tuple) else (row,[])
             start=len(body);body+=sentence+"\n\n"
-            ref=EvidenceRefV2(session_id="scenario:pm_pilot:v2",kind="material",object_id=mid,version=version,
+            ref=EvidenceRefV2(session_id=scenario_session,kind="material",object_id=mid,version=version,
                 span_start=start,span_end=start+len(sentence),quote=sentence,observed_at_seq=0)
             fragments.append(SourceFragment(ref=ref,text=sentence,channel="material",disclosure=policies[mode],
                 fact_ids=tuple(x[0] for x in assertions)))
@@ -67,11 +70,11 @@ def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, c
             overrides["retrieval_debug_code"]=DisclosurePolicy(mode="paraphrase_only",actors=("tech_lead",),
                 paraphrase=text(locale,"tech_register_summary"))
         roles.append(RoleSpecV2(**definition,disclosure_policy=overrides))
-    baseline=AssistantConfig(id="pilot",session_id="scenario:pm_pilot:v2",config_version=0,
+    baseline=AssistantConfig(id="pilot",session_id=scenario_session,config_version=0,
         domains=("stable_faq","onboarding","policy_travel","policy_meal","policy_leave"),
         work_items=("scope_filter","human_fallback"),participants=20,launch_day=7,retrieval_limit=1,min_score=min_score)
     rules={
-        "scenario_id":"pm_pilot","revision":"2.5.0","locale":locale,"source_kind":"authored_synthetic_business_with_actual_module_QA",
+        "scenario_id":scenario_id,"revision":revision,"locale":locale,"source_kind":"authored_synthetic_business_with_actual_module_QA",
         "work_costs":{"scope_filter":1,"human_fallback":1,"realtime_sync":5},
         "approval_limits":{"capacity":60,"dev_days":6,"deadline_day":10},
         "approval_rule_revision":"pm-v2-approval-3",
@@ -131,11 +134,11 @@ def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, c
     for probe in probes:
         probe.update(locale=locale,canonical_probe_id=probe["id"],split="train")
     put("probes.json",probes)
-    put("paths.json",[
+    put("paths.json",practice_paths([
         {"id":"stable_narrow","domains":["stable_faq","onboarding"],"participants":20,"update_strategy":"daily","work_items":["scope_filter","human_fallback"],"launch_day":7,"request":{}},
         {"id":"delayed_realtime","domains":["stable_faq","policy_travel","policy_meal","policy_leave"],"participants":20,"update_strategy":"realtime","work_items":["realtime_sync","human_fallback"],"launch_day":10,"request":{"dev_days":6,"deadline_day":10}},
         {"id":"capacity_expanded","domains":["stable_faq"],"participants":50,"update_strategy":"daily","work_items":["scope_filter","human_fallback"],"launch_day":7,"request":{"capacity":60}},
-        {"id":"manual_policy","domains":["stable_faq","policy_travel","policy_meal"],"participants":20,"update_strategy":"manual_policy","work_items":["scope_filter","human_fallback"],"launch_day":7,"request":{}}])
+        {"id":"manual_policy","domains":["stable_faq","policy_travel","policy_meal"],"participants":20,"update_strategy":"manual_policy","work_items":["scope_filter","human_fallback"],"launch_day":7,"request":{}}],scenario_id))
     decision_examples=[
         {"decision":"defer_with_conditions","evidence":["demand","interviews","technical"],"proposal":"暂不开放动态政策自动回答。稳定FAQ仍有可行路径，我建议先邀请新员工中的小组验证入口指引，保留人工接管；当前样本混合等待与处理，不能承诺按重复率等比例节省人力。由PM整理实际问题和版本，业务负责人核验转交负担，技术负责人复跑更新与范围测试；第3天共同复核，若错误边界和接管责任已明确，再向经理建议下一步。恢复动态政策前须有可追问的来源同步或人工核验安排。","evaluation":"待情境评价，不预填评分"},
         {"decision":"no_go","evidence":[],"proposal":"不调查，全部放弃。","evaluation":"可保留讨论；按证据和后续责任评价，不按枚举自动裁决"}]
@@ -147,7 +150,7 @@ def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, c
     if case_records is not None:
         validate_public_cases(case_records,initial,materials,{"faq","onboarding","policy","meal","leave"},locale=locale)
         put("research/public-case-records.json",case_records)
-    locale_info=locale_metadata(locale,materials,facts,material_files,files,min_score)
+    locale_info=locale_metadata(locale,materials,facts,material_files,files,min_score,scenario_id=scenario_id)
     put("locale.json",locale_info)
     if calibration is not None:
         if locale!="en" or calibration["locale"]!="en" or calibration["selected_threshold"]!=min_score:
@@ -162,13 +165,13 @@ def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, c
     for name,value in {
         "model":{"mode":"local-extractive-v2","generative_model_installed":False},
         "acquisition":{"mode":"user_organized","agent_policy_installed":False},
-        "retrieval":{"mode":"meaningful_token_overlap","default_min_score":0.35,"calibration":"not_yet_established"},
+        "retrieval":{"mode":"meaningful_token_overlap","default_min_score":min_score,"calibration":"development_queries_only" if calibration else "not_yet_established"},
         "decision":{"mode":"deterministic","rule_revision":rules["approval_rule_revision"]},
         "tools":{"operations":["apply_config","refresh_index","request_business","resolve_approval","read_material","tests.create"]},
         "evaluation-protocol":{"mode":"advisory","installed":False,"owner":"W05"}
     }.items():put("runtime/"+name+".json",value)
     def file_ref(path):return FileRef(path=path,sha256=hashlib.sha256(files[path]).hexdigest())
-    runtime=RuntimeBundle(id="w02-runtime",revision="bilingual-r7-"+locale,model=file_ref("runtime/model.json"),prompts=(),
+    runtime=RuntimeBundle(id="w02-runtime",revision="practice-r8-"+scenario_id+"-"+locale,model=file_ref("runtime/model.json"),prompts=(),
         acquisition=file_ref("runtime/acquisition.json"),retrieval=file_ref("runtime/retrieval.json"),
         decision=file_ref("runtime/decision.json"),tools=file_ref("runtime/tools.json"),
         source=SourceIdentity(base_commit="80cf1f6189cd25610d609f44283ff9668582d759",source_digest=digest(code_files),
@@ -179,12 +182,12 @@ def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, c
     put("runtime/evaluation.json",evaluation.model_dump(mode="json"))
     public_paths={p for p in files if p.startswith("materials/") and not any(x in p for x in ("private","tech_diagnostics","policy-v2","demo-v2","scope_note-v2"))}
     if case_records is None:public_paths-= {"materials/failures-v1.md","materials/trial_details-v1.md"}
-    bundle=ScenarioBundle(id="pm_pilot",revision="2.5.0",structure_id="index_scope_resource_dependency",
+    bundle=ScenarioBundle(id=scenario_id,revision=revision,structure_id="index_scope_resource_dependency",
         files=tuple(FileRef(path=p,sha256=hashlib.sha256(raw).hexdigest(),media_type="text/markdown" if p.endswith(".md") else "application/json") for p,raw in sorted(files.items())),
         public_files=tuple(sorted(public_paths)),private_files=tuple(sorted(set(files)-public_paths)),
         role_specs=tuple(roles),domains={"stable_faq":("faq",),"onboarding":("onboarding",),"policy_travel":("policy",),"policy_meal":("meal",),"policy_leave":("leave",)},
         capabilities=("apply_config","refresh_index","request_business","resolve_approval","read_material","test_assistant"),
-        baseline_config=baseline,initial_resources={"capacity":30,"dev_days":3,"deadline_day":7},lineage=("pm_pilot-v1",),split="train")
+        baseline_config=baseline,initial_resources=resources(scenario_id),lineage=("pm_pilot-v1",) if scenario_id=="pm_pilot" else ("pm_pilot-v1",scenario_id+"-v1","pm_pilot-v2"),split="train")
     for path,raw in files.items():
         p=root/path;p.parent.mkdir(parents=True,exist_ok=True);p.write_bytes(raw)
     (root/"manifest.json").write_text(bundle.model_dump_json(indent=2)+"\n")

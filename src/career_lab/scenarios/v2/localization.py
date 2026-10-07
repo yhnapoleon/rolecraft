@@ -26,9 +26,10 @@ def locale_root(root,locale=None):
     return candidate
 
 
-def canonical_facts():
+def canonical_facts(scenario_id="pm_pilot"):
+    from .variants import material_definitions
     result={}
-    for mid,_,_,version,_,rows in canonical_materials():
+    for mid,_,_,version,_,rows in material_definitions("zh",.35,scenario_id):
         for index,row in enumerate(rows):
             if isinstance(row,tuple):
                 for fid,value,unit in row[1]:
@@ -37,22 +38,22 @@ def canonical_facts():
     return result
 
 
-def metadata(locale,materials,facts,material_files,files,min_score):
+def metadata(locale,materials,facts,material_files,files,min_score,*,scenario_id="pm_pilot"):
     require_locale(locale)
-    canonical=canonical_facts();root_id='pm-pilot-facts-'+digest(canonical)
+    canonical=canonical_facts(scenario_id);root_id='pm-pilot-facts-'+digest(canonical)
     by_fact={f'{f.id}@{f.version}':f for f in facts}
     if set(by_fact)!=set(canonical):raise ProtocolError('locale_fact_set_mismatch')
     lineage=Lineage(structure_id=STRUCTURE_ID,fact_root_ids=(root_id,),component_id=COMPONENT_ID,
         derivation_ids=(ACCEPTED_CHINESE_COMMIT,))
     return {'schema_version':1,'locale':locale,'source_language':locale,'original_language':'zh',
-        'translation_basis_commit':ACCEPTED_CHINESE_COMMIT,'canonical_scenario_id':'pm_pilot',
+        'translation_basis_commit':ACCEPTED_CHINESE_COMMIT,'canonical_scenario_id':scenario_id,
         'canonical_fact_root_id':root_id,'lineage':lineage.model_dump(mode='json'),'split':'train',
         'independent_structure_count':1,'translation_adds_independent_structures':0,
         'calibration_usage':'development work on an already-seen training fact root; not held-out evaluation',
         'retrieval_default':min_score,
         'facts':{key:{**value,'display_value':by_fact[key].value,'display_unit':by_fact[key].unit} for key,value in canonical.items()},
         'materials':[{'id':m.id,'version':m.version,'locale':locale,
-            'canonical_record_id':f'pm_pilot:{m.id}@{m.version}',
+            'canonical_record_id':f'{scenario_id}:{m.id}@{m.version}',
             'translation_group_id':f'{root_id}:{m.id}@{m.version}',
             'path':material_files[m.id][str(m.version)],
             'sha256':__import__('hashlib').sha256(files[material_files[m.id][str(m.version)]]).hexdigest()}
@@ -92,7 +93,7 @@ def text(package_or_locale,key):
 def validate_metadata(data,bundle,facts,materials,contents):
     from hashlib import sha256
     locale=require_locale(data['locale'])
-    canonical=canonical_facts()
+    canonical=canonical_facts(bundle.id)
     if (data['canonical_scenario_id']!=bundle.id or data['split']!=bundle.split
             or data['canonical_fact_root_id']!='pm-pilot-facts-'+digest(canonical)):
         raise ProtocolError('locale_canonical_identity_mismatch')

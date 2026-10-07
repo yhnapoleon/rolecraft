@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "id": "w02-runtime",
-  "revision": "bilingual-r7-en",
+  "revision": "practice-r8-pm_pilot-en",
   "model": {
     "schema_version": 2,
     "path": "runtime/model.json",
@@ -19,7 +19,7 @@
   "retrieval": {
     "schema_version": 2,
     "path": "runtime/retrieval.json",
-    "sha256": "3f48e5f463ef76edc5196630788c3f4860ea88a9ed837e7add38d7fe886df12a",
+    "sha256": "6bcc03f28fa46e6f5dfbd9689df0502ddd086eb240258c31bdb13fbf692a945d",
     "media_type": "application/json"
   },
   "decision": {
@@ -37,11 +37,11 @@
   "source": {
     "schema_version": 2,
     "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
-    "source_digest": "e55cfe2d2f28a533722e7541480a68a1cea03165870b4fc242f786c7261b4afb",
+    "source_digest": "faa412728977371c4e81a6b6a9ade15f3501f067737809cf83322909b21b332f",
     "overlay": {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "ae9ce7863e427e1a521870cbe177f2f1f6b7cee5ab37b830c7b1260156e2042c",
+      "sha256": "2679960e97792cb05c3ee696d5082e7de743224606c1dca37d34b58757fc531d",
       "media_type": "application/json"
     },
     "dependency_locks": []
