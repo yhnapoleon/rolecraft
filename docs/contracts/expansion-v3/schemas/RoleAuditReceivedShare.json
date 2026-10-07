@@ -1,5 +1,53 @@
 {
   "$defs": {
+    "DisclosedFragment": {
+      "additionalProperties": false,
+      "properties": {
+        "channel": {
+          "title": "Channel",
+          "type": "string"
+        },
+        "fact_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Fact Ids",
+          "type": "array"
+        },
+        "ref": {
+          "$ref": "#/$defs/EvidenceRefV2"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "text": {
+          "title": "Text",
+          "type": "string"
+        },
+        "verification": {
+          "default": "unverified",
+          "enum": [
+            "unverified",
+            "model_extracted",
+            "verified",
+            "rejected"
+          ],
+          "title": "Verification",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ref",
+        "text",
+        "channel"
+      ],
+      "title": "DisclosedFragment",
+      "type": "object"
+    },
     "EvidenceRefV2": {
       "additionalProperties": false,
       "properties": {
@@ -115,92 +163,6 @@
       "title": "EvidenceRefV2",
       "type": "object"
     },
-    "Executor": {
-      "additionalProperties": false,
-      "properties": {
-        "delegation_id": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Delegation Id"
-        },
-        "id": {
-          "minLength": 1,
-          "title": "Id",
-          "type": "string"
-        },
-        "kind": {
-          "enum": [
-            "human",
-            "external_agent",
-            "reference_agent",
-            "system"
-          ],
-          "title": "Kind",
-          "type": "string"
-        },
-        "schema_version": {
-          "const": 2,
-          "default": 2,
-          "title": "Schema Version",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "id",
-        "kind"
-      ],
-      "title": "Executor",
-      "type": "object"
-    },
-    "FeedbackReadBoundary": {
-      "additionalProperties": false,
-      "properties": {
-        "attestation": {
-          "const": "common_store_trace_v1",
-          "default": "common_store_trace_v1",
-          "title": "Attestation",
-          "type": "string"
-        },
-        "content_hash": {
-          "pattern": "^[0-9a-f]{64}$",
-          "title": "Content Hash",
-          "type": "string"
-        },
-        "dependencies": {
-          "items": {
-            "$ref": "#/$defs/ObjectRef"
-          },
-          "minItems": 1,
-          "title": "Dependencies",
-          "type": "array"
-        },
-        "path": {
-          "title": "Path",
-          "type": "string"
-        },
-        "schema_version": {
-          "const": 2,
-          "default": 2,
-          "title": "Schema Version",
-          "type": "integer"
-        }
-      },
-      "required": [
-        "path",
-        "content_hash",
-        "dependencies"
-      ],
-      "title": "FeedbackReadBoundary",
-      "type": "object"
-    },
     "ObjectRef": {
       "additionalProperties": false,
       "properties": {
@@ -289,92 +251,19 @@
   },
   "additionalProperties": false,
   "properties": {
-    "criterion": {
-      "anyOf": [
-        {
-          "minLength": 1,
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Criterion"
+    "fragment": {
+      "$ref": "#/$defs/DisclosedFragment"
     },
-    "evidence": {
-      "default": [],
-      "items": {
-        "$ref": "#/$defs/EvidenceRefV2"
-      },
-      "title": "Evidence",
-      "type": "array"
-    },
-    "evidence_status": {
-      "anyOf": [
-        {
-          "enum": [
-            "none_submitted",
-            "user_submitted_unverified"
-          ],
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Evidence Status"
-    },
-    "executor": {
-      "$ref": "#/$defs/Executor"
-    },
-    "feedback": {
+    "product": {
       "$ref": "#/$defs/ObjectRef"
     },
-    "id": {
-      "minLength": 1,
-      "title": "Id",
-      "type": "string"
-    },
-    "kind": {
-      "enum": [
-        "objection",
-        "supplement"
-      ],
-      "title": "Kind",
-      "type": "string"
-    },
-    "read_boundaries": {
-      "anyOf": [
-        {
-          "items": {
-            "$ref": "#/$defs/FeedbackReadBoundary"
-          },
-          "type": "array"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Read Boundaries"
-    },
-    "read_projection": {
-      "anyOf": [
-        {
-          "const": "partial",
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Read Projection"
-    },
-    "recorded_at": {
+    "received_at": {
       "$ref": "#/$defs/VersionPoint"
+    },
+    "role_id": {
+      "minLength": 1,
+      "title": "Role Id",
+      "type": "string"
     },
     "schema_version": {
       "const": 2,
@@ -382,45 +271,17 @@
       "title": "Schema Version",
       "type": "integer"
     },
-    "section": {
-      "default": "general",
-      "enum": [
-        "general",
-        "verified_facts",
-        "historical_responsibilities",
-        "rule_items",
-        "model_advice"
-      ],
-      "title": "Section",
-      "type": "string"
-    },
-    "session_id": {
-      "minLength": 1,
-      "title": "Session Id",
-      "type": "string"
-    },
-    "text": {
-      "maxLength": 12000,
-      "minLength": 1,
-      "title": "Text",
-      "type": "string"
-    },
-    "version": {
-      "const": 1,
-      "default": 1,
-      "title": "Version",
-      "type": "integer"
+    "share": {
+      "$ref": "#/$defs/ObjectRef"
     }
   },
   "required": [
-    "id",
-    "session_id",
-    "feedback",
-    "kind",
-    "text",
-    "recorded_at",
-    "executor"
+    "share",
+    "product",
+    "role_id",
+    "received_at",
+    "fragment"
   ],
-  "title": "FeedbackResponseRecord",
+  "title": "RoleAuditReceivedShare",
   "type": "object"
 }

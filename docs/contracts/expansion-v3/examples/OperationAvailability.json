@@ -1,0 +1,8 @@
+{
+  "capability": null,
+  "installed": false,
+  "name": "example",
+  "ready": false,
+  "schema_version": 2,
+  "unavailable_code": "module_unavailable"
+}

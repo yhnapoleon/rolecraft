@@ -1,6 +1,7 @@
 {
   "criterion": null,
   "evidence": [],
+  "evidence_status": null,
   "executor": {
     "delegation_id": null,
     "id": "human:example",
@@ -17,6 +18,7 @@
   },
   "id": "response",
   "kind": "objection",
+  "read_boundaries": null,
   "read_projection": null,
   "recorded_at": {
     "business_seq": 0,

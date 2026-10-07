@@ -1,0 +1,62 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "capability": {
+      "anyOf": [
+        {
+          "enum": [
+            "read",
+            "act",
+            "submit",
+            "delegate"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Capability"
+    },
+    "installed": {
+      "title": "Installed",
+      "type": "boolean"
+    },
+    "name": {
+      "minLength": 1,
+      "title": "Name",
+      "type": "string"
+    },
+    "ready": {
+      "title": "Ready",
+      "type": "boolean"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "unavailable_code": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Unavailable Code"
+    }
+  },
+  "required": [
+    "name",
+    "installed",
+    "ready"
+  ],
+  "title": "OperationAvailability",
+  "type": "object"
+}

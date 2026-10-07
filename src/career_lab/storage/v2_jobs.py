@@ -78,13 +78,14 @@ class JobStoreMixin:
             if check_context:self._check_job_context(c,context,command)
             return auth
 
-    def job_view(self,auth,context,*,command=None):
+    def job_view(self,auth,context,*,command=None,worker_claim=None,capability='act'):
         """Read the exact queued/refreshed snapshot, filtered by current permission."""
         from .v2_store import TransactionView
         with self.db.transaction() as c:
             current_auth=self._job_auth(c,context,'read')
             if current_auth!=auth:raise ProtocolError('credential_revoked_or_invalid',status=403)
             self._check_job_context(c,context,command)
+            if worker_claim is not None:self._validate_job_commit(c,auth,command,context,worker_claim,capability)
             state=self._job_snapshot(c,context)
             row=self._row(c,auth.session_id)
             records=self._records(c,auth.session_id,context.as_of.storage_revision)
@@ -93,7 +94,7 @@ class JobStoreMixin:
             cycles=[x for x in records if x.ref.kind=='cycle' and x.ref.object_id==state.cycle_id]
             private=ScenarioStateV2.model_validate(max(scenarios,key=lambda x:x.ref.version).content) if scenarios else None
             cycle=max(cycles,key=lambda x:x.ref.version) if cycles else None
-            return TransactionView(state,SessionBindings.model_validate_json(row['bindings']),visible,private,cycle)
+            return TransactionView(state,SessionBindings.model_validate_json(row['bindings']),visible,private,cycle,job_context=context,worker_claim=worker_claim)
 
     def _validate_job_commit(self,c,auth,command,context,claim,capability):
         from career_lab.jobs.repository import jobs
@@ -121,7 +122,9 @@ class JobStoreMixin:
         original_auth=self._job_auth(c,context,payload['capability'])
         # Caller permission never grants a revoked/narrowed original actor new authority.
         self._auth(c,auth,'act',context.action,[x.object_id for x in context.sources])
-        if row['status']!='needs_context':raise ProtocolError('job_refresh_not_available',status=409)
+        failed_model=row['status']=='failed' and row['kind'] in {'v2.role_turn','v2.feedback','v2.submission-feedback'}
+        if row['status']!='needs_context' and not failed_model:raise ProtocolError('job_refresh_not_available',status=409)
+        self._ensure_delegation_capacity(c,original_auth,1)
         self._check_job_lifecycle(c,context,Command.model_validate(payload['command']),refresh=True)
         if c.execute(select(v2_transactions.c.request_id).where(v2_transactions.c.session_id==auth.session_id,v2_transactions.c.request_id==context.request_id)).first():raise ProtocolError('job_effect_already_committed',status=409)
         records=self._records(c,auth.session_id)

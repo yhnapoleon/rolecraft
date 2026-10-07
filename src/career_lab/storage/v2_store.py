@@ -1,5 +1,5 @@
 """Atomic v2 storage and authentication hooks for independently installed modules."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from uuid import uuid4
 import hmac
@@ -15,14 +15,18 @@ from career_lab.contracts.v2 import *
 from .v2_tables import *
 from .v2_jobs import JobStoreMixin
 
-ROLE_REPLY_PRIVATE_FIELDS=frozenset({'prompt_messages','prompt_hash','context_hash','history_revision','source_versions','omitted_sources'})
+ROLE_REPLY_PRIVATE_FIELDS=frozenset({'prompt_messages','prompt_hash','context_hash','history_revision','source_versions','omitted_sources','attempts','actual_disclosures','received_shares','internal_disclosures','context'})
 
 def role_reply_has_private_fields(content):
-    """Recognize legacy audit fields without rejecting the new public quote DTO."""
-    if ROLE_REPLY_PRIVATE_FIELDS.intersection(content):return True
-    spoken=content.get('spoken_evidence',())
-    if not isinstance(spoken,(list,tuple)):return True
-    return any(not isinstance(item,dict) or set(item)-{'schema_version','label','quote','verification'} for item in spoken)
+    """Validate the entire fixed public DTO, independent of registry replacement."""
+    from career_lab.storage.role_memory import RoleReply
+    if not isinstance(content,dict) or ROLE_REPLY_PRIVATE_FIELDS.intersection(content):return True
+    try:
+        # JSON round-trip prevents a preconstructed nested model from avoiding
+        # recursive validation. Never return the private validation input.
+        RoleReply.model_validate_json(canonical(content))
+    except (ValidationError,TypeError,ValueError):return True
+    return False
 
 
 OBJECT_MODELS={
@@ -55,6 +59,30 @@ class JobRequest(V2):
     state_dependencies: tuple[Literal['config_version','resources','applied_milestones','status','cycle_id'],...] = ()
 
 @dataclass(frozen=True)
+class RoleExecutionPermit:
+    seal: object = field(repr=False)
+    auth: AuthContext = field(repr=False)
+    role_auth: AuthContext = field(repr=False)
+    context: JobContextSnapshot
+    command: Command
+    claim: object = field(repr=False)
+    role_id: str
+    private_refs: tuple[ObjectRef,...]
+    external_refs: tuple[ExternalReference,...]
+    prompt_context: RoleContext = field(repr=False)
+    prompt_hash: str
+    history_revision: str
+    public_cycles: tuple[ObjectRef | None,...] = ()
+    mutation_hash: str | None = None
+
+@dataclass(frozen=True)
+class FeedbackReadTrace:
+    # Server-only: producer must know the complete input set for this segment.
+    record: ObjectRef
+    path: str
+    dependencies: tuple[ObjectRef,...]
+
+@dataclass(frozen=True)
 class Mutation:
     writes: tuple[ObjectWrite, ...] = ()
     events: tuple[EventDraft, ...] = ()
@@ -64,6 +92,8 @@ class Mutation:
     decision: BusinessDecision | None = None
     jobs: tuple[JobRequest,...] = ()
     refresh_job: str | None = None
+    private_role_authority: object | None = field(default=None,repr=False)
+    feedback_read_traces: tuple[FeedbackReadTrace,...] = ()
 
 class TransactionResult(V2):
     transaction_id: Identifier
@@ -84,6 +114,8 @@ class TransactionView:
     current_cycle: StoredObject | None = field(default=None,repr=False)
     reference_allowed: object | None = field(default=None,repr=False)
     removal_cascade: Literal["current_product_only"] | None = None
+    job_context: JobContextSnapshot | None = field(default=None,repr=False)
+    worker_claim: object | None = field(default=None,repr=False)
     def get(self,ref: ObjectRef) -> StoredObject:
         found=next((x for x in self.objects if x.ref==ref),None)
         if found is None:raise ProtocolError('object_not_found',status=404)
@@ -91,6 +123,7 @@ class TransactionView:
 
 class V2Store(JobStoreMixin):
     def __init__(self, url_or_db):
+        self._role_execution_seal=object()
         self.db=url_or_db if isinstance(url_or_db,Database) else Database(url_or_db)
         # v2 table definitions are registered before this additive create_all.
         from career_lab.jobs.repository import jobs as queue
@@ -100,9 +133,42 @@ class V2Store(JobStoreMixin):
         self.contextual_reference_resolvers=set()
 
     def register_reference_resolver(self,kind,resolver,*,contextual=False):
+        if kind=='event':raise ValueError('event references are managed by the common store')
         if kind in self.object_models or kind in self.reference_resolvers:raise ValueError('reference kind already registered')
         self.reference_resolvers[kind]=resolver
         if contextual:self.contextual_reference_resolvers.add(kind)
+
+    def _event_reference(self,c,ref,*,auth=None,role_id=None,ceiling=None):
+        if ref.kind!='event' or ref.version!=1 or ref.config_version is not None:raise ProtocolError('event_reference_invalid')
+        rows=c.execute(select(v2_events.c.record).where(v2_events.c.session_id==ref.session_id)).scalars()
+        event=next((item for raw in rows if (item:=StoredEvent.model_validate_json(raw)).id==ref.object_id),None)
+        if event is None or (ceiling is not None and event.seq>ceiling.business_seq):raise ProtocolError('object_not_found',status=404)
+        if auth is not None:
+            if ref.session_id!=auth.session_id:raise ProtocolError('object_not_found',status=404)
+            event_scope=(event.data.get('material_id'),) if event.type=='material_read' and auth.allowed_objects is not None and ref.object_id not in auth.allowed_objects else (ref.object_id,)
+            self._auth(c,auth,'read',object_ids=event_scope)
+            if 'research' not in auth.capabilities and auth.actor_id not in event.visible_to:raise ProtocolError('object_not_found',status=404)
+        elif role_id is None or role_id not in event.visible_to:raise ProtocolError('object_not_found',status=404)
+        if isinstance(ref,EvidenceRefV2):
+            if ref.observed_at_seq<event.seq or (ceiling is not None and ref.observed_at_seq>ceiling.business_seq):raise ProtocolError('future_evidence')
+            if ref.quote is not None or ref.span_start is not None:
+                # W05's public reading record has a fixed text projection. It
+                # contains only an independently authorized material identity,
+                # never the raw event dictionary or private scenario payload.
+                mid,version=event.data.get('material_id'),event.data.get('version')
+                if auth is None or event.type!='material_read' or not isinstance(mid,str) or type(version) is not int:
+                    raise ProtocolError('event_reference_requires_projection')
+                current=ceiling or WorldStateV2.model_validate_json(self._row(c,auth.session_id)['state'])
+                material=ObjectRef(session_id=auth.session_id,kind='material',object_id=mid,version=version)
+                self._resolve_reference(c,auth,material,current,SessionBindings.model_validate_json(self._row(c,auth.session_id)['bindings']))
+                text=f'Material read: {mid} v{version}'
+                if ref.span_start is not None:
+                    if ref.span_end>len(text) or text[ref.span_start:ref.span_end]!=ref.quote:raise ProtocolError('reference_quote_mismatch',status=409)
+                elif not ref.quote or ref.quote not in text:raise ProtocolError('reference_quote_mismatch',status=409)
+        return event
+
+    def _event_keys(self,c,sid,ceiling):
+        return {canonical(ObjectRef(session_id=sid,kind='event',object_id=event.id,version=1)) for raw in c.execute(select(v2_events.c.record).where(v2_events.c.session_id==sid,v2_events.c.seq<=ceiling.business_seq)).scalars() if (event:=StoredEvent.model_validate_json(raw))}
 
     def _external(self,c,sid,revision=None):
         q=select(v2_external_refs).where(v2_external_refs.c.session_id==sid)
@@ -110,6 +176,7 @@ class V2Store(JobStoreMixin):
         return tuple(ExternalReference.model_validate_json(x['record']) for x in c.execute(q).mappings())
 
     def register_object(self,kind,model):
+        if kind=='event':raise ValueError('event references are managed by the common store')
         if kind in self.object_models or kind in self.reference_resolvers:raise ValueError('reference kind already registered')
         if not issubclass(model,V2):raise TypeError('object model must be v2')
         self.object_models[kind]=model
@@ -164,7 +231,7 @@ class V2Store(JobStoreMixin):
         if not rows:return False
         first_record=StoredObject.model_validate_json(rows[0]);latest=StoredObject.model_validate_json(rows[-1]).content
         if first_record.creator!=auth.executor:return False
-        if first_record.ref.kind in {'test','review','submission','business_request','business_decision','feedback','feedback_response'}:return True
+        if first_record.ref.kind in {'test','review','submission','business_request','business_decision','feedback','feedback_response','role_turn','role_reply'}:return True
         return first_record.ref.kind=='product' and (latest.get('task') or {}).get('object_id') in auth.create_under_tasks
 
     def authenticate(self,sid,token):
@@ -176,7 +243,8 @@ class V2Store(JobStoreMixin):
     def authorize(self,auth,capability,operation=None,object_ids=()):
         with self.db.engine.connect() as c:return self._auth(c,auth,capability,operation,object_ids)
 
-    def issue_delegation(self,owner:AuthContext,grant:DelegationGrant):
+    def issue_delegation(self,owner:AuthContext,grant:DelegationGrant,*,max_active_jobs=2):
+        if type(max_active_jobs) is not int or not 1<=max_active_jobs<=2:raise ProtocolError('delegation_job_limit_invalid')
         with self.db.transaction() as c:
             self._auth(c,owner,'delegate')
             key=c.execute(select(v2_credentials.c.token_hash).where(v2_credentials.c.id==owner.credential_id)).scalar_one()
@@ -193,10 +261,28 @@ class V2Store(JobStoreMixin):
             if owner.expires_at and grant.expires_at>owner.expires_at:raise ProtocolError('delegation_escalation',status=403)
             context=AuthContext(session_id=owner.session_id,actor_id=grant.actor_id,executor=grant.executor,capabilities=grant.capabilities,allowed_actions=grant.allowed_actions,allowed_objects=grant.allowed_objects,create_under_tasks=grant.create_under_tasks,expires_at=grant.expires_at,credential_id=grant.id)
             previous=c.execute(select(v2_credentials).where(v2_credentials.c.id==grant.id).with_for_update()).mappings().first()
+            policy=c.execute(select(v2_delegation_job_limits.c.max_active_jobs).where(v2_delegation_job_limits.c.credential_id==grant.id)).scalar_one_or_none()
+            if previous and (policy if policy is not None else 2)!=max_active_jobs:raise ProtocolError('delegation_id_reused',status=409)
             if previous:
                 if previous['revoked'] or previous['context']!=canonical(context) or previous['token_hash']!=digest(token):raise ProtocolError('delegation_id_reused',status=409)
             else:self._credential(c,context,token)
+            if policy is None:c.execute(insert(v2_delegation_job_limits).values(credential_id=grant.id,session_id=grant.session_id,max_active_jobs=max_active_jobs))
         return token
+
+    def _delegation_capacity(self,c,auth):
+        from career_lab.jobs.repository import delegation_capacity
+        self._auth(c,auth)
+        return delegation_capacity(c,auth)
+
+    def delegation_job_capacity(self,auth):
+        with self.db.transaction() as c:
+            self._auth(c,auth,'read')
+            return self._delegation_capacity(c,auth)
+
+    def _ensure_delegation_capacity(self,c,auth,additional):
+        from career_lab.jobs.repository import require_delegation_capacity
+        self._auth(c,auth)
+        require_delegation_capacity(c,auth,additional)
 
     def revoke_delegation(self,owner,credential_id):
         with self.db.transaction() as c:
@@ -276,6 +362,9 @@ class V2Store(JobStoreMixin):
             except ProtocolError as exc:
                 if exc.code in {'credential_revoked_or_invalid','credential_expired','capability_forbidden'}:raise
                 return False
+            if ref.kind=='event':
+                try:self._event_reference(c,ref,auth=auth);return True
+                except ProtocolError:return False
             target=by_ref.get(canonical(ref))
             if target is not None:return self._visible(target,auth)
             if canonical(ref) not in external or ref.kind not in self.reference_resolvers or origin is None:return False
@@ -395,6 +484,7 @@ class V2Store(JobStoreMixin):
             self._auth(c,auth,'read',object_ids=(ref.object_id,))
             if ref.session_id!=auth.session_id:raise ProtocolError('object_not_found',status=404)
             bare=ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode='json').items() if k in ObjectRef.model_fields})
+            if ref.kind=='event':self._event_reference(c,ref,auth=auth,ceiling=state);return True
             if ref.kind in self.reference_resolvers:
                 self._resolve_reference(c,auth,ref,state,bindings);return True
             target=next((x for x in allowed if x.ref==bare),None)
@@ -408,9 +498,222 @@ class V2Store(JobStoreMixin):
             view=self._operation_view(c,auth,WorldStateV2.model_validate_json(row['state']),SessionBindings.model_validate_json(row['bindings']),self._records(c,auth.session_id))
             return reader(view)
 
+    def query_at(self,auth,at,reader,*,operation=None):
+        """Trusted read adapter at one real persisted point, with current scope.
+
+        Historical metadata is never a credential, and no public route exposes
+        this internal scenario view. The original bindings stay unchanged.
+        """
+        with self.db.transaction() as c:
+            self._auth(c,auth,'read',operation)
+            row=self._row(c,auth.session_id)
+            raw=c.execute(select(v2_snapshots.c.state).where(v2_snapshots.c.session_id==auth.session_id,v2_snapshots.c.storage_revision==at.storage_revision)).scalar_one_or_none()
+            if raw is None:raise ProtocolError('snapshot_window_unavailable',status=404)
+            state=WorldStateV2.model_validate_json(raw)
+            if VersionPoint(**state.model_dump(include={'business_seq','workspace_revision','storage_revision'}))!=at:
+                raise ProtocolError('snapshot_point_mismatch',status=409)
+            records=self._records(c,auth.session_id,at.storage_revision)
+            allowed=self._project_public_records(c,auth,records)
+            cycles=[r for r in records if r.ref.kind=='cycle' and r.ref.object_id==state.cycle_id]
+            cycle=max(cycles,key=lambda r:r.ref.version) if cycles else None
+            bindings=SessionBindings.model_validate_json(row['bindings'])
+            private=self._scenario_state(c,auth.session_id,at.storage_revision)
+            def reference_allowed(ref):
+                if c.closed:raise ProtocolError('reference_view_expired',status=409)
+                self._auth(c,auth,'read',object_ids=(ref.object_id,))
+                if ref.session_id!=auth.session_id:raise ProtocolError('object_not_found',status=404)
+                if ref.kind in self.reference_resolvers:
+                    self._resolve_reference(c,auth,ref,state,bindings);return True
+                bare=ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode='json').items() if k in ObjectRef.model_fields})
+                return any(r.ref==bare for r in allowed)
+            return reader(TransactionView(state,bindings,allowed,private,cycle,reference_allowed))
+
     def view(self,auth):
         # A retained snapshot contains data, not a reusable authority callback.
         return self.query(auth,lambda v:TransactionView(v.state,v.bindings,v.objects,v.private_scenario_state,v.current_cycle))
+
+    def role_snapshot_records(self,auth,view,role_id):
+        """Internal role projection at a real recorded job window, never a public read.
+
+        The caller identity is preserved. No owner/role token is substituted for
+        it and no private rows are added to its ordinary TransactionView.objects.
+        """
+        context=view.job_context
+        if context is None or context.action!='turns.create':raise ProtocolError('role_job_snapshot_required',status=409)
+        if role_id in {'learner','system','research'}:raise ProtocolError('role_not_available',status=404)
+        with self.db.transaction() as c:
+            if self._job_auth(c,context,'read')!=auth:raise ProtocolError('credential_revoked_or_invalid',status=403)
+            self._check_job_context(c,context)
+            state=self._job_snapshot(c,context)
+            bindings=SessionBindings.model_validate_json(self._row(c,auth.session_id)['bindings'])
+            if state!=view.state or bindings!=view.bindings:raise ProtocolError('role_snapshot_identity_invalid',status=409)
+            records=self._records(c,auth.session_id,context.as_of.storage_revision)
+            if not any(r.ref.kind=='job_context' and r.content==context.model_dump(mode='json') for r in records):raise ProtocolError('role_job_snapshot_unrecorded',status=409)
+            subjects=[r for r in context.sources if r.kind=='role_turn']
+            if len(subjects)!=1:raise ProtocolError('role_subject_invalid')
+            request=next((r for r in records if r.ref==subjects[0]),None)
+            if request is None or request.content.get('executor')!=auth.executor.model_dump(mode='json') or request.content.get('input',{}).get('role_id')!=role_id:raise ProtocolError('role_snapshot_identity_invalid',status=403)
+            scenario=self._scenario_state(c,auth.session_id,context.as_of.storage_revision)
+            if scenario is None or scenario!=view.private_scenario_state:raise ProtocolError('role_snapshot_state_missing',status=409)
+            selected=tuple(r for r in records if role_id in r.visible_to and ((r.ref.kind in {'role_context','role_reply'} and r.content.get('role_id')==role_id) or r.ref.kind=='business_decision'))
+            for record in selected:
+                if record.ref.kind!='role_context':continue
+                try:private=RoleContext.model_validate(record.content)
+                except (ValidationError,TypeError,ValueError):raise ProtocolError('role_private_record_invalid',status=409) from None
+                audit=private.generation_audit
+                if audit is None:continue
+                request=next((r for r in records if r.ref==audit.request),None)
+                if request is None or request.content.get('executor')!=audit.scope.executor.model_dump(mode='json') or request.content.get('input',{}).get('role_id')!=role_id:raise ProtocolError('role_history_identity_invalid',status=409)
+                supplied={canonical(x) for x in (*private.sources,*(r.fragment for r in audit.received_shares),*(m.fragment for m in audit.memories))}
+                if any(canonical(x) not in supplied for x in audit.used_sources):raise ProtocolError('role_history_source_invalid',status=409)
+                for receipt in audit.received_shares:
+                    historical=[r for r in records if r.created_storage_revision<=receipt.received_at.storage_revision]
+                    shares=[r for r in historical if r.ref.kind=='share' and r.ref.object_id==receipt.share.object_id]
+                    products=[r for r in historical if r.ref.kind=='product' and r.ref.object_id==receipt.product.object_id]
+                    if not shares or not products:raise ProtocolError('role_share_receipt_invalid',status=409)
+                    head=max(shares,key=lambda r:r.ref.version);share=ProductShare.model_validate(head.content)
+                    product=next((r for r in products if r.ref==receipt.product),None)
+                    if head.ref!=receipt.share or share.recipient_role!=role_id or share.product!=receipt.product or share.revoked_at is not None or product is None or max(products,key=lambda r:r.ref.version).content.get('removed_at') is not None:raise ProtocolError('role_share_receipt_invalid',status=409)
+                    if any(getattr(share.shared_at,k)>getattr(receipt.received_at,k) for k in ('business_seq','workspace_revision','storage_revision')):raise ProtocolError('role_share_receipt_invalid',status=409)
+                    text=canonical({k:product.content[k] for k in ('title','content','purpose','structured_payload')})
+                    if receipt.fragment.text!=text or receipt.fragment.ref.observed_at_seq!=receipt.received_at.business_seq:raise ProtocolError('role_share_receipt_invalid',status=409)
+            events=tuple(StoredEvent.model_validate_json(raw) for raw in c.execute(select(v2_events.c.record).where(v2_events.c.session_id==auth.session_id,v2_events.c.seq<=context.as_of.business_seq).order_by(v2_events.c.seq)).scalars())
+            events=tuple(event for event in events if role_id in event.visible_to)
+            return scenario,selected,events
+
+    def begin_role_execution(self,view,envelope,auth,claim,catalog,*,max_context_chars):
+        from career_lab.api.role_snapshot import FixedRoleSnapshotPort
+        from career_lab.runtime.context_v2 import ContextPort
+        from career_lab.storage.role_memory import RoleTurn
+        request_ref=ObjectRef.model_validate(envelope.command.payload.get('subject'))
+        if request_ref.kind!='role_turn' or envelope.operation!='v2.role_turn':raise ProtocolError('role_subject_invalid')
+        request=RoleTurn.model_validate(view.get(request_ref).content)
+        snapshot=ContextPort(catalog,FixedRoleSnapshotPort(self,catalog)).capture(view,auth,request.input,as_of=envelope.context.as_of)
+        messages,_=snapshot.messages(auth,max_chars=max_context_chars)
+        role_auth=self.role_reader(auth.session_id,request.input.role_id)
+        with self.db.transaction() as c:
+            self._validate_job_commit(c,auth,envelope.command,envelope.context,claim,envelope.capability)
+            records=self._records(c,auth.session_id,envelope.context.as_of.storage_revision)
+            refs=[*references(snapshot.context.model_dump(mode='json')),request_ref]
+            for receipt in snapshot.received_shares:refs.extend((receipt.share,receipt.product,receipt.fragment.ref))
+            for memory in snapshot.memories:refs.extend((*memory.learner_refs,*memory.provenance,memory.fragment.ref))
+            unique={canonical(ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode='json').items() if k in ObjectRef.model_fields})):ref for ref in refs}
+            externals=[]
+            for ref in unique.values():
+                if ref.kind=='event':self._event_reference(c,ref,role_id=request.input.role_id,ceiling=view.state)
+                elif ref.kind in self.reference_resolvers:externals.append(self._resolve_reference(c,role_auth,ref,view.state,view.bindings))
+                elif not any(r.ref==ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode='json').items() if k in ObjectRef.model_fields}) for r in records):raise ProtocolError('role_private_source_missing',status=409)
+            existing_external={canonical(item.ref):item for item in self._external(c,auth.session_id)}
+            if any(canonical(item.ref) in existing_external and existing_external[canonical(item.ref)]!=item for item in externals):raise ProtocolError('external_reference_drift',status=409)
+            permit=RoleExecutionPermit(self._role_execution_seal,auth.model_copy(deep=True),role_auth,envelope.context,envelope.command,claim,request.input.role_id,tuple(ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode='json').items() if k in ObjectRef.model_fields}) for ref in unique.values()),tuple(externals),snapshot.context,digest(messages),snapshot.history_revision,public_cycles=(request.origin_cycle,view.current_cycle.ref if view.current_cycle else None))
+            return permit,snapshot
+
+    @staticmethod
+    def _role_plan_hash(plan):
+        return digest({'feedback_read_traces':[{'record':t.record.model_dump(mode='json'),'path':t.path,'dependencies':[r.model_dump(mode='json') for r in t.dependencies]} for t in plan.feedback_read_traces],'writes':[w.model_dump(mode='json') for w in plan.writes],'events':[e.model_dump(mode='json') for e in plan.events],'jobs':[j.model_dump(mode='json') for j in plan.jobs],'state_changes':plan.state_changes,'decision':plan.decision.model_dump(mode='json') if plan.decision else None,'result':plan.result,'refresh_job':plan.refresh_job})
+
+    def authorize_role_plan(self,permit,plan):
+        if not isinstance(permit,RoleExecutionPermit) or permit.seal is not self._role_execution_seal:raise ProtocolError('role_authority_invalid',status=403)
+        if plan.events or plan.jobs or plan.state_changes or plan.decision or plan.refresh_job or len(plan.writes)!=2:raise ProtocolError('role_generation_only',status=403)
+        public=[w for w in plan.writes if w.ref.kind=='role_reply'];private=[w for w in plan.writes if w.ref.kind=='role_context']
+        if len(public)!=1 or len(private)!=1:raise ProtocolError('role_generation_only',status=403)
+        reply=public[0];context=RoleContext.model_validate(private[0].content);audit=context.generation_audit
+        if set(reply.visible_to)!={'learner',permit.role_id} or set(private[0].visible_to)!={'system',permit.role_id}:raise ProtocolError('role_private_audience_invalid',status=403)
+        if reply.content.get('role_id')!=permit.role_id or reply.content.get('executor')!=permit.auth.executor.model_dump(mode='json'):raise ProtocolError('role_executor_spoofed',status=403)
+        original=ObjectRef.model_validate(permit.command.payload['subject'])
+        if reply.content.get('request')!=original.model_dump(mode='json') or audit is None or audit.phase!='completed' or audit.reply!=reply.ref or audit.request!=original or audit.job_id!=permit.claim.job_id or audit.job_attempt!=permit.claim.attempt:raise ProtocolError('role_private_identity_invalid',status=403)
+        if context.role_id!=permit.role_id or context.as_of!=permit.context.as_of or audit.scope.executor!=permit.auth.executor or audit.scope.credential_id!=permit.auth.credential_id:raise ProtocolError('role_private_identity_invalid',status=403)
+        expected_scope=RoleAuditScope(**{key:getattr(permit.auth,key) for key in RoleAuditScope.model_fields if key!='schema_version'})
+        if audit.scope!=expected_scope:raise ProtocolError('role_private_scope_mismatch',status=403)
+        if context.model_dump(mode='json',exclude={'generation_audit','actual_disclosures'})!=permit.prompt_context.model_dump(mode='json',exclude={'generation_audit','actual_disclosures'}):raise ProtocolError('role_private_context_mismatch',status=409)
+        if tuple(reply.content.get(key) for key in ('origin_cycle','generation_cycle'))!=tuple(ref.model_dump(mode='json') if ref else None for ref in permit.public_cycles):raise ProtocolError('role_public_cycle_invalid',status=403)
+        for disclosure in context.actual_disclosures:
+            if disclosure.reply_ref!=reply.ref or disclosure.quote not in reply.content.get('text','') or disclosure.fact_id not in permit.prompt_context.prompt_fact_ids:raise ProtocolError('role_disclosure_invalid',status=403)
+        if audit.prompt_hash!=permit.prompt_hash or audit.history_revision!=permit.history_revision or audit.refresh_count!=permit.context.refresh_count:raise ProtocolError('role_private_context_mismatch',status=409)
+        if audit.worker_id!=permit.claim.worker_id or audit.lease_token_hash!=digest(permit.claim.lease_token):raise ProtocolError('role_private_identity_invalid',status=403)
+        if any(w.expected_head!=0 or w.ref.version!=1 or w.ref.session_id!=permit.auth.session_id for w in plan.writes):raise ProtocolError('role_generation_identity_conflict',status=409)
+        if any(ref.kind not in {'role_turn','cycle'} for ref in references(reply.content)):raise ProtocolError('role_public_private_dependency',status=403)
+        allowed={canonical(ref) for ref in (*permit.private_refs,reply.ref)}
+        if any(canonical(ref) not in allowed for ref in references(private[0].content)):raise ProtocolError('role_private_source_unapproved',status=403)
+        return replace(plan,private_role_authority=replace(permit,mutation_hash=self._role_plan_hash(plan)))
+
+    def _role_lease(self,c,permit):
+        from career_lab.jobs.repository import jobs
+        from career_lab.jobs.worker import WorkerClaim
+        if not isinstance(permit,RoleExecutionPermit) or permit.seal is not self._role_execution_seal or not isinstance(permit.claim,WorkerClaim):raise ProtocolError('role_authority_invalid',status=403)
+        claim=permit.claim
+        row=c.execute(select(jobs).where(jobs.c.id==claim.job_id).with_for_update()).mappings().first()
+        if row is None or row['status']!='running' or row['kind']!='v2.role_turn' or row['lease_until']<=time.time() or (row['lease_token'],row['worker_id'],row['attempt'])!=(claim.lease_token,claim.worker_id,claim.attempt):raise ProtocolError('worker_lease_lost',status=409)
+        payload=json.loads(row['payload'])
+        if payload['context']!=permit.context.model_dump(mode='json') or payload['command']!=permit.command.model_dump(mode='json'):raise ProtocolError('job_identity_mismatch',status=409)
+
+    def record_role_attempt(self,permit,context):
+        """Fenced internal audit, using the same objects/clock/transaction log.
+
+        A caller revoked or paused after a real invocation cannot erase its audit.
+        This permits only the captured private context; no public/world effect.
+        """
+        if not isinstance(permit,RoleExecutionPermit) or permit.seal is not self._role_execution_seal:raise ProtocolError('role_authority_invalid',status=403)
+        context=RoleContext.model_validate(context.model_dump(mode='json'));audit=context.generation_audit
+        if audit is None or audit.phase!='attempt' or len(audit.attempts)!=1:raise ProtocolError('role_attempt_invalid',status=403)
+        if (context.role_id,context.as_of,audit.request,audit.scope.executor,audit.scope.credential_id)!=(permit.role_id,permit.context.as_of,ObjectRef.model_validate(permit.command.payload['subject']),permit.auth.executor,permit.auth.credential_id):raise ProtocolError('role_attempt_identity_invalid',status=403)
+        expected_scope=RoleAuditScope(**{key:getattr(permit.auth,key) for key in RoleAuditScope.model_fields if key!='schema_version'})
+        if audit.scope!=expected_scope or audit.refresh_count!=permit.context.refresh_count:raise ProtocolError('role_private_scope_mismatch',status=403)
+        if context.model_dump(mode='json',exclude={'generation_audit'})!=permit.prompt_context.model_dump(mode='json',exclude={'generation_audit'}):raise ProtocolError('role_private_context_mismatch',status=409)
+        if audit.prompt_hash!=permit.prompt_hash or audit.history_revision!=permit.history_revision or audit.job_id!=permit.claim.job_id or audit.job_attempt!=permit.claim.attempt or audit.worker_id!=permit.claim.worker_id or audit.lease_token_hash!=digest(permit.claim.lease_token):raise ProtocolError('role_attempt_identity_invalid',status=403)
+        allowed={canonical(ref) for ref in permit.private_refs};deps=references(context.model_dump(mode='json'))
+        if any(canonical(ref) not in allowed for ref in deps):raise ProtocolError('role_private_source_unapproved',status=403)
+        attempt=audit.attempts[0];sid=permit.auth.session_id;key='role-attempt-'+digest([audit.job_id,attempt.attempt_id])[:32]
+        ref=ObjectRef(session_id=sid,kind='role_context',object_id=key,version=1);fingerprint=digest(context)
+        with self.db.transaction() as c:
+            self._role_lease(c,permit)
+            prior=c.execute(select(v2_transactions).where(v2_transactions.c.session_id==sid,v2_transactions.c.request_id==key)).mappings().first()
+            if prior:
+                if prior['fingerprint']!=fingerprint:raise ProtocolError('role_attempt_identity_conflict',status=409)
+                return ref
+            state=WorldStateV2.model_validate_json(self._row(c,sid)['state']);sr=state.storage_revision+1
+            records=self._records(c,sid)
+            if any(row.ref.object_id==key for row in records):raise ProtocolError('object_identity_conflict',status=409)
+            external={canonical(row.ref):row for row in self._external(c,sid)}
+            for verified in permit.external_refs:
+                ident=canonical(verified.ref)
+                if ident in external and external[ident]!=verified:raise ProtocolError('external_reference_drift',status=409)
+                if ident not in external:c.execute(insert(v2_external_refs).values(session_id=sid,kind=verified.ref.kind,id=verified.ref.object_id,version=verified.ref.version,record=canonical(verified),created_revision=sr))
+                external[ident]=verified
+            executor=Executor(id='role-audit:'+permit.role_id,kind='system')
+            record=StoredObject(ref=ref,creator=executor,content=context.model_dump(mode='json'),visible_to=('system',permit.role_id),dependencies=deps,created_storage_revision=sr)
+            validate_graph((*records,record),external_keys=set(external)|self._event_keys(c,sid,state))
+            self._put(c,record)
+            # Private attempt bookkeeping does not advance business or workspace revisions.
+            new=state.model_copy(update={'storage_revision':sr});txn=uuid4().hex
+            boundary=ActionBoundary(transaction_id=txn,request_id=key,start_seq=state.business_seq,end_seq=state.business_seq,storage_revision=sr)
+            result=TransactionResult(transaction_id=txn,boundary=boundary,executor=executor,state=new,objects=(ref,),events=(),result={})
+            c.execute(update(v2_sessions).where(v2_sessions.c.id==sid).values(state=canonical(new),storage_revision=sr))
+            c.execute(insert(v2_snapshots).values(session_id=sid,storage_revision=sr,state=canonical(new)))
+            c.execute(insert(v2_transactions).values(session_id=sid,request_id=key,fingerprint=fingerprint,result=canonical(result),boundary=canonical(boundary)))
+            c.execute(insert(v2_request_meta).values(session_id=sid,request_id=key,credential_id='internal-worker:'+permit.claim.worker_id,executor=canonical(executor),actor_id='system',operation='role.audit.attempt',scope_refs=canonical([ref.model_dump(mode='json')]),job_ids='[]'))
+            return ref
+
+    def _role_enqueue_scope(self,auth,command,mutation):
+        if command.operation!='turns.create' or set(command.payload)!={'schema_version','role_id','text','shares','task'}:return None
+        if len(mutation.writes)!=1 or len(mutation.jobs)!=1 or mutation.events or mutation.state_changes or mutation.decision or mutation.refresh_job:return None
+        write=mutation.writes[0];job=mutation.jobs[0]
+        if write.ref.kind!='role_turn' or write.expected_head!=0 or write.ref.version!=1 or job.name!='v2.role_turn':return None
+        body=TurnInput.model_validate(command.payload)
+        if auth.actor_id!='learner' or not {'read','act'}<=set(auth.capabilities):raise ProtocolError('role_request_forbidden',status=403)
+        if write.content.get('input')!=body.model_dump(mode='json') or write.content.get('executor')!=auth.executor.model_dump(mode='json') or set(write.visible_to)!={'learner'}:raise ProtocolError('role_turn_identity_invalid',status=403)
+        if write.ref.object_id!='turn-'+digest([auth.session_id,command.request_id])[:24] or job.command.operation!='turns.create' or job.command.payload!={'subject':write.ref.model_dump(mode='json')}:raise ProtocolError('role_turn_identity_invalid',status=403)
+        if job.sources!=(write.ref,*body.shares) or job.context_hash!=digest(write.content):raise ProtocolError('role_turn_identity_invalid',status=403)
+        return write.ref
+
+    def _role_permit_for_commit(self,c,auth,command,mutation,context,claim):
+        permit=mutation.private_role_authority
+        if permit is None:return None
+        if not isinstance(permit,RoleExecutionPermit) or permit.seal is not self._role_execution_seal or permit.auth!=auth or permit.context!=context or permit.command!=command or permit.claim!=claim or permit.mutation_hash!=self._role_plan_hash(mutation):raise ProtocolError('role_authority_invalid',status=403)
+        if context is None:raise ProtocolError('role_worker_required',status=403)
+        self._validate_job_commit(c,auth,command,context,claim,'act')
+        self._auth(c,permit.role_auth,'read')
+        return permit
 
     def _reference_window(self,c,sid,ceiling,ref):
         point=VersionPoint(**ceiling.model_dump(include={'business_seq','workspace_revision','storage_revision'}))
@@ -465,6 +768,7 @@ class V2Store(JobStoreMixin):
             self._auth(c,auth,'read',object_ids=(ref.object_id,))
             if ref.session_id!=auth.session_id:raise ProtocolError('object_not_found',status=404)
             row=self._row(c,auth.session_id);state=WorldStateV2.model_validate_json(row['state'])
+            if ref.kind=='event':self._event_reference(c,ref,auth=auth,ceiling=state);return True
             if ref.kind in self.reference_resolvers:
                 self._resolve_reference(c,auth,ref,state,SessionBindings.model_validate_json(row['bindings']))
                 return True
@@ -542,7 +846,16 @@ class V2Store(JobStoreMixin):
         command=Command.model_validate(command.model_dump(mode='json'))
         fp=digest({'command':command.model_dump(mode='json'),'executor':auth.executor.model_dump(mode='json'),'actor':auth.actor_id,'credential_id':auth.credential_id})
         with self.db.transaction() as c:
-            self._auth(c,auth,capability,command.operation);row=self._row(c,auth.session_id)
+            self._auth(c,auth,capability,command.operation)
+            if command.operation=='jobs.refresh' and isinstance(command.payload.get('job_id'),str):
+                # Lock the original delegate before the session row, matching
+                # enqueue's credential -> session order even for owner refresh.
+                from career_lab.jobs.repository import jobs as refresh_queue
+                raw=c.execute(select(refresh_queue.c.payload).where(refresh_queue.c.id==command.payload['job_id'])).scalar_one_or_none()
+                if raw is not None:
+                    payload=json.loads(raw);saved=payload.get('context',{})
+                    if saved.get('session_id')==auth.session_id:self._job_auth(c,JobContextSnapshot.model_validate(saved),'read')
+            row=self._row(c,auth.session_id)
             prior=c.execute(select(v2_transactions).where(v2_transactions.c.session_id==auth.session_id,v2_transactions.c.request_id==command.request_id)).mappings().first()
             if prior:
                 if not hmac.compare_digest(prior['fingerprint'],fp):raise ProtocolError('request_id_reused',status=409)
@@ -557,14 +870,19 @@ class V2Store(JobStoreMixin):
             allowed=tuple(x for x in records if self._visible(x,auth) and (self._object_in_scope(c,auth,x.ref.object_id)))
             mutation=handler(self._operation_view(c,auth,state,bindings,records),command,auth)
             if not isinstance(mutation,Mutation):raise TypeError('handler must return Mutation')
+            if any(not isinstance(trace,FeedbackReadTrace) or trace.record.kind not in {'feedback','feedback_response'} or not any(write.ref==trace.record for write in mutation.writes) for trace in mutation.feedback_read_traces):raise ProtocolError('feedback_trace_invalid',status=403)
+            role_permit=self._role_permit_for_commit(c,auth,command,mutation,job_context,worker_fence)
+            queued_role=self._role_enqueue_scope(auth,command,mutation) if job_context is None else None
             if job_context is not None and (mutation.state_changes or mutation.decision or mutation.jobs or mutation.refresh_job):raise ProtocolError('async_state_change_forbidden',status=403)
             refreshing=mutation.refresh_job is not None
             if refreshing and (mutation.writes or mutation.events or mutation.state_changes or mutation.jobs or mutation.decision):raise ProtocolError('job_refresh_only',status=403)
             if set(mutation.state_changes)-{'status','cycle_id','config_version','applied_milestones'}:raise ProtocolError('state_field_forbidden',status=403)
+            if mutation.jobs:self._ensure_delegation_capacity(c,auth,len(mutation.jobs))
             derived_feedback=self._derived_feedback(c,auth,mutation,derived_subject,records,bindings)
             feedback_response=self._feedback_response_only(c,auth,command,mutation,records)
-            if state.status=='submitted' and command.operation!='begin_revision' and not derived_feedback and not feedback_response and not refreshing:raise ProtocolError('session_submitted')
-            if state.status=='paused' and command.operation!='resume' and not derived_feedback and not feedback_response and not refreshing:raise ProtocolError('session_paused')
+            reply_display=command.operation=='turns.display' and bool(mutation.writes) and all(w.ref.kind=='role_display' for w in mutation.writes) and not (mutation.events or mutation.state_changes or mutation.jobs or mutation.decision)
+            if state.status=='submitted' and command.operation!='begin_revision' and not derived_feedback and not feedback_response and not reply_display and not refreshing:raise ProtocolError('session_submitted')
+            if state.status=='paused' and command.operation!='resume' and not derived_feedback and not feedback_response and not reply_display and not refreshing:raise ProtocolError('session_paused')
             txn=uuid4().hex;sr=state.storage_revision+1;wr=state.workspace_revision+bool(mutation.writes);seq=state.business_seq
             planned=[]
             for write in mutation.writes:
@@ -573,6 +891,8 @@ class V2Store(JobStoreMixin):
                 scoped_creation=ref.kind=='product' and write.expected_head==0 and ref.version==1 and parent.get('kind')=='task' and parent.get('session_id')==auth.session_id and parent.get('object_id') in auth.create_under_tasks
                 derived_creation=write.expected_head==0 and ref.version==1 and ref.kind in {'test','review','business_request','business_decision','feedback','submission'}
                 if ref.kind=='feedback_response':derived_creation=feedback_response and write.expected_head==0 and ref.version==1
+                if ref.kind=='role_turn':derived_creation=queued_role==ref
+                if role_permit is not None and ref.kind in {'role_reply','role_context'}:derived_creation=True
                 if ref.kind=='submission' and capability!='submit':derived_creation=False
                 structural_cycle=ref.kind=='cycle' and ref.object_id==state.cycle_id and capability=='submit'
                 if ref.kind!='scenario_state' and not scoped_creation and not derived_creation and not structural_cycle:self._auth(c,auth,object_ids=(ref.object_id,))
@@ -589,6 +909,21 @@ class V2Store(JobStoreMixin):
                 try:obj=model.model_validate(write.content)
                 except ValidationError as exc:raise ProtocolError('module_object_invalid',status=503) from exc
                 content=obj.model_dump(mode='json')
+                trace_deps=()
+                if ref.kind in {'feedback','feedback_response'}:
+                    if content.get('read_boundaries') is not None:raise ProtocolError('feedback_boundary_requires_server_trace',status=403)
+                    traces=[trace for trace in mutation.feedback_read_traces if trace.record==ref]
+                    if traces:
+                        from career_lab.contracts.v2.projection import feedback_segment
+                        if len({trace.path for trace in traces})!=len(traces):raise ProtocolError('feedback_trace_invalid',status=403)
+                        boundaries=[]
+                        for trace in traces:
+                            if not trace.dependencies or any(dep.session_id!=auth.session_id for dep in trace.dependencies):raise ProtocolError('feedback_trace_invalid',status=403)
+                            value=feedback_segment(content,trace.path)
+                            deps=tuple({canonical(dep):dep for dep in (*trace.dependencies,*references(value))}.values())
+                            boundaries.append(FeedbackReadBoundary(path=trace.path,content_hash=digest(value),dependencies=deps))
+                        content['read_boundaries']=[boundary.model_dump(mode='json') for boundary in boundaries]
+                        trace_deps=tuple({canonical(dep):dep for boundary in boundaries for dep in boundary.dependencies}.values())
                 if ref.kind not in {'cycle','scenario_state','job_context','role_context'} and auth.actor_id not in write.visible_to:raise ProtocolError('private_object_channel_required',status=403)
                 if job_context is not None:
                     if ref.kind=='cycle':raise ProtocolError('async_cycle_write_forbidden',status=403)
@@ -611,6 +946,7 @@ class V2Store(JobStoreMixin):
                 if ref.kind=='role_reply' and role_reply_has_private_fields(content):
                     raise ProtocolError('role_reply_private_fields_forbidden',status=403)
                 if ref.kind=='role_context':
+                    if content.get('generation_audit') is not None and role_permit is None:raise ProtocolError('role_private_authority_required',status=403)
                     if content['role_id'] in {'learner','system','research'} or not write.visible_to or not set(write.visible_to)<={'system',content['role_id']}:raise ProtocolError('role_context_private',status=403)
                     if existing and any(x.content['role_id']!=content['role_id'] for x in existing):raise ProtocolError('role_context_identity_immutable',status=409)
                 if ref.kind=='config' and content['config_version']!=ref.config_version:raise ProtocolError('config_reference_mismatch')
@@ -637,17 +973,20 @@ class V2Store(JobStoreMixin):
                 if content.get('version',content.get('revision',ref.version))!=ref.version:raise ProtocolError('object_identity_mismatch')
                 if content.get('executor') and content['executor']!=auth.executor.model_dump(mode='json'):raise ProtocolError('executor_spoofed',status=403)
                 deps=references(content)
-                if set(canonical(x) for x in deps)-set(canonical(x) for x in write.dependencies):raise ProtocolError('undeclared_object_reference')
+                declared=tuple({canonical(dep):dep for dep in (*write.dependencies,*trace_deps)}.values())
+                if set(canonical(x) for x in deps)-set(canonical(x) for x in declared):raise ProtocolError('undeclared_object_reference')
                 if ref.kind in {'submission','review'} and content.get('evaluation')!=bindings.evaluation.model_dump(mode='json'):raise ProtocolError('evaluation_binding_mismatch',status=409)
                 if ref.kind=='submission' and content.get('scenario')!=bindings.scenario.model_dump(mode='json'):raise ProtocolError('scenario_binding_mismatch',status=409)
-                planned.append(StoredObject(creator=auth.executor,ref=ref,content=content,visible_to=write.visible_to,dependencies=write.dependencies,created_storage_revision=sr))
+                planned.append(StoredObject(creator=auth.executor,ref=ref,content=content,visible_to=write.visible_to,dependencies=declared,created_storage_revision=sr))
             external={canonical(x.ref):x for x in self._external(c,auth.session_id)}
             # Read-only business actions may have no ObjectWrite. Their verified
             # command/result refs still need an atomic anchor for request recovery.
             validate_reference_times(mutation.result,state.business_seq)
             candidates=[*full_references(command.payload),*full_references(mutation.result)]
-            for write in mutation.writes:candidates.extend(full_references(write.content))
+            for write in mutation.writes:
+                if role_permit is None or write.ref.kind!='role_context':candidates.extend(full_references(write.content))
             for ref in candidates:
+                if ref.kind=='event':self._event_reference(c,ref,auth=auth,ceiling=state);continue
                 if isinstance(ref,EvidenceRefV2) and ref.kind in {'feedback','feedback_response'}:
                     _,source_ok,_=self._record_projection(c,auth,records)
                     if not source_ok(ref):raise ProtocolError('feedback_evidence_unavailable',status=403)
@@ -658,6 +997,15 @@ class V2Store(JobStoreMixin):
                 if key not in external:
                     c.execute(insert(v2_external_refs).values(session_id=auth.session_id,kind=bare.kind,id=bare.object_id,version=bare.version,record=canonical(resolution),created_revision=sr))
                 external[key]=resolution
+            if role_permit is not None:
+                fixed=self._job_snapshot(c,role_permit.context)
+                for verified in role_permit.external_refs:
+                    current=self._resolve_reference(c,role_permit.role_auth,verified.ref,fixed,bindings)
+                    if current!=verified:raise ProtocolError('external_reference_drift',status=409)
+                    key=canonical(verified.ref)
+                    if key in external and external[key]!=verified:raise ProtocolError('external_reference_drift',status=409)
+                    if key not in external:c.execute(insert(v2_external_refs).values(session_id=auth.session_id,kind=verified.ref.kind,id=verified.ref.object_id,version=verified.ref.version,record=canonical(verified),created_revision=sr))
+                    external[key]=verified
             all_records={canonical(x.ref):x for x in records}
             for record in planned:
                 if canonical(record.ref) in all_records:raise ProtocolError('object_version_conflict',status=409)
@@ -667,6 +1015,20 @@ class V2Store(JobStoreMixin):
                     basis=BusinessBasis.model_validate(record.content['basis']);target=all_records.get(canonical(basis.config_ref))
                     if target is None or target.content!=basis.config.model_dump(mode='json'):raise ProtocolError('request_basis_reference_mismatch',status=409)
                 for dep in record.dependencies:
+                    if role_permit is not None and record.ref.kind=='role_context':
+                        allowed_private={canonical(ref) for ref in (*role_permit.private_refs,*(r.ref for r in planned if r.ref.kind=='role_reply'))}
+                        if canonical(dep) not in allowed_private:raise ProtocolError('role_private_source_unapproved',status=403)
+                        if dep.kind=='event':self._event_reference(c,dep,role_id=role_permit.role_id,ceiling=self._job_snapshot(c,role_permit.context));continue
+                        if canonical(dep) in external:continue
+                        if canonical(dep) not in all_records:raise ProtocolError('role_private_source_missing',status=409)
+                        continue
+                    if role_permit is not None and record.ref.kind=='role_reply' and dep.kind=='cycle':
+                        turn=all_records.get(canonical(ObjectRef.model_validate(role_permit.command.payload['subject'])))
+                        current=self._current_cycle(c,auth.session_id)
+                        allowed_cycles=[turn.content.get('origin_cycle') if turn else None,current.ref.model_dump(mode='json') if current else None]
+                        if dep.model_dump(mode='json') not in allowed_cycles or canonical(dep) not in all_records:raise ProtocolError('role_public_cycle_invalid',status=403)
+                        continue
+                    if dep.kind=='event':self._event_reference(c,dep,auth=auth,ceiling=state);continue
                     if canonical(dep) in external:
                         if dep.kind not in self.reference_resolvers:raise ProtocolError('reference_provider_unavailable',status=503)
                         self._auth(c,auth,'read',object_ids=(dep.object_id,))
@@ -678,7 +1040,7 @@ class V2Store(JobStoreMixin):
                     if not ((dep.kind=='cycle' and dep.object_id==state.cycle_id) or (record.ref.kind=='cycle' and capability=='submit')):self._auth(c,auth,object_ids=(dep.object_id,))
             cascaded=self._removal_cascade(auth,records,planned,state,sr,wr,len(mutation.events))
             for record in cascaded:all_records[canonical(record.ref)]=record
-            validate_graph(tuple(all_records.values()),external_keys=set(external))
+            validate_graph(tuple(all_records.values()),external_keys=set(external)|self._event_keys(c,auth.session_id,state))
             resources=state.resources
             if mutation.decision is not None:
                 d=mutation.decision
@@ -691,7 +1053,7 @@ class V2Store(JobStoreMixin):
             if 'config_version' in changes and not any(x.ref.kind=='config' and x.ref.config_version==changes['config_version'] for x in planned):raise ProtocolError('config_write_required')
             if changes.get('status')=='submitted':
                 if capability!='submit' or not any(x.ref.kind=='submission' for x in planned):raise ProtocolError('submission_required',status=403)
-            if state.status=='submitted' and not derived_feedback and not feedback_response and not refreshing:
+            if state.status=='submitted' and not derived_feedback and not feedback_response and not reply_display and not refreshing:
                 cycles=[RevisionCycle.model_validate(x.content) for x in planned if x.ref.kind=='cycle']
                 if len(cycles)!=1 or not cycles[0].parent_submission or changes.get('status')!='active' or changes.get('cycle_id')!=cycles[0].id:raise ProtocolError('revision_cycle_required')
             emitted=[]
@@ -746,6 +1108,8 @@ class V2Store(JobStoreMixin):
             c.execute(insert(v2_transactions).values(session_id=auth.session_id,request_id=command.request_id,fingerprint=fp,result=canonical(result),boundary=canonical(boundary)))
             scope={canonical(r):r for r in (*references(command.payload),*references(output))}
             for record in planned:
+                # Fenced private audit sources are not public read dependencies.
+                if role_permit is not None and record.ref.kind=='role_context':continue
                 for r in (record.ref,*record.dependencies):scope[canonical(r)]=r
             for job in mutation.jobs:
                 for r in job.sources:scope[canonical(r)]=r
@@ -771,6 +1135,7 @@ class V2Store(JobStoreMixin):
         item=FeedbackResponseRecord.model_validate(write.content)
         expected=ObjectRef(session_id=auth.session_id,kind='feedback',object_id=body.feedback_id,version=body.feedback_version)
         if item.feedback!=expected or item.executor!=auth.executor:raise ProtocolError('feedback_response_identity_mismatch',status=403)
+        if item.evidence_status!=('user_submitted_unverified' if body.evidence else 'none_submitted'):raise ProtocolError('feedback_evidence_status_required',status=403)
         for key in ('kind','section','criterion','text','evidence'):
             if getattr(item,key)!=getattr(body,key):raise ProtocolError('feedback_response_input_mismatch',status=409)
         self._auth(c,auth,'read',object_ids=(expected.object_id,))
@@ -864,6 +1229,7 @@ class V2Store(JobStoreMixin):
         external={canonical(x.ref) for x in self._external(c,auth.session_id)}
         for ref in refs.values():
             if ref.session_id!=auth.session_id:raise ProtocolError('request_not_found',status=404)
+            if ref.kind=='event':self._event_reference(c,ref,auth=auth);continue
             record=records.get(canonical(ref))
             if record is not None:
                 project,_,_=self._record_projection(c,auth,saved_records)

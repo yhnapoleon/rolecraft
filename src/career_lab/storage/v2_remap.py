@@ -22,7 +22,8 @@ SCALAR_IDS = {
     C.ShareCreate: {'product_id': 'product'},
     C.ShareUpdate: {'product_id': 'product', 'share_id': 'share'},
     C.TaskPatch: {'item_id': 'task'},
-    C.ResourcePage: {'product_id': 'product', 'review_id': 'review', 'submission_id': 'submission'},
+    C.ResourcePage: {'product_id': 'product', 'review_id': 'review', 'submission_id': 'submission', 'import_id':'workspace_import', 'feedback_id':'feedback', 'response_id':'feedback_response'},
+    C.FeedbackResponseCreate: {'feedback_id':'feedback'},
     C.EvidenceRead: {'submission_id': 'submission'},
 }
 OPAQUE_MODELS = (C.LegacyProvenance, C.LegacyAnnotation, C.FileRef, C.Executor)
@@ -33,6 +34,7 @@ class NamespaceRemapper:
         self.parent_session, self.target_session, self.mapping = parent_session, target_session, mapping
 
     def object_id(self, kind, value):
+        if kind=='event':return self.mapping.get(event_key(value),value)
         return self.mapping.get(identity_key(kind, value), value)
 
     def session(self, value):
@@ -82,6 +84,14 @@ class NamespaceRemapper:
             identifier = 'product_id' if entity_ref.kind == 'product' else 'id'
             if identifier in data:
                 data[identifier] = self.object_id(entity_ref.kind, entity_ref.object_id)
+        if isinstance(model,(C.FeedbackV2,C.FeedbackResponseRecord)) and data.get('read_boundaries') is not None:
+            from career_lab.contracts.v2.projection import feedback_segment
+            transformed=type(model).model_validate(data).model_dump(mode='json')
+            data['read_boundaries']=tuple(boundary.model_copy(update={'content_hash':C.digest(feedback_segment(transformed,boundary.path))}) for boundary in data['read_boundaries'])
+        if isinstance(model, C.RoleGenerationAudit):
+            # In this typed carrier request_id denotes its RoleTurn identity;
+            # external provider attempt IDs and original prompt text stay intact.
+            data['attempts']=tuple(attempt.model_copy(update={'request_id':data['request'].object_id}) for attempt in data['attempts'])
         if isinstance(model, C.WorkProductVersion):
             payload = data['structured_payload']
             data['content_hash'] = C.digest({'content': data['content'], 'structured_payload': payload.model_dump(mode='json') if payload else None})

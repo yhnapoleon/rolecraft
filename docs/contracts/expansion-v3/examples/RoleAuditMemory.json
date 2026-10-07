@@ -1,0 +1,27 @@
+{
+  "fragment": {
+    "channel": "received_share",
+    "fact_ids": [],
+    "ref": {
+      "config_version": null,
+      "kind": "product",
+      "object_id": "product",
+      "observed_at_seq": 0,
+      "quote": null,
+      "schema_version": 2,
+      "session_id": "example",
+      "span_end": null,
+      "span_start": null,
+      "valid_from_seq": 0,
+      "valid_until_seq": null,
+      "version": 1
+    },
+    "schema_version": 2,
+    "text": "Synthetic private receipt.",
+    "verification": "verified"
+  },
+  "learner_refs": [],
+  "provenance": [],
+  "role_id": "tech_lead",
+  "schema_version": 2
+}

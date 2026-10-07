@@ -136,7 +136,8 @@ class VerifiedFactsSnapshot(V2):
         refs=[r.verified_ref for r in self.references if r.verified_ref is not None]+[r.ref for r in self.activity_records]+[r.target for r in self.activity_records if r.target is not None]
         if any(r.session_id!=self.subject.session_id for r in refs):raise ValueError('cross-session factual evidence')
         if self.as_of is not None and any(r.observed_at_seq>self.as_of.business_seq for r in refs if isinstance(r,EvidenceRefV2)):raise ValueError('future factual reference')
-        if len({r.submitted_reference_hash for r in self.references})!=len(self.references):raise ValueError('duplicate submitted reference')
+        hashes=[r.submitted_reference_hash for r in self.references if r.submitted_reference_hash is not None]
+        if len(set(hashes))!=len(hashes):raise ValueError('duplicate submitted reference')
         if any(not feedback_point_before(r.occurred_at,self.as_of) for r in self.activity_records):raise ValueError('future activity fact')
         if len({canonical(r.ref) for r in self.activity_records})!=len(self.activity_records):raise ValueError('duplicate activity record')
         for kind,total in self.activity_totals.items():
@@ -195,7 +196,21 @@ class HistoricalResponsibilitiesSnapshot(V2):
             if any(r.observed_at_seq>self.as_of.business_seq for r in item.sources):raise ValueError('future responsibility source')
         return self
 
+class FeedbackReadBoundary(V2):
+    # Installed by the common store from a server-only complete input trace.
+    path: str
+    content_hash: Hash
+    dependencies: tuple[ObjectRef,...] = Field(min_length=1)
+    attestation: Literal['common_store_trace_v1'] = 'common_store_trace_v1'
+    @model_validator(mode='after')
+    def unique(self):
+        if not self.path.startswith('/') or '~' in self.path:raise ValueError('invalid feedback segment path')
+        if len({canonical(r) for r in self.dependencies})!=len(self.dependencies):raise ValueError('duplicate boundary dependency')
+        return self
+
 class FeedbackResponseRecord(V2):
+    read_boundaries: tuple[FeedbackReadBoundary,...] | None = None
+    evidence_status: Literal['none_submitted','user_submitted_unverified'] | None = None
     read_projection: Literal['partial'] | None = None
     id: Identifier
     session_id: Identifier
@@ -211,6 +226,7 @@ class FeedbackResponseRecord(V2):
     @model_validator(mode='after')
     def linked(self):
         if self.feedback.kind!='feedback' or self.feedback.session_id!=self.session_id:raise ValueError('invalid feedback link')
+        if self.evidence_status is not None and self.read_projection is None and self.evidence_status!=('user_submitted_unverified' if self.evidence else 'none_submitted'):raise ValueError('invalid submitted evidence status')
         if not self.text.strip():raise ValueError('response text is empty')
         if self.kind=='supplement' and not self.evidence and self.read_projection is None:raise ValueError('supplement needs exact evidence')
         if any(r.session_id!=self.session_id or r.observed_at_seq>self.recorded_at.business_seq for r in self.evidence):raise ValueError('invalid response evidence')
@@ -218,6 +234,7 @@ class FeedbackResponseRecord(V2):
         return self
 
 class FeedbackV2(V2):
+    read_boundaries: tuple[FeedbackReadBoundary,...] | None = None
     read_projection: Literal['partial'] | None = None
     id: Identifier
     session_id: Identifier
