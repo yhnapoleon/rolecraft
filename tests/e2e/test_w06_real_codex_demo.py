@@ -25,7 +25,8 @@ def demo(tmp_path, monkeypatch):
 
 
 def config():
-    return {'model_provider':m.PROVIDER,'web_search':'disabled','model_providers':{m.PROVIDER:{'request_max_retries':0,'stream_max_retries':0}},'features':{key:False for key in m.DISABLED_FEATURES}}
+    return {'model_provider':m.PROVIDER,'web_search':'disabled','model_providers':{m.PROVIDER:{'request_max_retries':0,'stream_max_retries':0}},'features':{key:False for key in m.DISABLED_FEATURES},
+            'mcp_servers':{'rolecraft':{'enabled_tools':list(m.DEMO_TOOLS),'tools':{name:{'approval_mode':'approve'} for name in m.AUTHORIZED_WRITES}}}}
 
 
 @pytest.mark.parametrize('account', [None, {'type':'apiKey'}, {'type':'amazonBedrock'}])
@@ -115,6 +116,21 @@ def test_language_mismatch_stops_before_thread_or_model(demo):
     assert not demo.sent and not demo.report['model_turn_started']
 
 
+@pytest.mark.parametrize('fault', ['missing_write_permission', 'extra_tool'])
+def test_preflight_rejects_incomplete_or_expanded_tool_permission(demo, fault):
+    settings = config()
+    if fault == 'missing_write_permission': settings['mcp_servers']['rolecraft']['tools'].pop('tests.create')
+    else: settings['mcp_servers']['rolecraft']['enabled_tools'].append('submissions.create')
+    def rpc(method, params, **kw):
+        demo.sent.append(method)
+        if method == 'account/read': return {'account': {'type': 'chatgpt', 'planType': 'pro'}}
+        if method == 'config/read': return {'config': settings}
+        return {}
+    demo.rpc = rpc
+    with pytest.raises(m.DemoFailure, match='explicit_demo_tool_authorization_missing'): demo.preflight()
+    assert 'turn/start' not in demo.sent
+
+
 @pytest.mark.parametrize('status,binding,error', [
     (403,None,'authorized_session_binding_unavailable'),
     (200,{'protocol':2,'sessionId':'another','workLanguage':'en','scenarioHash':'a'*64},'session_binding_invalid'),
@@ -132,3 +148,13 @@ def test_live_binding_rejects_unavailable_or_mixed_context(tmp_path,monkeypatch,
     monkeypatch.setattr(m.httpx,'Client',Client)
     credentials=SimpleNamespace(api_url='http://127.0.0.1:9',session_id='session1',token='SECRET')
     with pytest.raises(m.DemoFailure,match=error):m.session_binding(credentials)
+
+
+def test_child_override_preserves_literal_dots_in_tool_names(tmp_path):
+    import tomllib
+    settings = m.overrides(tmp_path / 'delegate.json', tmp_path)
+    value = tomllib.loads(next(s for s in settings if s.startswith('mcp_servers=')))
+    server = value['mcp_servers']['rolecraft']
+    assert set(server['tools']) == set(m.AUTHORIZED_WRITES)
+    assert server['tools']['tests.create']['approval_mode'] == 'approve'
+    assert 'submissions.create' not in server['enabled_tools']

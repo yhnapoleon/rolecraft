@@ -21,6 +21,9 @@ from career_lab.delegations.http_client import HttpAgentClient, safe_id
 from examples.byo_agent_client.workflow import save
 
 PROVIDER = 'rolecraft_subscription_demo'
+AUTHORIZED_WRITES = ('read_material', 'work_products.create', 'tests.create')
+DEMO_TOOLS = ('observation', 'tools', 'materials.list', 'tests.list', 'requests.read',
+              'work_products.list', 'work_products.versions.list', *AUTHORIZED_WRITES)
 
 DISABLED_FEATURES = ('apps', 'hooks', 'shell_tool', 'unified_exec', 'multi_agent',
                      'multi_agent_v2', 'browser_use', 'computer_use', 'image_generation',
@@ -57,14 +60,23 @@ def session_binding(credentials):
 
 def overrides(config_path, server_cwd):
     server = {'command': sys.executable, 'args': ['-m', 'career_lab.mcp', '--config', str(config_path)],
-              'cwd': str(server_cwd), 'startup_timeout_sec': 20, 'tool_timeout_sec': 30, 'required': True}
-    table = '{ rolecraft = { ' + ', '.join(k + ' = ' + json.dumps(v) for k, v in server.items()) + ' } }'
+              'cwd': str(server_cwd), 'startup_timeout_sec': 20, 'tool_timeout_sec': 30, 'required': True,
+              'enabled_tools': list(DEMO_TOOLS),
+              'tools': {name: {'approval_mode': 'approve'} for name in AUTHORIZED_WRITES}}
+    def toml(value):
+        if isinstance(value, dict):
+            return '{ ' + ', '.join(json.dumps(k) + ' = ' + toml(v) for k, v in value.items()) + ' }'
+        return json.dumps(value)
+    table = toml({'rolecraft': server})
     settings = ['mcp_servers=' + table, 'plugins={}', 'model_provider=' + json.dumps(PROVIDER), 'web_search="disabled"',
                 'model_providers.' + PROVIDER + '.name="RoleCraft subscription demo"',
                 'model_providers.' + PROVIDER + '.requires_openai_auth=true',
                 'model_providers.' + PROVIDER + '.wire_api="responses"',
                 'model_providers.' + PROVIDER + '.request_max_retries=0',
                 'model_providers.' + PROVIDER + '.stream_max_retries=0']
+    # The operator explicitly authorized this bounded demonstration. Apply that
+    # authorization only to these exact local MCP tools in this child process.
+    # No global config is changed; RoleCraft still enforces each grant and scope.
     return settings + ['features.' + key + '=false' for key in DISABLED_FEATURES]
 
 
@@ -161,12 +173,18 @@ class CodexAgentDemo:
         config = self.rpc('config/read', {'includeLayers': False})['config']
         provider = config.get('model_providers', {}).get(PROVIDER, {})
         expected = config.get('features', {})
+        server = config.get('mcp_servers', {}).get('rolecraft', {})
         if (config.get('model_provider') != PROVIDER or config.get('web_search') != 'disabled'
                 or provider.get('request_max_retries') != 0 or provider.get('stream_max_retries') != 0
                 or any(expected.get(key) is not False for key in DISABLED_FEATURES)):
             raise DemoFailure('effective_demo_configuration_mismatch')
+        if (set(server.get('enabled_tools', [])) != set(DEMO_TOOLS)
+                or any(server.get('tools', {}).get(name, {}).get('approval_mode') != 'approve'
+                       for name in AUTHORIZED_WRITES)):
+            raise DemoFailure('explicit_demo_tool_authorization_missing')
         self.report.update(status='preflight_complete', retry_configuration={'request': 0, 'stream': 0},
-                           disabled_features=list(DISABLED_FEATURES))
+                           disabled_features=list(DISABLED_FEATURES), allowed_tools=list(DEMO_TOOLS),
+                           explicitly_authorized_writes=list(AUTHORIZED_WRITES))
         self.persist()
         return self.report
 
