@@ -10,6 +10,7 @@ from .attestation import verify_annotation_artifacts
 from . import EXPORTER_REVISION
 from .origin import binding,verify_sources
 from .readiness import input_problem,readiness
+from .bilingual import verify_pairs,pair_dict,read_pairs,language_report,PROTOCOL as TRANSLATION_PROTOCOL
 
 
 def save_export(target, result):
@@ -38,7 +39,8 @@ def load_export(root):
 
 
 def publish_release(target, result, *, source_root, policies, annotations=None,
-                    annotation_artifacts=None, fixture=False, allow_pending=False,source_contexts=None,source_authority=None,label_only_authority=None):
+                    annotation_artifacts=None, fixture=False, allow_pending=False,source_contexts=None,source_authority=None,label_only_authority=None,translation_pairs=()):
+    translation_pairs=list(translation_pairs)
     membership=validate_source_membership(result)
     snapshot_by_digest={d["snapshot_digest"]:d for d in result.source_snapshots}
     contexts=source_contexts or {r.record_id:{"root":source_root,"policies":policies} for r in result.records}
@@ -53,6 +55,7 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
         raise ProtocolError("empty_release")
     # Check connected leakage before exclusions can accidentally hide it.
     audit_records(result.records)
+    verify_pairs(result.records,translation_pairs,contexts)
     labels = list(result.annotations if annotations is None else annotations)
     by_id = {a.record_id: a for a in labels}
     if len(by_id) != len(labels) or by_id.keys() - {r.record_id for r in result.records}:
@@ -108,9 +111,11 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
         error.record_id=excluded[0]["record_id"] if excluded else None
         error.report={"excluded":excluded}
         raise error
+    translation_metadata=verify_pairs(accepted,translation_pairs,contexts)
     ready=readiness(accepted,selected_labels,fixture=fixture)
     quality = audit_records(accepted, annotations=selected_labels)
     quality["readiness"]=ready
+    quality["bilingual"]=language_report(accepted,selected_labels,translation_metadata)
     quality.update(excluded=excluded, input_records=len(result.records),
                    origin=result.origin, fixture_release=fixture, pending_allowed=allow_pending)
     required_labels = {"relation": {"SUPPORTED", "CONTRADICTED", "INSUFFICIENT"},
@@ -168,6 +173,8 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
         write_new(root / "source-snapshots.json",snapshots)
         write_new(root / "split-manifest.json", split)
         write_new(root / "quality-report.json", quality)
+        write_new(root / "translation-evidence.json",{"protocol":TRANSLATION_PROTOCOL,"pairs":[pair_dict(p) for p in translation_pairs]})
+        write_new(root / "translation-metadata.json",translation_metadata)
         (root / "data_card.md").write_text(
             "# expansion-v3 W07 data release\n\n"
             + ("TEST FIXTURE ONLY. No actual environment, model or human experiment.\n\n" if fixture else "Source-backed development release; not a confirmatory test release.\n\n")
@@ -182,14 +189,14 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
         manifest = {"protocol": "expansion-v3-w07-release-v4", "exporter": EXPORTER_REVISION,
             "files": files, "records": len(accepted), "fixture": fixture, "splits": quality["splits"],
             "source_set_digest":digest({"protocol":"w07-snapshot-set-v1","members":snapshots}),"source_snapshot_count":len(snapshots),"training_ready": not fixture and ready["status"]=="ready", "readiness":ready,
-            "confirmatory": False,"metadata":FileRef(path="record-metadata.json",sha256=files["record-metadata.json"]).model_dump(mode="json")}
+            "confirmatory": False,"translation_metadata":FileRef(path="translation-metadata.json",sha256=files["translation-metadata.json"]).model_dump(mode="json"),"metadata":FileRef(path="record-metadata.json",sha256=files["record-metadata.json"]).model_dump(mode="json")}
         manifest["id"] = digest(manifest)
         write_new(root / "manifest.json", manifest)
-        audit_release(root,source_authority=source_authority,label_only_authority=label_only_authority)
+        audit_release(root,source_authority=source_authority,label_only_authority=label_only_authority,translation_contexts=contexts)
     return manifest
 
 
-def audit_release(root,*,source_authority=None,label_only_authority=None):
+def audit_release(root,*,source_authority=None,label_only_authority=None,translation_contexts=None):
     root = Path(root)
     manifest = read_json(root / "manifest.json")
     if manifest.get("protocol") != "expansion-v3-w07-release-v4":
@@ -262,6 +269,15 @@ def audit_release(root,*,source_authority=None,label_only_authority=None):
         if annotation.adjudication_ref:
             read_file(root, annotation.adjudication_ref)
     report = audit_records(rows, annotations=labels)
+    if 'translation_metadata' in manifest:
+        meta_ref=FileRef.model_validate(manifest['translation_metadata'])
+        if files.get(meta_ref.path)!=meta_ref.sha256:raise ProtocolError('translation_metadata_hash_mismatch')
+        declared=read_json(root/meta_ref.path)
+        pairs=read_pairs(read_json(root/'translation-evidence.json'))
+        actual=verify_pairs(rows,pairs,translation_contexts or {})
+        if declared!=actual:raise ProtocolError('translation_metadata_mismatch')
+        report['bilingual']=language_report(rows,labels,actual)
+        if read_json(root/'quality-report.json').get('bilingual')!=report['bilingual']:raise ProtocolError('bilingual_quality_report_mismatch')
     ready=readiness(rows,labels,fixture=manifest['fixture'])
     if manifest.get('readiness')!=ready or manifest.get('training_ready')!=(not manifest['fixture'] and ready['status']=='ready'):
         raise ProtocolError('training_readiness_mismatch')
@@ -271,7 +287,7 @@ def audit_release(root,*,source_authority=None,label_only_authority=None):
     return report
 
 
-def publish_exports(target,contributions,*,fixture=False,allow_pending=False,source_authority=None,label_only_authority=None):
+def publish_exports(target,contributions,*,fixture=False,allow_pending=False,source_authority=None,label_only_authority=None,translation_pairs=()):
     """Public multi-export publishing API. Each source retains its own root/reviews.
 
     contributions: {export: ExportResult, source_root: Path, policies: mapping,
@@ -292,4 +308,4 @@ def publish_exports(target,contributions,*,fixture=False,allow_pending=False,sou
             if name in artifacts and artifacts[name]!=raw:raise ProtocolError("annotation_artifact_collision")
             artifacts[name]=raw
     return publish_release(target,result,source_root=None,policies=None,source_contexts=contexts,
-                           annotations=annotations,annotation_artifacts=artifacts,fixture=fixture,allow_pending=allow_pending,source_authority=source_authority,label_only_authority=label_only_authority)
+                           annotations=annotations,annotation_artifacts=artifacts,fixture=fixture,allow_pending=allow_pending,source_authority=source_authority,label_only_authority=label_only_authority,translation_pairs=translation_pairs)
