@@ -3,13 +3,13 @@
 W02 supplies evaluate(request, view, auth) and legal candidate terms. This module
 does not maintain a second approval rule set and never writes resource state.
 """
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Callable
 
 from career_lab.api.modules import Operation
 from career_lab.contracts.v2 import (
     ActionInput, ApprovalInput, BusinessDecision, BusinessRequest, ObjectRef,
-    ProtocolError, digest,
+    ProtocolError, PublicEvent, RoleSpecV2, digest,
 )
 from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.v2_store import Mutation, EventDraft
@@ -20,9 +20,12 @@ from career_lab.storage.role_memory import object_write
 class ScenarioApprovalPort:
     evaluate: Callable
     candidates: Callable
+    roles: tuple[RoleSpecV2, ...]
+    decision_followup: Callable | None = None
+    followup_required: bool = False
 
     @classmethod
-    def from_w02(cls, package, evaluate):
+    def from_w02(cls, package, evaluate, *, decision_followup=None):
         """Use hash-checked W02 limits, without changing its necessity/basis rules.
 
         `evaluate` is the installed W02 adapter from BusinessRequest and the real
@@ -31,14 +34,15 @@ class ScenarioApprovalPort:
         limits = dict(package.rules["approval_limits"])
 
         def candidates(request, view):
-            if set(request.requested) - limits.keys():
+            if set(request.requested) - limits.keys() or set(request.requested) - view.state.resources.keys():
                 return ()
             lower = {k: min(v, limits[k]) for k, v in request.requested.items()}
             if lower == request.requested or any(v <= view.state.resources[k] for k, v in lower.items()):
                 return ()
             return (lower,)
 
-        return cls(evaluate=evaluate, candidates=candidates)
+        return cls(evaluate=evaluate, candidates=candidates, roles=package.bundle.role_specs,
+                   decision_followup=decision_followup, followup_required=bool(package.rules.get("business_events")))
 
 
 def latest_request(view, ref):
@@ -57,12 +61,17 @@ class NegotiationService:
         self.policy = policy
 
     def _assess(self, request, view, auth):
+        if set(request.requested) - view.state.resources.keys():
+            raise ProtocolError("unsupported_resource_request", status=422)
         decision = self.policy.evaluate(request, view, auth)
         decision = BusinessDecision.model_validate(decision.model_dump(mode="json"))
         expected = ObjectRef(session_id=request.session_id, kind="business_request",
                              object_id=request.id, version=request.version)
         if decision.request != expected or decision.session_id != request.session_id:
             raise ProtocolError("approval_policy_identity_invalid", status=503)
+        role = next((r for r in self.policy.roles if r.id == decision.decider), None)
+        if role is None or "approve_business" not in role.approval_authority:
+            raise ProtocolError("approval_authority_forbidden", status=403)
         if decision.status not in {"approved", "rejected"}:
             raise ProtocolError("approval_policy_result_invalid", status=503)
         if decision.status == "approved" and decision.granted != request.requested:
@@ -130,15 +139,28 @@ class NegotiationService:
             "version": request.version + 1, "status": decision.status})
         request_write = object_write("business_request", updated)
         decision_write = object_write("business_decision", decision, visible_to=("learner", decision.decider))
-        events = [EventDraft(type="resource_counteroffer_accepted" if accepted else "resource_" + decision.status,
-                            visible_to=("learner", "supervisor"), refs=(decision_write.ref, request_write.ref))]
+        audience = tuple(dict.fromkeys(("learner", decision.decider, *(r.id for r in self.policy.roles if "business_decided" in r.event_subscriptions))))
+        events = [EventDraft(type="business_decided", visible_to=audience,
+                    refs=(decision_write.ref, request_write.ref), data={"decision_id":decision.id,
+                    "request_id":request.id, "status":decision.status, "reason_code":decision.reason_code,
+                    "granted":decision.granted, "countered":decision.countered})]
+        if accepted:
+            events.append(EventDraft(type="business_counteroffer_accepted",visible_to=audience,refs=(decision_write.ref,)))
         if decision.status in {"approved", "accepted"}:
-            events.append(EventDraft(type="resource_grant_committed", visible_to=("learner", "supervisor"),
+            events.append(EventDraft(type="resource_grant_committed", visible_to=audience,
                                      refs=(decision_write.ref,), data={"granted": decision.granted}))
-        return Mutation(writes=(request_write, decision_write), events=tuple(events), decision=decision,
-                        result={"decision": decision.model_dump(mode="json"),
-                                "request": request_write.ref.model_dump(mode="json"),
-                                "resources_changed": decision.status in {"approved", "accepted"}})
+        plan = Mutation(writes=(request_write, decision_write), events=tuple(events), decision=decision,
+                        result={"decision":decision.model_dump(mode="json"),
+                                "request":request_write.ref.model_dump(mode="json"),
+                                "resources_changed":decision.status in {"approved","accepted"}})
+        if decision.status in {"approved", "accepted"} and "capacity" in decision.granted:
+            if self.policy.decision_followup is not None:
+                return self.policy.decision_followup(view,request,decision,plan)
+            if self.policy.followup_required:
+                # Do not silently skip W02's capacity-approved business event or
+                # manufacture a parallel scenario state transition in W04.
+                raise ProtocolError("role_decision_followup_unavailable",status=409)
+        return plan
 
     def actions(self, downstream_handler):
         def handle(view, command, auth):
@@ -158,4 +180,22 @@ class NegotiationService:
 
     def operation(self):
         return Operation("approvals.resolve", "act", ApprovalInput, self.resolve,
-                         approval_policy=self.resolve_decision)
+                         approval_policy=self.resolve_decision, event_projector=self.event_projector())
+
+    def event_projector(self, downstream=None):
+        def project(event, auth):
+            if event.type not in {"business_decided","business_counteroffer_accepted","resource_grant_committed"}:
+                return downstream(event,auth) if downstream else None
+            if event.session_id!=auth.session_id or auth.actor_id not in event.visible_to or "read" not in auth.capabilities:
+                return None
+            allowed={"decision_id","request_id","status","reason_code","granted","countered"}
+            return PublicEvent.model_validate(event.model_dump(mode="json",exclude={"visible_to","data"}) |
+                       {"data":{k:v for k,v in event.data.items() if k in allowed}})
+        return project
+
+    def action_operation(self, downstream_handler, *, downstream_policy=None, downstream_projector=None):
+        # ActionInput.tool is Literal, so W01 can recover this projector from the
+        # persisted action on job results, request replays and historical reads.
+        return Operation("actions","act",ActionInput,self.actions(downstream_handler),action_field="tool",
+                         approval_policy=self.approval_policy(downstream_policy),
+                         event_projector=self.event_projector(downstream_projector))

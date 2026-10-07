@@ -1,0 +1,70 @@
+"""Historical responsibility findings, separate from the current work's grade."""
+from career_lab.contracts.v2.core import ProtocolError,canonical
+from math import isfinite
+
+
+def before(a,b):
+    if a is None or b is None:return False
+    return all(getattr(a,k)<=getattr(b,k) for k in ['business_seq','workspace_revision','storage_revision'])
+
+
+def assess_responsibilities(records,policy,subjects,at,resolve,resolve_at):
+    output=[]
+    for record in records:
+        if record.kind not in {'actual_action','commitment','completion_claim','unknown'} or record.state not in {'active','withdrawn','unknown'}:
+            raise ProtocolError('invalid_responsibility_record')
+        if record.criterion!=policy.id or not any(a==b for a in subjects for b in record.scope):continue
+        # Newer responsibilities are outside the historical judgment. No future
+        # source text is loaded merely to explain why it was excluded.
+        if not before(record.occurred_at,at) or not before(record.valid_from,at):continue
+        entry={'criterion':record.criterion,'kind':record.kind,'state':record.state,
+               'occurred_at':record.occurred_at.model_dump(mode='json'),'evaluated_at':at.model_dump(mode='json'),
+               'scope':[r.model_dump(mode='json') for r in record.scope],
+               'finding':'unknown','explanation':'历史责任来源尚未核全。','sources':[]}
+        if record.valid_until is not None and before(record.valid_until,at):
+            entry['explanation']='该责任记录在作品参照点已失效，不能据此认定当前义务。';output.append(entry);continue
+        proofs=[resolve(ref) for ref in record.sources]
+        if not proofs or not all(proofs) or any(r.valid_until_seq is not None and at.business_seq>=r.valid_until_seq for r in proofs):
+            output.append(entry);continue
+        entry['sources']=[r.model_dump(mode='json') for r in proofs]
+        if record.kind=='unknown' or record.state=='unknown':output.append(entry);continue
+        if record.kind=='commitment':
+            entry.update(finding='recorded_commitment',explanation='记录中有'+('已撤回的' if record.state=='withdrawn' else '')+'承诺；承诺不证明已经执行，撤回的合理性仍需结合理由核验。')
+            output.append(entry);continue
+        values={};seen=set()
+        for fact in record.facts:
+            if fact.name in seen:raise ProtocolError('duplicate_historical_fact')
+            seen.add(fact.name);canonical(fact.value);refs=[resolve_at(r,record.occurred_at) for r in fact.sources]
+            if refs and all(refs):
+                values[fact.name]=fact.value;entry['sources'].extend(r.model_dump(mode='json') for r in refs)
+        def numbers(*names):
+            if any(type(values.get(n)) not in (int,float) or not isfinite(values[n]) or values[n]<0 for n in names):return None
+            return [values[n] for n in names]
+        if record.kind=='actual_action' and policy.mechanism=='capacity':
+            pair=numbers('actual_participants','capacity_at_action')
+            if pair is not None:
+                breach=pair[0]>pair[1]
+                entry.update(finding='verified_breach' if breach else 'verified_within_limit',
+                    explanation=f'历史实际开放人数{pair[0]}，当时有效容量{pair[1]}；'+('存在超容量记录。' if breach else '该记录未超容量；0人不构成未达标。'))
+        elif record.kind=='actual_action' and policy.mechanism=='resources':
+            pair=numbers('actual_dev_days','available_dev_days_at_action')
+            if pair is not None:
+                breach=pair[0]>pair[1]
+                entry.update(finding='verified_breach' if breach else 'verified_within_limit',
+                    explanation=f'历史实际占用{pair[0]}人日，当时可用{pair[1]}人日；'+('存在超用记录。' if breach else '未发现该次占用超额；不要求停止方案另有正数上线日期。'))
+        elif record.kind=='completion_claim' and policy.mechanism in {'capacity','resources'}:
+            names=('claimed_participants','actual_participants_at_claim') if policy.mechanism=='capacity' else ('claimed_dev_days','actual_dev_days_at_claim')
+            pair=numbers(*names)
+            if pair is not None:
+                entry.update(finding='claim_matches_record' if pair[0]==pair[1] else 'verified_claim_mismatch',
+                    explanation=f'报告声明值{pair[0]}，声明时点真实记录值{pair[1]}；只核这项明确声明，不推断整份结果报告已上线。')
+        elif record.kind=='completion_claim' and policy.mechanism=='tests':
+            # These facts must describe the ledger AT THE CLAIM, not later tests.
+            count=values.get('valid_test_count_at_claim');complete=values.get('test_ledger_complete_at_claim')
+            if complete is True and type(count) is int and count>=0:
+                entry.update(finding='verified_breach' if count==0 else 'claim_has_run_records',
+                    explanation='声明已完成验证，但声明时点的完整记录无有效测试。' if count==0 else '声明时点存在有效测试记录；数量不证明完成声明或结论质量。')
+        elif record.kind=='actual_action' and policy.mechanism=='tests':
+            entry.update(finding='recorded_action',explanation='有实际测试行动记录；运行不等于测试通过或覆盖充分。')
+        output.append(entry)
+    return output

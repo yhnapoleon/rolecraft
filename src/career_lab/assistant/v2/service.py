@@ -48,6 +48,22 @@ def meaningful_tokens(text):
     return set(tokens(text))
 
 
+
+def public_credential_workflow(query):
+    """Match a whole, bounded workflow question, never a request for a value.
+
+    These aliases only search published FAQ procedure paragraphs. The mandatory
+    topic list and generic credential guards remain unchanged for every other
+    input, including compound requests and requests to send a key to the caller.
+    """
+    text=re.sub(r"\s+","",query).rstrip("？?。！!")
+    password=r"(?:请|能|可以|请问|麻烦)?(?:告诉我|说明一下|讲一下)?(?:我的|我|账号|账户|登录)?(?:忘记(?:了)?密码|密码(?:忘了|忘记了|忘记)|账号密码忘了)(?:该)?(?:怎么(?:办|处理|重置|找回)|如何(?:重置|找回|处理))(?:吗|呢)?"
+    network=r"(?:连接办公网络时[，,]?)?访问密钥(?:可以|能|应不应该|是否可以|可否)(?:发给|分享给|转发给)同事(?:吗|呢)?"
+    if re.fullmatch(password,text):return ("账号密码", "账号密码重置流程")
+    if re.fullmatch(network,text):return ("办公网络连接", "办公网络连接访问密钥分享")
+    return None
+
+
 def chunks(material, fragments, size):
     result = []
     for fragment in fragments:
@@ -96,7 +112,11 @@ class Assistant:
         if auth.allowed_objects is not None:
             visible=tuple((m,fs) for m,fs in visible if m.id in auth.allowed_objects)
         candidates=[c for m,fs in visible for c in chunks(m,fs,cfg.chunk_size)]
-        query_terms=meaningful_tokens(request.query)
+        workflow=public_credential_workflow(request.query)
+        # A recognized procedure question may use only its public FAQ paragraph;
+        # it cannot authorize another source or relax configured domain scope.
+        if workflow:candidates=[c for c in candidates if c.material_id=="faq" and c.text.startswith(workflow[0])]
+        query_terms=meaningful_tokens(workflow[1] if workflow else request.query)
         scored=[]
         for candidate in candidates:
             overlap=query_terms & meaningful_tokens(candidate.text)
@@ -107,7 +127,12 @@ class Assistant:
         scored.sort(key=lambda x:(-x[0],x[1].id))
         selected=[]; status="fallback"; code=None; answer=""; selected_stale=False
         forbidden=tuple(self.package.rules["mandatory_prohibited_topics"])+tuple(cfg.prohibited_topics)
-        if any(term.casefold() in request.query.casefold() for term in forbidden) or any(re.search(pattern,request.query) for pattern in self.package.rules.get("credential_request_patterns",())):
+        prohibited=any(term.casefold() in request.query.casefold() for term in forbidden)
+        credential_value_request=any(re.search(pattern,request.query) for pattern in self.package.rules.get("credential_request_patterns",()))
+        # A full matched safety/procedure question is confined to public FAQ.
+        # Explicit user-configured prohibitions still win over this recognition.
+        custom_prohibited=any(term.casefold() in request.query.casefold() for term in cfg.prohibited_topics)
+        if custom_prohibited or (workflow is None and (prohibited or credential_value_request)):
             code="prohibited_topic"
         elif not scored:
             code="no_retrieval_hit"
@@ -168,5 +193,6 @@ class Assistant:
             "used_versions":{k:v for k,v in versions.items() if k in source_visible},
             "chunk_ids":[c.id for c in selected],
             "tuning":dict(tuning.__dict__),"executor":auth.executor.model_dump(mode="json"),
+            "public_workflow_alias":workflow[1] if workflow else None,
             "authorization_digest":digest(auth),"retrieved_source_stale":selected_stale,
             "declared_expectation_is_gold":False,"result_is_evaluation":False})

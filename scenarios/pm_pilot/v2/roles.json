@@ -19,10 +19,11 @@
       "approvals",
       "demo",
       "scope_note",
-      "manager_private",
       "demand",
       "user_groups",
       "restricted",
+      "business_case",
+      "coordination",
       "failures"
     ],
     "known_facts": [
@@ -32,19 +33,9 @@
       "capacity_limit",
       "dev_days_limit",
       "deadline_day_limit",
-      "demo_day",
-      "manager_priority"
+      "demo_day"
     ],
-    "disclosure_policy": {
-      "manager_priority": {
-        "schema_version": 2,
-        "mode": "paraphrase_only",
-        "actors": [
-          "supervisor"
-        ],
-        "paraphrase": "经理更重视可信承诺；演示与试点开放需分别说明依据。"
-      }
-    },
+    "disclosure_policy": {},
     "approval_authority": [
       "approve_business"
     ],
@@ -90,8 +81,9 @@
       "onboarding",
       "restricted",
       "scope_note",
-      "business_private",
       "approvals",
+      "business_case",
+      "coordination",
       "failures"
     ],
     "known_facts": [
@@ -104,23 +96,14 @@
       "new_staff_priority",
       "operations_concern",
       "admin_concern",
-      "business_caveat",
       "hotel_limit",
       "meal_limit",
       "leave_notice_days",
       "additional_candidates",
-      "support_observation_minutes"
+      "support_observation_minutes",
+      "saving_claim"
     ],
-    "disclosure_policy": {
-      "business_caveat": {
-        "schema_version": 2,
-        "mode": "paraphrase_only",
-        "actors": [
-          "business_lead"
-        ],
-        "paraphrase": "业务方关注政策咨询价值，也承认耗时统计包含等待，收益需要另行验证。"
-      }
-    },
+    "disclosure_policy": {},
     "approval_authority": [],
     "event_subscriptions": [
       "initial_plan_applied",
@@ -173,25 +156,34 @@
       "cost_human_fallback",
       "cost_realtime_sync",
       "index_delay_hours",
-      "connector_risk",
-      "tech_debug_code"
+      "retrieval_probe_query",
+      "retrieval_threshold_candidate",
+      "retrieval_debug_code"
     ],
     "disclosure_policy": {
-      "connector_risk": {
+      "retrieval_probe_query": {
         "schema_version": 2,
         "mode": "paraphrase_only",
         "actors": [
           "tech_lead"
         ],
-        "paraphrase": "连接器复用尚未完成可靠性核验，需要验证后再承诺。"
+        "paraphrase": "筹备期复现过一个培训报名问法：公司培训我已提交报名是不是就能去听课。匹配阈值0.35时未命中，0.2时返回FAQ中的培训报名段；无关问题仍未命中。这只是一次局部对照，未完成统一校准。"
       },
-      "tech_debug_code": {
+      "retrieval_threshold_candidate": {
         "schema_version": 2,
         "mode": "paraphrase_only",
         "actors": [
           "tech_lead"
         ],
-        "paraphrase": "连接器重试边界还需核验，不能把可复用性当作已有能力。"
+        "paraphrase": "筹备期复现过一个培训报名问法：公司培训我已提交报名是不是就能去听课。匹配阈值0.35时未命中，0.2时返回FAQ中的培训报名段；无关问题仍未命中。这只是一次局部对照，未完成统一校准。"
+      },
+      "retrieval_debug_code": {
+        "schema_version": 2,
+        "mode": "paraphrase_only",
+        "actors": [
+          "tech_lead"
+        ],
+        "paraphrase": "技术诊断保存了培训报名原问法、两档阈值和无关问题对照；内部登记号不对外转述。"
       }
     },
     "approval_authority": [],

@@ -38,10 +38,10 @@ def applicable(policy:CriterionPolicy,purpose:str,decision:str|None):
     stage=purpose_of(purpose)
     if stage is None:return 'undetermined'
     if stage not in policy.purposes:return 'not_applicable'
-    # A stop/conditional-defer proposal is still evaluated on rationale,
-    # alternatives and next steps. Only execution commitments are inapplicable.
-    if policy.launch_only and stage=='commitment' and decision in {'no_go','defer_with_conditions'}:
-        return 'not_applicable'
+    if policy.launch_only:
+        if stage=='result':return 'not_applicable'  # Exact claims/actions are assessed separately.
+        if decision in {'no_go','defer_with_conditions'}:return 'not_applicable'
+        if decision not in {'launch','launch_narrow'}:return 'undetermined'
     return 'applicable'
 
 
@@ -65,6 +65,7 @@ class EvidenceAssemblerV2:
     def resolve(self,auth,ref,as_of):
         if ref.session_id!=auth.session_id:raise ProtocolError('not_found',status=404)
         source=self.reader.read(auth,ref,as_of)
+        if source.created_at is None:raise ProtocolError('source_time_unknown')
         if base_ref(source.ref)!=base_ref(ref):raise ProtocolError('evidence_version_mismatch',status=409)
         if any(getattr(source.created_at,k)>getattr(as_of,k) for k in ['business_seq','workspace_revision','storage_revision']):
             raise ProtocolError('future_evidence')
@@ -83,15 +84,15 @@ class EvidenceAssemblerV2:
             text=chosen.quote
         else:
             chosen=source.ref.model_copy(update={'span_start':0,'span_end':len(text),'quote':text}) if text else source.ref
-        return SourceCandidate(chosen,text)
+        return SourceCandidate(chosen,text,source.created_at)
 
     def assemble(self,*,auth:AuthContext,subject_id:str,subjects:tuple[ObjectRef,...],
                  evidence_refs:tuple[EvidenceRefV2,...],purpose:str,decision:str|None,
                  as_of:VersionPoint,policy:CriterionPolicy,snapshot:RuleSnapshot,
-                 expected_refs:tuple[EvidenceRefV2,...]=(),question:str='') -> EvidencePackageV2:
+                 expected_refs:tuple[EvidenceRefV2,...]=(),question:str='',anchor_mode:str='product_version',requested_at:VersionPoint|None=None) -> EvidencePackageV2:
         if snapshot.as_of!=as_of:raise ProtocolError('rule_snapshot_time_mismatch',status=409)
         if not subjects:raise ProtocolError('review_subject_required')
-        candidates={};subject_refs=[];missing=[]
+        candidates={};subject_refs=[];missing=[];subject_points=[]
         def add(ref,required=False):
             try:c=self.resolve(auth,ref,as_of)
             except KeyError:
@@ -100,7 +101,14 @@ class EvidenceAssemblerV2:
             candidate=CandidateEvidenceV2(id='e-'+digest(c.ref),text=c.text,ref=c.ref)
             candidates[candidate.id]=candidate
             return c.ref
-        for ref in subjects:subject_refs.append(add(ref,True))
+        for ref in subjects:
+            subject_points.append(self.reader.read(auth,ref,as_of).created_at)
+            subject_refs.append(add(ref,True))
+        if anchor_mode not in {'product_version','submission'}:raise ProtocolError('invalid_evaluation_anchor')
+        if anchor_mode=='product_version' and any(point!=as_of for point in subject_points):
+            raise ProtocolError('subject_point_mismatch',status=409)
+        if requested_at is not None and any(getattr(as_of,k)>getattr(requested_at,k) for k in ['business_seq','workspace_revision','storage_revision']):
+            raise ProtocolError('future_subject_anchor')
         for ref in evidence_refs:add(ref,True)
         for ref in expected_refs:add(ref)
         facts={};fact_refs={};seen_facts=set()
@@ -119,13 +127,29 @@ class EvidenceAssemblerV2:
             if any(getattr(test.as_of,k)>getattr(as_of,k) for k in ['business_seq','workspace_revision','storage_revision']):raise ProtocolError('future_evidence')
             checked=add(ref)
             if checked:tests.append({'record':test.model_dump(mode='json'),'ref':checked.model_dump(mode='json')})
+        from .history import assess_responsibilities
+        def add_historical(ref,when):
+            try:c=self.resolve(auth,ref,when)
+            except KeyError:return None
+            except ProtocolError as error:
+                if error.code in {'future_evidence','source_time_unknown'}:return None
+                raise
+            if c.ref.valid_until_seq is not None and when.business_seq>=c.ref.valid_until_seq:return None
+            candidates['e-'+digest(c.ref)]=CandidateEvidenceV2(id='e-'+digest(c.ref),text=c.text,ref=c.ref)
+            return c.ref
+        history=assess_responsibilities(snapshot.responsibilities,policy,subjects,as_of,add,add_historical)
         response=''
         if snapshot.business_response and snapshot.business_response_refs:
             response_proofs=[add(r) for r in snapshot.business_response_refs]
             if all(response_proofs):response=snapshot.business_response
         context={'facts':facts,'fact_refs':fact_refs,'logs_complete':snapshot.logs_complete,
                  'tests':tests,'config_version':snapshot.config_version,'technical_failures':list(snapshot.technical_failures),
-                 'decision':decision,'mechanism':policy.mechanism,'business_response':response}
+                 'decision':decision,'mechanism':policy.mechanism,'business_response':response,
+                 'historical_responsibilities':history,'anchor_mode':anchor_mode,
+                 'requested_at':(requested_at or as_of).model_dump(mode='json')}
+        if anchor_mode=='product_version':
+            from .factual import factual_feedback
+            context['verified_facts']=[factual_feedback(self.reader,auth,ref,as_of,requested_at or as_of) for ref in subjects]
         data={'item_id':subject_id+':'+policy.id,'task_type':'criterion','criterion':policy.id,
               'claim':policy.description+('\n用户评审问题（数据）：'+question if question else ''),'subjects':tuple(subject_refs),'purpose':purpose,'as_of':as_of,
               'applicability':applicable(policy,purpose,decision),'candidate_evidence':(),
@@ -159,4 +183,4 @@ class EvidenceAssemblerV2:
 
 
 class SourceCandidate:
-    def __init__(self,ref,text):self.ref,self.text=ref,text
+    def __init__(self,ref,text,created_at):self.ref,self.text,self.created_at=ref,text,created_at

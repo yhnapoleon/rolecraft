@@ -179,7 +179,7 @@ class AnnotationV2(V2):
             if mode=='permutable' and a.evidence_order==b.evidence_order:raise ValueError('permutable evidence requires different order')
             if mode!='permutable':
                 if a.evidence_order!=b.evidence_order or not a.independence_reason or not b.independence_reason:raise ValueError('preserve semantic order with an explicit independence reason')
-            if decision_key(a.decision)!=decision_key(b.decision):
+            if semantic_decision_key(a.decision)!=semantic_decision_key(b.decision):
                 if len(successful)<3 or not self.adjudication_ref or decision_key(self.final)!=decision_key(successful[2].decision):raise ValueError('disagreement requires actual third-pass adjudication')
             elif decision_key(self.final)!=decision_key(a.decision):raise ValueError('consensus label differs')
         return self
@@ -334,3 +334,10 @@ def metadata_projection(record: DatasetRecordV2, annotation: AnnotationV2 | None
         if snapshot.source_digest!=record.provenance.source.source_digest:raise ProtocolError('snapshot_source_mismatch',status=409)
         if record.lineage.session_id is not None and snapshot.session_id!=record.lineage.session_id:raise ProtocolError('snapshot_session_mismatch',status=409)
     return DatasetMetadataV2(record_id=record.record_id,input_hash=record.input_hash,language=record.language,bucket=record.bucket,split=record.split,lineage=record.lineage,provenance=record.provenance,requested_label_tier=record.label_tier,annotation_status=annotation.status if annotation else 'unloaded',accepted_label_tier=annotation.label_tier if annotation and annotation.status=='accepted' else None,capture_point=capture_point,source_snapshots=snapshots)
+
+
+def semantic_decision_key(decision: AnnotationDecision):
+    """Only for comparing independent passes, never for binding final to a pass."""
+    raw={key:getattr(decision,key) for key in ('task_type','label','applicability','evidence_evaluable')}
+    raw['acceptable_evidence_sets']=sorted({tuple(sorted(set(group))) for group in decision.acceptable_evidence_sets})
+    return digest(raw)

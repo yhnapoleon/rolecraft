@@ -248,7 +248,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "e2c917bb051a7ca2032f9594f627e28c852465f7b04b1ebe8879cd39b48fc8b3"
+      "sha256": "250258f3f749d7807504727b7a78499f35d83752170f68bce65d8a8dd70da977"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -256,7 +256,7 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "d34a73eb365e02bdc0b42ca0e845d79ef3e20b51e1b978ab9fdad9da6e5efd3a"
+      "sha256": "dfc3d8e47586a2aafa23324f8a5e32c7fc7f6f3acf93dee79d21848cd90ceb51"
     }
   },
   "errors": {
@@ -269,14 +269,15 @@
     "W02-S07": "Verified command/result references are atomically anchored for read-request recovery.",
     "W03-GR02-partial": "Validated LegacyProvenance.raw remains inert during reference/time traversal; receipt and preview interfaces remain pending.",
     "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.",
-    "W07-W08-empty-joint-target": "Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence."
+    "W07-W08-empty-joint-target": "Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.",
+    "W07-W08-semantic-consensus": "Only independent-pass consensus uses semantic_decision_key; G2/G2v final remains bound by the full normalized decision_key to the actual selected pass."
   },
   "openapi": {
     "path": "openapi.json",
     "sha256": "a6bdfc780629d8a8127b70517e3494e626b6f221440ac348a37733d4764d7578"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-722c39cc0906f1b1a8e741ad234321491ee85198e6714b5a52d99e1e9262dd37",
+  "previous_contract_revision": "expansion-v3-81f4855d5cdf8c601c6b09d7b350b11dcda5ed156e2d801d8e542fa197718c85",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -2631,11 +2632,11 @@
     "src/career_lab/contracts/scenario.py": "b191244dd1356503b153abf3a31921ce7911ec19b66534378b369b35d135e3b0",
     "src/career_lab/contracts/v2/__init__.py": "bcb066dbbe937f00a366d9fd836a1411afef069472cb2c8765988f771bee55e7",
     "src/career_lab/contracts/v2/core.py": "50e521c7d7ea22d5ec4a60134917fe827361bf898ff8b5d7bf2ab8509ea34ea8",
-    "src/career_lab/contracts/v2/data.py": "b5849a66811dd2026e14d90814633cc42fd5d4f5ef2374d1ff71b660eac1923f",
+    "src/career_lab/contracts/v2/data.py": "bd0888c2937400bf00ceeac53b9e49260040c3782c7cbfaca62d10097841065b",
     "src/career_lab/contracts/v2/discovery.py": "1089a5682cb915ce4f095ec28f65014d88724e4e5a30e1b17a753bb358bc006c",
     "src/career_lab/contracts/v2/evaluation.py": "c8bc7004d8d14c54f1832eecc227ae45e7fe8492c1b584117ad1f8a372a5c631",
     "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
-    "src/career_lab/contracts/v2/export.py": "1e7ccd78d463d50b98672104a1a03257a43d6a58b69148b6b70edac10392a848",
+    "src/career_lab/contracts/v2/export.py": "23e8f8aca6879f4afacd61daba0a6072a87e074db1217075f79a55498fe7c3bd",
     "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
     "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
     "src/career_lab/contracts/v2/projection.py": "8740cf952268d8997610904224db37dcd7ce91886046653b46284be9583062ab",

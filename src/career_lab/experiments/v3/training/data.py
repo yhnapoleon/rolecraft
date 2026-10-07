@@ -22,7 +22,7 @@ class ReleaseReader:
         self.root=Path(root);self.release_ref=release_ref;self.split_ref=split_ref;self.access_log=[];self.excluded=[]
         self.manifest=json.loads(self._read(release_ref,"metadata-index"))
         if self.manifest.get("id")!=digest({k:v for k,v in self.manifest.items() if k!="id"}):raise ProtocolError("release_manifest_drift")
-        if self.manifest.get("protocol")!="expansion-v3-w07-release-v3":raise ProtocolError("unsupported_release_protocol")
+        if self.manifest.get("protocol")!="expansion-v3-w07-release-v4":raise ProtocolError("unsupported_release_protocol")
         if self.manifest.get("files",{}).get(split_ref.path)!=split_ref.sha256:raise ProtocolError("release_split_identity_mismatch")
         self.split=SplitManifest.model_validate_json(self._read(split_ref,"metadata-index"))
         self.fixture=bool(self.manifest.get("fixture"))
@@ -47,6 +47,15 @@ class ReleaseReader:
     def load(self,partition,task_type="relation"):
         if task_type not in LABELS:raise ProtocolError("unsupported_model_task")
         require_training_split(partition)
+        requested=[e for e in self.split.entries if e.split==partition]
+        ready=self.manifest.get('readiness',{})
+        if (not self.fixture and self.manifest.get('training_ready') is not True) or ready.get('policy')!='complete-accepted-training-v1' or ready.get('status')!='ready' or ready.get('scope')!=('fixture' if self.fixture else 'development'):
+            ids={e.record_id for e in requested}
+            blocked=next((b for b in ready.get('blockers',[]) if b.get('record_id') in ids),None)
+            if blocked is None:blocked=next((b for b in ready.get('blockers',[]) if b.get('record_id') in {e.record_id for e in self.split.entries}),None)
+            rid=blocked['record_id'] if blocked else requested[0].record_id if requested else '<partition:'+partition+'>'
+            error=RecordReadError(rid,partition,ProtocolError(blocked['reason'] if blocked else 'release_not_training_ready'))
+            self.excluded.append(error.report);raise error
         rows=[]
         for entry in self.split.entries:
             if entry.split!=partition:continue
@@ -66,6 +75,7 @@ class ReleaseReader:
                 family=next((name for name,task in FAMILY_TASK.items() if task==item.task_type),None)
                 if family is None:raise ProtocolError("input_family_unknown")
                 if metadata.input_hash!=digest(item):raise ProtocolError("metadata_input_hash_mismatch")
+                if item.task_type in LABELS and item.evidence.completeness!="complete":raise ProtocolError("input_"+item.evidence.completeness)
                 if item.task_type!=task_type:
                     self.excluded.append({"record_id":entry.record_id,"task_type":item.task_type,"reason":"different_task"});continue
                 name=f"labels/{entry.record_id}.json"

@@ -6,6 +6,7 @@ from career_lab.contracts.v2.core import canonical, digest
 from career_lab.contracts.v2.evaluation import FeedbackItem
 from career_lab.evidence.v2.assembler import model_input
 from .rules import pending
+from .support import EvidenceSupportVerifier
 
 
 @dataclass(frozen=True)
@@ -15,13 +16,15 @@ class JudgeOutcome:
 
 
 class AdvisoryJudge:
-    def __init__(self,model=None,support_check=None):
+    def __init__(self,model=None,support_check=None,*,input_bytes=64000):
         # A complete() hidden retry loop would multiply the explicit two-attempt
         # budget. Production providers must expose a single bounded call here.
         if model is not None and getattr(model,'retries',0)!=0:
             raise ValueError('judge provider must disable hidden retries')
         self.model=model
-        self.support_check=support_check or (lambda package,advice:'unverified')
+        self.support_check=support_check or EvidenceSupportVerifier()
+        if input_bytes<512:raise ValueError('invalid Judge input budget')
+        self.input_bytes=input_bytes
 
     @property
     def revision(self):return self.model.revision if self.model is not None else 'unavailable'
@@ -47,6 +50,9 @@ class AdvisoryJudge:
         for number in range(1,3):
             record={'attempt':number,'input_hash':package.input_hash,'model_revision':self.revision}
             try:
+                if len(canonical(messages).encode())>self.input_bytes:
+                    record['status']='input_overflow';attempts.append(record)
+                    return JudgeOutcome(pending(package,'完整模型输入超出已配置预算；未截断证据，规则结果保留。'),tuple(attempts))
                 reply=self.model.complete(messages,[])
                 if reply.tool_calls:raise ValueError('tools_not_allowed')
                 if len(reply.text)>24000:raise ValueError('response_too_large')
@@ -67,7 +73,11 @@ class AdvisoryJudge:
                 if package.rule_bound and item.label not in {'INSUFFICIENT','NOT_APPLICABLE'}:
                     order={'NOT_MET':0,'PARTIAL':1,'MET':2}
                     if not order[package.rule_bound.lower]<=order[item.label]<=order[package.rule_bound.upper]:raise ValueError('advice_outside_rule_bound')
-                relation=self.support_check(package,item)
+                if hasattr(self.support_check,'verify'):
+                    checked=self.support_check.verify(package,item);relation=checked.verdict
+                    from dataclasses import asdict
+                    record['support']=asdict(checked)
+                else:relation=self.support_check(package,item)
                 if relation not in {'supported','unsupported','unverified'}:raise ValueError('invalid_support_verdict')
                 if relation=='unsupported':raise ValueError('citation_does_not_support_claim')
                 if relation=='unverified' and item.label!='INSUFFICIENT':

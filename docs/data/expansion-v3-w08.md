@@ -1,6 +1,6 @@
 # W08 模型与实验管线
 
-当前为 **implementation_only / partial**，消费031固定的c4公共候选`expansion-v3-81f4855d5cdf8c601c6b09d7b350b11dcda5ed156e2d801d8e542fa197718c85`（commit `b55b4c260867ba04ca8ecac7232c9f5d3bcbc41f`）。本模块已实现可运行代码及小数据管线验证；W07合法fixture发布已实际消费；正式业务release、W11真实多结构和产品加载仍未接齐，不能据此宣称新E1/E2、模型质量或课程交付完成。
+当前为 **implementation_only / partial**，消费031固定的c5公共候选`expansion-v3-deb8023ca664946f45c52692c65e3524703d77194c5100e0ee42939ae26cff4b`（commit `d82d7fe690ed0491744cb716df377a77bc2ed4b4`）。本模块已实现可运行代码及小数据管线验证；W07合法fixture发布已实际消费；正式业务release、W11真实多结构和产品加载仍未接齐，不能据此宣称新E1/E2、模型质量或课程交付完成。
 
 所有候选输出固定为advisory、affects_score=false。G2v只代表模型复核标签；独立人工语义校准与正式scoring采用不由本模块自动开启。
 
@@ -97,3 +97,8 @@ W07以12个合成快照实际发布6 train与6 dev，W08用独立进程直接读
 每条记录额外读取`origins/<record_id>.json`，绑定来源桶、session、完整lineage摘要、snapshot/source摘要及实际原文件FileRef；与DatasetMetadataV2和输入记录重建比较。删marker、改桶、重算外层hash仍不能将fixture变成业务输入。非fixture消费者除总体metadata_approval外，还必须注入独立source_authority逐条返回可信来源绑定；只接收release自报内容的回调不构成真实授权。该端口尚未接真实业务源，正式数据仍blocked。
 
 来源绑定是验证用内部侧记，未修改冻结公共schema；新reader拒绝缺少来源绑定的旧release。旧release按原冻结源码追溯，不原地改写。
+
+
+## v4训练就绪入口
+
+新reader只消费W07 release-v4：readiness采用complete-accepted-training-v1，必须status=ready且scope匹配fixture/development；真实来源同时要求training_ready=true。合成数据的training_ready保持false，显式fixture ready仅开放本地合成流程，不代表研究通过。非ready发布在读取训练正文前带具体record_id/原因拒绝；即使manifest自报ready，实际input.completeness不足也在reader内拒绝，不等到fit时匿名整批崩溃，不生成替代标签或证据。

@@ -4,9 +4,9 @@ Facts must come from deterministic/historical services. Neither a learner reques
 nor a Judge completion can populate these trusted ports directly.
 """
 from dataclasses import dataclass
-from typing import Protocol, Any
+from typing import Protocol, Any, Literal
 
-from career_lab.contracts.v2.core import AuthContext, EvidenceRefV2, ObjectRef, VersionPoint
+from career_lab.contracts.v2.core import AuthContext, EvidenceRefV2, ObjectRef, VersionPoint, Executor
 from career_lab.contracts.v2.world import TestResultV2
 
 
@@ -14,7 +14,14 @@ from career_lab.contracts.v2.world import TestResultV2
 class SourceRecord:
     ref: EvidenceRefV2
     text: str
-    created_at: VersionPoint
+    created_at: VersionPoint | None
+    declared_refs: tuple[EvidenceRefV2, ...] = ()
+    author: Executor | None = None
+    executor: Executor | None = None
+    adopter: Executor | None = None
+    activity_kind: str | None = None
+    activity_target: ObjectRef | None = None
+    actor_id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -22,6 +29,47 @@ class VerifiedFact:
     name: str
     value: Any
     sources: tuple[EvidenceRefV2, ...]
+
+
+@dataclass(frozen=True)
+class ResponsibilityFact:
+    """Source-backed historical record, not a launch obligation flag.
+
+    scope binds exact subject versions. Occurrence and validity are checked at
+    the subject anchor, never at a later review-request time. Actual values must
+    use actual_* facts; intended configuration does not prove actual execution.
+    """
+    criterion: str
+    kind: Literal['actual_action', 'commitment', 'completion_claim', 'unknown']
+    occurred_at: VersionPoint
+    valid_from: VersionPoint
+    scope: tuple[ObjectRef, ...]
+    sources: tuple[EvidenceRefV2, ...]
+    facts: tuple[VerifiedFact, ...] = ()
+    valid_until: VersionPoint | None = None
+    state: Literal['active', 'withdrawn', 'unknown'] = 'active'
+
+
+@dataclass(frozen=True)
+class ActivityRecord:
+    ref: EvidenceRefV2
+    kind: Literal['material_read', 'test_run', 'question_sent', 'reply_received', 'learner_displayed']
+    occurred_at: VersionPoint
+    executor: Executor
+    actor_id: str
+    target: ObjectRef | None = None
+    counterparty: str | None = None
+
+
+@dataclass(frozen=True)
+class ActivityLedger:
+    records: tuple[ActivityRecord, ...] = ()
+    # Completeness is an assertion of the trusted ledger adapter for this exact
+    # authorized history window, not inferred from an empty returned list.
+    completeness: tuple[tuple[str, bool], ...] = ()
+    covered_from: VersionPoint | None = None
+    covered_through: VersionPoint | None = None
+    captured_at: VersionPoint | None = None
 
 
 @dataclass(frozen=True)
@@ -35,6 +83,7 @@ class RuleSnapshot:
     technical_failures: tuple[str, ...] = ()
     business_response: str = ''
     business_response_refs: tuple[EvidenceRefV2, ...] = ()
+    responsibilities: tuple[ResponsibilityFact, ...] = ()
 
 
 class EvidenceReader(Protocol):

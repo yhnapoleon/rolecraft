@@ -50,8 +50,12 @@ def test_exact_share_revoke_remove_restore_preserves_history(env):
     removed=do(env,'work_products.versions.create',edit_payload(v2,removed=True))['object']
     with pytest.raises(ProtocolError):env['service'].get_product(role(env,'tech_lead'),p['product_id'],1)
     restored=do(env,'work_products.versions.create',edit_payload(removed,removed=False))['object']
-    assert restored['version']==4 and env['service'].get_product(role(env,'tech_lead'),p['product_id'])['version']==1
-    assert env['service'].get_product(env['auth'],p['product_id'],1)==old_version
+    assert restored['version']==4
+    with pytest.raises(ProtocolError):env['service'].get_product(role(env,'tech_lead'),p['product_id'])
+    do(env,'work_products.shares.change',{'product_id':p['product_id'],'share_id':shared['id'],'expected_revision':4,'operation':'restore'})
+    assert env['service'].get_product(role(env,'tech_lead'),p['product_id'])['version']==1
+    current=env['service'].get_product(env['auth'],p['product_id'],1)
+    assert {k:v for k,v in current.items() if k not in {'shares','visibility'}}=={k:v for k,v in old_version.items() if k not in {'shares','visibility'}}
     assert revoked['revoked_at']['storage_revision']>shared['shared_at']['storage_revision']
 
 

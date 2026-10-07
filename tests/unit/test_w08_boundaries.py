@@ -59,7 +59,7 @@ def test_laundered_fixture_cannot_be_blessed_by_rehashed_metadata(tmp_path,rewri
     idx=json.loads((root/'record-metadata.json').read_text())
     for rid,ref in idx['records'].items():ref['sha256']=manifest['files'][ref['path']]
     (root/'record-metadata.json').write_bytes(json_bytes(idx));manifest['metadata']['sha256']=manifest['files']['record-metadata.json']=sha((root/'record-metadata.json').read_bytes())
-    manifest['fixture']=False;manifest['id']=digest({k:v for k,v in manifest.items() if k!='id'});(root/'manifest.json').write_bytes(json_bytes(manifest))
+    manifest['fixture']=False;manifest['training_ready']=True;manifest['readiness']['scope']='development';manifest['id']=digest({k:v for k,v in manifest.items() if k!='id'});(root/'manifest.json').write_bytes(json_bytes(manifest))
     reader=ReleaseReader(root,FileRef(path='manifest.json',sha256=sha((root/'manifest.json').read_bytes())),FileRef(path='split-manifest.json',sha256=manifest['files']['split-manifest.json']),metadata_approval=lambda *args:None)
     with pytest.raises(RecordReadError) as exc:reader.load('train')
     assert exc.value.cause_code==('independent_source_authority_required' if rewrite_snapshot_and_origin else 'ValidationError')

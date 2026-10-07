@@ -75,7 +75,7 @@ def release_fixture(root):
     (root/"records.json").write_text('DO NOT READ: global sidecar includes held-out content')
     files["records.json"]=sha((root/"records.json").read_bytes())
     (root/"record-metadata.json").write_bytes(json_bytes({"protocol":"w07-record-metadata-index-v1","records":metadata}));files["record-metadata.json"]=sha((root/"record-metadata.json").read_bytes())
-    manifest={"protocol":"expansion-v3-w07-release-v3","metadata":FileRef(path="record-metadata.json",sha256=files["record-metadata.json"]).model_dump(mode="json"),"files":files,"records":len(rows),"fixture":True,"splits":{"train":6,"dev":3,"test":3}}
+    manifest={"protocol":"expansion-v3-w07-release-v4","readiness":{"policy":"complete-accepted-training-v1","status":"ready","scope":"fixture","blockers":[],"research_approved":False},"metadata":FileRef(path="record-metadata.json",sha256=files["record-metadata.json"]).model_dump(mode="json"),"files":files,"records":len(rows),"fixture":True,"splits":{"train":6,"dev":3,"test":3}}
     manifest["id"]=digest(manifest);(root/"manifest.json").write_bytes(json_bytes(manifest))
     return FileRef(path="manifest.json",sha256=sha((root/"manifest.json").read_bytes())),FileRef(path="split-manifest.json",sha256=files["split-manifest.json"])
 
