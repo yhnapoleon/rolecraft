@@ -12,7 +12,7 @@ from career_lab.contracts.v2 import (
     ObjectRef, ProtocolError, ProviderMessage, RoleContext, TurnInput, digest,
 )
 from career_lab.contracts.v2.projection import project_disclosures
-from career_lab.runtime.context_v2 import ContextPort, clean_ref, identifier_in, internal_alias_in
+from career_lab.runtime.context_v2 import ContextPort, clean_ref, identifier_in, internal_alias_in, role_text, require_work_language, ROLE_PROMPT_REVISION
 from career_lab.runtime.model_adapter import ModelReply
 from career_lab.storage.role_memory import (
     PrivateGeneration, PublicSpokenEvidence, RoleStanceEvidence, RoleTurn, RoleReply, RoleDisplay,
@@ -30,14 +30,17 @@ class RoleModelTransient(ProtocolError):
 
 class LocalRoleModel:
     """Offline example only; continuity must be in context, never this model's echo."""
-    revision="w04-local-extractive-v2"
+    revision="w04-local-extractive-v3"
+    retries=0
     def complete(self,messages,tools):
         import json
         ctx=json.loads(messages[0]["content"].split("\nCONTEXT\n",1)[1])
-        lines=["本地资料模式。", "我的职责："+"；".join(ctx['responsibilities'])+"。"]
-        for source in ctx['sources'][:4]:lines.append(f"[{source['id']}] {source['text']}")
-        if ctx['omissions']['learner_scope']:lines.append("有学员材料超出本次授权，相关内容未读取或复述。")
-        lines.append("以上供讨论；申请与资源生效以实际保存的决定为准。访谈尚未执行，可先整理为待办建议。")
+        language=require_work_language(ctx.get('work_language'))
+        separator='; ' if language=='en' else '；'
+        lines=[role_text(language,'local_mode'), role_text(language,'responsibilities')+separator.join(ctx['responsibilities'])]
+        for source in ctx['sources'][:4]:lines.append(f"[{source['display_name']}] {source['text']}")
+        if ctx['omissions']['learner_scope']:lines.append(role_text(language,'scope_omitted'))
+        lines.append(role_text(language,'discussion_only'))
         return ModelReply(text="\n".join(lines))
 
 
@@ -91,6 +94,7 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
         or snapshot.context.role_id!=request.input.role_id or reply_ref.kind!='role_reply'
         or reply_ref.session_id!=auth.session_id):raise ProtocolError("role_generation_identity_invalid",status=403)
     if snapshot.source_binding is None:raise ProtocolError("role_stance_source_unavailable",status=409)
+    require_work_language(snapshot.work_language)
     if getattr(model,'retries',0):raise ProtocolError("role_provider_retry_budget_uncontrolled",status=409)
     stance=snapshot.stance_state;resolutions=[]
     if stance is None:raise ProtocolError('role_stance_context_invalid',status=409)
@@ -145,7 +149,8 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
         history_revision=snapshot.history_revision,received_shares=snapshot.received_shares,
         memories=snapshot.memories,refresh_count=refresh_count,attempts=(attempt,),used_sources=selected,
         opinions=actual_opinions(snapshot,reply_ref,response.text),source_aliases=source_aliases,
-        stance_state=stance,stance_resolutions=tuple(resolutions))
+        stance_state=stance,stance_resolutions=tuple(resolutions),
+        work_language=snapshot.work_language,prompt_template_revision=ROLE_PROMPT_REVISION)
     # The question is immutable learner-authored input, not generated disclosure.
     # All generated fields still pass the guard; do not selectively redact input.
     snapshot.require_public(reply.model_dump(mode="json",exclude={'question'}))

@@ -129,6 +129,8 @@ class PrivateGeneration:
     source_aliases: tuple[tuple[ObjectRef,str], ...] = ()
     stance_state: "RoleStanceState | None" = None
     stance_resolutions: tuple["StanceResolution", ...] = ()
+    work_language: Literal["zh", "en"] | None = None
+    prompt_template_revision: str | None = None
     language_consistency: Literal["unverified"] = "unverified"
     learner_penalty_allowed: Literal[False] = False
 
@@ -197,8 +199,11 @@ def memory_from_generation(reply, generation):
         ref=ObjectRef.model_validate({k:v for k,v in m.fragment.ref.model_dump().items() if k in ObjectRef.model_fields})
         if canonical(ref) in selected:learner.extend(m.learner_refs)
     provenance=tuple(s.ref for s in generation.used_sources)
+    from career_lab.runtime.context_v2 import role_text
+    # Existing Chinese c7 audits predate explicit owned language metadata.
+    language=generation.work_language if generation.work_language is not None else 'zh'
     text=canonical({"historical_question":reply.question,"historical_reply":reply.text,
-                    "meaning":"过去对话原文，保留其时点；意见不自动成为公司事实"})
+                    "meaning":role_text(language,'history_meaning')})
     fragment=DisclosedFragment(ref=EvidenceRefV2(**generation.reply_ref.model_dump(),observed_at_seq=reply.as_of.business_seq),
                               text=text,channel="memory",verification="verified")
     return RoleMemory(fragment,reply.role_id,tuple({canonical(r):r for r in learner}.values()),provenance)
