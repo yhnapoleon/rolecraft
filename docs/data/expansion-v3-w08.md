@@ -102,3 +102,12 @@ W07以12个合成快照实际发布6 train与6 dev，W08用独立进程直接读
 ## v4训练就绪入口
 
 新reader只消费W07 release-v4：readiness采用complete-accepted-training-v1，必须status=ready且scope匹配fixture/development；真实来源同时要求training_ready=true。合成数据的training_ready保持false，显式fixture ready仅开放本地合成流程，不代表研究通过。非ready发布在读取训练正文前带具体record_id/原因拒绝；即使manifest自报ready，实际input.completeness不足也在reader内拒绝，不等到fit时匿名整批崩溃，不生成替代标签或证据。
+
+
+## Joint候选的最小训练资格
+
+当前LR、Legacy MLP和Attention joint候选统一要求train至少有1条完整校验通过、evidence_evaluable=true的记录。pipeline在读取dev、训练和选型前执行同一training_examples闸门；Attention按容量排除记录后再次执行该闸门，不能保留未训练证据头参与joint选型，也不能用dev补训。缺少条件时返回joint_training_evidence_required及train记录范围，不生成该候选的可用模型包。该条件只是最低机械资格，一条证据不证明质量合格。
+
+label-only导出与读取仍合法，既有分类标签及证据分母排除规则保持；没有新增classification-only产品模式。直接fit遇到不完整输入会给record_id、split和具体input原因。Reader的label_only_records按release hash、partition、record_id幂等记录，只有整行全部校验成功后才登记；读取日志仍保留每次真实访问。
+
+ReleaseReader初始化已有SplitManifest.isolation，structure/component/ancestor跨区会在metadata/input/label/test正文读取之前拒绝。本轮入口反例验证该既有防线，不另复制一套校验。W07的全谱系与来源闸门、真实authority要求仍保持。origin-binding-v1跨包兼容继续用实际W07发布物→W08读取验证。

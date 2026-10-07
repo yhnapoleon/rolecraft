@@ -90,17 +90,30 @@ def training_examples(examples, task, *, split="train", require_all_classes=True
     if task not in LABELS or not rows:
         raise ProtocolError("training_data_required")
     for row in rows:
-        row.validate()
+        try:row.validate()
+        except ProtocolError as exc:
+            exc.split=row.split
+            exc.report=dict(getattr(exc,"report",{}),split=row.split)
+            raise
         if row.split != split:
             raise ProtocolError("training_partition_forbidden", status=403)
         if row.item.task_type != task:
             raise ProtocolError("mixed_training_tasks")
-        if input_problem(row.item):
-            raise ProtocolError("incomplete_training_input")
+        problem=input_problem(row.item)
+        if problem:
+            error=ProtocolError("incomplete_training_input",f"record {row.record_id} in {row.split}: {problem}")
+            error.record_id=row.record_id;error.split=row.split
+            error.report={"record_id":row.record_id,"split":row.split,"reason":problem}
+            raise error
     if len({r.record_id for r in rows}) != len(rows):
         raise ProtocolError("duplicate_training_record")
     if require_all_classes and {r.annotation.final.label for r in rows} != set(LABELS[task]):
         raise ProtocolError("training_class_coverage_missing")
+    if split=="train" and not any(r.annotation.final.evidence_evaluable for r in rows):
+        error=ProtocolError("joint_training_evidence_required","joint training requires at least one validated evidence-evaluable train record")
+        error.split=split
+        error.report={"split":split,"reason":error.code,"record_ids":[r.record_id for r in rows],"evaluable_records":0}
+        raise error
     return rows
 
 

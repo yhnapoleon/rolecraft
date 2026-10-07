@@ -5,7 +5,7 @@ import subprocess
 import time
 
 from career_lab.contracts.v2.core import FileRef,SourceIdentity,ProtocolError,digest,read_file
-from career_lab.models.v3.core import Prediction
+from career_lab.models.v3.core import Prediction,training_examples
 from career_lab.models.v3.linear import LinearCandidate,ConstantCandidate
 from career_lab.models.v3.encoder import AttentionEncoder
 from career_lab.models.v3.legacy import LegacyMLP
@@ -74,7 +74,8 @@ def run_development(reader,output,*,workspace,task="relation",seed=5002,epochs=4
     started=time.perf_counter();reports={};bundles={};evaluations={}
     write_json(output/"started.json",{"mode":"synthetic_pipeline" if reader.fixture else "development_only","formal_E1_E2_complete":False})
     try:
-        train=reader.load("train",task);dev=reader.load("dev",task)
+        train=training_examples(reader.load("train",task),task)
+        dev=reader.load("dev",task)
         source=source_snapshot(workspace,output)
         release_raw=read_file(reader.root,reader.release_ref);split_raw=read_file(reader.root,reader.split_ref)
         (output/"provenance").mkdir();(output/"provenance/release.json").write_bytes(release_raw);(output/"provenance/split.json").write_bytes(split_raw)

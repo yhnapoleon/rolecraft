@@ -18,7 +18,7 @@ class RecordReadError(ProtocolError):
 class ReleaseReader:
     def __init__(self,root,release_ref:FileRef,split_ref:FileRef,*,metadata_approval=None,allow_fixture=False,source_authority=None,label_only_authority=None):
         self.source_authority=source_authority;self.label_only_authority=label_only_authority
-        self.label_only_records=[]
+        self._label_only_records={}
         self.root=Path(root);self.release_ref=release_ref;self.split_ref=split_ref;self.access_log=[];self.excluded=[]
         self.manifest=json.loads(self._read(release_ref,"metadata-index"))
         if self.manifest.get("id")!=digest({k:v for k,v in self.manifest.items() if k!="id"}):raise ProtocolError("release_manifest_drift")
@@ -99,20 +99,28 @@ class ReleaseReader:
                     if self.source_authority is None or self.source_authority(metadata,tuple(record.provenance.actual_sources))!=expected_origin:
                         raise ProtocolError('independent_source_authority_required')
                 validate_record_annotation(record,annotation,require_accepted=True)
+                label_only=None
                 if not annotation.final.evidence_evaluable:
                     if not self.fixture and annotation.label_tier!='G0' and (self.label_only_authority is None or self.label_only_authority(record,annotation) is not True):
                         raise ProtocolError('label_only_semantic_review_required')
-                    self.label_only_records.append({'record_id':record.record_id,'evidence_training':False,'evidence_metrics':False,
-                        'label_basis':'fixture only; no semantic truth claim' if self.fixture else 'upstream numeric verifier' if annotation.label_tier=='G0' else 'independent semantic review'})
+                    label_only={'release_sha256':self.release_ref.sha256,'partition':partition,'record_id':record.record_id,'evidence_training':False,'evidence_metrics':False,
+                        'label_basis':'fixture only; no semantic truth claim' if self.fixture else 'upstream numeric verifier' if annotation.label_tier=='G0' else 'independent semantic review'}
                 projected=metadata_projection(record,annotation,capture_point=metadata.capture_point,source_snapshots=metadata.source_snapshots)
                 if projected!=metadata:raise ProtocolError("metadata_annotation_status_mismatch")
                 row=Example(entry.record_id,item,annotation,partition,entry.structure_id,entry.component_id,
                             language=metadata.language,bucket=metadata.bucket,fixture=self.fixture)
-                row.validate();rows.append(row)
+                row.validate()
+                if label_only is not None:
+                    self._label_only_records[(self.release_ref.sha256,partition,record.record_id)]=label_only
+                rows.append(row)
             except (ValueError,KeyError,TypeError,OSError) as exc:
                 error=RecordReadError(entry.record_id,partition,exc);self.excluded.append(error.report);raise error from exc
         if not rows:raise ProtocolError("empty_requested_partition")
         return rows
+
+    @property
+    def label_only_records(self):
+        return [dict(row) for row in self._label_only_records.values()]
 
     def scope_report(self):
         return {"release":self.release_ref.model_dump(mode="json"),"split_manifest":self.split_ref.model_dump(mode="json"),

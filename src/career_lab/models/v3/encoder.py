@@ -153,7 +153,7 @@ class AttentionEncoder:
             else:kept.append(row)
         try:rows=training_examples(kept,self.task_type)
         except ProtocolError as exc:
-            exc.report={"excluded_records":excluded,"input_train_records":original_count,"kept_train_records":len(kept),"reason":"class coverage or records missing after declared capacity filter"}
+            exc.report=dict(getattr(exc,"report",{}),excluded_records=excluded,input_train_records=original_count,kept_train_records=len(kept),filter_reason="revalidated after declared capacity filter")
             raise
         self.initialize(rows)
         initial={k:v.copy() for k,v in self.params.items()};before=array_digest(initial)
