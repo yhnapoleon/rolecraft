@@ -113,3 +113,14 @@ def test_existing_split_manifest_isolation_rejects_at_reader_before_any_body(tmp
     monkeypatch.setattr(Path,'read_bytes',guard)
     with pytest.raises(ValueError,match='split'):ReleaseReader(root,release,split,allow_fixture=True)
     assert opened==['manifest.json','split-manifest.json']
+
+
+
+def test_linear_still_rejects_single_class_evidence_pairs_after_global_minimum():
+    from career_lab.models.v3.core import evidence_target
+    original=examples();only=next(r for r in original if r.annotation.final.label=='INSUFFICIENT')
+    rows=[r if r.record_id==only.record_id else label_only(r) for r in original]
+    assert training_examples(rows,'relation') and evidence_target(only)==set()
+    assert {int(c.id in evidence_target(only)) for c in only.item.evidence.candidate_evidence}=={0}
+    with pytest.raises(ProtocolError) as exc:LinearCandidate().fit(rows)
+    assert exc.value.code=='evidence_selector_class_coverage_missing'

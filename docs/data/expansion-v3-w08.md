@@ -53,10 +53,29 @@ LR、旧MLP、微型编码器及概率融合通过W01 ModelBundle保存为JSON+N
 
 ```sh
 .venv/bin/python -m career_lab.experiments.v3.training --help
-.venv/bin/python -m career_lab.experiments.v3.training train-v3 --release-root <fixture-release> --release-hash <sha256> --split-hash <sha256> --output <new-output> --workspace <this-checkout> --fixture --epochs 4 --dimension 8
+.venv/bin/python -m career_lab.experiments.v3.training train-v3 --release-root <fixture-release> --release-hash <sha256> --split-hash <sha256> --output <new-output> --workspace <this-checkout> --fixture --epochs 4 --dimension 8 > train-result.json
 .venv/bin/python -m career_lab.experiments.v3.training predict-v3 --root <saved-model> --bundle-hash <sha256> --input <allowed-model-input.json>
 .venv/bin/python -m career_lab.experiments.v3.training check-freeze-v3 --root <experiment> --freeze-hash <sha256>
 ```
+
+`train-v3`成功输出保留内部`freeze_id`，同时给出实际`freeze.json`绝对路径`freeze_path`和文件SHA-256 `freeze_hash`。`check-freeze-v3 --freeze-hash`使用文件hash；内部ID不能代替文件hash。上面的训练命令保存stdout为`train-result.json`后，以下命令可直接复制执行，路径中有空格也适用：
+
+```sh
+.venv/bin/python - <<'PY'
+import json
+import subprocess
+import sys
+from pathlib import Path
+result = json.loads(Path("train-result.json").read_text())
+subprocess.run([
+    sys.executable, "-m", "career_lab.experiments.v3.training",
+    "check-freeze-v3", "--root", str(Path(result["freeze_path"]).parent),
+    "--freeze-hash", result["freeze_hash"],
+], check=True)
+PY
+```
+
+校验仍检查文件SHA-256、内部记录摘要及全部冻结成员。传错hash或篡改freeze文件/成员会拒绝；没有增加按内部ID跳过文件校验的入口。
 
 总career-lab入口尚未挂载；模块提供`register_commands(commands)`及`w08_handler`给032串行集成。所有预测是advisory；predict CLI同时返回训练release引用和synthetic/development边界，不能把fixture模型显示为已验证产品模型。本地predict CLI不替代W05产品接口实调。
 
@@ -111,3 +130,6 @@ W07以12个合成快照实际发布6 train与6 dev，W08用独立进程直接读
 label-only导出与读取仍合法，既有分类标签及证据分母排除规则保持；没有新增classification-only产品模式。直接fit遇到不完整输入会给record_id、split和具体input原因。Reader的label_only_records按release hash、partition、record_id幂等记录，只有整行全部校验成功后才登记；读取日志仍保留每次真实访问。
 
 ReleaseReader初始化已有SplitManifest.isolation，structure/component/ancestor跨区会在metadata/input/label/test正文读取之前拒绝。本轮入口反例验证该既有防线，不另复制一套校验。W07的全谱系与来源闸门、真实authority要求仍保持。origin-binding-v1跨包兼容继续用实际W07发布物→W08读取验证。
+
+
+最低joint门槛与候选自身的训练条件分别生效。LR证据选择头要求正、负两类证据pair；例如唯一可评行为INSUFFICIENT且合法目标为空时，所有pair都为负，仍以evidence_selector_class_coverage_missing拒绝。当前pipeline保留候选失败即中止的fail-closed行为，不用dev补齐、不降低LR覆盖、不新增分类模式；至少一条可评记录不保证每个候选都能训练，更不保证质量。HF门槛目前仅做源码检查，真实运行继续blocked；没有安装依赖、下载checkpoint或付费验证。

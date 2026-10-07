@@ -139,7 +139,8 @@ def run_development(reader,output,*,workspace,task="relation",seed=5002,epochs=4
         frozen=freeze_selection(output,"freeze.json",files=refs,source=source,selection={"selection_split":"dev","selected":selected,
             "alpha":alpha_report["alpha"] if alpha_report else None,"evidence_threshold":alpha_report["evidence_threshold"] if alpha_report else None,
             "selection_policy":policy.as_dict(),"seed":seed,"epochs":epochs,"dimension":dimension,"max_tokens":max_tokens},split_manifest=split_ref,fixture=reader.fixture)
-        return {"report":"reports/development.json","freeze_id":frozen["id"],"selected":selected,"mode":report["mode"],"formal_E1_E2_complete":False}
+        return {"report":"reports/development.json","freeze_id":frozen["id"],
+                "freeze_path":str((output/"freeze.json").resolve()),"freeze_hash":sha((output/"freeze.json").read_bytes()),"selected":selected,"mode":report["mode"],"formal_E1_E2_complete":False}
     except Exception as exc:
         failure={"error":getattr(exc,"code",type(exc).__name__),"record_id":getattr(exc,"record_id",None),
                  "details":getattr(exc,"report",None),"elapsed_seconds":time.perf_counter()-started,"completed_fit_reports":reports,"formal_E1_E2_complete":False}

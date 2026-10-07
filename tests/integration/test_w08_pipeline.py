@@ -27,11 +27,23 @@ def command(*args):
 
 def test_pipeline_cli_trains_reloads_predicts_freezes_and_moves(tmp_path):
     release,split=release_fixture(tmp_path/"data")
-    output=tmp_path/"experiment"
+    output=tmp_path/"experiment with spaces"
     result=command("train-v3","--release-root",tmp_path/"data","--release-hash",release.sha256,"--split-hash",split.sha256,
                    "--output",output,"--workspace",WORKSPACE,"--fixture","--epochs",2,"--dimension",4)
     assert result.returncode==0,result.stdout+result.stderr
     summary=json.loads(result.stdout);assert summary["mode"]=="synthetic_pipeline" and not summary["formal_E1_E2_complete"]
+    freeze_path=Path(summary['freeze_path'])
+    assert freeze_path==output.resolve()/'freeze.json'
+    assert summary['freeze_hash']==sha(freeze_path.read_bytes()) and summary['freeze_hash']!=summary['freeze_id']
+    checked=command('check-freeze-v3','--root',freeze_path.parent,'--freeze-hash',summary['freeze_hash'])
+    assert checked.returncode==0 and json.loads(checked.stdout)['freeze_id']==summary['freeze_id']
+    wrong=command('check-freeze-v3','--root',freeze_path.parent,'--freeze-hash',summary['freeze_id'])
+    assert wrong.returncode!=0 and json.loads(wrong.stdout)['error']=='file_hash_mismatch'
+    bad_freeze=tmp_path/'tampered freeze';shutil.copytree(output,bad_freeze)
+    (bad_freeze/'freeze.json').write_bytes((bad_freeze/'freeze.json').read_bytes()+b'\n')
+    changed=command('check-freeze-v3','--root',bad_freeze,'--freeze-hash',summary['freeze_hash'])
+    assert changed.returncode!=0 and json.loads(changed.stdout)['error']=='file_hash_mismatch'
+
     report=json.loads((output/"reports/development.json").read_text())
     assert report["test_evaluation"]=="not_run" and report["external_model_calls"]==0
     assert report["training"]["attention_pack"]["weight_delta_l2"]>0
@@ -44,7 +56,7 @@ def test_pipeline_cli_trains_reloads_predicts_freezes_and_moves(tmp_path):
     assert infer.returncode==0,infer.stdout+infer.stderr
     assert json.loads(infer.stdout)["mode"]=="advisory" and not json.loads(infer.stdout)["affects_score"]
     assert json.loads(infer.stdout)["training_scope"]=="synthetic_pipeline" and json.loads(infer.stdout)["training_release"]["sha256"]
-    frozen_ref=FileRef(path="freeze.json",sha256=sha((output/"freeze.json").read_bytes()))
+    frozen_ref=FileRef(path="freeze.json",sha256=summary["freeze_hash"])
     moved=tmp_path/"moved";shutil.copytree(output,moved)
     assert verify_freeze(moved,frozen_ref)["id"]==summary["freeze_id"]
     a,_=load_bundle(bundle_root,ref);b,_=load_bundle(moved/"models/attention_pack",ref)
