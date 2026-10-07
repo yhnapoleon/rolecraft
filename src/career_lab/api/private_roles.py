@@ -63,7 +63,7 @@ def install_private_role_runtime(registry,catalog,model,*,enable_generation=Fals
     """
     for kind,model_type in (('role_turn',RoleTurn),('role_reply',RoleReply),('role_display',RoleDisplay)):registry.register_object_model(kind,model_type)
     enqueue=RoleService(ContextPort(catalog),model,max_context_chars=max_context_chars)
-    registry.register(Operation('turns.create','act',TurnInput,enqueue.enqueue))
+    registry.register(Operation('turns.create','act',TurnInput,enqueue.enqueue,ready=enable_generation,unavailable_code=None if enable_generation else 'role_integration_not_accepted'))
     def generate(store,view,envelope,auth):
         if not enable_generation:raise ProtocolError('role_integration_not_accepted',status=409)
         port=PrivateRoleGenerationPort(store,catalog,view,envelope,auth,max_context_chars=max_context_chars)

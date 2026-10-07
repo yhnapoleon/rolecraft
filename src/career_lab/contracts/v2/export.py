@@ -24,6 +24,7 @@ CONSUMERS={
 CONSUMERS['W02'] += ['BusinessBasis','ScenarioStateV2','MaterialMetadata','TestExecutionMetadata','RetrievedChunk','ExternalReference']
 CONSUMERS['W03'] += ['ProductAdopt','TaskBatch','ImportConflict','ImportVersionMap','PublicTransactionResult']
 CONSUMERS['W04'] += ['ObservedFragment','ProviderRequest','ProviderResult','ProviderCapabilities','ActualConsumption']
+CONSUMERS['W06'] += ['DelegationJobCapacity','OperationAvailability']
 CONSUMERS['W06'] += ['StepResult','ObservedFragment','PublicState','PublicEvent','PublicTransactionResult','ActualConsumption']
 CONSUMERS['W07'] += ['ExternalReference','ObservedFragment','ActualConsumption']
 CONSUMERS['W08'] += ['ProviderRequest','ProviderReply','ProviderResult','ProviderCapabilities']
@@ -61,6 +62,9 @@ def integration_example(model):
         return model(job_id='example-job',job_attempt=1,request=ObjectRef(session_id='example',kind='role_turn',object_id='turn',version=1),scope=scope,prompt_messages=(message,),prompt_hash=digest([{'role':message.role,'content':message.content}]),history_revision=digest('synthetic history'))
     from career_lab.contracts.v2 import FeedbackReadBoundary
     if model is FeedbackReadBoundary:return model(path='/business_response',content_hash=digest('Synthetic bounded text'),dependencies=(ObjectRef(session_id='example',kind='product',object_id='product',version=1),))
+    from career_lab.contracts.v2 import DelegationJobCapacity,OperationAvailability
+    if model is DelegationJobCapacity:return model(delegation_id='example',max_active_jobs=2,active_jobs=0,available_slots=2,observed_at=STAMP)
+    if model is OperationAvailability:return model(name='example',installed=False,ready=False,unavailable_code='module_unavailable')
     if model is FeedbackReferenceCheck:return model(submitted_reference_hash=digest('synthetic missing reference'),status='unavailable')
     if model is VerifiedFactsSnapshot:return model(subject=ObjectRef(session_id='example',kind='product',object_id='product',version=1),status='unknown',as_of=None,requested_at=sample_model(VersionPoint),captured_at=sample_model(VersionPoint),source_snapshot_hash=digest('synthetic unverified snapshot'),summary=('Formation point is unknown.',))
     if model is FeedbackResponseRecord:return model(id='response',session_id='example',feedback=ObjectRef(session_id='example',kind='feedback',object_id='feedback',version=1),kind='objection',text='Please reconsider this interpretation.',recorded_at=sample_model(VersionPoint),executor=Executor(id='human:example',kind='human'))
@@ -160,6 +164,9 @@ def export(root:Path,output:Path):
     manifest['previous_contract_revision']='expansion-v3-ffa9cb25c4a9d74c670c8cd03aac284cb6a23c6bea04192dc0c6d3da6391532a'
     manifest['integration_changes']['feedback-segment-scope']='Server-only complete input traces bind exact content hashes and dependencies per segment; fully authorized finite-scope readers retain proved text, missing or hidden dependencies degrade only affected parts.'
     manifest['integration_changes']['submitted-evidence-status']='New response evidence is explicitly user_submitted_unverified (or none_submitted); legacy absence stays unknown. Linking never claims quote or semantic verification.'
+    manifest['previous_contract_revision']='expansion-v3-41a21baa9f86c9e7ee7d17b07aa0c55eb5b0dd24b6f04c8a402ec65f72ddf05c'
+    manifest['integration_changes']['W06-public-queue-capacity']='Persisted per-credential 1–2 job policy; existing jobs counted in locked transactions for public enqueue/refresh, not process memory. Native repository enqueue/failed retry still requires coordinator scope release.'
+    manifest['integration_changes']['operation-readiness']='Installed and ready are distinct; closed registered operations return stable unavailable before public dispatch. Auth/delegation capabilities remain independent.'
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

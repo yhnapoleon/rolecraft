@@ -2539,6 +2539,67 @@
         "title": "DelegationInput",
         "type": "object"
       },
+      "DelegationJobCapacity": {
+        "additionalProperties": false,
+        "properties": {
+          "active_jobs": {
+            "minimum": 0,
+            "title": "Active Jobs",
+            "type": "integer"
+          },
+          "available_slots": {
+            "minimum": 0,
+            "title": "Available Slots",
+            "type": "integer"
+          },
+          "counted_statuses": {
+            "default": [
+              "queued",
+              "running"
+            ],
+            "items": {
+              "enum": [
+                "queued",
+                "running"
+              ],
+              "type": "string"
+            },
+            "title": "Counted Statuses",
+            "type": "array"
+          },
+          "delegation_id": {
+            "minLength": 1,
+            "title": "Delegation Id",
+            "type": "string"
+          },
+          "max_active_jobs": {
+            "maximum": 2,
+            "minimum": 1,
+            "title": "Max Active Jobs",
+            "type": "integer"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "delegation_id",
+          "max_active_jobs",
+          "active_jobs",
+          "available_slots",
+          "observed_at"
+        ],
+        "title": "DelegationJobCapacity",
+        "type": "object"
+      },
       "DelegationRevoke": {
         "additionalProperties": false,
         "properties": {
@@ -6318,6 +6379,68 @@
           "outcome"
         ],
         "title": "ObservedStep",
+        "type": "object"
+      },
+      "OperationAvailability": {
+        "additionalProperties": false,
+        "properties": {
+          "capability": {
+            "anyOf": [
+              {
+                "enum": [
+                  "read",
+                  "act",
+                  "submit",
+                  "delegate"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Capability"
+          },
+          "installed": {
+            "title": "Installed",
+            "type": "boolean"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "unavailable_code": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Unavailable Code"
+          }
+        },
+        "required": [
+          "name",
+          "installed",
+          "ready"
+        ],
+        "title": "OperationAvailability",
         "type": "object"
       },
       "Option": {

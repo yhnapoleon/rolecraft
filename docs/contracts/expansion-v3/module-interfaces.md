@@ -251,3 +251,12 @@ install_private_role_runtime默认enable_generation=False。当前成功/受众/
 新异议/补证记录包含evidence_status：none_submitted或user_submitted_unverified。旧字段缺失仍未记录/未知，不回填为已核实。权限/版本关联成功只证明可以引用，不证明quote在原文中、语义支持或该声明正确。原生UI接线须分别显示“未附补证”“用户提交，引用原文与支持关系待核实”“旧记录未记录核验状态”；不能套已核实证据样式。之后的W05评审必须再次读取实际源版本核quote/span/时点/语义，生成新的评审结果，原补证及原反馈不改。
 
 新回应文本由服务器关联到原反馈和所附引用，完整授权时可恢复原话；父反馈存在隐藏依赖时该文本继续降级。此字段和读取合同已实现，生产W05 writer/reader以及原生v4数据装配、UI标签仍待实际接线；本次不声称前端或真实业务闭环完成。
+
+
+W06公共排队容量：issue_delegation新增仅服务端max_active_jobs参数，默认2，可设1，范围始终不超过2；策略单独存v2_delegation_job_limits，不改既有AuthContext/Grant规范化和token算法。旧策略缺失按2，旧token继续可用；同delegate重签不能静默改变策略。计数来自既有jobs的queued/running，临时失败重排继续占槽，完成/终态失败释放，needs_context暂停不占活跃槽；显式refresh按原delegate重新检查，即使请求来自owner也不借owner额度。
+
+入队容量检查与业务写入、队列和回执在同一事务；先锁真实credential，SQLite使用原共同BEGIN IMMEDIATE，PostgreSQL使用行锁与DB COUNT。拒绝时返回delegation_job_limit_reached/429，整个计划不留部分写入。缓存重放不新增额度。owner刷新预先锁原delegate再取session，避免与Agent入队反向锁等待。delegation_job_capacity只返回当前容量快照，不是预留；human/research/reference-agent不被误记成外部delegate，本机制不授予任何新身份或研究权限。
+
+当前尚待031释放jobs/repository.py，给原生direct v2 enqueue与retry_failed（failed→queued）增加相同边界；该文件仍属不可变继承，不能称所有原生入口已封口。HTTP/MCP尚无v2 retry挂载，W06必须使用共同V2Store/Gateway，不自行调旧原生重试或自建计数器。失败重试共享请求与具体边界随候选保存。
+
+OperationAvailability明确installed/ready/capability/unavailable_code，注册不等于业务可用。Operation.ready=False在公共dispatch入队之前503拒绝；角色工厂默认关闭时，真实Actor不能借HTTP/MCP注册名触发生成或积压新任务。公开requests.read/jobs.refresh为既有能力；未挂载的observation/tools、内部research名字不会被假定ready。该信号不替代AuthContext的read/act/submit与对象范围检查。MCP协议、CLI/UI/worker总装和新入口隐私回归仍待W06固定实现，未声称这些已完成。

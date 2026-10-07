@@ -19,3 +19,6 @@ v2_restores=Table('v2_restores',metadata,key('target_session_id'),text('request_
 v2_external_refs=Table('v2_external_refs',metadata,key('session_id'),key('kind'),key('id'),Column('version',Integer,primary_key=True),text('record'),integer('created_revision'))
 
 v2_request_meta=Table('v2_request_meta',metadata,key('session_id'),key('request_id'),text('credential_id'),text('executor'),text('actor_id'),text('operation'),text('scope_refs'),text('job_ids'))
+
+# Per-credential policy only. Active counts come from the existing jobs table.
+v2_delegation_job_limits=Table('v2_delegation_job_limits',metadata,key('credential_id'),text('session_id'),integer('max_active_jobs'))

@@ -190,3 +190,28 @@ class ExternalReference(V2):
     ref: ObjectRef
     source: FileRef
     content_hash: Hash
+
+
+class DelegationJobCapacity(V2):
+    delegation_id: Identifier
+    max_active_jobs: Annotated[int,Field(ge=1,le=2)]
+    active_jobs: NonNegativeInt
+    available_slots: NonNegativeInt
+    counted_statuses: tuple[Literal['queued','running'],...] = ('queued','running')
+    observed_at: Timestamp
+    @model_validator(mode='after')
+    def capacity(self):
+        if self.available_slots!=max(0,self.max_active_jobs-self.active_jobs):raise ValueError('invalid available job capacity')
+        return self
+
+class OperationAvailability(V2):
+    name: Identifier
+    installed: bool
+    ready: bool
+    capability: Literal['read','act','submit','delegate'] | None = None
+    unavailable_code: Identifier | None = None
+    @model_validator(mode='after')
+    def readiness(self):
+        if self.ready and (not self.installed or self.unavailable_code is not None):raise ValueError('invalid operation readiness')
+        if not self.ready and self.unavailable_code is None:raise ValueError('unavailable operation needs code')
+        return self

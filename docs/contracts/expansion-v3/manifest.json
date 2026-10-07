@@ -133,6 +133,8 @@
       "Command",
       "JobEnvelope",
       "ResourcePage",
+      "DelegationJobCapacity",
+      "OperationAvailability",
       "StepResult",
       "ObservedFragment",
       "PublicState",
@@ -270,7 +272,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "c5fd628c193a62e23647d6dc973f2fbaaca4d8f3806a8bc347d1e3646e85168e"
+      "sha256": "7ad3dab7d0a33fab1f7235b85a4a069c965990db99948492588189f0d95aefc5"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -278,12 +280,12 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "7986e32b1faa0549b34b9edb49dc9bc0576746df0e124c54ad96fe55bf524f9e"
+      "sha256": "c48665981aadc371ae1ddf4b3ae2beef90c9bb584bed4379cc2ff148ac13cd97"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "a7c168747f7c621d9b617a14f8320a9c6e99e13c36770d33e40593e93e26f1b7"
+    "sha256": "53a36bd20fd117b14c0a6163deb8a5d0cdd8273f4f3868473d7b380df9f49727"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
@@ -300,20 +302,22 @@
     "W04-private-writer": "Actual worker-bound private port, atomic public reply/private audit, fenced internal attempt journal, original Agent attribution without scope expansion; factory stays closed by default pending repaired W04 input.",
     "W05-W03-remapping": "FeedbackResponseCreate.feedback_id and ResourcePage feedback/response/import identities remap by declared kind, leaving text and historical opaque provenance unchanged.",
     "W05-factual-persistence": "Optional typed factual/history/rule sections persist in FeedbackV2; legacy absent means not recorded. Exact feedback follow-ups append immutable objects without changing submitted/paused business state; new reviews link prior responses and explicit decisions.",
+    "W06-public-queue-capacity": "Persisted per-credential 1–2 job policy; existing jobs counted in locked transactions for public enqueue/refresh, not process memory. Native repository enqueue/failed retry still requires coordinator scope release.",
     "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.",
     "W07-W08-empty-joint-target": "Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.",
     "W07-W08-semantic-consensus": "Only independent-pass consensus uses semantic_decision_key; G2/G2v final remains bound by the full normalized decision_key to the actual selected pass.",
     "feedback-segment-scope": "Server-only complete input traces bind exact content hashes and dependencies per segment; fully authorized finite-scope readers retain proved text, missing or hidden dependencies degrade only affected parts.",
+    "operation-readiness": "Installed and ready are distinct; closed registered operations return stable unavailable before public dispatch. Auth/delegation capabilities remain independent.",
     "original-source-protection": "test_freeze enumerates only BASE existing scenarios; no v2 baseline rewrite and no test exclusion needed.",
     "role-event-references": "Actual event provenance is scope/audience/window validated and remapped in the event namespace; no parallel event store.",
     "submitted-evidence-status": "New response evidence is explicitly user_submitted_unverified (or none_submitted); legacy absence stays unknown. Linking never claims quote or semantic verification."
   },
   "openapi": {
     "path": "openapi.json",
-    "sha256": "3de94537fca1fc5721cbbee7c1d5bcc9ae8a85901b8a57cef3ce5337557a1d72"
+    "sha256": "d804551185491f4bcc7d51f37f3ddff53dab87fb027957d4919fc48ffb1152a3"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-ffa9cb25c4a9d74c670c8cd03aac284cb6a23c6bea04192dc0c6d3da6391532a",
+  "previous_contract_revision": "expansion-v3-41a21baa9f86c9e7ee7d17b07aa0c55eb5b0dd24b6f04c8a402ec65f72ddf05c",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -864,6 +868,20 @@
       "owner": "W01",
       "schema": "schemas/DelegationInput.json",
       "schema_sha256": "93cc53b897006c9263cc4af0efefe0375df515d088ed8a833174967500db644a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DelegationJobCapacity": {
+      "consumers": [
+        "W06"
+      ],
+      "example": "examples/DelegationJobCapacity.json",
+      "example_sha256": "a107bbddd7217e74a8dfad2eae7b3b6cea9229eec5104bcad8097dbb6790ee43",
+      "owner": "W01",
+      "schema": "schemas/DelegationJobCapacity.json",
+      "schema_sha256": "ed2c85705eb363bf90ffe96bc3075f1e8527af1d057752780ccf4141ef24be89",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1667,6 +1685,20 @@
       "owner": "W01",
       "schema": "schemas/ObservedStep.json",
       "schema_sha256": "d8a1c44e30df2686cc4b89b4198f89c3fb976b0ec125167d82c6b2c5bd189779",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "OperationAvailability": {
+      "consumers": [
+        "W06"
+      ],
+      "example": "examples/OperationAvailability.json",
+      "example_sha256": "8bfe18352ebbd32eb726a6a5af50ab624f34b54ff230c2025382a416b695f134",
+      "owner": "W01",
+      "schema": "schemas/OperationAvailability.json",
+      "schema_sha256": "e4d47cec3736aecd4965418786a65c2459ec203b9035963c59fe1277477442d4",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -2932,8 +2964,8 @@
   "source_files": {
     "src/career_lab/api/app.py": "7d91e7e2161014dfadd98c7986dea531ca8a76a859e9172329789a351abc444c",
     "src/career_lab/api/feedback_integration.py": "ab0adab1472101b5bfb4bfade4b237f5a918ccdbb47ef1452d887d2c449b66c4",
-    "src/career_lab/api/modules.py": "1427e748826fe7b9c30668dc607d6e062918bb3252bb6bf4b0459dec4dd71273",
-    "src/career_lab/api/private_roles.py": "566ae44ede6ae36ae9d91b31ab88e857a87a4ee1b180121eb5c76f78eb62c43a",
+    "src/career_lab/api/modules.py": "eac79d477122b6bcd6dcfbbb5055b6f898384e02c6b7ad70674396e990d2820d",
+    "src/career_lab/api/private_roles.py": "b728767310eb0bb66235e190532fb58a7b50d64202fd7b28abd180042679af37",
     "src/career_lab/api/role_snapshot.py": "e7b6e1ff6146bb09bc55bf0d8c275c45b0602ac20023801f42d80c6f6d936b23",
     "src/career_lab/api/v2_routes.py": "14c2fb3a76fbff6f2f29673a398d1adbecf5a12cae2eb5483e67be021016aadf",
     "src/career_lab/api/workspace_integration.py": "0b731ea27219d49767b72e07b65293edc810eae79872842f8a2459ef863e2604",
@@ -2944,12 +2976,12 @@
     "src/career_lab/contracts/evaluation.py": "6dc4969cf02222543fa96ddffbd4d9fd19f4813ee1f9b85ea3d193797ac4ea23",
     "src/career_lab/contracts/scenario.py": "b191244dd1356503b153abf3a31921ce7911ec19b66534378b369b35d135e3b0",
     "src/career_lab/contracts/v2/__init__.py": "bcb066dbbe937f00a366d9fd836a1411afef069472cb2c8765988f771bee55e7",
-    "src/career_lab/contracts/v2/core.py": "50e521c7d7ea22d5ec4a60134917fe827361bf898ff8b5d7bf2ab8509ea34ea8",
+    "src/career_lab/contracts/v2/core.py": "6dc7ce6ab00d781f8c14f505a7c8f9ef482e8715dee7fb78a2e7ee3da1318fb5",
     "src/career_lab/contracts/v2/data.py": "bd0888c2937400bf00ceeac53b9e49260040c3782c7cbfaca62d10097841065b",
     "src/career_lab/contracts/v2/discovery.py": "302fffa41141a5adbe5037eeca3e4dc7b30761957cd1565309fe01845996934b",
     "src/career_lab/contracts/v2/evaluation.py": "0697b8f77246da064a43b31596acb12e7943405e6d5ea3b084c376e22dc37307",
     "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
-    "src/career_lab/contracts/v2/export.py": "c1aaf23e5f659193c9f028933f51f3c5fad81c98a0fb49f245d0cc2729cb894f",
+    "src/career_lab/contracts/v2/export.py": "98da916afa120543aec23e8223b4065e67e68f34047bf701250e9495c29d7589",
     "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
     "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
     "src/career_lab/contracts/v2/projection.py": "5a0781470e344f7ea341a8378ed3eb43978e9a02bdee0689a416baad1aca76dc",
@@ -2962,12 +2994,12 @@
     "src/career_lab/jobs/repository.py": "8b6bf7dcfe438347670b160f069cb6cfbd0cb8aadbf911b866de6bd4c073128d",
     "src/career_lab/jobs/worker.py": "75f733c2f7610db49f42ef7b9646d468dd0661a288abbf9a622d1592cc94ca30",
     "src/career_lab/rubrics/registry.py": "204f90efa1b93bc010d638f7310ef396148caf2aed3af132c7a5e064442700de",
-    "src/career_lab/storage/v2_jobs.py": "9c47b2c649052af8edf5c05ef556de6d7433327fdee2dd9865a38d4e8ca843ee",
+    "src/career_lab/storage/v2_jobs.py": "4a3165f4b270fbe1adfcfc22bad95a8a0537edb4dd833937a7ea795d02c9006c",
     "src/career_lab/storage/v2_lifecycle.py": "820df180088bd3c09a550912aab838f4586042955b3220553ae294167a97c857",
     "src/career_lab/storage/v2_remap.py": "05ded384d8682e2cef5a14828c7418eeb427ad9ee1e9b5614846c74b786debee",
     "src/career_lab/storage/v2_snapshot.py": "e4d295e54c3ffe9813bb93ebd90d57a9b65368d91f1e83d4dda502e902108f0f",
-    "src/career_lab/storage/v2_store.py": "757d51763da3ffb76eaf0a80184b74e4c882b7f0b30d756f6fd8a99739dba0c7",
-    "src/career_lab/storage/v2_tables.py": "cb15ae737542083abb5206378bec958939901b9343246ce4614e97c77bd27ff2"
+    "src/career_lab/storage/v2_store.py": "c5382390313d9450ebb480e43ee26644109c8324ab96ce91f3174f931d06efc7",
+    "src/career_lab/storage/v2_tables.py": "db85ef5684efbee9dd0788d41377801eecd8acd1c7802c591f54e0688e02fcac"
   },
   "status": "frozen_candidate_pending_independent_review",
   "v1_dirty_included": false

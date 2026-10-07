@@ -123,6 +123,7 @@ class JobStoreMixin:
         # Caller permission never grants a revoked/narrowed original actor new authority.
         self._auth(c,auth,'act',context.action,[x.object_id for x in context.sources])
         if row['status']!='needs_context':raise ProtocolError('job_refresh_not_available',status=409)
+        self._ensure_delegation_capacity(c,original_auth,1)
         self._check_job_lifecycle(c,context,Command.model_validate(payload['command']),refresh=True)
         if c.execute(select(v2_transactions.c.request_id).where(v2_transactions.c.session_id==auth.session_id,v2_transactions.c.request_id==context.request_id)).first():raise ProtocolError('job_effect_already_committed',status=409)
         records=self._records(c,auth.session_id)

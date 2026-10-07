@@ -45,6 +45,8 @@ class Operation:
     service_mode: bool = False
     event_projector: Callable | None = None
     preview_handler: Callable | None = None
+    ready: bool = True
+    unavailable_code: str | None = None
 
 # Public API/tool installation whitelist. Internal snapshot/restore is deliberately absent.
 PUBLIC_OPERATIONS={
@@ -73,6 +75,8 @@ class ExtensionRegistry:
         self.scenarios[name]=scenario
     def register(self,operation:Operation):
         if operation.name=='requests.read' and (operation.mutates or operation.capability!='read'):raise ValueError('request result lookup is read-only')
+        if operation.ready and operation.unavailable_code is not None:raise ValueError('ready operation cannot have unavailable code')
+        if not operation.ready and operation.unavailable_code is None:raise ValueError('unready operation needs unavailable code')
         if operation.name not in PUBLIC_OPERATIONS:raise ValueError('not a public module slot')
         if operation.preview_handler and operation.name!='workspace_imports':raise ValueError('preview hook reserved for workspace import')
         if operation.name in self.operations:raise ValueError('operation already installed')
@@ -111,6 +115,13 @@ class ExtensionRegistry:
             if matched:matches.append(op)
         if len(matches)>1:raise ProtocolError('event_projection_ambiguous',status=503)
         return matches[0].event_projector if matches else None
+
+    def availability(self,name):
+        builtins={'requests.read':'read','jobs.refresh':'act'}
+        if name in builtins:return OperationAvailability(name=name,installed=True,ready=True,capability=builtins[name])
+        operation=self.operations.get(name)
+        if operation is None:return OperationAvailability(name=name,installed=False,ready=False,unavailable_code='module_unavailable' if name in PUBLIC_OPERATIONS else 'operation_not_public')
+        return OperationAvailability(name=name,installed=True,ready=operation.ready,capability=operation.capability,unavailable_code=operation.unavailable_code)
 
     def register_cli(self,name,configure_parser):
         if name in self.cli:raise ValueError('CLI already registered')
@@ -155,6 +166,7 @@ class Gateway:
             return self.request_result(auth,query.request_id).model_dump(mode='json')
         op=self.registry.operations.get(name)
         if op is None:raise ProtocolError('module_unavailable',f'{name} is not installed',503)
+        if not op.ready:raise ProtocolError(op.unavailable_code or 'module_unavailable',status=503)
         params=route_params or {}
         self.store.authorize(auth,op.capability)
         if op.mutates:

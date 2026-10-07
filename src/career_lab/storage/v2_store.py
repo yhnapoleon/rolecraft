@@ -9,7 +9,7 @@ import secrets
 import time
 from pydantic import ValidationError
 
-from sqlalchemy import insert, select, update
+from sqlalchemy import insert, select, update, func, cast
 from career_lab.storage.database import Database
 from career_lab.contracts.v2 import *
 from .v2_tables import *
@@ -229,7 +229,8 @@ class V2Store(JobStoreMixin):
     def authorize(self,auth,capability,operation=None,object_ids=()):
         with self.db.engine.connect() as c:return self._auth(c,auth,capability,operation,object_ids)
 
-    def issue_delegation(self,owner:AuthContext,grant:DelegationGrant):
+    def issue_delegation(self,owner:AuthContext,grant:DelegationGrant,*,max_active_jobs=2):
+        if type(max_active_jobs) is not int or not 1<=max_active_jobs<=2:raise ProtocolError('delegation_job_limit_invalid')
         with self.db.transaction() as c:
             self._auth(c,owner,'delegate')
             key=c.execute(select(v2_credentials.c.token_hash).where(v2_credentials.c.id==owner.credential_id)).scalar_one()
@@ -246,10 +247,41 @@ class V2Store(JobStoreMixin):
             if owner.expires_at and grant.expires_at>owner.expires_at:raise ProtocolError('delegation_escalation',status=403)
             context=AuthContext(session_id=owner.session_id,actor_id=grant.actor_id,executor=grant.executor,capabilities=grant.capabilities,allowed_actions=grant.allowed_actions,allowed_objects=grant.allowed_objects,create_under_tasks=grant.create_under_tasks,expires_at=grant.expires_at,credential_id=grant.id)
             previous=c.execute(select(v2_credentials).where(v2_credentials.c.id==grant.id).with_for_update()).mappings().first()
+            policy=c.execute(select(v2_delegation_job_limits.c.max_active_jobs).where(v2_delegation_job_limits.c.credential_id==grant.id)).scalar_one_or_none()
+            if previous and (policy if policy is not None else 2)!=max_active_jobs:raise ProtocolError('delegation_id_reused',status=409)
             if previous:
                 if previous['revoked'] or previous['context']!=canonical(context) or previous['token_hash']!=digest(token):raise ProtocolError('delegation_id_reused',status=409)
             else:self._credential(c,context,token)
+            if policy is None:c.execute(insert(v2_delegation_job_limits).values(credential_id=grant.id,session_id=grant.session_id,max_active_jobs=max_active_jobs))
         return token
+
+    def _delegation_capacity(self,c,auth):
+        from career_lab.jobs.repository import jobs
+        if auth.executor.kind!='external_agent' and auth.executor.delegation_id is None:return None
+        # All capacity decisions occur after locking the same real credential.
+        self._auth(c,auth)
+        limit=c.execute(select(v2_delegation_job_limits.c.max_active_jobs).where(v2_delegation_job_limits.c.credential_id==auth.credential_id,v2_delegation_job_limits.c.session_id==auth.session_id)).scalar_one_or_none()
+        limit=2 if limit is None else limit
+        if type(limit) is not int or not 1<=limit<=2:raise ProtocolError('delegation_job_policy_invalid',status=503)
+        if self.db.engine.dialect.name=='postgresql':
+            from sqlalchemy.dialects.postgresql import JSONB
+            credential=cast(jobs.c.payload,JSONB)['context']['credential_id'].astext
+        elif self.db.engine.dialect.name=='sqlite':credential=func.json_extract(jobs.c.payload,'$.context.credential_id')
+        else:raise ProtocolError('delegation_job_backend_unavailable',status=503)
+        active=c.execute(select(func.count()).select_from(jobs).where(jobs.c.kind.like('v2.%'),jobs.c.status.in_(('queued','running')),credential==auth.credential_id)).scalar_one()
+        return DelegationJobCapacity(delegation_id=auth.executor.delegation_id or auth.credential_id,max_active_jobs=limit,active_jobs=active,available_slots=max(0,limit-active),observed_at=datetime.now(timezone.utc))
+
+    def delegation_job_capacity(self,auth):
+        with self.db.transaction() as c:
+            self._auth(c,auth,'read')
+            return self._delegation_capacity(c,auth)
+
+    def _ensure_delegation_capacity(self,c,auth,additional):
+        capacity=self._delegation_capacity(c,auth)
+        if capacity is not None and capacity.active_jobs+additional>capacity.max_active_jobs:
+            error=ProtocolError('delegation_job_limit_reached','委托后台任务已达到并发上限。',status=429)
+            error.details={'max_active_jobs':capacity.max_active_jobs,'active_jobs':capacity.active_jobs,'requested_jobs':additional}
+            raise error
 
     def revoke_delegation(self,owner,credential_id):
         with self.db.transaction() as c:
@@ -783,7 +815,16 @@ class V2Store(JobStoreMixin):
         command=Command.model_validate(command.model_dump(mode='json'))
         fp=digest({'command':command.model_dump(mode='json'),'executor':auth.executor.model_dump(mode='json'),'actor':auth.actor_id,'credential_id':auth.credential_id})
         with self.db.transaction() as c:
-            self._auth(c,auth,capability,command.operation);row=self._row(c,auth.session_id)
+            self._auth(c,auth,capability,command.operation)
+            if command.operation=='jobs.refresh' and isinstance(command.payload.get('job_id'),str):
+                # Lock the original delegate before the session row, matching
+                # enqueue's credential -> session order even for owner refresh.
+                from career_lab.jobs.repository import jobs as refresh_queue
+                raw=c.execute(select(refresh_queue.c.payload).where(refresh_queue.c.id==command.payload['job_id'])).scalar_one_or_none()
+                if raw is not None:
+                    payload=json.loads(raw);saved=payload.get('context',{})
+                    if saved.get('session_id')==auth.session_id:self._job_auth(c,JobContextSnapshot.model_validate(saved),'read')
+            row=self._row(c,auth.session_id)
             prior=c.execute(select(v2_transactions).where(v2_transactions.c.session_id==auth.session_id,v2_transactions.c.request_id==command.request_id)).mappings().first()
             if prior:
                 if not hmac.compare_digest(prior['fingerprint'],fp):raise ProtocolError('request_id_reused',status=409)
@@ -805,6 +846,7 @@ class V2Store(JobStoreMixin):
             refreshing=mutation.refresh_job is not None
             if refreshing and (mutation.writes or mutation.events or mutation.state_changes or mutation.jobs or mutation.decision):raise ProtocolError('job_refresh_only',status=403)
             if set(mutation.state_changes)-{'status','cycle_id','config_version','applied_milestones'}:raise ProtocolError('state_field_forbidden',status=403)
+            if mutation.jobs:self._ensure_delegation_capacity(c,auth,len(mutation.jobs))
             derived_feedback=self._derived_feedback(c,auth,mutation,derived_subject,records,bindings)
             feedback_response=self._feedback_response_only(c,auth,command,mutation,records)
             if state.status=='submitted' and command.operation!='begin_revision' and not derived_feedback and not feedback_response and not refreshing:raise ProtocolError('session_submitted')
