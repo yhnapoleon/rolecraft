@@ -338,6 +338,11 @@ export class WorkspaceClient {
   }
   share(input:ShareCreate){return this.mutate('work_products.shares.create','/work-products/'+encodeURIComponent(input.product_id)+'/shares',input);}
   updateShare(input:ShareUpdate){return this.mutate('work_products.shares.change','/work-products/'+encodeURIComponent(input.product_id)+'/shares/'+encodeURIComponent(input.share_id),input,'POST');}
+  async loadVersions(productId:string):Promise<WorkspaceProductRead[]> {
+    const page=await this.pages<WorkspaceProductRead>('/work-products/'+encodeURIComponent(productId)+'/versions');
+    if(page.items.some(p=>p.product_id!==productId || !Number.isInteger(p.version) || p.version<1))throw Error('Invalid product history');
+    return page.items.sort((a,b)=>b.version-a.version);
+  }
   async loadShares(productId:string){
     await this.refresh();
     if(Object.hasOwn(this.value.shares,productId))return this.value.shares[productId];

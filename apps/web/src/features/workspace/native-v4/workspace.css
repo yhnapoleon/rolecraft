@@ -1,0 +1,14 @@
+.native-workspace{color:var(--ink);font:inherit;min-width:0;max-width:100%}
+.native-workspace [hidden]{display:none!important}
+.native-workspace .sheet-body{padding:0}
+.native-workspace-list,.native-workspace .field-row{display:flex;flex-wrap:wrap;gap:8px}
+.native-workspace-list{margin-block:12px}
+.native-workspace input,.native-workspace select,.native-workspace textarea{box-sizing:border-box;max-width:100%;font:inherit}
+.native-workspace textarea{width:100%;resize:vertical;line-height:1.7}
+.native-workspace .field{display:grid;gap:6px;margin-block:12px}
+.native-workspace .field-row{align-items:center}
+.native-workspace h3{font-size:17px;font-weight:600;margin:20px 0 8px}
+.native-workspace p{overflow-wrap:anywhere}
+.native-workspace button{white-space:normal}
+.native-workspace .native-version-content{white-space:pre-wrap;overflow-wrap:anywhere;max-height:18rem;overflow:auto;font:inherit}
+.native-workspace :focus-visible{outline:2px solid var(--ink);outline-offset:3px}
