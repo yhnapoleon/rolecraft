@@ -116,7 +116,7 @@ def evaluate_request(package, request, snapshot, evidence_check):
         "request_over_limit":"请求超过当前可审批上限，或试图降低既有资源；请对照审批规则调整条款。",
         "request_not_needed":"所请求条款未显示新增缺口；请按实际目标人数、工作成本与日期重新说明需要。",
         "requested_resources_insufficient":"所请求资源仍不足以支持该条款对应的拟实施方案。",
-        "approval_plan_incomplete":"本次审批需要人工兜底及相应工作项。请对照《经理的资源申请与保障规则》补齐后重提。"
+        "approval_plan_incomplete":"本次审批需要人工兜底及相应工作项。请对照《经理发布：资源审批规则》补齐后重提。"
     }.get(code,"申请条款存在真实缺口且在可审批范围内；决定提交成功后资源才生效。")
     if code=="request_not_needed":
         demand={"capacity":cfg.participants,"dev_days":sum(work_costs[w] for w in cfg.work_items),"deadline_day":cfg.launch_day}

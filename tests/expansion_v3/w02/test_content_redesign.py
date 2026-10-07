@@ -50,7 +50,7 @@ def test_processing_time_and_repeat_rate_have_explicit_consistent_sources(packag
     assert sum(facts[k,1] for k in ("faq_repeats","policy_repeats","sensitive_repeats"))==facts["total_repeats",1]==66
     assert facts["repeat_percent",1]==55
     text=(package.root/"materials/demand-v1.md").read_text()
-    assert "等待" in text and "不能直接" in text and "未结单" in text
+    assert "等待" in text and "closed_at − accepted_at" in text and "未结单" in text
 
 
 def test_stable_meal_leave_and_onboarding_are_distinct_kb_domains(package,engine):
@@ -124,9 +124,9 @@ def test_role_knowledge_and_disclosure_rules_are_consumed(package,engine):
     manager=engine.role_knowledge(s,role_auth("supervisor"))
     business=engine.role_knowledge(s,role_auth("business_lead"))
     tech=engine.role_knowledge(s,role_auth("tech_lead"))
-    assert "可信承诺" in str(manager) and "780" in str(business)
-    assert "重试边界" in str(tech)
-    assert "CONN-RETRY-07" not in str(tech) and "legacy_connector_unstable" not in str(tech)
+    assert "capacity_limit" in str(manager) and "780" in str(business)
+    assert "培训报名" in str(tech) and "0.2" in str(tech)
+    assert "TR-TRAIN-01" not in str(tech) and "legacy_connector_unstable" not in str(tech)
     assert any(f.disclosure.mode=="role_only" for m in package.materials for f in m.fragments)
     with pytest.raises(ProtocolError,match="role reader required"):
         engine.role_knowledge(s,auth())

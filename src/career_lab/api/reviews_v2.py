@@ -13,3 +13,13 @@ def create_service(*args, **kwargs):
 
 def create_router(*args, **kwargs):
     raise ProtocolError('module_unavailable', 'Install W05 operations on the shared Gateway', status=503)
+
+
+def create_review_evaluator(reader,*,engine=None,model_bytes=16000):
+    """Default read-only factual/semantic handler; no provider required.
+
+    Reader must supply an immutable authorized snapshot, frozen policies and the
+    exact-version formation point. Persistence/worker/objections remain external.
+    """
+    from career_lab.evidence.v2.review_evaluator import ReviewEvaluator
+    return ReviewEvaluator(reader,engine=engine,model_bytes=model_bytes)

@@ -9,6 +9,7 @@ from career_lab.contracts.v2.research import RuntimeBundle, EvaluationBundle
 from career_lab.contracts.v2.world import (AssistantConfig, DisclosurePolicy, FactV2,
     MaterialV2, RoleSpecV2, ScenarioBundle, SourceFragment)
 from .content import materials as business_materials, role_definitions
+from .case_records import render_public_cases, validate_public_cases
 
 
 def build_seed(root, case_records=None):
@@ -20,30 +21,14 @@ def build_seed(root, case_records=None):
     never=DisclosurePolicy(mode="never")
     policies={
         "public":public,"never":never,
-        "manager_summary":DisclosurePolicy(mode="paraphrase_only",actors=("supervisor",),paraphrase="经理更重视可信承诺；演示与试点开放需分别说明依据。"),
-        "business_summary":DisclosurePolicy(mode="paraphrase_only",actors=("business_lead",),paraphrase="业务方关注政策咨询价值，也承认耗时统计包含等待，收益需要另行验证。"),
-        "tech_summary":DisclosurePolicy(mode="paraphrase_only",actors=("tech_lead",),paraphrase="连接器复用尚未完成可靠性核验，需要验证后再承诺。"),
+        "tech_summary":DisclosurePolicy(mode="paraphrase_only",actors=("tech_lead",),paraphrase="筹备期复现过一个培训报名问法：公司培训我已提交报名是不是就能去听课。匹配阈值0.35时未命中，0.2时返回FAQ中的培训报名段；无关问题仍未命中。这只是一次局部对照，未完成统一校准。"),
         "tech_only":DisclosurePolicy(mode="role_only",actors=("tech_lead",))
     }
     definitions=list(business_materials())
     if case_records is None:
         definitions.append(("failures","内部试用记录","investigation",1,"never",["此记录尚未作为学员资料发布。"]))
     else:
-        rows=[]
-        for number,record in enumerate(case_records["records"],1):
-            result=record["result"]
-            refs="；".join(f"{r['object_id']}@{r['version']}" for r in result["citations"]) or "没有引用"
-            execution=result["execution"]
-            rows.extend([
-                f"记录{number}｜提问：{result['query']}",
-                f"当时实际回答：{result['answer']}",
-                f"检索引用：{refs}。当时源版本：{json.dumps(execution['source_versions'],ensure_ascii=False)}；索引版本：{json.dumps(execution['indexed_versions'],ensure_ascii=False)}。",
-                f"配置编号：{result['config']['requested']['config_version']}。实际状态：{result['status']}；记录时间：{execution['executed_at']}。"
-            ])
-        definitions.append(("failures","内部试用问答记录","investigation",1,"public",[
-            "下列问答来自训练助手的实际本地运行。它们保留了回答与版本，没有给出正确答案或评价。公司背景与提问场景为虚构设定，不代表真实员工效果。",
-            *rows
-        ]))
+        definitions.append(("failures","筹备期试用问答记录","investigation",1,"public",render_public_cases(case_records)))
     for mid,title,domain,version,mode,rows in definitions:
         text=f"# {title}\n\n本案例的公司与业务资料为虚构训练设定。\n\n"
         fragments=[]
@@ -67,18 +52,17 @@ def build_seed(root, case_records=None):
             definition["known_materials"]=(*definition["known_materials"],"failures")
         role=definition["id"]
         overrides={}
-        if role=="supervisor":overrides["manager_priority"]=policies["manager_summary"]
-        if role=="business_lead":overrides["business_caveat"]=policies["business_summary"]
         if role=="tech_lead":
-            overrides["connector_risk"]=policies["tech_summary"]
-            overrides["tech_debug_code"]=DisclosurePolicy(mode="paraphrase_only",actors=("tech_lead",),
-                paraphrase="连接器重试边界还需核验，不能把可复用性当作已有能力。")
+            overrides["retrieval_probe_query"]=policies["tech_summary"]
+            overrides["retrieval_threshold_candidate"]=policies["tech_summary"]
+            overrides["retrieval_debug_code"]=DisclosurePolicy(mode="paraphrase_only",actors=("tech_lead",),
+                paraphrase="技术诊断保存了培训报名原问法、两档阈值和无关问题对照；内部登记号不对外转述。")
         roles.append(RoleSpecV2(**definition,disclosure_policy=overrides))
     baseline=AssistantConfig(id="pilot",session_id="scenario:pm_pilot:v2",config_version=0,
         domains=("stable_faq","onboarding","policy_travel","policy_meal","policy_leave"),
         work_items=("scope_filter","human_fallback"),participants=20,launch_day=7,retrieval_limit=1)
     rules={
-        "scenario_id":"pm_pilot","revision":"2.3.0","source_kind":"authored_synthetic_business_with_actual_module_QA",
+        "scenario_id":"pm_pilot","revision":"2.4.0","source_kind":"authored_synthetic_business_with_actual_module_QA",
         "work_costs":{"scope_filter":1,"human_fallback":1,"realtime_sync":5},
         "approval_limits":{"capacity":60,"dev_days":6,"deadline_day":10},
         "approval_rule_revision":"pm-v2-approval-3",
@@ -91,8 +75,10 @@ def build_seed(root, case_records=None):
         "initial_plan_material_updates":{"policy":2},
         "business_events":[
             {"id":"demo_schedule_changed","on":"first_resource_request","material_updates":{"demo":2},
+             "notice":"经理发来日程变更：内部演示改到第4天，详见新的演示安排。",
              "visible_to":["learner","supervisor","tech_lead"]},
             {"id":"business_scope_requested","on":"capacity_approved","material_updates":{"scope_note":2},
+             "notice":"陈敏转来销售支持组追加意向，请查看业务范围讨论的新记录。",
              "visible_to":["learner","supervisor","business_lead"]}
         ],
         "material_files":material_files,
@@ -140,7 +126,9 @@ def build_seed(root, case_records=None):
         {"decision":"defer_with_conditions","evidence":["demand","interviews","technical"],"proposal":"暂不开放动态政策自动回答。稳定FAQ仍有可行路径，我建议先邀请新员工中的小组验证入口指引，保留人工接管；当前样本混合等待与处理，不能承诺按重复率等比例节省人力。由PM整理实际问题和版本，业务负责人核验转交负担，技术负责人复跑更新与范围测试；第3天共同复核，若错误边界和接管责任已明确，再向经理建议下一步。恢复动态政策前须有可追问的来源同步或人工核验安排。","evaluation":"待情境评价，不预填评分"},
         {"decision":"no_go","evidence":[],"proposal":"不调查，全部放弃。","evaluation":"可保留讨论；按证据和后续责任评价，不按枚举自动裁决"}])
     put("rubric-reference.json",{"rules_revision":"rules-v4","rubric_revision":"rubric-v2","provider":"W05","status":"not_installed","w02_produces_scores":False})
-    if case_records is not None:put("research/public-case-records.json",case_records)
+    if case_records is not None:
+        validate_public_cases(case_records,initial,materials,{"faq","onboarding","policy","meal","leave"})
+        put("research/public-case-records.json",case_records)
     # Bind real deterministic code and explicit uninstalled evaluation metadata.
     repo=Path(__file__).resolve().parents[4]
     code_files={p.relative_to(repo).as_posix():hashlib.sha256(p.read_bytes()).hexdigest()
@@ -158,7 +146,7 @@ def build_seed(root, case_records=None):
         "evaluation-protocol":{"mode":"advisory","installed":False,"owner":"W05"}
     }.items():put("runtime/"+name+".json",value)
     def file_ref(path):return FileRef(path=path,sha256=hashlib.sha256(files[path]).hexdigest())
-    runtime=RuntimeBundle(id="w02-runtime",revision="reference-port-c1",model=file_ref("runtime/model.json"),prompts=(),
+    runtime=RuntimeBundle(id="w02-runtime",revision="content-pre-event-r6",model=file_ref("runtime/model.json"),prompts=(),
         acquisition=file_ref("runtime/acquisition.json"),retrieval=file_ref("runtime/retrieval.json"),
         decision=file_ref("runtime/decision.json"),tools=file_ref("runtime/tools.json"),
         source=SourceIdentity(base_commit="80cf1f6189cd25610d609f44283ff9668582d759",source_digest=digest(code_files),
@@ -169,7 +157,7 @@ def build_seed(root, case_records=None):
     put("runtime/evaluation.json",evaluation.model_dump(mode="json"))
     public_paths={p for p in files if p.startswith("materials/") and not any(x in p for x in ("private","tech_diagnostics","policy-v2","demo-v2","scope_note-v2"))}
     if case_records is None:public_paths.discard("materials/failures-v1.md")
-    bundle=ScenarioBundle(id="pm_pilot",revision="2.3.0",structure_id="index_scope_resource_dependency",
+    bundle=ScenarioBundle(id="pm_pilot",revision="2.4.0",structure_id="index_scope_resource_dependency",
         files=tuple(FileRef(path=p,sha256=hashlib.sha256(raw).hexdigest(),media_type="text/markdown" if p.endswith(".md") else "application/json") for p,raw in sorted(files.items())),
         public_files=tuple(sorted(public_paths)),private_files=tuple(sorted(set(files)-public_paths)),
         role_specs=tuple(roles),domains={"stable_faq":("faq",),"onboarding":("onboarding",),"policy_travel":("policy",),"policy_meal":("meal",),"policy_leave":("leave",)},

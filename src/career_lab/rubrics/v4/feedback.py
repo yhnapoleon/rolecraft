@@ -25,7 +25,8 @@ class FeedbackEngine:
                 result=self.judge.evaluate(EvidencePackageV2.model_validate(bounded),expected_model_revision)
                 attempts.append({'criterion':package.criterion,'attempts':list(result.attempts)})
                 if result.item.source=='model_advice' and result.item.label!='INSUFFICIENT':
-                    items.append(result.item.model_copy(update={'explanation':rule.explanation+'\n模型建议：'+result.item.explanation}))
+                    items.append(result.item.model_copy(update={'explanation':f'规则已核验区间：{rule.rule_bound.lower}—{rule.rule_bound.upper}。'+rule.explanation+'\n模型建议（不改变规则区间）：'+result.item.explanation,
+                        'citations':tuple({r.model_dump_json():r for r in [*rule.citations,*result.item.citations]}.values())}))
                 else:items.append(rule)
             elif rule.source=='verified_rule' or package.applicability!='applicable' or package.rule_context['mechanism']!='semantic':items.append(rule)
             else:
@@ -49,6 +50,8 @@ class FeedbackEngine:
             model_coverage=model/denominator if denominator else 0,mode='advisory',independent_understanding='unobserved')
         return report,{'model_revision':self.judge.revision,'criterion_attempts':attempts,
                        'input_hashes':[p.input_hash for p in packages],
+                       'verified_facts':list({digest(f):f for p in packages for f in p.rule_context.get('verified_facts',[])}.values()),
+                       'historical_responsibilities':[h for p in packages for h in p.rule_context.get('historical_responsibilities',[])],
                        'rule_items':[i.model_dump(mode='json') for i in rule_items],
                        'score_bounds':score_bounds(rule_items)}
 

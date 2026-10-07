@@ -5,7 +5,7 @@ import { JournalStore, browserCoordinator, emptyJournal, type Draft, type DraftB
 export type { Draft, LocalStorage, JournalCoordinator } from './journal';
 
 export type Transport = (path: string, body?: unknown, method?: string) => Promise<any>;
-type Page<T> = { items: T[]; as_of: VersionPoint; next_cursor: number | null };
+type Page<T> = { items: T[]; as_of: VersionPoint; next_cursor: number | null; shares?: ProductShare[]; sharing_complete?: boolean };
 type EditIntent = { draft:Draft; base:DraftBase|null; token:string; parentToken?:string; writer:string };
 const validPoint = (point: any): point is VersionPoint => point && ['business_seq','workspace_revision','storage_revision'].every(k => Number.isInteger(point[k]) && point[k] >= 0);
 const same = (a: unknown,b: unknown) => JSON.stringify(a) === JSON.stringify(b);
@@ -110,16 +110,22 @@ export class WorkspaceClient {
   async flushLocal() { await this.localWrites;if(this.value.storageError)throw Error('本机保存未确认，尚未发送。');this.readJournal(); }
   private path(suffix:string) { return '/sessions/'+encodeURIComponent(this.sessionId)+suffix; }
   private async pages<T>(suffix:string):Promise<Page<T>> {
-    const items:T[]=[];let cursor=0;let result:Page<T>;let point:VersionPoint|undefined;
+    const items:T[]=[];const shares:ProductShare[]=[];let sharingComplete:boolean|undefined;
+    let cursor=0;let result:Page<T>;let point:VersionPoint|undefined;
     do {
       result=await this.transport(this.path(suffix+'?cursor='+cursor+'&limit=100'));
       if(!Array.isArray(result.items)||!validPoint(result.as_of)||result.items.some((x:any)=>x.session_id!==this.sessionId))throw Error('Invalid workspace response');
       if(point && !same(point,result.as_of))throw Error('分页读取期间工作区已变化，请重新读取。');
       point=result.as_of;items.push(...result.items);
+      if(result.shares!==undefined){
+        if(!Array.isArray(result.shares)||result.shares.some(s=>s.session_id!==this.sessionId||!s.product||s.product.session_id!==this.sessionId||!Number.isInteger(s.version)||s.version<1))throw Error('Invalid share projection');
+        if(sharingComplete!==undefined && sharingComplete!==result.sharing_complete)throw Error('Invalid share projection');
+        sharingComplete=result.sharing_complete;shares.push(...result.shares);
+      }
       if(result.next_cursor!==null&&(!Number.isInteger(result.next_cursor)||result.next_cursor<=cursor))throw Error('Invalid cursor');
       cursor=result.next_cursor??0;
     }while(result.next_cursor!==null);
-    return {...result,items};
+    return {...result,items,...(sharingComplete===undefined?{}:{shares,sharing_complete:sharingComplete})};
   }
   private markConflicts(journal:Journal,products:WorkProductVersion[]) {
     for(const [id,draft] of Object.entries(journal.drafts)) {
@@ -143,7 +149,16 @@ export class WorkspaceClient {
         }
       }
       if(!tasks||!products)throw Error('工作区读取尚未完成。');
-      this.emit({tasks:tasks.items,products:products.items,asOf:products.as_of});
+      if(products.sharing_complete===false)throw Error('当前授权无法完整读取分享状态，请使用有完整作品权限的入口。');
+      const projectedShares:Record<string,ProductShare[]>={};
+      if(products.shares!==undefined){
+        for(const product of products.items)projectedShares[product.product_id]=[];
+        for(const share of products.shares){
+          if(!Object.hasOwn(projectedShares,share.product.object_id))throw Error('Invalid share projection');
+          projectedShares[share.product.object_id].push(share);
+        }
+      }
+      this.emit({tasks:tasks.items,products:products.items,asOf:products.as_of,...(products.shares===undefined?{}:{shares:projectedShares})});
       const current=this.readJournal();const changed=structuredClone(current);this.markConflicts(changed,products.items);
       if(!same(changed.conflicts,current.conflicts))await this.transaction(latest=>this.markConflicts(latest,products.items));
     }catch(error){this.emit({error:error instanceof Error?error.message:String(error)});throw error;}
@@ -312,6 +327,8 @@ export class WorkspaceClient {
   share(input:ShareCreate){return this.mutate('work_products.shares.create','/work-products/'+encodeURIComponent(input.product_id)+'/shares',input);}
   updateShare(input:ShareUpdate){return this.mutate('work_products.shares.change','/work-products/'+encodeURIComponent(input.product_id)+'/shares/'+encodeURIComponent(input.share_id),input,'POST');}
   async loadShares(productId:string){
+    await this.refresh();
+    if(Object.hasOwn(this.value.shares,productId))return this.value.shares[productId];
     const page=await this.pages<ProductShare>('/work-products/'+encodeURIComponent(productId)+'/shares');
     if(page.items.some(s=>!s.product||s.product.object_id!==productId||!Number.isInteger(s.product.version)||s.product.version<1))throw Error('Invalid share response');
     this.emit({shares:{...this.value.shares,[productId]:page.items}});return page.items;

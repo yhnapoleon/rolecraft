@@ -9,9 +9,12 @@ def pending(item,reason):
 
 def run_rules(item):
     if item.applicability=='not_applicable':
+        reason=('本次作品是停止或暂缓建议，不按上线成功条件验收；历史行动与承诺另列核对。'
+                if item.rule_context.get('decision') in {'no_go','defer_with_conditions'}
+                else '本次作品用途不承担这一项上线验收责任；历史记录另列核对。')
         return FeedbackItem(criterion=item.criterion,label='NOT_APPLICABLE',applicability=item.applicability,
-            source='verified_rule',explanation='本次作品用途和评价时点暂不要求完成这一项。',citations=())
-    if item.applicability=='undetermined':return pending(item,'用途或责任尚不明确，请先说明希望评审的内容。')
+            source='verified_rule',explanation=reason,citations=())
+    if item.applicability=='undetermined':return pending(item,'用途或本次决定尚未明确，不能默认上线；历史记录与引用核验另列。')
     ctx=item.rule_context;facts=ctx['facts'];proofs=ctx['fact_refs'];kind=ctx['mechanism']
     def numeric(names):
         if any(n not in facts or type(facts[n]) not in (int,float) or facts[n]<0 or not proofs.get(n) for n in names):return None

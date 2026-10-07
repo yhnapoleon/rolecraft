@@ -179,3 +179,29 @@ describe('R3 known rejection versus unknown execution outcome',()=>{
     expect(c.snapshot().journal.pending).toBeDefined();await expect(c.createTask({title:'new'})).rejects.toThrow('先恢复');
   });
 });
+
+describe('current share projection recovery',()=>{
+  it('loads share ids, exact versions and revoked heads from a fresh paged product read',async()=>{
+    const f=fixture();const old=f.server.products[0];
+    const share:any={schema_version:2,id:'share-1',session_id:'s',version:2,
+      product:{session_id:'s',kind:'product',object_id:old.product_id,version:1},recipient_role:'tech_lead',
+      question:'',purpose:'discussion',shared_at:{...f.server.as_of},revoked_at:{...f.server.as_of}};
+    const paths:string[]=[];
+    const source:Transport=async(path)=>{
+      paths.push(path);
+      if(path.includes('/shares'))throw Error('uninstalled GET shares');
+      return {items:path.includes('work-items')?[]:[old],as_of:{...f.server.as_of},next_cursor:null,
+        ...(path.includes('work-products')?{shares:[share],sharing_complete:true}:{})};
+    };
+    const client=new WorkspaceClient('s',f.storage,source,()=>crypto.randomUUID(),{coordinator:f.coordinator});
+    await client.refresh();expect(client.snapshot().shares.p1).toEqual([share]);
+    expect(await client.loadShares('p1')).toEqual([share]);
+    expect(paths.some(p=>p.includes('/shares'))).toBe(false);
+  });
+  it('does not display a product-scoped empty share view as private',async()=>{
+    const f=fixture();const source:Transport=async(path)=>({items:path.includes('work-items')?[]:f.server.products,
+      as_of:f.server.as_of,next_cursor:null,...(path.includes('work-products')?{shares:[],sharing_complete:false}:{})});
+    const c=new WorkspaceClient('s',f.storage,source,()=>crypto.randomUUID(),{coordinator:f.coordinator});
+    await expect(c.refresh()).rejects.toThrow('无法完整读取分享状态');expect(c.snapshot().products).toEqual([]);
+  });
+});

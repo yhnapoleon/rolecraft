@@ -20,7 +20,7 @@ from career_lab.contracts.v2.core import AuthContext,Executor,ObjectRef,Evidence
 from career_lab.contracts.v2.world import WorldStateV2,SessionBindings,AssistantConfig,EffectiveConfig,TestResultV2 as AssistantTestResult
 from career_lab.contracts.v2.evaluation import FeedbackItem
 from career_lab.contracts.v2.workspace import RevisionCycle,WorkProductVersion,OptionsPayload,Option
-from career_lab.evidence.v2.ports import SourceRecord,VerifiedFact,RuleSnapshot,DEFAULT_POLICIES,CriterionPolicy
+from career_lab.evidence.v2.ports import SourceRecord,VerifiedFact,RuleSnapshot,DEFAULT_POLICIES,CriterionPolicy,ResponsibilityFact
 from career_lab.evidence.v2.assembler import EvidenceAssemblerV2,model_input,product_text
 from career_lab.rubrics.v4.rules import run_rules
 from career_lab.rubrics.v4.judge import AdvisoryJudge
@@ -40,6 +40,7 @@ class UpstreamDouble:
         self.sources={};self.revoked=False;self.protocol_value='v2';self.failure=False
         self.capacity=30;self.participants=20;self.logs_complete=True;self.tests=();self.test_refs=();self.technical=()
         self.denied=set();self.revoked_ids=set();self.selected_policies=DEFAULT_POLICIES
+        self.incurred=set();self.responsibility_known=True
         self.bundle=SessionBindings(scenario=FileRef(path='scenario.json',sha256='1'*64),runtime=FileRef(path='runtime.json',sha256='2'*64),evaluation=FileRef(path='evaluation.json',sha256='3'*64))
         self.add('product','p1',1,'先比较稳定域开放与人工处理；缺少真实需求前，可有依据地暂缓并继续访谈。')
         self.add('event','ledger',1,'当时有效容量30；资源3人日；期限7天。完整测试账本。')
@@ -73,7 +74,8 @@ class UpstreamDouble:
         facts=tuple(VerifiedFact(k,v,(config if k in {'participants','required_dev_days','requested_launch_day'} else ledger,)) for k,v in {
             'participants':self.participants,'capacity':self.capacity,'required_dev_days':2,'available_dev_days':3,
             'requested_launch_day':7,'deadline_day':7,'test_ledger_complete':True}.items())
-        return RuleSnapshot(as_of,facts,self.logs_complete,self.tests,self.test_refs,0,self.technical),()
+        return RuleSnapshot(as_of,facts,self.logs_complete,self.tests,self.test_refs,0,self.technical,
+            responsibilities=tuple(ResponsibilityFact(p.id,'actual_action',INITIAL,INITIAL,(product_ref(),),(ledger,)) for p in self.selected_policies if p.id in self.incurred) if self.responsibility_known else ()),()
     def policies(self,conn,evaluation):return self.selected_policies
     def commit_transition(self,conn,auth,before,after,operation):
         assert before.resources==after.resources and before.applied_milestones==after.applied_milestones
@@ -95,7 +97,7 @@ def env(tmp_path):
 
 def command(env,operation,payload,request_id=None):
     with env['engine'].connect() as conn:state=env['authority'].state(conn,env['auth'],lock=False)
-    return Command(request_id=request_id or uuid4().hex,expected_version=state.business_seq,expected_workspace_revision=state.workspace_revision,operation=operation,payload=payload)
+    return Command(schema_version=2,request_id=request_id or uuid4().hex,expected_version=state.business_seq,expected_workspace_revision=state.workspace_revision,operation=operation,payload=payload)
 
 
 def execute(env,operation,payload,request_id=None):return env['service'].execute(env['auth'],command(env,operation,payload,request_id))
@@ -117,7 +119,7 @@ def test_purpose_and_stop_decision_keep_different_responsibilities(env):
     env['authority'].participants=50
     assert run_rules(package(env,purpose='draft')).label=='NOT_APPLICABLE'
     assert run_rules(package(env,purpose='commitment')).label=='NOT_MET'
-    assert run_rules(package(env,purpose='result')).label=='NOT_MET'
+    assert run_rules(package(env,purpose='result')).label=='NOT_APPLICABLE'
     assert run_rules(package(env,purpose='没有明确用途')).label=='INSUFFICIENT'
     assert run_rules(package(env,decision='no_go')).label=='NOT_APPLICABLE'
     assert package(env,criterion='decision.rationale',decision='no_go').applicability=='applicable'
@@ -223,9 +225,11 @@ def test_review_is_nonterminal_and_worker_uses_fixed_historical_input(env):
     assert env['service'].run_once()
     job=env['service'].job(env['auth'],created['job_id']);assert job['status']=='completed'
     report=env['service'].get(env['auth'],'feedback',job['feedback_id'])
-    assert report['as_of']['business_seq']==5 and report['items'][0]['label']=='MET'
+    assert report['as_of']['business_seq']==5 and report['items'][0]['label']=='INSUFFICIENT'
     assert report['mode']=='advisory' and report['independent_understanding']=='unobserved'
-    assert '30' in report['items'][0]['explanation']
+    with env['service'].repository.transaction() as conn:
+        frozen=env['service'].repository.get(conn,'s','review',created['review']['id'])['frozen']
+    assert frozen['packages'][0]['rule_context']['facts']['capacity']==30
 
 
 def test_submit_feedback_revision_resubmit_keeps_old_snapshots_and_replays(env):
@@ -414,7 +418,10 @@ def test_oversize_question_header_keeps_rules_and_never_calls_model(env):
     created=execute(env,'reviews.create',{'subjects':[product_ref().model_dump(mode='json')],'purpose':'commitment','scope':['R3.capacity','R6.comparison'],'question':'问题'*400})
     assert env['service'].run_once()
     job=env['service'].job(env['auth'],created['job_id']);report=env['service'].get(env['auth'],'feedback',job['feedback_id'])
-    assert report['items'][0]['label']=='MET' and report['items'][1]['label']=='INSUFFICIENT'
+    assert report['items'][0]['label']=='INSUFFICIENT' and report['items'][1]['label']=='INSUFFICIENT'
+    with env['service'].repository.transaction() as conn:
+        frozen=env['service'].repository.get(conn,'s','review',created['review']['id'])['frozen']
+    assert frozen['packages'][0]['rule_context']['facts']['capacity']==30
     assert model.calls==[]
 
 
@@ -426,10 +433,11 @@ def test_active_session_cannot_silently_change_evaluation_bundle(env):
 
 
 def test_evidence_links_resolve_exact_versions_and_missing_history_does_not_substitute_latest(env):
-    created=review(env,purpose='commitment',scope=('R3.capacity',));env['service'].run_once()
+    submitted=execute(env,'submissions.create',{'decision':'launch','products':[product_ref().model_dump(mode='json')]})['submission']
+    created=execute(env,'feedback.request',{'subject':ref('s','submission',submitted['id']).model_dump(mode='json')});env['service'].run_once()
     job=env['service'].job(env['auth'],created['job_id']);links=env['service'].evidence_links(env['auth'],job['feedback_id'])
-    assert links and all(x['criterion']=='R3.capacity' for x in links)
-    selected=next(x for x in links if x['ref']['object_id']=='ledger')
+    assert links and any(x['criterion']=='R3.capacity' for x in links)
+    selected=next(x for x in links if x['ref']['object_id']=='ledger' and x['criterion']=='R3.capacity')
     result=env['service'].read_evidence(env['auth'],job['feedback_id'],selected['criterion'],selected['evidence_id'])
     assert result['ref']['version']==1 and '30' in result['content']
     env['authority'].sources.pop(('event','ledger',1,None));env['authority'].add('event','ledger',2,'后来容量改为10')
@@ -465,7 +473,10 @@ print(json.dumps({'processed':service.run_once()}));engine.dispose()
     assert json.loads(result.stdout)['processed'] is True
     job=env['service'].job(env['auth'],created['job_id']);assert job['status']=='completed'
     report=env['service'].get(env['auth'],'feedback',job['feedback_id'])
-    assert report['items'][0]['label']=='MET' and '30' in report['items'][0]['explanation']
+    assert report['items'][0]['label']=='INSUFFICIENT'
+    with env['service'].repository.transaction() as conn:
+        frozen=env['service'].repository.get(conn,'s','review',created['review']['id'])['frozen']
+    assert frozen['packages'][0]['rule_context']['facts']['capacity']==30
     assert not env['service'].run_once()
 
 
@@ -527,7 +538,9 @@ def test_semantic_judge_can_choose_within_non_point_rule_interval(env):
     assert json.loads(model.calls[0][1]['content'])['rule_bound']['lower']=='PARTIAL'
     assert diagnostics['rule_items'][0]['label']=='PARTIAL'
     assert diagnostics['score_bounds']['lower']==0.5 and diagnostics['score_bounds']['upper']==1
-    assert report.items[0].rule_bound is None
+    assert report.items[0].rule_bound is None  # Public draft forbids model advice tightening bounds.
+    assert '规则已核验区间：PARTIAL—MET' in report.items[0].explanation
+    assert {json.dumps(r,sort_keys=True) for r in diagnostics['rule_items'][0]['citations']} <= {json.dumps(r.model_dump(mode='json'),sort_keys=True) for r in report.items[0].citations}
 
 
 def test_production_cannot_start_the_retired_private_store_or_router():
