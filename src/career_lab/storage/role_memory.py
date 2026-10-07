@@ -503,3 +503,53 @@ class ReplyVerification:
     review_ref: FileRef
     semantic_quality: Literal['unverified'] = 'unverified'
     learner_penalty_allowed: Literal[False] = False
+
+
+@dataclass(frozen=True)
+class RoleAuditExtension:
+    """Owned payload inside the official private carrier, never a public kind."""
+    work_language: Literal['zh','en']
+    prompt_template_revision: str
+    stance_memory: RoleStanceMemory
+    reply_verification: ReplyVerification | None
+    schema_version: Literal[1] = 1
+
+    @property
+    def stance_record(self):
+        return _stance_json(self.stance_memory)
+
+
+def generation_audit_extension(generation):
+    """Minimal writer boundary: existing carrier already owns attempts/prompt/share data."""
+    if not generation.prompt_template_revision:
+        raise ProtocolError('role_audit_extension_invalid',status=409)
+    return {'schema_version':1,'work_language':generation.work_language,
+        'prompt_template_revision':generation.prompt_template_revision,
+        'stance_memory':stance_memory_payload(generation),
+        'reply_verification':_stance_json(generation.reply_verification)}
+
+
+def read_generation_audit_extension(payload,reply,*,binding,as_of,work_language):
+    """Fixed snapshot reader: bind the private extension to the exact public reply.
+
+    None means an old carrier has no extension; it is never evidence of persisted
+    stance or language. The caller continues to own authorization and snapshot IO.
+    """
+    if payload is None:return None
+    from pydantic import TypeAdapter
+    from career_lab.contracts.v2 import digest
+    try:
+        extension=TypeAdapter(RoleAuditExtension).validate_json(canonical(payload))
+        memory=extension.stance_memory
+        expected=ObjectRef(session_id=reply.session_id,kind='role_reply',object_id=reply.id,version=reply.version)
+        if (extension.work_language!=work_language or not extension.prompt_template_revision
+            or memory.reply!=expected or memory.as_of!=reply.as_of):raise ValueError('reply binding mismatch')
+        state=restore_stance_memory([_stance_json(memory)],session_id=reply.session_id,role_id=reply.role_id,
+            binding=binding,as_of=as_of,work_language=work_language)
+        review=extension.reply_verification
+        if review is not None and (review.state_hash!=stance_digest(state) or review.reply_hash!=digest(reply.text)
+            or review.checked_at!=reply.as_of or review.decision!='consistent' or review.language_match is not True):
+            raise ValueError('reply verification mismatch')
+        return extension
+    except (ValidationError,TypeError,ValueError,KeyError):
+        raise ProtocolError('role_audit_extension_invalid',status=409) from None

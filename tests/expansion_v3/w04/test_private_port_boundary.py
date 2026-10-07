@@ -126,7 +126,8 @@ def test_provider_stays_closed_without_durable_claim_port(tmp_path,package,catal
     finally:store.db.engine.dispose()
 
 
-def test_model_claim_survives_worker_reconstruction_before_commit(tmp_path,package,catalog):
+@pytest.mark.parametrize("first_outcome",["returned","timeout"])
+def test_model_claim_survives_worker_reconstruction_before_commit(tmp_path,package,catalog,first_outcome):
     """A controlled durable port exercises the new production callback contract."""
     import sqlite3
     from career_lab.api.modules import JobEnvelope
@@ -144,7 +145,14 @@ def test_model_claim_survives_worker_reconstruction_before_commit(tmp_path,packa
         # Direct handler evaluation models a process loss after provider return,
         # before public/private mutation commit. No shared worker code is changed.
         view=store.view(auth)
-        service.generate(view,envelope,auth)
+        if first_outcome=='timeout':
+            from career_lab.runtime.roles_v2 import RoleModelTransient
+            def timeout(messages,tools):model.calls.append(messages);raise TimeoutError()
+            model.complete=timeout
+            with pytest.raises(RoleModelTransient):service.generate(view,envelope,auth)
+        else:service.generate(view,envelope,auth)
+        # A provider/model configuration change is not user authorization to retry.
+        model.revision='different-provider-model-configuration'
         replacement=RoleService(service.port,model,private_port=DurablePort(),reply_verifier=ControlledReplyVerifier())
         with pytest.raises(ProtocolError) as exc:replacement.generate(view,envelope,auth)
         assert exc.value.code=='role_model_call_already_claimed' and len(model.calls)==1
@@ -157,4 +165,15 @@ def test_provider_without_reply_verifier_stops_before_any_model_call(tmp_path,pa
     try:
         worker.run_once();job=worker.jobs.get(jid)
         assert job['error']=='role_reply_verifier_unavailable' and not model.calls and not port.claims
+    finally:store.db.engine.dispose()
+
+
+def test_local_reply_with_installed_reviewer_still_requires_durable_claim(tmp_path,package,catalog):
+    from career_lab.runtime.roles_v2 import LocalRoleModel
+    port=ControlledPrivatePort();port.claim_model_call=None
+    store,auth,model,worker,jid,service=wired_case(tmp_path,package,catalog,port)
+    service.model=LocalRoleModel()  # A real reviewer could still call an external provider.
+    try:
+        worker.run_once();job=worker.jobs.get(jid)
+        assert job['error']=='role_attempt_guard_unavailable' and not port.attempts
     finally:store.db.engine.dispose()

@@ -40,7 +40,6 @@ class LocalRoleModel:
         lines=[role_text(language,'local_mode'), role_text(language,'responsibilities')+separator.join(ctx['responsibilities'])]
         for source in ctx['sources'][:4]:lines.append(f"[{source['display_name']}] {source['text']}")
         if ctx['omissions']['learner_scope']:lines.append(role_text(language,'scope_omitted'))
-        lines.append(role_text(language,'discussion_only'))
         return ModelReply(text="\n".join(lines))
 
 
@@ -212,7 +211,7 @@ class RoleService:
         snapshot=self.port.capture(view,auth,request.input,as_of=envelope.context.as_of)
         reply_ref=ObjectRef(session_id=auth.session_id,kind='role_reply',object_id="reply-"+digest([auth.session_id,envelope.origin_request_id])[:24],version=1)
         claim=getattr(self.private_port,'claim_model_call',None)
-        if claim is None and (type(self.model) is not LocalRoleModel or self.stance_producer is not None or self.stance_verifier is not None):
+        if claim is None and (type(self.model) is not LocalRoleModel or self.stance_producer is not None or self.stance_verifier is not None or self.reply_verifier is not None):
             raise ProtocolError('role_attempt_guard_unavailable',status=409)
         if type(self.model) is not LocalRoleModel and self.reply_verifier is None:
             raise ProtocolError('role_reply_verifier_unavailable',status=409)
