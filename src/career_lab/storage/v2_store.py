@@ -76,6 +76,13 @@ class RoleExecutionPermit:
     mutation_hash: str | None = None
 
 @dataclass(frozen=True)
+class FeedbackReadTrace:
+    # Server-only: producer must know the complete input set for this segment.
+    record: ObjectRef
+    path: str
+    dependencies: tuple[ObjectRef,...]
+
+@dataclass(frozen=True)
 class Mutation:
     writes: tuple[ObjectWrite, ...] = ()
     events: tuple[EventDraft, ...] = ()
@@ -86,6 +93,7 @@ class Mutation:
     jobs: tuple[JobRequest,...] = ()
     refresh_job: str | None = None
     private_role_authority: object | None = field(default=None,repr=False)
+    feedback_read_traces: tuple[FeedbackReadTrace,...] = ()
 
 class TransactionResult(V2):
     transaction_id: Identifier
@@ -539,7 +547,7 @@ class V2Store(JobStoreMixin):
 
     @staticmethod
     def _role_plan_hash(plan):
-        return digest({'writes':[w.model_dump(mode='json') for w in plan.writes],'events':[e.model_dump(mode='json') for e in plan.events],'jobs':[j.model_dump(mode='json') for j in plan.jobs],'state_changes':plan.state_changes,'decision':plan.decision.model_dump(mode='json') if plan.decision else None,'result':plan.result,'refresh_job':plan.refresh_job})
+        return digest({'feedback_read_traces':[{'record':t.record.model_dump(mode='json'),'path':t.path,'dependencies':[r.model_dump(mode='json') for r in t.dependencies]} for t in plan.feedback_read_traces],'writes':[w.model_dump(mode='json') for w in plan.writes],'events':[e.model_dump(mode='json') for e in plan.events],'jobs':[j.model_dump(mode='json') for j in plan.jobs],'state_changes':plan.state_changes,'decision':plan.decision.model_dump(mode='json') if plan.decision else None,'result':plan.result,'refresh_job':plan.refresh_job})
 
     def authorize_role_plan(self,permit,plan):
         if not isinstance(permit,RoleExecutionPermit) or permit.seal is not self._role_execution_seal:raise ProtocolError('role_authority_invalid',status=403)
@@ -790,6 +798,7 @@ class V2Store(JobStoreMixin):
             allowed=tuple(x for x in records if self._visible(x,auth) and (self._object_in_scope(c,auth,x.ref.object_id)))
             mutation=handler(self._operation_view(c,auth,state,bindings,records),command,auth)
             if not isinstance(mutation,Mutation):raise TypeError('handler must return Mutation')
+            if any(not isinstance(trace,FeedbackReadTrace) or trace.record.kind not in {'feedback','feedback_response'} or not any(write.ref==trace.record for write in mutation.writes) for trace in mutation.feedback_read_traces):raise ProtocolError('feedback_trace_invalid',status=403)
             role_permit=self._role_permit_for_commit(c,auth,command,mutation,job_context,worker_fence)
             queued_role=self._role_enqueue_scope(auth,command,mutation) if job_context is None else None
             if job_context is not None and (mutation.state_changes or mutation.decision or mutation.jobs or mutation.refresh_job):raise ProtocolError('async_state_change_forbidden',status=403)
@@ -826,6 +835,21 @@ class V2Store(JobStoreMixin):
                 try:obj=model.model_validate(write.content)
                 except ValidationError as exc:raise ProtocolError('module_object_invalid',status=503) from exc
                 content=obj.model_dump(mode='json')
+                trace_deps=()
+                if ref.kind in {'feedback','feedback_response'}:
+                    if content.get('read_boundaries') is not None:raise ProtocolError('feedback_boundary_requires_server_trace',status=403)
+                    traces=[trace for trace in mutation.feedback_read_traces if trace.record==ref]
+                    if traces:
+                        from career_lab.contracts.v2.projection import feedback_segment
+                        if len({trace.path for trace in traces})!=len(traces):raise ProtocolError('feedback_trace_invalid',status=403)
+                        boundaries=[]
+                        for trace in traces:
+                            if not trace.dependencies or any(dep.session_id!=auth.session_id for dep in trace.dependencies):raise ProtocolError('feedback_trace_invalid',status=403)
+                            value=feedback_segment(content,trace.path)
+                            deps=tuple({canonical(dep):dep for dep in (*trace.dependencies,*references(value))}.values())
+                            boundaries.append(FeedbackReadBoundary(path=trace.path,content_hash=digest(value),dependencies=deps))
+                        content['read_boundaries']=[boundary.model_dump(mode='json') for boundary in boundaries]
+                        trace_deps=tuple({canonical(dep):dep for boundary in boundaries for dep in boundary.dependencies}.values())
                 if ref.kind not in {'cycle','scenario_state','job_context','role_context'} and auth.actor_id not in write.visible_to:raise ProtocolError('private_object_channel_required',status=403)
                 if job_context is not None:
                     if ref.kind=='cycle':raise ProtocolError('async_cycle_write_forbidden',status=403)
@@ -875,10 +899,11 @@ class V2Store(JobStoreMixin):
                 if content.get('version',content.get('revision',ref.version))!=ref.version:raise ProtocolError('object_identity_mismatch')
                 if content.get('executor') and content['executor']!=auth.executor.model_dump(mode='json'):raise ProtocolError('executor_spoofed',status=403)
                 deps=references(content)
-                if set(canonical(x) for x in deps)-set(canonical(x) for x in write.dependencies):raise ProtocolError('undeclared_object_reference')
+                declared=tuple({canonical(dep):dep for dep in (*write.dependencies,*trace_deps)}.values())
+                if set(canonical(x) for x in deps)-set(canonical(x) for x in declared):raise ProtocolError('undeclared_object_reference')
                 if ref.kind in {'submission','review'} and content.get('evaluation')!=bindings.evaluation.model_dump(mode='json'):raise ProtocolError('evaluation_binding_mismatch',status=409)
                 if ref.kind=='submission' and content.get('scenario')!=bindings.scenario.model_dump(mode='json'):raise ProtocolError('scenario_binding_mismatch',status=409)
-                planned.append(StoredObject(creator=auth.executor,ref=ref,content=content,visible_to=write.visible_to,dependencies=write.dependencies,created_storage_revision=sr))
+                planned.append(StoredObject(creator=auth.executor,ref=ref,content=content,visible_to=write.visible_to,dependencies=declared,created_storage_revision=sr))
             external={canonical(x.ref):x for x in self._external(c,auth.session_id)}
             # Read-only business actions may have no ObjectWrite. Their verified
             # command/result refs still need an atomic anchor for request recovery.
@@ -1036,6 +1061,7 @@ class V2Store(JobStoreMixin):
         item=FeedbackResponseRecord.model_validate(write.content)
         expected=ObjectRef(session_id=auth.session_id,kind='feedback',object_id=body.feedback_id,version=body.feedback_version)
         if item.feedback!=expected or item.executor!=auth.executor:raise ProtocolError('feedback_response_identity_mismatch',status=403)
+        if item.evidence_status!=('user_submitted_unverified' if body.evidence else 'none_submitted'):raise ProtocolError('feedback_evidence_status_required',status=403)
         for key in ('kind','section','criterion','text','evidence'):
             if getattr(item,key)!=getattr(body,key):raise ProtocolError('feedback_response_input_mismatch',status=409)
         self._auth(c,auth,'read',object_ids=(expected.object_id,))

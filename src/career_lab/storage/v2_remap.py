@@ -84,6 +84,10 @@ class NamespaceRemapper:
             identifier = 'product_id' if entity_ref.kind == 'product' else 'id'
             if identifier in data:
                 data[identifier] = self.object_id(entity_ref.kind, entity_ref.object_id)
+        if isinstance(model,(C.FeedbackV2,C.FeedbackResponseRecord)) and data.get('read_boundaries') is not None:
+            from career_lab.contracts.v2.projection import feedback_segment
+            transformed=type(model).model_validate(data).model_dump(mode='json')
+            data['read_boundaries']=tuple(boundary.model_copy(update={'content_hash':C.digest(feedback_segment(transformed,boundary.path))}) for boundary in data['read_boundaries'])
         if isinstance(model, C.RoleGenerationAudit):
             # In this typed carrier request_id denotes its RoleTurn identity;
             # external provider attempt IDs and original prompt text stay intact.

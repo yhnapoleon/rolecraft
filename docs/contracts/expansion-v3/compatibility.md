@@ -94,3 +94,12 @@ RoleReply的公开写/历史读按固定公共DTO字段白名单判定，宽松O
 事件引用kind=event由共同事件表管理：验证真实id/version/session、受众与窗口，带原文/跨度的事件证据须另经安全投影；研究快照在原event namespace重映射，RoleGenerationAudit中指向RoleTurn的attempt.request_id随该明确引用映射，实际provider attempt_id、usage和原prompt不改。
 
 install_private_role_runtime默认enable_generation=False。当前成功/受众/回滚/三轮/刷新测试使用明确受控模型与catalog；旧固定W04仍有待037修复的私有来源ID回显，未装入新修正版前不启用业务生成。实际材料/有效时点绑定、私有stance新计划、原生display/Observation/tools及产品QA仍需累计接线，不能用本切片替代。
+
+
+逐段反馈读取：read_boundaries由共同store从服务端Mutation.feedback_read_traces生成，绑定封闭路径集合、确切段落内容hash及完整依赖；正文直接提交read_boundaries被拒绝，公开请求也没有此字段。FeedbackReadTrace是服务端生产者声明，只有掌握该段完整真实输入时才能提供，不得从用户refs列表、调用方类型、来源hash或alwaysTrue回调推导完整性；共同时增加该段显式引用并核其真实对象/权限。当前W05生产reader尚未接入，该机制不代表已经有真实输入完整性权威。
+
+读取依据具体段落证明和当前主体/依赖权限，不能因为allowed_objects非None就无条件遮盖。证明匹配且依赖全部可读时保留原文；缺证明、hash不匹配或隐藏依赖仍安全降级。有明确授权引用的既有反馈项保留；全局统计/摘要需自己的完整来源证明。受限证明自身的依赖ID/hash不外泄。多条不可读引用可以同时变unknown，不能因多个空hash误报重复而拒绝整份反馈。快照恢复只随显式引用变换重算相应段落hash，原报告不改。
+
+新异议/补证记录包含evidence_status：none_submitted或user_submitted_unverified。旧字段缺失仍未记录/未知，不回填为已核实。权限/版本关联成功只证明可以引用，不证明quote在原文中、语义支持或该声明正确。原生UI接线须分别显示“未附补证”“用户提交，引用原文与支持关系待核实”“旧记录未记录核验状态”；不能套已核实证据样式。之后的W05评审必须再次读取实际源版本核quote/span/时点/语义，生成新的评审结果，原补证及原反馈不改。
+
+新回应文本由服务器关联到原反馈和所附引用，完整授权时可恢复原话；父反馈存在隐藏依赖时该文本继续降级。此字段和读取合同已实现，生产W05 writer/reader以及原生v4数据装配、UI标签仍待实际接线；本次不声称前端或真实业务闭环完成。

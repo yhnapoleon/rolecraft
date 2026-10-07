@@ -40,6 +40,7 @@ CONSUMERS['W07'] += ['ProviderReceipt','DatasetMetadataV2','DatasetSnapshotMetad
 CONSUMERS['W08'] += ['ProviderReceipt','DatasetMetadataV2','DatasetSnapshotMetadata']
 CONSUMERS['W12'] += ['ProviderReceipt']
 CONSUMERS['W03'] += ['ImportedTaskSource','WorkspaceImportReceipt','WorkspaceProductRead','WorkspaceProductPage','WorkspaceSharePage']
+CONSUMERS['W05'] += ['FeedbackReadBoundary']
 CONSUMERS['W05'] += ['FeedbackReferenceCheck','FeedbackActivity','FeedbackActivityCount','FeedbackActivityWindow','VerifiedFactsSnapshot','HistoricalResponsibilityFinding','HistoricalResponsibilitiesSnapshot','FeedbackResponseRecord','FeedbackResponseCreate']
 CONSUMERS['W04'] += ['RoleAuditScope','RoleAuditReceivedShare','RoleAuditMemory','RoleGenerationAudit']
 for consumer in ('W04','W05','W06','W09','W14'):
@@ -58,6 +59,8 @@ def integration_example(model):
     if model is RoleGenerationAudit:
         message=ProviderMessage(role='system',content='Synthetic private prompt; no model call occurred.')
         return model(job_id='example-job',job_attempt=1,request=ObjectRef(session_id='example',kind='role_turn',object_id='turn',version=1),scope=scope,prompt_messages=(message,),prompt_hash=digest([{'role':message.role,'content':message.content}]),history_revision=digest('synthetic history'))
+    from career_lab.contracts.v2 import FeedbackReadBoundary
+    if model is FeedbackReadBoundary:return model(path='/business_response',content_hash=digest('Synthetic bounded text'),dependencies=(ObjectRef(session_id='example',kind='product',object_id='product',version=1),))
     if model is FeedbackReferenceCheck:return model(submitted_reference_hash=digest('synthetic missing reference'),status='unavailable')
     if model is VerifiedFactsSnapshot:return model(subject=ObjectRef(session_id='example',kind='product',object_id='product',version=1),status='unknown',as_of=None,requested_at=sample_model(VersionPoint),captured_at=sample_model(VersionPoint),source_snapshot_hash=digest('synthetic unverified snapshot'),summary=('Formation point is unknown.',))
     if model is FeedbackResponseRecord:return model(id='response',session_id='example',feedback=ObjectRef(session_id='example',kind='feedback',object_id='feedback',version=1),kind='objection',text='Please reconsider this interpretation.',recorded_at=sample_model(VersionPoint),executor=Executor(id='human:example',kind='human'))
@@ -154,6 +157,9 @@ def export(root:Path,output:Path):
     manifest['integration_changes']['W04-private-reply-whitelist']='Public/historical RoleReply fields are restricted to the pinned public DTO regardless of permissive registrations; private carrier and unknown fields remain unreadable to learner/Agent.'
     manifest['integration_changes']['role-event-references']='Actual event provenance is scope/audience/window validated and remapped in the event namespace; no parallel event store.'
     manifest['boundaries'].append('Successful generation checks use controlled non-network models and catalog. W04 new private-ID fix and real business cumulative acceptance are still required; no production activation implied.')
+    manifest['previous_contract_revision']='expansion-v3-ffa9cb25c4a9d74c670c8cd03aac284cb6a23c6bea04192dc0c6d3da6391532a'
+    manifest['integration_changes']['feedback-segment-scope']='Server-only complete input traces bind exact content hashes and dependencies per segment; fully authorized finite-scope readers retain proved text, missing or hidden dependencies degrade only affected parts.'
+    manifest['integration_changes']['submitted-evidence-status']='New response evidence is explicitly user_submitted_unverified (or none_submitted); legacy absence stays unknown. Linking never claims quote or semantic verification.'
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

@@ -160,6 +160,47 @@
       "title": "Executor",
       "type": "object"
     },
+    "FeedbackReadBoundary": {
+      "additionalProperties": false,
+      "properties": {
+        "attestation": {
+          "const": "common_store_trace_v1",
+          "default": "common_store_trace_v1",
+          "title": "Attestation",
+          "type": "string"
+        },
+        "content_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Content Hash",
+          "type": "string"
+        },
+        "dependencies": {
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "minItems": 1,
+          "title": "Dependencies",
+          "type": "array"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "content_hash",
+        "dependencies"
+      ],
+      "title": "FeedbackReadBoundary",
+      "type": "object"
+    },
     "ObjectRef": {
       "additionalProperties": false,
       "properties": {
@@ -269,6 +310,22 @@
       "title": "Evidence",
       "type": "array"
     },
+    "evidence_status": {
+      "anyOf": [
+        {
+          "enum": [
+            "none_submitted",
+            "user_submitted_unverified"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Evidence Status"
+    },
     "executor": {
       "$ref": "#/$defs/Executor"
     },
@@ -287,6 +344,21 @@
       ],
       "title": "Kind",
       "type": "string"
+    },
+    "read_boundaries": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/FeedbackReadBoundary"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Read Boundaries"
     },
     "read_projection": {
       "anyOf": [

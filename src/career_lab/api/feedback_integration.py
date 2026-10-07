@@ -6,7 +6,7 @@ never infers facts, completeness, actual actions or model quality from a request
 from uuid import uuid4
 from career_lab.contracts.v2 import *
 from career_lab.api.modules import Operation,V2Response
-from career_lab.storage.v2_store import Mutation,ObjectWrite,references
+from career_lab.storage.v2_store import Mutation,ObjectWrite,references,FeedbackReadTrace
 from career_lab.storage.v2_lifecycle import point
 
 
@@ -18,9 +18,9 @@ def record_feedback_response(view,command,auth):
     for snapshot in feedback.historical_responsibilities or ():
         known.update(item.criterion for item in snapshot.entries)
     if body.criterion is not None and body.criterion not in known:raise ProtocolError('feedback_criterion_unknown')
-    item=FeedbackResponseRecord(id=uuid4().hex,session_id=auth.session_id,feedback=target,kind=body.kind,section=body.section,criterion=body.criterion,text=body.text,evidence=body.evidence,recorded_at=point(view.state),executor=auth.executor)
+    item=FeedbackResponseRecord(evidence_status='user_submitted_unverified' if body.evidence else 'none_submitted',id=uuid4().hex,session_id=auth.session_id,feedback=target,kind=body.kind,section=body.section,criterion=body.criterion,text=body.text,evidence=body.evidence,recorded_at=point(view.state),executor=auth.executor)
     ref=ObjectRef(session_id=auth.session_id,kind='feedback_response',object_id=item.id,version=1)
-    return Mutation(writes=(ObjectWrite(ref=ref,expected_head=0,content=item.model_dump(mode='json'),dependencies=references(item.model_dump(mode='json'))),),result={'response':ref.model_dump(mode='json'),'feedback':target.model_dump(mode='json')})
+    return Mutation(writes=(ObjectWrite(ref=ref,expected_head=0,content=item.model_dump(mode='json'),dependencies=references(item.model_dump(mode='json'))),),result={'response':ref.model_dump(mode='json'),'feedback':target.model_dump(mode='json'),'evidence_status':item.evidence_status},feedback_read_traces=(FeedbackReadTrace(ref,'/text',tuple({canonical(r):r for r in (target,*references([v.model_dump(mode='json') for v in body.evidence]))}.values())),))
 
 
 def install_feedback_recovery(registry):
