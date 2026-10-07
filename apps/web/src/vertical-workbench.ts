@@ -10,6 +10,11 @@ const labels:any={investigate:['调查与资料','Investigation'],trial:['知识
 const action=(id:string,zh:string,en:string,primary=false)=>`<button class="btn ${primary?'primary':''}" data-do="${id}">${T(zh,en)}</button>`;
 
 export async function mountVerticalWorkbench(root:HTMLElement,storage:Storage,parts:NativeParts={}) {
+  const label=document.createElement('aside');
+  label.dataset.v2DevelopmentNotice='true';label.setAttribute('role','note');
+  label.textContent='开发自测 · 非用户入口 · 不作为纵切验收依据';
+  label.style.cssText='position:sticky;top:0;z-index:10000;padding:10px 16px;background:#fff2d8;color:#6b3b00;border-bottom:1px solid #d6ad68;font:14px system-ui';
+  root.before(label);document.title='开发自测 · v2接线';
   const sessions=new VerticalSessions(storage);
   let client:VerticalClient|undefined, page=Object.hasOwn(labels,location.hash.slice(1))?location.hash.slice(1):'investigate',selected:Ref|undefined,doc:any,notice='',error='',busy=false;
   let cleanups:(()=>void)[]=[];
