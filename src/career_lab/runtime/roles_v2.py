@@ -1,5 +1,6 @@
 """Public role utterances, private generation plans and common-worker handlers."""
 from time import monotonic
+from dataclasses import replace
 import math
 import httpx
 from uuid import uuid4
@@ -11,11 +12,11 @@ from career_lab.contracts.v2 import (
     ObjectRef, ProtocolError, ProviderMessage, RoleContext, TurnInput, digest,
 )
 from career_lab.contracts.v2.projection import project_disclosures
-from career_lab.runtime.context_v2 import ContextPort, bare, clean_ref
+from career_lab.runtime.context_v2 import ContextPort, clean_ref
 from career_lab.runtime.model_adapter import ModelReply
 from career_lab.storage.role_memory import (
     PrivateGeneration, PublicSpokenEvidence, RoleStanceEvidence, RoleTurn, RoleReply, RoleDisplay,
-    object_write, parse_public_reply,
+    object_write, parse_public_reply, resolve_stance,
 )
 from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.v2_store import JobRequest, Mutation
@@ -84,14 +85,21 @@ def _usage(raw,key):
 
 
 def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,refresh_count=0,
-                  max_context_chars=24000,record_attempt):
+                  max_context_chars=24000,record_attempt,stance_verifier=None):
     """One model invocation. The caller supplies W01's protected attempt sink."""
     if (request.session_id!=auth.session_id or request.executor!=auth.executor
         or snapshot.context.role_id!=request.input.role_id or reply_ref.kind!='role_reply'
         or reply_ref.session_id!=auth.session_id):raise ProtocolError("role_generation_identity_invalid",status=403)
+    if snapshot.source_binding is None:raise ProtocolError("role_stance_source_unavailable",status=409)
     if getattr(model,'retries',0):raise ProtocolError("role_provider_retry_budget_uncontrolled",status=409)
-    messages,omitted=snapshot.messages(auth,max_chars=max_context_chars)
-    started=monotonic();raw=None;status="success";error=None;cause=None
+    stance=snapshot.stance_state;resolutions=[]
+    if stance is None:raise ProtocolError('role_stance_context_invalid',status=409)
+    for proposal in snapshot.stance_proposals:
+        resolution=resolve_stance(stance,proposal,snapshot.stance_facts,snapshot.context.as_of,stance_verifier)
+        resolutions.append(resolution);stance=resolution.state
+    effective=replace(snapshot,stance_state=stance)
+    messages,omitted,source_aliases=effective.build_prompt(auth,max_chars=max_context_chars)
+    started=monotonic();raw=None;status="success";error=None
     try:
         raw=model.complete(messages,[])
         response=ModelReply.model_validate(raw.model_dump(mode="json") if isinstance(raw,ModelReply) else raw)
@@ -105,7 +113,7 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
     if error is None:
         private_ids={f.id for f in snapshot.private_facts if f.disclosure.mode!='public'}
         private_metadata=('prompt_messages','prompt_fact_ids','context_hash','acceptable_conditions','unacceptable_conditions')
-        if (snapshot.scrub(response.text)!=response.text or any(fid in response.text for fid in private_ids)
+        if (snapshot.scrub(response.text)!=response.text or snapshot.has_private_identifier(response.model_dump(mode='json')) or any(fid in response.text for fid in private_ids)
             or messages[0]['content'] in response.text or any(key in response.text for key in private_metadata)):
             status,error="failed","role_output_blocked"
     input_tokens,output_tokens=_usage(raw,'prompt_tokens'),_usage(raw,'completion_tokens')
@@ -126,7 +134,7 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
                  for i,x in enumerate(internal))
     reply=RoleReply(id=reply_ref.object_id,session_id=auth.session_id,role_id=request.input.role_id,
         request=ObjectRef(session_id=auth.session_id,kind="role_turn",object_id=request.id,version=request.version),
-        question=snapshot.scrub(request.input.text),text=response.text,status="completed",as_of=snapshot.context.as_of,
+        question=snapshot.prompt_text(request.input.text),text=response.text,status="completed",as_of=snapshot.context.as_of,
         executor=auth.executor,origin_cycle=request.origin_cycle,generation_cycle=generation_cycle,
         spoken_evidence=public,omission_count=len(omitted)+snapshot.permission_omissions(auth))
     context=snapshot.context.model_copy(update={'actual_disclosures':internal})
@@ -134,14 +142,17 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
         prompt_messages=tuple(ProviderMessage.model_validate(m) for m in messages),prompt_hash=digest(messages),
         history_revision=snapshot.history_revision,received_shares=snapshot.received_shares,
         memories=snapshot.memories,refresh_count=refresh_count,attempts=(attempt,),used_sources=selected,
-        opinions=actual_opinions(snapshot,reply_ref,response.text))
+        opinions=actual_opinions(snapshot,reply_ref,response.text),source_aliases=source_aliases,
+        stance_state=stance,stance_resolutions=tuple(resolutions))
+    snapshot.require_public(reply.model_dump(mode="json"))
     return reply,private
 
 
 class RoleService:
-    def __init__(self,context_port,model=None,*,max_context_chars=24000,private_port=None):
+    def __init__(self,context_port,model=None,*,max_context_chars=24000,private_port=None,stance_verifier=None):
         self.port,self.model=context_port,model or LocalRoleModel()
         self.max_context_chars,self.private_port=max_context_chars,private_port
+        self.stance_verifier=stance_verifier
 
     def enqueue(self,view,command,auth):
         turn=TurnInput.model_validate(command.payload)
@@ -170,7 +181,7 @@ class RoleService:
         reply,private=generate_plan(snapshot,auth,request,reply_ref,self.model,
             generation_cycle=view.current_cycle.ref if view.current_cycle else None,
             refresh_count=envelope.context.refresh_count,max_context_chars=self.max_context_chars,
-            record_attempt=lambda attempt,error:self.private_port.record_attempt(envelope,auth,attempt,error))
+            record_attempt=lambda attempt,error:self.private_port.record_attempt(envelope,auth,attempt,error),stance_verifier=self.stance_verifier)
         # Only official RoleContext carrier(s) are accepted; do not install a new
         # private kind or conceal a prompt in a learner-readable DTO.
         private_writes=self.private_port.prepare(view,envelope,auth,private)
