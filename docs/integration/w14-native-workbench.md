@@ -33,6 +33,10 @@ ROLECRAFT_API_TARGET=http://127.0.0.1:18832 npm run dev -- --port 18830
 | 3：W05提交/反馈/修订 | `#sheet`内sheetDeliver/`#live-deliver`；`.review-main`、`.review-side`及原反馈侧栏 | 模块按surface=submission/feedback提供原生内容，去掉独立页头/导航。替换旧六字段协议为明确作品版本与决定；分段反馈/补证/修订走统一命令。反馈用自身semantic_status/条目来源，装046固定的完整14项输入，不复用同事mode。引用回跳沿review-side。 | 原交付入口完成提交→worker反馈→确切依据→异议补证→修订重交，旧记录不改写；停做/暂缓不过度裁决。 |
 | 3：W06 Agent | 原railAgent、`.agent-conn`、`.agent-log`与任务包/回传/采用位置 | 按044的v4-agent-mount-request接授权、MCP观察/操作/回传/撤销；模块只接原槽位，不创建独立面板或第二权限/队列。公共history/mount可先单独交付，不等本步UI齐。 | 原Agent区能授权、真实读取/回传、恢复、采用及撤销；执行、采用、验证分开呈现。 |
 
+插槽文件边界：032维护`src/app/ui.js`的上述现有容器、`workbench-entry.ts`、`workbench-live.ts`、统一会话/command数据层与公共adapter；W03由040改`src/features/workspace/native-v4/**`及其登记的client，W04由039改`src/features/roles-native/**`，W05由040改`src/features/feedback-native/**`。这些部件不得接管`#app`或全局导航、不得另存凭据/恢复账本；确切shared改动仍依登记串行。W06的044请求明确本轮无新frontend组件：032接`railAgent .agent-conn .conn-ways`和`.agent-log`，044提供现有factory/SDK/受权callback；不编造新组件路径。039树里未提交的W03文件不得作为输入或由039提交，本树只继承已登记owned哈希。
+
+本轮中文纵切按用户17:16决定保存截图与实际操作记录；最终验收再录屏。共享接口和模块组合仅依据准确commit/场景hash/契约与当前mode验证，开发自测页成功不计v4通过。
+
 所有模块沿`docs/design/frontend-style.md`及现有CSS变量，不挂`WorkspacePanel.tsx`或`recovery-browser.tsx`早期React页，不把独立CSS与新导航原样覆盖v4。相关切片验浅/深色、小屏、键盘和草稿恢复。v4负责路由、选择态、焦点/动效及mount/destroy；模块负责自身业务内容，不能创建顶层应用或另一套恢复流程。
 
 公共接口同步项属于同一数据层任务：objects读取移入Gateway Operation（turns.display已有正式Operation，保留统一入口）；完整Command和只读恢复从同一账本取；工作语言固定到会话/任务上下文；绑定046固定的W02/W05准确输入后真实重绑场景，记录冻结期必要变更理由。每个可测切片独立提交并给043在v4根入口验证。
