@@ -5,6 +5,7 @@
   "intended_reply_id": null,
   "job_attempt": 1,
   "job_id": "example-job",
+  "lease_token_hash": null,
   "memories": [],
   "phase": "attempt",
   "prompt_hash": "a012213f24641405de95c25bcc60e6a115425b685c937294acb0b435a283e404",
@@ -46,5 +47,6 @@
     "expires_at": null,
     "schema_version": 2
   },
-  "used_sources": []
+  "used_sources": [],
+  "worker_id": null
 }

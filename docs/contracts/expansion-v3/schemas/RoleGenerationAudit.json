@@ -696,6 +696,19 @@
       "title": "Job Id",
       "type": "string"
     },
+    "lease_token_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Lease Token Hash"
+    },
     "memories": {
       "default": [],
       "items": {
@@ -770,6 +783,19 @@
       },
       "title": "Used Sources",
       "type": "array"
+    },
+    "worker_id": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Worker Id"
     }
   },
   "required": [

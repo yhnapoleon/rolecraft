@@ -85,7 +85,13 @@ def add_controlled_audit(env,context,effect,request):
     audit=C.RoleGenerationAudit(phase='completed',job_id='controlled-job',job_attempt=1,request=request,reply=reply_write.ref,scope=C.RoleAuditScope(capabilities=auth.capabilities,actor_id=auth.actor_id,executor=auth.executor,credential_id=auth.credential_id,allowed_objects=auth.allowed_objects,allowed_actions=auth.allowed_actions),prompt_messages=messages,prompt_hash=C.digest([{'role':'system','content':'CONTROLLED_PRIVATE_PROMPT'}]),history_revision=C.digest('controlled history'),received_shares=(C.RoleAuditReceivedShare(share=share_ref,product=product,role_id='tech_lead',received_at=at,fragment=fragment),),used_sources=(fragment,))
     private=C.RoleContext(session_id=auth.session_id,role_id='tech_lead',as_of=at,sources=(),shared_products=(product,),sourced_memory=(fragment,),context_hash=C.digest('controlled context'),generation_audit=audit)
     ref=C.ObjectRef(session_id=auth.session_id,kind='role_context',object_id='private-context',version=1)
-    store.execute(auth,command(store.view(auth),'controlled-audit'),lambda *_:Mutation(writes=(reply_write,ObjectWrite(ref=ref,expected_head=0,visible_to=('system','tech_lead'),content=private.model_dump(mode='json'),dependencies=references(private.model_dump(mode='json')))),result={}))
+    from sqlalchemy import insert
+    from career_lab.storage.v2_tables import v2_objects,v2_heads
+    saved=store.execute(auth,command(store.view(auth),'controlled-audit'),lambda *_:Mutation(writes=(reply_write,),result={}))
+    historical=C.StoredObject(ref=ref,creator=auth.executor,content=private.model_dump(mode='json'),visible_to=('system','tech_lead'),dependencies=references(private.model_dump(mode='json')),created_storage_revision=saved.state.storage_revision)
+    with store.db.transaction() as conn:
+        conn.execute(insert(v2_objects).values(session_id=auth.session_id,kind=ref.kind,id=ref.object_id,version=1,record=C.canonical(historical),created_revision=historical.created_storage_revision))
+        conn.execute(insert(v2_heads).values(session_id=auth.session_id,kind=ref.kind,id=ref.object_id,version=1))
     return product,ref
 
 

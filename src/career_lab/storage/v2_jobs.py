@@ -78,13 +78,14 @@ class JobStoreMixin:
             if check_context:self._check_job_context(c,context,command)
             return auth
 
-    def job_view(self,auth,context,*,command=None):
+    def job_view(self,auth,context,*,command=None,worker_claim=None,capability='act'):
         """Read the exact queued/refreshed snapshot, filtered by current permission."""
         from .v2_store import TransactionView
         with self.db.transaction() as c:
             current_auth=self._job_auth(c,context,'read')
             if current_auth!=auth:raise ProtocolError('credential_revoked_or_invalid',status=403)
             self._check_job_context(c,context,command)
+            if worker_claim is not None:self._validate_job_commit(c,auth,command,context,worker_claim,capability)
             state=self._job_snapshot(c,context)
             row=self._row(c,auth.session_id)
             records=self._records(c,auth.session_id,context.as_of.storage_revision)
@@ -93,7 +94,7 @@ class JobStoreMixin:
             cycles=[x for x in records if x.ref.kind=='cycle' and x.ref.object_id==state.cycle_id]
             private=ScenarioStateV2.model_validate(max(scenarios,key=lambda x:x.ref.version).content) if scenarios else None
             cycle=max(cycles,key=lambda x:x.ref.version) if cycles else None
-            return TransactionView(state,SessionBindings.model_validate_json(row['bindings']),visible,private,cycle,job_context=context)
+            return TransactionView(state,SessionBindings.model_validate_json(row['bindings']),visible,private,cycle,job_context=context,worker_claim=worker_claim)
 
     def _validate_job_commit(self,c,auth,command,context,claim,capability):
         from career_lab.jobs.repository import jobs

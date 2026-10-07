@@ -34,6 +34,7 @@ class NamespaceRemapper:
         self.parent_session, self.target_session, self.mapping = parent_session, target_session, mapping
 
     def object_id(self, kind, value):
+        if kind=='event':return self.mapping.get(event_key(value),value)
         return self.mapping.get(identity_key(kind, value), value)
 
     def session(self, value):
@@ -83,6 +84,10 @@ class NamespaceRemapper:
             identifier = 'product_id' if entity_ref.kind == 'product' else 'id'
             if identifier in data:
                 data[identifier] = self.object_id(entity_ref.kind, entity_ref.object_id)
+        if isinstance(model, C.RoleGenerationAudit):
+            # In this typed carrier request_id denotes its RoleTurn identity;
+            # external provider attempt IDs and original prompt text stay intact.
+            data['attempts']=tuple(attempt.model_copy(update={'request_id':data['request'].object_id}) for attempt in data['attempts'])
         if isinstance(model, C.WorkProductVersion):
             payload = data['structured_payload']
             data['content_hash'] = C.digest({'content': data['content'], 'structured_payload': payload.model_dump(mode='json') if payload else None})

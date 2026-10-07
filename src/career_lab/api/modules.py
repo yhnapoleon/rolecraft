@@ -28,6 +28,10 @@ class ScenarioRegistration:
     scenario_state: ScenarioStateV2 | None = None
 
 @dataclass(frozen=True)
+class StoreJobHandler:
+    callback: Callable
+
+@dataclass(frozen=True)
 class Operation:
     name: str
     capability: str
@@ -55,7 +59,11 @@ PUBLIC_OPERATIONS={
 
 class ExtensionRegistry:
     def __init__(self):
-        self.scenarios={};self.operations={};self.cli={};self.job_handlers={};self.reference_resolvers={};self.contextual_reference_resolvers=set()
+        self.object_models={};self.scenarios={};self.operations={};self.cli={};self.job_handlers={};self.reference_resolvers={};self.contextual_reference_resolvers=set()
+    def register_object_model(self,kind,model):
+        if kind in self.object_models:raise ValueError('object model already installed')
+        self.object_models[kind]=model
+
     def register_reference_resolver(self,kind,resolver,*,contextual=False):
         if kind in self.reference_resolvers:raise ValueError('reference resolver already registered')
         self.reference_resolvers[kind]=resolver
@@ -122,7 +130,15 @@ def public_state(state):
     return state.model_dump(mode='json',exclude={'resources','applied_milestones'})
 
 class Gateway:
-    def __init__(self,store:V2Store,registry:ExtensionRegistry):self.store,self.registry=store,registry
+    def __init__(self,store:V2Store,registry:ExtensionRegistry):
+        self.store,self.registry=store,registry
+        for kind,resolver in registry.reference_resolvers.items():
+            contextual=kind in registry.contextual_reference_resolvers
+            if kind not in store.reference_resolvers:store.register_reference_resolver(kind,resolver,contextual=contextual)
+            elif store.reference_resolvers[kind] is not resolver or (kind in store.contextual_reference_resolvers)!=contextual:raise ValueError('incompatible reference resolver registration')
+        for kind,model in registry.object_models.items():
+            if kind not in store.object_models:store.register_object(kind,model)
+            elif store.object_models[kind] is not model:raise ValueError('incompatible object model registration')
     def create(self,request:CreateSessionV2):
         scenario=self.registry.scenarios.get(request.scenario)
         if scenario is None:raise ProtocolError('scenario_module_unavailable',status=503)
@@ -229,7 +245,8 @@ class Gateway:
         if prior is not None:return self.public_result(auth,prior,self.registry.projector_for_action(envelope.command.operation))
         self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
         derived_subject=self.store.fixed_feedback_subject(envelope.command)
-        plan=handler(self.store.job_view(auth,envelope.context,command=envelope.command),envelope,auth)
+        view=self.store.job_view(auth,envelope.context,command=envelope.command,worker_claim=claim,capability=envelope.capability)
+        plan=handler.callback(self.store,view,envelope,auth) if isinstance(handler,StoreJobHandler) else handler(view,envelope,auth)
         # External calls can repeat on transient failure; deterministic failures stop.
         self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
         result=self.store.execute(auth,envelope.command,lambda *_:plan,capability=envelope.capability,worker_fence=claim,derived_subject=derived_subject,job_context=envelope.context)

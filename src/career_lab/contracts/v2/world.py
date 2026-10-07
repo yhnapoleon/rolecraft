@@ -293,6 +293,8 @@ class RoleGenerationAudit(V2):
     phase: Literal['attempt','completed'] = 'attempt'
     job_id: Identifier
     job_attempt: PositiveInt
+    worker_id: Identifier | None = None
+    lease_token_hash: Hash | None = None
     request: ObjectRef
     reply: ObjectRef | None = None
     intended_reply_id: Identifier | None = None
