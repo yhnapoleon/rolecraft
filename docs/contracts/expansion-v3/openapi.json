@@ -4031,6 +4031,29 @@
         "title": "ImportVersionMap",
         "type": "object"
       },
+      "ImportedTaskSource": {
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/LegacyProvenance"
+          },
+          "task": {
+            "$ref": "#/components/schemas/ObjectRef"
+          }
+        },
+        "required": [
+          "task",
+          "source"
+        ],
+        "title": "ImportedTaskSource",
+        "type": "object"
+      },
       "InvestigationBlock": {
         "additionalProperties": false,
         "properties": {
@@ -7266,6 +7289,18 @@
             "minimum": 0,
             "title": "Cursor",
             "type": "integer"
+          },
+          "import_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Import Id"
           },
           "limit": {
             "default": 50,
@@ -10837,6 +10872,404 @@
         "title": "WorkspaceImport",
         "type": "object"
       },
+      "WorkspaceImportReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "package_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Package Hash",
+            "type": "string"
+          },
+          "package_id": {
+            "minLength": 1,
+            "title": "Package Id",
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ImportResult"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "source_schema": {
+            "minLength": 1,
+            "title": "Source Schema",
+            "type": "string"
+          },
+          "source_session_id": {
+            "minLength": 1,
+            "title": "Source Session Id",
+            "type": "string"
+          },
+          "task_sources": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ImportedTaskSource"
+            },
+            "title": "Task Sources",
+            "type": "array"
+          },
+          "version": {
+            "default": 1,
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "package_id",
+          "package_hash",
+          "source_schema",
+          "source_session_id",
+          "fingerprint",
+          "result",
+          "executor",
+          "created_at"
+        ],
+        "title": "WorkspaceImportReceipt",
+        "type": "object"
+      },
+      "WorkspaceProductPage": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceProductRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Next Cursor"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "shares": {
+            "items": {
+              "$ref": "#/components/schemas/ProductShare"
+            },
+            "title": "Shares",
+            "type": "array"
+          },
+          "sharing_complete": {
+            "title": "Sharing Complete",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "shares",
+          "sharing_complete",
+          "as_of"
+        ],
+        "title": "WorkspaceProductPage",
+        "type": "object"
+      },
+      "WorkspaceProductRead": {
+        "additionalProperties": false,
+        "properties": {
+          "adoption": {
+            "$ref": "#/components/schemas/Adoption",
+            "default": {
+              "adopted_at": null,
+              "adopter": null,
+              "schema_version": 2,
+              "status": "unadopted"
+            }
+          },
+          "author": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "content": {
+            "default": "",
+            "title": "Content",
+            "type": "string"
+          },
+          "content_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "cycle": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "draft": {
+            "default": true,
+            "title": "Draft",
+            "type": "boolean"
+          },
+          "evidence_refs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "kind": {
+            "default": "text",
+            "enum": [
+              "text",
+              "plan",
+              "test_plan",
+              "options",
+              "investigation"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "legacy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LegacyProvenance"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "product_id": {
+            "minLength": 1,
+            "title": "Product Id",
+            "type": "string"
+          },
+          "purpose": {
+            "default": "exploration",
+            "title": "Purpose",
+            "type": "string"
+          },
+          "removed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Removed At"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "shares": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Shares",
+            "type": "array"
+          },
+          "source_return_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Return Id"
+          },
+          "structured_payload": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "investigation": "#/components/schemas/InvestigationPayload",
+                    "options": "#/components/schemas/OptionsPayload",
+                    "plan": "#/components/schemas/PlanPayload",
+                    "test_plan": "#/components/schemas/TestPlanPayload",
+                    "text": "#/components/schemas/TextPayload"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/TextPayload"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlanPayload"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TestPlanPayload"
+                  },
+                  {
+                    "$ref": "#/components/schemas/OptionsPayload"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InvestigationPayload"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Structured Payload"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "enum": [
+                  "private",
+                  "shared"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Visibility"
+          }
+        },
+        "required": [
+          "product_id",
+          "session_id",
+          "version",
+          "cycle",
+          "author",
+          "executor",
+          "content_hash",
+          "created_at"
+        ],
+        "title": "WorkspaceProductRead",
+        "type": "object"
+      },
+      "WorkspaceSharePage": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductShare"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Next Cursor"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "sharing_complete": {
+            "title": "Sharing Complete",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "sharing_complete",
+          "as_of"
+        ],
+        "title": "WorkspaceSharePage",
+        "type": "object"
+      },
       "WorkspaceTask": {
         "additionalProperties": false,
         "properties": {
@@ -12952,6 +13385,82 @@
       }
     },
     "/sessions/{session_id}/work-products/{product_id}/shares": {
+      "get": {
+        "operationId": "work_products_shares_list_sessions__session_id__work_products__product_id__shares_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Work Products Shares List"
+      },
       "post": {
         "operationId": "work_products_shares_create_sessions__session_id__work_products__product_id__shares_post",
         "parameters": [
@@ -13184,6 +13693,82 @@
       }
     },
     "/sessions/{session_id}/workspace-imports": {
+      "get": {
+        "operationId": "workspace_imports_list_sessions__session_id__workspace_imports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Workspace Imports List"
+      },
       "post": {
         "operationId": "workspace_imports_sessions__session_id__workspace_imports_post",
         "parameters": [
@@ -13233,6 +13818,84 @@
           }
         ],
         "summary": "Workspace Imports"
+      }
+    },
+    "/sessions/{session_id}/workspace-imports/{import_id}": {
+      "get": {
+        "operationId": "workspace_imports_read_sessions__session_id__workspace_imports__import_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Workspace Imports Read"
       }
     }
   },
@@ -13324,6 +13987,9 @@
     "work_products.shares.create": {
       "$ref": "#/components/schemas/ShareCreate"
     },
+    "work_products.shares.list": {
+      "$ref": "#/components/schemas/ResourcePage"
+    },
     "work_products.versions.create": {
       "$ref": "#/components/schemas/ProductEdit"
     },
@@ -13332,6 +13998,12 @@
     },
     "workspace_imports": {
       "$ref": "#/components/schemas/WorkspaceImport"
+    },
+    "workspace_imports.list": {
+      "$ref": "#/components/schemas/ResourcePage"
+    },
+    "workspace_imports.read": {
+      "$ref": "#/components/schemas/ResourcePage"
     }
   },
   "x-rolecraft-v2-boundary": "Explicit schema_version=2; uninstalled modules return503. Internal snapshots are not public tools."

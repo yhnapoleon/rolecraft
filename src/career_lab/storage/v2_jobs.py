@@ -45,6 +45,14 @@ class JobStoreMixin:
             record=next((x for x in self._records(c,context.session_id) if x.ref==subject),None)
             if record is None or not self._visible(record,auth):raise ProtocolError('object_not_found',status=404)
             return
+        records=self._records(c,context.session_id)
+        for source in (*context.sources,*context.head_dependencies):
+            if source.kind!='share':continue
+            shares=[x for x in records if x.ref.kind=='share' and x.ref.object_id==source.object_id]
+            if not shares:raise ProtocolError('job_share_unavailable',status=403)
+            share=ProductShare.model_validate(max(shares,key=lambda x:x.ref.version).content)
+            products=[x for x in records if x.ref.kind=='product' and x.ref.object_id==share.product.object_id]
+            if share.revoked_at is not None or not products or max(products,key=lambda x:x.ref.version).content.get('removed_at') is not None:raise ProtocolError('job_share_unavailable',status=403)
         current=WorldStateV2.model_validate_json(self._row(c,context.session_id)['state'])
         if current.status!='active':raise ProtocolError('job_session_inactive',status=409)
         cycle=self._current_cycle(c,context.session_id)

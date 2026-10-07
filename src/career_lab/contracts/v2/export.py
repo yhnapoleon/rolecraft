@@ -39,8 +39,23 @@ CONSUMERS['W09'] += ['RequestResultQuery','RequestJobResult','RequestResult','Pr
 CONSUMERS['W07'] += ['ProviderReceipt','DatasetMetadataV2','DatasetSnapshotMetadata']
 CONSUMERS['W08'] += ['ProviderReceipt','DatasetMetadataV2','DatasetSnapshotMetadata']
 CONSUMERS['W12'] += ['ProviderReceipt']
+CONSUMERS['W03'] += ['ImportedTaskSource','WorkspaceImportReceipt','WorkspaceProductRead','WorkspaceProductPage','WorkspaceSharePage']
 for consumer in ('W04','W05','W06','W09','W14'):
     CONSUMERS[consumer] += ['JobRefreshRecord']
+
+def integration_example(model):
+    from career_lab.contracts.v2 import (ImportedTaskSource,WorkspaceImportReceipt,WorkspaceProductRead,WorkspaceProductPage,WorkspaceSharePage,WorkProductVersion,LegacyProvenance,ImportResult,ObjectRef,VersionPoint,Executor,digest)
+    from career_lab.contracts.v2.examples import STAMP
+    if model is WorkspaceProductRead:return model.model_validate(sample_model(WorkProductVersion).model_dump(mode='json')|{'visibility':None})
+    if model is ImportedTaskSource:
+        source=sample_model(LegacyProvenance).model_copy(update={'original_kind':'task'})
+        return model(task=ObjectRef(session_id='example',kind='task',object_id='task',version=1),source=source)
+    if model is WorkspaceImportReceipt:
+        result=ImportResult(package_id='example',mode='apply',id_map={},unresolved=(),as_of=VersionPoint(business_seq=0,workspace_revision=1,storage_revision=1),applied=True)
+        return model(id='receipt',session_id='example',package_id='example',package_hash=digest([]),source_schema='browser-v1',source_session_id='legacy',fingerprint=digest('synthetic-example'),result=result,executor=Executor(id='human:example',kind='human'),created_at=STAMP)
+    if model is WorkspaceProductPage:return model(items=(),shares=(),sharing_complete=True,as_of=sample_model(VersionPoint))
+    if model is WorkspaceSharePage:return model(items=(),sharing_complete=True,as_of=sample_model(VersionPoint))
+    return sample_model(model)
 
 def dump(path,data):
     path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(data,ensure_ascii=False,sort_keys=True,indent=2)+'\n')
@@ -51,7 +66,7 @@ def export(root:Path,output:Path):
     output.mkdir(parents=True,exist_ok=True)
     models=public_models();entries={}
     for name,model in models.items():
-        example=sample_model(model)
+        example=integration_example(model)
         dump(output/'schemas'/f'{name}.json',model.model_json_schema())
         dump(output/'examples'/f'{name}.json',example.model_dump(mode='json'))
         entries[name]={'owner':'W01','schema_version':2,'consumers':[wp for wp,names in CONSUMERS.items() if name in names] or ['shared-primitive'],'schema':f'schemas/{name}.json','schema_sha256':sha(output/'schemas'/f'{name}.json'),'example':f'examples/{name}.json','example_sha256':sha(output/'examples'/f'{name}.json'),'tests':['tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree']}
@@ -60,7 +75,7 @@ def export(root:Path,output:Path):
     app=create_app('sqlite:///:memory:');dump(output/'openapi.json',app.openapi());app.state.store.close()
     # Only implementation files here: the complete source tree is identified by the delivery receipt.
     files=set((root/'src/career_lab/contracts').rglob('*.py'))
-    files|={root/p for p in ['src/career_lab/api/app.py','src/career_lab/api/modules.py','src/career_lab/api/v2_routes.py','src/career_lab/storage/v2_tables.py','src/career_lab/storage/v2_store.py','src/career_lab/storage/v2_jobs.py','src/career_lab/storage/v2_snapshot.py','src/career_lab/storage/v2_lifecycle.py','src/career_lab/storage/v2_remap.py','src/career_lab/jobs/worker.py','src/career_lab/jobs/repository.py','src/career_lab/rubrics/registry.py']}
+    files|={root/p for p in ['src/career_lab/api/app.py','src/career_lab/api/workspace_integration.py','src/career_lab/api/modules.py','src/career_lab/api/v2_routes.py','src/career_lab/storage/v2_tables.py','src/career_lab/storage/v2_store.py','src/career_lab/storage/v2_jobs.py','src/career_lab/storage/v2_snapshot.py','src/career_lab/storage/v2_lifecycle.py','src/career_lab/storage/v2_remap.py','src/career_lab/jobs/worker.py','src/career_lab/jobs/repository.py','src/career_lab/rubrics/registry.py']}
     source={str(p.relative_to(root)):sha(p) for p in sorted(files)}
     errors=[]
     import re
@@ -102,6 +117,11 @@ def export(root:Path,output:Path):
     manifest['integration_changes']['W07-W08-semantic-consensus']='Only independent-pass consensus uses semantic_decision_key; G2/G2v final remains bound by the full normalized decision_key to the actual selected pass.'
     manifest['previous_contract_revision']='expansion-v3-deb8023ca664946f45c52692c65e3524703d77194c5100e0ee42939ae26cff4b'
     manifest['integration_changes']['W04-S02-P0']='Legacy role_reply audit fields are denied to learner/Agent on common reads and replay; new public spoken evidence remains readable; research audit preserves history. No role generation activation is implied.'
+    manifest['previous_contract_revision']='expansion-v3-3f2ca36e4275f2ff8d8e074e91231509116c054df8750d157682e8486354a9de'
+    manifest['integration_changes']['W03-common-import-sharing']='Read-only import preview and atomic receipt; operation-local reference checks; exact-version share pages; trusted removal cascade without scope expansion; queued share reads rechecked.'
+    manifest['integration_changes']['W02-projector-registration']='Conflicting declared public action/projector registrations are rejected before installation.'
+    manifest['boundaries']=[x for x in manifest['boundaries'] if not x.startswith('W02 runtime is still pinned')]
+    manifest['boundaries'].append('W02 owned b821 remains exact c2; coordinator rebind required for cumulative business runtime. W03 owner must adopt removal_cascade port for restricted removals; role private generation and native UI remain pending.')
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

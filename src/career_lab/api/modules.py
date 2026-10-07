@@ -40,6 +40,7 @@ class Operation:
     action_field: str | None = None
     service_mode: bool = False
     event_projector: Callable | None = None
+    preview_handler: Callable | None = None
 
 # Public API/tool installation whitelist. Internal snapshot/restore is deliberately absent.
 PUBLIC_OPERATIONS={
@@ -47,7 +48,7 @@ PUBLIC_OPERATIONS={
  'feedback.create','feedback.read','approvals.resolve','materials.list','timeline','evidence.read',
  'work_items.create','work_items.list','work_items.update','work_items.batch','work_products.adopt','work_products.create','work_products.list',
  'work_products.versions.create','work_products.versions.list','work_products.shares.create',
- 'work_products.shares.change','workspace_imports','reviews.create','reviews.read','revision_cycles',
+ 'work_products.shares.change','work_products.shares.list','workspace_imports','workspace_imports.read','workspace_imports.list','reviews.create','reviews.read','revision_cycles',
  'observation','tools','delegations.create','delegations.revoke',
 }
 
@@ -64,12 +65,27 @@ class ExtensionRegistry:
     def register(self,operation:Operation):
         if operation.name=='requests.read' and (operation.mutates or operation.capability!='read'):raise ValueError('request result lookup is read-only')
         if operation.name not in PUBLIC_OPERATIONS:raise ValueError('not a public module slot')
+        if operation.preview_handler and operation.name!='workspace_imports':raise ValueError('preview hook reserved for workspace import')
         if operation.name in self.operations:raise ValueError('operation already installed')
         if operation.capability not in {'read','act','submit','delegate'}:raise ValueError('invalid public capability')
         if operation.mutates and operation.capability=='read':raise ValueError('read capability cannot mutate')
         if not issubclass(operation.request_model,V2):raise TypeError('v2 request model required')
         if operation.service_mode and operation.name not in {'delegations.create','delegations.revoke'}:raise ValueError('service mode reserved for auth control plane')
+        actions=self.operation_actions(operation)
+        if operation.event_projector is not None and actions is None:raise ValueError('projected action field must declare Literal values')
+        if actions is not None:
+            for installed in self.operations.values():
+                prior=self.operation_actions(installed)
+                if prior is not None and actions & prior:raise ValueError('public action already registered')
         self.operations[operation.name]=operation
+    @staticmethod
+    def operation_actions(operation):
+        if not operation.mutates:return frozenset()
+        if not operation.action_field:return frozenset((operation.action_name or operation.name,))
+        field=operation.request_model.model_fields.get(operation.action_field)
+        if field is None or get_origin(field.annotation) is not Literal:return None
+        return frozenset(get_args(field.annotation))
+
     def projector_for_action(self,action):
         """Select only from installed registrations and a persisted action name.
 
@@ -134,6 +150,13 @@ class Gateway:
             if params:
                 for key,value in params.items():
                     if command.payload.get(key)!=value:raise ProtocolError('route_object_mismatch',status=409)
+            if op.preview_handler is not None and getattr(payload,'mode',None)=='preview':
+                self.store.authorize(auth,'read',command.operation)
+                result=self.store.query(auth,lambda view:op.preview_handler(view,command,auth),operation=command.operation)
+                if op.response_model is None:raise ProtocolError('module_response_contract_missing',status=503)
+                try:result=op.response_model.model_validate(result.model_dump(mode='json') if isinstance(result,BaseModel) else result)
+                except ValidationError as exc:raise ProtocolError('module_response_invalid',status=503) from exc
+                return {'schema_version':2,'result':result.model_dump(mode='json')}
             if op.service_mode:
                 self.store.authorize(auth,op.capability,command.operation)
                 result=op.handler(self.store,payload,auth,command.request_id)
@@ -145,7 +168,7 @@ class Gateway:
             return self.public_result(auth,result,self.registry.projector_for_action(command.operation) if result.replayed else op.event_projector)
         self.store.authorize(auth,op.capability,op.action_name or op.name)
         payload=op.request_model.model_validate(body or params)
-        result=op.handler(self.store.view(auth),payload,auth)
+        result=self.store.query(auth,lambda view:op.handler(view,payload,auth),operation=op.action_name or op.name)
         if op.response_model is None:raise ProtocolError('module_response_contract_missing',status=503)
         try:
             result=op.response_model.model_validate(result.model_dump(mode='json') if isinstance(result,BaseModel) else result)

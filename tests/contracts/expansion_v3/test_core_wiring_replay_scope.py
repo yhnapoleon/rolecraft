@@ -127,7 +127,8 @@ def test_recovery_uses_registered_projector_for_persisted_literal_action(foundat
     assert handler_calls==[1] and set(projection_calls)=={'material_read'}
     assert 'NEVER_SHOW' not in first.text+recovered.text+retried.text
     # A second compatible registration must not redirect replay to another module.
-    registry.register(Operation('approvals.resolve','act',C.ActionInput,handler,action_field='tool',event_projector=lambda e,a:None))
-    denied=client.get(path+'/requests/projected-read',headers=h)
-    assert denied.status_code==503 and denied.json()['code']=='event_projection_ambiguous'
-    assert 'NEVER_SHOW' not in denied.text and handler_calls==[1]
+    with pytest.raises(ValueError,match='public action already registered'):
+        registry.register(Operation('approvals.resolve','act',C.ActionInput,handler,action_field='tool',event_projector=lambda e,a:None))
+    recovered=client.get(path+'/requests/projected-read',headers=h)
+    assert recovered.status_code==200 and recovered.json()['response']==first.json()
+    assert 'NEVER_SHOW' not in recovered.text and handler_calls==[1]

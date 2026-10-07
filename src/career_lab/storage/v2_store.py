@@ -24,11 +24,13 @@ def role_reply_has_private_fields(content):
     if not isinstance(spoken,(list,tuple)):return True
     return any(not isinstance(item,dict) or set(item)-{'schema_version','label','quote','verification'} for item in spoken)
 
+
 OBJECT_MODELS={
     'task':WorkspaceTask,'product':WorkProductVersion,'share':ProductShare,'cycle':RevisionCycle,
     'review':ReviewRequest,'submission':SubmissionV2,'feedback':FeedbackV2,'config':AssistantConfig,
     'test':TestResultV2,'business_request':BusinessRequest,'business_decision':BusinessDecision,
     'role_context':RoleContext,'job_context':JobContextSnapshot,'scenario_state':ScenarioStateV2,
+    'workspace_import':WorkspaceImportReceipt,
 }
 
 class ObjectWrite(V2):
@@ -80,6 +82,8 @@ class TransactionView:
     objects: tuple[StoredObject, ...]
     private_scenario_state: ScenarioStateV2 | None = field(default=None,repr=False)
     current_cycle: StoredObject | None = field(default=None,repr=False)
+    reference_allowed: object | None = field(default=None,repr=False)
+    removal_cascade: Literal["current_product_only"] | None = None
     def get(self,ref: ObjectRef) -> StoredObject:
         found=next((x for x in self.objects if x.ref==ref),None)
         if found is None:raise ProtocolError('object_not_found',status=404)
@@ -255,11 +259,28 @@ class V2Store(JobStoreMixin):
             if auth.actor_id!=role_id or auth.executor.kind!='system' or auth.executor.id!='role:'+role_id:return False
         return auth.actor_id in record.visible_to
 
-    def view(self,auth):
+    def _operation_view(self,c,auth,state,bindings,records):
+        allowed=tuple(x for x in records if self._visible(x,auth) and self._object_in_scope(c,auth,x.ref.object_id))
+        def reference_allowed(ref):
+            if c.closed:raise ProtocolError('reference_view_expired',status=409)
+            self._auth(c,auth,'read',object_ids=(ref.object_id,))
+            if ref.session_id!=auth.session_id:raise ProtocolError('object_not_found',status=404)
+            bare=ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode='json').items() if k in ObjectRef.model_fields})
+            if ref.kind in self.reference_resolvers:
+                self._resolve_reference(c,auth,ref,state,bindings);return True
+            return any(x.ref==bare for x in allowed)
+        return TransactionView(state,bindings,allowed,self._scenario_state(c,auth.session_id),self._current_cycle(c,auth.session_id),reference_allowed,"current_product_only")
+
+    def query(self,auth,reader,*,operation=None):
+        """Execute a pure read against an authorized operation-local view."""
         with self.db.transaction() as c:
-            self._auth(c,auth,'read');r=self._row(c,auth.session_id)
-            records=tuple(x for x in self._records(c,auth.session_id) if self._visible(x,auth) and (self._object_in_scope(c,auth,x.ref.object_id)))
-            return TransactionView(WorldStateV2.model_validate_json(r['state']),SessionBindings.model_validate_json(r['bindings']),records,self._scenario_state(c,auth.session_id),self._current_cycle(c,auth.session_id))
+            self._auth(c,auth,'read',operation);row=self._row(c,auth.session_id)
+            view=self._operation_view(c,auth,WorldStateV2.model_validate_json(row['state']),SessionBindings.model_validate_json(row['bindings']),self._records(c,auth.session_id))
+            return reader(view)
+
+    def view(self,auth):
+        # A retained snapshot contains data, not a reusable authority callback.
+        return self.query(auth,lambda v:TransactionView(v.state,v.bindings,v.objects,v.private_scenario_state,v.current_cycle))
 
     def _reference_window(self,c,sid,ceiling,ref):
         point=VersionPoint(**ceiling.model_dump(include={'business_seq','workspace_revision','storage_revision'}))
@@ -342,7 +363,9 @@ class V2Store(JobStoreMixin):
             current=max(shares,key=lambda x:x.ref.version);share=ProductShare.model_validate(current.content)
             if share_ref.session_id!=auth.session_id or share.recipient_role!=auth.actor_id or share.revoked_at is not None:raise ProtocolError('object_not_found',status=404)
             self._auth(c,auth,'read',object_ids=(share.product.object_id,))
-            return next((x for x in records if x.ref==share.product),None) or self._not_found()
+            products=[x for x in records if x.ref.kind=='product' and x.ref.object_id==share.product.object_id]
+            if not products or max(products,key=lambda x:x.ref.version).content.get('removed_at') is not None:raise ProtocolError('object_not_found',status=404)
+            return next((x for x in products if x.ref==share.product),None) or self._not_found()
 
     def _not_found(self):raise ProtocolError('object_not_found',status=404)
 
@@ -354,6 +377,30 @@ class V2Store(JobStoreMixin):
         else:c.execute(insert(v2_heads).values(session_id=ref.session_id,kind=ref.kind,id=ref.object_id,version=ref.version))
         for dep in record.dependencies:
             c.execute(insert(v2_relations).values(session_id=ref.session_id,source_kind=ref.kind,source_id=ref.object_id,source_version=ref.version,target_kind=dep.kind,target_id=dep.object_id,target_version=dep.version))
+
+    def _removal_cascade(self,auth,records,planned,state,storage_revision,workspace_revision,event_count):
+        """Trusted collateral effect of already-authorized product removals only.
+
+        Does not grant the caller share scope and does not add hidden shares to
+        public result objects or request scope metadata.
+        """
+        removed={x.ref.object_id:x.ref for x in planned if x.ref.kind=='product' and x.content.get('removed_at') is not None}
+        if not removed:return ()
+        heads={}
+        for obj in (*records,*planned):
+            if obj.ref.kind=='share' and (obj.ref.object_id not in heads or obj.ref.version>heads[obj.ref.object_id].ref.version):heads[obj.ref.object_id]=obj
+        planned_keys={canonical(x.ref) for x in planned};cascade=[]
+        point=VersionPoint(business_seq=state.business_seq+event_count,workspace_revision=int(workspace_revision),storage_revision=storage_revision)
+        for obj in heads.values():
+            try:share=ProductShare.model_validate(obj.content)
+            except ValidationError as exc:raise ProtocolError('share_record_invalid',status=503) from exc
+            if share.product.object_id not in removed or share.revoked_at is not None:continue
+            if canonical(obj.ref) in planned_keys:raise ProtocolError('active_share_on_removed_product',status=409)
+            revoked=ProductShare.model_validate(share.model_dump(mode='json')|{'version':share.version+1,'revoked_at':point.model_dump(mode='json')})
+            ref=obj.ref.model_copy(update={'version':revoked.version})
+            deps=tuple({canonical(x):x for x in (*obj.dependencies,share.product,removed[share.product.object_id])}.values())
+            cascade.append(StoredObject(creator=auth.executor,ref=ref,content=revoked.model_dump(mode='json'),visible_to=obj.visible_to,dependencies=deps,created_storage_revision=storage_revision))
+        return tuple(cascade)
 
     def execute(self,auth:AuthContext,command:Command,handler,*,capability='act',fault=None,approval_policy=None,expected_storage_revision=None,worker_fence=None,derived_subject=None,job_context=None):
         # Callbacks compute a plan inside the locked transaction; no model/network IO.
@@ -374,7 +421,7 @@ class V2Store(JobStoreMixin):
             elif state.business_seq!=command.expected_version or state.workspace_revision!=command.expected_workspace_revision:raise ProtocolError('version_conflict',status=409)
             records=self._records(c,auth.session_id)
             allowed=tuple(x for x in records if self._visible(x,auth) and (self._object_in_scope(c,auth,x.ref.object_id)))
-            mutation=handler(TransactionView(state,bindings,allowed,self._scenario_state(c,auth.session_id),self._current_cycle(c,auth.session_id)),command,auth)
+            mutation=handler(self._operation_view(c,auth,state,bindings,records),command,auth)
             if not isinstance(mutation,Mutation):raise TypeError('handler must return Mutation')
             if job_context is not None and (mutation.state_changes or mutation.decision or mutation.jobs or mutation.refresh_job):raise ProtocolError('async_state_change_forbidden',status=403)
             refreshing=mutation.refresh_job is not None
@@ -406,6 +453,7 @@ class V2Store(JobStoreMixin):
                 try:obj=model.model_validate(write.content)
                 except ValidationError as exc:raise ProtocolError('module_object_invalid',status=503) from exc
                 content=obj.model_dump(mode='json')
+                if ref.kind not in {'cycle','scenario_state','job_context','role_context'} and auth.actor_id not in write.visible_to:raise ProtocolError('private_object_channel_required',status=403)
                 if job_context is not None:
                     if ref.kind=='cycle':raise ProtocolError('async_cycle_write_forbidden',status=403)
                     cycle_data=content.get('cycle')
@@ -416,6 +464,8 @@ class V2Store(JobStoreMixin):
                     original=max(existing,key=lambda x:x.ref.version).content
                     if any(content[k]!=original[k] for k in original if k not in {'version','status'}) or content['status']!='submitted':raise ProtocolError('cycle_scope_invalid',status=403)
                 if ref.kind=='product' and set(write.visible_to)!={'learner'}:raise ProtocolError('product_requires_share',status=403)
+                if ref.kind=='workspace_import':
+                    if existing or set(write.visible_to)!={'learner'}:raise ProtocolError('import_receipt_immutable',status=403)
                 if ref.kind=='role_reply' and role_reply_has_private_fields(content):
                     raise ProtocolError('role_reply_private_fields_forbidden',status=403)
                 if ref.kind=='role_context':
@@ -481,6 +531,8 @@ class V2Store(JobStoreMixin):
                     target=all_records.get(canonical(dep))
                     if dep.session_id!=auth.session_id or target is None or not self._visible(target,auth):raise ProtocolError('object_not_found',status=404)
                     if not ((dep.kind=='cycle' and dep.object_id==state.cycle_id) or (record.ref.kind=='cycle' and capability=='submit')):self._auth(c,auth,object_ids=(dep.object_id,))
+            cascaded=self._removal_cascade(auth,records,planned,state,sr,wr,len(mutation.events))
+            for record in cascaded:all_records[canonical(record.ref)]=record
             validate_graph(tuple(all_records.values()),external_keys=set(external))
             resources=state.resources
             if mutation.decision is not None:
@@ -505,7 +557,7 @@ class V2Store(JobStoreMixin):
                 emitted.append(StoredEvent(id=uuid4().hex,session_id=auth.session_id,seq=seq,transaction_id=txn,type=draft.type,executor=auth.executor,visible_to=draft.visible_to,refs=draft.refs,data=draft.data))
             new=WorldStateV2.model_validate(state.model_dump(mode='json')|changes|{'business_seq':seq,'workspace_revision':int(wr),'storage_revision':sr,'resources':resources})
             if refreshing:self._refresh_queued_job(c,auth,command,mutation.refresh_job,new)
-            for record in planned:self._put(c,record)
+            for record in (*planned,*cascaded):self._put(c,record)
             if fault:fault('after_objects')
             for event in emitted:c.execute(insert(v2_events).values(session_id=auth.session_id,seq=event.seq,record=canonical(event)))
             if fault:fault('after_events')
@@ -532,10 +584,22 @@ class V2Store(JobStoreMixin):
                     self._put(c,StoredObject(ref=jobref,content=context.model_dump(mode='json'),visible_to=('learner',),dependencies=sources,created_storage_revision=sr))
                     queued.append(jid)
             output=mutation.result | ({'refreshed_job':mutation.refresh_job} if refreshing else {}) | ({'queued_jobs':queued} if queued else {})
+            if command.operation=='work_products.versions.create':
+                removals=[]
+                for product in planned:
+                    if product.ref.kind!='product' or product.content.get('removed_at') is None:continue
+                    visible_revocations=[]
+                    for share in (*planned,*cascaded):
+                        if share.ref.kind!='share' or share.content['product']['object_id']!=product.ref.object_id or share.content.get('revoked_at') is None:continue
+                        if 'read' in auth.capabilities and self._visible(share,auth) and self._object_in_scope(c,auth,share.ref.object_id):
+                            visible_revocations.append({'ref':share.ref.model_dump(mode='json'),'product':share.content['product'],'recipient_role':share.content['recipient_role'],'revoked_at':share.content['revoked_at']})
+                    removals.append({'product':product.ref.model_dump(mode='json'),'all_active_shares_revoked':True,'visible_revocations':visible_revocations,'sharing_complete':auth.allowed_objects is None})
+                if removals:output=output|{'removals':removals}
+
             boundary=ActionBoundary(transaction_id=txn,request_id=command.request_id,start_seq=state.business_seq,end_seq=seq,storage_revision=sr)
             result=TransactionResult(transaction_id=txn,boundary=boundary,executor=auth.executor,state=new,objects=tuple(x.ref for x in planned),events=tuple(emitted),result=output)
             c.execute(insert(v2_transactions).values(session_id=auth.session_id,request_id=command.request_id,fingerprint=fp,result=canonical(result),boundary=canonical(boundary)))
-            scope={canonical(r):r for r in (*references(command.payload),*references(mutation.result))}
+            scope={canonical(r):r for r in (*references(command.payload),*references(output))}
             for record in planned:
                 for r in (record.ref,*record.dependencies):scope[canonical(r)]=r
             for job in mutation.jobs:
