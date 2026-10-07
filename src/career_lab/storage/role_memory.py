@@ -133,6 +133,7 @@ class PrivateGeneration:
     prompt_template_revision: str | None = None
     language_consistency: Literal["unverified"] = "unverified"
     learner_penalty_allowed: Literal[False] = False
+    reply_verification: "ReplyVerification | None" = None
 
 
 class PrivateGenerationPort(Protocol):
@@ -246,6 +247,7 @@ class StanceFactReceipt:
     acquired_at_seq: int
     verification: Literal['source_verified'] = 'source_verified'
     acquired_at: VersionPoint | None = None
+    statement: str | None = None  # Actual disclosure-approved source text; never inferred from a hash.
 
     @property
     def key(self):return self.fact_id,self.semantic_hash
@@ -489,3 +491,15 @@ class PendingStanceVerifier:
     def check(self,state,proposal,basis):
         return StanceSupport('undetermined',None,stance_digest(state),stance_digest(proposal),
             stance_digest(basis),proposal.proposed_at,None,'waiting_for_model_connection')
+
+
+@dataclass(frozen=True)
+class ReplyVerification:
+    decision: Literal['consistent','inconsistent','undetermined']
+    language_match: bool | None
+    state_hash: str
+    reply_hash: str
+    checked_at: VersionPoint
+    review_ref: FileRef
+    semantic_quality: Literal['unverified'] = 'unverified'
+    learner_penalty_allowed: Literal[False] = False

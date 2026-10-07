@@ -579,7 +579,7 @@ def assemble_context(catalog, frame, *, question="", new_shares=(), head_depende
                         candidates=[p for p in first if all(point_at_or_before(p,q) for q in first)]
                         if candidates:acquired=candidates[0]
             receipt_ref=clean_ref(source.ref).model_copy(update={'observed_at_seq':acquired_seq})
-            receipt=StanceFactReceipt(fid,semantic,receipt_ref,acquired_seq,acquired_at=acquired)
+            receipt=StanceFactReceipt(fid,semantic,receipt_ref,acquired_seq,acquired_at=acquired,statement=source.text)
             if receipt not in stance_facts:stance_facts.append(receipt)
     from career_lab.storage.role_memory import restore_stance_memory
     recovered=restore_stance_memory(frame.stance_records,session_id=frame.session_id,role_id=role.id,

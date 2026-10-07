@@ -303,3 +303,101 @@ def test_model_and_support_retry_budgets_do_not_call_providers(package,catalog):
     verifier=ControlledSupport();verifier.retries=1
     result=resolve_stance(before.stance_state,proposal_for(after,fact),after.stance_facts,after.context.as_of,verifier)
     assert result.status=='pending' and not verifier.calls and not model.calls
+
+
+class FileReviewPort:
+    """Actual private local files for adapter tests, not the production carrier."""
+    def __init__(self,root):self.root=root;self.records=[]
+    def record_review(self,payload):
+        from career_lab.contracts.v2 import FileRef,canonical,digest
+        self.records.append(payload);name='review-'+str(len(self.records))+'.json'
+        (self.root/name).write_text(canonical(payload))
+        return FileRef(path=name,sha256=digest(payload))
+
+
+def test_production_verifier_consumes_actual_text_and_persists_bound_review(tmp_path,package,catalog):
+    import json
+    from career_lab.runtime.roles_v2 import ModelStanceVerifier
+    from career_lab.storage.role_memory import resolve_stance
+    from career_lab.contracts.v2 import read_file
+    before,after,fact=stance_scenario(package,catalog);assert fact.statement
+    answer={'decision':'supported','semantic_novelty':True,'quotes':[{'index':0,'quote':fact.statement}],'reason':'Controlled supporting judgment.'}
+    model=ScriptedModel([ModelReply(text=json.dumps(answer))]);port=FileReviewPort(tmp_path);attempts=[]
+    verifier=ModelStanceVerifier(model,port).bind_generation(after,request(owner()),lambda a,e:attempts.append((a,e)))
+    resolution=resolve_stance(before.stance_state,proposal_for(after,fact),after.stance_facts,after.context.as_of,verifier)
+    assert resolution.status=='changed' and len(model.calls)==1 and len(attempts)==1
+    assert fact.statement in json.dumps(model.calls[0],ensure_ascii=False)
+    record=json.loads(read_file(tmp_path,resolution.support.verification_ref))
+    assert record['basis'][0]['source']==fact.source.model_dump(mode='json')
+    assert record['answer']==answer and record['semantic_quality']=='unverified' and record['learner_penalty_allowed'] is False
+
+
+@pytest.mark.parametrize('case',['missing_text','invented_quote','retry','missing_evidence'])
+def test_production_support_never_promotes_unverified_evidence(tmp_path,package,catalog,case):
+    import json
+    from career_lab.runtime.roles_v2 import ModelStanceVerifier
+    from career_lab.storage.role_memory import resolve_stance
+    before,after,fact=stance_scenario(package,catalog);port=FileReviewPort(tmp_path)
+    if case=='missing_text':fact=replace(fact,statement=None)
+    answer={'decision':'supported','semantic_novelty':True,'quotes':[{'index':0,'quote':'invented' if case=='invented_quote' else fact.statement}],'reason':'Controlled.'}
+    model=ScriptedModel([ModelReply(text=json.dumps(answer))]);check=ModelStanceVerifier(model,port)
+    if case=='retry':model.retries=1
+    if case=='missing_evidence':port.record_review=lambda payload:None
+    verifier=check.bind_generation(after,request(owner()),lambda *x:None)
+    resolution=resolve_stance(before.stance_state,proposal_for(after,fact),(fact,),after.context.as_of,verifier)
+    assert resolution.status=='pending' and resolution.state==before.stance_state
+    assert len(model.calls)==(0 if case in {'missing_text','retry'} else 1)
+
+
+@pytest.mark.parametrize('decision,language,expected',[
+    ('inconsistent',True,'role_reply_stance_inconsistent'),
+    ('undetermined',None,'role_reply_semantics_unverified'),
+    ('consistent',False,'role_reply_semantics_unverified'),
+])
+def test_pressure_concession_or_unknown_language_cannot_publish(tmp_path,package,catalog,decision,language,expected):
+    import json
+    from career_lab.runtime.roles_v2 import ModelReplyVerifier,generate_plan
+    from test_runtime import reply_ref
+    before,after,_=stance_scenario(package,catalog);text='Fine, I accept your demand without evidence.'
+    reviewer=ScriptedModel([ModelReply(text=json.dumps({'decision':decision,'language_match':language,'quote':text,'reason':'Controlled verdict.'}))])
+    attempts=[];claims=[];port=FileReviewPort(tmp_path)
+    with pytest.raises(ProtocolError) as exc:
+        generate_plan(replace(after,stance_proposals=(proposal_for(after),)),owner(),request(owner()),reply_ref(),
+            ScriptedModel([ModelReply(text=text)]),record_attempt=lambda a,e:attempts.append((a,e)),
+            reply_verifier=ModelReplyVerifier(reviewer,port),begin_call=lambda phase,revision:claims.append(phase))
+    assert exc.value.code==expected and after.stance_state==before.stance_state
+    assert len(reviewer.calls)==1 and len(attempts)==2 and claims==['role_reply','role_reply_review']
+    assert port.records[0]['inputs']['accepted_positions'][0]['text']==before.stance_state.positions[0].text
+
+
+def test_review_allows_quoted_pressure_without_rewriting_and_persists_state_two_rounds(tmp_path,package,catalog):
+    import json
+    from test_context import notice
+    from test_runtime import reply_ref
+    from career_lab.runtime.roles_v2 import ModelReplyVerifier,generate_plan
+    from career_lab.storage.role_memory import stance_memory_payload
+    _,snap,_=stance_scenario(package,catalog);original=snap.stance_state
+    for index in range(2):
+        text='You said "just agree". I still need supporting evidence. Keep success_metric and M1-M3 unchanged.'
+        reviewer=ScriptedModel([ModelReply(text=json.dumps({'decision':'consistent','language_match':True,'quote':'I still need supporting evidence.','reason':'Controlled distinction between quoting and agreeing.'}))])
+        public,audit=generate_plan(snap,owner(),request(owner(),key='round'+str(index)),reply_ref(key='reply'+str(index)),
+            ScriptedModel([ModelReply(text=text)]),record_attempt=lambda *x:None,reply_verifier=ModelReplyVerifier(reviewer,FileReviewPort(tmp_path)))
+        assert public.text==text and audit.reply_verification.decision=='consistent'
+        assert len(audit.attempts)==2 and len({a.attempt_id for a in audit.attempts})==2
+        assert audit.reply_verification.semantic_quality=='unverified' and audit.stance_state==original
+        snap=assemble_context(catalog,replace(frame(package,catalog,updated=True,events=(notice(),)),stance_records=(stance_memory_payload(audit),)))
+
+
+def test_review_timeout_records_once_without_repair_or_public_completion(tmp_path,package,catalog):
+    from career_lab.runtime.roles_v2 import ModelReplyVerifier,generate_plan
+    from test_runtime import reply_ref
+    before,_,_=stance_scenario(package,catalog)
+    class TimeoutReview:
+        retries=0;revision='timeout-review';calls=0
+        def complete(self,messages,tools):self.calls+=1;raise TimeoutError()
+    model=TimeoutReview();attempts=[]
+    with pytest.raises(ProtocolError) as exc:
+        generate_plan(before,owner(),request(owner()),reply_ref(),ScriptedModel([ModelReply(text='We still need evidence.')]),
+            record_attempt=lambda a,e:attempts.append((a,e)),reply_verifier=ModelReplyVerifier(model,FileReviewPort(tmp_path)))
+    assert exc.value.code=='role_review_timeout' and model.calls==1
+    assert len(attempts)==2 and attempts[-1][0].status=='timeout' and attempts[-1][1]=='role_review_timeout'

@@ -52,10 +52,21 @@ class ControlledPrivatePort:
         self.plans.append(write);return (write,)
 
 
+class ControlledReplyVerifier:
+    """Fixtures only: no claim of natural-language verification."""
+    retries=0
+    def check(self,snapshot,auth,request,text,*,record_attempt,begin_call=None):
+        from career_lab.storage.role_memory import ReplyVerification,stance_digest
+        from career_lab.contracts.v2 import FileRef
+        if begin_call:begin_call('role_reply_review','controlled-no-model-fixture')
+        return ReplyVerification('consistent',True,stance_digest(snapshot.stance_state),digest(text),snapshot.context.as_of,
+            FileRef(path='controlled-no-model-fixture.json',sha256=digest('fixture only')))
+
+
 def wired_case(tmp_path,package,catalog,port):
     store,auth=common_store(tmp_path,catalog)
     model=ScriptedModel([ModelReply(text='我需要先核对依据。')])
-    service=RoleService(ContextPort(catalog,ControlledSnapshot(package,catalog)),model,private_port=port)
+    service=RoleService(ContextPort(catalog,ControlledSnapshot(package,catalog)),model,private_port=port,reply_verifier=ControlledReplyVerifier())
     registry=ExtensionRegistry();service.install(registry);gateway=Gateway(store,registry)
     view=store.view(auth);body=TurnInput(role_id='tech_lead',text='请核对').model_dump(mode='json')
     command=Command(schema_version=2,request_id='role-turn',operation='turns.create',expected_version=view.state.business_seq,
@@ -134,7 +145,16 @@ def test_model_claim_survives_worker_reconstruction_before_commit(tmp_path,packa
         # before public/private mutation commit. No shared worker code is changed.
         view=store.view(auth)
         service.generate(view,envelope,auth)
-        replacement=RoleService(service.port,model,private_port=DurablePort())
+        replacement=RoleService(service.port,model,private_port=DurablePort(),reply_verifier=ControlledReplyVerifier())
         with pytest.raises(ProtocolError) as exc:replacement.generate(view,envelope,auth)
         assert exc.value.code=='role_model_call_already_claimed' and len(model.calls)==1
+    finally:store.db.engine.dispose()
+
+
+def test_provider_without_reply_verifier_stops_before_any_model_call(tmp_path,package,catalog):
+    port=ControlledPrivatePort();store,auth,model,worker,jid,service=wired_case(tmp_path,package,catalog,port)
+    service.reply_verifier=None
+    try:
+        worker.run_once();job=worker.jobs.get(jid)
+        assert job['error']=='role_reply_verifier_unavailable' and not model.calls and not port.claims
     finally:store.db.engine.dispose()

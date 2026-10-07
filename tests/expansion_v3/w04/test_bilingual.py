@@ -281,3 +281,19 @@ def test_package_language_is_hash_bound_and_cannot_be_relabelled(tmp_path,packag
     with pytest.raises(ProtocolError):ScenarioKnowledge.from_package(reference)
     reference.locale='en';(tmp_path/'locale.json').write_text('{"locale":"zh"}')
     with pytest.raises(ProtocolError):ScenarioKnowledge.from_package(reference)
+
+
+@pytest.mark.parametrize('language',['zh','en'])
+def test_reply_review_binds_work_language_and_preserves_original_quotes(tmp_path,language):
+    from career_lab.runtime.roles_v2 import ModelReplyVerifier,generate_plan
+    from test_identifier_and_stance import FileReviewPort
+    from test_runtime import reply_ref
+    c,f,_,_=bilingual_fixture(language);snap=assemble_context(c,f)
+    text='原话是 "follow-up"；依据仍待核实。' if language=='zh' else 'You wrote "后续跟进". The supporting evidence is still pending.'
+    reviewer=ScriptedModel([ModelReply(text=json.dumps({'decision':'consistent','language_match':True,'quote':text,'reason':'Controlled quotation case.'}))])
+    port=FileReviewPort(tmp_path)
+    public,audit=generate_plan(snap,owner(),req_for(snap,'Continue the discussion.'),reply_ref(),ScriptedModel([ModelReply(text=text)]),
+        record_attempt=lambda *x:None,reply_verifier=ModelReplyVerifier(reviewer,port))
+    assert public.text==text and audit.work_language==language and audit.language_consistency=='unverified'
+    assert port.records[0]['inputs']['work_language']==language
+    assert 'original wording' in reviewer.calls[0][0]['content']
