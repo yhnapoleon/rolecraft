@@ -93,7 +93,7 @@ class JobStoreMixin:
             cycles=[x for x in records if x.ref.kind=='cycle' and x.ref.object_id==state.cycle_id]
             private=ScenarioStateV2.model_validate(max(scenarios,key=lambda x:x.ref.version).content) if scenarios else None
             cycle=max(cycles,key=lambda x:x.ref.version) if cycles else None
-            return TransactionView(state,SessionBindings.model_validate_json(row['bindings']),visible,private,cycle)
+            return TransactionView(state,SessionBindings.model_validate_json(row['bindings']),visible,private,cycle,job_context=context)
 
     def _validate_job_commit(self,c,auth,command,context,claim,capability):
         from career_lab.jobs.repository import jobs

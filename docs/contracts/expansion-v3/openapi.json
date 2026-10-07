@@ -8378,6 +8378,174 @@
         "title": "RevisionCycle",
         "type": "object"
       },
+      "RoleAuditMemory": {
+        "additionalProperties": false,
+        "properties": {
+          "fragment": {
+            "$ref": "#/components/schemas/DisclosedFragment"
+          },
+          "learner_refs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Learner Refs",
+            "type": "array"
+          },
+          "provenance": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Provenance",
+            "type": "array"
+          },
+          "role_id": {
+            "minLength": 1,
+            "title": "Role Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fragment",
+          "role_id"
+        ],
+        "title": "RoleAuditMemory",
+        "type": "object"
+      },
+      "RoleAuditReceivedShare": {
+        "additionalProperties": false,
+        "properties": {
+          "fragment": {
+            "$ref": "#/components/schemas/DisclosedFragment"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "received_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "role_id": {
+            "minLength": 1,
+            "title": "Role Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "share": {
+            "$ref": "#/components/schemas/ObjectRef"
+          }
+        },
+        "required": [
+          "share",
+          "product",
+          "role_id",
+          "received_at",
+          "fragment"
+        ],
+        "title": "RoleAuditReceivedShare",
+        "type": "object"
+      },
+      "RoleAuditScope": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "minLength": 1,
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "allowed_actions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Allowed Actions"
+          },
+          "allowed_objects": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Allowed Objects"
+          },
+          "capabilities": {
+            "items": {
+              "enum": [
+                "read",
+                "act",
+                "submit",
+                "approve",
+                "delegate",
+                "research"
+              ],
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "credential_id": {
+            "minLength": 1,
+            "title": "Credential Id",
+            "type": "string"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expires At"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "capabilities",
+          "actor_id",
+          "executor",
+          "credential_id"
+        ],
+        "title": "RoleAuditScope",
+        "type": "object"
+      },
       "RoleContext": {
         "additionalProperties": false,
         "properties": {
@@ -8404,6 +8572,17 @@
             },
             "title": "Conversations",
             "type": "array"
+          },
+          "generation_audit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoleGenerationAudit"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "known_events": {
             "default": [],
@@ -8477,6 +8656,146 @@
           "context_hash"
         ],
         "title": "RoleContext",
+        "type": "object"
+      },
+      "RoleGenerationAudit": {
+        "additionalProperties": false,
+        "properties": {
+          "attempts": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ModelAttemptUsage"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "history_revision": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "History Revision",
+            "type": "string"
+          },
+          "intended_reply_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Intended Reply Id"
+          },
+          "job_attempt": {
+            "exclusiveMinimum": 0,
+            "title": "Job Attempt",
+            "type": "integer"
+          },
+          "job_id": {
+            "minLength": 1,
+            "title": "Job Id",
+            "type": "string"
+          },
+          "memories": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RoleAuditMemory"
+            },
+            "title": "Memories",
+            "type": "array"
+          },
+          "phase": {
+            "default": "attempt",
+            "enum": [
+              "attempt",
+              "completed"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "prompt_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Prompt Hash",
+            "type": "string"
+          },
+          "prompt_messages": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderMessage"
+            },
+            "minItems": 1,
+            "title": "Prompt Messages",
+            "type": "array"
+          },
+          "received_shares": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RoleAuditReceivedShare"
+            },
+            "title": "Received Shares",
+            "type": "array"
+          },
+          "refresh_count": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Refresh Count",
+            "type": "integer"
+          },
+          "reply": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "request": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/RoleAuditScope"
+          },
+          "used_sources": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DisclosedFragment"
+            },
+            "title": "Used Sources",
+            "type": "array"
+          }
+        },
+        "required": [
+          "job_id",
+          "job_attempt",
+          "request",
+          "scope",
+          "prompt_messages",
+          "prompt_hash",
+          "history_revision"
+        ],
+        "title": "RoleGenerationAudit",
         "type": "object"
       },
       "RoleSpecV2": {

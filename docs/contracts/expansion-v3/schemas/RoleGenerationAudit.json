@@ -48,64 +48,6 @@
       "title": "DisclosedFragment",
       "type": "object"
     },
-    "DisclosureRecord": {
-      "additionalProperties": false,
-      "properties": {
-        "displayed_at_seq": {
-          "anyOf": [
-            {
-              "minimum": 0,
-              "type": "integer"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Displayed At Seq"
-        },
-        "fact_id": {
-          "minLength": 1,
-          "title": "Fact Id",
-          "type": "string"
-        },
-        "quote": {
-          "minLength": 1,
-          "title": "Quote",
-          "type": "string"
-        },
-        "reply_ref": {
-          "$ref": "#/$defs/ObjectRef"
-        },
-        "schema_version": {
-          "const": 2,
-          "default": 2,
-          "title": "Schema Version",
-          "type": "integer"
-        },
-        "source": {
-          "$ref": "#/$defs/EvidenceRefV2"
-        },
-        "verification": {
-          "enum": [
-            "model_extracted",
-            "verified",
-            "rejected"
-          ],
-          "title": "Verification",
-          "type": "string"
-        }
-      },
-      "required": [
-        "fact_id",
-        "source",
-        "reply_ref",
-        "quote",
-        "verification"
-      ],
-      "title": "DisclosureRecord",
-      "type": "object"
-    },
     "EvidenceRefV2": {
       "additionalProperties": false,
       "properties": {
@@ -669,146 +611,6 @@
       "title": "RoleAuditScope",
       "type": "object"
     },
-    "RoleGenerationAudit": {
-      "additionalProperties": false,
-      "properties": {
-        "attempts": {
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/ModelAttemptUsage"
-          },
-          "title": "Attempts",
-          "type": "array"
-        },
-        "error_code": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Error Code"
-        },
-        "history_revision": {
-          "pattern": "^[0-9a-f]{64}$",
-          "title": "History Revision",
-          "type": "string"
-        },
-        "intended_reply_id": {
-          "anyOf": [
-            {
-              "minLength": 1,
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null,
-          "title": "Intended Reply Id"
-        },
-        "job_attempt": {
-          "exclusiveMinimum": 0,
-          "title": "Job Attempt",
-          "type": "integer"
-        },
-        "job_id": {
-          "minLength": 1,
-          "title": "Job Id",
-          "type": "string"
-        },
-        "memories": {
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/RoleAuditMemory"
-          },
-          "title": "Memories",
-          "type": "array"
-        },
-        "phase": {
-          "default": "attempt",
-          "enum": [
-            "attempt",
-            "completed"
-          ],
-          "title": "Phase",
-          "type": "string"
-        },
-        "prompt_hash": {
-          "pattern": "^[0-9a-f]{64}$",
-          "title": "Prompt Hash",
-          "type": "string"
-        },
-        "prompt_messages": {
-          "items": {
-            "$ref": "#/$defs/ProviderMessage"
-          },
-          "minItems": 1,
-          "title": "Prompt Messages",
-          "type": "array"
-        },
-        "received_shares": {
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/RoleAuditReceivedShare"
-          },
-          "title": "Received Shares",
-          "type": "array"
-        },
-        "refresh_count": {
-          "default": 0,
-          "minimum": 0,
-          "title": "Refresh Count",
-          "type": "integer"
-        },
-        "reply": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/ObjectRef"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "request": {
-          "$ref": "#/$defs/ObjectRef"
-        },
-        "schema_version": {
-          "const": 2,
-          "default": 2,
-          "title": "Schema Version",
-          "type": "integer"
-        },
-        "scope": {
-          "$ref": "#/$defs/RoleAuditScope"
-        },
-        "used_sources": {
-          "default": [],
-          "items": {
-            "$ref": "#/$defs/DisclosedFragment"
-          },
-          "title": "Used Sources",
-          "type": "array"
-        }
-      },
-      "required": [
-        "job_id",
-        "job_attempt",
-        "request",
-        "scope",
-        "prompt_messages",
-        "prompt_hash",
-        "history_revision"
-      ],
-      "title": "RoleGenerationAudit",
-      "type": "object"
-    },
     "VersionPoint": {
       "additionalProperties": false,
       "properties": {
@@ -845,34 +647,103 @@
   },
   "additionalProperties": false,
   "properties": {
-    "actual_disclosures": {
+    "attempts": {
       "default": [],
       "items": {
-        "$ref": "#/$defs/DisclosureRecord"
+        "$ref": "#/$defs/ModelAttemptUsage"
       },
-      "title": "Actual Disclosures",
+      "title": "Attempts",
       "type": "array"
     },
-    "as_of": {
-      "$ref": "#/$defs/VersionPoint"
-    },
-    "context_hash": {
-      "pattern": "^[0-9a-f]{64}$",
-      "title": "Context Hash",
-      "type": "string"
-    },
-    "conversations": {
-      "default": [],
-      "items": {
-        "$ref": "#/$defs/ObjectRef"
-      },
-      "title": "Conversations",
-      "type": "array"
-    },
-    "generation_audit": {
+    "error_code": {
       "anyOf": [
         {
-          "$ref": "#/$defs/RoleGenerationAudit"
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Code"
+    },
+    "history_revision": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "History Revision",
+      "type": "string"
+    },
+    "intended_reply_id": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Intended Reply Id"
+    },
+    "job_attempt": {
+      "exclusiveMinimum": 0,
+      "title": "Job Attempt",
+      "type": "integer"
+    },
+    "job_id": {
+      "minLength": 1,
+      "title": "Job Id",
+      "type": "string"
+    },
+    "memories": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/RoleAuditMemory"
+      },
+      "title": "Memories",
+      "type": "array"
+    },
+    "phase": {
+      "default": "attempt",
+      "enum": [
+        "attempt",
+        "completed"
+      ],
+      "title": "Phase",
+      "type": "string"
+    },
+    "prompt_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Prompt Hash",
+      "type": "string"
+    },
+    "prompt_messages": {
+      "items": {
+        "$ref": "#/$defs/ProviderMessage"
+      },
+      "minItems": 1,
+      "title": "Prompt Messages",
+      "type": "array"
+    },
+    "received_shares": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/RoleAuditReceivedShare"
+      },
+      "title": "Received Shares",
+      "type": "array"
+    },
+    "refresh_count": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Refresh Count",
+      "type": "integer"
+    },
+    "reply": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObjectRef"
         },
         {
           "type": "null"
@@ -880,34 +751,8 @@
       ],
       "default": null
     },
-    "known_events": {
-      "default": [],
-      "items": {
-        "$ref": "#/$defs/ObjectRef"
-      },
-      "title": "Known Events",
-      "type": "array"
-    },
-    "omitted_sources": {
-      "default": [],
-      "items": {
-        "$ref": "#/$defs/ObjectRef"
-      },
-      "title": "Omitted Sources",
-      "type": "array"
-    },
-    "prompt_fact_ids": {
-      "default": [],
-      "items": {
-        "type": "string"
-      },
-      "title": "Prompt Fact Ids",
-      "type": "array"
-    },
-    "role_id": {
-      "minLength": 1,
-      "title": "Role Id",
-      "type": "string"
+    "request": {
+      "$ref": "#/$defs/ObjectRef"
     },
     "schema_version": {
       "const": 2,
@@ -915,42 +760,27 @@
       "title": "Schema Version",
       "type": "integer"
     },
-    "session_id": {
-      "minLength": 1,
-      "title": "Session Id",
-      "type": "string"
+    "scope": {
+      "$ref": "#/$defs/RoleAuditScope"
     },
-    "shared_products": {
-      "default": [],
-      "items": {
-        "$ref": "#/$defs/ObjectRef"
-      },
-      "title": "Shared Products",
-      "type": "array"
-    },
-    "sourced_memory": {
+    "used_sources": {
       "default": [],
       "items": {
         "$ref": "#/$defs/DisclosedFragment"
       },
-      "title": "Sourced Memory",
-      "type": "array"
-    },
-    "sources": {
-      "items": {
-        "$ref": "#/$defs/DisclosedFragment"
-      },
-      "title": "Sources",
+      "title": "Used Sources",
       "type": "array"
     }
   },
   "required": [
-    "session_id",
-    "role_id",
-    "as_of",
-    "sources",
-    "context_hash"
+    "job_id",
+    "job_attempt",
+    "request",
+    "scope",
+    "prompt_messages",
+    "prompt_hash",
+    "history_revision"
   ],
-  "title": "RoleContext",
+  "title": "RoleGenerationAudit",
   "type": "object"
 }

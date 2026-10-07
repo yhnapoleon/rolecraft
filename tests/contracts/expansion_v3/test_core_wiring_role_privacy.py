@@ -84,7 +84,7 @@ def test_historical_audit_is_preserved_and_untrusted_exports_are_denied(foundati
     assert state_digest(store)==before
 
 
-@pytest.mark.parametrize('field',['prompt_messages','prompt_hash','context_hash','history_revision','source_versions','omitted_sources','spoken_source'])
+@pytest.mark.parametrize('field',['prompt_messages','prompt_hash','context_hash','history_revision','source_versions','omitted_sources','attempts','actual_disclosures','received_shares','internal_disclosures','context','spoken_source'])
 def test_any_legacy_private_field_blocks_new_public_reply_write(foundation,field):
     store,auth,*_=foundation
     class LooseReply(C.V2):

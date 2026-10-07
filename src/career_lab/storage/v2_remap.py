@@ -22,7 +22,8 @@ SCALAR_IDS = {
     C.ShareCreate: {'product_id': 'product'},
     C.ShareUpdate: {'product_id': 'product', 'share_id': 'share'},
     C.TaskPatch: {'item_id': 'task'},
-    C.ResourcePage: {'product_id': 'product', 'review_id': 'review', 'submission_id': 'submission'},
+    C.ResourcePage: {'product_id': 'product', 'review_id': 'review', 'submission_id': 'submission', 'import_id':'workspace_import', 'feedback_id':'feedback', 'response_id':'feedback_response'},
+    C.FeedbackResponseCreate: {'feedback_id':'feedback'},
     C.EvidenceRead: {'submission_id': 'submission'},
 }
 OPAQUE_MODELS = (C.LegacyProvenance, C.LegacyAnnotation, C.FileRef, C.Executor)

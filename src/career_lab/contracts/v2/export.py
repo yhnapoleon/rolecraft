@@ -41,6 +41,7 @@ CONSUMERS['W08'] += ['ProviderReceipt','DatasetMetadataV2','DatasetSnapshotMetad
 CONSUMERS['W12'] += ['ProviderReceipt']
 CONSUMERS['W03'] += ['ImportedTaskSource','WorkspaceImportReceipt','WorkspaceProductRead','WorkspaceProductPage','WorkspaceSharePage']
 CONSUMERS['W05'] += ['FeedbackReferenceCheck','FeedbackActivity','FeedbackActivityCount','FeedbackActivityWindow','VerifiedFactsSnapshot','HistoricalResponsibilityFinding','HistoricalResponsibilitiesSnapshot','FeedbackResponseRecord','FeedbackResponseCreate']
+CONSUMERS['W04'] += ['RoleAuditScope','RoleAuditReceivedShare','RoleAuditMemory','RoleGenerationAudit']
 for consumer in ('W04','W05','W06','W09','W14'):
     CONSUMERS[consumer] += ['JobRefreshRecord']
 
@@ -48,6 +49,15 @@ def integration_example(model):
     from career_lab.contracts.v2 import (ImportedTaskSource,WorkspaceImportReceipt,WorkspaceProductRead,WorkspaceProductPage,WorkspaceSharePage,WorkProductVersion,LegacyProvenance,ImportResult,ObjectRef,VersionPoint,Executor,digest)
     from career_lab.contracts.v2.examples import STAMP
     from career_lab.contracts.v2 import FeedbackReferenceCheck,VerifiedFactsSnapshot,FeedbackResponseRecord
+    from career_lab.contracts.v2 import RoleAuditScope,RoleAuditReceivedShare,RoleAuditMemory,RoleGenerationAudit,DisclosedFragment,EvidenceRefV2,ProviderMessage
+    scope=RoleAuditScope(capabilities=('read','act'),actor_id='learner',executor=Executor(id='human:example',kind='human'),credential_id='example')
+    fragment=DisclosedFragment(ref=EvidenceRefV2(session_id='example',kind='product',object_id='product',version=1,observed_at_seq=0),text='Synthetic private receipt.',channel='received_share',verification='verified')
+    if model is RoleAuditScope:return scope
+    if model is RoleAuditReceivedShare:return model(share=ObjectRef(session_id='example',kind='share',object_id='share',version=1),product=ObjectRef(session_id='example',kind='product',object_id='product',version=1),role_id='tech_lead',received_at=sample_model(VersionPoint),fragment=fragment)
+    if model is RoleAuditMemory:return model(fragment=fragment,role_id='tech_lead')
+    if model is RoleGenerationAudit:
+        message=ProviderMessage(role='system',content='Synthetic private prompt; no model call occurred.')
+        return model(job_id='example-job',job_attempt=1,request=ObjectRef(session_id='example',kind='role_turn',object_id='turn',version=1),scope=scope,prompt_messages=(message,),prompt_hash=digest([{'role':message.role,'content':message.content}]),history_revision=digest('synthetic history'))
     if model is FeedbackReferenceCheck:return model(submitted_reference_hash=digest('synthetic missing reference'),status='unavailable')
     if model is VerifiedFactsSnapshot:return model(subject=ObjectRef(session_id='example',kind='product',object_id='product',version=1),status='unknown',as_of=None,requested_at=sample_model(VersionPoint),captured_at=sample_model(VersionPoint),source_snapshot_hash=digest('synthetic unverified snapshot'),summary=('Formation point is unknown.',))
     if model is FeedbackResponseRecord:return model(id='response',session_id='example',feedback=ObjectRef(session_id='example',kind='feedback',object_id='feedback',version=1),kind='objection',text='Please reconsider this interpretation.',recorded_at=sample_model(VersionPoint),executor=Executor(id='human:example',kind='human'))
@@ -80,7 +90,7 @@ def export(root:Path,output:Path):
     app=create_app('sqlite:///:memory:');dump(output/'openapi.json',app.openapi());app.state.store.close()
     # Only implementation files here: the complete source tree is identified by the delivery receipt.
     files=set((root/'src/career_lab/contracts').rglob('*.py'))
-    files|={root/p for p in ['src/career_lab/api/app.py','src/career_lab/api/workspace_integration.py','src/career_lab/api/feedback_integration.py','src/career_lab/api/modules.py','src/career_lab/api/v2_routes.py','src/career_lab/storage/v2_tables.py','src/career_lab/storage/v2_store.py','src/career_lab/storage/v2_jobs.py','src/career_lab/storage/v2_snapshot.py','src/career_lab/storage/v2_lifecycle.py','src/career_lab/storage/v2_remap.py','src/career_lab/jobs/worker.py','src/career_lab/jobs/repository.py','src/career_lab/rubrics/registry.py']}
+    files|={root/p for p in ['src/career_lab/api/app.py','src/career_lab/api/workspace_integration.py','src/career_lab/api/feedback_integration.py','src/career_lab/api/role_snapshot.py','src/career_lab/api/modules.py','src/career_lab/api/v2_routes.py','src/career_lab/storage/v2_tables.py','src/career_lab/storage/v2_store.py','src/career_lab/storage/v2_jobs.py','src/career_lab/storage/v2_snapshot.py','src/career_lab/storage/v2_lifecycle.py','src/career_lab/storage/v2_remap.py','src/career_lab/jobs/worker.py','src/career_lab/jobs/repository.py','src/career_lab/rubrics/registry.py']}
     source={str(p.relative_to(root)):sha(p) for p in sorted(files)}
     errors=[]
     import re
@@ -131,9 +141,14 @@ def export(root:Path,output:Path):
     manifest['integration_changes']['W05-factual-persistence']='Optional typed factual/history/rule sections persist in FeedbackV2; legacy absent means not recorded. Exact feedback follow-ups append immutable objects without changing submitted/paused business state; new reviews link prior responses and explicit decisions.'
     manifest['boundaries'].append('W05 evaluator-to-trusted-source adapter and native feedback UI remain pending. Controlled persistence tests do not prove actual production history or model quality.')
     manifest['previous_contract_revision']='expansion-v3-d6277a2b850369a86d4f1c169464ea521587066071d899fd2d43326d178bd076'
+    manifest['integration_changes']['W04-fixed-role-read']='Private audit DTOs and exact recorded job-window role projection; receipt/source history checked; ordinary view has no authority; private generation sink/activation still unavailable.'
+    manifest['integration_changes']['W05-W03-remapping']='FeedbackResponseCreate.feedback_id and ResourcePage feedback/response/import identities remap by declared kind, leaving text and historical opaque provenance unchanged.'
+    manifest['boundaries'].append('Role snapshot tests use controlled catalogs/audits. No production private writer, failure-attempt sink, event-reference persistence or full role generation is claimed.')
+    manifest['previous_contract_revision']='expansion-v3-d6277a2b850369a86d4f1c169464ea521587066071d899fd2d43326d178bd076'
     manifest['integration_changes']['031-C8-01']='Store read/query/view/job-view and cached request/replay share feedback subject authorization and transient support projection; hidden quote/title/ID/derived prose removed; original records unchanged.'
     manifest['integration_changes']['original-source-protection']='test_freeze enumerates only BASE existing scenarios; no v2 baseline rewrite and no test exclusion needed.'
     manifest['integration_changes']['W03-product-cycle-replay']='Only an exact saved authorized product DTO cycle field is structural metadata. Explicit cycle sources, direct cycle objects and unproven DTOs retain scope checks; no scope grant is widened.'
+    manifest['previous_contract_revision']='expansion-v3-5edc886f3e862b53b11c19dbcf9955042d02c7ff18dd4ecf51fee8bb3d7c108c'
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

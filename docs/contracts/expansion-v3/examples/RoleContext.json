@@ -8,6 +8,7 @@
   },
   "context_hash": "0000000000000000000000000000000000000000000000000000000000000000",
   "conversations": [],
+  "generation_audit": null,
   "known_events": [],
   "omitted_sources": [],
   "prompt_fact_ids": [],

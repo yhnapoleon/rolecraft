@@ -15,7 +15,7 @@ from career_lab.contracts.v2 import *
 from .v2_tables import *
 from .v2_jobs import JobStoreMixin
 
-ROLE_REPLY_PRIVATE_FIELDS=frozenset({'prompt_messages','prompt_hash','context_hash','history_revision','source_versions','omitted_sources'})
+ROLE_REPLY_PRIVATE_FIELDS=frozenset({'prompt_messages','prompt_hash','context_hash','history_revision','source_versions','omitted_sources','attempts','actual_disclosures','received_shares','internal_disclosures','context'})
 
 def role_reply_has_private_fields(content):
     """Recognize legacy audit fields without rejecting the new public quote DTO."""
@@ -84,6 +84,7 @@ class TransactionView:
     current_cycle: StoredObject | None = field(default=None,repr=False)
     reference_allowed: object | None = field(default=None,repr=False)
     removal_cascade: Literal["current_product_only"] | None = None
+    job_context: JobContextSnapshot | None = field(default=None,repr=False)
     def get(self,ref: ObjectRef) -> StoredObject:
         found=next((x for x in self.objects if x.ref==ref),None)
         if found is None:raise ProtocolError('object_not_found',status=404)
@@ -411,6 +412,55 @@ class V2Store(JobStoreMixin):
     def view(self,auth):
         # A retained snapshot contains data, not a reusable authority callback.
         return self.query(auth,lambda v:TransactionView(v.state,v.bindings,v.objects,v.private_scenario_state,v.current_cycle))
+
+    def role_snapshot_records(self,auth,view,role_id):
+        """Internal role projection at a real recorded job window, never a public read.
+
+        The caller identity is preserved. No owner/role token is substituted for
+        it and no private rows are added to its ordinary TransactionView.objects.
+        """
+        context=view.job_context
+        if context is None or context.action!='turns.create':raise ProtocolError('role_job_snapshot_required',status=409)
+        if role_id in {'learner','system','research'}:raise ProtocolError('role_not_available',status=404)
+        with self.db.transaction() as c:
+            if self._job_auth(c,context,'read')!=auth:raise ProtocolError('credential_revoked_or_invalid',status=403)
+            self._check_job_context(c,context)
+            state=self._job_snapshot(c,context)
+            bindings=SessionBindings.model_validate_json(self._row(c,auth.session_id)['bindings'])
+            if state!=view.state or bindings!=view.bindings:raise ProtocolError('role_snapshot_identity_invalid',status=409)
+            records=self._records(c,auth.session_id,context.as_of.storage_revision)
+            if not any(r.ref.kind=='job_context' and r.content==context.model_dump(mode='json') for r in records):raise ProtocolError('role_job_snapshot_unrecorded',status=409)
+            subjects=[r for r in context.sources if r.kind=='role_turn']
+            if len(subjects)!=1:raise ProtocolError('role_subject_invalid')
+            request=next((r for r in records if r.ref==subjects[0]),None)
+            if request is None or request.content.get('executor')!=auth.executor.model_dump(mode='json') or request.content.get('input',{}).get('role_id')!=role_id:raise ProtocolError('role_snapshot_identity_invalid',status=403)
+            scenario=self._scenario_state(c,auth.session_id,context.as_of.storage_revision)
+            if scenario is None or scenario!=view.private_scenario_state:raise ProtocolError('role_snapshot_state_missing',status=409)
+            selected=tuple(r for r in records if role_id in r.visible_to and ((r.ref.kind in {'role_context','role_reply'} and r.content.get('role_id')==role_id) or r.ref.kind=='business_decision'))
+            for record in selected:
+                if record.ref.kind!='role_context':continue
+                try:private=RoleContext.model_validate(record.content)
+                except (ValidationError,TypeError,ValueError):raise ProtocolError('role_private_record_invalid',status=409) from None
+                audit=private.generation_audit
+                if audit is None:continue
+                request=next((r for r in records if r.ref==audit.request),None)
+                if request is None or request.content.get('executor')!=audit.scope.executor.model_dump(mode='json') or request.content.get('input',{}).get('role_id')!=role_id:raise ProtocolError('role_history_identity_invalid',status=409)
+                supplied={canonical(x) for x in (*private.sources,*(r.fragment for r in audit.received_shares),*(m.fragment for m in audit.memories))}
+                if any(canonical(x) not in supplied for x in audit.used_sources):raise ProtocolError('role_history_source_invalid',status=409)
+                for receipt in audit.received_shares:
+                    historical=[r for r in records if r.created_storage_revision<=receipt.received_at.storage_revision]
+                    shares=[r for r in historical if r.ref.kind=='share' and r.ref.object_id==receipt.share.object_id]
+                    products=[r for r in historical if r.ref.kind=='product' and r.ref.object_id==receipt.product.object_id]
+                    if not shares or not products:raise ProtocolError('role_share_receipt_invalid',status=409)
+                    head=max(shares,key=lambda r:r.ref.version);share=ProductShare.model_validate(head.content)
+                    product=next((r for r in products if r.ref==receipt.product),None)
+                    if head.ref!=receipt.share or share.recipient_role!=role_id or share.product!=receipt.product or share.revoked_at is not None or product is None or max(products,key=lambda r:r.ref.version).content.get('removed_at') is not None:raise ProtocolError('role_share_receipt_invalid',status=409)
+                    if any(getattr(share.shared_at,k)>getattr(receipt.received_at,k) for k in ('business_seq','workspace_revision','storage_revision')):raise ProtocolError('role_share_receipt_invalid',status=409)
+                    text=canonical({k:product.content[k] for k in ('title','content','purpose','structured_payload')})
+                    if receipt.fragment.text!=text or receipt.fragment.ref.observed_at_seq!=receipt.received_at.business_seq:raise ProtocolError('role_share_receipt_invalid',status=409)
+            events=tuple(StoredEvent.model_validate_json(raw) for raw in c.execute(select(v2_events.c.record).where(v2_events.c.session_id==auth.session_id,v2_events.c.seq<=context.as_of.business_seq).order_by(v2_events.c.seq)).scalars())
+            events=tuple(event for event in events if role_id in event.visible_to)
+            return scenario,selected,events
 
     def _reference_window(self,c,sid,ceiling,ref):
         point=VersionPoint(**ceiling.model_dump(include={'business_seq','workspace_revision','storage_revision'}))
