@@ -32,7 +32,7 @@ W05/032后续在原模型建议段消费`public_prediction`、登记`model_revis
 
 ### 回传复算
 
-`experiments/v3/training/review.py`独立重载两份同注册产物，对相同输入重新预测并核重载一致；从独立提供的Example/标签重算固定标签顺序、macro-F1、证据F1、joint及分母，中英分别报告，缺一语明确缺失。可对负责方逐条预测做身份/标签顺序校验及差异报告，不直接相信其汇总指标。技术失败单列，不重试或伪造INSUFFICIENT；首次失败不再做第二次推理冒充恢复。
+`experiments/v3/training/review.py`独立重载两份同注册产物，对相同输入重新预测并核重载一致；从独立提供的Example/标签重算固定标签顺序、macro-F1、证据F1、joint及分母，中英分别报告，缺一语明确缺失。可对负责方逐条预测做身份/标签顺序校验及差异报告，不直接相信其汇总指标。既有生产者用null保留格式失败的记录：复核将其单列missing_prediction_record_ids并标incomplete，不算一致，也不补成INSUFFICIENT。技术失败单列，不重试或伪造INSUFFICIENT；首次失败不再做第二次推理冒充恢复。
 
 本入口只接受train/dev/regression，不自行打开test；确认性test仍需既有冻结/授权流程。CLI复用ReleaseReader权限、来源与split门槛，不能用--fixture祝福真实数据；正式源缺metadata/source authority仍拒绝，后续由固定live适配器提供。指标复算与外部数据/标签的语义真实性、真实模型质量分别报告。
 
@@ -48,7 +48,7 @@ W05/032后续在原模型建议段消费`public_prediction`、登记`model_revis
 .venv/bin/python -m career_lab.models.v3.registry_cli review --registry <注册目录> --registration-path <原相对路径> --registration-hash <原sha256> --release-root <冻结release> --release-hash <真实sha256> --split-hash <真实sha256> --partition dev --task relation --fixture
 ```
 
-真实候选register使用`external_candidate`且predict不传`--allow-synthetic`。参数只是本机服务器/审核者入口，不直接暴露为学员授权能力；真实产品仍走已鉴权的公共Gateway。实际测试日志与命令在本包`runs/local/expansion-v3/W08/20261007-043-registry/`。12项定向检查通过，包括真实CLI注册/调用/只读恢复、篡改拒绝、模型零隐式重调、重载与中英指标；不等于正式v4或模型质量通过。
+真实候选register使用`external_candidate`且predict不传`--allow-synthetic`。参数只是本机服务器/审核者入口，不直接暴露为学员授权能力；真实产品仍走已鉴权的公共Gateway。实际测试日志与命令在本包`runs/local/expansion-v3/W08/20261007-043-registry/`。13项定向检查通过，包括真实CLI注册/调用/只读恢复、篡改拒绝、模型零隐式重调、重载与中英指标；不等于正式v4或模型质量通过。
 
 ## 中英文评测为必需覆盖（2026-10-07确认）
 

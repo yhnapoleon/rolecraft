@@ -20,9 +20,13 @@ def review_registered(registry_root, registration_ref, examples, *, producer_pre
     loaded_again, second_entry = load_registration(registry_root, registration_ref)
     if entry != second_entry:
         raise ProtocolError("review_registration_changed")
-    grades, predictions, mismatches, failures, reload_skipped = [], [], [], [], []
+    grades, predictions, mismatches, failures, reload_skipped, missing_predictions = [], [], [], [], [], []
     expected = None
     if producer_predictions is not None:
+        if not isinstance(producer_predictions, (list, tuple)) or any(
+                not isinstance(row, dict) or not isinstance(row.get("record_id"), str)
+                or "prediction" not in row for row in producer_predictions):
+            raise ProtocolError("review_producer_records_invalid")
         expected = {r["record_id"]: r["prediction"] for r in producer_predictions}
         if len(expected) != len(producer_predictions) or set(expected) != {r.record_id for r in rows}:
             raise ProtocolError("review_producer_record_set_mismatch")
@@ -51,13 +55,20 @@ def review_registered(registry_root, registration_ref, examples, *, producer_pre
         actual = json.loads(json_bytes(first.as_dict()))
         if expected is not None:
             produced = expected[row.record_id]
-            if (produced.get("labels") != list(LABELS[row.item.task_type])
-                    or produced.get("mode") != "advisory" or produced.get("affects_score") is not False):
-                raise ProtocolError("review_producer_label_or_mode_mismatch")
-            raw = {k: produced.get(k) for k in Prediction.__dataclass_fields__}
-            Prediction(**raw).validate(row.item)
-            if produced != actual:
-                mismatches.append(row.record_id)
+            if produced is None or produced == {}:
+                # The existing producer writes null for format-invalid outputs.
+                # Preserve this missing result; never count two empty outputs as agreement.
+                missing_predictions.append(row.record_id)
+            else:
+                if not isinstance(produced, dict):
+                    raise ProtocolError("review_producer_prediction_invalid")
+                if (produced.get("labels") != list(LABELS[row.item.task_type])
+                        or produced.get("mode") != "advisory" or produced.get("affects_score") is not False):
+                    raise ProtocolError("review_producer_label_or_mode_mismatch")
+                raw = {k: produced.get(k) for k in Prediction.__dataclass_fields__}
+                Prediction(**raw).validate(row.item)
+                if produced != actual:
+                    mismatches.append(row.record_id)
         graded = grade(row, first)
         if failure_kind is not None:
             graded["failure_kind"] = failure_kind
@@ -75,8 +86,9 @@ def review_registered(registry_root, registration_ref, examples, *, producer_pre
             "reload_skipped_failed_record_ids": reload_skipped, "failures": failures,
             "metrics": summarize(grades, task),
             "languages": languages, "other_languages": sorted({r.language for r in rows} - {"zh", "en"}),
-            "producer_comparison": {"status": "not_supplied" if expected is None else "mismatch" if mismatches else "matched",
-                                     "mismatched_record_ids": mismatches},
+            "producer_comparison": {"status": "not_supplied" if expected is None else "incomplete" if missing_predictions else "mismatch" if mismatches else "matched",
+                                     "mismatched_record_ids": mismatches,
+                                     "missing_prediction_record_ids": missing_predictions},
             "predictions": predictions, "graded_records": grades,
             "scope": entry["scope"], "quality_validated": False,
             "mode": "advisory", "affects_score": False,

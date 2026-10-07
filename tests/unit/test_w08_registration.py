@@ -199,3 +199,16 @@ def test_actual_registry_cli_registers_predicts_and_recovers_without_fit(tmp_pat
     assert result['public_prediction']['status']=='unavailable'
     assert result==cli('recover',*common)
     assert result['automatic_retries']==0 and result['status']=='completed'
+
+
+def test_null_producer_result_is_preserved_as_missing_not_agreement(tmp_path):
+    _,_,r=registered(tmp_path);rows=examples('dev')
+    producer=review_registered(tmp_path/'registry',r,rows)['predictions']
+    producer[0]['prediction']=None
+    result=review_registered(tmp_path/'registry',r,rows,producer_predictions=producer)
+    assert result['producer_comparison']['status']=='incomplete'
+    assert result['producer_comparison']['missing_prediction_record_ids']==[rows[0].record_id]
+    assert result['predictions'][0]['prediction']['label']=='SUPPORTED'
+    with pytest.raises(ProtocolError) as error:
+        review_registered(tmp_path/'registry',r,rows,producer_predictions={'predictions':producer})
+    assert error.value.code=='review_producer_records_invalid'
