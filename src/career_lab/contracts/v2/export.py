@@ -24,6 +24,7 @@ CONSUMERS={
 CONSUMERS['W02'] += ['BusinessBasis','ScenarioStateV2','MaterialMetadata','TestExecutionMetadata','RetrievedChunk','ExternalReference']
 CONSUMERS['W03'] += ['ProductAdopt','TaskBatch','ImportConflict','ImportVersionMap','PublicTransactionResult']
 CONSUMERS['W04'] += ['ObservedFragment','ProviderRequest','ProviderResult','ProviderCapabilities','ActualConsumption']
+CONSUMERS['W06'] += ['DelegationJobCapacity','OperationAvailability']
 CONSUMERS['W06'] += ['StepResult','ObservedFragment','PublicState','PublicEvent','PublicTransactionResult','ActualConsumption']
 CONSUMERS['W07'] += ['ExternalReference','ObservedFragment','ActualConsumption']
 CONSUMERS['W08'] += ['ProviderRequest','ProviderReply','ProviderResult','ProviderCapabilities']
@@ -36,11 +37,47 @@ CONSUMERS['W14'] += ['PublicState','PublicEvent','PublicTransactionResult']
 CONSUMERS['W04'] += ['PublicDisclosureSource','PublicDisclosureRecord']
 CONSUMERS['W06'] += ['PublicDisclosureSource','PublicDisclosureRecord','RequestResultQuery','RequestJobResult','RequestResult']
 CONSUMERS['W09'] += ['RequestResultQuery','RequestJobResult','RequestResult','ProviderReceipt']
-CONSUMERS['W07'] += ['ProviderReceipt']
-CONSUMERS['W08'] += ['ProviderReceipt']
+CONSUMERS['W07'] += ['ProviderReceipt','DatasetMetadataV2','DatasetSnapshotMetadata']
+CONSUMERS['W08'] += ['ProviderReceipt','DatasetMetadataV2','DatasetSnapshotMetadata']
 CONSUMERS['W12'] += ['ProviderReceipt']
+CONSUMERS['W03'] += ['ImportedTaskSource','WorkspaceImportReceipt','WorkspaceProductRead','WorkspaceProductPage','WorkspaceSharePage']
+CONSUMERS['W05'] += ['FeedbackReadBoundary']
+CONSUMERS['W05'] += ['FeedbackReferenceCheck','FeedbackActivity','FeedbackActivityCount','FeedbackActivityWindow','VerifiedFactsSnapshot','HistoricalResponsibilityFinding','HistoricalResponsibilitiesSnapshot','FeedbackResponseRecord','FeedbackResponseCreate']
+CONSUMERS['W04'] += ['RoleAuditScope','RoleAuditReceivedShare','RoleAuditMemory','RoleGenerationAudit']
 for consumer in ('W04','W05','W06','W09','W14'):
     CONSUMERS[consumer] += ['JobRefreshRecord']
+
+def integration_example(model):
+    from career_lab.contracts.v2 import (ImportedTaskSource,WorkspaceImportReceipt,WorkspaceProductRead,WorkspaceProductPage,WorkspaceSharePage,WorkProductVersion,LegacyProvenance,ImportResult,ObjectRef,VersionPoint,Executor,digest)
+    from career_lab.contracts.v2.examples import STAMP
+    from career_lab.contracts.v2 import FeedbackReferenceCheck,VerifiedFactsSnapshot,FeedbackResponseRecord
+    from career_lab.contracts.v2 import RoleAuditScope,RoleAuditReceivedShare,RoleAuditMemory,RoleGenerationAudit,DisclosedFragment,EvidenceRefV2,ProviderMessage
+    scope=RoleAuditScope(capabilities=('read','act'),actor_id='learner',executor=Executor(id='human:example',kind='human'),credential_id='example')
+    fragment=DisclosedFragment(ref=EvidenceRefV2(session_id='example',kind='product',object_id='product',version=1,observed_at_seq=0),text='Synthetic private receipt.',channel='received_share',verification='verified')
+    if model is RoleAuditScope:return scope
+    if model is RoleAuditReceivedShare:return model(share=ObjectRef(session_id='example',kind='share',object_id='share',version=1),product=ObjectRef(session_id='example',kind='product',object_id='product',version=1),role_id='tech_lead',received_at=sample_model(VersionPoint),fragment=fragment)
+    if model is RoleAuditMemory:return model(fragment=fragment,role_id='tech_lead')
+    if model is RoleGenerationAudit:
+        message=ProviderMessage(role='system',content='Synthetic private prompt; no model call occurred.')
+        return model(job_id='example-job',job_attempt=1,request=ObjectRef(session_id='example',kind='role_turn',object_id='turn',version=1),scope=scope,prompt_messages=(message,),prompt_hash=digest([{'role':message.role,'content':message.content}]),history_revision=digest('synthetic history'))
+    from career_lab.contracts.v2 import FeedbackReadBoundary
+    if model is FeedbackReadBoundary:return model(path='/business_response',content_hash=digest('Synthetic bounded text'),dependencies=(ObjectRef(session_id='example',kind='product',object_id='product',version=1),))
+    from career_lab.contracts.v2 import DelegationJobCapacity,OperationAvailability
+    if model is DelegationJobCapacity:return model(delegation_id='example',max_active_jobs=2,active_jobs=0,available_slots=2,observed_at=STAMP)
+    if model is OperationAvailability:return model(name='example',installed=False,ready=False,unavailable_code='module_unavailable')
+    if model is FeedbackReferenceCheck:return model(submitted_reference_hash=digest('synthetic missing reference'),status='unavailable')
+    if model is VerifiedFactsSnapshot:return model(subject=ObjectRef(session_id='example',kind='product',object_id='product',version=1),status='unknown',as_of=None,requested_at=sample_model(VersionPoint),captured_at=sample_model(VersionPoint),source_snapshot_hash=digest('synthetic unverified snapshot'),summary=('Formation point is unknown.',))
+    if model is FeedbackResponseRecord:return model(id='response',session_id='example',feedback=ObjectRef(session_id='example',kind='feedback',object_id='feedback',version=1),kind='objection',text='Please reconsider this interpretation.',recorded_at=sample_model(VersionPoint),executor=Executor(id='human:example',kind='human'))
+    if model is WorkspaceProductRead:return model.model_validate(sample_model(WorkProductVersion).model_dump(mode='json')|{'visibility':None})
+    if model is ImportedTaskSource:
+        source=sample_model(LegacyProvenance).model_copy(update={'original_kind':'task'})
+        return model(task=ObjectRef(session_id='example',kind='task',object_id='task',version=1),source=source)
+    if model is WorkspaceImportReceipt:
+        result=ImportResult(package_id='example',mode='apply',id_map={},unresolved=(),as_of=VersionPoint(business_seq=0,workspace_revision=1,storage_revision=1),applied=True)
+        return model(id='receipt',session_id='example',package_id='example',package_hash=digest([]),source_schema='browser-v1',source_session_id='legacy',fingerprint=digest('synthetic-example'),result=result,executor=Executor(id='human:example',kind='human'),created_at=STAMP)
+    if model is WorkspaceProductPage:return model(items=(),shares=(),sharing_complete=True,as_of=sample_model(VersionPoint))
+    if model is WorkspaceSharePage:return model(items=(),sharing_complete=True,as_of=sample_model(VersionPoint))
+    return sample_model(model)
 
 def dump(path,data):
     path.parent.mkdir(parents=True,exist_ok=True);path.write_text(json.dumps(data,ensure_ascii=False,sort_keys=True,indent=2)+'\n')
@@ -51,7 +88,7 @@ def export(root:Path,output:Path):
     output.mkdir(parents=True,exist_ok=True)
     models=public_models();entries={}
     for name,model in models.items():
-        example=sample_model(model)
+        example=integration_example(model)
         dump(output/'schemas'/f'{name}.json',model.model_json_schema())
         dump(output/'examples'/f'{name}.json',example.model_dump(mode='json'))
         entries[name]={'owner':'W01','schema_version':2,'consumers':[wp for wp,names in CONSUMERS.items() if name in names] or ['shared-primitive'],'schema':f'schemas/{name}.json','schema_sha256':sha(output/'schemas'/f'{name}.json'),'example':f'examples/{name}.json','example_sha256':sha(output/'examples'/f'{name}.json'),'tests':['tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree']}
@@ -60,7 +97,7 @@ def export(root:Path,output:Path):
     app=create_app('sqlite:///:memory:');dump(output/'openapi.json',app.openapi());app.state.store.close()
     # Only implementation files here: the complete source tree is identified by the delivery receipt.
     files=set((root/'src/career_lab/contracts').rglob('*.py'))
-    files|={root/p for p in ['src/career_lab/api/app.py','src/career_lab/api/modules.py','src/career_lab/api/v2_routes.py','src/career_lab/storage/v2_tables.py','src/career_lab/storage/v2_store.py','src/career_lab/storage/v2_jobs.py','src/career_lab/storage/v2_snapshot.py','src/career_lab/storage/v2_lifecycle.py','src/career_lab/storage/v2_remap.py','src/career_lab/jobs/worker.py','src/career_lab/jobs/repository.py','src/career_lab/rubrics/registry.py']}
+    files|={root/p for p in ['src/career_lab/api/app.py','src/career_lab/cli.py','src/career_lab/api/vertical_runtime.py','src/career_lab/api/vertical_reads.py','src/career_lab/api/lifecycle_integration.py','src/career_lab/api/evaluation_runtime.py','src/career_lab/api/workspace_integration.py','src/career_lab/api/feedback_integration.py','src/career_lab/api/role_snapshot.py','src/career_lab/api/private_roles.py','src/career_lab/api/modules.py','src/career_lab/api/v2_routes.py','src/career_lab/storage/v2_tables.py','src/career_lab/storage/v2_store.py','src/career_lab/storage/v2_jobs.py','src/career_lab/storage/v2_snapshot.py','src/career_lab/storage/v2_lifecycle.py','src/career_lab/storage/v2_remap.py','src/career_lab/jobs/worker.py','src/career_lab/jobs/repository.py','src/career_lab/rubrics/registry.py']}
     source={str(p.relative_to(root)):sha(p) for p in sorted(files)}
     errors=[]
     import re
@@ -94,6 +131,49 @@ def export(root:Path,output:Path):
     manifest['boundaries'].append('W02 runtime is still pinned to r3; controlled source-port regressions do not close actual ScenarioModule HTTP acceptance. Consumers must migrate through coordinator-fixed inputs.')
     manifest['review_fixes']['031-W01-REPLAY-SCOPE-01']='execute, replay and request/job GET share current scope and visibility checks, including historical result-only/unanchored references; no handler/resolver rerun.'
     manifest['review_fixes']['W02-S09']='Recovery and idempotent replay select event projector only by persisted action and trusted installed registration; preserve safe fields without handler/resolver rerun.'
+    manifest['previous_contract_revision']='expansion-v3-d5aa8ca0d6532afe1165511e1403455cde39026f7d555decdd1840038849e0bb'
+    manifest['integration_changes']['W07-W08-data-slice']='Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.'
+    manifest['previous_contract_revision']='expansion-v3-722c39cc0906f1b1a8e741ad234321491ee85198e6714b5a52d99e1e9262dd37'
+    manifest['integration_changes']['W07-W08-empty-joint-target']='Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.'
+    manifest['previous_contract_revision']='expansion-v3-81f4855d5cdf8c601c6b09d7b350b11dcda5ed156e2d801d8e542fa197718c85'
+    manifest['integration_changes']['W07-W08-semantic-consensus']='Only independent-pass consensus uses semantic_decision_key; G2/G2v final remains bound by the full normalized decision_key to the actual selected pass.'
+    manifest['previous_contract_revision']='expansion-v3-deb8023ca664946f45c52692c65e3524703d77194c5100e0ee42939ae26cff4b'
+    manifest['integration_changes']['W04-S02-P0']='Legacy role_reply audit fields are denied to learner/Agent on common reads and replay; new public spoken evidence remains readable; research audit preserves history. No role generation activation is implied.'
+    manifest['previous_contract_revision']='expansion-v3-3f2ca36e4275f2ff8d8e074e91231509116c054df8750d157682e8486354a9de'
+    manifest['integration_changes']['W03-common-import-sharing']='Read-only import preview and atomic receipt; operation-local reference checks; exact-version share pages; trusted removal cascade without scope expansion; queued share reads rechecked.'
+    manifest['integration_changes']['W02-projector-registration']='Conflicting declared public action/projector registrations are rejected before installation.'
+    manifest['boundaries']=[x for x in manifest['boundaries'] if not x.startswith('W02 runtime is still pinned')]
+    manifest['boundaries'].append('W02 owned b821 remains exact c2; coordinator rebind required for cumulative business runtime. W03 owner must adopt removal_cascade port for restricted removals; role private generation and native UI remain pending.')
+    manifest['previous_contract_revision']='expansion-v3-0aa98d5ebec838fd0e2b56a9eed2f32a51c6ec94dff526712083a589d858e510'
+    manifest['integration_changes']['W05-factual-persistence']='Optional typed factual/history/rule sections persist in FeedbackV2; legacy absent means not recorded. Exact feedback follow-ups append immutable objects without changing submitted/paused business state; new reviews link prior responses and explicit decisions.'
+    manifest['boundaries'].append('W05 evaluator-to-trusted-source adapter and native feedback UI remain pending. Controlled persistence tests do not prove actual production history or model quality.')
+    manifest['previous_contract_revision']='expansion-v3-d6277a2b850369a86d4f1c169464ea521587066071d899fd2d43326d178bd076'
+    manifest['integration_changes']['W04-fixed-role-read']='Private audit DTOs and exact recorded job-window role projection; receipt/source history checked; ordinary view has no authority; private generation sink/activation still unavailable.'
+    manifest['integration_changes']['W05-W03-remapping']='FeedbackResponseCreate.feedback_id and ResourcePage feedback/response/import identities remap by declared kind, leaving text and historical opaque provenance unchanged.'
+    manifest['boundaries'].append('Role snapshot tests use controlled catalogs/audits. No production private writer, failure-attempt sink, event-reference persistence or full role generation is claimed.')
+    manifest['previous_contract_revision']='expansion-v3-d6277a2b850369a86d4f1c169464ea521587066071d899fd2d43326d178bd076'
+    manifest['integration_changes']['031-C8-01']='Store read/query/view/job-view and cached request/replay share feedback subject authorization and transient support projection; hidden quote/title/ID/derived prose removed; original records unchanged.'
+    manifest['integration_changes']['original-source-protection']='test_freeze enumerates only BASE existing scenarios; no v2 baseline rewrite and no test exclusion needed.'
+    manifest['integration_changes']['W03-product-cycle-replay']='Only an exact saved authorized product DTO cycle field is structural metadata. Explicit cycle sources, direct cycle objects and unproven DTOs retain scope checks; no scope grant is widened.'
+    manifest['previous_contract_revision']='expansion-v3-5edc886f3e862b53b11c19dbcf9955042d02c7ff18dd4ecf51fee8bb3d7c108c'
+    manifest['previous_contract_revision']='expansion-v3-3d096f2715f31fc99d48862be10e9f78e414199d241f12f6dbf84d8443038d49'
+    manifest['integration_changes']['W04-private-writer']='Actual worker-bound private port, atomic public reply/private audit, fenced internal attempt journal, original Agent attribution without scope expansion; factory stays closed by default pending repaired W04 input.'
+    manifest['integration_changes']['W04-private-reply-whitelist']='Public/historical RoleReply fields are restricted to the pinned public DTO regardless of permissive registrations; private carrier and unknown fields remain unreadable to learner/Agent.'
+    manifest['integration_changes']['role-event-references']='Actual event provenance is scope/audience/window validated and remapped in the event namespace; no parallel event store.'
+    manifest['boundaries'].append('Successful generation checks use controlled non-network models and catalog. W04 new private-ID fix and real business cumulative acceptance are still required; no production activation implied.')
+    manifest['previous_contract_revision']='expansion-v3-ffa9cb25c4a9d74c670c8cd03aac284cb6a23c6bea04192dc0c6d3da6391532a'
+    manifest['integration_changes']['feedback-segment-scope']='Server-only complete input traces bind exact content hashes and dependencies per segment; fully authorized finite-scope readers retain proved text, missing or hidden dependencies degrade only affected parts.'
+    manifest['integration_changes']['submitted-evidence-status']='New response evidence is explicitly user_submitted_unverified (or none_submitted); legacy absence stays unknown. Linking never claims quote or semantic verification.'
+    manifest['previous_contract_revision']='expansion-v3-41a21baa9f86c9e7ee7d17b07aa0c55eb5b0dd24b6f04c8a402ec65f72ddf05c'
+    manifest['integration_changes']['W06-public-queue-capacity']='Persisted per-credential 1–2 job policy; existing jobs counted in locked transactions for public enqueue/refresh, not process memory. Native repository enqueue/failed retry still requires coordinator scope release.'
+    manifest['integration_changes']['operation-readiness']='Installed and ready are distinct; closed registered operations return stable unavailable before public dispatch. Auth/delegation capabilities remain independent.'
+    manifest['previous_contract_revision']='expansion-v3-a9f27fe80aead0f69080b23ece63773ab3e50131e77e41532581958b0a4fa3f4'
+    manifest['integration_changes']['recursive-public-reply-validation']='Fixed RoleReply DTO validates the entire JSON tree independently of permissive registrations; nested private metadata is rejected on write and historical public reads.'
+    manifest['integration_changes']['authoritative-segment-traces']='A declared trace always constrains text hash and complete dependencies, including cited explanations and history; visible citations do not bypass it. The most-specific complete trace is authoritative for a field.'
+    manifest['previous_contract_revision']='expansion-v3-d04601c2f279d3940e6b6e1cb452664585faa0b289f2a0c985b06aa28b9e3d24'
+    manifest['integration_changes']['W06-native-queue-capacity']='Native session-v2 enqueue/failed retry and V2Store share the same credential lock, SQL active-job count and persisted policy; idempotent replay does not reserve again; legacy v1 unchanged.'
+    manifest['previous_contract_revision']='expansion-v3-e17e102c1dc0c7755dbaf6828d18ca17ad7a3c4485dc2fa25e90c4dd8f9211aa'
+    manifest['integration_changes']['native-runtime-slice']='One standard API/worker assembly; native investigation, assistant trials, resource decisions and colleague slots. Explicit failed-job refresh, no automatic model retry including expired leases, exact historical public event/source reads, real material activation in recovered role provenance. W05 r9 production evidence, atomic feedback and native callbacks are assembled with frozen advisory policies; W03 native composition remains pending.'
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

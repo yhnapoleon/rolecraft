@@ -1,0 +1,33 @@
+{
+  "actor_id": null,
+  "criterion": "example",
+  "evaluated_at": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "executor": null,
+  "explanation": "example",
+  "finding": "unknown",
+  "kind": "actual_action",
+  "occurred_at": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "schema_version": 2,
+  "scope": [
+    {
+      "config_version": null,
+      "kind": "document",
+      "object_id": "example",
+      "schema_version": 2,
+      "session_id": "example",
+      "version": 1
+    }
+  ],
+  "sources": [],
+  "state": "active"
+}

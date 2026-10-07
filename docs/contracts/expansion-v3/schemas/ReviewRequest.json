@@ -168,11 +168,37 @@
     "as_of": {
       "$ref": "#/$defs/VersionPoint"
     },
+    "decision": {
+      "anyOf": [
+        {
+          "enum": [
+            "launch",
+            "launch_narrow",
+            "defer_with_conditions",
+            "no_go"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Decision"
+    },
     "evaluation": {
       "$ref": "#/$defs/FileRef"
     },
     "executor": {
       "$ref": "#/$defs/Executor"
+    },
+    "followup_of": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ObjectRef"
+      },
+      "title": "Followup Of",
+      "type": "array"
     },
     "id": {
       "minLength": 1,

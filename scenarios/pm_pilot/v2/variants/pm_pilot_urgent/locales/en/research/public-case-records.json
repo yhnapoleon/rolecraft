@@ -3,8 +3,8 @@
   "locale": "en",
   "source_kind": "actual_deterministic_module_run_on_synthetic_scenario",
   "story_phase": "before_pm_handoff",
-  "captured_at": "2026-10-07T09:07:58.018788+00:00",
-  "input_bundle_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
+  "captured_at": "2026-10-07T10:05:01.537120+00:00",
+  "input_bundle_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
   "executor": "system:w02-pre-event-recorder",
   "http_or_human_trial": false,
   "expected_answers_included": false,
@@ -139,7 +139,7 @@
         "query": "Where is the meeting-room booking page?",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T09:07:58.019619Z",
+          "executed_at": "2026-10-07T10:05:01.537903Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -301,8 +301,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
-        "created_at": "2026-10-07T09:07:58.019619+00:00",
+        "scenario_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
+        "created_at": "2026-10-07T10:05:01.537903+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -475,7 +475,7 @@
         "query": "I forgot my password. How do I reset it?",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T09:07:58.020430Z",
+          "executed_at": "2026-10-07T10:05:01.538696Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -637,8 +637,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
-        "created_at": "2026-10-07T09:07:58.020430+00:00",
+        "scenario_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
+        "created_at": "2026-10-07T10:05:01.538696+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -811,7 +811,7 @@
         "query": "My office account activation notice has not arrived. What should I do?",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T09:07:58.021461Z",
+          "executed_at": "2026-10-07T10:05:01.539607Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -973,8 +973,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
-        "created_at": "2026-10-07T09:07:58.021461+00:00",
+        "scenario_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
+        "created_at": "2026-10-07T10:05:01.539607+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1147,7 +1147,7 @@
         "query": "My device has broken. What information should I include in a repair request?",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T09:07:58.022375Z",
+          "executed_at": "2026-10-07T10:05:01.540651Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -1309,8 +1309,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
-        "created_at": "2026-10-07T09:07:58.022375+00:00",
+        "scenario_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
+        "created_at": "2026-10-07T10:05:01.540651+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1483,7 +1483,7 @@
         "query": "How much can I claim per night for a hotel on a domestic business trip?",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T09:07:58.023332Z",
+          "executed_at": "2026-10-07T10:05:01.541686Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -1645,8 +1645,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
-        "created_at": "2026-10-07T09:07:58.023332+00:00",
+        "scenario_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
+        "created_at": "2026-10-07T10:05:01.541686+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1819,7 +1819,7 @@
         "query": "What is the taxi reimbursement limit per trip?",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T09:07:58.024360Z",
+          "executed_at": "2026-10-07T10:05:01.542785Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -1981,8 +1981,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
-        "created_at": "2026-10-07T09:07:58.024360+00:00",
+        "scenario_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
+        "created_at": "2026-10-07T10:05:01.542785+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -2155,7 +2155,7 @@
         "query": "What is the daily meal reimbursement amount?",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T09:07:58.025281Z",
+          "executed_at": "2026-10-07T10:05:01.543809Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -2317,8 +2317,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
-        "created_at": "2026-10-07T09:07:58.025281+00:00",
+        "scenario_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
+        "created_at": "2026-10-07T10:05:01.543809+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -2491,7 +2491,7 @@
         "query": "How early must I submit planned leave?",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T09:07:58.026168Z",
+          "executed_at": "2026-10-07T10:05:01.544711Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -2653,8 +2653,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
-        "created_at": "2026-10-07T09:07:58.026168+00:00",
+        "scenario_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
+        "created_at": "2026-10-07T10:05:01.544711+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -2824,7 +2824,7 @@
         "query": "What is the hotel reimbursement ceiling for domestic travel?",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T09:07:58.027091Z",
+          "executed_at": "2026-10-07T10:05:01.545700Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -2941,8 +2941,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
-        "created_at": "2026-10-07T09:07:58.027091+00:00",
+        "scenario_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
+        "created_at": "2026-10-07T10:05:01.545700+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -3113,7 +3113,7 @@
         "query": "What is the hotel reimbursement ceiling for domestic travel?",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T09:07:58.028030Z",
+          "executed_at": "2026-10-07T10:05:01.546603Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -3277,8 +3277,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
-        "created_at": "2026-10-07T09:07:58.028030+00:00",
+        "scenario_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
+        "created_at": "2026-10-07T10:05:01.546603+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -3451,7 +3451,7 @@
         "query": "What is the hotel reimbursement ceiling for domestic travel?",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T09:07:58.028919Z",
+          "executed_at": "2026-10-07T10:05:01.547518Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -3574,8 +3574,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
-        "created_at": "2026-10-07T09:07:58.028919+00:00",
+        "scenario_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
+        "created_at": "2026-10-07T10:05:01.547518+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -3746,7 +3746,7 @@
         "query": "What makes up Neptune's atmosphere?",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T09:07:58.029779Z",
+          "executed_at": "2026-10-07T10:05:01.548399Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -3869,8 +3869,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "7c3a58a9789e01b0081fdac5e06f47c85c16e97a05b4012d1414ee0a2e8a3f99",
-        "created_at": "2026-10-07T09:07:58.029779+00:00",
+        "scenario_hash": "5d2a6b3e14a77090db7e77eb8afd3e2edeb09d7ebaafa89e23b1242e0410e302",
+        "created_at": "2026-10-07T10:05:01.548399+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,

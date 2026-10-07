@@ -1,0 +1,47 @@
+{
+  "fragment": {
+    "channel": "received_share",
+    "fact_ids": [],
+    "ref": {
+      "config_version": null,
+      "kind": "product",
+      "object_id": "product",
+      "observed_at_seq": 0,
+      "quote": null,
+      "schema_version": 2,
+      "session_id": "example",
+      "span_end": null,
+      "span_start": null,
+      "valid_from_seq": 0,
+      "valid_until_seq": null,
+      "version": 1
+    },
+    "schema_version": 2,
+    "text": "Synthetic private receipt.",
+    "verification": "verified"
+  },
+  "product": {
+    "config_version": null,
+    "kind": "product",
+    "object_id": "product",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "received_at": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "role_id": "tech_lead",
+  "schema_version": 2,
+  "share": {
+    "config_version": null,
+    "kind": "share",
+    "object_id": "share",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  }
+}

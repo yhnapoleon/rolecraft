@@ -12,4 +12,4 @@ The assistant has not been opened to employees. The workspace contains a candida
 
 I have booked an internal demonstration for day 5. The decision to invite pilot users will be recorded separately after I receive your recommendation.
 
-The saved setup is a preparation draft for 20 participants on day 7. An existing setup does not approve its resources or launch date. This assignment has its own allocation; check it before deciding what to propose.
+The saved setup is a preparation draft for 20 participants on day 7. Saving a setup does not mean its resources or launch date are approved. Use the allocation above when deciding what to propose.

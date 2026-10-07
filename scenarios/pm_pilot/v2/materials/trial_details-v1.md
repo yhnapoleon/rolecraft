@@ -34,7 +34,9 @@
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-参数差异：—
+未生效项（已按实际配置执行）：无
+
+超出当前额度（未自动修改）：无
 
 ## Q02
 
@@ -66,7 +68,9 @@
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-参数差异：—
+未生效项（已按实际配置执行）：无
+
+超出当前额度（未自动修改）：无
 
 ## Q03
 
@@ -98,7 +102,9 @@
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-参数差异：—
+未生效项（已按实际配置执行）：无
+
+超出当前额度（未自动修改）：无
 
 ## Q04
 
@@ -130,7 +136,9 @@
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-参数差异：—
+未生效项（已按实际配置执行）：无
+
+超出当前额度（未自动修改）：无
 
 ## Q05
 
@@ -162,7 +170,9 @@
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-参数差异：—
+未生效项（已按实际配置执行）：无
+
+超出当前额度（未自动修改）：无
 
 ## Q06
 
@@ -194,7 +204,9 @@
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-参数差异：—
+未生效项（已按实际配置执行）：无
+
+超出当前额度（未自动修改）：无
 
 ## Q07
 
@@ -226,7 +238,9 @@
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-参数差异：—
+未生效项（已按实际配置执行）：无
+
+超出当前额度（未自动修改）：无
 
 ## Q08
 
@@ -258,7 +272,9 @@
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-参数差异：—
+未生效项（已按实际配置执行）：无
+
+超出当前额度（未自动修改）：无
 
 ## Q09
 
@@ -290,7 +306,9 @@
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-参数差异：—
+未生效项（已按实际配置执行）：无
+
+超出当前额度（未自动修改）：无
 
 ## Q10
 
@@ -322,7 +340,9 @@
 | participants | 20 | 20 |
 | launch_day | 10 | 10 |
 
-参数差异：work_items: requested_work_exceeds_approved_budget; update_strategy: realtime_sync_not_provisioned; scope_filter: scope_filter_not_provisioned; launch_day: requested_launch_exceeds_approved_deadline
+未生效项（已按实际配置执行）：工作项: realtime_sync, human_fallback → human_fallback; 更新策略: realtime → daily; 范围过滤: true → false
+
+超出当前额度（未自动修改）：计划上线第10天晚于当前期限第7天
 
 ## Q11
 
@@ -354,7 +374,9 @@
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-参数差异：—
+未生效项（已按实际配置执行）：无
+
+超出当前额度（未自动修改）：无
 
 ## Q12
 
@@ -386,4 +408,6 @@
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-参数差异：—
+未生效项（已按实际配置执行）：无
+
+超出当前额度（未自动修改）：无

@@ -82,6 +82,60 @@
   },
   {
     "schema_version": 2,
+    "id": "draft_participants",
+    "version": 1,
+    "value": 20,
+    "unit": "people",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot_urgent:v2",
+      "kind": "material",
+      "object_id": "brief",
+      "version": 1,
+      "config_version": null,
+      "span_start": 1347,
+      "span_end": 1543,
+      "quote": "The saved setup is a preparation draft for 20 participants on day 7. Saving a setup does not mean its resources or launch date are approved. Use the allocation above when deciding what to propose.",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "draft_launch_day",
+    "version": 1,
+    "value": 7,
+    "unit": "days",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot_urgent:v2",
+      "kind": "material",
+      "object_id": "brief",
+      "version": 1,
+      "config_version": null,
+      "span_start": 1347,
+      "span_end": 1543,
+      "quote": "The saved setup is a preparation draft for 20 participants on day 7. Saving a setup does not mean its resources or launch date are approved. Use the allocation above when deciding what to propose.",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
     "id": "sample_days",
     "version": 1,
     "value": 10,
@@ -1255,8 +1309,8 @@
       "version": 1,
       "config_version": null,
       "span_start": 120,
-      "span_end": 422,
-      "quote": "Diagnostic input: I've already signed up for company training. Does that mean I can simply turn up to attend the class? The comparison uses thresholds 0.35 and 0.2 with the same FAQ source and an unrelated control question. This is a local diagnostic comparison, not a universally calibrated threshold.",
+      "span_end": 613,
+      "quote": "Diagnostic input: I've already signed up for company training. Does that mean I can simply turn up to attend the class? The comparison uses thresholds 0.35, the current default 0.3, and 0.2 with the same FAQ source and an unrelated control question. At 0.35 and 0.3 there was no supported passage; at 0.2 the answer was Device repair, not training registration. Lowering the threshold did not resolve the question. This is a local diagnostic comparison, not a universally calibrated threshold.",
       "observed_at_seq": 0,
       "valid_from_seq": 0,
       "valid_until_seq": null
@@ -1267,7 +1321,7 @@
       "actors": [
         "tech_lead"
       ],
-      "paraphrase": "A preparation-stage test reproduced this question: I've already signed up for company training. Does that mean I can simply turn up to attend the class? At threshold 0.35 it retrieved no supported passage; at 0.2 it returned the FAQ training-registration paragraph. An unrelated control still retrieved nothing. This is a local comparison, not a generally correct threshold."
+      "paraphrase": "A preparation-stage test reproduced this question: I've already signed up for company training. Does that mean I can simply turn up to attend the class? At thresholds 0.35 and the current default 0.3 it retrieved no supported passage. At 0.2 it returned Device repair, which does not answer the training question. Lowering the threshold did not solve this case. An unrelated control still retrieved nothing. This is an observed English diagnostic, not a recommended threshold."
     }
   },
   {
@@ -1284,8 +1338,8 @@
       "version": 1,
       "config_version": null,
       "span_start": 120,
-      "span_end": 422,
-      "quote": "Diagnostic input: I've already signed up for company training. Does that mean I can simply turn up to attend the class? The comparison uses thresholds 0.35 and 0.2 with the same FAQ source and an unrelated control question. This is a local diagnostic comparison, not a universally calibrated threshold.",
+      "span_end": 613,
+      "quote": "Diagnostic input: I've already signed up for company training. Does that mean I can simply turn up to attend the class? The comparison uses thresholds 0.35, the current default 0.3, and 0.2 with the same FAQ source and an unrelated control question. At 0.35 and 0.3 there was no supported passage; at 0.2 the answer was Device repair, not training registration. Lowering the threshold did not resolve the question. This is a local diagnostic comparison, not a universally calibrated threshold.",
       "observed_at_seq": 0,
       "valid_from_seq": 0,
       "valid_until_seq": null
@@ -1296,7 +1350,7 @@
       "actors": [
         "tech_lead"
       ],
-      "paraphrase": "A preparation-stage test reproduced this question: I've already signed up for company training. Does that mean I can simply turn up to attend the class? At threshold 0.35 it retrieved no supported passage; at 0.2 it returned the FAQ training-registration paragraph. An unrelated control still retrieved nothing. This is a local comparison, not a generally correct threshold."
+      "paraphrase": "A preparation-stage test reproduced this question: I've already signed up for company training. Does that mean I can simply turn up to attend the class? At thresholds 0.35 and the current default 0.3 it retrieved no supported passage. At 0.2 it returned Device repair, which does not answer the training question. Lowering the threshold did not solve this case. An unrelated control still retrieved nothing. This is an observed English diagnostic, not a recommended threshold."
     }
   },
   {
@@ -1313,8 +1367,8 @@
       "version": 1,
       "config_version": null,
       "span_start": 118,
-      "span_end": 376,
-      "quote": "Original register ID TR-TRAIN-01. The preparation-stage technical test program records the training-registration question, actual outputs at 0.35 and 0.2, and an unrelated control question. Individual input and output records accompany the scenario evidence.",
+      "span_end": 381,
+      "quote": "Original register ID TR-TRAIN-01. The preparation-stage technical test program records the training-registration question, actual outputs at 0.35, 0.3 and 0.2, and an unrelated control question. Individual input and output records accompany the scenario evidence.",
       "observed_at_seq": 0,
       "valid_from_seq": 0,
       "valid_until_seq": null

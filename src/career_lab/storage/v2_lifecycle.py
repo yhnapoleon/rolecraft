@@ -30,6 +30,10 @@ def record_submission(view,cmd,auth):
 
 def record_review(view,cmd,auth):
     body=ReviewInput.model_validate(cmd.payload);oid=uuid4().hex
-    request=ReviewRequest(id=oid,session_id=auth.session_id,subjects=body.subjects,purpose=body.purpose,scope=body.scope,question=body.question,as_of=point(view.state),evaluation=view.bindings.evaluation,executor=auth.executor)
+    for prior in body.followup_of:
+        if prior.kind!='feedback_response':raise ProtocolError('review_followup_invalid')
+        item=FeedbackResponseRecord.model_validate(view.get(prior).content)
+        view.get(item.feedback)
+    request=ReviewRequest(id=oid,session_id=auth.session_id,subjects=body.subjects,purpose=body.purpose,scope=body.scope,question=body.question,as_of=point(view.state),evaluation=view.bindings.evaluation,executor=auth.executor,decision=body.decision,followup_of=body.followup_of)
     ref=objref(auth.session_id,'review',oid)
-    return Mutation(writes=(ObjectWrite(ref=ref,expected_head=0,content=request.model_dump(mode='json'),dependencies=body.subjects),),result={'review':ref.model_dump(mode='json')})
+    return Mutation(writes=(ObjectWrite(ref=ref,expected_head=0,content=request.model_dump(mode='json'),dependencies=(*body.subjects,*body.followup_of)),),result={'review':ref.model_dump(mode='json')})

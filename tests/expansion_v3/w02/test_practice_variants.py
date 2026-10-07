@@ -67,7 +67,8 @@ def test_frozen_variant_can_be_rebuilt_from_its_actual_records(practice,tmp_path
     sid,locale,module=practice;p=module.package
     records=json.loads((p.root/'research/public-case-records.json').read_text())
     calibration=json.loads((p.root/'research/retrieval-calibration.json').read_text()) if locale=='en' else None
-    replica=build_seed(tmp_path/'replica',records,locale=locale,scenario_id=sid,english_min_score=.3,calibration=calibration)
+    diagnostic=json.loads((p.root/'research/private-diagnostic.json').read_text()) if (p.root/'research/private-diagnostic.json').exists() else None
+    replica=build_seed(tmp_path/'replica',records,locale=locale,scenario_id=sid,english_min_score=.3,calibration=calibration,private_diagnostic=diagnostic)
     assert (replica/'manifest.json').read_bytes()==(p.root/'manifest.json').read_bytes()
 
 

@@ -28,6 +28,11 @@ class ScenarioRegistration:
     scenario_state: ScenarioStateV2 | None = None
 
 @dataclass(frozen=True)
+class StoreJobHandler:
+    callback: Callable
+    retry_on_error: bool = True
+
+@dataclass(frozen=True)
 class Operation:
     name: str
     capability: str
@@ -40,20 +45,28 @@ class Operation:
     action_field: str | None = None
     service_mode: bool = False
     event_projector: Callable | None = None
+    preview_handler: Callable | None = None
+    ready: bool = True
+    unavailable_code: str | None = None
 
 # Public API/tool installation whitelist. Internal snapshot/restore is deliberately absent.
 PUBLIC_OPERATIONS={
- 'requests.read','actions','tests.create','tests.list','turns.create','submissions.create','submissions.list',
+ 'turns.display','requests.read','actions','tests.create','tests.list','turns.create','submissions.create','submissions.list',
+ 'feedback.records.read','feedback.responses.create','feedback.responses.read','feedback.responses.list',
  'feedback.create','feedback.read','approvals.resolve','materials.list','timeline','evidence.read',
  'work_items.create','work_items.list','work_items.update','work_items.batch','work_products.adopt','work_products.create','work_products.list',
  'work_products.versions.create','work_products.versions.list','work_products.shares.create',
- 'work_products.shares.change','workspace_imports','reviews.create','reviews.read','revision_cycles',
+ 'work_products.shares.change','work_products.shares.list','workspace_imports','workspace_imports.read','workspace_imports.list','reviews.create','reviews.read','revision_cycles',
  'observation','tools','delegations.create','delegations.revoke',
 }
 
 class ExtensionRegistry:
     def __init__(self):
-        self.scenarios={};self.operations={};self.cli={};self.job_handlers={};self.reference_resolvers={};self.contextual_reference_resolvers=set()
+        self.object_models={};self.scenarios={};self.operations={};self.cli={};self.job_handlers={};self.reference_resolvers={};self.contextual_reference_resolvers=set()
+    def register_object_model(self,kind,model):
+        if kind in self.object_models:raise ValueError('object model already installed')
+        self.object_models[kind]=model
+
     def register_reference_resolver(self,kind,resolver,*,contextual=False):
         if kind in self.reference_resolvers:raise ValueError('reference resolver already registered')
         self.reference_resolvers[kind]=resolver
@@ -63,13 +76,30 @@ class ExtensionRegistry:
         self.scenarios[name]=scenario
     def register(self,operation:Operation):
         if operation.name=='requests.read' and (operation.mutates or operation.capability!='read'):raise ValueError('request result lookup is read-only')
+        if operation.ready and operation.unavailable_code is not None:raise ValueError('ready operation cannot have unavailable code')
+        if not operation.ready and operation.unavailable_code is None:raise ValueError('unready operation needs unavailable code')
         if operation.name not in PUBLIC_OPERATIONS:raise ValueError('not a public module slot')
+        if operation.preview_handler and operation.name!='workspace_imports':raise ValueError('preview hook reserved for workspace import')
         if operation.name in self.operations:raise ValueError('operation already installed')
         if operation.capability not in {'read','act','submit','delegate'}:raise ValueError('invalid public capability')
         if operation.mutates and operation.capability=='read':raise ValueError('read capability cannot mutate')
         if not issubclass(operation.request_model,V2):raise TypeError('v2 request model required')
         if operation.service_mode and operation.name not in {'delegations.create','delegations.revoke'}:raise ValueError('service mode reserved for auth control plane')
+        actions=self.operation_actions(operation)
+        if operation.event_projector is not None and actions is None:raise ValueError('projected action field must declare Literal values')
+        if actions is not None:
+            for installed in self.operations.values():
+                prior=self.operation_actions(installed)
+                if prior is not None and actions & prior:raise ValueError('public action already registered')
         self.operations[operation.name]=operation
+    @staticmethod
+    def operation_actions(operation):
+        if not operation.mutates:return frozenset()
+        if not operation.action_field:return frozenset((operation.action_name or operation.name,))
+        field=operation.request_model.model_fields.get(operation.action_field)
+        if field is None or get_origin(field.annotation) is not Literal:return None
+        return frozenset(get_args(field.annotation))
+
     def projector_for_action(self,action):
         """Select only from installed registrations and a persisted action name.
 
@@ -86,6 +116,13 @@ class ExtensionRegistry:
             if matched:matches.append(op)
         if len(matches)>1:raise ProtocolError('event_projection_ambiguous',status=503)
         return matches[0].event_projector if matches else None
+
+    def availability(self,name):
+        builtins={'requests.read':'read','jobs.refresh':'act'}
+        if name in builtins:return OperationAvailability(name=name,installed=True,ready=True,capability=builtins[name])
+        operation=self.operations.get(name)
+        if operation is None:return OperationAvailability(name=name,installed=False,ready=False,unavailable_code='module_unavailable' if name in PUBLIC_OPERATIONS else 'operation_not_public')
+        return OperationAvailability(name=name,installed=True,ready=operation.ready,capability=operation.capability,unavailable_code=operation.unavailable_code)
 
     def register_cli(self,name,configure_parser):
         if name in self.cli:raise ValueError('CLI already registered')
@@ -105,7 +142,15 @@ def public_state(state):
     return state.model_dump(mode='json',exclude={'resources','applied_milestones'})
 
 class Gateway:
-    def __init__(self,store:V2Store,registry:ExtensionRegistry):self.store,self.registry=store,registry
+    def __init__(self,store:V2Store,registry:ExtensionRegistry):
+        self.store,self.registry=store,registry
+        for kind,resolver in registry.reference_resolvers.items():
+            contextual=kind in registry.contextual_reference_resolvers
+            if kind not in store.reference_resolvers:store.register_reference_resolver(kind,resolver,contextual=contextual)
+            elif store.reference_resolvers[kind] is not resolver or (kind in store.contextual_reference_resolvers)!=contextual:raise ValueError('incompatible reference resolver registration')
+        for kind,model in registry.object_models.items():
+            if kind not in store.object_models:store.register_object(kind,model)
+            elif store.object_models[kind] is not model:raise ValueError('incompatible object model registration')
     def create(self,request:CreateSessionV2):
         scenario=self.registry.scenarios.get(request.scenario)
         if scenario is None:raise ProtocolError('scenario_module_unavailable',status=503)
@@ -122,6 +167,7 @@ class Gateway:
             return self.request_result(auth,query.request_id).model_dump(mode='json')
         op=self.registry.operations.get(name)
         if op is None:raise ProtocolError('module_unavailable',f'{name} is not installed',503)
+        if not op.ready:raise ProtocolError(op.unavailable_code or 'module_unavailable',status=503)
         params=route_params or {}
         self.store.authorize(auth,op.capability)
         if op.mutates:
@@ -134,6 +180,13 @@ class Gateway:
             if params:
                 for key,value in params.items():
                     if command.payload.get(key)!=value:raise ProtocolError('route_object_mismatch',status=409)
+            if op.preview_handler is not None and getattr(payload,'mode',None)=='preview':
+                self.store.authorize(auth,'read',command.operation)
+                result=self.store.query(auth,lambda view:op.preview_handler(view,command,auth),operation=command.operation)
+                if op.response_model is None:raise ProtocolError('module_response_contract_missing',status=503)
+                try:result=op.response_model.model_validate(result.model_dump(mode='json') if isinstance(result,BaseModel) else result)
+                except ValidationError as exc:raise ProtocolError('module_response_invalid',status=503) from exc
+                return {'schema_version':2,'result':result.model_dump(mode='json')}
             if op.service_mode:
                 self.store.authorize(auth,op.capability,command.operation)
                 result=op.handler(self.store,payload,auth,command.request_id)
@@ -145,7 +198,7 @@ class Gateway:
             return self.public_result(auth,result,self.registry.projector_for_action(command.operation) if result.replayed else op.event_projector)
         self.store.authorize(auth,op.capability,op.action_name or op.name)
         payload=op.request_model.model_validate(body or params)
-        result=op.handler(self.store.view(auth),payload,auth)
+        result=self.store.query(auth,lambda view:op.handler(view,payload,auth),operation=op.action_name or op.name)
         if op.response_model is None:raise ProtocolError('module_response_contract_missing',status=503)
         try:
             result=op.response_model.model_validate(result.model_dump(mode='json') if isinstance(result,BaseModel) else result)
@@ -205,7 +258,8 @@ class Gateway:
         if prior is not None:return self.public_result(auth,prior,self.registry.projector_for_action(envelope.command.operation))
         self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
         derived_subject=self.store.fixed_feedback_subject(envelope.command)
-        plan=handler(self.store.job_view(auth,envelope.context,command=envelope.command),envelope,auth)
+        view=self.store.job_view(auth,envelope.context,command=envelope.command,worker_claim=claim,capability=envelope.capability)
+        plan=handler.callback(self.store,view,envelope,auth) if isinstance(handler,StoreJobHandler) else handler(view,envelope,auth)
         # External calls can repeat on transient failure; deterministic failures stop.
         self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
         result=self.store.execute(auth,envelope.command,lambda *_:plan,capability=envelope.capability,worker_fence=claim,derived_subject=derived_subject,job_context=envelope.context)

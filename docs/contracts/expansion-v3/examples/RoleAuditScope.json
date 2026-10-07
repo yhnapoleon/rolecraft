@@ -1,0 +1,18 @@
+{
+  "actor_id": "learner",
+  "allowed_actions": null,
+  "allowed_objects": null,
+  "capabilities": [
+    "read",
+    "act"
+  ],
+  "credential_id": "example",
+  "executor": {
+    "delegation_id": null,
+    "id": "human:example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "expires_at": null,
+  "schema_version": 2
+}

@@ -34,7 +34,9 @@ Trial configuration: trial-Q01; version=1; config_version=0
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-Setting differences: participants: requested_participants_exceed_approved_capacity
+Not effective (using the effective settings): None
+
+Over current allocation (not changed automatically): participants 20 > capacity 15
 
 ## Q02
 
@@ -66,7 +68,9 @@ Trial configuration: trial-Q02; version=1; config_version=0
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-Setting differences: participants: requested_participants_exceed_approved_capacity
+Not effective (using the effective settings): None
+
+Over current allocation (not changed automatically): participants 20 > capacity 15
 
 ## Q03
 
@@ -98,7 +102,9 @@ Trial configuration: trial-Q03; version=1; config_version=0
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-Setting differences: participants: requested_participants_exceed_approved_capacity
+Not effective (using the effective settings): None
+
+Over current allocation (not changed automatically): participants 20 > capacity 15
 
 ## Q04
 
@@ -130,7 +136,9 @@ Trial configuration: trial-Q04; version=1; config_version=0
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-Setting differences: participants: requested_participants_exceed_approved_capacity
+Not effective (using the effective settings): None
+
+Over current allocation (not changed automatically): participants 20 > capacity 15
 
 ## Q05
 
@@ -162,7 +170,9 @@ Trial configuration: trial-Q05; version=1; config_version=0
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-Setting differences: participants: requested_participants_exceed_approved_capacity
+Not effective (using the effective settings): None
+
+Over current allocation (not changed automatically): participants 20 > capacity 15
 
 ## Q06
 
@@ -194,7 +204,9 @@ Trial configuration: trial-Q06; version=1; config_version=0
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-Setting differences: participants: requested_participants_exceed_approved_capacity
+Not effective (using the effective settings): None
+
+Over current allocation (not changed automatically): participants 20 > capacity 15
 
 ## Q07
 
@@ -226,7 +238,9 @@ Trial configuration: trial-Q07; version=1; config_version=0
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-Setting differences: participants: requested_participants_exceed_approved_capacity
+Not effective (using the effective settings): None
+
+Over current allocation (not changed automatically): participants 20 > capacity 15
 
 ## Q08
 
@@ -258,7 +272,9 @@ Trial configuration: trial-Q08; version=1; config_version=0
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-Setting differences: participants: requested_participants_exceed_approved_capacity
+Not effective (using the effective settings): None
+
+Over current allocation (not changed automatically): participants 20 > capacity 15
 
 ## Q09
 
@@ -290,7 +306,9 @@ Trial configuration: trial-Q09; version=1; config_version=0
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-Setting differences: participants: requested_participants_exceed_approved_capacity
+Not effective (using the effective settings): None
+
+Over current allocation (not changed automatically): participants 20 > capacity 15
 
 ## Q10
 
@@ -322,7 +340,9 @@ Trial configuration: trial-Q10; version=1; config_version=0
 | participants | 20 | 20 |
 | launch_day | 10 | 10 |
 
-Setting differences: work_items: requested_work_exceeds_approved_budget; update_strategy: realtime_sync_not_provisioned; scope_filter: scope_filter_not_provisioned; participants: requested_participants_exceed_approved_capacity; launch_day: requested_launch_exceeds_approved_deadline
+Not effective (using the effective settings): Work items: realtime_sync, human_fallback → human_fallback; Update strategy: realtime → daily; Scope filter: true → false
+
+Over current allocation (not changed automatically): participants 20 > capacity 15; planned day 10 > deadline day 7
 
 ## Q11
 
@@ -354,7 +374,9 @@ Trial configuration: trial-Q11; version=1; config_version=0
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-Setting differences: participants: requested_participants_exceed_approved_capacity
+Not effective (using the effective settings): None
+
+Over current allocation (not changed automatically): participants 20 > capacity 15
 
 ## Q12
 
@@ -386,4 +408,6 @@ Trial configuration: trial-Q12; version=1; config_version=0
 | participants | 20 | 20 |
 | launch_day | 7 | 7 |
 
-Setting differences: participants: requested_participants_exceed_approved_capacity
+Not effective (using the effective settings): None
+
+Over current allocation (not changed automatically): participants 20 > capacity 15

@@ -1764,11 +1764,143 @@
         "title": "CriterionInput",
         "type": "object"
       },
+      "DatasetMetadataV2": {
+        "additionalProperties": false,
+        "description": "A sidecar for audit/stratification. Never part of model_input(record).",
+        "properties": {
+          "accepted_label_tier": {
+            "anyOf": [
+              {
+                "enum": [
+                  "G0",
+                  "G1",
+                  "G2",
+                  "G2v"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Accepted Label Tier"
+          },
+          "annotation_status": {
+            "enum": [
+              "unloaded",
+              "pending",
+              "accepted",
+              "disputed",
+              "failed"
+            ],
+            "title": "Annotation Status",
+            "type": "string"
+          },
+          "bucket": {
+            "enum": [
+              "fixture",
+              "env_run",
+              "human_session",
+              "public_aux",
+              "business_synth"
+            ],
+            "title": "Bucket",
+            "type": "string"
+          },
+          "capture_point": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionPoint"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "input_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "language": {
+            "minLength": 1,
+            "title": "Language",
+            "type": "string"
+          },
+          "lineage": {
+            "$ref": "#/components/schemas/Lineage"
+          },
+          "metadata_only": {
+            "const": true,
+            "default": true,
+            "title": "Metadata Only",
+            "type": "boolean"
+          },
+          "provenance": {
+            "$ref": "#/components/schemas/Provenance"
+          },
+          "record_id": {
+            "minLength": 1,
+            "title": "Record Id",
+            "type": "string"
+          },
+          "requested_label_tier": {
+            "enum": [
+              "G0",
+              "G1",
+              "G2",
+              "G2v"
+            ],
+            "title": "Requested Label Tier",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_snapshots": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DatasetSnapshotMetadata"
+            },
+            "title": "Source Snapshots",
+            "type": "array"
+          },
+          "split": {
+            "enum": [
+              "train",
+              "dev",
+              "test",
+              "regression"
+            ],
+            "title": "Split",
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "input_hash",
+          "language",
+          "bucket",
+          "split",
+          "lineage",
+          "provenance",
+          "requested_label_tier",
+          "annotation_status"
+        ],
+        "title": "DatasetMetadataV2",
+        "type": "object"
+      },
       "DatasetRecordV2": {
         "additionalProperties": false,
         "properties": {
           "bucket": {
             "enum": [
+              "fixture",
               "env_run",
               "human_session",
               "public_aux",
@@ -1878,6 +2010,62 @@
           "input_hash"
         ],
         "title": "DatasetRecordV2",
+        "type": "object"
+      },
+      "DatasetSnapshotMetadata": {
+        "additionalProperties": false,
+        "properties": {
+          "capture_point": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "origin": {
+            "enum": [
+              "fixture",
+              "env_run",
+              "human_session",
+              "public_aux",
+              "business_synth"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Session Id"
+          },
+          "snapshot_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Snapshot Digest",
+            "type": "string"
+          },
+          "source_digest": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source Digest",
+            "type": "string"
+          }
+        },
+        "required": [
+          "snapshot_digest",
+          "source_digest",
+          "capture_point",
+          "origin"
+        ],
+        "title": "DatasetSnapshotMetadata",
         "type": "object"
       },
       "DecisionPointInput": {
@@ -2349,6 +2537,67 @@
           "agent_label"
         ],
         "title": "DelegationInput",
+        "type": "object"
+      },
+      "DelegationJobCapacity": {
+        "additionalProperties": false,
+        "properties": {
+          "active_jobs": {
+            "minimum": 0,
+            "title": "Active Jobs",
+            "type": "integer"
+          },
+          "available_slots": {
+            "minimum": 0,
+            "title": "Available Slots",
+            "type": "integer"
+          },
+          "counted_statuses": {
+            "default": [
+              "queued",
+              "running"
+            ],
+            "items": {
+              "enum": [
+                "queued",
+                "running"
+              ],
+              "type": "string"
+            },
+            "title": "Counted Statuses",
+            "type": "array"
+          },
+          "delegation_id": {
+            "minLength": 1,
+            "title": "Delegation Id",
+            "type": "string"
+          },
+          "max_active_jobs": {
+            "maximum": 2,
+            "minimum": 1,
+            "title": "Max Active Jobs",
+            "type": "integer"
+          },
+          "observed_at": {
+            "format": "date-time",
+            "title": "Observed At",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "delegation_id",
+          "max_active_jobs",
+          "active_jobs",
+          "available_slots",
+          "observed_at"
+        ],
+        "title": "DelegationJobCapacity",
         "type": "object"
       },
       "DelegationRevoke": {
@@ -3324,6 +3573,142 @@
         "title": "FactV2",
         "type": "object"
       },
+      "FeedbackActivity": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "minLength": 1,
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "counterparty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Counterparty"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "kind": {
+            "enum": [
+              "material_read",
+              "test_run",
+              "question_sent",
+              "reply_received",
+              "learner_displayed"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "occurred_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "ref": {
+            "$ref": "#/components/schemas/EvidenceRefV2"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "kind",
+          "ref",
+          "occurred_at",
+          "executor",
+          "actor_id"
+        ],
+        "title": "FeedbackActivity",
+        "type": "object"
+      },
+      "FeedbackActivityCount": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Count"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "default": "unknown",
+            "enum": [
+              "complete",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "verified_records": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Verified Records",
+            "type": "integer"
+          }
+        },
+        "title": "FeedbackActivityCount",
+        "type": "object"
+      },
+      "FeedbackActivityWindow": {
+        "additionalProperties": false,
+        "properties": {
+          "captured_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "covered_from": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "covered_through": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "covered_from",
+          "covered_through",
+          "captured_at"
+        ],
+        "title": "FeedbackActivityWindow",
+        "type": "object"
+      },
       "FeedbackInput": {
         "additionalProperties": false,
         "properties": {
@@ -3425,6 +3810,118 @@
         "title": "FeedbackItem",
         "type": "object"
       },
+      "FeedbackReadBoundary": {
+        "additionalProperties": false,
+        "properties": {
+          "attestation": {
+            "const": "common_store_trace_v1",
+            "default": "common_store_trace_v1",
+            "title": "Attestation",
+            "type": "string"
+          },
+          "content_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "dependencies": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "minItems": 1,
+            "title": "Dependencies",
+            "type": "array"
+          },
+          "path": {
+            "title": "Path",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "path",
+          "content_hash",
+          "dependencies"
+        ],
+        "title": "FeedbackReadBoundary",
+        "type": "object"
+      },
+      "FeedbackReferenceCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "semantic_support": {
+            "const": "not_established",
+            "default": "not_established",
+            "title": "Semantic Support",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "exact_reference_verified",
+              "unavailable",
+              "future_evidence",
+              "evidence_version_mismatch",
+              "evidence_quote_mismatch",
+              "evidence_time_mismatch",
+              "source_time_unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_reference_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted Reference Hash"
+          },
+          "valid_at_subject": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Valid At Subject"
+          },
+          "verified_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceRefV2"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "submitted_reference_hash",
+          "status"
+        ],
+        "title": "FeedbackReferenceCheck",
+        "type": "object"
+      },
       "FeedbackRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3443,6 +3940,220 @@
           "submission_id"
         ],
         "title": "FeedbackRequest",
+        "type": "object"
+      },
+      "FeedbackResponseCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "criterion": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Criterion"
+          },
+          "evidence": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "feedback_id": {
+            "minLength": 1,
+            "title": "Feedback Id",
+            "type": "string"
+          },
+          "feedback_version": {
+            "exclusiveMinimum": 0,
+            "title": "Feedback Version",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "objection",
+              "supplement"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "section": {
+            "default": "general",
+            "enum": [
+              "general",
+              "verified_facts",
+              "historical_responsibilities",
+              "rule_items",
+              "model_advice"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 12000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feedback_id",
+          "feedback_version",
+          "kind",
+          "text"
+        ],
+        "title": "FeedbackResponseCreate",
+        "type": "object"
+      },
+      "FeedbackResponseRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "criterion": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Criterion"
+          },
+          "evidence": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "evidence_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "none_submitted",
+                  "user_submitted_unverified"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Evidence Status"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "objection",
+              "supplement"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "read_boundaries": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FeedbackReadBoundary"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Read Boundaries"
+          },
+          "read_projection": {
+            "anyOf": [
+              {
+                "const": "partial",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Read Projection"
+          },
+          "recorded_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "section": {
+            "default": "general",
+            "enum": [
+              "general",
+              "verified_facts",
+              "historical_responsibilities",
+              "rule_items",
+              "model_advice"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "session_id": {
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 12000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "feedback",
+          "kind",
+          "text",
+          "recorded_at",
+          "executor"
+        ],
+        "title": "FeedbackResponseRecord",
         "type": "object"
       },
       "FeedbackV2": {
@@ -3468,6 +4179,21 @@
           },
           "evaluation": {
             "$ref": "#/components/schemas/FileRef"
+          },
+          "historical_responsibilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/HistoricalResponsibilitiesSnapshot"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Historical Responsibilities"
           },
           "id": {
             "minLength": 1,
@@ -3512,6 +4238,49 @@
             "title": "Next Options",
             "type": "array"
           },
+          "read_boundaries": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FeedbackReadBoundary"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Read Boundaries"
+          },
+          "read_projection": {
+            "anyOf": [
+              {
+                "const": "partial",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Read Projection"
+          },
+          "rule_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FeedbackItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rule Items"
+          },
           "schema_version": {
             "const": 2,
             "default": 2,
@@ -3531,6 +4300,21 @@
             "minimum": 0,
             "title": "Verified Coverage",
             "type": "number"
+          },
+          "verified_facts": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/VerifiedFactsSnapshot"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Verified Facts"
           },
           "version": {
             "default": 1,
@@ -3597,6 +4381,204 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HistoricalResponsibilitiesSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "captured_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "completeness": {
+            "default": "unknown",
+            "enum": [
+              "complete",
+              "partial",
+              "unknown"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackActivityWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "entries": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/HistoricalResponsibilityFinding"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "requested_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_snapshot_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Snapshot Hash"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/ObjectRef"
+          }
+        },
+        "required": [
+          "subject",
+          "as_of",
+          "requested_at",
+          "captured_at",
+          "source_snapshot_hash"
+        ],
+        "title": "HistoricalResponsibilitiesSnapshot",
+        "type": "object"
+      },
+      "HistoricalResponsibilityFinding": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Actor Id"
+          },
+          "criterion": {
+            "minLength": 1,
+            "title": "Criterion",
+            "type": "string"
+          },
+          "evaluated_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "executor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Executor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "finding": {
+            "enum": [
+              "unknown",
+              "recorded_commitment",
+              "verified_breach",
+              "verified_within_limit",
+              "claim_matches_record",
+              "verified_claim_mismatch",
+              "claim_has_run_records",
+              "recorded_action"
+            ],
+            "title": "Finding",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "actual_action",
+              "commitment",
+              "completion_claim",
+              "unknown"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "scope": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "minItems": 1,
+            "title": "Scope",
+            "type": "array"
+          },
+          "sources": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "withdrawn",
+              "unknown"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "criterion",
+          "kind",
+          "state",
+          "occurred_at",
+          "evaluated_at",
+          "scope",
+          "finding",
+          "explanation"
+        ],
+        "title": "HistoricalResponsibilityFinding",
         "type": "object"
       },
       "ImportConflict": {
@@ -3841,6 +4823,29 @@
           "status"
         ],
         "title": "ImportVersionMap",
+        "type": "object"
+      },
+      "ImportedTaskSource": {
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/LegacyProvenance"
+          },
+          "task": {
+            "$ref": "#/components/schemas/ObjectRef"
+          }
+        },
+        "required": [
+          "task",
+          "source"
+        ],
+        "title": "ImportedTaskSource",
         "type": "object"
       },
       "InvestigationBlock": {
@@ -5374,6 +6379,68 @@
           "outcome"
         ],
         "title": "ObservedStep",
+        "type": "object"
+      },
+      "OperationAvailability": {
+        "additionalProperties": false,
+        "properties": {
+          "capability": {
+            "anyOf": [
+              {
+                "enum": [
+                  "read",
+                  "act",
+                  "submit",
+                  "delegate"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Capability"
+          },
+          "installed": {
+            "title": "Installed",
+            "type": "boolean"
+          },
+          "name": {
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "unavailable_code": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Unavailable Code"
+          }
+        },
+        "required": [
+          "name",
+          "installed",
+          "ready"
+        ],
+        "title": "OperationAvailability",
         "type": "object"
       },
       "Option": {
@@ -7079,6 +8146,31 @@
             "title": "Cursor",
             "type": "integer"
           },
+          "feedback_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Id"
+          },
+          "import_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Import Id"
+          },
           "limit": {
             "default": 50,
             "maximum": 100,
@@ -7097,6 +8189,19 @@
             ],
             "default": null,
             "title": "Product Id"
+          },
+          "response_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Response Id"
           },
           "review_id": {
             "anyOf": [
@@ -7253,6 +8358,32 @@
       "ReviewInput": {
         "additionalProperties": false,
         "properties": {
+          "decision": {
+            "anyOf": [
+              {
+                "enum": [
+                  "launch",
+                  "launch_narrow",
+                  "defer_with_conditions",
+                  "no_go"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Decision"
+          },
+          "followup_of": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Followup Of",
+            "type": "array"
+          },
           "purpose": {
             "title": "Purpose",
             "type": "string"
@@ -7297,11 +8428,37 @@
           "as_of": {
             "$ref": "#/components/schemas/VersionPoint"
           },
+          "decision": {
+            "anyOf": [
+              {
+                "enum": [
+                  "launch",
+                  "launch_narrow",
+                  "defer_with_conditions",
+                  "no_go"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Decision"
+          },
           "evaluation": {
             "$ref": "#/components/schemas/FileRef"
           },
           "executor": {
             "$ref": "#/components/schemas/Executor"
+          },
+          "followup_of": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Followup Of",
+            "type": "array"
           },
           "id": {
             "minLength": 1,
@@ -7431,6 +8588,174 @@
         "title": "RevisionCycle",
         "type": "object"
       },
+      "RoleAuditMemory": {
+        "additionalProperties": false,
+        "properties": {
+          "fragment": {
+            "$ref": "#/components/schemas/DisclosedFragment"
+          },
+          "learner_refs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Learner Refs",
+            "type": "array"
+          },
+          "provenance": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Provenance",
+            "type": "array"
+          },
+          "role_id": {
+            "minLength": 1,
+            "title": "Role Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "fragment",
+          "role_id"
+        ],
+        "title": "RoleAuditMemory",
+        "type": "object"
+      },
+      "RoleAuditReceivedShare": {
+        "additionalProperties": false,
+        "properties": {
+          "fragment": {
+            "$ref": "#/components/schemas/DisclosedFragment"
+          },
+          "product": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "received_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "role_id": {
+            "minLength": 1,
+            "title": "Role Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "share": {
+            "$ref": "#/components/schemas/ObjectRef"
+          }
+        },
+        "required": [
+          "share",
+          "product",
+          "role_id",
+          "received_at",
+          "fragment"
+        ],
+        "title": "RoleAuditReceivedShare",
+        "type": "object"
+      },
+      "RoleAuditScope": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "minLength": 1,
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "allowed_actions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Allowed Actions"
+          },
+          "allowed_objects": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Allowed Objects"
+          },
+          "capabilities": {
+            "items": {
+              "enum": [
+                "read",
+                "act",
+                "submit",
+                "approve",
+                "delegate",
+                "research"
+              ],
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "credential_id": {
+            "minLength": 1,
+            "title": "Credential Id",
+            "type": "string"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expires At"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "capabilities",
+          "actor_id",
+          "executor",
+          "credential_id"
+        ],
+        "title": "RoleAuditScope",
+        "type": "object"
+      },
       "RoleContext": {
         "additionalProperties": false,
         "properties": {
@@ -7457,6 +8782,17 @@
             },
             "title": "Conversations",
             "type": "array"
+          },
+          "generation_audit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RoleGenerationAudit"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "known_events": {
             "default": [],
@@ -7530,6 +8866,172 @@
           "context_hash"
         ],
         "title": "RoleContext",
+        "type": "object"
+      },
+      "RoleGenerationAudit": {
+        "additionalProperties": false,
+        "properties": {
+          "attempts": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ModelAttemptUsage"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "history_revision": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "History Revision",
+            "type": "string"
+          },
+          "intended_reply_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Intended Reply Id"
+          },
+          "job_attempt": {
+            "exclusiveMinimum": 0,
+            "title": "Job Attempt",
+            "type": "integer"
+          },
+          "job_id": {
+            "minLength": 1,
+            "title": "Job Id",
+            "type": "string"
+          },
+          "lease_token_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Lease Token Hash"
+          },
+          "memories": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RoleAuditMemory"
+            },
+            "title": "Memories",
+            "type": "array"
+          },
+          "phase": {
+            "default": "attempt",
+            "enum": [
+              "attempt",
+              "completed"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "prompt_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Prompt Hash",
+            "type": "string"
+          },
+          "prompt_messages": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderMessage"
+            },
+            "minItems": 1,
+            "title": "Prompt Messages",
+            "type": "array"
+          },
+          "received_shares": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/RoleAuditReceivedShare"
+            },
+            "title": "Received Shares",
+            "type": "array"
+          },
+          "refresh_count": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Refresh Count",
+            "type": "integer"
+          },
+          "reply": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "request": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "scope": {
+            "$ref": "#/components/schemas/RoleAuditScope"
+          },
+          "used_sources": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DisclosedFragment"
+            },
+            "title": "Used Sources",
+            "type": "array"
+          },
+          "worker_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Worker Id"
+          }
+        },
+        "required": [
+          "job_id",
+          "job_attempt",
+          "request",
+          "scope",
+          "prompt_messages",
+          "prompt_hash",
+          "history_revision"
+        ],
+        "title": "RoleGenerationAudit",
         "type": "object"
       },
       "RoleSpecV2": {
@@ -10331,6 +11833,216 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VerifiedFactsSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "activity_records": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FeedbackActivity"
+            },
+            "title": "Activity Records",
+            "type": "array"
+          },
+          "activity_totals": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FeedbackActivityCount"
+            },
+            "default": {},
+            "propertyNames": {
+              "enum": [
+                "material_read",
+                "test_run",
+                "question_sent",
+                "reply_received",
+                "learner_displayed"
+              ]
+            },
+            "title": "Activity Totals",
+            "type": "object"
+          },
+          "activity_window": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackActivityWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "actor_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Actor Id"
+          },
+          "adopter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Executor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Executor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "captured_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "conclusion_quality": {
+            "const": "not_scored",
+            "default": "not_scored",
+            "title": "Conclusion Quality",
+            "type": "string"
+          },
+          "declared_citation_count": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Declared Citation Count"
+          },
+          "declared_source_count": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Declared Source Count"
+          },
+          "executor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Executor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "independent_understanding": {
+            "const": "unobserved",
+            "default": "unobserved",
+            "title": "Independent Understanding",
+            "type": "string"
+          },
+          "references": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FeedbackReferenceCheck"
+            },
+            "title": "References",
+            "type": "array"
+          },
+          "requested_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_snapshot_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Snapshot Hash"
+          },
+          "status": {
+            "enum": [
+              "verified",
+              "partial",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "summary": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Summary",
+            "type": "array"
+          },
+          "verified_source_count": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Verified Source Count"
+          }
+        },
+        "required": [
+          "subject",
+          "status",
+          "as_of",
+          "requested_at",
+          "captured_at",
+          "source_snapshot_hash"
+        ],
+        "title": "VerifiedFactsSnapshot",
+        "type": "object"
+      },
       "VersionPoint": {
         "additionalProperties": false,
         "properties": {
@@ -10647,6 +12359,404 @@
           "package_hash"
         ],
         "title": "WorkspaceImport",
+        "type": "object"
+      },
+      "WorkspaceImportReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "fingerprint": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "package_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Package Hash",
+            "type": "string"
+          },
+          "package_id": {
+            "minLength": 1,
+            "title": "Package Id",
+            "type": "string"
+          },
+          "result": {
+            "$ref": "#/components/schemas/ImportResult"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "source_schema": {
+            "minLength": 1,
+            "title": "Source Schema",
+            "type": "string"
+          },
+          "source_session_id": {
+            "minLength": 1,
+            "title": "Source Session Id",
+            "type": "string"
+          },
+          "task_sources": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ImportedTaskSource"
+            },
+            "title": "Task Sources",
+            "type": "array"
+          },
+          "version": {
+            "default": 1,
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "package_id",
+          "package_hash",
+          "source_schema",
+          "source_session_id",
+          "fingerprint",
+          "result",
+          "executor",
+          "created_at"
+        ],
+        "title": "WorkspaceImportReceipt",
+        "type": "object"
+      },
+      "WorkspaceProductPage": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/WorkspaceProductRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Next Cursor"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "shares": {
+            "items": {
+              "$ref": "#/components/schemas/ProductShare"
+            },
+            "title": "Shares",
+            "type": "array"
+          },
+          "sharing_complete": {
+            "title": "Sharing Complete",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "shares",
+          "sharing_complete",
+          "as_of"
+        ],
+        "title": "WorkspaceProductPage",
+        "type": "object"
+      },
+      "WorkspaceProductRead": {
+        "additionalProperties": false,
+        "properties": {
+          "adoption": {
+            "$ref": "#/components/schemas/Adoption",
+            "default": {
+              "adopted_at": null,
+              "adopter": null,
+              "schema_version": 2,
+              "status": "unadopted"
+            }
+          },
+          "author": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "content": {
+            "default": "",
+            "title": "Content",
+            "type": "string"
+          },
+          "content_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "cycle": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "draft": {
+            "default": true,
+            "title": "Draft",
+            "type": "boolean"
+          },
+          "evidence_refs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Evidence Refs",
+            "type": "array"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "kind": {
+            "default": "text",
+            "enum": [
+              "text",
+              "plan",
+              "test_plan",
+              "options",
+              "investigation"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "legacy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LegacyProvenance"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "product_id": {
+            "minLength": 1,
+            "title": "Product Id",
+            "type": "string"
+          },
+          "purpose": {
+            "default": "exploration",
+            "title": "Purpose",
+            "type": "string"
+          },
+          "removed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Removed At"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "shares": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Shares",
+            "type": "array"
+          },
+          "source_return_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Return Id"
+          },
+          "structured_payload": {
+            "anyOf": [
+              {
+                "discriminator": {
+                  "mapping": {
+                    "investigation": "#/components/schemas/InvestigationPayload",
+                    "options": "#/components/schemas/OptionsPayload",
+                    "plan": "#/components/schemas/PlanPayload",
+                    "test_plan": "#/components/schemas/TestPlanPayload",
+                    "text": "#/components/schemas/TextPayload"
+                  },
+                  "propertyName": "type"
+                },
+                "oneOf": [
+                  {
+                    "$ref": "#/components/schemas/TextPayload"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PlanPayload"
+                  },
+                  {
+                    "$ref": "#/components/schemas/TestPlanPayload"
+                  },
+                  {
+                    "$ref": "#/components/schemas/OptionsPayload"
+                  },
+                  {
+                    "$ref": "#/components/schemas/InvestigationPayload"
+                  }
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Structured Payload"
+          },
+          "task": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "title": {
+            "default": "",
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "visibility": {
+            "anyOf": [
+              {
+                "enum": [
+                  "private",
+                  "shared"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Visibility"
+          }
+        },
+        "required": [
+          "product_id",
+          "session_id",
+          "version",
+          "cycle",
+          "author",
+          "executor",
+          "content_hash",
+          "created_at"
+        ],
+        "title": "WorkspaceProductRead",
+        "type": "object"
+      },
+      "WorkspaceSharePage": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ProductShare"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Next Cursor"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "sharing_complete": {
+            "title": "Sharing Complete",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "items",
+          "sharing_complete",
+          "as_of"
+        ],
+        "title": "WorkspaceSharePage",
         "type": "object"
       },
       "WorkspaceTask": {
@@ -11385,6 +13495,290 @@
         "summary": "Feedback"
       }
     },
+    "/sessions/{session_id}/feedback-records/{feedback_id}": {
+      "get": {
+        "operationId": "feedback_records_read_sessions__session_id__feedback_records__feedback_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Feedback Records Read"
+      }
+    },
+    "/sessions/{session_id}/feedback-responses/{response_id}": {
+      "get": {
+        "operationId": "feedback_responses_read_sessions__session_id__feedback_responses__response_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Feedback Responses Read"
+      }
+    },
+    "/sessions/{session_id}/feedback/{feedback_id}/responses": {
+      "get": {
+        "operationId": "feedback_responses_list_sessions__session_id__feedback__feedback_id__responses_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Feedback Responses List"
+      },
+      "post": {
+        "operationId": "feedback_responses_create_sessions__session_id__feedback__feedback_id__responses_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Feedback Responses Create"
+      }
+    },
     "/sessions/{session_id}/feedback/{submission_id}": {
       "get": {
         "operationId": "feedback_result_sessions__session_id__feedback__submission_id__get",
@@ -11604,6 +13998,91 @@
           }
         ],
         "summary": "Materials"
+      }
+    },
+    "/sessions/{session_id}/objects/{kind}/{object_id}/{version}": {
+      "get": {
+        "operationId": "v2_object_sessions__session_id__objects__kind___object_id___version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "object_id",
+            "required": true,
+            "schema": {
+              "title": "Object Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "config_version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Config Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "V2 Object"
       }
     },
     "/sessions/{session_id}/observation": {
@@ -12351,6 +14830,58 @@
         "summary": "Turn"
       }
     },
+    "/sessions/{session_id}/turns/display": {
+      "post": {
+        "operationId": "turns_display_sessions__session_id__turns_display_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Turns Display"
+      }
+    },
     "/sessions/{session_id}/work-items": {
       "get": {
         "operationId": "work_items_list_sessions__session_id__work_items_get",
@@ -12764,6 +15295,82 @@
       }
     },
     "/sessions/{session_id}/work-products/{product_id}/shares": {
+      "get": {
+        "operationId": "work_products_shares_list_sessions__session_id__work_products__product_id__shares_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Work Products Shares List"
+      },
       "post": {
         "operationId": "work_products_shares_create_sessions__session_id__work_products__product_id__shares_post",
         "parameters": [
@@ -12996,6 +15603,82 @@
       }
     },
     "/sessions/{session_id}/workspace-imports": {
+      "get": {
+        "operationId": "workspace_imports_list_sessions__session_id__workspace_imports_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Workspace Imports List"
+      },
       "post": {
         "operationId": "workspace_imports_sessions__session_id__workspace_imports_post",
         "parameters": [
@@ -13046,6 +15729,84 @@
         ],
         "summary": "Workspace Imports"
       }
+    },
+    "/sessions/{session_id}/workspace-imports/{import_id}": {
+      "get": {
+        "operationId": "workspace_imports_read_sessions__session_id__workspace_imports__import_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Workspace Imports Read"
+      }
     }
   },
   "x-rolecraft-module-payloads": {
@@ -13068,6 +15829,18 @@
       "$ref": "#/components/schemas/FeedbackInput"
     },
     "feedback.read": {
+      "$ref": "#/components/schemas/ResourcePage"
+    },
+    "feedback.records.read": {
+      "$ref": "#/components/schemas/ResourcePage"
+    },
+    "feedback.responses.create": {
+      "$ref": "#/components/schemas/FeedbackResponseCreate"
+    },
+    "feedback.responses.list": {
+      "$ref": "#/components/schemas/ResourcePage"
+    },
+    "feedback.responses.read": {
       "$ref": "#/components/schemas/ResourcePage"
     },
     "materials.list": {
@@ -13109,6 +15882,9 @@
     "turns.create": {
       "$ref": "#/components/schemas/TurnInput"
     },
+    "turns.display": {
+      "$ref": "#/components/schemas/ObjectRead"
+    },
     "work_items.batch": {
       "$ref": "#/components/schemas/TaskBatch"
     },
@@ -13136,6 +15912,9 @@
     "work_products.shares.create": {
       "$ref": "#/components/schemas/ShareCreate"
     },
+    "work_products.shares.list": {
+      "$ref": "#/components/schemas/ResourcePage"
+    },
     "work_products.versions.create": {
       "$ref": "#/components/schemas/ProductEdit"
     },
@@ -13144,6 +15923,12 @@
     },
     "workspace_imports": {
       "$ref": "#/components/schemas/WorkspaceImport"
+    },
+    "workspace_imports.list": {
+      "$ref": "#/components/schemas/ResourcePage"
+    },
+    "workspace_imports.read": {
+      "$ref": "#/components/schemas/ResourcePage"
     }
   },
   "x-rolecraft-v2-boundary": "Explicit schema_version=2; uninstalled modules return503. Internal snapshots are not public tools."

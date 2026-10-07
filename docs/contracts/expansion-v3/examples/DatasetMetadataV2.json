@@ -1,0 +1,48 @@
+{
+  "accepted_label_tier": null,
+  "annotation_status": "unloaded",
+  "bucket": "fixture",
+  "capture_point": null,
+  "input_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "language": "example",
+  "lineage": {
+    "branch_id": null,
+    "candidate_id": null,
+    "component_id": "example",
+    "decision_id": null,
+    "derivation_ids": [],
+    "fact_root_ids": [],
+    "run_id": null,
+    "schema_version": 2,
+    "session_id": null,
+    "source_record_ids": [],
+    "structure_id": "example"
+  },
+  "metadata_only": true,
+  "provenance": {
+    "actual_sources": [],
+    "captured_at": "2026-10-06T12:00:00Z",
+    "command": "example",
+    "executor": {
+      "delegation_id": null,
+      "id": "example",
+      "kind": "human",
+      "schema_version": 2
+    },
+    "license": null,
+    "schema_version": 2,
+    "source": {
+      "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
+      "dependency_locks": [],
+      "overlay": null,
+      "schema_version": 2,
+      "source_digest": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "transformations": []
+  },
+  "record_id": "example",
+  "requested_label_tier": "G0",
+  "schema_version": 2,
+  "source_snapshots": [],
+  "split": "train"
+}

@@ -21,9 +21,19 @@ class WorkerClaim:
 @dataclass(frozen=True)
 class ClaimedHandler:
     callback: Callable
+    retry_on_error: bool = True
 
     def __call__(self, payload, claim):
         return self.callback(payload, claim)
+
+@dataclass(frozen=True)
+class NonRetryingHandler:
+    callback: Callable
+    retry_on_error: bool = False
+
+    def __call__(self, payload):
+        return self.callback(payload)
+
 
 class Worker:
     def __init__(self, jobs, handlers):
@@ -47,6 +57,9 @@ class Worker:
         handler = None
         try:
             handler = self.handlers[job["kind"]]
+            if job["attempt"] > 1 and not getattr(handler,"retry_on_error",True):
+                self.jobs.fail(job,"model_retry_requires_user_action",retry=False)
+                return True
             if isinstance(handler, ClaimedHandler):
                 result = handler(job["payload"], WorkerClaim.from_job(job))
             else:
@@ -62,9 +75,9 @@ class Worker:
                         self.jobs.needs_context(job,code)
                     else:
                         deterministic=isinstance(exc,ProtocolError) and (exc.status<500 or code in {'module_unavailable','module_object_invalid','module_response_invalid','object_kind_unavailable'})
-                        self.jobs.fail(job,code,retry=not deterministic)
+                        self.jobs.fail(job,code,retry=handler.retry_on_error and not deterministic)
                 else:
-                    self.jobs.fail(job,type(exc).__name__)
+                    self.jobs.fail(job,type(exc).__name__,retry=getattr(handler,"retry_on_error",True))
             except LeaseLost:
                 pass
         finally:

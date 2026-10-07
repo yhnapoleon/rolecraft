@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "id": "pm_pilot_urgent",
-  "revision": "2.8.0",
+  "revision": "2.9.0",
   "structure_id": "index_scope_resource_dependency",
   "files": [
     {
@@ -19,19 +19,19 @@
     {
       "schema_version": 2,
       "path": "facts.json",
-      "sha256": "25e6881af1490bae1fec6a060d4963bb254233c8f947567829a539f3bbffa370",
+      "sha256": "bcc717d65f465f9ac4b9494d888adbe32e4cd6f3c95eff6b6d6c408fb16a3257",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "locale.json",
-      "sha256": "26490203626903dddad346f9b3f21778835899ed0b481e30679d04c385317ef8",
+      "sha256": "07903943ddad0638c31c1d9ccd83891711127a306a5397f241a93562c37fe5d3",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "materials.json",
-      "sha256": "c98bc77536eace3884092a2a731dc86f91b95244ff5fe2a4f025c6aa6b9ca18d",
+      "sha256": "0fac249c2dd01270a8cc5b5e4dadf3fcafc7067b6d1f8e2900ba365661619173",
       "media_type": "application/json"
     },
     {
@@ -43,7 +43,7 @@
     {
       "schema_version": 2,
       "path": "materials/brief-v1.md",
-      "sha256": "8063757af21e6be71b54b657585586e939f2af8db26f3d3b7c3955210f755b74",
+      "sha256": "2c42a3ce06307ba38298606b34b601a9bba2fb07b73cda0f0aca3718b16c4310",
       "media_type": "text/markdown"
     },
     {
@@ -163,7 +163,7 @@
     {
       "schema_version": 2,
       "path": "materials/trial_details-v1.md",
-      "sha256": "cab39d668093d2225e2d5adbc3369e515a6dbc01222b10342ce2c546074947cf",
+      "sha256": "ca1cae2c6c2d2951d162f3989483e147be1ec9b2cac11d632c58aa58d9cc67d8",
       "media_type": "text/markdown"
     },
     {
@@ -193,13 +193,13 @@
     {
       "schema_version": 2,
       "path": "research/public-case-records.json",
-      "sha256": "433e5e1f8ee1057d388ef6786d1d5c8ac351cfc28163558383db7711222a7255",
+      "sha256": "15cc1142ae00318b6312a65fd0703a73c96bff6b6bf371e09e22bba13c0febd4",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "roles.json",
-      "sha256": "f6895278d2f56ab9c6606a924af016ec3e546fdb9102ca7ccb17ad3c2f9143b6",
+      "sha256": "27141e54c6693123915b02cc9ee9980cb563ee9a0d2c6f218e6ba773d0bdcac0",
       "media_type": "application/json"
     },
     {
@@ -217,7 +217,7 @@
     {
       "schema_version": 2,
       "path": "runtime/bundle.json",
-      "sha256": "c8d0a43de5447d150db3e0d5cdd423ff5b4b0ae68211dd55539e65832fd980d7",
+      "sha256": "fb49a83224c9d5b3f5a5afb4bc23fb5797e68a2c669618fc23c1736d846a13e5",
       "media_type": "application/json"
     },
     {
@@ -253,7 +253,7 @@
     {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "06c9e027eef6dbc20f95606fe69dbc01aa53f57bd8ced0c08841f15b422b8fbf",
+      "sha256": "902ca9cc3d7f42baccf3e6b25208bddaa07f88daf02e773fecc659e10b059e26",
       "media_type": "application/json"
     },
     {
@@ -265,7 +265,7 @@
     {
       "schema_version": 2,
       "path": "scenario.yaml",
-      "sha256": "901a5f76b2fb3ba48135319b2ca302b31af8007c05ea5c381f3acc84e6be18bc",
+      "sha256": "bafc159afa6a1244b289d98f2c0a8dc80dac4baf1cdb236d74d9716fb7cc2292",
       "media_type": "application/json"
     }
   ],
@@ -353,7 +353,9 @@
         "capacity_limit",
         "dev_days_limit",
         "deadline_day_limit",
-        "demo_day"
+        "demo_day",
+        "draft_participants",
+        "draft_launch_day"
       ],
       "disclosure_policy": {},
       "approval_authority": [
@@ -483,7 +485,9 @@
         "index_delay_hours",
         "retrieval_probe_query",
         "retrieval_threshold_candidate",
-        "retrieval_debug_code"
+        "retrieval_debug_code",
+        "draft_participants",
+        "draft_launch_day"
       ],
       "disclosure_policy": {
         "retrieval_probe_query": {

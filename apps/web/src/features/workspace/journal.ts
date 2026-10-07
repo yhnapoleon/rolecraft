@@ -1,10 +1,10 @@
-import type { Command, ProductCreate, VersionPoint, WorkProductVersion } from './contract-types';
+import type { Command, ProductCreate, VersionPoint, WorkspaceProductRead } from './contract-types';
 
 export type Draft = ProductCreate;
-export type DraftBase = { product: WorkProductVersion; asOf: VersionPoint };
+export type DraftBase = { product: WorkspaceProductRead; asOf: VersionPoint };
 export type Pending = { command: Command; path: string; method: string; writer: string;
   attempts: number; draftId?: string; draft?: Draft; draftToken?: string; base?: DraftBase | null };
-export type Conflict = { local: Draft; server?: WorkProductVersion; reason: string;
+export type Conflict = { local: Draft; server?: WorkspaceProductRead; reason: string;
   baseVersion: number | null; observedAt: number | null };
 export type PreservedDraft = { draft: Draft; base: DraftBase | null; token: string; writer: string };
 export type RejectedRequest = { request: Pending; status: number; code: string;

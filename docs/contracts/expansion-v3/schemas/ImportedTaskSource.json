@@ -1,0 +1,142 @@
+{
+  "$defs": {
+    "JsonValue": {},
+    "LegacyProvenance": {
+      "additionalProperties": false,
+      "properties": {
+        "original_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Original Hash",
+          "type": "string"
+        },
+        "original_id": {
+          "minLength": 1,
+          "title": "Original Id",
+          "type": "string"
+        },
+        "original_kind": {
+          "title": "Original Kind",
+          "type": "string"
+        },
+        "original_purpose": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Original Purpose"
+        },
+        "raw": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Raw",
+          "type": "object"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_schema": {
+          "minLength": 1,
+          "title": "Source Schema",
+          "type": "string"
+        },
+        "source_session_id": {
+          "minLength": 1,
+          "title": "Source Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_schema",
+        "source_session_id",
+        "original_id",
+        "original_kind",
+        "raw",
+        "original_hash"
+      ],
+      "title": "LegacyProvenance",
+      "type": "object"
+    },
+    "ObjectRef": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version"
+      ],
+      "title": "ObjectRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source": {
+      "$ref": "#/$defs/LegacyProvenance"
+    },
+    "task": {
+      "$ref": "#/$defs/ObjectRef"
+    }
+  },
+  "required": [
+    "task",
+    "source"
+  ],
+  "title": "ImportedTaskSource",
+  "type": "object"
+}

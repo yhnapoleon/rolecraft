@@ -2,6 +2,7 @@
 from typing import Literal
 from pydantic import Field, JsonValue, model_validator
 from .core import *
+from .provider import ProviderMessage
 
 class DisclosurePolicy(V2):
     mode: Literal['public', 'role_only', 'paraphrase_only', 'never']
@@ -256,7 +257,73 @@ class PublicDisclosureRecord(V2):
     verification: Literal['model_extracted','verified','rejected']
     displayed_at_seq: NonNegativeInt
 
+class RoleAuditScope(V2):
+    capabilities: tuple[Literal['read','act','submit','approve','delegate','research'],...]
+    actor_id: Identifier
+    executor: Executor
+    credential_id: Identifier
+    allowed_objects: tuple[str,...] | None = None
+    allowed_actions: tuple[str,...] | None = None
+    expires_at: Timestamp | None = None
+
+class RoleAuditReceivedShare(V2):
+    share: ObjectRef
+    product: ObjectRef
+    role_id: Identifier
+    received_at: VersionPoint
+    fragment: DisclosedFragment
+    @model_validator(mode='after')
+    def source(self):
+        if self.share.kind!='share' or self.product.kind!='product' or self.fragment.ref.kind!='product':raise ValueError('invalid role share receipt')
+        if self.share.session_id!=self.product.session_id or self.fragment.ref.session_id!=self.product.session_id:raise ValueError('cross-session role share receipt')
+        if (self.fragment.ref.object_id,self.fragment.ref.version)!=(self.product.object_id,self.product.version) or self.fragment.verification!='verified':raise ValueError('role share receipt source mismatch')
+        return self
+
+class RoleAuditMemory(V2):
+    fragment: DisclosedFragment
+    role_id: Identifier
+    learner_refs: tuple[ObjectRef,...] = ()
+    provenance: tuple[EvidenceRefV2,...] = ()
+    @model_validator(mode='after')
+    def source(self):
+        if self.fragment.verification!='verified' or any(r.session_id!=self.fragment.ref.session_id for r in (*self.learner_refs,*self.provenance)):raise ValueError('invalid role memory provenance')
+        return self
+
+class RoleGenerationAudit(V2):
+    phase: Literal['attempt','completed'] = 'attempt'
+    job_id: Identifier
+    job_attempt: PositiveInt
+    worker_id: Identifier | None = None
+    lease_token_hash: Hash | None = None
+    request: ObjectRef
+    reply: ObjectRef | None = None
+    intended_reply_id: Identifier | None = None
+    scope: RoleAuditScope
+    prompt_messages: tuple[ProviderMessage,...] = Field(min_length=1)
+    prompt_hash: Hash
+    history_revision: Hash
+    refresh_count: NonNegativeInt = 0
+    attempts: tuple[ModelAttemptUsage,...] = ()
+    error_code: Identifier | None = None
+    received_shares: tuple[RoleAuditReceivedShare,...] = ()
+    memories: tuple[RoleAuditMemory,...] = ()
+    used_sources: tuple[DisclosedFragment,...] = ()
+    @model_validator(mode='after')
+    def identity(self):
+        if self.request.kind!='role_turn':raise ValueError('role audit needs original turn')
+        if (self.phase=='completed')!=(self.reply is not None):raise ValueError('completed audit requires exact public reply')
+        if self.reply is not None and (self.reply.kind!='role_reply' or self.reply.session_id!=self.request.session_id or self.error_code is not None):raise ValueError('invalid role audit reply')
+        wire=[{'role':m.role,'content':m.content,**({'tool_call_id':m.tool_call_id} if m.tool_call_id is not None else {})} for m in self.prompt_messages]
+        if digest(wire)!=self.prompt_hash:raise ValueError('role audit prompt hash mismatch')
+        if len({a.attempt_id for a in self.attempts})!=len(self.attempts):raise ValueError('duplicate role model attempt')
+        if any(a.request_id!=self.request.object_id for a in self.attempts):raise ValueError('role attempt request mismatch')
+        refs=[r.share for r in self.received_shares]+[r.product for r in self.received_shares]+[m.fragment.ref for m in self.memories]+[r.ref for r in self.used_sources]
+        if any(r.session_id!=self.request.session_id for r in refs):raise ValueError('cross-session role audit')
+        return self
+
 class RoleContext(V2):
+    # Internal only. Ordinary read/view/replay must never return this carrier.
+    generation_audit: RoleGenerationAudit | None = None
     session_id: Identifier
     role_id: Identifier
     as_of: VersionPoint

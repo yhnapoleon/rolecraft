@@ -11,6 +11,8 @@ def public_models():
     return dict(sorted(models.items()))
 
 REQUEST_MODELS={
+ 'turns.display':'ObjectRead',
+ 'feedback.records.read':'ResourcePage','feedback.responses.create':'FeedbackResponseCreate','feedback.responses.read':'ResourcePage','feedback.responses.list':'ResourcePage',
  'work_items.batch':'TaskBatch','work_products.adopt':'ProductAdopt',
  'requests.read':'RequestResultQuery','actions':'ActionInput','tests.create':'TestRequestV2','tests.list':'ResourcePage',
  'turns.create':'TurnInput','submissions.create':'SubmitInput','submissions.list':'ResourcePage',
@@ -20,6 +22,7 @@ REQUEST_MODELS={
  'work_products.create':'ProductCreate','work_products.list':'ResourcePage',
  'work_products.versions.create':'ProductEdit','work_products.versions.list':'ResourcePage',
  'work_products.shares.create':'ShareCreate','work_products.shares.change':'ShareUpdate',
+ 'work_products.shares.list':'ResourcePage','workspace_imports.read':'ResourcePage','workspace_imports.list':'ResourcePage',
  'workspace_imports':'WorkspaceImport','reviews.create':'ReviewInput','reviews.read':'ResourcePage',
  'revision_cycles':'BeginRevisionInput','observation':'ResourcePage','tools':'ResourcePage',
  'delegations.create':'DelegationInput','delegations.revoke':'DelegationRevoke',

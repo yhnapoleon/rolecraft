@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "id": "pm_pilot",
-  "revision": "2.8.0",
+  "revision": "2.9.0",
   "structure_id": "index_scope_resource_dependency",
   "files": [
     {
@@ -25,13 +25,13 @@
     {
       "schema_version": 2,
       "path": "locale.json",
-      "sha256": "1e5d91254dafd7b74a7b5e39be85555b62b92d69059cb01a96172555b58b4ddf",
+      "sha256": "2b4376df62767517dd5bf3572dbc8cf44d5d4534bf31771a0f9ca3fecd9392d2",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "materials.json",
-      "sha256": "e0e4b72a744b13080371d6b64b279f8486d61f75d696b32bfa584a7e541f5f67",
+      "sha256": "a5df49e985fe4e69a159fcc46b327ead78f102db558c4dcc186d7e7d1569fb96",
       "media_type": "application/json"
     },
     {
@@ -163,7 +163,7 @@
     {
       "schema_version": 2,
       "path": "materials/trial_details-v1.md",
-      "sha256": "b0f6e738df36162eee1c118e7dd486e88dcb29b0eaee3ca9f9a9effc9d572d9f",
+      "sha256": "d96f2a714510a1ad772d25ececc88052eac16f8311605183f464a2372230d7cc",
       "media_type": "text/markdown"
     },
     {
@@ -193,7 +193,7 @@
     {
       "schema_version": 2,
       "path": "research/public-case-records.json",
-      "sha256": "9f7cf9e7c639a805561b6eeaeae6439b1f70edb1ac3ad77502b8134231148919",
+      "sha256": "ff4ed00d3f6640f560f29de5eae7c0c36e59be1b7cb71a1a3566e564238106ad",
       "media_type": "application/json"
     },
     {
@@ -217,7 +217,7 @@
     {
       "schema_version": 2,
       "path": "runtime/bundle.json",
-      "sha256": "460359661d7b39ab599f5c881b5d3c919639df1911d32c4e42099189e92d1977",
+      "sha256": "d4c581b19678923629bdfe17c27f3e1ad485061d50e12c6e4bd82b37535049fd",
       "media_type": "application/json"
     },
     {
@@ -253,7 +253,7 @@
     {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "06c9e027eef6dbc20f95606fe69dbc01aa53f57bd8ced0c08841f15b422b8fbf",
+      "sha256": "902ca9cc3d7f42baccf3e6b25208bddaa07f88daf02e773fecc659e10b059e26",
       "media_type": "application/json"
     },
     {
@@ -265,7 +265,7 @@
     {
       "schema_version": 2,
       "path": "scenario.yaml",
-      "sha256": "71acdbc3c65c8791ce5cbe5d3d248d2368c291fb3e75270bd541a3453e479b5d",
+      "sha256": "3c63fc5f0169f466012ad47dc6b284d760f53222020e00d68b39ff05d41093aa",
       "media_type": "application/json"
     }
   ],

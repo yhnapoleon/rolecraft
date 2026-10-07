@@ -1,3 +1,8 @@
+"""Read projections used by Gateway; execute is retained for historical fixtures.
+
+Formal role reads use the common read_shared_product boundary. Mutable sharing
+state is projected at read time and never written into historical product bodies.
+"""
 from career_lab.contracts.v2.core import AuthContext, Command, ProtocolError, PageRequest
 from career_lab.contracts.v2.workspace import ProductShare
 from career_lab.contracts.v2.workspace import WorkspaceImport
@@ -31,11 +36,21 @@ class WorkspaceService:
         return self.repository.execute(auth, command, handle)
 
     def get_product(self, auth, oid, version=None):
-        return self.repository.read(auth, lambda snap: self._product_output(auth,visible_product(snap,auth,oid,version).content))
+        return self.repository.read(auth, lambda snap: self._product_output(auth,visible_product(snap,auth,oid,version).content,snap))
 
     @staticmethod
-    def _product_output(auth, content):
-        if auth.actor_id == 'learner': return content
+    def _product_output(auth, content, snapshot):
+        if auth.actor_id == 'learner':
+            current = [r for r in snapshot.heads('share') if r.content['product']['object_id']==content['product_id']
+                       and r.content['product']['version']==content['version']]
+            active = [r for r in current if r.content['revoked_at'] is None]
+            value = {**content, 'shares':[r.ref.model_dump(mode='json') for r in current]}
+            # visibility describes this exact version. Page-level share records
+            # also expose active sharing of older versions of the same product.
+            if active: value['visibility'] = 'shared'
+            elif snapshot.shares_complete: value['visibility'] = 'private'
+            else: value['visibility'] = None
+            return value
         # Import provenance includes unsaved drafts and unshared old versions.
         return {**content, 'legacy':None, 'shares':[]}
 
@@ -63,14 +78,21 @@ class WorkspaceService:
                     else:
                         object_scope(auth,obj.ref.object_id,snap)
                         if auth.actor_id!='learner': continue
-                    visible.append(self._product_output(auth,obj.content) if obj.ref.kind=='product' else obj.content)
+                    visible.append(self._product_output(auth,obj.content,snap) if obj.ref.kind=='product' else obj.content)
                 except ProtocolError as error:
                     if error.status!=404: raise
             if kind=='task': visible.sort(key=lambda x:(x['priority'],x['order'],x['id']))
             if kind=='versions': visible.sort(key=lambda x:x['version'])
             end=page.cursor+page.limit
-            return {'items':visible[page.cursor:end], 'next_cursor':end if end<len(visible) else None,
-                    'as_of':snap.point.model_dump(mode='json')}
+            result = {'items':visible[page.cursor:end], 'next_cursor':end if end<len(visible) else None,
+                      'as_of':snap.point.model_dump(mode='json')}
+            if kind in {'product','versions'} and auth.actor_id == 'learner':
+                ids = {item['product_id'] for item in result['items']}
+                result['shares'] = [r.content for r in snap.heads('share') if r.content['product']['object_id'] in ids]
+                result['sharing_complete'] = snap.shares_complete
+                from career_lab.contracts.v2.workspace import WorkspaceProductPage
+                result=WorkspaceProductPage.model_validate(result).model_dump(mode='json')
+            return result
         return self.repository.read(auth,query)
 
 

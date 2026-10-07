@@ -3,8 +3,8 @@
   "locale": "zh",
   "source_kind": "actual_deterministic_module_run_on_synthetic_scenario",
   "story_phase": "before_pm_handoff",
-  "captured_at": "2026-10-07T07:54:56.582245+00:00",
-  "input_bundle_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
+  "captured_at": "2026-10-07T10:05:01.620805+00:00",
+  "input_bundle_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
   "executor": "system:w02-pre-event-recorder",
   "http_or_human_trial": false,
   "expected_answers_included": false,
@@ -139,7 +139,7 @@
         "query": "会议室预约入口在什么地方",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T07:54:56.583088Z",
+          "executed_at": "2026-10-07T10:05:01.621571Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -301,8 +301,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
-        "created_at": "2026-10-07T07:54:56.583088+00:00",
+        "scenario_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
+        "created_at": "2026-10-07T10:05:01.621571+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -475,7 +475,7 @@
         "query": "我的账号密码忘记了，需要重置",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T07:54:56.584005Z",
+          "executed_at": "2026-10-07T10:05:01.622536Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -637,8 +637,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
-        "created_at": "2026-10-07T07:54:56.584005+00:00",
+        "scenario_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
+        "created_at": "2026-10-07T10:05:01.622536+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -811,7 +811,7 @@
         "query": "入职账号没有开通通知该怎么办",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T07:54:56.584873Z",
+          "executed_at": "2026-10-07T10:05:01.623466Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -973,8 +973,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
-        "created_at": "2026-10-07T07:54:56.584873+00:00",
+        "scenario_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
+        "created_at": "2026-10-07T10:05:01.623466+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1147,7 +1147,7 @@
         "query": "设备坏了想报修应该提供哪些信息",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T07:54:56.585721Z",
+          "executed_at": "2026-10-07T10:05:01.624369Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -1270,8 +1270,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
-        "created_at": "2026-10-07T07:54:56.585721+00:00",
+        "scenario_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
+        "created_at": "2026-10-07T10:05:01.624369+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1442,7 +1442,7 @@
         "query": "出差住宿报销一晚能报多少",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T07:54:56.586564Z",
+          "executed_at": "2026-10-07T10:05:01.625331Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -1604,8 +1604,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
-        "created_at": "2026-10-07T07:54:56.586564+00:00",
+        "scenario_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
+        "created_at": "2026-10-07T10:05:01.625331+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1778,7 +1778,7 @@
         "query": "出差出租车单程报销上限",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T07:54:56.587516Z",
+          "executed_at": "2026-10-07T10:05:01.626363Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -1940,8 +1940,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
-        "created_at": "2026-10-07T07:54:56.587516+00:00",
+        "scenario_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
+        "created_at": "2026-10-07T10:05:01.626363+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -2114,7 +2114,7 @@
         "query": "今天餐费报销每天按什么额度",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T07:54:56.588487Z",
+          "executed_at": "2026-10-07T10:05:01.627347Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -2276,8 +2276,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
-        "created_at": "2026-10-07T07:54:56.588487+00:00",
+        "scenario_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
+        "created_at": "2026-10-07T10:05:01.627347+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -2450,7 +2450,7 @@
         "query": "计划性请假提交申请需要提前多久",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T07:54:56.589473Z",
+          "executed_at": "2026-10-07T10:05:01.628337Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -2612,8 +2612,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
-        "created_at": "2026-10-07T07:54:56.589473+00:00",
+        "scenario_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
+        "created_at": "2026-10-07T10:05:01.628337+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -2783,7 +2783,7 @@
         "query": "国内出差住宿每晚的报销上限",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T07:54:56.590451Z",
+          "executed_at": "2026-10-07T10:05:01.629405Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -2900,8 +2900,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
-        "created_at": "2026-10-07T07:54:56.590451+00:00",
+        "scenario_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
+        "created_at": "2026-10-07T10:05:01.629405+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -3072,7 +3072,7 @@
         "query": "国内出差住宿每晚的报销上限",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T07:54:56.591443Z",
+          "executed_at": "2026-10-07T10:05:01.630399Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -3237,8 +3237,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
-        "created_at": "2026-10-07T07:54:56.591443+00:00",
+        "scenario_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
+        "created_at": "2026-10-07T10:05:01.630399+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -3411,7 +3411,7 @@
         "query": "国内出差住宿每晚的报销上限",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T07:54:56.592511Z",
+          "executed_at": "2026-10-07T10:05:01.631401Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -3534,8 +3534,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
-        "created_at": "2026-10-07T07:54:56.592511+00:00",
+        "scenario_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
+        "created_at": "2026-10-07T10:05:01.631401+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -3706,7 +3706,7 @@
         "query": "海王星大气的主要成分",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-07T07:54:56.593581Z",
+          "executed_at": "2026-10-07T10:05:01.632379Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -3829,8 +3829,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "d00e898ee3d9d81508fbaac8d7f4fe7905a39b605ad00b65a3f52b9a7ff84487",
-        "created_at": "2026-10-07T07:54:56.593581+00:00",
+        "scenario_hash": "7f28a93042399928025bcb9806eed9cb2c8963e11cfb56619d44a8a8c78a352f",
+        "created_at": "2026-10-07T10:05:01.632379+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,

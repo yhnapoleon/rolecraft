@@ -745,7 +745,7 @@
       "canonical_record_id": "pm_pilot:trial_details@1",
       "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:trial_details@1",
       "path": "materials/trial_details-v1.md",
-      "sha256": "b0f6e738df36162eee1c118e7dd486e88dcb29b0eaee3ca9f9a9effc9d572d9f"
+      "sha256": "d96f2a714510a1ad772d25ececc88052eac16f8311605183f464a2372230d7cc"
     }
   ],
   "reference_contract": "Offsets and source hashes belong to this locale bundle. Static fact source seq0 is an authoring placeholder; use authoritative material_activation and runtime projection.",

@@ -4,12 +4,16 @@ from career_lab.contracts.v2 import Command, ProtocolError
 from .modules import SessionAccess
 
 ROUTES=[
+ ('POST','/turns/display','turns.display'),
+ ('GET','/feedback-records/{feedback_id}','feedback.records.read'),
+ ('POST','/feedback/{feedback_id}/responses','feedback.responses.create'),('GET','/feedback/{feedback_id}/responses','feedback.responses.list'),('GET','/feedback-responses/{response_id}','feedback.responses.read'),
  ('POST','/work-items/batch','work_items.batch'),('POST','/work-products/{product_id}/adoption','work_products.adopt'),
  ('GET','/work-items','work_items.list'),('POST','/work-items','work_items.create'),
  ('PATCH','/work-items/{item_id}','work_items.update'),
  ('GET','/work-products','work_products.list'),('POST','/work-products','work_products.create'),
  ('GET','/work-products/{product_id}/versions','work_products.versions.list'),('POST','/work-products/{product_id}/versions','work_products.versions.create'),
  ('POST','/work-products/{product_id}/shares','work_products.shares.create'),('POST','/work-products/{product_id}/shares/{share_id}','work_products.shares.change'),
+ ('GET','/work-products/{product_id}/shares','work_products.shares.list'),('GET','/workspace-imports','workspace_imports.list'),('GET','/workspace-imports/{import_id}','workspace_imports.read'),
  ('POST','/workspace-imports','workspace_imports'),('POST','/reviews','reviews.create'),('GET','/reviews/{review_id}','reviews.read'),
  ('POST','/revision-cycles','revision_cycles'),('GET','/observation','observation'),('GET','/tools','tools'),
  ('POST','/delegations','delegations.create'),('DELETE','/delegations/{delegation_id}','delegations.revoke'),

@@ -13,7 +13,7 @@ from .case_records import render_public_cases, render_case_details, validate_pub
 from .localization import require_locale, metadata as locale_metadata, text, runtime_source_files
 
 
-def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, calibration=None, scenario_id="pm_pilot", revision="2.8.0"):
+def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, calibration=None, scenario_id="pm_pilot", revision="2.9.0", private_diagnostic=None):
     from .variants import material_definitions, resources, practice_paths
     require_locale(locale)
     min_score=.35 if locale=="zh" else english_min_score
@@ -63,6 +63,8 @@ def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, c
         if case_records is not None:
             definition["known_materials"]=(*definition["known_materials"],"failures","trial_details")
         role=definition["id"]
+        if scenario_id!="pm_pilot" and role in {"supervisor","tech_lead"}:
+            definition["known_facts"]=(*definition["known_facts"],"draft_participants","draft_launch_day")
         overrides={}
         if role=="tech_lead":
             overrides["retrieval_probe_query"]=policies["tech_summary"]
@@ -150,6 +152,9 @@ def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, c
     if case_records is not None:
         validate_public_cases(case_records,initial,materials,{"faq","onboarding","policy","meal","leave"},locale=locale)
         put("research/public-case-records.json",case_records)
+    if private_diagnostic is not None:
+        if private_diagnostic.get("locale")!=locale:raise ValueError("diagnostic locale mismatch")
+        put("research/private-diagnostic.json",private_diagnostic)
     locale_info=locale_metadata(locale,materials,facts,material_files,files,min_score,scenario_id=scenario_id)
     put("locale.json",locale_info)
     if calibration is not None:

@@ -709,7 +709,7 @@
       "canonical_record_id": "pm_pilot:tech_private@1",
       "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:tech_private@1",
       "path": "materials/tech_private-v1.md",
-      "sha256": "f2798d13bd48f3eda85d81ebe4b2635a309cf00b0958bdb1e4e7fa9bb47068b9"
+      "sha256": "88cfa90b7080a450b1975744aa60d9e46dd06ab22c6082c1063d521e4c74051e"
     },
     {
       "id": "tech_diagnostics",
@@ -718,7 +718,7 @@
       "canonical_record_id": "pm_pilot:tech_diagnostics@1",
       "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:tech_diagnostics@1",
       "path": "materials/tech_diagnostics-v1.md",
-      "sha256": "f47912df47e8d660cd94e91ccd0db41c555d1fbbb4e31ea9718bb41028ec3757"
+      "sha256": "b17e99f786664e4105e01fde3e251a65f0715016359cae11900175dcd0ed6b52"
     },
     {
       "id": "world_private",
@@ -745,7 +745,7 @@
       "canonical_record_id": "pm_pilot:trial_details@1",
       "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:trial_details@1",
       "path": "materials/trial_details-v1.md",
-      "sha256": "5da8955a9f84967fb9d8b3f1747be466eaa1891b790aa4f1d9c94e810e84d69c"
+      "sha256": "e4cfe0846cb846fe93ade0d517258d3c0261f848d4b04ffac94ff6758ae48f29"
     }
   ],
   "reference_contract": "Offsets and source hashes belong to this locale bundle. Static fact source seq0 is an authoring placeholder; use authoritative material_activation and runtime projection.",

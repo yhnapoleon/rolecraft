@@ -45,6 +45,11 @@ def validate_reference(snapshot: Snapshot, auth: AuthContext, ref: ObjectRef,
 
 
 def visible_product(snapshot: Snapshot, auth: AuthContext, oid: str, version: int | None = None):
+    """Learner lookup plus historical fixture role filtering.
+
+    Formal role source reads use V2Store.read_shared_product; its current-share
+    authorization must not be replaced with this fixture-side branch.
+    """
     object_scope(auth, oid, snapshot)
     if auth.actor_id == 'learner':
         return snapshot.get('product', oid, version)
@@ -256,6 +261,19 @@ def handle(snapshot: Snapshot, auth: AuthContext, command: Command, now: datetim
             product = product.model_copy(update={'adoption': old.adoption})
         product = product.model_copy(update={'removed_at': (old.removed_at or now) if p.removed else None})
         writes = (stored(snapshot, 'product', product.product_id, product.version, product, product_dependencies(product)),)
+        if p.removed and snapshot.removal_cascade != 'current_product_only':
+            # Without the trusted transaction cascade, a filtered view cannot
+            # prove every share was revoked. Legacy fixture behavior stays local.
+            # A filtered view cannot prove that every active share was revoked.
+            # shares_complete is never upgraded by a removal authorization.
+            if not snapshot.shares_complete:
+                raise ProtocolError('share_scope_incomplete', status=403)
+            for record in snapshot.heads('share'):
+                share = ProductShare.model_validate(record.content)
+                if share.product.object_id != product.product_id or share.revoked_at is not None:
+                    continue
+                revoked = share.model_copy(update={'version':share.version + 1, 'revoked_at':snapshot.next_point})
+                writes += (stored(snapshot, 'share', share.id, revoked.version, revoked, (share.product,)),)
     elif op == 'work_products.shares.create':
         p = ShareCreate.model_validate(data); object_scope(auth, p.product_id, snapshot)
         if p.recipient_role not in snapshot.roles:

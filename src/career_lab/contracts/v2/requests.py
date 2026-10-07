@@ -47,6 +47,9 @@ class ShareUpdate(V2):
     expected_revision: PositiveInt
     operation: Literal['revoke','restore']
 class ResourcePage(PageRequest):
+    feedback_id: Identifier | None = None
+    response_id: Identifier | None = None
+    import_id: str | None = None
     product_id: str | None = None
     review_id: str | None = None
     submission_id: str | None = None
@@ -65,6 +68,18 @@ class ReviewInput(V2):
     purpose: str
     scope: tuple[str,...]
     question: str = ''
+    decision: Literal['launch','launch_narrow','defer_with_conditions','no_go'] | None = None
+    followup_of: tuple[ObjectRef,...] = ()
+
+class FeedbackResponseCreate(V2):
+    feedback_id: Identifier
+    feedback_version: PositiveInt
+    kind: Literal['objection','supplement']
+    section: Literal['general','verified_facts','historical_responsibilities','rule_items','model_advice'] = 'general'
+    criterion: Identifier | None = None
+    text: Annotated[str,Field(min_length=1,max_length=12000)]
+    evidence: tuple[EvidenceRefV2,...] = ()
+
 class TurnInput(V2):
     role_id: Identifier
     text: Annotated[str,Field(min_length=1,max_length=4000)]

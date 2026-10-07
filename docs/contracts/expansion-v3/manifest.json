@@ -4,7 +4,10 @@
     "This is W01 common foundation, not implemented W02-W15 business modules.",
     "v4 semantic engine, paid provider/model quality, full product QA and research results are not claimed.",
     "Existing v1 remains separate; internal snapshot/restore never appears in learner routes.",
-    "W02 runtime is still pinned to r3; controlled source-port regressions do not close actual ScenarioModule HTTP acceptance. Consumers must migrate through coordinator-fixed inputs."
+    "W02 owned b821 remains exact c2; coordinator rebind required for cumulative business runtime. W03 owner must adopt removal_cascade port for restricted removals; role private generation and native UI remain pending.",
+    "W05 evaluator-to-trusted-source adapter and native feedback UI remain pending. Controlled persistence tests do not prove actual production history or model quality.",
+    "Role snapshot tests use controlled catalogs/audits. No production private writer, failure-attempt sink, event-reference persistence or full role generation is claimed.",
+    "Successful generation checks use controlled non-network models and catalog. W04 new private-ID fix and real business cumulative acceptance are still required; no production activation implied."
   ],
   "changes_since_draft": [
     "Command.schema_version and CreateSessionV2.schema_version are now required for explicit envelopes.",
@@ -63,7 +66,12 @@
       "TaskBatch",
       "ImportConflict",
       "ImportVersionMap",
-      "PublicTransactionResult"
+      "PublicTransactionResult",
+      "ImportedTaskSource",
+      "WorkspaceImportReceipt",
+      "WorkspaceProductRead",
+      "WorkspaceProductPage",
+      "WorkspaceSharePage"
     ],
     "W04": [
       "RoleContext",
@@ -82,6 +90,10 @@
       "ActualConsumption",
       "PublicDisclosureSource",
       "PublicDisclosureRecord",
+      "RoleAuditScope",
+      "RoleAuditReceivedShare",
+      "RoleAuditMemory",
+      "RoleGenerationAudit",
       "JobRefreshRecord"
     ],
     "W05": [
@@ -98,6 +110,16 @@
       "TerminalEvaluation",
       "JobRequest",
       "JobEnvelope",
+      "FeedbackReadBoundary",
+      "FeedbackReferenceCheck",
+      "FeedbackActivity",
+      "FeedbackActivityCount",
+      "FeedbackActivityWindow",
+      "VerifiedFactsSnapshot",
+      "HistoricalResponsibilityFinding",
+      "HistoricalResponsibilitiesSnapshot",
+      "FeedbackResponseRecord",
+      "FeedbackResponseCreate",
       "JobRefreshRecord"
     ],
     "W06": [
@@ -111,6 +133,8 @@
       "Command",
       "JobEnvelope",
       "ResourcePage",
+      "DelegationJobCapacity",
+      "OperationAvailability",
       "StepResult",
       "ObservedFragment",
       "PublicState",
@@ -140,7 +164,9 @@
       "ExternalReference",
       "ObservedFragment",
       "ActualConsumption",
-      "ProviderReceipt"
+      "ProviderReceipt",
+      "DatasetMetadataV2",
+      "DatasetSnapshotMetadata"
     ],
     "W08": [
       "ModelBundle",
@@ -155,7 +181,9 @@
       "ProviderReply",
       "ProviderResult",
       "ProviderCapabilities",
-      "ProviderReceipt"
+      "ProviderReceipt",
+      "DatasetMetadataV2",
+      "DatasetSnapshotMetadata"
     ],
     "W09": [
       "ActionProposal",
@@ -244,7 +272,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "dbcf5552c61e4527b3f4137023294b163b560c2a3680ed47a85c796eed7a2cfa"
+      "sha256": "a1115dfc12f6c9482a542249b9395b0d091a042ada9e49ef188d337e5c93a971"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -252,25 +280,48 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "f27dd712b1b8e352d28526311c079533cbaf802603fc2fc30b921224842192a1"
+      "sha256": "4f13e172e8193ce899ed9e23185344ab66a3d4d3caf636c6e58a07f8e4706731"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "1c97e45724fde66f0a0a3a358c76fd4e6f81c619162133544d9c78af38381316"
+    "sha256": "3628c2eb5f2bf70513893f36eb03dff95e15f0c9e2c46ba53e6782b384810141"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
+    "031-C8-01": "Store read/query/view/job-view and cached request/replay share feedback subject authorization and transient support projection; hidden quote/title/ID/derived prose removed; original records unchanged.",
     "W02-S06": "Opt-in contextual resolver gets authoritative persisted-window ScenarioState; legacy four-argument behavior retained.",
     "W02-S07": "Verified command/result references are atomically anchored for read-request recovery.",
-    "W03-GR02-partial": "Validated LegacyProvenance.raw remains inert during reference/time traversal; receipt and preview interfaces remain pending."
+    "W02-projector-registration": "Conflicting declared public action/projector registrations are rejected before installation.",
+    "W03-GR02-partial": "Validated LegacyProvenance.raw remains inert during reference/time traversal; receipt and preview interfaces remain pending.",
+    "W03-common-import-sharing": "Read-only import preview and atomic receipt; operation-local reference checks; exact-version share pages; trusted removal cascade without scope expansion; queued share reads rechecked.",
+    "W03-product-cycle-replay": "Only an exact saved authorized product DTO cycle field is structural metadata. Explicit cycle sources, direct cycle objects and unproven DTOs retain scope checks; no scope grant is widened.",
+    "W04-S02-P0": "Legacy role_reply audit fields are denied to learner/Agent on common reads and replay; new public spoken evidence remains readable; research audit preserves history. No role generation activation is implied.",
+    "W04-fixed-role-read": "Private audit DTOs and exact recorded job-window role projection; receipt/source history checked; ordinary view has no authority; private generation sink/activation still unavailable.",
+    "W04-private-reply-whitelist": "Public/historical RoleReply fields are restricted to the pinned public DTO regardless of permissive registrations; private carrier and unknown fields remain unreadable to learner/Agent.",
+    "W04-private-writer": "Actual worker-bound private port, atomic public reply/private audit, fenced internal attempt journal, original Agent attribution without scope expansion; factory stays closed by default pending repaired W04 input.",
+    "W05-W03-remapping": "FeedbackResponseCreate.feedback_id and ResourcePage feedback/response/import identities remap by declared kind, leaving text and historical opaque provenance unchanged.",
+    "W05-factual-persistence": "Optional typed factual/history/rule sections persist in FeedbackV2; legacy absent means not recorded. Exact feedback follow-ups append immutable objects without changing submitted/paused business state; new reviews link prior responses and explicit decisions.",
+    "W06-native-queue-capacity": "Native session-v2 enqueue/failed retry and V2Store share the same credential lock, SQL active-job count and persisted policy; idempotent replay does not reserve again; legacy v1 unchanged.",
+    "W06-public-queue-capacity": "Persisted per-credential 1–2 job policy; existing jobs counted in locked transactions for public enqueue/refresh, not process memory. Native repository enqueue/failed retry still requires coordinator scope release.",
+    "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.",
+    "W07-W08-empty-joint-target": "Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.",
+    "W07-W08-semantic-consensus": "Only independent-pass consensus uses semantic_decision_key; G2/G2v final remains bound by the full normalized decision_key to the actual selected pass.",
+    "authoritative-segment-traces": "A declared trace always constrains text hash and complete dependencies, including cited explanations and history; visible citations do not bypass it. The most-specific complete trace is authoritative for a field.",
+    "feedback-segment-scope": "Server-only complete input traces bind exact content hashes and dependencies per segment; fully authorized finite-scope readers retain proved text, missing or hidden dependencies degrade only affected parts.",
+    "native-runtime-slice": "One standard API/worker assembly; native investigation, assistant trials, resource decisions and colleague slots. Explicit failed-job refresh, no automatic model retry including expired leases, exact historical public event/source reads, real material activation in recovered role provenance. W05 r9 production evidence, atomic feedback and native callbacks are assembled with frozen advisory policies; W03 native composition remains pending.",
+    "operation-readiness": "Installed and ready are distinct; closed registered operations return stable unavailable before public dispatch. Auth/delegation capabilities remain independent.",
+    "original-source-protection": "test_freeze enumerates only BASE existing scenarios; no v2 baseline rewrite and no test exclusion needed.",
+    "recursive-public-reply-validation": "Fixed RoleReply DTO validates the entire JSON tree independently of permissive registrations; nested private metadata is rejected on write and historical public reads.",
+    "role-event-references": "Actual event provenance is scope/audience/window validated and remapped in the event namespace; no parallel event store.",
+    "submitted-evidence-status": "New response evidence is explicitly user_submitted_unverified (or none_submitted); legacy absence stays unknown. Linking never claims quote or semantic verification."
   },
   "openapi": {
     "path": "openapi.json",
-    "sha256": "8f10baf8552832ef7bf19c29f1d6aca01ba84d758339271bb34e657003bdf47d"
+    "sha256": "180f363a91fec265cf92642db4a59108857b5d7f241013a998e9030300b16968"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-2e4b5f05138ae995320db1ae21ca6f5d7a8d63bf5ec3e19346a088510cb0515c",
+  "previous_contract_revision": "expansion-v3-e17e102c1dc0c7755dbaf6828d18ca17ad7a3c4485dc2fa25e90c4dd8f9211aa",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -281,6 +332,10 @@
     "evidence.read": "EvidenceRead",
     "feedback.create": "FeedbackInput",
     "feedback.read": "ResourcePage",
+    "feedback.records.read": "ResourcePage",
+    "feedback.responses.create": "FeedbackResponseCreate",
+    "feedback.responses.list": "ResourcePage",
+    "feedback.responses.read": "ResourcePage",
     "materials.list": "ResourcePage",
     "observation": "ResourcePage",
     "requests.read": "RequestResultQuery",
@@ -294,6 +349,7 @@
     "timeline": "ResourcePage",
     "tools": "ResourcePage",
     "turns.create": "TurnInput",
+    "turns.display": "ObjectRead",
     "work_items.batch": "TaskBatch",
     "work_items.create": "TaskCreate",
     "work_items.list": "ResourcePage",
@@ -303,9 +359,12 @@
     "work_products.list": "ResourcePage",
     "work_products.shares.change": "ShareUpdate",
     "work_products.shares.create": "ShareCreate",
+    "work_products.shares.list": "ResourcePage",
     "work_products.versions.create": "ProductEdit",
     "work_products.versions.list": "ResourcePage",
-    "workspace_imports": "WorkspaceImport"
+    "workspace_imports": "WorkspaceImport",
+    "workspace_imports.list": "ResourcePage",
+    "workspace_imports.read": "ResourcePage"
   },
   "review_fixes": {
     "031-W01-REPLAY-SCOPE-01": "execute, replay and request/job GET share current scope and visibility checks, including historical result-only/unanchored references; no handler/resolver rerun.",
@@ -691,15 +750,45 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "DatasetMetadataV2": {
+      "consumers": [
+        "W07",
+        "W08"
+      ],
+      "example": "examples/DatasetMetadataV2.json",
+      "example_sha256": "9ee647458cd79427a2fdd20e7d0561fd2ddedbbe9a510a36f2dbbc51057a55d9",
+      "owner": "W01",
+      "schema": "schemas/DatasetMetadataV2.json",
+      "schema_sha256": "cff632f9ec60bd28ff7b87613560a4f9912799416516e9e97b3024d4f1d8308a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "DatasetRecordV2": {
       "consumers": [
         "W07"
       ],
       "example": "examples/DatasetRecordV2.json",
-      "example_sha256": "d095c2cd4b123341ee2693ce7a0a528d15ed14279775fe9f032adfedb7e4f776",
+      "example_sha256": "2e31013d19f70d2bd3d9940b74e4b2f2f1e450fef6844f336ef66a8938da64c9",
       "owner": "W01",
       "schema": "schemas/DatasetRecordV2.json",
-      "schema_sha256": "2b9274fc31b5f6f6c98f2ee626413eba5bb783c707f63139bdee4ee91fba238b",
+      "schema_sha256": "3da95ef9ab471adf620598c76fe9bd4d4700a706478071cd4401b7b7b5acb15b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DatasetSnapshotMetadata": {
+      "consumers": [
+        "W07",
+        "W08"
+      ],
+      "example": "examples/DatasetSnapshotMetadata.json",
+      "example_sha256": "6971cea2989dbd1f55f98e60ec765569a2f92a036549ef1b942a13376c20c01c",
+      "owner": "W01",
+      "schema": "schemas/DatasetSnapshotMetadata.json",
+      "schema_sha256": "c633b4d580b3455535ccec5940e2bdd5958d403eebd4b69d93755d886893a025",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -784,6 +873,20 @@
       "owner": "W01",
       "schema": "schemas/DelegationInput.json",
       "schema_sha256": "93cc53b897006c9263cc4af0efefe0375df515d088ed8a833174967500db644a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DelegationJobCapacity": {
+      "consumers": [
+        "W06"
+      ],
+      "example": "examples/DelegationJobCapacity.json",
+      "example_sha256": "a107bbddd7217e74a8dfad2eae7b3b6cea9229eec5104bcad8097dbb6790ee43",
+      "owner": "W01",
+      "schema": "schemas/DelegationJobCapacity.json",
+      "schema_sha256": "ed2c85705eb363bf90ffe96bc3075f1e8527af1d057752780ccf4141ef24be89",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1032,6 +1135,48 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "FeedbackActivity": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackActivity.json",
+      "example_sha256": "2327bb8970dae4f856430b696010a66a5c2b9112455eaf46fd1778b5995c5662",
+      "owner": "W01",
+      "schema": "schemas/FeedbackActivity.json",
+      "schema_sha256": "e4d7f922ed681969276ac5601b3a10aca8ff418027a18cfbfe822bb1d6a77723",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FeedbackActivityCount": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackActivityCount.json",
+      "example_sha256": "79fe702939a2608af1794b46b60c74549584d5c91aae2694cd8d6302aa73098a",
+      "owner": "W01",
+      "schema": "schemas/FeedbackActivityCount.json",
+      "schema_sha256": "1fe3dc6773cad1c468ef19b94d834788c6f3a4b0267b55330df847df607ec7f4",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FeedbackActivityWindow": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackActivityWindow.json",
+      "example_sha256": "9c27eb19a446d98fe8a70ec80944e60cedec0d6ae4e0eb690f5c1e7c56b4fe21",
+      "owner": "W01",
+      "schema": "schemas/FeedbackActivityWindow.json",
+      "schema_sha256": "82dc3b718f082c3ed98c8cabe6a30b386f1602e497824fe2193a36538b307f02",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "FeedbackInput": {
       "consumers": [
         "shared-primitive"
@@ -1060,16 +1205,72 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "FeedbackReadBoundary": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackReadBoundary.json",
+      "example_sha256": "496ceec1b311f4e33c09f7330155958d16fb52d727cfb4166fdd82e7480a5d6b",
+      "owner": "W01",
+      "schema": "schemas/FeedbackReadBoundary.json",
+      "schema_sha256": "73ad0f028a1cb7780a12b120eff5dd01d7ca26b065465a214974796fadf736f2",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FeedbackReferenceCheck": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackReferenceCheck.json",
+      "example_sha256": "ddaac0aaab5dd928cca03834c8d81ce23170367fb058357b6858d557c25895a3",
+      "owner": "W01",
+      "schema": "schemas/FeedbackReferenceCheck.json",
+      "schema_sha256": "875f3c0763a57b283dc67c3a354bd6c0089bac13ee4eb524e82620b0bf4289c0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FeedbackResponseCreate": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackResponseCreate.json",
+      "example_sha256": "64c00334721da85efa1bf50ba21a06632f7d0c0f3a13a5f0f9b5f84ac24fed35",
+      "owner": "W01",
+      "schema": "schemas/FeedbackResponseCreate.json",
+      "schema_sha256": "5dead759ddf31268e65d8e2e353e5ddd3a4d6b1b399d073fe73cadfe3c51c957",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FeedbackResponseRecord": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackResponseRecord.json",
+      "example_sha256": "442f7a3e3e5e9a8dc504e6647fbe7087d5e765366a62c8ea0b579db7e1b3ec52",
+      "owner": "W01",
+      "schema": "schemas/FeedbackResponseRecord.json",
+      "schema_sha256": "10f3c881fa6333aac5473ffa81412e5419042f3f7ac725de3828af76c9052c46",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "FeedbackV2": {
       "consumers": [
         "W05",
         "W15"
       ],
       "example": "examples/FeedbackV2.json",
-      "example_sha256": "3d449dd4d996075358b64a5d9ee28f141405a4906179d479671b856747dfa713",
+      "example_sha256": "d801545eb5a4ae55713c934a40ae0feec7c356b7ceb3bb0c11b176d4627e039c",
       "owner": "W01",
       "schema": "schemas/FeedbackV2.json",
-      "schema_sha256": "1d82d93a0479a6abf9183bc95dc51e54a2debc9bf6f210e4eeb2e0482e698aa6",
+      "schema_sha256": "9e42f73b69022676c675172b81afff885b3e4abee0a18b663a51b8bf3f4f7008",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1085,6 +1286,34 @@
       "owner": "W01",
       "schema": "schemas/FileRef.json",
       "schema_sha256": "be951fe618674a09191b9fb7af493092161eb1e6691a6e578d9c11835488cb33",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "HistoricalResponsibilitiesSnapshot": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/HistoricalResponsibilitiesSnapshot.json",
+      "example_sha256": "cdea03e1eacea226d088a9f401425f5033483231078260a1d46e3e1dfdb47256",
+      "owner": "W01",
+      "schema": "schemas/HistoricalResponsibilitiesSnapshot.json",
+      "schema_sha256": "706c5b676517ae213440510bb353dd0c3097183206a8400bf2d18edd8be94778",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "HistoricalResponsibilityFinding": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/HistoricalResponsibilityFinding.json",
+      "example_sha256": "fcfbac417924671fca3422635267b1e1eba7aa8e1d153d34284137782927be34",
+      "owner": "W01",
+      "schema": "schemas/HistoricalResponsibilityFinding.json",
+      "schema_sha256": "b26b1a5ca554f317cd7a1de4b18a389518ca68f694e445167bb0b94739b9ab8a",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1141,6 +1370,20 @@
       "owner": "W01",
       "schema": "schemas/ImportVersionMap.json",
       "schema_sha256": "b0289e2a5f7e1114182ad9c3b1d02742c67065d1819e1ed6139a47c8271284c3",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ImportedTaskSource": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/ImportedTaskSource.json",
+      "example_sha256": "268555da53e98641261fc168ca804528d4217455aca24449910017dd05e15374",
+      "owner": "W01",
+      "schema": "schemas/ImportedTaskSource.json",
+      "schema_sha256": "c63786bb0c8f8102288bbcdd9650158774931bf4b2de047db8d47dd53d2a8729",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1447,6 +1690,20 @@
       "owner": "W01",
       "schema": "schemas/ObservedStep.json",
       "schema_sha256": "d8a1c44e30df2686cc4b89b4198f89c3fb976b0ec125167d82c6b2c5bd189779",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "OperationAvailability": {
+      "consumers": [
+        "W06"
+      ],
+      "example": "examples/OperationAvailability.json",
+      "example_sha256": "8bfe18352ebbd32eb726a6a5af50ab624f34b54ff230c2025382a416b695f134",
+      "owner": "W01",
+      "schema": "schemas/OperationAvailability.json",
+      "schema_sha256": "e4d47cec3736aecd4965418786a65c2459ec203b9035963c59fe1277477442d4",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1845,10 +2102,10 @@
         "W06"
       ],
       "example": "examples/ResourcePage.json",
-      "example_sha256": "a03a667662f3e3034aa88350a312969f0bf9f030c8e05a2ad71529896e290ef0",
+      "example_sha256": "e7835336753626c03332fb2ccb67c2a78a37d96667955e536864c1fb393aa6d1",
       "owner": "W01",
       "schema": "schemas/ResourcePage.json",
-      "schema_sha256": "d575f21dc71b9741f52c1bf191eb388a05156cd4ceb379ae398132347e53b93b",
+      "schema_sha256": "f98375f646cd227b72a1e396270899f139cba5a40359905d05456e0600d94bc8",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1889,10 +2146,10 @@
         "W05"
       ],
       "example": "examples/ReviewInput.json",
-      "example_sha256": "1eae241fd1e17d0ec13d9febef3bba23e538ac2abf0799ac828ad2745be67070",
+      "example_sha256": "b7325612ebadf4f276d849d951c062617cb770f25f2ad322740a3389adc5335a",
       "owner": "W01",
       "schema": "schemas/ReviewInput.json",
-      "schema_sha256": "e9c30b7f35ace9c2591fa5f62f4b1bc3692bf9260cc89844259aae400944154a",
+      "schema_sha256": "9c5e82b76cb250debc93c290093dbd92cdf37ff3e731bf0ad3e0c028db3b283a",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1903,10 +2160,10 @@
         "W05"
       ],
       "example": "examples/ReviewRequest.json",
-      "example_sha256": "f8039a5079cf61022133f234c5924895215781816285d37d3581872667ad5030",
+      "example_sha256": "e948babf62ed6033f3e66f3b4ff4d420d004d2783609347db4dea5b68a8a3bee",
       "owner": "W01",
       "schema": "schemas/ReviewRequest.json",
-      "schema_sha256": "88e99630b2c9383505b4290247d32bec0c036bf49ffaebc75f57ae031544d631",
+      "schema_sha256": "d649522d2b246001a8bfa27f5be050b34633a166128494c4fc3e7b61919c431e",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1926,15 +2183,71 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "RoleAuditMemory": {
+      "consumers": [
+        "W04"
+      ],
+      "example": "examples/RoleAuditMemory.json",
+      "example_sha256": "0b9e1048ac35b7124f58da74c664e7bcdf615c69eaf36478b2a5c6b77fb4c46a",
+      "owner": "W01",
+      "schema": "schemas/RoleAuditMemory.json",
+      "schema_sha256": "1f4bc421d288bb688fce4d5df30a1edc36a5cc6b126385543e68b33e7ea90286",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RoleAuditReceivedShare": {
+      "consumers": [
+        "W04"
+      ],
+      "example": "examples/RoleAuditReceivedShare.json",
+      "example_sha256": "dc4cf567e91bb011259fd9e93b0cade1ca99d95261b3772fe730ec8527ce2b23",
+      "owner": "W01",
+      "schema": "schemas/RoleAuditReceivedShare.json",
+      "schema_sha256": "dad3c5d0553b1c06d4f1329c3e7adc9114652ad788b88688c84ea8173182a10c",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RoleAuditScope": {
+      "consumers": [
+        "W04"
+      ],
+      "example": "examples/RoleAuditScope.json",
+      "example_sha256": "272facc9735d105375153860b72bff66498de611bb25f025f47de7de64f566b2",
+      "owner": "W01",
+      "schema": "schemas/RoleAuditScope.json",
+      "schema_sha256": "d3f7ea64d9f90301258980a8903214625b6096a7579b2a9e4a278a113824889e",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "RoleContext": {
       "consumers": [
         "W04"
       ],
       "example": "examples/RoleContext.json",
-      "example_sha256": "ce361d01d970a2e927ec645f04c9d6f0922d2390aafe06aa78ca2f0c3b959083",
+      "example_sha256": "3700f1fc05c54a445d35b7ad43e14b1a959193862e9a9fc283023736538cb005",
       "owner": "W01",
       "schema": "schemas/RoleContext.json",
-      "schema_sha256": "83b28a552fd5db01636417c8875fbe577609f22e7eabd5b1fc1813a2b0c4fb55",
+      "schema_sha256": "a87fb35745881406acb3a09783a96df064be7389d8593b3b76f55f2d5fd9fdc0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "RoleGenerationAudit": {
+      "consumers": [
+        "W04"
+      ],
+      "example": "examples/RoleGenerationAudit.json",
+      "example_sha256": "7c0c0ca47267018ac9d066cf9090413774d60b37e4bc46af4eb979a1ef25637a",
+      "owner": "W01",
+      "schema": "schemas/RoleGenerationAudit.json",
+      "schema_sha256": "91dc0a0e9f9efa533b82cb68aaf595872d84efe395cc136c5b19bc0713a26ca9",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -2512,6 +2825,20 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "VerifiedFactsSnapshot": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/VerifiedFactsSnapshot.json",
+      "example_sha256": "f15e9e55f7934f419b98fb0ee8fe1b54f3a04d4063d6856250d95b04d4b1f89a",
+      "owner": "W01",
+      "schema": "schemas/VerifiedFactsSnapshot.json",
+      "schema_sha256": "d13a8f3d7ade329428a13dc483153a2db2e511c1c0be31bed4dcf9bb0ddd6a4a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "VersionPoint": {
       "consumers": [
         "shared-primitive"
@@ -2554,6 +2881,62 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "WorkspaceImportReceipt": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/WorkspaceImportReceipt.json",
+      "example_sha256": "723d6b49895757e835d02c964a8511f5c37d3b822e8c99a2c83646c5a8cc5858",
+      "owner": "W01",
+      "schema": "schemas/WorkspaceImportReceipt.json",
+      "schema_sha256": "3718981bf7bf436bfbf516da235def24e8b110ce7b89d9030e4e50a117688e86",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "WorkspaceProductPage": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/WorkspaceProductPage.json",
+      "example_sha256": "42367e30cc275c43d0a3f4175a12faed1d288dceab7044f916a793ee67745959",
+      "owner": "W01",
+      "schema": "schemas/WorkspaceProductPage.json",
+      "schema_sha256": "3ea321fa8681299de3a873a7f282ae2db358e1fc648ebd9b7cec11f273e676bd",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "WorkspaceProductRead": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/WorkspaceProductRead.json",
+      "example_sha256": "6a2e680a5b552bedfe9ad6e59130f2899cd3f222739669ca22d2726497751337",
+      "owner": "W01",
+      "schema": "schemas/WorkspaceProductRead.json",
+      "schema_sha256": "1b95f1585d1643e44ef0acd69aab3300348540761330a82f55e60142fb2bebac",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "WorkspaceSharePage": {
+      "consumers": [
+        "W03"
+      ],
+      "example": "examples/WorkspaceSharePage.json",
+      "example_sha256": "2820b4653e5215b85d8c5dd0485525115c3970900410cac4653f0704de13f65d",
+      "owner": "W01",
+      "schema": "schemas/WorkspaceSharePage.json",
+      "schema_sha256": "c3745534ec742076eb9ad03e1c6a968571c323c3f20b4fed1aba4b68c78bb8c6",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "WorkspaceTask": {
       "consumers": [
         "W03"
@@ -2584,9 +2967,18 @@
     }
   },
   "source_files": {
-    "src/career_lab/api/app.py": "7d91e7e2161014dfadd98c7986dea531ca8a76a859e9172329789a351abc444c",
-    "src/career_lab/api/modules.py": "1a0707255e84e8ef961eef7f52d0d66e00ef46d60de64453ee9da1e36065b553",
-    "src/career_lab/api/v2_routes.py": "2eeb7adfa9dfa368ecc86da9993bac9ce7b5f1602989a4592f6451e84950dab1",
+    "src/career_lab/api/app.py": "d592e6a6d62d7e340730df09ee2b01b82b1347ae385981d993c1c01add5bb370",
+    "src/career_lab/api/evaluation_runtime.py": "a17ad9b0d9ec73618469ba942b158789ab4c45be09f9716aa8f0eee1de1684c1",
+    "src/career_lab/api/feedback_integration.py": "ab0adab1472101b5bfb4bfade4b237f5a918ccdbb47ef1452d887d2c449b66c4",
+    "src/career_lab/api/lifecycle_integration.py": "099f37bdb5b1678f5e3c86ae42c8f6788a2c1ad20f89f7fcaa26a932c5a75066",
+    "src/career_lab/api/modules.py": "3d0bb838ed29718692743b17bc8899d910bef9084d702da9d166f85d63b9787b",
+    "src/career_lab/api/private_roles.py": "e4379b2d4bd8ffac4a20ff648d25464eb59bc53c08fa79777eb15244f8d8f9de",
+    "src/career_lab/api/role_snapshot.py": "d0501a9549c2ca361b26c42a922ee98483a6193dae63b298d8094712150f2d4c",
+    "src/career_lab/api/v2_routes.py": "99decb8eacbce543a685b79286a82ce0671d17b007a6afb1ac91fc7a65f4f143",
+    "src/career_lab/api/vertical_reads.py": "782b3593d86355e4d6505ec9fc0463ceec295aa245e31ab56bfc5fee901e3b78",
+    "src/career_lab/api/vertical_runtime.py": "000b7ec82121569ae2fdeb1fec88b3e48e554b48bff3c0dfad9f2c216bf1e4ec",
+    "src/career_lab/api/workspace_integration.py": "0b731ea27219d49767b72e07b65293edc810eae79872842f8a2459ef863e2604",
+    "src/career_lab/cli.py": "4085c8ce4b0f242734bccb4e4f8a8ac713d7c78ba42a724eea767b115b4469ce",
     "src/career_lab/contracts/__init__.py": "10140c7ad16ce4744487b7e5f3418b726caa52979d662feda985b44986e2d7ac",
     "src/career_lab/contracts/actions.py": "835fbb62979891cbf97d0580e0843c2a8f97b8a8bcc08c8a01afecec36f919ac",
     "src/career_lab/contracts/base.py": "e62af2f4c8d827a994ae7f69d2022d50b5a42581d885348aab070fa407de2a77",
@@ -2594,30 +2986,30 @@
     "src/career_lab/contracts/evaluation.py": "6dc4969cf02222543fa96ddffbd4d9fd19f4813ee1f9b85ea3d193797ac4ea23",
     "src/career_lab/contracts/scenario.py": "b191244dd1356503b153abf3a31921ce7911ec19b66534378b369b35d135e3b0",
     "src/career_lab/contracts/v2/__init__.py": "bcb066dbbe937f00a366d9fd836a1411afef069472cb2c8765988f771bee55e7",
-    "src/career_lab/contracts/v2/core.py": "50e521c7d7ea22d5ec4a60134917fe827361bf898ff8b5d7bf2ab8509ea34ea8",
-    "src/career_lab/contracts/v2/data.py": "cf238959645892d07902b388616ef3cbb0fe6b5c0d2a19e617511066ace53952",
-    "src/career_lab/contracts/v2/discovery.py": "1089a5682cb915ce4f095ec28f65014d88724e4e5a30e1b17a753bb358bc006c",
-    "src/career_lab/contracts/v2/evaluation.py": "c8bc7004d8d14c54f1832eecc227ae45e7fe8492c1b584117ad1f8a372a5c631",
+    "src/career_lab/contracts/v2/core.py": "6dc7ce6ab00d781f8c14f505a7c8f9ef482e8715dee7fb78a2e7ee3da1318fb5",
+    "src/career_lab/contracts/v2/data.py": "bd0888c2937400bf00ceeac53b9e49260040c3782c7cbfaca62d10097841065b",
+    "src/career_lab/contracts/v2/discovery.py": "93cc327208f8e269c57baf3016c09b820a1076d556e60ab40cb04ecc4dbd5db5",
+    "src/career_lab/contracts/v2/evaluation.py": "0697b8f77246da064a43b31596acb12e7943405e6d5ea3b084c376e22dc37307",
     "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
-    "src/career_lab/contracts/v2/export.py": "37809fe682b0a3cc233a994752341600d4bf73ff34e86ca080433b2f14a30120",
+    "src/career_lab/contracts/v2/export.py": "426454a2c9bac4b17847d63fb1cdf0c472656d5c73cf6b29b6f16f718bcebcab",
     "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
     "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
-    "src/career_lab/contracts/v2/projection.py": "8740cf952268d8997610904224db37dcd7ce91886046653b46284be9583062ab",
+    "src/career_lab/contracts/v2/projection.py": "24dd56480f1de6f8489241e9bd4d65cd7bf533427b2dbc91768318f1d733f896",
     "src/career_lab/contracts/v2/provider.py": "8ef69da0f37b0e91ec235ab6ac039b2c81d1be14c7affb1eb8e71dda3c815306",
-    "src/career_lab/contracts/v2/requests.py": "08c7675ba8bb031e7d0e01f220533d727b70e86d1ccc73185590c2e266423452",
+    "src/career_lab/contracts/v2/requests.py": "0bf9ee25aeaba3a21f7d218588a8262ae383524161d0cb6af955e28ac0c3658f",
     "src/career_lab/contracts/v2/research.py": "6319d233b5c1ad6833236bd9c51daf2b7d140d5aaade6853a672b4ad76561629",
-    "src/career_lab/contracts/v2/workspace.py": "6e7a43cad83d29a3e299a5b6bee915744dfdc6d40d1a2ac9cbaf84d0543b1007",
-    "src/career_lab/contracts/v2/world.py": "83d5621f6cfcb8328730d62a51a25d0b9ae6456d71ef6f3ae414122607b1ff0b",
+    "src/career_lab/contracts/v2/workspace.py": "32662a94bb7e728f1def9fdfe11c4570f8f0651afff4fbab8b16f78bfdc6e878",
+    "src/career_lab/contracts/v2/world.py": "afa8e26e1e27200260d61ade7eb987a5ea70a38e99af4cb89e658ad8de6ad03a",
     "src/career_lab/contracts/versioning.py": "da1fc0d7a3bb7b1110cc33d1b7a7f68dcc6dbb8c061f81f3778a113a7ae809fb",
-    "src/career_lab/jobs/repository.py": "8b6bf7dcfe438347670b160f069cb6cfbd0cb8aadbf911b866de6bd4c073128d",
-    "src/career_lab/jobs/worker.py": "75f733c2f7610db49f42ef7b9646d468dd0661a288abbf9a622d1592cc94ca30",
+    "src/career_lab/jobs/repository.py": "dbf999faadb779f386fa3661acf51f335fdbb7426d024a70416102e8d2f04283",
+    "src/career_lab/jobs/worker.py": "a91bffb17fdd295db6ce259cc84f9fa3c0e7deb8debfa915954b1eb380aad437",
     "src/career_lab/rubrics/registry.py": "204f90efa1b93bc010d638f7310ef396148caf2aed3af132c7a5e064442700de",
-    "src/career_lab/storage/v2_jobs.py": "3010433ba29d96ebbdb8d38c0f76362534f852dd6d7117c3b21bad533feb34f4",
-    "src/career_lab/storage/v2_lifecycle.py": "77d0e275b4d18e68906fb42460518279a776a42b3860dfbdaf9ab8c56d6ce7a6",
-    "src/career_lab/storage/v2_remap.py": "5fa7f55ce4fcf721b4b81978214698f83a4f0437ae397f94ad6bfc4c98cf769f",
-    "src/career_lab/storage/v2_snapshot.py": "0c079af78ef90a36abdc69f8f1313223d9cbc4f951a56e8e14416c5399ab233f",
-    "src/career_lab/storage/v2_store.py": "6e76128f4a9ce83c457702420efd58206658bdc3780d4c3d361e6b1cbbca7540",
-    "src/career_lab/storage/v2_tables.py": "cb15ae737542083abb5206378bec958939901b9343246ce4614e97c77bd27ff2"
+    "src/career_lab/storage/v2_jobs.py": "397b36937d61acbd3283bce7b2ef8f4e5c6f9fabe691288ddf43f1a490383890",
+    "src/career_lab/storage/v2_lifecycle.py": "820df180088bd3c09a550912aab838f4586042955b3220553ae294167a97c857",
+    "src/career_lab/storage/v2_remap.py": "05ded384d8682e2cef5a14828c7418eeb427ad9ee1e9b5614846c74b786debee",
+    "src/career_lab/storage/v2_snapshot.py": "e4d295e54c3ffe9813bb93ebd90d57a9b65368d91f1e83d4dda502e902108f0f",
+    "src/career_lab/storage/v2_store.py": "f4a714597e5f190f2765229b872a1b7623a12249c4fed644674798200871a448",
+    "src/career_lab/storage/v2_tables.py": "db85ef5684efbee9dd0788d41377801eecd8acd1c7802c591f54e0688e02fcac"
   },
   "status": "frozen_candidate_pending_independent_review",
   "v1_dirty_included": false

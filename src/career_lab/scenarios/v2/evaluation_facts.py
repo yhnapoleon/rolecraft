@@ -214,7 +214,7 @@ class ScenarioFactAdapter:
             if pass_known and classified and tests:
                 latest=max((t for t in tests if t.id in dynamic),key=lambda t:t.as_of.storage_revision,default=None)
                 if latest is not None:
-                    add('adjustment_appropriate_verified',latest.id in passing and not effective_config(self.module.package,config,state.world.resources).differences,
+                    add('adjustment_appropriate_verified',latest.id in passing and not (set(effective_config(self.module.package,config,state.world.resources).differences) & {'work_items','update_strategy','scope_filter','fallback','manual_domains','freshness_guard'}),
                         config_source,policy_ref,*test_refs)
         return RuleSnapshot(at,tuple(facts),window.tests_complete,tuple(tests),tuple(test_refs),
             config.config_version,tuple(t.id for t in tests if t.status=='failed'))

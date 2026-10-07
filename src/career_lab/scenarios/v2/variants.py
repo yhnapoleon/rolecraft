@@ -46,9 +46,9 @@ def material_definitions(locale, min_score, scenario_id="pm_pilot"):
                             f"正式试点期限为第{limits['deadline_day']}天。")
             rows[row_index] = (sentence, [(fid, limits.get(fid, value), unit) for fid, value, unit in row[1]])
         if locale == "en":
-            rows.append("The saved setup is a preparation draft for 20 participants on day 7. An existing setup does not approve its resources or launch date. This assignment has its own allocation; check it before deciding what to propose.")
+            rows.append(("The saved setup is a preparation draft for 20 participants on day 7. Saving a setup does not mean its resources or launch date are approved. Use the allocation above when deciding what to propose.", [("draft_participants",20,"people"),("draft_launch_day",7,"days")]))
         else:
-            rows.append("当前保存的是20人、第7天的筹备配置草案。已有配置不代表资源或上线日期获批；本轮资源安排独立，请核对后决定提出什么建议。")
+            rows.append(("当前保存的是20人、第7天的筹备配置草案。已有草案不代表资源或上线日期已获批；本次委托以上方预留为准，请核对后决定提出什么建议。", [("draft_participants",20,"人"),("draft_launch_day",7,"天")]))
         definitions[index] = (mid, title, domain, version, mode, rows)
     return definitions
 

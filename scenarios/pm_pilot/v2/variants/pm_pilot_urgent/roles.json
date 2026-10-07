@@ -34,7 +34,9 @@
       "capacity_limit",
       "dev_days_limit",
       "deadline_day_limit",
-      "demo_day"
+      "demo_day",
+      "draft_participants",
+      "draft_launch_day"
     ],
     "disclosure_policy": {},
     "approval_authority": [
@@ -164,7 +166,9 @@
       "index_delay_hours",
       "retrieval_probe_query",
       "retrieval_threshold_candidate",
-      "retrieval_debug_code"
+      "retrieval_debug_code",
+      "draft_participants",
+      "draft_launch_day"
     ],
     "disclosure_policy": {
       "retrieval_probe_query": {

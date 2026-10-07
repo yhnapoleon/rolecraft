@@ -1,0 +1,16 @@
+{
+  "attestation": "common_store_trace_v1",
+  "content_hash": "1b96739cfe3bbf5fc9ed9cab541c6735ffe4066099cf9ef8304e00240a67b6b3",
+  "dependencies": [
+    {
+      "config_version": null,
+      "kind": "product",
+      "object_id": "product",
+      "schema_version": 2,
+      "session_id": "example",
+      "version": 1
+    }
+  ],
+  "path": "/business_response",
+  "schema_version": 2
+}

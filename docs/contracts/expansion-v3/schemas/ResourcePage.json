@@ -20,6 +20,31 @@
       "title": "Cursor",
       "type": "integer"
     },
+    "feedback_id": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Feedback Id"
+    },
+    "import_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Import Id"
+    },
     "limit": {
       "default": 50,
       "maximum": 100,
@@ -38,6 +63,19 @@
       ],
       "default": null,
       "title": "Product Id"
+    },
+    "response_id": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Response Id"
     },
     "review_id": {
       "anyOf": [

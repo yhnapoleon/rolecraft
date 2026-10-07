@@ -44,6 +44,11 @@ class ReviewService:
 
     def _freeze(self,conn,auth,oid,kind,subjects,purpose,decision,as_of,scope,evidence_refs=(),question=''):
         bindings=self._bindings(conn,auth)
+        requested_at=as_of
+        if kind=='review':
+            points=[self.authority.reader(conn).read(auth,r,as_of).created_at for r in subjects]
+            if not points or any(p is None or p!=points[0] for p in points):raise ProtocolError('subject_point_unknown')
+            as_of=points[0]
         all_policies=self.authority.policies(conn,bindings.evaluation)
         policy_ids=[p.id for p in all_policies]
         if len(policy_ids)!=len(set(policy_ids)) or not policy_ids or len(policy_ids)>24:raise ProtocolError('invalid_evaluation_policy')
@@ -59,7 +64,8 @@ class ReviewService:
         assembler=EvidenceAssemblerV2(self.authority.reader(conn),self.model_bytes)
         packages=tuple(assembler.assemble(auth=auth,subject_id=oid,subjects=subjects,
             evidence_refs=tuple(evidence_refs),expected_refs=tuple(automatic_refs),purpose=purpose,decision=decision,
-            as_of=as_of,policy=policy,snapshot=snapshot,question=question) for policy in selected)
+            as_of=as_of,policy=policy,snapshot=snapshot,question=question,
+            anchor_mode='submission' if kind=='submission' else 'product_version',requested_at=requested_at) for policy in selected)
         frozen={'subject':ref(auth.session_id,kind,oid).model_dump(mode='json'),
             'evaluation':bindings.evaluation.model_dump(mode='json'),'as_of':as_of.model_dump(mode='json'),
             'packages':[p.model_dump(mode='json') for p in packages],
@@ -82,7 +88,7 @@ class ReviewService:
                 if len(body.purpose)>200 or len(body.question)>4000:raise ProtocolError('review_text_limit')
                 frozen=self._freeze(conn,auth,oid,'review',body.subjects,body.purpose,None,as_of,body.scope,question=body.question)
                 review=ReviewRequest(id=oid,session_id=auth.session_id,subjects=body.subjects,purpose=body.purpose,
-                    as_of=as_of,question=body.question,scope=tuple(p['id'] for p in frozen['policies']),
+                    as_of=VersionPoint.model_validate(frozen['as_of']),question=body.question,scope=tuple(p['id'] for p in frozen['policies']),
                     evaluation=FileRef.model_validate(frozen['evaluation']),executor=auth.executor)
                 self.repository.put(conn,auth.session_id,'review',oid,{'public':review.model_dump(mode='json'),'frozen':frozen})
                 job_id=self.repository.enqueue(conn,auth,'review',oid,command.operation,command.request_id)

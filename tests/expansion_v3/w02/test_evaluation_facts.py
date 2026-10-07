@@ -28,9 +28,11 @@ class History:
         self.adapter=ScenarioFactAdapter(module,authorize=lambda auth:self.store.authorize(auth,'read'),window_reader=self.window,
             record_reader=lambda auth,ref,at:self.store.read(auth,ref,storage_revision=at.storage_revision if at else None),
             reference_resolver=lambda auth,ref,at:self.store.resolve_reference(auth,ref,storage_revision=at.storage_revision))
+    def scenario_view(self):
+        return self.store.query(self.auth,lambda view:view,operation="actions")
     def capture(self,result=None):
         view=self.store.view(self.auth);at=point(view.state)
-        self.windows[at.storage_revision]=(deepcopy(self.module.snapshot(view)),view.bindings,at)
+        self.windows[at.storage_revision]=(deepcopy(self.module.snapshot(self.scenario_view())),view.bindings,at)
         if result:
             for event in result.get('events',[]):self.events.append((PublicEvent.model_validate(event),at))
         return at
@@ -54,7 +56,7 @@ class History:
         s=self.store.view(self.auth).state
         return self.post('tests','tests.create',{'query':query,'config_version':s.config_version})['result']['test']
     def apply(self,**changes):
-        current=self.module.snapshot(self.store.view(self.auth)).config
+        current=self.module.snapshot(self.scenario_view()).config
         config=current.model_dump(mode='json')|changes|{'version':current.version+1,'config_version':current.config_version+1}
         return self.post('actions','apply_config',{'tool':'apply_config','config':config})
     def product(self,text):
@@ -62,14 +64,17 @@ class History:
         result=self.gateway.dispatch(self.auth,'work_products.create',body);self.capture(result)
         return max((r.ref for r in self.store.view(self.auth).objects if r.ref.kind=='product'),key=lambda ref:self.store.read(self.auth,ref).created_storage_revision)
     def submit(self,products,decision='launch'):
-        cfg=self.store.view(self.auth).private_scenario_state.current_config
+        cfg=self.scenario_view().private_scenario_state.current_config
         result=self.post('submissions','submissions.create',{'decision':decision,'products':[p.model_dump(mode='json') for p in products],'config':cfg.model_dump(mode='json')})
         ref=ObjectRef.model_validate(result['result']['submission'])
         return SubmissionV2.model_validate(self.store.read(self.auth,ref).content)
 
 @pytest.fixture(params=['zh','en'])
 def history(request,tmp_path):
-    module=ScenarioModule(ROOT/'scenarios/pm_pilot/v2',work_language=request.param)
+    sid,lang=request.param if isinstance(request.param,tuple) else ('pm_pilot',request.param)
+    root=ROOT/'scenarios/pm_pilot/v2'
+    if sid!='pm_pilot':root=root/'variants'/sid
+    module=ScenarioModule(root,work_language=lang)
     registry=module.install(ExtensionRegistry());install_workspace_operations(registry,roles=tuple(r.id for r in module.package.bundle.role_specs))
     registry.register(Operation('submissions.create','submit',SubmitInput,record_submission))
     app=create_app('sqlite:///'+str(tmp_path/'facts.db'),extensions=registry)

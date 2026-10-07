@@ -18,10 +18,11 @@ MESSAGES_EN = {'synthetic': 'This company and its business information are ficti
  'stale_source_guard': 'The source and index versions differ. The freshness guard prevented an automatic answer.',
  'no_fallback': 'An automatic answer is not sufficiently supported, and human fallback is not provisioned.',
  'tech_summary': "A preparation-stage test reproduced this question: I've already signed up for company training. "
-                 'Does that mean I can simply turn up to attend the class? At threshold 0.35 it retrieved no '
-                 'supported passage; at 0.2 it returned the FAQ training-registration paragraph. An unrelated '
-                 'control still retrieved nothing. This is a local comparison, not a generally correct threshold.',
- 'tech_register_summary': 'The technical diagnostic retains the original training question, two thresholds and an '
+                 'Does that mean I can simply turn up to attend the class? At thresholds 0.35 and the current '
+                 'default 0.3 it retrieved no supported passage. At 0.2 it returned Device repair, which does '
+                 'not answer the training question. Lowering the threshold did not solve this case. An unrelated '
+                 'control still retrieved nothing. This is an observed English diagnostic, not a recommended threshold.',
+ 'tech_register_summary': 'The technical diagnostic retains the original training question, three thresholds and an '
                           'unrelated control. Its internal register ID is not for disclosure.',
  'path_question': 'What is the hotel reimbursement limit per night?',
  'path_reason': 'Request based on the candidate material and the proposed work items.'}

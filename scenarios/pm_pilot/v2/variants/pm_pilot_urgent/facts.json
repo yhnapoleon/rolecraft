@@ -82,6 +82,60 @@
   },
   {
     "schema_version": 2,
+    "id": "draft_participants",
+    "version": 1,
+    "value": 20,
+    "unit": "人",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot_urgent:v2",
+      "kind": "material",
+      "object_id": "brief",
+      "version": 1,
+      "config_version": null,
+      "span_start": 387,
+      "span_end": 451,
+      "quote": "当前保存的是20人、第7天的筹备配置草案。已有草案不代表资源或上线日期已获批；本次委托以上方预留为准，请核对后决定提出什么建议。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
+    "id": "draft_launch_day",
+    "version": 1,
+    "value": 7,
+    "unit": "天",
+    "source": {
+      "schema_version": 2,
+      "session_id": "scenario:pm_pilot_urgent:v2",
+      "kind": "material",
+      "object_id": "brief",
+      "version": 1,
+      "config_version": null,
+      "span_start": 387,
+      "span_end": 451,
+      "quote": "当前保存的是20人、第7天的筹备配置草案。已有草案不代表资源或上线日期已获批；本次委托以上方预留为准，请核对后决定提出什么建议。",
+      "observed_at_seq": 0,
+      "valid_from_seq": 0,
+      "valid_until_seq": null
+    },
+    "disclosure": {
+      "schema_version": 2,
+      "mode": "public",
+      "actors": [],
+      "paraphrase": null
+    }
+  },
+  {
+    "schema_version": 2,
     "id": "sample_days",
     "version": 1,
     "value": 10,

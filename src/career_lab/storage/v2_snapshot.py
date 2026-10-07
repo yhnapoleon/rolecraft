@@ -28,7 +28,7 @@ class SnapshotService:
             if sr and (not boundaries or boundaries[-1].storage_revision!=sr or boundaries[-1].end_seq!=state.business_seq):raise ProtocolError('not_action_boundary',status=409)
             records=tuple(sorted(self.store._records(c,auth.session_id,sr),key=lambda x:(x.ref.kind,x.ref.object_id,x.ref.version)))
             external=self.store._external(c,auth.session_id,sr)
-            validate_graph(records,external_keys={canonical(x.ref) for x in external})
+            validate_graph(records,external_keys={canonical(x.ref) for x in external}|self.store._event_keys(c,auth.session_id,state))
             events=tuple(StoredEvent.model_validate_json(x) for x in c.execute(select(v2_events.c.record).where(v2_events.c.session_id==auth.session_id,v2_events.c.seq<=state.business_seq).order_by(v2_events.c.seq)).scalars())
             if [x.seq for x in events]!=list(range(1,state.business_seq+1)):raise ProtocolError('snapshot_log_gap',status=409)
             value={'schema_version':2,'id':digest([auth.session_id,sr,source_digest]),'session_id':auth.session_id,'bindings':json.loads(row['bindings']),'state':state.model_dump(mode='json'),'objects':[x.model_dump(mode='json') for x in records],'events':[x.model_dump(mode='json') for x in events],'boundaries':[x.model_dump(mode='json') for x in boundaries],'external_references':[x.model_dump(mode='json') for x in sorted(external,key=lambda x:canonical(x.ref))],'source_digest':source_digest}
@@ -37,7 +37,7 @@ class SnapshotService:
     def restore(self,snapshot:SnapshotExport,*,session_id=None,token=None,request_id=None):
         # Revalidate rather than trust callers' model_copy(update=...) values.
         snapshot=SnapshotExport.model_validate(snapshot.model_dump(mode='json'))
-        validate_graph(snapshot.objects,external_keys={canonical(x.ref) for x in snapshot.external_references})
+        validate_graph(snapshot.objects,external_keys={canonical(x.ref) for x in snapshot.external_references}|{canonical(ObjectRef(session_id=snapshot.session_id,kind='event',object_id=e.id,version=1)) for e in snapshot.events})
         validate_snapshot_structure(snapshot)
         if any(x.ref.session_id!=snapshot.session_id or x.created_storage_revision>snapshot.state.storage_revision for x in snapshot.objects):raise ProtocolError('snapshot_object_scope')
         if snapshot.state.session_id!=snapshot.session_id:raise ProtocolError('snapshot_session_mismatch')
@@ -76,8 +76,8 @@ class SnapshotService:
         events=tuple(remapper.model(x) for x in snapshot.events)
         boundaries=tuple(remapper.model(x) for x in snapshot.boundaries)
         external_references=tuple(remapper.model(x) for x in snapshot.external_references)
-        validate_graph(objects,external_keys={canonical(x.ref) for x in external_references})
-        valid_refs={canonical(x.ref) for x in objects}|{canonical(x.ref) for x in external_references}
+        validate_graph(objects,external_keys={canonical(x.ref) for x in external_references}|{canonical(ObjectRef(session_id=sid,kind='event',object_id=e.id,version=1)) for e in events})
+        valid_refs={canonical(x.ref) for x in objects}|{canonical(x.ref) for x in external_references}|{canonical(ObjectRef(session_id=sid,kind='event',object_id=e.id,version=1)) for e in events}
         for event in events:
             if event.session_id!=sid or any(canonical(r) not in valid_refs for r in event.refs):raise ProtocolError('snapshot_event_reference_missing')
         if any(x.ref.session_id!=sid or any(r.session_id!=sid for r in x.dependencies) for x in objects):raise ProtocolError('snapshot_object_scope')

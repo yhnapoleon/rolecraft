@@ -1,0 +1,52 @@
+{
+  "attempts": [],
+  "error_code": null,
+  "history_revision": "62cb187b3b255ff473bd6055148cb8a8418c634f60b75599e7fb78a9f49b9f48",
+  "intended_reply_id": null,
+  "job_attempt": 1,
+  "job_id": "example-job",
+  "lease_token_hash": null,
+  "memories": [],
+  "phase": "attempt",
+  "prompt_hash": "a012213f24641405de95c25bcc60e6a115425b685c937294acb0b435a283e404",
+  "prompt_messages": [
+    {
+      "content": "Synthetic private prompt; no model call occurred.",
+      "role": "system",
+      "schema_version": 2,
+      "tool_call_id": null
+    }
+  ],
+  "received_shares": [],
+  "refresh_count": 0,
+  "reply": null,
+  "request": {
+    "config_version": null,
+    "kind": "role_turn",
+    "object_id": "turn",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "schema_version": 2,
+  "scope": {
+    "actor_id": "learner",
+    "allowed_actions": null,
+    "allowed_objects": null,
+    "capabilities": [
+      "read",
+      "act"
+    ],
+    "credential_id": "example",
+    "executor": {
+      "delegation_id": null,
+      "id": "human:example",
+      "kind": "human",
+      "schema_version": 2
+    },
+    "expires_at": null,
+    "schema_version": 2
+  },
+  "used_sources": [],
+  "worker_id": null
+}
