@@ -3,7 +3,7 @@
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 
 type SelectedProduct = Pick<WorkProductVersion,'session_id'|'product_id'|'version'|'title'|'removed_at'|'author'>;
-type Item = { criterion: string; explanation: string; source: string; label: string; citations: EvidenceRefV2[] };
+type Item = { criterion: string; explanation: string; source: string; label: string; rule_bound?:{lower:string;upper:string}|null; citations: EvidenceRefV2[] };
 type Report = {
   id: string; version: number; subject: ObjectRef; items: Item[]; rule_items?: Item[] | null;
   verified_facts?: { status?:'verified'|'partial'|'unknown'; summary: string[]; references: {verified_ref?:EvidenceRefV2|null}[] }[] | null;
@@ -114,11 +114,11 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
     for(const snapshot of report.historical_responsibilities??[])for(const entry of snapshot.entries){history.append(el('p',entry.explanation));refs(history,entry.sources);}
     if(!report.historical_responsibilities?.some(s=>s.entries.length))history.append(el('p','当前没有可展示的历史责任结论。','muted'));
     panel.append(history);
-    const criteria:Record<string,string>={'R3.capacity':'人数与容量','R3.resources':'资源与时间','R4.functional_tests':'实际测试','R6.comparison':'方案比较','decision.rationale':'决定依据','decision.follow_up':'后续安排','result.claims':'已完成事项的声明'};
+    const criteria:Record<string,string>={'R1.target':'目标用户与业务目标','R1.metrics':'指标与验收口径','R2.support':'判断的证据支持','R2.unknowns':'事实与待确认事项','R2.failure_analysis':'失败案例与原因分析','R4.staleness_test':'政策更新后的复测','R5.impact':'变更影响','R5.adjustment':'实际调整与复测','R6.consistency':'作品与配置一致性','R6.operations':'后续运行安排','R6.alternatives':'替代方案与取舍','R3.capacity':'人数与容量','R3.resources':'资源与时间','R4.functional_tests':'实际测试','R6.comparison':'方案比较','decision.rationale':'决定依据','decision.follow_up':'后续安排','result.claims':'已完成事项的声明'};
     const notApplicable=el('details');notApplicable.append(el('summary','查看本次未适用的验收项'));
     let inactive=0;
     for(const item of report.rule_items??report.items.filter(i=>i.source==='verified_rule')){
-      const section=el('section');section.append(el('h3',criteria[item.criterion]??'具体反馈项'),el('p',item.source==='verified_rule'?'规则核实':'等待核验','muted'),el('p',item.explanation));refs(section,item.citations);section.append(responseForm(report,item.criterion,'rule_items'));
+      const section=el('section');section.append(el('h3',criteria[item.criterion]??'具体反馈项'),el('p',item.source==='verified_rule'?'规则核实':'等待核验','muted'),el('p',item.explanation));if(item.rule_bound){const labels:Record<string,string>={NOT_MET:'未满足',PARTIAL:'部分满足',MET:'满足'};section.append(el('p',item.rule_bound.lower===item.rule_bound.upper?'规则确定：'+(labels[item.rule_bound.lower]??item.rule_bound.lower):'规则已核实范围：'+(labels[item.rule_bound.lower]??item.rule_bound.lower)+'—'+(labels[item.rule_bound.upper]??item.rule_bound.upper)+'；范围内的具体判断仍待核验。','muted'));}refs(section,item.citations);section.append(responseForm(report,item.criterion,'rule_items'));
       if(item.label==='NOT_APPLICABLE'){notApplicable.append(section);inactive++;}else panel.append(section);
     }
     if(inactive)panel.append(notApplicable);

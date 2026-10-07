@@ -188,12 +188,12 @@ def advice(package,label='MET',citation=None):
         'explanation':'有可定位的依据，供复核。','citation_ids':[candidate_id]},ensure_ascii=False)
 
 
-def test_judge_retry_invalid_citation_once_and_never_promotes_advice_to_rule(env):
+def test_judge_invalid_citation_does_not_retry_or_promote_advice(env):
     item=package(env,criterion='R6.comparison')
     foreign=item.candidate_evidence[0].ref.model_copy(update={'session_id':'foreign'})
     model=ScriptedModel([ModelReply(text=advice(item,citation=foreign)),ModelReply(text=advice(item))])
     result=AdvisoryJudge(model,lambda p,a:'supported').evaluate(item)
-    assert len(model.calls)==2 and result.item.source=='model_advice' and result.item.rule_bound is None
+    assert len(model.calls)==1 and result.item.source=='pending' and result.item.rule_bound is None
     assert score_bounds([result.item])['lower']==0
 
 
@@ -201,14 +201,14 @@ def test_failed_model_or_unverified_support_stays_pending_and_redacts_error(env)
     item=package(env,criterion='R6.comparison')
     model=ScriptedModel([ModelReply(text='invalid'),ModelReply(text='still invalid')])
     result=AdvisoryJudge(model).evaluate(item)
-    assert len(model.calls)==2 and result.item.label=='INSUFFICIENT'
+    assert len(model.calls)==1 and result.item.label=='INSUFFICIENT'
     unverified=AdvisoryJudge(ScriptedModel([ModelReply(text=advice(item))])).evaluate(item)
     assert unverified.item.source=='pending' and unverified.attempts[0]['status']=='support_pending'
     class Broken:
         revision='unavailable-test'
         def complete(self,*args):raise RuntimeError('PRIVATE_SECRET_NOT_FOR_OUTPUT')
     failed=AdvisoryJudge(Broken()).evaluate(item)
-    assert 'PRIVATE_SECRET' not in str(failed) and len(failed.attempts)==2
+    assert 'PRIVATE_SECRET' not in str(failed) and len(failed.attempts)==1
 
 
 def test_model_input_excludes_rule_context_and_kind_does_not_determine_comparison(env):

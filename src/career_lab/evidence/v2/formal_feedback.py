@@ -24,6 +24,7 @@ def sections(reader,auth,subject,requested_at,facts,history,*,work_language='zh'
         'references':projected_refs,'activities':facts.get('activity_records',[]),'activity_totals':facts.get('activity_totals',{}),
         'authorship':facts.get('authorship',{}),'actor_id':auth.actor_id,
         'historical_sources':[{k:r.get(k) for k in ('criterion','kind','state','occurred_at','scope','sources','actor_id','executor')} for r in history if r['sources']]}
+    if facts.get('change_facts'):source_projection['change_facts']=facts['change_facts']
     public_hash=C.digest(['authorized-source-projection-v1',source_projection])
     base={'subject':subject,'as_of':facts.get('as_of'),'requested_at':requested_at,
           'captured_at':captured,'source_snapshot_hash':public_hash}

@@ -8,7 +8,7 @@ def pending(item,reason):
                         source='pending',explanation=reason,citations=())
 
 
-def run_rules(item,*,work_language='zh'):
+def _run_rules(item,*,work_language='zh'):
     if item.applicability=='not_applicable':
         reason=(message(work_language,'本次作品是停止或暂缓建议，不按上线成功条件验收；历史行动与承诺另列核对。')
                 if item.rule_context.get('decision') in {'no_go','defer_with_conditions'}
@@ -16,6 +16,9 @@ def run_rules(item,*,work_language='zh'):
         return FeedbackItem(criterion=item.criterion,label='NOT_APPLICABLE',applicability=item.applicability,
             source='verified_rule',explanation=reason,citations=())
     if item.applicability=='undetermined':return pending(item,message(work_language,'用途或本次决定尚未明确，不能默认上线；历史记录与引用核验另列。'))
+    if item.rule_context['mechanism'].startswith('v2.'):
+        from .rules_v2 import run_rules_v2
+        return run_rules_v2(item,work_language=work_language)
     ctx=item.rule_context;facts=ctx['facts'];proofs=ctx['fact_refs'];kind=ctx['mechanism']
     def numeric(names):
         if any(n not in facts or type(facts[n]) not in (int,float) or facts[n]<0 or not proofs.get(n) for n in names):return None
@@ -53,3 +56,15 @@ def run_rules(item,*,work_language='zh'):
         # declared_category/expected and repeated FAQ labels never grant MET.
         return verified('PARTIAL',message(work_language,'已有相关配置下的实际运行；覆盖面及其对判断的支持仍需核验。'),extra=refs,upper='MET')
     return pending(item,message(work_language,'内容与证据关系仍需情境核验；模板、结论枚举和重复操作次数不直接决定评价。'))
+
+
+def run_rules(item,*,work_language='zh'):
+    result=_run_rules(item,work_language=work_language)
+    if item.rule_context['mechanism'] in {'v2.staleness_test','v2.adjustment'}:
+        from .rules_v2 import change_observations
+        observations=change_observations(item,work_language=work_language)
+        if observations:
+            refs=[*result.citations,*[EvidenceRefV2.model_validate(r) for row in observations for r in row['sources']]]
+            result=result.model_copy(update={'explanation':result.explanation+'\n'+'\n'.join(row['summary'] for row in observations),
+                'citations':tuple({r.model_dump_json():r for r in refs}.values())})
+    return result
