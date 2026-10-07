@@ -11,7 +11,12 @@ for(const [caption,value] of [['中文','zh'],['English','en']] as const){
   button.addEventListener('click',()=>setPreference(value));controls.append(button);
 }
 
-try {
+if(new URLSearchParams(location.search).get('slot')==='1'){
+  controls.remove();
+  const caption=document.querySelector('main > .muted');if(caption)caption.textContent='插槽验证 · 合成 host · 不代表真实 API 或正式 v4';
+  const {mountSlotFixture}=await import('./slot-fixture');
+  mountSlotFixture(document.querySelector<HTMLElement>('#workspace')!);status.textContent='仅验证插槽UI与host调用边界；不是真实API或正式v4。';
+} else try {
   const response=await fetch('/api/__w03_native_test__/bootstrap',{method:'POST'});
   if(!response.ok)throw Error('受控测试服务未连接');
   const created=await response.json();
