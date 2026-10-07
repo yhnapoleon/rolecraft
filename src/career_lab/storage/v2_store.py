@@ -145,12 +145,26 @@ class V2Store(JobStoreMixin):
         if event is None or (ceiling is not None and event.seq>ceiling.business_seq):raise ProtocolError('object_not_found',status=404)
         if auth is not None:
             if ref.session_id!=auth.session_id:raise ProtocolError('object_not_found',status=404)
-            self._auth(c,auth,'read',object_ids=(ref.object_id,))
+            event_scope=(event.data.get('material_id'),) if event.type=='material_read' and auth.allowed_objects is not None and ref.object_id not in auth.allowed_objects else (ref.object_id,)
+            self._auth(c,auth,'read',object_ids=event_scope)
             if 'research' not in auth.capabilities and auth.actor_id not in event.visible_to:raise ProtocolError('object_not_found',status=404)
         elif role_id is None or role_id not in event.visible_to:raise ProtocolError('object_not_found',status=404)
         if isinstance(ref,EvidenceRefV2):
             if ref.observed_at_seq<event.seq or (ceiling is not None and ref.observed_at_seq>ceiling.business_seq):raise ProtocolError('future_evidence')
-            if ref.quote is not None or ref.span_start is not None:raise ProtocolError('event_reference_requires_projection')
+            if ref.quote is not None or ref.span_start is not None:
+                # W05's public reading record has a fixed text projection. It
+                # contains only an independently authorized material identity,
+                # never the raw event dictionary or private scenario payload.
+                mid,version=event.data.get('material_id'),event.data.get('version')
+                if auth is None or event.type!='material_read' or not isinstance(mid,str) or type(version) is not int:
+                    raise ProtocolError('event_reference_requires_projection')
+                current=ceiling or WorldStateV2.model_validate_json(self._row(c,auth.session_id)['state'])
+                material=ObjectRef(session_id=auth.session_id,kind='material',object_id=mid,version=version)
+                self._resolve_reference(c,auth,material,current,SessionBindings.model_validate_json(self._row(c,auth.session_id)['bindings']))
+                text=f'Material read: {mid} v{version}'
+                if ref.span_start is not None:
+                    if ref.span_end>len(text) or text[ref.span_start:ref.span_end]!=ref.quote:raise ProtocolError('reference_quote_mismatch',status=409)
+                elif not ref.quote or ref.quote not in text:raise ProtocolError('reference_quote_mismatch',status=409)
         return event
 
     def _event_keys(self,c,sid,ceiling):
@@ -483,6 +497,36 @@ class V2Store(JobStoreMixin):
             self._auth(c,auth,'read',operation);row=self._row(c,auth.session_id)
             view=self._operation_view(c,auth,WorldStateV2.model_validate_json(row['state']),SessionBindings.model_validate_json(row['bindings']),self._records(c,auth.session_id))
             return reader(view)
+
+    def query_at(self,auth,at,reader,*,operation=None):
+        """Trusted read adapter at one real persisted point, with current scope.
+
+        Historical metadata is never a credential, and no public route exposes
+        this internal scenario view. The original bindings stay unchanged.
+        """
+        with self.db.transaction() as c:
+            self._auth(c,auth,'read',operation)
+            row=self._row(c,auth.session_id)
+            raw=c.execute(select(v2_snapshots.c.state).where(v2_snapshots.c.session_id==auth.session_id,v2_snapshots.c.storage_revision==at.storage_revision)).scalar_one_or_none()
+            if raw is None:raise ProtocolError('snapshot_window_unavailable',status=404)
+            state=WorldStateV2.model_validate_json(raw)
+            if VersionPoint(**state.model_dump(include={'business_seq','workspace_revision','storage_revision'}))!=at:
+                raise ProtocolError('snapshot_point_mismatch',status=409)
+            records=self._records(c,auth.session_id,at.storage_revision)
+            allowed=self._project_public_records(c,auth,records)
+            cycles=[r for r in records if r.ref.kind=='cycle' and r.ref.object_id==state.cycle_id]
+            cycle=max(cycles,key=lambda r:r.ref.version) if cycles else None
+            bindings=SessionBindings.model_validate_json(row['bindings'])
+            private=self._scenario_state(c,auth.session_id,at.storage_revision)
+            def reference_allowed(ref):
+                if c.closed:raise ProtocolError('reference_view_expired',status=409)
+                self._auth(c,auth,'read',object_ids=(ref.object_id,))
+                if ref.session_id!=auth.session_id:raise ProtocolError('object_not_found',status=404)
+                if ref.kind in self.reference_resolvers:
+                    self._resolve_reference(c,auth,ref,state,bindings);return True
+                bare=ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode='json').items() if k in ObjectRef.model_fields})
+                return any(r.ref==bare for r in allowed)
+            return reader(TransactionView(state,bindings,allowed,private,cycle,reference_allowed))
 
     def view(self,auth):
         # A retained snapshot contains data, not a reusable authority callback.
@@ -836,8 +880,9 @@ class V2Store(JobStoreMixin):
             if mutation.jobs:self._ensure_delegation_capacity(c,auth,len(mutation.jobs))
             derived_feedback=self._derived_feedback(c,auth,mutation,derived_subject,records,bindings)
             feedback_response=self._feedback_response_only(c,auth,command,mutation,records)
-            if state.status=='submitted' and command.operation!='begin_revision' and not derived_feedback and not feedback_response and not refreshing:raise ProtocolError('session_submitted')
-            if state.status=='paused' and command.operation!='resume' and not derived_feedback and not feedback_response and not refreshing:raise ProtocolError('session_paused')
+            reply_display=command.operation=='turns.display' and bool(mutation.writes) and all(w.ref.kind=='role_display' for w in mutation.writes) and not (mutation.events or mutation.state_changes or mutation.jobs or mutation.decision)
+            if state.status=='submitted' and command.operation!='begin_revision' and not derived_feedback and not feedback_response and not reply_display and not refreshing:raise ProtocolError('session_submitted')
+            if state.status=='paused' and command.operation!='resume' and not derived_feedback and not feedback_response and not reply_display and not refreshing:raise ProtocolError('session_paused')
             txn=uuid4().hex;sr=state.storage_revision+1;wr=state.workspace_revision+bool(mutation.writes);seq=state.business_seq
             planned=[]
             for write in mutation.writes:
@@ -1008,7 +1053,7 @@ class V2Store(JobStoreMixin):
             if 'config_version' in changes and not any(x.ref.kind=='config' and x.ref.config_version==changes['config_version'] for x in planned):raise ProtocolError('config_write_required')
             if changes.get('status')=='submitted':
                 if capability!='submit' or not any(x.ref.kind=='submission' for x in planned):raise ProtocolError('submission_required',status=403)
-            if state.status=='submitted' and not derived_feedback and not feedback_response and not refreshing:
+            if state.status=='submitted' and not derived_feedback and not feedback_response and not reply_display and not refreshing:
                 cycles=[RevisionCycle.model_validate(x.content) for x in planned if x.ref.kind=='cycle']
                 if len(cycles)!=1 or not cycles[0].parent_submission or changes.get('status')!='active' or changes.get('cycle_id')!=cycles[0].id:raise ProtocolError('revision_cycle_required')
             emitted=[]

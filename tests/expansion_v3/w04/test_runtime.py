@@ -21,11 +21,11 @@ from career_lab.storage.role_memory import (
 )
 from career_lab.storage.v2_store import V2Store,Mutation,ObjectWrite,JobRequest
 from career_lab.storage.v2_lifecycle import point as state_point
-from test_context import package,catalog,point,owner,agent,frame,memory,share_receipt,make_view,FixedFrameFixture
+from test_context import package,catalog,point,owner,agent,frame,memory,share_receipt,make_view,FixedFrameFixture,disclosure_samples,private_sample
 
 
-def request(auth,key='turn',shares=()):
-    return RoleTurn(id=key,session_id=auth.session_id,input=TurnInput(role_id='tech_lead',text='请接续上轮分析',shares=shares),
+def request(auth,key='turn',shares=(),role_id='tech_lead'):
+    return RoleTurn(id=key,session_id=auth.session_id,input=TurnInput(role_id=role_id,text='请接续上轮分析',shares=shares),
                     as_of=point(),executor=auth.executor)
 
 def reply_ref(sid='s',key='reply'):
@@ -36,28 +36,34 @@ def generate(snapshot,auth,req,model,key='reply',sink=None):
     return generate_plan(snapshot,auth,req,reply_ref(auth.session_id,key),model,record_attempt=lambda a,e:attempts.append((a,e)))
 
 
-def test_public_reply_has_no_prompt_unsaid_material_or_private_mapping(package,catalog):
-    snap=assemble_context(catalog,frame(package,catalog))
-    req=request(owner());model=ScriptedModel([ModelReply(text='我需要先看更多证据。')])
+def test_public_reply_has_no_prompt_unsaid_material_or_private_mapping(package,catalog,private_sample):
+    role=private_sample['role'].id
+    snap=assemble_context(catalog,frame(package,catalog,role))
+    req=request(owner(),role_id=role);model=ScriptedModel([ModelReply(text='我需要先看更多证据。')])
     public,private=generate(snap,owner(),req,model)
     raw=public.model_dump(mode='json')
     assert not PRIVATE_REPLY_FIELDS.intersection(raw)
     assert raw['text']=='我需要先看更多证据。' and not raw['spoken_evidence']
-    assert '连接器复用尚未完成' not in json.dumps(raw,ensure_ascii=False)
+    assert private_sample['approved'] not in json.dumps(raw,ensure_ascii=False)
+    assert private_sample['approved'] in private.prompt_messages[0].content
     assert 'acceptable_conditions' not in json.dumps(raw)
     assert 'acceptable_conditions' in private.prompt_messages[0].content
     assert private.context.sources and private.reply_ref==reply_ref()
     assert private.prompt_hash==digest(model.calls[0])
 
 
-def test_actual_quote_mapping_is_private_public_display_uses_utterance(package,catalog):
-    snap=assemble_context(catalog,frame(package,catalog))
-    summary=next(s.text for s in snap.context.sources if 'connector_risk' in s.fact_ids)
-    public,private=generate(snap,owner(),request(owner()),ScriptedModel([ModelReply(text=summary)]))
-    assert private.context.actual_disclosures[0].fact_id=='connector_risk'
+def test_actual_quote_mapping_is_private_public_display_uses_utterance(package,catalog,private_sample):
+    role=private_sample['role'].id
+    snap=assemble_context(catalog,frame(package,catalog,role))
+    fact=private_sample['fact']
+    summary=next(s.text for s in snap.context.sources if fact.id in s.fact_ids)
+    assert summary==private_sample['approved']
+    public,private=generate(snap,owner(),request(owner(),role_id=role),ScriptedModel([ModelReply(text=summary)]))
+    assert private.context.actual_disclosures
+    assert fact.id in {d.fact_id for d in private.context.actual_disclosures}
     assert private.context.actual_disclosures[0].displayed_at_seq is None
-    assert 'connector_risk' not in public.model_dump_json()
-    assert 'tech_private' not in public.model_dump_json()
+    assert fact.id not in public.model_dump_json()
+    assert fact.source.object_id not in public.model_dump_json()
     shown=displayed_disclosures(public,reply_ref(),displayed_at_seq=4)
     assert shown and shown[0].source.kind=='role_reply'
     assert shown[0].source.quote is None and shown[0].source.span_start is None
@@ -85,7 +91,8 @@ def test_three_rounds_non_echo_retains_exact_received_versions(package,catalog):
     # Scope applies to derived learner excerpts, not intrinsic colleague knowledge.
     denied=snap3.messages(agent(('faq',)))[0][0]['content']
     assert 'V1_BODY_ALPHA' not in denied and 'V2_BODY_BETA' not in denied
-    assert '当前知识索引按日更新' in denied
+    intrinsic=next(s.text for s in snap3.context.sources if s.ref.object_id=='technical')
+    assert intrinsic in denied
     assert snap3.permission_omissions(agent(('faq',)))>=2
 
 
@@ -97,10 +104,15 @@ def test_received_memory_survives_source_revoke_without_new_read(package,catalog
     assert not hasattr(ContextPort(catalog),'store')
 
 
-@pytest.mark.parametrize('response,error',[('legacy_connector_unstable','role_output_blocked'),('connector_risk','role_output_blocked'),('', 'role_model_invalid')])
-def test_deterministic_model_failure_has_stable_code_and_keeps_usage(package,catalog,response,error):
+@pytest.mark.parametrize('sample_kind,error',[
+    ('never_value','role_output_blocked'),('paraphrase_raw','role_output_blocked'),
+    ('private_fact_id','role_output_blocked'),('empty','role_model_invalid')])
+def test_deterministic_model_failure_has_stable_code_and_keeps_usage(package,catalog,disclosure_samples,private_sample,sample_kind,error):
+    responses={'never_value':disclosure_samples['never'][0].value,
+               'paraphrase_raw':private_sample['fragment'].text,
+               'private_fact_id':private_sample['fact'].id,'empty':''}
     snap=assemble_context(catalog,frame(package,catalog));calls=[]
-    model=ScriptedModel([ModelReply(text=response,usage={'prompt_tokens':12,'completion_tokens':4})])
+    model=ScriptedModel([ModelReply(text=responses[sample_kind],usage={'prompt_tokens':12,'completion_tokens':4})])
     with pytest.raises(ProtocolError) as exc:
         generate(snap,owner(),request(owner()),model,sink=calls)
     assert exc.value.code==error and exc.value.status==422
@@ -254,3 +266,43 @@ def test_common_worker_transient_error_keeps_code_and_uses_common_budget(tmp_pat
     for _ in range(4):worker.run_once()
     row=jobs.get(queued.result['queued_jobs'][0])
     assert len(calls)==3 and row['status']=='failed' and row['error']=='role_model_timeout'
+
+
+@pytest.mark.parametrize('role_id',['supervisor','business_lead','tech_lead'])
+def test_explained_business_stance_is_spoken_opinion_not_world_fact(package,catalog,role_id):
+    role=catalog.role(role_id)
+    assert role.goals and role.acceptable_conditions
+    quote=role.goals[0]
+    snap=assemble_context(catalog,frame(package,catalog,role_id),question='你在意哪些业务取舍？')
+    public,audit=generate(snap,owner(),request(owner(),role_id=role_id),ScriptedModel([ModelReply(text='我的关注点是：'+quote)]))
+    assert quote in public.text
+    matches=[o for o in audit.opinions if o.quote==quote]
+    assert matches and matches[0].source_field=='goals' and matches[0].source_index==0
+    assert matches[0].source_binding==catalog.binding
+    assert matches[0].assertion_type=='role_opinion' and matches[0].verification=='verbatim_match_only'
+    assert not audit.context.actual_disclosures  # no claim of a verified world fact or G0
+    assert not public.spoken_evidence
+    assert 'source_field' not in public.model_dump_json()
+    assert 'acceptable_conditions' not in public.model_dump_json()
+    _,silent=generate(snap,owner(),request(owner(),role_id=role_id),ScriptedModel([ModelReply(text='我先核对你提供的资料。')]))
+    assert not silent.opinions
+
+
+def test_prompt_exposes_only_in_scope_memory_object_versions_and_times(package,catalog):
+    first=share_receipt(1,'first version body','share-one')
+    second=share_receipt(2,'second version body','share-two')
+    snap=assemble_context(catalog,frame(package,catalog,shares=(first,second)))
+    payload=json.loads(snap.messages(owner())[0][0]['content'].split('\nCONTEXT\n',1)[1])
+    received=[row for row in payload['sources'] if row['channel']=='received_share']
+    assert {row['source_object'] for row in received}=={'product:plan@1','product:plan@2'}
+    assert all(row['source_time']['observed_at_seq']==0 for row in received)
+    assert {row['received_via'][0]['share'] for row in received}=={'share:share-one@1','share:share-two@1'}
+    public,audit=generate(snap,owner(),request(owner()),ScriptedModel([ModelReply(text='请继续核对差异。')]),key='memory-reply')
+    history=memory_from_generation(public,audit)
+    third=assemble_context(catalog,frame(package,catalog,memories=(history,)))
+    rows=json.loads(third.messages(owner())[0][0]['content'].split('\nCONTEXT\n',1)[1])['sources']
+    row=next(x for x in rows if x['channel']=='memory')
+    assert row['source_object']=='role_reply:memory-reply@1'
+    assert {'product:plan@1','product:plan@2'}<={p['object'] for p in row['based_on']}
+    hidden=third.messages(agent(('faq',)))[0][0]['content']
+    assert 'memory-reply' not in hidden and 'product:plan@' not in hidden

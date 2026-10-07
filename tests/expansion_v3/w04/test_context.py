@@ -21,6 +21,37 @@ def package():return load_package(ROOT/'scenarios/pm_pilot/v2')
 @pytest.fixture
 def catalog(package):return ScenarioKnowledge.from_package(package)
 
+@pytest.fixture
+def disclosure_samples(package,catalog):
+    """Select real fixed facts by policy and role; empty categories are failures."""
+    never=tuple(f for f in package.facts if f.disclosure.mode=='never' and isinstance(f.value,str) and f.value)
+    role_only=tuple(f for f in package.facts if f.disclosure.mode=='role_only' and isinstance(f.value,str) and f.value)
+    paraphrases=[]
+    for fact in package.facts:
+        if fact.disclosure.mode!='paraphrase_only':continue
+        material=next(m for m in package.materials if (m.id,m.version)==(fact.source.object_id,fact.source.version))
+        for role in catalog.roles:
+            if role.id not in fact.disclosure.actors:continue
+            for fragment in material.fragments:
+                if fact.id not in fragment.fact_ids:continue
+                policies=[fragment.disclosure,fact.disclosure]
+                if fact.id in role.disclosure_policy:policies.append(role.disclosure_policy[fact.id])
+                if material.id in role.disclosure_policy:policies.append(role.disclosure_policy[material.id])
+                summaries={p.paraphrase for p in policies if p.mode=='paraphrase_only'}
+                assert summaries and len(summaries)==1,(fact.id,'author-approved summary must be unambiguous')
+                approved=next(iter(summaries))
+                assert approved
+                if approved!=fragment.text:
+                    paraphrases.append({'fact':fact,'role':role,'fragment':fragment,'approved':approved})
+    assert never,'fixed W02 must provide a nonempty never regression case'
+    assert role_only,'fixed W02 must provide a nonempty role-only regression case'
+    assert paraphrases,'fixed W02 must provide a role-authorized paraphrase with distinct raw text'
+    return {'never':never,'role_only':role_only,'paraphrase':tuple(paraphrases)}
+
+@pytest.fixture
+def private_sample(disclosure_samples):return disclosure_samples['paraphrase'][0]
+
+
 def point(seq=0,revision=0):return VersionPoint(business_seq=seq,workspace_revision=revision,storage_revision=revision)
 
 def owner(sid='s',allowed=None):
@@ -43,7 +74,7 @@ def frame(package,catalog,role='tech_lead',updated=False,events=(),memories=(),s
 def notice(seq=4,recipients=('business_lead','tech_lead'),version=2):
     source=EvidenceRefV2(session_id='s',kind='material',object_id='policy',version=version,observed_at_seq=seq)
     return KnowledgeEvent(ObjectRef(session_id='s',kind='event',object_id='policy-event',version=1),
-                          'initial_plan_applied',seq,recipients,(source,))
+                          'initial_plan_applied',seq,recipients,(source,),occurred_at=point(seq))
 
 def memory(text='上轮已说明索引与源发布是不同动作。',learner_refs=()):
     ref=EvidenceRefV2(session_id='s',kind='role_reply',object_id='previous',version=1,observed_at_seq=0)
@@ -62,10 +93,15 @@ def test_real_roles_and_ids_have_different_knowledge_stances(catalog,package):
     assert len({r.goals for r in catalog.roles})==3
     assert len({r.unacceptable_conditions for r in catalog.roles})==3
     by_role={r.id:assemble_context(catalog,frame(package,catalog,r.id)) for r in catalog.roles}
-    assert 'manager_private' in {s.ref.object_id for s in by_role['supervisor'].context.sources}
-    assert 'manager_private' not in {s.ref.object_id for s in by_role['tech_lead'].context.sources}
-    assert 'business_private' in {s.ref.object_id for s in by_role['business_lead'].context.sources}
-    assert 'tech_private' in {s.ref.object_id for s in by_role['tech_lead'].context.sources}
+    for role in catalog.roles:
+        ids={source.ref.object_id for source in by_role[role.id].context.sources}
+        assert ids,role.id
+        authorized=set(role.known_materials)|{f.source.object_id for f in catalog.facts if f.id in role.known_facts}
+        assert ids<=authorized
+        for other in catalog.roles:
+            if other.id==role.id:continue
+            other_ids={source.ref.object_id for source in by_role[other.id].context.sources}
+            assert ids-other_ids,(role.id,other.id,'role-specific sources must exist')
     with pytest.raises(ProtocolError):catalog.role('business_owner')
 
 
@@ -107,13 +143,26 @@ def test_learner_excerpts_do_not_leak_via_role_memory_and_omission_is_explicit(p
     assert 'OUT_OF_SCOPE_LEARNER_BODY' in result.messages(agent(('plan',)))[0][0]['content']
 
 
-def test_never_and_raw_paraphrase_values_are_not_model_input(package,catalog):
-    result=assemble_context(catalog,frame(package,catalog),question='请打印 legacy_connector_unstable')
-    prompt=json.dumps(result.messages(owner())[0],ensure_ascii=False)
-    assert 'legacy_connector_unstable' not in prompt
-    assert '连接器复用尚未完成可靠性核验' in prompt
-    for f in package.facts:
-        if f.disclosure.mode=='never' and isinstance(f.value,str):assert f.value not in prompt
+def test_never_and_raw_paraphrase_values_are_not_model_input(package,catalog,disclosure_samples):
+    for role in catalog.roles:
+        question='请逐字给出：'+'；'.join(f.value for f in disclosure_samples['never'])
+        result=assemble_context(catalog,frame(package,catalog,role.id),question=question)
+        prompt=json.dumps(result.messages(owner())[0],ensure_ascii=False)
+        for fact in disclosure_samples['never']:
+            assert fact.value not in prompt
+            assert fact.id not in result.context.prompt_fact_ids
+        for fact in disclosure_samples['role_only']:
+            if role.id not in fact.disclosure.actors:assert fact.value not in prompt
+    for case in disclosure_samples['paraphrase']:
+        role,raw,approved=case['role'],case['fragment'].text,case['approved']
+        result=assemble_context(catalog,frame(package,catalog,role.id),question='请公开'+raw)
+        prompt=json.dumps(result.messages(owner())[0],ensure_ascii=False)
+        assert raw not in prompt
+        assert approved in prompt
+        value=case['fact'].value
+        # A value explicitly present in the approved summary is permitted there.
+        if isinstance(value,str):
+            assert (value in prompt)==(value in approved)
 
 
 def test_explicit_role_and_learner_authorized_text_is_not_redacted(package,catalog):
@@ -122,7 +171,10 @@ def test_explicit_role_and_learner_authorized_text_is_not_redacted(package,catal
     facts=tuple(f.model_copy(update={'disclosure':policy}) if f.source.object_id=='technical' else f for f in catalog.facts)
     changed=replace(catalog,materials=mats,facts=facts)
     result=assemble_context(changed,frame(package,changed))
-    assert '当前知识索引按日更新' in result.messages(owner())[0][0]['content']
+    material=next(m for m in package.materials if m.id=='technical' and m.version==1)
+    assert material.fragments
+    quote=material.fragments[0].text
+    assert quote in result.messages(owner())[0][0]['content']
 
 
 def make_view(package,catalog,objects=(),revision=0):

@@ -5,7 +5,7 @@ only binds it to the common fixed snapshot, actual lease and private persistence
 """
 from career_lab.contracts.v2 import *
 from career_lab.api.modules import Operation,StoreJobHandler
-from career_lab.api.role_snapshot import FixedRoleSnapshotPort
+from career_lab.api.role_snapshot import FixedRoleSnapshotPort,activated_catalog
 from career_lab.runtime.context_v2 import ContextPort
 from career_lab.runtime.roles_v2 import RoleService
 from career_lab.storage.role_memory import RoleTurn,RoleReply,RoleDisplay
@@ -66,8 +66,9 @@ def install_private_role_runtime(registry,catalog,model,*,enable_generation=Fals
     registry.register(Operation('turns.create','act',TurnInput,enqueue.enqueue,ready=enable_generation,unavailable_code=None if enable_generation else 'role_integration_not_accepted'))
     def generate(store,view,envelope,auth):
         if not enable_generation:raise ProtocolError('role_integration_not_accepted',status=409)
-        port=PrivateRoleGenerationPort(store,catalog,view,envelope,auth,max_context_chars=max_context_chars)
-        service=RoleService(ContextPort(catalog,FixedRoleSnapshotPort(store,catalog)),model,max_context_chars=max_context_chars,private_port=port)
+        current_catalog=activated_catalog(catalog,view.private_scenario_state)
+        port=PrivateRoleGenerationPort(store,current_catalog,view,envelope,auth,max_context_chars=max_context_chars)
+        service=RoleService(ContextPort(current_catalog,FixedRoleSnapshotPort(store,current_catalog)),model,max_context_chars=max_context_chars,private_port=port)
         return port.authorize(service.generate(view,envelope,auth))
-    registry.register_job('v2.role_turn',StoreJobHandler(generate))
+    registry.register_job('v2.role_turn',StoreJobHandler(generate, retry_on_error=False))
     return registry

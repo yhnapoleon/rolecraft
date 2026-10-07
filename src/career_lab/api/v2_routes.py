@@ -4,6 +4,7 @@ from career_lab.contracts.v2 import Command, ProtocolError
 from .modules import SessionAccess
 
 ROUTES=[
+ ('POST','/turns/display','turns.display'),
  ('GET','/feedback-records/{feedback_id}','feedback.records.read'),
  ('POST','/feedback/{feedback_id}/responses','feedback.responses.create'),('GET','/feedback/{feedback_id}/responses','feedback.responses.list'),('GET','/feedback-responses/{response_id}','feedback.responses.read'),
  ('POST','/work-items/batch','work_items.batch'),('POST','/work-products/{product_id}/adoption','work_products.adopt'),

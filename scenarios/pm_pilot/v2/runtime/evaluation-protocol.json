@@ -1,5 +1,108 @@
 {
+  "owner": "W05",
+  "installed": true,
   "mode": "advisory",
-  "installed": false,
-  "owner": "W05"
+  "semantic_status": "waiting_for_model_connection",
+  "formal_scoring_enabled": false,
+  "policies": [
+    {
+      "id": "R3.capacity",
+      "description": "正式开放人数是否符合当时有效容量",
+      "mechanism": "capacity",
+      "purposes": [
+        "commitment",
+        "result"
+      ],
+      "launch_only": true
+    },
+    {
+      "id": "R3.resources",
+      "description": "正式承诺的资源和时间是否有依据",
+      "mechanism": "resources",
+      "purposes": [
+        "commitment",
+        "result"
+      ],
+      "launch_only": true
+    },
+    {
+      "id": "R4.functional_tests",
+      "description": "是否在相关配置下实际运行过验证；覆盖质量另行核验",
+      "mechanism": "tests",
+      "purposes": [
+        "commitment",
+        "result"
+      ],
+      "launch_only": true
+    },
+    {
+      "id": "R6.comparison",
+      "description": "比较内容是否说明方案、替代和取舍；不依赖作品模板",
+      "mechanism": "semantic",
+      "purposes": [
+        "option",
+        "plan",
+        "commitment",
+        "result"
+      ],
+      "launch_only": false
+    },
+    {
+      "id": "decision.rationale",
+      "description": "判断是否有目标、证据和风险/价值依据；结论枚举不决定质量",
+      "mechanism": "semantic",
+      "purposes": [
+        "exploration",
+        "option",
+        "plan",
+        "commitment",
+        "result"
+      ],
+      "launch_only": false
+    },
+    {
+      "id": "decision.follow_up",
+      "description": "决定之后的处理、责任和补证安排是否清楚",
+      "mechanism": "semantic",
+      "purposes": [
+        "plan",
+        "commitment",
+        "result"
+      ],
+      "launch_only": false
+    },
+    {
+      "id": "result.claims",
+      "description": "结果报告中的声明是否由实际记录支持",
+      "mechanism": "semantic",
+      "purposes": [
+        "result"
+      ],
+      "launch_only": false
+    }
+  ],
+  "source_files": {
+    "src/career_lab/api/reviews_v2.py": "31ca651c248b1e28f7bc131061a5128f3dc708b5d37ba76a0e20ee882d41b90d",
+    "src/career_lab/evidence/v2/__init__.py": "09055f6b25786f7a2052e0255116ac7ef55f16b535cc78534f8aecda9bba974b",
+    "src/career_lab/evidence/v2/assembler.py": "8d0d9d316f6d83f0104d5d663e7cc9a2e59f7920da3e02bafb5eb969ab4537e2",
+    "src/career_lab/evidence/v2/availability.py": "aea8ce5ff16f4af1ea956296afdf1430538c113ff25af34c31e8d10b829975ed",
+    "src/career_lab/evidence/v2/factual.py": "c42060a256e7787992729c815388f124ee3f1e054ef67a315282e6e35da221ec",
+    "src/career_lab/evidence/v2/formal_feedback.py": "324cc3890e1d19e3420c3a84c3f82d40dc9ea0d9099aedd2c8d2c1c1fe3c96a7",
+    "src/career_lab/evidence/v2/history.py": "575c1b6b2ced0c0f56f95c861d2bea260ce52d02fc912452feb782e1d5fb9e27",
+    "src/career_lab/evidence/v2/localization.py": "faa9f794ad2085fc323cc9ffab1cb210dc20b488b6037bf2c4e953a247662f99",
+    "src/career_lab/evidence/v2/ports.py": "8bf09761494fb98bb702aa0e249f7ee0b482d195e1bf2b0efd5c1fd3cb12c57d",
+    "src/career_lab/evidence/v2/review_evaluator.py": "b1d09bf3532e69314495d0e605c495457c404747eb960a1678079e44e6e3c41e",
+    "src/career_lab/evidence/v2/review_ports.py": "bdbe241b1201d80c3b59a9df0fc5453cd5b954aa89a78d5ced6ebc8ac69cafbe",
+    "src/career_lab/evidence/v2/snapshot_reader.py": "e560c7b411c85664850d19c7f265e2d711aa9928f3bd392da188cdcfcb6b1154",
+    "src/career_lab/evidence/v2/store_reader.py": "a6e94c863f96db495020609ea9125b5acc2ae51ac923443a60e45c6b0491fd11",
+    "src/career_lab/evidence/v2/submission_evaluator.py": "3021af89c26d28fb844e66a556157f12bcf0ed6d43bc429b33abac44aa8b3a77",
+    "src/career_lab/evidence/v2/work_summary.py": "4b53f2be46e477ff2b7b37690c9b428a48d710de502ce596da056ebe1a2b985b",
+    "src/career_lab/rubrics/v4/__init__.py": "7cc8aae0dd49bb2bbdc7ec09a582c5f5215f14daa9a1d763abd3ca27ff06224f",
+    "src/career_lab/rubrics/v4/feedback.py": "d0a88b20d42b088ebd0c1b339f551c6066f9f22a8321c271a73d6d2a1bcb8cca",
+    "src/career_lab/rubrics/v4/judge.py": "464d68b3a627cce446cac44f88f5df7bf602fd0ffd399be19369f9aeb26073dd",
+    "src/career_lab/rubrics/v4/provider.py": "95a647c907b510d1b6ef4215550dc752ae1a5676505aff6fa76cae8aff57dc5f",
+    "src/career_lab/rubrics/v4/rules.py": "fdb20b8175e50bdb8b3bbe5d407dc213707b08e3586e28640f0fa6094ed46a1c",
+    "src/career_lab/rubrics/v4/support.py": "4b7bdce6393f64a0f43754bac8b198d47addff05098ac25f8d4215695c1a3afb"
+  },
+  "supersedes_placeholder": "rubric-reference.json remains authored immutable history; this frozen evaluation uses the source-backed W05 policies above."
 }

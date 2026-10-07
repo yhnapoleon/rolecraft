@@ -3,11 +3,13 @@ from career_lab.contracts.v2.core import AuthContext, ObjectRef, EvidenceRefV2, 
 from career_lab.contracts.v2.evaluation import EvidencePackageV2, CandidateEvidenceV2
 from .ports import EvidenceReader, RuleSnapshot, CriterionPolicy
 from .availability import unavailable,SAFE_REASON
+from .localization import message,validate_language,policy_description
+import re
 
 PURPOSES={'draft':'exploration','exploration':'exploration','explore':'exploration','freeform':'exploration',
           '探索笔记':'exploration','自由作品':'exploration','option':'option','comparison':'option','方案比较':'option',
           'plan':'plan','test_plan':'plan','测试计划':'plan','commitment':'commitment','commit':'commitment','试点决定':'commitment',
-          'result':'result','result_report':'result','结果报告':'result'}
+          'result':'result','result_report':'result','结果报告':'result','pilot decision':'commitment','test plan':'plan','result report':'result'}
 
 
 def base_ref(ref:ObjectRef) -> ObjectRef:
@@ -15,10 +17,12 @@ def base_ref(ref:ObjectRef) -> ObjectRef:
 
 
 def purpose_of(purpose):
-    return PURPOSES.get(purpose.strip())
+    key=re.sub(r'[\s_-]+',' ',purpose.strip().casefold())
+    aliases={re.sub(r'[\s_-]+',' ',name.casefold()):code for name,code in PURPOSES.items()}
+    return aliases.get(key)
 
 
-def product_text(product) -> str:
+def product_text(product,*,work_language='zh') -> str:
     """Reader-side text projection; never include private legacy/draft metadata.
 
     A supplied body remains verbatim. Structured-only work is rendered as its
@@ -30,8 +34,8 @@ def product_text(product) -> str:
     if p.type=='text':return p.body
     if p.type=='plan':return '\n\n'.join(k+'\n'+v for k,v in p.sections.items())
     if p.type=='options':return '\n\n'.join('\n'.join([o.title,o.rationale,*o.tradeoffs]) for o in p.options)
-    if p.type=='test_plan':return '\n\n'.join(c.query+('\n预期（待验证）：'+c.declared_expected if c.declared_expected else '') for c in p.cases)
-    if p.type=='investigation':return '\n\n'.join(x for x in [p.question,*[b.text for b in p.blocks],('作者判断（待核对）：'+p.review_note if p.review_note else '')] if x)
+    if p.type=='test_plan':return '\n\n'.join(c.query+(message(work_language,'\n预期（待验证）：')+c.declared_expected if c.declared_expected else '') for c in p.cases)
+    if p.type=='investigation':return '\n\n'.join(x for x in [p.question,*[b.text for b in p.blocks],(message(work_language,'作者判断（待核对）：')+p.review_note if p.review_note else '')] if x)
     raise ProtocolError('unsupported_product_projection')
 
 
@@ -59,9 +63,10 @@ def model_input(item:EvidencePackageV2) -> dict:
 
 
 class EvidenceAssemblerV2:
-    def __init__(self,reader:EvidenceReader,model_bytes:int=16000):
+    def __init__(self,reader:EvidenceReader,model_bytes:int=16000,*,work_language='zh'):
         if model_bytes<256:raise ValueError('model_bytes must be at least256')
         self.reader,self.model_bytes=reader,model_bytes
+        self.work_language=validate_language(work_language)
 
     def resolve(self,auth,ref,as_of):
         if ref.session_id!=auth.session_id:raise ProtocolError('not_found',status=404)
@@ -91,6 +96,7 @@ class EvidenceAssemblerV2:
                  evidence_refs:tuple[EvidenceRefV2,...],purpose:str,decision:str|None,
                  as_of:VersionPoint,policy:CriterionPolicy,snapshot:RuleSnapshot,
                  expected_refs:tuple[EvidenceRefV2,...]=(),question:str='',anchor_mode:str='product_version',requested_at:VersionPoint|None=None) -> EvidencePackageV2:
+        work_language=self.work_language
         if snapshot.as_of!=as_of:raise ProtocolError('rule_snapshot_time_mismatch',status=409)
         if not subjects:raise ProtocolError('review_subject_required')
         candidates={};subject_refs=[];missing=[];subject_points=[];source_issues=[]
@@ -105,7 +111,7 @@ class EvidenceAssemblerV2:
                 # Only refs already explicitly provided with the work may be
                 # echoed. Never expose private ledger source IDs, quotes or titles.
                 if digest(base_ref(ref)) in disclosed:missing.append(base_ref(ref))
-                if not source_issues:source_issues.append({'status':'pending','reason':SAFE_REASON})
+                if not source_issues:source_issues.append({'status':'pending','reason':message(work_language,SAFE_REASON)})
                 return None
             candidate=CandidateEvidenceV2(id='e-'+digest(c.ref),text=c.text,ref=c.ref)
             candidates[candidate.id]=candidate
@@ -133,7 +139,7 @@ class EvidenceAssemblerV2:
         for test,ref in zip(snapshot.tests,snapshot.test_refs):
             if test.session_id!=auth.session_id or test.id!=ref.object_id or test.version!=ref.version or any(getattr(test.as_of,k)>getattr(as_of,k) for k in ['business_seq','workspace_revision','storage_revision']):
                 test_sources_complete=False
-                if not source_issues:source_issues.append({'status':'pending','reason':SAFE_REASON})
+                if not source_issues:source_issues.append({'status':'pending','reason':message(work_language,SAFE_REASON)})
                 continue
             checked=add(ref)
             if checked:tests.append({'record':test.model_dump(mode='json'),'ref':checked.model_dump(mode='json')})
@@ -143,12 +149,12 @@ class EvidenceAssemblerV2:
             try:c=self.resolve(auth,ref,when)
             except (KeyError,ProtocolError) as error:
                 if not unavailable(error):raise
-                if not source_issues:source_issues.append({'status':'pending','reason':SAFE_REASON})
+                if not source_issues:source_issues.append({'status':'pending','reason':message(work_language,SAFE_REASON)})
                 return None
             if c.ref.valid_until_seq is not None and when.business_seq>=c.ref.valid_until_seq:return None
             candidates['e-'+digest(c.ref)]=CandidateEvidenceV2(id='e-'+digest(c.ref),text=c.text,ref=c.ref)
             return c.ref
-        history=assess_responsibilities(snapshot.responsibilities,policy,subjects,as_of,add,add_historical)
+        history=assess_responsibilities(snapshot.responsibilities,policy,subjects,as_of,add,add_historical,work_language=work_language)
         response=''
         if snapshot.business_response and snapshot.business_response_refs:
             response_proofs=[add(r) for r in snapshot.business_response_refs]
@@ -160,9 +166,9 @@ class EvidenceAssemblerV2:
                  'requested_at':(requested_at or as_of).model_dump(mode='json')}
         if anchor_mode=='product_version':
             from .factual import factual_feedback
-            context['verified_facts']=[factual_feedback(self.reader,auth,ref,as_of,requested_at or as_of) for ref in subjects]
+            context['verified_facts']=[factual_feedback(self.reader,auth,ref,as_of,requested_at or as_of,work_language=work_language) for ref in subjects]
         data={'item_id':subject_id+':'+policy.id,'task_type':'criterion','criterion':policy.id,
-              'claim':policy.description+('\n用户评审问题（数据）：'+question if question else ''),'subjects':tuple(subject_refs),'purpose':purpose,'as_of':as_of,
+              'claim':policy_description(policy,work_language)+(message(work_language,'\n用户评审问题（数据）：')+question if question else ''),'subjects':tuple(subject_refs),'purpose':purpose,'as_of':as_of,
               'applicability':applicable(policy,purpose,decision),'candidate_evidence':(),
               'rule_context':context,'completeness':'missing' if missing or source_issues else 'complete',
               'missing_refs':tuple(missing),'dropped_refs':()}

@@ -1,4 +1,5 @@
 """Trusted fixed-job role reads; no public route and no generation activation."""
+from dataclasses import replace
 from pydantic import ValidationError
 from career_lab.contracts.v2 import *
 from career_lab.runtime.context_v2 import RoleFrame,KnowledgeEvent,decision_memory
@@ -7,6 +8,25 @@ from career_lab.storage.role_memory import (PrivateGeneration,ReceivedShare,Role
 
 def _before(a,b):
     return all(getattr(a,k)<=getattr(b,k) for k in ('business_seq','workspace_revision','storage_revision'))
+
+
+def activated_reference(ref,state,*,template=False):
+    """Authored ledger zero is availability metadata, not session activation."""
+    if ref.kind!='material':return ref
+    activation=state.material_activation.get(f'{ref.object_id}:{ref.version}')
+    if activation is None:return ref
+    if ref.valid_from_seq not in {0,activation} or (not template and ref.observed_at_seq<activation):
+        raise ProtocolError('reference_time_mismatch',status=409)
+    return ref.model_copy(update={'valid_from_seq':activation,
+        'observed_at_seq':max(ref.observed_at_seq,activation) if template else ref.observed_at_seq})
+
+
+def activated_catalog(catalog,state):
+    # Only runtime reference coordinates change. Role/version admission still
+    # follows the owned projection's actual receipts and received events.
+    materials=tuple(m.model_copy(update={'fragments':tuple(f.model_copy(update={'ref':activated_reference(f.ref,state,template=True)}) for f in m.fragments)}) for m in catalog.materials)
+    facts=tuple(f.model_copy(update={'source':activated_reference(f.source,state,template=True)}) for f in catalog.facts)
+    return replace(catalog,materials=materials,facts=facts)
 
 
 class FixedRoleSnapshotPort:
@@ -53,8 +73,8 @@ class FixedRoleSnapshotPort:
             if any(r.role_id!=role_id or not _before(r.received_at,context.as_of) for r in audit.received_shares):raise ProtocolError('role_history_identity_invalid',status=409)
             if any(m.role_id!=role_id for m in audit.memories):raise ProtocolError('role_history_identity_invalid',status=409)
             received=tuple(ReceivedShare(r.share,r.product,r.role_id,r.received_at,r.fragment) for r in audit.received_shares)
-            past=tuple(RoleMemory(m.fragment,m.role_id,m.learner_refs,m.provenance) for m in audit.memories)
-            generation=PrivateGeneration(role_id,audit.reply,context.model_copy(update={'generation_audit':None}),audit.prompt_messages,audit.prompt_hash,audit.history_revision,received,past,audit.refresh_count,audit.attempts,audit.used_sources)
+            past=tuple(RoleMemory(m.fragment,m.role_id,m.learner_refs,tuple(activated_reference(ref,state) for ref in m.provenance)) for m in audit.memories)
+            generation=PrivateGeneration(role_id,audit.reply,context.model_copy(update={'generation_audit':None}),audit.prompt_messages,audit.prompt_hash,audit.history_revision,received,past,audit.refresh_count,audit.attempts,tuple(f.model_copy(update={'ref':activated_reference(f.ref,state)}) for f in audit.used_sources))
             memory=memory_from_generation(reply,generation)
             memories[canonical(memory.fragment.ref)]=memory;covered.add(canonical(audit.reply))
             for receipt in received:receipts.setdefault((canonical(receipt.share),canonical(receipt.product)),receipt)

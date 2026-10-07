@@ -11,6 +11,7 @@ def public_models():
     return dict(sorted(models.items()))
 
 REQUEST_MODELS={
+ 'turns.display':'ObjectRead',
  'feedback.records.read':'ResourcePage','feedback.responses.create':'FeedbackResponseCreate','feedback.responses.read':'ResourcePage','feedback.responses.list':'ResourcePage',
  'work_items.batch':'TaskBatch','work_products.adopt':'ProductAdopt',
  'requests.read':'RequestResultQuery','actions':'ActionInput','tests.create':'TestRequestV2','tests.list':'ResourcePage',

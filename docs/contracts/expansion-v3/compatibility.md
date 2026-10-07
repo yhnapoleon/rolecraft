@@ -122,3 +122,14 @@ OperationAvailability明确installed/ready/capability/unavailable_code，注册�
 原生配额续接：JobRepository.enqueue/retry_failed中的会话v2任务先从真实凭据核session、actor、到期/撤销、能力和动作，再与V2Store共享同一个SQL容量函数；不复制第二份计数状态。重复enqueue/已重排retry不新占槽，failed→queued需在同一凭据锁/任务事务内重新取得容量；满额拒绝且不改任务或时间元数据。v1行为保持；历史内部空payload的v2诊断任务不具有session/delegate身份，也不是可执行Gateway JobEnvelope，不能由MCP当业务工具暴露。原生入队本身不代替Gateway对源对象、世界状态、WorkerClaim和结果的完整校验。
 
 每个真正session-v2入口的容量均按原delegate维度，任意新HTTP/MCP/worker适配仍须消费共同方法并验证公开能力ready。当前已固定W05r7 e249622，旧r6验收不改签；实际MCP/原生UI完整组合与移除行为门槛仍待后续。
+
+
+## 中文公共启动切片（2026-10-07）
+
+标准 `career-lab serve/worker` 共用 `create_runtime_app` 装配；W02生成运行绑定与公共manifest同批核验。`turns.display`使用既有ObjectRead，历史对象读取只返回当前权限下的确切版本。提交、修订和固定反馈任务仍走同一Gateway/V2Store；反馈handler未装时明确报告未安装，不伪造评价。
+
+模型任务失败或过期租约不会自动重调；用户显式`jobs.refresh`现可恢复failed及needs_context，并重新检查原凭据、作用域、固定subject和真实上下文。普通任务默认恢复行为不变。提交/暂停后允许受限的公开回复显示回执，不开放普通编辑。
+
+公共事件读取在`career_lab.api.vertical_reads.public_event_history`：输入同一个store/registry、原auth与实际VersionPoint，按持久化operation调用已安装投影。处于Gateway查询中时传其view，避免SQLite嵌套BEGIN IMMEDIATE；独立调用则经query_at验证历史点和当前权限。材料目录不伪装阅读事件；`GET /objects/material/{id}/{version}`是授权只读原文入口，`actions/read_material`另产生真实阅读记录。原生timeline提供实际公开事件供MCP接线，不输出原始private事件数据。
+
+W05 r9的39份owned已固定并挂载真实W02授权材料/规则端口、原子反馈任务与原生callbacks；本地评价政策及源码哈希从生成的EvaluationBundle核验，语义仍待接入。W03新原生部件待固定输入后组合；当前W04为r7的23份owned，W02/W03仍沿登记固定输入。英文语言字段本切片未新增；旧包按固定中文内容处理，界面locale不改变历史。

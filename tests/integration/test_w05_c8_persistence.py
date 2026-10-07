@@ -23,7 +23,8 @@ def cmd(store,auth,operation,payload,key):
 
 
 @pytest.fixture
-def prepared_env(tmp_path):
+def prepared_env(tmp_path,request):
+    work_language=getattr(request,'param','zh')
     raw=b'controlled evaluation fixture';(tmp_path/'evaluation.json').write_bytes(raw)
     f=C.FileRef(path='evaluation.json',sha256=hashlib.sha256(raw).hexdigest());registry=ExtensionRegistry()
     registry.register_scenario('w05-owned-c8',ScenarioRegistration(C.SessionBindings(scenario=f,runtime=f,evaluation=f),C.AssistantConfig(id='config',session_id='fixture',domains=('faq',)),{}))
@@ -61,11 +62,11 @@ def prepared_env(tmp_path):
             'covered_from':C.VersionPoint(business_seq=0,workspace_revision=0,storage_revision=0).model_dump(mode='json'),'covered_through':captured.model_dump(mode='json')},
         'rule_snapshots':[{'subject':work.model_dump(mode='json'),'as_of':work_point.model_dump(mode='json'),'facts':[],'responsibilities':[]}]}
     path=tmp_path/'controlled-store-snapshot.json';data=json.dumps(snapshot).encode();path.write_bytes(data)
-    evaluator=create_review_evaluator(SnapshotEvidenceReader(path,hashlib.sha256(data).hexdigest()))
+    evaluator=create_review_evaluator(SnapshotEvidenceReader(path,hashlib.sha256(data).hexdigest()),work_language=work_language)
     prepared=prepare_review_feedback(evaluator,auth,saved)
     result=store.execute(auth,cmd(store,auth,'feedback.request',{'subject':rref.model_dump(mode='json')},'store-feedback'),lambda v,c,a:review_feedback_plan(v,c,a,prepared),derived_subject=rref)
     feedback=result.objects[0]
-    yield dict(app=app,client=client,store=store,auth=auth,token=session['token'],source=source,visible=visible,work=work,review=rref,request=saved,feedback=feedback,prepared=prepared,evaluator=evaluator)
+    yield dict(app=app,client=client,store=store,auth=auth,token=session['token'],source=source,visible=visible,work=work,review=rref,request=saved,feedback=feedback,prepared=prepared,evaluator=evaluator,work_language=work_language,snapshot_path=path)
     client.close();app.state.store.close();store.db.engine.dispose()
 
 

@@ -2,6 +2,7 @@
 from career_lab.contracts.v2.core import ProtocolError,VersionPoint,canonical
 from .ports import ActivityLedger
 from .history import before
+from .localization import message,validate_language
 from .availability import unavailable,ACTIVITY_CODES
 
 KINDS=('material_read','test_run','question_sent','reply_received','learner_displayed')
@@ -12,10 +13,12 @@ def reference_key(ref):
     return (ref.session_id,ref.kind,ref.object_id,ref.version,ref.config_version)
 
 
-def factual_feedback(reader,auth,subject,at,requested_at):
+def factual_feedback(reader,auth,subject,at,requested_at,*,work_language='zh',anchor_mode='product_version'):
     from .assembler import EvidenceAssemblerV2
     record=reader.read(auth,subject,at);resolver=EvidenceAssemblerV2(reader)
-    if record.created_at!=at:raise ProtocolError('subject_point_mismatch',status=409)
+    if anchor_mode not in {'product_version','submission'}:raise ProtocolError('invalid_evaluation_anchor')
+    if anchor_mode=='product_version' and record.created_at!=at:raise ProtocolError('subject_point_mismatch',status=409)
+    if anchor_mode=='submission' and not before(record.created_at,at):raise ProtocolError('subject_point_mismatch',status=409)
     refs=[];seen=set();source_keys=set();exact_sources=set();effective_sources=set();expired_sources=set()
     for ref in record.declared_refs:
         key=canonical(ref)
@@ -77,13 +80,17 @@ def factual_feedback(reader,auth,subject,at,requested_at):
         known=full_window and complete.get(kind) is True and kind not in broken
         totals[kind]={'status':'complete' if known else 'unknown','count':len(actual) if known else None,
                       'verified_records':len(actual)}
-    summary=[f'作品明确关联{len(source_keys)}个来源、{len(refs)}处去重引用；原文/版本已核对{len(exact_sources)}个，其中在作品参照点有效{len(effective_sources)}个、已失效{len(expired_sources)}个。失效来源保留历史用途；引用真实不等于支持结论。']
+    from .work_summary import work_summary
+    summary=work_summary(totals,len(exact_sources),rows,work_language)
+    summary += [message(work_language,'作品明确关联{p0}个来源、{p1}处去重引用；原文/版本已核对{p2}个，其中在作品参照点有效{p3}个、已失效{p4}个。失效来源保留历史用途；引用真实不等于支持结论。',p0=len(source_keys),p1=len(refs),p2=len(exact_sources),p3=len(effective_sources),p4=len(expired_sources))]
     for kind in KINDS:
         value=totals[kind]
-        if value['status']=='complete':summary.append(f'作品形成前完整授权日志中的{NAMES[kind]}记录：{value["count"]}条。')
-        else:summary.append(f'{NAMES[kind]}日志完整性未知；已核实{value["verified_records"]}条，不能据此断言没有发生。')
-    if any(r['executor']['kind']=='external_agent' for r in rows):summary.append('含外部Agent执行记录；不视为学员独立调查或理解。')
-    summary.append('提问、收到回复、向学员展示和理解分别记录；当前无法判断独立理解。')
+        if value['status']=='complete':summary.append(message(work_language,'作品形成前完整授权日志中的{p0}记录：{p1}条。',p0=message(work_language, NAMES[kind]),p1=value['count']))
+        else:summary.append(message(work_language,'{p0}日志完整性未知；已核实{p1}条，不能据此断言没有发生。',p0=message(work_language, NAMES[kind]),p1=value['verified_records']))
+    if any(r['executor']['kind']=='external_agent' for r in rows):summary.append(message(work_language,'含外部Agent执行记录；不视为学员独立调查或理解。'))
+    summary.append(message(work_language,'提问、收到回复、向学员展示和理解分别记录；当前无法判断独立理解。'))
+    if anchor_mode=='submission':
+        summary=[text.replace('作品形成前完整授权日志','提交时点前完整授权日志').replace('before the work was created','before the submission') for text in summary]
     return {'section':'verified_facts','subject':subject.model_dump(mode='json'),'as_of':at.model_dump(mode='json'),
             'requested_at':requested_at.model_dump(mode='json'),'reference_grain':'exact_ref_and_quote; source_count_by_object_version_config',
             'declared_source_count':len(source_keys),'declared_citation_count':len(refs),'verified_source_count':len(exact_sources),'exact_source_count':len(exact_sources),

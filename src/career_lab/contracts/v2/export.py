@@ -97,7 +97,7 @@ def export(root:Path,output:Path):
     app=create_app('sqlite:///:memory:');dump(output/'openapi.json',app.openapi());app.state.store.close()
     # Only implementation files here: the complete source tree is identified by the delivery receipt.
     files=set((root/'src/career_lab/contracts').rglob('*.py'))
-    files|={root/p for p in ['src/career_lab/api/app.py','src/career_lab/api/workspace_integration.py','src/career_lab/api/feedback_integration.py','src/career_lab/api/role_snapshot.py','src/career_lab/api/private_roles.py','src/career_lab/api/modules.py','src/career_lab/api/v2_routes.py','src/career_lab/storage/v2_tables.py','src/career_lab/storage/v2_store.py','src/career_lab/storage/v2_jobs.py','src/career_lab/storage/v2_snapshot.py','src/career_lab/storage/v2_lifecycle.py','src/career_lab/storage/v2_remap.py','src/career_lab/jobs/worker.py','src/career_lab/jobs/repository.py','src/career_lab/rubrics/registry.py']}
+    files|={root/p for p in ['src/career_lab/api/app.py','src/career_lab/cli.py','src/career_lab/api/vertical_runtime.py','src/career_lab/api/vertical_reads.py','src/career_lab/api/lifecycle_integration.py','src/career_lab/api/evaluation_runtime.py','src/career_lab/api/workspace_integration.py','src/career_lab/api/feedback_integration.py','src/career_lab/api/role_snapshot.py','src/career_lab/api/private_roles.py','src/career_lab/api/modules.py','src/career_lab/api/v2_routes.py','src/career_lab/storage/v2_tables.py','src/career_lab/storage/v2_store.py','src/career_lab/storage/v2_jobs.py','src/career_lab/storage/v2_snapshot.py','src/career_lab/storage/v2_lifecycle.py','src/career_lab/storage/v2_remap.py','src/career_lab/jobs/worker.py','src/career_lab/jobs/repository.py','src/career_lab/rubrics/registry.py']}
     source={str(p.relative_to(root)):sha(p) for p in sorted(files)}
     errors=[]
     import re
@@ -172,6 +172,8 @@ def export(root:Path,output:Path):
     manifest['integration_changes']['authoritative-segment-traces']='A declared trace always constrains text hash and complete dependencies, including cited explanations and history; visible citations do not bypass it. The most-specific complete trace is authoritative for a field.'
     manifest['previous_contract_revision']='expansion-v3-d04601c2f279d3940e6b6e1cb452664585faa0b289f2a0c985b06aa28b9e3d24'
     manifest['integration_changes']['W06-native-queue-capacity']='Native session-v2 enqueue/failed retry and V2Store share the same credential lock, SQL active-job count and persisted policy; idempotent replay does not reserve again; legacy v1 unchanged.'
+    manifest['previous_contract_revision']='expansion-v3-e17e102c1dc0c7755dbaf6828d18ca17ad7a3c4485dc2fa25e90c4dd8f9211aa'
+    manifest['integration_changes']['native-runtime-slice']='One standard API/worker assembly; native investigation, assistant trials, resource decisions and colleague slots. Explicit failed-job refresh, no automatic model retry including expired leases, exact historical public event/source reads, real material activation in recovered role provenance. W05 r9 production evidence, atomic feedback and native callbacks are assembled with frozen advisory policies; W03 native composition remains pending.'
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

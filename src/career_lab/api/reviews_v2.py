@@ -15,14 +15,14 @@ def create_router(*args, **kwargs):
     raise ProtocolError('module_unavailable', 'Install W05 operations on the shared Gateway', status=503)
 
 
-def create_review_evaluator(reader,*,engine=None,model_bytes=16000):
+def create_review_evaluator(reader,*,engine=None,model_bytes=16000,work_language='zh'):
     """Default read-only factual/semantic handler; no provider required.
 
     Reader must supply an immutable authorized snapshot, frozen policies and the
     exact-version formation point. Persistence/worker/objections remain external.
     """
     from career_lab.evidence.v2.review_evaluator import ReviewEvaluator
-    return ReviewEvaluator(reader,engine=engine,model_bytes=model_bytes)
+    return ReviewEvaluator(reader,engine=engine,model_bytes=model_bytes,work_language=work_language)
 
 
 def prepare_review_feedback(evaluator,auth,request):
@@ -42,6 +42,7 @@ def prepare_review_feedback(evaluator,auth,request):
         raw.update(subject=subject.model_dump(mode='json'),id=C.digest([subject.model_dump(mode='json'),entry['subject'],request.evaluation.model_dump(mode='json'),'w05-c8-feedback']))
         reports.append(C.FeedbackV2.model_validate(raw))
     return {'request':request,'request_hash':C.digest(request),'reports':tuple(reports),
+            'work_language':evaluator.work_language,
             'followup_of':request.followup_of,'followup_status':result['followup_status'],'followup_evidence_status':result['followup_evidence_status']}
 
 

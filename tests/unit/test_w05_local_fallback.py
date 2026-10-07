@@ -82,8 +82,8 @@ def test_expired_reference_keeps_historical_evidence_but_is_not_effective_at_sub
     facts=result['verified_facts']
     assert facts['exact_source_count']==1 and facts['effective_source_count']==0 and facts['expired_source_count']==1
     assert facts['references'][0]['status']=='exact_reference_verified' and facts['references'][0]['valid_at_subject'] is False
-    assert '作品参照点有效0个、已失效1个' in facts['summary'][0]
-    assert '历史用途' in facts['summary'][0]
+    assert any('作品参照点有效0个、已失效1个' in text for text in facts['summary'])
+    assert any('历史用途' in text for text in facts['summary'])
 
 
 def test_result_without_typed_actual_or_completion_records_is_explicitly_pending(tmp_path):

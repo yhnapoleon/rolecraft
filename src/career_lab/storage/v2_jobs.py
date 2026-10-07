@@ -122,7 +122,8 @@ class JobStoreMixin:
         original_auth=self._job_auth(c,context,payload['capability'])
         # Caller permission never grants a revoked/narrowed original actor new authority.
         self._auth(c,auth,'act',context.action,[x.object_id for x in context.sources])
-        if row['status']!='needs_context':raise ProtocolError('job_refresh_not_available',status=409)
+        failed_model=row['status']=='failed' and row['kind'] in {'v2.role_turn','v2.feedback','v2.submission-feedback'}
+        if row['status']!='needs_context' and not failed_model:raise ProtocolError('job_refresh_not_available',status=409)
         self._ensure_delegation_capacity(c,original_auth,1)
         self._check_job_lifecycle(c,context,Command.model_validate(payload['command']),refresh=True)
         if c.execute(select(v2_transactions.c.request_id).where(v2_transactions.c.session_id==auth.session_id,v2_transactions.c.request_id==context.request_id)).first():raise ProtocolError('job_effect_already_committed',status=409)

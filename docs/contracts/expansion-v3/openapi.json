@@ -14000,6 +14000,91 @@
         "summary": "Materials"
       }
     },
+    "/sessions/{session_id}/objects/{kind}/{object_id}/{version}": {
+      "get": {
+        "operationId": "v2_object_sessions__session_id__objects__kind___object_id___version__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "object_id",
+            "required": true,
+            "schema": {
+              "title": "Object Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "version",
+            "required": true,
+            "schema": {
+              "title": "Version",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "config_version",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Config Version"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "V2 Object"
+      }
+    },
     "/sessions/{session_id}/observation": {
       "get": {
         "operationId": "observation_sessions__session_id__observation_get",
@@ -14743,6 +14828,58 @@
           }
         ],
         "summary": "Turn"
+      }
+    },
+    "/sessions/{session_id}/turns/display": {
+      "post": {
+        "operationId": "turns_display_sessions__session_id__turns_display_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Turns Display"
       }
     },
     "/sessions/{session_id}/work-items": {
@@ -15744,6 +15881,9 @@
     },
     "turns.create": {
       "$ref": "#/components/schemas/TurnInput"
+    },
+    "turns.display": {
+      "$ref": "#/components/schemas/ObjectRead"
     },
     "work_items.batch": {
       "$ref": "#/components/schemas/TaskBatch"
