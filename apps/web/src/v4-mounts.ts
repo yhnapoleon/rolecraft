@@ -61,10 +61,10 @@ export class V4Mounts {
         pick('tasks0', '.col-first .cards'); pick('tasks1', '.col-next .cards'); pick('tasks2', '.col-later .cards');
         pick('folder', '[data-work-folder]'); pick('title', '#editor-title'); pick('body', '#editor-body');
         pick('purpose', '[data-edit="purpose"]'); pick('saveStatus', '[data-save]');
-        pick('investigation', '.investigation-workpaper, .investigation-sheet');
+        pick('investigation', '.investigation-paper');
         if (nodes.saveStatus) { const title = nodes.saveStatus.title; nodes.saveStatus.dataset.v4Managed = 'true'; nodes.saveStatus.title = T('草稿和服务端作品版本的保存状态', 'Draft and server version save status'); restore.push(() => { delete nodes.saveStatus.dataset.v4Managed; nodes.saveStatus.title = title; }); }
         if (nodes.title || nodes.investigation) {
-          const paper = root.querySelector<HTMLElement>('.paper.editor');
+          const paper = root.querySelector<HTMLElement>('.paper.editor, .paper.investigation-paper');
           const actions = root.querySelector<HTMLElement>('.action-bar') ?? paper;
           insert('actions', actions); insert('sharing', paper); insert('versions', paper);
           for (const button of root.querySelectorAll<HTMLElement>('[data-action="save-work"], [data-action="remove-work"]')) {

@@ -133,6 +133,28 @@ export class LiveWorkbench {
       return { sessionId: session.id, token: session.token };
     }, fetcher);
   }
+  async createNativeInvestigation(a: Attempt, runId: string, taskId: string) {
+    const s=this.session(a),task=s?.v2Workspace?.tasks.find(t=>t.id===taskId),run=s?.tests.find(t=>t.id===runId);
+    if(!s||!task||!run)throw new Error(T('请选择真实测试和事项。','Choose an actual test and task.'));
+    const host=this.v4.host(s),timeline:any=await host.query('timeline');
+    const testRef=timeline.objects.find((r:any)=>r.ref.kind==='test'&&r.ref.object_id===runId)?.ref;
+    if(!testRef)throw new Error(T('测试原始版本暂不可读。','The original test version is unavailable.'));
+    const blocks:any[]=[{id:crypto.randomUUID(),type:'note',title:T('调查思路','Investigation notes'),text:''}];
+    const citation=run.citations[0],material=citation&&s.materials.find(m=>m.id===citation.material_id);
+    if(material){
+      const source:any=await host.query('objects.read',{kind:'material',object_id:material.id,version:material.version});
+      const ref=source.content.fragments[0]?.ref;
+      if(ref)blocks.push({id:crypto.randomUUID(),type:'source_check',test_ref:testRef,source_ref:ref});
+    }
+    blocks.push({id:crypto.randomUUID(),type:'retest',test_ref:testRef});
+    const result=await host.command('work_products.create',{task:{session_id:s.id,kind:'task',object_id:task.id,version:task.revision},kind:'investigation',purpose:'exploration',title:T('核对回答与资料','Check the answer against its sources'),content:'',evidence_refs:[],structured_payload:{type:'investigation',question:run.query,blocks}});
+    if(result.status!=='confirmed')throw new Error(T('调查保存尚未确认，请保留原请求。','The investigation is unconfirmed. Keep the original request.'));
+    const body=result.result as any;
+    await this.v4.sync(this.store.getSnapshot().workspace.sessions.find(x=>x.id===s.id)!);
+    const objectId=body.ref?.kind==='product'&&body.ref.session_id===s.id?body.ref.object_id:undefined;
+    if(!objectId)throw new Error(T('调查已保存，请在事项目录打开。','The investigation is saved. Open it from the task contents.'));
+    return objectId as string;
+  }
   async patchNativeTask(a: Attempt, id: string, patch: Record<string, unknown>) {
     const s=this.session(a);const task=s?.v2Workspace?.tasks.find(t=>t.id===id);
     if(!s||!task)throw new Error(T('找不到这件事的已保存版本。','The saved task version is unavailable.'));

@@ -833,10 +833,18 @@ async function loadInvestigationSources(a, work, onlyBlockId) {
     });
   }
 }
-function openInvestigation(runId) {
+async function openInvestigation(runId, chosenTaskId) {
   commit(); const a=current(), run=a?.tests.find(r=>r.id===runId);
   if(!run) throw new Error(T('这条实际测试记录暂不可用。','That actual test is unavailable.'));
   if(statusOf(a)!=='active'||storageIssue) throw new Error(T('当前只读，不能新建调查。','This practice is read-only; a new investigation cannot be created.'));
+  if (L.nativeWorkspace(a)) {
+    const target=chosenTaskId||run.taskId;
+    if(!target){
+      openSheet(T('这份调查放在哪件事下？','Which task should contain this investigation?'),`<div class="pick-list">${a.tasks.map(t=>`<button type="button" class="pick-row" data-action="native-investigation-task" data-id="${esc(t.id)}" data-run="${esc(runId)}">${esc(taskTitle(t))}</button>`).join('')}</div>`,'','narrow');return;
+    }
+    const route=ui.route,routeId=ui.routeId;const id=await L.createNativeInvestigation(a,runId,target);
+    if(current()===a&&ui.route===route&&ui.routeId===routeId){closeSheet(true);openTask(target,{type:'work',id});}return;
+  }
   const ref=run.citations.find(c=>c.id==='policy') || run.citations[0];
   const material=ref && E.getMaterials(a).find(m=>m.id===ref.id);
   const seed=[run.id,material?.version||0,a.configVersion].join('|');
@@ -1589,7 +1597,8 @@ async function act(el) {
   const a = current(); const id = el.dataset.id; const action = el.dataset.action;
   if (action !== 'menu' && action !== 'set-lang' && action !== 'show-advice' && ui.menu) { ui.menu = null; if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']); else render(); }
   switch (action) {
-    case 'investigate-run': openInvestigation(id); break;
+    case 'investigate-run': await openInvestigation(id); break;
+    case 'native-investigation-task': await openInvestigation(el.dataset.run,id); break;
     case 'investigation-retest': await runInvestigationBlock(id); break;
     case 'investigation-refresh-index': {
       if(ui.busy)break; commit(); const x=artifact(),b=x?.blocks?.find(b=>b.id===id),r=b&&a.tests.find(t=>t.id===b.testId);
