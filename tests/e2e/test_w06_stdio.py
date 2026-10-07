@@ -207,3 +207,149 @@ def test_w06_actual_http_scope_forbids_foreign_object_and_delegate_control(live)
     bad=c.post(f'/sessions/{sid}/delegations',headers=header,json=cmd);assert bad.status_code==403 and 'token' not in bad.text
     another=c.post('/sessions',json={'schema_version':2,'scenario':'controlled-w06'}).json()
     bad=c.get(f'/sessions/{another["session_id"]}/observation',headers=header);assert bad.status_code in (401,403,404)
+
+
+def queue_example_product(live):
+    """Controlled async producer using the real shared queue and workspace writer."""
+    from dataclasses import replace
+    from career_lab.storage.v2_store import Mutation,JobRequest
+    from career_lab.jobs.repository import JobRepository
+    from career_lab.jobs.worker import Worker,ClaimedHandler
+    gateway=live['app'].state.gateway
+    original=gateway.registry.operations['work_products.create']
+    name='v2.w06-example-product'
+    def enqueue(view,command,auth):
+        return Mutation(jobs=(JobRequest(name=name,command=command.model_copy(update={'request_id':command.request_id+'-effect'}),context_hash='0'*64),))
+    gateway.registry.operations[original.name]=replace(original,handler=enqueue)
+    gateway.registry.register_job(name,lambda view,envelope,auth:original.handler(view,envelope.command,auth))
+    return Worker(JobRepository(gateway.store.db),{name:ClaimedHandler(lambda payload,claim:gateway.run_job(name,payload,claim=claim))})
+
+
+def example_invocation(live):
+    ref=C.ObjectRef(session_id=live['sid'],kind='material',object_id='public-material',version=1)
+    response=live['client'].post(f'/sessions/{live["sid"]}/actions',json=fixture.command(live,'read_material',{'tool':'read_material','material':ref.model_dump(mode='json')}))
+    assert response.status_code==200,response.text
+    journal=live['tmp']/'async-journal.json'
+    cmd=[sys.executable,'examples/byo_agent_minimal.py','--config',str(live['config']),'--journal',str(journal),'--config-version','0','--wait-seconds','0']
+    return journal,cmd
+
+
+def test_w06_example_does_not_advance_queued_work_and_recovers_worker_effect(live):
+    worker=queue_example_product(live)
+    journal,cmd=example_invocation(live)
+    first=subprocess.run(cmd,capture_output=True,text=True,timeout=15)
+    record=json.loads(journal.read_text())
+    assert first.returncode==2,(first.stdout,first.stderr)
+    assert record['status']=='pending' and len(record['steps'])==1
+    step=record['steps'][0];request_id=step['command']['request_id']
+    job=step['request_result']['jobs'][0]
+    assert step['status']=='pending' and job['status']=='queued'
+    assert job['job_id'] in first.stdout and request_id in first.stdout
+    assert 'Completed' not in first.stdout
+    assert not any(r.ref.kind in {'product','test'} for r in live['app'].state.v2_store.view(live['owner']).objects)
+    assert worker.run_once()
+    again=subprocess.run(cmd,capture_output=True,text=True,timeout=15)
+    assert again.returncode==0,(again.stdout,again.stderr)
+    record=json.loads(journal.read_text());assert record['status']=='completed'
+    assert record['steps'][0]['command']['request_id']==request_id
+    effect=record['steps'][0]['request_result']['jobs'][0]
+    assert effect['job_id']==job['job_id'] and effect['status']=='completed'
+    assert effect['effect']['result']['object']['executor']['kind']=='external_agent'
+    before=live['app'].state.v2_store.view(live['owner']).state
+    third=subprocess.run(cmd,capture_output=True,text=True,timeout=15);assert third.returncode==0,third.stderr
+    assert live['app'].state.v2_store.view(live['owner']).state==before and not worker.run_once()
+    assert live['delegate']['token'] not in journal.read_text()+first.stdout+again.stdout+third.stdout
+
+
+@pytest.mark.parametrize('outcome', ['needs_context','failed','unresolved'])
+def test_w06_example_retains_noncompletion_and_only_refreshes_explicitly(live,outcome):
+    from career_lab.jobs.worker import Worker,ClaimedHandler
+    worker=queue_example_product(live)
+    gateway=live['app'].state.gateway;name='v2.w06-example-product'
+    real_handler=gateway.registry.job_handlers[name]
+    journal,cmd=example_invocation(live)
+    first=subprocess.run(cmd,capture_output=True,text=True,timeout=15);assert first.returncode==2,first.stderr
+    pending=json.loads(journal.read_text())['steps'][0]
+    job_id=pending['request_result']['jobs'][0]['job_id']
+    if outcome=='unresolved':
+        # A worker acknowledges completion without committing its business effect.
+        worker=Worker(worker.jobs,{name:lambda payload:{}})
+    else:
+        def stop(*args):
+            raise C.ProtocolError('context_stale' if outcome=='needs_context' else 'controlled_rejection',status=409)
+        gateway.registry.job_handlers[name]=stop
+    assert worker.run_once()
+    before=gateway.store.view(live['owner']).state
+    resumed=subprocess.run(cmd,capture_output=True,text=True,timeout=15)
+    record=json.loads(journal.read_text())
+    assert resumed.returncode==(1 if outcome=='failed' else 2),(resumed.stdout,resumed.stderr)
+    assert record['status']==outcome and record['steps'][0]['status']==outcome
+    assert len(record['steps'])==1 and record['steps'][0]['command']==pending['command']
+    assert outcome in resumed.stdout and 'Completed' not in resumed.stdout and job_id in resumed.stdout
+    assert gateway.store.view(live['owner']).state==before
+    if outcome=='needs_context':
+        assert record['steps'][0]['request_result']['jobs'][0]['error_code']=='context_stale'
+        gateway.registry.job_handlers[name]=real_handler
+        refreshed=live['client'].post(f'/sessions/{live["sid"]}/jobs/{job_id}/refresh',json=fixture.command(live,'jobs.refresh',{'job_id':job_id}))
+        assert refreshed.status_code==200,refreshed.text
+        assert worker.run_once()
+        completed=subprocess.run(cmd,capture_output=True,text=True,timeout=15);assert completed.returncode==0,completed.stderr
+        result=json.loads(journal.read_text())['steps'][0]['request_result']
+        assert result['request_id']==pending['command']['request_id'] and result['status']=='completed'
+        assert result['jobs'][0]['job_id']==job_id and result['jobs'][0]['refresh_count']==1
+        assert len(result['jobs'][0]['refresh_history'])==1
+    assert live['delegate']['token'] not in journal.read_text()+resumed.stdout+resumed.stderr
+
+
+def test_w06_example_rechecks_old_completed_acknowledgement(live):
+    queue_example_product(live)
+    journal,cmd=example_invocation(live)
+    first=subprocess.run(cmd,capture_output=True,text=True,timeout=15);assert first.returncode==2,first.stderr
+    record=json.loads(journal.read_text());step=record['steps'][0]
+    command=step['command'];record.pop('identity');record.pop('status');step.pop('request_result')
+    step['status']='completed'  # The old client incorrectly accepted queued_jobs.
+    journal.write_text(json.dumps(record))
+    before=live['app'].state.v2_store.view(live['owner']).state
+    resumed=subprocess.run(cmd,capture_output=True,text=True,timeout=15);assert resumed.returncode==2,resumed.stderr
+    recovered=json.loads(journal.read_text())
+    assert recovered['status']=='pending' and len(recovered['steps'])==1
+    assert recovered['steps'][0]['command']==command and live['app'].state.v2_store.view(live['owner']).state==before
+
+
+def test_w06_example_refuses_replacement_delegate_journal(live):
+    journal,cmd=example_invocation(live)
+    first=subprocess.run(cmd,capture_output=True,text=True,timeout=15);assert first.returncode==0,first.stderr
+    before=live['app'].state.v2_store.view(live['owner']).state
+    saved=journal.read_bytes()
+    created,_=fixture.grant(live,('read','act'))
+    config=json.loads(live['config'].read_text());config['token']=created['token'];live['config'].write_text(json.dumps(config))
+    resumed=subprocess.run(cmd,capture_output=True,text=True,timeout=15);assert resumed.returncode==1
+    assert 'Completed' not in resumed.stdout and journal.read_bytes()==saved
+    assert live['app'].state.v2_store.view(live['owner']).state==before
+
+
+def test_w06_example_lost_queue_ack_recovers_original_request(live,monkeypatch):
+    worker=queue_example_product(live)
+    journal,_=example_invocation(live)
+    source=importlib.util.spec_from_file_location('w06_example_recovery',ROOT/'examples/byo_agent_client/workflow.py')
+    workflow=importlib.util.module_from_spec(source);source.loader.exec_module(workflow)
+    class LostAck(HttpAgentClient):
+        def call(self,name,arguments,**kwargs):
+            result=super().call(name,arguments,**kwargs)
+            if name=='work_products.create':raise RemoteFailure('response_unconfirmed')
+            return result
+    monkeypatch.setattr(workflow,'HttpAgentClient',LostAck)
+    with pytest.raises(RemoteFailure,match='response_unconfirmed'):
+        workflow.run(live['config'],journal,config_version=0,wait_seconds=0)
+    lost=json.loads(journal.read_text());step=lost['steps'][0]
+    assert step['status']=='unconfirmed' and 'result' not in step
+    before=live['app'].state.v2_store.view(live['owner']).state
+    monkeypatch.setattr(workflow,'HttpAgentClient',HttpAgentClient)
+    pending=workflow.run(live['config'],journal,config_version=0,wait_seconds=0)
+    assert pending['status']=='pending' and len(pending['steps'])==1
+    assert pending['steps'][0]['command']==step['command']
+    assert live['app'].state.v2_store.view(live['owner']).state==before
+    assert worker.run_once()
+    completed=workflow.run(live['config'],journal,config_version=0,wait_seconds=0)
+    assert completed['status']=='completed' and completed['steps'][0]['command']==step['command']
+    assert not worker.run_once()

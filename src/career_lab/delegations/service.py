@@ -1,7 +1,6 @@
 """Thin control plane and tool boundary. No SQL, token table or queue."""
 from datetime import datetime,timezone,timedelta
 from pydantic import ValidationError
-import re
 from career_lab.contracts import v2 as C
 from career_lab.api.modules import V2Response
 from .catalog import bindings,SYNC_OPERATIONS,NEVER_ENABLE
@@ -17,7 +16,9 @@ def issue(store,payload,auth,request_id,*,max_ttl_seconds=3600):
     if auth.executor.kind!='human':raise C.ProtocolError('human_delegation_required',status=403)
     now=datetime.now(timezone.utc)
     if not now<payload.expires_at<=now+timedelta(seconds=max_ttl_seconds):raise C.ProtocolError('delegation_expiry_invalid')
-    if not re.fullmatch(r'[A-Za-z0-9_.-]{1,64}',payload.agent_label):raise C.ProtocolError('agent_label_invalid')
+    # Labels are user-facing names, not executor IDs or routing identifiers.
+    if not payload.agent_label.strip() or len(payload.agent_label)>64 or not payload.agent_label.isprintable():
+        raise C.ProtocolError('agent_label_invalid')
     identifier=C.digest([auth.session_id,auth.credential_id,request_id,'delegation'])
     grant=C.DelegationGrant(id=identifier,session_id=auth.session_id,actor_id='learner',
         executor=C.Executor(id='external:'+identifier,kind='external_agent',delegation_id=identifier),

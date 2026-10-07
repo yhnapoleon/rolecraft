@@ -210,3 +210,21 @@ def test_w06_explicit_submit_capability_and_unavailable_uninstalled_operations(e
     assert submitted['state']['status']=='submitted' and submitted['executor']['kind']=='external_agent'
     recovered=service.call(env['sid'],actor['token'],'requests.read',{'session_id':env['sid'],'query':{'request_id':submitted['boundary']['request_id']}})
     assert recovered['status']=='completed'
+
+
+@pytest.mark.parametrize('label',['Claude Code','我的 Codex 助手'])
+def test_w06_natural_agent_name_does_not_control_executor(env,label):
+    body=C.DelegationInput(expires_at=datetime.now(timezone.utc)+timedelta(minutes=30),agent_label=label)
+    response=env['client'].post(f'/sessions/{env["sid"]}/delegations',json=command(env,'delegations.create',body.model_dump(mode='json')))
+    assert response.status_code==200,response.text
+    created=response.json()['result']['result']
+    auth=env['app'].state.v2_store.authenticate(env['sid'],created['token'])
+    assert auth.executor.kind=='external_agent' and auth.executor.id=='external:'+created['delegation']['id']
+    assert label not in auth.executor.id and auth.capabilities==('read',)
+
+
+@pytest.mark.parametrize('label',['   ','agent\nname','x'*65])
+def test_w06_invalid_display_name_rejected(env,label):
+    body=C.DelegationInput(expires_at=datetime.now(timezone.utc)+timedelta(minutes=30),agent_label=label)
+    response=env['client'].post(f'/sessions/{env["sid"]}/delegations',json=command(env,'delegations.create',body.model_dump(mode='json')))
+    assert response.status_code==422 and response.json()['code']=='agent_label_invalid'
