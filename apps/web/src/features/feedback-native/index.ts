@@ -5,7 +5,9 @@ import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/
 
 type SelectedProduct = Pick<WorkProductVersion,'session_id'|'product_id'|'version'|'title'|'removed_at'|'author'>;
 type Item = { criterion: string; explanation: string; source: string; label: string; rule_bound?:{lower:string;upper:string}|null; citations: EvidenceRefV2[] };
+export type FeedbackSemanticStatus = 'waiting_for_model' | 'available' | 'pending' | 'failed';
 type Report = {
+  semantic_status?: FeedbackSemanticStatus;
   id: string; version: number; subject: ObjectRef; items: Item[]; rule_items?: Item[] | null;
   verified_facts?: { status?:'verified'|'partial'|'unknown'; summary: string[]; references: {verified_ref?:EvidenceRefV2|null}[] }[] | null;
   historical_responsibilities?: {entries:{criterion:string;explanation:string;sources:EvidenceRefV2[]}[]}[] | null;
@@ -18,7 +20,10 @@ export interface FeedbackNativeState {
   submission?: {ref:ObjectRef;products:ObjectRef[];decision:string} | null;
   reports: Report[];
   responses?:{id:string;kind:'objection'|'supplement';text:string}[];
-  modelMode: 'placeholder'|'provider';
+  /** Feedback slot status only. Never copy a colleague/role mode here. */
+  semanticStatus?: FeedbackSemanticStatus;
+  /** Legacy adapter field; intentionally ignored by semantic rendering. */
+  modelMode?: 'placeholder'|'provider';
   status: 'active'|'paused'|'submitted';
   busy: boolean;
   pending?: boolean;
@@ -40,7 +45,15 @@ export interface FeedbackNativeAdapter {
   canRespond?:boolean;
 }
 
-export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapter) {
+export function feedbackSemanticPresentation(report:Pick<Report,'semantic_status'|'items'>,state:Pick<FeedbackNativeState,'semanticStatus'|'modelMode'>) {
+  const status=report.semantic_status??state.semanticStatus;
+  const advice=status==='waiting_for_model'?[]:report.items.filter(item=>item.source==='model_advice');
+  return {status,advice,waitingForModel:status==='waiting_for_model'||(status===undefined&&advice.length===0)};
+}
+
+export type FeedbackMountOptions = {surface?:'all'|'submission'|'feedback'};
+
+export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapter,options:FeedbackMountOptions={}) {
   const doc=host.ownerDocument;
   const language=adapter.snapshot().workLanguage??'zh';
   const T=(zh:string,en:string)=>feedbackText(language,zh,en);
@@ -86,7 +99,10 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
   const revise=button(T("开始修订","Start a revision"),async()=>{const current=adapter.snapshot().submission;if(!current)return;if(!revisionReason.value.trim())throw Error(T("请写下本次修订的方向。","Describe the direction of this revision."));await savedDrafts;if(draftError)throw Error(T("修订说明尚未保存，请先保留文字。","The revision note is not saved. Keep a copy of your text."));await adapter.beginRevision({parent_submission:current.ref,reason:revisionReason.value});});
   revisions.append(el('h2',T("接着修订","Continue revising")),revisionReason,revise);
   const refresh=button(T("查看最新反馈","Refresh feedback"),()=>adapter.refresh());
-  root.append(failure,notice,submissions,refresh,reports,responseHistory,revisions);host.replaceChildren(root);
+  root.append(failure,notice);
+  if(options.surface!=='feedback')root.append(submissions);
+  if(options.surface!=='submission')root.append(refresh,reports,responseHistory,revisions);
+  host.replaceChildren(root);
   function refs(parent:HTMLElement,values:(ObjectRef|EvidenceRefV2)[]) {
     const names:Record<string,string>={product:T("作品","Artifact"),material:T("材料","Material"),test:T("测试","Test"),role_reply:T("同事回复","Colleague reply"),role_turn:T("问题","Question"),submission:T("提交记录","Submission"),review:T("评审记录","Review"),event:T("历史记录","History")};
     const row=el('div');for(const ref of values){const link=button(`${names[ref.kind]??T("依据","Evidence")} · ${versionLabel(ref.version)}`,()=>adapter.openReference(ref));row.append(link);if('quote' in ref && ref.quote){if(language==='en'&&/[\u4e00-\u9fff]/u.test(ref.quote))row.append(el('small','Chinese source','muted'));row.append(el('blockquote',ref.quote));}}parent.append(row);
@@ -130,8 +146,8 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
     }
     if(inactive)panel.append(notApplicable);
     const semantic=el('section');semantic.append(el('h3',T("理由与证据的支持关系","Support between reasoning and evidence")));
-    const advice=adapter.snapshot().modelMode==='provider'?report.items.filter(i=>i.source==='model_advice'):[];
-    if(!advice.length)semantic.append(el('p',adapter.snapshot().modelMode==='provider'?T("支持关系仍待核验；当前没有已完成的模型建议。","Support remains unverified; no completed model advice is available."):T("等待模型接入。当前只展示已核事实与规则，不对理由是否合理作模板判断。","Awaiting model connection. Only verified facts and rules are shown; no template judgment of reasoning quality is made."),'muted'));
+    const {advice,waitingForModel}=feedbackSemanticPresentation(report,adapter.snapshot());
+    if(!advice.length)semantic.append(el('p',!waitingForModel?T("支持关系仍待核验；当前没有已完成的模型建议。","Support remains unverified; no completed model advice is available."):T("等待模型接入。当前只展示已核事实与规则，不对理由是否合理作模板判断。","Awaiting model connection. Only verified facts and rules are shown; no template judgment of reasoning quality is made."),'muted'));
     for(const item of advice){semantic.append(el('p',T("模型建议 · ","Model advice · ")+item.explanation));refs(semantic,item.citations);semantic.append(responseForm(report,item.criterion,'model_advice'));}
     panel.append(semantic);
     panel.append(el('p',report.business_response));for(const text of report.next_options)panel.append(el('p',text,'muted'));

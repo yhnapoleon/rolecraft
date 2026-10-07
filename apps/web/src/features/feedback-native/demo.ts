@@ -4,7 +4,7 @@ import {mountNativeFeedback,type FeedbackNativeAdapter,type FeedbackNativeState}
 import type {EvidenceRefV2} from '../workspace/contract-types';
 const created=await (await fetch('/api/__w05_native_test__/bootstrap',{method:'POST'})).json();
 const sid=created.session_id;const listeners=new Set<()=>void>();
-let state:FeedbackNativeState={workLanguage:created.work_language??'zh',products:[],reports:[],status:created.status??'active',busy:false,modelMode:'placeholder',responses:[],submission:created.submission};
+let state:FeedbackNativeState={workLanguage:created.work_language??'zh',products:[],reports:[],status:created.status??'active',busy:false,semanticStatus:'waiting_for_model',responses:[],submission:created.submission};
 state.reports=created.reports??[];
 const emit=()=>listeners.forEach(f=>f());
 async function api(path:string,body?:unknown){const r=await fetch('/api/sessions/'+encodeURIComponent(sid)+path,{method:body===undefined?'GET':'POST',headers:{Authorization:'Bearer '+created.token,...(body===undefined?{}:{'Content-Type':'application/json'})},body:body===undefined?undefined:JSON.stringify(body)});const value=await r.json();if(!r.ok)throw Error(value.code??'request_failed');return value;}
@@ -25,4 +25,5 @@ const adapter:FeedbackNativeAdapter={snapshot:()=>state,subscribe:fn=>{listeners
   readDraft:key=>{const raw=localStorage.getItem('w05-demo:'+sid+':'+key);return raw?JSON.parse(raw):undefined;},
   keepDraft:async(key,value)=>{localStorage.setItem('w05-demo:'+sid+':'+key,JSON.stringify(value));},canSubmit:true,canRespond:true,
 };
-mountNativeFeedback(document.querySelector<HTMLElement>('#feedback')!,adapter);await refresh();
+const surface=new URL(location.href).searchParams.get('surface');
+mountNativeFeedback(document.querySelector<HTMLElement>('#feedback')!,adapter,{surface:surface==='submission'||surface==='feedback'?surface:'all'});await refresh();
