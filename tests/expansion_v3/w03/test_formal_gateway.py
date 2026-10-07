@@ -9,6 +9,7 @@ from career_lab.api.app import create_app
 from career_lab.api.modules import ExtensionRegistry,ScenarioRegistration
 from career_lab.contracts.v2 import SessionBindings,FileRef,AssistantConfig
 from career_lab.workspace.extension import install_workspace_operations
+from career_lab.api.workspace_integration import install_workspace_recovery
 
 
 @pytest.fixture
@@ -16,6 +17,7 @@ def api(tmp_path):
     registry=ExtensionRegistry();file=FileRef(path='synthetic.json',sha256='1'*64)
     registry.register_scenario('w03-contract-fixture',ScenarioRegistration(SessionBindings(scenario=file,runtime=file,evaluation=file),AssistantConfig(id='config',session_id='fixture',domains=('stable_faq',)),{'capacity':30,'dev_days':3}))
     install_workspace_operations(registry,roles=('supervisor','business_lead','tech_lead'))
+    install_workspace_recovery(registry,roles=('supervisor','business_lead','tech_lead'))
     app=create_app(f'sqlite:///{tmp_path / "formal.db"}',extensions=registry);client=TestClient(app)
     created=client.post('/sessions',json={'schema_version':2,'scenario':'w03-contract-fixture'}).json()
     sid=created['session_id'];client.headers['Authorization']='Bearer '+created['token']
@@ -138,7 +140,7 @@ def test_gateway_remove_revokes_all_shares_atomically_restore_needs_explicit_res
     assert len(client.get(f'/sessions/{sid}/work-products/{pid}/versions').json()['result']['result']['items'])==3
 
 
-def test_scoped_product_agent_cannot_treat_filtered_shares_as_empty_or_partially_remove(api):
+def test_scoped_product_agent_keeps_unknown_sharing_and_uses_trusted_cascade(api):
     from career_lab.contracts.v2 import ObjectRef,DelegationGrant,Executor
     app,client,sid=api;store=app.state.v2_store
     owner=store.authenticate(sid,client.headers['Authorization'].removeprefix('Bearer '))
@@ -147,9 +149,14 @@ def test_scoped_product_agent_cannot_treat_filtered_shares_as_empty_or_partially
     grant=DelegationGrant(id='product-only',session_id=sid,actor_id='learner',executor=Executor(id='limited',kind='external_agent',delegation_id='product-only'),capabilities=('read','act'),allowed_objects=(pid,),expires_at=datetime.now(timezone.utc)+timedelta(hours=1))
     restricted=TestClient(app);restricted.headers['Authorization']='Bearer '+store.issue_delegation(owner,grant)
     page=product_page(restricted,sid);assert page['sharing_complete'] is False
-    assert 'visibility' not in page['items'][0] and page['shares']==[]
+    assert page['items'][0]['visibility'] is None and page['shares']==[]
     before=store.view(owner).state
     denied=call((app,restricted,sid),f'/work-products/{pid}/versions','work_products.versions.create',{'product_id':pid,'expected_head':1,'kind':'text','content':'private','removed':True})
-    assert denied.status_code==403,denied.text
-    assert store.view(owner).state==before and product_page(client,sid)['items'][0]['removed_at'] is None
-    role=store.role_reader(sid,'tech_lead');assert store.read_shared_product(role,ObjectRef.model_validate(shared['ref'])).content['content']=='private'
+    assert denied.status_code==200,denied.text
+    assert store.view(owner).state.workspace_revision==before.workspace_revision+1
+    removal=denied.json()['result']['removals'][0]
+    assert removal['all_active_shares_revoked'] and removal['visible_revocations']==[] and not removal['sharing_complete']
+    assert shared['ref']['object_id'] not in denied.text
+    role=store.role_reader(sid,'tech_lead')
+    from career_lab.contracts.v2 import ProtocolError
+    with pytest.raises(ProtocolError):store.read_shared_product(role,ObjectRef.model_validate(shared['ref']))

@@ -2,6 +2,7 @@
 from career_lab.contracts.v2.core import ProtocolError,VersionPoint,canonical
 from .ports import ActivityLedger
 from .history import before
+from .availability import unavailable,ACTIVITY_CODES
 
 KINDS=('material_read','test_run','question_sent','reply_received','learner_displayed')
 NAMES={'material_read':'材料读取','test_run':'测试运行','question_sent':'向同事提问','reply_received':'实际收到回复','learner_displayed':'向学员展示'}
@@ -15,7 +16,7 @@ def factual_feedback(reader,auth,subject,at,requested_at):
     from .assembler import EvidenceAssemblerV2
     record=reader.read(auth,subject,at);resolver=EvidenceAssemblerV2(reader)
     if record.created_at!=at:raise ProtocolError('subject_point_mismatch',status=409)
-    refs=[];seen=set();source_keys=set();valid_sources=set()
+    refs=[];seen=set();source_keys=set();exact_sources=set();effective_sources=set();expired_sources=set()
     for ref in record.declared_refs:
         key=canonical(ref)
         if key in seen:continue
@@ -24,11 +25,12 @@ def factual_feedback(reader,auth,subject,at,requested_at):
         try:
             resolved=resolver.resolve(auth,ref,at)
             row.update(status='exact_reference_verified',valid_at_subject=resolved.ref.valid_until_seq is None or at.business_seq<resolved.ref.valid_until_seq)
-            valid_sources.add(reference_key(ref))
+            exact_sources.add(reference_key(ref))
+            (effective_sources if row['valid_at_subject'] else expired_sources).add(reference_key(ref))
         except KeyError:pass
         except ProtocolError as error:
             if error.code in {'future_evidence','evidence_version_mismatch','evidence_quote_mismatch','evidence_time_mismatch','source_time_unknown'}:row['status']=error.code
-            elif error.status in {403,404}:row['status']='unavailable'
+            elif unavailable(error):row['status']='unavailable'
             else:raise
         refs.append(row)
     ledger=reader.activity_log(auth,at) if hasattr(reader,'activity_log') else ActivityLedger()
@@ -60,7 +62,9 @@ def factual_feedback(reader,auth,subject,at,requested_at):
             rows.append({'kind':event.kind,'ref':checked.ref.model_dump(mode='json'),'occurred_at':event.occurred_at.model_dump(mode='json'),
                          'executor':event.executor.model_dump(mode='json'),'actor_id':event.actor_id,
                          'target':event.target.model_dump(mode='json') if event.target else None,'counterparty':event.counterparty})
-        except (KeyError,ProtocolError):broken.add(event.kind)
+        except (KeyError,ProtocolError) as error:
+            if not unavailable(error) and not (isinstance(error,ProtocolError) and error.code in ACTIVITY_CODES):raise
+            broken.add(event.kind)
     from career_lab.contracts.v2.core import EvidenceRefV2,ObjectRef
     present={(r['kind'],reference_key(EvidenceRefV2.model_validate(r['ref']))) for r in rows}
     for row in rows:
@@ -73,7 +77,7 @@ def factual_feedback(reader,auth,subject,at,requested_at):
         known=full_window and complete.get(kind) is True and kind not in broken
         totals[kind]={'status':'complete' if known else 'unknown','count':len(actual) if known else None,
                       'verified_records':len(actual)}
-    summary=[f'作品明确关联{len(source_keys)}个来源、{len(refs)}处去重引用；已核对{len(valid_sources)}个来源的确切版本与原文。引用真实不等于支持结论。']
+    summary=[f'作品明确关联{len(source_keys)}个来源、{len(refs)}处去重引用；原文/版本已核对{len(exact_sources)}个，其中在作品参照点有效{len(effective_sources)}个、已失效{len(expired_sources)}个。失效来源保留历史用途；引用真实不等于支持结论。']
     for kind in KINDS:
         value=totals[kind]
         if value['status']=='complete':summary.append(f'作品形成前完整授权日志中的{NAMES[kind]}记录：{value["count"]}条。')
@@ -82,7 +86,10 @@ def factual_feedback(reader,auth,subject,at,requested_at):
     summary.append('提问、收到回复、向学员展示和理解分别记录；当前无法判断独立理解。')
     return {'section':'verified_facts','subject':subject.model_dump(mode='json'),'as_of':at.model_dump(mode='json'),
             'requested_at':requested_at.model_dump(mode='json'),'reference_grain':'exact_ref_and_quote; source_count_by_object_version_config',
-            'declared_source_count':len(source_keys),'declared_citation_count':len(refs),'verified_source_count':len(valid_sources),
+            'declared_source_count':len(source_keys),'declared_citation_count':len(refs),'verified_source_count':len(exact_sources),'exact_source_count':len(exact_sources),
+            'effective_source_count':len(effective_sources),'expired_source_count':len(expired_sources),
+            'verified_source_count_basis':'exact_text_and_version_only',
             'references':refs,'activity_records':rows,'activity_totals':totals,'summary':summary,
+            'activity_window':{'covered_from':ledger.covered_from.model_dump(mode='json'),'covered_through':ledger.covered_through.model_dump(mode='json'),'captured_at':ledger.captured_at.model_dump(mode='json')} if ledger.covered_from is not None and ledger.covered_through is not None and ledger.captured_at is not None else None,
             'authorship':{k:getattr(record,k).model_dump(mode='json') if getattr(record,k) else None for k in ['author','executor','adopter']},
             'independent_understanding':'unobserved','conclusion_quality':'not_scored'}

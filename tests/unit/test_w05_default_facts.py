@@ -169,7 +169,8 @@ def test_old_valid_record_is_judged_at_product_time_even_if_expired_by_review(tm
 def test_unknown_formation_time_does_not_fall_back_to_request_time(tmp_path):
     raw=history_payload();raw['records'][0]['created_at']=None
     result,_,_,_=default_review(tmp_path,raw)
-    assert result['feedback'] is None and result['evaluated_at'] is None and result['pending_reason']=='subject_point_unknown'
+    assert result['feedback']['verified_facts'][0]['status']=='unknown' and result['evaluated_at'] is None and result['pending_reason']=='subject_point_unknown'
+    assert result['feedback']['verified_facts'][0]['declared_source_count'] is None
 
 
 def test_real_reference_without_semantic_support_and_wrong_version_are_visible_facts(tmp_path):

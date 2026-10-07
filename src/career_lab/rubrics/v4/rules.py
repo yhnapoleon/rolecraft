@@ -36,7 +36,7 @@ def run_rules(item):
         okay=v[0]<=v[1] and 0<v[2]<=v[3]
         return verified('MET' if okay else 'NOT_MET',f'当时所需/可用人日为{v[0]}/{v[1]}，承诺日/有效期限为{v[2]}/{v[3]}。',names)
     if kind=='tests':
-        if not ctx['logs_complete'] or item.missing_refs:return pending(item,'测试记录或日志缺失，无法据此判断未做测试。')
+        if not ctx['logs_complete'] or not ctx.get('test_sources_complete',True):return pending(item,'测试记录或日志缺失，无法据此判断未做测试。')
         tests=ctx['tests'];version=ctx['config_version']
         if version is None:return pending(item,'缺少评价时点的配置版本。')
         valid=[t for t in tests if t['record']['config']['effective']['config_version']==version and t['record']['status']!='failed']

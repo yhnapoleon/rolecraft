@@ -198,10 +198,11 @@ describe('current share projection recovery',()=>{
     expect(await client.loadShares('p1')).toEqual([share]);
     expect(paths.some(p=>p.includes('/shares'))).toBe(false);
   });
-  it('does not display a product-scoped empty share view as private',async()=>{
+  it('keeps scoped sharing unknown while allowing a product view',async()=>{
     const f=fixture();const source:Transport=async(path)=>({items:path.includes('work-items')?[]:f.server.products,
       as_of:f.server.as_of,next_cursor:null,...(path.includes('work-products')?{shares:[],sharing_complete:false}:{})});
     const c=new WorkspaceClient('s',f.storage,source,()=>crypto.randomUUID(),{coordinator:f.coordinator});
-    await expect(c.refresh()).rejects.toThrow('无法完整读取分享状态');expect(c.snapshot().products).toEqual([]);
+    await c.refresh();expect(c.snapshot().sharingComplete).toBe(false);expect(c.snapshot().products).toHaveLength(2);
+    expect(c.snapshot().products[0].visibility).not.toBe('private');
   });
 });
