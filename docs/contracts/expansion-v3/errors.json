@@ -42,6 +42,8 @@
     "external_reference_mismatch",
     "feedback_completeness_scope_unknown",
     "feedback_criterion_unknown",
+    "feedback_evidence_unavailable",
+    "feedback_projection_not_persistable",
     "feedback_record_immutable",
     "feedback_response_basis_missing",
     "feedback_response_identity_mismatch",

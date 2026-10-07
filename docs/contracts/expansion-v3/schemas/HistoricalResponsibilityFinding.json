@@ -309,7 +309,14 @@
       "type": "string"
     },
     "occurred_at": {
-      "$ref": "#/$defs/VersionPoint"
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        {
+          "type": "null"
+        }
+      ]
     },
     "schema_version": {
       "const": 2,

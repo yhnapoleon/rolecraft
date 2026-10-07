@@ -251,7 +251,14 @@
           "type": "string"
         },
         "occurred_at": {
-          "$ref": "#/$defs/VersionPoint"
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionPoint"
+            },
+            {
+              "type": "null"
+            }
+          ]
         },
         "schema_version": {
           "const": 2,
@@ -438,9 +445,16 @@
       "type": "integer"
     },
     "source_snapshot_hash": {
-      "pattern": "^[0-9a-f]{64}$",
-      "title": "Source Snapshot Hash",
-      "type": "string"
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Source Snapshot Hash"
     },
     "subject": {
       "$ref": "#/$defs/ObjectRef"

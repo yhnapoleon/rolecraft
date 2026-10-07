@@ -128,10 +128,10 @@ def test_response_allowance_cannot_smuggle_other_writes_while_submitted(foundati
 
 def test_scoped_agent_response_keeps_original_executor_and_grant(foundation):
     store,owner,*_=foundation;product,review,feedback,report=make_report(foundation)
-    grant=C.DelegationGrant(id='respond',session_id=owner.session_id,actor_id='learner',executor=C.Executor(id='agent',kind='external_agent',delegation_id='respond'),capabilities=('read','act'),allowed_actions=('feedback.responses.create','feedback.responses.read','feedback.responses.list'),allowed_objects=(feedback.object_id,),expires_at=datetime.now(timezone.utc)+timedelta(minutes=10))
+    grant=C.DelegationGrant(id='respond',session_id=owner.session_id,actor_id='learner',executor=C.Executor(id='agent',kind='external_agent',delegation_id='respond'),capabilities=('read','act'),allowed_actions=('feedback.responses.create','feedback.responses.read','feedback.responses.list'),allowed_objects=(feedback.object_id,review.object_id,product.object_id),expires_at=datetime.now(timezone.utc)+timedelta(minutes=10))
     auth=store.authenticate(owner.session_id,store.issue_delegation(owner,grant));cmd=send(store,auth,'agent-response');result=store.execute(auth,cmd,record_feedback_response);record=store.read(auth,result.objects[0])
     assert record.creator==auth.executor and record.content['executor']==auth.executor.model_dump(mode='json')
-    assert store.authenticate(auth.session_id,store.issue_delegation(owner,grant)).allowed_objects==(feedback.object_id,)
+    assert store.authenticate(auth.session_id,store.issue_delegation(owner,grant)).allowed_objects==(feedback.object_id,review.object_id,product.object_id)
     assert store.replay(auth,cmd).replayed
     store.revoke_delegation(owner,grant.id)
     with pytest.raises(C.ProtocolError):store.read(auth,record.ref)

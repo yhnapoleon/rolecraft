@@ -130,6 +130,10 @@ def export(root:Path,output:Path):
     manifest['previous_contract_revision']='expansion-v3-0aa98d5ebec838fd0e2b56a9eed2f32a51c6ec94dff526712083a589d858e510'
     manifest['integration_changes']['W05-factual-persistence']='Optional typed factual/history/rule sections persist in FeedbackV2; legacy absent means not recorded. Exact feedback follow-ups append immutable objects without changing submitted/paused business state; new reviews link prior responses and explicit decisions.'
     manifest['boundaries'].append('W05 evaluator-to-trusted-source adapter and native feedback UI remain pending. Controlled persistence tests do not prove actual production history or model quality.')
+    manifest['previous_contract_revision']='expansion-v3-d6277a2b850369a86d4f1c169464ea521587066071d899fd2d43326d178bd076'
+    manifest['integration_changes']['031-C8-01']='Store read/query/view/job-view and cached request/replay share feedback subject authorization and transient support projection; hidden quote/title/ID/derived prose removed; original records unchanged.'
+    manifest['integration_changes']['original-source-protection']='test_freeze enumerates only BASE existing scenarios; no v2 baseline rewrite and no test exclusion needed.'
+    manifest['integration_changes']['W03-product-cycle-replay']='Only an exact saved authorized product DTO cycle field is structural metadata. Explicit cycle sources, direct cycle objects and unproven DTOs retain scope checks; no scope grant is widened.'
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

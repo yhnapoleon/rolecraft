@@ -259,8 +259,137 @@ class V2Store(JobStoreMixin):
             if auth.actor_id!=role_id or auth.executor.kind!='system' or auth.executor.id!='role:'+role_id:return False
         return auth.actor_id in record.visible_to
 
+    def _record_projection(self,c,auth,records):
+        """One current-scope read projection; no resolver/model/handler rerun."""
+        from career_lab.contracts.v2.projection import project_feedback_content,project_feedback_response_content
+        by_ref={canonical(row.ref):row for row in records};cache={};visiting=set();requirements={};origins=None
+        external={canonical(row.ref) for row in self._external(c,auth.session_id)}
+        def bare(ref):
+            if isinstance(ref,dict):ref=ObjectRef.model_validate({k:v for k,v in ref.items() if k in ObjectRef.model_fields})
+            else:ref=ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode='json').items() if k in ObjectRef.model_fields})
+            return ref
+        def basic(ref,origin=None):
+            nonlocal origins
+            ref=bare(ref)
+            if ref.session_id!=auth.session_id:return False
+            try:self._auth(c,auth,'read',object_ids=(ref.object_id,))
+            except ProtocolError as exc:
+                if exc.code in {'credential_revoked_or_invalid','credential_expired','capability_forbidden'}:raise
+                return False
+            target=by_ref.get(canonical(ref))
+            if target is not None:return self._visible(target,auth)
+            if canonical(ref) not in external or ref.kind not in self.reference_resolvers or origin is None:return False
+            if origins is None:
+                origins={}
+                rows=c.execute(select(v2_transactions.c.boundary,v2_request_meta.c.actor_id).join(v2_request_meta,(v2_transactions.c.session_id==v2_request_meta.c.session_id)&(v2_transactions.c.request_id==v2_request_meta.c.request_id)).where(v2_transactions.c.session_id==auth.session_id)).all()
+                for boundary,actor in rows:origins[ActionBoundary.model_validate_json(boundary).storage_revision]=actor
+            # A saved report's same-actor write verified its immutable external
+            # references. Missing historical proof degrades safely to pending.
+            return origins.get(origin.created_storage_revision)==auth.actor_id
+        def source_ok(ref,origin=None):
+            ref=bare(ref)
+            if not basic(ref,origin):return False
+            target=by_ref.get(canonical(ref))
+            if target is not None and target.ref.kind in {'feedback','feedback_response'}:
+                value=project(target)
+                return value is not None and value.content.get('read_projection') is None
+            return True
+        def required(record):
+            key=canonical(record.ref)
+            if key in requirements:return requirements[key]
+            result=[];content=record.content
+            if record.ref.kind=='feedback':
+                subject=ObjectRef.model_validate(content['subject']);result.append(subject)
+                target=by_ref.get(canonical(subject))
+                if target is not None and subject.kind in {'review','submission'}:
+                    result.extend(ObjectRef.model_validate(r) for r in target.content.get('subjects' if subject.kind=='review' else 'products',()))
+                for section in ('verified_facts','historical_responsibilities'):
+                    result.extend(ObjectRef.model_validate(row['subject']) for row in content.get(section) or ())
+            elif record.ref.kind=='feedback_response':
+                parent=ObjectRef.model_validate(content['feedback']);result.append(parent)
+                target=by_ref.get(canonical(parent))
+                if target is not None:result.extend(required(target))
+            requirements[key]=tuple({canonical(r):r for r in result}.values());return requirements[key]
+        def project(record):
+            key=canonical(record.ref)
+            if key in cache:return cache[key]
+            if key in visiting:return None
+            if not basic(record.ref):cache[key]=None;return None
+            if 'research' in auth.capabilities or record.ref.kind not in {'feedback','feedback_response'}:cache[key]=record;return record
+            visiting.add(key)
+            try:
+                mandatory=required(record)
+                if any(not basic(ref,record) for ref in mandatory):cache[key]=None;return None
+                if record.ref.kind=='feedback':
+                    if any(ref.kind in {'feedback','feedback_response'} and not source_ok(ref,record) for ref in mandatory):cache[key]=None;return None
+                    FeedbackV2.model_validate(record.content)
+                    content,partial=project_feedback_content(record.content,lambda ref:source_ok(ref,record),limited_scope=auth.allowed_objects is not None)
+                else:
+                    FeedbackResponseRecord.model_validate(record.content)
+                    parent=by_ref.get(canonical(ObjectRef.model_validate(record.content['feedback'])))
+                    visible=project(parent) if parent is not None else None
+                    if visible is None:cache[key]=None;return None
+                    content,partial=project_feedback_response_content(record.content,lambda ref:source_ok(ref,record),parent_partial=visible.content.get('read_projection')=='partial')
+                if not partial:cache[key]=record;return record
+                mandatory_keys={canonical(ref) for ref in mandatory}
+                deps=tuple(ref for ref in record.dependencies if canonical(ref) in mandatory_keys or source_ok(ref,record))
+                cache[key]=record.model_copy(update={'content':content,'dependencies':deps});return cache[key]
+            except (ValidationError,KeyError,TypeError,ValueError) as exc:
+                if isinstance(exc,ProtocolError) and exc.code in {'credential_revoked_or_invalid','credential_expired','capability_forbidden'}:raise
+                cache[key]=None;return None
+            finally:visiting.discard(key)
+        return project,source_ok,required
+
+    def _project_public_records(self,c,auth,records):
+        if 'read' not in auth.capabilities:return ()
+        project,_,_=self._record_projection(c,auth,records)
+        return tuple(value for record in records if (value:=project(record)) is not None)
+
+    def _project_feedback_transaction(self,c,auth,result,records,*,extra_refs=(),operation=None):
+        """Remove inaccessible derived bodies before any cached result is returned."""
+        project,source_ok,required=self._record_projection(c,auth,records)
+        by_ref={canonical(row.ref):row for row in records};mentioned={}
+        def add(ref):
+            if ref.kind in {'feedback','feedback_response'}:
+                record=by_ref.get(canonical(ref))
+                if record is None:raise ProtocolError('request_not_found',status=404)
+                mentioned[canonical(ref)]=record
+        for ref in (*result.objects,*references(result.result),*extra_refs):add(ref)
+        for record in records:
+            if record.ref.kind in {'feedback','feedback_response'} and record.created_storage_revision==result.boundary.storage_revision:add(record.ref)
+        def embedded(value):
+            if isinstance(value,dict):
+                if {'id','session_id','subject','evaluation','items'}<=value.keys():
+                    add(ObjectRef(session_id=value['session_id'],kind='feedback',object_id=value['id'],version=value.get('version',1)))
+                elif {'id','session_id','feedback','kind','recorded_at'}<=value.keys():
+                    add(ObjectRef(session_id=value['session_id'],kind='feedback_response',object_id=value['id'],version=value.get('version',1)))
+                for item in value.values():embedded(item)
+            elif isinstance(value,(list,tuple)):
+                for item in value:embedded(item)
+        embedded(result.result)
+        if operation and operation.startswith('feedback.') and not mentioned and set(result.result)-{'queued_jobs','status','job_id'}:raise ProtocolError('request_record_invalid',status=409)
+        partial=[];hidden=set();must_check={}
+        for key,record in mentioned.items():
+            visible=project(record)
+            if visible is None:raise ProtocolError('request_not_found',status=404)
+            mandatory=required(record)
+            must_check.update({canonical(ref):ref for ref in mandatory})
+            if visible.content.get('read_projection')!='partial':continue
+            partial.append(visible)
+            mandatory_keys={canonical(ref) for ref in mandatory}
+            hidden.update(canonical(ref) for ref in references(record.content) if canonical(ref) not in mandatory_keys and not source_ok(ref,record))
+        if not partial:return result,set(),tuple(must_check.values())
+        # Historical untyped free text has no independently verifiable citation
+        # scope. Return only the safe typed reports/responses and no event bodies.
+        safe={'read_projection':'partial','feedbacks':[],'feedback_responses':[]}
+        for record in mentioned.values():
+            value=project(record)
+            safe['feedbacks' if record.ref.kind=='feedback' else 'feedback_responses'].append(value.content)
+        visible_objects=tuple(ref for ref in result.objects if canonical(ref) not in hidden)
+        return result.model_copy(update={'objects':visible_objects,'events':(),'result':safe}),hidden,tuple(must_check.values())
+
     def _operation_view(self,c,auth,state,bindings,records):
-        allowed=tuple(x for x in records if self._visible(x,auth) and self._object_in_scope(c,auth,x.ref.object_id))
+        allowed=self._project_public_records(c,auth,records)
         def reference_allowed(ref):
             if c.closed:raise ProtocolError('reference_view_expired',status=409)
             self._auth(c,auth,'read',object_ids=(ref.object_id,))
@@ -268,7 +397,8 @@ class V2Store(JobStoreMixin):
             bare=ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode='json').items() if k in ObjectRef.model_fields})
             if ref.kind in self.reference_resolvers:
                 self._resolve_reference(c,auth,ref,state,bindings);return True
-            return any(x.ref==bare for x in allowed)
+            target=next((x for x in allowed if x.ref==bare),None)
+            return target is not None and not (isinstance(ref,EvidenceRefV2) and target.ref.kind in {'feedback','feedback_response'} and target.content.get('read_projection')=='partial')
         return TransactionView(state,bindings,allowed,self._scenario_state(c,auth.session_id),self._current_cycle(c,auth.session_id),reference_allowed,"current_product_only")
 
     def query(self,auth,reader,*,operation=None):
@@ -340,7 +470,9 @@ class V2Store(JobStoreMixin):
                 return True
             bare=ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode='json').items() if k in ObjectRef.model_fields})
             record=next((x for x in self._records(c,auth.session_id) if x.ref==bare),None)
-            if record is None or not self._visible(record,auth):raise ProtocolError('object_not_found',status=404)
+            if record is None:raise ProtocolError('object_not_found',status=404)
+            project,source_ok,_=self._record_projection(c,auth,self._records(c,auth.session_id))
+            if project(record) is None or (isinstance(ref,EvidenceRefV2) and not source_ok(ref,record)):raise ProtocolError('object_not_found',status=404)
             return True
 
     def read(self,auth,ref:ObjectRef,*,storage_revision=None):
@@ -351,8 +483,10 @@ class V2Store(JobStoreMixin):
             # A revoked credential or share cannot regain access by requesting the past.
             records=self._records(c,auth.session_id,storage_revision)
             rec=next((x for x in records if x.ref==ref),None)
-            if rec is None or not self._visible(rec,auth):raise ProtocolError('object_not_found',status=404)
-            return rec
+            if rec is None:raise ProtocolError('object_not_found',status=404)
+            project,_,_=self._record_projection(c,auth,records);visible=project(rec)
+            if visible is None:raise ProtocolError('object_not_found',status=404)
+            return visible
 
     def read_shared_product(self,auth,share_ref:ObjectRef):
         with self.db.transaction() as c:
@@ -466,6 +600,7 @@ class V2Store(JobStoreMixin):
                     original=max(existing,key=lambda x:x.ref.version).content
                     if any(content[k]!=original[k] for k in original if k not in {'version','status'}) or content['status']!='submitted':raise ProtocolError('cycle_scope_invalid',status=403)
                 if ref.kind=='product' and set(write.visible_to)!={'learner'}:raise ProtocolError('product_requires_share',status=403)
+                if ref.kind in {'feedback','feedback_response'} and content.get('read_projection') is not None:raise ProtocolError('feedback_projection_not_persistable',status=403)
                 if ref.kind in {'feedback','feedback_response'} and (existing or ref.version!=1):raise ProtocolError('feedback_record_immutable',status=409)
                 if ref.kind=='feedback' and auth.allowed_objects is not None:
                     report=FeedbackV2.model_validate(content)
@@ -513,6 +648,9 @@ class V2Store(JobStoreMixin):
             candidates=[*full_references(command.payload),*full_references(mutation.result)]
             for write in mutation.writes:candidates.extend(full_references(write.content))
             for ref in candidates:
+                if isinstance(ref,EvidenceRefV2) and ref.kind in {'feedback','feedback_response'}:
+                    _,source_ok,_=self._record_projection(c,auth,records)
+                    if not source_ok(ref):raise ProtocolError('feedback_evidence_unavailable',status=403)
                 if ref.kind not in self.reference_resolvers:continue
                 resolution=self._resolve_reference(c,auth,ref,state,bindings)
                 bare=resolution.ref;key=canonical(bare)
@@ -637,7 +775,8 @@ class V2Store(JobStoreMixin):
             if getattr(item,key)!=getattr(body,key):raise ProtocolError('feedback_response_input_mismatch',status=409)
         self._auth(c,auth,'read',object_ids=(expected.object_id,))
         original=next((r for r in records if r.ref==expected),None)
-        if original is None or not self._visible(original,auth):raise ProtocolError('object_not_found',status=404)
+        project,_,_=self._record_projection(c,auth,records)
+        if original is None or project(original) is None:raise ProtocolError('object_not_found',status=404)
         if expected not in write.dependencies:raise ProtocolError('feedback_response_basis_missing')
         return True
 
@@ -657,6 +796,39 @@ class V2Store(JobStoreMixin):
             if subject not in write.dependencies:raise ProtocolError('derived_feedback_subject_missing')
         return True
 
+    def _product_cycle_metadata_refs(self,c,auth,result,records,operation):
+        """Recognize only product DTO cycle fields, never an expanded cycle read."""
+        if operation not in {'work_products.create','work_products.versions.create','work_products.adopt'}:return set()
+        by_ref={canonical(row.ref):row for row in records};anchors=set();uses={}
+        def visit(value,path=()):
+            if isinstance(value,dict):
+                if {'product_id','session_id','version','cycle','content_hash','executor'}<=value.keys():
+                    try:
+                        product=WorkspaceProductRead.model_validate(value)
+                        ref=ObjectRef(session_id=product.session_id,kind='product',object_id=product.product_id,version=product.version)
+                        record=by_ref.get(canonical(ref))
+                        self._auth(c,auth,'read',object_ids=(ref.object_id,))
+                        if record is not None and self._visible(record,auth) and product.cycle.kind=='cycle':
+                            persisted=WorkProductVersion.model_validate(record.content)
+                            left=product.model_dump(mode='json',exclude={'visibility'})
+                            right=persisted.model_dump(mode='json',exclude={'visibility'})
+                            if left==right:anchors.add(path+('cycle',))
+                    except (ProtocolError,ValidationError,TypeError,ValueError):pass
+                if {'session_id','kind','object_id','version'}<=value.keys():
+                    try:ref=ObjectRef.model_validate({k:v for k,v in value.items() if k in ObjectRef.model_fields})
+                    except (ValidationError,TypeError,ValueError):return
+                    uses.setdefault(canonical(ref),[]).append(path);return
+                for key,part in value.items():visit(part,path+(key,))
+            elif isinstance(value,(list,tuple)):
+                for index,part in enumerate(value):visit(part,path+(index,))
+        visit(result.result)
+        for index,ref in enumerate(result.objects):
+            if ref.kind=='cycle':uses.setdefault(canonical(ref),[]).append(('direct_object',index))
+        for index,event in enumerate(result.events):
+            for ref in event.refs:
+                if ref.kind=='cycle':uses.setdefault(canonical(ref),[]).append(('event_source',index))
+        return {key for key,paths in uses.items() if paths and all(path in anchors for path in paths)}
+
     def _authorized_request_result(self,c,auth,key,capability='read'):
         """One current-authorization boundary for GET, execute replay and worker replay.
 
@@ -672,7 +844,11 @@ class V2Store(JobStoreMixin):
         self._auth(c,auth,capability,meta['operation'])
         result=TransactionResult.model_validate_json(txn['result'])
         if result.boundary.request_id!=key or canonical(result.executor)!=meta['executor']:raise ProtocolError('request_record_invalid',status=409)
+        saved_records=self._records(c,auth.session_id)
+        result,hidden_feedback_refs,required_feedback_refs=self._project_feedback_transaction(c,auth,result,saved_records,extra_refs=tuple(ObjectRef.model_validate(x) for x in json.loads(meta['scope_refs'])),operation=meta['operation'])
         refs={canonical(r):r for r in (ObjectRef.model_validate(x) for x in json.loads(meta['scope_refs']))}
+        refs={k:v for k,v in refs.items() if k not in hidden_feedback_refs}
+        refs.update({canonical(ref):ref for ref in required_feedback_refs})
         for r in result.objects:
             if r.kind not in {'cycle','scenario_state','job_context','role_context'}:refs[canonical(r)]=r
         # Internal bookkeeping is not a grant. Explicit result references and
@@ -681,6 +857,8 @@ class V2Store(JobStoreMixin):
         for event in result.events:
             if auth.actor_id in event.visible_to:
                 for r in event.refs:refs[canonical(r)]=r
+        structural=self._product_cycle_metadata_refs(c,auth,result,saved_records,meta['operation'])
+        refs={key:ref for key,ref in refs.items() if key not in structural}
         self._auth(c,auth,capability,object_ids=tuple(r.object_id for r in refs.values()))
         records={canonical(x.ref):x for x in self._records(c,auth.session_id)}
         external={canonical(x.ref) for x in self._external(c,auth.session_id)}
@@ -688,7 +866,8 @@ class V2Store(JobStoreMixin):
             if ref.session_id!=auth.session_id:raise ProtocolError('request_not_found',status=404)
             record=records.get(canonical(ref))
             if record is not None:
-                if not self._visible(record,auth):raise ProtocolError('request_not_found',status=404)
+                project,_,_=self._record_projection(c,auth,saved_records)
+                if project(record) is None:raise ProtocolError('request_not_found',status=404)
             elif canonical(ref) not in external:
                 # Pre-anchor records are historical projections, not a fresh read
                 # or proof that the source still exists. Fail closed if the kind

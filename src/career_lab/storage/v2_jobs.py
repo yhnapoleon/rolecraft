@@ -21,6 +21,9 @@ class JobStoreMixin:
         for ref in (*context.sources,*context.head_dependencies):
             target=next((x for x in records if x.ref==ref),None)
             if target is None or ref.session_id!=context.session_id or not self._visible(target,auth):raise ProtocolError('object_not_found',status=404)
+            if ref.kind in {'feedback','feedback_response'}:
+                project,_,_=self._record_projection(c,auth,records)
+                if project(target) is None:raise ProtocolError('object_not_found',status=404)
         return auth
 
     def _job_snapshot(self,c,context):
@@ -85,7 +88,7 @@ class JobStoreMixin:
             state=self._job_snapshot(c,context)
             row=self._row(c,auth.session_id)
             records=self._records(c,auth.session_id,context.as_of.storage_revision)
-            visible=tuple(x for x in records if self._visible(x,auth) and self._object_in_scope(c,auth,x.ref.object_id))
+            visible=self._project_public_records(c,auth,records)
             scenarios=[x for x in records if x.ref.kind=='scenario_state']
             cycles=[x for x in records if x.ref.kind=='cycle' and x.ref.object_id==state.cycle_id]
             private=ScenarioStateV2.model_validate(max(scenarios,key=lambda x:x.ref.version).content) if scenarios else None

@@ -144,9 +144,16 @@
       "type": "string"
     },
     "submitted_reference_hash": {
-      "pattern": "^[0-9a-f]{64}$",
-      "title": "Submitted Reference Hash",
-      "type": "string"
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Submitted Reference Hash"
     },
     "valid_at_subject": {
       "anyOf": [

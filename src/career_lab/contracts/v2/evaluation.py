@@ -67,7 +67,7 @@ def feedback_point_before(left, right):
 
 class FeedbackReferenceCheck(V2):
     # An unavailable source is represented only by a digest of the submitted reference.
-    submitted_reference_hash: Hash
+    submitted_reference_hash: Hash | None
     status: Literal['exact_reference_verified','unavailable','future_evidence','evidence_version_mismatch','evidence_quote_mismatch','evidence_time_mismatch','source_time_unknown']
     verified_ref: EvidenceRefV2 | None = None
     valid_at_subject: bool | None = None
@@ -112,7 +112,7 @@ class VerifiedFactsSnapshot(V2):
     as_of: VersionPoint | None
     requested_at: VersionPoint
     captured_at: VersionPoint
-    source_snapshot_hash: Hash
+    source_snapshot_hash: Hash | None
     references: tuple[FeedbackReferenceCheck,...] = ()
     activity_records: tuple[FeedbackActivity,...] = ()
     activity_totals: dict[ActivityKind,FeedbackActivityCount] = {}
@@ -155,7 +155,7 @@ class HistoricalResponsibilityFinding(V2):
     criterion: Identifier
     kind: Literal['actual_action','commitment','completion_claim','unknown']
     state: Literal['active','withdrawn','unknown']
-    occurred_at: VersionPoint
+    occurred_at: VersionPoint | None
     evaluated_at: VersionPoint
     scope: tuple[ObjectRef,...] = Field(min_length=1)
     finding: Literal['unknown','recorded_commitment','verified_breach','verified_within_limit','claim_matches_record','verified_claim_mismatch','claim_has_run_records','recorded_action']
@@ -165,7 +165,8 @@ class HistoricalResponsibilityFinding(V2):
     executor: Executor | None = None
     @model_validator(mode='after')
     def basis(self):
-        if not feedback_point_before(self.occurred_at,self.evaluated_at):raise ValueError('future responsibility')
+        if self.occurred_at is not None and not feedback_point_before(self.occurred_at,self.evaluated_at):raise ValueError('future responsibility')
+        if self.occurred_at is None and self.finding!='unknown':raise ValueError('known responsibility requires occurrence point')
         if self.finding!='unknown' and not self.sources:raise ValueError('known responsibility needs verified sources')
         if self.kind=='commitment' and self.finding not in {'unknown','recorded_commitment'}:raise ValueError('commitment does not prove action')
         if self.kind=='unknown' and self.finding!='unknown':raise ValueError('unknown responsibility cannot be assessed')
@@ -176,7 +177,7 @@ class HistoricalResponsibilitiesSnapshot(V2):
     as_of: VersionPoint | None
     requested_at: VersionPoint
     captured_at: VersionPoint
-    source_snapshot_hash: Hash
+    source_snapshot_hash: Hash | None
     completeness: Literal['complete','partial','unknown'] = 'unknown'
     coverage: FeedbackActivityWindow | None = None
     entries: tuple[HistoricalResponsibilityFinding,...] = ()
@@ -195,6 +196,7 @@ class HistoricalResponsibilitiesSnapshot(V2):
         return self
 
 class FeedbackResponseRecord(V2):
+    read_projection: Literal['partial'] | None = None
     id: Identifier
     session_id: Identifier
     version: Literal[1] = 1
@@ -210,12 +212,13 @@ class FeedbackResponseRecord(V2):
     def linked(self):
         if self.feedback.kind!='feedback' or self.feedback.session_id!=self.session_id:raise ValueError('invalid feedback link')
         if not self.text.strip():raise ValueError('response text is empty')
-        if self.kind=='supplement' and not self.evidence:raise ValueError('supplement needs exact evidence')
+        if self.kind=='supplement' and not self.evidence and self.read_projection is None:raise ValueError('supplement needs exact evidence')
         if any(r.session_id!=self.session_id or r.observed_at_seq>self.recorded_at.business_seq for r in self.evidence):raise ValueError('invalid response evidence')
         if len({canonical(r) for r in self.evidence})!=len(self.evidence):raise ValueError('duplicate response evidence')
         return self
 
 class FeedbackV2(V2):
+    read_projection: Literal['partial'] | None = None
     id: Identifier
     session_id: Identifier
     version: PositiveInt = 1
@@ -237,6 +240,9 @@ class FeedbackV2(V2):
     @model_validator(mode='after')
     def adoption(self):
         if self.mode=='scoring' and not self.adoption_record:raise ValueError('scoring requires independent adoption record')
+        if self.read_projection is None:
+            if any(x.source_snapshot_hash is None for x in (*(self.verified_facts or ()),*(self.historical_responsibilities or ()))):raise ValueError('stored feedback needs snapshot identity')
+            if any(r.submitted_reference_hash is None for facts in self.verified_facts or () for r in facts.references):raise ValueError('stored feedback needs submitted reference identity')
         for section in (self.verified_facts,self.historical_responsibilities):
             if section is None:continue
             if len({canonical(x.subject) for x in section})!=len(section):raise ValueError('duplicate subject feedback section')

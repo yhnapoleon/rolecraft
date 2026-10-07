@@ -17,6 +17,7 @@
   },
   "id": "response",
   "kind": "objection",
+  "read_projection": null,
   "recorded_at": {
     "business_seq": 0,
     "schema_version": 2,
