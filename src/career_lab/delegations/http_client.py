@@ -22,7 +22,7 @@ class HttpAgentClient:
         if not 0<timeout<=30:raise ValueError('invalid timeout')
         self.config_path=config_path;self.timeout=timeout
 
-    def _request(self,credentials,method,suffix,body=None,query=None,deadline=None):
+    def _request(self,credentials,method,suffix,body=None,query=None,deadline=None,*,operation=None):
         url=credentials.api_url+'/sessions/'+safe_id(credentials.session_id)+suffix
         timeout=self.timeout if deadline is None else min(self.timeout,max(0.001,deadline-time.monotonic()))
         async def execute():
@@ -43,9 +43,8 @@ class HttpAgentClient:
             if not isinstance(code,str) or not re.fullmatch(r'[a-z][a-z0-9_]{0,95}',code) or credentials.token in code:code='request_failed'
             raise RemoteFailure(code,status)
         if not isinstance(value,dict) or value.get('schema_version')!=2:raise RemoteFailure('response_unconfirmed')
-        from .public_output import validate_public_output
-        validate_public_output(value)
-        return redact(value,credentials.token)
+        from .public_output import project_public_output
+        return redact(project_public_output(value,operation=operation),credentials.token)
 
     def observation(self,session_id,query=None,*,credentials=None,deadline=None):
         credentials=credentials or load_credentials(self.config_path)
@@ -91,7 +90,7 @@ class HttpAgentClient:
             if key not in payload:raise RemoteFailure('route_object_required',422)
             suffix=suffix.replace('{'+key+'}',safe_id(payload[key]))
         query={k:v for k,v in payload.items() if k not in route.ids and v is not None} if body is None else None
-        return self._request(credentials,route.method,suffix,body,query,deadline)
+        return self._request(credentials,route.method,suffix,body,query,deadline,operation=name)
 
     def _editable_head(self,credentials,observation,payload,deadline=None):
         product_id=payload.get('product_id');head=next((p for p in observation.products if p.object_id==product_id),None)

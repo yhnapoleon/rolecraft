@@ -14,7 +14,8 @@ def install_delegations(registry,*,source_provider=None,max_ttl_seconds=3600,syn
     def service():
         if 'gateway' not in holder:raise C.ProtocolError('delegation_gateway_unbound',status=503)
         return ToolService(holder['gateway'],**({'synchronous':synchronous} if synchronous is not None else {}),
-            unavailable={} if source_provider else {'observation':'observation_source_unavailable'})
+            unavailable=({'observation':getattr(source_provider,'unavailable_code',None)}
+                if getattr(source_provider,'unavailable_code',None) else {} if source_provider else {'observation':'observation_source_unavailable'}))
     registry.register(Operation('tools','read',C.ResourcePage,
         lambda view,page,auth:V2Response(result={'tools':[t.model_dump(mode='json') for t in service().catalogue(auth,view.state)]}),
         mutates=False,response_model=V2Response))
