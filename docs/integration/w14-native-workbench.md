@@ -33,7 +33,18 @@ ROLECRAFT_API_TARGET=http://127.0.0.1:18832 npm run dev -- --port 18830
 | 3：W05提交/反馈/修订 | `#sheet`内sheetDeliver/`#live-deliver`；`.review-main`、`.review-side`及原反馈侧栏 | 模块按surface=submission/feedback提供原生内容，去掉独立页头/导航。替换旧六字段协议为明确作品版本与决定；分段反馈/补证/修订走统一命令。反馈用自身semantic_status/条目来源，装046固定的完整14项输入，不复用同事mode。引用回跳沿review-side。 | 原交付入口完成提交→worker反馈→确切依据→异议补证→修订重交，旧记录不改写；停做/暂缓不过度裁决。 |
 | 3：W06 Agent | 原railAgent、`.agent-conn`、`.agent-log`与任务包/回传/采用位置 | 按044的v4-agent-mount-request接授权、MCP观察/操作/回传/撤销；模块只接原槽位，不创建独立面板或第二权限/队列。公共history/mount可先单独交付，不等本步UI齐。 | 原Agent区能授权、真实读取/回传、恢复、采用及撤销；执行、采用、验证分开呈现。 |
 
-插槽文件边界：032维护`src/app/ui.js`的上述现有容器、`workbench-entry.ts`、`workbench-live.ts`、统一会话/command数据层与公共adapter；W03由040改`src/features/workspace/native-v4/**`及其登记的client，W04由039改`src/features/roles-native/**`，W05由040改`src/features/feedback-native/**`。这些部件不得接管`#app`或全局导航、不得另存凭据/恢复账本；确切shared改动仍依登记串行。W06的044请求明确本轮无新frontend组件：032接`railAgent .agent-conn .conn-ways`和`.agent-log`，044提供现有factory/SDK/受权callback；不编造新组件路径。039树里未提交的W03文件不得作为输入或由039提交，本树只继承已登记owned哈希。
+### 模块独占slot与统一host类型
+
+共享类型已落在`apps/web/src/v4-host.ts`（`V4HostAdapter`、`V4SlotContext`、`V4SlotHandle`），目前是接口声明，实际统一数据层待032实现。模块不拿token或raw transport，不构造Command/envelope、猜版本或维护第二恢复流程；只调用host.query/command/recover/retry及同一draft存储。`command`只收业务意图，`recover`只恢复旧请求，真实重试必须单独显式动作。工作语言从固定session读取，界面语言独立；反馈自己的semantic_status通过反馈DTO读取。
+
+| 实施线 | 专属slot文件（由046按此登记放行） | 032提供的真实nodes与数据 | 模块作者须自己完成/去掉 |
+|---|---|---|---|
+| W03／047 | `apps/web/src/features/workspace/native-v4/v4-slot.ts`，辅助文件限同目录 | 工作板事项区、任务卡操作、`#ws-object`中原编辑/调查节点、文件夹节点；currentTask/currentProduct、任务/作品/版本/分享数据与统一commands/drafts | 实现事项/编辑/调查/分享事件和原位渲染、冲突/草稿保全、解绑；去掉组件自带页头、独立作品导航和整页shell。不要改根ui.js。 |
+| W04／039 | `apps/web/src/features/roles-native/v4-slot.ts`、`v4-request-slot.ts`，辅助文件限同目录 | 原railTeam/railChat的people/thread/composer节点、申请弹窗节点；确切role/task/share上下文、请求/回复/展示/业务决定数据与commands | 实现原同事区发送/恢复/显示回执和申请结果事件/渲染；保留host人物选择及头像样式，不重复人物导航/标题或另起面板。 |
+| W05／040 | `apps/web/src/features/feedback-native/v4-slot.ts`，辅助文件限同目录 | sheetDeliver的原表单节点；review-main/review-side节点；surface=submission或feedback，确切产品/提交/反馈、独立semantic_status、原文回跳及draft/command | 实现两surface的原位内容、提交/补证/修订事件和解绑；去掉独立页头/导航/全局选择态，不自存反馈请求日志。 |
+| W06／044 | `apps/web/src/features/agent-native/v4-slot.ts`，辅助文件限同目录（新slot范围，不沿用旧“无前端组件”限制） | `railAgent .agent-conn .conn-ways`、`.agent-log`和原任务包/回传/采用位置；准确refs、真实授权状态/到期/能力、委托callbacks、操作/回传结果 | 自己完成授权/MCP连接/撤销/日志/回传的slot胶水和渲染；沿用原Agent布局，去掉独立连接页或模块导航，不改根ui.js、不复制凭据。 |
+
+032只维护根ui.js的薄挂载和数据适配、workbench-entry、LiveWorkbench/统一session与command数据层。根渲染前保全host草稿和焦点，旧slot先destroy；afterRender对实际存在的nodes执行mount/update。模块输入先进入同一host draft存储，输入焦点中不得重建编辑节点；切换会话/路由解除订阅，不在mount/destroy时自动生成、分享或提交。模块可并行实现slot及自有样式对齐，具体范围以046更新后的登记为准。039树里未提交W03文件不得引入或由039提交；本树只继承固定owned哈希。
 
 本轮中文纵切按用户17:16决定保存截图与实际操作记录；最终验收再录屏。共享接口和模块组合仅依据准确commit/场景hash/契约与当前mode验证，开发自测页成功不计v4通过。
 
