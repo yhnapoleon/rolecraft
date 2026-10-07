@@ -3512,6 +3512,142 @@
         "title": "FactV2",
         "type": "object"
       },
+      "FeedbackActivity": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "minLength": 1,
+            "title": "Actor Id",
+            "type": "string"
+          },
+          "counterparty": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Counterparty"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "kind": {
+            "enum": [
+              "material_read",
+              "test_run",
+              "question_sent",
+              "reply_received",
+              "learner_displayed"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "occurred_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "ref": {
+            "$ref": "#/components/schemas/EvidenceRefV2"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "kind",
+          "ref",
+          "occurred_at",
+          "executor",
+          "actor_id"
+        ],
+        "title": "FeedbackActivity",
+        "type": "object"
+      },
+      "FeedbackActivityCount": {
+        "additionalProperties": false,
+        "properties": {
+          "count": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Count"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "default": "unknown",
+            "enum": [
+              "complete",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "verified_records": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Verified Records",
+            "type": "integer"
+          }
+        },
+        "title": "FeedbackActivityCount",
+        "type": "object"
+      },
+      "FeedbackActivityWindow": {
+        "additionalProperties": false,
+        "properties": {
+          "captured_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "covered_from": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "covered_through": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "covered_from",
+          "covered_through",
+          "captured_at"
+        ],
+        "title": "FeedbackActivityWindow",
+        "type": "object"
+      },
       "FeedbackInput": {
         "additionalProperties": false,
         "properties": {
@@ -3613,6 +3749,77 @@
         "title": "FeedbackItem",
         "type": "object"
       },
+      "FeedbackReferenceCheck": {
+        "additionalProperties": false,
+        "properties": {
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "semantic_support": {
+            "const": "not_established",
+            "default": "not_established",
+            "title": "Semantic Support",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "exact_reference_verified",
+              "unavailable",
+              "future_evidence",
+              "evidence_version_mismatch",
+              "evidence_quote_mismatch",
+              "evidence_time_mismatch",
+              "source_time_unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submitted_reference_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Submitted Reference Hash"
+          },
+          "valid_at_subject": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Valid At Subject"
+          },
+          "verified_ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EvidenceRefV2"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "submitted_reference_hash",
+          "status"
+        ],
+        "title": "FeedbackReferenceCheck",
+        "type": "object"
+      },
       "FeedbackRequest": {
         "additionalProperties": false,
         "properties": {
@@ -3631,6 +3838,189 @@
           "submission_id"
         ],
         "title": "FeedbackRequest",
+        "type": "object"
+      },
+      "FeedbackResponseCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "criterion": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Criterion"
+          },
+          "evidence": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "feedback_id": {
+            "minLength": 1,
+            "title": "Feedback Id",
+            "type": "string"
+          },
+          "feedback_version": {
+            "exclusiveMinimum": 0,
+            "title": "Feedback Version",
+            "type": "integer"
+          },
+          "kind": {
+            "enum": [
+              "objection",
+              "supplement"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "section": {
+            "default": "general",
+            "enum": [
+              "general",
+              "verified_facts",
+              "historical_responsibilities",
+              "rule_items",
+              "model_advice"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 12000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "feedback_id",
+          "feedback_version",
+          "kind",
+          "text"
+        ],
+        "title": "FeedbackResponseCreate",
+        "type": "object"
+      },
+      "FeedbackResponseRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "criterion": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Criterion"
+          },
+          "evidence": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Evidence",
+            "type": "array"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "objection",
+              "supplement"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "read_projection": {
+            "anyOf": [
+              {
+                "const": "partial",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Read Projection"
+          },
+          "recorded_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "section": {
+            "default": "general",
+            "enum": [
+              "general",
+              "verified_facts",
+              "historical_responsibilities",
+              "rule_items",
+              "model_advice"
+            ],
+            "title": "Section",
+            "type": "string"
+          },
+          "session_id": {
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "text": {
+            "maxLength": 12000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "version": {
+            "const": 1,
+            "default": 1,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "feedback",
+          "kind",
+          "text",
+          "recorded_at",
+          "executor"
+        ],
+        "title": "FeedbackResponseRecord",
         "type": "object"
       },
       "FeedbackV2": {
@@ -3656,6 +4046,21 @@
           },
           "evaluation": {
             "$ref": "#/components/schemas/FileRef"
+          },
+          "historical_responsibilities": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/HistoricalResponsibilitiesSnapshot"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Historical Responsibilities"
           },
           "id": {
             "minLength": 1,
@@ -3700,6 +4105,34 @@
             "title": "Next Options",
             "type": "array"
           },
+          "read_projection": {
+            "anyOf": [
+              {
+                "const": "partial",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Read Projection"
+          },
+          "rule_items": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FeedbackItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Rule Items"
+          },
           "schema_version": {
             "const": 2,
             "default": 2,
@@ -3719,6 +4152,21 @@
             "minimum": 0,
             "title": "Verified Coverage",
             "type": "number"
+          },
+          "verified_facts": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/VerifiedFactsSnapshot"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Verified Facts"
           },
           "version": {
             "default": 1,
@@ -3785,6 +4233,204 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "HistoricalResponsibilitiesSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "captured_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "completeness": {
+            "default": "unknown",
+            "enum": [
+              "complete",
+              "partial",
+              "unknown"
+            ],
+            "title": "Completeness",
+            "type": "string"
+          },
+          "coverage": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackActivityWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "entries": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/HistoricalResponsibilityFinding"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "requested_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_snapshot_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Snapshot Hash"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/ObjectRef"
+          }
+        },
+        "required": [
+          "subject",
+          "as_of",
+          "requested_at",
+          "captured_at",
+          "source_snapshot_hash"
+        ],
+        "title": "HistoricalResponsibilitiesSnapshot",
+        "type": "object"
+      },
+      "HistoricalResponsibilityFinding": {
+        "additionalProperties": false,
+        "properties": {
+          "actor_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Actor Id"
+          },
+          "criterion": {
+            "minLength": 1,
+            "title": "Criterion",
+            "type": "string"
+          },
+          "evaluated_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "executor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Executor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "finding": {
+            "enum": [
+              "unknown",
+              "recorded_commitment",
+              "verified_breach",
+              "verified_within_limit",
+              "claim_matches_record",
+              "verified_claim_mismatch",
+              "claim_has_run_records",
+              "recorded_action"
+            ],
+            "title": "Finding",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "actual_action",
+              "commitment",
+              "completion_claim",
+              "unknown"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "occurred_at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "scope": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "minItems": 1,
+            "title": "Scope",
+            "type": "array"
+          },
+          "sources": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "state": {
+            "enum": [
+              "active",
+              "withdrawn",
+              "unknown"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "criterion",
+          "kind",
+          "state",
+          "occurred_at",
+          "evaluated_at",
+          "scope",
+          "finding",
+          "explanation"
+        ],
+        "title": "HistoricalResponsibilityFinding",
         "type": "object"
       },
       "ImportConflict": {
@@ -7290,6 +7936,19 @@
             "title": "Cursor",
             "type": "integer"
           },
+          "feedback_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Feedback Id"
+          },
           "import_id": {
             "anyOf": [
               {
@@ -7320,6 +7979,19 @@
             ],
             "default": null,
             "title": "Product Id"
+          },
+          "response_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Response Id"
           },
           "review_id": {
             "anyOf": [
@@ -7476,6 +8148,32 @@
       "ReviewInput": {
         "additionalProperties": false,
         "properties": {
+          "decision": {
+            "anyOf": [
+              {
+                "enum": [
+                  "launch",
+                  "launch_narrow",
+                  "defer_with_conditions",
+                  "no_go"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Decision"
+          },
+          "followup_of": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Followup Of",
+            "type": "array"
+          },
           "purpose": {
             "title": "Purpose",
             "type": "string"
@@ -7520,11 +8218,37 @@
           "as_of": {
             "$ref": "#/components/schemas/VersionPoint"
           },
+          "decision": {
+            "anyOf": [
+              {
+                "enum": [
+                  "launch",
+                  "launch_narrow",
+                  "defer_with_conditions",
+                  "no_go"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Decision"
+          },
           "evaluation": {
             "$ref": "#/components/schemas/FileRef"
           },
           "executor": {
             "$ref": "#/components/schemas/Executor"
+          },
+          "followup_of": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Followup Of",
+            "type": "array"
           },
           "id": {
             "minLength": 1,
@@ -10554,6 +11278,216 @@
         "title": "ValidationError",
         "type": "object"
       },
+      "VerifiedFactsSnapshot": {
+        "additionalProperties": false,
+        "properties": {
+          "activity_records": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FeedbackActivity"
+            },
+            "title": "Activity Records",
+            "type": "array"
+          },
+          "activity_totals": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/FeedbackActivityCount"
+            },
+            "default": {},
+            "propertyNames": {
+              "enum": [
+                "material_read",
+                "test_run",
+                "question_sent",
+                "reply_received",
+                "learner_displayed"
+              ]
+            },
+            "title": "Activity Totals",
+            "type": "object"
+          },
+          "activity_window": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FeedbackActivityWindow"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "actor_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Actor Id"
+          },
+          "adopter": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Executor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "as_of": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionPoint"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "author": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Executor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "captured_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "conclusion_quality": {
+            "const": "not_scored",
+            "default": "not_scored",
+            "title": "Conclusion Quality",
+            "type": "string"
+          },
+          "declared_citation_count": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Declared Citation Count"
+          },
+          "declared_source_count": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Declared Source Count"
+          },
+          "executor": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Executor"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "independent_understanding": {
+            "const": "unobserved",
+            "default": "unobserved",
+            "title": "Independent Understanding",
+            "type": "string"
+          },
+          "references": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/FeedbackReferenceCheck"
+            },
+            "title": "References",
+            "type": "array"
+          },
+          "requested_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_snapshot_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Snapshot Hash"
+          },
+          "status": {
+            "enum": [
+              "verified",
+              "partial",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "subject": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "summary": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Summary",
+            "type": "array"
+          },
+          "verified_source_count": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Verified Source Count"
+          }
+        },
+        "required": [
+          "subject",
+          "status",
+          "as_of",
+          "requested_at",
+          "captured_at",
+          "source_snapshot_hash"
+        ],
+        "title": "VerifiedFactsSnapshot",
+        "type": "object"
+      },
       "VersionPoint": {
         "additionalProperties": false,
         "properties": {
@@ -12004,6 +12938,290 @@
           }
         ],
         "summary": "Feedback"
+      }
+    },
+    "/sessions/{session_id}/feedback-records/{feedback_id}": {
+      "get": {
+        "operationId": "feedback_records_read_sessions__session_id__feedback_records__feedback_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Feedback Records Read"
+      }
+    },
+    "/sessions/{session_id}/feedback-responses/{response_id}": {
+      "get": {
+        "operationId": "feedback_responses_read_sessions__session_id__feedback_responses__response_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Feedback Responses Read"
+      }
+    },
+    "/sessions/{session_id}/feedback/{feedback_id}/responses": {
+      "get": {
+        "operationId": "feedback_responses_list_sessions__session_id__feedback__feedback_id__responses_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "title": "Cursor",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "since_seq",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Since Seq"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Feedback Responses List"
+      },
+      "post": {
+        "operationId": "feedback_responses_create_sessions__session_id__feedback__feedback_id__responses_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Command"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Feedback Responses Create"
       }
     },
     "/sessions/{session_id}/feedback/{submission_id}": {
@@ -13919,6 +15137,18 @@
       "$ref": "#/components/schemas/FeedbackInput"
     },
     "feedback.read": {
+      "$ref": "#/components/schemas/ResourcePage"
+    },
+    "feedback.records.read": {
+      "$ref": "#/components/schemas/ResourcePage"
+    },
+    "feedback.responses.create": {
+      "$ref": "#/components/schemas/FeedbackResponseCreate"
+    },
+    "feedback.responses.list": {
+      "$ref": "#/components/schemas/ResourcePage"
+    },
+    "feedback.responses.read": {
       "$ref": "#/components/schemas/ResourcePage"
     },
     "materials.list": {

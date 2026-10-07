@@ -1,5 +1,120 @@
 {
   "$defs": {
+    "EvidenceRefV2": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "observed_at_seq": {
+          "minimum": 0,
+          "title": "Observed At Seq",
+          "type": "integer"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quote"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "span_end": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span End"
+        },
+        "span_start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Start"
+        },
+        "valid_from_seq": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Valid From Seq",
+          "type": "integer"
+        },
+        "valid_until_seq": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until Seq"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version",
+        "observed_at_seq"
+      ],
+      "title": "EvidenceRefV2",
+      "type": "object"
+    },
     "Executor": {
       "additionalProperties": false,
       "properties": {
@@ -43,38 +158,6 @@
         "kind"
       ],
       "title": "Executor",
-      "type": "object"
-    },
-    "FileRef": {
-      "additionalProperties": false,
-      "properties": {
-        "media_type": {
-          "default": "application/json",
-          "title": "Media Type",
-          "type": "string"
-        },
-        "path": {
-          "minLength": 1,
-          "title": "Path",
-          "type": "string"
-        },
-        "schema_version": {
-          "const": 2,
-          "default": 2,
-          "title": "Schema Version",
-          "type": "integer"
-        },
-        "sha256": {
-          "pattern": "^[0-9a-f]{64}$",
-          "title": "Sha256",
-          "type": "string"
-        }
-      },
-      "required": [
-        "path",
-        "sha256"
-      ],
-      "title": "FileRef",
       "type": "object"
     },
     "ObjectRef": {
@@ -165,18 +248,14 @@
   },
   "additionalProperties": false,
   "properties": {
-    "as_of": {
-      "$ref": "#/$defs/VersionPoint"
+    "actor_id": {
+      "minLength": 1,
+      "title": "Actor Id",
+      "type": "string"
     },
-    "decision": {
+    "counterparty": {
       "anyOf": [
         {
-          "enum": [
-            "launch",
-            "launch_narrow",
-            "defer_with_conditions",
-            "no_go"
-          ],
           "type": "string"
         },
         {
@@ -184,35 +263,27 @@
         }
       ],
       "default": null,
-      "title": "Decision"
-    },
-    "evaluation": {
-      "$ref": "#/$defs/FileRef"
+      "title": "Counterparty"
     },
     "executor": {
       "$ref": "#/$defs/Executor"
     },
-    "followup_of": {
-      "default": [],
-      "items": {
-        "$ref": "#/$defs/ObjectRef"
-      },
-      "title": "Followup Of",
-      "type": "array"
-    },
-    "id": {
-      "minLength": 1,
-      "title": "Id",
+    "kind": {
+      "enum": [
+        "material_read",
+        "test_run",
+        "question_sent",
+        "reply_received",
+        "learner_displayed"
+      ],
+      "title": "Kind",
       "type": "string"
     },
-    "purpose": {
-      "title": "Purpose",
-      "type": "string"
+    "occurred_at": {
+      "$ref": "#/$defs/VersionPoint"
     },
-    "question": {
-      "default": "",
-      "title": "Question",
-      "type": "string"
+    "ref": {
+      "$ref": "#/$defs/EvidenceRefV2"
     },
     "schema_version": {
       "const": 2,
@@ -220,43 +291,25 @@
       "title": "Schema Version",
       "type": "integer"
     },
-    "scope": {
-      "items": {
-        "type": "string"
-      },
-      "title": "Scope",
-      "type": "array"
-    },
-    "session_id": {
-      "minLength": 1,
-      "title": "Session Id",
-      "type": "string"
-    },
-    "subjects": {
-      "items": {
-        "$ref": "#/$defs/ObjectRef"
-      },
-      "minItems": 1,
-      "title": "Subjects",
-      "type": "array"
-    },
-    "version": {
-      "default": 1,
-      "exclusiveMinimum": 0,
-      "title": "Version",
-      "type": "integer"
+    "target": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObjectRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     }
   },
   "required": [
-    "id",
-    "session_id",
-    "subjects",
-    "purpose",
-    "as_of",
-    "scope",
-    "evaluation",
-    "executor"
+    "kind",
+    "ref",
+    "occurred_at",
+    "executor",
+    "actor_id"
   ],
-  "title": "ReviewRequest",
+  "title": "FeedbackActivity",
   "type": "object"
 }

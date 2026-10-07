@@ -1,13 +1,13 @@
-"""W03 owned handlers through fixed c7 Gateway/V2Store, never a bypass router."""
+"""W03 owned handlers through fixed Gateway/V2Store; original c7 counterexamples retained."""
 from datetime import datetime,timedelta,timezone
 from dataclasses import replace
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import select,func
+from sqlalchemy import select,func,update
 from career_lab.contracts import v2 as C
 from career_lab.api.app import create_app
 from career_lab.api.modules import ExtensionRegistry,ScenarioRegistration
-from career_lab.storage.v2_tables import v2_objects,v2_transactions,v2_events
+from career_lab.storage.v2_tables import v2_objects,v2_transactions,v2_events,v2_credentials
 from career_lab.workspace.extension import install_workspace_operations,workspace_plan,snapshot_from_view
 from career_lab.workspace.imports import MAX_SOURCE_REVISION,MAX_VERSION_SPAN,MAX_HISTORY_PER_ITEM,MAX_REFERENCES
 from test_formal_gateway import api,call,product_page
@@ -55,6 +55,20 @@ def test_actual_scoped_handler_removes_only_target_without_revealing_hidden_shar
     # structural-cycle scope bug is still present. Do not xfail the real failure.
     after=counts(store);again=limited.post(f"/sessions/{sid}/work-products/{a['product_id']}/versions",json=body)
     assert again.status_code==200 and again.json()['replayed'] and counts(store)==after,again.text
+    recovered=limited.get(f'/sessions/{sid}/requests/scoped-remove')
+    assert recovered.status_code==200,recovered.text
+    assert recovered.json()['response']['result']['object']['cycle']==result.json()['result']['object']['cycle']
+    cycle=C.ObjectRef.model_validate(result.json()['result']['object']['cycle'])
+    with pytest.raises(C.ProtocolError):store.read(agent,cycle)
+    assert sa.object_id not in recovered.text and sb.object_id not in recovered.text
+    # Simulate a server-side grant narrowing in this isolated credential table;
+    # no production permission-management endpoint is added by this test.
+    narrowed=agent.model_copy(update={'allowed_objects':()})
+    with store.db.transaction() as conn:
+        conn.execute(update(v2_credentials).where(v2_credentials.c.id==agent.credential_id).values(context=C.canonical(narrowed)))
+    assert limited.get(f'/sessions/{sid}/requests/scoped-remove').status_code in {403,404}
+    assert limited.post(f"/sessions/{sid}/work-products/{a['product_id']}/versions",json=body).status_code in {403,404}
+    assert counts(store)==after
 
 
 def test_owned_removal_rolls_back_cascade_and_same_key_can_retry(api):

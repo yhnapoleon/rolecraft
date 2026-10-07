@@ -1,4 +1,4 @@
-// Generated from W01 manifest SHA256 0aa98d5ebec838fd0e2b56a9eed2f32a51c6ec94dff526712083a589d858e510. Do not edit.
+// Generated from W01 manifest SHA256 5edc886f3e862b53b11c19dbcf9955042d02c7ff18dd4ecf51fee8bb3d7c108c. Do not edit.
 export type Adoption = { "adopted_at"?: (string | null); "adopter"?: (Executor | null); "schema_version"?: 2; "status"?: "unadopted" | "adopted" | "rejected" };
 export type Command = { "expected_version": number; "expected_workspace_revision": number; "operation": string; "payload"?: Record<string, JsonValue>; "request_id": string; "schema_version": 2 };
 export type EvidenceRefV2 = { "config_version"?: (number | null); "kind": string; "object_id": string; "observed_at_seq": number; "quote"?: (string | null); "schema_version"?: 2; "session_id": string; "span_end"?: (number | null); "span_start"?: (number | null); "valid_from_seq"?: number; "valid_until_seq"?: (number | null); "version": number };

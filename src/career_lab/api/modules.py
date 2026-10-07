@@ -45,6 +45,7 @@ class Operation:
 # Public API/tool installation whitelist. Internal snapshot/restore is deliberately absent.
 PUBLIC_OPERATIONS={
  'requests.read','actions','tests.create','tests.list','turns.create','submissions.create','submissions.list',
+ 'feedback.records.read','feedback.responses.create','feedback.responses.read','feedback.responses.list',
  'feedback.create','feedback.read','approvals.resolve','materials.list','timeline','evidence.read',
  'work_items.create','work_items.list','work_items.update','work_items.batch','work_products.adopt','work_products.create','work_products.list',
  'work_products.versions.create','work_products.versions.list','work_products.shares.create',

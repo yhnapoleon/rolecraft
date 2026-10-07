@@ -6,7 +6,7 @@ export { buildBrowserImport } from './import-browser';
 
 export const integrationManifest = {
   package: 'W03',
-  contract: 'expansion-v3-0aa98d5ebec838fd0e2b56a9eed2f32a51c6ec94dff526712083a589d858e510',
+  contract: 'expansion-v3-5edc886f3e862b53b11c19dbcf9955042d02c7ff18dd4ecf51fee8bb3d7c108c',
   backendFactory: 'career_lab.api.workspace_v2.install_workspace_operations',
   planHandler: 'career_lab.workspace.extension.workspace_plan',
   recoveryFactory: 'career_lab.api.workspace_integration.install_workspace_recovery',

@@ -36,7 +36,7 @@ def test_all_frozen_models_examples_and_openapi_agree():
 
 def test_v1_scenarios_contracts_and_old_research_freeze_bytes_unchanged():
     protected=['src/career_lab/contracts/actions.py','src/career_lab/contracts/base.py','src/career_lab/contracts/scenario.py','src/career_lab/contracts/evaluation.py','src/career_lab/contracts/deliverables.py','docs/reports/controlled-v2-freeze.json']
-    protected += subprocess.check_output(['git','ls-files','scenarios'],cwd=ROOT,text=True).splitlines()
+    protected += subprocess.check_output(['git','ls-tree','-r','--name-only','80cf1f6189cd25610d609f44283ff9668582d759','--','scenarios'],cwd=ROOT,text=True).splitlines()
     for rel in protected:
         old=subprocess.check_output(['git','show','80cf1f6189cd25610d609f44283ff9668582d759:'+rel],cwd=ROOT)
         assert (ROOT/rel).read_bytes()==old,rel

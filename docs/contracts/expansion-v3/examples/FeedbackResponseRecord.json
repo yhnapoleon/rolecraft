@@ -1,0 +1,32 @@
+{
+  "criterion": null,
+  "evidence": [],
+  "executor": {
+    "delegation_id": null,
+    "id": "human:example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "feedback": {
+    "config_version": null,
+    "kind": "feedback",
+    "object_id": "feedback",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "id": "response",
+  "kind": "objection",
+  "read_projection": null,
+  "recorded_at": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "schema_version": 2,
+  "section": "general",
+  "session_id": "example",
+  "text": "Please reconsider this interpretation.",
+  "version": 1
+}

@@ -174,6 +174,9 @@ class ReviewRequest(V2):
     evaluation: FileRef
     executor: Executor
 
+    decision: Literal['launch','launch_narrow','defer_with_conditions','no_go'] | None = None
+    followup_of: tuple[ObjectRef,...] = ()
+
 class SubmissionV2(V2):
     id: Identifier
     session_id: Identifier
