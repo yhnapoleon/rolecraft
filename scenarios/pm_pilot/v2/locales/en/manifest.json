@@ -7,175 +7,175 @@
     {
       "schema_version": 2,
       "path": "baseline.json",
-      "sha256": "1c45262e93aa5c9ec7c64d20f0c20eef775c8f61653e8ae152087de5f07fb754",
+      "sha256": "362bb5e2550f3746c29f9a5ac3dc8b5e2d8321ddb82408f600e570c76dd0b4f0",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "decision_examples.json",
-      "sha256": "955090ee0308cea119af74d6d3314b766c6da57c831410d73ac91e438021a107",
+      "sha256": "3c4fefc84987ad3fcdfbb387ac73544ec384b67696b8057cea4eb637f8857819",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "facts.json",
-      "sha256": "73eb9a49804752de5e0101b3513b6d30e59537738a6f1d3198e7d433721536bc",
+      "sha256": "d07069813412f496ecba0adde0a5f5fbe3f12425dcb83eb673b6dfe85ce272e1",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "locale.json",
-      "sha256": "1e5d91254dafd7b74a7b5e39be85555b62b92d69059cb01a96172555b58b4ddf",
+      "sha256": "43931f43df09f7e44a3a6675b82b3a476de43e8195ea40b3b7c176a24a201b4b",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "materials.json",
-      "sha256": "e0e4b72a744b13080371d6b64b279f8486d61f75d696b32bfa584a7e541f5f67",
+      "sha256": "1c015dfc874e087e6bad93a1151b335e53c1fda372adbdedf655ec6ee3e628e9",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "materials/approvals-v1.md",
-      "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+      "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/brief-v1.md",
-      "sha256": "b1ba4450650d48d6c73542380a4cf4da50d34da0b6d4c3a459b4a7c85412418c",
+      "sha256": "3e14692b1102820ba3042a5e7711427d593c6581e5a3e8e317b26163e06c7135",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/business_case-v1.md",
-      "sha256": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+      "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/coordination-v1.md",
-      "sha256": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+      "sha256": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/demand-v1.md",
-      "sha256": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+      "sha256": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/demo-v1.md",
-      "sha256": "f5a8b3cadbbb93978a56241a5064f4a638a2f03665a89b114ed26b120a35811e",
+      "sha256": "a12476b68fe52aedfb1ddef8e3523a2cc1a9b831707d23da9bdf35a2cdb584ec",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/demo-v2.md",
-      "sha256": "fb86f44ee7df15c79990740da322fff3555d617cf3311ace042e939c5f13a874",
+      "sha256": "a2640df69d07055524ba50b0bbabfb84322c758de67f5830466ddecb51650660",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/failures-v1.md",
-      "sha256": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+      "sha256": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/faq-v1.md",
-      "sha256": "53e335fafa1ff0ffb32249cc92826b489dbcb73e652915f05b5027244f90ff7d",
+      "sha256": "b8fad283036c2ba68a8b20e537d11457908f8a8921b741c9ba0e758a1e24bd88",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/interviews-v1.md",
-      "sha256": "983ea5fe34a7d929754e3a00fbb327906edd8f874a8622aeb989f871bbe1673c",
+      "sha256": "345705f33270e338444f4a9a92cc8b0f03c77a0d16b6b5c2833bda4eb0b5418d",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/leave-v1.md",
-      "sha256": "ee26220a9f8e6da888aea0b0bb5f676ce847d5aa2b268f6c9ed89978a49012b2",
+      "sha256": "d287651b1f47f46ca1f6a39744121b7eb01ea9be93795a04637766d36b563320",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/meal-v1.md",
-      "sha256": "43f347192b0a11e262c524fb83790c2dc7eed51881eb17c849655a646c7aabed",
+      "sha256": "459abcb2c620d75b0caf62ff0328fa83f67908a8c154a6d998d0351f5966e0e8",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/onboarding-v1.md",
-      "sha256": "f76fe14d4f2f41b92a4725116f91dc10cb3d62d24cd8b25bd4c2dfd8efe4f509",
+      "sha256": "906d5dcecb028f616741bbeba4dd58ad2251257329564b699fbb6356999dc7d8",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/policy-v1.md",
-      "sha256": "495d92ed9fa52e2d67ed69b0ed83aeeff1cb8f7568923999469244b70311d9cb",
+      "sha256": "b29b349fc19da70717ba7405586dd2760ee40ce344477bfe776eed1d7fb4281f",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/policy-v2.md",
-      "sha256": "1ef31bcb24b3a768e2aa002edea825bc37d71c8435ac94b6db3db69214cf6419",
+      "sha256": "d4b820c6700b21de6af5f7170aedb0f2bf76b7d91bccf926efd3f4cb0c9975ad",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/restricted-v1.md",
-      "sha256": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+      "sha256": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/scope_note-v1.md",
-      "sha256": "39e78d207899f544745b0b2847df4a34bd475b1a4867af42662937f18234ede8",
+      "sha256": "d6eff2910a2e0f39dd773a5e28d257bb56e2c41c12471263b05df8c2d23ea112",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/scope_note-v2.md",
-      "sha256": "e7d2ee20ba3fcf0efa7d7075f812bfb0f7587b3e6e8a77ec25641328d854716b",
+      "sha256": "f7af830782ac84614662e312ba6181fbd8917fc8b436abc8ed2fff8aa5dcd5d4",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/tech_diagnostics-v1.md",
-      "sha256": "7dc867646bff9e33b15b2df4089baaf3f8befb23cfd14537987fbaa19517b4a1",
+      "sha256": "f47912df47e8d660cd94e91ccd0db41c555d1fbbb4e31ea9718bb41028ec3757",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/tech_private-v1.md",
-      "sha256": "a5fa9ae780e10788b79151bd97fabbddd40183eb2c5778e23037b94d20e2ded7",
+      "sha256": "f2798d13bd48f3eda85d81ebe4b2635a309cf00b0958bdb1e4e7fa9bb47068b9",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/technical-v1.md",
-      "sha256": "cdfed7fefe4ff3772261b15be6fa42a172ace2a1364d4ca2398260a37999d166",
+      "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/trial_details-v1.md",
-      "sha256": "b0f6e738df36162eee1c118e7dd486e88dcb29b0eaee3ca9f9a9effc9d572d9f",
+      "sha256": "5da8955a9f84967fb9d8b3f1747be466eaa1891b790aa4f1d9c94e810e84d69c",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/user_groups-v1.md",
-      "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
+      "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/world_private-v1.md",
-      "sha256": "97ee621793774fd024266127495b3a99ce489a3b9ebbbe194119fb3d2e9b4ebf",
+      "sha256": "6a5ef0f1e5b42d0bcdcb7faf8dc3a5d880beb48972714f182bb55ae56023d58c",
       "media_type": "text/markdown"
     },
     {
@@ -187,19 +187,25 @@
     {
       "schema_version": 2,
       "path": "probes.json",
-      "sha256": "b8b56e09f7f247a9c29484b26240e63e01d6a37e65b937bcd2739ddb1db5fdce",
+      "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "research/public-case-records.json",
-      "sha256": "9f7cf9e7c639a805561b6eeaeae6439b1f70edb1ac3ad77502b8134231148919",
+      "sha256": "621f9605522bbb6dc7d807dd30d99c9224e1d132bab7c17ed2f1fbf93f72018b",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
+      "path": "research/retrieval-calibration.json",
+      "sha256": "303f2ea8b3e6ba6075d2df750e46d2a2d3faeb97f00069370aaeb8e65466182b",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "roles.json",
-      "sha256": "f6895278d2f56ab9c6606a924af016ec3e546fdb9102ca7ccb17ad3c2f9143b6",
+      "sha256": "dc57d16a0c52909d04a1f0c912625bb15a95e9413e72cfd0d4c82b584293feda",
       "media_type": "application/json"
     },
     {
@@ -217,7 +223,7 @@
     {
       "schema_version": 2,
       "path": "runtime/bundle.json",
-      "sha256": "b9fcfca6605137173540a680edbd870aa9ef8ed7dd0a8147b1c41e640ef3a112",
+      "sha256": "c1ef0d24f39f84d7e2e172d4bb6f5ed46d92f5be003de6ea402ecbd78b9f7977",
       "media_type": "application/json"
     },
     {
@@ -253,7 +259,7 @@
     {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "cd7b0f871be7d01ea02d349a58c9554fe22eecde34605b924be7802147061121",
+      "sha256": "ae9ce7863e427e1a521870cbe177f2f1f6b7cee5ab37b830c7b1260156e2042c",
       "media_type": "application/json"
     },
     {
@@ -265,7 +271,7 @@
     {
       "schema_version": 2,
       "path": "scenario.yaml",
-      "sha256": "67f49c2fa70daefe40fd0e882d4893b0a5c7a448f47c52912c636980e58317d1",
+      "sha256": "795149dfc3ceaa8197f822d8231503bcdb7965696ff64b4cfc27910981b8c59d",
       "media_type": "application/json"
     }
   ],
@@ -304,6 +310,7 @@
     "paths.json",
     "probes.json",
     "research/public-case-records.json",
+    "research/retrieval-calibration.json",
     "roles.json",
     "rubric-reference.json",
     "runtime/acquisition.json",
@@ -321,16 +328,16 @@
     {
       "schema_version": 2,
       "id": "supervisor",
-      "name": "经理",
+      "name": "Manager",
       "responsibilities": [
-        "明确业务目标与承诺",
-        "审批容量、开发资源和期限",
-        "对演示与试点的取舍负责"
+        "Set business goals and commitments",
+        "Approve capacity, developer-days and deadlines",
+        "Own the tradeoff between demonstration and pilot"
       ],
       "goals": [
-        "得到有证据、可追问的建议",
-        "演示可解释但不夸大完成状态",
-        "资源申请有真实缺口"
+        "Receive evidence-backed, inspectable recommendations",
+        "Make the demonstration explainable without overstating completion",
+        "Allocate resources against genuine shortfalls"
       ],
       "known_materials": [
         "brief",
@@ -366,32 +373,32 @@
         "business_scope_requested"
       ],
       "acceptable_conditions": [
-        "承诺与实际资源相符",
-        "先说明证据和取舍再申请",
-        "如需暂停，明确后续责任与复核条件"
+        "Commitments fit actual resources",
+        "Evidence and tradeoffs precede requests",
+        "A pause has follow-up ownership and review conditions"
       ],
       "unacceptable_conditions": [
-        "把聊天支持当成批准",
-        "用演示成功代替试点验证",
-        "无缺口也索要最大资源"
+        "Treating conversational support as approval",
+        "Treating a successful demonstration as pilot validation",
+        "Requesting the maximum allocation without a shortfall"
       ]
     },
     {
       "schema_version": 2,
       "id": "business_lead",
-      "name": "业务负责人",
+      "name": "Business lead",
       "responsibilities": [
-        "解释用户需求和业务流程",
-        "协调政策解释与个案核验",
-        "讨论人工接管和业务验收",
-        "基于现有记录帮助核对吕雯和许青的材料；没有实际转达或回复记录时，不声称已经联系对方或取得新答复"
+        "Explain user needs and business processes",
+        "Coordinate policy explanations and case reviews",
+        "Discuss human handoff and business acceptance",
+        "Help examine Lu Wen and Xu Qing material using available records; never claim contact or a new reply without an actual handoff or reply record"
       ],
       "goals": [
-        "优先解决有影响的问题",
-        "不把转人工或用户沉默都当成功",
-        "区分统计口径与业务价值",
-        "起初支持BC-01的429分钟测算并用它争取试点，尚未逐项核对SD-120字段",
-        "学员提出具体字段反证后承认并修正自己的测算，不否认BC-01原文，也不因学员忠实引用它而责备对方"
+        "Prioritize consequential problems",
+        "Do not count handoffs or silence as success",
+        "Distinguish measurement definitions from business value",
+        "Initially advocate the 429-minute BC-01 estimate without having checked every SD-120 field",
+        "Acknowledge and revise the estimate when the learner supplies specific field evidence; do not deny BC-01 or blame the learner for accurately citing it"
       ],
       "known_materials": [
         "brief",
@@ -434,29 +441,29 @@
         "business_scope_requested"
       ],
       "acceptable_conditions": [
-        "业务价值有可检查的依据",
-        "自动回答与人工接管各自有责任人",
-        "听到反例后愿意修改判断"
+        "Business value has inspectable support",
+        "Automated answers and human handoff have owners",
+        "Counterevidence can change a judgment"
       ],
       "unacceptable_conditions": [
-        "只报告自动回答率",
-        "明确收到字段反证后仍把等待时长全算成节省劳动",
-        "声称人工已经处理却没有记录"
+        "Reporting only the automated-answer rate",
+        "Continuing to count all waiting time as labor saved after receiving explicit field counterevidence",
+        "Claiming a person handled a case without a record"
       ]
     },
     {
       "schema_version": 2,
       "id": "tech_lead",
-      "name": "技术负责人",
+      "name": "Technical lead",
       "responsibilities": [
-        "解释检索、版本与工程成本",
-        "提供可复现验证方法",
-        "指出未生效配置与技术风险"
+        "Explain retrieval, versions and engineering costs",
+        "Provide reproducible verification methods",
+        "Identify ineffective settings and technical risks"
       ],
       "goals": [
-        "回答能追溯到实际来源",
-        "关键配置有正反验证",
-        "工程承诺不超出已批准资源"
+        "Trace answers to the sources actually used",
+        "Verify critical settings with positive and negative cases",
+        "Keep engineering commitments within approved resources"
       ],
       "known_materials": [
         "brief",
@@ -492,7 +499,7 @@
           "actors": [
             "tech_lead"
           ],
-          "paraphrase": "筹备期复现过一个培训报名问法：公司培训我已提交报名是不是就能去听课。匹配阈值0.35时未命中，0.2时返回FAQ中的培训报名段；无关问题仍未命中。这只是一次局部对照，未完成统一校准。"
+          "paraphrase": "A preparation-stage test reproduced this question: I've already signed up for company training. Does that mean I can simply turn up to attend the class? At threshold 0.35 it retrieved no supported passage; at 0.2 it returned the FAQ training-registration paragraph. An unrelated control still retrieved nothing. This is a local comparison, not a generally correct threshold."
         },
         "retrieval_threshold_candidate": {
           "schema_version": 2,
@@ -500,7 +507,7 @@
           "actors": [
             "tech_lead"
           ],
-          "paraphrase": "筹备期复现过一个培训报名问法：公司培训我已提交报名是不是就能去听课。匹配阈值0.35时未命中，0.2时返回FAQ中的培训报名段；无关问题仍未命中。这只是一次局部对照，未完成统一校准。"
+          "paraphrase": "A preparation-stage test reproduced this question: I've already signed up for company training. Does that mean I can simply turn up to attend the class? At threshold 0.35 it retrieved no supported passage; at 0.2 it returned the FAQ training-registration paragraph. An unrelated control still retrieved nothing. This is a local comparison, not a generally correct threshold."
         },
         "retrieval_debug_code": {
           "schema_version": 2,
@@ -508,7 +515,7 @@
           "actors": [
             "tech_lead"
           ],
-          "paraphrase": "技术诊断保存了培训报名原问法、两档阈值和无关问题对照；内部登记号不对外转述。"
+          "paraphrase": "The technical diagnostic retains the original training question, two thresholds and an unrelated control. Its internal register ID is not for disclosure."
         }
       },
       "approval_authority": [],
@@ -518,14 +525,14 @@
         "business_decided"
       ],
       "acceptable_conditions": [
-        "先复现问题再判断修复",
-        "区分源、索引和配置版本",
-        "保留失败和未验证边界"
+        "Reproduce a problem before judging the repair",
+        "Distinguish source, index and configuration versions",
+        "Retain failures and unverified limits"
       ],
       "unacceptable_conditions": [
-        "只凭配置名称认定能力已生效",
-        "把文档发布当成索引已更新",
-        "省掉必要保障却承诺可靠"
+        "Assuming a feature works because its name is selected",
+        "Treating document publication as an index refresh",
+        "Promising reliability without required safeguards"
       ]
     }
   ],
@@ -572,7 +579,7 @@
     "fallback": "human",
     "chunk_size": 500,
     "retrieval_limit": 1,
-    "min_score": 0.35,
+    "min_score": 0.3,
     "min_score_calibration": null,
     "freshness_guard": "none",
     "manual_domains": [],

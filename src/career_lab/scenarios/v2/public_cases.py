@@ -22,20 +22,6 @@ TRIALS = (
 )
 
 
-TRIALS_EN = (
-    ('Q01','Where is the meeting-room booking page?',{}),
-    ('Q02','I forgot my password. How do I reset it?',{}),
-    ('Q03','My office account activation notice has not arrived. What should I do?',{}),
-    ('Q04','My device has broken. What information should I include in a repair request?',{}),
-    ('Q05','How much can I claim per night for a hotel on a domestic business trip?',{}),
-    ('Q06','What is the taxi reimbursement limit per trip?',{}),
-    ('Q07','What is the daily meal reimbursement amount?',{}),
-    ('Q08','How early must I submit planned leave?',{}),
-    ('Q09','What is the hotel reimbursement ceiling for domestic travel?',{'domains':('stable_faq','onboarding')}),
-    ('Q10','What is the hotel reimbursement ceiling for domestic travel?',{'update_strategy':'realtime','work_items':('realtime_sync','human_fallback'),'launch_day':10}),
-    ('Q11','What is the hotel reimbursement ceiling for domestic travel?',{'update_strategy':'manual_policy'}),
-    ('Q12',"What makes up Neptune's atmosphere?",{'fallback':'none'}),
-)
 
 
 def run_pre_event_trial(package, trial_id, query, changes, *, now=None):
@@ -58,16 +44,20 @@ def run_pre_event_trial(package, trial_id, query, changes, *, now=None):
 
 
 def record_public_cases(package):
+    trials=TRIALS
+    if getattr(package,'locale','zh')=='en':
+        from .public_cases_en import TRIALS_EN
+        trials=TRIALS_EN
     return {'schema_version': 2, 'locale':getattr(package,'locale','zh'), 'source_kind': 'actual_deterministic_module_run_on_synthetic_scenario',
             'story_phase': 'before_pm_handoff', 'captured_at': datetime.now(timezone.utc).isoformat(),
             'input_bundle_hash': package.content_hash, 'executor': 'system:w02-pre-event-recorder',
             'http_or_human_trial': False, 'expected_answers_included': False,
-            'records': [run_pre_event_trial(package, *trial) for trial in (TRIALS_EN if getattr(package,'locale','zh')=='en' else TRIALS)]}
+            'records': [run_pre_event_trial(package, *trial) for trial in trials]}
 
 
 def record_private_diagnostic(package):
     en=getattr(package,'locale','zh')=='en'
-    query = 'I signed up for company training; does that mean I can go to the class?' if en else '公司培训我已提交报名是不是就能去听课'
+    query = next(f.value for f in package.facts if f.id=='retrieval_probe_query' and f.version==1)
     trials = [('TR-TRAIN-01-a', query, {'min_score': .35}),
               ('TR-TRAIN-01-b', query, {'min_score': .2}),
               ('TR-TRAIN-01-control', "What makes up Neptune's atmosphere?" if en else '海王星大气的主要成分', {'min_score': .2})]

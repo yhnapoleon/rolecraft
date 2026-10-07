@@ -136,9 +136,13 @@ def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, c
         {"id":"delayed_realtime","domains":["stable_faq","policy_travel","policy_meal","policy_leave"],"participants":20,"update_strategy":"realtime","work_items":["realtime_sync","human_fallback"],"launch_day":10,"request":{"dev_days":6,"deadline_day":10}},
         {"id":"capacity_expanded","domains":["stable_faq"],"participants":50,"update_strategy":"daily","work_items":["scope_filter","human_fallback"],"launch_day":7,"request":{"capacity":60}},
         {"id":"manual_policy","domains":["stable_faq","policy_travel","policy_meal"],"participants":20,"update_strategy":"manual_policy","work_items":["scope_filter","human_fallback"],"launch_day":7,"request":{}}])
-    put("decision_examples.json",[
+    decision_examples=[
         {"decision":"defer_with_conditions","evidence":["demand","interviews","technical"],"proposal":"暂不开放动态政策自动回答。稳定FAQ仍有可行路径，我建议先邀请新员工中的小组验证入口指引，保留人工接管；当前样本混合等待与处理，不能承诺按重复率等比例节省人力。由PM整理实际问题和版本，业务负责人核验转交负担，技术负责人复跑更新与范围测试；第3天共同复核，若错误边界和接管责任已明确，再向经理建议下一步。恢复动态政策前须有可追问的来源同步或人工核验安排。","evaluation":"待情境评价，不预填评分"},
-        {"decision":"no_go","evidence":[],"proposal":"不调查，全部放弃。","evaluation":"可保留讨论；按证据和后续责任评价，不按枚举自动裁决"}])
+        {"decision":"no_go","evidence":[],"proposal":"不调查，全部放弃。","evaluation":"可保留讨论；按证据和后续责任评价，不按枚举自动裁决"}]
+    if locale=="en":
+        from .decision_examples_en import EXAMPLES
+        decision_examples=EXAMPLES
+    put("decision_examples.json",decision_examples)
     put("rubric-reference.json",{"rules_revision":"rules-v4","rubric_revision":"rubric-v2","provider":"W05","status":"not_installed","w02_produces_scores":False})
     if case_records is not None:
         validate_public_cases(case_records,initial,materials,{"faq","onboarding","policy","meal","leave"},locale=locale)

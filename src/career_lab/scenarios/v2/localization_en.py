@@ -17,10 +17,10 @@ MESSAGES_EN = {'synthetic': 'This company and its business information are ficti
                                  'given.',
  'stale_source_guard': 'The source and index versions differ. The freshness guard prevented an automatic answer.',
  'no_fallback': 'An automatic answer is not sufficiently supported, and human fallback is not provisioned.',
- 'tech_summary': 'A preparation-stage diagnostic compared this question: I signed up for company training; does '
-                 'that mean I can go to the class? It used thresholds 0.35 and 0.2 against the same FAQ and an '
-                 'unrelated control. The actual paired results are retained in the diagnostic record. This is a '
-                 'local comparison, not a universally correct setting.',
+ 'tech_summary': "A preparation-stage test reproduced this question: I've already signed up for company training. "
+                 'Does that mean I can simply turn up to attend the class? At threshold 0.35 it retrieved no '
+                 'supported passage; at 0.2 it returned the FAQ training-registration paragraph. An unrelated '
+                 'control still retrieved nothing. This is a local comparison, not a generally correct threshold.',
  'tech_register_summary': 'The technical diagnostic retains the original training question, two thresholds and an '
                           'unrelated control. Its internal register ID is not for disclosure.',
  'path_question': 'What is the hotel reimbursement limit per night?',

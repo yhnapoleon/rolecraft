@@ -7,7 +7,7 @@ FACT_DISPLAY = {
     'new_staff_priority': 'finding the right entry point',
     'operations_concern': 'whether the amount is valid today',
     'admin_concern': 'more review work',
-    'retrieval_probe_query': 'I signed up for company training; does that mean I can go to the class?',
+    'retrieval_probe_query': 'I\'ve already signed up for company training. Does that mean I can simply turn up to attend the class?',
 }
 
 
@@ -154,7 +154,7 @@ DOCUMENTS = {
     'Chen Min: "I have not merged the list or sent invitations. I would like your view on the scope and our existing arrangements first."',
 ]),
 'tech_private:1': ("Technical lead's diagnostic working note", [
-    'Diagnostic input: I signed up for company training; does that mean I can go to the class? The comparison uses thresholds 0.35 and 0.2 with the same FAQ source and an unrelated control question. This is a local diagnostic comparison, not a universally calibrated threshold.',
+    'Diagnostic input: I\'ve already signed up for company training. Does that mean I can simply turn up to attend the class? The comparison uses thresholds 0.35 and 0.2 with the same FAQ source and an unrelated control question. This is a local diagnostic comparison, not a universally calibrated threshold.',
 ]),
 'tech_diagnostics:1': ('Original technical diagnostic register', [
     'Original register ID TR-TRAIN-01. The preparation-stage technical test program records the training-registration question, actual outputs at 0.35 and 0.2, and an unrelated control question. Individual input and output records accompany the scenario evidence.',
