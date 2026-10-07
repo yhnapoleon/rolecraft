@@ -1,6 +1,7 @@
 """Historical responsibility findings, separate from the current work's grade."""
 from career_lab.contracts.v2.core import ProtocolError,canonical
 from math import isfinite
+from .availability import SAFE_REASON
 
 
 def before(a,b):
@@ -19,17 +20,26 @@ def assess_responsibilities(records,policy,subjects,at,resolve,resolve_at):
         if not before(record.occurred_at,at) or not before(record.valid_from,at):continue
         entry={'criterion':record.criterion,'kind':record.kind,'state':record.state,
                'occurred_at':record.occurred_at.model_dump(mode='json'),'evaluated_at':at.model_dump(mode='json'),
-               'scope':[r.model_dump(mode='json') for r in record.scope],
-               'finding':'unknown','explanation':'历史责任来源尚未核全。','sources':[]}
-        if record.valid_until is not None and before(record.valid_until,at):
-            entry['explanation']='该责任记录在作品参照点已失效，不能据此认定当前义务。';output.append(entry);continue
+               'scope':[r.model_dump(mode='json') for r in record.scope if any(r==s for s in subjects)],
+               'finding':'unknown','explanation':SAFE_REASON,'sources':[]}
         proofs=[resolve(ref) for ref in record.sources]
-        if not proofs or not all(proofs) or any(r.valid_until_seq is not None and at.business_seq>=r.valid_until_seq for r in proofs):
-            output.append(entry);continue
+        if not proofs or not all(proofs):
+            # Missing and forbidden have the same safe shape. Coalesce these
+            # placeholders so private source cardinality is not disclosed.
+            pending={'criterion':policy.id,'kind':'unknown','state':'unknown','occurred_at':None,
+                     'evaluated_at':at.model_dump(mode='json'),'scope':[r.model_dump(mode='json') for r in subjects],
+                     'finding':'unknown','explanation':SAFE_REASON,'sources':[]}
+            if pending not in output:output.append(pending)
+            continue
         entry['sources']=[r.model_dump(mode='json') for r in proofs]
+        valid=(record.valid_until is None or not before(record.valid_until,at)) and all(r.valid_until_seq is None or at.business_seq<r.valid_until_seq for r in proofs)
+        entry['sources_valid_at_subject']=valid
+        if not valid:
+            entry['explanation']='已核对历史来源，但其在本次参照点已失效；保留历史用途，本项当前有效性待核验。'
+            output.append(entry);continue
         if record.kind=='unknown' or record.state=='unknown':output.append(entry);continue
         if record.kind=='commitment':
-            entry.update(finding='recorded_commitment',explanation='记录中有'+('已撤回的' if record.state=='withdrawn' else '')+'承诺；承诺不证明已经执行，撤回的合理性仍需结合理由核验。')
+            entry.update(finding='recorded_commitment',explanation=('记录中有已撤回的承诺；承诺不证明已经执行，撤回理由与后续安排仍需结合依据核验。' if record.state=='withdrawn' else '记录中有持续有效的承诺；承诺不证明已经执行，仍需按其内容与期限跟进。'))
             output.append(entry);continue
         values={};seen=set()
         for fact in record.facts:

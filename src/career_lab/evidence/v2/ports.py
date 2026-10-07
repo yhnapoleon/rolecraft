@@ -11,6 +11,18 @@ from career_lab.contracts.v2.world import TestResultV2
 
 
 @dataclass(frozen=True)
+class StructuredDecision:
+    """Trusted structured-field declaration bound to this exact work version.
+
+    This is an adapter input, never inferred from free text or model output.
+    """
+    value: str
+    subject: ObjectRef
+    declared_at: VersionPoint
+    source: EvidenceRefV2
+
+
+@dataclass(frozen=True)
 class SourceRecord:
     ref: EvidenceRefV2
     text: str
@@ -22,6 +34,7 @@ class SourceRecord:
     activity_kind: str | None = None
     activity_target: ObjectRef | None = None
     actor_id: str | None = None
+    structured_decision: StructuredDecision | None = None
 
 
 @dataclass(frozen=True)
