@@ -37,6 +37,7 @@ export interface FeedbackNativeState {
   pending?: boolean;
   /** Presentation only; request identity and recovery remain in the host journal. */
   awaitingFeedback?: boolean;
+  failedFeedback?: boolean;
   error?: string;
 }
 export interface FeedbackNativeAdapter {
@@ -48,6 +49,8 @@ export interface FeedbackNativeAdapter {
   beginRevision(input:{parent_submission:ObjectRef;reason:string}):Promise<unknown>;
   refresh():Promise<unknown>;
   recover?():Promise<unknown>;
+  retry?():Promise<unknown>;
+  canRetry?:boolean;
   openReference(ref:ObjectRef|EvidenceRefV2):void;
   chooseEvidence?():Promise<EvidenceRefV2[]>;
   readDraft(key:string):{text:string;evidence:EvidenceRefV2[]} | undefined;
@@ -107,12 +110,14 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
     if(!selected.size)throw Error(T("请选择这次要交付的作品版本。","Select the artifact versions to submit."));
     await adapter.submit({decision:choice.value,products:[...selected.values()]});
   },true);
+  const retryFeedback=button(T('重新请求反馈','Request feedback again'),()=>adapter.retry?.());
+  const failedNote=el('p',T('这次反馈没有完成。原提交仍保留，没有自动重试；你可以主动重新请求。','This feedback did not complete. The submission is retained and no retry was made automatically. You can request it again.'),'muted');
   const recover=button(T("确认上一请求","Check the previous request"),()=>adapter.recover?.());
   submissions.append(el('p',T("提交会保留这些确切版本。反馈后可进入修订，原提交与原反馈继续保留。","Submission preserves these exact versions. You can revise after feedback; the original submission and feedback remain available."),'muted'),selection,selectedSummary,choice,submit,recover,receipt);
   const revise=button(T("开始修订","Start a revision"),async()=>{const current=adapter.snapshot().submission;if(!current)return;if(!revisionReason.value.trim())throw Error(T("请写下本次修订的方向。","Describe the direction of this revision."));await savedDrafts;if(draftError)throw Error(T("修订说明尚未保存，请先保留文字。","The revision note is not saved. Keep a copy of your text."));await adapter.beginRevision({parent_submission:current.ref,reason:revisionReason.value});});
   revisions.append(el('h2',T("接着修订","Continue revising")),revisionReason,revise);
   const refresh=button(T("查看最新反馈","Refresh feedback"),()=>adapter.refresh());
-  root.append(failure,notice);
+  root.append(failure,notice,failedNote,retryFeedback);
   if(options.surface!=='feedback')root.append(submissions);
   if(options.surface==='feedback')root.append(recover);
   if(options.surface!=='submission')root.append(refresh,reports,responseHistory,revisions);
@@ -175,6 +180,7 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
   }
   function render(){
     if(destroyed)return;const state=adapter.snapshot();reviewControls?.render();
+    failedNote.hidden=!state.failedFeedback;retryFeedback.hidden=!state.failedFeedback||!adapter.retry;retryFeedback.disabled=state.busy||adapter.canRetry===false;
     notice.textContent=state.busy?T("正在等待服务端确认…","Waiting for server confirmation…"):state.pending?T("上一请求结果尚未确认，请先恢复。","The previous request is unresolved. Recover its result first."):state.status==='submitted'?(state.reports.some(r=>r.subject.object_id===state.submission?.ref.object_id)?T("本次提交已保存，可以看反馈、提出异议或开始修订。","Submission saved. Review feedback, raise a challenge or start revising."):T("本次提交已保存，反馈尚未就绪。","Submission saved. Feedback is not ready yet.")):T("可以继续工作，选择准备交付的版本。","Continue your work and select versions for submission.");
     selection.replaceChildren(...state.products.map(product=>{
       const ref:ObjectRef={session_id:product.session_id,kind:'product',object_id:product.product_id,version:product.version};const id=key(ref);

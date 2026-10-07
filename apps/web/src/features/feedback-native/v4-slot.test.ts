@@ -52,9 +52,9 @@ describe('W05 v4 host adapter',()=>{
     const f=fixture();const ctl=createV4FeedbackAdapter(f.host);await ctl.refresh();
     f.setResult({requestId:'feedback-job',status:'pending',result:{submission:ref('submission','sub'),feedback_status:'queued'}});
     await ctl.adapter.submit({decision:'no_go',products:[ref('product','p',2)]});
-    expect(ctl.adapter.snapshot().pending).toBe(false);expect(ctl.adapter.snapshot().awaitingFeedback).toBe(true);expect(f.recovery).toEqual([]);
+    expect(ctl.adapter.snapshot().pending).toBe(false);expect(ctl.adapter.snapshot().awaitingFeedback).toBe(true);expect(f.recovery).toEqual(['feedback-job']);expect(f.calls).toHaveLength(1);
     f.setResult({requestId:'feedback-job',status:'confirmed',result:{}});await ctl.adapter.recover!();
-    expect(ctl.adapter.snapshot().awaitingFeedback).toBe(false);expect(f.recovery).toEqual(['feedback-job']);ctl.destroy();
+    expect(ctl.adapter.snapshot().awaitingFeedback).toBe(false);expect(f.recovery).toEqual(['feedback-job','feedback-job']);ctl.destroy();
   });
   it('does not treat colleague model mode as feedback readiness',async()=>{
     const f=fixture();const ctl=createV4FeedbackAdapter(f.host);await ctl.refresh();
@@ -136,6 +136,15 @@ describe('W05 non-terminal review via public host',()=>{
     await ctl.adapter.review!({subjects:review.subjects,purpose:'test plan',question:'',decision:null,scope:[],followup_of:[]});
     f.setResult({requestId:'response',status:'confirmed',result:{}});
     await ctl.adapter.respond({feedback_id:'f',feedback_version:1,kind:'objection',section:'general',text:'An explicit user action',evidence:[]});
-    expect(f.calls).toHaveLength(2);expect(f.recovery).toEqual([]);ctl.destroy();
+    expect(f.calls).toHaveLength(2);expect(f.recovery).toEqual(['review-job']);ctl.destroy();
   });
+});
+
+
+it('restores a failed feedback pointer without retry and requires an explicit new attempt',async()=>{
+ const f=fixture();f.drafts.set('last-request',{requestId:'original',status:'pending'});
+ f.setResult({requestId:'original',status:'failed',result:{}});f.setSnapshot({available:{...f.host.snapshot().available,'jobs.refresh':true}});
+ const ctl=createV4FeedbackAdapter(f.host);await ctl.refresh();expect(ctl.adapter.snapshot().failedFeedback).toBe(true);expect(f.calls).toEqual([]);expect(f.recovery).toEqual(['original']);
+ const retries:string[]=[];f.host.retry=async id=>{retries.push(id);const result:V4CommandResult={requestId:'explicit-new',status:'pending',result:{}};f.setResult(result);return result;};
+ await ctl.adapter.retry!();expect(retries).toEqual(['original']);expect(f.drafts.get('last-request')).toEqual({requestId:'explicit-new',status:'pending'});expect(ctl.adapter.snapshot().awaitingFeedback).toBe(true);ctl.destroy();
 });
