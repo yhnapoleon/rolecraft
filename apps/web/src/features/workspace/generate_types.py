@@ -7,7 +7,7 @@ import tempfile
 import os
 
 names=['WorkspaceTask','WorkProductVersion','ProductShare','Command','WorkspaceImport','ImportResult',
-       'TaskCreate','TaskPatch','TaskBatch','ProductCreate','ProductEdit','ProductAdopt','ShareCreate','ShareUpdate','VersionPoint']
+       'TaskCreate','TaskPatch','TaskBatch','ProductCreate','ProductEdit','ProductAdopt','ShareCreate','ShareUpdate','VersionPoint','WorkspaceProductRead','WorkspaceProductPage','WorkspaceSharePage','WorkspaceImportReceipt']
 
 def ts(s):
     if '$ref' in s: return s['$ref'].split('/')[-1]

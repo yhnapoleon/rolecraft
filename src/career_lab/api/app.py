@@ -99,7 +99,7 @@ def create_app(database_url=None, scenario_path=None, model=None, study_path=Non
     v2_store = V2Store(store.db)
     extensions = extensions or ExtensionRegistry()
     for kind, resolver in extensions.reference_resolvers.items():
-        v2_store.register_reference_resolver(kind, resolver)
+        v2_store.register_reference_resolver(kind, resolver, contextual=kind in getattr(extensions, "contextual_reference_resolvers", ()))
     gateway = Gateway(v2_store, extensions)
     service = TrainingService(store)
     jobs = JobRepository(store.db)
@@ -293,6 +293,11 @@ def create_app(database_url=None, scenario_path=None, model=None, study_path=Non
             raise ProtocolError("v2_session_required", status=409)
         return gateway.request_result(session_id.context, request_id)
 
+    @app.post("/sessions/{session_id}/jobs/{job_id}/refresh")
+    def refresh_job(job_id: str, body: Command, session_id=Depends(auth)):
+        if not isinstance(session_id, SessionAccess):raise ProtocolError('v2_session_required',status=409)
+        return gateway.dispatch(session_id.context,'jobs.refresh',body.model_dump(mode='json'),{'job_id':job_id})
+
     @app.get("/sessions/{session_id}/jobs/{job_id}")
     def job(job_id: str, session_id=Depends(auth)):
         if isinstance(session_id, SessionAccess):
@@ -309,6 +314,10 @@ def create_app(database_url=None, scenario_path=None, model=None, study_path=Non
             raise KeyError("job not found")
         identity = {}
         if result["kind"].startswith("v2."):
+            if isinstance(session_id, SessionAccess):
+                request=gateway.request_result(session_id.context,result['payload']['origin_request_id'])
+                effect=next(j for j in request.jobs if j.job_id==job_id).effect
+                result['result']=effect.model_dump(mode='json') if effect is not None else None
             identity = {"request_id": result["payload"]["origin_request_id"], "effect_request_id": result["payload"]["command"]["request_id"], "executor": result["payload"]["context"]["actor"]}
         return {**{k: result[k] for k in ("id", "status", "attempt", "result", "error", "kind", "queued_at", "started_at", "finished_at")},
                 "role_id": result["payload"].get("role_id") if result["kind"] == "turn" else None, **identity}

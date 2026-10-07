@@ -20,6 +20,18 @@
       "title": "Cursor",
       "type": "integer"
     },
+    "import_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Import Id"
+    },
     "limit": {
       "default": 50,
       "maximum": 100,

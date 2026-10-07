@@ -20,6 +20,7 @@ REQUEST_MODELS={
  'work_products.create':'ProductCreate','work_products.list':'ResourcePage',
  'work_products.versions.create':'ProductEdit','work_products.versions.list':'ResourcePage',
  'work_products.shares.create':'ShareCreate','work_products.shares.change':'ShareUpdate',
+ 'work_products.shares.list':'ResourcePage','workspace_imports.read':'ResourcePage','workspace_imports.list':'ResourcePage',
  'workspace_imports':'WorkspaceImport','reviews.create':'ReviewInput','reviews.read':'ResourcePage',
  'revision_cycles':'BeginRevisionInput','observation':'ResourcePage','tools':'ResourcePage',
  'delegations.create':'DelegationInput','delegations.revoke':'DelegationRevoke',

@@ -1,0 +1,10 @@
+{
+  "operations": [
+    "apply_config",
+    "refresh_index",
+    "request_business",
+    "resolve_approval",
+    "read_material",
+    "tests.create"
+  ]
+}

@@ -81,6 +81,7 @@ export function WorkspacePanel({ client, locale = 'zh' }: { client: WorkspaceCli
           <label>{t('想讨论什么','What would you like to discuss?')}<input value={question} onChange={e => setQuestion(e.target.value)} maxLength={4000} /></label>
           <button onClick={() => act(client.share({ product_id: product.product_id, product_version: product.version, recipient_role: recipient, question }).then(() => client.loadShares(product.product_id)))}>{t('分享此版本','Share this version')}</button>
           <p className="rc-workspace-muted">{t('新修改不会自动分享。撤销只限制今后的读取，已经发生的讨论会保留。','New edits are not shared automatically. Revocation limits future access; past discussions remain.')}</p>
+          {state.sharingComplete===false && <p>{t('当前只能查看部分分享记录，空列表不代表没有分享。','Only part of the sharing history is visible; an empty list does not mean nothing was shared.')}</p>}
           {(state.shares[product.product_id] ?? []).map(s => <p key={s.id}>{s.recipient_role} · v{s.product.version} · {s.revoked_at ? t('已撤销','Revoked') : t('可读取','Readable')} <button onClick={() => act(client.updateShare({ product_id: product.product_id, share_id: s.id, expected_revision: s.version, operation: s.revoked_at ? 'restore' : 'revoke' }).then(() => client.loadShares(product.product_id)))}>{s.revoked_at ? t('重新分享','Restore access') : t('撤销分享','Revoke')}</button></p>)}
         </fieldset>
       </article> : <p className="rc-workspace-empty">{t('选择一份作品，或先写下你的问题。','Choose a work, or start with your question.')}</p>}

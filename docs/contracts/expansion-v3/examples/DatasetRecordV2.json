@@ -1,5 +1,5 @@
 {
-  "bucket": "env_run",
+  "bucket": "fixture",
   "family": "relation",
   "input_hash": "689549a483495ae4d68394f1094175c436470d8652a0b5364dac3074555edfab",
   "label_ref": {

@@ -261,9 +261,11 @@ def handle(snapshot: Snapshot, auth: AuthContext, command: Command, now: datetim
             product = product.model_copy(update={'adoption': old.adoption})
         product = product.model_copy(update={'removed_at': (old.removed_at or now) if p.removed else None})
         writes = (stored(snapshot, 'product', product.product_id, product.version, product, product_dependencies(product)),)
-        if p.removed:
+        if p.removed and snapshot.removal_cascade != 'current_product_only':
+            # Without the trusted transaction cascade, a filtered view cannot
+            # prove every share was revoked. Legacy fixture behavior stays local.
             # A filtered view cannot prove that every active share was revoked.
-            # Until W01 supplies a complete authorized cascade, fail atomically.
+            # shares_complete is never upgraded by a removal authorization.
             if not snapshot.shares_complete:
                 raise ProtocolError('share_scope_incomplete', status=403)
             for record in snapshot.heads('share'):

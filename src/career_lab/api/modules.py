@@ -1,6 +1,6 @@
 """Explicit installation point. No imports, code execution or model from user input."""
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Literal, get_args, get_origin
 from pydantic import BaseModel, ValidationError
 from career_lab.contracts.v2 import *
 from career_lab.storage.v2_store import V2Store,Mutation,TransactionResult
@@ -40,6 +40,7 @@ class Operation:
     action_field: str | None = None
     service_mode: bool = False
     event_projector: Callable | None = None
+    preview_handler: Callable | None = None
 
 # Public API/tool installation whitelist. Internal snapshot/restore is deliberately absent.
 PUBLIC_OPERATIONS={
@@ -47,28 +48,61 @@ PUBLIC_OPERATIONS={
  'feedback.create','feedback.read','approvals.resolve','materials.list','timeline','evidence.read',
  'work_items.create','work_items.list','work_items.update','work_items.batch','work_products.adopt','work_products.create','work_products.list',
  'work_products.versions.create','work_products.versions.list','work_products.shares.create',
- 'work_products.shares.change','workspace_imports','reviews.create','reviews.read','revision_cycles',
+ 'work_products.shares.change','work_products.shares.list','workspace_imports','workspace_imports.read','workspace_imports.list','reviews.create','reviews.read','revision_cycles',
  'observation','tools','delegations.create','delegations.revoke',
 }
 
 class ExtensionRegistry:
     def __init__(self):
-        self.scenarios={};self.operations={};self.cli={};self.job_handlers={};self.reference_resolvers={}
-    def register_reference_resolver(self,kind,resolver):
+        self.scenarios={};self.operations={};self.cli={};self.job_handlers={};self.reference_resolvers={};self.contextual_reference_resolvers=set()
+    def register_reference_resolver(self,kind,resolver,*,contextual=False):
         if kind in self.reference_resolvers:raise ValueError('reference resolver already registered')
         self.reference_resolvers[kind]=resolver
+        if contextual:self.contextual_reference_resolvers.add(kind)
     def register_scenario(self,name,scenario:ScenarioRegistration):
         if name in self.scenarios:raise ValueError('scenario already registered')
         self.scenarios[name]=scenario
     def register(self,operation:Operation):
         if operation.name=='requests.read' and (operation.mutates or operation.capability!='read'):raise ValueError('request result lookup is read-only')
         if operation.name not in PUBLIC_OPERATIONS:raise ValueError('not a public module slot')
+        if operation.preview_handler and operation.name!='workspace_imports':raise ValueError('preview hook reserved for workspace import')
         if operation.name in self.operations:raise ValueError('operation already installed')
         if operation.capability not in {'read','act','submit','delegate'}:raise ValueError('invalid public capability')
         if operation.mutates and operation.capability=='read':raise ValueError('read capability cannot mutate')
         if not issubclass(operation.request_model,V2):raise TypeError('v2 request model required')
         if operation.service_mode and operation.name not in {'delegations.create','delegations.revoke'}:raise ValueError('service mode reserved for auth control plane')
+        actions=self.operation_actions(operation)
+        if operation.event_projector is not None and actions is None:raise ValueError('projected action field must declare Literal values')
+        if actions is not None:
+            for installed in self.operations.values():
+                prior=self.operation_actions(installed)
+                if prior is not None and actions & prior:raise ValueError('public action already registered')
         self.operations[operation.name]=operation
+    @staticmethod
+    def operation_actions(operation):
+        if not operation.mutates:return frozenset()
+        if not operation.action_field:return frozenset((operation.action_name or operation.name,))
+        field=operation.request_model.model_fields.get(operation.action_field)
+        if field is None or get_origin(field.annotation) is not Literal:return None
+        return frozenset(get_args(field.annotation))
+
+    def projector_for_action(self,action):
+        """Select only from installed registrations and a persisted action name.
+
+        Dynamic string fields are not proof of routing. Ambiguous registrations
+        fail closed rather than selecting another module's projector.
+        """
+        matches=[]
+        for op in self.operations.values():
+            if not op.mutates:continue
+            if op.action_field:
+                field=op.request_model.model_fields.get(op.action_field)
+                matched=field is not None and get_origin(field.annotation) is Literal and action in get_args(field.annotation)
+            else:matched=action==(op.action_name or op.name)
+            if matched:matches.append(op)
+        if len(matches)>1:raise ProtocolError('event_projection_ambiguous',status=503)
+        return matches[0].event_projector if matches else None
+
     def register_cli(self,name,configure_parser):
         if name in self.cli:raise ValueError('CLI already registered')
         self.cli[name]=configure_parser
@@ -94,6 +128,11 @@ class Gateway:
         state,token=self.store.create_session(scenario.bindings,scenario.baseline_config,scenario.resources,scenario_state=scenario.scenario_state)
         return {'schema_version':2,'session_id':state.session_id,'token':token,'state':public_state(state)}
     def dispatch(self,auth,name,body=None,route_params=None):
+        if name=='jobs.refresh':
+            command=Command.model_validate(body)
+            if command.operation!='jobs.refresh' or command.payload!={'job_id':(route_params or {}).get('job_id')}:raise ProtocolError('operation_route_mismatch',status=403)
+            result=self.store.refresh_job(auth,command,command.payload['job_id'])
+            return self.public_result(auth,result)
         if name=='requests.read':
             query=RequestResultQuery.model_validate(body or route_params)
             return self.request_result(auth,query.request_id).model_dump(mode='json')
@@ -111,6 +150,13 @@ class Gateway:
             if params:
                 for key,value in params.items():
                     if command.payload.get(key)!=value:raise ProtocolError('route_object_mismatch',status=409)
+            if op.preview_handler is not None and getattr(payload,'mode',None)=='preview':
+                self.store.authorize(auth,'read',command.operation)
+                result=self.store.query(auth,lambda view:op.preview_handler(view,command,auth),operation=command.operation)
+                if op.response_model is None:raise ProtocolError('module_response_contract_missing',status=503)
+                try:result=op.response_model.model_validate(result.model_dump(mode='json') if isinstance(result,BaseModel) else result)
+                except ValidationError as exc:raise ProtocolError('module_response_invalid',status=503) from exc
+                return {'schema_version':2,'result':result.model_dump(mode='json')}
             if op.service_mode:
                 self.store.authorize(auth,op.capability,command.operation)
                 result=op.handler(self.store,payload,auth,command.request_id)
@@ -119,10 +165,10 @@ class Gateway:
                 except ValidationError as exc:raise ProtocolError('module_response_invalid',status=503) from exc
                 return {'schema_version':2,'result':result.model_dump(mode='json')}
             result=self.store.execute(auth,command,op.handler,capability=op.capability,approval_policy=op.approval_policy)
-            return self.public_result(auth,result,op.event_projector)
+            return self.public_result(auth,result,self.registry.projector_for_action(command.operation) if result.replayed else op.event_projector)
         self.store.authorize(auth,op.capability,op.action_name or op.name)
         payload=op.request_model.model_validate(body or params)
-        result=op.handler(self.store.view(auth),payload,auth)
+        result=self.store.query(auth,lambda view:op.handler(view,payload,auth),operation=op.action_name or op.name)
         if op.response_model is None:raise ProtocolError('module_response_contract_missing',status=503)
         try:
             result=op.response_model.model_validate(result.model_dump(mode='json') if isinstance(result,BaseModel) else result)
@@ -133,14 +179,16 @@ class Gateway:
         meta,response,links=self.store.request_result(auth,request_id)
         jobs=[]
         for link in links:
-            effect=link.pop('effect')
-            jobs.append(RequestJobResult(**link,effect=PublicTransactionResult.model_validate(self.public_result(auth,effect)) if effect is not None else None))
+            effect=link.pop('effect');effect_operation=link.pop('effect_operation',None)
+            projector=self.registry.projector_for_action(effect_operation) if effect_operation is not None else None
+            jobs.append(RequestJobResult(**link,effect=PublicTransactionResult.model_validate(self.public_result(auth,effect,projector)) if effect is not None else None))
         status='completed'
         if any(j.status in {'queued','running'} for j in jobs):status='pending'
         elif any(j.status=='failed' for j in jobs):status='failed'
+        elif any(j.status=='needs_context' for j in jobs):status='needs_context'
         elif any(j.effect is None for j in jobs):status='unresolved'
         return RequestResult(session_id=auth.session_id,request_id=request_id,operation=meta['operation'],executor=response.executor,
-            status=status,response=PublicTransactionResult.model_validate(self.public_result(auth,response)),jobs=tuple(jobs))
+            status=status,response=PublicTransactionResult.model_validate(self.public_result(auth,response,self.registry.projector_for_action(meta['operation']))),jobs=tuple(jobs))
 
     def public_result(self,auth,result,event_projector=None):
         readable='read' in auth.capabilities
@@ -177,19 +225,14 @@ class Gateway:
             raise ProtocolError('worker_lease_lost',status=409)
         auth=self.store.guard_job(envelope.context,envelope.capability,check_context=False)
         prior=self.store.replay(auth,envelope.command,envelope.capability)
-        if prior is not None:return self.public_result(auth,prior)
-        self.store.guard_job(envelope.context,envelope.capability)
-        derived_subject=None
-        if 'subject' in envelope.command.payload:
-            candidate=ObjectRef.model_validate(envelope.command.payload['subject'])
-            if candidate.kind in {'submission','review'}:
-                self.store.read(auth,candidate)
-                derived_subject=candidate
-        plan=handler(self.store.view(auth),envelope,auth)
-        # External calls can repeat on failure; modules retain each actual usage attempt.
-        self.store.guard_job(envelope.context,envelope.capability)
-        result=self.store.execute(auth,envelope.command,lambda *_:plan,capability=envelope.capability,expected_storage_revision=envelope.context.as_of.storage_revision,worker_fence=claim,derived_subject=derived_subject)
-        return self.public_result(auth,result)
+        if prior is not None:return self.public_result(auth,prior,self.registry.projector_for_action(envelope.command.operation))
+        self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
+        derived_subject=self.store.fixed_feedback_subject(envelope.command)
+        plan=handler(self.store.job_view(auth,envelope.context,command=envelope.command),envelope,auth)
+        # External calls can repeat on transient failure; deterministic failures stop.
+        self.store.guard_job(envelope.context,envelope.capability,command=envelope.command)
+        result=self.store.execute(auth,envelope.command,lambda *_:plan,capability=envelope.capability,worker_fence=claim,derived_subject=derived_subject,job_context=envelope.context)
+        return self.public_result(auth,result,self.registry.projector_for_action(envelope.command.operation))
 
 
 def make_step_result(transaction:TransactionResult,observation:Observation,step:ObservedStep,consumption:ActualConsumption,*,origin_request_id=None,model_attempts=()):

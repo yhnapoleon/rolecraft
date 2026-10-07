@@ -1,0 +1,12 @@
+{
+  "as_of": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "items": [],
+  "next_cursor": null,
+  "schema_version": 2,
+  "sharing_complete": true
+}

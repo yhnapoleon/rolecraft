@@ -47,6 +47,7 @@ class ShareUpdate(V2):
     expected_revision: PositiveInt
     operation: Literal['revoke','restore']
 class ResourcePage(PageRequest):
+    import_id: str | None = None
     product_id: str | None = None
     review_id: str | None = None
     submission_id: str | None = None

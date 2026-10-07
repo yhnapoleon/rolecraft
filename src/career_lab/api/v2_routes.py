@@ -10,6 +10,7 @@ ROUTES=[
  ('GET','/work-products','work_products.list'),('POST','/work-products','work_products.create'),
  ('GET','/work-products/{product_id}/versions','work_products.versions.list'),('POST','/work-products/{product_id}/versions','work_products.versions.create'),
  ('POST','/work-products/{product_id}/shares','work_products.shares.create'),('POST','/work-products/{product_id}/shares/{share_id}','work_products.shares.change'),
+ ('GET','/work-products/{product_id}/shares','work_products.shares.list'),('GET','/workspace-imports','workspace_imports.list'),('GET','/workspace-imports/{import_id}','workspace_imports.read'),
  ('POST','/workspace-imports','workspace_imports'),('POST','/reviews','reviews.create'),('GET','/reviews/{review_id}','reviews.read'),
  ('POST','/revision-cycles','revision_cycles'),('GET','/observation','observation'),('GET','/tools','tools'),
  ('POST','/delegations','delegations.create'),('DELETE','/delegations/{delegation_id}','delegations.revoke'),
