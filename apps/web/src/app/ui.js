@@ -143,7 +143,7 @@ function saveLabel() {
   return x && x.draft ? T('草稿已保存', 'Draft saved') : T('已存本机', 'Saved locally');
 }
 function updateSave() {
-  document.querySelectorAll('[data-save]').forEach(el => { el.textContent = saveLabel(); el.classList.toggle('error', !!storageIssue); });
+  document.querySelectorAll('[data-save]:not([data-v4-managed])').forEach(el => { el.textContent = saveLabel(); el.classList.toggle('error', !!storageIssue); });
   const x = artifact(); document.querySelectorAll('[data-revision]').forEach(el => { if (x) el.textContent = 'v' + x.revision; });
 }
 // A pause in typing keeps a draft; leaving the editor, switching, submitting or ⌘S makes a version.
@@ -256,7 +256,9 @@ function render() {
   afterRender();
   restoreFocus(key);
 }
+function mountNativeSlots() { L.mountV4(current(), { taskId: task()?.id || null, productId: ui.obj?.type === 'work' ? ui.obj.id : null }); }
 function afterRender() {
+  mountNativeSlots();
   // Only the workbench's own scroll regions move; browser focus must not shift
   // the entire fixed-height workspace (especially after viewport changes).
   if (WS.includes(ui.route) && window.scrollY) window.scrollTo(0, 0);
@@ -1244,10 +1246,11 @@ function openSheet(title, body, foot = '', cls = '') {
   if (!sheet.open) sheet.showModal();
   (sheet.querySelector('[autofocus]') || sheet.querySelector('.sheet-body input:not([type=checkbox]):not([type=radio]), .sheet-body textarea') || sheet.querySelector('.sheet-foot .primary') || sheet.querySelector('.sheet-head .btn'))?.focus();
   sheet.querySelectorAll('.segmented').forEach(layoutSegmented);
+  mountNativeSlots();
 }
 function closeSheet(instant) {
   if (!sheet.open) return;
-  const done = () => { sheet.classList.remove('closing'); sheet.close(); const el = sheetReturn && (sheetReturn.id ? document.getElementById(sheetReturn.id) : document.querySelector(sheetReturn.sel)); if (el) el.focus({ preventScroll: true }); else document.getElementById('main')?.focus({ preventScroll: true }); };
+  const done = () => { sheet.classList.remove('closing'); sheet.close(); mountNativeSlots(); const el = sheetReturn && (sheetReturn.id ? document.getElementById(sheetReturn.id) : document.querySelector(sheetReturn.sel)); if (el) el.focus({ preventScroll: true }); else document.getElementById('main')?.focus({ preventScroll: true }); };
   if (instant || reduceMotion.matches) { done(); return; }
   sheet.classList.add('closing'); setTimeout(done, 200);
 }
@@ -1279,7 +1282,7 @@ function sheetConfig() {
   openSheet(T('试点设置', 'Pilot settings'), `<form data-form="config" id="config-form" class="stack">
     <div class="field-row"><label class="field"><span>${T('试点人数', 'Users in the pilot')}</span><input class="input" type="number" name="participants" min="1" max="10000" value="${c.participants}" required></label>
     <label class="field"><span>${T('计划上线日', 'Planned launch day')}</span><input class="input" name="launchDay" type="number" min="1" value="${c.launchDay || a.world.deadline}" required></label></div>
-    <fieldset class="field"><legend>${T('开放的知识', 'Knowledge it covers')}</legend><div class="choices">${['faq', 'policy'].map(k => `<label class="choice"><input type="checkbox" name="domains" value="${k}" ${c.domains.includes(k) ? 'checked' : ''}><span>${DOMAIN(k)}</span></label>`).join('')}</div></fieldset>
+    <fieldset class="field"><legend>${T('开放的知识', 'Knowledge it covers')}</legend><div class="choices">${L.configDomains(a).map(k => `<label class="choice"><input type="checkbox" name="domains" value="${k}" ${c.domains.includes(k) ? 'checked' : ''}><span>${DOMAIN(k)}</span></label>`).join('')}</div></fieldset>
     <fieldset class="field"><legend>${T('政策怎么保持最新', 'Keeping policy current')}</legend><div class="choices wrap">${['daily', 'realtime', 'manual'].map(k => `<label class="choice"><input type="radio" name="update" value="${k}" ${c.update === k ? 'checked' : ''}><span>${UPDATE(k)}</span></label>`).join('')}</div></fieldset>
     <fieldset class="field"><legend>${T('答不了或不确定时', 'When it cannot answer')}</legend><div class="choices">${['human', 'none'].map(k => `<label class="choice"><input type="radio" name="fallback" value="${k}" ${c.fallback === k ? 'checked' : ''}><span>${FALLBACK(k)}</span></label>`).join('')}</div></fieldset>
     <fieldset class="field"><legend>${T('要安排的开发', 'Engineering work')}</legend><div class="choices wrap">${['scope', 'fallback', 'realtime'].map(k => `<label class="choice"><input type="checkbox" name="workItems" value="${k}" ${c.workItems.includes(k) ? 'checked' : ''}><span>${WORK_ITEM(k)}<small>${T(WORK_COST[k] + ' 人日', WORK_COST[k] + ' pd')}</small></span></label>`).join('')}</div></fieldset>
@@ -1540,7 +1543,7 @@ function moveWithUndo(a, id, to, message) {
 function download(data, name) { const blob = new Blob([typeof data === 'string' ? data : JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = name; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); }
 function resetAttemptUi() { Object.assign(ui, { obj: null, artifactId: null, rail: 'team', railTab: 'team', chatRole: null, railOpen: false, menu: null, advice: null, scopeAll: false, benchAll: false, reviewFor: null, pendingRequestId: null, lastUndo: null, compare: false, editPending: null, lastRun: null, reviewTab: 'rules' }); }
 async function startAttempt(caseId, opts) {
-  const a = await L.start(caseId, opts);
+  const a = await L.start(caseId, { ...opts, initialTasks: SEED_KEYS.map(key => ({ title: seedText(key) })) });
   ui.arriving = true; a.selectedTaskId = null; a.readTurns = {}; a.turnTimes = {}; a.eventTimes = {}; a.turnTask = {};
   resetAttemptUi(); persist();
   return a;
@@ -1665,7 +1668,7 @@ async function act(el) {
     case 'take-case': {
       const caseId = el.dataset.case; const card = el.closest('.case-hero, .variant');
       const triage = card ? [...card.querySelectorAll('select[data-change="triage"]')].map(x => x.value) : [];
-      await enterWork(async () => { const na = await startAttempt(caseId); triage.forEach((p, i) => { if (na.tasks[i] && p !== na.tasks[i].priority) E.updateTask(na, na.tasks[i].id, { priority: p }); }); const order = { first: 0, next: 1, later: 2 }; na.tasks.sort((x, y) => order[x.priority] - order[y.priority]); persist(); });
+      await enterWork(async () => { const na = await startAttempt(caseId, { priorities: triage }); if (!L.nativeWorkspace(na)) triage.forEach((p, i) => { if (na.tasks[i] && p !== na.tasks[i].priority) E.updateTask(na, na.tasks[i].id, { priority: p }); }); const order = { first: 0, next: 1, later: 2 }; na.tasks.sort((x, y) => order[x.priority] - order[y.priority]); persist(); });
       break;
     }
     case 'menu': { const m = el.dataset.menu; ui.menu = ui.menu === m ? null : m; if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']); else render(); if (ui.kbd) document.querySelector('.menu button, .popover .btn')?.focus(); break; }
@@ -1948,6 +1951,19 @@ window.addEventListener('beforeunload', commit);
 window.addEventListener('scroll', () => document.documentElement.classList.toggle('scrolled', window.scrollY > 4), { passive: true });
 window.addEventListener('resize', () => { document.querySelectorAll('.segmented').forEach(layoutSegmented); syncPanels(); });
 onLocaleChange(() => { flush(); if (sheet.open) closeSheet(true); render(); });
+
+window.addEventListener('v4-selection', event => {
+  const { kind, ref } = event.detail, a = current();
+  if (!a || a.id !== ref.session_id || !L.nativeWorkspace(a)) return;
+  if (kind === 'currentTask' && a.tasks.some(t => t.id === ref.object_id)) { if (sheet.open) closeSheet(true); openTask(ref.object_id); }
+  if (kind === 'currentProduct') {
+    const work = a.artifacts.find(x => x.id === ref.object_id);
+    const taskId = work?.taskId || task()?.id || a.tasks[0]?.id;
+    if (work && taskId) { if (sheet.open) closeSheet(true); openTask(taskId, { type: 'work', id: work.id }); }
+  }
+});
+window.addEventListener('w03:form-confirmed', event => { if (!event.detail.changedWhileWaiting && sheet.open && event.target.closest?.('#sheet')) { closeSheet(true); refreshWS(); } });
+window.addEventListener('beforeunload', event => { if (L.hasUnsavedV4()) { event.preventDefault(); event.returnValue = ''; } });
 
 /* ---------- boot ---------- */
 const workFolders = installWorkFolders(document, { onSelect: (taskId, workId, event) => {

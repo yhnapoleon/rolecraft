@@ -1,0 +1,1970 @@
+{
+  "W02": {
+    "commit": "a8ec5b8e41e37f95630bc2a110072999df9a22a5",
+    "workspace": "/Users/jefmacmini/Projects/rolecraft-worktrees/033-w02",
+    "source_digest": "ad14b02ab129bf3550ef4c5f53cbcf852ccca73e9cf32d6694b56b34d84c3d95",
+    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W02/W02-20261007-041-english-relevance-r10.json",
+    "files": {
+      "docs/modules/expansion-v3/W02.md": {
+        "sha256": "ab1197e1e006c8339cde66999a2e203f3a304ebc4438304aa3b65f732e2a7e7a",
+        "size": 22398
+      },
+      "scenarios/pm_pilot/v2/baseline.json": {
+        "sha256": "1c45262e93aa5c9ec7c64d20f0c20eef775c8f61653e8ae152087de5f07fb754",
+        "size": 598
+      },
+      "scenarios/pm_pilot/v2/decision_examples.json": {
+        "sha256": "955090ee0308cea119af74d6d3314b766c6da57c831410d73ac91e438021a107",
+        "size": 922
+      },
+      "scenarios/pm_pilot/v2/facts.json": {
+        "sha256": "73eb9a49804752de5e0101b3513b6d30e59537738a6f1d3198e7d433721536bc",
+        "size": 36132
+      },
+      "scenarios/pm_pilot/v2/locale.json": {
+        "sha256": "1e5d91254dafd7b74a7b5e39be85555b62b92d69059cb01a96172555b58b4ddf",
+        "size": 23417
+      },
+      "scenarios/pm_pilot/v2/locales/en/baseline.json": {
+        "sha256": "362bb5e2550f3746c29f9a5ac3dc8b5e2d8321ddb82408f600e570c76dd0b4f0",
+        "size": 597
+      },
+      "scenarios/pm_pilot/v2/locales/en/decision_examples.json": {
+        "sha256": "3c4fefc84987ad3fcdfbb387ac73544ec384b67696b8057cea4eb637f8857819",
+        "size": 1194
+      },
+      "scenarios/pm_pilot/v2/locales/en/facts.json": {
+        "sha256": "d07069813412f496ecba0adde0a5f5fbe3f12425dcb83eb673b6dfe85ce272e1",
+        "size": 38198
+      },
+      "scenarios/pm_pilot/v2/locales/en/locale.json": {
+        "sha256": "43931f43df09f7e44a3a6675b82b3a476de43e8195ea40b3b7c176a24a201b4b",
+        "size": 23683
+      },
+      "scenarios/pm_pilot/v2/locales/en/manifest.json": {
+        "sha256": "e68ca35373cbccaefec5912a94a6323d6be97b575bb9ba525165c48abf156593",
+        "size": 19164
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials.json": {
+        "sha256": "1c015dfc874e087e6bad93a1151b335e53c1fda372adbdedf655ec6ee3e628e9",
+        "size": 212806
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/approvals-v1.md": {
+        "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+        "size": 1779
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/brief-v1.md": {
+        "sha256": "3e14692b1102820ba3042a5e7711427d593c6581e5a3e8e317b26163e06c7135",
+        "size": 1346
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/business_case-v1.md": {
+        "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+        "size": 917
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/coordination-v1.md": {
+        "sha256": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+        "size": 828
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/demand-v1.md": {
+        "sha256": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+        "size": 2127
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/demo-v1.md": {
+        "sha256": "a12476b68fe52aedfb1ddef8e3523a2cc1a9b831707d23da9bdf35a2cdb584ec",
+        "size": 451
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/demo-v2.md": {
+        "sha256": "a2640df69d07055524ba50b0bbabfb84322c758de67f5830466ddecb51650660",
+        "size": 362
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/failures-v1.md": {
+        "sha256": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+        "size": 2807
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/faq-v1.md": {
+        "sha256": "b8fad283036c2ba68a8b20e537d11457908f8a8921b741c9ba0e758a1e24bd88",
+        "size": 2149
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/interviews-v1.md": {
+        "sha256": "345705f33270e338444f4a9a92cc8b0f03c77a0d16b6b5c2833bda4eb0b5418d",
+        "size": 1635
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/leave-v1.md": {
+        "sha256": "d287651b1f47f46ca1f6a39744121b7eb01ea9be93795a04637766d36b563320",
+        "size": 493
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/meal-v1.md": {
+        "sha256": "459abcb2c620d75b0caf62ff0328fa83f67908a8c154a6d998d0351f5966e0e8",
+        "size": 361
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/onboarding-v1.md": {
+        "sha256": "906d5dcecb028f616741bbeba4dd58ad2251257329564b699fbb6356999dc7d8",
+        "size": 1012
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/policy-v1.md": {
+        "sha256": "b29b349fc19da70717ba7405586dd2760ee40ce344477bfe776eed1d7fb4281f",
+        "size": 640
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/policy-v2.md": {
+        "sha256": "d4b820c6700b21de6af5f7170aedb0f2bf76b7d91bccf926efd3f4cb0c9975ad",
+        "size": 612
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/restricted-v1.md": {
+        "sha256": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/scope_note-v1.md": {
+        "sha256": "d6eff2910a2e0f39dd773a5e28d257bb56e2c41c12471263b05df8c2d23ea112",
+        "size": 577
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/scope_note-v2.md": {
+        "sha256": "f7af830782ac84614662e312ba6181fbd8917fc8b436abc8ed2fff8aa5dcd5d4",
+        "size": 437
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/tech_diagnostics-v1.md": {
+        "sha256": "f47912df47e8d660cd94e91ccd0db41c555d1fbbb4e31ea9718bb41028ec3757",
+        "size": 377
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/tech_private-v1.md": {
+        "sha256": "f2798d13bd48f3eda85d81ebe4b2635a309cf00b0958bdb1e4e7fa9bb47068b9",
+        "size": 423
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/technical-v1.md": {
+        "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
+        "size": 1993
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/trial_details-v1.md": {
+        "sha256": "5da8955a9f84967fb9d8b3f1747be466eaa1891b790aa4f1d9c94e810e84d69c",
+        "size": 14221
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/user_groups-v1.md": {
+        "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/locales/en/materials/world_private-v1.md": {
+        "sha256": "6a5ef0f1e5b42d0bcdcb7faf8dc3a5d880beb48972714f182bb55ae56023d58c",
+        "size": 188
+      },
+      "scenarios/pm_pilot/v2/locales/en/paths.json": {
+        "sha256": "42510b731cb45b1162e1898796ce7487564f65fe34300d932e6cb6bcf56c97ba",
+        "size": 1214
+      },
+      "scenarios/pm_pilot/v2/locales/en/probes.json": {
+        "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
+        "size": 4573
+      },
+      "scenarios/pm_pilot/v2/locales/en/research/public-case-records.json": {
+        "sha256": "eed3efe22a631cf81b65d43a6d5f0dc3cf800ba9d21a4579d0303c5cc62255b1",
+        "size": 116081
+      },
+      "scenarios/pm_pilot/v2/locales/en/research/retrieval-calibration.json": {
+        "sha256": "31bae8060b92cb09bc272db327c3650f5422f2d7803da171fb1aace472eda842",
+        "size": 502239
+      },
+      "scenarios/pm_pilot/v2/locales/en/roles.json": {
+        "sha256": "dc57d16a0c52909d04a1f0c912625bb15a95e9413e72cfd0d4c82b584293feda",
+        "size": 6893
+      },
+      "scenarios/pm_pilot/v2/locales/en/rubric-reference.json": {
+        "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
+        "size": 151
+      },
+      "scenarios/pm_pilot/v2/locales/en/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/locales/en/runtime/bundle.json": {
+        "sha256": "524c9845d7058a7f8dc87bf9fcaed65834ac827d40b9836bb6991858c708c663",
+        "size": 1574
+      },
+      "scenarios/pm_pilot/v2/locales/en/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/locales/en/runtime/evaluation-protocol.json": {
+        "sha256": "b12fc508cc9c336a0b72e3c747c6cc8b66258bebaf01689658a912de56c7c5af",
+        "size": 65
+      },
+      "scenarios/pm_pilot/v2/locales/en/runtime/evaluation.json": {
+        "sha256": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0",
+        "size": 798
+      },
+      "scenarios/pm_pilot/v2/locales/en/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/locales/en/runtime/retrieval.json": {
+        "sha256": "6bcc03f28fa46e6f5dfbd9689df0502ddd086eb240258c31bdb13fbf692a945d",
+        "size": 114
+      },
+      "scenarios/pm_pilot/v2/locales/en/runtime/source-files.json": {
+        "sha256": "b6b7f9c957ea668bdd08408c275c569ca2d773d4b02e0d9c1aa1fb0fd6f0151d",
+        "size": 3037
+      },
+      "scenarios/pm_pilot/v2/locales/en/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/locales/en/scenario.yaml": {
+        "sha256": "4970063719b02766d3f7471dd04c3ddfd92597ddf096a678e4d4b5dc43697308",
+        "size": 3133
+      },
+      "scenarios/pm_pilot/v2/manifest.json": {
+        "sha256": "7d77dffbff0fe5dd890eafc48508f82d034892445e067deb64c74317ff3e117c",
+        "size": 18127
+      },
+      "scenarios/pm_pilot/v2/materials.json": {
+        "sha256": "e0e4b72a744b13080371d6b64b279f8486d61f75d696b32bfa584a7e541f5f67",
+        "size": 202742
+      },
+      "scenarios/pm_pilot/v2/materials/approvals-v1.md": {
+        "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+        "size": 1325
+      },
+      "scenarios/pm_pilot/v2/materials/brief-v1.md": {
+        "sha256": "b1ba4450650d48d6c73542380a4cf4da50d34da0b6d4c3a459b4a7c85412418c",
+        "size": 1118
+      },
+      "scenarios/pm_pilot/v2/materials/business_case-v1.md": {
+        "sha256": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+        "size": 775
+      },
+      "scenarios/pm_pilot/v2/materials/coordination-v1.md": {
+        "sha256": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+        "size": 700
+      },
+      "scenarios/pm_pilot/v2/materials/demand-v1.md": {
+        "sha256": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+        "size": 1755
+      },
+      "scenarios/pm_pilot/v2/materials/demo-v1.md": {
+        "sha256": "f5a8b3cadbbb93978a56241a5064f4a638a2f03665a89b114ed26b120a35811e",
+        "size": 331
+      },
+      "scenarios/pm_pilot/v2/materials/demo-v2.md": {
+        "sha256": "fb86f44ee7df15c79990740da322fff3555d617cf3311ace042e939c5f13a874",
+        "size": 268
+      },
+      "scenarios/pm_pilot/v2/materials/failures-v1.md": {
+        "sha256": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+        "size": 2940
+      },
+      "scenarios/pm_pilot/v2/materials/faq-v1.md": {
+        "sha256": "53e335fafa1ff0ffb32249cc92826b489dbcb73e652915f05b5027244f90ff7d",
+        "size": 1691
+      },
+      "scenarios/pm_pilot/v2/materials/interviews-v1.md": {
+        "sha256": "983ea5fe34a7d929754e3a00fbb327906edd8f874a8622aeb989f871bbe1673c",
+        "size": 1267
+      },
+      "scenarios/pm_pilot/v2/materials/leave-v1.md": {
+        "sha256": "ee26220a9f8e6da888aea0b0bb5f676ce847d5aa2b268f6c9ed89978a49012b2",
+        "size": 373
+      },
+      "scenarios/pm_pilot/v2/materials/meal-v1.md": {
+        "sha256": "43f347192b0a11e262c524fb83790c2dc7eed51881eb17c849655a646c7aabed",
+        "size": 315
+      },
+      "scenarios/pm_pilot/v2/materials/onboarding-v1.md": {
+        "sha256": "f76fe14d4f2f41b92a4725116f91dc10cb3d62d24cd8b25bd4c2dfd8efe4f509",
+        "size": 792
+      },
+      "scenarios/pm_pilot/v2/materials/policy-v1.md": {
+        "sha256": "495d92ed9fa52e2d67ed69b0ed83aeeff1cb8f7568923999469244b70311d9cb",
+        "size": 470
+      },
+      "scenarios/pm_pilot/v2/materials/policy-v2.md": {
+        "sha256": "1ef31bcb24b3a768e2aa002edea825bc37d71c8435ac94b6db3db69214cf6419",
+        "size": 455
+      },
+      "scenarios/pm_pilot/v2/materials/restricted-v1.md": {
+        "sha256": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+        "size": 870
+      },
+      "scenarios/pm_pilot/v2/materials/scope_note-v1.md": {
+        "sha256": "39e78d207899f544745b0b2847df4a34bd475b1a4867af42662937f18234ede8",
+        "size": 454
+      },
+      "scenarios/pm_pilot/v2/materials/scope_note-v2.md": {
+        "sha256": "e7d2ee20ba3fcf0efa7d7075f812bfb0f7587b3e6e8a77ec25641328d854716b",
+        "size": 350
+      },
+      "scenarios/pm_pilot/v2/materials/tech_diagnostics-v1.md": {
+        "sha256": "7dc867646bff9e33b15b2df4089baaf3f8befb23cfd14537987fbaa19517b4a1",
+        "size": 265
+      },
+      "scenarios/pm_pilot/v2/materials/tech_private-v1.md": {
+        "sha256": "a5fa9ae780e10788b79151bd97fabbddd40183eb2c5778e23037b94d20e2ded7",
+        "size": 329
+      },
+      "scenarios/pm_pilot/v2/materials/technical-v1.md": {
+        "sha256": "cdfed7fefe4ff3772261b15be6fa42a172ace2a1364d4ca2398260a37999d166",
+        "size": 1464
+      },
+      "scenarios/pm_pilot/v2/materials/trial_details-v1.md": {
+        "sha256": "b0f6e738df36162eee1c118e7dd486e88dcb29b0eaee3ca9f9a9effc9d572d9f",
+        "size": 13348
+      },
+      "scenarios/pm_pilot/v2/materials/user_groups-v1.md": {
+        "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
+        "size": 930
+      },
+      "scenarios/pm_pilot/v2/materials/world_private-v1.md": {
+        "sha256": "97ee621793774fd024266127495b3a99ce489a3b9ebbbe194119fb3d2e9b4ebf",
+        "size": 153
+      },
+      "scenarios/pm_pilot/v2/paths.json": {
+        "sha256": "42510b731cb45b1162e1898796ce7487564f65fe34300d932e6cb6bcf56c97ba",
+        "size": 1214
+      },
+      "scenarios/pm_pilot/v2/probes.json": {
+        "sha256": "b8b56e09f7f247a9c29484b26240e63e01d6a37e65b937bcd2739ddb1db5fdce",
+        "size": 4402
+      },
+      "scenarios/pm_pilot/v2/research/public-case-records.json": {
+        "sha256": "9f7cf9e7c639a805561b6eeaeae6439b1f70edb1ac3ad77502b8134231148919",
+        "size": 112810
+      },
+      "scenarios/pm_pilot/v2/roles.json": {
+        "sha256": "f6895278d2f56ab9c6606a924af016ec3e546fdb9102ca7ccb17ad3c2f9143b6",
+        "size": 6114
+      },
+      "scenarios/pm_pilot/v2/rubric-reference.json": {
+        "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
+        "size": 151
+      },
+      "scenarios/pm_pilot/v2/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/runtime/bundle.json": {
+        "sha256": "460359661d7b39ab599f5c881b5d3c919639df1911d32c4e42099189e92d1977",
+        "size": 1574
+      },
+      "scenarios/pm_pilot/v2/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/runtime/evaluation-protocol.json": {
+        "sha256": "b12fc508cc9c336a0b72e3c747c6cc8b66258bebaf01689658a912de56c7c5af",
+        "size": 65
+      },
+      "scenarios/pm_pilot/v2/runtime/evaluation.json": {
+        "sha256": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0",
+        "size": 798
+      },
+      "scenarios/pm_pilot/v2/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/runtime/retrieval.json": {
+        "sha256": "3f48e5f463ef76edc5196630788c3f4860ea88a9ed837e7add38d7fe886df12a",
+        "size": 110
+      },
+      "scenarios/pm_pilot/v2/runtime/source-files.json": {
+        "sha256": "06c9e027eef6dbc20f95606fe69dbc01aa53f57bd8ced0c08841f15b422b8fbf",
+        "size": 2082
+      },
+      "scenarios/pm_pilot/v2/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/scenario.yaml": {
+        "sha256": "71acdbc3c65c8791ce5cbe5d3d248d2368c291fb3e75270bd541a3453e479b5d",
+        "size": 3100
+      },
+      "scenarios/pm_pilot/v2/variants/catalog.json": {
+        "sha256": "5a58dc1c15e3903e47735aab240f0e07b6f0e45a77f8700e7ac29210c469f5ed",
+        "size": 3507
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/baseline.json": {
+        "sha256": "f7f6ba2f07d8684722f2e86863ff173f34783a36bd14c932bc866b6c2bb50fb0",
+        "size": 609
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/decision_examples.json": {
+        "sha256": "955090ee0308cea119af74d6d3314b766c6da57c831410d73ac91e438021a107",
+        "size": 922
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/facts.json": {
+        "sha256": "b1685f0256b52382391488360e5b5b937c6a798f3ecc6f31cd19c2252299d839",
+        "size": 36682
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locale.json": {
+        "sha256": "bcf8cf4c3d3f479cd7dfb9d531eb4e903e3edab28fefa9aad2a55037cdea2c65",
+        "size": 23692
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/baseline.json": {
+        "sha256": "e9bd3783aa3885c6a415ae265f7994468409b715bd3d356c8c70bc13b5bd5ed6",
+        "size": 608
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/decision_examples.json": {
+        "sha256": "3c4fefc84987ad3fcdfbb387ac73544ec384b67696b8057cea4eb637f8857819",
+        "size": 1194
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/facts.json": {
+        "sha256": "299975bd7f921969938baa77928f46f76cbad34293bb828c6422c03b266c95f3",
+        "size": 38748
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/locale.json": {
+        "sha256": "b38dabe58620277fd65b6beeb1e575fc7da95bc40637717d443fdec7107c41e8",
+        "size": 23958
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/manifest.json": {
+        "sha256": "f1282f467461e6771455c17c711b6ca149c6d20bf6e192ed9e7affdaf165ecf2",
+        "size": 19235
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials.json": {
+        "sha256": "6cdb21269009a1901bfcd56840f59d599af414500e96b543ae589f6d895b403b",
+        "size": 217546
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/approvals-v1.md": {
+        "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+        "size": 1779
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/brief-v1.md": {
+        "sha256": "00c9a7d49b3b89aa0072f6e86445656e58214cde79cecc481a319fe88271571a",
+        "size": 1563
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/business_case-v1.md": {
+        "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+        "size": 917
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/coordination-v1.md": {
+        "sha256": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+        "size": 828
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/demand-v1.md": {
+        "sha256": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+        "size": 2127
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/demo-v1.md": {
+        "sha256": "a12476b68fe52aedfb1ddef8e3523a2cc1a9b831707d23da9bdf35a2cdb584ec",
+        "size": 451
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/demo-v2.md": {
+        "sha256": "a2640df69d07055524ba50b0bbabfb84322c758de67f5830466ddecb51650660",
+        "size": 362
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/failures-v1.md": {
+        "sha256": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+        "size": 2807
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/faq-v1.md": {
+        "sha256": "b8fad283036c2ba68a8b20e537d11457908f8a8921b741c9ba0e758a1e24bd88",
+        "size": 2149
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/interviews-v1.md": {
+        "sha256": "345705f33270e338444f4a9a92cc8b0f03c77a0d16b6b5c2833bda4eb0b5418d",
+        "size": 1635
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/leave-v1.md": {
+        "sha256": "d287651b1f47f46ca1f6a39744121b7eb01ea9be93795a04637766d36b563320",
+        "size": 493
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/meal-v1.md": {
+        "sha256": "459abcb2c620d75b0caf62ff0328fa83f67908a8c154a6d998d0351f5966e0e8",
+        "size": 361
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/onboarding-v1.md": {
+        "sha256": "906d5dcecb028f616741bbeba4dd58ad2251257329564b699fbb6356999dc7d8",
+        "size": 1012
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/policy-v1.md": {
+        "sha256": "b29b349fc19da70717ba7405586dd2760ee40ce344477bfe776eed1d7fb4281f",
+        "size": 640
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/policy-v2.md": {
+        "sha256": "d4b820c6700b21de6af5f7170aedb0f2bf76b7d91bccf926efd3f4cb0c9975ad",
+        "size": 612
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/restricted-v1.md": {
+        "sha256": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/scope_note-v1.md": {
+        "sha256": "d6eff2910a2e0f39dd773a5e28d257bb56e2c41c12471263b05df8c2d23ea112",
+        "size": 577
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/scope_note-v2.md": {
+        "sha256": "f7af830782ac84614662e312ba6181fbd8917fc8b436abc8ed2fff8aa5dcd5d4",
+        "size": 437
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/tech_diagnostics-v1.md": {
+        "sha256": "f47912df47e8d660cd94e91ccd0db41c555d1fbbb4e31ea9718bb41028ec3757",
+        "size": 377
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/tech_private-v1.md": {
+        "sha256": "f2798d13bd48f3eda85d81ebe4b2635a309cf00b0958bdb1e4e7fa9bb47068b9",
+        "size": 423
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/technical-v1.md": {
+        "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
+        "size": 1993
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/trial_details-v1.md": {
+        "sha256": "f07799beefe811b53a69290eec1b7421c81d57f567dc26aad836c17281a364e6",
+        "size": 14922
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/user_groups-v1.md": {
+        "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/world_private-v1.md": {
+        "sha256": "6a5ef0f1e5b42d0bcdcb7faf8dc3a5d880beb48972714f182bb55ae56023d58c",
+        "size": 188
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/paths.json": {
+        "sha256": "db8587d45cc0bcb9a2d16c185dc6138ac7640f5d85bcb96ed75d6eb34971db14",
+        "size": 1236
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/probes.json": {
+        "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
+        "size": 4573
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/research/public-case-records.json": {
+        "sha256": "a7f86124e02d9146ec30602c612452c47ba3b0500c95da970ab6a2f9cad55e86",
+        "size": 117139
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/research/retrieval-calibration.json": {
+        "sha256": "31bae8060b92cb09bc272db327c3650f5422f2d7803da171fb1aace472eda842",
+        "size": 502239
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/roles.json": {
+        "sha256": "dc57d16a0c52909d04a1f0c912625bb15a95e9413e72cfd0d4c82b584293feda",
+        "size": 6893
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/rubric-reference.json": {
+        "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
+        "size": 151
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/bundle.json": {
+        "sha256": "cb35cebad161c81330d0dd0ba4e093e7df42f58b24738586be36ed022164a30f",
+        "size": 1585
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/evaluation-protocol.json": {
+        "sha256": "b12fc508cc9c336a0b72e3c747c6cc8b66258bebaf01689658a912de56c7c5af",
+        "size": 65
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/evaluation.json": {
+        "sha256": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0",
+        "size": 798
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/retrieval.json": {
+        "sha256": "6bcc03f28fa46e6f5dfbd9689df0502ddd086eb240258c31bdb13fbf692a945d",
+        "size": 114
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/source-files.json": {
+        "sha256": "b6b7f9c957ea668bdd08408c275c569ca2d773d4b02e0d9c1aa1fb0fd6f0151d",
+        "size": 3037
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/scenario.yaml": {
+        "sha256": "e277a95ff4937198949e5fd03a8a0882780770034772ab5a1615eff3d82be761",
+        "size": 3144
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/manifest.json": {
+        "sha256": "34876b33af1dcb503e9032cf019299c716d29948ababad647c3eaa2eb3d0e3d7",
+        "size": 18198
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials.json": {
+        "sha256": "115f4e546a62ac11e45d0d44d159296f9052c365a4782f28d6a3754096cdf8fb",
+        "size": 207408
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/approvals-v1.md": {
+        "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+        "size": 1325
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/brief-v1.md": {
+        "sha256": "faf0dfd5255fca3241b7ed5bc9d8d91ace3a9fb1c34df3e0ad502b136c4d6bdb",
+        "size": 1294
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/business_case-v1.md": {
+        "sha256": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+        "size": 775
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/coordination-v1.md": {
+        "sha256": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+        "size": 700
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/demand-v1.md": {
+        "sha256": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+        "size": 1755
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/demo-v1.md": {
+        "sha256": "f5a8b3cadbbb93978a56241a5064f4a638a2f03665a89b114ed26b120a35811e",
+        "size": 331
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/demo-v2.md": {
+        "sha256": "fb86f44ee7df15c79990740da322fff3555d617cf3311ace042e939c5f13a874",
+        "size": 268
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/failures-v1.md": {
+        "sha256": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+        "size": 2940
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/faq-v1.md": {
+        "sha256": "53e335fafa1ff0ffb32249cc92826b489dbcb73e652915f05b5027244f90ff7d",
+        "size": 1691
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/interviews-v1.md": {
+        "sha256": "983ea5fe34a7d929754e3a00fbb327906edd8f874a8622aeb989f871bbe1673c",
+        "size": 1267
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/leave-v1.md": {
+        "sha256": "ee26220a9f8e6da888aea0b0bb5f676ce847d5aa2b268f6c9ed89978a49012b2",
+        "size": 373
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/meal-v1.md": {
+        "sha256": "43f347192b0a11e262c524fb83790c2dc7eed51881eb17c849655a646c7aabed",
+        "size": 315
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/onboarding-v1.md": {
+        "sha256": "f76fe14d4f2f41b92a4725116f91dc10cb3d62d24cd8b25bd4c2dfd8efe4f509",
+        "size": 792
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/policy-v1.md": {
+        "sha256": "495d92ed9fa52e2d67ed69b0ed83aeeff1cb8f7568923999469244b70311d9cb",
+        "size": 470
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/policy-v2.md": {
+        "sha256": "1ef31bcb24b3a768e2aa002edea825bc37d71c8435ac94b6db3db69214cf6419",
+        "size": 455
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/restricted-v1.md": {
+        "sha256": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+        "size": 870
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/scope_note-v1.md": {
+        "sha256": "39e78d207899f544745b0b2847df4a34bd475b1a4867af42662937f18234ede8",
+        "size": 454
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/scope_note-v2.md": {
+        "sha256": "e7d2ee20ba3fcf0efa7d7075f812bfb0f7587b3e6e8a77ec25641328d854716b",
+        "size": 350
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/tech_diagnostics-v1.md": {
+        "sha256": "7dc867646bff9e33b15b2df4089baaf3f8befb23cfd14537987fbaa19517b4a1",
+        "size": 265
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/tech_private-v1.md": {
+        "sha256": "a5fa9ae780e10788b79151bd97fabbddd40183eb2c5778e23037b94d20e2ded7",
+        "size": 329
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/technical-v1.md": {
+        "sha256": "cdfed7fefe4ff3772261b15be6fa42a172ace2a1364d4ca2398260a37999d166",
+        "size": 1464
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/trial_details-v1.md": {
+        "sha256": "01d3dd90130dd111ce243ed5149bace819ac1d666d2e18da7fe72554ae282554",
+        "size": 14049
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/user_groups-v1.md": {
+        "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
+        "size": 930
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/world_private-v1.md": {
+        "sha256": "97ee621793774fd024266127495b3a99ce489a3b9ebbbe194119fb3d2e9b4ebf",
+        "size": 153
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/paths.json": {
+        "sha256": "db8587d45cc0bcb9a2d16c185dc6138ac7640f5d85bcb96ed75d6eb34971db14",
+        "size": 1236
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/probes.json": {
+        "sha256": "b8b56e09f7f247a9c29484b26240e63e01d6a37e65b937bcd2739ddb1db5fdce",
+        "size": 4402
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/research/public-case-records.json": {
+        "sha256": "c7a354e7576fc739caeec3e7a10e227182ddbff19228e8c36b3af52278515034",
+        "size": 113868
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/roles.json": {
+        "sha256": "f6895278d2f56ab9c6606a924af016ec3e546fdb9102ca7ccb17ad3c2f9143b6",
+        "size": 6114
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/rubric-reference.json": {
+        "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
+        "size": 151
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/bundle.json": {
+        "sha256": "a4297b013d46d49524009917f8904d73ec111d525b8ed29244d66b72c3132e40",
+        "size": 1585
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/evaluation-protocol.json": {
+        "sha256": "b12fc508cc9c336a0b72e3c747c6cc8b66258bebaf01689658a912de56c7c5af",
+        "size": 65
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/evaluation.json": {
+        "sha256": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0",
+        "size": 798
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/retrieval.json": {
+        "sha256": "3f48e5f463ef76edc5196630788c3f4860ea88a9ed837e7add38d7fe886df12a",
+        "size": 110
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/source-files.json": {
+        "sha256": "06c9e027eef6dbc20f95606fe69dbc01aa53f57bd8ced0c08841f15b422b8fbf",
+        "size": 2082
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/scenario.yaml": {
+        "sha256": "4c29b5f35ac1ea03c67082b7ac6fb6a0164f5d9a8f1267a2a8c1be1bc71eadc4",
+        "size": 3111
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/baseline.json": {
+        "sha256": "d6dd526354b24dee22d849f3086cbd7cb716eb13992f34f08e26730c2ec7b10c",
+        "size": 605
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/decision_examples.json": {
+        "sha256": "955090ee0308cea119af74d6d3314b766c6da57c831410d73ac91e438021a107",
+        "size": 922
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/facts.json": {
+        "sha256": "25e6881af1490bae1fec6a060d4963bb254233c8f947567829a539f3bbffa370",
+        "size": 36482
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locale.json": {
+        "sha256": "26490203626903dddad346f9b3f21778835899ed0b481e30679d04c385317ef8",
+        "size": 23592
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/baseline.json": {
+        "sha256": "4dd6c958bc068b25b843ec32d1cabcf85929291b377f0f16e555ba4202ff0ecc",
+        "size": 604
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/decision_examples.json": {
+        "sha256": "3c4fefc84987ad3fcdfbb387ac73544ec384b67696b8057cea4eb637f8857819",
+        "size": 1194
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/facts.json": {
+        "sha256": "7dd2340509d17fd4161acc3bd0fc37896f1c7d7661904c8b0d998d506921ace2",
+        "size": 38548
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/locale.json": {
+        "sha256": "17f2ee5cd15ac56de02eb8f7193c784eb7cecf5c544fe75e222886d0b7f1cf6d",
+        "size": 23858
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/manifest.json": {
+        "sha256": "553aa18ae760f985b3df73fb34a92c04a2241c19eec1dd6fd6ec762c095d65d5",
+        "size": 19223
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials.json": {
+        "sha256": "95c6841bd493423f06cceaa5c539f85ed5e907ff6f0841ade1c0ad2dfa5da0a9",
+        "size": 216456
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/approvals-v1.md": {
+        "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+        "size": 1779
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/brief-v1.md": {
+        "sha256": "4cf1bd352eb43551bfbe8ff41496a40b3f7aefcbb720068b113e60f93b3fc063",
+        "size": 1563
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/business_case-v1.md": {
+        "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+        "size": 917
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/coordination-v1.md": {
+        "sha256": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+        "size": 828
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/demand-v1.md": {
+        "sha256": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+        "size": 2127
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/demo-v1.md": {
+        "sha256": "a12476b68fe52aedfb1ddef8e3523a2cc1a9b831707d23da9bdf35a2cdb584ec",
+        "size": 451
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/demo-v2.md": {
+        "sha256": "a2640df69d07055524ba50b0bbabfb84322c758de67f5830466ddecb51650660",
+        "size": 362
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/failures-v1.md": {
+        "sha256": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+        "size": 2807
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/faq-v1.md": {
+        "sha256": "b8fad283036c2ba68a8b20e537d11457908f8a8921b741c9ba0e758a1e24bd88",
+        "size": 2149
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/interviews-v1.md": {
+        "sha256": "345705f33270e338444f4a9a92cc8b0f03c77a0d16b6b5c2833bda4eb0b5418d",
+        "size": 1635
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/leave-v1.md": {
+        "sha256": "d287651b1f47f46ca1f6a39744121b7eb01ea9be93795a04637766d36b563320",
+        "size": 493
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/meal-v1.md": {
+        "sha256": "459abcb2c620d75b0caf62ff0328fa83f67908a8c154a6d998d0351f5966e0e8",
+        "size": 361
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/onboarding-v1.md": {
+        "sha256": "906d5dcecb028f616741bbeba4dd58ad2251257329564b699fbb6356999dc7d8",
+        "size": 1012
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/policy-v1.md": {
+        "sha256": "b29b349fc19da70717ba7405586dd2760ee40ce344477bfe776eed1d7fb4281f",
+        "size": 640
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/policy-v2.md": {
+        "sha256": "d4b820c6700b21de6af5f7170aedb0f2bf76b7d91bccf926efd3f4cb0c9975ad",
+        "size": 612
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/restricted-v1.md": {
+        "sha256": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/scope_note-v1.md": {
+        "sha256": "d6eff2910a2e0f39dd773a5e28d257bb56e2c41c12471263b05df8c2d23ea112",
+        "size": 577
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/scope_note-v2.md": {
+        "sha256": "f7af830782ac84614662e312ba6181fbd8917fc8b436abc8ed2fff8aa5dcd5d4",
+        "size": 437
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/tech_diagnostics-v1.md": {
+        "sha256": "f47912df47e8d660cd94e91ccd0db41c555d1fbbb4e31ea9718bb41028ec3757",
+        "size": 377
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/tech_private-v1.md": {
+        "sha256": "f2798d13bd48f3eda85d81ebe4b2635a309cf00b0958bdb1e4e7fa9bb47068b9",
+        "size": 423
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/technical-v1.md": {
+        "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
+        "size": 1993
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/trial_details-v1.md": {
+        "sha256": "33d5e14876bca1dbac019edf05a5fe412abe050e1a5681172caf07ce188a5850",
+        "size": 14782
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/user_groups-v1.md": {
+        "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/world_private-v1.md": {
+        "sha256": "6a5ef0f1e5b42d0bcdcb7faf8dc3a5d880beb48972714f182bb55ae56023d58c",
+        "size": 188
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/paths.json": {
+        "sha256": "286328d326752f1252b5cd38f7ea83bf58e0bc6af3ae9f771c01a57604a1325d",
+        "size": 1214
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/probes.json": {
+        "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
+        "size": 4573
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/research/public-case-records.json": {
+        "sha256": "0f88dbb1290b2094fa777c12043789dedcd1a27ca93d12ff4c176fdfd3239388",
+        "size": 116983
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/research/retrieval-calibration.json": {
+        "sha256": "31bae8060b92cb09bc272db327c3650f5422f2d7803da171fb1aace472eda842",
+        "size": 502239
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/roles.json": {
+        "sha256": "dc57d16a0c52909d04a1f0c912625bb15a95e9413e72cfd0d4c82b584293feda",
+        "size": 6893
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/rubric-reference.json": {
+        "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
+        "size": 151
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/bundle.json": {
+        "sha256": "81c719bb4b970da6f728521398217963ab1b22bdf3292db4328c0d57b7eaece1",
+        "size": 1581
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/evaluation-protocol.json": {
+        "sha256": "b12fc508cc9c336a0b72e3c747c6cc8b66258bebaf01689658a912de56c7c5af",
+        "size": 65
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/evaluation.json": {
+        "sha256": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0",
+        "size": 798
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/retrieval.json": {
+        "sha256": "6bcc03f28fa46e6f5dfbd9689df0502ddd086eb240258c31bdb13fbf692a945d",
+        "size": 114
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/source-files.json": {
+        "sha256": "b6b7f9c957ea668bdd08408c275c569ca2d773d4b02e0d9c1aa1fb0fd6f0151d",
+        "size": 3037
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/scenario.yaml": {
+        "sha256": "2384fdd9b3f58ff5a8cb83b56955f4e6dad92f968bc0f9501d1916137bcaf666",
+        "size": 3140
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/manifest.json": {
+        "sha256": "69564187d0af67f2705d1f0a4a0f3254a32b168ffa28bc31b715ef0046b11da7",
+        "size": 18186
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials.json": {
+        "sha256": "c98bc77536eace3884092a2a731dc86f91b95244ff5fe2a4f025c6aa6b9ca18d",
+        "size": 206318
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/approvals-v1.md": {
+        "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+        "size": 1325
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/brief-v1.md": {
+        "sha256": "8063757af21e6be71b54b657585586e939f2af8db26f3d3b7c3955210f755b74",
+        "size": 1294
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/business_case-v1.md": {
+        "sha256": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+        "size": 775
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/coordination-v1.md": {
+        "sha256": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+        "size": 700
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/demand-v1.md": {
+        "sha256": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+        "size": 1755
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/demo-v1.md": {
+        "sha256": "f5a8b3cadbbb93978a56241a5064f4a638a2f03665a89b114ed26b120a35811e",
+        "size": 331
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/demo-v2.md": {
+        "sha256": "fb86f44ee7df15c79990740da322fff3555d617cf3311ace042e939c5f13a874",
+        "size": 268
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/failures-v1.md": {
+        "sha256": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+        "size": 2940
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/faq-v1.md": {
+        "sha256": "53e335fafa1ff0ffb32249cc92826b489dbcb73e652915f05b5027244f90ff7d",
+        "size": 1691
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/interviews-v1.md": {
+        "sha256": "983ea5fe34a7d929754e3a00fbb327906edd8f874a8622aeb989f871bbe1673c",
+        "size": 1267
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/leave-v1.md": {
+        "sha256": "ee26220a9f8e6da888aea0b0bb5f676ce847d5aa2b268f6c9ed89978a49012b2",
+        "size": 373
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/meal-v1.md": {
+        "sha256": "43f347192b0a11e262c524fb83790c2dc7eed51881eb17c849655a646c7aabed",
+        "size": 315
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/onboarding-v1.md": {
+        "sha256": "f76fe14d4f2f41b92a4725116f91dc10cb3d62d24cd8b25bd4c2dfd8efe4f509",
+        "size": 792
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/policy-v1.md": {
+        "sha256": "495d92ed9fa52e2d67ed69b0ed83aeeff1cb8f7568923999469244b70311d9cb",
+        "size": 470
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/policy-v2.md": {
+        "sha256": "1ef31bcb24b3a768e2aa002edea825bc37d71c8435ac94b6db3db69214cf6419",
+        "size": 455
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/restricted-v1.md": {
+        "sha256": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+        "size": 870
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/scope_note-v1.md": {
+        "sha256": "39e78d207899f544745b0b2847df4a34bd475b1a4867af42662937f18234ede8",
+        "size": 454
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/scope_note-v2.md": {
+        "sha256": "e7d2ee20ba3fcf0efa7d7075f812bfb0f7587b3e6e8a77ec25641328d854716b",
+        "size": 350
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/tech_diagnostics-v1.md": {
+        "sha256": "7dc867646bff9e33b15b2df4089baaf3f8befb23cfd14537987fbaa19517b4a1",
+        "size": 265
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/tech_private-v1.md": {
+        "sha256": "a5fa9ae780e10788b79151bd97fabbddd40183eb2c5778e23037b94d20e2ded7",
+        "size": 329
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/technical-v1.md": {
+        "sha256": "cdfed7fefe4ff3772261b15be6fa42a172ace2a1364d4ca2398260a37999d166",
+        "size": 1464
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/trial_details-v1.md": {
+        "sha256": "cab39d668093d2225e2d5adbc3369e515a6dbc01222b10342ce2c546074947cf",
+        "size": 13909
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/user_groups-v1.md": {
+        "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
+        "size": 930
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/world_private-v1.md": {
+        "sha256": "97ee621793774fd024266127495b3a99ce489a3b9ebbbe194119fb3d2e9b4ebf",
+        "size": 153
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/paths.json": {
+        "sha256": "286328d326752f1252b5cd38f7ea83bf58e0bc6af3ae9f771c01a57604a1325d",
+        "size": 1214
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/probes.json": {
+        "sha256": "b8b56e09f7f247a9c29484b26240e63e01d6a37e65b937bcd2739ddb1db5fdce",
+        "size": 4402
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/research/public-case-records.json": {
+        "sha256": "433e5e1f8ee1057d388ef6786d1d5c8ac351cfc28163558383db7711222a7255",
+        "size": 113712
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/roles.json": {
+        "sha256": "f6895278d2f56ab9c6606a924af016ec3e546fdb9102ca7ccb17ad3c2f9143b6",
+        "size": 6114
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/rubric-reference.json": {
+        "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
+        "size": 151
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/bundle.json": {
+        "sha256": "c8d0a43de5447d150db3e0d5cdd423ff5b4b0ae68211dd55539e65832fd980d7",
+        "size": 1581
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/evaluation-protocol.json": {
+        "sha256": "b12fc508cc9c336a0b72e3c747c6cc8b66258bebaf01689658a912de56c7c5af",
+        "size": 65
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/evaluation.json": {
+        "sha256": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0",
+        "size": 798
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/retrieval.json": {
+        "sha256": "3f48e5f463ef76edc5196630788c3f4860ea88a9ed837e7add38d7fe886df12a",
+        "size": 110
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/source-files.json": {
+        "sha256": "06c9e027eef6dbc20f95606fe69dbc01aa53f57bd8ced0c08841f15b422b8fbf",
+        "size": 2082
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/scenario.yaml": {
+        "sha256": "901a5f76b2fb3ba48135319b2ca302b31af8007c05ea5c381f3acc84e6be18bc",
+        "size": 3107
+      },
+      "scenarios/pm_pilot/v2/variants/review-packet-2.8.0.json": {
+        "sha256": "83db40c4a26296aa097772bb2eeb17e73c7565340b82eb64c5962c0d7d4ff504",
+        "size": 8683
+      },
+      "scenarios/pm_pilot/v2/variants/review-packet.json": {
+        "sha256": "2e3769bb609db9f997f9f5fcf260f01513231cdfb122d4c0676a4a01f9159e4f",
+        "size": 8596
+      },
+      "src/career_lab/assistant/v2/__init__.py": {
+        "sha256": "b92a51d4eb2478af5f8c8e0232cfdbfd9669457b02609653d62e16258ababa2b",
+        "size": 123
+      },
+      "src/career_lab/assistant/v2/calibration_en.py": {
+        "sha256": "0280abe64e6d048a2cf1a73a7199b14c68be29ab64db927bcd02b07e467bb0ec",
+        "size": 5717
+      },
+      "src/career_lab/assistant/v2/english.py": {
+        "sha256": "9cba3d75d9202380d4ea4d6d7bc0b29ff345ca012b02d1fe59df459265014476",
+        "size": 4018
+      },
+      "src/career_lab/assistant/v2/service.py": {
+        "sha256": "67a9b5b5de3621457b9277dad1b05324207939164dedb250ed4ea499385960c9",
+        "size": 12863
+      },
+      "src/career_lab/scenarios/v2/__init__.py": {
+        "sha256": "98b6e25225f811b7f622f538b886dba657d4c809ed5d5c30405a95f5c751792f",
+        "size": 154
+      },
+      "src/career_lab/scenarios/v2/__main__.py": {
+        "sha256": "a26c7f4c6589f556cdc591b161952f346034d45111597a6cf418c20bc7028af2",
+        "size": 5732
+      },
+      "src/career_lab/scenarios/v2/case_records.py": {
+        "sha256": "5a9c22aa21f732573ae9803cf55642c08abbd825d110170ac09d32467eb0ab46",
+        "size": 7815
+      },
+      "src/career_lab/scenarios/v2/content.py": {
+        "sha256": "206b30eb648960d28d44887360c5c8842e5818a2fe14c01d3e0176a4dc984a5c",
+        "size": 25753
+      },
+      "src/career_lab/scenarios/v2/content_en.py": {
+        "sha256": "aceb698662cc38b90dc5dbff3ab5d0b4af3b583235f1c787a926ed45bf3b1f85",
+        "size": 25501
+      },
+      "src/career_lab/scenarios/v2/decision_examples_en.py": {
+        "sha256": "5a2ecfe21210cb1de702ee69497125a8b2e1202cc3f1200f18ae7182535cb543",
+        "size": 1213
+      },
+      "src/career_lab/scenarios/v2/engine.py": {
+        "sha256": "ad0aed1937d9ff96a0fe435f3dbab017000485d02de6108c8d87f47e3cd7d933",
+        "size": 21363
+      },
+      "src/career_lab/scenarios/v2/evaluation_facts.py": {
+        "sha256": "0f5d08fdf07f577084e8646ad7e17ee8d3bafa975695802e849d8d6257569a56",
+        "size": 15446
+      },
+      "src/career_lab/scenarios/v2/loader.py": {
+        "sha256": "1eb1546945ab3aa096b6f5887f58a41beef7fd9b66c778eecaeb6295f7036264",
+        "size": 12233
+      },
+      "src/career_lab/scenarios/v2/localization.py": {
+        "sha256": "edf29d09de7d29261d560c7c198ccaebe3d3134c259e45119638681fe3a13468",
+        "size": 8504
+      },
+      "src/career_lab/scenarios/v2/localization_en.py": {
+        "sha256": "c40362406df0e629a582648cfea4915974473c2bb69eae77d66a4986430c0777",
+        "size": 2470
+      },
+      "src/career_lab/scenarios/v2/module.py": {
+        "sha256": "d8428734c74f55f9f79b6a5cbf6b069c11faf34167c3dbcae340bb98f20b9411",
+        "size": 20058
+      },
+      "src/career_lab/scenarios/v2/policy.py": {
+        "sha256": "87bb82873fd7eb56c3b6a5dda7957f6c0c4eef1f17734634ea92098aa84f7fb4",
+        "size": 8652
+      },
+      "src/career_lab/scenarios/v2/policy_en.py": {
+        "sha256": "8ab818531c48d0dc2c3897eeb11aeb5c8f42b9364952ace2f4d007dae2d12614",
+        "size": 1672
+      },
+      "src/career_lab/scenarios/v2/probes.py": {
+        "sha256": "2456b54fa3995cab375e3a6155e2ea4764a168001f96cb7b7faf1e323b30414b",
+        "size": 3300
+      },
+      "src/career_lab/scenarios/v2/probes_en.py": {
+        "sha256": "5f451f844f6475649ff117244c1fb07aa9e7d9c415eac8bb5ae3b0dab3e09e38",
+        "size": 1106
+      },
+      "src/career_lab/scenarios/v2/public_cases.py": {
+        "sha256": "3cf088b7555f2f231edc753dc03d30ed6eea22b53fe71e6480d1ab8032b4f479",
+        "size": 4166
+      },
+      "src/career_lab/scenarios/v2/public_cases_en.py": {
+        "sha256": "d46bfc7f83a70136888e04f6bad1b338e2dd9acb40fbcb3a5e6c7c42592871e5",
+        "size": 1146
+      },
+      "src/career_lab/scenarios/v2/rebind.py": {
+        "sha256": "26088499df09d657aff962341bb0bde85e42372a65463a55e981e7307ac76414",
+        "size": 9153
+      },
+      "src/career_lab/scenarios/v2/seed.py": {
+        "sha256": "b7ae75f5c28fd55c87cb1a1b8b6c9ee21bca554df0a78e46a2d62bfd52126a1d",
+        "size": 16016
+      },
+      "src/career_lab/scenarios/v2/variants.py": {
+        "sha256": "1aa00b78ee24055bf799b343c7ab534f90450d4853b89b5cab1fe533ebdea8fc",
+        "size": 3459
+      },
+      "tests/expansion_v3/w02/__init__.py": {
+        "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "size": 0
+      },
+      "tests/expansion_v3/w02/conftest.py": {
+        "sha256": "b179f4fea5791fc70996bf1a9267866d682271cf049b5a7a470e5108c09c5eaa",
+        "size": 1409
+      },
+      "tests/expansion_v3/w02/migration_support.py": {
+        "sha256": "f025ae45776f3b393c294086478ebdae540b9fcb632996ad0036f354af1dac50",
+        "size": 8828
+      },
+      "tests/expansion_v3/w02/test_assistant.py": {
+        "sha256": "1598c6d2738eecba719fc36717286f3b53b4c4432b9a760b71d4833593ab7588",
+        "size": 6527
+      },
+      "tests/expansion_v3/w02/test_bilingual.py": {
+        "sha256": "81739229c1248122b95db7ec4fa7e910402bd4af7ebf7f63ec66787d25ef0b24",
+        "size": 12791
+      },
+      "tests/expansion_v3/w02/test_boundaries.py": {
+        "sha256": "af0e8bf68925e73bb50530dbd1b4f59c4cddc3b445dc8560f2e3f17f3a4dfc55",
+        "size": 6941
+      },
+      "tests/expansion_v3/w02/test_bundle.py": {
+        "sha256": "9a1c936811f5bcb8f430d5836a05ce14e9aabece938da6e4c139b10bc244d8e2",
+        "size": 3854
+      },
+      "tests/expansion_v3/w02/test_chinese_slice.py": {
+        "sha256": "4ab324d0e92e83dfdd18fbdcc99e2e81a36356876cafeaf8bcf35a4822ded7d0",
+        "size": 3886
+      },
+      "tests/expansion_v3/w02/test_content_redesign.py": {
+        "sha256": "78d67975670cc18bb43a2c96653f02776f3d57d8b50eaf31f570a6aa969f253e",
+        "size": 10051
+      },
+      "tests/expansion_v3/w02/test_engine.py": {
+        "sha256": "ee2ad6a1348852a952f598f55567b38896ff489290540583a716706d449dd78e",
+        "size": 6359
+      },
+      "tests/expansion_v3/w02/test_english_relevance.py": {
+        "sha256": "9b514475b125dc32642b49660a02251447c9b206acdd965acc21fdb76c3445b2",
+        "size": 2067
+      },
+      "tests/expansion_v3/w02/test_evaluation_facts.py": {
+        "sha256": "7c3e5e34e1111bdef518141071e5824801657efe97b40740e0a20155319914c5",
+        "size": 13383
+      },
+      "tests/expansion_v3/w02/test_formal_api.py": {
+        "sha256": "3c121d0afc865d1e9b34c3defb71683c316392536b6899094dcefb0a3f945101",
+        "size": 12147
+      },
+      "tests/expansion_v3/w02/test_migration.py": {
+        "sha256": "21e8729eb71260b4acb44a2986f14f640dc82322e6240f171d8d7c4ab7059d85",
+        "size": 7489
+      },
+      "tests/expansion_v3/w02/test_practice_variants.py": {
+        "sha256": "9e812ab0e0021b56efbffe86f25a1164ea90a88e738b5442112098ad6b3b6916",
+        "size": 7758
+      },
+      "tests/expansion_v3/w02/test_reference_http.py": {
+        "sha256": "18f572686eb01318821bb6139fffffeda680455f8218f65e1aa7a69dcd9c14ed",
+        "size": 21003
+      },
+      "tests/expansion_v3/w02/test_review_r1_regressions.py": {
+        "sha256": "646bbd6a93b24f01385571709f0c66dc0706d513012b1b042f0e57cf873f2d4f",
+        "size": 13240
+      },
+      "tests/expansion_v3/w02/test_review_r2_content.py": {
+        "sha256": "14a62ae6fe888b0632606ba8fee35c291132602c56ca0ef1c59dbcdead54e4b8",
+        "size": 8987
+      },
+      "tests/expansion_v3/w02/test_rubric_fact_handoff.py": {
+        "sha256": "e71370e5b7172657d4a7109e6151ee0a2fe586351191720ba37d424c482f8162",
+        "size": 3918
+      }
+    }
+  },
+  "W03": {
+    "commit": "0a1496372569e14ca556ecefe231cb03cb3193e4",
+    "workspace": "/Users/jefmacmini/Projects/rolecraft-worktrees/034-w03",
+    "source_digest": "e1216cb30138c4a7d8d6defa4979792e4ead189c4d8b0de37d25d0a1a551668d",
+    "receipt": "047 authorized interface message: 0a14963 exact committed owned delta; final receipt pending author handoff.",
+    "files": {
+      "apps/web/src/features/workspace/WorkspacePanel.tsx": {
+        "sha256": "b6cea98fdd09a98875ba5471811315f617ca00b6a530b20fe8f594a7906daf05",
+        "size": 17494
+      },
+      "apps/web/src/features/workspace/c7.test.ts": {
+        "sha256": "20dbb47da064f0075762dc2e4de6741c3c705281c85057978f3b34c140f1aba8",
+        "size": 5143
+      },
+      "apps/web/src/features/workspace/client.ts": {
+        "sha256": "0549c46f86feb1238b2055eb56c3b053ca4628a26b95b04ca44934c57bb72c0c",
+        "size": 26082
+      },
+      "apps/web/src/features/workspace/contract-types.ts": {
+        "sha256": "d208814f9b02ab5d918efe4de59517cf2cad817f96bae7651adad01f39811995",
+        "size": 9395
+      },
+      "apps/web/src/features/workspace/gateway-adapter.ts": {
+        "sha256": "29d53543a89a079477136fb753c26eb5277277b541d50936807f223bf13ecb0d",
+        "size": 2374
+      },
+      "apps/web/src/features/workspace/generate_types.py": {
+        "sha256": "b8fb5dd28042423987a98e5714373962c04b25b1ff9fc8b38a96ef18400b1093",
+        "size": 2530
+      },
+      "apps/web/src/features/workspace/import-browser.ts": {
+        "sha256": "ba8228b6109db71765c5b15430ad462fd931e23769ce67f471989466c9ff4de1",
+        "size": 3709
+      },
+      "apps/web/src/features/workspace/index.ts": {
+        "sha256": "ac4430dcccc46ecb439abee5e37735c5e74ed376e75467e2f6ef567ac1daf6c5",
+        "size": 877
+      },
+      "apps/web/src/features/workspace/journal.ts": {
+        "sha256": "546958b09374448720e7475b6dd4c5796c45bfb346817a41ff9d02c282f889c3",
+        "size": 5207
+      },
+      "apps/web/src/features/workspace/native-slots.ts": {
+        "sha256": "0fd365c952c6317ad69ee62c2a8a1fe1ad9ee0bcff820aadeeaa3518f1a6a4a5",
+        "size": 2096
+      },
+      "apps/web/src/features/workspace/native-v4/demo.html": {
+        "sha256": "38e42d0ed9970a78b69a8067a818a32fc3fe01171e9f48134f5e052be3fe690f",
+        "size": 795
+      },
+      "apps/web/src/features/workspace/native-v4/demo.ts": {
+        "sha256": "747180fb9dd10df5b8148fc96ac4d9c0ec925b80985ef186adbedc0e526be495",
+        "size": 2432
+      },
+      "apps/web/src/features/workspace/native-v4/form-slot.ts": {
+        "sha256": "0b471d8ee81e6e6ce49d7d5e2a73aea11e17aa2500dffa2435164792208ce682",
+        "size": 7209
+      },
+      "apps/web/src/features/workspace/native-v4/form-values.test.ts": {
+        "sha256": "f0fb558de510d544cd1f7e28595c1d6651abdc7fefc1ea1b5f52b3973cc2d188",
+        "size": 1429
+      },
+      "apps/web/src/features/workspace/native-v4/form-values.ts": {
+        "sha256": "bcfa9d4cc2f177c831da759f672cc48b51a20dd2b8d5c5aa909224208810517b",
+        "size": 2032
+      },
+      "apps/web/src/features/workspace/native-v4/import-slot.test.ts": {
+        "sha256": "a4f6ad9a71e7d4730ca518bfc54aee5b0fcdf4ce6a78d2b3aa0ec25541622100",
+        "size": 1951
+      },
+      "apps/web/src/features/workspace/native-v4/import-slot.ts": {
+        "sha256": "b0dfe27752ad52eeb068d73ffb805f583dd08f697d77097e9192209dd1cf63bf",
+        "size": 9602
+      },
+      "apps/web/src/features/workspace/native-v4/index.ts": {
+        "sha256": "cd8c90abe426f629cddb18dd95ff1235b0fe75fd4508ccc93594fd450977366e",
+        "size": 14904
+      },
+      "apps/web/src/features/workspace/native-v4/slot-controller.test.ts": {
+        "sha256": "3e19e0973ed9993898e8446f37fee205a3525b9836cdf9ea87d8db0d474e7035",
+        "size": 12965
+      },
+      "apps/web/src/features/workspace/native-v4/slot-controller.ts": {
+        "sha256": "c02d5a36e449b5be97f382225e6589626d4ca03762a0733bd75994eec4476fa8",
+        "size": 18472
+      },
+      "apps/web/src/features/workspace/native-v4/slot-fixture.ts": {
+        "sha256": "f6b81bb585fcbf06b2816f3cd2b2aeaa42351c4757614a2eddf57ba6ec77589d",
+        "size": 13686
+      },
+      "apps/web/src/features/workspace/native-v4/v4-slot.css": {
+        "sha256": "97bb3a6de3d6ff6ab23bb89f5d8433fe663795e84bf102cd6a38a48d23861be5",
+        "size": 823
+      },
+      "apps/web/src/features/workspace/native-v4/v4-slot.md": {
+        "sha256": "987856fd5397fdd0eb0529290a77b7b28586af157eb711d2585765f51a8fd5ae",
+        "size": 8686
+      },
+      "apps/web/src/features/workspace/native-v4/v4-slot.ts": {
+        "sha256": "0498c63fe62368b6d64730241f72f146a775636a600e4c3227e7f45749413b9b",
+        "size": 26882
+      },
+      "apps/web/src/features/workspace/native-v4/workspace.css": {
+        "sha256": "041fda639fd0b77550123f02b236981bf7d01a82055d5560de9a3e85ac0293c3",
+        "size": 984
+      },
+      "apps/web/src/features/workspace/recovery-browser.html": {
+        "sha256": "ae82312fdc5e3fbc372aeb14764a15898da9735f0851a43dabfe008c832bb371",
+        "size": 368
+      },
+      "apps/web/src/features/workspace/recovery-browser.tsx": {
+        "sha256": "ee9998c743557afd25591d1f29551dc7ef72250a464574d4d2215f3a546a6306",
+        "size": 3676
+      },
+      "apps/web/src/features/workspace/recovery.test.ts": {
+        "sha256": "09ffce76142058b603d944e6c53fae33a1e2f6b2a13299f261f2aaad47703559",
+        "size": 17287
+      },
+      "apps/web/src/features/workspace/test-support.ts": {
+        "sha256": "a9dd7574bc3f1677936bce9740a2d27199788aa6e1dda24c0fa025cd1d4b18bc",
+        "size": 829
+      },
+      "apps/web/src/features/workspace/workspace.css": {
+        "sha256": "ffa9c5a7e0de6e27d17f7bd6bf93ea9fc6107d83390f2ae6442b5ed6a1bdc882",
+        "size": 3035
+      },
+      "apps/web/src/features/workspace/workspace.test.tsx": {
+        "sha256": "ea084a1d9096d4f5866d91ab3565d9c3439d8428e71f5c1f4f14e99ae958acd9",
+        "size": 13680
+      },
+      "docs/modules/expansion-v3/W03.md": {
+        "sha256": "870c88b182f601221cb3b8ac125c3b0c04280a18fd0f433ed1289a6f64fdf191",
+        "size": 10307
+      },
+      "src/career_lab/api/workspace_v2.py": {
+        "sha256": "fb3616c52dc55510a0a431ba6666d2785d91125de0cd7f5a229dab2d85a9a6a6",
+        "size": 192
+      },
+      "src/career_lab/storage/workspace_v2.py": {
+        "sha256": "45c8428c1c0ba0eeebb1ef5c6eaa1509fa5ff4958fb1bcc7f0369b9c0d8938eb",
+        "size": 399
+      },
+      "src/career_lab/workspace/__init__.py": {
+        "sha256": "2854fa8a13c209cb7041230825fe5a4b0d050259eca0d93d3cf072b467302bf6",
+        "size": 156
+      },
+      "src/career_lab/workspace/domain.py": {
+        "sha256": "27ce26985a4acfdf7b7359fbfea197ef1b83719036d6c72f80c9532dea56886b",
+        "size": 19408
+      },
+      "src/career_lab/workspace/extension.py": {
+        "sha256": "b800c14708ad3d7e634a4dbc4a7e297ca96fc3c678fc835b071253e848161a9c",
+        "size": 4424
+      },
+      "src/career_lab/workspace/imports.py": {
+        "sha256": "735350c32e1ead7112e24ba9b26ffbad4a702b459664019356be708509963ee4",
+        "size": 16523
+      },
+      "src/career_lab/workspace/ports.py": {
+        "sha256": "f166f7b63739edf5dfee6750371144a06122555f775b92ebfe16be5a18aeb8f4",
+        "size": 3191
+      },
+      "src/career_lab/workspace/service.py": {
+        "sha256": "f808dba32ec0aa4116cd17c64a85b5ee73d2ba49bc02c8e0efbdc689a65b5f93",
+        "size": 6448
+      },
+      "tests/expansion_v3/w03/browser_recovery_r2.mjs": {
+        "sha256": "5555e48d3883e391f55390cee9a041ce0777ebca11d94a2aa33b0bf905fbd57a",
+        "size": 8177
+      },
+      "tests/expansion_v3/w03/conftest.py": {
+        "sha256": "23637a0271d8dafdf1ed3c3dd42b0208fb9452ea9c4e13800676e9ddeb36ab81",
+        "size": 3848
+      },
+      "tests/expansion_v3/w03/legacy_repository_fixture.py": {
+        "sha256": "cdf09288e4b0a3bd01204770ca7a6ee7b0703a66509486b0aa0d631524ba64bb",
+        "size": 5992
+      },
+      "tests/expansion_v3/w03/legacy_router_fixture.py": {
+        "sha256": "55f405c9241b49ea5f916958cce8fca570030b6c8f77ff1fb5e5153264123dd0",
+        "size": 4818
+      },
+      "tests/expansion_v3/w03/probe_formal_import_seams.py": {
+        "sha256": "b97966df268e9d13956ae8bf88d434c6e915d0c6463f4dd05396aef19c2b27ab",
+        "size": 3358
+      },
+      "tests/expansion_v3/w03/serve_native_v4.py": {
+        "sha256": "a4ae41b908febfca5017d3e7ee7a41de520b5124e90fee42ed9304f5d206d850",
+        "size": 1414
+      },
+      "tests/expansion_v3/w03/test_c7_workspace.py": {
+        "sha256": "daeee5133922c2439c03f9547a542b3110a71bd03cecce2b54a0eaef95dc8ecf",
+        "size": 16563
+      },
+      "tests/expansion_v3/w03/test_formal_gateway.py": {
+        "sha256": "5a0b3eb777201eecca75b830b0f01b17a9917a3d19b4bafb2a587a1c78aa8efd",
+        "size": 12891
+      },
+      "tests/expansion_v3/w03/test_imports_router.py": {
+        "sha256": "4edb32c14e0370bad1d603edec0171dab3f70ec1747fb9e850f2d3b8cbd2a92d",
+        "size": 8696
+      },
+      "tests/expansion_v3/w03/test_m2_work_choices.py": {
+        "sha256": "20ec21bbeeb57d881fa99674dd1049fee420c3a1a6011e3b60417e478d2d2eea",
+        "size": 4955
+      },
+      "tests/expansion_v3/w03/test_workspace.py": {
+        "sha256": "8b88ad49101d926b64b149b3f80ebe2f6b8fa3766f1c51dffc32fe2b26484215",
+        "size": 17582
+      }
+    }
+  },
+  "W04": {
+    "commit": "a5a94fa7124e4945cad757634153986e4cb72601",
+    "workspace": "/Users/jefmacmini/Projects/rolecraft-worktrees/037-w04-c7-review",
+    "source_digest": "2e2d00ecd86864c656f65fb9ea782d5999955d3889a1972b745305f6c695e439",
+    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W04/W04-20261007-039-v4-embedded-local-reference-r10.json",
+    "files": {
+      "apps/web/src/features/roles-native/browser-check.mjs": {
+        "sha256": "881389ee56fef1e728c20ddb963e118dd63fc899aa5c8c0c8031a5eb222e1cd7",
+        "size": 7787
+      },
+      "apps/web/src/features/roles-native/index.ts": {
+        "sha256": "1ce3e438c6709d899bce53cfb8b5a4f0de38b347dc8b7d0e01c4cffb9f309eaf",
+        "size": 16089
+      },
+      "apps/web/src/features/roles-native/roles.css": {
+        "sha256": "7bc6d98a748d6160bdef8db2c1a6c1f1f7626423461451c24cf0a369442b9372",
+        "size": 4991
+      },
+      "apps/web/src/features/roles-native/test-page.html": {
+        "sha256": "810f97e89634344006c9557d9c3b5886683c8be195f87fbae10d5d47223a6338",
+        "size": 1230
+      },
+      "apps/web/src/features/roles-native/test-page.ts": {
+        "sha256": "637d9751f05d2aa3e6c7777191212328ccd0541444287cf6e2eb97b47121a1e9",
+        "size": 5939
+      },
+      "docs/modules/expansion-v3/W04.md": {
+        "sha256": "b97c721b2492adf1a398487e4c185aef5504759c81f232de088c4a0fcfd6a196",
+        "size": 49651
+      },
+      "src/career_lab/api/approvals_v2.py": {
+        "sha256": "85039d4d17584319c81f4784bc43fbb1a6a739338036dc4e61bf821a48215ad5",
+        "size": 11920
+      },
+      "src/career_lab/runtime/context_v2.py": {
+        "sha256": "03615d0de0d9e60296df6de6d41c36505ee1a85e3804cc6f053cef16d9666fd1",
+        "size": 44132
+      },
+      "src/career_lab/runtime/roles_v2.py": {
+        "sha256": "b5d1128359fef6b63749285c9653158714d8a0e02f92734e4d0c8bf303d9613f",
+        "size": 31113
+      },
+      "src/career_lab/storage/role_memory.py": {
+        "sha256": "1ed3ba09146856cc19274643a2a6aa9c6f75896efabaa879f477ff2ca8e17e46",
+        "size": 26129
+      },
+      "tests/expansion_v3/w04/legacy_r1_fixture.py": {
+        "sha256": "9e169d5a683cba614e12371154ad0805c0ec25d4ac47cce28298e630919c0554",
+        "size": 4877
+      },
+      "tests/expansion_v3/w04/serve_fixture.py": {
+        "sha256": "b8fd88994169b7941552d1cb65403e9b3901e3165f40c34ccd3afb13092b5c55",
+        "size": 2030
+      },
+      "tests/expansion_v3/w04/test_approvals.py": {
+        "sha256": "f35172fad9b14570688e0440734588b7ffebd86db2ce54c0bcd0517fc3778210",
+        "size": 7400
+      },
+      "tests/expansion_v3/w04/test_bilingual.py": {
+        "sha256": "f0ad4a2a4d6f6bd398d5133e39914f206edd3572a04acb5e89cbfd39bc116e59",
+        "size": 25721
+      },
+      "tests/expansion_v3/w04/test_context.py": {
+        "sha256": "2a3d7b6e6c6edfc6982cd47feac591d3f1d5bb8241c666a92095d8f63a7f092f",
+        "size": 17556
+      },
+      "tests/expansion_v3/w04/test_http_processes.py": {
+        "sha256": "7e214e2bff886efdfb3a1648a1e40485a0e45e97173ef1b12952dbb7271910c6",
+        "size": 4146
+      },
+      "tests/expansion_v3/w04/test_identifier_and_stance.py": {
+        "sha256": "5022d21e64fd70c1c46130ac3e056296d2d98375466c3a5bb31fda6146804457",
+        "size": 28615
+      },
+      "tests/expansion_v3/w04/test_known_r3_limits.py": {
+        "sha256": "a923740f481c2e3f7755c82b807b06b3ed149ed0a4775c5357e5ee1df6330a99",
+        "size": 13644
+      },
+      "tests/expansion_v3/w04/test_normal_dialogue.py": {
+        "sha256": "9e7f516fa240f4bb92b047ae59446541659897f4cd29766f1ee59948d973f929",
+        "size": 7481
+      },
+      "tests/expansion_v3/w04/test_private_port_boundary.py": {
+        "sha256": "8323de7cb86845cf2b9e719f1193a175ec7a84a1144de715d0ce1b2be107b33e",
+        "size": 10978
+      },
+      "tests/expansion_v3/w04/test_review_r4_regressions.py": {
+        "sha256": "d3b382109bf935eddaa691d2bb4062952af4fb8fd23659cdf2546ce85e212b68",
+        "size": 10091
+      },
+      "tests/expansion_v3/w04/test_review_r5_regressions.py": {
+        "sha256": "46153c299b437f4837dbfeb590809e826ae5488b1d25a6dfde273c102504acbe",
+        "size": 10175
+      },
+      "tests/expansion_v3/w04/test_runtime.py": {
+        "sha256": "039c075bc4f131252daeb6afbd715036305be304d10cd4080aaf51906e2f327f",
+        "size": 19800
+      }
+    }
+  },
+  "W05": {
+    "commit": "9550087a0665a799cf186ff7f2e78267b109e92f",
+    "workspace": "/Users/jefmacmini/Projects/rolecraft-worktrees/034-w05",
+    "source_digest": "10e040496ffb3914e78934fcef1c1bbe170245d2a07d945e504b48506108eaf4",
+    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W05/W05-20261007-040-real-sources-v4-slot-r13.json",
+    "files": {
+      "apps/web/src/features/feedback-native/demo.html": {
+        "sha256": "0b9b3bdc4c9251eea0d6e3d3f3580ee763dce4a54099122c3de6ebe27b988d2a",
+        "size": 899
+      },
+      "apps/web/src/features/feedback-native/demo.ts": {
+        "sha256": "4e0f20e87b2bd2359ecc2af8b56c2283559a41119d7c486dce4c0f7b89c77b8d",
+        "size": 4569
+      },
+      "apps/web/src/features/feedback-native/index.ts": {
+        "sha256": "18ac3f7523ac4d06daadb0808cbf78e2dbc5dbbda7265516e4e6e3caab6d570c",
+        "size": 23741
+      },
+      "apps/web/src/features/feedback-native/localization.ts": {
+        "sha256": "58ba77e905b5af659cffd3ff4349c2f0f166d4f343f9878ef0e9edad23e72e09",
+        "size": 241
+      },
+      "apps/web/src/features/feedback-native/semantic.test.ts": {
+        "sha256": "b873ef7300abb84013886454a618c48e5e97ac102d5fd1232d576ba6b5e388b9",
+        "size": 1827
+      },
+      "apps/web/src/features/feedback-native/v4-slot.test.ts": {
+        "sha256": "fc9e5cfb28d4b7115f3f019c2b931b342920460a83f40b8d683254a24e10efc0",
+        "size": 8784
+      },
+      "apps/web/src/features/feedback-native/v4-slot.ts": {
+        "sha256": "6c993266b14f611bb830491799f15753791fb28fe2954b306d9b80471f02be22",
+        "size": 13949
+      },
+      "docs/modules/expansion-v3/W05.md": {
+        "sha256": "28450ee09c1ce75d4196b150ba5cb1cdad6b819db0e514fd96724bfdee2c5990",
+        "size": 38570
+      },
+      "src/career_lab/api/reviews_v2.py": {
+        "sha256": "31ca651c248b1e28f7bc131061a5128f3dc708b5d37ba76a0e20ee882d41b90d",
+        "size": 4193
+      },
+      "src/career_lab/evidence/v2/__init__.py": {
+        "sha256": "09055f6b25786f7a2052e0255116ac7ef55f16b535cc78534f8aecda9bba974b",
+        "size": 181
+      },
+      "src/career_lab/evidence/v2/assembler.py": {
+        "sha256": "9e4296a6493facc3c6f41145ad4cce2545886ea22516770822b927f273cae327",
+        "size": 14137
+      },
+      "src/career_lab/evidence/v2/availability.py": {
+        "sha256": "aea8ce5ff16f4af1ea956296afdf1430538c113ff25af34c31e8d10b829975ed",
+        "size": 1036
+      },
+      "src/career_lab/evidence/v2/factual.py": {
+        "sha256": "c42060a256e7787992729c815388f124ee3f1e054ef67a315282e6e35da221ec",
+        "size": 8405
+      },
+      "src/career_lab/evidence/v2/formal_feedback.py": {
+        "sha256": "079a9bdf28727f214a6c411a1729c299faea461e36ac457b4434c299bf09e2e3",
+        "size": 5017
+      },
+      "src/career_lab/evidence/v2/history.py": {
+        "sha256": "d671423b138d577d651c39ac505de3089b27ba60b2748882af9332c28d90560d",
+        "size": 7564
+      },
+      "src/career_lab/evidence/v2/localization.py": {
+        "sha256": "faa9f794ad2085fc323cc9ffab1cb210dc20b488b6037bf2c4e953a247662f99",
+        "size": 123052
+      },
+      "src/career_lab/evidence/v2/ports.py": {
+        "sha256": "972160076b74497a3b71e55d66df302775b0d2b3c933dc02628ce29faf0cdafe",
+        "size": 5586
+      },
+      "src/career_lab/evidence/v2/review_evaluator.py": {
+        "sha256": "aa1b1a18a7983a465efc9f94baffc35f6f0362ce0ae66cdba6726a10c18bdfcb",
+        "size": 9661
+      },
+      "src/career_lab/evidence/v2/review_ports.py": {
+        "sha256": "bdbe241b1201d80c3b59a9df0fc5453cd5b954aa89a78d5ced6ebc8ac69cafbe",
+        "size": 2068
+      },
+      "src/career_lab/evidence/v2/snapshot_reader.py": {
+        "sha256": "de1dc2a2aee126d6b9025aa0e67561cd55b1545bd5b4c0bcd63aec06e8e09669",
+        "size": 7214
+      },
+      "src/career_lab/evidence/v2/store_reader.py": {
+        "sha256": "32b02186d5e8191874c74f08617411a134ace84820b5c1d208f6988cf85f6d6e",
+        "size": 12256
+      },
+      "src/career_lab/evidence/v2/submission_evaluator.py": {
+        "sha256": "026b4d2ee24952dacc2a68aa5d8f7c32ed0ba32f3fd8b299a056afd0bb14675b",
+        "size": 8476
+      },
+      "src/career_lab/evidence/v2/work_summary.py": {
+        "sha256": "4b53f2be46e477ff2b7b37690c9b428a48d710de502ce596da056ebe1a2b985b",
+        "size": 2236
+      },
+      "src/career_lab/rubrics/v4/__init__.py": {
+        "sha256": "7cc8aae0dd49bb2bbdc7ec09a582c5f5215f14daa9a1d763abd3ca27ff06224f",
+        "size": 169
+      },
+      "src/career_lab/rubrics/v4/applicability.py": {
+        "sha256": "ba02d4c9dbdc5d214404149a18f55081c7e3c12b35d30671cb1f0b778b378e54",
+        "size": 8147
+      },
+      "src/career_lab/rubrics/v4/feedback.py": {
+        "sha256": "d230cda7eb0cf63d6a1f4d9c532c4bea2028fb7d2eca5d202ba054c632bf10b7",
+        "size": 8116
+      },
+      "src/career_lab/rubrics/v4/judge.py": {
+        "sha256": "59e86c512e625ee9f67636ec848646f0bfd1abb15d434e05aa6715c166e6fe41",
+        "size": 7214
+      },
+      "src/career_lab/rubrics/v4/practice.py": {
+        "sha256": "e5ea26093a678fdc37fa2f363af7eefecf4096686c974a4aa005097ebfdcbaf2",
+        "size": 5358
+      },
+      "src/career_lab/rubrics/v4/provider.py": {
+        "sha256": "d8148696a2342676e058cb2c6667fdc153ae82d788abfbf8f5c56dcd0c79f635",
+        "size": 1920
+      },
+      "src/career_lab/rubrics/v4/rubric_v2.py": {
+        "sha256": "d4ebb4b61dd8554bf37447a874fb3bdd7e9267d977bf2bb6e1e0c4512cf85394",
+        "size": 15150
+      },
+      "src/career_lab/rubrics/v4/rules.py": {
+        "sha256": "30e4f8c9b2a5e197bdfd35960cf09007bc5d27fa29de5b89e8faa34f5627afa2",
+        "size": 6136
+      },
+      "src/career_lab/rubrics/v4/rules_v2.py": {
+        "sha256": "e5b2e15b9e62726562df92188b5887f2f10bf910354b67d921ad257030933cf6",
+        "size": 15764
+      },
+      "src/career_lab/rubrics/v4/support.py": {
+        "sha256": "97d9428c14b53362b5d7a49916a02f61ac6edd208a471fe24edeb33f82a06ee8",
+        "size": 6405
+      },
+      "src/career_lab/storage/revisions.py": {
+        "sha256": "dccd20c0bcb92a6d60d9634429483b9d89829c8c7c1f11e2ccc8ede737ce2c2e",
+        "size": 661
+      },
+      "tests/e2e/test_w05_legacy_dispatch.py": {
+        "sha256": "df9daaa3e10793b6a0ebea153a62179c80a50b46f729ab709c9b3bc1b377cc6a",
+        "size": 2250
+      },
+      "tests/e2e/test_w05_native_server.py": {
+        "sha256": "29ec12336cb6dc4c75d8c5f3d0372b48ab1d236cfbdf2743203709996e940719",
+        "size": 5907
+      },
+      "tests/integration/test_w05_bilingual_persistence.py": {
+        "sha256": "d1684d11c4d8d73570f502bcc9ffeabab1e2f81f767625c89a9bf06f68ad1d1b",
+        "size": 4114
+      },
+      "tests/integration/test_w05_c8_persistence.py": {
+        "sha256": "01dd46243acb3d10a667185ad26e16ba70c387357527efb8b85e0a321b1cd710",
+        "size": 17973
+      },
+      "tests/integration/test_w05_frozen_w02.py": {
+        "sha256": "329b26924f0271ce54967ecea5ba9f3d243524eed727d9e77711dc164e334608",
+        "size": 12320
+      },
+      "tests/integration/test_w05_rubric_v2_persistence.py": {
+        "sha256": "d8c6ccb7eba0c67994ce4ea559fe69108be3cf36019b0e5a2b21ad38759fe28c",
+        "size": 6926
+      },
+      "tests/integration/test_w05_store_reader.py": {
+        "sha256": "b1f21a4dc386b8d5bca0a94c27e31bfb08160430de9e433754b72f4ba7b41132",
+        "size": 14121
+      },
+      "tests/unit/test_w05_bilingual.py": {
+        "sha256": "a12d079ee17e513948b1bfbac43389c7b123fffd855cd61fa0e330b241b4ac76",
+        "size": 8006
+      },
+      "tests/unit/test_w05_default_facts.py": {
+        "sha256": "b62ef3c954419964923b0f61d89e5ac68e9cc59fb3a7aa98fde94724dfecb7d0",
+        "size": 17623
+      },
+      "tests/unit/test_w05_legacy_repository_fixture.py": {
+        "sha256": "871a91e7fbbe216b23353dced9c203e67043fab165a884ca8268e286f5300c6b",
+        "size": 9249
+      },
+      "tests/unit/test_w05_legacy_service_fixture.py": {
+        "sha256": "bad071c3e473ed589ab28e6e7b0b9fd9bbfdd4030a2efb5933ac6becb34c106a",
+        "size": 18647
+      },
+      "tests/unit/test_w05_local_fallback.py": {
+        "sha256": "975817bb3d8aa23ffc95621e5e7210953895f3b93a60e9cd29a7adde65b4b854",
+        "size": 10047
+      },
+      "tests/unit/test_w05_pipeline.py": {
+        "sha256": "0a061cc82d31b1fa57d115c61f1aa8081dd29a374096adb33c83693d90ad7acf",
+        "size": 40333
+      },
+      "tests/unit/test_w05_practice.py": {
+        "sha256": "794caee8832d1825b86d2754468a1e7b12bc55c096fdf7825c34dce181a82877",
+        "size": 4605
+      },
+      "tests/unit/test_w05_preui_p2.py": {
+        "sha256": "b7a520cf8c03b227bec71fa2d00d483d664d8b7f3ff7edd749aafb552b1752ec",
+        "size": 3073
+      },
+      "tests/unit/test_w05_responsibility_support.py": {
+        "sha256": "9f96eac2c7f7b235d6943d95e04de9beb72abc727d436aecd6c635819818b7c9",
+        "size": 7494
+      },
+      "tests/unit/test_w05_rubric_v2.py": {
+        "sha256": "70de78404758ec3bdebc0ee3a6b2a2b2f80a902e002855dd085a3b5854fec127",
+        "size": 15630
+      }
+    }
+  },
+  "W06": {
+    "commit": "0b3788105a1e53a50425781ba48c7afdd4bf9986",
+    "workspace": "/Users/jefmacmini/Projects/rolecraft-worktrees/036-w06",
+    "source_digest": "7b3dae679a62cfed8132cd62f7cd5047a861dff6586e4a607e366eca0a96012d",
+    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W06/W06-20261007-044-v4-slot-r7.json",
+    "files": {
+      "apps/web/src/features/agent-native/README.md": {
+        "sha256": "c9d3d6802b3d72427a67b0ee61f38c9d768efaccafebccd4adf010eb51c3fe36",
+        "size": 5380
+      },
+      "apps/web/src/features/agent-native/model.test.ts": {
+        "sha256": "72f7e2b6a1516b838650de62602cfcd2703216e9def6e15aee58f8ff8474a2c9",
+        "size": 3426
+      },
+      "apps/web/src/features/agent-native/model.ts": {
+        "sha256": "4b41e56603882c69eae35beb92d1c30e0f6d17e986ce24f974d6636100bf72d8",
+        "size": 6570
+      },
+      "apps/web/src/features/agent-native/v4-slot.browser.mjs": {
+        "sha256": "55a138258be0c4e2cd37cb30397134ef9ba8e353900846d12a384969180cbd1f",
+        "size": 17684
+      },
+      "apps/web/src/features/agent-native/v4-slot.css": {
+        "sha256": "25d48477172971afb40e0091b9fc0706fb9d7e6b95f2b6cc7363ec8d126c737c",
+        "size": 1084
+      },
+      "apps/web/src/features/agent-native/v4-slot.ts": {
+        "sha256": "eb70cadf15f87a526dc7b37c39aae42b9a2f9cd187b3b22e136a35b74ed2411f",
+        "size": 21057
+      },
+      "docs/modules/expansion-v3/W06.md": {
+        "sha256": "b57d4bb8dc18539d67a74444b784a5271c5f338772ddf5cbbcdf651b4d549245",
+        "size": 24668
+      },
+      "examples/byo_agent_client/__init__.py": {
+        "sha256": "f96812fee498d35eec1fa487db3be5b42a663fe2c22f900648048ff854e99824",
+        "size": 85
+      },
+      "examples/byo_agent_client/codex_client.py": {
+        "sha256": "96024a7be7188880fcab3d21be640c291eeb82fed9551827909ce3c105d96790",
+        "size": 4630
+      },
+      "examples/byo_agent_client/service_check.py": {
+        "sha256": "38b4ed6d0a66e3ae06b6aa99838c2555ada7f67d0c44aac82f1f2ef3cc7302f7",
+        "size": 21721
+      },
+      "examples/byo_agent_client/workflow.py": {
+        "sha256": "18ddbf88fd0d55eb3e581b8c8273ca9c20089d5ee09beea9c079926cb9174816",
+        "size": 5834
+      },
+      "examples/byo_agent_minimal.py": {
+        "sha256": "766c0202db1ca59ff93cb7163c44f54414f4acefbe5238557596b7ba0538e2b5",
+        "size": 1886
+      },
+      "src/career_lab/api/delegations_v2.py": {
+        "sha256": "4b3c84b91bf7bf66c3b3bfb5c5d57257f80d2f4c34633d39f6227f5403feddb2",
+        "size": 2086
+      },
+      "src/career_lab/delegations/__init__.py": {
+        "sha256": "3dceb72302e48388ed6d2816d63a9dd6720fbe4da4ba0574bb5aaff7bd34c875",
+        "size": 71
+      },
+      "src/career_lab/delegations/__main__.py": {
+        "sha256": "02e1317228807eb065e6eff75a345f373de15dd4774ce89bd26e0887ff5c8a81",
+        "size": 895
+      },
+      "src/career_lab/delegations/catalog.py": {
+        "sha256": "3d0c2940f5a0fe1f0742d3916ed86b84394c5a33733742dcec2bc146c93e4877",
+        "size": 5251
+      },
+      "src/career_lab/delegations/credentials.py": {
+        "sha256": "c6994a8d6850d226cc24dc17332bdc852faa2dc3600ce0b8e326d93b6a06c874",
+        "size": 1994
+      },
+      "src/career_lab/delegations/factory.py": {
+        "sha256": "091dcfb5535b256e923ece6b329f6ab7740c994066a4cae65962f4e46358e192",
+        "size": 2989
+      },
+      "src/career_lab/delegations/http_client.py": {
+        "sha256": "b68ca2656257bb3749d6cd3b14b9a0a96d0ea4b9515f2b52c8990fee9007bb87",
+        "size": 7729
+      },
+      "src/career_lab/delegations/localization.py": {
+        "sha256": "6d36dc16f8f932217a7deb0e75a03e4f37e7786d87bd902f5069fefe02caa512",
+        "size": 1001
+      },
+      "src/career_lab/delegations/observation.py": {
+        "sha256": "30889f5f73a206be43d37725388b59f4e20cef9dbc18bbb672c398671294da56",
+        "size": 3747
+      },
+      "src/career_lab/delegations/openai_tools.py": {
+        "sha256": "88029777694366ccbce462c8b2beb963299b0ad84f503e24c40ffa13e50e274b",
+        "size": 4080
+      },
+      "src/career_lab/delegations/public_output.py": {
+        "sha256": "f32971a4250c8a0a914e2df0cf2966ee1c058e40988b462598d003962c214220",
+        "size": 2462
+      },
+      "src/career_lab/delegations/service.py": {
+        "sha256": "e906844f75580b719da1f7554afda9725c816078118b2cba9b65492329c961bb",
+        "size": 6354
+      },
+      "src/career_lab/delegations/sources.py": {
+        "sha256": "92153070bb5038a3e1468336c7a6b71358300c9860ca128bd0de3100dd8d8a33",
+        "size": 7549
+      },
+      "src/career_lab/mcp/__init__.py": {
+        "sha256": "df63f1c59a77e2741d9c7841047c39317257958a4b43191ef0f700a0bc10ea07",
+        "size": 79
+      },
+      "src/career_lab/mcp/__main__.py": {
+        "sha256": "abab6ba315ae2efb408e16d35049c7dc0286a214401ad535b40411865f4e61b3",
+        "size": 1172
+      },
+      "src/career_lab/mcp/protocol.py": {
+        "sha256": "0764cdbab917442f69477969edc4dc0aa7ed258fbbf03004957ba872ae08f016",
+        "size": 6095
+      },
+      "src/career_lab/mcp/stdio.py": {
+        "sha256": "8d16584615ba1ae81c1429394765f0b25063647618dfd8e0e932ba29732ac248",
+        "size": 4156
+      },
+      "tests/e2e/test_w06_codex_client.py": {
+        "sha256": "404133c4435f8390137979ada2caa747c5b19e17be721c4c2ff5859fb793008c",
+        "size": 7416
+      },
+      "tests/e2e/test_w06_openai_tools.py": {
+        "sha256": "1c765863f4a37fd029bf2dfea07d3d19ec9b6970eee416b500e5839bae8d70d4",
+        "size": 7036
+      },
+      "tests/e2e/test_w06_service_check.py": {
+        "sha256": "99ec862c897522e05382a720ab81e2c9523fa57721bae22fcb4f5bf9fc2c3084",
+        "size": 11635
+      },
+      "tests/e2e/test_w06_stdio.py": {
+        "sha256": "dafd6a72af40345c0e29c1f20fd79b5465cc8d1a224f66593eef91ad993261b3",
+        "size": 25861
+      },
+      "tests/integration/test_w06_gateway.py": {
+        "sha256": "cd0f8783ac108bc2847e9cf34570a090acb1091b881761d1d02b2880a48bc558",
+        "size": 18869
+      },
+      "tests/integration/test_w06_production.py": {
+        "sha256": "d2e19dfb55674cd9fd37f9191b13b7122dc4e41a2dbf0f914da96d4b8b2055dd",
+        "size": 10186
+      },
+      "tests/unit/test_w06_transport.py": {
+        "sha256": "62ce5d69046a2610b5e4929a85fd44c4cbb714f43cc2869730375e5484a93d87",
+        "size": 5512
+      }
+    }
+  }
+}

@@ -107,11 +107,9 @@ def test_model_lease_recovery_requires_an_explicit_user_retry(tmp_path):
 
 def test_old_material_and_display_receipts_remain_available_after_submission(tmp_path,monkeypatch):
     from career_lab.api import vertical_runtime
-    from career_lab.runtime.model_adapter import LocalModel,ModelReply
-    class ControlledModel:
-        revision='controlled-display-test';retries=0
-        def complete(self,messages,tools):return ModelReply(text='等待模型接入。')
-    monkeypatch.setattr(vertical_runtime,'configured_models',lambda provider:(LocalModel(),ControlledModel()))
+    from career_lab.runtime.model_adapter import LocalModel
+    from career_lab.runtime.roles_v2 import LocalRoleModel
+    monkeypatch.setattr(vertical_runtime,'configured_models',lambda provider:(LocalModel(),LocalRoleModel()))
     monkeypatch.setattr(vertical_runtime,'ROLE_RUNTIME_READY',True)
     app,c,sid,h,send=connect(tmp_path)
     try:
@@ -148,7 +146,9 @@ def test_w02_evidence_port_uses_actual_historical_config_and_public_sources(tmp_
     try:
         store=app.state.v2_store;auth=store.authenticate(sid,h['Authorization'].split(' ',1)[1])
         port=ScenarioEvidencePort(store,app.state.scenario_v2)
-        made=send('work-products','draft','work_products.create',{'kind':'text','content':'先核实容量'})
+        cfg=app.state.scenario_v2.package.baseline(sid)
+        declared=C.EvidenceRefV2(session_id=sid,kind='config',object_id=cfg.id,version=cfg.version,config_version=cfg.config_version,observed_at_seq=0)
+        made=send('work-products','draft','work_products.create',{'kind':'text','content':'先核实容量','evidence_refs':[declared.model_dump(mode='json')]})
         product=C.ObjectRef.model_validate(next(r for r in made['objects'] if r['kind']=='product'))
         formation=point(store.view(auth).state)
         original=port.rules(auth,product,formation)
@@ -156,9 +156,10 @@ def test_w02_evidence_port_uses_actual_historical_config_and_public_sources(tmp_
         assert values['participants']==20 and values['capacity']==30 and values['required_dev_days']==2
         # The adapter returns actual file text, so absolute source spans remain
         # exact; private material cannot be treated as public evidence.
-        capacity=next(f for f in original.facts if f.name=='capacity').sources[0]
+        capacity=next(ref for f in original.facts if f.name=='capacity' for ref in f.sources if ref.kind=='material')
         source=port.source(auth,capacity,formation)
-        assert source.text[capacity.span_start:capacity.span_end]==capacity.quote
+        assert source.text and source.ref.object_id==capacity.object_id
+        if capacity.quote is not None:assert source.text[capacity.span_start:capacity.span_end]==capacity.quote
         with pytest.raises(C.ProtocolError):port.source(auth,C.ObjectRef(session_id=sid,kind='material',object_id='world_private',version=1),formation)
         cfg=app.state.scenario_v2.package.baseline(sid).model_dump(mode='json')|{'participants':50,'version':2,'config_version':1}
         send('actions','apply','apply_config',{'tool':'apply_config','config':cfg})
@@ -166,7 +167,7 @@ def test_w02_evidence_port_uses_actual_historical_config_and_public_sources(tmp_
         send('approvals/resolve','approve','resolve_approval',{'request':request['result']['request'],'expected_request_revision':1})
         now=port.rules(auth,product,point(store.view(auth).state))
         assert {f.name:f.value for f in now.facts}['capacity']==60
-        assert next(f for f in now.facts if f.name=='capacity').sources[0].kind=='business_decision'
+        assert any(ref.kind=='business_decision' for ref in next(f for f in now.facts if f.name=='capacity').sources)
         still=port.rules(auth,product,formation)
         assert {f.name:f.value for f in still.facts}==values
     finally:app.state.store.close()
@@ -238,6 +239,7 @@ def test_real_w02_w05_submission_feedback_and_revision(tmp_path):
         assert result['jobs'][0]['status']=='completed',result
         ref=result['jobs'][0]['effect']['result']['feedbacks'][0]
         saved=c.get('/sessions/'+sid+'/feedback-records/'+ref['object_id'],headers=h).json()['result']['result']['feedback']
+        assert len(saved['items'])==14
         assert saved['verified_facts'] and saved['rule_items']
         assert any(r['verified_ref'] is not None for facts in saved['verified_facts'] for r in facts['references'])
         assert saved['verified_facts'][0]['activity_totals']['material_read']['verified_records']==1

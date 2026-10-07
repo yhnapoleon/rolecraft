@@ -1,23 +1,26 @@
-# 中文纵切部分候选：启动和接续
+# v4 公共数据层与模块接线
 
-2026-10-07 16:37用户纠正：v4是唯一用户界面。92aed63将独立接线页替代v4根入口的做法已撤回。本文记录后端与开发自测边界。当前是 W14 部分候选，完整七步、录屏和最终验收没有宣称通过。源码身份与精确模块输入以项目接口预览中的 `w14-native-vertical-20261007/manifest.json` 为准。
+本页是032的实现与复现入口。v4（app/ui.js）是唯一用户界面；独立vertical-workbench只保留DEV下的`?dev-v2=1`诊断入口，不加功能、不作为产品验收依据。本批是M1部分实现，不能称M1或整包完成。
 
-## 正常入口
+## 当前实际结果
 
-仓库根运行下列两条命令，API 与 worker 必须共用同一个数据库和 provider。当前默认装配函数为 `career_lab.api.vertical_runtime.create_runtime_app`；不需测试bootstrap或私有router。
+- 正常根入口创建固定工作语言的v2会话，凭据仍只由WorkspaceStore管理；`protocol`明确区分旧v1与新v2。旧v1会话及本机作品保留原路径，未自动迁移。新练习先经统一host批量保存入口上显示的三件事项，再标记v2NativeWorkspace启用原生投影；c17中间版未标记的本机作品继续保全，不用空服务端列表覆盖。
+- LiveWorkbench/V4LiveData把真实v2材料、配置、试用投影到原v4。设置在服务器验证base并产生下一版本，客户端不加版本、不预填测试问题、不替用户选择工作项。
+- V4DataHost是v2唯一Command/恢复journal及模块draft服务；模块不拿token/raw transport。recover只GET，retry是主动新尝试；网络/5xx保留未确认，存储失败不发送命令并保全草稿。workspace_imports preview经原只读handler，不能借query执行apply。
+- objects.read走Gateway；read_material、原请求恢复/重放和材料对象公开读取去除内部fact_ids，原持久记录与原文/span/版本不改。GET /reviews复用reviews.read返回授权历史列表，host可无review_id分页。workbench.read在一个授权view返回固定语言、三轴点、独立roles/feedback/assistant语义状态、材料和timeline。当前provider local，模型语义均“等待模型接入”。
+- W02真实ScenarioFactAdapter已接W05完整14项规则/反馈和实际历史，提交→worker反馈→修订回归通过。全文证明只接受原文件每个片段均公开、身份/时间/原文全部吻合的确切全文；不删除或缩短证明规避验证。
+- W06已在标准serve/worker装配，PublicHistoryWindow在当前查询事务内读实际公开事件和材料读取回执；目录不冒充已获取知识。端口离开事务后失效。v4授权状态列表、凭据一次性配置导出与真实Codex实操尚未接通。host将delegations.create/revoke明确置为不可用并在派发前拒绝：W06控制面返回含私密token且尚无统一事务回执，不能当普通Command发送后误报失败、再重试签发第二份授权。
+
+## 复现
+
+原c15数据库完整保留。本批通过SQLite backup建了新副本，旧v1记录随副本可读；未改签旧v2场景。实际进程：
 
 ```sh
-.venv/bin/career-lab serve --host 127.0.0.1 --port 18832 --database-url sqlite:///runs/local/expansion-v3/W14/20261007-032-vertical/candidate-c15.db --provider local
-.venv/bin/career-lab worker --database-url sqlite:///runs/local/expansion-v3/W14/20261007-032-vertical/candidate-c15.db --provider local
+.venv/bin/career-lab serve --host 127.0.0.1 --port 18832 --database-url sqlite:///runs/local/expansion-v3/W14/20261007-032-native-slots/c18.db --provider local
+.venv/bin/career-lab worker --database-url sqlite:///runs/local/expansion-v3/W14/20261007-032-native-slots/c18.db --provider local
 ```
 
-在 `apps/web` 运行：
-
-```sh
-ROLECRAFT_API_TARGET=http://127.0.0.1:18832 npm run dev -- --port 18830
-```
-
-正常根入口为 `http://127.0.0.1:18830/`，**默认v4（app/ui.js）**，`?v2=1`也进入v4。当前v4数据桥仍使用v1；接下来在原工作板、文件夹、同事与反馈位置接入v2，旧v1记录仍可读。独立接线页仅在开发服务器的 `?dev-v2=1` 可打开，标明“开发自测”，不作为用户入口或纵切验收依据，不再增加功能。生产构建不启用此参数。独立QA可改成自己的空数据库及未占用端口，并同步修改前端代理；不要复用旧工作树的数据库/凭据。
+在apps/web运行`ROLECRAFT_API_TARGET=http://127.0.0.1:18832 npm run dev -- --port 18830`，打开`http://127.0.0.1:18830/`。独立QA使用自己的端口/浏览器profile和数据库，避免同源练习选择互相影响。当前只装了中文运行包；英文请求明确返回work_language_unavailable，不静默改成中文。
 
 ## v4容器约定与三步接线
 
@@ -35,7 +38,7 @@ ROLECRAFT_API_TARGET=http://127.0.0.1:18832 npm run dev -- --port 18830
 
 ### 模块独占slot与统一host类型
 
-共享类型已落在`apps/web/src/v4-host.ts`（`V4HostAdapter`、`V4SlotContext`、`V4SlotHandle`），目前是接口声明，实际统一数据层待032实现。模块不拿token或raw transport，不构造Command/envelope、猜版本或维护第二恢复流程；只调用host.query/command/recover/retry及同一draft存储。`command`只收业务意图，`recover`只恢复旧请求，真实重试必须单独显式动作。工作语言从固定session读取，界面语言独立；反馈自己的semantic_status通过反馈DTO读取。
+共享类型在`apps/web/src/v4-host.ts`（`V4HostAdapter`、`V4SlotContext`、`V4SlotHandle`），基础wire类型现由公共`contracts-v2.ts`导出，不再依赖W03目录。`v4-data-host.ts`已实现统一命令/草稿journal、只读recover和主动retry，`v4-operations.ts`集中维护业务操作到正式路由的映射；已接入LiveWorkbench的新v2会话、材料、配置和试用；模块原位挂载尚未完成。模块不拿token或raw transport，不构造Command/envelope、猜版本或维护第二恢复流程；只调用host.query/command/recover/retry及同一draft存储。`command`只收业务意图，`recover`只恢复旧请求，真实重试必须单独显式动作。工作语言从固定session读取，界面语言独立；反馈自己的semantic_status通过反馈DTO读取。
 
 | 实施线 | 专属slot文件（由046按此登记放行） | 032提供的真实nodes与数据 | 模块作者须自己完成/去掉 |
 |---|---|---|---|
@@ -50,49 +53,28 @@ ROLECRAFT_API_TARGET=http://127.0.0.1:18832 npm run dev -- --port 18830
 
 所有模块沿`docs/design/frontend-style.md`及现有CSS变量，不挂`WorkspacePanel.tsx`或`recovery-browser.tsx`早期React页，不把独立CSS与新导航原样覆盖v4。相关切片验浅/深色、小屏、键盘和草稿恢复。v4负责路由、选择态、焦点/动效及mount/destroy；模块负责自身业务内容，不能创建顶层应用或另一套恢复流程。
 
-公共接口同步项属于同一数据层任务：objects读取移入Gateway Operation（turns.display已有正式Operation，保留统一入口）；完整Command和只读恢复从同一账本取；工作语言固定到会话/任务上下文；绑定046固定的W02/W05准确输入后真实重绑场景，记录冻结期必要变更理由。每个可测切片独立提交并给043在v4根入口验证。
+宿主返回约定：`query`返回正式Gateway读取结果中的业务DTO；`command`返回`{requestId,status,result}`，其中result为业务结果。`recover`/`retry`的恢复结果包含原RequestResult及jobs；恢复只GET，网络/5xx后的未确认命令会阻止新的写入。服务器明确返回request_not_found后，只有用户主动retry才用新边界和新请求键重新尝试。模型任务仅通过用户主动的jobs.refresh重试；旧命令保持不变。draft写失败保留内存文字，flushDrafts补存，模块不得在失败时销毁唯一输入。
 
-## 当前可测与缺口
+snapshot新增独立`semantic.roles/feedback/assistant`状态，值为waiting_model/model/unavailable；未取得正式workbench.read时三项均unavailable，不从同事mode推断反馈能力。query映射、只读导入预览、统一journal、正式session/context与LiveWorkbench切换已实现；模块原位挂载仍在实施。semantic字段为兼容a276消费者保持可选，实际host始终提供三项状态。
 
-- 标准装配含W02、W03后端、W04 r7生产私有端口与原生同事部件、W05 r9生产reader/反馈worker与原生反馈部件。材料、配置、助手试用、实际资源申请、角色发送/保存/追问/显示记录可测。
-- W03新原生作品部件尚未固定到本候选；“我的作品”仍显示接入提示。作品、分享、提交接口和W05两轮反馈已由真实API/SQLite/公共worker验证，但**完整浏览器创建作品→分享→提交链尚未完成**。W03后续从031固定的准确owned输入装配，不复制它的旧公共层。
-- W02业务内容仍为b821b0e r6。运行绑定和EvaluationBundle已真实生成；新中文内容检查点524dca4及英文包尚未装入。旧测试数据库及旧绑定保留，不静默改签历史会话。
-- 当前W05使用冻结的7项本地advisory责任政策及准确源码哈希，语义没有评分。技术原稿14项rubric与政策更新后复测/调整的完整反馈由040/041后续交付，不能将这7项等同最终rubric。
-- 全链PostgreSQL、英文体验、真实provider质量、七步录屏和独立产品QA未完成；已知包级剩余项仍见任务登记及排期清单。
+公共接口同步项属于同一数据层任务：objects读取已移入Gateway Operation（turns.display保留统一入口）；完整Command和只读恢复从同一账本取；工作语言固定到会话/任务上下文；绑定046固定的W02/W05准确输入后真实重绑场景，记录冻结期必要变更理由。每个可测切片独立提交并给043在v4根入口验证。
 
-## 模型与重试
+## 固定输入与验证边界
 
-当前 `--provider local`：角色界面为 `local_reference`；反馈为 `placeholder`，语义显示“等待模型接入”，可核实内容标“规则核实”。没有线上调用、模型下载或费用。
+准确模块输入及逐文件SHA见[v4-fixed-inputs.json](v4-fixed-inputs.json)。W02 a8ec5b8、W03 0a14963、W04 a5a94fa、W05 9550087、W06 0b37881；仅复制各自owned文件，没有复制他人的公共层或未提交活动树。W03原工作板、纸面与表单薄挂载已实现，实操新建三事项和作品v1→v2；完整W03交互未验。W06 slot已继承，尚未挂进正常v4。
 
-后续兼容provider使用 `CAREER_LAB_KEY_FILE`、`CAREER_LAB_BASE_URL`、`CAREER_LAB_MODEL`；key仅由进程读取本机文件，不进数据库/源码/日志。支持的真实adapter要求`retries=0`；标准CLI和直接API工厂的真实模型handler均禁止自动重排，租约过期也不能自行重调。Judge修复循环的同一输入被公共单次调用包装拦住；实际线上语义与调用计数仍须接真实配置后独立验证，当前不声称通过。
+原位已实操：创建中文v2练习；打开真实委托；测试c0取得500元原文；从练习列表重开并刷新后保留测试；原设置将人数20改为12，服务器产生config v1、政策源v2/索引v1，原c0测试保持500元。旧v1调查作品仍可见。截图、操作记录与数据库核对进入`runs/local/expansion-v3/W14/20261007-032-v4-host/`，不是七步验收。
 
-用户显式 `jobs.refresh` 可恢复failed模型任务及needs_context，重新检查原身份、scope、subject和上下文。普通永久输出冲突仍不能刷新。原请求键恢复不自动发送新模型调用；失败输入和旧记录保留。
+本批后端组合/契约18项、前端207项（7跳过）、原v4状态72项通过；完整npm build通过。原W03三处Mock类型错误已通过作者bab8870解除；再继承0a14963的原表单/迟到确认修复。截图与数据库证明在`runs/local/expansion-v3/W14/20261007-032-native-slots/`。浏览器发现并修复stage外层不换、内部换纸面时的旧绑定问题；重试浏览器审批一次后已看到真实作品v2，但不声明完整纵切通过。
 
-## 精确数据与公共接口
+## 接下来
 
-`VerticalClient`统一v2凭据、Command和原请求恢复；W03继续用唯一WorkspaceClient/journal。角色和反馈部件只使用注入adapter，不持有token。`turns.display`仅在确切公开回复实际可见后记录，不能把轮询当展示或理解。
+1. 从本批W03基本挂载继续验表单、文件夹、调查、分享/撤回、草稿与迟到响应。原任务标题区优先级/状态等未接管的旧同步写入口目前受guard拒写；接手线需完成这些原位入口，不能删guard改成本机假成功。
+2. 继承039/040的准确slot提交，完成同事/申请、作品提交到反馈/补证/修订；中文七步A/B截图与操作记录。
+3. 完成W06授权列表/控制面恢复/一次性私密配置导出，补W04真实模型持久调用端口；英文真实重绑、AC15补练、干净环境和小屏验证。
+4. 外部真实模型配置到位后只改配置复验，核对单次调用与全部AC；当前不新增线上费用、不声称模型质量已验证。
 
-W05：`install_lifecycle`在同一事务保存提交/评审并排反馈job；`create_feedback_handler`消费实际固定subject，使用StoreEvidenceReader与W02授权材料/历史规则端口，经真实WorkerClaim写反馈。`query_at`读取真实三轴历史点并重查当前权限；原作品形成点、提交点与读取点不互换。源文件必须全部对当前调用者可见才作为全文坐标基准，部分不可见则相关来源待核验，不传私有全文或拼假引文。
+只在本人分支本地commit。没有push、merge、PR或部署。整包reviewed/integrated留最终独立验收。
 
-角色：公共`activated_catalog`及历史来源恢复把创作包零时点映射为真实会话激活；角色获知仍由实际事件/分享决定。此修复处理真实第二轮`reference_time_mismatch`，未重写旧记录或放宽W02引用验证。
 
-`GET /objects/{kind}/{id}/{version}`回跳授权的精确版本，提交后仍可只读。阅读事件引用只支持明确的公开文本投影，不接受任意原始事件quote。
-
-### 给W06的范围
-
-已可用：`career_lab.api.vertical_reads.public_event_history(store, registry, auth, at, since_seq=0, view=None)`；在现有query里传`view`，避免SQLite嵌套事务。它按持久化operation选择已安装projector，返回真正授权的PublicEvent元组；`GET /timeline`也含events。材料目录不冒充阅读，`actions/read_material`保存实际读取及片段；只读材料端点见上。
-
-**尚不可用：** W06请求的同query `public_history(view,page,auth) -> PublicHistoryWindow`完整扫描窗口及全部MaterialReadReceipt尚未实现；`mount_delegations`也未在标准工厂调用，本候选未安装W06 owned包，MCP生产链不能标通过。后续在既有端口上补薄适配与一次挂载，不能另造权限/时钟/队列。具体请求沿项目`完成回执/W06/036-production-mount-request.json`。
-
-## 重现与验证
-
-仅在公共源已固定后运行，实际W02生成器在临时目录生成整包，再拒绝任何业务文件差异，只安装runtime与外层manifest：
-
-```sh
-.venv/bin/python -m career_lab.contracts.v2.export --output docs/contracts/expansion-v3
-.venv/bin/python docs/integration/rebind_runtime.py --with-w05 --evidence runs/local/rebind-evidence.json
-.venv/bin/python docs/integration/check_public.py --artifacts runs/local/new-public-check
-.venv/bin/python -m pytest -q --tb=short tests/integration/test_w14_vertical_runtime.py --basetemp=/private/tmp/rolecraft-vertical-check
-```
-
-下述接线页浏览器结果只作开发自测，不能计入v4纵切通过。本轮公共回归531通过/1跳过；新增纵切集成10通过；前端152通过/7跳过、72项状态回归通过、构建通过。原第一次公共回归的4条失败及真实追问失败记录均保留。浏览器工作树验证覆盖500→旧索引500→新索引400、容量申请拒绝/批准后30→60、正常命名问题、跨worker追问与草稿重开；不冒充最终冻结候选完整七步验收。
+2026-10-07 20:06—20:07后按用户决定收束此partial检查点，由046分发新①v4主流程接手。当前不开始下一里程碑，不标七步、M1或整包通过；实际任务状态和交接从项目登记及032交接页进入。

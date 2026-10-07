@@ -10,6 +10,22 @@
       "const": 2,
       "title": "Schema Version",
       "type": "integer"
+    },
+    "work_language": {
+      "anyOf": [
+        {
+          "enum": [
+            "zh",
+            "en"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Work Language"
     }
   },
   "required": [

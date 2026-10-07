@@ -28,6 +28,8 @@ def combined(request,tmp_path):
     module=ScenarioModule(Path(os.environ.get('W05_W02_SCENE_ROOT',str(repo/'installed/scenarios/pm_pilot/v2'))),work_language=request.param)
     registry=module.install(ExtensionRegistry());install_workspace_operations(registry,roles=tuple(r.id for r in module.package.bundle.role_specs));install_feedback_recovery(registry)
     registry.register(Operation('submissions.create','submit',C.SubmitInput,submission_plan_with_feedback))
+    from career_lab.storage.v2_lifecycle import begin_revision
+    registry.register(Operation('revision_cycles','act',C.BeginRevisionInput,begin_revision,action_name='begin_revision'))
     app=create_app('sqlite:///'+str(tmp_path/'combo.db'),extensions=registry);holder={}
     def generate(view,envelope,actor):
         h=holder['h'];subject=C.FeedbackInput.model_validate(envelope.command.payload).subject
@@ -90,6 +92,7 @@ def test_w05_frozen_w02_full_feedback(combined,branch,tmp_path):
         report=C.FeedbackV2.model_validate(rows[0].content);by_id={x.criterion:x for x in report.rule_items}
     by_id={x.criterion:x for x in report.rule_items}
     assert len(report.items)==len(by_id)==14 and len(report.verified_facts)==2
+    assert report.read_projection is None
     assert report.mode=='advisory' and all(x.source!='model_advice' for x in report.items)
     assert not any(x.label=='NOT_MET' for x in report.items if x.criterion in {'R1.target','R1.metrics','R6.alternatives'})
     for cid in ('R3.capacity','R3.resources'):
@@ -108,3 +111,27 @@ def test_w05_frozen_w02_full_feedback(combined,branch,tmp_path):
         'feedback_sha256':before,'source':'real FastAPI TestClient / Gateway / SQLite / worker; frozen W02 r9 actual material/config/policy/test/approval producers',
         'feedback_persisted':not generation_only,'history_boundary':'in-process exact capture after each actual command, not W14 production history reader','initial_answer_preserved':old['answer']}
     (folder/(h.module.work_language+'-'+branch+'.json')).write_text(json.dumps(record,ensure_ascii=False,indent=2)+'\n')
+
+
+def test_w05_real_w02_supplement_revision_preserves_original(combined,tmp_path):
+    h,worker,queue,holder=combined
+    question='住宿报销上限是多少？' if h.module.work_language=='zh' else 'What is the hotel reimbursement limit per night?'
+    h.apply(freshness_guard='warn');h.post('actions','refresh_index',{'tool':'refresh_index'});tested=h.run(question)
+    original_work=h.product('A limited launch subject to checking the policy version.')
+    original=h.submit((original_work,),'launch_narrow');assert worker.run_once()
+    row=next(r for r in h.store.view(h.auth).objects if r.ref.kind=='feedback');before=C.digest(row.content)
+    for kind in ('objection','supplement'):
+        result=h.post('feedback/'+row.ref.object_id+'/responses','feedback.responses.create',{'feedback_id':row.ref.object_id,'feedback_version':row.ref.version,'kind':kind,'section':'rule_items','criterion':'R4.staleness_test','text':'Please check the current policy and actual retest.','evidence':[tested['citations'][0]]})
+        assert result['result']['evidence_status']=='user_submitted_unverified'
+    assert C.digest(h.store.read(h.auth,row.ref).content)==before
+    h.post('revision-cycles','begin_revision',{'parent_submission':{'session_id':h.sid,'kind':'submission','object_id':original.id,'version':original.version},'reason':'Revise with the recorded policy evidence.'})
+    edit=h.post('work-products/'+original_work.object_id+'/versions','work_products.versions.create',{'product_id':original_work.object_id,'expected_head':1,'kind':'text','purpose':'commitment','title':'Revised decision','content':'Revised with current policy evidence and a fresh test.','evidence_refs':[tested['citations'][0]]})
+    updated=C.ObjectRef.model_validate(edit['result']['ref']);assert updated.version==2
+    h.run(question);later=h.submit((updated,),'launch_narrow');assert worker.run_once()
+    reports=[r for r in h.store.view(h.auth).objects if r.ref.kind=='feedback'];assert len(reports)==2
+    assert C.digest(h.store.read(h.auth,row.ref).content)==before
+    new=next(r for r in reports if r.ref!=row.ref);assert len(new.content['items'])==14 and new.content['subject']['object_id']==later.id
+    original_ref=C.ObjectRef(session_id=h.sid,kind='submission',object_id=original.id,version=original.version)
+    assert C.SubmissionV2.model_validate(h.store.read(h.auth,original_ref).content)==original
+    folder=Path(os.environ.get('W05_COMBO_EVIDENCE_DIR',str(tmp_path)));folder.mkdir(parents=True,exist_ok=True)
+    (folder/(h.module.work_language+'-revision-proof.json')).write_text(json.dumps({'original_feedback':row.ref.model_dump(mode='json'),'original_feedback_hash':before,'original_submission':original.id,'next_submission':later.id,'next_feedback':new.ref.model_dump(mode='json'),'original_version':original_work.model_dump(mode='json'),'revised_version':updated.model_dump(mode='json'),'responses':2,'feedback_persisted':True,'source':'actual W02 HTTP actions + W05 reader/evaluator + shared worker/SQLite','history':'original feedback/submission unchanged; supplement remains unverified'},ensure_ascii=False,indent=2)+'\n')

@@ -13,7 +13,13 @@ from career_lab.storage.v2_lifecycle import point
 
 
 class ScenarioEvidencePort:
-    def __init__(self, store, module): self.store,self.module=store,module
+    """Bind W02's owned fact producer to real authorized store history."""
+    def __init__(self,store,module):
+        from career_lab.scenarios.v2.evaluation_facts import ScenarioFactAdapter
+        self.store,self.module=store,module
+        adapter=ScenarioFactAdapter(module,authorize=lambda auth:store.authorize(auth,'read'),
+            window_reader=self.window,record_reader=self.record,reference_resolver=self.reference)
+        self.source,self.rules,self.submission_rules=adapter.source_reader,adapter.rule_provider,adapter.submission_rule_provider
 
     def points(self,auth,at):
         self.store.authorize(auth,'read')
@@ -21,78 +27,32 @@ class ScenarioEvidencePort:
             return tuple(point(C.WorldStateV2.model_validate_json(raw)) for raw in conn.execute(
                 select(v2_snapshots.c.state).where(v2_snapshots.c.session_id==auth.session_id,v2_snapshots.c.storage_revision<=at.storage_revision)).scalars())
 
-    def source(self,auth,ref,at):
-        from career_lab.evidence.v2.ports import SourceRecord
+    def window(self,auth,at):
+        from career_lab.scenarios.v2.evaluation_facts import ScenarioEvidenceWindow
+        from career_lab.storage.v2_tables import v2_transactions
+        from career_lab.storage.v2_store import TransactionResult
+        points=self.points(auth,at)
+        with self.store.db.engine.connect() as conn:
+            transactions=[TransactionResult.model_validate_json(raw) for raw in conn.execute(select(v2_transactions.c.result).where(v2_transactions.c.session_id==auth.session_id)).scalars()]
+        completed={t.transaction_id:point(t.state) for t in transactions if t.state.storage_revision<=at.storage_revision}
         def read(view):
-            self.module.reference(auth,ref,at,view.bindings,scenario_state=view.private_scenario_state)
-            material=next(m for m in self.module.package.materials if (m.id,m.version)==(ref.object_id,ref.version))
-            projected=self.module.package.project(ref.object_id,ref.version,auth.actor_id,at.business_seq,auth.session_id)
-            # Absolute citation offsets are from the actual file. Never pad a
-            # redacted text or pass a partially private file to the evaluator.
-            originals={(f.ref.span_start,f.ref.span_end,f.text) for f in material.fragments}
-            approved={(f.ref.span_start,f.ref.span_end,f.text) for f in projected}
-            if not originals or originals!=approved:raise C.ProtocolError('source_unavailable',status=404)
-            filename=self.module.package.rules['material_files'][ref.object_id][str(ref.version)]
-            text=C.read_file(self.module.package.root,self.module.files[filename]).decode('utf-8')
-            activation=view.private_scenario_state.material_activation[f'{ref.object_id}:{ref.version}']
-            born=min((p for p in self.points(auth,at) if p.business_seq>=activation),key=lambda p:p.storage_revision,default=None)
-            bare={k:v for k,v in ref.model_dump(mode='json').items() if k in C.ObjectRef.model_fields}
-            # A document-only reference resolves to an explicit permitted excerpt;
-            # it never becomes a fabricated whole-file span across fragments.
-            chosen=ref if isinstance(ref,C.EvidenceRefV2) and ref.quote is not None else projected[0].ref
-            observed=ref.observed_at_seq if isinstance(ref,C.EvidenceRefV2) else activation
-            evidence=C.EvidenceRefV2(**bare,quote=chosen.quote,span_start=chosen.span_start,span_end=chosen.span_end,
-                observed_at_seq=observed,valid_from_seq=activation,valid_until_seq=chosen.valid_until_seq)
-            return SourceRecord(evidence,text,born)
+            events=[];cursor=0;complete=auth.allowed_objects is None and callable(view.public_history)
+            while cursor<at.business_seq:
+                if view.public_history is None:complete=False;break
+                history=view.public_history(C.ResourcePage(since_seq=cursor,limit=100),auth)
+                if not history.acquisitions_complete or history.next_seq<=cursor:complete=False;break
+                events.extend(history.events);cursor=history.next_seq
+            pairs=tuple((event,completed[event.transaction_id]) for event in events if event.transaction_id in completed)
+            return ScenarioEvidenceWindow(self.module.snapshot(view),view.bindings,view.objects,pairs,points,
+                tests_complete=auth.allowed_objects is None,events_complete=complete and len(pairs)==len(events))
         return self.store.query_at(auth,at,read)
 
-    def rules(self,auth,subject,at):
-        from career_lab.evidence.v2.ports import RuleSnapshot,VerifiedFact,ResponsibilityFact
-        points={p.storage_revision:p for p in self.points(auth,at)}
+    def record(self,auth,ref,at):
+        if at is None:return self.store.query(auth,lambda view:view.get(ref))
+        return self.store.query_at(auth,at,lambda view:view.get(ref))
+    def reference(self,auth,ref,at):
         def read(view):
-            view.get(subject)
-            def evidence(row):
-                born=points.get(row.created_storage_revision)
-                if born is None:raise C.ProtocolError('source_time_unknown')
-                return C.EvidenceRefV2(**row.ref.model_dump(),observed_at_seq=born.business_seq)
-            tests=tuple(r for r in view.objects if r.ref.kind=='test')
-            responsibilities=tuple(ResponsibilityFact('R4.functional_tests','actual_action',points[r.created_storage_revision],
-                points[r.created_storage_revision],(subject,),(evidence(r),),actor_id=auth.actor_id,executor=r.creator)
-                for r in tests if r.created_storage_revision in points)
-            basic={'tests':tuple(C.TestResultV2.model_validate(r.content) for r in tests),
-                'test_refs':tuple(evidence(r) for r in tests),'responsibilities':responsibilities}
-            try:snapshot=self.module.snapshot(view)
-            except C.ProtocolError:return RuleSnapshot(at,**basic)
-            config=view.get(view.private_scenario_state.current_config)
-            cfg=C.AssistantConfig.model_validate(config.content);cref=evidence(config);facts=[]
-            def authored(name):
-                candidates=[f for f in self.module.package.facts if f.id==name and f.disclosure.mode=='public']
-                for fact in candidates:
-                    source=fact.source.model_copy(update={'session_id':auth.session_id})
-                    try:self.module.reference(auth,source,at,view.bindings,scenario_state=view.private_scenario_state)
-                    except C.ProtocolError:continue
-                    return fact.value,source
-                raise C.ProtocolError('source_unavailable',status=404)
-            def resource(name):
-                decisions=sorted((r for r in view.objects if r.ref.kind=='business_decision' and r.content['status'] in {'approved','accepted'} and name in r.content['granted']),key=lambda r:r.created_storage_revision,reverse=True)
-                if decisions:return decisions[0].content['granted'][name],evidence(decisions[0])
-                value,ref=authored(name)
-                if value!=snapshot.world.resources.get(name):raise C.ProtocolError('resource_source_unavailable',status=404)
-                return value,ref
-            facts.extend([VerifiedFact('participants',cfg.participants,(cref,)),VerifiedFact('requested_launch_day',cfg.launch_day,(cref,))])
-            for name,label in [('capacity','capacity'),('dev_days','available_dev_days'),('deadline_day','deadline_day')]:
-                try:value,source=resource(name);facts.append(VerifiedFact(label,value,(source,)))
-                except C.ProtocolError:pass
-            try:
-                cost=0;refs=[cref]
-                for work in cfg.work_items:
-                    value,source=authored('cost_'+work);cost+=value;refs.append(source)
-                facts.append(VerifiedFact('required_dev_days',cost,tuple(refs)))
-            except C.ProtocolError:pass
-            decisions=sorted((r for r in view.objects if r.ref.kind=='business_decision'),key=lambda r:r.created_storage_revision)
-            return RuleSnapshot(at,facts=tuple(facts),config_version=cfg.config_version,
-                business_response=decisions[-1].content['reason'] if decisions else '',
-                business_response_refs=(evidence(decisions[-1]),) if decisions else (),**basic)
+            if view.reference_allowed is None or not view.reference_allowed(ref):raise C.ProtocolError('object_not_found',status=404)
         return self.store.query_at(auth,at,read)
 
 
@@ -149,14 +109,14 @@ def create_feedback_handler(module, *, model=None):
         from career_lab.rubrics.v4.support import EvidenceSupportVerifier
         module.check_bindings(view.bindings)
         source=ScenarioEvidencePort(store,module)
-        reader=StoreEvidenceReader(store,auth,policies=policies,source_reader=source.source,rule_provider=source.rules)
+        reader=StoreEvidenceReader(store,auth,policies=policies,source_reader=source.source,rule_provider=source.rules,submission_rule_provider=source.submission_rules)
         engine=FeedbackEngine(AdvisoryJudge(OncePerInputModel(model),EvidenceSupportVerifier(OncePerInputModel(model)))) if model is not None else FeedbackEngine()
         subject=C.FeedbackInput.model_validate(envelope.command.payload).subject
         if subject.kind=='submission':
             submitted=C.SubmissionV2.model_validate(view.get(subject).content)
-            prepared=SubmissionEvaluator(reader,engine=engine,work_language='zh').evaluate(auth,submitted)
+            prepared=SubmissionEvaluator(reader,engine=engine,work_language=module.work_language).evaluate(auth,submitted)
             return traced(submission_feedback_plan(view,envelope.command,auth,prepared),reader)
         request=C.ReviewRequest.model_validate(view.get(subject).content)
-        prepared=prepare_review_feedback(create_review_evaluator(reader,engine=engine,work_language='zh'),auth,request)
+        prepared=prepare_review_feedback(create_review_evaluator(reader,engine=engine,work_language=module.work_language),auth,request)
         return traced(review_feedback_plan(view,envelope.command,auth,prepared),reader)
     return run

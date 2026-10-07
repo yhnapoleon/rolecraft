@@ -11,6 +11,13 @@ export class WorkspaceStore {
   private listeners = new Set<() => void>();
   private state: Snapshot;
   private polling = false;
+  private v2?: {
+    sync(session: LocalSession): Promise<void>;
+    write(session: LocalSession, kind: Operation['kind'], body: Record<string, unknown>, localRun?: LocalTestRun): Promise<void>;
+    poll(session: LocalSession): Promise<void>;
+  };
+  installV2(bridge: NonNullable<WorkspaceStore['v2']>) { this.v2 = bridge; }
+  report(patch: Partial<Pick<Snapshot, 'busy' | 'error' | 'notice' | 'connected'>>) { this.emit(patch); }
   constructor(private storage: Pick<Storage, 'getItem' | 'setItem'>, private transport: Transport = request) {
     let workspace: Workspace = { schema: 1, sessions: [] }, error = '';
     try {
@@ -42,15 +49,17 @@ export class WorkspaceStore {
     try { const result = await this.transport('/health'); this.emit({ connected: true, model: result.model }); }
     catch { this.emit({ connected: false, model: '' }); }
   }
-  async create(scenario: Scenario) {
+  async create(scenario: Scenario, workLanguage?: 'zh' | 'en') {
     if (this.state.busy || this.state.storageError) return;
     // Prove local persistence works before creating a non-idempotent session.
     if (!this.persist()) return;
     this.emit({ busy: true, error: '', notice: '' });
     try {
-      const result = await this.transport('/sessions', { scenario });
+      const result = await this.transport('/sessions', workLanguage ? { schema_version: 2, scenario: scenario === 'pm_pilot' ? 'pm_pilot_v2' : scenario + '_v2', work_language: workLanguage } : { scenario });
+      if (workLanguage && (result.schema_version !== 2 || result.binding?.protocol !== 2 || result.binding?.sessionId !== result.session_id || result.binding?.workLanguage !== workLanguage || typeof result.binding?.scenarioHash !== 'string')) throw new ApiError('Session binding is unconfirmed', 0, 'response_unconfirmed');
+      const world = workLanguage ? { session_id: result.session_id, version: result.state.business_seq, logical_time: 0, resources: {}, configs: {}, material_versions: {}, indexed_versions: {}, applied_rules: [], pending_requests: [], action_count: 0, config_version: result.state.config_version, status: result.state.status } : result.state;
       const session: LocalSession = {
-        id: result.session_id, token: result.token, scenario, world: result.state,
+        id: result.session_id, token: result.token, scenario, world, ...(workLanguage ? { protocol: 2, v2Binding: result.binding } : {}),
         created: new Date().toISOString(), materials: [], timeline: { events: [], turns: [], mode: '' },
         draft: emptyDraft(), tests: [], questions: {}, testNotes: {},
         inputs: { question: '', expected: '', messages: {}, capacityReason: '', resourceReason: '' },
@@ -65,6 +74,7 @@ export class WorkspaceStore {
   async sync(id = this.state.workspace.active) {
     const s = this.state.workspace.sessions.find(s => s.id === id);
     if (!s) return;
+    if (s.protocol === 2) { if (!this.v2) throw new Error("V4 host unavailable"); return this.v2.sync(s); }
     try {
       const optionalList = async (suffix: string) => {
         try { return await this.transport(sessionPath(s, suffix), undefined, s); }
@@ -104,6 +114,7 @@ export class WorkspaceStore {
   async write(kind: Operation['kind'], suffix: string, body: Record<string, unknown>, label: string, localRun?: LocalTestRun) {
     const s = this.active();
     if (!s || this.state.busy || s.pending || this.state.storageError) return;
+    if (s.protocol === 2) { if (!this.v2) throw new Error('V4 host unavailable'); return this.v2.write(s, kind, body, localRun); }
     if (!['feedback', 'action', 'relation'].includes(kind) && s.world.status !== 'active') return;
     const operation: Operation = { kind, path: suffix, body, label, created: new Date().toISOString(), ...(kind === 'test' ? { localExpected: localRun?.expectation ?? s.inputs.expected, ...(localRun ? { localRun: structuredClone(localRun) } : {}) } : {}) };
     if (!this.update(s.id, { pending: operation })) return;
@@ -141,6 +152,7 @@ export class WorkspaceStore {
   approval(rule: string) { const s = this.active(); if (!s) return; return this.write('approval', '/approvals/resolve', { rule_id: rule, request_id: crypto.randomUUID(), expected_version: s.world.version }, T('按场景规则审核申请', 'Approval')); }
   async execute(id = this.state.workspace.active) {
     const s = this.state.workspace.sessions.find(s => s.id === id);
+    if (s?.protocol === 2) { if (!this.v2) throw new Error('V4 host unavailable'); return this.v2.poll(s); }
     if (!s?.pending || this.state.busy || this.state.storageError) return;
     if (s.pending.jobId) { await this.poll(id); return; }
     this.emit({ busy: true, error: '', notice: '' });
@@ -186,6 +198,7 @@ export class WorkspaceStore {
   }
   async poll(id = this.state.workspace.active) {
     const s = this.state.workspace.sessions.find(s => s.id === id);
+    if (s?.protocol === 2) { if (!this.v2 || this.polling || this.state.busy) return; this.polling = true; try { await this.v2.poll(s); } finally { this.polling = false; } return; }
     if (!s?.pending?.jobId || this.polling || this.state.busy) return;
     this.polling = true;
     const op = s.pending;
@@ -286,7 +299,7 @@ export function serverText(detail: string, code?: string, details?: Record<strin
 }
 
 function validSession(s: any): s is LocalSession {
-  return !!s && typeof s.id === 'string' && typeof s.token === 'string' && !!s.token &&
+  return !!s && (s.protocol == null || s.protocol === 1 || (s.protocol === 2 && s.v2Binding?.protocol === 2 && s.v2Binding?.sessionId === s.id && ['zh', 'en'].includes(s.v2Binding?.workLanguage) && typeof s.v2Binding?.scenarioHash === 'string')) && typeof s.id === 'string' && typeof s.token === 'string' && !!s.token &&
     ['pm_pilot', 'pm_pilot_urgent', 'pm_pilot_capacity15'].includes(s.scenario) &&
     s.world?.session_id === s.id && ['active', 'paused', 'submitted'].includes(s.world?.status) &&
     Number.isInteger(s.world?.version) && !!s.world.resources && !!s.world.configs &&

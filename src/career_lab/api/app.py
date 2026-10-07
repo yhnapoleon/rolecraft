@@ -307,31 +307,8 @@ def create_app(database_url=None, scenario_path=None, model=None, study_path=Non
     def v2_object(kind: str, object_id: str, version: int, config_version: int | None = None, session_id=Depends(auth)):
         from career_lab.contracts.v2 import ObjectRef
         if not isinstance(session_id, SessionAccess):raise ProtocolError('v2_session_required',status=409)
-        if kind == 'event':
-            from career_lab.api.vertical_reads import public_event_history
-            from career_lab.storage.v2_lifecycle import point
-            at=point(v2_store.view(session_id.context).state)
-            events=public_event_history(v2_store,extensions,session_id.context,at)
-            event=next((e for e in events if e.id==object_id),None)
-            if event is None or version!=1:raise ProtocolError('object_not_found',status=404)
-            text=(f"Material read: {event.data['material_id']} v{event.data['version']}" if event.type=='material_read' else event.type)
-            return {'schema_version':2,'content':{'text':text,'event':event.model_dump(mode='json')}}
-        if kind == 'material':
-            from career_lab.storage.v2_lifecycle import point
-            module=getattr(app.state,'scenario_v2',None)
-            if module is None:raise ProtocolError('module_unavailable',status=503)
-            ref=ObjectRef(session_id=str(session_id),kind=kind,object_id=object_id,version=version)
-            def material(view):
-                module.reference(session_id.context,ref,point(view.state),view.bindings,scenario_state=view.private_scenario_state)
-                fragments=module.package.project(object_id,version,session_id.context.actor_id,view.state.business_seq,str(session_id))
-                title=next(m.title for m in module.package.materials if (m.id,m.version)==(object_id,version))
-                return {'schema_version':2,'ref':ref.model_dump(mode='json'),'content':{'title':title,'fragments':[f.model_copy(update={'ref':f.ref.model_copy(update={'observed_at_seq':view.state.business_seq,'valid_from_seq':view.private_scenario_state.material_activation[f'{object_id}:{version}']})}).model_dump(mode='json') for f in fragments]}}
-            return v2_store.query(session_id.context,material,operation='materials.list')
-        if kind not in {'task','product','share','cycle','review','submission','feedback','config','test','business_request','business_decision','role_turn','role_reply','role_display','feedback_response'}:
-            raise ProtocolError('object_not_found',status=404)
         ref=ObjectRef(session_id=str(session_id),kind=kind,object_id=object_id,version=version,config_version=config_version)
-        record=v2_store.read(session_id.context,ref)
-        return {'schema_version':2,'ref':ref.model_dump(mode='json'),'content':record.content}
+        return gateway.dispatch(session_id.context,'objects.read',{'ref':ref.model_dump(mode='json')})['result']['result']
 
     @app.get("/sessions/{session_id}/jobs/{job_id}")
     def job(job_id: str, session_id=Depends(auth)):
