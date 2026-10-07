@@ -4,7 +4,7 @@ W02 supplies evaluate(request, view, auth) and legal candidate terms. This modul
 does not maintain a second approval rule set and never writes resource state.
 """
 from dataclasses import dataclass
-from typing import Callable
+from typing import Callable, Literal
 
 from career_lab.api.modules import Operation
 from career_lab.contracts.v2 import (
@@ -23,6 +23,11 @@ class ScenarioApprovalPort:
     roles: tuple[RoleSpecV2, ...]
     decision_followup: Callable | None = None
     followup_required: bool = False
+    work_language: Literal['zh','en'] = 'zh'  # Legacy package default, not a request/UI override.
+
+    def __post_init__(self):
+        from career_lab.runtime.context_v2 import require_work_language
+        require_work_language(self.work_language)
 
     @classmethod
     def from_w02(cls, package, evaluate, *, decision_followup=None):
@@ -31,6 +36,8 @@ class ScenarioApprovalPort:
         `evaluate` is the installed W02 adapter from BusinessRequest and the real
         TransactionView to its immutable scenario Snapshot. No active paths/imports.
         """
+        from career_lab.runtime.context_v2 import ScenarioKnowledge
+        language=ScenarioKnowledge.from_package(package).work_language
         limits = dict(package.rules["approval_limits"])
 
         def candidates(request, view):
@@ -42,7 +49,7 @@ class ScenarioApprovalPort:
             return (lower,)
 
         return cls(evaluate=evaluate, candidates=candidates, roles=package.bundle.role_specs,
-                   decision_followup=decision_followup, followup_required=bool(package.rules.get("business_events")))
+                   decision_followup=decision_followup, followup_required=bool(package.rules.get("business_events")), work_language=language)
 
 
 def latest_request(view, ref):
@@ -61,6 +68,8 @@ class NegotiationService:
         self.policy = policy
 
     def _assess(self, request, view, auth):
+        if getattr(view.bindings,'work_language',self.policy.work_language)!=self.policy.work_language:
+            raise ProtocolError('approval_language_binding_mismatch',status=409)
         if set(request.requested) - view.state.resources.keys():
             raise ProtocolError("unsupported_resource_request", status=422)
         decision = self.policy.evaluate(request, view, auth)
@@ -79,6 +88,7 @@ class NegotiationService:
         return decision
 
     def resolve_decision(self, view, command, auth):
+        from career_lab.runtime.context_v2 import role_text
         body = ApprovalInput.model_validate(command.payload)
         request = latest_request(view, body.request)
         if request.version != body.expected_request_revision or request.status != "pending":
@@ -95,7 +105,7 @@ class NegotiationService:
                 return BusinessDecision.model_validate(decision.model_dump(mode="json") | {
                     "id": "counter-" + digest([decision.id, terms])[:24], "status": "countered",
                     "granted": {}, "countered": terms, "reason_code": "lower_terms_available",
-                    "reason": "当前申请超出可批档位；这些较低条件已通过同一场景规则。接受成功前资源不变。"})
+                    "reason": role_text(self.policy.work_language,"counteroffer")})
         return decision
 
     def resolve(self, view, command, auth):
@@ -104,6 +114,7 @@ class NegotiationService:
         return self._plan(request, decision, view, accepted=False)
 
     def acceptance_decision(self, view, command, auth):
+        from career_lab.runtime.context_v2 import role_text
         body = ActionInput.model_validate(command.payload)
         if body.tool != "accept_counteroffer" or body.request is None:
             raise ProtocolError("counteroffer_request_required")
@@ -127,7 +138,7 @@ class NegotiationService:
         return BusinessDecision.model_validate(checked.model_dump(mode="json") | {
             "id": "accepted-" + digest([offer.id, command.request_id])[:24],
             "status": "accepted", "countered": {}, "reason_code": "counteroffer_accepted",
-            "reason": "已接受还价；资源仅随本决定的原子提交生效。"})
+            "reason": role_text(self.policy.work_language,"counteroffer_accepted")})
 
     def accept(self, view, command, auth):
         decision = self.acceptance_decision(view, command, auth)
