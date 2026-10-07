@@ -652,9 +652,10 @@ class ContextPort:
         if language is None and self.language_port is not None:
             language=self.language_port.read_fixed(view,auth)
         if language is None:
-            if frame.work_language!='zh' or self.catalog.work_language!='zh':
-                raise ProtocolError('role_language_binding_unavailable',status=409)
-            language='zh'  # Existing c7 sessions have only the original Chinese package.
+            # validate_request already bound this fixed session to catalog.binding.
+            # The hash-checked scenario locale is authoritative for either language;
+            # old wire schemas do not require an unconditional Chinese-only gate.
+            language=self.catalog.work_language
         if require_work_language(language)!=frame.work_language or language!=self.catalog.work_language:
             raise ProtocolError('role_language_binding_mismatch',status=409)
         return assemble_context(self.catalog,frame,question=turn.text,new_shares=new,head_dependencies=heads)

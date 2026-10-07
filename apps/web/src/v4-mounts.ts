@@ -1,5 +1,8 @@
 /** Thin ownership/lifecycle bridge into the existing v4 DOM. No business rendering. */
 import { mountWorkspaceSlot } from './features/workspace/native-v4/v4-slot';
+import { mount as mountRoles } from './features/roles-native/v4-slot';
+import { mount as mountResources } from './features/roles-native/v4-request-slot';
+import { mountV4Feedback } from './features/feedback-native/v4-slot';
 import type { V4DataHost } from './v4-data-host';
 import type { V4HostAdapter, V4SlotContext, V4SlotHandle } from './v4-host';
 import type { LocalSession } from './types';
@@ -18,10 +21,17 @@ export class V4Mounts {
   async sync(doc: Document, session: LocalSession | undefined, host: V4DataHost | null, selection: Selection) {
     const stage = doc.querySelector<HTMLElement>('#ws-stage');
     const sheet = doc.querySelector<HTMLDialogElement>('#sheet');
-    if (!session?.v2NativeWorkspace || !host) { this.destroy(); return; }
+    if (session?.protocol !== 2 || !host) { this.destroy(); return; }
+    if (host.snapshot().state === 'unavailable') await host.query('workbench.read');
     const roots = new Map<string, HTMLElement>();
-    if (stage) roots.set('workspace', stage);
-    if (sheet?.open && sheet.querySelector('#task-form, #artifact-form')) roots.set('workspace-form', sheet.querySelector('.sheet-body')!);
+    if (stage && session.v2NativeWorkspace) roots.set('workspace', stage);
+    if (session.v2NativeWorkspace && sheet?.open && sheet.querySelector('#task-form, #artifact-form')) roots.set('workspace-form', sheet.querySelector('.sheet-body')!);
+    const chat = doc.querySelector<HTMLElement>('#ws-rail .chat');
+    if (chat) roots.set('roles', chat);
+    if (sheet?.open && sheet.querySelector('#res-form')) roots.set('resource-requests', sheet.querySelector('.sheet-body')!);
+    if (sheet?.open && sheet.querySelector('[data-v4-submission]')) roots.set('submission', sheet.querySelector('[data-v4-submission]')!);
+    const feedback = doc.querySelector<HTMLElement>('[data-v4-feedback]');
+    if (feedback) roots.set('feedback', feedback);
     for (const [id, current] of this.mounted) {
       if (current.host !== host || roots.get(id) !== current.root || current.root.firstElementChild !== current.content || !current.root.isConnected) {
         current.handle.destroy(); current.clean(); this.mounted.delete(id);
@@ -71,7 +81,7 @@ export class V4Mounts {
           const hint = meta?.querySelector<HTMLElement>(':scope > span');
           if (hint) { const previous = hint.textContent; hint.textContent = T('输入先保留为草稿，保存后形成作品版本', 'Input stays as a draft until you save a version'); restore.push(() => { hint.textContent = previous; }); }
         }
-      } else {
+      } else if (id === 'workspace-form') {
         pick('taskTitle', '#task-form [name="title"]'); pick('taskGoal', '#task-form [name="note"]');
         pick('taskForm', '#task-form');
         if (nodes.taskForm?.dataset.id) {
@@ -85,6 +95,13 @@ export class V4Mounts {
         pick('newTitle', '#artifact-form [name="title"]'); pick('newPurpose', '#artifact-form [name="purpose"]:checked');
         pick('newPurposeGroup', '#artifact-form fieldset'); pick('newTaskId', '#artifact-form [name="taskId"]');
         pick('newProduct', '[form="artifact-form"][type="submit"]', sheet!);
+      } else if (id === 'roles') {
+        pick('thread', '.thread'); pick('composer', '.composer');
+      } else if (id === 'resource-requests') {
+        pick('form', '#res-form');
+        pick('submit', '[form="res-form"][type="submit"]', sheet!);
+      } else {
+        nodes.content = root;
       }
       if (!Object.keys(nodes).length) { owned.forEach(n => n.remove()); continue; }
       // A completion from a destroyed surface may save its authorized command,
@@ -98,7 +115,15 @@ export class V4Mounts {
         selectTask: ref => { if (alive) host.selectTask(ref); }, selectProduct: ref => { if (alive) host.selectProduct(ref); },
         announce: (message, kind) => { if (alive) host.announce(message, kind); },
       };
-      const handle = mountWorkspaceSlot({ host: adapter, nodes } as V4SlotContext);
+      const context: V4SlotContext = { host: adapter, nodes };
+      const handle = id === 'roles' ? mountRoles(context)
+        : id === 'resource-requests' ? mountResources(context)
+        : id === 'submission' || id === 'feedback' ? mountV4Feedback({ ...context, surface: id === 'submission' ? 'submission' : 'feedback' })
+        : mountWorkspaceSlot(context);
+      if (id === 'feedback' && root.dataset.openReview === 'true') {
+        const form=root.querySelector<HTMLDetailsElement>('section[aria-label="作品评审"] details, section[aria-label="Artifact review"] details');
+        if(form)form.open=true;
+      }
       this.mounted.set(id, { host, root, content: root.firstElementChild, handle, clean: () => { alive = false; restore.forEach(fn => fn()); owned.forEach(n => n.remove()); } });
     }
   }

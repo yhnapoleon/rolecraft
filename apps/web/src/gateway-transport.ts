@@ -62,7 +62,8 @@ export function createGatewayTransport(
     catch { throw new ApiError(T('返回内容无法核对，请保留原请求。', 'The response could not be verified. Keep the original request.'), 0, 'response_unconfirmed'); }
     if (!response.ok) {
       const error = result && typeof result === 'object' ? result as Record<string, unknown> : {};
-      const detail = typeof error.detail === 'string' ? error.detail : typeof error.error === 'string' ? error.error : T('请求未完成。', 'The request was not completed.');
+      const historical = ['scenario_binding_mismatch','scenario_archive_unavailable','scenario_read_only'].includes(String(error.code));
+      const detail = historical ? T('这个练习使用旧版场景。原记录仍保留，请只读查看或开始新的练习；若暂时无法读取，请保留浏览器存档并重试连接。','This practice uses an earlier scenario. Its records are retained. View them read-only or start a new practice; if reading is unavailable, keep your browser data and reconnect.') : typeof error.detail === 'string' ? error.detail : typeof error.error === 'string' ? error.error : T('请求未完成。', 'The request was not completed.');
       throw new ApiError(detail, response.status, typeof error.code === 'string' ? error.code : 'request_failed');
     }
     if (!result || typeof result !== 'object' || Array.isArray(result) || (result as Record<string, unknown>).schema_version !== 2) {

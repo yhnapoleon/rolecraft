@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "id": "pm_pilot_urgent",
-  "revision": "2.8.0",
+  "revision": "2.9.0",
   "structure_id": "index_scope_resource_dependency",
   "files": [
     {
@@ -19,19 +19,19 @@
     {
       "schema_version": 2,
       "path": "facts.json",
-      "sha256": "7dd2340509d17fd4161acc3bd0fc37896f1c7d7661904c8b0d998d506921ace2",
+      "sha256": "bbb2ef1cb48aa7a2df4c70e8c6eb25c47f9a58cbfa218aa07b06e0daf2bbe803",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "locale.json",
-      "sha256": "17f2ee5cd15ac56de02eb8f7193c784eb7cecf5c544fe75e222886d0b7f1cf6d",
+      "sha256": "ae554e5d4d439eaa7ea68263b5443af1ccb0619ecf6e49b72446c4b4282082b6",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "materials.json",
-      "sha256": "95c6841bd493423f06cceaa5c539f85ed5e907ff6f0841ade1c0ad2dfa5da0a9",
+      "sha256": "75e193003bbb1f66237d9483925e9e69ee22711807195a38cc3e08c65493e5a9",
       "media_type": "application/json"
     },
     {
@@ -43,7 +43,7 @@
     {
       "schema_version": 2,
       "path": "materials/brief-v1.md",
-      "sha256": "4cf1bd352eb43551bfbe8ff41496a40b3f7aefcbb720068b113e60f93b3fc063",
+      "sha256": "8b843fae2248cd880c1a520fbd1acd3e862ccad1bfe74d74666815db91deda46",
       "media_type": "text/markdown"
     },
     {
@@ -145,13 +145,13 @@
     {
       "schema_version": 2,
       "path": "materials/tech_diagnostics-v1.md",
-      "sha256": "f47912df47e8d660cd94e91ccd0db41c555d1fbbb4e31ea9718bb41028ec3757",
+      "sha256": "b17e99f786664e4105e01fde3e251a65f0715016359cae11900175dcd0ed6b52",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/tech_private-v1.md",
-      "sha256": "f2798d13bd48f3eda85d81ebe4b2635a309cf00b0958bdb1e4e7fa9bb47068b9",
+      "sha256": "88cfa90b7080a450b1975744aa60d9e46dd06ab22c6082c1063d521e4c74051e",
       "media_type": "text/markdown"
     },
     {
@@ -163,7 +163,7 @@
     {
       "schema_version": 2,
       "path": "materials/trial_details-v1.md",
-      "sha256": "33d5e14876bca1dbac019edf05a5fe412abe050e1a5681172caf07ce188a5850",
+      "sha256": "5b374266bfedb617c0b7991b1a2b05c4a996c750efb3aaac9bf11b0c88b8ead4",
       "media_type": "text/markdown"
     },
     {
@@ -192,8 +192,14 @@
     },
     {
       "schema_version": 2,
+      "path": "research/private-diagnostic.json",
+      "sha256": "7882e3ed710d67ada739503560591dccb65faa45109216965a7f1186a940c8a9",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
       "path": "research/public-case-records.json",
-      "sha256": "0f88dbb1290b2094fa777c12043789dedcd1a27ca93d12ff4c176fdfd3239388",
+      "sha256": "56ab452551c151400e77e3c48b26bc6cacc01de4d9690e829f0d049dfc688e82",
       "media_type": "application/json"
     },
     {
@@ -205,7 +211,7 @@
     {
       "schema_version": 2,
       "path": "roles.json",
-      "sha256": "dc57d16a0c52909d04a1f0c912625bb15a95e9413e72cfd0d4c82b584293feda",
+      "sha256": "8fe3a867b8d6967a06de510070be622e9475cca749215bfd8b646e01cd304dc1",
       "media_type": "application/json"
     },
     {
@@ -223,7 +229,7 @@
     {
       "schema_version": 2,
       "path": "runtime/bundle.json",
-      "sha256": "81c719bb4b970da6f728521398217963ab1b22bdf3292db4328c0d57b7eaece1",
+      "sha256": "4f7bed556ec4ca5ddec7b4128ae71b2da2034421b4292fb994fe13399dcc2515",
       "media_type": "application/json"
     },
     {
@@ -259,7 +265,7 @@
     {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "b6b7f9c957ea668bdd08408c275c569ca2d773d4b02e0d9c1aa1fb0fd6f0151d",
+      "sha256": "a33a65833edab9c973edde4c12012e0ff0156aefa781c50af41946e7b9f1a9f8",
       "media_type": "application/json"
     },
     {
@@ -271,7 +277,7 @@
     {
       "schema_version": 2,
       "path": "scenario.yaml",
-      "sha256": "2384fdd9b3f58ff5a8cb83b56955f4e6dad92f968bc0f9501d1916137bcaf666",
+      "sha256": "6b05083c25ba1494f92911f2d9c2c95ca972a00cf64e46d63bb11a9d8d10c506",
       "media_type": "application/json"
     }
   ],
@@ -309,6 +315,7 @@
     "materials/world_private-v1.md",
     "paths.json",
     "probes.json",
+    "research/private-diagnostic.json",
     "research/public-case-records.json",
     "research/retrieval-calibration.json",
     "roles.json",
@@ -360,7 +367,9 @@
         "capacity_limit",
         "dev_days_limit",
         "deadline_day_limit",
-        "demo_day"
+        "demo_day",
+        "draft_participants",
+        "draft_launch_day"
       ],
       "disclosure_policy": {},
       "approval_authority": [
@@ -490,7 +499,9 @@
         "index_delay_hours",
         "retrieval_probe_query",
         "retrieval_threshold_candidate",
-        "retrieval_debug_code"
+        "retrieval_debug_code",
+        "draft_participants",
+        "draft_launch_day"
       ],
       "disclosure_policy": {
         "retrieval_probe_query": {
@@ -499,7 +510,7 @@
           "actors": [
             "tech_lead"
           ],
-          "paraphrase": "A preparation-stage test reproduced this question: I've already signed up for company training. Does that mean I can simply turn up to attend the class? At threshold 0.35 it retrieved no supported passage; at 0.2 it returned the FAQ training-registration paragraph. An unrelated control still retrieved nothing. This is a local comparison, not a generally correct threshold."
+          "paraphrase": "A preparation-stage test reproduced this question: I've already signed up for company training. Does that mean I can simply turn up to attend the class? At thresholds 0.35 and the current default 0.3 it retrieved no supported passage. At 0.2 it returned Device repair, which does not answer the training question. Lowering the threshold did not solve this case. An unrelated control still retrieved nothing. This is an observed English diagnostic, not a recommended threshold."
         },
         "retrieval_threshold_candidate": {
           "schema_version": 2,
@@ -507,7 +518,7 @@
           "actors": [
             "tech_lead"
           ],
-          "paraphrase": "A preparation-stage test reproduced this question: I've already signed up for company training. Does that mean I can simply turn up to attend the class? At threshold 0.35 it retrieved no supported passage; at 0.2 it returned the FAQ training-registration paragraph. An unrelated control still retrieved nothing. This is a local comparison, not a generally correct threshold."
+          "paraphrase": "A preparation-stage test reproduced this question: I've already signed up for company training. Does that mean I can simply turn up to attend the class? At thresholds 0.35 and the current default 0.3 it retrieved no supported passage. At 0.2 it returned Device repair, which does not answer the training question. Lowering the threshold did not solve this case. An unrelated control still retrieved nothing. This is an observed English diagnostic, not a recommended threshold."
         },
         "retrieval_debug_code": {
           "schema_version": 2,
@@ -515,7 +526,7 @@
           "actors": [
             "tech_lead"
           ],
-          "paraphrase": "The technical diagnostic retains the original training question, two thresholds and an unrelated control. Its internal register ID is not for disclosure."
+          "paraphrase": "The technical diagnostic retains the original training question, three thresholds and an unrelated control. Its internal register ID is not for disclosure."
         }
       },
       "approval_authority": [],

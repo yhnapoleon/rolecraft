@@ -74,7 +74,7 @@ class FixedRoleSnapshotPort:
             if any(m.role_id!=role_id for m in audit.memories):raise ProtocolError('role_history_identity_invalid',status=409)
             received=tuple(ReceivedShare(r.share,r.product,r.role_id,r.received_at,r.fragment) for r in audit.received_shares)
             past=tuple(RoleMemory(m.fragment,m.role_id,m.learner_refs,tuple(activated_reference(ref,state) for ref in m.provenance)) for m in audit.memories)
-            generation=PrivateGeneration(role_id,audit.reply,context.model_copy(update={'generation_audit':None}),audit.prompt_messages,audit.prompt_hash,audit.history_revision,received,past,audit.refresh_count,audit.attempts,tuple(f.model_copy(update={'ref':activated_reference(f.ref,state)}) for f in audit.used_sources))
+            generation=PrivateGeneration(role_id,audit.reply,context.model_copy(update={'generation_audit':None}),audit.prompt_messages,audit.prompt_hash,audit.history_revision,received,past,audit.refresh_count,audit.attempts,tuple(f.model_copy(update={'ref':activated_reference(f.ref,state)}) for f in audit.used_sources),work_language=self.catalog.work_language)
             memory=memory_from_generation(reply,generation)
             memories[canonical(memory.fragment.ref)]=memory;covered.add(canonical(audit.reply))
             for receipt in received:receipts.setdefault((canonical(receipt.share),canonical(receipt.product)),receipt)
@@ -84,4 +84,4 @@ class FixedRoleSnapshotPort:
             if row.ref.kind=='business_decision':
                 memory=decision_memory(self.catalog,role_id,row,at,tuple(notices))
                 if memory is not None:memories[canonical(memory.fragment.ref)]=memory
-        return RoleFrame(auth.session_id,role_id,at,self.catalog.binding,state,tuple(memories.values()),tuple(receipts.values()),tuple(notices))
+        return RoleFrame(auth.session_id,role_id,at,self.catalog.binding,state,tuple(memories.values()),tuple(receipts.values()),tuple(notices),work_language=self.catalog.work_language)

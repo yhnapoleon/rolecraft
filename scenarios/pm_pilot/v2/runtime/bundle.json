@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "id": "w02-runtime",
-  "revision": "scenario-2.8.0-pm_pilot-zh",
+  "revision": "scenario-2.9.0-pm_pilot-zh",
   "model": {
     "schema_version": 2,
     "path": "runtime/model.json",
@@ -37,11 +37,11 @@
   "source": {
     "schema_version": 2,
     "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
-    "source_digest": "8debd73f7603a158f926a4866c9954e6e74e139828913d490595e11afb730db2",
+    "source_digest": "9baf453afe95ec120c0b22fde19b4da7f83311979a6a5352e1aa02adbb6c37da",
     "overlay": {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "f2b8667c1d9d4f65588cf8dce291ec508048f669e8470ced614bda914eea0a51",
+      "sha256": "3c5d0dd1a54e4018c9d913c87050dc4d7771ff6558f798b014465a51675086be",
       "media_type": "application/json"
     },
     "dependency_locks": []

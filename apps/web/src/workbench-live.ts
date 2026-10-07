@@ -133,6 +133,23 @@ export class LiveWorkbench {
       return { sessionId: session.id, token: session.token };
     }, fetcher);
   }
+  async patchNativeTask(a: Attempt, id: string, patch: Record<string, unknown>) {
+    const s=this.session(a);const task=s?.v2Workspace?.tasks.find(t=>t.id===id);
+    if(!s||!task)throw new Error(T('找不到这件事的已保存版本。','The saved task version is unavailable.'));
+    const result=await this.v4.host(s).command('work_items.update',{item_id:id,expected_revision:task.revision,...patch,...(patch.status==='working'?{status:'active'}:{})});
+    if(result.status!=='confirmed')throw new Error(T('事项变更尚未确认，请保留原请求。','The task change is not confirmed. Keep the original request.'));
+    await this.v4.sync(this.store.getSnapshot().workspace.sessions.find(x=>x.id===s.id)!);
+  }
+  async moveNativeTask(a: Attempt, id: string, to: {priority:string;beforeId?:string|null}) {
+    const s=this.session(a),task=s?.v2Workspace?.tasks.find(t=>t.id===id);if(!s||!task)throw new Error('Task unavailable');
+    const priority=['first','next','later'].indexOf(to.priority);if(priority<0)throw new Error('Invalid task priority');
+    const siblings=s.v2Workspace!.tasks.filter(t=>t.id!==id&&t.status!=='removed'&&t.priority===priority).sort((a,b)=>(a.order??0)-(b.order??0)||a.id.localeCompare(b.id));
+    const before=siblings.findIndex(t=>t.id===to.beforeId);siblings.splice(before<0?siblings.length:before,0,task);
+    const updates=siblings.map((t,order)=>({item_id:t.id,expected_revision:t.revision,priority,order}));
+    const result=await this.v4.host(s).command('work_items.batch',{updates});
+    if(result.status!=='confirmed')throw new Error(T('排序尚未确认，请核对原请求。','The order change is unconfirmed. Check the original request.'));
+    await this.v4.sync(this.store.getSnapshot().workspace.sessions.find(x=>x.id===s.id)!);
+  }
   nativeWorkspace(a: Attempt) { return this.session(a)?.v2NativeWorkspace === true; }
   hasUnsavedV4() { return this.v4.hasUnpersistedDrafts(); }
   mountV4(a: Attempt | null, selection: { taskId: string | null; productId: string | null }) {
@@ -172,7 +189,14 @@ export class LiveWorkbench {
   async read(a: Attempt, materialId: string) {
     if (!a.backend.materials.some((m: any) => m.id === materialId)) throw new Error(T('当前会话不可读取这份资料。', 'This document is not available in this session.'));
     if (this.session(a)!.world.status === 'active') await this.action(a, 'read_material', { material_id: materialId });
-    else await this.store.sync(a.id); // Paused/submitted sessions remain readable; do not invent a read event.
+    else {
+      await this.store.sync(a.id); // Read only; never invent a historical read receipt.
+      const current=this.session(a)!,visible=current.materials.find(m=>m.id===materialId);
+      if(current.protocol===2&&visible){
+        const exact=await this.exactMaterial(a,materialId,visible.version,current.world.version);
+        if(exact)this.store.update(a.id,{materials:this.session(a)!.materials.map(m=>m.id===materialId&&m.version===exact.version?exact:m)});
+      }
+    }
   }
   async config(a: Attempt, c: any) {
     const plan = toPilot(c); this.select(a); this.store.update(a.id, { configDraft: plan });
@@ -251,6 +275,8 @@ export class LiveWorkbench {
     const { s, current } = this.visibleMaterial(a, id, version);
     if (s.protocol === 2) {
       const value: any = await this.v4.host(s).query('objects.read', { kind: 'material', object_id: id, version });
+      const host=this.v4.host(s), known=host.draft<any[]>('workspace','evidence-cache')??[];
+      await host.keepDraft('workspace','evidence-cache',[...new Map([...known,...value.content.fragments.map((f:any)=>f.ref)].map(ref=>[JSON.stringify(ref),ref])).values()]);
       return this.cacheMaterial(s.id, { id, version, title: value.content.title, content: value.content.fragments.map((f: any) => f.text).join('\n\n') });
     }
     if (current.version === version) return this.cacheMaterial(s.id, current);

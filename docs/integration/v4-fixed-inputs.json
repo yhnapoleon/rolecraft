@@ -1,13 +1,13 @@
 {
   "W02": {
-    "commit": "a8ec5b8e41e37f95630bc2a110072999df9a22a5",
+    "commit": "95622b384a056d879ac0018aa63b15e3d681194e",
     "workspace": "/Users/jefmacmini/Projects/rolecraft-worktrees/033-w02",
-    "source_digest": "ad14b02ab129bf3550ef4c5f53cbcf852ccca73e9cf32d6694b56b34d84c3d95",
-    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W02/W02-20261007-041-english-relevance-r10.json",
+    "source_digest": "a431c042b333d39433ea4e215fac24acea77251aa0eeeeccc64f085e2ca07f8e",
+    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W02/W02-20261007-041-M2-install-r12.json",
     "files": {
       "docs/modules/expansion-v3/W02.md": {
-        "sha256": "ab1197e1e006c8339cde66999a2e203f3a304ebc4438304aa3b65f732e2a7e7a",
-        "size": 22398
+        "sha256": "6516c1c114aa76b6220ba3d0dc5f093c44118e80b0490fff263db0338a7bbd03",
+        "size": 27680
       },
       "scenarios/pm_pilot/v2/baseline.json": {
         "sha256": "1c45262e93aa5c9ec7c64d20f0c20eef775c8f61653e8ae152087de5f07fb754",
@@ -21,8 +21,1932 @@
         "sha256": "73eb9a49804752de5e0101b3513b6d30e59537738a6f1d3198e7d433721536bc",
         "size": 36132
       },
+      "scenarios/pm_pilot/v2/installed/current.json": {
+        "sha256": "161171e5df250d58fca0f79811247da886c4529f9528c03078fe5b3952d9ac8c",
+        "size": 1383
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/baseline.json": {
+        "sha256": "1c45262e93aa5c9ec7c64d20f0c20eef775c8f61653e8ae152087de5f07fb754",
+        "size": 598
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/decision_examples.json": {
+        "sha256": "955090ee0308cea119af74d6d3314b766c6da57c831410d73ac91e438021a107",
+        "size": 922
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/evaluation/rubric-v2-candidate-2.json": {
+        "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+        "size": 33717
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/evaluation/rules-v4-rubric-v2-c2.json": {
+        "sha256": "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f",
+        "size": 754
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/facts.json": {
+        "sha256": "73eb9a49804752de5e0101b3513b6d30e59537738a6f1d3198e7d433721536bc",
+        "size": 36132
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locale.json": {
+        "sha256": "2b4376df62767517dd5bf3572dbc8cf44d5d4534bf31771a0f9ca3fecd9392d2",
+        "size": 23417
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/baseline.json": {
+        "sha256": "362bb5e2550f3746c29f9a5ac3dc8b5e2d8321ddb82408f600e570c76dd0b4f0",
+        "size": 597
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/decision_examples.json": {
+        "sha256": "3c4fefc84987ad3fcdfbb387ac73544ec384b67696b8057cea4eb637f8857819",
+        "size": 1194
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/evaluation/rubric-v2-candidate-2.json": {
+        "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+        "size": 33717
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/evaluation/rules-v4-rubric-v2-c2.json": {
+        "sha256": "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f",
+        "size": 754
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/facts.json": {
+        "sha256": "de50de1c385a2062aa18be6f516900a772a6a3071f561cd4968c2979cfc35d04",
+        "size": 38789
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/locale.json": {
+        "sha256": "7fdcffe876804b6528d98b385b4c914a051bad04105cfe7693039cb385cde387",
+        "size": 23683
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/manifest.json": {
+        "sha256": "739db8a3696a8c99bde9a2e5dcd0c039175c5c0b7fee54d1ef3cbadcd4e6552e",
+        "size": 20149
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials.json": {
+        "sha256": "6ec899100eaec32c008bd7f0f6a7ad8a3a736de8fec3ea3ca7c78b01a60bf49c",
+        "size": 223388
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/approvals-v1.md": {
+        "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+        "size": 1779
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/brief-v1.md": {
+        "sha256": "3e14692b1102820ba3042a5e7711427d593c6581e5a3e8e317b26163e06c7135",
+        "size": 1346
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/business_case-v1.md": {
+        "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+        "size": 917
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/coordination-v1.md": {
+        "sha256": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+        "size": 828
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/demand-v1.md": {
+        "sha256": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+        "size": 2127
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/demo-v1.md": {
+        "sha256": "a12476b68fe52aedfb1ddef8e3523a2cc1a9b831707d23da9bdf35a2cdb584ec",
+        "size": 451
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/demo-v2.md": {
+        "sha256": "a2640df69d07055524ba50b0bbabfb84322c758de67f5830466ddecb51650660",
+        "size": 362
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/failures-v1.md": {
+        "sha256": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+        "size": 2807
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/faq-v1.md": {
+        "sha256": "b8fad283036c2ba68a8b20e537d11457908f8a8921b741c9ba0e758a1e24bd88",
+        "size": 2149
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/interviews-v1.md": {
+        "sha256": "345705f33270e338444f4a9a92cc8b0f03c77a0d16b6b5c2833bda4eb0b5418d",
+        "size": 1635
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/leave-v1.md": {
+        "sha256": "d287651b1f47f46ca1f6a39744121b7eb01ea9be93795a04637766d36b563320",
+        "size": 493
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/meal-v1.md": {
+        "sha256": "459abcb2c620d75b0caf62ff0328fa83f67908a8c154a6d998d0351f5966e0e8",
+        "size": 361
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/onboarding-v1.md": {
+        "sha256": "906d5dcecb028f616741bbeba4dd58ad2251257329564b699fbb6356999dc7d8",
+        "size": 1012
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/policy-v1.md": {
+        "sha256": "b29b349fc19da70717ba7405586dd2760ee40ce344477bfe776eed1d7fb4281f",
+        "size": 640
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/policy-v2.md": {
+        "sha256": "d4b820c6700b21de6af5f7170aedb0f2bf76b7d91bccf926efd3f4cb0c9975ad",
+        "size": 612
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/restricted-v1.md": {
+        "sha256": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/scope_note-v1.md": {
+        "sha256": "d6eff2910a2e0f39dd773a5e28d257bb56e2c41c12471263b05df8c2d23ea112",
+        "size": 577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/scope_note-v2.md": {
+        "sha256": "f7af830782ac84614662e312ba6181fbd8917fc8b436abc8ed2fff8aa5dcd5d4",
+        "size": 437
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/tech_diagnostics-v1.md": {
+        "sha256": "b17e99f786664e4105e01fde3e251a65f0715016359cae11900175dcd0ed6b52",
+        "size": 382
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/tech_private-v1.md": {
+        "sha256": "88cfa90b7080a450b1975744aa60d9e46dd06ab22c6082c1063d521e4c74051e",
+        "size": 614
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/technical-v1.md": {
+        "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
+        "size": 1993
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/trial_details-v1.md": {
+        "sha256": "e4cfe0846cb846fe93ade0d517258d3c0261f848d4b04ffac94ff6758ae48f29",
+        "size": 15196
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/user_groups-v1.md": {
+        "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/materials/world_private-v1.md": {
+        "sha256": "6a5ef0f1e5b42d0bcdcb7faf8dc3a5d880beb48972714f182bb55ae56023d58c",
+        "size": 188
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/paths.json": {
+        "sha256": "42510b731cb45b1162e1898796ce7487564f65fe34300d932e6cb6bcf56c97ba",
+        "size": 1214
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/probes.json": {
+        "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
+        "size": 4573
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/research/private-diagnostic.json": {
+        "sha256": "2ac688e60facb7f5d1e6adfb3e054e8f2fdc3f7e06d772bf9540fe60ed324ab8",
+        "size": 36065
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/research/public-case-records.json": {
+        "sha256": "67985f20bad11c4ceb7aed04e8c540f6b8a20dd50eb85dc4de6a4e61f040470a",
+        "size": 116081
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/research/retrieval-calibration.json": {
+        "sha256": "31bae8060b92cb09bc272db327c3650f5422f2d7803da171fb1aace472eda842",
+        "size": 502239
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/roles.json": {
+        "sha256": "671281d24ea4be57738bfc86fd8a44d3e10873699d530e55cae605a9572ed29b",
+        "size": 7099
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/rubric-reference.json": {
+        "sha256": "e7ac22535e849561eb06675154fd971ff1e36ceb612a49dc5e359898c96f30a9",
+        "size": 581
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/runtime/bundle.json": {
+        "sha256": "d33a27b335bddb8de2ff646d75cd9fc9f61b1400a863c543165dd0905c938474",
+        "size": 1577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/runtime/evaluation-protocol.json": {
+        "sha256": "ee8ead95aa4912636e458f819c9722bb935f630c85aca196f19c10d8abec9e22",
+        "size": 14445
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/runtime/evaluation.json": {
+        "sha256": "b4aa608aa454561c4fe5c9e633329e76c79b8fd9df4461600b0ddb69908eca21",
+        "size": 824
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/runtime/retrieval.json": {
+        "sha256": "6bcc03f28fa46e6f5dfbd9689df0502ddd086eb240258c31bdb13fbf692a945d",
+        "size": 114
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/runtime/source-files.json": {
+        "sha256": "a33a65833edab9c973edde4c12012e0ff0156aefa781c50af41946e7b9f1a9f8",
+        "size": 3037
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/locales/en/scenario.yaml": {
+        "sha256": "ce05eaf15917db14e31a3ff31c4f4bc8a54fe45dbf922a9fdc50dc16ad390dd3",
+        "size": 3133
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/manifest.json": {
+        "sha256": "dc8e38ac50ecc292faab31545ac7a7c593a3c7f2b3ae9f64940590502018965a",
+        "size": 18653
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials.json": {
+        "sha256": "a5df49e985fe4e69a159fcc46b327ead78f102db558c4dcc186d7e7d1569fb96",
+        "size": 212646
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/approvals-v1.md": {
+        "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+        "size": 1325
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/brief-v1.md": {
+        "sha256": "b1ba4450650d48d6c73542380a4cf4da50d34da0b6d4c3a459b4a7c85412418c",
+        "size": 1118
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/business_case-v1.md": {
+        "sha256": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+        "size": 775
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/coordination-v1.md": {
+        "sha256": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+        "size": 700
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/demand-v1.md": {
+        "sha256": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+        "size": 1755
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/demo-v1.md": {
+        "sha256": "f5a8b3cadbbb93978a56241a5064f4a638a2f03665a89b114ed26b120a35811e",
+        "size": 331
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/demo-v2.md": {
+        "sha256": "fb86f44ee7df15c79990740da322fff3555d617cf3311ace042e939c5f13a874",
+        "size": 268
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/failures-v1.md": {
+        "sha256": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+        "size": 2940
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/faq-v1.md": {
+        "sha256": "53e335fafa1ff0ffb32249cc92826b489dbcb73e652915f05b5027244f90ff7d",
+        "size": 1691
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/interviews-v1.md": {
+        "sha256": "983ea5fe34a7d929754e3a00fbb327906edd8f874a8622aeb989f871bbe1673c",
+        "size": 1267
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/leave-v1.md": {
+        "sha256": "ee26220a9f8e6da888aea0b0bb5f676ce847d5aa2b268f6c9ed89978a49012b2",
+        "size": 373
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/meal-v1.md": {
+        "sha256": "43f347192b0a11e262c524fb83790c2dc7eed51881eb17c849655a646c7aabed",
+        "size": 315
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/onboarding-v1.md": {
+        "sha256": "f76fe14d4f2f41b92a4725116f91dc10cb3d62d24cd8b25bd4c2dfd8efe4f509",
+        "size": 792
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/policy-v1.md": {
+        "sha256": "495d92ed9fa52e2d67ed69b0ed83aeeff1cb8f7568923999469244b70311d9cb",
+        "size": 470
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/policy-v2.md": {
+        "sha256": "1ef31bcb24b3a768e2aa002edea825bc37d71c8435ac94b6db3db69214cf6419",
+        "size": 455
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/restricted-v1.md": {
+        "sha256": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+        "size": 870
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/scope_note-v1.md": {
+        "sha256": "39e78d207899f544745b0b2847df4a34bd475b1a4867af42662937f18234ede8",
+        "size": 454
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/scope_note-v2.md": {
+        "sha256": "e7d2ee20ba3fcf0efa7d7075f812bfb0f7587b3e6e8a77ec25641328d854716b",
+        "size": 350
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/tech_diagnostics-v1.md": {
+        "sha256": "7dc867646bff9e33b15b2df4089baaf3f8befb23cfd14537987fbaa19517b4a1",
+        "size": 265
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/tech_private-v1.md": {
+        "sha256": "a5fa9ae780e10788b79151bd97fabbddd40183eb2c5778e23037b94d20e2ded7",
+        "size": 329
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/technical-v1.md": {
+        "sha256": "cdfed7fefe4ff3772261b15be6fa42a172ace2a1364d4ca2398260a37999d166",
+        "size": 1464
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/trial_details-v1.md": {
+        "sha256": "d96f2a714510a1ad772d25ececc88052eac16f8311605183f464a2372230d7cc",
+        "size": 14239
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/user_groups-v1.md": {
+        "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
+        "size": 930
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/materials/world_private-v1.md": {
+        "sha256": "97ee621793774fd024266127495b3a99ce489a3b9ebbbe194119fb3d2e9b4ebf",
+        "size": 153
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/paths.json": {
+        "sha256": "42510b731cb45b1162e1898796ce7487564f65fe34300d932e6cb6bcf56c97ba",
+        "size": 1214
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/probes.json": {
+        "sha256": "b8b56e09f7f247a9c29484b26240e63e01d6a37e65b937bcd2739ddb1db5fdce",
+        "size": 4402
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/research/public-case-records.json": {
+        "sha256": "ff4ed00d3f6640f560f29de5eae7c0c36e59be1b7cb71a1a3566e564238106ad",
+        "size": 112810
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/roles.json": {
+        "sha256": "f6895278d2f56ab9c6606a924af016ec3e546fdb9102ca7ccb17ad3c2f9143b6",
+        "size": 6114
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/rubric-reference.json": {
+        "sha256": "e7ac22535e849561eb06675154fd971ff1e36ceb612a49dc5e359898c96f30a9",
+        "size": 581
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/runtime/bundle.json": {
+        "sha256": "f3c24bf9af570d4e217b9b1fff7c18cfe7d43e513fb4a0a92449d15150045c54",
+        "size": 1577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/runtime/evaluation-protocol.json": {
+        "sha256": "2e22add8f7108961eb9f73cfcc1b1306489d1ec5b042794caf447bf6e4cab9a2",
+        "size": 12689
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/runtime/evaluation.json": {
+        "sha256": "0156af028028d72f088e5dcc51d38876e351fa8cb48a12f7fcb53c5d21dcfc8b",
+        "size": 824
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/runtime/retrieval.json": {
+        "sha256": "3f48e5f463ef76edc5196630788c3f4860ea88a9ed837e7add38d7fe886df12a",
+        "size": 110
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/runtime/source-files.json": {
+        "sha256": "902ca9cc3d7f42baccf3e6b25208bddaa07f88daf02e773fecc659e10b059e26",
+        "size": 2082
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.3/pm_pilot/scenario.yaml": {
+        "sha256": "b91e7f2f880694177f14fe6e17fbf970c3ec4b98e66f2a0fb13b57730b2a6fb9",
+        "size": 3100
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/baseline.json": {
+        "sha256": "1c45262e93aa5c9ec7c64d20f0c20eef775c8f61653e8ae152087de5f07fb754",
+        "size": 598
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/decision_examples.json": {
+        "sha256": "955090ee0308cea119af74d6d3314b766c6da57c831410d73ac91e438021a107",
+        "size": 922
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/evaluation/rubric-v2-candidate-2.json": {
+        "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+        "size": 33717
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/evaluation/rules-v4-rubric-v2-c2.json": {
+        "sha256": "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f",
+        "size": 754
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/facts.json": {
+        "sha256": "73eb9a49804752de5e0101b3513b6d30e59537738a6f1d3198e7d433721536bc",
+        "size": 36132
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locale.json": {
+        "sha256": "2b4376df62767517dd5bf3572dbc8cf44d5d4534bf31771a0f9ca3fecd9392d2",
+        "size": 23417
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/baseline.json": {
+        "sha256": "362bb5e2550f3746c29f9a5ac3dc8b5e2d8321ddb82408f600e570c76dd0b4f0",
+        "size": 597
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/decision_examples.json": {
+        "sha256": "3c4fefc84987ad3fcdfbb387ac73544ec384b67696b8057cea4eb637f8857819",
+        "size": 1194
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/evaluation/rubric-v2-candidate-2.json": {
+        "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+        "size": 33717
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/evaluation/rules-v4-rubric-v2-c2.json": {
+        "sha256": "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f",
+        "size": 754
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/facts.json": {
+        "sha256": "de50de1c385a2062aa18be6f516900a772a6a3071f561cd4968c2979cfc35d04",
+        "size": 38789
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/locale.json": {
+        "sha256": "7fdcffe876804b6528d98b385b4c914a051bad04105cfe7693039cb385cde387",
+        "size": 23683
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/manifest.json": {
+        "sha256": "237efe8e57386a8926435a0ef98eb2008fe3ff7093fb3141226bc88544675760",
+        "size": 20149
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials.json": {
+        "sha256": "6ec899100eaec32c008bd7f0f6a7ad8a3a736de8fec3ea3ca7c78b01a60bf49c",
+        "size": 223388
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/approvals-v1.md": {
+        "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+        "size": 1779
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/brief-v1.md": {
+        "sha256": "3e14692b1102820ba3042a5e7711427d593c6581e5a3e8e317b26163e06c7135",
+        "size": 1346
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/business_case-v1.md": {
+        "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+        "size": 917
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/coordination-v1.md": {
+        "sha256": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+        "size": 828
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/demand-v1.md": {
+        "sha256": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+        "size": 2127
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/demo-v1.md": {
+        "sha256": "a12476b68fe52aedfb1ddef8e3523a2cc1a9b831707d23da9bdf35a2cdb584ec",
+        "size": 451
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/demo-v2.md": {
+        "sha256": "a2640df69d07055524ba50b0bbabfb84322c758de67f5830466ddecb51650660",
+        "size": 362
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/failures-v1.md": {
+        "sha256": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+        "size": 2807
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/faq-v1.md": {
+        "sha256": "b8fad283036c2ba68a8b20e537d11457908f8a8921b741c9ba0e758a1e24bd88",
+        "size": 2149
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/interviews-v1.md": {
+        "sha256": "345705f33270e338444f4a9a92cc8b0f03c77a0d16b6b5c2833bda4eb0b5418d",
+        "size": 1635
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/leave-v1.md": {
+        "sha256": "d287651b1f47f46ca1f6a39744121b7eb01ea9be93795a04637766d36b563320",
+        "size": 493
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/meal-v1.md": {
+        "sha256": "459abcb2c620d75b0caf62ff0328fa83f67908a8c154a6d998d0351f5966e0e8",
+        "size": 361
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/onboarding-v1.md": {
+        "sha256": "906d5dcecb028f616741bbeba4dd58ad2251257329564b699fbb6356999dc7d8",
+        "size": 1012
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/policy-v1.md": {
+        "sha256": "b29b349fc19da70717ba7405586dd2760ee40ce344477bfe776eed1d7fb4281f",
+        "size": 640
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/policy-v2.md": {
+        "sha256": "d4b820c6700b21de6af5f7170aedb0f2bf76b7d91bccf926efd3f4cb0c9975ad",
+        "size": 612
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/restricted-v1.md": {
+        "sha256": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/scope_note-v1.md": {
+        "sha256": "d6eff2910a2e0f39dd773a5e28d257bb56e2c41c12471263b05df8c2d23ea112",
+        "size": 577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/scope_note-v2.md": {
+        "sha256": "f7af830782ac84614662e312ba6181fbd8917fc8b436abc8ed2fff8aa5dcd5d4",
+        "size": 437
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/tech_diagnostics-v1.md": {
+        "sha256": "b17e99f786664e4105e01fde3e251a65f0715016359cae11900175dcd0ed6b52",
+        "size": 382
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/tech_private-v1.md": {
+        "sha256": "88cfa90b7080a450b1975744aa60d9e46dd06ab22c6082c1063d521e4c74051e",
+        "size": 614
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/technical-v1.md": {
+        "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
+        "size": 1993
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/trial_details-v1.md": {
+        "sha256": "e4cfe0846cb846fe93ade0d517258d3c0261f848d4b04ffac94ff6758ae48f29",
+        "size": 15196
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/user_groups-v1.md": {
+        "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/materials/world_private-v1.md": {
+        "sha256": "6a5ef0f1e5b42d0bcdcb7faf8dc3a5d880beb48972714f182bb55ae56023d58c",
+        "size": 188
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/paths.json": {
+        "sha256": "42510b731cb45b1162e1898796ce7487564f65fe34300d932e6cb6bcf56c97ba",
+        "size": 1214
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/probes.json": {
+        "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
+        "size": 4573
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/research/private-diagnostic.json": {
+        "sha256": "2ac688e60facb7f5d1e6adfb3e054e8f2fdc3f7e06d772bf9540fe60ed324ab8",
+        "size": 36065
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/research/public-case-records.json": {
+        "sha256": "67985f20bad11c4ceb7aed04e8c540f6b8a20dd50eb85dc4de6a4e61f040470a",
+        "size": 116081
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/research/retrieval-calibration.json": {
+        "sha256": "31bae8060b92cb09bc272db327c3650f5422f2d7803da171fb1aace472eda842",
+        "size": 502239
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/roles.json": {
+        "sha256": "671281d24ea4be57738bfc86fd8a44d3e10873699d530e55cae605a9572ed29b",
+        "size": 7099
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/rubric-reference.json": {
+        "sha256": "e7ac22535e849561eb06675154fd971ff1e36ceb612a49dc5e359898c96f30a9",
+        "size": 581
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/runtime/bundle.json": {
+        "sha256": "e338591c868c107108e7ec8bad5a5dd18b5fc3fc7dce87631b508b58a4834370",
+        "size": 1577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/runtime/evaluation-protocol.json": {
+        "sha256": "7f830f0a2953ddeeb4bc0af7ae142076880041623ba78d850de28237faab8dc9",
+        "size": 14802
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/runtime/evaluation.json": {
+        "sha256": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+        "size": 824
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/runtime/retrieval.json": {
+        "sha256": "6bcc03f28fa46e6f5dfbd9689df0502ddd086eb240258c31bdb13fbf692a945d",
+        "size": 114
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/runtime/source-files.json": {
+        "sha256": "a33a65833edab9c973edde4c12012e0ff0156aefa781c50af41946e7b9f1a9f8",
+        "size": 3037
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en/scenario.yaml": {
+        "sha256": "a812a104ffa8e99c213abd9f21ba338d33ac103635f6022fb0a99a3a79a93fb2",
+        "size": 3133
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/manifest.json": {
+        "sha256": "e64e0589d3fe8d5d345ff0d56b7856a465759a985b9a18e4d73be82561542ef4",
+        "size": 18653
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials.json": {
+        "sha256": "a5df49e985fe4e69a159fcc46b327ead78f102db558c4dcc186d7e7d1569fb96",
+        "size": 212646
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/approvals-v1.md": {
+        "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+        "size": 1325
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/brief-v1.md": {
+        "sha256": "b1ba4450650d48d6c73542380a4cf4da50d34da0b6d4c3a459b4a7c85412418c",
+        "size": 1118
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/business_case-v1.md": {
+        "sha256": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+        "size": 775
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/coordination-v1.md": {
+        "sha256": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+        "size": 700
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/demand-v1.md": {
+        "sha256": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+        "size": 1755
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/demo-v1.md": {
+        "sha256": "f5a8b3cadbbb93978a56241a5064f4a638a2f03665a89b114ed26b120a35811e",
+        "size": 331
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/demo-v2.md": {
+        "sha256": "fb86f44ee7df15c79990740da322fff3555d617cf3311ace042e939c5f13a874",
+        "size": 268
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/failures-v1.md": {
+        "sha256": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+        "size": 2940
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/faq-v1.md": {
+        "sha256": "53e335fafa1ff0ffb32249cc92826b489dbcb73e652915f05b5027244f90ff7d",
+        "size": 1691
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/interviews-v1.md": {
+        "sha256": "983ea5fe34a7d929754e3a00fbb327906edd8f874a8622aeb989f871bbe1673c",
+        "size": 1267
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/leave-v1.md": {
+        "sha256": "ee26220a9f8e6da888aea0b0bb5f676ce847d5aa2b268f6c9ed89978a49012b2",
+        "size": 373
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/meal-v1.md": {
+        "sha256": "43f347192b0a11e262c524fb83790c2dc7eed51881eb17c849655a646c7aabed",
+        "size": 315
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/onboarding-v1.md": {
+        "sha256": "f76fe14d4f2f41b92a4725116f91dc10cb3d62d24cd8b25bd4c2dfd8efe4f509",
+        "size": 792
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/policy-v1.md": {
+        "sha256": "495d92ed9fa52e2d67ed69b0ed83aeeff1cb8f7568923999469244b70311d9cb",
+        "size": 470
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/policy-v2.md": {
+        "sha256": "1ef31bcb24b3a768e2aa002edea825bc37d71c8435ac94b6db3db69214cf6419",
+        "size": 455
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/restricted-v1.md": {
+        "sha256": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+        "size": 870
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/scope_note-v1.md": {
+        "sha256": "39e78d207899f544745b0b2847df4a34bd475b1a4867af42662937f18234ede8",
+        "size": 454
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/scope_note-v2.md": {
+        "sha256": "e7d2ee20ba3fcf0efa7d7075f812bfb0f7587b3e6e8a77ec25641328d854716b",
+        "size": 350
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/tech_diagnostics-v1.md": {
+        "sha256": "7dc867646bff9e33b15b2df4089baaf3f8befb23cfd14537987fbaa19517b4a1",
+        "size": 265
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/tech_private-v1.md": {
+        "sha256": "a5fa9ae780e10788b79151bd97fabbddd40183eb2c5778e23037b94d20e2ded7",
+        "size": 329
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/technical-v1.md": {
+        "sha256": "cdfed7fefe4ff3772261b15be6fa42a172ace2a1364d4ca2398260a37999d166",
+        "size": 1464
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/trial_details-v1.md": {
+        "sha256": "d96f2a714510a1ad772d25ececc88052eac16f8311605183f464a2372230d7cc",
+        "size": 14239
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/user_groups-v1.md": {
+        "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
+        "size": 930
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/materials/world_private-v1.md": {
+        "sha256": "97ee621793774fd024266127495b3a99ce489a3b9ebbbe194119fb3d2e9b4ebf",
+        "size": 153
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/paths.json": {
+        "sha256": "42510b731cb45b1162e1898796ce7487564f65fe34300d932e6cb6bcf56c97ba",
+        "size": 1214
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/probes.json": {
+        "sha256": "b8b56e09f7f247a9c29484b26240e63e01d6a37e65b937bcd2739ddb1db5fdce",
+        "size": 4402
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/research/public-case-records.json": {
+        "sha256": "ff4ed00d3f6640f560f29de5eae7c0c36e59be1b7cb71a1a3566e564238106ad",
+        "size": 112810
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/roles.json": {
+        "sha256": "f6895278d2f56ab9c6606a924af016ec3e546fdb9102ca7ccb17ad3c2f9143b6",
+        "size": 6114
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/rubric-reference.json": {
+        "sha256": "e7ac22535e849561eb06675154fd971ff1e36ceb612a49dc5e359898c96f30a9",
+        "size": 581
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/runtime/bundle.json": {
+        "sha256": "7ee4bf41b0fcc023f3add1c44aa6a8159fb00c1b3d5a2b14f83fd1730884d2c5",
+        "size": 1577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/runtime/evaluation-protocol.json": {
+        "sha256": "34b3bab45e16c7f872046360c7b17955413731018e20de46faddd97acac50288",
+        "size": 13046
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/runtime/evaluation.json": {
+        "sha256": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
+        "size": 824
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/runtime/retrieval.json": {
+        "sha256": "3f48e5f463ef76edc5196630788c3f4860ea88a9ed837e7add38d7fe886df12a",
+        "size": 110
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/runtime/source-files.json": {
+        "sha256": "902ca9cc3d7f42baccf3e6b25208bddaa07f88daf02e773fecc659e10b059e26",
+        "size": 2082
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/scenario.yaml": {
+        "sha256": "6f01f708e120705601e176462d7a8a33c47da5880766da6b839c9a5c4e3ef4e9",
+        "size": 3100
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/baseline.json": {
+        "sha256": "f7f6ba2f07d8684722f2e86863ff173f34783a36bd14c932bc866b6c2bb50fb0",
+        "size": 609
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/decision_examples.json": {
+        "sha256": "955090ee0308cea119af74d6d3314b766c6da57c831410d73ac91e438021a107",
+        "size": 922
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/evaluation/rubric-v2-candidate-2.json": {
+        "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+        "size": 33717
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/evaluation/rules-v4-rubric-v2-c2.json": {
+        "sha256": "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f",
+        "size": 754
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/facts.json": {
+        "sha256": "47991ed8787872e76cebce79a9ffc9d2fb5cd32fbf4a2ea4b966bf1cbf296ae1",
+        "size": 38257
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locale.json": {
+        "sha256": "d2b112ed41bffaa5f0ff89d7fe15f5c9d3f91a07a783316c626e391cf9342000",
+        "size": 24174
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/baseline.json": {
+        "sha256": "e9bd3783aa3885c6a415ae265f7994468409b715bd3d356c8c70bc13b5bd5ed6",
+        "size": 608
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/decision_examples.json": {
+        "sha256": "3c4fefc84987ad3fcdfbb387ac73544ec384b67696b8057cea4eb637f8857819",
+        "size": 1194
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/evaluation/rubric-v2-candidate-2.json": {
+        "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+        "size": 33717
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/evaluation/rules-v4-rubric-v2-c2.json": {
+        "sha256": "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f",
+        "size": 754
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/facts.json": {
+        "sha256": "f80b67dff29f6e3803c13b1a3ac1899e45f4374670aec823862d44e2adc3bdd9",
+        "size": 40942
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/locale.json": {
+        "sha256": "5f1e4d511f563b83a7ffef51091bba135d5b06c51f46ae5825cc206aeaf1b1e9",
+        "size": 24444
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/manifest.json": {
+        "sha256": "c6baf36342bd11f5179c9c34f9c4c01fbbc2baefa860225b8c5f30d9545f59b5",
+        "size": 20336
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials.json": {
+        "sha256": "6861c8f6308442450fc99e19526ca193b8b730507fd3590801636e684785831e",
+        "size": 227488
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/approvals-v1.md": {
+        "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+        "size": 1779
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/brief-v1.md": {
+        "sha256": "61da3cc1bb4d223174624fe701710e67900f71d16f236a5baf022a2ee4438353",
+        "size": 1544
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/business_case-v1.md": {
+        "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+        "size": 917
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/coordination-v1.md": {
+        "sha256": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+        "size": 828
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/demand-v1.md": {
+        "sha256": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+        "size": 2127
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/demo-v1.md": {
+        "sha256": "a12476b68fe52aedfb1ddef8e3523a2cc1a9b831707d23da9bdf35a2cdb584ec",
+        "size": 451
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/demo-v2.md": {
+        "sha256": "a2640df69d07055524ba50b0bbabfb84322c758de67f5830466ddecb51650660",
+        "size": 362
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/failures-v1.md": {
+        "sha256": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+        "size": 2807
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/faq-v1.md": {
+        "sha256": "b8fad283036c2ba68a8b20e537d11457908f8a8921b741c9ba0e758a1e24bd88",
+        "size": 2149
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/interviews-v1.md": {
+        "sha256": "345705f33270e338444f4a9a92cc8b0f03c77a0d16b6b5c2833bda4eb0b5418d",
+        "size": 1635
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/leave-v1.md": {
+        "sha256": "d287651b1f47f46ca1f6a39744121b7eb01ea9be93795a04637766d36b563320",
+        "size": 493
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/meal-v1.md": {
+        "sha256": "459abcb2c620d75b0caf62ff0328fa83f67908a8c154a6d998d0351f5966e0e8",
+        "size": 361
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/onboarding-v1.md": {
+        "sha256": "906d5dcecb028f616741bbeba4dd58ad2251257329564b699fbb6356999dc7d8",
+        "size": 1012
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/policy-v1.md": {
+        "sha256": "b29b349fc19da70717ba7405586dd2760ee40ce344477bfe776eed1d7fb4281f",
+        "size": 640
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/policy-v2.md": {
+        "sha256": "d4b820c6700b21de6af5f7170aedb0f2bf76b7d91bccf926efd3f4cb0c9975ad",
+        "size": 612
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/restricted-v1.md": {
+        "sha256": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/scope_note-v1.md": {
+        "sha256": "d6eff2910a2e0f39dd773a5e28d257bb56e2c41c12471263b05df8c2d23ea112",
+        "size": 577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/scope_note-v2.md": {
+        "sha256": "f7af830782ac84614662e312ba6181fbd8917fc8b436abc8ed2fff8aa5dcd5d4",
+        "size": 437
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/tech_diagnostics-v1.md": {
+        "sha256": "b17e99f786664e4105e01fde3e251a65f0715016359cae11900175dcd0ed6b52",
+        "size": 382
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/tech_private-v1.md": {
+        "sha256": "88cfa90b7080a450b1975744aa60d9e46dd06ab22c6082c1063d521e4c74051e",
+        "size": 614
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/technical-v1.md": {
+        "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
+        "size": 1993
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/trial_details-v1.md": {
+        "sha256": "ad3ec44d20a1aeb03cf26c42956fa1d7115c0224c0c121033bb06430bf91d1c4",
+        "size": 15502
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/user_groups-v1.md": {
+        "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/materials/world_private-v1.md": {
+        "sha256": "6a5ef0f1e5b42d0bcdcb7faf8dc3a5d880beb48972714f182bb55ae56023d58c",
+        "size": 188
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/paths.json": {
+        "sha256": "db8587d45cc0bcb9a2d16c185dc6138ac7640f5d85bcb96ed75d6eb34971db14",
+        "size": 1236
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/probes.json": {
+        "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
+        "size": 4573
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/research/private-diagnostic.json": {
+        "sha256": "08f7ec70f43c34ac40c086320854fc9110f3ef94357c9c74d3d796c5f4e4deef",
+        "size": 36421
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/research/public-case-records.json": {
+        "sha256": "5346cde70e8a5c3c9435f39615005897dc3bffc78a24dd189ffb69f85bcf799d",
+        "size": 117139
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/research/retrieval-calibration.json": {
+        "sha256": "31bae8060b92cb09bc272db327c3650f5422f2d7803da171fb1aace472eda842",
+        "size": 502239
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/roles.json": {
+        "sha256": "8fe3a867b8d6967a06de510070be622e9475cca749215bfd8b646e01cd304dc1",
+        "size": 7207
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/rubric-reference.json": {
+        "sha256": "e7ac22535e849561eb06675154fd971ff1e36ceb612a49dc5e359898c96f30a9",
+        "size": 581
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/runtime/bundle.json": {
+        "sha256": "e338591c868c107108e7ec8bad5a5dd18b5fc3fc7dce87631b508b58a4834370",
+        "size": 1577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/runtime/evaluation-protocol.json": {
+        "sha256": "7f830f0a2953ddeeb4bc0af7ae142076880041623ba78d850de28237faab8dc9",
+        "size": 14802
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/runtime/evaluation.json": {
+        "sha256": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+        "size": 824
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/runtime/retrieval.json": {
+        "sha256": "6bcc03f28fa46e6f5dfbd9689df0502ddd086eb240258c31bdb13fbf692a945d",
+        "size": 114
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/runtime/source-files.json": {
+        "sha256": "a33a65833edab9c973edde4c12012e0ff0156aefa781c50af41946e7b9f1a9f8",
+        "size": 3037
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/locales/en/scenario.yaml": {
+        "sha256": "248de068c4d9d8fee46b66896c9e17b3d4a024db736af2ea90659a4d4698d5af",
+        "size": 3144
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/manifest.json": {
+        "sha256": "6586cf2cb06e0caf94029fdf831913ce5c6f989ee01ae8046e64fd35acba7b16",
+        "size": 18840
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials.json": {
+        "sha256": "962774161598972aac8963b3f2ab0e7178ad21b61b7d6aefde683417eb63e0d3",
+        "size": 216878
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/approvals-v1.md": {
+        "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+        "size": 1325
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/brief-v1.md": {
+        "sha256": "145dac78a7407b9d184cc867b722514e41031ca535d83e64a6cafeb8df8449a4",
+        "size": 1306
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/business_case-v1.md": {
+        "sha256": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+        "size": 775
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/coordination-v1.md": {
+        "sha256": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+        "size": 700
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/demand-v1.md": {
+        "sha256": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+        "size": 1755
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/demo-v1.md": {
+        "sha256": "f5a8b3cadbbb93978a56241a5064f4a638a2f03665a89b114ed26b120a35811e",
+        "size": 331
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/demo-v2.md": {
+        "sha256": "fb86f44ee7df15c79990740da322fff3555d617cf3311ace042e939c5f13a874",
+        "size": 268
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/failures-v1.md": {
+        "sha256": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+        "size": 2940
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/faq-v1.md": {
+        "sha256": "53e335fafa1ff0ffb32249cc92826b489dbcb73e652915f05b5027244f90ff7d",
+        "size": 1691
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/interviews-v1.md": {
+        "sha256": "983ea5fe34a7d929754e3a00fbb327906edd8f874a8622aeb989f871bbe1673c",
+        "size": 1267
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/leave-v1.md": {
+        "sha256": "ee26220a9f8e6da888aea0b0bb5f676ce847d5aa2b268f6c9ed89978a49012b2",
+        "size": 373
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/meal-v1.md": {
+        "sha256": "43f347192b0a11e262c524fb83790c2dc7eed51881eb17c849655a646c7aabed",
+        "size": 315
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/onboarding-v1.md": {
+        "sha256": "f76fe14d4f2f41b92a4725116f91dc10cb3d62d24cd8b25bd4c2dfd8efe4f509",
+        "size": 792
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/policy-v1.md": {
+        "sha256": "495d92ed9fa52e2d67ed69b0ed83aeeff1cb8f7568923999469244b70311d9cb",
+        "size": 470
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/policy-v2.md": {
+        "sha256": "1ef31bcb24b3a768e2aa002edea825bc37d71c8435ac94b6db3db69214cf6419",
+        "size": 455
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/restricted-v1.md": {
+        "sha256": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+        "size": 870
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/scope_note-v1.md": {
+        "sha256": "39e78d207899f544745b0b2847df4a34bd475b1a4867af42662937f18234ede8",
+        "size": 454
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/scope_note-v2.md": {
+        "sha256": "e7d2ee20ba3fcf0efa7d7075f812bfb0f7587b3e6e8a77ec25641328d854716b",
+        "size": 350
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/tech_diagnostics-v1.md": {
+        "sha256": "7dc867646bff9e33b15b2df4089baaf3f8befb23cfd14537987fbaa19517b4a1",
+        "size": 265
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/tech_private-v1.md": {
+        "sha256": "a5fa9ae780e10788b79151bd97fabbddd40183eb2c5778e23037b94d20e2ded7",
+        "size": 329
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/technical-v1.md": {
+        "sha256": "cdfed7fefe4ff3772261b15be6fa42a172ace2a1364d4ca2398260a37999d166",
+        "size": 1464
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/trial_details-v1.md": {
+        "sha256": "ad2b46f564598a05de777b7e94565b5c46648670ac06f482647ccc4cd3163f11",
+        "size": 14616
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/user_groups-v1.md": {
+        "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
+        "size": 930
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/materials/world_private-v1.md": {
+        "sha256": "97ee621793774fd024266127495b3a99ce489a3b9ebbbe194119fb3d2e9b4ebf",
+        "size": 153
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/paths.json": {
+        "sha256": "db8587d45cc0bcb9a2d16c185dc6138ac7640f5d85bcb96ed75d6eb34971db14",
+        "size": 1236
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/probes.json": {
+        "sha256": "b8b56e09f7f247a9c29484b26240e63e01d6a37e65b937bcd2739ddb1db5fdce",
+        "size": 4402
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/research/public-case-records.json": {
+        "sha256": "c80de78e56afff8c24a89834792b0de8236f7897ae5f11e5299885c568420171",
+        "size": 113868
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/roles.json": {
+        "sha256": "27141e54c6693123915b02cc9ee9980cb563ee9a0d2c6f218e6ba773d0bdcac0",
+        "size": 6222
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/rubric-reference.json": {
+        "sha256": "e7ac22535e849561eb06675154fd971ff1e36ceb612a49dc5e359898c96f30a9",
+        "size": 581
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/runtime/bundle.json": {
+        "sha256": "7ee4bf41b0fcc023f3add1c44aa6a8159fb00c1b3d5a2b14f83fd1730884d2c5",
+        "size": 1577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/runtime/evaluation-protocol.json": {
+        "sha256": "34b3bab45e16c7f872046360c7b17955413731018e20de46faddd97acac50288",
+        "size": 13046
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/runtime/evaluation.json": {
+        "sha256": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
+        "size": 824
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/runtime/retrieval.json": {
+        "sha256": "3f48e5f463ef76edc5196630788c3f4860ea88a9ed837e7add38d7fe886df12a",
+        "size": 110
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/runtime/source-files.json": {
+        "sha256": "902ca9cc3d7f42baccf3e6b25208bddaa07f88daf02e773fecc659e10b059e26",
+        "size": 2082
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_capacity15/scenario.yaml": {
+        "sha256": "52984d63a0fec92dec33f330d700cf1d7113f1e41f7eac66ef23bb29c70bb099",
+        "size": 3111
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/baseline.json": {
+        "sha256": "d6dd526354b24dee22d849f3086cbd7cb716eb13992f34f08e26730c2ec7b10c",
+        "size": 605
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/decision_examples.json": {
+        "sha256": "955090ee0308cea119af74d6d3314b766c6da57c831410d73ac91e438021a107",
+        "size": 922
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/evaluation/rubric-v2-candidate-2.json": {
+        "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+        "size": 33717
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/evaluation/rules-v4-rubric-v2-c2.json": {
+        "sha256": "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f",
+        "size": 754
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/facts.json": {
+        "sha256": "bcc717d65f465f9ac4b9494d888adbe32e4cd6f3c95eff6b6d6c408fb16a3257",
+        "size": 38049
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locale.json": {
+        "sha256": "07903943ddad0638c31c1d9ccd83891711127a306a5397f241a93562c37fe5d3",
+        "size": 24074
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/baseline.json": {
+        "sha256": "4dd6c958bc068b25b843ec32d1cabcf85929291b377f0f16e555ba4202ff0ecc",
+        "size": 604
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/decision_examples.json": {
+        "sha256": "3c4fefc84987ad3fcdfbb387ac73544ec384b67696b8057cea4eb637f8857819",
+        "size": 1194
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/evaluation/rubric-v2-candidate-2.json": {
+        "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+        "size": 33717
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/evaluation/rules-v4-rubric-v2-c2.json": {
+        "sha256": "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f",
+        "size": 754
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/facts.json": {
+        "sha256": "bbb2ef1cb48aa7a2df4c70e8c6eb25c47f9a58cbfa218aa07b06e0daf2bbe803",
+        "size": 40734
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/locale.json": {
+        "sha256": "ae554e5d4d439eaa7ea68263b5443af1ccb0619ecf6e49b72446c4b4282082b6",
+        "size": 24344
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/manifest.json": {
+        "sha256": "a9906fcba342bdd0d14936599187692758325e382f08e696ec0a02678f628ba4",
+        "size": 20324
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials.json": {
+        "sha256": "75e193003bbb1f66237d9483925e9e69ee22711807195a38cc3e08c65493e5a9",
+        "size": 226592
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/approvals-v1.md": {
+        "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+        "size": 1779
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/brief-v1.md": {
+        "sha256": "8b843fae2248cd880c1a520fbd1acd3e862ccad1bfe74d74666815db91deda46",
+        "size": 1544
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/business_case-v1.md": {
+        "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+        "size": 917
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/coordination-v1.md": {
+        "sha256": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+        "size": 828
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/demand-v1.md": {
+        "sha256": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+        "size": 2127
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/demo-v1.md": {
+        "sha256": "a12476b68fe52aedfb1ddef8e3523a2cc1a9b831707d23da9bdf35a2cdb584ec",
+        "size": 451
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/demo-v2.md": {
+        "sha256": "a2640df69d07055524ba50b0bbabfb84322c758de67f5830466ddecb51650660",
+        "size": 362
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/failures-v1.md": {
+        "sha256": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+        "size": 2807
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/faq-v1.md": {
+        "sha256": "b8fad283036c2ba68a8b20e537d11457908f8a8921b741c9ba0e758a1e24bd88",
+        "size": 2149
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/interviews-v1.md": {
+        "sha256": "345705f33270e338444f4a9a92cc8b0f03c77a0d16b6b5c2833bda4eb0b5418d",
+        "size": 1635
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/leave-v1.md": {
+        "sha256": "d287651b1f47f46ca1f6a39744121b7eb01ea9be93795a04637766d36b563320",
+        "size": 493
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/meal-v1.md": {
+        "sha256": "459abcb2c620d75b0caf62ff0328fa83f67908a8c154a6d998d0351f5966e0e8",
+        "size": 361
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/onboarding-v1.md": {
+        "sha256": "906d5dcecb028f616741bbeba4dd58ad2251257329564b699fbb6356999dc7d8",
+        "size": 1012
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/policy-v1.md": {
+        "sha256": "b29b349fc19da70717ba7405586dd2760ee40ce344477bfe776eed1d7fb4281f",
+        "size": 640
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/policy-v2.md": {
+        "sha256": "d4b820c6700b21de6af5f7170aedb0f2bf76b7d91bccf926efd3f4cb0c9975ad",
+        "size": 612
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/restricted-v1.md": {
+        "sha256": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/scope_note-v1.md": {
+        "sha256": "d6eff2910a2e0f39dd773a5e28d257bb56e2c41c12471263b05df8c2d23ea112",
+        "size": 577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/scope_note-v2.md": {
+        "sha256": "f7af830782ac84614662e312ba6181fbd8917fc8b436abc8ed2fff8aa5dcd5d4",
+        "size": 437
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/tech_diagnostics-v1.md": {
+        "sha256": "b17e99f786664e4105e01fde3e251a65f0715016359cae11900175dcd0ed6b52",
+        "size": 382
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/tech_private-v1.md": {
+        "sha256": "88cfa90b7080a450b1975744aa60d9e46dd06ab22c6082c1063d521e4c74051e",
+        "size": 614
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/technical-v1.md": {
+        "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
+        "size": 1993
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/trial_details-v1.md": {
+        "sha256": "5b374266bfedb617c0b7991b1a2b05c4a996c750efb3aaac9bf11b0c88b8ead4",
+        "size": 15482
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/user_groups-v1.md": {
+        "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/materials/world_private-v1.md": {
+        "sha256": "6a5ef0f1e5b42d0bcdcb7faf8dc3a5d880beb48972714f182bb55ae56023d58c",
+        "size": 188
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/paths.json": {
+        "sha256": "286328d326752f1252b5cd38f7ea83bf58e0bc6af3ae9f771c01a57604a1325d",
+        "size": 1214
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/probes.json": {
+        "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
+        "size": 4573
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/research/private-diagnostic.json": {
+        "sha256": "7882e3ed710d67ada739503560591dccb65faa45109216965a7f1186a940c8a9",
+        "size": 36393
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/research/public-case-records.json": {
+        "sha256": "56ab452551c151400e77e3c48b26bc6cacc01de4d9690e829f0d049dfc688e82",
+        "size": 116983
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/research/retrieval-calibration.json": {
+        "sha256": "31bae8060b92cb09bc272db327c3650f5422f2d7803da171fb1aace472eda842",
+        "size": 502239
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/roles.json": {
+        "sha256": "8fe3a867b8d6967a06de510070be622e9475cca749215bfd8b646e01cd304dc1",
+        "size": 7207
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/rubric-reference.json": {
+        "sha256": "e7ac22535e849561eb06675154fd971ff1e36ceb612a49dc5e359898c96f30a9",
+        "size": 581
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/runtime/bundle.json": {
+        "sha256": "e338591c868c107108e7ec8bad5a5dd18b5fc3fc7dce87631b508b58a4834370",
+        "size": 1577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/runtime/evaluation-protocol.json": {
+        "sha256": "7f830f0a2953ddeeb4bc0af7ae142076880041623ba78d850de28237faab8dc9",
+        "size": 14802
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/runtime/evaluation.json": {
+        "sha256": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+        "size": 824
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/runtime/retrieval.json": {
+        "sha256": "6bcc03f28fa46e6f5dfbd9689df0502ddd086eb240258c31bdb13fbf692a945d",
+        "size": 114
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/runtime/source-files.json": {
+        "sha256": "a33a65833edab9c973edde4c12012e0ff0156aefa781c50af41946e7b9f1a9f8",
+        "size": 3037
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/locales/en/scenario.yaml": {
+        "sha256": "8ec5e070570b5f38ee983dff3bab40c70d169536ffaa63bbbe652ffa09eb594c",
+        "size": 3140
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/manifest.json": {
+        "sha256": "30a297ef278920933ad0c67a31e901e0b42f8e55b104dd534b176367e24d8c49",
+        "size": 18828
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials.json": {
+        "sha256": "0fac249c2dd01270a8cc5b5e4dadf3fcafc7067b6d1f8e2900ba365661619173",
+        "size": 216170
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/approvals-v1.md": {
+        "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+        "size": 1325
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/brief-v1.md": {
+        "sha256": "2c42a3ce06307ba38298606b34b601a9bba2fb07b73cda0f0aca3718b16c4310",
+        "size": 1306
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/business_case-v1.md": {
+        "sha256": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+        "size": 775
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/coordination-v1.md": {
+        "sha256": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+        "size": 700
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/demand-v1.md": {
+        "sha256": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+        "size": 1755
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/demo-v1.md": {
+        "sha256": "f5a8b3cadbbb93978a56241a5064f4a638a2f03665a89b114ed26b120a35811e",
+        "size": 331
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/demo-v2.md": {
+        "sha256": "fb86f44ee7df15c79990740da322fff3555d617cf3311ace042e939c5f13a874",
+        "size": 268
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/failures-v1.md": {
+        "sha256": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+        "size": 2940
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/faq-v1.md": {
+        "sha256": "53e335fafa1ff0ffb32249cc92826b489dbcb73e652915f05b5027244f90ff7d",
+        "size": 1691
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/interviews-v1.md": {
+        "sha256": "983ea5fe34a7d929754e3a00fbb327906edd8f874a8622aeb989f871bbe1673c",
+        "size": 1267
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/leave-v1.md": {
+        "sha256": "ee26220a9f8e6da888aea0b0bb5f676ce847d5aa2b268f6c9ed89978a49012b2",
+        "size": 373
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/meal-v1.md": {
+        "sha256": "43f347192b0a11e262c524fb83790c2dc7eed51881eb17c849655a646c7aabed",
+        "size": 315
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/onboarding-v1.md": {
+        "sha256": "f76fe14d4f2f41b92a4725116f91dc10cb3d62d24cd8b25bd4c2dfd8efe4f509",
+        "size": 792
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/policy-v1.md": {
+        "sha256": "495d92ed9fa52e2d67ed69b0ed83aeeff1cb8f7568923999469244b70311d9cb",
+        "size": 470
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/policy-v2.md": {
+        "sha256": "1ef31bcb24b3a768e2aa002edea825bc37d71c8435ac94b6db3db69214cf6419",
+        "size": 455
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/restricted-v1.md": {
+        "sha256": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+        "size": 870
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/scope_note-v1.md": {
+        "sha256": "39e78d207899f544745b0b2847df4a34bd475b1a4867af42662937f18234ede8",
+        "size": 454
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/scope_note-v2.md": {
+        "sha256": "e7d2ee20ba3fcf0efa7d7075f812bfb0f7587b3e6e8a77ec25641328d854716b",
+        "size": 350
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/tech_diagnostics-v1.md": {
+        "sha256": "7dc867646bff9e33b15b2df4089baaf3f8befb23cfd14537987fbaa19517b4a1",
+        "size": 265
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/tech_private-v1.md": {
+        "sha256": "a5fa9ae780e10788b79151bd97fabbddd40183eb2c5778e23037b94d20e2ded7",
+        "size": 329
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/technical-v1.md": {
+        "sha256": "cdfed7fefe4ff3772261b15be6fa42a172ace2a1364d4ca2398260a37999d166",
+        "size": 1464
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/trial_details-v1.md": {
+        "sha256": "ca1cae2c6c2d2951d162f3989483e147be1ec9b2cac11d632c58aa58d9cc67d8",
+        "size": 14690
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/user_groups-v1.md": {
+        "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
+        "size": 930
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/materials/world_private-v1.md": {
+        "sha256": "97ee621793774fd024266127495b3a99ce489a3b9ebbbe194119fb3d2e9b4ebf",
+        "size": 153
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/paths.json": {
+        "sha256": "286328d326752f1252b5cd38f7ea83bf58e0bc6af3ae9f771c01a57604a1325d",
+        "size": 1214
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/probes.json": {
+        "sha256": "b8b56e09f7f247a9c29484b26240e63e01d6a37e65b937bcd2739ddb1db5fdce",
+        "size": 4402
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/research/public-case-records.json": {
+        "sha256": "15cc1142ae00318b6312a65fd0703a73c96bff6b6bf371e09e22bba13c0febd4",
+        "size": 113712
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/roles.json": {
+        "sha256": "27141e54c6693123915b02cc9ee9980cb563ee9a0d2c6f218e6ba773d0bdcac0",
+        "size": 6222
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/rubric-reference.json": {
+        "sha256": "e7ac22535e849561eb06675154fd971ff1e36ceb612a49dc5e359898c96f30a9",
+        "size": 581
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/runtime/bundle.json": {
+        "sha256": "7ee4bf41b0fcc023f3add1c44aa6a8159fb00c1b3d5a2b14f83fd1730884d2c5",
+        "size": 1577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/runtime/evaluation-protocol.json": {
+        "sha256": "34b3bab45e16c7f872046360c7b17955413731018e20de46faddd97acac50288",
+        "size": 13046
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/runtime/evaluation.json": {
+        "sha256": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
+        "size": 824
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/runtime/retrieval.json": {
+        "sha256": "3f48e5f463ef76edc5196630788c3f4860ea88a9ed837e7add38d7fe886df12a",
+        "size": 110
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/runtime/source-files.json": {
+        "sha256": "902ca9cc3d7f42baccf3e6b25208bddaa07f88daf02e773fecc659e10b059e26",
+        "size": 2082
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot_urgent/scenario.yaml": {
+        "sha256": "d031f37375bea95c21b3e8f3e24aaad3bf41caa489f35536a3492a75334e0289",
+        "size": 3107
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/baseline.json": {
+        "sha256": "1c45262e93aa5c9ec7c64d20f0c20eef775c8f61653e8ae152087de5f07fb754",
+        "size": 598
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/decision_examples.json": {
+        "sha256": "955090ee0308cea119af74d6d3314b766c6da57c831410d73ac91e438021a107",
+        "size": 922
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/evaluation/rubric-v2-candidate-2.json": {
+        "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+        "size": 33717
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/evaluation/rules-v4-rubric-v2-c2.json": {
+        "sha256": "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f",
+        "size": 754
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/facts.json": {
+        "sha256": "73eb9a49804752de5e0101b3513b6d30e59537738a6f1d3198e7d433721536bc",
+        "size": 36132
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locale.json": {
+        "sha256": "2b4376df62767517dd5bf3572dbc8cf44d5d4534bf31771a0f9ca3fecd9392d2",
+        "size": 23417
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/baseline.json": {
+        "sha256": "362bb5e2550f3746c29f9a5ac3dc8b5e2d8321ddb82408f600e570c76dd0b4f0",
+        "size": 597
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/decision_examples.json": {
+        "sha256": "3c4fefc84987ad3fcdfbb387ac73544ec384b67696b8057cea4eb637f8857819",
+        "size": 1194
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/evaluation/rubric-v2-candidate-2.json": {
+        "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+        "size": 33717
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/evaluation/rules-v4-rubric-v2-c2.json": {
+        "sha256": "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f",
+        "size": 754
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/facts.json": {
+        "sha256": "de50de1c385a2062aa18be6f516900a772a6a3071f561cd4968c2979cfc35d04",
+        "size": 38789
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/locale.json": {
+        "sha256": "7fdcffe876804b6528d98b385b4c914a051bad04105cfe7693039cb385cde387",
+        "size": 23683
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/manifest.json": {
+        "sha256": "58e94afa5ce4af5e7bd8b2bc37a32625b7f1baf0dd7fc497c2e5f2b77867a957",
+        "size": 20149
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials.json": {
+        "sha256": "6ec899100eaec32c008bd7f0f6a7ad8a3a736de8fec3ea3ca7c78b01a60bf49c",
+        "size": 223388
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/approvals-v1.md": {
+        "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+        "size": 1779
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/brief-v1.md": {
+        "sha256": "3e14692b1102820ba3042a5e7711427d593c6581e5a3e8e317b26163e06c7135",
+        "size": 1346
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/business_case-v1.md": {
+        "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+        "size": 917
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/coordination-v1.md": {
+        "sha256": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+        "size": 828
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/demand-v1.md": {
+        "sha256": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+        "size": 2127
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/demo-v1.md": {
+        "sha256": "a12476b68fe52aedfb1ddef8e3523a2cc1a9b831707d23da9bdf35a2cdb584ec",
+        "size": 451
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/demo-v2.md": {
+        "sha256": "a2640df69d07055524ba50b0bbabfb84322c758de67f5830466ddecb51650660",
+        "size": 362
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/failures-v1.md": {
+        "sha256": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+        "size": 2807
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/faq-v1.md": {
+        "sha256": "b8fad283036c2ba68a8b20e537d11457908f8a8921b741c9ba0e758a1e24bd88",
+        "size": 2149
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/interviews-v1.md": {
+        "sha256": "345705f33270e338444f4a9a92cc8b0f03c77a0d16b6b5c2833bda4eb0b5418d",
+        "size": 1635
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/leave-v1.md": {
+        "sha256": "d287651b1f47f46ca1f6a39744121b7eb01ea9be93795a04637766d36b563320",
+        "size": 493
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/meal-v1.md": {
+        "sha256": "459abcb2c620d75b0caf62ff0328fa83f67908a8c154a6d998d0351f5966e0e8",
+        "size": 361
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/onboarding-v1.md": {
+        "sha256": "906d5dcecb028f616741bbeba4dd58ad2251257329564b699fbb6356999dc7d8",
+        "size": 1012
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/policy-v1.md": {
+        "sha256": "b29b349fc19da70717ba7405586dd2760ee40ce344477bfe776eed1d7fb4281f",
+        "size": 640
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/policy-v2.md": {
+        "sha256": "d4b820c6700b21de6af5f7170aedb0f2bf76b7d91bccf926efd3f4cb0c9975ad",
+        "size": 612
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/restricted-v1.md": {
+        "sha256": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/scope_note-v1.md": {
+        "sha256": "d6eff2910a2e0f39dd773a5e28d257bb56e2c41c12471263b05df8c2d23ea112",
+        "size": 577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/scope_note-v2.md": {
+        "sha256": "f7af830782ac84614662e312ba6181fbd8917fc8b436abc8ed2fff8aa5dcd5d4",
+        "size": 437
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/tech_diagnostics-v1.md": {
+        "sha256": "b17e99f786664e4105e01fde3e251a65f0715016359cae11900175dcd0ed6b52",
+        "size": 382
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/tech_private-v1.md": {
+        "sha256": "88cfa90b7080a450b1975744aa60d9e46dd06ab22c6082c1063d521e4c74051e",
+        "size": 614
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/technical-v1.md": {
+        "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
+        "size": 1993
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/trial_details-v1.md": {
+        "sha256": "e4cfe0846cb846fe93ade0d517258d3c0261f848d4b04ffac94ff6758ae48f29",
+        "size": 15196
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/user_groups-v1.md": {
+        "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
+        "size": 1151
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/materials/world_private-v1.md": {
+        "sha256": "6a5ef0f1e5b42d0bcdcb7faf8dc3a5d880beb48972714f182bb55ae56023d58c",
+        "size": 188
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/paths.json": {
+        "sha256": "42510b731cb45b1162e1898796ce7487564f65fe34300d932e6cb6bcf56c97ba",
+        "size": 1214
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/probes.json": {
+        "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
+        "size": 4573
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/research/private-diagnostic.json": {
+        "sha256": "2ac688e60facb7f5d1e6adfb3e054e8f2fdc3f7e06d772bf9540fe60ed324ab8",
+        "size": 36065
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/research/public-case-records.json": {
+        "sha256": "67985f20bad11c4ceb7aed04e8c540f6b8a20dd50eb85dc4de6a4e61f040470a",
+        "size": 116081
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/research/retrieval-calibration.json": {
+        "sha256": "31bae8060b92cb09bc272db327c3650f5422f2d7803da171fb1aace472eda842",
+        "size": 502239
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/roles.json": {
+        "sha256": "671281d24ea4be57738bfc86fd8a44d3e10873699d530e55cae605a9572ed29b",
+        "size": 7099
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/rubric-reference.json": {
+        "sha256": "e7ac22535e849561eb06675154fd971ff1e36ceb612a49dc5e359898c96f30a9",
+        "size": 581
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/runtime/bundle.json": {
+        "sha256": "75668c1b3ab0f51da9b1ff039d7e646370b78fd77a00cb0e6385e4f5775541f1",
+        "size": 1577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/runtime/evaluation-protocol.json": {
+        "sha256": "73f912d4044057cb81030242e8861a0980861db09d2794d7cc0bd968ae46386c",
+        "size": 224
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/runtime/evaluation.json": {
+        "sha256": "cfa048da7faf8701de6932f7710e7aaf44de4e5076b9feb57f6eabd7334e5e05",
+        "size": 824
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/runtime/retrieval.json": {
+        "sha256": "6bcc03f28fa46e6f5dfbd9689df0502ddd086eb240258c31bdb13fbf692a945d",
+        "size": 114
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/runtime/source-files.json": {
+        "sha256": "a33a65833edab9c973edde4c12012e0ff0156aefa781c50af41946e7b9f1a9f8",
+        "size": 3037
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/locales/en/scenario.yaml": {
+        "sha256": "aa445257da8b843ad85bac08bc95bb24339a8fd890ce915c75a35c7e95bb1d9a",
+        "size": 3133
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/manifest.json": {
+        "sha256": "6f0757e9a6372e903d33cb7e6a28432c9fea5da5394f6600ba9b09b7188bcc1b",
+        "size": 18653
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials.json": {
+        "sha256": "a5df49e985fe4e69a159fcc46b327ead78f102db558c4dcc186d7e7d1569fb96",
+        "size": 212646
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/approvals-v1.md": {
+        "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+        "size": 1325
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/brief-v1.md": {
+        "sha256": "b1ba4450650d48d6c73542380a4cf4da50d34da0b6d4c3a459b4a7c85412418c",
+        "size": 1118
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/business_case-v1.md": {
+        "sha256": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+        "size": 775
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/coordination-v1.md": {
+        "sha256": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+        "size": 700
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/demand-v1.md": {
+        "sha256": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+        "size": 1755
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/demo-v1.md": {
+        "sha256": "f5a8b3cadbbb93978a56241a5064f4a638a2f03665a89b114ed26b120a35811e",
+        "size": 331
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/demo-v2.md": {
+        "sha256": "fb86f44ee7df15c79990740da322fff3555d617cf3311ace042e939c5f13a874",
+        "size": 268
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/failures-v1.md": {
+        "sha256": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+        "size": 2940
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/faq-v1.md": {
+        "sha256": "53e335fafa1ff0ffb32249cc92826b489dbcb73e652915f05b5027244f90ff7d",
+        "size": 1691
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/interviews-v1.md": {
+        "sha256": "983ea5fe34a7d929754e3a00fbb327906edd8f874a8622aeb989f871bbe1673c",
+        "size": 1267
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/leave-v1.md": {
+        "sha256": "ee26220a9f8e6da888aea0b0bb5f676ce847d5aa2b268f6c9ed89978a49012b2",
+        "size": 373
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/meal-v1.md": {
+        "sha256": "43f347192b0a11e262c524fb83790c2dc7eed51881eb17c849655a646c7aabed",
+        "size": 315
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/onboarding-v1.md": {
+        "sha256": "f76fe14d4f2f41b92a4725116f91dc10cb3d62d24cd8b25bd4c2dfd8efe4f509",
+        "size": 792
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/policy-v1.md": {
+        "sha256": "495d92ed9fa52e2d67ed69b0ed83aeeff1cb8f7568923999469244b70311d9cb",
+        "size": 470
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/policy-v2.md": {
+        "sha256": "1ef31bcb24b3a768e2aa002edea825bc37d71c8435ac94b6db3db69214cf6419",
+        "size": 455
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/restricted-v1.md": {
+        "sha256": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+        "size": 870
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/scope_note-v1.md": {
+        "sha256": "39e78d207899f544745b0b2847df4a34bd475b1a4867af42662937f18234ede8",
+        "size": 454
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/scope_note-v2.md": {
+        "sha256": "e7d2ee20ba3fcf0efa7d7075f812bfb0f7587b3e6e8a77ec25641328d854716b",
+        "size": 350
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/tech_diagnostics-v1.md": {
+        "sha256": "7dc867646bff9e33b15b2df4089baaf3f8befb23cfd14537987fbaa19517b4a1",
+        "size": 265
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/tech_private-v1.md": {
+        "sha256": "a5fa9ae780e10788b79151bd97fabbddd40183eb2c5778e23037b94d20e2ded7",
+        "size": 329
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/technical-v1.md": {
+        "sha256": "cdfed7fefe4ff3772261b15be6fa42a172ace2a1364d4ca2398260a37999d166",
+        "size": 1464
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/trial_details-v1.md": {
+        "sha256": "d96f2a714510a1ad772d25ececc88052eac16f8311605183f464a2372230d7cc",
+        "size": 14239
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/user_groups-v1.md": {
+        "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
+        "size": 930
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/materials/world_private-v1.md": {
+        "sha256": "97ee621793774fd024266127495b3a99ce489a3b9ebbbe194119fb3d2e9b4ebf",
+        "size": 153
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/paths.json": {
+        "sha256": "42510b731cb45b1162e1898796ce7487564f65fe34300d932e6cb6bcf56c97ba",
+        "size": 1214
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/probes.json": {
+        "sha256": "b8b56e09f7f247a9c29484b26240e63e01d6a37e65b937bcd2739ddb1db5fdce",
+        "size": 4402
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/research/public-case-records.json": {
+        "sha256": "ff4ed00d3f6640f560f29de5eae7c0c36e59be1b7cb71a1a3566e564238106ad",
+        "size": 112810
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/roles.json": {
+        "sha256": "f6895278d2f56ab9c6606a924af016ec3e546fdb9102ca7ccb17ad3c2f9143b6",
+        "size": 6114
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/rubric-reference.json": {
+        "sha256": "e7ac22535e849561eb06675154fd971ff1e36ceb612a49dc5e359898c96f30a9",
+        "size": 581
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/runtime/acquisition.json": {
+        "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+        "size": 66
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/runtime/bundle.json": {
+        "sha256": "50e31d75594fd496ec63df96505f95b2d8c3ad58910aa6894f2db5add9304444",
+        "size": 1577
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/runtime/decision.json": {
+        "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+        "size": 69
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/runtime/evaluation-protocol.json": {
+        "sha256": "73f912d4044057cb81030242e8861a0980861db09d2794d7cc0bd968ae46386c",
+        "size": 224
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/runtime/evaluation.json": {
+        "sha256": "cfa048da7faf8701de6932f7710e7aaf44de4e5076b9feb57f6eabd7334e5e05",
+        "size": 824
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/runtime/model.json": {
+        "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+        "size": 75
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/runtime/retrieval.json": {
+        "sha256": "3f48e5f463ef76edc5196630788c3f4860ea88a9ed837e7add38d7fe886df12a",
+        "size": 110
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/runtime/source-files.json": {
+        "sha256": "902ca9cc3d7f42baccf3e6b25208bddaa07f88daf02e773fecc659e10b059e26",
+        "size": 2082
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/runtime/tools.json": {
+        "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+        "size": 155
+      },
+      "scenarios/pm_pilot/v2/installed/rubric-v2-c2/pm_pilot/scenario.yaml": {
+        "sha256": "f14636ed2b152d1f75189083f7db645b7950c66b7abacd0afc8e89b175fb508e",
+        "size": 3100
+      },
       "scenarios/pm_pilot/v2/locale.json": {
-        "sha256": "1e5d91254dafd7b74a7b5e39be85555b62b92d69059cb01a96172555b58b4ddf",
+        "sha256": "2b4376df62767517dd5bf3572dbc8cf44d5d4534bf31771a0f9ca3fecd9392d2",
         "size": 23417
       },
       "scenarios/pm_pilot/v2/locales/en/baseline.json": {
@@ -34,20 +1958,20 @@
         "size": 1194
       },
       "scenarios/pm_pilot/v2/locales/en/facts.json": {
-        "sha256": "d07069813412f496ecba0adde0a5f5fbe3f12425dcb83eb673b6dfe85ce272e1",
-        "size": 38198
+        "sha256": "de50de1c385a2062aa18be6f516900a772a6a3071f561cd4968c2979cfc35d04",
+        "size": 38789
       },
       "scenarios/pm_pilot/v2/locales/en/locale.json": {
-        "sha256": "43931f43df09f7e44a3a6675b82b3a476de43e8195ea40b3b7c176a24a201b4b",
+        "sha256": "7fdcffe876804b6528d98b385b4c914a051bad04105cfe7693039cb385cde387",
         "size": 23683
       },
       "scenarios/pm_pilot/v2/locales/en/manifest.json": {
-        "sha256": "e68ca35373cbccaefec5912a94a6323d6be97b575bb9ba525165c48abf156593",
-        "size": 19164
+        "sha256": "fe01b67a15315669d9e4fd1cd1d83029403465256face3cc5129f62386f245c1",
+        "size": 19623
       },
       "scenarios/pm_pilot/v2/locales/en/materials.json": {
-        "sha256": "1c015dfc874e087e6bad93a1151b335e53c1fda372adbdedf655ec6ee3e628e9",
-        "size": 212806
+        "sha256": "6ec899100eaec32c008bd7f0f6a7ad8a3a736de8fec3ea3ca7c78b01a60bf49c",
+        "size": 223388
       },
       "scenarios/pm_pilot/v2/locales/en/materials/approvals-v1.md": {
         "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
@@ -122,20 +2046,20 @@
         "size": 437
       },
       "scenarios/pm_pilot/v2/locales/en/materials/tech_diagnostics-v1.md": {
-        "sha256": "f47912df47e8d660cd94e91ccd0db41c555d1fbbb4e31ea9718bb41028ec3757",
-        "size": 377
+        "sha256": "b17e99f786664e4105e01fde3e251a65f0715016359cae11900175dcd0ed6b52",
+        "size": 382
       },
       "scenarios/pm_pilot/v2/locales/en/materials/tech_private-v1.md": {
-        "sha256": "f2798d13bd48f3eda85d81ebe4b2635a309cf00b0958bdb1e4e7fa9bb47068b9",
-        "size": 423
+        "sha256": "88cfa90b7080a450b1975744aa60d9e46dd06ab22c6082c1063d521e4c74051e",
+        "size": 614
       },
       "scenarios/pm_pilot/v2/locales/en/materials/technical-v1.md": {
         "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
         "size": 1993
       },
       "scenarios/pm_pilot/v2/locales/en/materials/trial_details-v1.md": {
-        "sha256": "5da8955a9f84967fb9d8b3f1747be466eaa1891b790aa4f1d9c94e810e84d69c",
-        "size": 14221
+        "sha256": "e4cfe0846cb846fe93ade0d517258d3c0261f848d4b04ffac94ff6758ae48f29",
+        "size": 15196
       },
       "scenarios/pm_pilot/v2/locales/en/materials/user_groups-v1.md": {
         "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
@@ -153,8 +2077,12 @@
         "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
         "size": 4573
       },
+      "scenarios/pm_pilot/v2/locales/en/research/private-diagnostic.json": {
+        "sha256": "2ac688e60facb7f5d1e6adfb3e054e8f2fdc3f7e06d772bf9540fe60ed324ab8",
+        "size": 36065
+      },
       "scenarios/pm_pilot/v2/locales/en/research/public-case-records.json": {
-        "sha256": "eed3efe22a631cf81b65d43a6d5f0dc3cf800ba9d21a4579d0303c5cc62255b1",
+        "sha256": "67985f20bad11c4ceb7aed04e8c540f6b8a20dd50eb85dc4de6a4e61f040470a",
         "size": 116081
       },
       "scenarios/pm_pilot/v2/locales/en/research/retrieval-calibration.json": {
@@ -162,8 +2090,8 @@
         "size": 502239
       },
       "scenarios/pm_pilot/v2/locales/en/roles.json": {
-        "sha256": "dc57d16a0c52909d04a1f0c912625bb15a95e9413e72cfd0d4c82b584293feda",
-        "size": 6893
+        "sha256": "671281d24ea4be57738bfc86fd8a44d3e10873699d530e55cae605a9572ed29b",
+        "size": 7099
       },
       "scenarios/pm_pilot/v2/locales/en/rubric-reference.json": {
         "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
@@ -174,7 +2102,7 @@
         "size": 66
       },
       "scenarios/pm_pilot/v2/locales/en/runtime/bundle.json": {
-        "sha256": "524c9845d7058a7f8dc87bf9fcaed65834ac827d40b9836bb6991858c708c663",
+        "sha256": "2e83d79cfa7a26e31b8355d0cf7bfd8f30d7da5a493c5d9043f60b4b47817a3a",
         "size": 1574
       },
       "scenarios/pm_pilot/v2/locales/en/runtime/decision.json": {
@@ -198,7 +2126,7 @@
         "size": 114
       },
       "scenarios/pm_pilot/v2/locales/en/runtime/source-files.json": {
-        "sha256": "b6b7f9c957ea668bdd08408c275c569ca2d773d4b02e0d9c1aa1fb0fd6f0151d",
+        "sha256": "a33a65833edab9c973edde4c12012e0ff0156aefa781c50af41946e7b9f1a9f8",
         "size": 3037
       },
       "scenarios/pm_pilot/v2/locales/en/runtime/tools.json": {
@@ -206,16 +2134,16 @@
         "size": 155
       },
       "scenarios/pm_pilot/v2/locales/en/scenario.yaml": {
-        "sha256": "4970063719b02766d3f7471dd04c3ddfd92597ddf096a678e4d4b5dc43697308",
+        "sha256": "e067cee3e9e48cbc84c6e5212c0c168e4e0830c36ffa70e497b45b0d7d722e8b",
         "size": 3133
       },
       "scenarios/pm_pilot/v2/manifest.json": {
-        "sha256": "7d77dffbff0fe5dd890eafc48508f82d034892445e067deb64c74317ff3e117c",
+        "sha256": "b9833825140c37eb54d188dbf7279866a5a3c20b18efbb92c032e98ed0ac43bc",
         "size": 18127
       },
       "scenarios/pm_pilot/v2/materials.json": {
-        "sha256": "e0e4b72a744b13080371d6b64b279f8486d61f75d696b32bfa584a7e541f5f67",
-        "size": 202742
+        "sha256": "a5df49e985fe4e69a159fcc46b327ead78f102db558c4dcc186d7e7d1569fb96",
+        "size": 212646
       },
       "scenarios/pm_pilot/v2/materials/approvals-v1.md": {
         "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
@@ -302,8 +2230,8 @@
         "size": 1464
       },
       "scenarios/pm_pilot/v2/materials/trial_details-v1.md": {
-        "sha256": "b0f6e738df36162eee1c118e7dd486e88dcb29b0eaee3ca9f9a9effc9d572d9f",
-        "size": 13348
+        "sha256": "d96f2a714510a1ad772d25ececc88052eac16f8311605183f464a2372230d7cc",
+        "size": 14239
       },
       "scenarios/pm_pilot/v2/materials/user_groups-v1.md": {
         "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
@@ -322,7 +2250,7 @@
         "size": 4402
       },
       "scenarios/pm_pilot/v2/research/public-case-records.json": {
-        "sha256": "9f7cf9e7c639a805561b6eeaeae6439b1f70edb1ac3ad77502b8134231148919",
+        "sha256": "ff4ed00d3f6640f560f29de5eae7c0c36e59be1b7cb71a1a3566e564238106ad",
         "size": 112810
       },
       "scenarios/pm_pilot/v2/roles.json": {
@@ -338,7 +2266,7 @@
         "size": 66
       },
       "scenarios/pm_pilot/v2/runtime/bundle.json": {
-        "sha256": "460359661d7b39ab599f5c881b5d3c919639df1911d32c4e42099189e92d1977",
+        "sha256": "d4c581b19678923629bdfe17c27f3e1ad485061d50e12c6e4bd82b37535049fd",
         "size": 1574
       },
       "scenarios/pm_pilot/v2/runtime/decision.json": {
@@ -362,7 +2290,7 @@
         "size": 110
       },
       "scenarios/pm_pilot/v2/runtime/source-files.json": {
-        "sha256": "06c9e027eef6dbc20f95606fe69dbc01aa53f57bd8ced0c08841f15b422b8fbf",
+        "sha256": "902ca9cc3d7f42baccf3e6b25208bddaa07f88daf02e773fecc659e10b059e26",
         "size": 2082
       },
       "scenarios/pm_pilot/v2/runtime/tools.json": {
@@ -370,12 +2298,12 @@
         "size": 155
       },
       "scenarios/pm_pilot/v2/scenario.yaml": {
-        "sha256": "71acdbc3c65c8791ce5cbe5d3d248d2368c291fb3e75270bd541a3453e479b5d",
+        "sha256": "3c63fc5f0169f466012ad47dc6b284d760f53222020e00d68b39ff05d41093aa",
         "size": 3100
       },
       "scenarios/pm_pilot/v2/variants/catalog.json": {
-        "sha256": "5a58dc1c15e3903e47735aab240f0e07b6f0e45a77f8700e7ac29210c469f5ed",
-        "size": 3507
+        "sha256": "9bbc2554decfa84045d085c10d8fc24bf4094e175379e7cd6c9479de318c7dfe",
+        "size": 3968
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/baseline.json": {
         "sha256": "f7f6ba2f07d8684722f2e86863ff173f34783a36bd14c932bc866b6c2bb50fb0",
@@ -386,12 +2314,12 @@
         "size": 922
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/facts.json": {
-        "sha256": "b1685f0256b52382391488360e5b5b937c6a798f3ecc6f31cd19c2252299d839",
-        "size": 36682
+        "sha256": "47991ed8787872e76cebce79a9ffc9d2fb5cd32fbf4a2ea4b966bf1cbf296ae1",
+        "size": 38257
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locale.json": {
-        "sha256": "bcf8cf4c3d3f479cd7dfb9d531eb4e903e3edab28fefa9aad2a55037cdea2c65",
-        "size": 23692
+        "sha256": "d2b112ed41bffaa5f0ff89d7fe15f5c9d3f91a07a783316c626e391cf9342000",
+        "size": 24174
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/baseline.json": {
         "sha256": "e9bd3783aa3885c6a415ae265f7994468409b715bd3d356c8c70bc13b5bd5ed6",
@@ -402,28 +2330,28 @@
         "size": 1194
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/facts.json": {
-        "sha256": "299975bd7f921969938baa77928f46f76cbad34293bb828c6422c03b266c95f3",
-        "size": 38748
+        "sha256": "f80b67dff29f6e3803c13b1a3ac1899e45f4374670aec823862d44e2adc3bdd9",
+        "size": 40942
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/locale.json": {
-        "sha256": "b38dabe58620277fd65b6beeb1e575fc7da95bc40637717d443fdec7107c41e8",
-        "size": 23958
+        "sha256": "5f1e4d511f563b83a7ffef51091bba135d5b06c51f46ae5825cc206aeaf1b1e9",
+        "size": 24444
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/manifest.json": {
-        "sha256": "f1282f467461e6771455c17c711b6ca149c6d20bf6e192ed9e7affdaf165ecf2",
-        "size": 19235
+        "sha256": "0e434a840f5fbb8e540f4ac5ce9aa9b5b3351373c0e982e4e2c7b7924f08f19b",
+        "size": 19810
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials.json": {
-        "sha256": "6cdb21269009a1901bfcd56840f59d599af414500e96b543ae589f6d895b403b",
-        "size": 217546
+        "sha256": "6861c8f6308442450fc99e19526ca193b8b730507fd3590801636e684785831e",
+        "size": 227488
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/approvals-v1.md": {
         "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
         "size": 1779
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/brief-v1.md": {
-        "sha256": "00c9a7d49b3b89aa0072f6e86445656e58214cde79cecc481a319fe88271571a",
-        "size": 1563
+        "sha256": "61da3cc1bb4d223174624fe701710e67900f71d16f236a5baf022a2ee4438353",
+        "size": 1544
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/business_case-v1.md": {
         "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
@@ -490,20 +2418,20 @@
         "size": 437
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/tech_diagnostics-v1.md": {
-        "sha256": "f47912df47e8d660cd94e91ccd0db41c555d1fbbb4e31ea9718bb41028ec3757",
-        "size": 377
+        "sha256": "b17e99f786664e4105e01fde3e251a65f0715016359cae11900175dcd0ed6b52",
+        "size": 382
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/tech_private-v1.md": {
-        "sha256": "f2798d13bd48f3eda85d81ebe4b2635a309cf00b0958bdb1e4e7fa9bb47068b9",
-        "size": 423
+        "sha256": "88cfa90b7080a450b1975744aa60d9e46dd06ab22c6082c1063d521e4c74051e",
+        "size": 614
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/technical-v1.md": {
         "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
         "size": 1993
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/trial_details-v1.md": {
-        "sha256": "f07799beefe811b53a69290eec1b7421c81d57f567dc26aad836c17281a364e6",
-        "size": 14922
+        "sha256": "ad3ec44d20a1aeb03cf26c42956fa1d7115c0224c0c121033bb06430bf91d1c4",
+        "size": 15502
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/materials/user_groups-v1.md": {
         "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
@@ -521,8 +2449,12 @@
         "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
         "size": 4573
       },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/research/private-diagnostic.json": {
+        "sha256": "08f7ec70f43c34ac40c086320854fc9110f3ef94357c9c74d3d796c5f4e4deef",
+        "size": 36421
+      },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/research/public-case-records.json": {
-        "sha256": "a7f86124e02d9146ec30602c612452c47ba3b0500c95da970ab6a2f9cad55e86",
+        "sha256": "5346cde70e8a5c3c9435f39615005897dc3bffc78a24dd189ffb69f85bcf799d",
         "size": 117139
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/research/retrieval-calibration.json": {
@@ -530,8 +2462,8 @@
         "size": 502239
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/roles.json": {
-        "sha256": "dc57d16a0c52909d04a1f0c912625bb15a95e9413e72cfd0d4c82b584293feda",
-        "size": 6893
+        "sha256": "8fe3a867b8d6967a06de510070be622e9475cca749215bfd8b646e01cd304dc1",
+        "size": 7207
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/rubric-reference.json": {
         "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
@@ -542,7 +2474,7 @@
         "size": 66
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/bundle.json": {
-        "sha256": "cb35cebad161c81330d0dd0ba4e093e7df42f58b24738586be36ed022164a30f",
+        "sha256": "df86ceb4cc88f7ad821ef7ab56701286abbdc745cb972a4d067884f010a59313",
         "size": 1585
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/decision.json": {
@@ -566,7 +2498,7 @@
         "size": 114
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/source-files.json": {
-        "sha256": "b6b7f9c957ea668bdd08408c275c569ca2d773d4b02e0d9c1aa1fb0fd6f0151d",
+        "sha256": "a33a65833edab9c973edde4c12012e0ff0156aefa781c50af41946e7b9f1a9f8",
         "size": 3037
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/runtime/tools.json": {
@@ -574,24 +2506,24 @@
         "size": 155
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en/scenario.yaml": {
-        "sha256": "e277a95ff4937198949e5fd03a8a0882780770034772ab5a1615eff3d82be761",
+        "sha256": "01f47a4aa189cefd03593e3b6be700f95f6b9ab86275765d7189918244b3dd9d",
         "size": 3144
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/manifest.json": {
-        "sha256": "34876b33af1dcb503e9032cf019299c716d29948ababad647c3eaa2eb3d0e3d7",
-        "size": 18198
+        "sha256": "0348f566f4f2f112d4e2f80e72e735c58c87a38f86991b347c6d5215981d36c7",
+        "size": 18314
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials.json": {
-        "sha256": "115f4e546a62ac11e45d0d44d159296f9052c365a4782f28d6a3754096cdf8fb",
-        "size": 207408
+        "sha256": "962774161598972aac8963b3f2ab0e7178ad21b61b7d6aefde683417eb63e0d3",
+        "size": 216878
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/approvals-v1.md": {
         "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
         "size": 1325
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/brief-v1.md": {
-        "sha256": "faf0dfd5255fca3241b7ed5bc9d8d91ace3a9fb1c34df3e0ad502b136c4d6bdb",
-        "size": 1294
+        "sha256": "145dac78a7407b9d184cc867b722514e41031ca535d83e64a6cafeb8df8449a4",
+        "size": 1306
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/business_case-v1.md": {
         "sha256": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
@@ -670,8 +2602,8 @@
         "size": 1464
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/trial_details-v1.md": {
-        "sha256": "01d3dd90130dd111ce243ed5149bace819ac1d666d2e18da7fe72554ae282554",
-        "size": 14049
+        "sha256": "ad2b46f564598a05de777b7e94565b5c46648670ac06f482647ccc4cd3163f11",
+        "size": 14616
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/materials/user_groups-v1.md": {
         "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
@@ -690,12 +2622,12 @@
         "size": 4402
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/research/public-case-records.json": {
-        "sha256": "c7a354e7576fc739caeec3e7a10e227182ddbff19228e8c36b3af52278515034",
+        "sha256": "c80de78e56afff8c24a89834792b0de8236f7897ae5f11e5299885c568420171",
         "size": 113868
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/roles.json": {
-        "sha256": "f6895278d2f56ab9c6606a924af016ec3e546fdb9102ca7ccb17ad3c2f9143b6",
-        "size": 6114
+        "sha256": "27141e54c6693123915b02cc9ee9980cb563ee9a0d2c6f218e6ba773d0bdcac0",
+        "size": 6222
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/rubric-reference.json": {
         "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
@@ -706,7 +2638,7 @@
         "size": 66
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/bundle.json": {
-        "sha256": "a4297b013d46d49524009917f8904d73ec111d525b8ed29244d66b72c3132e40",
+        "sha256": "454b61b36aa5fc5f17ed457d4644129c2857fec4a5032cfabb3478827f011be4",
         "size": 1585
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/decision.json": {
@@ -730,7 +2662,7 @@
         "size": 110
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/source-files.json": {
-        "sha256": "06c9e027eef6dbc20f95606fe69dbc01aa53f57bd8ced0c08841f15b422b8fbf",
+        "sha256": "902ca9cc3d7f42baccf3e6b25208bddaa07f88daf02e773fecc659e10b059e26",
         "size": 2082
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/runtime/tools.json": {
@@ -738,7 +2670,7 @@
         "size": 155
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/scenario.yaml": {
-        "sha256": "4c29b5f35ac1ea03c67082b7ac6fb6a0164f5d9a8f1267a2a8c1be1bc71eadc4",
+        "sha256": "a27ee7ba46339c155e8c016be765b8d160a64199c23f9d1a92c985a9322a03d7",
         "size": 3111
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/baseline.json": {
@@ -750,12 +2682,12 @@
         "size": 922
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/facts.json": {
-        "sha256": "25e6881af1490bae1fec6a060d4963bb254233c8f947567829a539f3bbffa370",
-        "size": 36482
+        "sha256": "bcc717d65f465f9ac4b9494d888adbe32e4cd6f3c95eff6b6d6c408fb16a3257",
+        "size": 38049
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locale.json": {
-        "sha256": "26490203626903dddad346f9b3f21778835899ed0b481e30679d04c385317ef8",
-        "size": 23592
+        "sha256": "07903943ddad0638c31c1d9ccd83891711127a306a5397f241a93562c37fe5d3",
+        "size": 24074
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/baseline.json": {
         "sha256": "4dd6c958bc068b25b843ec32d1cabcf85929291b377f0f16e555ba4202ff0ecc",
@@ -766,28 +2698,28 @@
         "size": 1194
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/facts.json": {
-        "sha256": "7dd2340509d17fd4161acc3bd0fc37896f1c7d7661904c8b0d998d506921ace2",
-        "size": 38548
+        "sha256": "bbb2ef1cb48aa7a2df4c70e8c6eb25c47f9a58cbfa218aa07b06e0daf2bbe803",
+        "size": 40734
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/locale.json": {
-        "sha256": "17f2ee5cd15ac56de02eb8f7193c784eb7cecf5c544fe75e222886d0b7f1cf6d",
-        "size": 23858
+        "sha256": "ae554e5d4d439eaa7ea68263b5443af1ccb0619ecf6e49b72446c4b4282082b6",
+        "size": 24344
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/manifest.json": {
-        "sha256": "553aa18ae760f985b3df73fb34a92c04a2241c19eec1dd6fd6ec762c095d65d5",
-        "size": 19223
+        "sha256": "6d151e276528bf27132d136b2a41bc256b7a6437f193c101596091484e252750",
+        "size": 19798
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials.json": {
-        "sha256": "95c6841bd493423f06cceaa5c539f85ed5e907ff6f0841ade1c0ad2dfa5da0a9",
-        "size": 216456
+        "sha256": "75e193003bbb1f66237d9483925e9e69ee22711807195a38cc3e08c65493e5a9",
+        "size": 226592
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/approvals-v1.md": {
         "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
         "size": 1779
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/brief-v1.md": {
-        "sha256": "4cf1bd352eb43551bfbe8ff41496a40b3f7aefcbb720068b113e60f93b3fc063",
-        "size": 1563
+        "sha256": "8b843fae2248cd880c1a520fbd1acd3e862ccad1bfe74d74666815db91deda46",
+        "size": 1544
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/business_case-v1.md": {
         "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
@@ -854,20 +2786,20 @@
         "size": 437
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/tech_diagnostics-v1.md": {
-        "sha256": "f47912df47e8d660cd94e91ccd0db41c555d1fbbb4e31ea9718bb41028ec3757",
-        "size": 377
+        "sha256": "b17e99f786664e4105e01fde3e251a65f0715016359cae11900175dcd0ed6b52",
+        "size": 382
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/tech_private-v1.md": {
-        "sha256": "f2798d13bd48f3eda85d81ebe4b2635a309cf00b0958bdb1e4e7fa9bb47068b9",
-        "size": 423
+        "sha256": "88cfa90b7080a450b1975744aa60d9e46dd06ab22c6082c1063d521e4c74051e",
+        "size": 614
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/technical-v1.md": {
         "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c",
         "size": 1993
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/trial_details-v1.md": {
-        "sha256": "33d5e14876bca1dbac019edf05a5fe412abe050e1a5681172caf07ce188a5850",
-        "size": 14782
+        "sha256": "5b374266bfedb617c0b7991b1a2b05c4a996c750efb3aaac9bf11b0c88b8ead4",
+        "size": 15482
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/materials/user_groups-v1.md": {
         "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f",
@@ -885,8 +2817,12 @@
         "sha256": "4365675001a7fc47e0cbef94c86da1637158a2c123aa6d446f7c2cacf2463db3",
         "size": 4573
       },
+      "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/research/private-diagnostic.json": {
+        "sha256": "7882e3ed710d67ada739503560591dccb65faa45109216965a7f1186a940c8a9",
+        "size": 36393
+      },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/research/public-case-records.json": {
-        "sha256": "0f88dbb1290b2094fa777c12043789dedcd1a27ca93d12ff4c176fdfd3239388",
+        "sha256": "56ab452551c151400e77e3c48b26bc6cacc01de4d9690e829f0d049dfc688e82",
         "size": 116983
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/research/retrieval-calibration.json": {
@@ -894,8 +2830,8 @@
         "size": 502239
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/roles.json": {
-        "sha256": "dc57d16a0c52909d04a1f0c912625bb15a95e9413e72cfd0d4c82b584293feda",
-        "size": 6893
+        "sha256": "8fe3a867b8d6967a06de510070be622e9475cca749215bfd8b646e01cd304dc1",
+        "size": 7207
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/rubric-reference.json": {
         "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
@@ -906,7 +2842,7 @@
         "size": 66
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/bundle.json": {
-        "sha256": "81c719bb4b970da6f728521398217963ab1b22bdf3292db4328c0d57b7eaece1",
+        "sha256": "4f7bed556ec4ca5ddec7b4128ae71b2da2034421b4292fb994fe13399dcc2515",
         "size": 1581
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/decision.json": {
@@ -930,7 +2866,7 @@
         "size": 114
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/source-files.json": {
-        "sha256": "b6b7f9c957ea668bdd08408c275c569ca2d773d4b02e0d9c1aa1fb0fd6f0151d",
+        "sha256": "a33a65833edab9c973edde4c12012e0ff0156aefa781c50af41946e7b9f1a9f8",
         "size": 3037
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/runtime/tools.json": {
@@ -938,24 +2874,24 @@
         "size": 155
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en/scenario.yaml": {
-        "sha256": "2384fdd9b3f58ff5a8cb83b56955f4e6dad92f968bc0f9501d1916137bcaf666",
+        "sha256": "6b05083c25ba1494f92911f2d9c2c95ca972a00cf64e46d63bb11a9d8d10c506",
         "size": 3140
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/manifest.json": {
-        "sha256": "69564187d0af67f2705d1f0a4a0f3254a32b168ffa28bc31b715ef0046b11da7",
-        "size": 18186
+        "sha256": "09604036833180f0f5d16185798f24cb13e04184d86fa5b6c97a3cd09abea505",
+        "size": 18302
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials.json": {
-        "sha256": "c98bc77536eace3884092a2a731dc86f91b95244ff5fe2a4f025c6aa6b9ca18d",
-        "size": 206318
+        "sha256": "0fac249c2dd01270a8cc5b5e4dadf3fcafc7067b6d1f8e2900ba365661619173",
+        "size": 216170
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/approvals-v1.md": {
         "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
         "size": 1325
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/brief-v1.md": {
-        "sha256": "8063757af21e6be71b54b657585586e939f2af8db26f3d3b7c3955210f755b74",
-        "size": 1294
+        "sha256": "2c42a3ce06307ba38298606b34b601a9bba2fb07b73cda0f0aca3718b16c4310",
+        "size": 1306
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/business_case-v1.md": {
         "sha256": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
@@ -1034,8 +2970,8 @@
         "size": 1464
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/trial_details-v1.md": {
-        "sha256": "cab39d668093d2225e2d5adbc3369e515a6dbc01222b10342ce2c546074947cf",
-        "size": 13909
+        "sha256": "ca1cae2c6c2d2951d162f3989483e147be1ec9b2cac11d632c58aa58d9cc67d8",
+        "size": 14690
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/materials/user_groups-v1.md": {
         "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
@@ -1054,12 +2990,12 @@
         "size": 4402
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/research/public-case-records.json": {
-        "sha256": "433e5e1f8ee1057d388ef6786d1d5c8ac351cfc28163558383db7711222a7255",
+        "sha256": "15cc1142ae00318b6312a65fd0703a73c96bff6b6bf371e09e22bba13c0febd4",
         "size": 113712
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/roles.json": {
-        "sha256": "f6895278d2f56ab9c6606a924af016ec3e546fdb9102ca7ccb17ad3c2f9143b6",
-        "size": 6114
+        "sha256": "27141e54c6693123915b02cc9ee9980cb563ee9a0d2c6f218e6ba773d0bdcac0",
+        "size": 6222
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/rubric-reference.json": {
         "sha256": "7a61b2bfa6d73f98e2db2f4087e066097f4b141e948229327ce64b62cd659e9f",
@@ -1070,7 +3006,7 @@
         "size": 66
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/bundle.json": {
-        "sha256": "c8d0a43de5447d150db3e0d5cdd423ff5b4b0ae68211dd55539e65832fd980d7",
+        "sha256": "fb49a83224c9d5b3f5a5afb4bc23fb5797e68a2c669618fc23c1736d846a13e5",
         "size": 1581
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/decision.json": {
@@ -1094,7 +3030,7 @@
         "size": 110
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/source-files.json": {
-        "sha256": "06c9e027eef6dbc20f95606fe69dbc01aa53f57bd8ced0c08841f15b422b8fbf",
+        "sha256": "902ca9cc3d7f42baccf3e6b25208bddaa07f88daf02e773fecc659e10b059e26",
         "size": 2082
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/runtime/tools.json": {
@@ -1102,16 +3038,36 @@
         "size": 155
       },
       "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/scenario.yaml": {
-        "sha256": "901a5f76b2fb3ba48135319b2ca302b31af8007c05ea5c381f3acc84e6be18bc",
+        "sha256": "bafc159afa6a1244b289d98f2c0a8dc80dac4baf1cdb236d74d9716fb7cc2292",
         "size": 3107
       },
       "scenarios/pm_pilot/v2/variants/review-packet-2.8.0.json": {
         "sha256": "83db40c4a26296aa097772bb2eeb17e73c7565340b82eb64c5962c0d7d4ff504",
         "size": 8683
       },
+      "scenarios/pm_pilot/v2/variants/review-packet-2.9.0.json": {
+        "sha256": "2bc6e8ad09d36b37f4d5a4cf159787f3c70dbb85fd6b91a07350f86044be4516",
+        "size": 9261
+      },
       "scenarios/pm_pilot/v2/variants/review-packet.json": {
         "sha256": "2e3769bb609db9f997f9f5fcf260f01513231cdfb122d4c0676a4a01f9159e4f",
         "size": 8596
+      },
+      "scenarios/pm_pilot/v2/variants/reviewed-options-2.9.0.json": {
+        "sha256": "50e741eab0ffb5267171e99b5ef7bf91c99debcca58075fe98ec10125d54ead4",
+        "size": 7010
+      },
+      "scenarios/pm_pilot/v2/variants/reviewed-options-2.9.4.json": {
+        "sha256": "eddcc401eb9aa61c68a537ffc2e8a12066d506ce1a88af5eb8526df8029cb848",
+        "size": 7170
+      },
+      "scenarios/pm_pilot/v2/variants/reviews/content-approval-2.9.0.json": {
+        "sha256": "06ac5ac71e63d98bf73a0bb14730c2c6bc248354e134844e7c95240094a4dc10",
+        "size": 1311
+      },
+      "scenarios/pm_pilot/v2/variants/reviews/content-continuity-2.9.4.json": {
+        "sha256": "fb307ec8e0e9aaacb7278ac4bec19c1331e5e8f19cc906b797c126ca6be245c9",
+        "size": 2272
       },
       "src/career_lab/assistant/v2/__init__.py": {
         "sha256": "b92a51d4eb2478af5f8c8e0232cfdbfd9669457b02609653d62e16258ababa2b",
@@ -1137,17 +3093,25 @@
         "sha256": "a26c7f4c6589f556cdc591b161952f346034d45111597a6cf418c20bc7028af2",
         "size": 5732
       },
+      "src/career_lab/scenarios/v2/authoring/__init__.py": {
+        "sha256": "5bab7cba7f5cb2dc5c71144f088b982a08d4f2912c74e79c691f7108d4896387",
+        "size": 84
+      },
+      "src/career_lab/scenarios/v2/authoring/evaluation.py": {
+        "sha256": "08cc15e5ca6fb7bff43d8d1232edc5fb9dcf9f1ae8baaace6aa7a29724e1f6b4",
+        "size": 6612
+      },
       "src/career_lab/scenarios/v2/case_records.py": {
-        "sha256": "5a9c22aa21f732573ae9803cf55642c08abbd825d110170ac09d32467eb0ab46",
-        "size": 7815
+        "sha256": "9285fdfdcbff2544f2be0b87946ddcdf63662341c3c3b30a9dde2e9ca3091c0f",
+        "size": 9147
       },
       "src/career_lab/scenarios/v2/content.py": {
         "sha256": "206b30eb648960d28d44887360c5c8842e5818a2fe14c01d3e0176a4dc984a5c",
         "size": 25753
       },
       "src/career_lab/scenarios/v2/content_en.py": {
-        "sha256": "aceb698662cc38b90dc5dbff3ab5d0b4af3b583235f1c787a926ed45bf3b1f85",
-        "size": 25501
+        "sha256": "cae5433e480f5d523e9ac23ad9cb126426a591f753f481f4f8031dd93c74bcfd",
+        "size": 25697
       },
       "src/career_lab/scenarios/v2/decision_examples_en.py": {
         "sha256": "5a2ecfe21210cb1de702ee69497125a8b2e1202cc3f1200f18ae7182535cb543",
@@ -1158,8 +3122,16 @@
         "size": 21363
       },
       "src/career_lab/scenarios/v2/evaluation_facts.py": {
-        "sha256": "0f5d08fdf07f577084e8646ad7e17ee8d3bafa975695802e849d8d6257569a56",
-        "size": 15446
+        "sha256": "6f6258c915c05ea32e1dc4f3f869ee4ac28908f43d4cb58712d034791a38ebec",
+        "size": 15549
+      },
+      "src/career_lab/scenarios/v2/evidence_ports/__init__.py": {
+        "sha256": "baa7ea738ee822fbdadb7a7ceece9ef43e1d38ab3508a032389f178c1e37104b",
+        "size": 83
+      },
+      "src/career_lab/scenarios/v2/evidence_ports/store.py": {
+        "sha256": "2c88ae8e47584f88644fe427992c3f683171d2cb0f338657a2ddae9d7d99ec11",
+        "size": 2565
       },
       "src/career_lab/scenarios/v2/loader.py": {
         "sha256": "1eb1546945ab3aa096b6f5887f58a41beef7fd9b66c778eecaeb6295f7036264",
@@ -1170,8 +3142,8 @@
         "size": 8504
       },
       "src/career_lab/scenarios/v2/localization_en.py": {
-        "sha256": "c40362406df0e629a582648cfea4915974473c2bb69eae77d66a4986430c0777",
-        "size": 2470
+        "sha256": "390ae8f27cd3af1e321de2c7eb7c65b72a96126b79fb92f7b0e932f9579ece10",
+        "size": 2594
       },
       "src/career_lab/scenarios/v2/module.py": {
         "sha256": "d8428734c74f55f9f79b6a5cbf6b069c11faf34167c3dbcae340bb98f20b9411",
@@ -1194,8 +3166,8 @@
         "size": 1106
       },
       "src/career_lab/scenarios/v2/public_cases.py": {
-        "sha256": "3cf088b7555f2f231edc753dc03d30ed6eea22b53fe71e6480d1ab8032b4f479",
-        "size": 4166
+        "sha256": "e42f3d32678ebf9758c14a04b669cf0170ab83d30353171d6c000122a31d0948",
+        "size": 4278
       },
       "src/career_lab/scenarios/v2/public_cases_en.py": {
         "sha256": "d46bfc7f83a70136888e04f6bad1b338e2dd9acb40fbcb3a5e6c7c42592871e5",
@@ -1206,12 +3178,12 @@
         "size": 9153
       },
       "src/career_lab/scenarios/v2/seed.py": {
-        "sha256": "b7ae75f5c28fd55c87cb1a1b8b6c9ee21bca554df0a78e46a2d62bfd52126a1d",
-        "size": 16016
+        "sha256": "e8efc9bcfbf3d7a505763f3afc53ce40ab102da4ae1090f69d08608e2e755155",
+        "size": 16428
       },
       "src/career_lab/scenarios/v2/variants.py": {
-        "sha256": "1aa00b78ee24055bf799b343c7ab534f90450d4853b89b5cab1fe533ebdea8fc",
-        "size": 3459
+        "sha256": "cb53d4961f7f08c30aeb49b566d60ea00592dd16b436e1056031e825b7610850",
+        "size": 3588
       },
       "tests/expansion_v3/w02/__init__.py": {
         "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
@@ -1249,6 +3221,10 @@
         "sha256": "78d67975670cc18bb43a2c96653f02776f3d57d8b50eaf31f570a6aa969f253e",
         "size": 10051
       },
+      "tests/expansion_v3/w02/test_content_review_fixes.py": {
+        "sha256": "3b3f708c5d7c50f538488cee9c8aca20dcb21bf59752760a56784025ab2591d9",
+        "size": 3510
+      },
       "tests/expansion_v3/w02/test_engine.py": {
         "sha256": "ee2ad6a1348852a952f598f55567b38896ff489290540583a716706d449dd78e",
         "size": 6359
@@ -1258,20 +3234,24 @@
         "size": 2067
       },
       "tests/expansion_v3/w02/test_evaluation_facts.py": {
-        "sha256": "7c3e5e34e1111bdef518141071e5824801657efe97b40740e0a20155319914c5",
-        "size": 13383
+        "sha256": "183b32fd88dd5778165bee737f42ac189a63456091c71125b18d377b2104cff9",
+        "size": 13643
       },
       "tests/expansion_v3/w02/test_formal_api.py": {
         "sha256": "3c121d0afc865d1e9b34c3defb71683c316392536b6899094dcefb0a3f945101",
         "size": 12147
+      },
+      "tests/expansion_v3/w02/test_installed_variants.py": {
+        "sha256": "3218fb40e0b1d279971004f9bb8e1166b3a297de0376746becbe02f8e21e95ed",
+        "size": 3542
       },
       "tests/expansion_v3/w02/test_migration.py": {
         "sha256": "21e8729eb71260b4acb44a2986f14f640dc82322e6240f171d8d7c4ab7059d85",
         "size": 7489
       },
       "tests/expansion_v3/w02/test_practice_variants.py": {
-        "sha256": "9e812ab0e0021b56efbffe86f25a1164ea90a88e738b5442112098ad6b3b6916",
-        "size": 7758
+        "sha256": "74a67f2f0ee2b52516ca6b5594ceb7457700eec4f3e608bdd85d42658408589b",
+        "size": 7937
       },
       "tests/expansion_v3/w02/test_reference_http.py": {
         "sha256": "18f572686eb01318821bb6139fffffeda680455f8218f65e1aa7a69dcd9c14ed",
@@ -1285,9 +3265,17 @@
         "sha256": "14a62ae6fe888b0632606ba8fee35c291132602c56ca0ef1c59dbcdead54e4b8",
         "size": 8987
       },
+      "tests/expansion_v3/w02/test_reviewed_options.py": {
+        "sha256": "6f5b4402ecc36a2f9fdd0986de2cec6cb2723bb6564d92d885351ff1facc5839",
+        "size": 3249
+      },
       "tests/expansion_v3/w02/test_rubric_fact_handoff.py": {
         "sha256": "e71370e5b7172657d4a7109e6151ee0a2fe586351191720ba37d424c482f8162",
         "size": 3918
+      },
+      "tests/expansion_v3/w02/test_store_fact_port.py": {
+        "sha256": "c2f2541412b149ac8c6d23fea615ca18eec08854b4d9e46fd38aa47d9bddc1c0",
+        "size": 1786
       }
     }
   },
@@ -1504,46 +3492,62 @@
     }
   },
   "W04": {
-    "commit": "a5a94fa7124e4945cad757634153986e4cb72601",
+    "commit": "b125953c61c8fe20db49a79759926c37317a1c1f",
     "workspace": "/Users/jefmacmini/Projects/rolecraft-worktrees/037-w04-c7-review",
-    "source_digest": "2e2d00ecd86864c656f65fb9ea782d5999955d3889a1972b745305f6c695e439",
-    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W04/W04-20261007-039-v4-embedded-local-reference-r10.json",
+    "source_digest": "3760a224963651637dcdf233fbd5e8d273b11fac99db0fd044426d64a4e155e6",
+    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W04/W04-20261007-052-readable-r12.json",
     "files": {
       "apps/web/src/features/roles-native/browser-check.mjs": {
         "sha256": "881389ee56fef1e728c20ddb963e118dd63fc899aa5c8c0c8031a5eb222e1cd7",
         "size": 7787
       },
       "apps/web/src/features/roles-native/index.ts": {
-        "sha256": "1ce3e438c6709d899bce53cfb8b5a4f0de38b347dc8b7d0e01c4cffb9f309eaf",
-        "size": 16089
+        "sha256": "29284e95d2b6f0d37a6db5acb7c10b1666239ee724676e7b9fd6db1a28be9eb4",
+        "size": 18815
       },
       "apps/web/src/features/roles-native/roles.css": {
-        "sha256": "7bc6d98a748d6160bdef8db2c1a6c1f1f7626423461451c24cf0a369442b9372",
-        "size": 4991
+        "sha256": "51aaa926dbc513a9ea88a229d015c2d59d1b7c636153f954380a0930b5b6e0cd",
+        "size": 5119
       },
       "apps/web/src/features/roles-native/test-page.html": {
         "sha256": "810f97e89634344006c9557d9c3b5886683c8be195f87fbae10d5d47223a6338",
         "size": 1230
       },
       "apps/web/src/features/roles-native/test-page.ts": {
-        "sha256": "637d9751f05d2aa3e6c7777191212328ccd0541444287cf6e2eb97b47121a1e9",
-        "size": 5939
+        "sha256": "3c19972f0036d71efcd0b23bef864a98ec27545a9cc543370696af8d5bf2ec95",
+        "size": 6399
+      },
+      "apps/web/src/features/roles-native/v4-data.ts": {
+        "sha256": "3b4f4a04b6652b3da1fe789ad4ef40bc8868bfea41d92947f73efa014d9e4ce8",
+        "size": 4275
+      },
+      "apps/web/src/features/roles-native/v4-fixture.ts": {
+        "sha256": "7deecfd0d9344a7c911f842bd848e6051b34fa69b43c69fcc29dc84ffea8db94",
+        "size": 12084
+      },
+      "apps/web/src/features/roles-native/v4-request-slot.ts": {
+        "sha256": "53c48c800f3cb32ddfdadac54b3cfc93331b1cc9c2280cc596d8cc3131cc750f",
+        "size": 13458
+      },
+      "apps/web/src/features/roles-native/v4-slot.ts": {
+        "sha256": "f540ca81913aaf9f336e23a4a6c632939b143940769f89a43efcb48071fedc85",
+        "size": 13372
       },
       "docs/modules/expansion-v3/W04.md": {
-        "sha256": "b97c721b2492adf1a398487e4c185aef5504759c81f232de088c4a0fcfd6a196",
-        "size": 49651
+        "sha256": "0b4814783a25da53d3b9f5512ba32bb53214348550a38a43796d5432bed9cb81",
+        "size": 56977
       },
       "src/career_lab/api/approvals_v2.py": {
-        "sha256": "85039d4d17584319c81f4784bc43fbb1a6a739338036dc4e61bf821a48215ad5",
-        "size": 11920
+        "sha256": "f0372d27820068f0fed0e912faac3f3c0c57f1c5573acdd91e5881f7ffb6db06",
+        "size": 12581
       },
       "src/career_lab/runtime/context_v2.py": {
-        "sha256": "03615d0de0d9e60296df6de6d41c36505ee1a85e3804cc6f053cef16d9666fd1",
-        "size": 44132
+        "sha256": "eb602d897ebaf8e7fdd2bcb4879cf95a66ec3e7c41a79dd48675f51ccf73a131",
+        "size": 44179
       },
       "src/career_lab/runtime/roles_v2.py": {
-        "sha256": "b5d1128359fef6b63749285c9653158714d8a0e02f92734e4d0c8bf303d9613f",
-        "size": 31113
+        "sha256": "4c634c4623d0cac949a1936619844cb06793dc248b393af8531139cbd5c49dda",
+        "size": 32144
       },
       "src/career_lab/storage/role_memory.py": {
         "sha256": "1ed3ba09146856cc19274643a2a6aa9c6f75896efabaa879f477ff2ca8e17e46",
@@ -1558,12 +3562,12 @@
         "size": 2030
       },
       "tests/expansion_v3/w04/test_approvals.py": {
-        "sha256": "f35172fad9b14570688e0440734588b7ffebd86db2ce54c0bcd0517fc3778210",
-        "size": 7400
+        "sha256": "729efddcc4e1305c152f28b85feb45d7bd159d6c3b6fba452fc619030eff6ae6",
+        "size": 9246
       },
       "tests/expansion_v3/w04/test_bilingual.py": {
-        "sha256": "f0ad4a2a4d6f6bd398d5133e39914f206edd3572a04acb5e89cbfd39bc116e59",
-        "size": 25721
+        "sha256": "49a246e96088edba1791b439e6dfdde66dd9fed8d91691a166cf282e9af724ba",
+        "size": 25718
       },
       "tests/expansion_v3/w04/test_context.py": {
         "sha256": "2a3d7b6e6c6edfc6982cd47feac591d3f1d5bb8241c666a92095d8f63a7f092f",
@@ -1580,6 +3584,10 @@
       "tests/expansion_v3/w04/test_known_r3_limits.py": {
         "sha256": "a923740f481c2e3f7755c82b807b06b3ed149ed0a4775c5357e5ee1df6330a99",
         "size": 13644
+      },
+      "tests/expansion_v3/w04/test_local_readable.py": {
+        "sha256": "8ff69d173a42701aa34551ffa3d8e2d191ead0048ded87e717feca35f882b3dd",
+        "size": 1264
       },
       "tests/expansion_v3/w04/test_normal_dialogue.py": {
         "sha256": "9e7f516fa240f4bb92b047ae59446541659897f4cd29766f1ee59948d973f929",
@@ -1604,10 +3612,10 @@
     }
   },
   "W05": {
-    "commit": "9550087a0665a799cf186ff7f2e78267b109e92f",
+    "commit": "a7a260d3508e029314c0a2505cc11a7f8589e99c",
     "workspace": "/Users/jefmacmini/Projects/rolecraft-worktrees/034-w05",
-    "source_digest": "10e040496ffb3914e78934fcef1c1bbe170245d2a07d945e504b48506108eaf4",
-    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W05/W05-20261007-040-real-sources-v4-slot-r13.json",
+    "source_digest": "e09e638e9aa2fffd47a4f0b31c7d31a9c48786794c36085f49bc6d5945a78e4a",
+    "receipt": "/Users/jefmacmini/Library/Mobile Documents/com~apple~CloudDocs/ISY5002_模式识别系统项目/工作成果/实施执行/完成回执/W05/W05-20261007-052-recovery-r16.json",
     "files": {
       "apps/web/src/features/feedback-native/demo.html": {
         "sha256": "0b9b3bdc4c9251eea0d6e3d3f3580ee763dce4a54099122c3de6ebe27b988d2a",
@@ -1618,28 +3626,40 @@
         "size": 4569
       },
       "apps/web/src/features/feedback-native/index.ts": {
-        "sha256": "18ac3f7523ac4d06daadb0808cbf78e2dbc5dbbda7265516e4e6e3caab6d570c",
-        "size": 23741
+        "sha256": "2031475dcd0f92b02cc75cf08a1d873248d3285a846609c9d545a655aaca41bc",
+        "size": 26321
       },
       "apps/web/src/features/feedback-native/localization.ts": {
         "sha256": "58ba77e905b5af659cffd3ff4349c2f0f166d4f343f9878ef0e9edad23e72e09",
         "size": 241
+      },
+      "apps/web/src/features/feedback-native/review-check.html": {
+        "sha256": "3bf95e959c3dfed5527c11e3d560157aaa08e4b79dbf1f1131e2ba1dcf1f64c8",
+        "size": 2514
+      },
+      "apps/web/src/features/feedback-native/review-controls.browser.mjs": {
+        "sha256": "3846d2addb07e468dd95256ed08e5729866236cd75753ab3a8c7e1fd8de7f03b",
+        "size": 3384
+      },
+      "apps/web/src/features/feedback-native/review-controls.ts": {
+        "sha256": "3b13e59838f5c1131eeb1cb7a12fa5958835c286bf973f1328c6347891c8b1f6",
+        "size": 9379
       },
       "apps/web/src/features/feedback-native/semantic.test.ts": {
         "sha256": "b873ef7300abb84013886454a618c48e5e97ac102d5fd1232d576ba6b5e388b9",
         "size": 1827
       },
       "apps/web/src/features/feedback-native/v4-slot.test.ts": {
-        "sha256": "fc9e5cfb28d4b7115f3f019c2b931b342920460a83f40b8d683254a24e10efc0",
-        "size": 8784
+        "sha256": "be364adf529e7a426cfc0f5cb632a063e4ea044fbdf96dce8d78d31e96536d40",
+        "size": 13856
       },
       "apps/web/src/features/feedback-native/v4-slot.ts": {
-        "sha256": "6c993266b14f611bb830491799f15753791fb28fe2954b306d9b80471f02be22",
-        "size": 13949
+        "sha256": "6d759f4f62af7b017aa4fef76b8045bf606d9b9be20a9a5d4cfd29120b2236e6",
+        "size": 17918
       },
       "docs/modules/expansion-v3/W05.md": {
-        "sha256": "28450ee09c1ce75d4196b150ba5cb1cdad6b819db0e514fd96724bfdee2c5990",
-        "size": 38570
+        "sha256": "9a243d6990c31754c21c75fed77511c052a590a96cdc063d61260e7ea65ea5c9",
+        "size": 40789
       },
       "src/career_lab/api/reviews_v2.py": {
         "sha256": "31ca651c248b1e28f7bc131061a5128f3dc708b5d37ba76a0e20ee882d41b90d",

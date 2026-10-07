@@ -66,7 +66,7 @@ def public_event_history(store,registry,auth,at,*,since_seq=0,view=None):
     return store.query_at(auth,at,read,operation='timeline')
 
 
-def public_material_resolver(module):
+def public_material_resolver(module,scenario_resolver=None):
     """Permit a whole-file citation only when every original fragment is public.
 
     W05 emits whole-file spans for document-level rule proofs. Preserve the exact
@@ -74,23 +74,30 @@ def public_material_resolver(module):
     """
     from career_lab.contracts.v2 import EvidenceRefV2, read_file
     def resolve(auth,ref,as_of,bindings,*,scenario_state):
-        try:return module.reference(auth,ref,as_of,bindings,scenario_state=scenario_state)
+        current=scenario_resolver(bindings) if scenario_resolver else module
+        try:return current.reference(auth,ref,as_of,bindings,scenario_state=scenario_state)
         except ProtocolError as exc:
             if exc.code!='reference_span_forbidden' or not isinstance(ref,EvidenceRefV2):raise
         document=ref.model_copy(update={'quote':None,'span_start':None,'span_end':None})
-        resolved=module.reference(auth,document,as_of,bindings,scenario_state=scenario_state)
-        material=module.package.material(ref.object_id,ref.version)
+        resolved=current.reference(auth,document,as_of,bindings,scenario_state=scenario_state)
+        material=current.package.material(ref.object_id,ref.version)
         if any(f.disclosure.mode!='public' or (f.disclosure.actors and auth.actor_id not in f.disclosure.actors) for f in material.fragments):raise ProtocolError('reference_span_forbidden',status=403)
-        projected=module.package.project(ref.object_id,ref.version,auth.actor_id,as_of.business_seq,auth.session_id)
+        projected=current.package.project(ref.object_id,ref.version,auth.actor_id,as_of.business_seq,auth.session_id)
         if {(f.ref.span_start,f.ref.span_end,f.text) for f in projected}!={(f.ref.span_start,f.ref.span_end,f.text) for f in material.fragments}:raise ProtocolError('reference_span_forbidden',status=403)
-        text=read_file(module.package.root,resolved.source).decode('utf-8')
+        text=read_file(current.package.root,resolved.source).decode('utf-8')
         if ref.span_start!=0 or ref.span_end!=len(text) or ref.quote!=text:raise ProtocolError('reference_span_forbidden',status=403)
         return resolved
     return resolve
 
 
-def install_native_reads(registry, module, *, role_mode="local_reference",feedback_mode="waiting_model",store_provider=None):
+def install_native_reads(registry, module, *, role_mode="local_reference",feedback_mode="waiting_model",store_provider=None,scenario_resolver=None):
+    from dataclasses import replace
+    resolve=scenario_resolver or (lambda bindings: module)
+    for name,method in [('materials.list','materials'),('tests.list','list_tests')]:
+        original=registry.operations[name]
+        registry.operations[name]=replace(original,handler=lambda view,payload,auth,method=method:getattr(resolve(view.bindings),method)(view,payload,auth))
     def timeline(view, payload, auth):
+        current=resolve(view.bindings)
         kinds = {"config", "test", "business_request", "business_decision", "role_turn", "role_reply", "role_display", "submission", "cycle"}
         rows = sorted((r for r in view.objects if r.ref.kind in kinds), key=lambda r: (r.created_storage_revision, r.ref.object_id))
         data = {"role_mode":role_mode,"objects": [{"ref":r.ref.model_dump(mode="json"), "content":r.content} for r in rows],
@@ -98,13 +105,13 @@ def install_native_reads(registry, module, *, role_mode="local_reference",feedba
         # The scoped observation adapter owns partial Agent state. An unrestricted
         # learner can inspect actual business resources and source/index versions.
         if auth.actor_id == "learner" and auth.allowed_objects is None:
-            snapshot = module.snapshot(view)
+            snapshot = current.snapshot(view)
             data["workspace"] = {"resources": dict(view.state.resources),
                 "source_versions": dict(snapshot.source_versions), "indexed_versions": dict(snapshot.indexed_versions),
                 "config": snapshot.config.model_dump(mode="json"),
-                "material_titles": {f"{m.id}:{m.version}":m.title for m in module.package.materials
+                "material_titles": {f"{m.id}:{m.version}":m.title for m in current.package.materials
                     if snapshot.material_activation.get(f"{m.id}:{m.version}",view.state.business_seq+1)<=view.state.business_seq
-                    and module.package.project(m.id,m.version,auth.actor_id,view.state.business_seq,auth.session_id)}}
+                    and current.package.project(m.id,m.version,auth.actor_id,view.state.business_seq,auth.session_id)}}
         if store_provider is not None:
             data['events']=[e.model_dump(mode='json') for e in public_event_history(store_provider(),registry,auth,point(view.state),since_seq=payload.since_seq or 0,view=view)]
         return V2Response(result=data)
@@ -112,11 +119,14 @@ def install_native_reads(registry, module, *, role_mode="local_reference",feedba
     registry.register(Operation("turns.display", "act", ObjectRead, record_reply_display))
     def context(view,page,auth):
         from career_lab.api.modules import public_state, PUBLIC_OPERATIONS
-        module.check_bindings(view.bindings)
+        current=resolve(view.bindings)
+        current.check_bindings(view.bindings)
+        archived=current is not module
         if auth.allowed_objects is not None:raise ProtocolError('use_scoped_observation',status=403)
-        return V2Response(result={'session':{'protocol':2,'sessionId':auth.session_id,'workLanguage':module.work_language,'scenarioHash':view.bindings.scenario.sha256},
+        return V2Response(result={'session':{'protocol':2,'sessionId':auth.session_id,'workLanguage':current.work_language,'scenarioHash':view.bindings.scenario.sha256},
             'state':public_state(view.state),'as_of':point(view.state).model_dump(mode='json'),
-            'available':{name:bool(registry.availability(name).ready) for name in PUBLIC_OPERATIONS},
+            'read_only':archived,
+            'available':{**{name:bool(registry.availability(name).ready) and (not archived or (name in registry.operations and not registry.operations[name].mutates) or name=='requests.read') for name in PUBLIC_OPERATIONS},'jobs.refresh':not archived},
             'semantic':{'roles':'model' if role_mode=='model' else 'waiting_model' if role_mode=='local_reference' else 'unavailable',
                 'feedback':feedback_mode,'assistant':'waiting_model'},
             'timeline':timeline(view,page,auth).result,
@@ -124,11 +134,12 @@ def install_native_reads(registry, module, *, role_mode="local_reference",feedba
     def object_read(view,payload,auth):
         from career_lab.contracts.v2 import ObjectRef
         ref=payload.ref
+        current=resolve(view.bindings)
         if ref.session_id!=auth.session_id or view.reference_allowed is None or not view.reference_allowed(ref):raise ProtocolError('object_not_found',status=404)
         if ref.kind=='material':
-            module.reference(auth,ref,point(view.state),view.bindings,scenario_state=view.private_scenario_state)
-            fragments=module.package.project(ref.object_id,ref.version,auth.actor_id,view.state.business_seq,auth.session_id)
-            material=module.package.material(ref.object_id,ref.version)
+            current.reference(auth,ref,point(view.state),view.bindings,scenario_state=view.private_scenario_state)
+            fragments=current.package.project(ref.object_id,ref.version,auth.actor_id,view.state.business_seq,auth.session_id)
+            material=current.package.material(ref.object_id,ref.version)
             activation=view.private_scenario_state.material_activation[f'{ref.object_id}:{ref.version}']
             content={'title':material.title,'fragments':[f.model_copy(update={'ref':f.ref.model_copy(update={'observed_at_seq':view.state.business_seq,'valid_from_seq':activation})}).model_dump(mode='json',exclude={'fact_ids'}) for f in fragments]}
         elif ref.kind=='event':

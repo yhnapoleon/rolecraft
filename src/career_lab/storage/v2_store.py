@@ -350,13 +350,13 @@ class V2Store(JobStoreMixin):
     def _record_projection(self,c,auth,records):
         """One current-scope read projection; no resolver/model/handler rerun."""
         from career_lab.contracts.v2.projection import project_feedback_content,project_feedback_response_content
-        by_ref={canonical(row.ref):row for row in records};cache={};visiting=set();requirements={};origins=None
+        by_ref={canonical(row.ref):row for row in records};cache={};visiting=set();requirements={};origins=None;basic_cache={}
         external={canonical(row.ref) for row in self._external(c,auth.session_id)}
         def bare(ref):
             if isinstance(ref,dict):ref=ObjectRef.model_validate({k:v for k,v in ref.items() if k in ObjectRef.model_fields})
             else:ref=ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode='json').items() if k in ObjectRef.model_fields})
             return ref
-        def basic(ref,origin=None):
+        def basic_uncached(ref,origin=None):
             nonlocal origins
             ref=bare(ref)
             if ref.session_id!=auth.session_id:return False
@@ -377,6 +377,12 @@ class V2Store(JobStoreMixin):
             # A saved report's same-actor write verified its immutable external
             # references. Missing historical proof degrades safely to pending.
             return origins.get(origin.created_storage_revision)==auth.actor_id
+        def basic(ref,origin=None):
+            # This cache lives for one authorized transaction projection only.
+            # Revocation, scope and source changes are checked afresh next time.
+            key=(canonical(bare(ref)),origin.created_storage_revision if origin is not None else None)
+            if key not in basic_cache:basic_cache[key]=basic_uncached(ref,origin)
+            return basic_cache[key]
         def source_ok(ref,origin=None):
             ref=bare(ref)
             if not basic(ref,origin):return False

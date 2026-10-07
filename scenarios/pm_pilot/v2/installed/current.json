@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "revision": "2.9.4",
+  "main": {
+    "zh": {
+      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot",
+      "scenario_hash": "e64e0589d3fe8d5d345ff0d56b7856a465759a985b9a18e4d73be82561542ef4",
+      "evaluation": {
+        "schema_version": 2,
+        "path": "runtime/evaluation.json",
+        "sha256": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
+        "media_type": "application/json"
+      }
+    },
+    "en": {
+      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4/pm_pilot/locales/en",
+      "scenario_hash": "237efe8e57386a8926435a0ef98eb2008fe3ff7093fb3141226bc88544675760",
+      "evaluation": {
+        "schema_version": 2,
+        "path": "runtime/evaluation.json",
+        "sha256": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+        "media_type": "application/json"
+      }
+    }
+  },
+  "practice_catalog": "scenarios/pm_pilot/v2/variants/reviewed-options-2.9.4.json",
+  "source_inputs": {
+    "public_commit": "a276074949ab7d2a367d6ac06f5b15363cdf3dae",
+    "w05_commit": "82fbd94cf1bea53a806f94eadcf0e48c90393a58"
+  },
+  "fact_adapter_factory": "career_lab.scenarios.v2.evidence_ports.store.create_store_fact_adapter",
+  "normal_v4_verified": false,
+  "historical_installations": [
+    "rubric-v2-c2/pm_pilot (2.9.2)",
+    "rubric-v2-c2-2.9.3/pm_pilot"
+  ]
+}

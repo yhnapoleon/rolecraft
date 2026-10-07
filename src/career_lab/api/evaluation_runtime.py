@@ -17,9 +17,33 @@ class ScenarioEvidencePort:
     def __init__(self,store,module):
         from career_lab.scenarios.v2.evaluation_facts import ScenarioFactAdapter
         self.store,self.module=store,module
+        self._window_cache={}
         adapter=ScenarioFactAdapter(module,authorize=lambda auth:store.authorize(auth,'read'),
             window_reader=self.window,record_reader=self.record,reference_resolver=self.reference)
-        self.source,self.rules,self.submission_rules=adapter.source_reader,adapter.rule_provider,adapter.submission_rule_provider
+        self.source=adapter.source_reader
+        self.rules=lambda auth,ref,at:self.with_business_response(auth,adapter.rule_provider(auth,ref,at))
+        self.submission_rules=lambda auth,submission:self.with_business_response(auth,adapter.submission_rule_provider(auth,submission))
+
+    def with_business_response(self,auth,snapshot):
+        """State the recorded approval outcome, without grading the learner's choice."""
+        from dataclasses import replace
+        window=self.window(auth,snapshot.as_of);latest={}
+        for row in window.objects:
+            if row.ref.kind!='business_decision':continue
+            request=row.content.get('request',{}).get('object_id')
+            if request and (request not in latest or row.created_storage_revision>latest[request].created_storage_revision):latest[request]=row
+        if not latest:return snapshot
+        en=self.module.work_language=='en';labels={'capacity':'Seats' if en else '名额','dev_days':'Developer-days' if en else '开发人日','deadline_day':'Deadline day' if en else '截止日'}
+        statuses={'approved':'Approved' if en else '已批准','accepted':'Accepted' if en else '已接受','rejected':'Declined' if en else '未批准','countered':'Counteroffer awaiting acceptance' if en else '还价待接受'}
+        def terms(values):return ', '.join(labels[key]+': '+str(value) for key,value in values.items() if key in labels)
+        lines=[];refs=[]
+        for request,row in latest.items():
+            decision=row.content;status=decision['status']
+            requested=next((r.requested for r in window.snapshot.requests if r.id==request),{})
+            result=decision.get('granted') if status in {'approved','accepted'} else decision.get('countered',{})
+            lines.append((('Requested ' if en else '申请：')+terms(requested)+'; '+statuses.get(status,'Awaiting verification' if en else '待核验')+('; '+terms(result) if result else '')))
+            refs.append(self.source(auth,row.ref,snapshot.as_of).ref)
+        return replace(snapshot,business_response=('Recorded business decisions (rule checked): ' if en else '已记录的业务决定（规则核实）：')+'\n'.join(lines),business_response_refs=tuple(refs))
 
     def points(self,auth,at):
         self.store.authorize(auth,'read')
@@ -28,6 +52,11 @@ class ScenarioEvidencePort:
                 select(v2_snapshots.c.state).where(v2_snapshots.c.session_id==auth.session_id,v2_snapshots.c.storage_revision<=at.storage_revision)).scalars())
 
     def window(self,auth,at):
+        # Per-job memoization of immutable, authorization-scoped historical data.
+        # Authorization is rechecked even when the original projection is reused.
+        self.store.authorize(auth,'read')
+        cache_key=C.digest([auth.model_dump(mode='json'),at.model_dump(mode='json')])
+        if cache_key in self._window_cache:return self._window_cache[cache_key]
         from career_lab.scenarios.v2.evaluation_facts import ScenarioEvidenceWindow
         from career_lab.storage.v2_tables import v2_transactions
         from career_lab.storage.v2_store import TransactionResult
@@ -45,7 +74,9 @@ class ScenarioEvidencePort:
             pairs=tuple((event,completed[event.transaction_id]) for event in events if event.transaction_id in completed)
             return ScenarioEvidenceWindow(self.module.snapshot(view),view.bindings,view.objects,pairs,points,
                 tests_complete=auth.allowed_objects is None,events_complete=complete and len(pairs)==len(events))
-        return self.store.query_at(auth,at,read)
+        result=self.store.query_at(auth,at,read)
+        self._window_cache[cache_key]=result
+        return result
 
     def record(self,auth,ref,at):
         if at is None:return self.store.query(auth,lambda view:view.get(ref))

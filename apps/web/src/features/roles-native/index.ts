@@ -4,7 +4,7 @@ import './roles.css';
 
 export type RoleId = 'supervisor' | 'business_lead' | 'tech_lead';
 export type WorkLanguage = 'zh' | 'en';
-export type TurnStatus = 'queued' | 'running' | 'completed' | 'failed' | 'needs_context' | 'paused' | 'cancelled';
+export type TurnStatus = 'queued' | 'running' | 'completed' | 'failed' | 'needs_context' | 'paused' | 'cancelled' | 'unknown';
 export interface MaterialReference { id: string; title: string; version: number }
 export interface Colleague { id: RoleId; name: string; available: boolean }
 export interface ConversationTurn {
@@ -18,6 +18,8 @@ export interface ConversationTurn {
   explanation?: string;
   canRetry?: boolean;
   canRefresh?: boolean;
+  canRecordDisplay?: boolean;
+  displayRecorded?: boolean; // Public server receipt, never inferred from a read.
 }
 /** Presentation data, not a new server schema. Never pass private audit objects. */
 export interface RolesView {
@@ -41,6 +43,10 @@ export interface RolesNativeAdapter {
   retry?(turnId: string): Promise<void>;
   refreshContext?(turnId: string): Promise<void>;
   openMaterial?(material: MaterialReference): void | Promise<void>;
+  /** Map a visibly painted reply to the existing idempotent display command.
+   * Supply only when authorized; journal/recovery remain with the shared client.
+   */
+  recordDisplay?(turnId: string): Promise<void>;
   subscribe?(changed: () => void): () => void;
   drafts?: { read(role: RoleId): string; write(role: RoleId, value: string): void };
 }
@@ -56,6 +62,7 @@ const statusText = (status: TurnStatus) => ({
   needs_context: T('材料已变化，需要确认后继续', 'Materials changed; confirm before continuing'),
   paused: T('已暂停，问题仍保留', 'Paused; the question is retained'),
   cancelled: T('本次处理已停止，问题仍保留', 'Stopped; the question is retained'),
+  unknown: T('处理状态尚待确认，问题仍保留', 'Processing status is unconfirmed; the question is retained'),
 })[status];
 
 export function mount(container: HTMLElement, adapter: RolesNativeAdapter, options: RolesMountOptions = {}): RolesNativeHandle {
@@ -86,7 +93,7 @@ export function mount(container: HTMLElement, adapter: RolesNativeAdapter, optio
   actions.append(hint, send); form.append(label, textarea, actions);
   if (historyOnly) {
     // v4 owns the colleague header, navigation, composer and scroll region.
-    main.append(list, empty); layout.append(main); root.append(mode, notice, recover, layout);
+    main.append(list, empty); layout.append(main); root.append(mode, notice, recover, reload, layout);
   } else {
     main.append(activeName, list, empty, form); layout.append(nav, main);
     root.append(header, mode, notice, recover, layout);
@@ -97,6 +104,39 @@ export function mount(container: HTMLElement, adapter: RolesNativeAdapter, optio
   let loaded = false; let busy = false; let uncertain = false; let destroyed = false; let loadTicket = 0;
   let feedback: 'read' | 'unconfirmed' | 'action' | 'draft' | undefined;
   const drafts = new Map<RoleId, string>(); const people = new Map<RoleId, HTMLButtonElement>();
+  const displayAttempts = new Set<string>();
+  const visibleReplies = new Map<HTMLElement, { turnId: string; visible: boolean }>();
+  const markDisplayed = (node: HTMLElement) => {
+    const entry = visibleReplies.get(node);
+    if (!adapter.recordDisplay || !entry?.visible || destroyed || doc.visibilityState !== 'visible') return;
+    const key = sessionId + ':' + entry.turnId;
+    if (displayAttempts.has(key)) return;
+    requestAnimationFrame(() => {
+      if (destroyed || !node.isConnected || !visibleReplies.get(node)?.visible || doc.visibilityState !== 'visible' || displayAttempts.has(key)) return;
+      for (let parent: HTMLElement | null = node; parent; parent = parent.parentElement) {
+        const style = getComputedStyle(parent);
+        if (style.display === 'none' || style.visibility === 'hidden' || Number(style.opacity) === 0) return;
+      }
+      // At most one automatic attempt in this mount. A failure is recovered via
+      // the shared original request journal, never by a render/observer retry.
+      displayAttempts.add(key);
+      void Promise.resolve().then(() => adapter.recordDisplay!(entry.turnId)).catch(() => {
+        if (!destroyed) { feedback = 'action'; render(); }
+      });
+    });
+  };
+  const displayObserver = adapter.recordDisplay && typeof IntersectionObserver !== 'undefined'
+    ? new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        const node = entry.target as HTMLElement;
+        const tracked = visibleReplies.get(node); if (!tracked) continue;
+        tracked.visible = entry.isIntersecting && entry.intersectionRatio > 0;
+        markDisplayed(node);
+      }
+    }) : undefined;
+  const onVisibility = () => { if (doc.visibilityState === 'visible') for (const node of visibleReplies.keys()) markDisplayed(node); };
+  doc.addEventListener('visibilitychange', onVisibility);
+
   const draft = (id: RoleId) => {
     if (!drafts.has(id)) {
       try { drafts.set(id, adapter.drafts?.read(id) ?? ''); }
@@ -148,6 +188,7 @@ export function mount(container: HTMLElement, adapter: RolesNativeAdapter, optio
     activeName.textContent = colleague?.name || roleTitle(selected);
     list.setAttribute('aria-label', T('对话记录', 'Conversation history'));
     const turns = view?.turns.filter(t => t.roleId === selected) ?? [];
+    displayObserver?.disconnect(); visibleReplies.clear();
     const fragments = turns.map(turn => {
       const item = el('li', 'rc-roles__turn'); item.dataset.turnId = turn.id;
       const questionLabel = el('strong'); questionLabel.textContent = T('你', 'You');
@@ -156,6 +197,10 @@ export function mount(container: HTMLElement, adapter: RolesNativeAdapter, optio
       if (turn.status === 'completed' && turn.reply !== undefined) {
         const replyLabel = el('strong'); replyLabel.textContent = colleague?.name || roleTitle(selected);
         const reply = el('p', 'rc-roles__reply'); reply.textContent = turn.reply; item.append(replyLabel, reply);
+        if (displayObserver && turn.canRecordDisplay !== false && !turn.displayRecorded) {
+          visibleReplies.set(reply, { turnId: turn.id, visible: false });
+          displayObserver.observe(reply);
+        }
         if (turn.materials?.length) {
           const refs = el('div', 'rc-roles__materials'); refs.setAttribute('aria-label', T('引用材料', 'Referenced materials'));
           for (const ref of turn.materials) {
@@ -240,7 +285,7 @@ export function mount(container: HTMLElement, adapter: RolesNativeAdapter, optio
   }, true); });
   const unsubscribe = adapter.subscribe?.(() => { void refresh(); }); const unlocale = onLocaleChange(render);
   render(); void refresh();
-  return { refresh, destroy() { if (destroyed) return; destroyed = true; ++loadTicket; unsubscribe?.(); unlocale(); root.remove(); } };
+  return { refresh, destroy() { if (destroyed) return; destroyed = true; ++loadTicket; unsubscribe?.(); unlocale(); displayObserver?.disconnect(); visibleReplies.clear(); doc.removeEventListener('visibilitychange', onVisibility); root.remove(); } };
 }
 
 /** Mount only the selected colleague's history into v4's existing thread node.

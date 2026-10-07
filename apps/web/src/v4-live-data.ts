@@ -54,7 +54,7 @@ export class V4LiveData {
   }
   async sync(session: LocalSession) {
     try {
-      const host = this.host(session), context: any = await host.query('workbench.read');
+      const host = this.host(session);await host.ensureFeedbackPointer();const context: any = await host.query('workbench.read');
       const s = this.current(session.id), timeline = context.timeline, w = timeline.workspace, config = w.config;
       const pilot: Pilot = { participants: config.participants, knowledge_domains: config.domains,
         launch_day: config.launch_day, update_strategy: config.update_strategy, fallback: config.fallback, work_items: config.work_items };
@@ -80,9 +80,9 @@ export class V4LiveData {
           config_version: t.config_ref.config_version, as_of_seq: t.as_of.business_seq };
       });
       this.store.update(s.id, {
-        v2MaterialTitles: w.material_titles,
+        v2MaterialTitles: w.material_titles, v2ReadOnly: context.read_only === true,
         v2Domains: context.configuration_domains ?? s.v2Domains ?? config.domains,
-        world: { session_id: s.id, status: context.state.status, version: context.as_of.business_seq,
+        world: { session_id: s.id, status: context.read_only && context.state.status !== 'submitted' ? 'paused' : context.state.status, version: context.as_of.business_seq,
           logical_time: context.as_of.business_seq, resources: w.resources, configs: { pilot },
           material_versions: w.source_versions, indexed_versions: w.indexed_versions,
           applied_rules: [], pending_requests: [], action_count: context.as_of.business_seq, config_version: context.state.config_version },

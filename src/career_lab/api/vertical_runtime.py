@@ -39,10 +39,15 @@ def configured_models(provider="local"):
     return model, model
 
 
-def build_registry(scenario_root, role_model, *, feedback_handler=None,store_provider=None):
+def build_registry(scenario_root, role_model, *, feedback_handler=None,store_provider=None,scenario_archive=None):
     module = ScenarioModule(scenario_root)
-    registry = module.install(ExtensionRegistry())
-    registry.reference_resolvers["material"]=public_material_resolver(module)
+    registry = module.install(ExtensionRegistry(),name=module.package.bundle.id+'_v2')
+    from career_lab.api.scenario_history import ScenarioReadCatalog
+    from career_lab.api.negotiation_runtime import install_negotiation
+    catalog=ScenarioReadCatalog(module,scenario_archive)
+    registry.active_bindings=(module.bindings,)
+    install_negotiation(registry,module)
+    registry.reference_resolvers["material"]=public_material_resolver(module,catalog.resolve)
     from dataclasses import replace
     registry.scenarios={name:replace(registration,work_language=module.work_language) for name,registration in registry.scenarios.items()}
     if feedback_handler is None:
@@ -57,7 +62,7 @@ def build_registry(scenario_root, role_model, *, feedback_handler=None,store_pro
     install_lifecycle(registry, feedback_handler=feedback_handler)
     install_private_role_runtime(registry, ScenarioKnowledge.from_package(module.package),
                                  role_model, enable_generation=ROLE_RUNTIME_READY)
-    install_native_reads(registry, module, role_mode=("local_reference" if isinstance(role_model,LocalRoleModel) else "model") if ROLE_RUNTIME_READY else "unavailable",feedback_mode="waiting_model" if isinstance(role_model,LocalRoleModel) else "model",store_provider=store_provider)
+    install_native_reads(registry, module, role_mode=("local_reference" if isinstance(role_model,LocalRoleModel) else "model") if ROLE_RUNTIME_READY else "unavailable",feedback_mode="waiting_model" if isinstance(role_model,LocalRoleModel) else "model",store_provider=store_provider,scenario_resolver=catalog.resolve)
     return registry, module
 
 
@@ -66,7 +71,12 @@ def create_runtime_app(database_url=None, *, provider="local", scenario_root=Non
     legacy_model, role_model = configured_models(provider)
     root = Path(scenario_root or os.getenv("CAREER_LAB_SCENARIO_V2", "scenarios/pm_pilot/v2"))
     holder={}
-    registry, module = build_registry(root, role_model, feedback_handler=feedback_handler,store_provider=lambda:holder["store"])
+    options=dict(feedback_handler=feedback_handler,store_provider=lambda:holder["store"],scenario_archive=os.getenv("CAREER_LAB_SCENARIO_ARCHIVE","runs/local/scenario-archive"))
+    if os.getenv('CAREER_LAB_SCENARIO_CATALOG'):
+        from career_lab.api.multilingual_runtime import build_catalog
+        registry,module=build_catalog(build_registry,os.environ['CAREER_LAB_SCENARIO_CATALOG'],role_model,**options)
+    else:
+        registry,module=build_registry(root,role_model,**options)
     app = create_app(database_url, model=legacy_model, extensions=registry)
     from career_lab.jobs.worker import NonRetryingHandler
     for name in ("turn","feedback"):

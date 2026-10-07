@@ -202,11 +202,10 @@ def test_fixed_chinese_package_cannot_be_relabelled_english(package,catalog):
     assert exc.value.code=='role_language_binding_mismatch'
 
 
-def test_english_capture_remains_closed_on_c7_common_contract(package):
+def test_english_capture_uses_fixed_scenario_language_without_new_wire_field(package):
     c,f,_,_=bilingual_fixture();view=make_view(package,c)
-    with pytest.raises(ProtocolError) as exc:
-        ContextPort(c,FixedFrameFixture(f)).capture(view,owner(),TurnInput(role_id=f.role_id,text='Continue.'))
-    assert exc.value.code=='role_language_binding_unavailable'
+    result=ContextPort(c,FixedFrameFixture(f)).capture(view,owner(),TurnInput(role_id=f.role_id,text='Continue.'))
+    assert result.work_language=='en' and result.source_binding==view.bindings.scenario
 
 
 @pytest.mark.parametrize('language',['zh','en'])

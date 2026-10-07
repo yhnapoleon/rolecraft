@@ -21,12 +21,14 @@ const adapter: RolesNativeAdapter = {
   async recover(){calls.push(['recover']);view.unconfirmed=false;return pending?{confirmed:pending}:undefined;},
   async retry(id){calls.push(['retry',id]);view={...view,turns:view.turns.map(t=>t.id===id?{...t,status:'queued'}:t)};},
   async refreshContext(id){calls.push(['refresh',id]);view={...view,turns:view.turns.map(t=>t.id===id?{...t,status:'queued'}:t)};},
+  async recordDisplay(id){calls.push(['display',id]);if(displayFailure)throw Error('PRIVATE_DISPLAY_ERROR_MUST_NOT_RENDER');},
   openMaterial(ref){calls.push(['material',ref]);},subscribe(fn){listener=fn;return()=>{listener=()=>{};calls.push(['unsubscribe']);};},
   drafts:{read:id=>drafts.get(id)||'',write:(id,text)=>{drafts.set(id,text);}},
 };
 let handle = mount(node,adapter);
+let displayFailure=false;
 const controls = {
-  calls,drafts, get view(){return view;}, setView(next:RolesView){view=next;listener();},
+  calls,drafts, displayFailure(value:boolean){displayFailure=value;}, get view(){return view;}, setView(next:RolesView){view=next;listener();},
   loseResponse(){loseResponse=true;}, holdSend(){holdSend=true;}, release(){holdSend=false;releaseSend();},
   failRead(value:boolean){failRead=value;}, locale:setPreference,
   remount(){handle.destroy();handle=mount(node,adapter);},
@@ -77,4 +79,8 @@ if(new URLSearchParams(location.search).get('mode')==='http'){
   adapter.retry=undefined;adapter.refreshContext=undefined;
   handle=mount(node,adapter);
   Object.assign(window,{rolesHttp:{ready:true,requestCount:()=>commands.length,publicEvidence:()=>commands.map(c=>({requestId:c.command.request_id,question:c.text,jobId:c.jobId}))}});
+}
+
+if(['v4-slot','v4-real-host'].includes(new URLSearchParams(location.search).get('mode')||'')){
+  handle.destroy();const fixture=await import('./v4-fixture');await fixture.start(node,new URLSearchParams(location.search).get('mode')==='v4-real-host');
 }

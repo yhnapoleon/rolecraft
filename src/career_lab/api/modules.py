@@ -154,12 +154,18 @@ class Gateway:
             if kind not in store.object_models:store.register_object(kind,model)
             elif store.object_models[kind] is not model:raise ValueError('incompatible object model registration')
     def create(self,request:CreateSessionV2):
-        scenario=self.registry.scenarios.get(request.scenario)
+        scenario=getattr(self.registry,'language_scenarios',{}).get((request.scenario,request.work_language)) or self.registry.scenarios.get(request.scenario)
         if scenario is None:raise ProtocolError('scenario_module_unavailable',status=503)
         if request.work_language is not None and request.work_language!=scenario.work_language:raise ProtocolError('work_language_unavailable',status=503)
         state,token=self.store.create_session(scenario.bindings,scenario.baseline_config,scenario.resources,scenario_state=scenario.scenario_state)
         return {'schema_version':2,'session_id':state.session_id,'token':token,'state':public_state(state),'binding':{'protocol':2,'sessionId':state.session_id,'workLanguage':scenario.work_language,'scenarioHash':scenario.bindings.scenario.sha256}}
     def dispatch(self,auth,name,body=None,route_params=None):
+        active=getattr(self.registry,'active_bindings',None)
+        operation=self.registry.operations.get(name)
+        if active and (name=='jobs.refresh' or operation is not None and operation.mutates):
+            # Session bindings are immutable. This check also covers service-mode grants.
+            binding=self.store.query(auth,lambda view:view.bindings)
+            if binding not in active:raise ProtocolError('scenario_read_only',status=409)
         if name=='jobs.refresh':
             command=Command.model_validate(body)
             if command.operation!='jobs.refresh' or command.payload!={'job_id':(route_params or {}).get('job_id')}:raise ProtocolError('operation_route_mismatch',status=403)

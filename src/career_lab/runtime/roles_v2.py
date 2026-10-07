@@ -30,7 +30,7 @@ class RoleModelTransient(ProtocolError):
 
 class LocalRoleModel:
     """Offline example only; continuity must be in context, never this model's echo."""
-    revision="w04-local-extractive-v3"
+    revision="w04-local-extractive-v4"
     retries=0
     def complete(self,messages,tools):
         import json
@@ -38,7 +38,25 @@ class LocalRoleModel:
         language=require_work_language(ctx.get('work_language'))
         separator='; ' if language=='en' else '；'
         lines=[role_text(language,'local_mode'), role_text(language,'responsibilities')+separator.join(ctx['responsibilities'])]
-        for source in ctx['sources'][:4]:lines.append(f"[{source['display_name']}] {source['text']}")
+        import re
+        question=messages[-1]['content'].casefold()
+        terms=set(re.findall(r'[a-z0-9_]{3,}',question))
+        for phrase in re.findall(r'[\u4e00-\u9fff]+',question):
+            terms.update(phrase[i:i+2] for i in range(len(phrase)-1))
+        # Only rank already-authorized source excerpts. No inference or new advice.
+        sources=sorted(enumerate(ctx['sources']),key=lambda pair:(-sum(term in pair[1]['text'].casefold() for term in terms),pair[0]))
+        seen=set()
+        for _,source in sources:
+            if source['display_name'] in seen:continue
+            seen.add(source['display_name']);text=source['text']
+            if source.get('channel') in {'received_share','attachment','memory'}:
+                try:
+                    work=json.loads(text)
+                    if isinstance(work,dict) and isinstance(work.get('content'),str) and isinstance(work.get('title'),str):
+                        text=work['title']+'\n'+work['content']
+                except (ValueError,TypeError):pass
+            lines.append(f"[{source['display_name']}] {text}")
+            if len(seen)==4:break
         if ctx['omissions']['learner_scope']:lines.append(role_text(language,'scope_omitted'))
         return ModelReply(text="\n".join(lines))
 

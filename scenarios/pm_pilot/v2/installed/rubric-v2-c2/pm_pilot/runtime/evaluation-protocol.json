@@ -1,0 +1,8 @@
+{
+  "mode": "advisory",
+  "installed": true,
+  "owner": "W05",
+  "semantic_status": "waiting_for_model",
+  "model_retries": 0,
+  "source_manifest_sha256": "04c18e529c2447f606c36230198e9e7fcfc34c3753cd925ecca8068ef9ec58e8"
+}

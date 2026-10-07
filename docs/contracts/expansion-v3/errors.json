@@ -187,6 +187,7 @@
     "rules_engine_unavailable",
     "scenario_binding_mismatch",
     "scenario_module_unavailable",
+    "scenario_read_only",
     "scenario_state_private",
     "session_not_found",
     "session_paused",

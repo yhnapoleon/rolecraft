@@ -18,7 +18,7 @@ from test_context import package,catalog
 from test_runtime import common_store
 
 
-def prepare(tmp_path,package,catalog,*,production_followups=False):
+def prepare(tmp_path,package,catalog,*,production_followups=False,work_language="zh"):
     store,auth=common_store(tmp_path,catalog)
     # Add full initial resources in a new controlled boundary session.
     view=store.view(auth)
@@ -29,6 +29,7 @@ def prepare(tmp_path,package,catalog,*,production_followups=False):
         return evaluate_request(package,request,snapshot,lambda ref: False)
     port=ScenarioApprovalPort.from_w02(package,evaluate)
     if not production_followups:port=replace(port,followup_required=False)  # explicit atomic-boundary fixture only
+    port=replace(port,work_language=work_language)  # Explicit locale fixture; production selects hashed package.
     service=NegotiationService(port);registry=ExtensionRegistry();registry.register(service.operation())
     def unsupported(*_):raise ProtocolError('fixture_action_unavailable')
     registry.register(service.action_operation(unsupported));gateway=Gateway(store,registry)
@@ -112,3 +113,25 @@ def test_production_w02_followup_cannot_be_silently_skipped(tmp_path,package,cat
     with pytest.raises(ProtocolError,match='role decision followup unavailable'):
         gateway.dispatch(auth,'approvals.resolve',c.model_dump(mode='json'))
     assert store.view(auth).state==before
+
+
+@pytest.mark.parametrize('language',['zh','en'])
+def test_counteroffer_language_is_fixed_and_resource_changes_only_on_accept(tmp_path,package,catalog,language,monkeypatch):
+    from career_lab.runtime.context_v2 import role_text
+    store,auth,service,gateway=prepare(tmp_path,package,catalog,work_language=language)
+    try:
+        ref=create_request(store,auth,'localized',100,50)
+        cmd=command(store,auth,'localized-offer','approvals.resolve',{'request':ref.model_dump(mode='json'),'expected_request_revision':1})
+        offer=gateway.dispatch(auth,'approvals.resolve',cmd.model_dump(mode='json'))
+        assert offer['result']['decision']['reason']==role_text(language,'counteroffer')
+        assert offer['result']['decision']['countered']=={'capacity':60} and store.view(auth).state.resources['capacity']==30
+        # UI/process locale is not a language input to business decisions.
+        monkeypatch.setenv('LANG','zh_CN.UTF-8' if language=='en' else 'en_US.UTF-8')
+        accept=command(store,auth,'localized-accept','accept_counteroffer',{'tool':'accept_counteroffer','request':offer['result']['request']})
+        result=gateway.dispatch(auth,'actions',accept.model_dump(mode='json'))
+        assert result['result']['decision']['reason']==role_text(language,'counteroffer_accepted')
+        assert store.view(auth).state.resources['capacity']==60
+        replay=gateway.dispatch(auth,'actions',accept.model_dump(mode='json'))
+        assert replay['replayed'] and store.view(auth).state.resources['capacity']==60
+        assert gateway.request_result(auth,'localized-offer').response.result['decision']['reason']==role_text(language,'counteroffer')
+    finally:store.db.engine.dispose()

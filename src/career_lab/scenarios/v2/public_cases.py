@@ -61,6 +61,7 @@ def record_private_diagnostic(package):
     trials = [('TR-TRAIN-01-a', query, {'min_score': .35}),
               ('TR-TRAIN-01-b', query, {'min_score': .2}),
               ('TR-TRAIN-01-control', "What makes up Neptune's atmosphere?" if en else '海王星大气的主要成分', {'min_score': .2})]
+    if en:trials.insert(1,('TR-TRAIN-01-current',query,{'min_score':package.baseline('diagnostic').min_score}))
     return {'diagnostic_id': 'TR-TRAIN-01', 'locale':getattr(package,'locale','zh'), 'input_bundle_hash': package.content_hash,
             'source_kind': 'actual_module_trials_on_synthetic_scenario',
             'records': [run_pre_event_trial(package, *trial) for trial in trials],

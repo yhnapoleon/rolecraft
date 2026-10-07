@@ -55,3 +55,7 @@
 .rc-roles--v4-history .rc-roles__conversation { max-height:none; overflow:visible; }
 .rc-roles--v4-history .rc-roles__mode, .rc-roles--v4-history .rc-roles__notice { padding:0 0 12px; }
 .rc-roles--v4-history > [data-action="recover"] { margin:0 0 12px; }
+
+.rc-roles--v4-history > [data-action="reload"] { margin:0 0 12px; }
+
+.rc-resource-fields [hidden] { display:none !important; }

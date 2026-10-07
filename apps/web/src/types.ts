@@ -68,6 +68,7 @@ export interface LocalSession {
   /** Missing means the original v1 record; never infer protocol from URL or UI language. */
   protocol?: 1 | 2;
   v2NativeWorkspace?: true;
+  v2ReadOnly?: boolean;
   v2Workspace?: { tasks: any[]; products: any[] };
   v2Domains?: string[];
   v2MaterialTitles?: Record<string, string>;

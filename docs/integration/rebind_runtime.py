@@ -35,7 +35,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='rolecraft-w02-rebind-') as tmp:
         generated=Path(tmp)/'scenario'
         cases=json.loads((old/'research/public-case-records.json').read_text())
-        build_seed(generated,cases,locale=locale,scenario_id=bundle_data['id'],revision=bundle_data['revision'],calibration=calibration,english_min_score=calibration['selected_threshold'] if calibration else .35)
+        build_seed(generated,cases,private_diagnostic=json.loads((old/'research/private-diagnostic.json').read_text()) if (old/'research/private-diagnostic.json').exists() else None,locale=locale,scenario_id=bundle_data['id'],revision=bundle_data['revision'],calibration=calibration,english_min_score=calibration['selected_threshold'] if calibration else .35)
         if args.with_w05:
             from career_lab.contracts import v2 as C
             from career_lab.rubrics.v4.rubric_v2 import policies

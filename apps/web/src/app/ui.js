@@ -16,6 +16,7 @@ import { createDocumentMotion } from './document-motion.js';
 import './document-motion.css';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
+import { installV4References } from '../v4-references';
 
 const L = window.PracticeLive;
 const E = L.engine;
@@ -73,7 +74,7 @@ const shown = x => (x.draft ? Object.assign({}, x, x.draft) : x);
 // What a piece of work is for: flask = a test plan, branch = options, stamp = the decision you will submit.
 const purposeGlyph = intent => ({ plan: 'flask', option: 'branch', commit: 'stamp' }[intent] ? icon({ plan: 'flask', option: 'branch', commit: 'stamp' }[intent], 'i-xs purpose-i') : '');
 // Doing something on a task moves it from 待处理 to 正在做; calling it done stays with you.
-const startWorking = (a, t) => { if (t && t.status === 'open') E.updateTask(a, t.id, { status: 'working' }); };
+const startWorking = (a, t) => { if (!L.nativeWorkspace(a) && t && t.status === 'open') E.updateTask(a, t.id, { status: 'working' }); };
 const hasDecision = a => works(a).some(w => { const v = shown(w); return E.intentOf(v.purpose) === 'commit' && v.body.trim(); });
 const scen = id => E.scenarios.find(s => s.id === id) || E.scenarios[0];
 const statusOf = a => (a && a.backend && a.backend.status) || 'active';
@@ -513,7 +514,7 @@ function wsToolbar(a) {
       <div class="menu-wrap title-wrap"><h1 class="ws-title"><button type="button" class="title-btn" data-action="menu" data-menu="brief" aria-expanded="${ui.menu === 'brief'}" aria-haspopup="dialog" title="${esc(T('委托与条件', 'Brief and conditions'))}"><span class="title-text" style="view-transition-name: case-title">${esc(CASE(a.scenarioId).title)}</span>${icon('down', 'i-sm')}</button></h1>${ui.menu === 'brief' ? briefPopover(a) : ''}</div>
       ${here}
     </nav>
-    ${st !== 'active' ? `<span class="state-chip ${st}">${st === 'paused' ? T('已暂停', 'Paused') : T('已交付', 'Submitted')}</span>` : ''}
+    ${st !== 'active' ? `<span class="state-chip ${st}">${sessionOf(a)?.v2ReadOnly ? T('旧版 · 只读','Earlier version · Read-only') : st === 'paused' ? T('已暂停', 'Paused') : T('已交付', 'Submitted')}</span>` : ''}
     ${conn}
     <div class="spacer"></div>
     <button type="button" class="team-btn" data-action="open-rail" aria-label="${esc(T('团队', 'Team'))}">${ROLES.map(r => avatar(r, 'sm', { typing: typing === r, dot: unread(a, r) > 0 || noteRoles.has(r) })).join('')}</button>
@@ -525,7 +526,7 @@ function wsToolbar(a) {
 function moreMenu(a) {
   const st = statusOf(a);
   const item = (action, label, ic, attrs = '') => `<button type="button" role="menuitem" data-action="${action}" ${attrs}>${icon(ic, 'i-sm')}<span class="grow">${label}</span></button>`;
-  return `<div class="menu right" role="menu">${st !== 'submitted' ? item('live-session', st === 'paused' ? T('恢复练习', 'Resume practice') : T('暂停练习', 'Pause practice'), st === 'paused' ? 'play' : 'pause') : ''}${item('live-timeline', T('后端过程记录', 'Server log'), 'history')}${item('export', T('导出本地笔记', 'Export local notes'), 'download')}${item('about', T('关于这个工作台', 'About this workspace'), 'info')}${item('to-entry', T('离开工作台', 'Leave the workspace'), 'back')}</div>`;
+  return `<div class="menu right" role="menu">${st !== 'submitted' && !sessionOf(a)?.v2ReadOnly ? item('live-session', st === 'paused' ? T('恢复练习', 'Resume practice') : T('暂停练习', 'Pause practice'), st === 'paused' ? 'play' : 'pause') : ''}${item('live-timeline', T('后端过程记录', 'Server log'), 'history')}${item('export', T('导出本地笔记', 'Export local notes'), 'download')}${item('about', T('关于这个工作台', 'About this workspace'), 'info')}${item('to-entry', T('离开工作台', 'Leave the workspace'), 'back')}</div>`;
 }
 function briefPopover(a) {
   const c = CASE(a.scenarioId);
@@ -555,7 +556,7 @@ function conditions(a, cls = '') {
 }
 function wsStage(a) {
   const st = statusOf(a);
-  const lock = st === 'paused' ? `<div class="stage-banner">${icon('pause', 'i-sm')}<span class="grow">${T('练习已暂停。资料可以看，操作要先恢复。', 'Paused. You can read; resume to act.')}</span>${btn(T('恢复', 'Resume'), 'live-session', 'small')}</div>`
+  const lock = sessionOf(a)?.v2ReadOnly ? `<div class="stage-banner" role="status"><span class="grow">${T('这个练习使用旧版场景，原记录可以只读查看。要继续练习，请开始新的工作。','This practice uses an earlier scenario. View its original records read-only, or start new work to continue practising.')}</span>${btn(T('开始新的练习','Start a new practice'),'v4-new-practice','small')}</div>` : st === 'paused' ? `<div class="stage-banner">${icon('pause', 'i-sm')}<span class="grow">${T('练习已暂停。资料可以看，操作要先恢复。', 'Paused. You can read; resume to act.')}</span>${btn(T('恢复', 'Resume'), 'live-session', 'small')}</div>`
     : st === 'submitted' ? `<div class="stage-banner">${icon('stamp', 'i-sm')}<span class="grow">${T('已固定交付，这次练习只读。', 'Submitted. This practice is read-only now.')}</span>${btn(T('看评审', 'See review'), 'to-review', 'small')}</div>` : '';
   const t = routeTask(a);
   if (t) return lock + taskView(a, t);
@@ -1010,7 +1011,7 @@ function railChat(a, role) {
   const failed = s?.failedTurn && ROLE_OF[s.failedTurn.body.role_id] === role;
   return `<div class="chat who-${role}">
     <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}<small>${ROLE_TITLE(role)}</small></p><p class="chat-knows">${esc(KNOWS(role))}</p></div></header>
-    <div class="thread" role="log" aria-live="polite">${msgs.length ? msgs.map(m => msgHtml(a, role, m)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(PEOPLE[role].name + ' 正在输入', PEOPLE[role].name + ' is typing'))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}</div>
+    <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${msgs.length ? msgs.map(m => msgHtml(a, role, m)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(PEOPLE[role].name + ' 正在输入', PEOPLE[role].name + ' is typing'))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}</div>
     <div class="chat-context">${t ? `<span class="ctx" title="${esc(T('这条对话会记在这件事下', 'This conversation is filed under this task'))}">${icon('note', 'i-xs')}<span>${esc(taskTitle(t))}</span></span>` : ''}${x ? `<button type="button" class="ctx add" data-action="prefill-artifact">${icon('plus', 'i-xs')}${T('附上作品', 'Attach work')}</button>` : ''}${a.tests.length ? `<button type="button" class="ctx add" data-action="prefill-run">${icon('plus', 'i-xs')}${T('附上测试', 'Attach a test')}</button>` : ''}</div>
     <form class="composer" data-form="chat"><label class="sr-only" for="chat-input">${esc(T('给 ' + PEOPLE[role].name + ' 的消息', 'Message to ' + PEOPLE[role].name))}</label><textarea id="chat-input" name="text" rows="2" maxlength="4000" required placeholder="${esc(T('写给 ' + PEOPLE[role].name + '…', 'Message ' + PEOPLE[role].name + '…'))}">${esc(s?.inputs.messages[ROLE_ID[role]] || '')}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></form>
   </div>`;
@@ -1028,6 +1029,7 @@ function msgHtml(a, role, m) {
   return `<div class="msg ${mine ? 'me' : 'them'}${local ? ' local' : ''}"><div class="bubble"${zhAttr(m.text)}>${mine ? esc(text) : md(text)}</div>${time || tag || (mine && tk) ? `<span class="msg-foot">${tag}${mine && tk ? (task ? `<button type="button" class="msg-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : `<span class="msg-task" title="${esc(tk)}">${esc(T('关联事项：', 'Linked task: ') + Array.from(String(tk)).slice(0, 8).join('') + (Array.from(String(tk)).length > 8 ? '…' : ''))}</span>`) : ''}${time ? `<time title="${esc(time)}">${when(time)}</time>` : ''}</span>` : ''}</div>`;
 }
 function railFeedback(a, t) {
+  if (L.nativeWorkspace(a)) return `<div class="rail-pad fb-pad" data-v4-feedback data-open-review="${!!ui.reviewFor}"></div>`;
   const scoped = t && !ui.scopeAll;
   const items = Coach.observations(a, E, scoped ? t.id : null);
   const x = t && ui.obj && ui.obj.type === 'work' ? a.artifacts.find(y => y.id === ui.obj.id && !y.removedAt) : null;
@@ -1148,6 +1150,11 @@ function railActivity(a, t) {
 
 /* ---------- 4. review ---------- */
 function renderReview() {
+  if (current() && L.nativeWorkspace(current())) return `${topbar(backBtn('to-board', T('工作板', 'Board')))}
+    <main id="main" class="page review" tabindex="-1">
+      <header class="review-hero"><div class="review-title"><p class="meta">${esc(CASE(current().scenarioId).title)}</p><h1 class="title-xl">${T('交付与反馈', 'Submission and feedback')}</h1></div></header>
+      <div class="review-grid"><div class="review-main" data-v4-feedback></div><aside class="review-side" data-v4-reference-side><p class="meta">${T('打开依据，核对当时的原文与版本。', 'Open a reference to inspect its original text and version.')}</p></aside></div>
+    </main>`;
   const a = current(); const s = sessionOf(a); const fb = s?.feedback; const submission = s ? L.store.submissionId(s) : '';
   const pending = s?.pending && (s.pending.job?.kind ?? s.pending.kind) === 'feedback';
   const head = topbar(backBtn('to-board', T('工作板', 'Board')));
@@ -1324,6 +1331,10 @@ function bundleRisk(a, draft) {
 }
 function sheetDeliver(readOnly = false) {
   const a = current(); const s = sessionOf(a);
+  if (L.nativeWorkspace(a)) {
+    openSheet(T('交付试点决定', 'Submit your pilot decision'), '<div class="deliver-doc paper" data-v4-submission></div>', btn(T('查看提交与反馈', 'View submission and feedback'), 'v4-feedback', 'quiet'), 'wide doc');
+    return;
+  }
   if (s.world.status === 'submitted' && !readOnly) { closeSheet(true); go('review'); return; }
   const list = deliverPick(a);
   if (!readOnly && !s.draft.rationale && list.length) L.store.update(a.id, { draft: { ...s.draft, rationale: rationaleFrom(a, ui.deliverPick) } });
@@ -1377,6 +1388,7 @@ function sheetAbout() {
 function onLive(changed) {
   const n = snap();
   noticeArrivals();
+  if (sheet.open && sheet.querySelector('.res-now') && current()) sheet.querySelector('.res-now').innerHTML=conditions(current(),'compact');
   if (n.error && n.error !== ui.lastError) { ui.lastError = n.error; notify(n.error); } else if (!n.error) ui.lastError = '';
   if (changed) scheduleRefresh(); else refreshChrome();
 }
@@ -1509,7 +1521,7 @@ async function openMaterial(id, compare = false) {
   // Reading is a counted business action on the server; record the first read of each version only.
   const readKey = id + '@' + (m ? m.version : 0);
   a.readSent = Array.isArray(a.readSent) ? a.readSent : [];
-  if (!a.readSent.includes(readKey)) {
+  if (!a.readSent.includes(readKey) || !m?.body) {
     try { await L.read(a, id); a.readSent.push(readKey); persist(); } catch (err) { notify(errText(err)); }
   }
   if (m && m.version > 1 && !ui.previous[id]) {
@@ -1536,6 +1548,7 @@ function flip(mutate) {
   });
 }
 function moveWithUndo(a, id, to, message) {
+  if (L.nativeWorkspace(a)) { void L.moveNativeTask(a,id,to).then(()=>notify(message)).catch(error=>notify(errText(error))); return; }
   let before;
   flip(() => { before = E.moveTask(a, id, to); persist(); refreshWS(['stage', 'toolbar']); });
   notify(message, { undo: () => { flip(() => { E.restoreOrder(a, before); persist(); refreshWS(['stage']); }); } });
@@ -1618,7 +1631,7 @@ async function act(el) {
     case 'about': sheetAbout(); break;
     case 'export': download(storageLocked && rawRecord ? rawRecord : state, storageLocked && rawRecord ? 'practice-original-record.json' : 'practice-local-notes.json'); notify(T('已交给浏览器下载', 'Handed to the browser to download')); break;
     case 'reset-storage': try { localStorage.setItem(KEY + '.bak', rawRecord); storageLocked = false; storageIssue = ''; rawRecord = null; persist(); render(); notify(T('原记录已另存，可以重新开始了', 'The original record is backed up. You can start fresh.')); } catch (_) { notify(T('浏览器不允许保存，没能另存', 'The browser blocked saving the backup.')); } break;
-    case 'set-status': { const t = a.tasks.find(x => x.id === id); if (t && t.status !== el.dataset.status) { E.updateTask(a, id, { status: el.dataset.status }); persist(); refreshWS(['stage']); } break; }
+    case 'set-status': { if (L.nativeWorkspace(a)) { await L.patchNativeTask(a,id,{status:el.dataset.status}); break; } const t = a.tasks.find(x => x.id === id); if (t && t.status !== el.dataset.status) { E.updateTask(a, id, { status: el.dataset.status }); persist(); refreshWS(['stage']); } break; }
     case 'new-task': sheetTask(); break;
     case 'edit-task': sheetTask(id); break;
     case 'move-task': { const t = a.tasks.find(x => x.id === id); const i = a.tasks.indexOf(t); const dir = Number(el.dataset.dir); const target = a.tasks[i + dir]; if (!target) { notify(T('已经到头了', 'Already at the end')); break; } closeSheet(true); moveWithUndo(a, id, dir < 0 ? { priority: target.priority, beforeId: target.id } : { priority: target.priority, beforeId: a.tasks[i + 2] ? a.tasks[i + 2].id : null }, T('已调整顺序', 'Order changed')); break; }
@@ -1635,8 +1648,10 @@ async function act(el) {
     case 'config': ui.configFromTestSet = ['test_set','investigation'].includes(artifact()?.kind) && ui.obj?.type === 'work'; closeSheet(true); ui.menu = null; sheetConfig(); break;
     case 'resend-turn': { const s = sessionOf(a); const op = s?.failedTurn; if (op) { await L.turn(a, ROLE_OF[op.body.role_id], String(op.body.text), { ...(op.body.task_id !== undefined ? { task_id: op.body.task_id } : {}), ...(op.body.work_id !== undefined ? { work_id: op.body.work_id } : {}), ...(op.body.attachments ? { attachments: op.body.attachments } : {}) }); L.store.update(a.id, { failedTurn: undefined }); refreshWS(['rail']); } break; }
     case 'discuss-run': { const r = a.tests.find(x => x.id === id); openChat('technical', T(`我测了“${r.question}”，助手答“${answerText(r.answer).slice(0, 300)}”（政策源 v${r.policyVersion}，索引 v${r.indexVersion}）。我想确认：`, `I asked “${r.question}” and the assistant said “${answerText(r.answer).slice(0, 300)}” (policy v${r.policyVersion}, index v${r.indexVersion}). I want to check: `)); break; }
-    case 'prefill-artifact': { const x = artifact(); const input = document.getElementById('chat-input'); if (input && x) { if (!attachToTurn(a, { type: 'work', id: x.id, version: x.revision })) break; const v = shown(x); input.value = T(`这是我的「${v.title}」：\n${v.body.slice(0, 1500)}\n\n`, `Here is my “${v.title}”:\n${v.body.slice(0, 1500)}\n\n`) + input.value; input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); } break; }
-    case 'prefill-run': { const r = a.tests.at(-1); const input = document.getElementById('chat-input'); if (input && r) { if (!attachToTurn(a, { type: 'test', id: r.id, version: r.configVersion })) break; input.value = T(`最近一次测试：“${r.question}” → “${answerText(r.answer).slice(0, 300)}”。`, `Latest test: “${r.question}” → “${answerText(r.answer).slice(0, 300)}”. `) + input.value; input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); } break; }
+    case 'v4-new-practice': { if (sheet.open) closeSheet(true); go('pm'); break; }
+    case 'v4-feedback': { closeSheet(true); go('review'); break; }
+    case 'prefill-artifact': { if (L.nativeWorkspace(a)) { const sharing = document.querySelector('[data-v4-insertion=sharing]'); sharing?.scrollIntoView({block:'nearest'}); sharing?.querySelector('select,button')?.focus(); notify(T('请在作品下方选择确切版本和接收同事后分享。','Choose an exact version and colleague below the work to share it.')); break; } const x = artifact(); const input = document.getElementById('chat-input'); if (input && x) { if (!attachToTurn(a, { type: 'work', id: x.id, version: x.revision })) break; const v = shown(x); input.value = T(`这是我的「${v.title}」：\n${v.body.slice(0, 1500)}\n\n`, `Here is my “${v.title}”:\n${v.body.slice(0, 1500)}\n\n`) + input.value; input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); } break; }
+    case 'prefill-run': { if (L.nativeWorkspace(a)) { notify(T('测试原文可在测试台查看；此处暂未支持向同事分享测试引用。','Open the test bench for the original result. Sharing test references here is not yet supported.')); break; } const r = a.tests.at(-1); const input = document.getElementById('chat-input'); if (input && r) { if (!attachToTurn(a, { type: 'test', id: r.id, version: r.configVersion })) break; input.value = T(`最近一次测试：“${r.question}” → “${answerText(r.answer).slice(0, 300)}”。`, `Latest test: “${r.question}” → “${answerText(r.answer).slice(0, 300)}”. `) + input.value; input.dispatchEvent(new Event('input', { bubbles: true })); input.focus(); } break; }
     case 'package': openSheet(T('任务包', 'Task package'), `<p class="meta">${T('这是会交给你的 Agent 的内容，不含任何连接凭据。', 'This is what your agent receives. It contains no credentials.')}</p><label class="sr-only" for="package-text">${T('任务包内容', 'Package content')}</label><textarea id="package-text" class="textarea mono" rows="16" readonly>${esc(JSON.stringify(pkgFor(a, false), null, 2))}</textarea>`, `${btn(T('关闭', 'Close'), 'close', 'quiet')}<span class="spacer"></span>${btn(T('复制并记为已导出', 'Copy and mark as handed over'), 'copy-package', 'primary')}`, 'wide'); break;
     case 'copy-package': { const pkg = pkgFor(a, true); persist(); closeSheet(true); try { await navigator.clipboard.writeText(JSON.stringify(pkg, null, 2)); notify(T('任务包已复制，记为已导出', 'Package copied and marked as handed over')); } catch (_) { notify(T('浏览器不允许自动复制；已记为导出，可在“查看”里手动复制', 'The browser blocked copying. It is marked as handed over; copy it from Preview.')); } refreshWS(['rail']); break; }
     case 'download-package': download(pkgFor(a, true), 'practice-task.json'); persist(); notify(T('任务包已交给浏览器下载', 'Package handed to the browser to download')); refreshWS(['rail']); break;
@@ -1689,7 +1704,7 @@ async function act(el) {
     case 'open-doc': case 'open-material': await openMaterial(id, el.dataset.compare === '1'); break;
     case 'open-bench': { const t = task(); if (t) setObj({ type: 'bench' }); else go('bench', { transition: true }); break; }
     case 'pick-doc': { const docs = E.getMaterials(a); openSheet(T('打开一份资料', 'Open a document'), `<div class="pick-list">${docs.map(m => `<button type="button" class="pick-row" data-action="open-doc" data-id="${esc(m.id)}">${icon('doc', 'i-sm')}<span class="grow">${esc(materialTitle(m))}</span><span class="ver">v${m.version}</span></button>`).join('')}</div>`, '', 'narrow'); break; }
-    case 'toggle-done': { const t = a.tasks.find(x => x.id === id); if (!t) break; const before = t.status; const next = before === 'done' ? 'open' : 'done'; E.updateTask(a, id, { status: next }); persist(); refreshWS(['stage']); notify(next === 'done' ? T('「' + taskTitle(t) + '」已处理', '“' + taskTitle(t) + '” is done') : T('「' + taskTitle(t) + '」重新打开', '“' + taskTitle(t) + '” reopened'), { undo: () => { E.updateTask(a, id, { status: before }); persist(); refreshWS(['stage']); } }); break; }
+    case 'toggle-done': { if (L.nativeWorkspace(a)) { const row=a.tasks.find(t=>t.id===id); if(row)await L.patchNativeTask(a,id,{status:row.status==='done'?'open':'done'}); break; } const t = a.tasks.find(x => x.id === id); if (!t) break; const before = t.status; const next = before === 'done' ? 'open' : 'done'; E.updateTask(a, id, { status: next }); persist(); refreshWS(['stage']); notify(next === 'done' ? T('「' + taskTitle(t) + '」已处理', '“' + taskTitle(t) + '” is done') : T('「' + taskTitle(t) + '」重新打开', '“' + taskTitle(t) + '” reopened'), { undo: () => { E.updateTask(a, id, { status: before }); persist(); refreshWS(['stage']); } }); break; }
     case 'show-advice': ui.menu = null; ui.advice = el.dataset.role; refreshWS(['stage']); break;
     case 'close-advice': ui.advice = null; refreshWS(['stage']); break;
     case 'apply-advice': { const adv = Coach.advice(a, ui.advice); if (!adv.items.length) break; let before; flip(() => { before = E.applySuggestion(a, { roleId: adv.roleId, items: adv.items }); ui.advice = null; persist(); refreshWS(['stage']); }); notify(T('已按 ' + adv.name + ' 的看法排列', 'Arranged the way ' + adv.name + ' sees it'), { undo: () => { flip(() => { E.restoreOrder(a, before); persist(); refreshWS(['stage']); }); } }); break; }
@@ -1711,7 +1726,7 @@ async function act(el) {
     case 'discuss-artifact': { const x = artifact(); closeSheet(true); const v = x && shown(x); openChat(x && E.intentOf(v.purpose) === 'commit' ? 'manager' : 'business', v ? T(`这是我的「${v.title}」（${purposeLabel(v.purpose)}）：\n${v.body.slice(0, 1500)}\n\n想请你看看：`, `Here is my “${v.title}” (${purposeLabel(v.purpose)}):\n${v.body.slice(0, 1500)}\n\nCould you look at: `) : ''); break; }
     case 'discuss-material': { const m = E.getMaterials(a).find(x => x.id === id); const role = el.dataset.role || whoHas(m)[0] || 'business'; openChat(role, T(`我在看《${materialTitle(m)}》v${m.version}，想确认：`, `I am reading “${materialTitle(m)}” v${m.version}. I want to check: `)); break; }
     case 'agent': ui.railTab = 'agent'; if (narrowRail()) ui.railOpen = true; refreshWS(['rail', 'toolbar']); break;
-    case 'request-review': { const x = artifact(); if (!x) { ui.railTab = 'feedback'; refreshWS(['rail']); break; } commit(); E.log(a, 'review_requested', '请求评审', { artifactId: x.id }); ui.reviewFor = x.id; ui.railTab = 'feedback'; ui.scopeAll = false; persist(); if (narrowRail()) ui.railOpen = true; refreshWS(['rail', 'toolbar']); notify(T('已对照记录整理反馈，见右侧“反馈”', 'Feedback drawn from the record is in the Feedback tab'), { toast: true }); break; }
+    case 'request-review': { if (L.nativeWorkspace(a)) { ui.reviewFor=artifact()?.id||true; ui.railTab='feedback'; if(narrowRail())ui.railOpen=true; refreshWS(['rail']); break; } const x = artifact(); if (!x) { ui.railTab = 'feedback'; refreshWS(['rail']); break; } commit(); E.log(a, 'review_requested', '请求评审', { artifactId: x.id }); ui.reviewFor = x.id; ui.railTab = 'feedback'; ui.scopeAll = false; persist(); if (narrowRail()) ui.railOpen = true; refreshWS(['rail', 'toolbar']); notify(T('已对照记录整理反馈，见右侧“反馈”', 'Feedback drawn from the record is in the Feedback tab'), { toast: true }); break; }
     case 'fb-act': { const kind = el.dataset.act; const tid = el.dataset.task; closeSheet(true);
       if (kind === 'chat') { openChat(el.dataset.role); break; }
       if (kind === 'rerun') { const r = a.tests.find(x => x.id === id); ui.labPrefill = r ? r.question : ''; if (tid) openTask(tid, { type: 'bench' }); else go('bench'); break; }
@@ -1979,6 +1994,7 @@ const workFolders = installWorkFolders(document, { onSelect: (taskId, workId, ev
   document.querySelectorAll('.menu, .popover').forEach(el => el.remove());
   document.querySelectorAll('[data-menu][aria-expanded="true"]').forEach(el => el.setAttribute('aria-expanded', 'false'));
 } });
+installV4References(() => L.v4Host(current()));
 L.attach(state, onLive);
 L.refresh(current()).then(() => { ui.synced = true; });
 setInterval(() => { if (!document.hidden) L.store.poll(); }, 1500);

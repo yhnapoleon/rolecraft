@@ -1,3 +1,4 @@
+import { T } from './app/i18n';
 import { ApiError } from './api';
 import { createGatewayTransport, type GatewayCredentials, type GatewayTransport } from './gateway-transport';
 import type { Command, ObjectRef, EvidenceRefV2, VersionPoint } from './contracts-v2';
@@ -87,7 +88,7 @@ export class V4DataHost implements V4HostAdapter {
   subscribe(changed: () => void) { this.listeners.add(changed); return () => { this.listeners.delete(changed); }; }
   snapshot(): Readonly<V4HostSnapshot> {
     return copy({ session: this.ports.binding, uiLanguage: this.ports.uiLanguage(),
-      state: this.context?.state?.status ?? 'unavailable', asOf: this.context?.as_of ?? null,
+      state: this.context?.read_only && this.context?.state?.status !== 'submitted' ? 'paused' : this.context?.state?.status ?? 'unavailable', asOf: this.context?.as_of ?? null,
       currentTask: this.local.currentTask, currentProduct: this.local.currentProduct,
       busy: this.busy, storageError: this.storageError,
       available: { ...this.context?.available, 'delegations.create': false, 'delegations.revoke': false },
@@ -134,6 +135,7 @@ export class V4DataHost implements V4HostAdapter {
     for (const key of ['token', 'request_id', 'expected_version', 'expected_workspace_revision', 'command']) {
       if (Object.hasOwn(input, key)) throw new ApiError('Only business input is accepted', 400, 'invalid_command_input');
     }
+    if (this.context?.read_only) throw new ApiError(T('这个练习使用旧版场景，目前只读。你可以查看原记录，或开始新的练习。', 'This practice uses an earlier scenario and is read-only. View its records or start a new practice.'),409,'scenario_read_only');
     const route = commandRoute(operation, input);
     this.busy = true; this.emit();
     try {
@@ -178,6 +180,11 @@ export class V4DataHost implements V4HostAdapter {
     });
   }
   hasUnpersistedDrafts() { return this.storageError || this.unsavedDrafts.size > 0; }
+  async ensureFeedbackPointer() {
+    if(this.local.drafts.feedback?.['last-request']!==undefined)return;
+    const last=Object.values(this.local.requests).filter(r=>['submissions.create','reviews.create','feedback.create'].includes(r.operation)).sort((a,b)=>a.createdAt.localeCompare(b.createdAt)).at(-1);
+    if(last)await this.keepDraft('feedback','last-request',{requestId:last.outcome.requestId,status:last.outcome.status});
+  }
   pendingRequests() { return Object.values(this.local.requests).filter(e => ['pending', 'unconfirmed'].includes(e.outcome.status)).map(e => copy(e.outcome)); }
   async recover(requestId: string): Promise<V4CommandResult> {
     return this.exclusive(async () => {

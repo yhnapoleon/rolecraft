@@ -51,7 +51,22 @@ def render_case_details(records,*,locale="zh"):
         requested=req.model_dump(mode="json");effective=eff.model_dump(mode="json")
         for key in CONFIG_OPTIONS:table.append("| "+" | ".join(cell(x) for x in (key,display(requested[key]),display(effective[key])))+" |")
         rows.append("\n".join(table))
-        rows.append(("Setting differences: " if en else "参数差异：")+display(result.config.differences))
+        unavailable=[];over=[]
+        resources=record['input_snapshot']['world']['resources']
+        names={'work_items':('工作项','Work items'),'update_strategy':('更新策略','Update strategy'),
+               'scope_filter':('范围过滤','Scope filter'),'fallback':('人工兜底','Human fallback')}
+        for key,reason in result.config.differences.items():
+            if key=='participants':
+                over.append(f"participants {req.participants} > capacity {resources['capacity']}" if en else
+                            f"计划人数{req.participants}超过当前容量{resources['capacity']}")
+            elif key=='launch_day':
+                over.append(f"planned day {req.launch_day} > deadline day {resources['deadline_day']}" if en else
+                            f"计划上线第{req.launch_day}天晚于当前期限第{resources['deadline_day']}天")
+            else:
+                label=names.get(key,(key,key))[1 if en else 0]
+                unavailable.append(f"{label}: {display(requested[key])} → {display(effective[key])}")
+        rows.append(("Not effective (using the effective settings): " if en else "未生效项（已按实际配置执行）：")+("; ".join(unavailable) or ("None" if en else "无")))
+        rows.append(("Over current allocation (not changed automatically): " if en else "超出当前额度（未自动修改）：")+("; ".join(over) or ("None" if en else "无")))
     return rows
 
 
