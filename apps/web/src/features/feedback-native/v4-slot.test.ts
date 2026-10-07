@@ -15,6 +15,7 @@ function fixture(){
     if(operation===op.products)return {result:{result:{items:[product],next_cursor:null}}};
     if(operation===op.submissions)return {result:{items:[submission],next_cursor:null}};
     if(operation===op.feedback)return {items:[report]};
+    if(operation===op.reviews)return {items:[],next_cursor:null};
     if(operation===op.responses)return {items:[],next_cursor:null};
     if(operation===op.timeline)return {role_mode:'model',objects:[{ref:cfg,content:{}}],workspace:{config:{id:'cfg',version:3,config_version:2}}};
     throw Error('unexpected operation');
@@ -87,5 +88,54 @@ describe('W05 v4 host adapter',()=>{
   it('changing UI language preserves fixed work language and stored feedback',async()=>{
     const f=fixture();const ctl=createV4FeedbackAdapter(f.host);await ctl.refresh();const count=f.queries.length;
     f.setSnapshot({uiLanguage:'zh'});expect(ctl.adapter.snapshot().workLanguage).toBe('zh');expect(ctl.adapter.snapshot().reports[0].business_response).toBe('原反馈不翻译');expect(f.queries.length).toBe(count);ctl.destroy();
+  });
+});
+
+
+describe('W05 non-terminal review via public host',()=>{
+  const review={id:'review-1',session_id:'s',version:1,subjects:[ref('product','p',2)],purpose:'test plan',question:'Check the assumptions',decision:null,scope:[],followup_of:[]};
+  it('records exact selected versions and optional unknown decision without submitting the session',async()=>{
+    const f=fixture(),ctl=createV4FeedbackAdapter(f.host);await ctl.refresh();
+    await ctl.adapter.review!({subjects:review.subjects,purpose:'test plan',question:review.question,decision:null,scope:[],followup_of:[]});
+    expect(f.calls).toEqual([{operation:op.review,input:{subjects:review.subjects,purpose:'test plan',question:review.question,decision:null,scope:[],followup_of:[]}}]);
+    expect(ctl.adapter.snapshot().status).toBe('active');expect(f.recovery).toEqual([]);ctl.destroy();
+  });
+  it('discovers immutable reviews and their feedback from public paged reads',async()=>{
+    const f=fixture();const seen:unknown[]=[];
+    f.setRead(async(operation,input)=>{
+      seen.push({operation,input});
+      if(operation===op.products)return {items:[f.product]};
+      if(operation===op.submissions)return {items:[]};
+      if(operation===op.timeline)return {objects:[]};
+      if(operation===op.reviews)return input?.cursor===0?{items:[review],next_cursor:1}:{items:[],next_cursor:null};
+      if(operation===op.feedback)return {items:[{...f.report,subject:ref('review',review.id)}]};
+      if(operation===op.responses)return {items:[{id:'resp',session_id:'s',version:1,feedback:ref('feedback','f'),kind:'supplement',text:'User-supplied; not verified'}]};
+      throw Error('unexpected operation');
+    });
+    const ctl=createV4FeedbackAdapter(f.host);await ctl.refresh();
+    expect(ctl.adapter.snapshot().reviews).toEqual([review]);expect(ctl.adapter.snapshot().reviewHistoryAvailable).toBe(true);
+    expect(ctl.adapter.snapshot().reports[0].subject).toEqual(ref('review',review.id));
+    expect(ctl.adapter.snapshot().responses![0].text).toBe('User-supplied; not verified');
+    expect(seen).toContainEqual({operation:op.feedback,input:{submission_id:'review-1'}});
+    expect(f.calls).toEqual([]);ctl.destroy();
+  });
+  it('keeps usable submission feedback when an older host lacks the collection route',async()=>{
+    const f=fixture(),ctl=createV4FeedbackAdapter(f.host);await ctl.refresh();
+    f.setSnapshot({available:{...f.host.snapshot().available,[op.reviews]:false}});await ctl.refresh();
+    expect(ctl.adapter.snapshot().reviewHistoryAvailable).toBe(false);expect(ctl.adapter.canReview).toBe(false);expect(ctl.adapter.snapshot().reports).toHaveLength(1);expect(ctl.adapter.snapshot().error).toBeUndefined();ctl.destroy();
+  });
+  it('does not borrow another feedback response or cross-session review subject',async()=>{
+    const f=fixture(),ctl=createV4FeedbackAdapter(f.host);await ctl.refresh();
+    expect(()=>ctl.adapter.review!({subjects:[{...ref('product','p'),session_id:'other'}],purpose:'',question:'',decision:null,scope:[],followup_of:[]})).toThrow();
+    expect(()=>ctl.adapter.review!({subjects:review.subjects,purpose:'',question:'',decision:null,scope:[],followup_of:[ref('feedback','f')]})).toThrow();
+    expect(f.calls).toEqual([]);ctl.destroy();
+  });
+  it('a pending review job does not prevent recording a later, explicit user response',async()=>{
+    const f=fixture(),ctl=createV4FeedbackAdapter(f.host);await ctl.refresh();
+    f.setResult({requestId:'review-job',status:'pending',result:{review:ref('review','r'),feedback_status:'queued'}});
+    await ctl.adapter.review!({subjects:review.subjects,purpose:'test plan',question:'',decision:null,scope:[],followup_of:[]});
+    f.setResult({requestId:'response',status:'confirmed',result:{}});
+    await ctl.adapter.respond({feedback_id:'f',feedback_version:1,kind:'objection',section:'general',text:'An explicit user action',evidence:[]});
+    expect(f.calls).toHaveLength(2);expect(f.recovery).toEqual([]);ctl.destroy();
   });
 });

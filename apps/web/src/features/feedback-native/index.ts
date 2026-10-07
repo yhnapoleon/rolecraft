@@ -1,27 +1,33 @@
 /** Native DOM submission/review surface. Inject the shared client; no credentials,
  * queue, mutation journal, global navigation or React root is created here. */
+import {mountReviewControls} from './review-controls';
 import {feedbackText,type FeedbackLanguage} from './localization';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 
-type SelectedProduct = Pick<WorkProductVersion,'session_id'|'product_id'|'version'|'title'|'removed_at'|'author'>;
+export type SelectedProduct = Pick<WorkProductVersion,'session_id'|'product_id'|'version'|'title'|'removed_at'|'author'>;
 type Item = { criterion: string; explanation: string; source: string; label: string; rule_bound?:{lower:string;upper:string}|null; citations: EvidenceRefV2[] };
 export type FeedbackSemanticStatus = 'waiting_for_model' | 'available' | 'pending' | 'failed';
 export type Report = {
   semantic_status?: FeedbackSemanticStatus;
   id: string; version: number; subject: ObjectRef; items: Item[]; rule_items?: Item[] | null;
-  verified_facts?: { status?:'verified'|'partial'|'unknown'; summary: string[]; references: {verified_ref?:EvidenceRefV2|null}[] }[] | null;
+  verified_facts?: { subject?:ObjectRef; status?:'verified'|'partial'|'unknown'; summary: string[]; references: {verified_ref?:EvidenceRefV2|null}[] }[] | null;
   historical_responsibilities?: {entries:{criterion:string;explanation:string;sources:EvidenceRefV2[]}[]}[] | null;
   business_response: string; next_options: string[];
 };
+export type ReviewRecord = {id:string;version:number;session_id:string;subjects:ObjectRef[];purpose:string;question:string;decision:string|null;followup_of:ObjectRef[]};
+export type ReviewDraft = {subjects:ObjectRef[];purpose:string;question:string;decision:string|null;scope:string[];followup_of:ObjectRef[]};
 export interface FeedbackNativeState {
   /** Fixed session language supplied by the shared adapter; never browser locale. */
   workLanguage?: FeedbackLanguage;
   /** UI preference only; stored feedback keeps its original language. */
   uiLanguage?: FeedbackLanguage;
   products: SelectedProduct[];
+  reviews?: ReviewRecord[];
+  reviewHistoryAvailable?:boolean;
   submission?: {ref:ObjectRef;products:ObjectRef[];decision:string} | null;
+  submissions?: {ref:ObjectRef;products:ObjectRef[];decision:string}[];
   reports: Report[];
-  responses?:{id:string;kind:'objection'|'supplement';text:string}[];
+  responses?:{id:string;version?:number;session_id?:string;feedback?:ObjectRef;kind:'objection'|'supplement';text:string}[];
   /** Feedback slot status only. Never copy a colleague/role mode here. */
   semanticStatus?: FeedbackSemanticStatus;
   /** Legacy adapter field; intentionally ignored by semantic rendering. */
@@ -36,6 +42,7 @@ export interface FeedbackNativeState {
 export interface FeedbackNativeAdapter {
   snapshot(): FeedbackNativeState;
   subscribe(callback:()=>void):()=>void;
+  review?(input:ReviewDraft):Promise<unknown>;
   submit(input:{decision:string;products:ObjectRef[]}):Promise<unknown>;
   respond(input:{feedback_id:string;feedback_version:number;kind:'objection'|'supplement';section:'general'|'verified_facts'|'historical_responsibilities'|'rule_items'|'model_advice';criterion?:string;text:string;evidence:EvidenceRefV2[]}):Promise<unknown>;
   beginRevision(input:{parent_submission:ObjectRef;reason:string}):Promise<unknown>;
@@ -45,6 +52,7 @@ export interface FeedbackNativeAdapter {
   chooseEvidence?():Promise<EvidenceRefV2[]>;
   readDraft(key:string):{text:string;evidence:EvidenceRefV2[]} | undefined;
   keepDraft(key:string,draft:{text:string;evidence:EvidenceRefV2[]}):Promise<void>;
+  canReview?:boolean;
   canSubmit?:boolean;
   canRespond?:boolean;
 }
@@ -107,6 +115,8 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
   if(options.surface!=='feedback')root.append(submissions);
   if(options.surface==='feedback')root.append(recover);
   if(options.surface!=='submission')root.append(refresh,reports,responseHistory,revisions);
+  const reviewControls=options.surface!=='submission'&&adapter.review?mountReviewControls(doc,adapter,language):undefined;
+  if(reviewControls)root.insertBefore(reviewControls.element,reports);
   host.replaceChildren(root);
   function refs(parent:HTMLElement,values:(ObjectRef|EvidenceRefV2)[]) {
     const names:Record<string,string>={product:T("作品","Artifact"),material:T("材料","Material"),test:T("测试","Test"),role_reply:T("同事回复","Colleague reply"),role_turn:T("问题","Question"),submission:T("提交记录","Submission"),review:T("评审记录","Review"),event:T("历史记录","History")};
@@ -132,11 +142,12 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
     return form;
   }
   function reportPanel(report:Report) {
-    const latest=adapter.snapshot().submission?.ref;const current=!latest||(report.subject.object_id===latest.object_id && report.subject.version===latest.version);
-    const panel=el('article');panel.append(el('h2',current?T("最近提交的反馈","Latest submission feedback"):T("此前提交的反馈","Earlier submission feedback")));refs(panel,[report.subject]);
+    const latest=adapter.snapshot().submission?.ref;const current=report.subject.kind==='submission'&&(!latest||(report.subject.object_id===latest.object_id && report.subject.version===latest.version));
+    const panel=el('article');panel.append(el('h2',report.subject.kind==='review'?T("作品评审反馈","Artifact review feedback"):current?T("最近提交的反馈","Latest submission feedback"):T("此前提交的反馈","Earlier submission feedback")));refs(panel,[report.subject]);
+    if(report.subject.kind==='review'){const review=adapter.snapshot().reviews?.find(r=>r.id===report.subject.object_id&&r.version===report.subject.version);if(review){panel.append(el('p',review.question||T('按作品形成时的信息评审。','Reviewed against information available when the artifact was formed.'),'muted'));refs(panel,review.subjects);}}
     const facts=el('section');facts.append(el('h3',T("你做过的工作与依据","Your recorded work and evidence")));
     if(!report.verified_facts?.length)facts.append(el('p',T("事实记录还未就绪，不能据此判断你没有调查。","Fact records are not ready. This does not show that you did no investigation."),'muted'));
-    for(const snapshot of report.verified_facts??[]){facts.append(el('p',snapshot.status==='verified'?T("规则核实","Verified by rules"):snapshot.status==='partial'?T("部分依据已核实，缺少的记录仍待核验","Some evidence is verified; missing records remain unverified"):T("记录待核验","Records awaiting verification"),'muted'));for(const text of snapshot.summary.slice(0,3))facts.append(el('p',text));if(snapshot.summary.length>3){const details=el('details');details.append(el('summary',T("查看核实明细","View verification details")));for(const text of snapshot.summary.slice(3))details.append(el('p',text));facts.append(details);}refs(facts,snapshot.references.flatMap(x=>x.verified_ref?[x.verified_ref]:[]));}
+    for(const snapshot of report.verified_facts??[]){if(snapshot.subject)refs(facts,[snapshot.subject]);facts.append(el('p',snapshot.status==='verified'?T("规则核实","Verified by rules"):snapshot.status==='partial'?T("部分依据已核实，缺少的记录仍待核验","Some evidence is verified; missing records remain unverified"):T("记录待核验","Records awaiting verification"),'muted'));for(const text of snapshot.summary.slice(0,3))facts.append(el('p',text));if(snapshot.summary.length>3){const details=el('details');details.append(el('summary',T("查看核实明细","View verification details")));for(const text of snapshot.summary.slice(3))details.append(el('p',text));facts.append(details);}refs(facts,snapshot.references.flatMap(x=>x.verified_ref?[x.verified_ref]:[]));}
     panel.append(facts);
     const history=el('section');history.append(el('h3',T("历史行动与承诺","Past actions and commitments")));
     for(const snapshot of report.historical_responsibilities??[])for(const entry of snapshot.entries){history.append(el('p',entry.explanation));refs(history,entry.sources);}
@@ -162,7 +173,7 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
     selectedSummary.replaceChildren(...[...selected].map(([id,ref])=>{const row=el('p');row.append(el('span',`${T("将提交：","To submit: ")}${selectedTitles.get(id)} · ${versionLabel(ref.version)} `));row.append(button(T("查看","View"),()=>adapter.openReference(ref)),button(T("取消选择","Deselect"),()=>{selected.delete(id);render();}));return row;}));
   }
   function render(){
-    if(destroyed)return;const state=adapter.snapshot();
+    if(destroyed)return;const state=adapter.snapshot();reviewControls?.render();
     notice.textContent=state.busy?T("正在等待服务端确认…","Waiting for server confirmation…"):state.pending?T("上一请求结果尚未确认，请先恢复。","The previous request is unresolved. Recover its result first."):state.status==='submitted'?(state.reports.some(r=>r.subject.object_id===state.submission?.ref.object_id)?T("本次提交已保存，可以看反馈、提出异议或开始修订。","Submission saved. Review feedback, raise a challenge or start revising."):T("本次提交已保存，反馈尚未就绪。","Submission saved. Feedback is not ready yet.")):T("可以继续工作，选择准备交付的版本。","Continue your work and select versions for submission.");
     selection.replaceChildren(...state.products.map(product=>{
       const ref:ObjectRef={session_id:product.session_id,kind:'product',object_id:product.product_id,version:product.version};const id=key(ref);
@@ -185,7 +196,7 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
     if(state.error){failure.textContent=state.error;failure.hidden=false;}
   }
   const unsubscribe=adapter.subscribe(render);render();
-  return {refresh:()=>act(()=>adapter.refresh()),destroy:()=>{destroyed=true;unsubscribe();root.remove();}};
+  return {refresh:()=>act(()=>adapter.refresh()),destroy:()=>{destroyed=true;unsubscribe();reviewControls?.destroy();root.remove();}};
 }
 
 export { mountNativeFeedback as mount };

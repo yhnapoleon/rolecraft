@@ -16,10 +16,10 @@ export interface V4HostSnapshot {
   currentTask: ObjectRef | null;
   currentProduct: ObjectRef | null;
   /** Independent server capabilities; never infer feedback status from colleague mode. */
-  semantic: Readonly<Record<'roles' | 'feedback' | 'assistant', SemanticStatus>>;
+  semantic?: Readonly<Record<'roles' | 'feedback' | 'assistant', SemanticStatus>>;
   busy: boolean;
   storageError: boolean;
-  /** Exact public operation availability, refreshed from the server. */
+  /** Server-confirmed operations supported by this host; incomplete adapters stay false. */
   available: Readonly<Record<string, boolean>>;
 }
 
