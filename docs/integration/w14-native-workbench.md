@@ -35,7 +35,7 @@ ROLECRAFT_API_TARGET=http://127.0.0.1:18832 npm run dev -- --port 18830
 
 ### 模块独占slot与统一host类型
 
-共享类型已落在`apps/web/src/v4-host.ts`（`V4HostAdapter`、`V4SlotContext`、`V4SlotHandle`），目前是接口声明，实际统一数据层待032实现。模块不拿token或raw transport，不构造Command/envelope、猜版本或维护第二恢复流程；只调用host.query/command/recover/retry及同一draft存储。`command`只收业务意图，`recover`只恢复旧请求，真实重试必须单独显式动作。工作语言从固定session读取，界面语言独立；反馈自己的semantic_status通过反馈DTO读取。
+共享类型在`apps/web/src/v4-host.ts`（`V4HostAdapter`、`V4SlotContext`、`V4SlotHandle`），基础wire类型现由公共`contracts-v2.ts`导出，不再依赖W03目录。`v4-data-host.ts`已实现统一命令/草稿journal、只读recover和主动retry，`v4-operations.ts`集中维护业务操作到正式路由的映射；尚未接入LiveWorkbench，不能据此称v4/v2已通。模块不拿token或raw transport，不构造Command/envelope、猜版本或维护第二恢复流程；只调用host.query/command/recover/retry及同一draft存储。`command`只收业务意图，`recover`只恢复旧请求，真实重试必须单独显式动作。工作语言从固定session读取，界面语言独立；反馈自己的semantic_status通过反馈DTO读取。
 
 | 实施线 | 专属slot文件（由046按此登记放行） | 032提供的真实nodes与数据 | 模块作者须自己完成/去掉 |
 |---|---|---|---|
@@ -49,6 +49,10 @@ ROLECRAFT_API_TARGET=http://127.0.0.1:18832 npm run dev -- --port 18830
 本轮中文纵切按用户17:16决定保存截图与实际操作记录；最终验收再录屏。共享接口和模块组合仅依据准确commit/场景hash/契约与当前mode验证，开发自测页成功不计v4通过。
 
 所有模块沿`docs/design/frontend-style.md`及现有CSS变量，不挂`WorkspacePanel.tsx`或`recovery-browser.tsx`早期React页，不把独立CSS与新导航原样覆盖v4。相关切片验浅/深色、小屏、键盘和草稿恢复。v4负责路由、选择态、焦点/动效及mount/destroy；模块负责自身业务内容，不能创建顶层应用或另一套恢复流程。
+
+宿主返回约定：`query`返回正式Gateway读取结果中的业务DTO；`command`返回`{requestId,status,result}`，其中result为业务结果。`recover`/`retry`的恢复结果包含原RequestResult及jobs；恢复只GET，网络/5xx后的未确认命令会阻止新的写入。服务器明确返回request_not_found后，只有用户主动retry才用新边界和新请求键重新尝试。模型任务仅通过用户主动的jobs.refresh重试；旧命令保持不变。draft写失败保留内存文字，flushDrafts补存，模块不得在失败时销毁唯一输入。
+
+snapshot新增独立`semantic.roles/feedback/assistant`状态，值为waiting_model/model/unavailable；未取得正式workbench.read时三项均unavailable，不从同事mode推断反馈能力。当前query映射、返回协议及10个宿主持久化/恢复测试已完成；正式session/context、LiveWorkbench切换和原位挂载仍在实施。
 
 公共接口同步项属于同一数据层任务：objects读取移入Gateway Operation（turns.display已有正式Operation，保留统一入口）；完整Command和只读恢复从同一账本取；工作语言固定到会话/任务上下文；绑定046固定的W02/W05准确输入后真实重绑场景，记录冻结期必要变更理由。每个可测切片独立提交并给043在v4根入口验证。
 
