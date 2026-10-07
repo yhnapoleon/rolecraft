@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "id": "pm_pilot",
-  "revision": "2.4.0",
+  "revision": "2.5.0",
   "structure_id": "index_scope_resource_dependency",
   "files": [
     {
@@ -24,8 +24,14 @@
     },
     {
       "schema_version": 2,
+      "path": "locale.json",
+      "sha256": "1e5d91254dafd7b74a7b5e39be85555b62b92d69059cb01a96172555b58b4ddf",
+      "media_type": "application/json"
+    },
+    {
+      "schema_version": 2,
       "path": "materials.json",
-      "sha256": "ca7a42a2ab454b6ab65cbd8dc8dff949139889b01e1a0c81e9b9b00b321315f8",
+      "sha256": "e0e4b72a744b13080371d6b64b279f8486d61f75d696b32bfa584a7e541f5f67",
       "media_type": "application/json"
     },
     {
@@ -49,13 +55,13 @@
     {
       "schema_version": 2,
       "path": "materials/coordination-v1.md",
-      "sha256": "3359d49c082fa4888bc998fbb2786f2c0e6d50a597555add7059d043b120f270",
+      "sha256": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/demand-v1.md",
-      "sha256": "7ed5d600f310193122af07eb8cd3a5687377c7c849b28fe3fb0659d7ef2dd382",
+      "sha256": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
       "media_type": "text/markdown"
     },
     {
@@ -73,7 +79,7 @@
     {
       "schema_version": 2,
       "path": "materials/failures-v1.md",
-      "sha256": "1c26619be90d19a90feb0339951da6ab1751e62fe0fda011c095b24917e42f66",
+      "sha256": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
       "media_type": "text/markdown"
     },
     {
@@ -156,6 +162,12 @@
     },
     {
       "schema_version": 2,
+      "path": "materials/trial_details-v1.md",
+      "sha256": "b0f6e738df36162eee1c118e7dd486e88dcb29b0eaee3ca9f9a9effc9d572d9f",
+      "media_type": "text/markdown"
+    },
+    {
+      "schema_version": 2,
       "path": "materials/user_groups-v1.md",
       "sha256": "8273557a25435e3067bf080cadc19221e04e90d1cbb4f40a7a869eff43beeaa6",
       "media_type": "text/markdown"
@@ -175,19 +187,19 @@
     {
       "schema_version": 2,
       "path": "probes.json",
-      "sha256": "eba852705dcddedc418559032e3c36f5275ee8a906a1feaa1572f5cdcd021e04",
+      "sha256": "b8b56e09f7f247a9c29484b26240e63e01d6a37e65b937bcd2739ddb1db5fdce",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "research/public-case-records.json",
-      "sha256": "8c221011c05fd8e22cbef7010cbcc6743e6b32a3f95300a3258d34a95ebcd119",
+      "sha256": "36b9daa2b974a58d1555e4bb0e89f90d5fd99af9a7e9aa852fa3de2911756071",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "roles.json",
-      "sha256": "37506ed45b7c1ca7bec80ce26a7ec01ea6a2183f6c70fab762a9da464bddbacf",
+      "sha256": "f6895278d2f56ab9c6606a924af016ec3e546fdb9102ca7ccb17ad3c2f9143b6",
       "media_type": "application/json"
     },
     {
@@ -205,7 +217,7 @@
     {
       "schema_version": 2,
       "path": "runtime/bundle.json",
-      "sha256": "1006497efab6aceb0b9b36a72de63779f3c46f6714dbdd7fdbb4aa5530e245db",
+      "sha256": "6ce1151356bc96a4aac779f81d0efcb93c68c09261ab3f6f39d8d3f1a894b583",
       "media_type": "application/json"
     },
     {
@@ -241,7 +253,7 @@
     {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "f10683840d4c9d60aad151f3804744430420464338e0074e7a86ce1ee48f0d2e",
+      "sha256": "707bbef713d366ab522b2b84ad1a84908154e4c7f9f44216fddc69998fd75efa",
       "media_type": "application/json"
     },
     {
@@ -253,7 +265,7 @@
     {
       "schema_version": 2,
       "path": "scenario.yaml",
-      "sha256": "db8979750fea2ce653dbd0ca9db299b3378bb491820203ec0294e435e94dc73b",
+      "sha256": "67f49c2fa70daefe40fd0e882d4893b0a5c7a448f47c52912c636980e58317d1",
       "media_type": "application/json"
     }
   ],
@@ -274,12 +286,14 @@
     "materials/restricted-v1.md",
     "materials/scope_note-v1.md",
     "materials/technical-v1.md",
+    "materials/trial_details-v1.md",
     "materials/user_groups-v1.md"
   ],
   "private_files": [
     "baseline.json",
     "decision_examples.json",
     "facts.json",
+    "locale.json",
     "materials.json",
     "materials/demo-v2.md",
     "materials/policy-v2.md",
@@ -329,7 +343,8 @@
         "restricted",
         "business_case",
         "coordination",
-        "failures"
+        "failures",
+        "trial_details"
       ],
       "known_facts": [
         "capacity",
@@ -368,12 +383,15 @@
       "responsibilities": [
         "解释用户需求和业务流程",
         "协调政策解释与个案核验",
-        "讨论人工接管和业务验收"
+        "讨论人工接管和业务验收",
+        "基于现有记录帮助核对吕雯和许青的材料；没有实际转达或回复记录时，不声称已经联系对方或取得新答复"
       ],
       "goals": [
         "优先解决有影响的问题",
         "不把转人工或用户沉默都当成功",
-        "区分统计口径与业务价值"
+        "区分统计口径与业务价值",
+        "起初支持BC-01的429分钟测算并用它争取试点，尚未逐项核对SD-120字段",
+        "学员提出具体字段反证后承认并修正自己的测算，不否认BC-01原文，也不因学员忠实引用它而责备对方"
       ],
       "known_materials": [
         "brief",
@@ -389,7 +407,8 @@
         "approvals",
         "business_case",
         "coordination",
-        "failures"
+        "failures",
+        "trial_details"
       ],
       "known_facts": [
         "demand_total",
@@ -421,7 +440,7 @@
       ],
       "unacceptable_conditions": [
         "只报告自动回答率",
-        "把等待时长全算成节省劳动",
+        "明确收到字段反证后仍把等待时长全算成节省劳动",
         "声称人工已经处理却没有记录"
       ]
     },
@@ -452,7 +471,8 @@
         "demo",
         "tech_private",
         "tech_diagnostics",
-        "failures"
+        "failures",
+        "trial_details"
       ],
       "known_facts": [
         "capacity",

@@ -9,10 +9,18 @@ from career_lab.contracts.v2.research import RuntimeBundle, EvaluationBundle
 from career_lab.contracts.v2.world import (AssistantConfig, DisclosurePolicy, FactV2,
     MaterialV2, RoleSpecV2, ScenarioBundle, SourceFragment)
 from .content import materials as business_materials, role_definitions
-from .case_records import render_public_cases, validate_public_cases
+from .case_records import render_public_cases, render_case_details, validate_public_cases
+from .localization import require_locale, metadata as locale_metadata, text, runtime_source_files
 
 
-def build_seed(root, case_records=None):
+def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, calibration=None):
+    require_locale(locale)
+    min_score=.35 if locale=="zh" else english_min_score
+    if locale=="en":
+        from .content_en import materials, role_definitions as localized_roles
+        definitions=list(materials(min_score));role_data=localized_roles()
+    else:
+        definitions=list(business_materials());role_data=role_definitions()
     root=Path(root)
     if root.exists() and any(root.iterdir()):raise ValueError("refuse to overwrite scenario release")
     root.mkdir(parents=True,exist_ok=True)
@@ -21,48 +29,49 @@ def build_seed(root, case_records=None):
     never=DisclosurePolicy(mode="never")
     policies={
         "public":public,"never":never,
-        "tech_summary":DisclosurePolicy(mode="paraphrase_only",actors=("tech_lead",),paraphrase="筹备期复现过一个培训报名问法：公司培训我已提交报名是不是就能去听课。匹配阈值0.35时未命中，0.2时返回FAQ中的培训报名段；无关问题仍未命中。这只是一次局部对照，未完成统一校准。"),
+        "tech_summary":DisclosurePolicy(mode="paraphrase_only",actors=("tech_lead",),paraphrase=text(locale,"tech_summary")),
         "tech_only":DisclosurePolicy(mode="role_only",actors=("tech_lead",))
     }
-    definitions=list(business_materials())
     if case_records is None:
-        definitions.append(("failures","内部试用记录","investigation",1,"never",["此记录尚未作为学员资料发布。"]))
+        definitions.append(("failures",text(locale,"cases_title"),"investigation",1,"never",[text(locale,"missing_cases")]))
+        definitions.append(("trial_details",text(locale,"case_details_title"),"investigation",1,"never",[text(locale,"missing_cases")]))
     else:
-        definitions.append(("failures","筹备期试用问答记录","investigation",1,"public",render_public_cases(case_records)))
+        definitions.append(("failures",text(locale,"cases_title"),"investigation",1,"public",render_public_cases(case_records,locale=locale)))
+        definitions.append(("trial_details",text(locale,"case_details_title"),"investigation",1,"public",render_case_details(case_records,locale=locale)))
     for mid,title,domain,version,mode,rows in definitions:
-        text=f"# {title}\n\n本案例的公司与业务资料为虚构训练设定。\n\n"
+        body=f"# {title}\n\n{text(locale, 'synthetic')}\n\n"
         fragments=[]
         for row in rows:
             sentence,assertions=row if isinstance(row,tuple) else (row,[])
-            start=len(text);text+=sentence+"\n\n"
+            start=len(body);body+=sentence+"\n\n"
             ref=EvidenceRefV2(session_id="scenario:pm_pilot:v2",kind="material",object_id=mid,version=version,
                 span_start=start,span_end=start+len(sentence),quote=sentence,observed_at_seq=0)
             fragments.append(SourceFragment(ref=ref,text=sentence,channel="material",disclosure=policies[mode],
                 fact_ids=tuple(x[0] for x in assertions)))
             for fid,value,unit in assertions:
                 facts.append(FactV2(id=fid,version=version,value=value,unit=unit,source=ref,disclosure=policies[mode]))
-        path=f"materials/{mid}-v{version}.md";files[path]=(text.rstrip()+"\n").encode()
+        path=f"materials/{mid}-v{version}.md";files[path]=(body.rstrip()+"\n").encode()
         material_files.setdefault(mid,{})[str(version)]=path
         materials.append(MaterialV2(id=mid,version=version,title=title,domain=domain,fragments=tuple(fragments)))
         if version==1:initial[mid]=version
     roles=[]
-    for definition in role_definitions():
+    for definition in role_data:
         definition=dict(definition)
         if case_records is not None:
-            definition["known_materials"]=(*definition["known_materials"],"failures")
+            definition["known_materials"]=(*definition["known_materials"],"failures","trial_details")
         role=definition["id"]
         overrides={}
         if role=="tech_lead":
             overrides["retrieval_probe_query"]=policies["tech_summary"]
             overrides["retrieval_threshold_candidate"]=policies["tech_summary"]
             overrides["retrieval_debug_code"]=DisclosurePolicy(mode="paraphrase_only",actors=("tech_lead",),
-                paraphrase="技术诊断保存了培训报名原问法、两档阈值和无关问题对照；内部登记号不对外转述。")
+                paraphrase=text(locale,"tech_register_summary"))
         roles.append(RoleSpecV2(**definition,disclosure_policy=overrides))
     baseline=AssistantConfig(id="pilot",session_id="scenario:pm_pilot:v2",config_version=0,
         domains=("stable_faq","onboarding","policy_travel","policy_meal","policy_leave"),
-        work_items=("scope_filter","human_fallback"),participants=20,launch_day=7,retrieval_limit=1)
+        work_items=("scope_filter","human_fallback"),participants=20,launch_day=7,retrieval_limit=1,min_score=min_score)
     rules={
-        "scenario_id":"pm_pilot","revision":"2.4.0","source_kind":"authored_synthetic_business_with_actual_module_QA",
+        "scenario_id":"pm_pilot","revision":"2.5.0","locale":locale,"source_kind":"authored_synthetic_business_with_actual_module_QA",
         "work_costs":{"scope_filter":1,"human_fallback":1,"realtime_sync":5},
         "approval_limits":{"capacity":60,"dev_days":6,"deadline_day":10},
         "approval_rule_revision":"pm-v2-approval-3",
@@ -75,10 +84,10 @@ def build_seed(root, case_records=None):
         "initial_plan_material_updates":{"policy":2},
         "business_events":[
             {"id":"demo_schedule_changed","on":"first_resource_request","material_updates":{"demo":2},
-             "notice":"经理发来日程变更：内部演示改到第4天，详见新的演示安排。",
+             "notice":text(locale,"demo_notice"),
              "visible_to":["learner","supervisor","tech_lead"]},
             {"id":"business_scope_requested","on":"capacity_approved","material_updates":{"scope_note":2},
-             "notice":"陈敏转来销售支持组追加意向，请查看业务范围讨论的新记录。",
+             "notice":text(locale,"scope_notice"),
              "visible_to":["learner","supervisor","business_lead"]}
         ],
         "material_files":material_files,
@@ -116,6 +125,11 @@ def build_seed(root, case_records=None):
         {"id":"F13","query":"计划性请假要提前几个工作日提交？","public":False,"apply":True,"refresh":True,
          "expected":{"status":"answered","contains":["3个工作日"],"citation_versions":{"leave":1}}}
     ]
+    if locale=="en":
+        from .probes_en import translate_probes
+        probes=translate_probes(probes)
+    for probe in probes:
+        probe.update(locale=locale,canonical_probe_id=probe["id"],split="train")
     put("probes.json",probes)
     put("paths.json",[
         {"id":"stable_narrow","domains":["stable_faq","onboarding"],"participants":20,"update_strategy":"daily","work_items":["scope_filter","human_fallback"],"launch_day":7,"request":{}},
@@ -127,13 +141,17 @@ def build_seed(root, case_records=None):
         {"decision":"no_go","evidence":[],"proposal":"不调查，全部放弃。","evaluation":"可保留讨论；按证据和后续责任评价，不按枚举自动裁决"}])
     put("rubric-reference.json",{"rules_revision":"rules-v4","rubric_revision":"rubric-v2","provider":"W05","status":"not_installed","w02_produces_scores":False})
     if case_records is not None:
-        validate_public_cases(case_records,initial,materials,{"faq","onboarding","policy","meal","leave"})
+        validate_public_cases(case_records,initial,materials,{"faq","onboarding","policy","meal","leave"},locale=locale)
         put("research/public-case-records.json",case_records)
+    locale_info=locale_metadata(locale,materials,facts,material_files,files,min_score)
+    put("locale.json",locale_info)
+    if calibration is not None:
+        if locale!="en" or calibration["locale"]!="en" or calibration["selected_threshold"]!=min_score:
+            raise ValueError("calibration locale/threshold mismatch")
+        put("research/retrieval-calibration.json",calibration)
     # Bind real deterministic code and explicit uninstalled evaluation metadata.
     repo=Path(__file__).resolve().parents[4]
-    code_files={p.relative_to(repo).as_posix():hashlib.sha256(p.read_bytes()).hexdigest()
-                for folder in (repo/"src/career_lab/assistant/v2",repo/"src/career_lab/scenarios/v2")
-                for p in folder.glob("*.py")}
+    code_files=runtime_source_files(repo,locale)
     foundation_path=repo/"docs/contracts/expansion-v3/manifest.json"
     foundation_hash=hashlib.sha256(foundation_path.read_bytes()).hexdigest()
     put("runtime/source-files.json",{"owned_code":code_files,"foundation_contract_sha256":foundation_hash})
@@ -146,7 +164,7 @@ def build_seed(root, case_records=None):
         "evaluation-protocol":{"mode":"advisory","installed":False,"owner":"W05"}
     }.items():put("runtime/"+name+".json",value)
     def file_ref(path):return FileRef(path=path,sha256=hashlib.sha256(files[path]).hexdigest())
-    runtime=RuntimeBundle(id="w02-runtime",revision="content-pre-event-r6",model=file_ref("runtime/model.json"),prompts=(),
+    runtime=RuntimeBundle(id="w02-runtime",revision="bilingual-r7-"+locale,model=file_ref("runtime/model.json"),prompts=(),
         acquisition=file_ref("runtime/acquisition.json"),retrieval=file_ref("runtime/retrieval.json"),
         decision=file_ref("runtime/decision.json"),tools=file_ref("runtime/tools.json"),
         source=SourceIdentity(base_commit="80cf1f6189cd25610d609f44283ff9668582d759",source_digest=digest(code_files),
@@ -156,8 +174,8 @@ def build_seed(root, case_records=None):
         rules=file_ref("rubric-reference.json"),graders=(),protocol=file_ref("runtime/evaluation-protocol.json"),mode="advisory")
     put("runtime/evaluation.json",evaluation.model_dump(mode="json"))
     public_paths={p for p in files if p.startswith("materials/") and not any(x in p for x in ("private","tech_diagnostics","policy-v2","demo-v2","scope_note-v2"))}
-    if case_records is None:public_paths.discard("materials/failures-v1.md")
-    bundle=ScenarioBundle(id="pm_pilot",revision="2.4.0",structure_id="index_scope_resource_dependency",
+    if case_records is None:public_paths-= {"materials/failures-v1.md","materials/trial_details-v1.md"}
+    bundle=ScenarioBundle(id="pm_pilot",revision="2.5.0",structure_id="index_scope_resource_dependency",
         files=tuple(FileRef(path=p,sha256=hashlib.sha256(raw).hexdigest(),media_type="text/markdown" if p.endswith(".md") else "application/json") for p,raw in sorted(files.items())),
         public_files=tuple(sorted(public_paths)),private_files=tuple(sorted(set(files)-public_paths)),
         role_specs=tuple(roles),domains={"stable_faq":("faq",),"onboarding":("onboarding",),"policy_travel":("policy",),"policy_meal":("meal",),"policy_leave":("leave",)},

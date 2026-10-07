@@ -10,6 +10,7 @@ from career_lab.contracts.v2.core import ProtocolError, VersionPoint, ObjectRef,
 from career_lab.contracts.v2.world import TestResultV2, TestExecutionMetadata, RetrievedChunk
 from career_lab.scenarios.v2.engine import ScenarioEngine
 from career_lab.scenarios.v2.policy import effective_config, canonical_domains
+from career_lab.scenarios.v2.localization import text as localized_text
 
 
 @dataclass(frozen=True)
@@ -42,20 +43,26 @@ class Chunk:
     ref: object
 
 
-def meaningful_tokens(text):
+def meaningful_tokens(text,locale="zh"):
+    if locale=="en":
+        from .english import meaningful_tokens as english_tokens
+        return english_tokens(text)
     for generic in ("如何", "怎么", "什么", "多少", "请问", "是否", "可以", "一下", "是多少", "怎么办"):
         text = text.replace(generic, " ")
     return set(tokens(text))
 
 
 
-def public_credential_workflow(query):
+def public_credential_workflow(query,locale="zh"):
     """Match a whole, bounded workflow question, never a request for a value.
 
     These aliases only search published FAQ procedure paragraphs. The mandatory
     topic list and generic credential guards remain unchanged for every other
     input, including compound requests and requests to send a key to the caller.
     """
+    if locale=="en":
+        from .english import public_credential_workflow as english_workflow
+        return english_workflow(query)
     text=re.sub(r"\s+","",query).rstrip("？?。！!")
     password=r"(?:请|能|可以|请问|麻烦)?(?:告诉我|说明一下|讲一下)?(?:我的|我|账号|账户|登录)?(?:忘记(?:了)?密码|密码(?:忘了|忘记了|忘记)|账号密码忘了)(?:该)?(?:怎么(?:办|处理|重置|找回)|如何(?:重置|找回|处理))(?:吗|呢)?"
     network=r"(?:连接办公网络时[，,]?)?访问密钥(?:可以|能|应不应该|是否可以|可否)(?:发给|分享给|转发给)同事(?:吗|呢)?"
@@ -112,14 +119,14 @@ class Assistant:
         if auth.allowed_objects is not None:
             visible=tuple((m,fs) for m,fs in visible if m.id in auth.allowed_objects)
         candidates=[c for m,fs in visible for c in chunks(m,fs,cfg.chunk_size)]
-        workflow=public_credential_workflow(request.query)
+        workflow=public_credential_workflow(request.query,getattr(self.package,"locale","zh"))
         # A recognized procedure question may use only its public FAQ paragraph;
         # it cannot authorize another source or relax configured domain scope.
         if workflow:candidates=[c for c in candidates if c.material_id=="faq" and c.text.startswith(workflow[0])]
-        query_terms=meaningful_tokens(workflow[1] if workflow else request.query)
+        query_terms=meaningful_tokens(workflow[1] if workflow else request.query,getattr(self.package,"locale","zh"))
         scored=[]
         for candidate in candidates:
-            overlap=query_terms & meaningful_tokens(candidate.text)
+            overlap=query_terms & meaningful_tokens(candidate.text,getattr(self.package,"locale","zh"))
             # Normalized query coverage avoids a shared "如何" returning every FAQ.
             score=len(overlap)/max(1,len(query_terms))
             if overlap and score>=tuning.min_score:
@@ -128,6 +135,9 @@ class Assistant:
         selected=[]; status="fallback"; code=None; answer=""; selected_stale=False
         forbidden=tuple(self.package.rules["mandatory_prohibited_topics"])+tuple(cfg.prohibited_topics)
         prohibited=any(term.casefold() in request.query.casefold() for term in forbidden)
+        if getattr(self.package,"locale","zh")=="en":
+            from .english import prohibited_topic
+            prohibited=prohibited or prohibited_topic(request.query)
         credential_value_request=any(re.search(pattern,request.query) for pattern in self.package.rules.get("credential_request_patterns",()))
         # A full matched safety/procedure question is confined to public FAQ.
         # Explicit user-configured prohibitions still win over this recognition.
@@ -151,17 +161,13 @@ class Assistant:
                     warn=selected_stale and tuning.freshness_guard == "warn"
                     status="answered_with_warning" if warn else "answered"
                     answer="\n\n".join(c.text for c in selected)
-                    if warn: answer="来源索引版本落后，以下内容须核验当前政策。\n"+answer
+                    if warn: answer=localized_text(self.package,"stale_warning")+answer
         if code:
             if cfg.fallback=="human":
-                answer={"prohibited_topic":"该主题禁止自动回答，请向授权负责人核验。",
-                        "outside_scope":"该问题超出当前开放知识范围，请转人工核验。",
-                        "no_retrieval_hit":"未检索到可靠依据，请转人工核验。",
-                        "manual_verification_required":"该知识域需要人工核验，当前未作自动回答。",
-                        "stale_source_guard":"索引与源版本不一致，新鲜度守卫已阻止自动回答。"}[code]
+                answer=localized_text(self.package,code)
             else:
                 status="failed"
-                answer="当前无法可靠自动回答，且人工兜底尚未生效。"
+                answer=localized_text(self.package,"no_fallback")
         sid=snapshot.world.session_id;seq=snapshot.world.business_seq
         refs=tuple(c.ref.model_copy(update={"observed_at_seq":seq,
                 "valid_from_seq":snapshot.material_activation.get(f"{c.material_id}:{c.version}",0)}) for c in selected)

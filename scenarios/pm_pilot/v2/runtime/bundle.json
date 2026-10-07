@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "id": "w02-runtime",
-  "revision": "content-pre-event-r6",
+  "revision": "bilingual-r7-zh",
   "model": {
     "schema_version": 2,
     "path": "runtime/model.json",
@@ -37,11 +37,11 @@
   "source": {
     "schema_version": 2,
     "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
-    "source_digest": "b72740af17bd9272e9b7f2a0e1644677a0a308bcd06d0fc6007f56ef168d7d11",
+    "source_digest": "0f946ce4d0c04b79ecc14ba0ad25e953575045c7625d621923c1c159cf74c99e",
     "overlay": {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "f10683840d4c9d60aad151f3804744430420464338e0074e7a86ce1ee48f0d2e",
+      "sha256": "707bbef713d366ab522b2b84ad1a84908154e4c7f9f44216fddc69998fd75efa",
       "media_type": "application/json"
     },
     "dependency_locks": []

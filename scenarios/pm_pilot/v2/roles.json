@@ -24,7 +24,8 @@
       "restricted",
       "business_case",
       "coordination",
-      "failures"
+      "failures",
+      "trial_details"
     ],
     "known_facts": [
       "capacity",
@@ -63,12 +64,15 @@
     "responsibilities": [
       "解释用户需求和业务流程",
       "协调政策解释与个案核验",
-      "讨论人工接管和业务验收"
+      "讨论人工接管和业务验收",
+      "基于现有记录帮助核对吕雯和许青的材料；没有实际转达或回复记录时，不声称已经联系对方或取得新答复"
     ],
     "goals": [
       "优先解决有影响的问题",
       "不把转人工或用户沉默都当成功",
-      "区分统计口径与业务价值"
+      "区分统计口径与业务价值",
+      "起初支持BC-01的429分钟测算并用它争取试点，尚未逐项核对SD-120字段",
+      "学员提出具体字段反证后承认并修正自己的测算，不否认BC-01原文，也不因学员忠实引用它而责备对方"
     ],
     "known_materials": [
       "brief",
@@ -84,7 +88,8 @@
       "approvals",
       "business_case",
       "coordination",
-      "failures"
+      "failures",
+      "trial_details"
     ],
     "known_facts": [
       "demand_total",
@@ -116,7 +121,7 @@
     ],
     "unacceptable_conditions": [
       "只报告自动回答率",
-      "把等待时长全算成节省劳动",
+      "明确收到字段反证后仍把等待时长全算成节省劳动",
       "声称人工已经处理却没有记录"
     ]
   },
@@ -147,7 +152,8 @@
       "demo",
       "tech_private",
       "tech_diagnostics",
-      "failures"
+      "failures",
+      "trial_details"
     ],
     "known_facts": [
       "capacity",

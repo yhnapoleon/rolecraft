@@ -121,6 +121,10 @@ def evaluate_request(package, request, snapshot, evidence_check):
     if code=="request_not_needed":
         demand={"capacity":cfg.participants,"dev_days":sum(work_costs[w] for w in cfg.work_items),"deadline_day":cfg.launch_day}
         reason += " "+"；".join(f"{labels[k]}：现有{resources[k]}，方案需要{demand[k]}，请求{v}" for k,v in requested.items() if k in labels)
+    if getattr(package,"locale","zh")=="en":
+        from .policy_en import reason as english_reason
+        demand={"capacity":cfg.participants,"dev_days":sum(work_costs[w] for w in cfg.work_items),"deadline_day":cfg.launch_day}
+        reason=english_reason(code,requested,resources,demand)
     return BusinessDecision(
         id=digest(["w02-decision", request.model_dump(mode="json"), cfg.model_dump(mode="json"), snapshot.world.model_dump(mode="json")]),
         session_id=request.session_id, version=1,

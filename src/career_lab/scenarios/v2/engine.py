@@ -10,6 +10,7 @@ from career_lab.contracts.v2.core import AuthContext, Command, ObjectRef, Protoc
 from career_lab.contracts.v2.requests import ActionInput, ApprovalInput
 from career_lab.contracts.v2.world import AssistantConfig, BusinessRequest, WorldStateV2, BusinessBasis, assistant_config_content_hash
 from .policy import effective_config, evaluate_request, validate_config
+from .localization import text
 
 
 @dataclass(frozen=True)
@@ -116,7 +117,10 @@ class ScenarioEngine:
             activation=snapshot.material_activation.get(f"{fact.source.object_id}:{fact.source.version}")
             if activation is None or activation>snapshot.world.business_seq:continue
             for fragment in self.package.project(fact.source.object_id,fact.source.version,role.id,snapshot.world.business_seq,snapshot.world.session_id):
-                if fact.id in fragment.fact_ids and not any(f.ref==fragment.ref for f in result):result.append(fragment)
+                if fact.id in fragment.fact_ids:
+                    projected=fragment.model_copy(update={"ref":fragment.ref.model_copy(update={
+                        "observed_at_seq":snapshot.world.business_seq,"valid_from_seq":activation})})
+                    if not any(f.ref==projected.ref for f in result):result.append(projected)
         return tuple(result)
 
     def business_followups(self,snapshot,trigger):
@@ -204,7 +208,7 @@ class ScenarioEngine:
                         material_activation={**state.material_activation, **{f"{mid}:{version}":state.world.business_seq+1 for mid,version in self.package.rules["initial_plan_material_updates"].items()}},
                         world=state.world.model_copy(update={"applied_milestones": (*state.world.applied_milestones,"initial_plan_applied")}))
                     emit("initial_plan_applied", {"trigger": "first_explicit_apply_config",
-                         "notice":"费用管理发布了差旅住宿政策通知，最新资料已放入工作区。",
+                         "notice":text(self.package,"policy_notice"),
                          "before_versions": before, "after_versions": versions},
                          ("learner","supervisor","tech_lead","business_lead"))
                 result = effective_config(self.package, state.config, state.world.resources)

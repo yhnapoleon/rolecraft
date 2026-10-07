@@ -15,7 +15,10 @@
       "citation_versions": {
         "policy": 1
       }
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F01",
+    "split": "train"
   },
   {
     "id": "F02",
@@ -31,7 +34,10 @@
       "citation_versions": {
         "meal": 1
       }
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F02",
+    "split": "train"
   },
   {
     "id": "F03",
@@ -47,7 +53,10 @@
       "citation_versions": {
         "policy": 2
       }
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F03",
+    "split": "train"
   },
   {
     "id": "F04",
@@ -56,7 +65,10 @@
     "expected": {
       "status": "fallback",
       "error_code": "no_retrieval_hit"
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F04",
+    "split": "train"
   },
   {
     "id": "F05",
@@ -65,7 +77,10 @@
     "expected": {
       "status": "fallback",
       "error_code": "prohibited_topic"
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F05",
+    "split": "train"
   },
   {
     "id": "F06",
@@ -74,7 +89,10 @@
     "expected": {
       "status": "fallback",
       "error_code": "prohibited_topic"
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F06",
+    "split": "train"
   },
   {
     "id": "F07",
@@ -88,7 +106,10 @@
     "expected": {
       "status": "fallback",
       "error_code": "outside_scope"
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F07",
+    "split": "train"
   },
   {
     "id": "F08",
@@ -105,7 +126,10 @@
       "citation_versions": {
         "faq": 1
       }
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F08",
+    "split": "train"
   },
   {
     "id": "F09",
@@ -125,7 +149,10 @@
         "500"
       ],
       "effective_update_strategy": "daily"
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F09",
+    "split": "train"
   },
   {
     "id": "F10",
@@ -137,7 +164,10 @@
     "expected": {
       "status": "fallback",
       "error_code": "manual_verification_required"
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F10",
+    "split": "train"
   },
   {
     "id": "F11",
@@ -149,7 +179,10 @@
     "expected": {
       "status": "failed",
       "error_code": "no_retrieval_hit"
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F11",
+    "split": "train"
   },
   {
     "id": "F12",
@@ -163,7 +196,10 @@
       "citation_versions": {
         "faq": 1
       }
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F12",
+    "split": "train"
   },
   {
     "id": "F13",
@@ -179,6 +215,9 @@
       "citation_versions": {
         "leave": 1
       }
-    }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F13",
+    "split": "train"
   }
 ]

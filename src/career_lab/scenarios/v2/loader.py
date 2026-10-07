@@ -1,5 +1,5 @@
 """Verified, versioned scenario content and disclosure projections."""
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 import hashlib
 import re
@@ -29,6 +29,8 @@ class ScenarioPackage:
     materials: tuple[MaterialV2, ...]
     facts: tuple[FactV2, ...]
     rules: dict
+    locale: str = "zh"
+    locale_metadata: dict = field(default_factory=dict)
 
     def baseline(self, session_id):
         return self.bundle.baseline_config.model_copy(update={"session_id": session_id})
@@ -101,6 +103,8 @@ def load_package(root: Path) -> ScenarioPackage:
         if not needed <= contents.keys():
             raise ProtocolError("incomplete_scenario_bundle")
         rules = yaml.safe_load(contents["scenario.yaml"])
+        locale_data=json.loads(contents["locale.json"]) if "locale.json" in contents else {}
+        locale=locale_data.get("locale","zh")
         if rules["scenario_id"] != bundle.id or rules["revision"] != bundle.revision:
             raise ProtocolError("scenario_identity_mismatch")
         if tuple(RoleSpecV2.model_validate(r) for r in json.loads(contents["roles.json"])) != bundle.role_specs:
@@ -186,14 +190,21 @@ def load_package(root: Path) -> ScenarioPackage:
                 raise ProtocolError("private_raw_file_published")
             if rules["initial_material_versions"].get(material.id)!=material.version:
                 raise ProtocolError("future_raw_file_published")
+        if locale_data:
+            from .localization import validate_metadata
+            locale=validate_metadata(locale_data,bundle,facts,materials,contents)
+            if rules.get("locale")!=locale:raise ProtocolError("locale_rule_mismatch")
         if "research/public-case-records.json" in contents:
-            from .case_records import validate_public_cases, render_public_cases
+            from .case_records import validate_public_cases, render_public_cases, render_case_details
             records=json.loads(contents["research/public-case-records.json"])
-            validate_public_cases(records,initial,materials,{mid for mids in bundle.domains.values() for mid in mids})
+            validate_public_cases(records,initial,materials,{mid for mids in bundle.domains.values() for mid in mids},locale=locale)
             actual=next((m for m in materials if m.id=="failures" and m.version==1),None)
-            if actual is None or [f.text for f in actual.fragments]!=render_public_cases(records):
+            if actual is None or [f.text for f in actual.fragments]!=render_public_cases(records,locale=locale):
                 raise ProtocolError("public_case_render_mismatch")
-        return ScenarioPackage(root, bundle, hashlib.sha256(raw).hexdigest(), materials, facts, rules)
+            details=next((m for m in materials if m.id=="trial_details" and m.version==1),None)
+            if details is None or [f.text for f in details.fragments]!=render_case_details(records,locale=locale):
+                raise ProtocolError("public_case_details_mismatch")
+        return ScenarioPackage(root, bundle, hashlib.sha256(raw).hexdigest(), materials, facts, rules,locale,locale_data)
     except ProtocolError:
         raise
     except (OSError, ValueError, TypeError, KeyError) as exc:
