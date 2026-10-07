@@ -9,6 +9,19 @@ def before(a,b):
     return all(getattr(a,k)<=getattr(b,k) for k in ['business_seq','workspace_revision','storage_revision'])
 
 
+def unique_sources(sources):
+    """Deduplicate exact canonical references only, preserving first-use order.
+
+    Different versions, time windows and quote spans remain distinct. This is
+    local to each finding; it never deduplicates responsibilities or activities.
+    """
+    seen=set();result=[]
+    for source in sources:
+        key=canonical(source)
+        if key not in seen:seen.add(key);result.append(source)
+    return result
+
+
 def assess_responsibilities(records,policy,subjects,at,resolve,resolve_at):
     output=[]
     for record in records:
@@ -31,7 +44,7 @@ def assess_responsibilities(records,policy,subjects,at,resolve,resolve_at):
                      'finding':'unknown','explanation':SAFE_REASON,'sources':[]}
             if pending not in output:output.append(pending)
             continue
-        entry['sources']=[r.model_dump(mode='json') for r in proofs]
+        entry['sources']=unique_sources([r.model_dump(mode='json') for r in proofs])
         entry['actor_id']=record.actor_id
         entry['executor']=record.executor.model_dump(mode='json') if record.executor else None
         valid=(record.valid_until is None or not before(record.valid_until,at)) and all(r.valid_until_seq is None or at.business_seq<r.valid_until_seq for r in proofs)
@@ -48,7 +61,7 @@ def assess_responsibilities(records,policy,subjects,at,resolve,resolve_at):
             if fact.name in seen:raise ProtocolError('duplicate_historical_fact')
             seen.add(fact.name);canonical(fact.value);refs=[resolve_at(r,record.occurred_at) for r in fact.sources]
             if refs and all(refs):
-                values[fact.name]=fact.value;entry['sources'].extend(r.model_dump(mode='json') for r in refs)
+                values[fact.name]=fact.value;entry['sources']=unique_sources([*entry['sources'],*[r.model_dump(mode='json') for r in refs]])
         def numbers(*names):
             if any(type(values.get(n)) not in (int,float) or not isfinite(values[n]) or values[n]<0 for n in names):return None
             return [values[n] for n in names]
