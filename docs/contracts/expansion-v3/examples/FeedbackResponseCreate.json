@@ -1,0 +1,10 @@
+{
+  "criterion": null,
+  "evidence": [],
+  "feedback_id": "example",
+  "feedback_version": 1,
+  "kind": "objection",
+  "schema_version": 2,
+  "section": "general",
+  "text": "example"
+}

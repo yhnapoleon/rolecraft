@@ -4,7 +4,8 @@
     "This is W01 common foundation, not implemented W02-W15 business modules.",
     "v4 semantic engine, paid provider/model quality, full product QA and research results are not claimed.",
     "Existing v1 remains separate; internal snapshot/restore never appears in learner routes.",
-    "W02 owned b821 remains exact c2; coordinator rebind required for cumulative business runtime. W03 owner must adopt removal_cascade port for restricted removals; role private generation and native UI remain pending."
+    "W02 owned b821 remains exact c2; coordinator rebind required for cumulative business runtime. W03 owner must adopt removal_cascade port for restricted removals; role private generation and native UI remain pending.",
+    "W05 evaluator-to-trusted-source adapter and native feedback UI remain pending. Controlled persistence tests do not prove actual production history or model quality."
   ],
   "changes_since_draft": [
     "Command.schema_version and CreateSessionV2.schema_version are now required for explicit envelopes.",
@@ -103,6 +104,15 @@
       "TerminalEvaluation",
       "JobRequest",
       "JobEnvelope",
+      "FeedbackReferenceCheck",
+      "FeedbackActivity",
+      "FeedbackActivityCount",
+      "FeedbackActivityWindow",
+      "VerifiedFactsSnapshot",
+      "HistoricalResponsibilityFinding",
+      "HistoricalResponsibilitiesSnapshot",
+      "FeedbackResponseRecord",
+      "FeedbackResponseCreate",
       "JobRefreshRecord"
     ],
     "W06": [
@@ -253,7 +263,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "c2767ebcf14e7eb636dd50b0d4369bc9fb2d8458794647b8876aabdc2af345a7"
+      "sha256": "f329b73ff1eed255163e975a10967a304da1602870072f045ddd89bca66ed82e"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -261,12 +271,12 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "83dbfbe8537349ddbdaada03f77f2972247ed6e0b51ba0a232ec2391391d8fc4"
+      "sha256": "266122223d4baa3f7ca05f37d897a1cb46ee1b3552055e1d59b0b36b2f22372a"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "e088d1c1dd198023a69c8ae71b43dc32d24ea99b752f539eb8fc44acf5db9875"
+    "sha256": "8cfb7df2fd055d658d93d765355696573f42d1f28d644b138e768a232aaa89b4"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
@@ -276,16 +286,17 @@
     "W03-GR02-partial": "Validated LegacyProvenance.raw remains inert during reference/time traversal; receipt and preview interfaces remain pending.",
     "W03-common-import-sharing": "Read-only import preview and atomic receipt; operation-local reference checks; exact-version share pages; trusted removal cascade without scope expansion; queued share reads rechecked.",
     "W04-S02-P0": "Legacy role_reply audit fields are denied to learner/Agent on common reads and replay; new public spoken evidence remains readable; research audit preserves history. No role generation activation is implied.",
+    "W05-factual-persistence": "Optional typed factual/history/rule sections persist in FeedbackV2; legacy absent means not recorded. Exact feedback follow-ups append immutable objects without changing submitted/paused business state; new reviews link prior responses and explicit decisions.",
     "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.",
     "W07-W08-empty-joint-target": "Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.",
     "W07-W08-semantic-consensus": "Only independent-pass consensus uses semantic_decision_key; G2/G2v final remains bound by the full normalized decision_key to the actual selected pass."
   },
   "openapi": {
     "path": "openapi.json",
-    "sha256": "c20f191594283554439e95fc5fa822fd4224f8c610f52e15dc749f53e79e6272"
+    "sha256": "43502723be0a13552a8a41c72b68bb21388ce86406b2cb7c5332b376dc244620"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-3f2ca36e4275f2ff8d8e074e91231509116c054df8750d157682e8486354a9de",
+  "previous_contract_revision": "expansion-v3-0aa98d5ebec838fd0e2b56a9eed2f32a51c6ec94dff526712083a589d858e510",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -296,6 +307,10 @@
     "evidence.read": "EvidenceRead",
     "feedback.create": "FeedbackInput",
     "feedback.read": "ResourcePage",
+    "feedback.records.read": "ResourcePage",
+    "feedback.responses.create": "FeedbackResponseCreate",
+    "feedback.responses.list": "ResourcePage",
+    "feedback.responses.read": "ResourcePage",
     "materials.list": "ResourcePage",
     "observation": "ResourcePage",
     "requests.read": "RequestResultQuery",
@@ -1080,6 +1095,48 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "FeedbackActivity": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackActivity.json",
+      "example_sha256": "2327bb8970dae4f856430b696010a66a5c2b9112455eaf46fd1778b5995c5662",
+      "owner": "W01",
+      "schema": "schemas/FeedbackActivity.json",
+      "schema_sha256": "e4d7f922ed681969276ac5601b3a10aca8ff418027a18cfbfe822bb1d6a77723",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FeedbackActivityCount": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackActivityCount.json",
+      "example_sha256": "79fe702939a2608af1794b46b60c74549584d5c91aae2694cd8d6302aa73098a",
+      "owner": "W01",
+      "schema": "schemas/FeedbackActivityCount.json",
+      "schema_sha256": "1fe3dc6773cad1c468ef19b94d834788c6f3a4b0267b55330df847df607ec7f4",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FeedbackActivityWindow": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackActivityWindow.json",
+      "example_sha256": "9c27eb19a446d98fe8a70ec80944e60cedec0d6ae4e0eb690f5c1e7c56b4fe21",
+      "owner": "W01",
+      "schema": "schemas/FeedbackActivityWindow.json",
+      "schema_sha256": "82dc3b718f082c3ed98c8cabe6a30b386f1602e497824fe2193a36538b307f02",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "FeedbackInput": {
       "consumers": [
         "shared-primitive"
@@ -1108,16 +1165,58 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "FeedbackReferenceCheck": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackReferenceCheck.json",
+      "example_sha256": "ddaac0aaab5dd928cca03834c8d81ce23170367fb058357b6858d557c25895a3",
+      "owner": "W01",
+      "schema": "schemas/FeedbackReferenceCheck.json",
+      "schema_sha256": "3c61804ab09b274de7402fa9c1d1fbc31ff7f578a9ae3fddb3541efff4eabbf0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FeedbackResponseCreate": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackResponseCreate.json",
+      "example_sha256": "64c00334721da85efa1bf50ba21a06632f7d0c0f3a13a5f0f9b5f84ac24fed35",
+      "owner": "W01",
+      "schema": "schemas/FeedbackResponseCreate.json",
+      "schema_sha256": "5dead759ddf31268e65d8e2e353e5ddd3a4d6b1b399d073fe73cadfe3c51c957",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "FeedbackResponseRecord": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/FeedbackResponseRecord.json",
+      "example_sha256": "1b214911009c09ef777d06c3c4bff6d5e9119a2cd786f8c320b833d39b4e1eb4",
+      "owner": "W01",
+      "schema": "schemas/FeedbackResponseRecord.json",
+      "schema_sha256": "1d092bc885c5e32264c0483a608055d867aa5f09a9493374dd9fa954ed9c70e0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "FeedbackV2": {
       "consumers": [
         "W05",
         "W15"
       ],
       "example": "examples/FeedbackV2.json",
-      "example_sha256": "3d449dd4d996075358b64a5d9ee28f141405a4906179d479671b856747dfa713",
+      "example_sha256": "ceb56ff859c2732e67883e7f429472b410ada46bc2d2dcb5c0d122dcd018dff0",
       "owner": "W01",
       "schema": "schemas/FeedbackV2.json",
-      "schema_sha256": "1d82d93a0479a6abf9183bc95dc51e54a2debc9bf6f210e4eeb2e0482e698aa6",
+      "schema_sha256": "fda075f6d84aa288178a9e7fff3247b7316cb650676a08bc4562358c127570a9",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1133,6 +1232,34 @@
       "owner": "W01",
       "schema": "schemas/FileRef.json",
       "schema_sha256": "be951fe618674a09191b9fb7af493092161eb1e6691a6e578d9c11835488cb33",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "HistoricalResponsibilitiesSnapshot": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/HistoricalResponsibilitiesSnapshot.json",
+      "example_sha256": "cdea03e1eacea226d088a9f401425f5033483231078260a1d46e3e1dfdb47256",
+      "owner": "W01",
+      "schema": "schemas/HistoricalResponsibilitiesSnapshot.json",
+      "schema_sha256": "e3ac3053ca7d37af62a231dc4c6c2172013078dd7c613978e1437a1537fae14d",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "HistoricalResponsibilityFinding": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/HistoricalResponsibilityFinding.json",
+      "example_sha256": "fcfbac417924671fca3422635267b1e1eba7aa8e1d153d34284137782927be34",
+      "owner": "W01",
+      "schema": "schemas/HistoricalResponsibilityFinding.json",
+      "schema_sha256": "daa74a1be24a14a0c12c93d82f9f233a59a717b888dce5ec20293f865d28aa0d",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1907,10 +2034,10 @@
         "W06"
       ],
       "example": "examples/ResourcePage.json",
-      "example_sha256": "88980c6fc1e6ced4a67141f96b56faeed09a2fa536293c1b1dd06b5431a07a2b",
+      "example_sha256": "e7835336753626c03332fb2ccb67c2a78a37d96667955e536864c1fb393aa6d1",
       "owner": "W01",
       "schema": "schemas/ResourcePage.json",
-      "schema_sha256": "ac960160cf7f56f1d3453ac51d17a1c5781f1c4190c28e92c8fc389b00882bee",
+      "schema_sha256": "f98375f646cd227b72a1e396270899f139cba5a40359905d05456e0600d94bc8",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1951,10 +2078,10 @@
         "W05"
       ],
       "example": "examples/ReviewInput.json",
-      "example_sha256": "1eae241fd1e17d0ec13d9febef3bba23e538ac2abf0799ac828ad2745be67070",
+      "example_sha256": "b7325612ebadf4f276d849d951c062617cb770f25f2ad322740a3389adc5335a",
       "owner": "W01",
       "schema": "schemas/ReviewInput.json",
-      "schema_sha256": "e9c30b7f35ace9c2591fa5f62f4b1bc3692bf9260cc89844259aae400944154a",
+      "schema_sha256": "9c5e82b76cb250debc93c290093dbd92cdf37ff3e731bf0ad3e0c028db3b283a",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1965,10 +2092,10 @@
         "W05"
       ],
       "example": "examples/ReviewRequest.json",
-      "example_sha256": "f8039a5079cf61022133f234c5924895215781816285d37d3581872667ad5030",
+      "example_sha256": "e948babf62ed6033f3e66f3b4ff4d420d004d2783609347db4dea5b68a8a3bee",
       "owner": "W01",
       "schema": "schemas/ReviewRequest.json",
-      "schema_sha256": "88e99630b2c9383505b4290247d32bec0c036bf49ffaebc75f57ae031544d631",
+      "schema_sha256": "d649522d2b246001a8bfa27f5be050b34633a166128494c4fc3e7b61919c431e",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -2574,6 +2701,20 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "VerifiedFactsSnapshot": {
+      "consumers": [
+        "W05"
+      ],
+      "example": "examples/VerifiedFactsSnapshot.json",
+      "example_sha256": "f15e9e55f7934f419b98fb0ee8fe1b54f3a04d4063d6856250d95b04d4b1f89a",
+      "owner": "W01",
+      "schema": "schemas/VerifiedFactsSnapshot.json",
+      "schema_sha256": "bff9464825559e54f46882b80322c815d4718ec7e741c00a1398a95256b720af",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "VersionPoint": {
       "consumers": [
         "shared-primitive"
@@ -2703,8 +2844,9 @@
   },
   "source_files": {
     "src/career_lab/api/app.py": "7d91e7e2161014dfadd98c7986dea531ca8a76a859e9172329789a351abc444c",
-    "src/career_lab/api/modules.py": "39fc261d63c1072c242ab457acd3b1c06eaa77f022ed3d897a85c6aa9fd33105",
-    "src/career_lab/api/v2_routes.py": "eaf65be4f90285941bfaf2bbb2e1b299d80e3ef850e89c04dca29599cd5ef4a9",
+    "src/career_lab/api/feedback_integration.py": "a5913844c1f31be99995704ee1ad014ca7132540cf78bd70e49039450b4ec3d4",
+    "src/career_lab/api/modules.py": "2a381c2e7badbc8e99fe773400df5b7d6a4d6e32f7e1b1d1c7c7affd93ba69ec",
+    "src/career_lab/api/v2_routes.py": "14c2fb3a76fbff6f2f29673a398d1adbecf5a12cae2eb5483e67be021016aadf",
     "src/career_lab/api/workspace_integration.py": "0b731ea27219d49767b72e07b65293edc810eae79872842f8a2459ef863e2604",
     "src/career_lab/contracts/__init__.py": "10140c7ad16ce4744487b7e5f3418b726caa52979d662feda985b44986e2d7ac",
     "src/career_lab/contracts/actions.py": "835fbb62979891cbf97d0580e0843c2a8f97b8a8bcc08c8a01afecec36f919ac",
@@ -2715,27 +2857,27 @@
     "src/career_lab/contracts/v2/__init__.py": "bcb066dbbe937f00a366d9fd836a1411afef069472cb2c8765988f771bee55e7",
     "src/career_lab/contracts/v2/core.py": "50e521c7d7ea22d5ec4a60134917fe827361bf898ff8b5d7bf2ab8509ea34ea8",
     "src/career_lab/contracts/v2/data.py": "bd0888c2937400bf00ceeac53b9e49260040c3782c7cbfaca62d10097841065b",
-    "src/career_lab/contracts/v2/discovery.py": "1c85f4118bec30302af849d84d570fe8e91455dcc9c23f74c752535f037c4a7c",
-    "src/career_lab/contracts/v2/evaluation.py": "c8bc7004d8d14c54f1832eecc227ae45e7fe8492c1b584117ad1f8a372a5c631",
+    "src/career_lab/contracts/v2/discovery.py": "302fffa41141a5adbe5037eeca3e4dc7b30761957cd1565309fe01845996934b",
+    "src/career_lab/contracts/v2/evaluation.py": "a122b76a8a20b782210040c14ecff7d3653c8612597e255a87f83c71a9438748",
     "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
-    "src/career_lab/contracts/v2/export.py": "7765dc9c9a94644e619c6ffb17f078a414a449257b4848f49dc8380324e087a0",
+    "src/career_lab/contracts/v2/export.py": "3b90413baeaf87e300d157615b3a741f2150e61cbd2a648061b3943c6aa7aa42",
     "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
     "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
     "src/career_lab/contracts/v2/projection.py": "8740cf952268d8997610904224db37dcd7ce91886046653b46284be9583062ab",
     "src/career_lab/contracts/v2/provider.py": "8ef69da0f37b0e91ec235ab6ac039b2c81d1be14c7affb1eb8e71dda3c815306",
-    "src/career_lab/contracts/v2/requests.py": "8e01304a8410c9c43423521ea409c870bad2e940fb3853f58e75cf53473e4d5d",
+    "src/career_lab/contracts/v2/requests.py": "0bf9ee25aeaba3a21f7d218588a8262ae383524161d0cb6af955e28ac0c3658f",
     "src/career_lab/contracts/v2/research.py": "6319d233b5c1ad6833236bd9c51daf2b7d140d5aaade6853a672b4ad76561629",
-    "src/career_lab/contracts/v2/workspace.py": "03008c5d7162fd274d63e9e8b73c775232cdf3a78222fdeb0d379ce863440b25",
+    "src/career_lab/contracts/v2/workspace.py": "32662a94bb7e728f1def9fdfe11c4570f8f0651afff4fbab8b16f78bfdc6e878",
     "src/career_lab/contracts/v2/world.py": "83d5621f6cfcb8328730d62a51a25d0b9ae6456d71ef6f3ae414122607b1ff0b",
     "src/career_lab/contracts/versioning.py": "da1fc0d7a3bb7b1110cc33d1b7a7f68dcc6dbb8c061f81f3778a113a7ae809fb",
     "src/career_lab/jobs/repository.py": "8b6bf7dcfe438347670b160f069cb6cfbd0cb8aadbf911b866de6bd4c073128d",
     "src/career_lab/jobs/worker.py": "75f733c2f7610db49f42ef7b9646d468dd0661a288abbf9a622d1592cc94ca30",
     "src/career_lab/rubrics/registry.py": "204f90efa1b93bc010d638f7310ef396148caf2aed3af132c7a5e064442700de",
     "src/career_lab/storage/v2_jobs.py": "cab89259d31f3988b7b2e0fae448d8eaddd1e2534b9f82504bd84e97beecda17",
-    "src/career_lab/storage/v2_lifecycle.py": "77d0e275b4d18e68906fb42460518279a776a42b3860dfbdaf9ab8c56d6ce7a6",
+    "src/career_lab/storage/v2_lifecycle.py": "820df180088bd3c09a550912aab838f4586042955b3220553ae294167a97c857",
     "src/career_lab/storage/v2_remap.py": "5fa7f55ce4fcf721b4b81978214698f83a4f0437ae397f94ad6bfc4c98cf769f",
     "src/career_lab/storage/v2_snapshot.py": "0c079af78ef90a36abdc69f8f1313223d9cbc4f951a56e8e14416c5399ab233f",
-    "src/career_lab/storage/v2_store.py": "caf37990cb2e3ae4666586183aa062cbf99b2b90bd3efacc261afa79ace393f3",
+    "src/career_lab/storage/v2_store.py": "bbe50c3d14ab0e79c8120404795bf5150d8bc15a62c0a2d5f3d8e9a24df26b87",
     "src/career_lab/storage/v2_tables.py": "cb15ae737542083abb5206378bec958939901b9343246ce4614e97c77bd27ff2"
   },
   "status": "frozen_candidate_pending_independent_review",

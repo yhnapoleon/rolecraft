@@ -1,0 +1,42 @@
+{
+  "activity_records": [],
+  "activity_totals": {},
+  "activity_window": null,
+  "actor_id": null,
+  "adopter": null,
+  "as_of": null,
+  "author": null,
+  "captured_at": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "conclusion_quality": "not_scored",
+  "declared_citation_count": null,
+  "declared_source_count": null,
+  "executor": null,
+  "independent_understanding": "unobserved",
+  "references": [],
+  "requested_at": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "schema_version": 2,
+  "source_snapshot_hash": "27b123426c77eeb6d3d9853eaedd2ed7ad54d1b218c86a12ac1cc63d21b22711",
+  "status": "unknown",
+  "subject": {
+    "config_version": null,
+    "kind": "product",
+    "object_id": "product",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "summary": [
+    "Formation point is unknown."
+  ],
+  "verified_source_count": null
+}

@@ -1,5 +1,120 @@
 {
   "$defs": {
+    "EvidenceRefV2": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "observed_at_seq": {
+          "minimum": 0,
+          "title": "Observed At Seq",
+          "type": "integer"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quote"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "span_end": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span End"
+        },
+        "span_start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Start"
+        },
+        "valid_from_seq": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Valid From Seq",
+          "type": "integer"
+        },
+        "valid_until_seq": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until Seq"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version",
+        "observed_at_seq"
+      ],
+      "title": "EvidenceRefV2",
+      "type": "object"
+    },
     "Executor": {
       "additionalProperties": false,
       "properties": {
@@ -43,38 +158,6 @@
         "kind"
       ],
       "title": "Executor",
-      "type": "object"
-    },
-    "FileRef": {
-      "additionalProperties": false,
-      "properties": {
-        "media_type": {
-          "default": "application/json",
-          "title": "Media Type",
-          "type": "string"
-        },
-        "path": {
-          "minLength": 1,
-          "title": "Path",
-          "type": "string"
-        },
-        "schema_version": {
-          "const": 2,
-          "default": 2,
-          "title": "Schema Version",
-          "type": "integer"
-        },
-        "sha256": {
-          "pattern": "^[0-9a-f]{64}$",
-          "title": "Sha256",
-          "type": "string"
-        }
-      },
-      "required": [
-        "path",
-        "sha256"
-      ],
-      "title": "FileRef",
       "type": "object"
     },
     "ObjectRef": {
@@ -165,18 +248,10 @@
   },
   "additionalProperties": false,
   "properties": {
-    "as_of": {
-      "$ref": "#/$defs/VersionPoint"
-    },
-    "decision": {
+    "criterion": {
       "anyOf": [
         {
-          "enum": [
-            "launch",
-            "launch_narrow",
-            "defer_with_conditions",
-            "no_go"
-          ],
+          "minLength": 1,
           "type": "string"
         },
         {
@@ -184,35 +259,37 @@
         }
       ],
       "default": null,
-      "title": "Decision"
+      "title": "Criterion"
     },
-    "evaluation": {
-      "$ref": "#/$defs/FileRef"
+    "evidence": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/EvidenceRefV2"
+      },
+      "title": "Evidence",
+      "type": "array"
     },
     "executor": {
       "$ref": "#/$defs/Executor"
     },
-    "followup_of": {
-      "default": [],
-      "items": {
-        "$ref": "#/$defs/ObjectRef"
-      },
-      "title": "Followup Of",
-      "type": "array"
+    "feedback": {
+      "$ref": "#/$defs/ObjectRef"
     },
     "id": {
       "minLength": 1,
       "title": "Id",
       "type": "string"
     },
-    "purpose": {
-      "title": "Purpose",
+    "kind": {
+      "enum": [
+        "objection",
+        "supplement"
+      ],
+      "title": "Kind",
       "type": "string"
     },
-    "question": {
-      "default": "",
-      "title": "Question",
-      "type": "string"
+    "recorded_at": {
+      "$ref": "#/$defs/VersionPoint"
     },
     "schema_version": {
       "const": 2,
@@ -220,29 +297,32 @@
       "title": "Schema Version",
       "type": "integer"
     },
-    "scope": {
-      "items": {
-        "type": "string"
-      },
-      "title": "Scope",
-      "type": "array"
+    "section": {
+      "default": "general",
+      "enum": [
+        "general",
+        "verified_facts",
+        "historical_responsibilities",
+        "rule_items",
+        "model_advice"
+      ],
+      "title": "Section",
+      "type": "string"
     },
     "session_id": {
       "minLength": 1,
       "title": "Session Id",
       "type": "string"
     },
-    "subjects": {
-      "items": {
-        "$ref": "#/$defs/ObjectRef"
-      },
-      "minItems": 1,
-      "title": "Subjects",
-      "type": "array"
+    "text": {
+      "maxLength": 12000,
+      "minLength": 1,
+      "title": "Text",
+      "type": "string"
     },
     "version": {
+      "const": 1,
       "default": 1,
-      "exclusiveMinimum": 0,
       "title": "Version",
       "type": "integer"
     }
@@ -250,13 +330,12 @@
   "required": [
     "id",
     "session_id",
-    "subjects",
-    "purpose",
-    "as_of",
-    "scope",
-    "evaluation",
+    "feedback",
+    "kind",
+    "text",
+    "recorded_at",
     "executor"
   ],
-  "title": "ReviewRequest",
+  "title": "FeedbackResponseRecord",
   "type": "object"
 }

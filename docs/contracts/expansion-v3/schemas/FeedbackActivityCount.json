@@ -1,0 +1,41 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "count": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Count"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "status": {
+      "default": "unknown",
+      "enum": [
+        "complete",
+        "unknown"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "verified_records": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Verified Records",
+      "type": "integer"
+    }
+  },
+  "title": "FeedbackActivityCount",
+  "type": "object"
+}

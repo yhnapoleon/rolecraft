@@ -55,6 +55,32 @@
   },
   "additionalProperties": false,
   "properties": {
+    "decision": {
+      "anyOf": [
+        {
+          "enum": [
+            "launch",
+            "launch_narrow",
+            "defer_with_conditions",
+            "no_go"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Decision"
+    },
+    "followup_of": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ObjectRef"
+      },
+      "title": "Followup Of",
+      "type": "array"
+    },
     "purpose": {
       "title": "Purpose",
       "type": "string"

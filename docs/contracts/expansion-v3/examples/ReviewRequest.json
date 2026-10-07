@@ -5,6 +5,7 @@
     "storage_revision": 0,
     "workspace_revision": 0
   },
+  "decision": null,
   "evaluation": {
     "media_type": "application/json",
     "path": "files/payload.json",
@@ -17,6 +18,7 @@
     "kind": "human",
     "schema_version": 2
   },
+  "followup_of": [],
   "id": "example",
   "purpose": "example",
   "question": "",

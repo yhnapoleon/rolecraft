@@ -30,7 +30,7 @@ OBJECT_MODELS={
     'review':ReviewRequest,'submission':SubmissionV2,'feedback':FeedbackV2,'config':AssistantConfig,
     'test':TestResultV2,'business_request':BusinessRequest,'business_decision':BusinessDecision,
     'role_context':RoleContext,'job_context':JobContextSnapshot,'scenario_state':ScenarioStateV2,
-    'workspace_import':WorkspaceImportReceipt,
+    'workspace_import':WorkspaceImportReceipt,'feedback_response':FeedbackResponseRecord,
 }
 
 class ObjectWrite(V2):
@@ -164,7 +164,7 @@ class V2Store(JobStoreMixin):
         if not rows:return False
         first_record=StoredObject.model_validate_json(rows[0]);latest=StoredObject.model_validate_json(rows[-1]).content
         if first_record.creator!=auth.executor:return False
-        if first_record.ref.kind in {'test','review','submission','business_request','business_decision','feedback'}:return True
+        if first_record.ref.kind in {'test','review','submission','business_request','business_decision','feedback','feedback_response'}:return True
         return first_record.ref.kind=='product' and (latest.get('task') or {}).get('object_id') in auth.create_under_tasks
 
     def authenticate(self,sid,token):
@@ -428,8 +428,9 @@ class V2Store(JobStoreMixin):
             if refreshing and (mutation.writes or mutation.events or mutation.state_changes or mutation.jobs or mutation.decision):raise ProtocolError('job_refresh_only',status=403)
             if set(mutation.state_changes)-{'status','cycle_id','config_version','applied_milestones'}:raise ProtocolError('state_field_forbidden',status=403)
             derived_feedback=self._derived_feedback(c,auth,mutation,derived_subject,records,bindings)
-            if state.status=='submitted' and command.operation!='begin_revision' and not derived_feedback and not refreshing:raise ProtocolError('session_submitted')
-            if state.status=='paused' and command.operation!='resume' and not derived_feedback and not refreshing:raise ProtocolError('session_paused')
+            feedback_response=self._feedback_response_only(c,auth,command,mutation,records)
+            if state.status=='submitted' and command.operation!='begin_revision' and not derived_feedback and not feedback_response and not refreshing:raise ProtocolError('session_submitted')
+            if state.status=='paused' and command.operation!='resume' and not derived_feedback and not feedback_response and not refreshing:raise ProtocolError('session_paused')
             txn=uuid4().hex;sr=state.storage_revision+1;wr=state.workspace_revision+bool(mutation.writes);seq=state.business_seq
             planned=[]
             for write in mutation.writes:
@@ -437,6 +438,7 @@ class V2Store(JobStoreMixin):
                 parent=write.content.get('task') or {}
                 scoped_creation=ref.kind=='product' and write.expected_head==0 and ref.version==1 and parent.get('kind')=='task' and parent.get('session_id')==auth.session_id and parent.get('object_id') in auth.create_under_tasks
                 derived_creation=write.expected_head==0 and ref.version==1 and ref.kind in {'test','review','business_request','business_decision','feedback','submission'}
+                if ref.kind=='feedback_response':derived_creation=feedback_response and write.expected_head==0 and ref.version==1
                 if ref.kind=='submission' and capability!='submit':derived_creation=False
                 structural_cycle=ref.kind=='cycle' and ref.object_id==state.cycle_id and capability=='submit'
                 if ref.kind!='scenario_state' and not scoped_creation and not derived_creation and not structural_cycle:self._auth(c,auth,object_ids=(ref.object_id,))
@@ -464,6 +466,11 @@ class V2Store(JobStoreMixin):
                     original=max(existing,key=lambda x:x.ref.version).content
                     if any(content[k]!=original[k] for k in original if k not in {'version','status'}) or content['status']!='submitted':raise ProtocolError('cycle_scope_invalid',status=403)
                 if ref.kind=='product' and set(write.visible_to)!={'learner'}:raise ProtocolError('product_requires_share',status=403)
+                if ref.kind in {'feedback','feedback_response'} and (existing or ref.version!=1):raise ProtocolError('feedback_record_immutable',status=409)
+                if ref.kind=='feedback' and auth.allowed_objects is not None:
+                    report=FeedbackV2.model_validate(content)
+                    if any(total.status=='complete' for facts in report.verified_facts or () for total in facts.activity_totals.values()) or any(history.completeness=='complete' for history in report.historical_responsibilities or ()):raise ProtocolError('feedback_completeness_scope_unknown',status=403)
+                if ref.kind=='feedback_response' and (not feedback_response or set(write.visible_to)!={'learner'}):raise ProtocolError('feedback_response_operation_required',status=403)
                 if ref.kind=='workspace_import':
                     if existing or set(write.visible_to)!={'learner'}:raise ProtocolError('import_receipt_immutable',status=403)
                 if ref.kind=='role_reply' and role_reply_has_private_fields(content):
@@ -546,7 +553,7 @@ class V2Store(JobStoreMixin):
             if 'config_version' in changes and not any(x.ref.kind=='config' and x.ref.config_version==changes['config_version'] for x in planned):raise ProtocolError('config_write_required')
             if changes.get('status')=='submitted':
                 if capability!='submit' or not any(x.ref.kind=='submission' for x in planned):raise ProtocolError('submission_required',status=403)
-            if state.status=='submitted' and not derived_feedback and not refreshing:
+            if state.status=='submitted' and not derived_feedback and not feedback_response and not refreshing:
                 cycles=[RevisionCycle.model_validate(x.content) for x in planned if x.ref.kind=='cycle']
                 if len(cycles)!=1 or not cycles[0].parent_submission or changes.get('status')!='active' or changes.get('cycle_id')!=cycles[0].id:raise ProtocolError('revision_cycle_required')
             emitted=[]
@@ -617,6 +624,22 @@ class V2Store(JobStoreMixin):
             if fault:fault('before_commit')
             self._auth(c,auth,capability,command.operation)
             return result
+
+    def _feedback_response_only(self,c,auth,command,mutation,records):
+        if command.operation!='feedback.responses.create':return False
+        if mutation.state_changes or mutation.events or mutation.jobs or mutation.decision or mutation.refresh_job or len(mutation.writes)!=1:raise ProtocolError('feedback_response_only',status=403)
+        body=FeedbackResponseCreate.model_validate(command.payload);write=mutation.writes[0]
+        if write.ref.kind!='feedback_response' or write.expected_head!=0 or write.ref.version!=1:raise ProtocolError('feedback_response_only',status=403)
+        item=FeedbackResponseRecord.model_validate(write.content)
+        expected=ObjectRef(session_id=auth.session_id,kind='feedback',object_id=body.feedback_id,version=body.feedback_version)
+        if item.feedback!=expected or item.executor!=auth.executor:raise ProtocolError('feedback_response_identity_mismatch',status=403)
+        for key in ('kind','section','criterion','text','evidence'):
+            if getattr(item,key)!=getattr(body,key):raise ProtocolError('feedback_response_input_mismatch',status=409)
+        self._auth(c,auth,'read',object_ids=(expected.object_id,))
+        original=next((r for r in records if r.ref==expected),None)
+        if original is None or not self._visible(original,auth):raise ProtocolError('object_not_found',status=404)
+        if expected not in write.dependencies:raise ProtocolError('feedback_response_basis_missing')
+        return True
 
     def _derived_feedback(self,c,auth,mutation,subject,records,bindings):
         if subject is None:return False
