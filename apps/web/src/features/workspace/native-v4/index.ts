@@ -20,6 +20,7 @@ export function mountNativeWorkspace(host: HTMLElement, client: WorkspaceClient,
     const el = doc.createElement(tag); el.textContent = text; el.className = cls; return el;
   };
   let selected = options.productId ?? '', rendered = '', destroyed = false;
+  let renderedVersion: number | undefined;
   const root = node('section', '', 'native-workspace');
   root.setAttribute('aria-label', '工作作品');
   const hiddenStyle=doc.createElement('style');hiddenStyle.textContent='.native-workspace [hidden]{display:none!important}';root.append(hiddenStyle);
@@ -107,8 +108,11 @@ export function mountNativeWorkspace(host: HTMLElement, client: WorkspaceClient,
       const entry=button(`${p.title || '未命名作品'} · 第 ${p.version} 版`,()=>choose(p.product_id));
       entry.setAttribute('aria-current',p.product_id===selected?'true':'false'); return entry;
     }));
-    if (rendered!==selected) {
-      rendered=selected; const draft=product ? state.journal.drafts[selected] ?? draftOf(product) : null;
+    // Refresh an unchanged selection when its saved version changes. A local
+    // draft keeps its existing fields and caret; the client marks any conflict.
+    if (rendered!==selected || (!state.journal.drafts[selected] && renderedVersion!==product?.version)) {
+      rendered=selected; renderedVersion=product?.version;
+      const draft=product ? state.journal.drafts[selected] ?? draftOf(product) : null;
       title.value=draft?.title ?? '';text.value=draft?.content ?? '';
       const value=draft?.purpose ?? 'exploration';
       if (![...purpose.options].some(o=>o.value===value)) { const option=node('option',value);option.value=value;purpose.append(option); }
