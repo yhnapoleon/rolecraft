@@ -1,6 +1,6 @@
 {
   "owned_code": {
-    "src/career_lab/assistant/v2/service.py": "bc89a9297267b72262fe9d7df9c132ba29a1ad4b3fcc98b4d9b08cd97ed7b7cf",
+    "src/career_lab/assistant/v2/service.py": "67a9b5b5de3621457b9277dad1b05324207939164dedb250ed4ea499385960c9",
     "src/career_lab/assistant/v2/__init__.py": "b92a51d4eb2478af5f8c8e0232cfdbfd9669457b02609653d62e16258ababa2b",
     "src/career_lab/scenarios/v2/case_records.py": "5a9c22aa21f732573ae9803cf55642c08abbd825d110170ac09d32467eb0ab46",
     "src/career_lab/scenarios/v2/variants.py": "1aa00b78ee24055bf799b343c7ab534f90450d4853b89b5cab1fe533ebdea8fc",
@@ -8,7 +8,7 @@
     "src/career_lab/scenarios/v2/__init__.py": "98b6e25225f811b7f622f538b886dba657d4c809ed5d5c30405a95f5c751792f",
     "src/career_lab/scenarios/v2/rebind.py": "26088499df09d657aff962341bb0bde85e42372a65463a55e981e7307ac76414",
     "src/career_lab/scenarios/v2/localization.py": "edf29d09de7d29261d560c7c198ccaebe3d3134c259e45119638681fe3a13468",
-    "src/career_lab/scenarios/v2/seed.py": "a6592106f8e91cbfaafb2eb86702c3bd47a09c1af07324632e33889b9edb7233",
+    "src/career_lab/scenarios/v2/seed.py": "b7ae75f5c28fd55c87cb1a1b8b6c9ee21bca554df0a78e46a2d62bfd52126a1d",
     "src/career_lab/scenarios/v2/engine.py": "ad0aed1937d9ff96a0fe435f3dbab017000485d02de6108c8d87f47e3cd7d933",
     "src/career_lab/scenarios/v2/content.py": "206b30eb648960d28d44887360c5c8842e5818a2fe14c01d3e0176a4dc984a5c",
     "src/career_lab/scenarios/v2/loader.py": "1eb1546945ab3aa096b6f5887f58a41beef7fd9b66c778eecaeb6295f7036264",

@@ -10,7 +10,11 @@ MORPH={'claims':'claim','claimed':'claim','rooms':'room','bookings':'booking','b
        'employees':'employee','colleagues':'colleague','keys':'key','passwords':'password','codes':'code',
        'registration':'register','registering':'register','registered':'register','reimbursement':'reimburse',
        'reimbursed':'reimburse','reimbursable':'reimburse','courses':'course','participants':'participant',
-       'devices':'device','repairs':'repair','documents':'document','approvals':'approval'}
+       'devices':'device','repairs':'repair','documents':'document','approvals':'approval',
+       'food':'meal','meals':'meal','lunch':'meal','dinner':'meal','breakfast':'meal',
+       'accommodation':'hotel','lodging':'hotel','cab':'taxi','cabs':'taxi',
+       'returned':'return','returning':'return','returns':'return','rejected':'reject',
+       'denied':'deny','appeals':'appeal','cancelled':'cancel','canceled':'cancel'}
 
 
 def meaningful_tokens(text):
@@ -38,3 +42,18 @@ def prohibited_topic(query):
     secret=r'(?:password|access[ _-]?key|api[ _-]?key|secret[ _-]?key|verification code|credential)'
     if re.search(secret,value):return True
     return False
+
+
+def candidate_relevant(query_terms, candidate_terms):
+    """Lexical relevance only; never answer labels or hidden scenario routes.
+
+    Generic claim/trip words must not substitute taxi guidance for a question
+    explicitly about meals. An unsupported action such as returning a rejected
+    form must not be answered by a paragraph merely mentioning the form.
+    Multi-topic questions are left to ordinary chunk scoring, not special answers.
+    """
+    topics = query_terms & {'meal', 'hotel', 'taxi'}
+    if len(topics) == 1 and not topics <= candidate_terms:
+        return False
+    requested_actions = query_terms & {'return', 'reject', 'deny', 'appeal', 'cancel'}
+    return requested_actions <= candidate_terms

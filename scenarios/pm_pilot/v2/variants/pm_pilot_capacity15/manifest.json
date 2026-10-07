@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "id": "pm_pilot_capacity15",
-  "revision": "2.7.0",
+  "revision": "2.8.0",
   "structure_id": "index_scope_resource_dependency",
   "files": [
     {
@@ -217,7 +217,7 @@
     {
       "schema_version": 2,
       "path": "runtime/bundle.json",
-      "sha256": "0ed8d6b1b3f24a35b52e9283533568ac8a70781fd1d26b648629ac4602048a90",
+      "sha256": "a4297b013d46d49524009917f8904d73ec111d525b8ed29244d66b72c3132e40",
       "media_type": "application/json"
     },
     {
@@ -253,7 +253,7 @@
     {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "5e00a021fa107ceffda41d05e772146b143e978e92865149549d163e68d605df",
+      "sha256": "06c9e027eef6dbc20f95606fe69dbc01aa53f57bd8ced0c08841f15b422b8fbf",
       "media_type": "application/json"
     },
     {
@@ -265,7 +265,7 @@
     {
       "schema_version": 2,
       "path": "scenario.yaml",
-      "sha256": "301fc258ca08aef8fe5074ac00ff571c9bc07a66d78e0a63525e1ae3ae98b3cf",
+      "sha256": "4c29b5f35ac1ea03c67082b7ac6fb6a0164f5d9a8f1267a2a8c1be1bc71eadc4",
       "media_type": "application/json"
     }
   ],

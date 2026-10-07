@@ -1,0 +1,129 @@
+{
+  "status": "ready_for_independent_content_review",
+  "independent_review_completed": false,
+  "normal_entry_enabled": false,
+  "source": "existing promised urgent/capacity15 variants rebuilt against the v2 business world",
+  "review_questions": [
+    "Do deadline day 5 and capacity 15 create real, understandable constraints without a preferred answer?",
+    "Do both languages preserve the 429-minute claim versus SD-120 time definition, and the 45-minute observation offer versus a staffing commitment?",
+    "Can users narrow, negotiate or defer with evidence without learning hidden test answers?",
+    "Do role knowledge, approval terms and initial test records match the exact version and language?"
+  ],
+  "variants": [
+    {
+      "scenario_id": "pm_pilot_urgent",
+      "constraints": {
+        "capacity": 30,
+        "dev_days": 3,
+        "deadline_day": 5
+      },
+      "locales": {
+        "zh": {
+          "revision": "2.8.0",
+          "scenario_hash": "69564187d0af67f2705d1f0a4a0f3254a32b168ffa28bc31b715ef0046b11da7",
+          "root": "scenarios/pm_pilot/v2/variants/pm_pilot_urgent",
+          "runtime_hash": "c8d0a43de5447d150db3e0d5cdd423ff5b4b0ae68211dd55539e65832fd980d7",
+          "evaluation_hash": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0",
+          "review_reading": {
+            "materials/brief-v1.md": "8063757af21e6be71b54b657585586e939f2af8db26f3d3b7c3955210f755b74",
+            "materials/approvals-v1.md": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+            "materials/business_case-v1.md": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+            "materials/demand-v1.md": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+            "materials/coordination-v1.md": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+            "materials/restricted-v1.md": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+            "materials/failures-v1.md": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+            "materials/trial_details-v1.md": "cab39d668093d2225e2d5adbc3369e515a6dbc01222b10342ce2c546074947cf"
+          },
+          "public_material_count": 18,
+          "initial_snapshot": "/Users/jefmacmini/Projects/rolecraft-worktrees/033-w02/runs/local/expansion-v3/W02/20261007-041-fact-adapter-r9/pm_pilot_urgent-zh-initial.json",
+          "initial_snapshot_sha256": "a9b36f23d008e744c7a213b3879d1f5e2e4692a7bb920d6dfad5fdf0f4bfb101",
+          "canonical_fact_root_id": "pm-pilot-facts-abb2312ea40cab0e9c5f0e4703206a111d44b0b3cbf77892618c2b711c6f1201",
+          "component_id": "pm_pilot_v2_family",
+          "split": "train"
+        },
+        "en": {
+          "revision": "2.8.0",
+          "scenario_hash": "553aa18ae760f985b3df73fb34a92c04a2241c19eec1dd6fd6ec762c095d65d5",
+          "root": "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en",
+          "runtime_hash": "81c719bb4b970da6f728521398217963ab1b22bdf3292db4328c0d57b7eaece1",
+          "evaluation_hash": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0",
+          "review_reading": {
+            "materials/brief-v1.md": "4cf1bd352eb43551bfbe8ff41496a40b3f7aefcbb720068b113e60f93b3fc063",
+            "materials/approvals-v1.md": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+            "materials/business_case-v1.md": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+            "materials/demand-v1.md": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+            "materials/coordination-v1.md": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+            "materials/restricted-v1.md": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+            "materials/failures-v1.md": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+            "materials/trial_details-v1.md": "33d5e14876bca1dbac019edf05a5fe412abe050e1a5681172caf07ce188a5850"
+          },
+          "public_material_count": 18,
+          "initial_snapshot": "/Users/jefmacmini/Projects/rolecraft-worktrees/033-w02/runs/local/expansion-v3/W02/20261007-041-fact-adapter-r9/pm_pilot_urgent-en-initial.json",
+          "initial_snapshot_sha256": "279b85b27affcbe2080d373d18e0a83afa528d15e19463f842de1be4a5fe48d5",
+          "canonical_fact_root_id": "pm-pilot-facts-abb2312ea40cab0e9c5f0e4703206a111d44b0b3cbf77892618c2b711c6f1201",
+          "component_id": "pm_pilot_v2_family",
+          "split": "train"
+        }
+      },
+      "review_verdict": "pending"
+    },
+    {
+      "scenario_id": "pm_pilot_capacity15",
+      "constraints": {
+        "capacity": 15,
+        "dev_days": 3,
+        "deadline_day": 7
+      },
+      "locales": {
+        "zh": {
+          "revision": "2.8.0",
+          "scenario_hash": "34876b33af1dcb503e9032cf019299c716d29948ababad647c3eaa2eb3d0e3d7",
+          "root": "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15",
+          "runtime_hash": "a4297b013d46d49524009917f8904d73ec111d525b8ed29244d66b72c3132e40",
+          "evaluation_hash": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0",
+          "review_reading": {
+            "materials/brief-v1.md": "faf0dfd5255fca3241b7ed5bc9d8d91ace3a9fb1c34df3e0ad502b136c4d6bdb",
+            "materials/approvals-v1.md": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+            "materials/business_case-v1.md": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+            "materials/demand-v1.md": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+            "materials/coordination-v1.md": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+            "materials/restricted-v1.md": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+            "materials/failures-v1.md": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+            "materials/trial_details-v1.md": "01d3dd90130dd111ce243ed5149bace819ac1d666d2e18da7fe72554ae282554"
+          },
+          "public_material_count": 18,
+          "initial_snapshot": "/Users/jefmacmini/Projects/rolecraft-worktrees/033-w02/runs/local/expansion-v3/W02/20261007-041-fact-adapter-r9/pm_pilot_capacity15-zh-initial.json",
+          "initial_snapshot_sha256": "4d436fbbd4d9feb5d78ca3b1c1822d7ffaf33237cf93a5f610e0f3eae802cdc3",
+          "canonical_fact_root_id": "pm-pilot-facts-e3a28c6a93f634f91ce72763a94f5501a022bb9236a054f509c4b7c933f3b75b",
+          "component_id": "pm_pilot_v2_family",
+          "split": "train"
+        },
+        "en": {
+          "revision": "2.8.0",
+          "scenario_hash": "f1282f467461e6771455c17c711b6ca149c6d20bf6e192ed9e7affdaf165ecf2",
+          "root": "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en",
+          "runtime_hash": "cb35cebad161c81330d0dd0ba4e093e7df42f58b24738586be36ed022164a30f",
+          "evaluation_hash": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0",
+          "review_reading": {
+            "materials/brief-v1.md": "00c9a7d49b3b89aa0072f6e86445656e58214cde79cecc481a319fe88271571a",
+            "materials/approvals-v1.md": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+            "materials/business_case-v1.md": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+            "materials/demand-v1.md": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+            "materials/coordination-v1.md": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+            "materials/restricted-v1.md": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+            "materials/failures-v1.md": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+            "materials/trial_details-v1.md": "f07799beefe811b53a69290eec1b7421c81d57f567dc26aad836c17281a364e6"
+          },
+          "public_material_count": 18,
+          "initial_snapshot": "/Users/jefmacmini/Projects/rolecraft-worktrees/033-w02/runs/local/expansion-v3/W02/20261007-041-fact-adapter-r9/pm_pilot_capacity15-en-initial.json",
+          "initial_snapshot_sha256": "55151a888d2233a74c742ccf4ef66c239155ef82c3b09460e93a5a29a159f3b8",
+          "canonical_fact_root_id": "pm-pilot-facts-e3a28c6a93f634f91ce72763a94f5501a022bb9236a054f509c4b7c933f3b75b",
+          "component_id": "pm_pilot_v2_family",
+          "split": "train"
+        }
+      },
+      "review_verdict": "pending"
+    }
+  ],
+  "supersedes_review_candidate": "2.7.0 (kept at W02 r9 exact commit/source archive)"
+}

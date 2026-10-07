@@ -13,7 +13,7 @@ from .case_records import render_public_cases, render_case_details, validate_pub
 from .localization import require_locale, metadata as locale_metadata, text, runtime_source_files
 
 
-def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, calibration=None, scenario_id="pm_pilot", revision="2.7.0"):
+def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, calibration=None, scenario_id="pm_pilot", revision="2.8.0"):
     from .variants import material_definitions, resources, practice_paths
     require_locale(locale)
     min_score=.35 if locale=="zh" else english_min_score

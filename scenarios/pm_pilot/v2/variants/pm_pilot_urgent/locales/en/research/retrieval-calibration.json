@@ -14303,5 +14303,13 @@
     }
   ],
   "hidden_probe_or_gold_used_for_selection": false,
-  "online_model_or_product_qa": false
+  "online_model_or_product_qa": false,
+  "post_selection_relevance_fix": {
+    "revision": "english-relevance-r10",
+    "threshold_reselected": false,
+    "default_threshold": 0.3,
+    "held_out": false,
+    "new_development_checks": 7,
+    "original_development_queries_rechecked": 24
+  }
 }

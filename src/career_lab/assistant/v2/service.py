@@ -126,7 +126,11 @@ class Assistant:
         query_terms=meaningful_tokens(workflow[1] if workflow else request.query,getattr(self.package,"locale","zh"))
         scored=[]
         for candidate in candidates:
-            overlap=query_terms & meaningful_tokens(candidate.text,getattr(self.package,"locale","zh"))
+            candidate_terms=meaningful_tokens(candidate.text,getattr(self.package,"locale","zh"))
+            if getattr(self.package,"locale","zh")=="en":
+                from .english import candidate_relevant
+                if not candidate_relevant(query_terms,candidate_terms):continue
+            overlap=query_terms & candidate_terms
             # Normalized query coverage avoids a shared "如何" returning every FAQ.
             score=len(overlap)/max(1,len(query_terms))
             if overlap and score>=tuning.min_score:

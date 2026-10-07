@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "revision": "practice-content-2.7.0",
+  "revision": "practice-content-2.8.0",
   "review_status": "pending_independent_content_review",
   "read_scope": "W05 may project only public_description and constraints; bindings are server assembly data",
   "selection_policy": "optional_user_choice_or_decline; start a new session; never rewrite the source submission or feedback",
@@ -25,17 +25,17 @@
       },
       "variants": {
         "zh": {
-          "revision": "2.7.0",
-          "scenario_hash": "775e669e0f582fdfb1030fab02d4d9e3f998e0f16f6917eba67ac263bd8c0f1e",
+          "revision": "2.8.0",
+          "scenario_hash": "69564187d0af67f2705d1f0a4a0f3254a32b168ffa28bc31b715ef0046b11da7",
           "root": "scenarios/pm_pilot/v2/variants/pm_pilot_urgent",
-          "runtime_hash": "03ba89d8522beb3ce4eb5a078bb404d14d27dae0c63a9206bde6224bbd87b18f",
+          "runtime_hash": "c8d0a43de5447d150db3e0d5cdd423ff5b4b0ae68211dd55539e65832fd980d7",
           "evaluation_hash": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0"
         },
         "en": {
-          "revision": "2.7.0",
-          "scenario_hash": "939263d916a4a0ce987869feef0db5379d9fcb2172402cc61d07c8902960eb16",
+          "revision": "2.8.0",
+          "scenario_hash": "553aa18ae760f985b3df73fb34a92c04a2241c19eec1dd6fd6ec762c095d65d5",
           "root": "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en",
-          "runtime_hash": "8d32af18b7773cec37e1828ecf263e883d548872fd3243a42d32e50b936138cd",
+          "runtime_hash": "81c719bb4b970da6f728521398217963ab1b22bdf3292db4328c0d57b7eaece1",
           "evaluation_hash": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0"
         }
       }
@@ -59,17 +59,17 @@
       },
       "variants": {
         "zh": {
-          "revision": "2.7.0",
-          "scenario_hash": "dbcfbd41b57b1491c3514031dbf12be367c7cea46eb2a2f48802f3bcaaa39686",
+          "revision": "2.8.0",
+          "scenario_hash": "34876b33af1dcb503e9032cf019299c716d29948ababad647c3eaa2eb3d0e3d7",
           "root": "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15",
-          "runtime_hash": "0ed8d6b1b3f24a35b52e9283533568ac8a70781fd1d26b648629ac4602048a90",
+          "runtime_hash": "a4297b013d46d49524009917f8904d73ec111d525b8ed29244d66b72c3132e40",
           "evaluation_hash": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0"
         },
         "en": {
-          "revision": "2.7.0",
-          "scenario_hash": "7db1398eb94c720b80fd735ada18732bfe78f3f23a8df57c1a2609e85dcab9cc",
+          "revision": "2.8.0",
+          "scenario_hash": "f1282f467461e6771455c17c711b6ca149c6d20bf6e192ed9e7affdaf165ecf2",
           "root": "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en",
-          "runtime_hash": "25e10c465df2f7b123aeb7366c4612e944b34b6ddccb166e2bb294cf8cdb91be",
+          "runtime_hash": "cb35cebad161c81330d0dd0ba4e093e7df42f58b24738586be36ed022164a30f",
           "evaluation_hash": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0"
         }
       }

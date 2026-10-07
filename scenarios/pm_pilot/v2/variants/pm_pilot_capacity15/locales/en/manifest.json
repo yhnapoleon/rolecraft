@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "id": "pm_pilot_capacity15",
-  "revision": "2.7.0",
+  "revision": "2.8.0",
   "structure_id": "index_scope_resource_dependency",
   "files": [
     {
@@ -193,13 +193,13 @@
     {
       "schema_version": 2,
       "path": "research/public-case-records.json",
-      "sha256": "1e556fbb9cb6bb68ec2c163157f9ad7b3ff9a0378b8c8d8d4d71ba073aae28f3",
+      "sha256": "a7f86124e02d9146ec30602c612452c47ba3b0500c95da970ab6a2f9cad55e86",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "research/retrieval-calibration.json",
-      "sha256": "303f2ea8b3e6ba6075d2df750e46d2a2d3faeb97f00069370aaeb8e65466182b",
+      "sha256": "31bae8060b92cb09bc272db327c3650f5422f2d7803da171fb1aace472eda842",
       "media_type": "application/json"
     },
     {
@@ -223,7 +223,7 @@
     {
       "schema_version": 2,
       "path": "runtime/bundle.json",
-      "sha256": "25e10c465df2f7b123aeb7366c4612e944b34b6ddccb166e2bb294cf8cdb91be",
+      "sha256": "cb35cebad161c81330d0dd0ba4e093e7df42f58b24738586be36ed022164a30f",
       "media_type": "application/json"
     },
     {
@@ -259,7 +259,7 @@
     {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "c5eececc14e2d7053a3c14fb8def0e560ec654fa7ccf4ecfa6847b062adedaa0",
+      "sha256": "b6b7f9c957ea668bdd08408c275c569ca2d773d4b02e0d9c1aa1fb0fd6f0151d",
       "media_type": "application/json"
     },
     {
@@ -271,7 +271,7 @@
     {
       "schema_version": 2,
       "path": "scenario.yaml",
-      "sha256": "a81fb3cc80dd87ecb4b473d3c2bb960463c53e6bcf1aa9f15ee281bc8f618c0c",
+      "sha256": "e277a95ff4937198949e5fd03a8a0882780770034772ab5a1615eff3d82be761",
       "media_type": "application/json"
     }
   ],
