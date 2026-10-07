@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "id": "w02-runtime",
-  "revision": "practice-r8-pm_pilot_capacity15-zh",
+  "revision": "scenario-2.7.0-pm_pilot_capacity15-zh",
   "model": {
     "schema_version": 2,
     "path": "runtime/model.json",
@@ -37,11 +37,11 @@
   "source": {
     "schema_version": 2,
     "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
-    "source_digest": "224d5cabffdc8faea0abb7fbd08e4ba90407df8e4e0df41be2991c7373e2975b",
+    "source_digest": "266cd0ee5c14b64ce25fb77c5956e165277efe5d9dbd066825bea8292eb8b2a5",
     "overlay": {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "d3970b82e13f965269f80d9c477e15f9d7e222739b3ba3ebda65cece71c827df",
+      "sha256": "5e00a021fa107ceffda41d05e772146b143e978e92865149549d163e68d605df",
       "media_type": "application/json"
     },
     "dependency_locks": []

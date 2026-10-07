@@ -13,7 +13,7 @@ from .case_records import render_public_cases, render_case_details, validate_pub
 from .localization import require_locale, metadata as locale_metadata, text, runtime_source_files
 
 
-def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, calibration=None, scenario_id="pm_pilot", revision="2.6.0"):
+def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, calibration=None, scenario_id="pm_pilot", revision="2.7.0"):
     from .variants import material_definitions, resources, practice_paths
     require_locale(locale)
     min_score=.35 if locale=="zh" else english_min_score
@@ -171,7 +171,7 @@ def build_seed(root, case_records=None, *, locale="zh", english_min_score=.35, c
         "evaluation-protocol":{"mode":"advisory","installed":False,"owner":"W05"}
     }.items():put("runtime/"+name+".json",value)
     def file_ref(path):return FileRef(path=path,sha256=hashlib.sha256(files[path]).hexdigest())
-    runtime=RuntimeBundle(id="w02-runtime",revision="practice-r8-"+scenario_id+"-"+locale,model=file_ref("runtime/model.json"),prompts=(),
+    runtime=RuntimeBundle(id="w02-runtime",revision="scenario-"+revision+"-"+scenario_id+"-"+locale,model=file_ref("runtime/model.json"),prompts=(),
         acquisition=file_ref("runtime/acquisition.json"),retrieval=file_ref("runtime/retrieval.json"),
         decision=file_ref("runtime/decision.json"),tools=file_ref("runtime/tools.json"),
         source=SourceIdentity(base_commit="80cf1f6189cd25610d609f44283ff9668582d759",source_digest=digest(code_files),

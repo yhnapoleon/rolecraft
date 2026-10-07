@@ -124,7 +124,7 @@ not_simulated:
 - 收入
 - 未执行访谈
 - 人工已经接管
-revision: 2.6.0
+revision: 2.7.0
 scenario_id: pm_pilot_capacity15
 source_kind: authored_synthetic_business_with_actual_module_QA
 work_costs:
