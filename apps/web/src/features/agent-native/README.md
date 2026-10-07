@@ -1,6 +1,6 @@
 # v4 Agent 原位插槽
 
-入口 `mountV4AgentSlot(context)`，消费已审 `v4-host.ts`，只返回 `update/destroy`。组件不持凭据、transport、Command或恢复账本；输入草稿与一个原请求指针存入host的同一draft服务。未改根`ui.js`、页面、导航或全局CSS。
+入口 `mountV4AgentSlot(context)`，消费已审 `v4-host.ts`；当前按032指定的d34d695原字节继承v4-host.ts/contracts-v2.ts，只返回 `update/destroy`。组件不持凭据、transport、Command或恢复账本；输入草稿与一个原请求指针存入host的同一draft服务。未改根`ui.js`、页面、导航或全局CSS。
 
 ## 宿主节点
 
@@ -46,3 +46,6 @@ W06_VITE_ORIGIN=http://127.0.0.1:19460 W06_BROWSER_EVIDENCE=/absolute/private/ev
 ```
 
 浏览器工具使用本机Playwright；未在项目安装时须用CODEX_NODE_MODULES指定bundled依赖目录。不下载浏览器或新增依赖。实际产物/失败日志从本包回执进入。
+
+
+2026-10-07 d34d695兼容核对：host.query直接业务DTO已支持；host.recover.result完整RequestResult不由组件拆解，只看host归一化status/requestId。新增可选semantic.roles/feedback/assistant互相独立，Agent权限与动作不使用其中一个状态冒充其他模块的判断。当前公共host明确禁用delegations.create/revoke，slot据available禁用按钮；待权威控制面正式接入后再做真实根入口验证。

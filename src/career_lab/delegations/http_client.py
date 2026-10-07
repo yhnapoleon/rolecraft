@@ -85,6 +85,15 @@ class HttpAgentClient:
             if operation=='work_products.versions.create':
                 if payload.get('removed') or not self._editable_head(credentials,observation,payload,deadline):raise RemoteFailure('lifecycle_permission_unavailable',503)
                 if (command.expected_version,command.expected_workspace_revision)!=(observation.as_of.business_seq,observation.as_of.workspace_revision):raise RemoteFailure('version_conflict',409)
+        if operation=='objects.read':
+            try:read=C.ObjectRead.model_validate(payload)
+            except ValidationError:raise RemoteFailure('tool_arguments_invalid',422) from None
+            if read.ref.session_id!=credentials.session_id:raise RemoteFailure('session_route_mismatch',404)
+            if read.as_of is not None:raise RemoteFailure('object_time_window_unsupported',422)
+            # Exact existing public route. No body write or synthetic read receipt.
+            target='/objects/'+safe_id(read.ref.kind)+'/'+safe_id(read.ref.object_id)+'/'+str(read.ref.version)
+            params={'config_version':read.ref.config_version} if read.ref.config_version is not None else None
+            return self._request(credentials,'GET',target,query=params,deadline=deadline,operation=name)
         suffix=route.path
         for key in route.ids:
             if key not in payload:raise RemoteFailure('route_object_required',422)

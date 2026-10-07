@@ -66,7 +66,7 @@ class Protocol:
             tools=sorted((t for t in self.backend.tools() if t.available),key=lambda t:t.name)
             start=int(cursor)
             if start>len(tools):raise RpcFailure(-32602,'Invalid cursor')
-            result={'tools':[{'name':t.name,'description':'Authorized RoleCraft '+t.capability+' operation. Existing server permissions and business rules apply.',
+            result={'tools':[{'name':t.name,'description':'Authorized RoleCraft '+t.capability+' operation. Existing server permissions and business rules apply. Preserve exact citation kind, object_id and version. config_version belongs only on kind=config references; omit it on material/test/product references. After an unknown result, read requests.read; re-execution requires an explicit user decision.',
                 'inputSchema':t.parameters,'annotations':{'readOnlyHint':t.capability=='read','openWorldHint':False}} for t in tools[start:start+50]]}
             if start+50<len(tools):result['nextCursor']=str(start+50)
             return self._result(result,version,cache=True)
@@ -80,7 +80,7 @@ class Protocol:
                     'structuredContent':result,'isError':False},version)
             except RemoteFailure as error:
                 return self._result({'content':[{'type':'text','text':error.code}],
-                    'structuredContent':{'code':error.code,'status':error.status,'retry_rule':'Query the original request or retry the identical business command; do not mint a new request_id.'},'isError':True},version)
+                    'structuredContent':{'code':error.code,'status':error.status,'retry_rule':'Recover the original request read-only. Re-execution requires an explicit user decision; never mint a new request_id to replace an unknown result.'},'isError':True},version)
             except ValidationError:
                 return self._result({'content':[{'type':'text','text':'tool_arguments_invalid'}],'isError':True},version)
         raise RpcFailure(-32601,'Method not supported')

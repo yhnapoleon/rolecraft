@@ -212,3 +212,17 @@ def test_w06_acknowledged_revoke_only_rechecks_denial_after_read_failure(public_
     assert calls == {'deletes': 1, 'verification': 2}
     assert final['command'] == first['command']
     evidence('explicit-revoke-verification-recovery', json.loads((target / 'trace.json').read_text()), {'revocation': final})
+
+
+def test_w06_public_client_uses_installed_submission_alias(public_url, production, tmp_path):
+    from dataclasses import replace
+    registry = production['app'].state.gateway.registry
+    original = registry.operations['submissions.create']
+    registry.operations['submissions.create'] = replace(original, action_name='submissions.create')
+    check = ServiceCheck(public_url, tmp_path / 'standard-alias')
+    result = check.run(scenario='pm_pilot_v2', query='账号密码忘了怎么重置？', config_version=0, material_id='brief')
+    assert result['status'] == 'completed'
+    assert result['submission_operation'] == 'submissions.create'
+    submit = next(step for step in result['steps'] if step['operation'] == 'submissions.create')
+    assert submit['command']['operation'] == 'submissions.create'
+    assert submit['response']['executor']['kind'] == 'human'
