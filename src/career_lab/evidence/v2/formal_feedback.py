@@ -4,10 +4,11 @@ No guessed source identity, occurrence time, actor or log completeness. Unknown 
 no timestamp or source metadata is fabricated.
 """
 from career_lab.contracts import v2 as C
+from .localization import message,validate_language
 from .availability import SAFE_REASON
 
 
-def sections(reader,auth,subject,requested_at,facts,history):
+def sections(reader,auth,subject,requested_at,facts,history,*,work_language='zh'):
     captured=getattr(reader,'captured_at',None);snapshot_hash=getattr(reader,'snapshot_sha256',None)
     if captured is None or snapshot_hash is None:raise C.ProtocolError('source_capture_required',status=503)
     # The input file hash is an internal integrity check. Public provenance binds
@@ -47,16 +48,16 @@ def sections(reader,auth,subject,requested_at,facts,history):
     entries=[];pending=[]
     for raw in history:
         if raw['occurred_at'] is None:
-            message=raw['criterion']+'：'+SAFE_REASON
-            if message not in pending:pending.append(message)
+            pending_message=raw['criterion']+': '+message(work_language,SAFE_REASON)
+            if pending_message not in pending:pending.append(pending_message)
         data={k:v for k,v in raw.items() if k in C.HistoricalResponsibilityFinding.model_fields}
         entries.append(C.HistoricalResponsibilityFinding.model_validate(data))
     historical=C.HistoricalResponsibilitiesSnapshot(**base,completeness='partial' if entries or pending else 'unknown',entries=tuple(entries))
     return factual,historical,pending
 
 
-def attach_sections(report,reader,auth,subject,requested_at,facts,history,rule_items,extra_notes=()):
-    factual,historical,pending=sections(reader,auth,subject,requested_at,facts,history)
+def attach_sections(report,reader,auth,subject,requested_at,facts,history,rule_items,extra_notes=(),*,work_language='zh'):
+    factual,historical,pending=sections(reader,auth,subject,requested_at,facts,history,work_language=work_language)
     raw=report.model_dump(mode='json')
     raw.update(as_of=requested_at.model_dump(mode='json'),verified_facts=[factual.model_dump(mode='json')],
         historical_responsibilities=[historical.model_dump(mode='json')],rule_items=rule_items,
