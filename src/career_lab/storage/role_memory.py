@@ -9,7 +9,7 @@ from typing import Literal, Protocol
 from pydantic import model_validator, ValidationError
 
 from career_lab.contracts.v2 import (
-    V2, Identifier, ObjectRef, TurnInput, VersionPoint, Executor, PositiveInt,
+    V2, Identifier, ObjectRef, FileRef, TurnInput, VersionPoint, Executor, PositiveInt,
     DisclosedFragment, EvidenceRefV2, PublicDisclosureRecord, ModelAttemptUsage,
     ProtocolError, RoleContext, ProviderMessage, DisclosureRecord, WorkProductVersion,
 )
@@ -101,6 +101,18 @@ class RoleMemory:
 
 
 @dataclass(frozen=True)
+class RoleStanceEvidence:
+    role_id: str
+    reply_ref: ObjectRef
+    source_binding: FileRef
+    source_field: str
+    source_index: int
+    quote: str
+    assertion_type: Literal["role_opinion"] = "role_opinion"
+    verification: Literal["verbatim_match_only"] = "verbatim_match_only"
+
+
+@dataclass(frozen=True)
 class PrivateGeneration:
     role_id: str
     reply_ref: ObjectRef
@@ -113,6 +125,7 @@ class PrivateGeneration:
     refresh_count: int
     attempts: tuple[ModelAttemptUsage, ...]
     used_sources: tuple[DisclosedFragment, ...]
+    opinions: tuple[RoleStanceEvidence, ...] = ()
 
 
 class PrivateGenerationPort(Protocol):

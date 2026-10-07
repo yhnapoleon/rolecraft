@@ -14,7 +14,7 @@ from career_lab.contracts.v2.projection import project_disclosures
 from career_lab.runtime.context_v2 import ContextPort, bare, clean_ref
 from career_lab.runtime.model_adapter import ModelReply
 from career_lab.storage.role_memory import (
-    PrivateGeneration, PublicSpokenEvidence, RoleTurn, RoleReply, RoleDisplay,
+    PrivateGeneration, PublicSpokenEvidence, RoleStanceEvidence, RoleTurn, RoleReply, RoleDisplay,
     object_write, parse_public_reply,
 )
 from career_lab.storage.v2_lifecycle import point
@@ -46,6 +46,14 @@ def actual_disclosures(snapshot,auth,reply_ref,text,*,included_sources=None):
     return tuple(DisclosureRecord(fact_id=fid,source=clean_ref(source.ref),reply_ref=reply_ref,
                  quote=source.text,verification="verified",displayed_at_seq=None)
                  for source in selected if source.text and source.text in text for fid in source.fact_ids)
+
+
+def actual_opinions(snapshot,reply_ref,text):
+    """Match actually spoken declared stances, without asserting world truth/G0."""
+    if snapshot.source_binding is None:raise ProtocolError("role_stance_source_unavailable",status=409)
+    return tuple(RoleStanceEvidence(snapshot.role.id,reply_ref,snapshot.source_binding,field,index,quote)
+        for field in ("responsibilities","goals","acceptable_conditions","unacceptable_conditions")
+        for index,quote in enumerate(getattr(snapshot.role,field)) if quote and quote in text)
 
 
 def displayed_disclosures(reply,reply_ref,*,displayed_at_seq):
@@ -125,7 +133,8 @@ def generate_plan(snapshot,auth,request,reply_ref,model,*,generation_cycle=None,
     private=PrivateGeneration(role_id=reply.role_id,reply_ref=reply_ref,context=context,
         prompt_messages=tuple(ProviderMessage.model_validate(m) for m in messages),prompt_hash=digest(messages),
         history_revision=snapshot.history_revision,received_shares=snapshot.received_shares,
-        memories=snapshot.memories,refresh_count=refresh_count,attempts=(attempt,),used_sources=selected)
+        memories=snapshot.memories,refresh_count=refresh_count,attempts=(attempt,),used_sources=selected,
+        opinions=actual_opinions(snapshot,reply_ref,response.text))
     return reply,private
 
 
