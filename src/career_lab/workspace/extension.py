@@ -30,14 +30,15 @@ def snapshot_from_view(view,auth,roles,resolvers):
     permitted_ids={r.ref.object_id for r in view.objects}
     def permitted(oid):return auth.allowed_objects is None or oid in permitted_ids or oid in auth.allowed_objects
     def can_reference(reference):
-        if reference.session_id!=auth.session_id or not permitted(reference.object_id):return False
-        bare=ObjectRef.model_validate({k:v for k,v in reference.model_dump(mode='json').items() if k in ObjectRef.model_fields})
-        if any(r.ref==bare for r in objects):return True
-        resolver=resolvers.get(reference.kind)
-        if resolver is None:return False
-        result=resolver(auth,reference,view.state,view.bindings)
-        return result.ref==bare
-    return Snapshot(view.state,tuple(objects),can_reference,tuple(roles),permitted,auth.allowed_objects is None)
+        if reference.session_id!=auth.session_id:return False
+        predicate=view.reference_allowed
+        if predicate is None:raise ProtocolError('reference_view_required',status=503)
+        # The public predicate supplies contextual resolver authority and expires
+        # with this transaction. Never call standalone resolvers or retain it.
+        return predicate(reference)
+    return Snapshot(view.state,tuple(objects),can_reference,tuple(roles),permitted,
+                    auth.allowed_objects is None,view.removal_cascade)
+
 
 
 def workspace_plan(view,command,auth,*,roles,resolvers,clock=None):

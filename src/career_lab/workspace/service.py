@@ -49,7 +49,7 @@ class WorkspaceService:
             # also expose active sharing of older versions of the same product.
             if active: value['visibility'] = 'shared'
             elif snapshot.shares_complete: value['visibility'] = 'private'
-            else: value.pop('visibility', None)
+            else: value['visibility'] = None
             return value
         # Import provenance includes unsaved drafts and unshared old versions.
         return {**content, 'legacy':None, 'shares':[]}
@@ -90,6 +90,8 @@ class WorkspaceService:
                 ids = {item['product_id'] for item in result['items']}
                 result['shares'] = [r.content for r in snap.heads('share') if r.content['product']['object_id'] in ids]
                 result['sharing_complete'] = snap.shares_complete
+                from career_lab.contracts.v2.workspace import WorkspaceProductPage
+                result=WorkspaceProductPage.model_validate(result).model_dump(mode='json')
             return result
         return self.repository.read(auth,query)
 

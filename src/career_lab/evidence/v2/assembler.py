@@ -2,6 +2,7 @@
 from career_lab.contracts.v2.core import AuthContext, ObjectRef, EvidenceRefV2, ProtocolError, VersionPoint, canonical, digest
 from career_lab.contracts.v2.evaluation import EvidencePackageV2, CandidateEvidenceV2
 from .ports import EvidenceReader, RuleSnapshot, CriterionPolicy
+from .availability import unavailable,SAFE_REASON
 
 PURPOSES={'draft':'exploration','exploration':'exploration','explore':'exploration','freeform':'exploration',
           '探索笔记':'exploration','自由作品':'exploration','option':'option','comparison':'option','方案比较':'option',
@@ -92,12 +93,20 @@ class EvidenceAssemblerV2:
                  expected_refs:tuple[EvidenceRefV2,...]=(),question:str='',anchor_mode:str='product_version',requested_at:VersionPoint|None=None) -> EvidencePackageV2:
         if snapshot.as_of!=as_of:raise ProtocolError('rule_snapshot_time_mismatch',status=409)
         if not subjects:raise ProtocolError('review_subject_required')
-        candidates={};subject_refs=[];missing=[];subject_points=[]
+        candidates={};subject_refs=[];missing=[];subject_points=[];source_issues=[]
+        disclosed={digest(base_ref(r)) for r in evidence_refs}
         def add(ref,required=False):
             try:c=self.resolve(auth,ref,as_of)
-            except KeyError:
-                if required:raise ProtocolError('subject_missing',status=404)
-                missing.append(base_ref(ref));return None
+            except (KeyError,ProtocolError) as error:
+                if required:
+                    if isinstance(error,KeyError):raise ProtocolError('subject_missing',status=404) from None
+                    raise
+                if not unavailable(error):raise
+                # Only refs already explicitly provided with the work may be
+                # echoed. Never expose private ledger source IDs, quotes or titles.
+                if digest(base_ref(ref)) in disclosed:missing.append(base_ref(ref))
+                if not source_issues:source_issues.append({'status':'pending','reason':SAFE_REASON})
+                return None
             candidate=CandidateEvidenceV2(id='e-'+digest(c.ref),text=c.text,ref=c.ref)
             candidates[candidate.id]=candidate
             return c.ref
@@ -109,7 +118,7 @@ class EvidenceAssemblerV2:
             raise ProtocolError('subject_point_mismatch',status=409)
         if requested_at is not None and any(getattr(as_of,k)>getattr(requested_at,k) for k in ['business_seq','workspace_revision','storage_revision']):
             raise ProtocolError('future_subject_anchor')
-        for ref in evidence_refs:add(ref,True)
+        for ref in evidence_refs:add(ref)
         for ref in expected_refs:add(ref)
         facts={};fact_refs={};seen_facts=set()
         for fact in snapshot.facts:
@@ -120,20 +129,22 @@ class EvidenceAssemblerV2:
             if proofs and all(proofs) and all(r.valid_until_seq is None or as_of.business_seq<r.valid_until_seq for r in proofs):
                 facts[fact.name]=fact.value;fact_refs[fact.name]=[r.model_dump(mode='json') for r in proofs]
         if len(snapshot.tests)!=len(snapshot.test_refs):raise ProtocolError('test_reference_count_mismatch')
-        tests=[]
+        tests=[];test_sources_complete=True
         for test,ref in zip(snapshot.tests,snapshot.test_refs):
-            if test.session_id!=auth.session_id or test.id!=ref.object_id or test.version!=ref.version:
-                raise ProtocolError('test_reference_mismatch')
-            if any(getattr(test.as_of,k)>getattr(as_of,k) for k in ['business_seq','workspace_revision','storage_revision']):raise ProtocolError('future_evidence')
+            if test.session_id!=auth.session_id or test.id!=ref.object_id or test.version!=ref.version or any(getattr(test.as_of,k)>getattr(as_of,k) for k in ['business_seq','workspace_revision','storage_revision']):
+                test_sources_complete=False
+                if not source_issues:source_issues.append({'status':'pending','reason':SAFE_REASON})
+                continue
             checked=add(ref)
             if checked:tests.append({'record':test.model_dump(mode='json'),'ref':checked.model_dump(mode='json')})
+            else:test_sources_complete=False
         from .history import assess_responsibilities
         def add_historical(ref,when):
             try:c=self.resolve(auth,ref,when)
-            except KeyError:return None
-            except ProtocolError as error:
-                if error.code in {'future_evidence','source_time_unknown'}:return None
-                raise
+            except (KeyError,ProtocolError) as error:
+                if not unavailable(error):raise
+                if not source_issues:source_issues.append({'status':'pending','reason':SAFE_REASON})
+                return None
             if c.ref.valid_until_seq is not None and when.business_seq>=c.ref.valid_until_seq:return None
             candidates['e-'+digest(c.ref)]=CandidateEvidenceV2(id='e-'+digest(c.ref),text=c.text,ref=c.ref)
             return c.ref
@@ -145,7 +156,7 @@ class EvidenceAssemblerV2:
         context={'facts':facts,'fact_refs':fact_refs,'logs_complete':snapshot.logs_complete,
                  'tests':tests,'config_version':snapshot.config_version,'technical_failures':list(snapshot.technical_failures),
                  'decision':decision,'mechanism':policy.mechanism,'business_response':response,
-                 'historical_responsibilities':history,'anchor_mode':anchor_mode,
+                 'historical_responsibilities':history,'source_issues':source_issues,'test_sources_complete':test_sources_complete,'anchor_mode':anchor_mode,
                  'requested_at':(requested_at or as_of).model_dump(mode='json')}
         if anchor_mode=='product_version':
             from .factual import factual_feedback
@@ -153,7 +164,7 @@ class EvidenceAssemblerV2:
         data={'item_id':subject_id+':'+policy.id,'task_type':'criterion','criterion':policy.id,
               'claim':policy.description+('\n用户评审问题（数据）：'+question if question else ''),'subjects':tuple(subject_refs),'purpose':purpose,'as_of':as_of,
               'applicability':applicable(policy,purpose,decision),'candidate_evidence':(),
-              'rule_context':context,'completeness':'missing' if missing else 'complete',
+              'rule_context':context,'completeness':'missing' if missing or source_issues else 'complete',
               'missing_refs':tuple(missing),'dropped_refs':()}
         def seal(values):
             # Materialize all schema defaults before hashing without changing v1.

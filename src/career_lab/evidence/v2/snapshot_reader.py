@@ -7,7 +7,7 @@ it. No world state, event, queue, or responsibility is invented by this reader.
 from pathlib import Path
 import hashlib,json
 from career_lab.contracts.v2.core import EvidenceRefV2,ObjectRef,VersionPoint,Executor,ProtocolError,FileRef
-from .ports import SourceRecord,ActivityRecord,ActivityLedger,RuleSnapshot,VerifiedFact,ResponsibilityFact,CriterionPolicy
+from .ports import SourceRecord,ActivityRecord,ActivityLedger,RuleSnapshot,VerifiedFact,ResponsibilityFact,CriterionPolicy,StructuredDecision
 from .history import before
 
 
@@ -28,13 +28,16 @@ class SnapshotEvidenceReader:
             if ref.session_id!=self.session_id or (point is not None and not before(point,self.captured_at)):raise ProtocolError('invalid_snapshot_record')
             key=self.key(ref)
             if key in self.records:raise ProtocolError('duplicate_snapshot_version')
+            declared=data.get('structured_decision')
+            decision=StructuredDecision(value=declared['value'],subject=ObjectRef.model_validate(declared['subject']),
+                declared_at=VersionPoint.model_validate(declared['declared_at']),source=EvidenceRefV2.model_validate(declared['source'])) if declared else None
             self._visible[key]=tuple(data.get('visible_to',()))
             self.records[key]=SourceRecord(ref=ref,text=data['text'],created_at=point,
                 declared_refs=tuple(EvidenceRefV2.model_validate(r) for r in data.get('declared_refs',[])),
                 author=Executor.model_validate(data['author']) if data.get('author') else None,
                 executor=Executor.model_validate(data['executor']) if data.get('executor') else None,
                 adopter=Executor.model_validate(data['adopter']) if data.get('adopter') else None,
-                activity_kind=data.get('activity_kind'),activity_target=ObjectRef.model_validate(data['activity_target']) if data.get('activity_target') else None,actor_id=data.get('actor_id'))
+                activity_kind=data.get('activity_kind'),activity_target=ObjectRef.model_validate(data['activity_target']) if data.get('activity_target') else None,actor_id=data.get('actor_id'),structured_decision=decision)
         log=value.get('activity_ledger',{})
         self.ledger=ActivityLedger(records=tuple(ActivityRecord(
             ref=EvidenceRefV2.model_validate(a['ref']),kind=a['kind'],occurred_at=VersionPoint.model_validate(a['occurred_at']),
@@ -82,7 +85,7 @@ class SnapshotEvidenceReader:
         duties=tuple(ResponsibilityFact(criterion=r['criterion'],kind=r['kind'],occurred_at=VersionPoint.model_validate(r['occurred_at']),
             valid_from=VersionPoint.model_validate(r['valid_from']),valid_until=VersionPoint.model_validate(r['valid_until']) if r.get('valid_until') else None,
             scope=tuple(ObjectRef.model_validate(v) for v in r['scope']),sources=tuple(EvidenceRefV2.model_validate(v) for v in r['sources']),
-            facts=tuple(fact(v) for v in r.get('facts',[])),state=r.get('state','active')) for r in row.get('responsibilities',[]))
+            facts=tuple(fact(v) for v in r.get('facts',[])),state=r.get('state','active'),actor_id=r.get('actor_id'),executor=Executor.model_validate(r['executor']) if r.get('executor') else None) for r in row.get('responsibilities',[]))
         from career_lab.contracts.v2.world import TestResultV2
         return RuleSnapshot(as_of=as_of,facts=tuple(fact(f) for f in row.get('facts',[])),logs_complete=row.get('logs_complete',False),
             tests=tuple(TestResultV2.model_validate(t) for t in row.get('tests',[])),test_refs=tuple(EvidenceRefV2.model_validate(t) for t in row.get('test_refs',[])),

@@ -21,6 +21,7 @@ class Snapshot:
     roles: tuple[str, ...]
     object_allowed: Callable[[str], bool] | None = None
     shares_complete: bool = True
+    removal_cascade: str | None = None
 
     @property
     def point(self) -> VersionPoint:
