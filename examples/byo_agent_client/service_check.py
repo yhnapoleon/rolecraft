@@ -234,10 +234,90 @@ def recover_requests(run_dir):
     return report
 
 
+
+def revoke_run(run_dir):
+    """Explicitly revoke this check's delegate using its original human owner.
+
+    A repeated explicit invocation uses the same persisted revocation command.
+    It never resends the interrupted business request or changes trace.json.
+    The control-plane revoke is idempotent and has no requests.read record.
+    """
+    directory = Path(run_dir)
+    owner = load_credentials(directory / 'owner.json')
+    delegate = load_credentials(directory / 'delegate.json')
+    trace = json.loads((directory / 'trace.json').read_text())
+    require(trace.get('session_id') == owner.session_id == delegate.session_id
+            and trace.get('api_url') == owner.api_url == delegate.api_url, 'recovery_session_mismatch')
+    grants = [step for step in trace['steps'] if step['operation'] == 'delegations.create'
+              and step['executor'] == 'human' and step.get('status') == 'responded']
+    require(len(grants) == 1, 'recorded_delegation_required')
+    grant = C.DelegationGrant.model_validate(grants[0]['response']['result']['result']['delegation'])
+    require(grant.session_id == owner.session_id and grant.executor.kind == 'external_agent'
+            and grant.executor.delegation_id == grant.id, 'recorded_delegation_mismatch')
+    path = directory / 'revocation.json'
+    prefix = '/sessions/' + safe_id(owner.session_id)
+    headers = {'Authorization': 'Bearer ' + owner.token}
+    with httpx.Client(base_url=owner.api_url, timeout=15, trust_env=False, follow_redirects=False) as http:
+        if path.exists():
+            report = json.loads(path.read_text())
+            require(report.get('session_id') == owner.session_id and report.get('api_url') == owner.api_url
+                    and report.get('delegation_id') == grant.id, 'revocation_record_mismatch')
+            command = C.Command.model_validate(report['command'])
+            require(command.operation == 'delegations.revoke' and command.payload == {'delegation_id': grant.id},
+                    'revocation_record_mismatch')
+        else:
+            response = http.get(prefix, headers=headers)
+            require(response.status_code == 200, 'owner_session_unavailable')
+            state = response.json()['state']
+            command = C.Command(schema_version=2, request_id=uuid4().hex,
+                expected_version=state['business_seq'], expected_workspace_revision=state['workspace_revision'],
+                operation='delegations.revoke', payload={'delegation_id': grant.id})
+            report = {'session_id': owner.session_id, 'api_url': owner.api_url, 'delegation_id': grant.id,
+                'command': command.model_dump(mode='json'), 'status': 'unconfirmed', 'attempts': [],
+                'original_trace_unchanged': True, 'business_commands_reexecuted': False}
+
+        def persist():
+            save(path, redact(redact(report, owner.token), delegate.token))
+
+        # A confirmed local record needs no new write. An unconfirmed write is
+        # repeated only by this explicitly requested CLI invocation, with its key.
+        if report['status'] == 'completed':
+            return report
+        acknowledged = any(item.get('status') == 'acknowledged' for item in report['attempts'])
+        attempt = {'status': 'unconfirmed', 'action': ('verify_existing_acknowledgement' if acknowledged else 'revoke_and_verify')}
+        report['attempts'].append(attempt)
+        persist()
+        try:
+            if not acknowledged:
+                response = http.request('DELETE', prefix + '/delegations/' + safe_id(grant.id),
+                                        headers=headers, json=command.model_dump(mode='json'))
+                attempt['http_status'] = response.status_code
+                require(response.status_code == 200, 'revocation_unconfirmed')
+                value = response.json()
+                require(value.get('schema_version') == 2 and value.get('result', {}).get('result') == {
+                    'delegation_id': grant.id, 'revoked': True}, 'revocation_response_invalid')
+                attempt.update(status='acknowledged', response=value)
+                persist()
+            denied = http.get(prefix, headers={'Authorization': 'Bearer ' + delegate.token})
+            report['delegate_http_status'] = denied.status_code
+            require(denied.status_code in {401, 403} and denied.json().get('code') == 'credential_revoked_or_invalid',
+                    'revocation_denial_unconfirmed')
+            report.pop('failure_code', None)
+            report.update(status='completed', revocation_acknowledged=True, delegate_denied=True)
+            persist()
+        except Exception as error:
+            report.update(status='incomplete', failure_code=(error.code if isinstance(error, RemoteFailure)
+                                                            else 'revocation_response_unconfirmed'))
+            persist()
+            raise
+    return report
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--api-url')
     parser.add_argument('--recover-run', type=Path, help='Read original requests as the human owner; sends no command')
+    parser.add_argument('--revoke-run', type=Path, help='Explicitly revoke this check delegate as its original human owner')
     parser.add_argument('--run-dir', type=Path, help='New private directory; never reuse an interrupted run')
     parser.add_argument('--transport', choices=('http', 'codex'), default='http')
     parser.add_argument('--scenario', default='pm_pilot_v2')
@@ -246,6 +326,16 @@ def main(argv=None):
     parser.add_argument('--material-id')
     parser.add_argument('--work-language', choices=('zh', 'en'))
     args = parser.parse_args(argv)
+    if args.revoke_run:
+        if args.api_url or args.run_dir or args.recover_run:
+            parser.error('revocation uses only the original private run configuration')
+        try:
+            revoke_run(args.revoke_run)
+        except Exception:
+            print('Revocation unconfirmed. Keep original trace, revocation record and credentials.', file=sys.stderr)
+            return 1
+        print('Delegate revoked; original business requests and trace preserved. See revocation.json.')
+        return 0
     if args.recover_run:
         if args.api_url or args.run_dir: parser.error('recovery uses the original private owner configuration')
         try:

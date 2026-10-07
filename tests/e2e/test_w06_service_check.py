@@ -15,7 +15,7 @@ import time
 import pytest
 import uvicorn
 from career_lab.contracts import v2 as C
-from examples.byo_agent_client.service_check import ServiceCheck, recover_requests
+from examples.byo_agent_client.service_check import ServiceCheck, recover_requests, revoke_run
 
 ROOT = Path(__file__).parents[2]
 spec = importlib.util.spec_from_file_location('w06_bridge_fixture', ROOT / 'tests/integration/test_w06_production.py')
@@ -115,3 +115,100 @@ def test_w06_public_client_failure_keeps_original_request_and_does_not_submit(pu
     assert not recovery['commands_reexecuted']
     assert (target / 'trace.json').read_bytes() == original
     evidence('incomplete-public-client', trace, recovery)
+
+
+def interrupted_check(public_url, tmp_path):
+    from career_lab.delegations.http_client import RemoteFailure
+    target = tmp_path / 'interrupted'
+    check = ServiceCheck(public_url, target)
+    with pytest.raises(RemoteFailure):
+        check.run(scenario='pm_pilot_v2', query='账号密码忘了怎么重置？', config_version=999, material_id='brief')
+    return target, check
+
+
+def test_w06_explicit_revoke_after_failure_preserves_work_and_recovery(public_url, tmp_path, monkeypatch):
+    import httpx
+    target, check = interrupted_check(public_url, tmp_path)
+    original = (target / 'trace.json').read_bytes()
+    trace = json.loads(original)
+    product = next(step['response']['result']['ref'] for step in trace['steps'] if step['operation'] == 'work_products.create')
+    with httpx.Client(base_url=public_url, headers={'Authorization': 'Bearer ' + check.token}) as http:
+        before = http.get('/sessions/' + check.sid).json()
+        report = revoke_run(target)
+        assert report['status'] == 'completed' and report['revocation_acknowledged'] and report['delegate_denied']
+        assert http.get('/sessions/' + check.sid).json() == before
+        products = http.get('/sessions/' + check.sid + '/work-products').json()
+        assert product['object_id'] in json.dumps(products)
+    assert (target / 'trace.json').read_bytes() == original
+    assert all(secret not in json.dumps(report) for secret in check.secrets)
+    assert (target / 'revocation.json').stat().st_mode & 0o077 == 0
+    recovery = recover_requests(target)
+    assert recovery['requests'][0]['status'] == recovery['requests'][1]['status'] == 'completed'
+    assert recovery['requests'][-1]['status'] == 'not_found_or_not_visible'
+    # Re-reading an already confirmed local revocation never sends a command.
+    def unexpected(*args, **kwargs): raise AssertionError('unexpected HTTP request')
+    monkeypatch.setattr(httpx.Client, 'request', unexpected)
+    assert revoke_run(target) == report
+    evidence('explicit-revoke-after-failure', trace, {'revocation': report, 'recovery': recovery})
+
+
+def test_w06_lost_revoke_response_requires_explicit_retry_with_original_key(public_url, tmp_path, monkeypatch):
+    import httpx
+    target, check = interrupted_check(public_url, tmp_path)
+    original = (target / 'trace.json').read_bytes()
+    request = httpx.Client.request
+    sent = []
+    def lose_first(self, method, url, **kwargs):
+        response = request(self, method, url, **kwargs)
+        if method == 'DELETE':
+            sent.append(kwargs['json'])
+            if len(sent) == 1:
+                raise httpx.ReadError('response lost after committed revocation')
+        return response
+    monkeypatch.setattr(httpx.Client, 'request', lose_first)
+    with pytest.raises(httpx.ReadError): revoke_run(target)
+    first = json.loads((target / 'revocation.json').read_text())
+    assert first['status'] == 'incomplete' and len(sent) == 1
+    assert first['command']['request_id']
+    second = revoke_run(target)  # A separate, explicit invocation, no automatic retry.
+    assert second['status'] == 'completed' and len(sent) == 2
+    assert sent[0] == sent[1] == first['command'] == second['command']
+    assert (target / 'trace.json').read_bytes() == original
+    assert not second['business_commands_reexecuted']
+    evidence('explicit-revoke-lost-response', json.loads(original), {'revocation': second})
+
+
+def test_w06_revoke_rejects_mixed_run_credentials_before_network(public_url, tmp_path, monkeypatch):
+    import httpx
+    from career_lab.delegations.http_client import RemoteFailure
+    from examples.byo_agent_client.workflow import save
+    target, check = interrupted_check(public_url, tmp_path)
+    credentials = json.loads((target / 'owner.json').read_text())
+    save(target / 'owner.json', {**credentials, 'session_id': 'another-session'})
+    def unexpected(*args, **kwargs): raise AssertionError('unexpected HTTP request')
+    monkeypatch.setattr(httpx.Client, 'request', unexpected)
+    with pytest.raises(RemoteFailure) as error: revoke_run(target)
+    assert error.value.code == 'recovery_session_mismatch'
+    assert not (target / 'revocation.json').exists()
+
+
+def test_w06_acknowledged_revoke_only_rechecks_denial_after_read_failure(public_url, tmp_path, monkeypatch):
+    import httpx
+    target, check = interrupted_check(public_url, tmp_path)
+    request = httpx.Client.request
+    calls = {'deletes': 0, 'verification': 0}
+    def lose_verification(self, method, url, **kwargs):
+        if method == 'DELETE': calls['deletes'] += 1
+        if method == 'GET' and kwargs.get('headers', {}).get('Authorization') == 'Bearer ' + check.delegate_token:
+            calls['verification'] += 1
+            if calls['verification'] == 1: raise httpx.ReadError('verification unavailable')
+        return request(self, method, url, **kwargs)
+    monkeypatch.setattr(httpx.Client, 'request', lose_verification)
+    with pytest.raises(httpx.ReadError): revoke_run(target)
+    first = json.loads((target / 'revocation.json').read_text())
+    assert first['status'] == 'incomplete' and first['attempts'][0]['status'] == 'acknowledged'
+    final = revoke_run(target)
+    assert final['status'] == 'completed' and 'failure_code' not in final
+    assert calls == {'deletes': 1, 'verification': 2}
+    assert final['command'] == first['command']
+    evidence('explicit-revoke-verification-recovery', json.loads((target / 'trace.json').read_text()), {'revocation': final})
