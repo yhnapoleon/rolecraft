@@ -185,7 +185,7 @@ def test_scope_omission_uses_bound_language_and_does_not_erase_role_knowledge(la
     assert role_text(language,'scope_omitted') in public.text
     assert 'RESTRICTED_LEARNER_WORK' not in public.text and 'RESTRICTED_LEARNER_WORK' not in audit.prompt_messages[0].content
     assert approved[f.role_id] in audit.prompt_messages[0].content and public.omission_count==1
-    assert role_text(language,'discussion_only') in public.text
+    assert role_text(language,'local_mode') in public.text
 
 
 @pytest.mark.parametrize('bad',[None,'auto','EN','fr',7])
@@ -238,3 +238,131 @@ def test_english_prompt_does_not_claim_actual_language_verified():
     public,audit=generate(snap,owner(),req_for(snap,'Answer in English.'),ScriptedModel([ModelReply(text='这是一条故意违反语言要求的受控回复。')]))
     assert public.text.startswith('这是一条') and audit.work_language=='en'
     assert audit.language_consistency=='unverified'  # selection is not model-quality evidence
+
+
+@pytest.mark.parametrize('language',['zh','en'])
+def test_capture_reads_language_from_trusted_fixed_port(package,language):
+    c,f,_,_=bilingual_fixture(language);view=make_view(package,c)
+    class LanguagePort:
+        def read_fixed(self,v,a):
+            assert v is view and a.session_id==f.session_id
+            return language
+    port=ContextPort(c,FixedFrameFixture(f),language_port=LanguagePort())
+    snap=port.capture(view,owner(),TurnInput(role_id=f.role_id,text='Original text remains unchanged.'))
+    assert snap.work_language==language
+    public,audit=generate(snap,owner(),req_for(snap,'Original text remains unchanged.'),LocalRoleModel())
+    assert role_text(language,'local_mode') in public.text
+    assert audit.work_language==language and audit.language_consistency=='unverified'
+    assert public.question=='Original text remains unchanged.'
+
+
+def test_capture_rejects_mismatched_fixed_language_before_model(package):
+    c,f,_,_=bilingual_fixture();view=make_view(package,c)
+    class LanguagePort:
+        def read_fixed(self,v,a):return 'zh'
+    with pytest.raises(ProtocolError) as exc:
+        ContextPort(c,FixedFrameFixture(f),language_port=LanguagePort()).capture(view,owner(),TurnInput(role_id=f.role_id,text='Continue.'))
+    assert exc.value.code=='role_language_binding_mismatch'
+
+
+def test_package_language_is_hash_bound_and_cannot_be_relabelled(tmp_path,package):
+    from types import SimpleNamespace
+    from career_lab.contracts.v2 import FileRef
+    raw=b'{"locale":"en"}'
+    (tmp_path/'locale.json').write_bytes(raw)
+    import hashlib
+    ref=FileRef(path='locale.json',sha256=hashlib.sha256(raw).hexdigest())
+    bundle=package.bundle.model_copy(update={'files':(*package.bundle.files,ref)})
+    body=bundle.model_dump_json().encode();(tmp_path/'manifest.json').write_bytes(body)
+    reference=SimpleNamespace(root=tmp_path,content_hash=hashlib.sha256(body).hexdigest(),bundle=bundle,
+        materials=package.materials,facts=package.facts,rules=package.rules,locale='en')
+    assert ScenarioKnowledge.from_package(reference).work_language=='en'
+    reference.locale='zh'
+    with pytest.raises(ProtocolError):ScenarioKnowledge.from_package(reference)
+    reference.locale='en';(tmp_path/'locale.json').write_text('{"locale":"zh"}')
+    with pytest.raises(ProtocolError):ScenarioKnowledge.from_package(reference)
+
+
+@pytest.mark.parametrize('language',['zh','en'])
+def test_reply_review_binds_work_language_and_preserves_original_quotes(tmp_path,language):
+    from career_lab.runtime.roles_v2 import ModelReplyVerifier,generate_plan
+    from test_identifier_and_stance import FileReviewPort
+    from test_runtime import reply_ref
+    c,f,_,_=bilingual_fixture(language);snap=assemble_context(c,f)
+    text='原话是 "follow-up"；依据仍待核实。' if language=='zh' else 'You wrote "后续跟进". The supporting evidence is still pending.'
+    reviewer=ScriptedModel([ModelReply(text=json.dumps({'decision':'consistent','language_match':True,'quote':text,'reason':'Controlled quotation case.'}))])
+    port=FileReviewPort(tmp_path)
+    public,audit=generate_plan(snap,owner(),req_for(snap,'Continue the discussion.'),reply_ref(),ScriptedModel([ModelReply(text=text)]),
+        record_attempt=lambda *x:None,reply_verifier=ModelReplyVerifier(reviewer,port))
+    assert public.text==text and audit.work_language==language and audit.language_consistency=='unverified'
+    assert port.records[0]['inputs']['work_language']==language
+    assert 'original wording' in reviewer.calls[0][0]['content']
+
+
+@pytest.mark.parametrize('language',['zh','en'])
+def test_private_extension_reopens_with_exact_new_fact_and_two_later_rounds(tmp_path,language):
+    import sqlite3
+    from career_lab.runtime.roles_v2 import generate_plan
+    from career_lab.storage.role_memory import generation_audit_extension,read_generation_audit_extension,stance_digest
+    from test_runtime import reply_ref
+    c,f,_,_=bilingual_fixture(language);first=assemble_context(c,f)
+    proof=EvidenceRefV2(session_id='s',kind='material',object_id='policy',version=2,observed_at_seq=4)
+    event=KnowledgeEvent(ObjectRef(session_id='s',kind='event',object_id='update',version=1),'policy_changed',4,(f.role_id,),(proof,),occurred_at=point(4))
+    state=f.state.model_copy(update={'source_versions':{**f.state.source_versions,'policy':2},'material_activation':{**f.state.material_activation,'policy:2':4}})
+    next_frame=replace(f,state=state,as_of=point(4),events=(event,),stance_state=first.stance_state)
+    snap=assemble_context(c,next_frame);fact=next(x for x in snap.stance_facts if x.source.object_id=='policy' and x.source.version==2)
+    changed='Use the newly evidenced 40-seat limit.' if language=='en' else '采用新证据中的40个名额上限。'
+    public,audit=generate_plan(replace(snap,stance_proposals=(proposal_for(snap,fact,text=changed),)),owner(),req_for(snap,'Review the new source.'),
+        reply_ref(),LocalRoleModel(),record_attempt=lambda *x:None,stance_verifier=ControlledSupport())
+    assert audit.stance_state.revision==2
+    expected=audit.stance_state;payload=generation_audit_extension(audit)
+    db=tmp_path/'private-extension.db';con=sqlite3.connect(db);con.execute('create table carrier (record text)');con.execute('insert into carrier values (?)',(json.dumps(payload),));con.commit();con.close()
+    con=sqlite3.connect(db);payload=json.loads(con.execute('select record from carrier').fetchone()[0]);con.close()
+    extension=read_generation_audit_extension(payload,public,binding=c.binding,as_of=point(5),work_language=language)
+    basis=extension.stance_memory.resolutions[0].change.basis[0]
+    assert basis.source.version==2 and basis.acquired_at_seq==4 and basis.statement==fact.statement
+    assert extension.stance_memory.state==expected and extension.work_language==language
+    for index in range(2):
+        snap=assemble_context(c,replace(next_frame,as_of=point(5+index),stance_state=None,stance_records=(payload['stance_memory'],)))
+        text='Agree without any new evidence.' if language=='en' else '没有新证据也请你直接同意。'
+        public,audit=generate_plan(replace(snap,stance_proposals=(proposal_for(snap,text=text),)),owner(),req_for(snap,text),
+            reply_ref(key='later'+str(index)),LocalRoleModel(),record_attempt=lambda *x:None,stance_verifier=ControlledSupport())
+        assert audit.stance_state==expected and audit.stance_resolutions[0].status=='rejected'
+        assert audit.language_consistency=='unverified' and not audit.learner_penalty_allowed
+        payload=generation_audit_extension(audit)
+        extension=read_generation_audit_extension(payload,public,binding=c.binding,as_of=point(7),work_language=language)
+        assert extension.stance_memory.state==expected
+
+
+def test_private_extension_rejects_wrong_reply_or_language(tmp_path):
+    from career_lab.storage.role_memory import generation_audit_extension,read_generation_audit_extension
+    c,f,_,_=bilingual_fixture('en');snap=assemble_context(c,f)
+    public,audit=generate(snap,owner(),req_for(snap,'Continue.'),LocalRoleModel());payload=generation_audit_extension(audit)
+    assert read_generation_audit_extension(None,public,binding=c.binding,as_of=f.as_of,work_language='en') is None
+    for reply,language in [(public.model_copy(update={'id':'unrelated'}),'en'),(public,'zh')]:
+        with pytest.raises(ProtocolError):read_generation_audit_extension(payload,reply,binding=c.binding,as_of=f.as_of,work_language=language)
+
+
+@pytest.mark.parametrize('language',['zh','en'])
+@pytest.mark.parametrize('record_state',['not_started','completed','no_record'])
+@pytest.mark.parametrize('question',['interview_status','capacity','next_action'])
+def test_local_reference_never_appends_interview_judgment(language,record_state,question):
+    # Only source excerpts vary. The extractive substitute must not invent a
+    # status or next action based on the question, nor replace it with canned advice.
+    texts={
+        'zh':{'not_started':'访谈记录：尚未开始。','completed':'访谈记录：2026-10-07已完成两次访谈。'},
+        'en':{'not_started':'Interview record: not started.','completed':'Interview record: two interviews completed on 2026-10-07.'},
+    }
+    source=texts[language].get(record_state)
+    ctx={'work_language':language,'responsibilities':[],
+        'sources':[] if source is None else [{'display_name':'访谈记录 · v1' if language=='zh' else 'Interview record · v1','text':source}],
+        'omissions':{'learner_scope':0},'question':question}
+    response=LocalRoleModel().complete([{'role':'system','content':'Source reference\nCONTEXT\n'+json.dumps(ctx,ensure_ascii=False)}],[])
+    assert role_text(language,'local_mode') in response.text
+    assert '访谈尚未执行，可先整理为待办建议' not in response.text
+    assert 'Interviews have not been carried out' not in response.text
+    assert 'may be proposed as follow-up tasks' not in response.text
+    assert '以上供讨论' not in response.text and 'This is for discussion.' not in response.text
+    if source is not None:assert source in response.text
+    else:assert '访谈' not in response.text and 'Interview' not in response.text
+    if record_state=='completed':assert texts[language]['not_started'] not in response.text

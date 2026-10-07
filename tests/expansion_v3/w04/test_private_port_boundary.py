@@ -30,8 +30,13 @@ class ControlledSnapshot:
 
 class ControlledPrivatePort:
     def __init__(self,audience=('system','tech_lead'),empty=False,wrong_role=False):
-        self.audience,self.empty,self.wrong_role=audience,empty,wrong_role;self.attempts=[];self.generations=[];self.plans=[]
+        self.audience,self.empty,self.wrong_role=audience,empty,wrong_role;self.attempts=[];self.generations=[];self.plans=[];self.claims=set()
     def require_available(self):pass
+    def claim_model_call(self,envelope,auth,phase,revision):
+        key=(auth.session_id,envelope.origin_request_id,phase)
+        if key in self.claims:return False
+        self.claims.add(key);return True
+
     def record_attempt(self,envelope,auth,attempt,error):self.attempts.append((attempt,error))
     def prepare(self,view,envelope,auth,generation):
         self.generations.append(generation)
@@ -47,10 +52,21 @@ class ControlledPrivatePort:
         self.plans.append(write);return (write,)
 
 
+class ControlledReplyVerifier:
+    """Fixtures only: no claim of natural-language verification."""
+    retries=0
+    def check(self,snapshot,auth,request,text,*,record_attempt,begin_call=None):
+        from career_lab.storage.role_memory import ReplyVerification,stance_digest
+        from career_lab.contracts.v2 import FileRef
+        if begin_call:begin_call('role_reply_review','controlled-no-model-fixture')
+        return ReplyVerification('consistent',True,stance_digest(snapshot.stance_state),digest(text),snapshot.context.as_of,
+            FileRef(path='controlled-no-model-fixture.json',sha256=digest('fixture only')))
+
+
 def wired_case(tmp_path,package,catalog,port):
     store,auth=common_store(tmp_path,catalog)
     model=ScriptedModel([ModelReply(text='我需要先核对依据。')])
-    service=RoleService(ContextPort(catalog,ControlledSnapshot(package,catalog)),model,private_port=port)
+    service=RoleService(ContextPort(catalog,ControlledSnapshot(package,catalog)),model,private_port=port,reply_verifier=ControlledReplyVerifier())
     registry=ExtensionRegistry();service.install(registry);gateway=Gateway(store,registry)
     view=store.view(auth);body=TurnInput(role_id='tech_lead',text='请核对').model_dump(mode='json')
     command=Command(schema_version=2,request_id='role-turn',operation='turns.create',expected_version=view.state.business_seq,
@@ -99,3 +115,65 @@ def test_controlled_missing_or_wrong_role_audit_is_rejected(tmp_path,package,cat
     worker.run_once();job=worker.jobs.get(jid)
     assert job['status']=='failed' and job['error']==error
     assert not [x for x in store.view(auth).objects if x.ref.kind=='role_reply']
+
+
+def test_provider_stays_closed_without_durable_claim_port(tmp_path,package,catalog):
+    port=ControlledPrivatePort();port.claim_model_call=None
+    store,auth,model,worker,jid,_=wired_case(tmp_path,package,catalog,port)
+    try:
+        worker.run_once();job=worker.jobs.get(jid)
+        assert job['error']=='role_attempt_guard_unavailable' and not model.calls
+    finally:store.db.engine.dispose()
+
+
+@pytest.mark.parametrize("first_outcome",["returned","timeout"])
+def test_model_claim_survives_worker_reconstruction_before_commit(tmp_path,package,catalog,first_outcome):
+    """A controlled durable port exercises the new production callback contract."""
+    import sqlite3
+    from career_lab.api.modules import JobEnvelope
+    class DurablePort(ControlledPrivatePort):
+        def claim_model_call(self,envelope,auth,phase,revision):
+            con=sqlite3.connect(tmp_path/'model-claims.db')
+            try:
+                con.execute('create table if not exists calls (session text, request text, phase text, primary key(session,request,phase))')
+                try:con.execute('insert into calls values (?,?,?)',(auth.session_id,envelope.origin_request_id,phase));con.commit();return True
+                except sqlite3.IntegrityError:return False
+            finally:con.close()
+    port=DurablePort();store,auth,model,worker,jid,service=wired_case(tmp_path,package,catalog,port)
+    try:
+        envelope=JobEnvelope.model_validate(worker.jobs.get(jid)['payload'])
+        # Direct handler evaluation models a process loss after provider return,
+        # before public/private mutation commit. No shared worker code is changed.
+        view=store.view(auth)
+        if first_outcome=='timeout':
+            from career_lab.runtime.roles_v2 import RoleModelTransient
+            def timeout(messages,tools):model.calls.append(messages);raise TimeoutError()
+            model.complete=timeout
+            with pytest.raises(RoleModelTransient):service.generate(view,envelope,auth)
+        else:service.generate(view,envelope,auth)
+        # A provider/model configuration change is not user authorization to retry.
+        model.revision='different-provider-model-configuration'
+        replacement=RoleService(service.port,model,private_port=DurablePort(),reply_verifier=ControlledReplyVerifier())
+        with pytest.raises(ProtocolError) as exc:replacement.generate(view,envelope,auth)
+        assert exc.value.code=='role_model_call_already_claimed' and len(model.calls)==1
+    finally:store.db.engine.dispose()
+
+
+def test_provider_without_reply_verifier_stops_before_any_model_call(tmp_path,package,catalog):
+    port=ControlledPrivatePort();store,auth,model,worker,jid,service=wired_case(tmp_path,package,catalog,port)
+    service.reply_verifier=None
+    try:
+        worker.run_once();job=worker.jobs.get(jid)
+        assert job['error']=='role_reply_verifier_unavailable' and not model.calls and not port.claims
+    finally:store.db.engine.dispose()
+
+
+def test_local_reply_with_installed_reviewer_still_requires_durable_claim(tmp_path,package,catalog):
+    from career_lab.runtime.roles_v2 import LocalRoleModel
+    port=ControlledPrivatePort();port.claim_model_call=None
+    store,auth,model,worker,jid,service=wired_case(tmp_path,package,catalog,port)
+    service.model=LocalRoleModel()  # A real reviewer could still call an external provider.
+    try:
+        worker.run_once();job=worker.jobs.get(jid)
+        assert job['error']=='role_attempt_guard_unavailable' and not port.attempts
+    finally:store.db.engine.dispose()

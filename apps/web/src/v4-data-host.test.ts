@@ -110,6 +110,26 @@ describe('v4 single host persistence and recovery', () => {
     expect(host.draft('roles', 'supervisor')).toBe('unsent question');
     expect(map.get('rolecraft.live.workspace.v1')).toBe('legacy-bytes');
   });
+  it('cannot dispatch secret-bearing delegation services before the control-plane adapter exists', async () => {
+    const { host, fetcher } = setup();
+    expect(host.snapshot().available['delegations.create']).toBe(false);
+    await expect(host.command('delegations.create', { agent_label: 'test' })).rejects.toMatchObject({ code: 'delegation_host_not_ready' });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+  it('previews an import through the existing read-only handler without a write journal', async () => {
+    const { host, fetcher, map } = setup();
+    fetcher.mockImplementation(async (_url, init) => {
+      if (!init?.body) return reply({ schema_version: 2, state });
+      const sent = JSON.parse(String(init.body));
+      expect(sent.operation).toBe('workspace_imports');
+      expect(sent.payload.mode).toBe('preview');
+      return reply({ schema_version: 2, result: { package_id: 'p', mode: 'preview', applied: false, as_of: point } });
+    });
+    expect(await host.query('workspace_imports', { package_id: 'p', mode: 'preview' })).toMatchObject({ applied: false });
+    expect(map.size).toBe(0);
+    await expect(host.query('workspace_imports', { package_id: 'p', mode: 'apply' })).rejects.toMatchObject({ code: 'invalid_read' });
+    expect(posts(fetcher)).toHaveLength(1);
+  });
   it('retains unsaved text in memory after a quota failure and flushes it when storage recovers', async () => {
     const { host, storage, ports } = setup();
     await host.keepDraft('workspace', 'work', 'old');

@@ -1,6 +1,7 @@
 import { createGatewayTransport } from './gateway-transport';
 import { request, sessionPath, type Transport } from './api';
-import { T } from './app/i18n';
+import { T, locale } from './app/i18n';
+import { V4LiveData } from './v4-live-data';
 import { blankPilot, WorkspaceStore } from './store';
 import type { Deliverable, LocalSession, Material, Pilot, RoleId, Scenario, TestRunOrigin, TurnContext } from './types';
 
@@ -14,7 +15,7 @@ const workIds: Record<string, string> = { scope: 'scope_filter', fallback: 'huma
 export const fromPilot = (p: Pilot) => ({ participants: p.participants, domains: p.knowledge_domains.map(d => d === 'stable_faq' ? 'faq' : d), update: p.update_strategy === 'manual_policy' ? 'manual' : p.update_strategy, fallback: p.fallback, workItems: p.work_items.map(w => Object.keys(workIds).find(k => workIds[k] === w) || w), launchDay: p.launch_day });
 export function toPilot(c: any): Pilot {
   if (!['daily', 'realtime', 'manual'].includes(c.update) || !['human', 'none'].includes(c.fallback)) throw new Error(T('这项设置没有对应的后端接口。', 'This setting has no server equivalent.'));
-  if (c.domains.some((d: string) => !['faq', 'policy'].includes(d)) || c.workItems.some((w: string) => !workIds[w])) throw new Error(T('未知知识范围或工作项。', 'Unknown knowledge area or work item.'));
+  if (c.domains.some((d: string) => !['faq', 'policy', 'onboarding', 'policy_travel', 'policy_meal', 'policy_leave'].includes(d)) || c.workItems.some((w: string) => !workIds[w])) throw new Error(T('未知知识范围或工作项。', 'Unknown knowledge area or work item.'));
   return { participants: c.participants, knowledge_domains: c.domains.map((d: string) => d === 'faq' ? 'stable_faq' : d), launch_day: c.launchDay, update_strategy: c.update === 'manual' ? 'manual_policy' : c.update, fallback: c.fallback, work_items: c.workItems.map((w: string) => workIds[w]) };
 }
 
@@ -23,11 +24,13 @@ export class LiveWorkbench {
   readonly fromPilot = fromPilot;
   readonly engine: Engine;
   private state: any;
+  private readonly v4: V4LiveData;
   private notify = (_changed: boolean) => {};
   private signature = '';
   private materialCache = new Map<string, Material>();
-  constructor(readonly base: Engine, storage: Pick<Storage, 'getItem' | 'setItem'>, private transport: Transport = request) {
+  constructor(readonly base: Engine, storage: Pick<Storage, 'getItem' | 'setItem'>, private transport: Transport = request, private options: { newSessionProtocol?: 2 } = {}) {
     this.store = new WorkspaceStore(storage, transport);
+    this.v4 = new V4LiveData(this.store, storage);
     this.engine = { ...base,
       scenarios: base.scenarios.map((s: any) => s.id === 'urgent' ? { ...s, deadline: 5 } : s),
       getMaterials: (a: Attempt) => a.backend?.materials || [],
@@ -75,7 +78,7 @@ export class LiveWorkbench {
     if (!this.state) return;
     const snap = this.store.getSnapshot();
     for (const s of snap.workspace.sessions) this.project(this.ensureAttempt(s), s);
-    const signature = JSON.stringify(snap.workspace.sessions.map(s => [s.id, s.world, s.materials, s.timeline, s.tests, s.testNotes, s.testRunMeta, s.feedback, s.pending?.jobId, s.pending?.job?.status, !!s.pending, s.feedbackFailure, s.failedTurn]));
+    const signature = JSON.stringify(snap.workspace.sessions.map(s => [s.id, s.world, s.materials, s.timeline, s.tests, s.testNotes, s.testRunMeta, s.feedback, s.pending?.jobId, s.pending?.job?.status, !!s.pending, s.feedbackFailure, s.failedTurn, s.v2Workspace]));
     const changed = signature !== this.signature; this.signature = signature;
     this.notify(changed);
   }
@@ -90,7 +93,7 @@ export class LiveWorkbench {
       const previous = a.tests.find((p: any) => p.id === t.id) || {};
       const saved = s.testRunMeta?.[t.id];
       const meta = saved || previous;
-      return { id: t.id, question: t.query, answer: t.answer, citations: t.citations.map(c => ({ id: c.material_id, version: c.version, title: s.materials.find(m => m.id === c.material_id)?.title || c.material_id })), expectation: s.testNotes[t.id]?.expected ?? saved?.expectation ?? '', diagnosis: s.testNotes[t.id]?.diagnosis || '', policyVersion: t.source_versions.policy, indexVersion: t.indexed_versions.policy, sourceVersions: { ...t.source_versions }, indexedVersions: { ...t.indexed_versions }, configVersion: t.config_version, config: saved ? (saved.config ? fromPilot(saved.config) : null) : previous.config || null, taskId: meta.taskId || null, createdAt: t.created_at || meta.createdAt || '', workId: meta.workId, workRevision: meta.workRevision, caseId: meta.caseId, caseRevision: meta.caseRevision, investigationId: meta.investigationId, investigationRevision: meta.investigationRevision, blockId: meta.blockId, blockRevision: meta.blockRevision, baselineRunId: meta.baselineRunId, requestId: meta.requestId, intent: meta.intent || '', refs: meta.refs || [], mode: t.mode, asOfSeq: t.as_of_seq, fallback: t.fallback, stale: t.stale };
+      return { id: t.id, question: t.query, answer: (s.protocol === 2 && t.mode === 'waiting_model' ? T('等待模型接入（当前为原文检索结果）\n\n', 'Waiting for model connection (source retrieval result)\n\n') : '') + t.answer, citations: t.citations.map(c => ({ id: c.material_id, version: c.version, title: s.v2MaterialTitles?.[c.material_id + ':' + c.version] || s.materials.find(m => m.id === c.material_id && m.version === c.version)?.title || c.material_id })), expectation: s.testNotes[t.id]?.expected ?? saved?.expectation ?? '', diagnosis: s.testNotes[t.id]?.diagnosis || '', policyVersion: t.source_versions.policy, indexVersion: t.indexed_versions.policy, sourceVersions: { ...t.source_versions }, indexedVersions: { ...t.indexed_versions }, configVersion: t.config_version, config: saved ? (saved.config ? fromPilot(saved.config) : null) : previous.config || null, taskId: meta.taskId || null, createdAt: t.created_at || meta.createdAt || '', workId: meta.workId, workRevision: meta.workRevision, caseId: meta.caseId, caseRevision: meta.caseRevision, investigationId: meta.investigationId, investigationRevision: meta.investigationRevision, blockId: meta.blockId, blockRevision: meta.blockRevision, baselineRunId: meta.baselineRunId, requestId: meta.requestId, intent: meta.intent || '', refs: meta.refs || [], mode: t.mode, asOfSeq: t.as_of_seq, fallback: t.fallback, stale: t.stale };
     });
     a.turnTask ||= {};
     for (const t of s.timeline.turns) if (t.context?.task_id !== undefined) a.turnTask[t.trace_id] = t.context.task_id;
@@ -119,9 +122,11 @@ export class LiveWorkbench {
       return { sessionId: session.id, token: session.token };
     }, fetcher);
   }
+  configDomains(a: Attempt) { const s = this.session(a); return s?.protocol === 2 ? (s.v2Domains ?? []).map(d => d === 'stable_faq' ? 'faq' : d) : ['faq','policy']; }
+  v4Host(a?: Attempt) { const s = this.session(a); return s?.protocol === 2 ? this.v4.host(s) : null; }
   async start(caseId: string, opts?: any) {
     if (!scenarios[caseId]) throw new Error(T('后端不支持这个情境。', 'The server does not support this situation.'));
-    const id = await this.store.create(scenarios[caseId]);
+    const id = await this.store.create(scenarios[caseId], this.options.newSessionProtocol === 2 ? locale() : undefined);
     if (!id) throw new Error(this.store.getSnapshot().error || T('会话未创建。', 'The session was not created.'));
     const a = this.ensureAttempt(this.store.active()!, opts); if (opts) Object.assign(a, opts);
     this.state.activeId = id; this.project(a, this.store.active()!); return a;
@@ -218,6 +223,10 @@ export class LiveWorkbench {
   }
   private async exactMaterial(a: Attempt, id: string, version: number, asOfSeq: number): Promise<Material | null> {
     const { s, current } = this.visibleMaterial(a, id, version);
+    if (s.protocol === 2) {
+      const value: any = await this.v4.host(s).query('objects.read', { kind: 'material', object_id: id, version });
+      return this.cacheMaterial(s.id, { id, version, title: value.content.title, content: value.content.fragments.map((f: any) => f.text).join('\n\n') });
+    }
     if (current.version === version) return this.cacheMaterial(s.id, current);
     const cached = this.materialCache.get(JSON.stringify([s.id, id, version]));
     if (cached) return structuredClone(cached);

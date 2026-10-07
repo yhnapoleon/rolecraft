@@ -36,3 +36,21 @@ it('merges overlapping pages once and preserves unknown sharing on scoped reads'
   await client.refresh();expect(client.snapshot().products).toHaveLength(1);expect(client.snapshot().shares.p).toEqual([share]);
   expect(client.snapshot().sharingComplete).toBe(false);expect(client.snapshot().products[0].visibility).toBeNull();
 });
+
+it('reads exact saved history without replacing the current head or local draft',async()=>{
+  const head:any={session_id:'s',product_id:'p',version:2,title:'current',content:'private v2',visibility:'private'};
+  const old:any={...head,version:1,title:'old',content:'shared v1',visibility:'shared'};
+  const data=new Map<string,string>();const storage={getItem:(k:string)=>data.get(k)??null,setItem:(k:string,v:string)=>{data.set(k,v);}};
+  const client=new WorkspaceClient('s',storage,async path=>path.includes('/versions')?{...page,items:[old,head]}:path.includes('work-items')?page:{...page,items:[head]},undefined,{coordinator:new MemoryCoordinator()});
+  await client.refresh();await client.keepDraft('p',{title:'unsent',content:'keep my local text',kind:'text'});
+  expect((await client.loadVersions('p')).map(p=>[p.version,p.content,p.visibility])).toEqual([[2,'private v2','private'],[1,'shared v1','shared']]);
+  expect(client.snapshot().products[0]).toEqual(head);
+  expect(client.snapshot().journal.drafts.p.content).toBe('keep my local text');
+});
+
+it('rejects an unrelated object in a history response',async()=>{
+  const data=new Map<string,string>();const storage={getItem:(k:string)=>data.get(k)??null,setItem:(k:string,v:string)=>{data.set(k,v);}};
+  const client=new WorkspaceClient('s',storage,async()=>({...page,items:[{session_id:'s',product_id:'other',version:1}]}),undefined,{coordinator:new MemoryCoordinator()});
+  await expect(client.loadVersions('p')).rejects.toThrow('Invalid product history');
+  expect(client.snapshot().products).toEqual([]);
+});

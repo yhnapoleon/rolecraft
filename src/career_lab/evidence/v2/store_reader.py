@@ -17,10 +17,10 @@ from .history import before
 
 
 class StoreEvidenceReader:
-    def __init__(self,store,auth,*,policies,source_reader=None,rule_provider=None):
+    def __init__(self,store,auth,*,policies,source_reader=None,rule_provider=None,submission_rule_provider=None):
         if auth.actor_id!='learner' or auth.executor.kind not in {'human','external_agent'}:raise C.ProtocolError('public_actor_required',status=403)
         self.store=store;self.identity=(auth.session_id,auth.actor_id,auth.credential_id)
-        self._policies=tuple(policies);self.source_reader=source_reader;self.rule_provider=rule_provider
+        self._policies=tuple(policies);self.source_reader=source_reader;self.rule_provider=rule_provider;self.submission_rule_provider=submission_rule_provider
         if not self._policies:raise ValueError('frozen evaluation policies required')
         self.records={};self.event_targets={};self.activities=[]
         def capture(view):
@@ -136,3 +136,23 @@ class StoreEvidenceReader:
             except C.ProtocolError:continue
             tests.append(C.TestResultV2.model_validate(stored.content));refs.append(record.ref)
         return RuleSnapshot(as_of,tests=tuple(tests),test_refs=tuple(refs),config_version=state.config_version)
+
+
+    def submission_snapshot(self,auth,submission):
+        """All submitted works are one evaluation scope for rubric-v2.
+
+        Single-work source compatibility is retained. Multiple-work content
+        absence cannot be inferred by merging per-work snapshots; without the
+        trusted aggregate provider it remains unknown.
+        """
+        self.authorize(auth)
+        if submission.session_id!=auth.session_id:raise C.ProtocolError('not_found',status=404)
+        for ref in submission.products:self.read(auth,ref,submission.as_of)
+        if self.submission_rule_provider is not None:
+            return self.submission_rule_provider(auth,submission)
+        if len(submission.products)==1:return self.snapshot(auth,submission.products[0],submission.as_of)
+        histories=[]
+        for ref in submission.products:
+            for duty in self.snapshot(auth,ref,submission.as_of).responsibilities:
+                if duty not in histories:histories.append(duty)
+        return RuleSnapshot(submission.as_of,config_version=submission.config.config_version if submission.config else None,responsibilities=tuple(histories))

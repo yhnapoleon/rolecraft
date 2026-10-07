@@ -7,27 +7,56 @@ CONFIG_OPTIONS = ('domains', 'scope_filter', 'update_strategy', 'fallback', 'chu
                   'prohibited_topics', 'work_items', 'participants', 'launch_day')
 
 
-def render_public_cases(records):
-    rows = ['整理：筹备期技术试用记录。以下试验均在产品经理接手前完成，各试验单独采用所列初始配置和同一批初始来源。试验编号用于回查，不是本次工作区的配置版本。']
+def cell(value):
+    return str(value).replace("|","\\|").replace("\n"," ").strip()
+
+
+def display(value):
+    if value is None:return "—"
+    if isinstance(value,bool):return "true" if value else "false"
+    if isinstance(value,(tuple,list)):return ", ".join(map(str,value)) or "—"
+    if isinstance(value,dict):return "; ".join(f"{k}: {v}" for k,v in value.items()) or "—"
+    return str(value)
+
+
+def render_public_cases(records,*,locale="zh"):
+    en=locale=="en"
+    intro=("Preparation-stage trials, before the Product Manager handoff. Each trial uses an independent initial configuration and the same initial sources." if en else "筹备期试用：全部发生在产品经理接手前，每个试验独立采用其初始配置及同一批初始来源。")
+    detail=("Answers below are excerpts. Open Trial settings and complete answers and find the same trial ID for the full answer, requested/effective settings, reasons and source versions." if en else "下表回答为节选。完整原文、请求配置、实际配置、原因码及来源版本见《试用配置与完整回答》，按同一试验编号核对。")
+    table=["| Trial | Question | Answer excerpt | Status / reason | Citation |" if en else "| 试验 | 提问 | 实际回答节选 | 状态／原因码 | 引用 |", "| --- | --- | --- | --- | --- |"]
+    labels={"answered":"已作答","answered_with_warning":"带警示作答","fallback":"转人工","failed":"未作答"}
     for record in records['records']:
-        result = TestResultV2.model_validate(record['result'])
-        requested = result.config.requested.model_dump(mode='json')
-        effective = result.config.effective.model_dump(mode='json')
-        rows.extend([
-            f"试验{record['trial_id']}｜提问：{result.query}",
-            '请求配置：' + json.dumps({k: requested[k] for k in CONFIG_OPTIONS}, ensure_ascii=False, sort_keys=True),
-            '实际配置：' + json.dumps({k: effective[k] for k in CONFIG_OPTIONS}, ensure_ascii=False, sort_keys=True),
-            '参数差异：' + json.dumps(result.config.differences, ensure_ascii=False, sort_keys=True),
-            f'实际回答：{result.answer}',
-            '引用：' + ('；'.join(f'{r.object_id}@{r.version}' for r in result.citations) or '无'),
-            '源版本：' + json.dumps(result.execution.source_versions, ensure_ascii=False, sort_keys=True) +
-            '；索引版本：' + json.dumps(result.execution.indexed_versions, ensure_ascii=False, sort_keys=True),
-            f"实际状态：{result.status}；原因码：{result.error_code or '无错误'}。",
-        ])
+        result=TestResultV2.model_validate(record['result'])
+        answer=result.answer if len(result.answer)<=88 else result.answer[:88]+"…"
+        status=result.status if en else labels[result.status]
+        reason=result.error_code or ("none" if en else "无错误")
+        refs="; ".join(f"{r.object_id}@{r.version}" for r in result.citations) or "—"
+        table.append("| "+" | ".join(cell(x) for x in (record['trial_id'],result.query,answer,status+" / "+reason,refs))+" |")
+    return [intro,detail,"\n".join(table)]
+
+
+def render_case_details(records,*,locale="zh"):
+    en=locale=="en"
+    rows=["Each card refers to a preparation-stage trial, not a configuration in your current workspace." if en else "下列配置卡属于接手前的独立试验，不是当前工作区的配置版本。"]
+    for record in records['records']:
+        result=TestResultV2.model_validate(record['result']);req=result.config.requested;eff=result.config.effective
+        rows.append(f"## {record['trial_id']}")
+        rows.append(("Question: " if en else "提问：")+result.query)
+        rows.append(("Complete actual answer: " if en else "完整实际回答：")+result.answer)
+        rows.append(("Status / reason: " if en else "状态／原因码：")+result.status+" / "+(result.error_code or ("none" if en else "无错误")))
+        rows.append(("Citations: " if en else "引用：")+("; ".join(f"{r.object_id}@{r.version}" for r in result.citations) or "—"))
+        rows.append(("Source versions: " if en else "源版本：")+display(result.execution.source_versions)+("; Index versions: " if en else "；索引版本：")+display(result.execution.indexed_versions))
+        rows.append(("Trial configuration: " if en else "试验配置标识：")+f"{req.id}; version={req.version}; config_version={req.config_version}")
+        table=["| Setting | Requested | Effective |" if en else "| 参数 | 请求配置 | 实际配置 |", "| --- | --- | --- |"]
+        requested=req.model_dump(mode="json");effective=eff.model_dump(mode="json")
+        for key in CONFIG_OPTIONS:table.append("| "+" | ".join(cell(x) for x in (key,display(requested[key]),display(effective[key])))+" |")
+        rows.append("\n".join(table))
+        rows.append(("Setting differences: " if en else "参数差异：")+display(result.config.differences))
     return rows
 
 
-def validate_public_cases(records, initial, materials, kb_ids):
+def validate_public_cases(records, initial, materials, kb_ids, *, locale="zh"):
+    if records.get('locale','zh')!=locale:raise ProtocolError('public_case_locale_mismatch')
     if records.get('schema_version') != 2 or records.get('story_phase') != 'before_pm_handoff':
         raise ProtocolError('public_case_phase_invalid')
     trials = records.get('records', [])

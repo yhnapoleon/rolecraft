@@ -8,6 +8,7 @@ from career_lab.storage.v2_store import V2Store,Mutation,TransactionResult
 class CreateSessionV2(V2):
     schema_version: Literal[2]
     scenario: Identifier
+    work_language: Literal['zh','en'] | None = None
 
 class V2Response(V2):
     result: dict[str,JsonValue]
@@ -26,6 +27,7 @@ class ScenarioRegistration:
     baseline_config: AssistantConfig
     resources: dict
     scenario_state: ScenarioStateV2 | None = None
+    work_language: Literal['zh','en'] | None = None
 
 @dataclass(frozen=True)
 class StoreJobHandler:
@@ -51,7 +53,7 @@ class Operation:
 
 # Public API/tool installation whitelist. Internal snapshot/restore is deliberately absent.
 PUBLIC_OPERATIONS={
- 'turns.display','requests.read','actions','tests.create','tests.list','turns.create','submissions.create','submissions.list',
+ 'configuration.apply','workbench.read','objects.read','turns.display','requests.read','actions','tests.create','tests.list','turns.create','submissions.create','submissions.list',
  'feedback.records.read','feedback.responses.create','feedback.responses.read','feedback.responses.list',
  'feedback.create','feedback.read','approvals.resolve','materials.list','timeline','evidence.read',
  'work_items.create','work_items.list','work_items.update','work_items.batch','work_products.adopt','work_products.create','work_products.list',
@@ -154,8 +156,9 @@ class Gateway:
     def create(self,request:CreateSessionV2):
         scenario=self.registry.scenarios.get(request.scenario)
         if scenario is None:raise ProtocolError('scenario_module_unavailable',status=503)
+        if request.work_language is not None and request.work_language!=scenario.work_language:raise ProtocolError('work_language_unavailable',status=503)
         state,token=self.store.create_session(scenario.bindings,scenario.baseline_config,scenario.resources,scenario_state=scenario.scenario_state)
-        return {'schema_version':2,'session_id':state.session_id,'token':token,'state':public_state(state)}
+        return {'schema_version':2,'session_id':state.session_id,'token':token,'state':public_state(state),'binding':{'protocol':2,'sessionId':state.session_id,'workLanguage':scenario.work_language,'scenarioHash':scenario.bindings.scenario.sha256}}
     def dispatch(self,auth,name,body=None,route_params=None):
         if name=='jobs.refresh':
             command=Command.model_validate(body)

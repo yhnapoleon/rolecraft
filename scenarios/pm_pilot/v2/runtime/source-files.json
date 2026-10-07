@@ -1,18 +1,22 @@
 {
   "owned_code": {
-    "src/career_lab/assistant/v2/service.py": "6c2db88c3040e7083907b49ed2f98b12c4b86ceb2c1069ca9666e8adaa5a8aaa",
+    "src/career_lab/assistant/v2/service.py": "67a9b5b5de3621457b9277dad1b05324207939164dedb250ed4ea499385960c9",
     "src/career_lab/assistant/v2/__init__.py": "b92a51d4eb2478af5f8c8e0232cfdbfd9669457b02609653d62e16258ababa2b",
-    "src/career_lab/scenarios/v2/case_records.py": "dfa4c082b95a2787149f687521171ff88846cf068bc90c88b653a851719a5b38",
-    "src/career_lab/scenarios/v2/policy.py": "a0e9775cfde91a0d9f87e97c8d6e2b5bc582abe57bc897fcae404b92260fd6de",
+    "src/career_lab/scenarios/v2/case_records.py": "5a9c22aa21f732573ae9803cf55642c08abbd825d110170ac09d32467eb0ab46",
+    "src/career_lab/scenarios/v2/variants.py": "1aa00b78ee24055bf799b343c7ab534f90450d4853b89b5cab1fe533ebdea8fc",
+    "src/career_lab/scenarios/v2/policy.py": "87bb82873fd7eb56c3b6a5dda7957f6c0c4eef1f17734634ea92098aa84f7fb4",
     "src/career_lab/scenarios/v2/__init__.py": "98b6e25225f811b7f622f538b886dba657d4c809ed5d5c30405a95f5c751792f",
-    "src/career_lab/scenarios/v2/seed.py": "94fabdc0a62673656f557a077c2410342fca191e21928d99ef8435cf88787631",
-    "src/career_lab/scenarios/v2/engine.py": "f5cf8e4ccb85fa9d7df3c51abc52cc882478a5834d5b37654f81361948a07123",
-    "src/career_lab/scenarios/v2/content.py": "842e7bd689dbfe3228364444da468c35c36f9f116d702ca2c94593d0b0c778d3",
-    "src/career_lab/scenarios/v2/loader.py": "d60157413655e48039e0ae41eceb2818b2750dbb913ffdb90e86fe1388cbd2eb",
-    "src/career_lab/scenarios/v2/public_cases.py": "3dd55ec1f9478d9b5513ffdf56ba42975f83aa45708fa8b4b59c59159f78078c",
-    "src/career_lab/scenarios/v2/module.py": "7ca42ec821a79de41dc412f28b26708e470cb50fc99d4cdc7ef281287b712a70",
+    "src/career_lab/scenarios/v2/rebind.py": "26088499df09d657aff962341bb0bde85e42372a65463a55e981e7307ac76414",
+    "src/career_lab/scenarios/v2/localization.py": "edf29d09de7d29261d560c7c198ccaebe3d3134c259e45119638681fe3a13468",
+    "src/career_lab/scenarios/v2/seed.py": "b7ae75f5c28fd55c87cb1a1b8b6c9ee21bca554df0a78e46a2d62bfd52126a1d",
+    "src/career_lab/scenarios/v2/engine.py": "ad0aed1937d9ff96a0fe435f3dbab017000485d02de6108c8d87f47e3cd7d933",
+    "src/career_lab/scenarios/v2/content.py": "206b30eb648960d28d44887360c5c8842e5818a2fe14c01d3e0176a4dc984a5c",
+    "src/career_lab/scenarios/v2/loader.py": "1eb1546945ab3aa096b6f5887f58a41beef7fd9b66c778eecaeb6295f7036264",
+    "src/career_lab/scenarios/v2/evaluation_facts.py": "0f5d08fdf07f577084e8646ad7e17ee8d3bafa975695802e849d8d6257569a56",
+    "src/career_lab/scenarios/v2/public_cases.py": "3cf088b7555f2f231edc753dc03d30ed6eea22b53fe71e6480d1ab8032b4f479",
+    "src/career_lab/scenarios/v2/module.py": "d8428734c74f55f9f79b6a5cbf6b069c11faf34167c3dbcae340bb98f20b9411",
     "src/career_lab/scenarios/v2/probes.py": "2456b54fa3995cab375e3a6155e2ea4764a168001f96cb7b7faf1e323b30414b",
-    "src/career_lab/scenarios/v2/__main__.py": "070c2cb4c753e698a654813f45287e97a3bae193abaae1a7b55be7b2277954a2"
+    "src/career_lab/scenarios/v2/__main__.py": "a26c7f4c6589f556cdc591b161952f346034d45111597a6cf418c20bc7028af2"
   },
-  "foundation_contract_sha256": "e9e25a3cf4b956ca22c7418605e997ff85832e826995508227aad919714dc874"
+  "foundation_contract_sha256": "da85391e15b5be06d80af1b667cf37178dd549af5eda31d7c3dc743c582cc7f9"
 }

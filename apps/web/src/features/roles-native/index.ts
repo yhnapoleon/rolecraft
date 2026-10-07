@@ -45,6 +45,7 @@ export interface RolesNativeAdapter {
   drafts?: { read(role: RoleId): string; write(role: RoleId, value: string): void };
 }
 export interface RolesNativeHandle { refresh(): Promise<void>; destroy(): void }
+export interface RolesMountOptions { surface?: 'standalone' | 'v4-history'; roleId?: RoleId }
 
 const ROLES: readonly RoleId[] = ['supervisor', 'business_lead', 'tech_lead'];
 const roleTitle = (id: RoleId) => ({ supervisor: T('经理', 'Manager'), business_lead: T('业务负责人', 'Business lead'), tech_lead: T('技术负责人', 'Technical lead') })[id];
@@ -57,13 +58,16 @@ const statusText = (status: TurnStatus) => ({
   cancelled: T('本次处理已停止，问题仍保留', 'Stopped; the question is retained'),
 })[status];
 
-export function mount(container: HTMLElement, adapter: RolesNativeAdapter): RolesNativeHandle {
+export function mount(container: HTMLElement, adapter: RolesNativeAdapter, options: RolesMountOptions = {}): RolesNativeHandle {
+  const historyOnly = options.surface === 'v4-history';
+  if (historyOnly && (!options.roleId || !ROLES.includes(options.roleId))) throw new Error('A v4 colleague is required');
   const doc = container.ownerDocument;
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string) => {
     const node = doc.createElement(tag); if (cls) node.className = cls; return node;
   };
   const button = (cls?: string) => { const node = el('button', cls); node.type = 'button'; return node; };
   const root = el('section', 'rc-roles'); root.dataset.rolePanel = '';
+  if (historyOnly) root.classList.add('rc-roles--v4-history');
   const header = el('header', 'rc-roles__header');
   const heading = el('h2'); const language = el('span', 'rc-roles__language');
   const reload = button('rc-roles__text-button'); reload.dataset.action = 'reload';
@@ -79,10 +83,17 @@ export function mount(container: HTMLElement, adapter: RolesNativeAdapter): Role
   const inputId = 'role-question-' + crypto.randomUUID(); textarea.id = inputId; label.htmlFor = inputId;
   const actions = el('div', 'rc-roles__actions'); const hint = el('span', 'rc-roles__hint');
   const send = el('button', 'rc-roles__send'); send.type = 'submit'; send.dataset.action = 'send';
-  actions.append(hint, send); form.append(label, textarea, actions); main.append(activeName, list, empty, form);
-  layout.append(nav, main); root.append(header, mode, notice, recover, layout); container.append(root);
+  actions.append(hint, send); form.append(label, textarea, actions);
+  if (historyOnly) {
+    // v4 owns the colleague header, navigation, composer and scroll region.
+    main.append(list, empty); layout.append(main); root.append(mode, notice, recover, layout);
+  } else {
+    main.append(activeName, list, empty, form); layout.append(nav, main);
+    root.append(header, mode, notice, recover, layout);
+  }
+  container.append(root);
 
-  let selected: RoleId = 'supervisor'; let view: RolesView | undefined; let sessionId: string | undefined;
+  let selected: RoleId = options.roleId ?? 'supervisor'; let view: RolesView | undefined; let sessionId: string | undefined;
   let loaded = false; let busy = false; let uncertain = false; let destroyed = false; let loadTicket = 0;
   let feedback: 'read' | 'unconfirmed' | 'action' | 'draft' | undefined;
   const drafts = new Map<RoleId, string>(); const people = new Map<RoleId, HTMLButtonElement>();
@@ -103,7 +114,7 @@ export function mount(container: HTMLElement, adapter: RolesNativeAdapter): Role
     item.addEventListener('click', () => { selected = id; textarea.value = draft(id); render(); });
     people.set(id, item); nav.append(item);
   }
-  textarea.value = draft(selected);
+  if (!historyOnly) textarea.value = draft(selected);
 
   function canSend() {
     return loaded && !busy && !uncertain && !view?.unconfirmed && view?.canSend && view.mode !== 'unavailable' &&
@@ -230,4 +241,11 @@ export function mount(container: HTMLElement, adapter: RolesNativeAdapter): Role
   const unsubscribe = adapter.subscribe?.(() => { void refresh(); }); const unlocale = onLocaleChange(render);
   render(); void refresh();
   return { refresh, destroy() { if (destroyed) return; destroyed = true; ++loadTicket; unsubscribe?.(); unlocale(); root.remove(); } };
+}
+
+/** Mount only the selected colleague's history into v4's existing thread node.
+ * v4 sends through its own composer/client. Destroy/remount when its role changes.
+ */
+export function mountConversation(container: HTMLElement, adapter: RolesNativeAdapter, roleId: RoleId): RolesNativeHandle {
+  return mount(container, adapter, { surface: 'v4-history', roleId });
 }

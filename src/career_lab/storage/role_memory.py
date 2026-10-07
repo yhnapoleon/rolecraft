@@ -133,6 +133,7 @@ class PrivateGeneration:
     prompt_template_revision: str | None = None
     language_consistency: Literal["unverified"] = "unverified"
     learner_penalty_allowed: Literal[False] = False
+    reply_verification: "ReplyVerification | None" = None
 
 
 class PrivateGenerationPort(Protocol):
@@ -142,6 +143,14 @@ class PrivateGenerationPort(Protocol):
     the public reply. The audit may reference the reply; reverse edges are banned.
     """
     def require_available(self) -> None: ...
+    def claim_model_call(self, envelope, auth, phase: str, model_revision: str) -> bool:
+        """Durably reserve once before transport. The key binds session, original
+        request, explicit user retry generation and phase; exclude worker leases.
+        A timeout/crash leaves it consumed. Recovery only reads the original
+        result; only an authorized explicit retry may open a new generation.
+        Provider/model configuration changes do not reset the reservation.
+        """
+        ...
     def prepare(self, view, envelope, auth, generation: PrivateGeneration) -> tuple[ObjectWrite, ...]: ...
     def record_attempt(self, envelope, auth, attempt: ModelAttemptUsage, error_code: str | None) -> None: ...
 
@@ -238,6 +247,7 @@ class StanceFactReceipt:
     acquired_at_seq: int
     verification: Literal['source_verified'] = 'source_verified'
     acquired_at: VersionPoint | None = None
+    statement: str | None = None  # Actual disclosure-approved source text; never inferred from a hash.
 
     @property
     def key(self):return self.fact_id,self.semantic_hash
@@ -346,7 +356,7 @@ def initial_stance(session_id,role,binding,as_of,facts):
     return RoleStanceState(session_id,role.id,binding,1,positions,as_of,tuple(sorted({f.key for f in facts})))
 
 
-def resolve_stance(state,proposal,known_facts,as_of,verifier=None):
+def resolve_stance(state,proposal,known_facts,as_of,verifier=None,*,before_check=None):
     """Mechanical guard. With no trusted semantic support, a proposal stays pending.
 
     Caller pressure, quoted rationale, duplicate refs and newer version numbers
@@ -391,6 +401,8 @@ def resolve_stance(state,proposal,known_facts,as_of,verifier=None):
     if not any(order=='after' for order in novelty_orders):
         return result('rejected','stance_new_fact_required',resolved)
     if verifier is None:return result('pending','stance_support_unverified',resolved)
+    if getattr(verifier,'retries',0)!=0:return result('pending','stance_support_retry_budget_uncontrolled',resolved)
+    if before_check is not None:before_check(verifier,proposal)
     try:support=verifier.check(state,proposal,tuple(resolved))
     except Exception:return result('pending','stance_support_unavailable',resolved)
     if (not isinstance(support,StanceSupport) or not isinstance(support.method,str)
@@ -410,3 +422,134 @@ def resolve_stance(state,proposal,known_facts,as_of,verifier=None):
                     if f.source.session_id==state.session_id and f.verification=='source_verified' and f.acquired_at_seq==f.source.observed_at_seq and f.acquired_at is not None and point_at_or_before(f.acquired_at,as_of)})))
     change=StanceChange(state.revision,new.revision,old.key,old.text,proposal.proposed_text,tuple(resolved),as_of,support)
     return result('changed','stance_change_supported',resolved,support,new,change)
+
+
+@dataclass(frozen=True)
+class RoleStanceMemory:
+    """Owned private payload; never a new public/storage DTO or a truth label."""
+    reply: ObjectRef
+    as_of: VersionPoint
+    work_language: Literal['zh','en']
+    state: RoleStanceState
+    resolutions: tuple[StanceResolution,...]
+    schema_version: Literal[1] = 1
+    language_consistency: Literal['unverified'] = 'unverified'
+    learner_penalty_allowed: Literal[False] = False
+
+
+def stance_memory_payload(generation):
+    """The common private writer persists this beside the existing audit atomically."""
+    if generation.stance_state is None or generation.work_language not in {'zh','en'}:
+        raise ProtocolError('role_stance_memory_invalid',status=409)
+    return _stance_json(RoleStanceMemory(generation.reply_ref,generation.context.as_of,
+        generation.work_language,generation.stance_state,generation.stance_resolutions))
+
+
+def restore_stance_memory(records,*,session_id,role_id,binding,as_of,work_language):
+    """Read trusted private records without inferring state from historical reply text.
+
+    The caller supplies only records from the fixed job snapshot. Omitted records
+    are not reconstructed here, and a malformed record never resets the stance.
+    """
+    from pydantic import TypeAdapter
+    adapter=TypeAdapter(RoleStanceMemory);decoded=[]
+    try:
+        for record in records:
+            item=adapter.validate_json(canonical(record));state=item.state
+            if ((state.session_id,state.role_id,state.source_binding)!=(session_id,role_id,binding)
+                or item.reply.session_id!=session_id or item.reply.kind!='role_reply'
+                or item.work_language!=work_language or state.revision<1
+                or not point_at_or_before(state.established_at,item.as_of)
+                or not point_at_or_before(item.as_of,as_of)):
+                raise ValueError('identity or time mismatch')
+            previous=None
+            for resolution in item.resolutions:
+                if previous is not None and resolution.previous_state!=previous:raise ValueError('broken resolution chain')
+                if ((resolution.state.session_id,resolution.state.role_id,resolution.state.source_binding)
+                    !=(session_id,role_id,binding)):raise ValueError('foreign resolution')
+                if resolution.status=='changed':
+                    if (resolution.change is None or resolution.support is None
+                        or resolution.state.revision!=resolution.previous_state.revision+1):raise ValueError('missing change evidence')
+                elif resolution.state!=resolution.previous_state:raise ValueError('unverified state change')
+                previous=resolution.state
+            if previous is not None and previous!=state:raise ValueError('state does not match resolutions')
+            decoded.append(item)
+        if not decoded:return None
+        latest=[x for x in decoded if all(point_at_or_before(y.as_of,x.as_of) for y in decoded)]
+        if not latest or any(x.state!=latest[0].state for x in latest):raise ValueError('ambiguous latest state')
+        selected=latest[0]
+        if any(x.state.revision>selected.state.revision for x in decoded):raise ValueError('state rollback')
+        return selected.state
+    except (ValidationError,TypeError,ValueError,KeyError):
+        raise ProtocolError('role_stance_memory_invalid',status=409) from None
+
+
+class PendingStanceVerifier:
+    """Explicit disconnected production default. It never asserts semantic support."""
+    retries=0
+    revision='stance-support-waiting-v1'
+    def check(self,state,proposal,basis):
+        return StanceSupport('undetermined',None,stance_digest(state),stance_digest(proposal),
+            stance_digest(basis),proposal.proposed_at,None,'waiting_for_model_connection')
+
+
+@dataclass(frozen=True)
+class ReplyVerification:
+    decision: Literal['consistent','inconsistent','undetermined']
+    language_match: bool | None
+    state_hash: str
+    reply_hash: str
+    checked_at: VersionPoint
+    review_ref: FileRef
+    semantic_quality: Literal['unverified'] = 'unverified'
+    learner_penalty_allowed: Literal[False] = False
+
+
+@dataclass(frozen=True)
+class RoleAuditExtension:
+    """Owned payload inside the official private carrier, never a public kind."""
+    work_language: Literal['zh','en']
+    prompt_template_revision: str
+    stance_memory: RoleStanceMemory
+    reply_verification: ReplyVerification | None
+    schema_version: Literal[1] = 1
+
+    @property
+    def stance_record(self):
+        return _stance_json(self.stance_memory)
+
+
+def generation_audit_extension(generation):
+    """Minimal writer boundary: existing carrier already owns attempts/prompt/share data."""
+    if not generation.prompt_template_revision:
+        raise ProtocolError('role_audit_extension_invalid',status=409)
+    return {'schema_version':1,'work_language':generation.work_language,
+        'prompt_template_revision':generation.prompt_template_revision,
+        'stance_memory':stance_memory_payload(generation),
+        'reply_verification':_stance_json(generation.reply_verification)}
+
+
+def read_generation_audit_extension(payload,reply,*,binding,as_of,work_language):
+    """Fixed snapshot reader: bind the private extension to the exact public reply.
+
+    None means an old carrier has no extension; it is never evidence of persisted
+    stance or language. The caller continues to own authorization and snapshot IO.
+    """
+    if payload is None:return None
+    from pydantic import TypeAdapter
+    from career_lab.contracts.v2 import digest
+    try:
+        extension=TypeAdapter(RoleAuditExtension).validate_json(canonical(payload))
+        memory=extension.stance_memory
+        expected=ObjectRef(session_id=reply.session_id,kind='role_reply',object_id=reply.id,version=reply.version)
+        if (extension.work_language!=work_language or not extension.prompt_template_revision
+            or memory.reply!=expected or memory.as_of!=reply.as_of):raise ValueError('reply binding mismatch')
+        state=restore_stance_memory([_stance_json(memory)],session_id=reply.session_id,role_id=reply.role_id,
+            binding=binding,as_of=as_of,work_language=work_language)
+        review=extension.reply_verification
+        if review is not None and (review.state_hash!=stance_digest(state) or review.reply_hash!=digest(reply.text)
+            or review.checked_at!=reply.as_of or review.decision!='consistent' or review.language_match is not True):
+            raise ValueError('reply verification mismatch')
+        return extension
+    except (ValidationError,TypeError,ValueError,KeyError):
+        raise ProtocolError('role_audit_extension_invalid',status=409) from None

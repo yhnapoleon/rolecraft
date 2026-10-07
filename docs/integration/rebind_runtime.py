@@ -26,24 +26,29 @@ def main():
     actual={name:sha(Path(name)) for name in overlay['owned_code']}
     if actual != overlay['owned_code']: raise SystemExit('W02 owned source changed; obtain the fixed release first')
     foundation=Path('docs/contracts/expansion-v3/manifest.json')
-    before={p.relative_to(old).as_posix():sha(p) for p in old.rglob('*') if p.is_file()}
+    bundle_data=json.loads((old/'manifest.json').read_text())
+    paths=['manifest.json',*[f['path'] for f in bundle_data['files']]]
+    before={name:sha(old/name) for name in paths}
+    locale=json.loads((old/'locale.json').read_text())['locale']
+    calibration_path=old/'research/retrieval-calibration.json'
+    calibration=json.loads(calibration_path.read_text()) if calibration_path.exists() else None
     with tempfile.TemporaryDirectory(prefix='rolecraft-w02-rebind-') as tmp:
         generated=Path(tmp)/'scenario'
         cases=json.loads((old/'research/public-case-records.json').read_text())
-        build_seed(generated,cases)
+        build_seed(generated,cases,locale=locale,scenario_id=bundle_data['id'],revision=bundle_data['revision'],calibration=calibration,english_min_score=calibration['selected_threshold'] if calibration else .35)
         if args.with_w05:
             from career_lab.contracts import v2 as C
-            from career_lab.evidence.v2.ports import DEFAULT_POLICIES
+            from career_lab.rubrics.v4.rubric_v2 import policies
             paths=sorted([*Path('src/career_lab/evidence/v2').glob('*.py'),*Path('src/career_lab/rubrics/v4').glob('*.py'),Path('src/career_lab/api/reviews_v2.py')])
             protocol={'owner':'W05','installed':True,'mode':'advisory',
                 'semantic_status':'waiting_for_model_connection','formal_scoring_enabled':False,
-                'policies':[policy.to_dict() for policy in DEFAULT_POLICIES],
+                'policies':[policy.to_dict() for policy in policies(work_language=locale)],
                 'source_files':{p.as_posix():sha(p) for p in paths},
                 'supersedes_placeholder':'rubric-reference.json remains authored immutable history; this frozen evaluation uses the source-backed W05 policies above.'}
             target=generated/'runtime/evaluation-protocol.json'
             target.write_text(json.dumps(protocol,ensure_ascii=False,indent=2)+'\n')
             ref=C.FileRef(path='runtime/evaluation-protocol.json',sha256=sha(target))
-            evaluation=C.EvaluationBundle(id='w05-local-advisory',revision='native-r9-'+C.digest(protocol)[:16],rubric=ref,rules=ref,graders=(),protocol=ref,mode='advisory')
+            evaluation=C.EvaluationBundle(id='w05-local-advisory',revision='native-r12-'+C.digest(protocol)[:16],rubric=ref,rules=ref,graders=(),protocol=ref,mode='advisory')
             (generated/'runtime/evaluation.json').write_text(evaluation.model_dump_json(indent=2)+'\n')
             manifest=generated/'manifest.json';bundle=C.ScenarioBundle.model_validate_json(manifest.read_bytes())
             bundle=bundle.model_copy(update={'files':tuple(f.model_copy(update={'sha256':sha(generated/f.path)}) for f in bundle.files)})

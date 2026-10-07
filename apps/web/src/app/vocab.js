@@ -51,7 +51,8 @@ export const seedText = key => pick(SEEDS[key], 0);
 
 // Purposes are stored in the engine's Chinese values; only the label changes.
 const PURPOSE_EN = { '探索笔记': 'Exploration note', '测试计划': 'Test plan', '方案比较': 'Option comparison', '试点决定': 'Pilot decision', '自由作品': 'Free-form' };
-export const purposeLabel = p => (locale() === 'en' ? PURPOSE_EN[p] || p : p);
+const V2_PURPOSES = { exploration: ['探索笔记','Exploration note'], test_plan: ['测试计划','Test plan'], option: ['方案比较','Option comparison'], commitment: ['试点决定','Pilot decision'], free_form: ['自由作品','Free-form'] };
+export const purposeLabel = p => V2_PURPOSES[p] ? T(...V2_PURPOSES[p]) : (locale() === 'en' ? PURPOSE_EN[p] || p : p);
 export const purposeFromLabel = label => Object.keys(PURPOSE_EN).find(k => k === label || PURPOSE_EN[k].toLowerCase() === String(label).toLowerCase()) || label;
 export const INTENT_HINT = i => ({
   explore: T('探索：想到什么写什么', 'Exploring: write what you think'),
@@ -62,7 +63,7 @@ export const INTENT_HINT = i => ({
 
 export const UPDATE = k => ({ daily: T('每日索引', 'Daily index'), realtime: T('实时同步', 'Real-time sync'), manual: T('政策转人工', 'Route policy to people') })[k] || k;
 export const FALLBACK = k => ({ none: T('暂不安排', 'None'), human: T('转人工确认', 'Hand off to a person') })[k] || k;
-export const DOMAIN = k => ({ faq: T('办公 FAQ', 'Office FAQ'), policy: T('差旅政策', 'Travel policy') })[k] || k;
+export const DOMAIN = k => ({ faq: T('办公 FAQ', 'Office FAQ'), policy: T('差旅政策', 'Travel policy'), onboarding: T('入职指引', 'Onboarding'), policy_travel: T('差旅政策', 'Travel policy'), policy_meal: T('餐费政策', 'Meal policy'), policy_leave: T('请假政策', 'Leave policy') })[k] || k;
 export const WORK_ITEM = k => ({ scope: T('知识范围过滤', 'Scope filter'), fallback: T('人工入口', 'Human hand-off'), realtime: T('实时同步', 'Real-time sync') })[k] || k;
 export const WORK_COST = { scope: 1, fallback: 1, realtime: 5 };
 

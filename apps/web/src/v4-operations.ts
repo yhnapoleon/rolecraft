@@ -36,7 +36,7 @@ export function readRoute(operation: string, input: Input = {}): string {
 }
 export function commandRoute(operation: string, input: Input): Route {
   const fixed: Record<string, string> = {
-    actions: '/actions', 'tests.create': '/tests', 'turns.create': '/turns', 'turns.display': '/turns/display',
+    'configuration.apply': '/configuration', actions: '/actions', 'tests.create': '/tests', 'turns.create': '/turns', 'turns.display': '/turns/display',
     'approvals.resolve': '/approvals/resolve', 'submissions.create': '/submissions', 'reviews.create': '/reviews',
     'feedback.create': '/feedback', begin_revision: '/revision-cycles', revision_cycles: '/revision-cycles',
     'work_items.create': '/work-items', 'work_items.batch': '/work-items/batch', 'work_products.create': '/work-products',
@@ -44,6 +44,7 @@ export function commandRoute(operation: string, input: Input): Route {
   };
   let path = fixed[operation], method: GatewayMethod = 'POST', action = operation;
   if (operation === 'actions') { if (typeof input.tool !== 'string' || !input.tool) return fail(); action = input.tool; }
+  if (operation === 'approvals.resolve') action = 'resolve_approval';
   if (operation === 'revision_cycles') action = 'begin_revision';
   if (operation === 'work_items.update') { path = '/work-items/' + id(input, 'item_id'); method = 'PATCH'; }
   if (operation === 'work_products.versions.create') path = '/work-products/' + id(input, 'product_id') + '/versions';

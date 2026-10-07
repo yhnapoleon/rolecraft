@@ -116,6 +116,7 @@ class TransactionView:
     removal_cascade: Literal["current_product_only"] | None = None
     job_context: JobContextSnapshot | None = field(default=None,repr=False)
     worker_claim: object | None = field(default=None,repr=False)
+    public_history: object | None = field(default=None,repr=False)
     def get(self,ref: ObjectRef) -> StoredObject:
         found=next((x for x in self.objects if x.ref==ref),None)
         if found is None:raise ProtocolError('object_not_found',status=404)
@@ -131,6 +132,7 @@ class V2Store(JobStoreMixin):
         self.object_models=dict(OBJECT_MODELS)
         self.reference_resolvers={}
         self.contextual_reference_resolvers=set()
+        self.public_history_reader=None
 
     def register_reference_resolver(self,kind,resolver,*,contextual=False):
         if kind=='event':raise ValueError('event references are managed by the common store')
@@ -489,7 +491,18 @@ class V2Store(JobStoreMixin):
                 self._resolve_reference(c,auth,ref,state,bindings);return True
             target=next((x for x in allowed if x.ref==bare),None)
             return target is not None and not (isinstance(ref,EvidenceRefV2) and target.ref.kind in {'feedback','feedback_response'} and target.content.get('read_projection')=='partial')
-        return TransactionView(state,bindings,allowed,self._scenario_state(c,auth.session_id),self._current_cycle(c,auth.session_id),reference_allowed,"current_product_only")
+        view=TransactionView(state,bindings,allowed,self._scenario_state(c,auth.session_id),self._current_cycle(c,auth.session_id),reference_allowed,"current_product_only")
+        return self._with_public_history(c,view,auth)
+
+    def _with_public_history(self,c,view,auth):
+        if self.public_history_reader is None:return view
+        from dataclasses import replace
+        def history(page,request_auth):
+            if c.closed:raise ProtocolError('reference_view_expired',status=409)
+            if request_auth!=auth:raise ProtocolError('history_identity_mismatch',status=403)
+            self._auth(c,auth,'read')
+            return self.public_history_reader(c,view,page,auth)
+        return replace(view,public_history=history)
 
     def query(self,auth,reader,*,operation=None):
         """Execute a pure read against an authorized operation-local view."""
@@ -522,11 +535,12 @@ class V2Store(JobStoreMixin):
                 if c.closed:raise ProtocolError('reference_view_expired',status=409)
                 self._auth(c,auth,'read',object_ids=(ref.object_id,))
                 if ref.session_id!=auth.session_id:raise ProtocolError('object_not_found',status=404)
+                if ref.kind=='event':self._event_reference(c,ref,auth=auth,ceiling=state);return True
                 if ref.kind in self.reference_resolvers:
                     self._resolve_reference(c,auth,ref,state,bindings);return True
                 bare=ObjectRef.model_validate({k:v for k,v in ref.model_dump(mode='json').items() if k in ObjectRef.model_fields})
                 return any(r.ref==bare for r in allowed)
-            return reader(TransactionView(state,bindings,allowed,private,cycle,reference_allowed))
+            return reader(self._with_public_history(c,TransactionView(state,bindings,allowed,private,cycle,reference_allowed),auth))
 
     def view(self,auth):
         # A retained snapshot contains data, not a reusable authority callback.

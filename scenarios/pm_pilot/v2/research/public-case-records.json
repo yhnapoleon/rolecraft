@@ -1,9 +1,10 @@
 {
   "schema_version": 2,
+  "locale": "zh",
   "source_kind": "actual_deterministic_module_run_on_synthetic_scenario",
   "story_phase": "before_pm_handoff",
-  "captured_at": "2026-10-06T23:13:06.907306+00:00",
-  "input_bundle_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
+  "captured_at": "2026-10-07T06:19:45.357280+00:00",
+  "input_bundle_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
   "executor": "system:w02-pre-event-recorder",
   "http_or_human_trial": false,
   "expected_answers_included": false,
@@ -12,6 +13,7 @@
       "trial_id": "Q01",
       "label": "Q01",
       "story_phase": "before_pm_handoff",
+      "locale": "zh",
       "input_snapshot": {
         "world": {
           "schema_version": 2,
@@ -48,6 +50,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -70,6 +73,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -92,6 +96,7 @@
           "tech_diagnostics:1": 0,
           "tech_private:1": 0,
           "technical:1": 0,
+          "trial_details:1": 0,
           "user_groups:1": 0,
           "world_private:1": 0
         },
@@ -134,7 +139,7 @@
         "query": "会议室预约入口在什么地方",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-06T23:13:06.908752Z",
+          "executed_at": "2026-10-07T06:19:45.358522Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -294,8 +299,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
-        "created_at": "2026-10-06T23:13:06.908752+00:00",
+        "scenario_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
+        "created_at": "2026-10-07T06:19:45.358522+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -342,6 +347,7 @@
       "trial_id": "Q02",
       "label": "Q02",
       "story_phase": "before_pm_handoff",
+      "locale": "zh",
       "input_snapshot": {
         "world": {
           "schema_version": 2,
@@ -378,6 +384,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -400,6 +407,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -422,6 +430,7 @@
           "tech_diagnostics:1": 0,
           "tech_private:1": 0,
           "technical:1": 0,
+          "trial_details:1": 0,
           "user_groups:1": 0,
           "world_private:1": 0
         },
@@ -464,7 +473,7 @@
         "query": "我的账号密码忘记了，需要重置",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-06T23:13:06.909629Z",
+          "executed_at": "2026-10-07T06:19:45.359383Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -624,8 +633,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
-        "created_at": "2026-10-06T23:13:06.909629+00:00",
+        "scenario_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
+        "created_at": "2026-10-07T06:19:45.359383+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -672,6 +681,7 @@
       "trial_id": "Q03",
       "label": "Q03",
       "story_phase": "before_pm_handoff",
+      "locale": "zh",
       "input_snapshot": {
         "world": {
           "schema_version": 2,
@@ -708,6 +718,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -730,6 +741,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -752,6 +764,7 @@
           "tech_diagnostics:1": 0,
           "tech_private:1": 0,
           "technical:1": 0,
+          "trial_details:1": 0,
           "user_groups:1": 0,
           "world_private:1": 0
         },
@@ -794,7 +807,7 @@
         "query": "入职账号没有开通通知该怎么办",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-06T23:13:06.910445Z",
+          "executed_at": "2026-10-07T06:19:45.360207Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -954,8 +967,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
-        "created_at": "2026-10-06T23:13:06.910445+00:00",
+        "scenario_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
+        "created_at": "2026-10-07T06:19:45.360207+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1002,6 +1015,7 @@
       "trial_id": "Q04",
       "label": "Q04",
       "story_phase": "before_pm_handoff",
+      "locale": "zh",
       "input_snapshot": {
         "world": {
           "schema_version": 2,
@@ -1038,6 +1052,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -1060,6 +1075,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -1082,6 +1098,7 @@
           "tech_diagnostics:1": 0,
           "tech_private:1": 0,
           "technical:1": 0,
+          "trial_details:1": 0,
           "user_groups:1": 0,
           "world_private:1": 0
         },
@@ -1124,7 +1141,7 @@
         "query": "设备坏了想报修应该提供哪些信息",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-06T23:13:06.911238Z",
+          "executed_at": "2026-10-07T06:19:45.361028Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -1245,8 +1262,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
-        "created_at": "2026-10-06T23:13:06.911238+00:00",
+        "scenario_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
+        "created_at": "2026-10-07T06:19:45.361028+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1291,6 +1308,7 @@
       "trial_id": "Q05",
       "label": "Q05",
       "story_phase": "before_pm_handoff",
+      "locale": "zh",
       "input_snapshot": {
         "world": {
           "schema_version": 2,
@@ -1327,6 +1345,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -1349,6 +1368,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -1371,6 +1391,7 @@
           "tech_diagnostics:1": 0,
           "tech_private:1": 0,
           "technical:1": 0,
+          "trial_details:1": 0,
           "user_groups:1": 0,
           "world_private:1": 0
         },
@@ -1413,7 +1434,7 @@
         "query": "出差住宿报销一晚能报多少",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-06T23:13:06.912119Z",
+          "executed_at": "2026-10-07T06:19:45.361862Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -1573,8 +1594,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
-        "created_at": "2026-10-06T23:13:06.912119+00:00",
+        "scenario_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
+        "created_at": "2026-10-07T06:19:45.361862+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1621,6 +1642,7 @@
       "trial_id": "Q06",
       "label": "Q06",
       "story_phase": "before_pm_handoff",
+      "locale": "zh",
       "input_snapshot": {
         "world": {
           "schema_version": 2,
@@ -1657,6 +1679,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -1679,6 +1702,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -1701,6 +1725,7 @@
           "tech_diagnostics:1": 0,
           "tech_private:1": 0,
           "technical:1": 0,
+          "trial_details:1": 0,
           "user_groups:1": 0,
           "world_private:1": 0
         },
@@ -1743,7 +1768,7 @@
         "query": "出差出租车单程报销上限",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-06T23:13:06.912927Z",
+          "executed_at": "2026-10-07T06:19:45.362691Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -1903,8 +1928,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
-        "created_at": "2026-10-06T23:13:06.912927+00:00",
+        "scenario_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
+        "created_at": "2026-10-07T06:19:45.362691+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1951,6 +1976,7 @@
       "trial_id": "Q07",
       "label": "Q07",
       "story_phase": "before_pm_handoff",
+      "locale": "zh",
       "input_snapshot": {
         "world": {
           "schema_version": 2,
@@ -1987,6 +2013,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -2009,6 +2036,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -2031,6 +2059,7 @@
           "tech_diagnostics:1": 0,
           "tech_private:1": 0,
           "technical:1": 0,
+          "trial_details:1": 0,
           "user_groups:1": 0,
           "world_private:1": 0
         },
@@ -2073,7 +2102,7 @@
         "query": "今天餐费报销每天按什么额度",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-06T23:13:06.913687Z",
+          "executed_at": "2026-10-07T06:19:45.363533Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -2233,8 +2262,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
-        "created_at": "2026-10-06T23:13:06.913687+00:00",
+        "scenario_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
+        "created_at": "2026-10-07T06:19:45.363533+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -2281,6 +2310,7 @@
       "trial_id": "Q08",
       "label": "Q08",
       "story_phase": "before_pm_handoff",
+      "locale": "zh",
       "input_snapshot": {
         "world": {
           "schema_version": 2,
@@ -2317,6 +2347,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -2339,6 +2370,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -2361,6 +2393,7 @@
           "tech_diagnostics:1": 0,
           "tech_private:1": 0,
           "technical:1": 0,
+          "trial_details:1": 0,
           "user_groups:1": 0,
           "world_private:1": 0
         },
@@ -2403,7 +2436,7 @@
         "query": "计划性请假提交申请需要提前多久",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-06T23:13:06.914464Z",
+          "executed_at": "2026-10-07T06:19:45.364436Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -2563,8 +2596,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
-        "created_at": "2026-10-06T23:13:06.914464+00:00",
+        "scenario_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
+        "created_at": "2026-10-07T06:19:45.364436+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -2611,6 +2644,7 @@
       "trial_id": "Q09",
       "label": "Q09",
       "story_phase": "before_pm_handoff",
+      "locale": "zh",
       "input_snapshot": {
         "world": {
           "schema_version": 2,
@@ -2647,6 +2681,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -2669,6 +2704,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -2691,6 +2727,7 @@
           "tech_diagnostics:1": 0,
           "tech_private:1": 0,
           "technical:1": 0,
+          "trial_details:1": 0,
           "user_groups:1": 0,
           "world_private:1": 0
         },
@@ -2730,7 +2767,7 @@
         "query": "国内出差住宿每晚的报销上限",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-06T23:13:06.915272Z",
+          "executed_at": "2026-10-07T06:19:45.365247Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -2845,8 +2882,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
-        "created_at": "2026-10-06T23:13:06.915272+00:00",
+        "scenario_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
+        "created_at": "2026-10-07T06:19:45.365247+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -2891,6 +2928,7 @@
       "trial_id": "Q10",
       "label": "Q10",
       "story_phase": "before_pm_handoff",
+      "locale": "zh",
       "input_snapshot": {
         "world": {
           "schema_version": 2,
@@ -2927,6 +2965,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -2949,6 +2988,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -2971,6 +3011,7 @@
           "tech_diagnostics:1": 0,
           "tech_private:1": 0,
           "technical:1": 0,
+          "trial_details:1": 0,
           "user_groups:1": 0,
           "world_private:1": 0
         },
@@ -3013,7 +3054,7 @@
         "query": "国内出差住宿每晚的报销上限",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-06T23:13:06.916063Z",
+          "executed_at": "2026-10-07T06:19:45.366060Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -3177,8 +3218,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
-        "created_at": "2026-10-06T23:13:06.916063+00:00",
+        "scenario_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
+        "created_at": "2026-10-07T06:19:45.366060+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -3225,6 +3266,7 @@
       "trial_id": "Q11",
       "label": "Q11",
       "story_phase": "before_pm_handoff",
+      "locale": "zh",
       "input_snapshot": {
         "world": {
           "schema_version": 2,
@@ -3261,6 +3303,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -3283,6 +3326,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -3305,6 +3349,7 @@
           "tech_diagnostics:1": 0,
           "tech_private:1": 0,
           "technical:1": 0,
+          "trial_details:1": 0,
           "user_groups:1": 0,
           "world_private:1": 0
         },
@@ -3347,7 +3392,7 @@
         "query": "国内出差住宿每晚的报销上限",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-06T23:13:06.916861Z",
+          "executed_at": "2026-10-07T06:19:45.366895Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -3468,8 +3513,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
-        "created_at": "2026-10-06T23:13:06.916861+00:00",
+        "scenario_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
+        "created_at": "2026-10-07T06:19:45.366895+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -3514,6 +3559,7 @@
       "trial_id": "Q12",
       "label": "Q12",
       "story_phase": "before_pm_handoff",
+      "locale": "zh",
       "input_snapshot": {
         "world": {
           "schema_version": 2,
@@ -3550,6 +3596,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -3572,6 +3619,7 @@
           "tech_diagnostics": 1,
           "tech_private": 1,
           "technical": 1,
+          "trial_details": 1,
           "user_groups": 1,
           "world_private": 1
         },
@@ -3594,6 +3642,7 @@
           "tech_diagnostics:1": 0,
           "tech_private:1": 0,
           "technical:1": 0,
+          "trial_details:1": 0,
           "user_groups:1": 0,
           "world_private:1": 0
         },
@@ -3636,7 +3685,7 @@
         "query": "海王星大气的主要成分",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-06T23:13:06.917642Z",
+          "executed_at": "2026-10-07T06:19:45.367736Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -3757,8 +3806,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "96be3b5c8bf497b5919e0fc184e0c15b91daf046decb2b852086b579def17dd0",
-        "created_at": "2026-10-06T23:13:06.917642+00:00",
+        "scenario_hash": "8a1267d59bef059370a65a425071d2a9ef73a2cb9bedac6711d68fd0b8995e42",
+        "created_at": "2026-10-07T06:19:45.367736+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,

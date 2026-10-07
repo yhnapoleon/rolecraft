@@ -40,8 +40,10 @@ def latest(view,kind):
 
 
 class ScenarioModule:
-    def __init__(self,root):
-        self.package=load_package(Path(root))
+    def __init__(self,root,*,work_language=None):
+        from .localization import locale_root
+        self.package=load_package(locale_root(root,work_language))
+        self.work_language=self.package.locale
         self.engine=ScenarioEngine(self.package)
         self.assistant=Assistant(self.package)
         self.files={f.path:f for f in self.package.bundle.files}
@@ -51,7 +53,8 @@ class ScenarioModule:
         EvaluationBundle.model_validate_json(read_file(self.package.root,self.bindings.evaluation))
         source=json.loads(read_file(self.package.root,runtime.source.overlay))
         repo=Path(__file__).resolve().parents[4]
-        actual={name:hashlib.sha256((repo/name).read_bytes()).hexdigest() for name in source["owned_code"]}
+        from .localization import runtime_source_files
+        actual=runtime_source_files(repo,self.package.locale)
         if actual!=source["owned_code"] or digest(actual)!=runtime.source.source_digest:
             raise ProtocolError("runtime_source_mismatch",status=409)
         foundation=repo/"docs/contracts/expansion-v3/manifest.json"

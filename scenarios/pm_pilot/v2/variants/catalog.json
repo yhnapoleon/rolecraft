@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "revision": "practice-content-2.8.0",
+  "review_status": "pending_independent_content_review",
+  "read_scope": "W05 may project only public_description and constraints; bindings are server assembly data",
+  "selection_policy": "optional_user_choice_or_decline; start a new session; never rewrite the source submission or feedback",
+  "progress_claim": "No automatic learning gain claim from a recommendation or a single completed practice",
+  "entries": [
+    {
+      "scenario_id": "pm_pilot_urgent",
+      "public_description": {
+        "zh": {
+          "title": "期限提前的知识助手试点",
+          "summary": "正式试点期限改为第5天，请依据本轮材料重新组织方案、验证和资源安排。"
+        },
+        "en": {
+          "title": "Knowledge-assistant pilot with an earlier deadline",
+          "summary": "The pilot deadline is day 5. Use this assignment’s sources to reconsider the proposal, validation and resource arrangements."
+        }
+      },
+      "constraints": {
+        "capacity": 30,
+        "dev_days": 3,
+        "deadline_day": 5
+      },
+      "variants": {
+        "zh": {
+          "revision": "2.8.0",
+          "scenario_hash": "69564187d0af67f2705d1f0a4a0f3254a32b168ffa28bc31b715ef0046b11da7",
+          "root": "scenarios/pm_pilot/v2/variants/pm_pilot_urgent",
+          "runtime_hash": "c8d0a43de5447d150db3e0d5cdd423ff5b4b0ae68211dd55539e65832fd980d7",
+          "evaluation_hash": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0"
+        },
+        "en": {
+          "revision": "2.8.0",
+          "scenario_hash": "553aa18ae760f985b3df73fb34a92c04a2241c19eec1dd6fd6ec762c095d65d5",
+          "root": "scenarios/pm_pilot/v2/variants/pm_pilot_urgent/locales/en",
+          "runtime_hash": "81c719bb4b970da6f728521398217963ab1b22bdf3292db4328c0d57b7eaece1",
+          "evaluation_hash": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0"
+        }
+      }
+    },
+    {
+      "scenario_id": "pm_pilot_capacity15",
+      "public_description": {
+        "zh": {
+          "title": "容量收紧的知识助手试点",
+          "summary": "初始容量为15人，请依据本轮材料重新考虑邀请范围、资源安排与验证。"
+        },
+        "en": {
+          "title": "Knowledge-assistant pilot with limited capacity",
+          "summary": "Initial capacity is 15 people. Use this assignment’s sources to reconsider invitations, resources and validation."
+        }
+      },
+      "constraints": {
+        "capacity": 15,
+        "dev_days": 3,
+        "deadline_day": 7
+      },
+      "variants": {
+        "zh": {
+          "revision": "2.8.0",
+          "scenario_hash": "34876b33af1dcb503e9032cf019299c716d29948ababad647c3eaa2eb3d0e3d7",
+          "root": "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15",
+          "runtime_hash": "a4297b013d46d49524009917f8904d73ec111d525b8ed29244d66b72c3132e40",
+          "evaluation_hash": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0"
+        },
+        "en": {
+          "revision": "2.8.0",
+          "scenario_hash": "f1282f467461e6771455c17c711b6ca149c6d20bf6e192ed9e7affdaf165ecf2",
+          "root": "scenarios/pm_pilot/v2/variants/pm_pilot_capacity15/locales/en",
+          "runtime_hash": "cb35cebad161c81330d0dd0ba4e093e7df42f58b24738586be36ed022164a30f",
+          "evaluation_hash": "edd8d0088042c3d654dbf7c637fb989a88a53cb7c77d4ddc8789a66aa4ce56f0"
+        }
+      }
+    }
+  ]
+}

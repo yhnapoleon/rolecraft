@@ -59,10 +59,12 @@ initial_material_versions:
   tech_diagnostics: 1
   tech_private: 1
   technical: 1
+  trial_details: 1
   user_groups: 1
   world_private: 1
 initial_plan_material_updates:
   policy: 2
+locale: zh
 mandatory_prohibited_topics:
 - 个人薪资
 - 医疗诊断
@@ -108,6 +110,8 @@ material_files:
     '1': materials/tech_private-v1.md
   technical:
     '1': materials/technical-v1.md
+  trial_details:
+    '1': materials/trial_details-v1.md
   user_groups:
     '1': materials/user_groups-v1.md
   world_private:
@@ -120,7 +124,7 @@ not_simulated:
 - 收入
 - 未执行访谈
 - 人工已经接管
-revision: 2.4.0
+revision: 2.8.0
 scenario_id: pm_pilot
 source_kind: authored_synthetic_business_with_actual_module_QA
 work_costs:

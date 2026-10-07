@@ -18,6 +18,8 @@ class SubmissionEvaluator:
     def evaluate(self,auth,submission):
         if not isinstance(submission,C.SubmissionV2) or submission.session_id!=auth.session_id or submission.evaluation!=self.reader.evaluation:
             raise C.ProtocolError('submission_binding_mismatch')
+        if all(p.mechanism.startswith('v2.') for p in self.reader.policies()):
+            return self._rubric_v2(auth,submission)
         at=submission.as_of;reports=[]
         subject=C.ObjectRef(session_id=submission.session_id,kind='submission',object_id=submission.id,version=submission.version)
         assembler=EvidenceAssemblerV2(self.reader,self.model_bytes,work_language=self.work_language)
@@ -36,6 +38,41 @@ class SubmissionEvaluator:
             reports.append(C.FeedbackV2.model_validate(raw))
         # Empty formal submissions are not assigned a synthetic quality grade.
         return {'submission':submission,'submission_hash':C.digest(submission),'reports':tuple(reports),'work_language':self.work_language}
+
+
+    def _rubric_v2(self,auth,submission):
+        from .formal_feedback import sections
+        from .ports import RuleSnapshot
+        at=submission.as_of
+        subject=C.ObjectRef(session_id=auth.session_id,kind='submission',object_id=submission.id,version=submission.version)
+        if not submission.products:
+            return {'submission':submission,'submission_hash':C.digest(submission),'reports':(),'work_language':self.work_language}
+        snapshot_method=getattr(self.reader,'submission_snapshot',None)
+        if snapshot_method is not None:snapshot=snapshot_method(auth,submission)
+        elif len(submission.products)==1:snapshot=self.reader.snapshot(auth,submission.products[0],at)
+        else:snapshot=RuleSnapshot(at,config_version=submission.config.config_version if submission.config else None)
+        if submission.config is not None and snapshot.config_version is not None and snapshot.config_version!=submission.config.config_version:
+            raise C.ProtocolError('submission_config_mismatch')
+        refs=list(submission.evidence_refs)
+        for ref in submission.products:refs.extend(self.reader.read(auth,ref,at).declared_refs)
+        refs=tuple({C.canonical(ref):ref for ref in refs}.values())
+        assembler=EvidenceAssemblerV2(self.reader,self.model_bytes,work_language=self.work_language)
+        packages=tuple(assembler.assemble(auth=auth,subject_id=submission.id,subjects=submission.products,evidence_refs=refs,
+            purpose='commitment',decision=submission.decision,as_of=at,policy=policy,snapshot=snapshot,anchor_mode='submission',requested_at=at)
+            for policy in self.reader.policies())
+        report,diagnostics=self.engine.evaluate(auth.session_id,subject,self.reader.evaluation,at,packages,work_language=self.work_language)
+        factual=[];historical=[];notes=[]
+        for ref in submission.products:
+            facts=factual_feedback(self.reader,auth,ref,at,at,work_language=self.work_language,anchor_mode='submission')
+            facts={**facts,'change_facts':diagnostics['change_facts'],'summary':[*facts['summary'],*[row['summary'] for row in diagnostics['change_facts']]]}
+            history=[h for h in diagnostics['historical_responsibilities'] if ref.model_dump(mode='json') in h['scope']]
+            a,b,c=sections(self.reader,auth,ref,at,facts,history,work_language=self.work_language)
+            factual.append(a);historical.append(b);notes.extend(c)
+        raw=report.model_dump(mode='json');raw.update(verified_facts=[v.model_dump(mode='json') for v in factual],
+            historical_responsibilities=[v.model_dump(mode='json') for v in historical],rule_items=diagnostics['rule_items'],
+            next_options=list(dict.fromkeys([*report.next_options,*notes])))
+        report=C.FeedbackV2.model_validate(raw)
+        return {'submission':submission,'submission_hash':C.digest(submission),'reports':(report,),'work_language':self.work_language}
 
 
 def submission_feedback_plan(view,command,auth,prepared):

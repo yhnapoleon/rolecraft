@@ -65,6 +65,13 @@ export interface Operation {
   localRun?: LocalTestRun;
 }
 export interface LocalSession {
+  /** Missing means the original v1 record; never infer protocol from URL or UI language. */
+  protocol?: 1 | 2;
+  v2Workspace?: { tasks: any[]; products: any[] };
+  v2Domains?: string[];
+  v2MaterialTitles?: Record<string, string>;
+  v2Binding?: Extract<import('./v4-host').V4SessionBinding, { protocol: 2 }>;
+
   id: string; token: string; scenario: Scenario; created: string;
   world: World; materials: Material[]; timeline: Timeline;
   draft: Deliverable; configDraft?: Pilot; tests: TestRun[];

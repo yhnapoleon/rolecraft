@@ -52,7 +52,11 @@ def applicable(policy:CriterionPolicy,purpose:str,decision:str|None):
 
 def model_input(item:EvidencePackageV2) -> dict:
     """Strict allowlist: never send rule_context or arbitrary metadata to a model."""
-    return {'criterion':item.criterion,'claim':item.claim,'purpose':item.purpose,
+    public_context={}
+    if item.rule_context.get('mechanism','').startswith('v2.'):
+        decision=item.rule_context.get('decision')
+        public_context={'declared_decision':decision if decision in {'launch','launch_narrow','no_go','defer_with_conditions'} else None}
+    return {**public_context,'criterion':item.criterion,'claim':item.claim,'purpose':item.purpose,
         'as_of':item.as_of.model_dump(mode='json'),'applicability':item.applicability,
         'subjects':[base_ref(r).model_dump(mode='json') for r in item.subjects],
         'candidate_evidence':[{'id':c.id,'text':c.text,

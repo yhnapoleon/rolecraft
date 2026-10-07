@@ -26,6 +26,8 @@ export interface V4HostPorts {
   chooseEvidence(): Promise<readonly EvidenceRefV2[]>;
   announce(message: string, kind?: 'status' | 'error'): void;
   fetcher?: typeof fetch;
+  didRead?(operation: string, value: any, input: Input): void;
+  didSelect?(kind: 'currentTask' | 'currentProduct', ref: ObjectRef): void;
   /** Native Web Lock in production, injectable for deterministic tests. */
   exclusive?<T>(name: string, action: () => Promise<T>): Promise<T>;
 }
@@ -88,14 +90,24 @@ export class V4DataHost implements V4HostAdapter {
       state: this.context?.state?.status ?? 'unavailable', asOf: this.context?.as_of ?? null,
       currentTask: this.local.currentTask, currentProduct: this.local.currentProduct,
       busy: this.busy, storageError: this.storageError,
-      available: this.context?.available ?? {},
+      available: { ...this.context?.available, 'delegations.create': false, 'delegations.revoke': false },
       semantic: this.context?.semantic ?? { roles: 'unavailable', feedback: 'unavailable', assistant: 'unavailable' },
     });
   }
   async query(operation: string, input: Input = {}): Promise<unknown> {
     if (input.session_id != null && input.session_id !== this.ports.binding.sessionId) throw new ApiError('Reference belongs to another session', 404, 'session_binding_mismatch');
+    if (operation === 'workspace_imports') {
+      if (input.mode !== 'preview') throw new ApiError('Only an import preview is a query', 400, 'invalid_read');
+      const state: any = await this.query('session.read');
+      if (!point(state)) throw unconfirmed();
+      const preview: any = await this.raw(this.path('/workspace-imports'), { schema_version: 2, request_id: crypto.randomUUID(),
+        expected_version: state.business_seq, expected_workspace_revision: state.workspace_revision, operation: 'workspace_imports', payload: copy(input) });
+      if (preview.result?.mode !== 'preview' || preview.result?.applied !== false || preview.result?.package_id !== input.package_id || !point(preview.result?.as_of)) throw unconfirmed();
+      return preview.result;
+    }
     const result: any = await this.raw(this.path(readRoute(operation, input)));
     if (operation === 'session.read') return result.state;
+    if (operation === 'objects.read') return result;
     if (!obj(result.result) || !obj(result.result.result)) throw unconfirmed();
     const value = result.result.result;
     if (operation === 'workbench.read') {
@@ -104,9 +116,13 @@ export class V4DataHost implements V4HostAdapter {
           !['active', 'paused', 'submitted'].includes(value.state?.status) || !obj(value.available) || !obj(value.semantic)) throw unconfirmed();
       this.context = copy(value); this.emit();
     }
+    this.ports.didRead?.(operation, copy(value), input);
     return value;
   }
   async command(operation: string, input: Input): Promise<V4CommandResult> {
+    // These service-mode responses carry a private secret and have no transaction
+    // receipt yet. Do not dispatch until the host control-plane adapter exists.
+    if (operation.startsWith('delegations.')) throw new ApiError('Agent control plane is not connected to this host yet', 503, 'delegation_host_not_ready');
     return this.exclusive(() => this.send(operation, copy(input)));
   }
   private async send(operation: string, input: Input, previousRequestId?: string): Promise<V4CommandResult> {
@@ -144,10 +160,14 @@ export class V4DataHost implements V4HostAdapter {
         // The caller always receives the journal ID, including ambiguous responses.
         this.ports.announce(error instanceof Error ? error.message : 'Request unconfirmed', 'error');
       }
+      if (entry.outcome.status !== 'unconfirmed') {
+        try { await this.query('workbench.read'); } catch { /* The committed outcome remains authoritative. */ }
+      }
       this.emit();
       return copy(entry.outcome);
     } finally { this.busy = false; this.emit(); }
   }
+  pendingRequests() { return Object.values(this.local.requests).filter(e => ['pending', 'unconfirmed'].includes(e.outcome.status)).map(e => copy(e.outcome)); }
   async recover(requestId: string): Promise<V4CommandResult> {
     return this.exclusive(async () => {
       this.reload();
@@ -209,7 +229,8 @@ export class V4DataHost implements V4HostAdapter {
   }
   private select(kind: 'currentTask' | 'currentProduct', ref: ObjectRef) {
     this.checkRef(ref);
-    void this.exclusive(async () => { this.reload(); if (this.storageError) throw new ApiError('Selection storage is unavailable', 0, 'storage_unavailable'); this.local[kind] = copy(ref); this.save(); this.emit(); })
+    if (JSON.stringify(this.local[kind]) === JSON.stringify(ref)) return;
+    void this.exclusive(async () => { this.reload(); if (this.storageError) throw new ApiError('Selection storage is unavailable', 0, 'storage_unavailable'); this.local[kind] = copy(ref); this.save(); this.emit(); this.ports.didSelect?.(kind, copy(ref)); })
       .catch(error => this.ports.announce(error.message, 'error'));
   }
   selectTask(ref: ObjectRef) { this.select('currentTask', ref); }

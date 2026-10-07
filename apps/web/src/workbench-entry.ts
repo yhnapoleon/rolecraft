@@ -6,7 +6,7 @@ declare global { interface Window { PracticeEngine: any; PracticeLive: LiveWorkb
 let storage: Storage | undefined;
 try { storage = window.localStorage; } catch { storage = undefined; }
 initLocale(storage);
-window.PracticeLive = new LiveWorkbench(window.PracticeEngine, storage ?? { getItem: () => null, setItem: () => { throw new DOMException('blocked', 'SecurityError'); } });
+window.PracticeLive = new LiveWorkbench(window.PracticeEngine, storage ?? { getItem: () => null, setItem: () => { throw new DOMException('blocked', 'SecurityError'); } }, undefined, { newSessionProtocol: 2 });
 // v4 is the product entry. This separate shell is a development-only diagnostic.
 if (import.meta.env.DEV && new URLSearchParams(location.search).get('dev-v2') === '1') {
   if (!storage) {

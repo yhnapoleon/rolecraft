@@ -1,5 +1,5 @@
 /** Test harness only, never installed into the workbench. */
-import { mount, type RolesView, type RolesNativeAdapter, type RoleId } from './index';
+import { mount, mountConversation, type RolesView, type RolesNativeAdapter, type RoleId } from './index';
 import { setPreference } from '../../app/i18n';
 import { createGatewayTransport } from '../../gateway-transport';
 import { request as legacyRead } from '../../api';
@@ -29,7 +29,9 @@ const controls = {
   calls,drafts, get view(){return view;}, setView(next:RolesView){view=next;listener();},
   loseResponse(){loseResponse=true;}, holdSend(){holdSend=true;}, release(){holdSend=false;releaseSend();},
   failRead(value:boolean){failRead=value;}, locale:setPreference,
-  remount(){handle.destroy();handle=mount(node,adapter);}, destroy(){handle.destroy();},
+  remount(){handle.destroy();handle=mount(node,adapter);},
+  embedded(role:RoleId){handle.destroy();handle=mountConversation(node,adapter,role);},
+  destroy(){handle.destroy();},
   refresh(){return handle.refresh();},
 };
 Object.assign(window,{rolesTest:controls});

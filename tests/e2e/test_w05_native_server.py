@@ -16,13 +16,13 @@ from career_lab.storage.v2_store import Mutation,JobRequest
 from career_lab.storage.v2_lifecycle import record_submission,begin_revision
 from career_lab.workspace.extension import install_workspace_operations
 from career_lab.evidence.v2.store_reader import StoreEvidenceReader
-from career_lab.evidence.v2.ports import DEFAULT_POLICIES
+from career_lab.rubrics.v4.rubric_v2 import policies
 from career_lab.evidence.v2.submission_evaluator import SubmissionEvaluator,submission_feedback_plan,submission_plan_with_feedback
 from career_lab.jobs.repository import JobRepository
 from career_lab.jobs.worker import Worker,ClaimedHandler
 
 
-def make_app(database):
+def make_app(database,work_language="zh"):
     registry=ExtensionRegistry();f=C.FileRef(path='controlled-native-feedback.json',sha256='1'*64)
     registry.register_scenario('native-feedback-fixture',ScenarioRegistration(C.SessionBindings(scenario=f,runtime=f,evaluation=f),C.AssistantConfig(id='config',session_id='fixture',domains=('faq',)),{}))
     install_workspace_operations(registry,roles=('supervisor','tech_lead','business_lead'));install_feedback_recovery(registry)
@@ -32,12 +32,17 @@ def make_app(database):
     def process(view,envelope,auth):
         store=holder['app'].state.v2_store;subject=C.FeedbackInput.model_validate(envelope.command.payload).subject
         submission=C.SubmissionV2.model_validate(view.get(subject).content)
-        reader=StoreEvidenceReader(store,auth,policies=DEFAULT_POLICIES)
-        prepared=SubmissionEvaluator(reader).evaluate(auth,submission)
+        reader=StoreEvidenceReader(store,auth,policies=policies(work_language=work_language))
+        prepared=SubmissionEvaluator(reader,work_language=work_language).evaluate(auth,submission)
         return submission_feedback_plan(view,envelope.command,auth,prepared)
     registry.register_job('v2.w05-native-feedback',process)
     app=create_app('sqlite:///'+str(database.resolve()),extensions=registry);holder['app']=app
     fixture={}
+    @app.get('/__w05_native_test__/dark-style')
+    def dark_style():
+        from fastapi.responses import Response
+        css=(Path(__file__).resolve().parents[2]/'apps/web/src/app/styles.css').read_text()
+        return Response(css.replace('@media (prefers-color-scheme: dark)','@media all'),media_type='text/css')
     @app.post('/__w05_native_test__/bootstrap')
     def bootstrap():
         if fixture:
@@ -56,14 +61,14 @@ def make_app(database):
             source=product('受控原始记录','本地验证：当前资料需要核对版本与覆盖范围。')
             evidence=C.EvidenceRefV2(**source,observed_at_seq=0,quote='当前资料需要核对版本与覆盖范围。').model_dump(mode='json')
             product('试点决定与后续核验','先补齐版本核对和测试，再决定是否推进。',(evidence,))
-            fixture['evidence']=[evidence]
+            fixture['evidence']=[evidence];fixture['work_language']=work_language
         return fixture
     return app,registry
 
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--database',type=Path,required=True);parser.add_argument('--port',type=int,required=True);args=parser.parse_args()
-    app,registry=make_app(args.database);gateway=app.state.gateway;queue=JobRepository(app.state.v2_store.db)
+    parser=argparse.ArgumentParser();parser.add_argument('--database',type=Path,required=True);parser.add_argument('--port',type=int,required=True);parser.add_argument('--language',choices=('zh','en'),default='zh');args=parser.parse_args()
+    app,registry=make_app(args.database,args.language);gateway=app.state.gateway;queue=JobRepository(app.state.v2_store.db)
     worker=Worker(queue,{'v2.w05-native-feedback':ClaimedHandler(lambda payload,claim:gateway.run_job('v2.w05-native-feedback',payload,claim=claim))})
     stop=threading.Event()
     def loop():

@@ -73,7 +73,7 @@ def test_claude_p1_terms_survive_actual_worker_store_readback_and_next_memory(tm
     from career_lab.runtime.context_v2 import ContextPort
     from career_lab.runtime.roles_v2 import RoleService
     from career_lab.storage.role_memory import parse_public_reply,memory_from_generation
-    from test_private_port_boundary import ControlledSnapshot,ControlledPrivatePort
+    from test_private_port_boundary import ControlledSnapshot,ControlledPrivatePort,ControlledReplyVerifier
     from test_runtime import common_store
     class ReadbackSnapshot(ControlledSnapshot):
         memories=()
@@ -88,7 +88,7 @@ def test_claude_p1_terms_survive_actual_worker_store_readback_and_next_memory(tm
     answer='关于'+question+'我需要先看更多证据。'
     model=ScriptedModel([ModelReply(text=answer),ModelReply(text='继续核对上一轮保留的条件。')])
     store,auth=common_store(tmp_path,catalog);projection=ReadbackSnapshot(package,catalog);private=PerReplyAudit()
-    service=RoleService(ContextPort(catalog,projection),model,private_port=private)
+    service=RoleService(ContextPort(catalog,projection),model,private_port=private,reply_verifier=ControlledReplyVerifier())
     registry=ExtensionRegistry();service.install(registry);gateway=Gateway(store,registry)
     jobs=JobRepository(store.db);worker=Worker(jobs,{'v2.role_turn':ClaimedHandler(lambda payload,claim:gateway.run_job('v2.role_turn',payload,claim=claim))})
     def run(text,key):
