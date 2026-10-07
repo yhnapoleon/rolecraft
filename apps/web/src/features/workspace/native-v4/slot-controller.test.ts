@@ -12,7 +12,7 @@ function fixture(){
   const page=(items:any[])=>({schema_version:2,items,as_of:point,next_cursor:null});
   const host:V4HostAdapter={snapshot:()=>snapshot,subscribe:()=>()=>{},
     query:vi.fn(async(op)=>op==='work_items.list'?page([]):{...page([p]),shares:[],sharing_complete:true}),
-    command:vi.fn(async(op,input)=>{
+    command:vi.fn(async(op:string,input:Readonly<Record<string,unknown>>):Promise<V4CommandResult>=>{
       if(op==='work_products.versions.create'){
         if(input.expected_head!==p.version)throw Error('object_version_conflict');
         p={...p,...input,version:p.version+1,visibility:'private'} as WorkspaceProductRead;
@@ -20,8 +20,8 @@ function fixture(){
       point={...point,workspace_revision:point.workspace_revision+1,storage_revision:point.storage_revision+1};snapshot={...snapshot,asOf:point};
       return {requestId:'host-request',status:'confirmed',result:{object:p,as_of:point}};
     }),
-    recover:vi.fn(async()=>({requestId:'host-request',status:'pending',result:null})),
-    retry:vi.fn(async()=>({requestId:'explicit-next-request',status:'pending',result:null})),
+    recover:vi.fn(async():Promise<V4CommandResult>=>({requestId:'host-request',status:'pending',result:null})),
+    retry:vi.fn(async():Promise<V4CommandResult>=>({requestId:'explicit-next-request',status:'pending',result:null})),
     draft:<T>(_slot:string,key:string)=>drafts.get(key) as T|undefined,
     keepDraft:vi.fn(async(_slot,key,value)=>{drafts.set(key,structuredClone(value));}),flushDrafts:vi.fn(async()=>{}),
     openReference:vi.fn(async()=>{}),chooseEvidence:vi.fn(async()=>[]),selectTask:vi.fn(),selectProduct:vi.fn(ref=>{snapshot={...snapshot,currentProduct:ref};}),announce:vi.fn()};
