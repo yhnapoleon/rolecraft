@@ -163,7 +163,17 @@ class ServiceCheck:
             require(tested['result']['test']['execution']['executor']['kind'] == 'external_agent', 'test_attribution_invalid')
             adopted = self.human('work_products.adopt', '/work-products/' + obj['product_id'] + '/adoption', {
                 'product_id': obj['product_id'], 'product_version': obj['version'], 'expected_head': obj['version'], 'status': 'adopted'})
-            submitted = self.human('submit', '/submissions', {'decision': 'defer_with_conditions', 'products': [adopted['result']['ref']]})
+            # The standard lifecycle and older fixed services expose different
+            # submit aliases. Use the installed public catalogue, never guess
+            # an operation name or change an interrupted command's request key.
+            catalogue = self.owner('GET', '/sessions/' + self.sid + '/tools')['result']['result']['tools']
+            submit_tools = [C.ToolSchema.model_validate(tool) for tool in catalogue]
+            submit_tools = [tool for tool in submit_tools if tool.capability == 'submit' and tool.available
+                            and tool.name in {'submit', 'submissions.create'}]
+            require(len(submit_tools) == 1, 'submission_tool_unavailable')
+            self.trace['submission_operation'] = submit_tools[0].name
+            self.persist()
+            submitted = self.human(submit_tools[0].name, '/submissions', {'decision': 'defer_with_conditions', 'products': [adopted['result']['ref']]})
             require(submitted['executor']['kind'] == 'human' and submitted['state']['status'] == 'submitted', 'human_submission_invalid')
             self.revoke()
             state = self.owner('GET', '/sessions/' + self.sid)
