@@ -134,6 +134,7 @@ def audit_records(records, *, annotations=None, near_duplicate_threshold=0.94):
             errors.append({"code": "connected_lineage_cross_split", "record_ids": sorted(r.record_id for r in component)})
     errors.extend(duplicate_pairs(rows,signatures,near_duplicate_threshold))
     label_counts, statuses, accepted_tiers = Counter(), Counter(), Counter()
+    evidence_rows=[];label_only=[]
     if annotations is not None:
         raw_labels = list(annotations)
         labels = {a.record_id: AnnotationV2.model_validate(a.model_dump(mode="json")) for a in raw_labels}
@@ -152,9 +153,17 @@ def audit_records(records, *, annotations=None, near_duplicate_threshold=0.94):
                 if a.final.task_type != r.model_input.task_type:
                     errors.append({"code": "annotation_task_mismatch", "record_id": r.record_id})
                 label_counts[f"{r.family}:{a.final.label}"] += 1
+                target=evidence_rows if a.final.evidence_evaluable else label_only
+                target.append({"record_id":r.record_id,"bucket":r.bucket,"label_tier":a.label_tier,
+                    "source_files":[ref.model_dump(mode="json") for ref in r.provenance.actual_sources],
+                    "session_id":r.lineage.session_id,"source_digest":r.provenance.source.source_digest,
+                    "evidence_training":a.final.evidence_evaluable,
+                    "isolation_reason":None if a.final.evidence_evaluable else "localization_not_evaluable; excluded from evidence training and evidence/joint denominators",
+                    "semantic_authority":"fixture only; no semantic truth claim" if fixture_record(r) else "numeric verifier rechecked at publication" if a.label_tier=="G0" else "requires independent semantic authority; model self-report is insufficient"})
     report = {"valid": not errors, "records": len(rows), "families": dict(Counter(r.family for r in rows)),
         "splits": dict(Counter(r.split for r in rows)), "languages": dict(Counter(r.language for r in rows)),
         "buckets": dict(Counter(r.bucket for r in rows)), "label_tiers": dict(accepted_tiers), "record_declared_tiers": dict(Counter(r.label_tier for r in rows)),
+        "evidence_supervision":{"evaluable_count":len(evidence_rows),"evaluable_records":evidence_rows,"label_only_count":len(label_only),"label_only_records":label_only},
         "labels": dict(label_counts), "annotation_status": dict(statuses),
         "structures": len({r.lineage.structure_id for r in rows}), "lineage_components": len(components),
         "sessions": len({r.lineage.session_id for r in rows if r.lineage.session_id}),

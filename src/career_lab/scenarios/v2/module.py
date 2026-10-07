@@ -264,6 +264,7 @@ class ScenarioModule:
         if auth.session_id!=event.session_id or "read" not in auth.capabilities or auth.actor_id not in event.visible_to:
             return None
         payload=dict(event.data)
+        payload.pop("trigger",None)  # The learner receives the business notice, not the script trigger.
         allowed=None if auth.allowed_objects is None else set(auth.allowed_objects)
         if "before_versions" in payload or "after_versions" in payload:
             for key in ("before_versions","after_versions"):

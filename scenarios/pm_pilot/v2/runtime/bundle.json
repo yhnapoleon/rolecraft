@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "id": "w02-runtime",
-  "revision": "reference-port-c1",
+  "revision": "content-pre-event-r6",
   "model": {
     "schema_version": 2,
     "path": "runtime/model.json",
@@ -37,11 +37,11 @@
   "source": {
     "schema_version": 2,
     "base_commit": "80cf1f6189cd25610d609f44283ff9668582d759",
-    "source_digest": "e65542c2683c38e6cc2ac7dd5a1ab523996678c9bea361c60601b5454b77532e",
+    "source_digest": "b72740af17bd9272e9b7f2a0e1644677a0a308bcd06d0fc6007f56ef168d7d11",
     "overlay": {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "b42279897ddf465a61877ecd030fb0076c3d6afd1f8178f4c2396ce35a4df196",
+      "sha256": "f10683840d4c9d60aad151f3804744430420464338e0074e7a86ce1ee48f0d2e",
       "media_type": "application/json"
     },
     "dependency_locks": []

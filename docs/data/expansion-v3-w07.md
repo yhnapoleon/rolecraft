@@ -1,8 +1,8 @@
 # W07 数据与标注模块
 
-本轮完成2026-10-07 c4数据契约迁移，仍是 **implementation_only / partial**。真实源码、模块测试和本地CLI已实现；输入为031固定的032 c4公共候选，尚未通过正式W01/02/05联调。没有生产新场景数据、调用真实标注模型、开启新封存test或开展真人实验。测试中的provider、批次和release均明确为fixture，不计真实运行样本。
+本轮完成2026-10-07 c5语义共识迁移，仍是 **implementation_only / partial**。真实源码、模块测试和本地CLI已实现；输入为031固定的032 c5公共候选，尚未通过正式W01/02/05联调。没有生产新场景数据、调用真实标注模型、开启新封存test或开展真人实验。测试中的provider、批次和release均明确为fixture，不计真实运行样本。
 
-输入基准：`80cf1f6189cd25610d609f44283ff9668582d759`，合同 `expansion-v3-81f4855d5cdf8c601c6b09d7b350b11dcda5ed156e2d801d8e542fa197718c85`（候选commit `b55b4c260867ba04ca8ecac7232c9f5d3bcbc41f`）。1066份公共源码来自上游不可变归档，完整继承且逐文件核hash，**不属于W07独占产出**。原v1生成器、数据、freeze、接口及共享依赖不修改。
+输入基准：`80cf1f6189cd25610d609f44283ff9668582d759`，合同 `expansion-v3-deb8023ca664946f45c52692c65e3524703d77194c5100e0ee42939ae26cff4b`（候选commit `d82d7fe690ed0491744cb716df377a77bc2ed4b4`）。1078份公共源码来自上游不可变归档，完整继承且逐文件核hash，**不属于W07独占产出**。原v1生成器、数据、freeze、接口及共享依赖不修改。
 
 ## 已实现的处理过程
 
@@ -73,11 +73,11 @@ r1阶段曾将内部证据协议升级为v2；本轮继续升级为v3。v1/v2目
 
 ## 2026-10-07 新审阅修复
 
-两遍共识按规范化的引用集合与可接受集合比较，保留原始返回正文及顺序；顺序不同不再自动调用第三遍。pending/disputed统一保持未接受模型状态，不允许导出者声明G0/G1/G2v；质量报告的label_tiers只统计已接受annotation，pending数量另列，metadata中的accepted_label_tier为null。
+两遍通过完整合法性校验后，以task_type、label、applicability、evidence_evaluable及规范化acceptable集合比较共识。missing_reason措辞和合法代表引用不参与比较；一致时精确保留首遍decision，只做两遍。原始返回与parsed decision仍逐字段一致，最终attestation仍完整重建比较。pending/disputed统一保持未接受模型状态，不允许导出者声明G0/G1/G2v；质量报告的label_tiers只统计已接受annotation，pending数量另列，metadata中的accepted_label_tier为null。
 
 一次snapshot导出仍保留单一来源身份；新aggregate_exports与publish_exports支持多个session/结构/分区，各自保留capture point、snapshot digest、source代码身份、record成员和完整lineage。每个来源有自己的文件根和审查策略，同名source.json也按record核验，不能只拿第一个来源。手工拼入没有对应来源清单的记录会被拒绝。CLI使用`publish --sources <清单.json>`，清单为包含export、source_root、policies和可选batch的数组；各路径相对该清单目录解析。
 
-元数据使用record-metadata.json索引加metadata/<record_id>.json单条文件，保存语言、来源桶、完整谱系、snapshot身份和annotation状态，不带model_input、gold正文或模型解释。W08按分区读取对应metadata，避免读取混合records.json。release与标注批次均升级到v3，旧产物按原冻结运行时追溯，不原地重写。
+元数据使用record-metadata.json索引加metadata/<record_id>.json单条文件，保存语言、来源桶、完整谱系、snapshot身份和annotation状态，不带model_input、gold正文或模型解释。W08按分区读取对应metadata，避免读取混合records.json。release与标注批次均升级到v4，旧产物按原冻结运行时追溯，不原地重写。
 
 历史时点采用`historical-evidence-time-v1`：EvidencePackage.as_of绑定被评价主张/行为的参照点，snapshot.capture_point只表示采集时点。SourceObject须明确声明validity_known及原始有效区间；ExportUnit须明确evaluation_time_known。未知时点/有效范围保留待核验；不因None或字符串“false”被误当已知。已公开的未来生效材料和过期材料可以保留在输入中，但可接受引用必须在目标参照点适用；原历史判断不会套用后来规则。实际事件记录的事实有效范围与政策的生效范围由来源适配器分别声明，不能猜测。
 
@@ -107,3 +107,15 @@ r1阶段曾将内部证据协议升级为v2；本轮继续升级为v3。v1/v2目
 发布端将record.bucket与snapshot.origin、源session和lineage配对，读取并核对实际源文件hash；源文件明确声明fixture时，移除transformations标记也不能转成业务来源。非fixture还强制注入source_authority，按独立真实源读取给出record/session/lineage/snapshot/source/files绑定；无此权威端口时明确失败。回读审计重新要求该端口，不能依靠release内自报凭据认证来源。当前只接fixture和明确测试替身，没有完成真实业务来源验证。
 
 每条来源绑定保存为`origins/<record_id>.json`并进入release文件hash清单；它是评测侧内部收据，不是公共schema或密码学签名，不进入model_input。W08按请求分区读取并重核，非fixture再经独立来源验证。当前联合样例的12条G0记录中，train/dev各1条SUPPORTED只有已验证的数值标签、没有定位监督，用于证明证据训练和指标分母正确排除。
+
+
+## 完整性与监督范围报告
+
+发布前先对全部原记录检查源/分区谱系，再处理不完整项，不能靠隔离掩盖跨区依赖。训练发布隔离不完整输入；显式allow_pending可保存原始诊断发布，readiness.status为diagnostic并按record_id给input_missing/truncated或annotation_not_accepted等原因。审计从实际record/annotation重算ready，不能手工改manifest放行。
+
+完整且已接受、训练类别齐全的合成发布使用readiness.status=ready、scope=fixture；training_ready仍为false，避免冒充真实研究数据。非fixture需相同机械条件及来源权威端口，training_ready才为true；这仍不代表研究、语义可靠性或产品验收。W08只消费对应范围ready发布，在读取入口再检查单条completeness。
+
+quality-report的evidence_supervision列出可评与label-only数量、ID、来源文件/session/代码身份及定位监督隔离原因。模型自报evaluable=false不能证明分类标签正确；G0重新核算，真实非G0纯标签另需独立authority。新v4协议拒绝重解释旧v3批次/attempt/release，旧产物按当时冻结运行时追溯，不改签。
+
+
+当前c5仅将公共a/b共识改为语义比较，final完整绑定未放宽。W07在线run、离线claim和artifact rebuild共用same_semantics；冗余phase3（包括只保留首遍final的伪造第三遍）在生产端仍拒绝。线上、恢复、离线、发布和重算外层hash后的审计均已回归；原c4的6项阻塞在c5已关闭。该结论只覆盖模块自验，真实provider双遍、业务authority及正式研究/产品验收仍未完成。

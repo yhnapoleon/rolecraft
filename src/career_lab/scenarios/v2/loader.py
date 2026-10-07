@@ -9,7 +9,7 @@ from typing import Mapping
 import yaml
 
 from career_lab.contracts.v2.core import EvidenceRefV2, ProtocolError, digest, read_file
-from career_lab.contracts.v2.world import ScenarioBundle, MaterialV2, FactV2, AssistantConfig
+from career_lab.contracts.v2.world import ScenarioBundle, MaterialV2, FactV2, AssistantConfig, RoleSpecV2
 from career_lab.contracts.v2.projection import project_fragments
 
 
@@ -103,7 +103,7 @@ def load_package(root: Path) -> ScenarioPackage:
         rules = yaml.safe_load(contents["scenario.yaml"])
         if rules["scenario_id"] != bundle.id or rules["revision"] != bundle.revision:
             raise ProtocolError("scenario_identity_mismatch")
-        if json.loads(contents["roles.json"]) != [r.model_dump(mode="json") for r in bundle.role_specs]:
+        if tuple(RoleSpecV2.model_validate(r) for r in json.loads(contents["roles.json"])) != bundle.role_specs:
             raise ProtocolError("role_manifest_mismatch")
         if AssistantConfig.model_validate_json(contents["baseline.json"]) != bundle.baseline_config:
             raise ProtocolError("baseline_manifest_mismatch")
@@ -186,6 +186,13 @@ def load_package(root: Path) -> ScenarioPackage:
                 raise ProtocolError("private_raw_file_published")
             if rules["initial_material_versions"].get(material.id)!=material.version:
                 raise ProtocolError("future_raw_file_published")
+        if "research/public-case-records.json" in contents:
+            from .case_records import validate_public_cases, render_public_cases
+            records=json.loads(contents["research/public-case-records.json"])
+            validate_public_cases(records,initial,materials,{mid for mids in bundle.domains.values() for mid in mids})
+            actual=next((m for m in materials if m.id=="failures" and m.version==1),None)
+            if actual is None or [f.text for f in actual.fragments]!=render_public_cases(records):
+                raise ProtocolError("public_case_render_mismatch")
         return ScenarioPackage(root, bundle, hashlib.sha256(raw).hexdigest(), materials, facts, rules)
     except ProtocolError:
         raise

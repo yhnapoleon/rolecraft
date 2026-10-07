@@ -6,6 +6,7 @@ consistency/provenance structure; provider authenticity still needs live review.
 from datetime import datetime
 import json
 import re
+from pydantic import ValidationError
 
 from career_lab.contracts.v2.core import Executor, FileRef, ProtocolError, digest
 from career_lab.contracts.v2.data import AnnotationDecision, AnnotationPass, AnnotationV2
@@ -51,6 +52,19 @@ def validate_decision(raw, payload):
     })
 
 
+def semantic_key(decision):
+    """Only use after full per-pass parsing/reference/time validation.
+
+    Raw ↔ parsed equality and the final attestation equality stay full-field.
+    """
+    return (decision.task_type,decision.label,decision.applicability,decision.evidence_evaluable,
+            tuple(sorted({tuple(sorted(set(group))) for group in decision.acceptable_evidence_sets})))
+
+
+def same_semantics(left,right):
+    return semantic_key(left)==semantic_key(right)
+
+
 def evidence_order_policy(payload):
     count=len(candidate_ids(payload))
     if count<2:return "singleton_or_empty","Zero/single evidence: preserve actual order; use a new context and distinct prompt."
@@ -90,7 +104,7 @@ def make_request(record, version, phase, attempt, prompt, executor, approval, ba
     order_mode,order_reason=evidence_order_policy(payload)
     requested_context="context-"+digest([record.record_id,version,phase,attempt,batch_id])[:32]
     instructions = ("依据可见证据独立判定，先核查支持与反证。", "重新独立审查适用性、信息缺口和反证，不参考其他评审。", "独立复核争议任务，给出有引用依据的裁决。")
-    return {"protocol": "w07-label-request-v3",
+    return {"protocol": "w07-label-request-v4",
         "request_id": "label-" + digest([record.record_id, version, phase, attempt, batch_id])[:32],
         "record_id": record.record_id, "annotation_version": version, "phase": phase, "attempt": attempt,
         "input_hash": record.input_hash, "payload_hash": digest(payload), "model_input": payload,
@@ -145,7 +159,7 @@ def verify_attempt(record, annotation_version, raw):
     """Validate full raw request/receipt/pass equivalence on publish and audit."""
     try:
         stored = json.loads(raw)
-        if stored["format"] != "w07-label-attempt-v3":
+        if stored["format"] != "w07-label-attempt-v4":
             raise ProtocolError("annotation_artifact_protocol_required")
         request, receipt, approval = stored["request"], stored["receipt"], stored["source_policy"]
         if request["annotation_version"] != annotation_version:
@@ -197,10 +211,10 @@ def rebuild_annotation(record, version, verified, *, tier="G2v"):
             status, final = "accepted", phases[1][0].decision
     elif tier == "G2v":
         if 1 in phases and 2 in phases:
-            if phases[1][0].decision == phases[2][0].decision:
-                if 3 in phases:
+            if same_semantics(phases[1][0].decision, phases[2][0].decision):
+                if any(stored["request"]["phase"]==3 for stored,parsed,raw in ordered):
                     raise ProtocolError("unneeded_adjudication")
-                status, final = "accepted", phases[1][0].decision
+                status,final="accepted",phases[1][0].decision
             elif 3 in phases:
                 status, final = "accepted", phases[3][0].decision
                 adjudication = FileRef(path=f"labels/passes/{phases[3][0].id}.json", sha256=sha(phases[3][1]))
@@ -210,8 +224,19 @@ def rebuild_annotation(record, version, verified, *, tier="G2v"):
             raise ProtocolError("adjudication_without_independent_passes")
     else:
         raise ProtocolError("annotation_protocol_not_supported")
-    return AnnotationV2(record_id=record.record_id, annotation_version=version, input_hash=record.input_hash,
-        label_tier=tier if status=="accepted" else "G2", status=status, passes=tuple(passes), final=final, adjudication_ref=adjudication)
+    fields=dict(record_id=record.record_id,annotation_version=version,input_hash=record.input_hash,
+        label_tier=tier if status=="accepted" else "G2",status=status,passes=tuple(passes),final=final,adjudication_ref=adjudication)
+    try:return AnnotationV2(**fields)
+    except ValidationError as exc:
+        # Older frozen c4 checks explanations/representatives for a/b consensus.
+        # Preserve every pass and fail closed only for that precise incompatibility.
+        errors=exc.errors()
+        if (tier=="G2v" and status=="accepted" and 3 not in phases and 1 in phases and 2 in phases
+            and same_semantics(phases[1][0].decision,phases[2][0].decision) and len(errors)==1
+            and errors[0]['msg']=='Value error, disagreement requires actual third-pass adjudication'):
+            return AnnotationV2(**(fields | {'label_tier':'G2','status':'pending','final':None}))
+        raise
+
 
 
 def verify_annotation_artifacts(record, annotation, artifacts):

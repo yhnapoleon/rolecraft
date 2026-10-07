@@ -98,6 +98,8 @@ def export(root:Path,output:Path):
     manifest['integration_changes']['W07-W08-data-slice']='Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.'
     manifest['previous_contract_revision']='expansion-v3-722c39cc0906f1b1a8e741ad234321491ee85198e6714b5a52d99e1e9262dd37'
     manifest['integration_changes']['W07-W08-empty-joint-target']='Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.'
+    manifest['previous_contract_revision']='expansion-v3-81f4855d5cdf8c601c6b09d7b350b11dcda5ed156e2d801d8e542fa197718c85'
+    manifest['integration_changes']['W07-W08-semantic-consensus']='Only independent-pass consensus uses semantic_decision_key; G2/G2v final remains bound by the full normalized decision_key to the actual selected pass.'
     dump(output/'manifest.json',manifest)
     revision='expansion-v3-'+sha(output/'manifest.json');(output/'revision.txt').write_text(revision+'\n')
     return {'models':len(models),'revision':revision,'manifest':str(output/'manifest.json')}

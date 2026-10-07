@@ -70,7 +70,7 @@ def test_approval_stale_revision_and_reused_request_are_rejected(engine):
 
 def test_no_retrieval_to_private_or_investigation_content(package,engine):
     s=engine.initial("session")
-    for question in ("legacy_connector_unstable", "NEVER_W02_7C9E", "咨询样本120次"):
+    for question in ("TR-TRAIN-01", "NEVER_W02_7C9E", "咨询样本120次"):
         result=Assistant(package).run(s,AssistantTestRequest(query=question,config_version=0),auth(),"private")
         assert result.result.status=="fallback" and not result.result.citations
         assert question not in result.result.answer

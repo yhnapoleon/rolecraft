@@ -52,7 +52,7 @@ def test_fact_contradiction_detected_even_after_hash_reseal(package,tmp_path):
 def test_roles_get_only_authorized_paraphrase_and_no_never(package,engine):
     snapshot=engine.initial("session")
     tech=package.project("tech_private",1,"tech_lead",0,"session")
-    assert tech and all("可靠性核验" in f.text for f in tech)
+    assert tech and all("局部对照" in f.text for f in tech)
     assert all(f.ref.quote is None and f.ref.span_start is None for f in tech)
     for actor in ("learner","supervisor","business_lead"):
         assert "tech_private" not in {m.id for m,_ in package.visible_materials(snapshot.source_versions,actor,0,"session")}

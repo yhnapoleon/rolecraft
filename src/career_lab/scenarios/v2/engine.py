@@ -130,7 +130,7 @@ class ScenarioEngine:
                 material_activation={**state.material_activation,**{f"{mid}:{version}":seq for mid,version in rule["material_updates"].items()}},
                 world=state.world.model_copy(update={"business_seq":seq,"applied_milestones":(*state.world.applied_milestones,rule["id"])}))
             events.append({"session_id":state.world.session_id,"seq":seq,"event_type":rule["id"],
-                "visible_to":rule["visible_to"],"payload":{"trigger":trigger,"before_versions":before,"after_versions":after}})
+                "visible_to":rule["visible_to"],"payload":{"trigger":trigger,"notice":rule["notice"],"before_versions":before,"after_versions":after}})
         return state,tuple(events)
 
     def plan(self, snapshot, command, auth, evidence_check=None):
@@ -204,6 +204,7 @@ class ScenarioEngine:
                         material_activation={**state.material_activation, **{f"{mid}:{version}":state.world.business_seq+1 for mid,version in self.package.rules["initial_plan_material_updates"].items()}},
                         world=state.world.model_copy(update={"applied_milestones": (*state.world.applied_milestones,"initial_plan_applied")}))
                     emit("initial_plan_applied", {"trigger": "first_explicit_apply_config",
+                         "notice":"费用管理发布了差旅住宿政策通知，最新资料已放入工作区。",
                          "before_versions": before, "after_versions": versions},
                          ("learner","supervisor","tech_lead","business_lead"))
                 result = effective_config(self.package, state.config, state.world.resources)
@@ -276,6 +277,7 @@ class ScenarioEngine:
             return None
         projected = deepcopy(event)
         payload = projected["payload"]
+        payload.pop("trigger",None)  # Internal deterministic trigger stays in stored audit events.
         objects = None if auth.allowed_objects is None else set(auth.allowed_objects)
         if objects is not None:
             subject = {"material_read":"material_id", "config_applied":"config_id"}.get(event["event_type"])

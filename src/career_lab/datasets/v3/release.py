@@ -9,6 +9,7 @@ from .export import ExportResult,aggregate_exports,validate_source_membership
 from .attestation import verify_annotation_artifacts
 from . import EXPORTER_REVISION
 from .origin import binding,verify_sources
+from .readiness import input_problem,readiness
 
 
 def save_export(target, result):
@@ -69,6 +70,10 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
             continue
         if record.record_id not in by_id:
             raise ProtocolError("annotation_identity_set_mismatch")
+        incomplete=input_problem(record)
+        if incomplete and not allow_pending:
+            excluded.append({"record_id":record.record_id,"reason":incomplete})
+            continue
         annotation = AnnotationV2.model_validate(by_id[record.record_id].model_dump(mode="json"))
         if annotation.input_hash != record.input_hash:
             raise ProtocolError("annotation_input_mismatch")
@@ -99,8 +104,13 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
         accepted.append(record)
         selected_labels.append(annotation)
     if not accepted:
-        raise ProtocolError("no_publishable_records")
+        error=ProtocolError("no_publishable_records")
+        error.record_id=excluded[0]["record_id"] if excluded else None
+        error.report={"excluded":excluded}
+        raise error
+    ready=readiness(accepted,selected_labels,fixture=fixture)
     quality = audit_records(accepted, annotations=selected_labels)
+    quality["readiness"]=ready
     quality.update(excluded=excluded, input_records=len(result.records),
                    origin=result.origin, fixture_release=fixture, pending_allowed=allow_pending)
     required_labels = {"relation": {"SUPPORTED", "CONTRADICTED", "INSUFFICIENT"},
@@ -169,9 +179,9 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
             + "Lexical duplicate screening cannot prove causal structure independence. W11 review remains required.\n"
             + "No new sealed test is included. No scoring adoption is granted.\n", encoding="utf-8")
         files = {p.relative_to(root).as_posix(): sha(p.read_bytes()) for p in sorted(root.rglob("*")) if p.is_file()}
-        manifest = {"protocol": "expansion-v3-w07-release-v3", "exporter": EXPORTER_REVISION,
+        manifest = {"protocol": "expansion-v3-w07-release-v4", "exporter": EXPORTER_REVISION,
             "files": files, "records": len(accepted), "fixture": fixture, "splits": quality["splits"],
-            "source_set_digest":digest({"protocol":"w07-snapshot-set-v1","members":snapshots}),"source_snapshot_count":len(snapshots),"training_ready": not fixture and bool(missing_train_labels) and not any(missing_train_labels.values()) and all(a.status == "accepted" for a in selected_labels),
+            "source_set_digest":digest({"protocol":"w07-snapshot-set-v1","members":snapshots}),"source_snapshot_count":len(snapshots),"training_ready": not fixture and ready["status"]=="ready", "readiness":ready,
             "confirmatory": False,"metadata":FileRef(path="record-metadata.json",sha256=files["record-metadata.json"]).model_dump(mode="json")}
         manifest["id"] = digest(manifest)
         write_new(root / "manifest.json", manifest)
@@ -182,7 +192,7 @@ def publish_release(target, result, *, source_root, policies, annotations=None,
 def audit_release(root,*,source_authority=None,label_only_authority=None):
     root = Path(root)
     manifest = read_json(root / "manifest.json")
-    if manifest.get("protocol") != "expansion-v3-w07-release-v3":
+    if manifest.get("protocol") != "expansion-v3-w07-release-v4":
         raise ProtocolError("release_raw_evidence_revalidation_required")
     if manifest["id"] != digest({k: v for k, v in manifest.items() if k != "id"}):
         raise ProtocolError("release_manifest_drift")
@@ -252,6 +262,10 @@ def audit_release(root,*,source_authority=None,label_only_authority=None):
         if annotation.adjudication_ref:
             read_file(root, annotation.adjudication_ref)
     report = audit_records(rows, annotations=labels)
+    ready=readiness(rows,labels,fixture=manifest['fixture'])
+    if manifest.get('readiness')!=ready or manifest.get('training_ready')!=(not manifest['fixture'] and ready['status']=='ready'):
+        raise ProtocolError('training_readiness_mismatch')
+    report['readiness']=ready
     if report["records"] != manifest["records"]:
         raise ProtocolError("release_count_mismatch")
     return report

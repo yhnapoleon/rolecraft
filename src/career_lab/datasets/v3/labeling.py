@@ -16,7 +16,7 @@ from career_lab.contracts.v2.data import DatasetRecordV2, AnnotationDecision
 from .common import json_bytes, sha, read_json, write_new, immutable_directory, check_payload
 from .quality import policy_approval, verify_policy_approval
 from .temporal import require_time_context
-from .attestation import (candidate_ids, validate_decision, annotation_payload, make_request,
+from .attestation import (same_semantics, annotation_payload, make_request,
                           parse_receipt, verify_attempt, rebuild_annotation, RECEIPT_FIELDS)
 
 
@@ -76,7 +76,7 @@ class AnnotationBatch:
         self.manifest = read_json(self.path / "batch.json")
         if self.manifest["id"] != digest({k: v for k, v in self.manifest.items() if k != "id"}):
             raise ProtocolError("batch_manifest_drift")
-        if self.manifest.get("protocol") != "w07-label-outbox-v3":
+        if self.manifest.get("protocol") != "w07-label-outbox-v4":
             raise ProtocolError("batch_policy_revalidation_required")
         raw = read_file(self.path, FileRef.model_validate(self.manifest["records"]))
         rows = [DatasetRecordV2.model_validate(x) for x in json.loads(raw)]
@@ -132,7 +132,7 @@ class AnnotationBatch:
             policy = {"approvals": approvals, "quarantined": quarantine}
             write_new(root / "records.json", rows)
             write_new(root / "source-policy.json", policy)
-            manifest = {"protocol": "w07-label-outbox-v3", "annotation_version": annotation_version,
+            manifest = {"protocol": "w07-label-outbox-v4", "annotation_version": annotation_version,
                 "executor": executor.model_dump(mode="json"), "prompts": list(prompts), "count": len(rows),
                 "quarantined": quarantine,"output_schema":AnnotationDecision.model_json_schema(),
                 "records": FileRef(path="records.json", sha256=sha(json_bytes(rows))).model_dump(mode="json"),
@@ -166,7 +166,7 @@ class AnnotationBatch:
         if phase == 3:
             state = self.annotation(record_id)
             good = [p for p in state.passes if p.status == "success"]
-            if len(good) < 2 or good[0].decision == good[1].decision:
+            if len(good) < 2 or same_semantics(good[0].decision, good[1].decision):
                 raise ProtocolError("adjudication_not_required")
         with self._db() as db:
             db.execute("BEGIN IMMEDIATE")
@@ -206,7 +206,7 @@ class AnnotationBatch:
                 return saved
             if row["status"] != "dispatched":
                 raise ProtocolError("annotation_stale_attempt", status=409)
-            stored = {"format": "w07-label-attempt-v3", "pass": parsed.model_dump(mode="json"),
+            stored = {"format": "w07-label-attempt-v4", "pass": parsed.model_dump(mode="json"),
                 "request": request, "request_hash": digest(request), "source_policy": self.approvals[rid],
                 "receipt": receipt, "receipt_hash": digest(receipt), "provider": receipt.get("provider"),
                 "usage": receipt.get("usage") or {}, "elapsed_seconds": receipt.get("elapsed_seconds"),
@@ -238,7 +238,9 @@ class AnnotationBatch:
                 if phase == 3:
                     state = self.annotation(rid)
                     successes = [p for p in state.passes if p.status == "success"]
-                    if len(successes) < 2 or successes[0].decision == successes[1].decision:
+                    if len(successes) < 2 or same_semantics(successes[0].decision, successes[1].decision):
+                        if len(successes)>=2 and state.status=="pending":
+                            blocked.append({"record_id":rid,"phase":3,"code":"semantic_consensus_contract_upgrade_required"})
                         break
                 try:
                     request = self.claim(rid, phase, retry_failed=retry_failed)
