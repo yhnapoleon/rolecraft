@@ -45,6 +45,10 @@ class FeedbackEngine:
             next_options.append(message(work_language,'作品用途尚未明确；可说明希望评审的内容，已核验事实仍保留。'))
         elif any(p.applicability=='undetermined' and p.rule_context.get('decision') is None for p in packages):
             next_options.append(message(work_language,'作品用途已记录，本次决定尚未声明；可补充决定，也可保留未定状态继续查看事实反馈。'))
+        if any(p.rule_context['mechanism'].startswith('v2.') for p in packages):
+            from .applicability import decision_note
+            declared={p.rule_context.get('decision') for p in packages}
+            next_options.append(decision_note(next(iter(declared)) if len(declared)==1 else None,work_language))
         if any(p.rule_context.get('decision') is not None for p in packages):
             next_options.append(message(work_language,'你的决定声明已记录；审批与执行不会由声明自动确认，仍按各自可核验记录展示。'))
         if any(i.source=='pending' for i in items):
@@ -88,7 +92,7 @@ class FeedbackDispatcher:
     def get_or_generate(self,revision,session_id,subject_id):
         try:return self.legacy_saved(session_id,subject_id)
         except KeyError:pass
-        if revision in {'rules-v4','rules-v4-rubric-v2-c1'}:return self.v4(session_id,subject_id)
+        if revision in {'rules-v4','rules-v4-rubric-v2-c1','rules-v4-rubric-v2-c2'}:return self.v4(session_id,subject_id)
         if revision!='rules-v3':
             from career_lab.contracts.v2.core import ProtocolError
             raise ProtocolError('historical_rules_unavailable',status=422)

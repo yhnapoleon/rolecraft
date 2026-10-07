@@ -36,7 +36,7 @@ def run_rules_v2(item,*,work_language='zh'):
   if all(has(n,bool) for n in names) and not all(facts[n] for n in names):return upper_partial('指标定义或目标有缺口，规则只确定上界。','Metric definitions or targets have a verified gap; only an upper bound is established.',(*names,'metrics_count','content_review_complete'))
  if kind=='unknowns' and flag('current_obligation_verified') and flag('unapproved_resource_excess'):
   return result('NOT_MET','已核实当前生效责任所需资源超过有效值且未获批准。','A current binding obligation exceeds effective resources without approval.',('current_obligation_verified','unapproved_resource_excess'))
- if kind=='failure_analysis' and flag('failure_evidence_complete') and count('failure_evidence_count') and facts['failure_evidence_count']==0:
+ if kind=='failure_analysis' and stage in {'commitment','result'} and flag('failure_evidence_complete') and count('failure_evidence_count') and facts['failure_evidence_count']==0:
   return upper_partial('完整案例引用/复现记录中未见失败案例；失败模式解释仍待语义核验。','The complete citation/reproduction ledger contains no failure case; failure-mode reasoning still needs semantic review.',('failure_evidence_complete','failure_evidence_count'))
  if kind in {'capacity','resources'}:
   from .rules import run_rules

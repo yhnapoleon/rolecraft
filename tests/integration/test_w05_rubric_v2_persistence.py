@@ -16,7 +16,7 @@ from career_lab.jobs.repository import JobRepository
 from test_w05_c8_persistence import cmd
 
 @pytest.mark.parametrize('language',['zh','en'])
-@pytest.mark.parametrize('decision',['launch','no_go','defer_with_conditions'])
+@pytest.mark.parametrize('decision',['launch','launch_narrow','no_go','defer_with_conditions'])
 def test_frozen_14_items_persist_once_for_multiple_works_and_replay(tmp_path,language,decision):
  refs=install_candidate(tmp_path)
  evaluation=C.EvaluationBundle(id='controlled-rubric-v2',revision='candidate-1',rubric=refs['rubric'],rules=refs['rules'],graders=(),protocol=refs['rules'])
@@ -64,8 +64,15 @@ def test_frozen_14_items_persist_once_for_multiple_works_and_replay(tmp_path,lan
   assert len(saved['verified_facts'])==2 and saved['evaluation']==f.model_dump(mode='json')
   assert all(i['label']!='NOT_MET' for i in saved['items'] if i['criterion'] in {'R1.target','R1.metrics'})
   stale=next(i for i in saved['rule_items'] if i['criterion']=='R4.staleness_test')
-  assert stale['label']==('NOT_MET' if decision=='launch' else 'NOT_APPLICABLE')
+  from career_lab.rubrics.v4.applicability import decision_note
+  assert decision_note(decision,language) in saved['next_options']
+  assert stale['label']==('NOT_MET' if decision in {'launch','launch_narrow'} else 'NOT_APPLICABLE')
   text=' '.join(saved['verified_facts'][0]['summary']);assert ('Policy change recorded' if language=='en' else '政策变更记录') in text
+  import os,json
+  if os.environ.get('W05_EVIDENCE_DIR'):
+   from pathlib import Path
+   folder=Path(os.environ['W05_EVIDENCE_DIR']);folder.mkdir(parents=True,exist_ok=True)
+   (folder/(language+'-'+decision+'.json')).write_text(json.dumps({'report':saved,'decision':decision,'language':language,'evidence_boundary':'controlled fact adapter with real API/SQLite/worker; not actual W02 business QA'},ensure_ascii=False,indent=2))
   replay=client.post(f'/sessions/{sid}/submissions',json=request.model_dump(mode='json'));assert replay.json()['replayed']
   assert not worker.run_once() and calls==[tuple(works)]
   client.get(f'/sessions/{sid}/requests/submit-candidate');assert C.canonical(store.read(auth,ref).content)==before

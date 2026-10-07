@@ -169,3 +169,53 @@ def test_exploration_missing_target_is_not_final_obligation(env):
 def test_claim_only_adjustment_has_upper_bound_not_confirmed_partial(env):
  item=run_rules(build(env,'R5.adjustment',{**CHANGE,'adjustment_action_count':0,'adjustment_proposal_verified':True,'adjustment_completion_claim_verified':True}))
  assert item.rule_bound.lower=='NOT_MET' and item.rule_bound.upper=='PARTIAL'
+
+
+@pytest.mark.parametrize('language',['zh','en'])
+@pytest.mark.parametrize('purpose',['exploration','option','plan','commitment','result','unknown private note'])
+def test_candidate_applicability_matrix_and_explanations(env,language,purpose):
+ from career_lab.evidence.v2.assembler import applicable
+ from career_lab.rubrics.v4.applicability import applicability_note
+ nonlaunch={'R1.target','R2.support','R2.unknowns','R2.failure_analysis','R6.consistency'}
+ allowed={'exploration':nonlaunch,'option':nonlaunch|{'R6.alternatives'},
+  'plan':nonlaunch|{'R1.metrics','R5.impact','R6.operations','R6.alternatives'},
+  'commitment':{p.id for p in policies()},
+  'result':{p.id for p in policies() if not p.launch_only}}
+ for decision in ('no_go','defer_with_conditions','launch_narrow',None):
+  for policy in policies(work_language=language):
+   result=applicable(policy,purpose,decision)
+   if purpose not in allowed:expected='undetermined'
+   elif policy.id not in allowed[purpose]:expected='not_applicable'
+   elif policy.launch_only and decision in {'no_go','defer_with_conditions'}:expected='not_applicable'
+   elif policy.launch_only and decision is None:expected='undetermined'
+   else:expected='applicable'
+   assert result==expected,(purpose,decision,policy.id,result)
+   note=applicability_note(policy,purpose,decision,language)
+   assert note
+   if language=='en':assert not any('\u4e00'<=ch<='\u9fff' for ch in note)
+
+@pytest.mark.parametrize('language',['zh','en'])
+def test_three_decision_feedbacks_differ_without_grading_the_enum(env,language):
+ from career_lab.rubrics.v4.applicability import decision_note
+ for decision in ('no_go','defer_with_conditions','launch_narrow'):
+  item=build(env,'R2.support',language=language,decision=decision)
+  report,_=FeedbackEngine().evaluate('s',product_ref(),env['authority'].bundle.evaluation,INITIAL,(item,),work_language=language)
+  assert decision_note(decision,language) in report.next_options
+  assert report.items[0].label=='INSUFFICIENT' and report.mode=='advisory'
+ assert len({decision_note(d,language) for d in ('no_go','defer_with_conditions','launch_narrow')})==3
+
+def test_exploratory_failure_note_does_not_acquire_final_case_obligation(env):
+ item=build(env,'R2.failure_analysis',{'failure_evidence_complete':True,'failure_evidence_count':0},purpose='exploration')
+ assert run_rules(item).label=='INSUFFICIENT' and run_rules(item).rule_bound is None
+
+@pytest.mark.parametrize('decision',['no_go','defer_with_conditions','launch_narrow',None])
+def test_judge_and_verifier_receive_only_the_declared_decision(env,decision):
+ from career_lab.evidence.v2.assembler import model_input
+ item=build(env,'R2.support',decision=decision)
+ payload=model_input(item)
+ assert payload['declared_decision']==decision and 'facts' not in payload and 'rule_context' not in payload
+ model=ScriptedModel([ModelReply(text=advice(item))]);support=ScriptedModel([ModelReply(text='{}')])
+ outcome=AdvisoryJudge(model,EvidenceSupportVerifier(support)).evaluate(item)
+ assert json.loads(model.calls[0][1]['content'])['declared_decision']==decision
+ assert json.loads(support.calls[0][1]['content'])['declared_decision']==decision
+ assert len(model.calls)==len(support.calls)==1 and outcome.item.label=='INSUFFICIENT'

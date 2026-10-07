@@ -60,6 +60,14 @@ def _run_rules(item,*,work_language='zh'):
 
 def run_rules(item,*,work_language='zh'):
     result=_run_rules(item,work_language=work_language)
+    if item.rule_context['mechanism'].startswith('v2.'):
+        from .rubric_v2 import policies
+        from .applicability import applicability_note
+        policy=next(p for p in policies(work_language=work_language) if p.id==item.criterion)
+        note=applicability_note(policy,item.purpose,item.rule_context.get('decision'),work_language)
+        if result.label=='NOT_APPLICABLE' or item.applicability=='undetermined':
+            result=result.model_copy(update={'explanation':note})
+        else:result=result.model_copy(update={'explanation':note+'\n'+result.explanation})
     if item.rule_context['mechanism'] in {'v2.staleness_test','v2.adjustment'}:
         from .rules_v2 import change_observations
         observations=change_observations(item,work_language=work_language)

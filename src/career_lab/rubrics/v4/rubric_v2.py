@@ -10,8 +10,8 @@ import json
 from career_lab.contracts import v2 as C
 from career_lab.evidence.v2.ports import CriterionPolicy
 
-RUBRIC_REVISION = 'rubric-v2-candidate-1'
-RULES_REVISION = 'rules-v4-rubric-v2-c1'
+RUBRIC_REVISION = 'rubric-v2-candidate-2'
+RULES_REVISION = 'rules-v4-rubric-v2-c2'
 # id, zh responsibility, en responsibility, purposes, launch-only
 CRITERIA = (
  ('R1.target','目标用户、业务目标与需求证据是否对应','Whether target users and business goals match the demand evidence','all',False),
@@ -101,17 +101,18 @@ def policies(*,work_language='zh'):
    'v2.'+cid.split('.',1)[1],PURPOSES[scope],launch) for cid,zh,en,scope,launch in CRITERIA)
 
 def rubric_document():
+ from .applicability import SCOPE,DECISIONS
  return {'revision':RUBRIC_REVISION,'rules_revision':RULES_REVISION,'mode':'advisory',
   'status':'candidate_requires_independent_review_and_technical_confirmation',
   'dimension_weights':'original_weights_pending_confirmation_no_aggregate_score',
   'rule_calibration_target':{'target':45,'scale':100,'status':'not_measured'},
-  'criteria':[{'id':r[0],'dimension':r[0].split('.')[0],'evidence_types':DETAILS[r[0]][0],'rule_bounds':DETAILS[r[0]][1],'difference_from_original':DETAILS[r[0]][2],'product_basis':'W05 task specification 4.3 / project definition contextual evaluation, 2026-10-07','zh':policies(work_language='zh')[i].to_dict(),'en':policies(work_language='en')[i].to_dict()} for i,r in enumerate(CRITERIA)],
-  'fact_contract':FACT_CONTRACT,'unknown_policy':'INSUFFICIENT; no invented zeros, labels or future facts'}
+  'criteria':[{'id':r[0],'dimension':r[0].split('.')[0],'product_applicability':{'zh':SCOPE[r[0]][0],'en':SCOPE[r[0]][1]},'evidence_types':DETAILS[r[0]][0],'rule_bounds':DETAILS[r[0]][1],'difference_from_original':DETAILS[r[0]][2],'product_basis':'W05 task specification 4.3 / project definition contextual evaluation, 2026-10-07','zh':policies(work_language='zh')[i].to_dict(),'en':policies(work_language='en')[i].to_dict()} for i,r in enumerate(CRITERIA)],
+  'decision_guidance':{k:{'zh':v[0],'en':v[1]} for k,v in DECISIONS.items()},'fact_contract':FACT_CONTRACT,'unknown_policy':'INSUFFICIENT; no invented zeros, labels or future facts'}
 
 def rules_document():
  # The installation hash includes code, so an implementation change requires a
  # fresh EvaluationBundle. Consumers must never hot-swap old session bindings.
- files=[Path(__file__).with_name(n) for n in ('rubric_v2.py','rules_v2.py','rules.py','feedback.py','judge.py','support.py','provider.py')]
+ files=[Path(__file__).with_name(n) for n in ('rubric_v2.py','applicability.py','rules_v2.py','rules.py','feedback.py','judge.py','support.py','provider.py')]
  return {'revision':RULES_REVISION,'rubric_revision':RUBRIC_REVISION,'model_retries':0,
   'files':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files}}
 
