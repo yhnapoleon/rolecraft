@@ -231,11 +231,15 @@ W03作品重放：仅work_products.create/versions.create/adopt返回的、与�
 有限对象scope的反馈自由摘要、无逐项引用依据的解释与全局统计属于当前无法独立核验的内容，使用安全待核验投影；有权且有明确来源引用的其他项仍保留。read_projection是读取语义，不能当作原始反馈写入、评分或伪造新来源hash。
 
 
+正式私有调用占用：`PrivateRoleGenerationPort.claim_model_call(envelope, auth, phase, model_revision)` 在独立新增表 `v2_role_model_calls` 持久化，以 `(session_id, origin_request_id, refresh_count, phase)` 唯一标识。每阶段传输前独立提交，首次 True、重复 False；租约/worker/进程恢复和 provider/model 配置变更均不重置。每次核对真实租约、原请求和当前权限，超时/回滚不退还占用；模型版本只作审计信息，不能成为解锁键。
+
+非本地模型由 `install_private_role_runtime` 默认装配 `RuleReplyVerifier`，亦可显式注入已批准核验器。本地默认不装核验器，保留原本地行为。规则核验器 `retries=0`，通过 `begin_call('role_reply_review', revision)` 消耗该阶段占用，只核固定工作语言的保守字符特征、请求身份、立场摘要 hash、回复 hash 和快照时点；不确定时返回 undetermined 并拒绝落公开回复。consistent 仅指机械检查一致，`semantic_quality=unverified`、`learner_penalty_allowed=False`，不判立场语义、不产生模型使用量或新费用。超时/提交回滚的测试保留失败与输入，确认只有显式重试才产生新调用，依据暂代指引“全部模型接入共用要求”第5条。
+
 正式私有角色写入：api.private_roles.PrivateRoleGenerationPort配合StoreJobHandler使用实际Gateway.store及WorkerClaim；API和独立worker均由同一ExtensionRegistry注册对象模型/引用提供器。begin_role_execution固定原AuthContext、原问题、snapshot、prompt/history hash、精确私有refs和经过角色reader核验的外部锚点。原调用者始终传给RoleService，内部role reader只核私有来源，不能替换caller token或扩大其scope。
 
 公开role_turn由受控turns.create派生，role_reply由实际fenced job派生，保留原executor。提交计划需不可序列化的本store许可与完整计划hash；改受众、删审计、改scope/上下文/周期/身份或加未批准来源均拒绝。公开回复只可引用原turn与确切原/生成cycle；私有audit可以引用公开reply，反向禁止。reply和completed RoleContext同一共同事务提交/回滚，私有依赖不塞入公开重放所需scope，也不给caller私有对象访问权。
 
-record_role_attempt用同一v2对象/事务/快照表及storage_revision保存实际接口给出的attempt/usage与prompt；由真实lease和原捕获许可授权，system作者记录原caller在audit.scope中。它不改变business_seq/workspace_revision。调用后暂停或撤销不会抹去实际尝试，公开结果仍按原caller当前授权/生命周期拒绝；缺失/过期/被替换lease不能写结果或审计，未保存usage不能解释为零调用/零费用。成功回复提交失败保留尝试，重试可再次实际调用模型，不能宣称外部调用恰好一次。
+record_role_attempt用同一v2对象/事务/快照表及storage_revision保存实际接口给出的attempt/usage与prompt；由真实lease和原捕获许可授权，system作者记录原caller在audit.scope中。它不改变business_seq/workspace_revision。调用后暂停或撤销不会抹去实际尝试，公开结果仍按原caller当前授权/生命周期拒绝；缺失/过期/被替换lease不能写结果或审计，未保存usage不能解释为零调用/零费用。成功回复提交失败仍保留尝试，任务失败并保存原输入；后台恢复不重新调用。只有获授权的显式 jobs.refresh 才开启新代数并允许新调用。此约束不声称外部计费恰好一次。
 
 RoleReply的公开写/历史读按固定公共DTO字段白名单判定，宽松ObjectModel(extra=allow)不能放行generation_audit、scope、used_sources、job_attempt及未知字段；合法公开spoken_evidence仍允许，私有原件留给内部角色/research。generation_audit写入须正式许可，不能靠改visible_to把私有记录公开。
 

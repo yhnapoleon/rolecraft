@@ -7,7 +7,8 @@
     "W02 owned b821 remains exact c2; coordinator rebind required for cumulative business runtime. W03 owner must adopt removal_cascade port for restricted removals; role private generation and native UI remain pending.",
     "W05 evaluator-to-trusted-source adapter and native feedback UI remain pending. Controlled persistence tests do not prove actual production history or model quality.",
     "Role snapshot tests use controlled catalogs/audits. No production private writer, failure-attempt sink, event-reference persistence or full role generation is claimed.",
-    "Successful generation checks use controlled non-network models and catalog. W04 new private-ID fix and real business cumulative acceptance are still required; no production activation implied."
+    "Successful generation checks use controlled non-network models and catalog. W04 new private-ID fix and real business cumulative acceptance are still required; no production activation implied.",
+    "056: preceding stage boundaries are historical. Private non-local plumbing now has controlled no-network regression evidence, not real provider quality, PostgreSQL or final package acceptance. W02 must rebind to this new contract before standard installed runtime acceptance."
   ],
   "changes_since_draft": [
     "Command.schema_version and CreateSessionV2.schema_version are now required for explicit envelopes.",
@@ -280,16 +281,17 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "4f13e172e8193ce899ed9e23185344ab66a3d4d3caf636c6e58a07f8e4706731"
+      "sha256": "2f393a2a47f8d489a77e3f83f4b17f2ae69a42473cb92c896196e1111086bb50"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "b94008b9a74ce7eb744f601087ddf0b3e0e82a8bc89d0665d692cacca4152cb3"
+    "sha256": "f151ee744a1ccd16fe2da7aa9b7beb8e97a2b8a97fdbcfd6d9e4726208708d58"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
     "031-C8-01": "Store read/query/view/job-view and cached request/replay share feedback subject authorization and transient support projection; hidden quote/title/ID/derived prose removed; original records unchanged.",
+    "056-role-call-guard": "Durable phase reservation keyed by original request and explicit refresh generation; worker/HTTP recovery and provider changes cannot reissue calls. Mechanical language/binding verifier only, semantic quality unverified; local replies unchanged. Controlled fixture workers inherit production no-retry policy.",
     "W02-S06": "Opt-in contextual resolver gets authoritative persisted-window ScenarioState; legacy four-argument behavior retained.",
     "W02-S07": "Verified command/result references are atomically anchored for read-request recovery.",
     "W02-projector-registration": "Conflicting declared public action/projector registrations are rejected before installation.",
@@ -321,7 +323,7 @@
     "sha256": "3f707d79c2cd15f92b5816aeb5798acb02baf9e4c7ff0121e42f3bb63326235a"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-e17e102c1dc0c7755dbaf6828d18ca17ad7a3c4485dc2fa25e90c4dd8f9211aa",
+  "previous_contract_revision": "expansion-v3-2b0629dbef16ce2cc4480949da7b50903a9a63f554145e7d0e268ae4a60a5e6e",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -368,6 +370,7 @@
   },
   "review_fixes": {
     "031-W01-REPLAY-SCOPE-01": "execute, replay and request/job GET share current scope and visibility checks, including historical result-only/unanchored references; no handler/resolver rerun.",
+    "056-role-call-guard": "Durable phase reservation keyed by original request and explicit refresh generation; worker/HTTP recovery and provider changes cannot reissue calls. Mechanical language/binding verifier only, semantic quality unverified; local replies unchanged. Controlled fixture workers inherit production no-retry policy.",
     "C-W01-01": "Snapshot-bound asynchronous inputs; declared head/state freshness, actual claim and current authorization checked atomically. needs_context parks once; explicit idempotent refresh preserves original subject/command and immutable context history.",
     "C-W01-02": "RoleContext reads reject non-research learner and historical reserved role IDs; only a trusted matching role reader or internal research capability can read. Reserved role credentials cannot be minted. New writes remain private.",
     "C-W01-03": "Withdrawn route-deleting candidate is not included. Public integration must use Gateway slots; W03 adapter remains separate integration work.",
@@ -2972,7 +2975,7 @@
     "src/career_lab/api/feedback_integration.py": "ab0adab1472101b5bfb4bfade4b237f5a918ccdbb47ef1452d887d2c449b66c4",
     "src/career_lab/api/lifecycle_integration.py": "099f37bdb5b1678f5e3c86ae42c8f6788a2c1ad20f89f7fcaa26a932c5a75066",
     "src/career_lab/api/modules.py": "db74178fab5ddfe27a7b949aaa195dbbb9abcfe15859bf8f3428c5d830cb0542",
-    "src/career_lab/api/private_roles.py": "e4379b2d4bd8ffac4a20ff648d25464eb59bc53c08fa79777eb15244f8d8f9de",
+    "src/career_lab/api/private_roles.py": "e12889119d1c78109cc2d503ee70c143fe0d58008f4e59670f55540a6e684759",
     "src/career_lab/api/public_materials.py": "dfdd1b42af9501541d75cfa7875297edb91887bc46db79595107cc31efaa2faf",
     "src/career_lab/api/role_snapshot.py": "19ea854aff520928b219f314bfa63608b90d62825603a3e36063a278ab563551",
     "src/career_lab/api/v2_routes.py": "91c8d42225aa52d460734e6460456b896c6a737f3ec131a406b0d1c9b791e96d",

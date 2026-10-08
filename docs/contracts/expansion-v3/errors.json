@@ -144,6 +144,7 @@
     "revision_cycle_required",
     "revision_not_available",
     "revision_parent_not_current",
+    "role_attempt_guard_unavailable",
     "role_attempt_identity_conflict",
     "role_attempt_identity_invalid",
     "role_attempt_invalid",

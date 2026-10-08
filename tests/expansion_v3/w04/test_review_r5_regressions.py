@@ -128,7 +128,7 @@ def test_pair_survives_real_store_worker_and_public_replay(tmp_path,package,cata
     from career_lab.api.modules import ExtensionRegistry,Gateway
     from career_lab.jobs.repository import JobRepository
     from career_lab.jobs.worker import Worker,ClaimedHandler
-    from test_private_port_boundary import ControlledSnapshot,ControlledPrivatePort
+    from test_private_port_boundary import ControlledSnapshot,ControlledPrivatePort,ControlledReplyVerifier
     from test_runtime import common_store
     outcomes=[]
     for i,identifier in enumerate(pair):
@@ -136,7 +136,7 @@ def test_pair_survives_real_store_worker_and_public_replay(tmp_path,package,cata
         store,auth=common_store(folder,catalog);query='请解释 '+identifier+' 的内容'
         model=ScriptedModel([ModelReply(text=query if echo_raw else '请提供可核对的公开材料。')])
         private=ControlledPrivatePort()
-        service=RoleService(ContextPort(catalog,ControlledSnapshot(package,catalog)),model,private_port=private)
+        service=RoleService(ContextPort(catalog,ControlledSnapshot(package,catalog)),model,private_port=private,reply_verifier=ControlledReplyVerifier())
         registry=ExtensionRegistry();service.install(registry);gateway=Gateway(store,registry)
         view=store.view(auth)
         command=Command(schema_version=2,request_id='pair',operation='turns.create',expected_version=view.state.business_seq,

@@ -3,13 +3,57 @@
 The module-owned RoleService remains responsible for dialogue behavior. This port
 only binds it to the common fixed snapshot, actual lease and private persistence.
 """
+from pathlib import Path
+import hashlib
+import re
+from sqlalchemy import Column, Integer, String, Table, insert, select
+from sqlalchemy.exc import IntegrityError
+from career_lab.storage.database import metadata, utc_timestamp
 from career_lab.contracts.v2 import *
 from career_lab.api.modules import Operation,StoreJobHandler
 from career_lab.api.role_snapshot import FixedRoleSnapshotPort,activated_catalog
 from career_lab.runtime.context_v2 import ContextPort
-from career_lab.runtime.roles_v2 import RoleService
+from career_lab.runtime.roles_v2 import RoleService, LocalRoleModel
 from career_lab.storage.role_memory import RoleTurn,RoleReply,RoleDisplay
 from career_lab.storage.v2_store import ObjectWrite,references
+
+
+# Additive private journal. A claim commits before transport and is never refunded.
+role_model_calls = Table('v2_role_model_calls', metadata,
+    Column('session_id', String, primary_key=True),
+    Column('origin_request_id', String, primary_key=True),
+    Column('retry_generation', Integer, primary_key=True),
+    Column('phase', String, primary_key=True),
+    Column('model_revision', String, nullable=False),
+    Column('claimed_at', String, nullable=False))
+
+
+class RuleReplyVerifier:
+    """Mechanical script/binding check only; consistent never means semantic quality.
+
+    Mixed or indeterminate language is withheld. No provider call, score, stance
+    change, or claim that the reply follows the role's position is made here.
+    """
+    retries = 0
+    revision = 'role-reply-mechanical-v1'
+
+    def check(self, snapshot, auth, request, text, *, record_attempt, begin_call=None):
+        from career_lab.storage.role_memory import ReplyVerification, stance_digest
+        if begin_call is None:
+            raise ProtocolError('role_attempt_guard_unavailable', status=409)
+        begin_call('role_reply_review', self.revision)
+        han = len(re.findall(r'[\u3400-\u9fff]', text))
+        latin = len(re.findall(r'[A-Za-z]', text))
+        # This is a conservative script check, not natural-language understanding.
+        match = (han > 0 and han >= latin) if snapshot.work_language == 'zh' else (latin > 0 and han == 0) if snapshot.work_language == 'en' else False
+        identity = (request.session_id == auth.session_id == snapshot.context.session_id
+                    and request.input.role_id == snapshot.context.role_id
+                    and request.executor == auth.executor)
+        source = Path(__file__)
+        return ReplyVerification('consistent' if match and identity else 'undetermined',
+            True if match and identity else None, stance_digest(snapshot.stance_state),
+            digest(text), snapshot.context.as_of,
+            FileRef(path='src/career_lab/api/private_roles.py', sha256=hashlib.sha256(source.read_bytes()).hexdigest()))
 
 
 class PrivateRoleGenerationPort:
@@ -21,6 +65,33 @@ class PrivateRoleGenerationPort:
         if self.permit is None:
             if self.view.worker_claim is None:raise ProtocolError('worker_claim_required',status=409)
             self.permit,self.snapshot=self.store.begin_role_execution(self.view,self.envelope,self.auth,self.view.worker_claim,self.catalog,max_context_chars=self.max_context_chars)
+
+    def claim_model_call(self, envelope, auth, phase, model_revision):
+        self.require_available()
+        if envelope != self.envelope or auth != self.auth:
+            raise ProtocolError('role_attempt_identity_invalid', status=403)
+        if not phase or not model_revision:
+            raise ProtocolError('role_attempt_identity_invalid', status=403)
+        key = dict(session_id=auth.session_id, origin_request_id=envelope.origin_request_id,
+                   retry_generation=envelope.context.refresh_count, phase=phase)
+        condition = [role_model_calls.c[name] == value for name, value in key.items()]
+        with self.store.db.transaction() as conn:
+            # Recheck the actual lease and caller before each stage. A new lease
+            # or provider revision never creates a new call identity.
+            self.store._role_lease(conn, self.permit)
+            self.store._validate_job_commit(conn, auth, envelope.command, envelope.context,
+                                            self.view.worker_claim, envelope.capability)
+            if conn.execute(select(role_model_calls.c.phase).where(*condition)).first():
+                return False
+            try:
+                with conn.begin_nested():
+                    conn.execute(insert(role_model_calls).values(**key, model_revision=model_revision,
+                                                                 claimed_at=utc_timestamp()))
+            except IntegrityError:
+                if conn.execute(select(role_model_calls.c.phase).where(*condition)).first():
+                    return False
+                raise
+        return True
 
     def _audit(self,*,phase,context,received,memories,used,attempts,reply=None,error=None):
         permit=self.permit
@@ -55,7 +126,7 @@ class PrivateRoleGenerationPort:
         return self.store.authorize_role_plan(self.permit,plan)
 
 
-def install_private_role_runtime(registry,catalog,model,*,enable_generation=False,max_context_chars=24000):
+def install_private_role_runtime(registry,catalog,model,*,enable_generation=False,max_context_chars=24000,reply_verifier=None):
     """Same registry for API/worker. Real business activation remains opt-in.
 
     Keep enable_generation false until the coordinator-fixed repaired W04 input
@@ -68,7 +139,8 @@ def install_private_role_runtime(registry,catalog,model,*,enable_generation=Fals
         if not enable_generation:raise ProtocolError('role_integration_not_accepted',status=409)
         current_catalog=activated_catalog(catalog,view.private_scenario_state)
         port=PrivateRoleGenerationPort(store,current_catalog,view,envelope,auth,max_context_chars=max_context_chars)
-        service=RoleService(ContextPort(current_catalog,FixedRoleSnapshotPort(store,current_catalog)),model,max_context_chars=max_context_chars,private_port=port)
+        service=RoleService(ContextPort(current_catalog,FixedRoleSnapshotPort(store,current_catalog)),model,max_context_chars=max_context_chars,private_port=port,
+                            reply_verifier=reply_verifier if reply_verifier is not None else (None if type(model) is LocalRoleModel else RuleReplyVerifier()))
         return port.authorize(service.generate(view,envelope,auth))
     registry.register_job('v2.role_turn',StoreJobHandler(generate, retry_on_error=False))
     return registry

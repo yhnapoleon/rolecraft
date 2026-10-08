@@ -9,7 +9,7 @@ from sqlalchemy import select,update
 from career_lab.contracts import v2 as C
 from career_lab.api.app import create_app
 from career_lab.api.modules import ExtensionRegistry,Gateway,JobEnvelope
-from career_lab.api.private_roles import install_private_role_runtime,PrivateRoleGenerationPort
+from career_lab.api.private_roles import install_private_role_runtime,PrivateRoleGenerationPort,RuleReplyVerifier
 from career_lab.api.role_snapshot import FixedRoleSnapshotPort
 from career_lab.runtime.context_v2 import ContextPort
 from career_lab.runtime.roles_v2 import RoleService
@@ -47,7 +47,7 @@ def role_api(foundation,tmp_path):
         return C.ExternalReference(ref=bare,source=f,content_hash=f.sha256)
     registry.register_reference_resolver('material',resolver,contextual=True);install_private_role_runtime(registry,catalog,model,enable_generation=True)
     app=create_app(str(store.db.engine.url),extensions=registry);client=TestClient(app);client.headers['Authorization']='Bearer '+token
-    worker_store=V2Store(str(store.db.engine.url));gateway=Gateway(worker_store,registry);repository=JobRepository(worker_store.db);worker=Worker(repository,{'v2.role_turn':ClaimedHandler(lambda payload,claim:gateway.run_job('v2.role_turn',payload,claim=claim))})
+    worker_store=V2Store(str(store.db.engine.url));gateway=Gateway(worker_store,registry);repository=JobRepository(worker_store.db);worker=Worker(repository,{'v2.role_turn':ClaimedHandler(lambda payload,claim:gateway.run_job('v2.role_turn',payload,claim=claim),retry_on_error=registry.job_handlers['v2.role_turn'].retry_on_error)})
     yield dict(app=app,client=client,store=app.state.v2_store,owner=owner,token=token,catalog=catalog,model=model,registry=registry,worker_store=worker_store,gateway=gateway,jobs=repository,worker=worker,resolver_calls=calls)
     client.close();app.state.store.close();worker_store.db.engine.dispose()
 
@@ -102,7 +102,10 @@ def test_scoped_agent_uses_original_executor_without_private_scope_expansion(rol
 @pytest.mark.parametrize('mode',['timeout','dump'])
 def test_failed_invocations_are_private_and_retained_without_public_reply(role_api,mode):
     api=role_api;api['model'].mode=mode;jid,cmd=queue(api);api['worker'].run_once();row=api['jobs'].get(jid)
-    assert row['status']==('queued' if mode=='timeout' else 'failed')
+    assert row['status']=='failed'
+    assert not api['worker'].run_once()
+    turn=next(r for r in api['store'].view(api['owner']).objects if r.ref.kind=='role_turn')
+    assert turn.content['input']['text']=='请核对当前依据。'
     records=private_records(api);assert len(records)==1 and records[0].content['generation_audit']['phase']=='attempt'
     assert records[0].content['generation_audit']['attempts'][0]['status']==('timeout' if mode=='timeout' else 'failed')
     assert not any(r.ref.kind=='role_reply' for r in api['store'].view(api['owner']).objects)
@@ -149,8 +152,13 @@ def test_reply_and_completed_audit_rollback_together_but_real_attempt_remains(ro
             kwargs['fault']=fault
         return original(*args,**kwargs)
     monkeypatch.setattr(api['worker_store'],'execute',execute)
-    jid,_=queue(api);api['worker'].run_once();assert api['jobs'].get(jid)['status']=='queued'
+    jid,_=queue(api);api['worker'].run_once();assert api['jobs'].get(jid)['status']=='failed'
     assert len(private_records(api))==1 and not any(r.ref.kind=='role_reply' for r in api['store'].view(api['owner']).objects)
+    assert not api['worker'].run_once()
+    assert len(api['model'].calls)==1
+    store=api['store'];owner=api['owner']
+    refresh=command(store.view(owner),'explicit-retry','jobs.refresh').model_copy(update={'payload':{'job_id':jid}})
+    store.refresh_job(owner,refresh,jid)
     api['worker'].run_once();assert api['jobs'].get(jid)['status']=='completed'
     records=private_records(api);assert sum(r.content['generation_audit']['phase']=='attempt' for r in records)==2
     assert sum(r.content['generation_audit']['phase']=='completed' for r in records)==1
@@ -204,7 +212,7 @@ def test_private_plan_tampering_after_authorization_and_bare_audit_are_rejected(
     api=role_api;jid,_=queue(api);job=api['jobs'].claim_job('manual');claim=WorkerClaim.from_job(job);envelope=JobEnvelope.model_validate(job['payload']);store=api['worker_store'];auth=store.guard_job(envelope.context)
     view=store.job_view(auth,envelope.context,command=envelope.command,worker_claim=claim)
     port=PrivateRoleGenerationPort(store,api['catalog'],view,envelope,auth)
-    service=RoleService(ContextPort(api['catalog'],FixedRoleSnapshotPort(store,api['catalog'])),api['model'],private_port=port)
+    service=RoleService(ContextPort(api['catalog'],FixedRoleSnapshotPort(store,api['catalog'])),api['model'],private_port=port,reply_verifier=RuleReplyVerifier())
     plan=port.authorize(service.generate(view,envelope,auth));private=next(w for w in plan.writes if w.ref.kind=='role_context')
     changed=replace(plan,result=plan.result|{'injected':'unapproved'})
     with pytest.raises(C.ProtocolError,match='role authority invalid'):store.execute(auth,envelope.command,lambda *_:changed,worker_fence=claim,job_context=envelope.context)
@@ -254,3 +262,53 @@ def test_historical_new_audit_fields_remain_private_and_unchanged(role_api,field
     with pytest.raises(C.ProtocolError):store.read(owner,ref)
     assert not any(r.ref==ref for r in store.view(owner).objects)
     actual=store.read(store.research_context(owner.session_id),ref);assert actual==record and 'PRIVATE_AUDIT_MARKER' in actual.model_dump_json()
+
+
+def test_production_claim_survives_store_reconstruction_and_configuration_change(role_api):
+    api=role_api; jid,_=queue(api)
+    job=api['jobs'].claim_job('original-worker'); claim=WorkerClaim.from_job(job)
+    envelope=JobEnvelope.model_validate(job['payload'])
+    def port_for(store, claim):
+        auth=store.guard_job(envelope.context)
+        view=store.job_view(auth,envelope.context,command=envelope.command,worker_claim=claim)
+        return PrivateRoleGenerationPort(store,api['catalog'],view,envelope,auth),auth
+    first,auth=port_for(api['worker_store'],claim)
+    assert first.claim_model_call(envelope,auth,'role_reply','provider-a') is True
+    # A fresh store and a changed actual worker lease still share the same claim.
+    with api['store'].db.transaction() as conn:
+        conn.execute(update(jobs).where(jobs.c.id==jid).values(worker_id='replacement-worker',lease_token='replacement-lease',attempt=2))
+    replacement_claim=WorkerClaim(jid,'replacement-lease','replacement-worker',2)
+    rebuilt=V2Store(str(api['store'].db.engine.url)); Gateway(rebuilt,api['registry'])
+    try:
+        second,current=port_for(rebuilt,replacement_claim)
+        assert second.claim_model_call(envelope,current,'role_reply','provider-b') is False
+        assert second.claim_model_call(envelope,current,'role_reply_review','mechanical') is True
+        assert second.claim_model_call(envelope,current,'role_reply_review','different-config') is False
+        assert not api['model'].calls
+    finally: rebuilt.db.engine.dispose()
+
+
+@pytest.mark.parametrize('language,text,expected',[
+    ('zh','我会继续核对依据。','consistent'),
+    ('en','I will check the available evidence.','consistent'),
+    ('en','我会继续核对依据。','undetermined'),
+    ('zh','Please check the evidence.','undetermined'),
+    ('en','123 --','undetermined'),
+])
+def test_mechanical_reply_verifier_is_bound_and_never_claims_semantics(role_api,language,text,expected):
+    from career_lab.storage.role_memory import RoleTurn,stance_digest
+    api=role_api;jid,_=queue(api);job=api['jobs'].claim_job('review-worker')
+    envelope=JobEnvelope.model_validate(job['payload']);store=api['worker_store'];auth=store.guard_job(envelope.context)
+    view=store.job_view(auth,envelope.context,command=envelope.command,worker_claim=WorkerClaim.from_job(job))
+    port=PrivateRoleGenerationPort(store,api['catalog'],view,envelope,auth);port.require_available()
+    snapshot=replace(port.snapshot,work_language=language)
+    request=RoleTurn.model_validate(view.get(C.ObjectRef.model_validate(envelope.command.payload['subject'])).content)
+    claims=[]
+    def no_model_attempt(*args):raise AssertionError('mechanical check must not report a provider invocation')
+    review=RuleReplyVerifier().check(snapshot,auth,request,text,record_attempt=no_model_attempt,begin_call=lambda *args:claims.append(args))
+    assert claims==[('role_reply_review',RuleReplyVerifier.revision)]
+    assert review.decision==expected and review.semantic_quality=='unverified' and review.learner_penalty_allowed is False
+    assert review.state_hash==stance_digest(snapshot.stance_state) and review.reply_hash==C.digest(text)
+    assert review.checked_at==snapshot.context.as_of
+    assert review.review_ref.sha256==hashlib.sha256((Path(__file__).resolve().parents[3]/review.review_ref.path).read_bytes()).hexdigest()
+    assert not api['model'].calls
