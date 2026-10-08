@@ -21,6 +21,13 @@ LEGACY_REQUIREMENTS = (
 )
 
 
+CURRENT_REQUIREMENTS = (
+    "Configuration-only handoff; no code execution.",
+    "Re-run recorded behavior before evaluating a configuration change.",
+    "Recorded behavior is not a correctness grade.",
+)
+
+
 def capture(
     store: V2Store,
     module: ScenarioModule,
@@ -157,11 +164,7 @@ def package_files(
         if schema_version == 1
         else retained[1].requirements
         if retained
-        else (
-            "Configuration-only handoff; no code execution.",
-            "Re-run recorded behavior before evaluating a configuration change.",
-            "Recorded behavior is not a correctness grade.",
-        ),
+        else CURRENT_REQUIREMENTS,
     )
     files["pack.json"] = encode(pack)
     add_index(files, source, module.work_language, test_files, retained)

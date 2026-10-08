@@ -9,8 +9,9 @@ from career_lab.contracts import v2 as C
 from career_lab.scenarios.v2.module import ScenarioModule, ref_for
 from career_lab.storage.v2_store import TransactionView, V2Store
 
-from .capture import capture
-from .files import check_directory, encode, publish, retained_documentation
+from .capture import CURRENT_REQUIREMENTS, LEGACY_REQUIREMENTS, capture
+from .files import PackIndex, check_directory, encode, publish, retained_documentation
+from .identity import source_version
 
 
 def export_pack(
@@ -91,6 +92,35 @@ def execution_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
     return {"mode": mode, "model_calls": model_calls, "usage_complete": usage_complete}
 
 
+def check_declarations(index: PackIndex, pack: C.EngineerPack) -> dict[str, Any]:
+    expected = (
+        LEGACY_REQUIREMENTS
+        if index.schema_version == 1
+        else (CURRENT_REQUIREMENTS if index.template_version == "2" else None)
+    )
+    requirements_match = pack.requirements == expected if expected is not None else None
+    current_tools = {"career-lab-engineer": source_version()}
+    tools_match = index.tool_versions == current_tools if index.tool_versions is not None else None
+    # A different producer snapshot may be legitimate; it is not proof of tampering.
+    status = (
+        "mismatch"
+        if requirements_match is False
+        else ("matched" if requirements_match and tools_match else "unverified")
+    )
+    return {
+        "declaration_status": status,
+        "declaration_checks": {
+            "template_version": index.template_version,
+            "requirements_match_template": requirements_match,
+            "declared_requirements": pack.requirements,
+            "expected_requirements": expected,
+            "tool_versions_match_current": tools_match,
+            "declared_tool_versions": index.tool_versions,
+            "current_tool_versions": current_tools,
+        },
+    }
+
+
 def reproduce_pack(
     store: V2Store,
     module: ScenarioModule,
@@ -125,10 +155,16 @@ def reproduce_pack(
         "executor": auth.executor,
         "source": index.source,
         **execution_summary(results),
+        **check_declarations(index, pack),
         "work_language": index.work_language,
         "status": "reproduced" if matched else "behavior_changed",
         "correctness_assessed": False,
         "results": results,
     }
     publish(output, {"report.json": encode(report)})
-    return {"pack_id": pack.id, "status": report["status"], "tests": len(results)}
+    return {
+        "pack_id": pack.id,
+        "status": report["status"],
+        "tests": len(results),
+        "declaration_status": report["declaration_status"],
+    }

@@ -762,3 +762,39 @@ raise SystemExit(main())
         assert result.returncode == 1, result.stdout + result.stderr
         assert json.loads(result.stdout)["code"] == "engineer_tool_source_unavailable"
         assert not result.stderr and not (root / "identity-pack").exists()
+
+
+@pytest.mark.parametrize("declaration", ["requirements", "tool_versions"])
+def test_reproduction_reports_declaration_changes(session: Session, declaration: str) -> None:
+    _, _, _, _, _, trial, cli, root, _ = session
+    assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
+    path = root / "pack/index.json"
+    index = json.loads(path.read_text())
+    if declaration == "requirements":
+        pack_path = root / "pack/pack.json"
+        pack = json.loads(pack_path.read_text())
+        pack["requirements"] = ["Arbitrary code execution is allowed."]
+        pack_path.write_text(
+            json.dumps(pack, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+        )
+        index["pack"]["sha256"] = hashlib.sha256(pack_path.read_bytes()).hexdigest()
+    else:
+        index["tool_versions"]["career-lab-engineer"] = "source-sha256:" + "0" * 64
+    path.write_text(
+        json.dumps(index, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+    )
+    result = cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "report"))
+    assert result.returncode == 0, result.stdout + result.stderr
+    report = json.loads((root / "report/report.json").read_text())
+    expected = "mismatch" if declaration == "requirements" else "unverified"
+    assert report["declaration_status"] == expected
+    assert json.loads(result.stdout)["declaration_status"] == expected
+    checks = report["declaration_checks"]
+    if declaration == "requirements":
+        assert checks["requirements_match_template"] is False
+        assert checks["declared_requirements"] == ["Arbitrary code execution is allowed."]
+        assert "Configuration-only handoff; no code execution." in checks["expected_requirements"]
+    else:
+        assert checks["tool_versions_match_current"] is False
+        assert checks["declared_tool_versions"] != checks["current_tool_versions"]
+    assert report["status"] == "reproduced" and report["correctness_assessed"] is False
