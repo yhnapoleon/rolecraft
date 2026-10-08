@@ -1,0 +1,980 @@
+{
+  "zh": {
+    "valid": {
+      "input": {
+        "schema_version": 2,
+        "item_id": "fixed-support",
+        "task_type": "criterion",
+        "criterion": "R2.support",
+        "claim": "住宿报销上限为400。",
+        "subjects": [
+          {
+            "schema_version": 2,
+            "session_id": "fixed-session",
+            "kind": "product",
+            "object_id": "decision",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 3,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "purpose": "commitment",
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 3,
+          "workspace_revision": 2,
+          "storage_revision": 5
+        },
+        "applicability": "applicable",
+        "candidate_evidence": [
+          {
+            "schema_version": 2,
+            "id": "policy-v2",
+            "text": "住宿报销上限为400。",
+            "ref": {
+              "schema_version": 2,
+              "session_id": "fixed-session",
+              "kind": "material",
+              "object_id": "policy",
+              "version": 2,
+              "config_version": null,
+              "span_start": 0,
+              "span_end": 11,
+              "quote": "住宿报销上限为400。",
+              "observed_at_seq": 3,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          }
+        ],
+        "rule_context": {},
+        "rule_bound": null,
+        "completeness": "complete",
+        "dropped_refs": [],
+        "missing_refs": [],
+        "input_hash": "09abdd2ae1749afb1a9d385889e9c254b071c829ea58a305d716eafaee231c85"
+      },
+      "output": {
+        "item": {
+          "schema_version": 2,
+          "criterion": "R2.support",
+          "label": "MET",
+          "applicability": "applicable",
+          "source": "model_advice",
+          "explanation": "固定证据支持该判断。",
+          "citations": [
+            {
+              "schema_version": 2,
+              "session_id": "fixed-session",
+              "kind": "material",
+              "object_id": "policy",
+              "version": 2,
+              "config_version": null,
+              "span_start": 0,
+              "span_end": 11,
+              "quote": "住宿报销上限为400。",
+              "observed_at_seq": 3,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          ],
+          "rule_bound": null
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "input_hash": "09abdd2ae1749afb1a9d385889e9c254b071c829ea58a305d716eafaee231c85",
+            "model_revision": "controlled-local/fixed-feedback-v1",
+            "work_language": "zh",
+            "prompt_hash": "6565bc26733b37e9061ed08a9118402155368c9f8e1250b8e17a5b6fc654d1d4",
+            "output_hash": "79ec8e8c09289a19e8a779ff679ac0635c07c9ae9ca70167c264cdba6cc76a15",
+            "support": {
+              "verdict": "supported",
+              "status": "model_relation",
+              "model_revision": "controlled-local/fixed-feedback-v1",
+              "input_hash": "62cf5bb8cc6f1f5c5795dae196f48da5f44885ab55c9e4f23adef3b7f6264196",
+              "output_hash": "f88213b854cf99c520107413c9ee7a1ae15e55b4283282d7ba585a8aa661cbac",
+              "reason": "Controlled verification",
+              "spans": [
+                {
+                  "id": "policy-v2",
+                  "start": 0,
+                  "end": 11,
+                  "quote": "住宿报销上限为400。"
+                }
+              ]
+            },
+            "status": "valid_advice"
+          }
+        ]
+      },
+      "provider": "controlled-local",
+      "model": "controlled-local/fixed-feedback-v1",
+      "calls": {
+        "judge": 1,
+        "support": 1
+      },
+      "retries": 0
+    },
+    "unknown_citation": {
+      "input": {
+        "schema_version": 2,
+        "item_id": "fixed-support",
+        "task_type": "criterion",
+        "criterion": "R2.support",
+        "claim": "住宿报销上限为400。",
+        "subjects": [
+          {
+            "schema_version": 2,
+            "session_id": "fixed-session",
+            "kind": "product",
+            "object_id": "decision",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 3,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "purpose": "commitment",
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 3,
+          "workspace_revision": 2,
+          "storage_revision": 5
+        },
+        "applicability": "applicable",
+        "candidate_evidence": [
+          {
+            "schema_version": 2,
+            "id": "policy-v2",
+            "text": "住宿报销上限为400。",
+            "ref": {
+              "schema_version": 2,
+              "session_id": "fixed-session",
+              "kind": "material",
+              "object_id": "policy",
+              "version": 2,
+              "config_version": null,
+              "span_start": 0,
+              "span_end": 11,
+              "quote": "住宿报销上限为400。",
+              "observed_at_seq": 3,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          }
+        ],
+        "rule_context": {},
+        "rule_bound": null,
+        "completeness": "complete",
+        "dropped_refs": [],
+        "missing_refs": [],
+        "input_hash": "09abdd2ae1749afb1a9d385889e9c254b071c829ea58a305d716eafaee231c85"
+      },
+      "output": {
+        "item": {
+          "schema_version": 2,
+          "criterion": "R2.support",
+          "label": "INSUFFICIENT",
+          "applicability": "applicable",
+          "source": "pending",
+          "explanation": "语义评价未通过技术核验；规则和原作品已保留，可稍后重新评审。",
+          "citations": [],
+          "rule_bound": null
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "input_hash": "09abdd2ae1749afb1a9d385889e9c254b071c829ea58a305d716eafaee231c85",
+            "model_revision": "controlled-local/fixed-feedback-v1",
+            "work_language": "zh",
+            "prompt_hash": "6565bc26733b37e9061ed08a9118402155368c9f8e1250b8e17a5b6fc654d1d4",
+            "output_hash": "a0ad1afc8c8299c909b7eefc3ad4898d5b695b85558c319360dcb88c34a981c6",
+            "status": "technical_failure",
+            "code": "citation_not_in_fixed_input"
+          }
+        ]
+      },
+      "provider": "controlled-local",
+      "model": "controlled-local/fixed-feedback-v1",
+      "calls": {
+        "judge": 1,
+        "support": 0
+      },
+      "retries": 0
+    },
+    "wrong_quote": {
+      "input": {
+        "schema_version": 2,
+        "item_id": "fixed-support",
+        "task_type": "criterion",
+        "criterion": "R2.support",
+        "claim": "住宿报销上限为400。",
+        "subjects": [
+          {
+            "schema_version": 2,
+            "session_id": "fixed-session",
+            "kind": "product",
+            "object_id": "decision",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 3,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "purpose": "commitment",
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 3,
+          "workspace_revision": 2,
+          "storage_revision": 5
+        },
+        "applicability": "applicable",
+        "candidate_evidence": [
+          {
+            "schema_version": 2,
+            "id": "policy-v2",
+            "text": "住宿报销上限为400。",
+            "ref": {
+              "schema_version": 2,
+              "session_id": "fixed-session",
+              "kind": "material",
+              "object_id": "policy",
+              "version": 2,
+              "config_version": null,
+              "span_start": 0,
+              "span_end": 11,
+              "quote": "住宿报销上限为400。",
+              "observed_at_seq": 3,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          }
+        ],
+        "rule_context": {},
+        "rule_bound": null,
+        "completeness": "complete",
+        "dropped_refs": [],
+        "missing_refs": [],
+        "input_hash": "09abdd2ae1749afb1a9d385889e9c254b071c829ea58a305d716eafaee231c85"
+      },
+      "output": {
+        "item": {
+          "schema_version": 2,
+          "criterion": "R2.support",
+          "label": "INSUFFICIENT",
+          "applicability": "applicable",
+          "source": "pending",
+          "explanation": "模型建议的引用已定位，支持关系仍待核验；未计为已核实结论。",
+          "citations": [],
+          "rule_bound": null
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "input_hash": "09abdd2ae1749afb1a9d385889e9c254b071c829ea58a305d716eafaee231c85",
+            "model_revision": "controlled-local/fixed-feedback-v1",
+            "work_language": "zh",
+            "prompt_hash": "6565bc26733b37e9061ed08a9118402155368c9f8e1250b8e17a5b6fc654d1d4",
+            "output_hash": "79ec8e8c09289a19e8a779ff679ac0635c07c9ae9ca70167c264cdba6cc76a15",
+            "support": {
+              "verdict": "unverified",
+              "status": "invalid_or_failed_verification",
+              "model_revision": "controlled-local/fixed-feedback-v1",
+              "input_hash": "62cf5bb8cc6f1f5c5795dae196f48da5f44885ab55c9e4f23adef3b7f6264196",
+              "output_hash": null,
+              "reason": "",
+              "spans": []
+            },
+            "status": "support_pending",
+            "proposed_label": "MET"
+          }
+        ]
+      },
+      "provider": "controlled-local",
+      "model": "controlled-local/fixed-feedback-v1",
+      "calls": {
+        "judge": 1,
+        "support": 1
+      },
+      "retries": 0
+    },
+    "provider_failure": {
+      "input": {
+        "schema_version": 2,
+        "item_id": "fixed-support",
+        "task_type": "criterion",
+        "criterion": "R2.support",
+        "claim": "住宿报销上限为400。",
+        "subjects": [
+          {
+            "schema_version": 2,
+            "session_id": "fixed-session",
+            "kind": "product",
+            "object_id": "decision",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 3,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "purpose": "commitment",
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 3,
+          "workspace_revision": 2,
+          "storage_revision": 5
+        },
+        "applicability": "applicable",
+        "candidate_evidence": [
+          {
+            "schema_version": 2,
+            "id": "policy-v2",
+            "text": "住宿报销上限为400。",
+            "ref": {
+              "schema_version": 2,
+              "session_id": "fixed-session",
+              "kind": "material",
+              "object_id": "policy",
+              "version": 2,
+              "config_version": null,
+              "span_start": 0,
+              "span_end": 11,
+              "quote": "住宿报销上限为400。",
+              "observed_at_seq": 3,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          }
+        ],
+        "rule_context": {},
+        "rule_bound": null,
+        "completeness": "complete",
+        "dropped_refs": [],
+        "missing_refs": [],
+        "input_hash": "09abdd2ae1749afb1a9d385889e9c254b071c829ea58a305d716eafaee231c85"
+      },
+      "output": {
+        "item": {
+          "schema_version": 2,
+          "criterion": "R2.support",
+          "label": "INSUFFICIENT",
+          "applicability": "applicable",
+          "source": "pending",
+          "explanation": "语义评价未通过技术核验；规则和原作品已保留，可稍后重新评审。",
+          "citations": [],
+          "rule_bound": null
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "input_hash": "09abdd2ae1749afb1a9d385889e9c254b071c829ea58a305d716eafaee231c85",
+            "model_revision": "controlled-local/fixed-feedback-v1",
+            "work_language": "zh",
+            "prompt_hash": "6565bc26733b37e9061ed08a9118402155368c9f8e1250b8e17a5b6fc654d1d4",
+            "status": "technical_failure",
+            "code": "TimeoutError"
+          }
+        ]
+      },
+      "provider": "controlled-local",
+      "model": "controlled-local/fixed-feedback-v1",
+      "calls": {
+        "judge": 1,
+        "support": 0
+      },
+      "retries": 0
+    },
+    "unavailable": {
+      "input": {
+        "schema_version": 2,
+        "item_id": "fixed-support",
+        "task_type": "criterion",
+        "criterion": "R2.support",
+        "claim": "住宿报销上限为400。",
+        "subjects": [
+          {
+            "schema_version": 2,
+            "session_id": "fixed-session",
+            "kind": "product",
+            "object_id": "decision",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 3,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "purpose": "commitment",
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 3,
+          "workspace_revision": 2,
+          "storage_revision": 5
+        },
+        "applicability": "applicable",
+        "candidate_evidence": [
+          {
+            "schema_version": 2,
+            "id": "policy-v2",
+            "text": "住宿报销上限为400。",
+            "ref": {
+              "schema_version": 2,
+              "session_id": "fixed-session",
+              "kind": "material",
+              "object_id": "policy",
+              "version": 2,
+              "config_version": null,
+              "span_start": 0,
+              "span_end": 11,
+              "quote": "住宿报销上限为400。",
+              "observed_at_seq": 3,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          }
+        ],
+        "rule_context": {},
+        "rule_bound": null,
+        "completeness": "complete",
+        "dropped_refs": [],
+        "missing_refs": [],
+        "input_hash": "09abdd2ae1749afb1a9d385889e9c254b071c829ea58a305d716eafaee231c85"
+      },
+      "output": {
+        "item": {
+          "schema_version": 2,
+          "criterion": "R2.support",
+          "label": "INSUFFICIENT",
+          "applicability": "applicable",
+          "source": "pending",
+          "explanation": "评价模型当前不可用；已保留规则结果与作品。",
+          "citations": [],
+          "rule_bound": null
+        },
+        "attempts": [
+          {
+            "status": "unavailable",
+            "model_revision": "unavailable"
+          }
+        ]
+      },
+      "provider": "controlled-local",
+      "model": "controlled-local/fixed-feedback-v1",
+      "calls": {
+        "judge": 0,
+        "support": 0
+      },
+      "retries": 0
+    }
+  },
+  "en": {
+    "valid": {
+      "input": {
+        "schema_version": 2,
+        "item_id": "fixed-support",
+        "task_type": "criterion",
+        "criterion": "R2.support",
+        "claim": "The hotel limit is 400.",
+        "subjects": [
+          {
+            "schema_version": 2,
+            "session_id": "fixed-session",
+            "kind": "product",
+            "object_id": "decision",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 3,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "purpose": "commitment",
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 3,
+          "workspace_revision": 2,
+          "storage_revision": 5
+        },
+        "applicability": "applicable",
+        "candidate_evidence": [
+          {
+            "schema_version": 2,
+            "id": "policy-v2",
+            "text": "The hotel limit is 400.",
+            "ref": {
+              "schema_version": 2,
+              "session_id": "fixed-session",
+              "kind": "material",
+              "object_id": "policy",
+              "version": 2,
+              "config_version": null,
+              "span_start": 0,
+              "span_end": 23,
+              "quote": "The hotel limit is 400.",
+              "observed_at_seq": 3,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          }
+        ],
+        "rule_context": {},
+        "rule_bound": null,
+        "completeness": "complete",
+        "dropped_refs": [],
+        "missing_refs": [],
+        "input_hash": "807192ae26f58969eb18d12aec369b15fe16ef28d60fce38c9442b1ea56f5e51"
+      },
+      "output": {
+        "item": {
+          "schema_version": 2,
+          "criterion": "R2.support",
+          "label": "MET",
+          "applicability": "applicable",
+          "source": "model_advice",
+          "explanation": "Fixed evidence supports the claim.",
+          "citations": [
+            {
+              "schema_version": 2,
+              "session_id": "fixed-session",
+              "kind": "material",
+              "object_id": "policy",
+              "version": 2,
+              "config_version": null,
+              "span_start": 0,
+              "span_end": 23,
+              "quote": "The hotel limit is 400.",
+              "observed_at_seq": 3,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          ],
+          "rule_bound": null
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "input_hash": "807192ae26f58969eb18d12aec369b15fe16ef28d60fce38c9442b1ea56f5e51",
+            "model_revision": "controlled-local/fixed-feedback-v1",
+            "work_language": "en",
+            "prompt_hash": "09aa82cf6705d5a80feb9ffdc9f44a723b144db5aa769beae19f3ef1b3e16bff",
+            "output_hash": "2a9ea763ad7a698f08d3a4853049e9613f2fcadf952e4ac2c3bfc66622e0fb0a",
+            "support": {
+              "verdict": "supported",
+              "status": "model_relation",
+              "model_revision": "controlled-local/fixed-feedback-v1",
+              "input_hash": "51b3c4d51c93d9fc4cd49f807fcf9088046389c13fa901976d76b624c1879cb6",
+              "output_hash": "fe6f1624c7f8bfea8c26191505330a447a8c1a07e64a9277f6e5cfbf4603f803",
+              "reason": "Controlled verification",
+              "spans": [
+                {
+                  "id": "policy-v2",
+                  "start": 0,
+                  "end": 23,
+                  "quote": "The hotel limit is 400."
+                }
+              ]
+            },
+            "status": "valid_advice"
+          }
+        ]
+      },
+      "provider": "controlled-local",
+      "model": "controlled-local/fixed-feedback-v1",
+      "calls": {
+        "judge": 1,
+        "support": 1
+      },
+      "retries": 0
+    },
+    "unknown_citation": {
+      "input": {
+        "schema_version": 2,
+        "item_id": "fixed-support",
+        "task_type": "criterion",
+        "criterion": "R2.support",
+        "claim": "The hotel limit is 400.",
+        "subjects": [
+          {
+            "schema_version": 2,
+            "session_id": "fixed-session",
+            "kind": "product",
+            "object_id": "decision",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 3,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "purpose": "commitment",
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 3,
+          "workspace_revision": 2,
+          "storage_revision": 5
+        },
+        "applicability": "applicable",
+        "candidate_evidence": [
+          {
+            "schema_version": 2,
+            "id": "policy-v2",
+            "text": "The hotel limit is 400.",
+            "ref": {
+              "schema_version": 2,
+              "session_id": "fixed-session",
+              "kind": "material",
+              "object_id": "policy",
+              "version": 2,
+              "config_version": null,
+              "span_start": 0,
+              "span_end": 23,
+              "quote": "The hotel limit is 400.",
+              "observed_at_seq": 3,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          }
+        ],
+        "rule_context": {},
+        "rule_bound": null,
+        "completeness": "complete",
+        "dropped_refs": [],
+        "missing_refs": [],
+        "input_hash": "807192ae26f58969eb18d12aec369b15fe16ef28d60fce38c9442b1ea56f5e51"
+      },
+      "output": {
+        "item": {
+          "schema_version": 2,
+          "criterion": "R2.support",
+          "label": "INSUFFICIENT",
+          "applicability": "applicable",
+          "source": "pending",
+          "explanation": "The semantic evaluation failed technical validation. Rules and the original work are retained; a later review is possible.",
+          "citations": [],
+          "rule_bound": null
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "input_hash": "807192ae26f58969eb18d12aec369b15fe16ef28d60fce38c9442b1ea56f5e51",
+            "model_revision": "controlled-local/fixed-feedback-v1",
+            "work_language": "en",
+            "prompt_hash": "09aa82cf6705d5a80feb9ffdc9f44a723b144db5aa769beae19f3ef1b3e16bff",
+            "output_hash": "5caa50f6b214ec0df96e07d3f6b23febda440d88f02ec4484c5f5e191b219a9b",
+            "status": "technical_failure",
+            "code": "citation_not_in_fixed_input"
+          }
+        ]
+      },
+      "provider": "controlled-local",
+      "model": "controlled-local/fixed-feedback-v1",
+      "calls": {
+        "judge": 1,
+        "support": 0
+      },
+      "retries": 0
+    },
+    "wrong_quote": {
+      "input": {
+        "schema_version": 2,
+        "item_id": "fixed-support",
+        "task_type": "criterion",
+        "criterion": "R2.support",
+        "claim": "The hotel limit is 400.",
+        "subjects": [
+          {
+            "schema_version": 2,
+            "session_id": "fixed-session",
+            "kind": "product",
+            "object_id": "decision",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 3,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "purpose": "commitment",
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 3,
+          "workspace_revision": 2,
+          "storage_revision": 5
+        },
+        "applicability": "applicable",
+        "candidate_evidence": [
+          {
+            "schema_version": 2,
+            "id": "policy-v2",
+            "text": "The hotel limit is 400.",
+            "ref": {
+              "schema_version": 2,
+              "session_id": "fixed-session",
+              "kind": "material",
+              "object_id": "policy",
+              "version": 2,
+              "config_version": null,
+              "span_start": 0,
+              "span_end": 23,
+              "quote": "The hotel limit is 400.",
+              "observed_at_seq": 3,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          }
+        ],
+        "rule_context": {},
+        "rule_bound": null,
+        "completeness": "complete",
+        "dropped_refs": [],
+        "missing_refs": [],
+        "input_hash": "807192ae26f58969eb18d12aec369b15fe16ef28d60fce38c9442b1ea56f5e51"
+      },
+      "output": {
+        "item": {
+          "schema_version": 2,
+          "criterion": "R2.support",
+          "label": "INSUFFICIENT",
+          "applicability": "applicable",
+          "source": "pending",
+          "explanation": "The citations in the model advice were located, but their support relation remains unverified. The advice is not counted as a verified conclusion.",
+          "citations": [],
+          "rule_bound": null
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "input_hash": "807192ae26f58969eb18d12aec369b15fe16ef28d60fce38c9442b1ea56f5e51",
+            "model_revision": "controlled-local/fixed-feedback-v1",
+            "work_language": "en",
+            "prompt_hash": "09aa82cf6705d5a80feb9ffdc9f44a723b144db5aa769beae19f3ef1b3e16bff",
+            "output_hash": "2a9ea763ad7a698f08d3a4853049e9613f2fcadf952e4ac2c3bfc66622e0fb0a",
+            "support": {
+              "verdict": "unverified",
+              "status": "invalid_or_failed_verification",
+              "model_revision": "controlled-local/fixed-feedback-v1",
+              "input_hash": "51b3c4d51c93d9fc4cd49f807fcf9088046389c13fa901976d76b624c1879cb6",
+              "output_hash": null,
+              "reason": "",
+              "spans": []
+            },
+            "status": "support_pending",
+            "proposed_label": "MET"
+          }
+        ]
+      },
+      "provider": "controlled-local",
+      "model": "controlled-local/fixed-feedback-v1",
+      "calls": {
+        "judge": 1,
+        "support": 1
+      },
+      "retries": 0
+    },
+    "provider_failure": {
+      "input": {
+        "schema_version": 2,
+        "item_id": "fixed-support",
+        "task_type": "criterion",
+        "criterion": "R2.support",
+        "claim": "The hotel limit is 400.",
+        "subjects": [
+          {
+            "schema_version": 2,
+            "session_id": "fixed-session",
+            "kind": "product",
+            "object_id": "decision",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 3,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "purpose": "commitment",
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 3,
+          "workspace_revision": 2,
+          "storage_revision": 5
+        },
+        "applicability": "applicable",
+        "candidate_evidence": [
+          {
+            "schema_version": 2,
+            "id": "policy-v2",
+            "text": "The hotel limit is 400.",
+            "ref": {
+              "schema_version": 2,
+              "session_id": "fixed-session",
+              "kind": "material",
+              "object_id": "policy",
+              "version": 2,
+              "config_version": null,
+              "span_start": 0,
+              "span_end": 23,
+              "quote": "The hotel limit is 400.",
+              "observed_at_seq": 3,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          }
+        ],
+        "rule_context": {},
+        "rule_bound": null,
+        "completeness": "complete",
+        "dropped_refs": [],
+        "missing_refs": [],
+        "input_hash": "807192ae26f58969eb18d12aec369b15fe16ef28d60fce38c9442b1ea56f5e51"
+      },
+      "output": {
+        "item": {
+          "schema_version": 2,
+          "criterion": "R2.support",
+          "label": "INSUFFICIENT",
+          "applicability": "applicable",
+          "source": "pending",
+          "explanation": "The semantic evaluation failed technical validation. Rules and the original work are retained; a later review is possible.",
+          "citations": [],
+          "rule_bound": null
+        },
+        "attempts": [
+          {
+            "attempt": 1,
+            "input_hash": "807192ae26f58969eb18d12aec369b15fe16ef28d60fce38c9442b1ea56f5e51",
+            "model_revision": "controlled-local/fixed-feedback-v1",
+            "work_language": "en",
+            "prompt_hash": "09aa82cf6705d5a80feb9ffdc9f44a723b144db5aa769beae19f3ef1b3e16bff",
+            "status": "technical_failure",
+            "code": "TimeoutError"
+          }
+        ]
+      },
+      "provider": "controlled-local",
+      "model": "controlled-local/fixed-feedback-v1",
+      "calls": {
+        "judge": 1,
+        "support": 0
+      },
+      "retries": 0
+    },
+    "unavailable": {
+      "input": {
+        "schema_version": 2,
+        "item_id": "fixed-support",
+        "task_type": "criterion",
+        "criterion": "R2.support",
+        "claim": "The hotel limit is 400.",
+        "subjects": [
+          {
+            "schema_version": 2,
+            "session_id": "fixed-session",
+            "kind": "product",
+            "object_id": "decision",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 3,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "purpose": "commitment",
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 3,
+          "workspace_revision": 2,
+          "storage_revision": 5
+        },
+        "applicability": "applicable",
+        "candidate_evidence": [
+          {
+            "schema_version": 2,
+            "id": "policy-v2",
+            "text": "The hotel limit is 400.",
+            "ref": {
+              "schema_version": 2,
+              "session_id": "fixed-session",
+              "kind": "material",
+              "object_id": "policy",
+              "version": 2,
+              "config_version": null,
+              "span_start": 0,
+              "span_end": 23,
+              "quote": "The hotel limit is 400.",
+              "observed_at_seq": 3,
+              "valid_from_seq": 0,
+              "valid_until_seq": null
+            }
+          }
+        ],
+        "rule_context": {},
+        "rule_bound": null,
+        "completeness": "complete",
+        "dropped_refs": [],
+        "missing_refs": [],
+        "input_hash": "807192ae26f58969eb18d12aec369b15fe16ef28d60fce38c9442b1ea56f5e51"
+      },
+      "output": {
+        "item": {
+          "schema_version": 2,
+          "criterion": "R2.support",
+          "label": "INSUFFICIENT",
+          "applicability": "applicable",
+          "source": "pending",
+          "explanation": "The evaluation model is unavailable. Rule results and the work are retained.",
+          "citations": [],
+          "rule_bound": null
+        },
+        "attempts": [
+          {
+            "status": "unavailable",
+            "model_revision": "unavailable"
+          }
+        ]
+      },
+      "provider": "controlled-local",
+      "model": "controlled-local/fixed-feedback-v1",
+      "calls": {
+        "judge": 0,
+        "support": 0
+      },
+      "retries": 0
+    }
+  }
+}

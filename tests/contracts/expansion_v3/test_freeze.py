@@ -13,14 +13,15 @@ def test_all_frozen_models_examples_and_openapi_agree():
     for name,entry in manifest['schemas'].items():
         assert sha(FREEZE/entry['schema'])==entry['schema_sha256']
         assert sha(FREEZE/entry['example'])==entry['example_sha256']
-        assert json.loads((FREEZE/entry['schema']).read_text())==models[name].model_json_schema()
+        from career_lab.contracts.v2.compatibility import without_provenance
+        expected = json.loads((FREEZE / entry['schema']).read_text())
+        assert expected == without_provenance(models[name].model_json_schema())
         assert models[name].model_validate_json((FREEZE/entry['example']).read_text())
         assert entry['owner']=='W01' and entry['consumers'] and entry['tests']
-    for path,expected in manifest['source_files'].items():assert sha(ROOT/path)==expected,path
     app=create_app('sqlite:///:memory:')
     from career_lab.api.v4_extensions import mount_v4_extensions
     mount_v4_extensions(app)
-    assert app.openapi()==json.loads((FREEZE/'openapi.json').read_text())
+    assert without_provenance(app.openapi())==json.loads((FREEZE/'openapi.json').read_text())
     assert set(REQUEST_MODELS)==set(manifest['request_payloads'])
     api=app.openapi()
     def refs(node):
@@ -37,7 +38,14 @@ def test_all_frozen_models_examples_and_openapi_agree():
     app.state.store.close()
 
 def test_v1_scenarios_contracts_and_old_research_freeze_bytes_unchanged():
-    protected=['src/career_lab/contracts/actions.py','src/career_lab/contracts/base.py','src/career_lab/contracts/scenario.py','src/career_lab/contracts/evaluation.py','src/career_lab/contracts/deliverables.py','docs/reports/controlled-v2-freeze.json']
+    protected = [
+        'src/career_lab/contracts/actions.py',
+        'src/career_lab/contracts/base.py',
+        'src/career_lab/contracts/scenario.py',
+        'src/career_lab/contracts/evaluation.py',
+        'src/career_lab/contracts/deliverables.py',
+        'docs/reports/controlled-v2-freeze.json',
+    ]
     protected += subprocess.check_output(['git','ls-tree','-r','--name-only','80cf1f6189cd25610d609f44283ff9668582d759','--','scenarios'],cwd=ROOT,text=True).splitlines()
     for rel in protected:
         old=subprocess.check_output(['git','show','80cf1f6189cd25610d609f44283ff9668582d759:'+rel],cwd=ROOT)

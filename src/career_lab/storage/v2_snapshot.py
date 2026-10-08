@@ -95,6 +95,9 @@ class SnapshotService:
                     if not any(AuthContext.model_validate_json(r['context']).executor.kind=='human' and (AuthContext.model_validate_json(r['context']).expires_at is None or AuthContext.model_validate_json(r['context']).expires_at>datetime.now(timezone.utc)) for r in credentials):raise ProtocolError('restore_token_conflict',status=409)
                     return RestoreResult.model_validate_json(previous['result']).model_copy(update={'replayed':True}),token
                 if c.execute(select(v2_sessions.c.id).where(v2_sessions.c.id==sid)).first():raise ProtocolError('restore_target_exists',status=409)
+                from .record_invariants import validate_history
+
+                validate_history(objects)
                 c.execute(insert(v2_sessions).values(id=sid,bindings=canonical(snapshot.bindings),state=canonical(state),storage_revision=state.storage_revision))
                 self.store._credential(c,owner,token)
                 for item in external_references:

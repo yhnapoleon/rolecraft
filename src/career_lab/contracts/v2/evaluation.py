@@ -1,5 +1,8 @@
 from typing import Literal
+
 from pydantic import Field, model_validator
+
+from . import provenance as _provenance
 from .core import *
 
 Applicability = Literal['applicable','not_applicable','undetermined']
@@ -233,7 +236,11 @@ class FeedbackResponseRecord(V2):
         if len({canonical(r) for r in self.evidence})!=len(self.evidence):raise ValueError('duplicate response evidence')
         return self
 
+
 class FeedbackV2(V2):
+    provenance: _provenance.FeedbackProvenance | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     read_boundaries: tuple[FeedbackReadBoundary,...] | None = None
     read_projection: Literal['partial'] | None = None
     id: Identifier

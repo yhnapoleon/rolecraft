@@ -12,7 +12,11 @@ from .conftest import auth,command
 def test_bundle_manifest_content_and_reproducibility(package,tmp_path):
     records=json.loads((package.root/"research/public-case-records.json").read_text())
     replica=load_package(build_seed(tmp_path/"replica",records))
-    assert replica.content_hash==package.content_hash
+    from career_lab.scenarios.v2.release import business_metadata, content_files
+    assert content_files(replica) == content_files(package)
+    assert business_metadata(replica.bundle.model_dump(mode='json')) == business_metadata(
+        package.bundle.model_dump(mode='json')
+    )
     assert len(package.facts)==50
     assert len(package.material("faq",1).fragments)==9
     assert len(records["records"])==12

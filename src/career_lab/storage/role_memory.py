@@ -4,16 +4,34 @@ PrivateGeneration is an in-process plan, never a registered storage kind. Only a
 future W01 protected audit port may persist it. Public objects contain no prompt,
 private provenance, context hashes or internal fact keys.
 """
+from __future__ import annotations
+
 from dataclasses import dataclass
-from typing import Literal, Protocol
-from pydantic import model_validator, ValidationError
+from typing import TYPE_CHECKING, Literal, Protocol
+
+from pydantic import ValidationError, model_validator
 
 from career_lab.contracts.v2 import (
-    V2, Identifier, ObjectRef, FileRef, TurnInput, VersionPoint, Executor, PositiveInt,
-    DisclosedFragment, EvidenceRefV2, ModelAttemptUsage,
-    ProtocolError, RoleContext, ProviderMessage, canonical,
+    V2,
+    DisclosedFragment,
+    EvidenceRefV2,
+    Executor,
+    FileRef,
+    Identifier,
+    ModelAttemptUsage,
+    ObjectRef,
+    PositiveInt,
+    ProtocolError,
+    ProviderMessage,
+    RoleContext,
+    TurnInput,
+    VersionPoint,
+    canonical,
 )
-from career_lab.storage.v2_store import ObjectWrite, references
+from career_lab.storage.reference_graph import references
+
+if TYPE_CHECKING:
+    from career_lab.storage.v2_store import ObjectWrite
 
 
 class RoleTurn(V2):
@@ -127,13 +145,13 @@ class PrivateGeneration:
     used_sources: tuple[DisclosedFragment, ...]
     opinions: tuple[RoleStanceEvidence, ...] = ()
     source_aliases: tuple[tuple[ObjectRef,str], ...] = ()
-    stance_state: "RoleStanceState | None" = None
-    stance_resolutions: tuple["StanceResolution", ...] = ()
+    stance_state: RoleStanceState | None = None
+    stance_resolutions: tuple[StanceResolution, ...] = ()
     work_language: Literal["zh", "en"] | None = None
     prompt_template_revision: str | None = None
     language_consistency: Literal["unverified"] = "unverified"
     learner_penalty_allowed: Literal[False] = False
-    reply_verification: "ReplyVerification | None" = None
+    reply_verification: ReplyVerification | None = None
 
 
 class PrivateGenerationPort(Protocol):
@@ -183,7 +201,9 @@ def install_role_storage(store):
     # generation before model invocation, rather than changing a DTO's visibility.
 
 
-def object_write(kind, obj, *, visible_to=("learner",)):
+def object_write(kind, obj, *, visible_to=("learner",)) -> ObjectWrite:
+    from career_lab.storage.v2_store import ObjectWrite
+
     content = obj.model_dump(mode="json")
     ref = ObjectRef(session_id=obj.session_id, kind=kind, object_id=obj.id, version=obj.version)
     # Public disclosure self-links are metadata, so they are returned at display
@@ -335,7 +355,7 @@ class StanceResolution:
 
 def _stance_json(value):
     """Internal canonical data for binding a support decision to exact inputs."""
-    from dataclasses import is_dataclass,fields
+    from dataclasses import fields, is_dataclass
     if hasattr(value,'model_dump'):return value.model_dump(mode='json')
     if is_dataclass(value):return {field.name:_stance_json(getattr(value,field.name)) for field in fields(value)}
     if isinstance(value,(tuple,list)):return [_stance_json(x) for x in value]
@@ -537,6 +557,7 @@ def read_generation_audit_extension(payload,reply,*,binding,as_of,work_language)
     """
     if payload is None:return None
     from pydantic import TypeAdapter
+
     from career_lab.contracts.v2 import digest
     try:
         extension=TypeAdapter(RoleAuditExtension).validate_json(canonical(payload))

@@ -10,8 +10,12 @@
     "test": "vitest run && npm run test:workbench",
     "test:workbench": "node tests/workbench-state.cjs"
   },
-  "dependencies": { "react": "19.3.0", "react-dom": "19.3.0" },
+  "dependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
   "devDependencies": {
+    "@biomejs/biome": "^2.5.15",
     "@types/node": "26.6.4",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
@@ -20,5 +24,7 @@
     "vite": "8.3.2",
     "vitest": "5.0.3"
   },
-  "engines": { "node": ">=22.12.0" }
+  "engines": {
+    "node": ">=22.12.0"
+  }
 }

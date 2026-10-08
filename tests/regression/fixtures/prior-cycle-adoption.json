@@ -1,0 +1,545 @@
+{
+  "producer_commit": "b33bd6a6bbbaf7075a97bc0d00d6b19811c7e560",
+  "producer": "unchanged parent source via git archive",
+  "snapshot": {
+    "schema_version": 2,
+    "external_references": [],
+    "id": "77a8c0220d16c91b7f8fbfa9527025624dd1edd75a1306b4a1d4459c8e3a9c67",
+    "session_id": "a13f368fa8904432b569d20e6063fffb",
+    "bindings": {
+      "schema_version": 2,
+      "scenario": {
+        "schema_version": 2,
+        "path": "bundles/frozen.json",
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "media_type": "application/json"
+      },
+      "runtime": {
+        "schema_version": 2,
+        "path": "bundles/frozen.json",
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "media_type": "application/json"
+      },
+      "evaluation": {
+        "schema_version": 2,
+        "path": "bundles/frozen.json",
+        "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+        "media_type": "application/json"
+      },
+      "rules_revision": "rules-v4",
+      "rubric_revision": "rubric-v2",
+      "evidence_revision": "evidence-v2"
+    },
+    "state": {
+      "schema_version": 2,
+      "business_seq": 2,
+      "workspace_revision": 4,
+      "storage_revision": 4,
+      "session_id": "a13f368fa8904432b569d20e6063fffb",
+      "status": "active",
+      "cycle_id": "ac9ce9f524b6431385f8654995ffa3b1",
+      "config_version": 0,
+      "resources": {
+        "capacity": 30,
+        "dev_days": 3
+      },
+      "applied_milestones": []
+    },
+    "objects": [
+      {
+        "schema_version": 2,
+        "creator": null,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "kind": "config",
+          "object_id": "c0",
+          "version": 1,
+          "config_version": 0
+        },
+        "content": {
+          "chunk_size": 500,
+          "config_version": 0,
+          "domains": [
+            "faq"
+          ],
+          "fallback": "human",
+          "freshness_guard": "none",
+          "id": "c0",
+          "launch_day": 7,
+          "manual_domains": [],
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "participants": 0,
+          "prohibited_topics": [],
+          "retrieval_limit": 3,
+          "schema_version": 2,
+          "scope_filter": true,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "update_strategy": "daily",
+          "version": 1,
+          "work_items": []
+        },
+        "visible_to": [
+          "learner"
+        ],
+        "dependencies": [],
+        "created_storage_revision": 0
+      },
+      {
+        "schema_version": 2,
+        "creator": null,
+        "ref": {
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "kind": "cycle",
+          "object_id": "59bb3f15770a43bf9d52bf449a155ee4",
+          "version": 1,
+          "config_version": null
+        },
+        "content": {
+          "base_state_ref": "093b31e188c46f3c316ffce47d86b183e9f68d72a09b947762e8bb3ce518eea9",
+          "id": "59bb3f15770a43bf9d52bf449a155ee4",
+          "opened_at": {
+            "business_seq": 0,
+            "schema_version": 2,
+            "storage_revision": 0,
+            "workspace_revision": 0
+          },
+          "parent_submission": null,
+          "reason": "",
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "status": "open",
+          "version": 1
+        },
+        "visible_to": [
+          "learner"
+        ],
+        "dependencies": [],
+        "created_storage_revision": 0
+      },
+      {
+        "schema_version": 2,
+        "creator": {
+          "schema_version": 2,
+          "id": "human:a13f368fa8904432b569d20e6063fffb",
+          "kind": "human",
+          "delegation_id": null
+        },
+        "ref": {
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "kind": "cycle",
+          "object_id": "59bb3f15770a43bf9d52bf449a155ee4",
+          "version": 2,
+          "config_version": null
+        },
+        "content": {
+          "base_state_ref": "093b31e188c46f3c316ffce47d86b183e9f68d72a09b947762e8bb3ce518eea9",
+          "id": "59bb3f15770a43bf9d52bf449a155ee4",
+          "opened_at": {
+            "business_seq": 0,
+            "schema_version": 2,
+            "storage_revision": 0,
+            "workspace_revision": 0
+          },
+          "parent_submission": null,
+          "reason": "",
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "status": "submitted",
+          "version": 2
+        },
+        "visible_to": [
+          "learner"
+        ],
+        "dependencies": [],
+        "created_storage_revision": 2
+      },
+      {
+        "schema_version": 2,
+        "creator": {
+          "schema_version": 2,
+          "id": "human:a13f368fa8904432b569d20e6063fffb",
+          "kind": "human",
+          "delegation_id": null
+        },
+        "ref": {
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "kind": "cycle",
+          "object_id": "ac9ce9f524b6431385f8654995ffa3b1",
+          "version": 1,
+          "config_version": null
+        },
+        "content": {
+          "base_state_ref": "ca245dfe29abd1ca27737efe7312b3756bf1aa713ead5038d98814f9edea1b69",
+          "id": "ac9ce9f524b6431385f8654995ffa3b1",
+          "opened_at": {
+            "business_seq": 1,
+            "schema_version": 2,
+            "storage_revision": 2,
+            "workspace_revision": 2
+          },
+          "parent_submission": {
+            "config_version": null,
+            "kind": "submission",
+            "object_id": "eed8a1bd59f741499dde7a029e200887",
+            "schema_version": 2,
+            "session_id": "a13f368fa8904432b569d20e6063fffb",
+            "version": 1
+          },
+          "reason": "Continue investigation",
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "status": "open",
+          "version": 1
+        },
+        "visible_to": [
+          "learner"
+        ],
+        "dependencies": [
+          {
+            "schema_version": 2,
+            "session_id": "a13f368fa8904432b569d20e6063fffb",
+            "kind": "submission",
+            "object_id": "eed8a1bd59f741499dde7a029e200887",
+            "version": 1,
+            "config_version": null
+          }
+        ],
+        "created_storage_revision": 3
+      },
+      {
+        "schema_version": 2,
+        "creator": {
+          "schema_version": 2,
+          "id": "human:a13f368fa8904432b569d20e6063fffb",
+          "kind": "human",
+          "delegation_id": null
+        },
+        "ref": {
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "kind": "product",
+          "object_id": "e0f2bd551375f1391a31b43f1d78967334bbf674364687eac77f9f75d81ce4d1",
+          "version": 1,
+          "config_version": null
+        },
+        "content": {
+          "adoption": {
+            "adopted_at": null,
+            "adopter": null,
+            "schema_version": 2,
+            "status": "unadopted"
+          },
+          "author": {
+            "delegation_id": null,
+            "id": "human:a13f368fa8904432b569d20e6063fffb",
+            "kind": "human",
+            "schema_version": 2
+          },
+          "content": "Original work",
+          "content_hash": "df7d2f899cca278186b316bb07e54d0fd90fa8186611decd8dd8e2a8d41b744a",
+          "created_at": "2026-10-08T16:31:51.768173Z",
+          "cycle": {
+            "config_version": null,
+            "kind": "cycle",
+            "object_id": "59bb3f15770a43bf9d52bf449a155ee4",
+            "schema_version": 2,
+            "session_id": "a13f368fa8904432b569d20e6063fffb",
+            "version": 1
+          },
+          "draft": true,
+          "evidence_refs": [],
+          "executor": {
+            "delegation_id": null,
+            "id": "human:a13f368fa8904432b569d20e6063fffb",
+            "kind": "human",
+            "schema_version": 2
+          },
+          "kind": "text",
+          "legacy": null,
+          "product_id": "e0f2bd551375f1391a31b43f1d78967334bbf674364687eac77f9f75d81ce4d1",
+          "purpose": "exploration",
+          "removed_at": null,
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "shares": [],
+          "source_return_id": null,
+          "structured_payload": null,
+          "task": null,
+          "title": "",
+          "version": 1,
+          "visibility": "private"
+        },
+        "visible_to": [
+          "learner"
+        ],
+        "dependencies": [
+          {
+            "schema_version": 2,
+            "session_id": "a13f368fa8904432b569d20e6063fffb",
+            "kind": "cycle",
+            "object_id": "59bb3f15770a43bf9d52bf449a155ee4",
+            "version": 1,
+            "config_version": null
+          }
+        ],
+        "created_storage_revision": 1
+      },
+      {
+        "schema_version": 2,
+        "creator": {
+          "schema_version": 2,
+          "id": "human:a13f368fa8904432b569d20e6063fffb",
+          "kind": "human",
+          "delegation_id": null
+        },
+        "ref": {
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "kind": "product",
+          "object_id": "e0f2bd551375f1391a31b43f1d78967334bbf674364687eac77f9f75d81ce4d1",
+          "version": 2,
+          "config_version": null
+        },
+        "content": {
+          "adoption": {
+            "adopted_at": "2026-10-08T16:31:51.785497Z",
+            "adopter": {
+              "delegation_id": null,
+              "id": "human:a13f368fa8904432b569d20e6063fffb",
+              "kind": "human",
+              "schema_version": 2
+            },
+            "schema_version": 2,
+            "status": "adopted"
+          },
+          "author": {
+            "delegation_id": null,
+            "id": "human:a13f368fa8904432b569d20e6063fffb",
+            "kind": "human",
+            "schema_version": 2
+          },
+          "content": "Original work",
+          "content_hash": "df7d2f899cca278186b316bb07e54d0fd90fa8186611decd8dd8e2a8d41b744a",
+          "created_at": "2026-10-08T16:31:51.785497Z",
+          "cycle": {
+            "config_version": null,
+            "kind": "cycle",
+            "object_id": "59bb3f15770a43bf9d52bf449a155ee4",
+            "schema_version": 2,
+            "session_id": "a13f368fa8904432b569d20e6063fffb",
+            "version": 1
+          },
+          "draft": true,
+          "evidence_refs": [],
+          "executor": {
+            "delegation_id": null,
+            "id": "human:a13f368fa8904432b569d20e6063fffb",
+            "kind": "human",
+            "schema_version": 2
+          },
+          "kind": "text",
+          "legacy": null,
+          "product_id": "e0f2bd551375f1391a31b43f1d78967334bbf674364687eac77f9f75d81ce4d1",
+          "purpose": "exploration",
+          "removed_at": null,
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "shares": [],
+          "source_return_id": null,
+          "structured_payload": null,
+          "task": null,
+          "title": "",
+          "version": 2,
+          "visibility": "private"
+        },
+        "visible_to": [
+          "learner"
+        ],
+        "dependencies": [
+          {
+            "schema_version": 2,
+            "session_id": "a13f368fa8904432b569d20e6063fffb",
+            "kind": "cycle",
+            "object_id": "59bb3f15770a43bf9d52bf449a155ee4",
+            "version": 1,
+            "config_version": null
+          }
+        ],
+        "created_storage_revision": 4
+      },
+      {
+        "schema_version": 2,
+        "creator": {
+          "schema_version": 2,
+          "id": "human:a13f368fa8904432b569d20e6063fffb",
+          "kind": "human",
+          "delegation_id": null
+        },
+        "ref": {
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "kind": "submission",
+          "object_id": "eed8a1bd59f741499dde7a029e200887",
+          "version": 1,
+          "config_version": null
+        },
+        "content": {
+          "as_of": {
+            "business_seq": 0,
+            "schema_version": 2,
+            "storage_revision": 1,
+            "workspace_revision": 1
+          },
+          "config": null,
+          "cycle": {
+            "config_version": null,
+            "kind": "cycle",
+            "object_id": "59bb3f15770a43bf9d52bf449a155ee4",
+            "schema_version": 2,
+            "session_id": "a13f368fa8904432b569d20e6063fffb",
+            "version": 2
+          },
+          "decision": "no_go",
+          "evaluation": {
+            "media_type": "application/json",
+            "path": "bundles/frozen.json",
+            "schema_version": 2,
+            "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+          },
+          "evidence_refs": [],
+          "executor": {
+            "delegation_id": null,
+            "id": "human:a13f368fa8904432b569d20e6063fffb",
+            "kind": "human",
+            "schema_version": 2
+          },
+          "id": "eed8a1bd59f741499dde7a029e200887",
+          "products": [],
+          "rules_revision": "rules-v4",
+          "scenario": {
+            "media_type": "application/json",
+            "path": "bundles/frozen.json",
+            "schema_version": 2,
+            "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+          },
+          "schema_version": 2,
+          "session_id": "a13f368fa8904432b569d20e6063fffb",
+          "version": 1
+        },
+        "visible_to": [
+          "learner"
+        ],
+        "dependencies": [
+          {
+            "schema_version": 2,
+            "session_id": "a13f368fa8904432b569d20e6063fffb",
+            "kind": "cycle",
+            "object_id": "59bb3f15770a43bf9d52bf449a155ee4",
+            "version": 2,
+            "config_version": null
+          }
+        ],
+        "created_storage_revision": 2
+      }
+    ],
+    "events": [
+      {
+        "schema_version": 2,
+        "id": "be8951c3332543acbece5a288a15b923",
+        "session_id": "a13f368fa8904432b569d20e6063fffb",
+        "seq": 1,
+        "transaction_id": "bede8d2a7ea942cf89a96e8d76a0bcc9",
+        "type": "submitted",
+        "executor": {
+          "schema_version": 2,
+          "id": "human:a13f368fa8904432b569d20e6063fffb",
+          "kind": "human",
+          "delegation_id": null
+        },
+        "visible_to": [
+          "learner"
+        ],
+        "refs": [
+          {
+            "schema_version": 2,
+            "session_id": "a13f368fa8904432b569d20e6063fffb",
+            "kind": "submission",
+            "object_id": "eed8a1bd59f741499dde7a029e200887",
+            "version": 1,
+            "config_version": null
+          }
+        ],
+        "data": {}
+      },
+      {
+        "schema_version": 2,
+        "id": "d6e6c246acf449289ead3887df6992ab",
+        "session_id": "a13f368fa8904432b569d20e6063fffb",
+        "seq": 2,
+        "transaction_id": "f64581c1c96a41cda4a51723cc955ab2",
+        "type": "revision_opened",
+        "executor": {
+          "schema_version": 2,
+          "id": "human:a13f368fa8904432b569d20e6063fffb",
+          "kind": "human",
+          "delegation_id": null
+        },
+        "visible_to": [
+          "learner"
+        ],
+        "refs": [
+          {
+            "schema_version": 2,
+            "session_id": "a13f368fa8904432b569d20e6063fffb",
+            "kind": "cycle",
+            "object_id": "ac9ce9f524b6431385f8654995ffa3b1",
+            "version": 1,
+            "config_version": null
+          }
+        ],
+        "data": {}
+      }
+    ],
+    "boundaries": [
+      {
+        "schema_version": 2,
+        "transaction_id": "ffa930fc2b294feca435157ffbd284f8",
+        "request_id": "work_products.create",
+        "start_seq": 0,
+        "end_seq": 0,
+        "storage_revision": 1
+      },
+      {
+        "schema_version": 2,
+        "transaction_id": "bede8d2a7ea942cf89a96e8d76a0bcc9",
+        "request_id": "submit",
+        "start_seq": 0,
+        "end_seq": 1,
+        "storage_revision": 2
+      },
+      {
+        "schema_version": 2,
+        "transaction_id": "f64581c1c96a41cda4a51723cc955ab2",
+        "request_id": "revise",
+        "start_seq": 1,
+        "end_seq": 2,
+        "storage_revision": 3
+      },
+      {
+        "schema_version": 2,
+        "transaction_id": "8fcee7bcf7c9416492755f9fe333beb1",
+        "request_id": "work_products.adopt",
+        "start_seq": 2,
+        "end_seq": 2,
+        "storage_revision": 4
+      }
+    ],
+    "source_digest": "ce0f8c48226eec91445a548ec441ec98cfcf98ae9d38e8f39a06a1e46b8ace1b",
+    "snapshot_hash": "675fdcffca06c291d62cda73993ada3d6746ea7f352f840a298dd34ce60fd22a"
+  }
+}

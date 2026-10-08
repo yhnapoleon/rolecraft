@@ -156,6 +156,43 @@ export class LiveWorkbench {
     if(!objectId)throw new Error(T('调查已保存，请在事项目录打开。','The investigation is saved. Open it from the task contents.'));
     return objectId as string;
   }
+  async createNativeTask(
+    a: Attempt,
+    input: { title: string; goal: string; priority: number },
+  ): Promise<string> {
+    const session = this.session(a);
+    if (!session?.v2NativeWorkspace) {
+      throw new Error(T('当前事项服务不可用。', 'The task service is unavailable.'));
+    }
+    const outcome = await this.v4.host(session).command('work_items.create', input);
+    if (outcome.status !== 'confirmed') {
+      throw new Error(
+        T(
+          '事项保存尚未确认，请核对原请求。',
+          'Task saving is unconfirmed. Check the original request.',
+        ),
+      );
+    }
+    const payload = outcome.result;
+    const ref = payload && typeof payload === 'object' && 'ref' in payload ? payload.ref : null;
+    if (
+      !ref ||
+      typeof ref !== 'object' ||
+      !('kind' in ref) ||
+      ref.kind !== 'task' ||
+      !('session_id' in ref) ||
+      ref.session_id !== session.id ||
+      !('object_id' in ref) ||
+      typeof ref.object_id !== 'string'
+    ) {
+      throw new Error(T('事项引用尚未确认。', 'The task reference is unconfirmed.'));
+    }
+    const current = this.store
+      .getSnapshot()
+      .workspace.sessions.find((row) => row.id === session.id);
+    if (current) await this.v4.sync(current);
+    return ref.object_id;
+  }
   async patchNativeTask(a: Attempt, id: string, patch: Record<string, unknown>) {
     const s=this.session(a);const task=s?.v2Workspace?.tasks.find(t=>t.id===id);
     if(!s||!task)throw new Error(T('找不到这件事的已保存版本。','The saved task version is unavailable.'));

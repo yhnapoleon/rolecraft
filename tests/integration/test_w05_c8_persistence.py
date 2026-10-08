@@ -83,7 +83,10 @@ def test_w05_formal_sections_persist_and_reopen(prepared_env):
             with TestClient(app) as client:
                 response=client.get(f'/sessions/{r.session_id}/feedback-records/{r.object_id}',headers={'Authorization':'Bearer '+e['token']});assert response.status_code==200,response.text
                 result=response.json()['result']['result'];report=C.FeedbackV2.model_validate(result['feedback'])
-                assert set(result['sections'].values())=={'recorded'} and report.rule_items is not None
+                assert result['sections']['provenance'] == 'not_recorded'
+                assert all(result['sections'][name] == 'recorded' for name in (
+                    'verified_facts', 'historical_responsibilities', 'rule_items'
+                )) and report.rule_items is not None
                 facts=report.verified_facts[0]
                 assert facts.subject==e['work'] and facts.verified_source_count==2 and facts.requested_at==e['request'].as_of
                 assert facts.activity_totals['material_read'].count==0 and facts.conclusion_quality=='not_scored'

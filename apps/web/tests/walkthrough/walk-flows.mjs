@@ -56,3 +56,5 @@ try {
   results.push(['INFO', 'route + cards after new task', await b.ev(`location.hash + ' ' + document.querySelectorAll('.kanban .card').length`)]);
 } catch (e) { results.push(['FAIL', 'script', e.message.slice(0, 200)]); }
 finally { results.push(['LOGS', JSON.stringify(b.logs).slice(0, 1200)]); console.log(results.map(r => r.join(' | ')).join('\n')); await b.close(); }
+
+process.exitCode = results.some(([status]) => status === 'FAIL') ? 1 : 0;

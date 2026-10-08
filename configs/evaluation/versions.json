@@ -1,0 +1,19 @@
+{
+  "versions": {
+    "feedback-rubric-v2-c2.1": {
+      "protocol_signatures": {
+        "zh": [
+          "7fc753da7bdb81d6f80b52591534d662bcdde69136afbb012b065fc524ab03fb",
+          "b268bf8e661bd990f274a6957e91496e889cd87bad15684aeac7407dd7315161"
+        ],
+        "en": [
+          "97d70e6d74a26dafc6849a7a2652d302df066e0df65c7f1a00abfe1c2510240f",
+          "b268bf8e661bd990f274a6957e91496e889cd87bad15684aeac7407dd7315161"
+        ]
+      },
+      "prompt_version": "grounded-feedback-bilingual-v1",
+      "comparison_baseline_sha256": "800d1c602bf84cdf0adb482cdcbefdb25bfe604daf1c6485cfacddf1af7a8464",
+      "engine_baseline_sha256": "7b9d79e92355e98f1160f35219ac104bdc90bd05a32edfeb484adf68da21f891"
+    }
+  }
+}
