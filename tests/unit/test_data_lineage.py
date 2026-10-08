@@ -17,7 +17,21 @@ def test_build_real_release_with_gold_sidecars(tmp_path):
 
 
 def test_template_and_parent_cannot_cross_splits():
-    rows = [{"item_id": "a", "template_id": "t", "root_case_id": "r", "split": "train", "parent_id": None},
-            {"item_id": "b", "template_id": "t", "root_case_id": "r", "split": "test", "parent_id": "a"}]
+    rows = [
+        {
+            "item_id": "a",
+            "template_id": "t",
+            "root_case_id": "r",
+            "split": "train",
+            "parent_id": None,
+        },
+        {
+            "item_id": "b",
+            "template_id": "t",
+            "root_case_id": "r",
+            "split": "test",
+            "parent_id": "a",
+        },
+    ]
     with pytest.raises(ValueError, match="split"):
         audit_records(rows)

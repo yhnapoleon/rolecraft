@@ -1,4 +1,5 @@
 """Reproduce E1 dev evaluation and non-deployable candidate registrations."""
+
 import argparse
 import json
 from pathlib import Path
@@ -22,9 +23,18 @@ def main():
     for name in ("linear", "encoder", "ensemble"):
         manifest = args.models / f"{name}.json"
         candidate = load_candidate(manifest)
-        config = RunnerConfig(suite="e1-dev", dataset_manifest=str(args.manifest), candidate=candidate.revision,
-                              prompt_version="relation-v1", input_mode="oracle", decode={}, seeds=[5002],
-                              concurrency=1, output_dir=str(args.output / "evals"), split="dev")
+        config = RunnerConfig(
+            suite="e1-dev",
+            dataset_manifest=str(args.manifest),
+            candidate=candidate.revision,
+            prompt_version="relation-v1",
+            input_mode="oracle",
+            decode={},
+            seeds=[5002],
+            concurrency=1,
+            output_dir=str(args.output / "evals"),
+            split="dev",
+        )
         report = run_eval(config, candidate)
         reports[name] = report.model_dump(mode="json")
         record = register_candidate(manifest, report.manifest_path, rubric_hash=rubric_hash)

@@ -84,13 +84,17 @@ def test_fact_ledger_and_enforced_constraints_cannot_disagree():
     spec = load_scenario(SCENARIO)
     capacity = next(f for f in spec.facts if f.id == "capacity")
     wrong_fact = capacity.model_copy(update={"value": 60})
-    bad = spec.model_copy(update={"facts": tuple(wrong_fact if f.id == "capacity" else f for f in spec.facts)})
+    bad = spec.model_copy(
+        update={"facts": tuple(wrong_fact if f.id == "capacity" else f for f in spec.facts)}
+    )
     assert "inconsistent_fact" in {i.code for i in validate_scenario(bad)}
 
 
 def test_minimum_participants_cannot_exceed_capacity():
     spec = load_scenario(SCENARIO)
-    bad = spec.model_copy(update={"constraints": spec.constraints.model_copy(update={"minimum_participants": 31})})
+    bad = spec.model_copy(
+        update={"constraints": spec.constraints.model_copy(update={"minimum_participants": 31})}
+    )
     assert "impossible_participant_bounds" in {i.code for i in validate_scenario(bad)}
 
 
@@ -98,13 +102,21 @@ def test_one_event_cannot_activate_two_versions_of_one_material():
     spec = load_scenario(SCENARIO)
     update = next(e for e in spec.event_rules if e.id == "policy_updated")
     ref = update.effects.material_versions[0]
-    ambiguous = update.model_copy(update={"effects": update.effects.model_copy(
-        update={"material_versions": (ref, ref.model_copy(update={"version": 3}))})})
+    ambiguous = update.model_copy(
+        update={
+            "effects": update.effects.model_copy(
+                update={"material_versions": (ref, ref.model_copy(update={"version": 3}))}
+            )
+        }
+    )
     future = next(m for m in spec.materials if m.id == "policy" and m.version == 2)
-    bad = spec.model_copy(update={
-        "event_rules": tuple(ambiguous if e.id == update.id else e for e in spec.event_rules),
-        "materials": spec.materials + (future.model_copy(update={"version": 3, "path": "materials/policy-v3.md"}),),
-    })
+    bad = spec.model_copy(
+        update={
+            "event_rules": tuple(ambiguous if e.id == update.id else e for e in spec.event_rules),
+            "materials": spec.materials
+            + (future.model_copy(update={"version": 3, "path": "materials/policy-v3.md"}),),
+        }
+    )
     assert "ambiguous_material_effect" in {i.code for i in validate_scenario(bad)}
 
 
@@ -126,16 +138,40 @@ def test_gold_sidecar_is_separate_from_input():
 def test_label_namespaces_and_duplicate_citations_are_validated():
     bundle = json.loads((ROOT / "docs/examples/judge-case-bundle.json").read_text(encoding="utf-8"))
     with pytest.raises(ValidationError):
-        GoldAnnotation.model_validate({**bundle["gold_sidecar"], "task_type": "relation", "label": "MET"})
+        GoldAnnotation.model_validate(
+            {**bundle["gold_sidecar"], "task_type": "relation", "label": "MET"}
+        )
     with pytest.raises(ValidationError):
-        JudgeDecision(label="SUPPORTED", evidence_ids=["e1", "e1"], reason_code="X", explanation="X", model_revision="test")
+        JudgeDecision(
+            label="SUPPORTED",
+            evidence_ids=["e1", "e1"],
+            reason_code="X",
+            explanation="X",
+            model_revision="test",
+        )
 
 
 def test_cli_validates_bundle_and_reports_errors(tmp_path):
-    result = subprocess.run([sys.executable, "-m", "career_lab.cli", "scenario", "validate", str(SCENARIO)], capture_output=True, text=True, encoding="utf-8")
+    result = subprocess.run(
+        [sys.executable, "-m", "career_lab.cli", "scenario", "validate", str(SCENARIO)],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
     assert result.returncode == 0, result.stderr
     assert json.loads(result.stdout)["valid"] is True
-    result = subprocess.run([sys.executable, "-m", "career_lab.cli", "scenario", "validate", str(tmp_path / "missing.yaml")], capture_output=True, text=True, encoding="utf-8")
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "career_lab.cli",
+            "scenario",
+            "validate",
+            str(tmp_path / "missing.yaml"),
+        ],
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+    )
     assert result.returncode == 1
     assert json.loads(result.stdout)["valid"] is False
-

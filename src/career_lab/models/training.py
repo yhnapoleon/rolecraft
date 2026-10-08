@@ -42,24 +42,54 @@ def train_baselines(manifest, output):
     encoder_seconds = time.perf_counter() - start
     a, b = linear.predict_proba(dev), encoder.predict_proba(dev)
     scores = []
-    for alpha in (0,.25,.5,.75,1):
-        predictions = [LABELS[i] for i in blend(a,b,alpha).argmax(axis=1)]
-        scores.append((f1_score(y_dev, predictions, labels=list(LABELS), average="macro", zero_division=0), alpha))
+    for alpha in (0, 0.25, 0.5, 0.75, 1):
+        predictions = [LABELS[i] for i in blend(a, b, alpha).argmax(axis=1)]
+        scores.append(
+            (
+                f1_score(y_dev, predictions, labels=list(LABELS), average="macro", zero_division=0),
+                alpha,
+            )
+        )
     best_score, alpha = max(scores, key=lambda p: (p[0], -p[1]))
     ensemble = Ensemble(linear, encoder, alpha)
-    result = {"selection_split": "dev", "alpha": alpha, "dev_macro_f1": best_score, "grid": scores,
-              "fit_seconds": {"linear": linear_seconds, "encoder": encoder_seconds},
-              "encoder_final_loss": float(encoder.classifier.loss_), "encoder_iterations": int(encoder.classifier.n_iter_),
-              "curve_available": False, "optimizer": "lbfgs", "seed": 5002}
+    result = {
+        "selection_split": "dev",
+        "alpha": alpha,
+        "dev_macro_f1": best_score,
+        "grid": scores,
+        "fit_seconds": {"linear": linear_seconds, "encoder": encoder_seconds},
+        "encoder_final_loss": float(encoder.classifier.loss_),
+        "encoder_iterations": int(encoder.classifier.n_iter_),
+        "curve_available": False,
+        "optimizer": "lbfgs",
+        "seed": 5002,
+    }
     dataset_hash = hashlib.sha256(manifest.read_bytes()).hexdigest()
     for name, model in (("linear", linear), ("encoder", encoder), ("ensemble", ensemble)):
         target = output / f"{name}.joblib"
         joblib.dump(model, target)
         checksum = hashlib.sha256(target.read_bytes()).hexdigest()
-        metadata = {"name": name, "revision": f"{name}:{checksum[:16]}", "sha256": checksum, "file": target.name,
-                    "dataset_hash": dataset_hash, "labels": LABELS, "seed": 5002, "training_split": "train", "selection_split": "dev",
-                    "train_items": [i.item_id for i in train], "architecture": "character n-gram TF-IDF + logistic regression" if name == "linear" else "character n-gram binary features + trained tanh MLP(32,16)" if name == "encoder" else f"probability blend alpha={alpha}",
-                    "pretrained": False, "post_training": False, "input_mode": "oracle", "evidence_selection": "all-candidate baseline"}
+        metadata = {
+            "name": name,
+            "revision": f"{name}:{checksum[:16]}",
+            "sha256": checksum,
+            "file": target.name,
+            "dataset_hash": dataset_hash,
+            "labels": LABELS,
+            "seed": 5002,
+            "training_split": "train",
+            "selection_split": "dev",
+            "train_items": [i.item_id for i in train],
+            "architecture": "character n-gram TF-IDF + logistic regression"
+            if name == "linear"
+            else "character n-gram binary features + trained tanh MLP(32,16)"
+            if name == "encoder"
+            else f"probability blend alpha={alpha}",
+            "pretrained": False,
+            "post_training": False,
+            "input_mode": "oracle",
+            "evidence_selection": "all-candidate baseline",
+        }
         model_manifest = output / f"{name}.json"
         model_manifest.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
         result[name] = str(model_manifest)
@@ -73,7 +103,10 @@ def load_candidate(manifest):
     data = json.loads(manifest.read_text(encoding="utf-8"))
     root = manifest.parent.resolve()
     path = (root / data["file"]).resolve()
-    if not path.is_relative_to(root) or hashlib.sha256(path.read_bytes()).hexdigest() != data["sha256"]:
+    if (
+        not path.is_relative_to(root)
+        or hashlib.sha256(path.read_bytes()).hexdigest() != data["sha256"]
+    ):
         raise ValueError("model artifact hash mismatch")
     model = joblib.load(path)
     model.revision = data["revision"]
