@@ -101,6 +101,11 @@ async function recoverAccess(context) {
   const { browser, text, shot } = context;
   await browser.click('.rail-tabs [data-tab="agent"]');
   await waitFor(browser, `!!document.querySelector('[name="agentName"]')`);
+  assert.equal(
+    await browser.ev(`document.querySelectorAll('[data-v4-region="agent"]').length`),
+    1,
+    'One named region owns the Agent controls',
+  );
   await browser.type('[name="agentName"]', 'Recovery check');
   await browser.click(
     `[aria-label="${text('授权整个工作区的可见内容', 'Allow visible content across the workspace')}"]`,
@@ -125,6 +130,11 @@ async function recoverAccess(context) {
     const input = document.querySelector('.agent-v4-grant [name="agentName"]');
     return !!input && !input.disabled;
   })()`,
+  );
+  assert.equal(
+    await browser.ev(`document.querySelectorAll('[data-action="download-agent-config"]').length`),
+    1,
+    'Recovered access exposes the one-time config control through the host subscription',
   );
   await shot('recovered-access');
 }

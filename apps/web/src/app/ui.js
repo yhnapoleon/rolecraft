@@ -620,6 +620,7 @@ function mountNativeSlots() {
   });
 }
 function afterRender() {
+  refreshAgentIssued();
   mountNativeSlots();
   // Only the workbench's own scroll regions move; browser focus must not shift
   // the entire fixed-height workspace (especially after viewport changes).
@@ -1981,6 +1982,16 @@ function fbItem(a, i, full = false) {
     <div class="fb-dispute">${ui.disputeOpen === key ? `<form class="dispute" data-form="dispute" data-key="${esc(key)}"><label class="sr-only" for="dispute-text">${T('你的不同看法', 'Your view')}</label><textarea id="dispute-text" class="textarea" name="text" rows="2" required maxlength="2000" placeholder="${esc(T('哪里不对？', 'What is wrong with it?'))}"></textarea><div class="row-actions"><button type="submit" class="btn small primary">${T('记下', 'Save')}</button>${btn(T('取消', 'Cancel'), 'dispute', 'small quiet', `data-key="${esc(key)}"`)}</div></form>` : `<button type="button" class="link quiet" data-action="dispute" data-key="${esc(key)}">${T('我有不同看法', 'I see it differently')}</button>`}${disputes.map((d) => `<p class="dispute-note">${icon('bubble', 'i-xs')}<span${zhAttr(d.text)}>${esc(d.text)}</span></p>`).join('')}</div>
   </div></li>`;
 }
+const issuedViews = new WeakMap();
+function refreshAgentIssued() {
+  const a = current();
+  const target = document.querySelector('[data-agent-issued]');
+  if (!a || !target) return;
+  const identity = JSON.stringify([a.id, locale(), L.v4Host(a)?.issuedDelegation()]);
+  if (issuedViews.get(target) === identity) return;
+  issuedViews.set(target, identity);
+  target.innerHTML = agentIssued(a);
+}
 function agentIssued(a) {
   const issued = L.nativeWorkspace(a) ? L.v4Host(a)?.issuedDelegation() : null;
   return issued
@@ -1994,7 +2005,7 @@ function railAgent(a, t) {
   const scopeWorks = (t ? works(a).filter((w) => w.taskId === t.id) : works(a)).length;
   const log = agentLog(a, t && !ui.scopeAll ? t.id : null);
   const native = L.nativeWorkspace(a);
-  return `<div class="rail-pad agent-panel" ${native ? 'data-agent-native' : ''}>
+  return `<div class="rail-pad agent-panel" ${native ? 'data-agent-native data-v4-region="agent"' : ''}>
     <section class="agent-conn">
       <div class="conn-row">${agentMark('md')}<div class="grow"><p class="agent-name">${T('我的 Agent', 'My agent')}</p><p class="meta">${T('你自己的工具：只看到你交出去的内容', 'Your own tool: it only sees what you hand over')}</p></div></div>
       <div class="conn-ways" data-agent-connection>
@@ -2937,6 +2948,7 @@ function sheetAbout() {
 /* ---------- live world: connection, typing, arrivals ---------- */
 function onLive(changed) {
   const n = snap();
+  refreshAgentIssued();
   noticeArrivals();
   if (sheet.open && sheet.querySelector('.res-now') && current())
     sheet.querySelector('.res-now').innerHTML = conditions(current(), 'compact');
@@ -4893,12 +4905,6 @@ function evidenceView(a, value) {
 }
 
 /* ---------- events ---------- */
-document.addEventListener('rolecraft:delegation-issued', () => {
-  // Updating the one-time download must not unmount a grant/recovery that is still acknowledging.
-  const a = current(),
-    target = document.querySelector('[data-agent-issued]');
-  if (a && target) target.innerHTML = agentIssued(a);
-});
 document.addEventListener('rolecraft:open-chat', (e) => {
   const role = ROLE_OF[e.detail?.roleId];
   if (role && current()) openChat(role);

@@ -263,11 +263,15 @@ describe('v4 single host persistence and recovery', () => {
     expect([...map.values()].join('')).not.toContain('agent-secret');
     expect(JSON.stringify(host.snapshot())).not.toContain('agent-secret');
     expect(host.issuedDelegation()).toMatchObject({ delegationId: 'd1', label: 'Helper' });
+    const issuedStates: ReturnType<typeof host.issuedDelegation>[] = [];
+    const unsubscribe = host.subscribe(() => issuedStates.push(host.issuedDelegation()));
     expect(host.takeConnectionConfig('http://127.0.0.1:1/api')).toEqual({
       api_url: 'http://127.0.0.1:1/api',
       session_id: 's',
       token: 'agent-secret',
     });
+    expect(issuedStates).toEqual([null]);
+    unsubscribe();
     expect(host.takeConnectionConfig('http://127.0.0.1:1/api')).toBeNull();
     await host.command('delegations.create', {
       agent_label: 'Second',
