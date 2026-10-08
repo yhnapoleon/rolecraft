@@ -61,6 +61,7 @@ def main() -> None:
             env,
             ROOT,
         )
+    env.pop("TMPDIR", None)
     web = ROOT / "apps/web"
     run(
         "frontend",

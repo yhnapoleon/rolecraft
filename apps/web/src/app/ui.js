@@ -1047,7 +1047,10 @@ function msgHtml(a, role, m) {
   return `<div class="msg ${mine ? 'me' : 'them'}${local ? ' local' : ''}"><div class="bubble"${zhAttr(m.text)}>${mine ? esc(text) : md(text)}</div>${time || tag || (mine && tk) ? `<span class="msg-foot">${tag}${mine && tk ? (task ? `<button type="button" class="msg-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : `<span class="msg-task" title="${esc(tk)}">${esc(T('关联事项：', 'Linked task: ') + Array.from(String(tk)).slice(0, 8).join('') + (Array.from(String(tk)).length > 8 ? '…' : ''))}</span>`) : ''}${time ? `<time title="${esc(time)}">${when(time)}</time>` : ''}</span>` : ''}</div>`;
 }
 function railFeedback(a, t) {
-  if (L.nativeWorkspace(a)) return `<div class="rail-pad fb-pad" data-v4-feedback data-open-review="${!!ui.reviewFor}"></div>`;
+  if (L.nativeWorkspace(a)) {
+    return `<div class="rail-pad fb-pad" data-v4-feedback
+      data-v4-region="feedback" data-open-review="${!!ui.reviewFor}"></div>`;
+  }
   const scoped = t && !ui.scopeAll;
   const items = Coach.observations(a, E, scoped ? t.id : null);
   const x = t && ui.obj && ui.obj.type === 'work' ? a.artifacts.find(y => y.id === ui.obj.id && !y.removedAt) : null;
@@ -1177,7 +1180,19 @@ function renderReview() {
   if (current() && L.nativeWorkspace(current())) return `${topbar(backBtn('to-board', T('工作板', 'Board')))}
     <main id="main" class="page review" tabindex="-1">
       <header class="review-hero"><div class="review-title"><p class="meta">${esc(CASE(current().scenarioId).title)}</p><h1 class="title-xl">${T('交付与反馈', 'Submission and feedback')}</h1></div></header>
-      <div class="review-grid"><div class="review-main" data-v4-feedback></div><aside class="review-side">${practiceOriginNote(current())}<section class="review-practice" data-v4-practice aria-live="polite">${practiceSection(current())}</section><div data-v4-reference-side><p class="meta">${T('打开依据，核对当时的原文与版本。', 'Open a reference to inspect its original text and version.')}</p></div></aside></div>
+      <div class="review-grid">
+        <div class="review-main" data-v4-feedback data-v4-region="feedback"></div>
+        <aside class="review-side">
+          ${practiceOriginNote(current())}
+          <section class="review-practice" data-v4-practice aria-live="polite">
+            ${practiceSection(current())}
+          </section>
+          <div data-v4-reference-side><p class="meta">${T(
+            '打开依据，核对当时的原文与版本。',
+            'Open a reference to inspect its original text and version.',
+          )}</p></div>
+        </aside>
+      </div>
     </main>`;
   const a = current(); const s = sessionOf(a); const fb = s?.feedback; const submission = s ? L.store.submissionId(s) : '';
   const pending = s?.pending && (s.pending.job?.kind ?? s.pending.kind) === 'feedback';
@@ -1459,7 +1474,13 @@ function bundleRisk(a, draft) {
 function sheetDeliver(readOnly = false) {
   const a = current(); const s = sessionOf(a);
   if (L.nativeWorkspace(a)) {
-    openSheet(T('交付试点决定', 'Submit your pilot decision'), '<div class="deliver-doc paper" data-v4-submission></div>', btn(T('查看提交与反馈', 'View submission and feedback'), 'v4-feedback', 'quiet'), 'wide doc');
+    openSheet(
+      T('交付试点决定', 'Submit your pilot decision'),
+      `<div class="deliver-doc paper"
+        data-v4-submission data-v4-region="submission"></div>`,
+      btn(T('查看提交与反馈', 'View submission and feedback'), 'v4-feedback', 'quiet'),
+      'wide doc',
+    );
     return;
   }
   if (s.world.status === 'submitted' && !readOnly) { closeSheet(true); go('review'); return; }

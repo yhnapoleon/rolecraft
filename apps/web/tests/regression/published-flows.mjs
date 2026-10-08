@@ -62,7 +62,8 @@ async function saveAndShare(context) {
   await browser.clickText(text('分享已保存的这版', 'Share this saved version'));
   await waitFor(
     browser,
-    `document.querySelector('[data-v4-insertion="sharing"]')?.innerText.includes(${JSON.stringify(text('可见', 'Visible'))})`,
+    `document.querySelector('[data-v4-insertion="sharing"]')
+      ?.innerText.includes(${JSON.stringify(text('可见', 'Visible'))})`,
   );
   await shot('shared');
 }
@@ -105,8 +106,20 @@ async function submitDeferral(context) {
   await browser.goto(`${base}#/review`);
   await waitFor(
     browser,
-    `document.querySelector('.native-feedback')?.innerText.includes(${JSON.stringify(text('等待模型接入', 'Awaiting model connection'))})`,
+    `document.querySelector('.native-feedback')
+      ?.innerText.includes(${JSON.stringify(text('等待模型接入', 'Awaiting model connection'))})`,
     30000,
+  );
+  await waitFor(
+    browser,
+    `!!document.querySelector('[data-action="practice-reload"], [data-action="practice-choose"]')`,
+  );
+  if (await browser.ev(`!!document.querySelector('[data-action="practice-reload"]')`)) {
+    await browser.click('[data-action="practice-reload"]');
+  }
+  await waitFor(
+    browser,
+    `document.querySelectorAll('[data-action="practice-choose"]').length === 2`,
   );
   await shot('feedback');
 }
@@ -163,7 +176,8 @@ async function runLanguage(language) {
   try {
     await browser.goto(base);
     await browser.ev(
-      `localStorage.clear(); localStorage.setItem('rolecraft.locale', ${JSON.stringify(language)});`,
+      `localStorage.clear();
+      localStorage.setItem('rolecraft.locale', ${JSON.stringify(language)});`,
     );
     await browser.goto(base);
     await step('normal entry and fixed work language', () => enterWorkspace(context));
@@ -189,7 +203,16 @@ async function runLanguage(language) {
       `${output}/${language}-controls.json`,
       JSON.stringify(
         await browser.ev(
-          `({buttons:[...document.querySelectorAll('button')].filter(b=>b.offsetParent!==null).map(b=>({text:b.textContent,disabled:b.disabled})),selects:[...document.querySelectorAll('select')].map(s=>({label:s.getAttribute('aria-label'),value:s.value,disabled:s.disabled})),logs:[]})`,
+          `({
+            buttons: [...document.querySelectorAll('button')]
+              .filter(button => button.offsetParent !== null)
+              .map(button => ({text: button.textContent, disabled: button.disabled})),
+            selects: [...document.querySelectorAll('select')].map(select => ({
+              label: select.getAttribute('aria-label'),
+              value: select.value,
+              disabled: select.disabled,
+            })),
+          })`,
         ),
         null,
         2,

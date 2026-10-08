@@ -15,7 +15,8 @@ for (const language of ['zh', 'en']) {
   try {
     await browser.goto(base);
     await browser.ev(
-      `localStorage.clear(); localStorage.setItem('rolecraft.locale', ${JSON.stringify(language)});`,
+      `localStorage.clear();
+      localStorage.setItem('rolecraft.locale', ${JSON.stringify(language)});`,
     );
     await browser.goto(base);
     await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);

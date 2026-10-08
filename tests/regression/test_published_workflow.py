@@ -12,15 +12,17 @@ from scripts.regression.published import CATALOG
 from .conftest import PublishedSession
 
 
+@pytest.mark.parametrize("decision", ["defer_with_conditions", "no_go"])
 def test_submission_response_loss_recovery_and_old_feedback(
     published_session: PublishedSession,
+    decision: str,
 ) -> None:
     session = published_session
     work = session.work()
     command = session.command(
         "fixed-submission",
         "submissions.create",
-        {"decision": "defer_with_conditions", "products": [work]},
+        {"decision": decision, "products": [work]},
     )
     first = session.client.post(session.url("submissions"), headers=session.headers, json=command)
     assert first.status_code == 200, first.text
@@ -112,20 +114,40 @@ def test_resource_choice_never_grants_unaccepted_terms(
             "reason": "Need a bounded pilot",
         },
     )["result"]["request"]
-    decision = session.send(
+    resolved = session.send(
         "approvals/resolve",
         "resolve-capacity",
         "resolve_approval",
         {"request": requested, "expected_request_revision": 1},
-    )["result"]["decision"]
+    )["result"]
+    decision = resolved["decision"]
     assert decision["status"] == expected
     assert (
         session.get("timeline").json()["result"]["result"]["workspace"]["resources"]["capacity"]
         == 30
     )
 
+    if expected == "countered":
+        session.send(
+            "actions",
+            "accept-terms",
+            "accept_counteroffer",
+            {
+                "tool": "accept_counteroffer",
+                "request": resolved["request"],
+                "terms": decision["countered"],
+            },
+        )
+        history = session.get("timeline").json()["result"]["result"]
+        assert history["workspace"]["resources"]["capacity"] == 60
+        requests = [
+            row["content"] for row in history["objects"] if row["ref"]["kind"] == "business_request"
+        ]
+        assert all(request["requested"] == {"capacity": 100} for request in requests)
+        assert any(request["status"] == "accepted" for request in requests)
 
-def test_revoked_agent_loses_access_and_cross_session_feedback_is_private(
+
+def test_revoked_agent_loses_access_and_cross_session_workspace_is_private(
     published_session: PublishedSession,
 ) -> None:
     session = published_session
