@@ -683,11 +683,11 @@ from pathlib import Path
 fault = sys.argv.pop(1)
 original_version = metadata.version
 original_read = Path.read_bytes
-def version(name):
+def version(name: str) -> str:
     if name == "career-lab":
         raise metadata.PackageNotFoundError(name)
     return original_version(name)
-def read(path):
+def read(path: Path) -> bytes:
     if path.parent.name == "engineer" and path.suffix == ".py":
         raise OSError("injected source read failure")
     return original_read(path)
