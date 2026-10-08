@@ -198,7 +198,8 @@ def reproduce_pack(store, module, auth, root, output):
                     "recorded": recorded, "reproduced": reproduced}
         results.append(store.query_at(auth, test.as_of, run, operation="tests.create"))
     matched = all(row["matches_record"] for row in results)
-    report = {"pack_id": pack.id, "mode": "isolated_deterministic_reexecution", "work_language": index.work_language,
+    report = {"schema_version": 1, "pack_id": pack.id, "executor": auth.executor,
+              "source": index.source, "mode": "isolated_deterministic_reexecution", "work_language": index.work_language,
               "status": "reproduced" if matched else "behavior_changed", "correctness_assessed": False,
               "model_calls": 0, "results": results}
     publish(output, {"report.json": encode(report)})

@@ -201,3 +201,27 @@ def test_invalid_package_fails_without_a_success_report(session, damage):
     result = cli('reproduce', '--pack', str(root / 'pack'), '--output', str(root / 'reproduction'))
     assert result.returncode == 1 and not result.stderr
     assert not (root / 'reproduction').exists()
+
+
+def test_reproduction_records_its_actual_executor_separately_from_the_original_test(session):
+    from datetime import datetime, timedelta, timezone
+    _, _, _, _, send, trial, cli, root, credentials = session
+    assert cli('pack', '--test', trial['id'], '--output', str(root / 'pack')).returncode == 0
+    assert cli('reproduce', '--pack', str(root / 'pack'), '--output', str(root / 'human')).returncode == 0
+    human = json.loads((root / 'human' / 'report.json').read_text())
+    grant = send('delegations', 'grant', 'delegations.create', {
+        'agent_label': 'engineer', 'capabilities': ['read', 'act'],
+        'expires_at': (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()})['result']['result']
+    value = json.loads(credentials.read_text())
+    value['token'] = grant['token']
+    credentials.write_text(json.dumps(value))
+    assert cli('reproduce', '--pack', str(root / 'pack'), '--output', str(root / 'agent')).returncode == 0
+    agent = json.loads((root / 'agent' / 'report.json').read_text())
+    assert human['executor']['kind'] == 'human'
+    assert agent['executor']['kind'] == 'external_agent'
+    assert agent['executor']['delegation_id'] == grant['delegation']['id']
+    assert human['results'] == agent['results']
+    # The existing human report cannot be relabelled by another executor.
+    denied = cli('reproduce', '--pack', str(root / 'pack'), '--output', str(root / 'human'))
+    assert denied.returncode == 1
+    assert json.loads((root / 'human' / 'report.json').read_text()) == human
