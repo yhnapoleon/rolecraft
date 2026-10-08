@@ -74,6 +74,7 @@ export function mount(context:V4SlotContext):V4SlotHandle {
     if(result.status!=='confirmed')throw Error('Original request remains unresolved');
   }
   let reading:Promise<RolesView>|undefined;
+  let readAgain=false;
   const readOnce=async():Promise<RolesView>=>{
       const ticket=++readTicket;const s=session(host,sid);const publicData=await timeline(host,sid);
       const statuses=new Map<string,V4CommandResult>();let unresolved:string|undefined;
@@ -117,12 +118,20 @@ export function mount(context:V4SlotContext):V4SlotHandle {
       if(ticket===readTicket)roleMode=['local_reference','model','unavailable'].includes(mode)?mode:'unavailable';
       updateControls();
       return {sessionId:sid,workLanguage:s.workLanguage,mode:['local_reference','model','unavailable'].includes(mode)?mode:'unavailable',
-        colleagues:roles.map(id=>({id,name:id==='supervisor'?T('经理','Manager'):id==='business_lead'?T('业务负责人','Business lead'):T('技术负责人','Technical lead'),available:mode!=='unavailable'})),
+        colleagues:roles.map(id=>({id,name:id==='supervisor'?T('经理','Manager'):id==='business_lead'?T('陈敏','Chen Min'):T('技术负责人','Technical lead'),available:mode!=='unavailable'})),
         turns,canSend:writable(),unconfirmed:!!pending||unknownDispatch,
         restriction:state.state==='active'?undefined:T('当前练习只读，原问题与回复保留。','This session is read-only; original questions and replies are retained.')};
   };
   const adapter:RolesNativeAdapter={
-    read(){return reading ??= readOnce().finally(()=>{reading=undefined;});},
+    read(){
+      return reading ??= (async()=>{
+        let next:RolesView;
+        // A timeline update can arrive while the prior read is still in flight.
+        // Finish with a fresh read instead of painting that stale reply forever.
+        do { readAgain=false; next=await readOnce(); } while(readAgain&&!destroyed);
+        return next;
+      })().finally(()=>{reading=undefined;});
+    },
     async send({roleId,text}){
       if(roleId!==selected || !writable())throw Error('Colleague command unavailable');
       const submittedRevision=inputRevision;const task=host.snapshot().currentTask;
@@ -149,11 +158,17 @@ export function mount(context:V4SlotContext):V4SlotHandle {
   };
   thread.replaceChildren(); // The assigned history surface is owned by this v2 slot.
   const view=mountConversation(thread,adapter,selected);
-  const onSubmit=(event:Event)=>{event.preventDefault();event.stopImmediatePropagation();const text=inputNode.value;if(!text.trim()||!writable())return;void adapter.send({roleId:selected,text}).catch(fail).finally(()=>{void Promise.resolve(reading).catch(()=>{}).then(()=>{if(!destroyed)return view.refresh();});});};
+  const onSubmit=(event:Event)=>{event.preventDefault();event.stopImmediatePropagation();const typed=inputNode.value;if(!typed.trim()||!writable())return;
+    // A quoted test sits outside the editable box; it is sent once, ahead of the person's own words.
+    const quote=form.closest('.chat')?.querySelector<HTMLElement>('.chat-quote')?.dataset.quote||'';
+    const text=quote?quote+'\n'+typed:typed;
+    if(text.length>4000){host.announce(T('引用加上问题超过 4000 字，请缩短问题或移除引用。','The quote plus your question is over 4,000 characters. Shorten it or remove the quote.'),'error');return;}
+    void adapter.send({roleId:selected,text}).then(()=>{if(quote&&!destroyed)form.dispatchEvent(new CustomEvent('rolecraft:quote-sent',{bubbles:true,detail:{roleId:selected}}));}).catch(fail).finally(()=>{void Promise.resolve(reading).catch(()=>{}).then(()=>{if(!destroyed)return view.refresh();});});};
   form.addEventListener('submit',onSubmit);inputNode.addEventListener('input',onInput);
   function update(snapshot:Readonly<V4HostSnapshot>){
     if(destroyed)return;
     if(snapshot.session?.sessionId!==sid || snapshot.session.protocol!==2){destroy();return;}
+    if(reading)readAgain=true;
     updateControls();void view.refresh().catch(fail);
   }
   let lastSnapshot=JSON.stringify(host.snapshot());

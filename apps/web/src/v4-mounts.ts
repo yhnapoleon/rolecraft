@@ -3,6 +3,7 @@ import { mountWorkspaceSlot } from './features/workspace/native-v4/v4-slot';
 import { mount as mountRoles } from './features/roles-native/v4-slot';
 import { mount as mountResources } from './features/roles-native/v4-request-slot';
 import { mountV4Feedback } from './features/feedback-native/v4-slot';
+import { mountV4AgentSlot } from './features/agent-native/v4-slot';
 import type { V4DataHost } from './v4-data-host';
 import type { V4HostAdapter, V4SlotContext, V4SlotHandle } from './v4-host';
 import type { LocalSession } from './types';
@@ -32,6 +33,8 @@ export class V4Mounts {
     if (sheet?.open && sheet.querySelector('[data-v4-submission]')) roots.set('submission', sheet.querySelector('[data-v4-submission]')!);
     const feedback = doc.querySelector<HTMLElement>('[data-v4-feedback]');
     if (feedback) roots.set('feedback', feedback);
+    const agentPanel = doc.querySelector<HTMLElement>('#ws-rail .agent-panel[data-agent-native]');
+    if (agentPanel && session.v2NativeWorkspace) roots.set('agent', agentPanel);
     for (const [id, current] of this.mounted) {
       if (current.host !== host || roots.get(id) !== current.root || current.root.firstElementChild !== current.content || !current.root.isConnected) {
         current.handle.destroy(); current.clean(); this.mounted.delete(id);
@@ -97,6 +100,8 @@ export class V4Mounts {
         pick('newProduct', '[form="artifact-form"][type="submit"]', sheet!);
       } else if (id === 'roles') {
         pick('thread', '.thread'); pick('composer', '.composer');
+      } else if (id === 'agent') {
+        pick('connection', '[data-agent-connection]'); pick('activity', '[data-agent-activity]'); pick('returns', '[data-agent-returns]');
       } else if (id === 'resource-requests') {
         pick('form', '#res-form');
         pick('submit', '[form="res-form"][type="submit"]', sheet!);
@@ -116,7 +121,8 @@ export class V4Mounts {
         announce: (message, kind) => { if (alive) host.announce(message, kind); },
       };
       const context: V4SlotContext = { host: adapter, nodes };
-      const handle = id === 'roles' ? mountRoles(context)
+      const handle = id === 'agent' ? mountV4AgentSlot(context)
+        : id === 'roles' ? mountRoles(context)
         : id === 'resource-requests' ? mountResources(context)
         : id === 'submission' || id === 'feedback' ? mountV4Feedback({ ...context, surface: id === 'submission' ? 'submission' : 'feedback' })
         : mountWorkspaceSlot(context);

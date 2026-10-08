@@ -1,6 +1,7 @@
 """Immutable scenario content for historical reads; never executes archived runtime code."""
 from pathlib import Path
 import hashlib
+import errno
 import shutil
 from career_lab.contracts.v2 import FileRef, SessionBindings, ProtocolError, read_file
 from career_lab.scenarios.v2.loader import load_package
@@ -65,7 +66,14 @@ class ScenarioReadCatalog:
                 path=stage/ref.path;path.parent.mkdir(parents=True,exist_ok=True);path.write_bytes(read_file(package.root,ref))
             HistoricalScenarioReader(stage)
             try:stage.rename(target)
-            except FileExistsError:HistoricalScenarioReader(target)
+            except OSError as error:
+                # Darwin reports ENOTEMPTY when another API/worker wins the
+                # atomic directory rename; Linux may use EEXIST.
+                if error.errno not in (errno.EEXIST, errno.ENOTEMPTY):
+                    raise
+                existing=HistoricalScenarioReader(target)
+                if existing.package.content_hash!=package.content_hash:
+                    raise ProtocolError('scenario_archive_invalid',status=503) from error
         return target
     def resolve(self, bindings):
         if bindings==self.current.bindings:return self.current

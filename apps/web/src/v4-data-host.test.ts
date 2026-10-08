@@ -116,6 +116,78 @@ describe('v4 single host persistence and recovery', () => {
     await expect(host.command('delegations.create', { agent_label: 'test' })).rejects.toMatchObject({ code: 'delegation_host_not_ready' });
     expect(fetcher).not.toHaveBeenCalled();
   });
+  it('keeps an issued agent secret only in memory and hands the connection config out once', async () => {
+    const { host, fetcher, map } = setup();
+    const context = { as_of: point, state, session: host.snapshot().session, available: { 'delegations.create': true, 'delegations.revoke': true },
+      semantic: { roles: 'model', feedback: 'model', assistant: 'model' } };
+    fetcher.mockImplementation(async (url, init) => {
+      if (!init?.body) return String(url).endsWith('/workbench') ? reply({ schema_version: 2, result: { result: context } }) : reply({ schema_version: 2, state });
+      const sent = JSON.parse(String(init.body));
+      return reply({ schema_version: 2, result: { schema_version: 2, result: sent.operation === 'delegations.revoke' ? { delegation_id: 'd1', revoked: true } : { delegation: { id: 'd1' }, token: 'agent-secret' } } });
+    });
+    await host.query('workbench.read');
+    expect(host.snapshot().available).toMatchObject({ 'delegations.create': true, 'delegations.list': true });
+    const issued = await host.command('delegations.create', { agent_label: 'Helper' });
+    expect(issued.status).toBe('confirmed');
+    expect(JSON.stringify(issued)).not.toContain('agent-secret');
+    expect([...map.values()].join('')).not.toContain('agent-secret');
+    expect(JSON.stringify(host.snapshot())).not.toContain('agent-secret');
+    expect(host.issuedDelegation()).toMatchObject({ delegationId: 'd1', label: 'Helper' });
+    expect(host.takeConnectionConfig('http://127.0.0.1:1/api')).toEqual({ api_url: 'http://127.0.0.1:1/api', session_id: 's', token: 'agent-secret' });
+    expect(host.takeConnectionConfig('http://127.0.0.1:1/api')).toBeNull();
+    await host.command('delegations.create', { agent_label: 'Second' });
+    await host.command('delegations.revoke', { delegation_id: 'd1' });
+    expect(host.issuedDelegation()).toBeNull();
+  });
+  it('recovers a lost grant after a new page host, persists confirmation, and permits the next business write', async () => {
+    const { host, ports, fetcher, map } = setup();
+    const context = { as_of: point, state, session: host.snapshot().session, available: { 'delegations.create': true, 'delegations.revoke': true },
+      semantic: { roles: 'waiting_model', feedback: 'waiting_model', assistant: 'waiting_model' } };
+    const grantCommands: unknown[] = []; const grants = new Map<string, string>(); let drop = true;
+    fetcher.mockImplementation(async (url, init) => {
+      if (!init?.body) return String(url).endsWith('/workbench') ? reply({ schema_version: 2, result: { result: context } }) : reply({ schema_version: 2, state });
+      const sent = JSON.parse(String(init.body));
+      if (sent.operation !== 'delegations.create') return reply(response(sent));
+      grantCommands.push(sent);
+      if (!grants.has(sent.request_id)) grants.set(sent.request_id, 'd1');
+      if (drop) { drop = false; throw Error('connection lost after commit'); }
+      return reply({ schema_version: 2, result: { schema_version: 2, result: { delegation: { id: grants.get(sent.request_id) }, token: 'agent-secret' } } });
+    });
+    await host.query('workbench.read');
+    const lost = await host.command('delegations.create', { agent_label: 'Helper' });
+    expect(lost.status).toBe('unconfirmed');
+    expect([...map.values()].join('')).toContain(lost.requestId);
+    await expect(host.command('work_items.create', { title: 'Blocked until recovered' })).rejects.toMatchObject({ code: 'request_unconfirmed' });
+    const restored = new V4DataHost(ports);
+    await restored.query('workbench.read');
+    expect(restored.pendingRequests({ readOnly: true })).toEqual([]);
+    expect(restored.pendingRequests()).toEqual([lost]);
+    expect(grantCommands).toHaveLength(1); // Remount/read and passive polling must not replay issuance.
+    const recovered = await restored.recover(lost.requestId);
+    expect(recovered.status).toBe('confirmed');
+    expect(grantCommands).toHaveLength(2);
+    expect(grantCommands[1]).toEqual(grantCommands[0]);
+    expect(grants.size).toBe(1);
+    expect(restored.pendingRequests()).toEqual([]);
+    const journal = JSON.parse(map.get('rolecraft.v4.session.s')!);
+    expect(journal.requests[lost.requestId].outcome.status).toBe('confirmed');
+    expect(new V4DataHost(ports).pendingRequests()).toEqual([]);
+    expect(await restored.command('work_items.create', { title: 'Continue working' })).toMatchObject({ status: 'confirmed', result: { saved: true } });
+    expect([...map.values()].join('')).not.toContain('agent-secret');
+    expect(JSON.stringify([recovered, restored.snapshot(), restored.issuedDelegation(), vi.mocked(ports.announce).mock.calls])).not.toContain('agent-secret');
+    expect(restored.issuedDelegation()).toMatchObject({ delegationId: 'd1' });
+  });
+  it('reports an agent grant that could not be sent as not sent, without a journal entry', async () => {
+    const { host, fetcher, map } = setup();
+    const context = { as_of: point, state, session: host.snapshot().session, available: { 'delegations.create': true },
+      semantic: { roles: 'model', feedback: 'model', assistant: 'model' } };
+    fetcher.mockImplementation(async (url) => String(url).endsWith('/workbench') ? reply({ schema_version: 2, result: { result: context } }) : reply({ detail: 'down' }, 502));
+    await host.query('workbench.read');
+    const result = await host.command('delegations.create', { agent_label: 'Helper' });
+    expect(result).toMatchObject({ status: 'failed', result: { code: 'not_sent', definitive: true } });
+    expect(posts(fetcher)).toHaveLength(0);
+    expect([...map.values()].join('')).not.toContain(result.requestId);
+  });
   it('previews an import through the existing read-only handler without a write journal', async () => {
     const { host, fetcher, map } = setup();
     fetcher.mockImplementation(async (_url, init) => {

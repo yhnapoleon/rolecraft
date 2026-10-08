@@ -271,7 +271,7 @@ def test_package_language_is_hash_bound_and_cannot_be_relabelled(tmp_path,packag
     (tmp_path/'locale.json').write_bytes(raw)
     import hashlib
     ref=FileRef(path='locale.json',sha256=hashlib.sha256(raw).hexdigest())
-    bundle=package.bundle.model_copy(update={'files':(*package.bundle.files,ref)})
+    bundle=package.bundle.model_copy(update={'files':(*[f for f in package.bundle.files if f.path!='locale.json'],ref)})
     body=bundle.model_dump_json().encode();(tmp_path/'manifest.json').write_bytes(body)
     reference=SimpleNamespace(root=tmp_path,content_hash=hashlib.sha256(body).hexdigest(),bundle=bundle,
         materials=package.materials,facts=package.facts,rules=package.rules,locale='en')

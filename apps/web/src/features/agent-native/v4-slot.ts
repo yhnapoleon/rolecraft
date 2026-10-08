@@ -102,6 +102,12 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
       statusText = action === 'delegations.create'
         ? ['授权已创建。请使用宿主提供的连接配置入口。', 'Access created. Use the host connection setup control.']
         : ['操作已确认，正在读取实际记录。', 'Action confirmed. Reading the actual records.'];
+    } else if (result.status === 'failed' && (result.result as { definitive?: boolean } | null)?.definitive) {
+      // The service rejected the request before any change; nothing is left to recover.
+      draft.pending = undefined; draft.dispatchUnknown = false;
+      statusText = (result.result as { code?: string } | null)?.code === 'not_sent'
+        ? ['暂时连不上服务，请求没有发出，没有发生变化；可稍后再提交。', 'The service is unreachable. Nothing was sent and nothing changed; submit again later.']
+        : ['服务未接受这次请求，没有发生变化；可调整后重新提交。', 'The service did not accept this request; nothing changed. Adjust and submit again.'];
     } else {
       draft.pending = { requestId: result.requestId, action, status: result.status };
       statusText = ['结果尚未确认，请先核对原请求。', 'Result is not confirmed. Check the original request first.'];
@@ -113,7 +119,19 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
     inFlight = true; renderControls();
     let issued = false;
     try { await host.flushDrafts(); if (!destroyed) { issued = true; await accept(await host.command(operation, input), operation); } }
-    catch { if (!destroyed) { if (issued) { draft.dispatchUnknown = true; await saveDraft(); } else { storageFailed = true; } statusText = ['操作结果未知，请从统一请求记录核对。', 'Outcome unknown. Check the shared request history.']; host.announce(label(...statusText), 'error'); } }
+    catch (error) {
+      if (!destroyed) {
+        // The host refuses these before anything is sent; nothing changed and nothing is left to check.
+        const code = (error as { code?: string } | null)?.code ?? '';
+        if (issued && ['request_unconfirmed', 'session_read_only', 'delegation_host_not_ready', 'invalid_command_input'].includes(code)) {
+          statusText = code === 'request_unconfirmed' ? ['还有一条未确认的请求，请先核对它；这次没有发出。', 'Another request is still unconfirmed. Check it first; this one was not sent.'] : ['这次请求没有发出，没有发生变化。', 'This request was not sent; nothing changed.'];
+        } else {
+          if (issued) { draft.dispatchUnknown = true; await saveDraft(); } else { storageFailed = true; }
+          statusText = ['操作结果未知；点“刷新授权与记录”按服务端记录核对。', 'Outcome unknown. Use “Refresh access and records” to check against the service records.'];
+        }
+        host.announce(label(...statusText), 'error');
+      }
+    }
     finally { inFlight = false; if (!destroyed) renderControls(); }
   }
   async function recover(retry: boolean) {
@@ -140,7 +158,14 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
     catch { events = []; activityFailed = true; }
     try { if (result[2].status === 'rejected') throw Error(); products = result[2].value == null ? [] : returnedWorks(result[2].value, sessionId); nextProductCursor = result[2].value == null ? undefined : listData(result[2].value, 'items').cursor; productsFailed = false; }
     catch { products = []; nextProductCursor = undefined; productsFailed = true; }
-    reading = false; renderLists(); renderControls();
+    reading = false;
+    // An unknown outcome is resolved by the authoritative grant and work records just read: the person
+    // now sees what actually exists and may continue.
+    if (draft.dispatchUnknown && connectionState === 'verified' && !productsFailed) {
+      draft.dispatchUnknown = false; statusText = ['已按服务端记录核对授权与回传作品，可以继续。', 'Checked access and returned work against the service records. You can continue.'];
+      await saveDraft();
+    }
+    renderLists(); renderControls();
   }
   async function loadMore() {
     if (destroyed || reading || nextProductCursor == null) return;
@@ -158,6 +183,7 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
     if (destroyed) return;
     nameText.textContent = label('Agent 名称', 'Agent name'); actText.textContent = label('允许操作与回传作品', 'Allow actions and returned work');
     allText.textContent = label('授权整个工作区的可见内容', 'Allow visible content across the workspace'); durationText.textContent = label('授权时长', 'Access duration');
+    name.setAttribute('aria-label', nameText.textContent); act.setAttribute('aria-label', actText.textContent); all.setAttribute('aria-label', allText.textContent); duration.setAttribute('aria-label', durationText.textContent);
     for (const option of duration.options) option.textContent = label(`${option.value} 分钟`, `${option.value} minutes`);
     createButton.textContent = label('创建授权', 'Create access'); refreshButton.textContent = label('刷新授权与记录', 'Refresh access and records');
     chooseButton.textContent = label('选择材料与作品范围', 'Choose sources and work'); taskButton.textContent = label('加入当前事项', 'Include current task');
@@ -178,8 +204,15 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
     }
     renderScope();
   }
+  let listKey = '';
   function renderLists() {
     if (destroyed) return;
+    // Rebuild rows only when what they show changes: the workbench polls, and a poll must not
+    // replace a button the person is pressing or has focused.
+    const key = JSON.stringify([connectionState, rows, events, products, activityFailed, productsFailed, snapshot.uiLanguage, snapshot.state,
+      locked(), !!draft.pending, available('delegations.revoke'), available('work_products.adopt')]);
+    if (key === listKey) return;
+    listKey = key;
     connectionStatus.textContent = connectionState === 'verified' ? label('以下为刚读取的授权状态。', 'Access state just read from the service.') : connectionState === 'loading' ? label('正在核对授权状态…', 'Checking access state…') : connectionState === 'error' ? label('无法确认当前授权状态，请刷新核对。', 'Cannot confirm current access. Refresh to verify.') : label('连接状态读取尚未接入。', 'Connection state is not connected yet.');
     connectionList.replaceChildren();
     if (connectionState === 'verified') for (const row of rows) {

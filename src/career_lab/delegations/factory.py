@@ -19,8 +19,18 @@ def mount_delegations(app, *, history_reader=stored_history, synchronous=None):
     gateway = app.state.gateway
     registry = gateway.registry
     source = WorkspaceSources(registry, history_reader=history_reader)
+    # A field on TransactionView is only a seam. The actual same-window history
+    # reader must be installed before tools advertise an available observation.
+    if history_reader is stored_history and not callable(app.state.v2_store.public_history_reader):
+        source.unavailable_code = 'observation_history_unavailable'
     bind = install_delegations(registry, source_provider=source, synchronous=synchronous)
     app.state.w06 = bind(gateway)
+    # v4 integration extensions (delegation list, reviewed practice) share this post-install mount,
+    # so frozen routes and the shared app factory stay unchanged.
+    if not getattr(app.state, 'v4_extensions', False):
+        from career_lab.api.v4_extensions import mount_v4_extensions
+        mount_v4_extensions(app)
+        app.state.v4_extensions = True
     return app.state.w06
 
 

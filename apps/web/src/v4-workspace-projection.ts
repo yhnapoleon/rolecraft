@@ -6,9 +6,13 @@ export function projectNativeWorkspace(a: any, s: LocalSession) {
         priority: ['first','next','later'][t.priority] ?? 'next', status: t.status === 'active' ? 'working' : t.status,
         revision: t.revision, createdAt: t.created_at, updatedAt: t.updated_at }));
       a.artifacts = s.v2Workspace.products.map(p => ({ id: p.product_id, taskId: p.task?.object_id ?? null,
-        title: p.title, purpose: ({ exploration: '探索笔记', test_plan: '测试计划', option: '方案比较', commitment: '试点决定', free_form: '自由作品' } as Record<string,string>)[p.purpose] ?? p.purpose, body: p.content, revision: p.version,
+        title: p.title, purpose: ({ exploration: '探索笔记', test_plan: '测试计划', option: '方案比较', commitment: '试点决定', freeform: '自由作品', free_form: '自由作品' } as Record<string,string>)[p.purpose] ?? p.purpose, body: p.content, revision: p.version,
         kind: p.kind === 'test_plan' ? 'test_set' : p.kind === 'investigation' ? 'investigation' : 'text',
-        source: p.author.kind === 'human' ? 'user' : 'external-agent', adopted: p.author.kind === 'human' || p.adoption?.status === 'adopted',
+        // A returned agent work stays "to check" until the person adopts that exact version,
+        // even though the person pressed import. Ordinary human writing is adopted by authorship.
+        source: p.source_return_id || p.author.kind !== 'human' ? 'external-agent' : 'user',
+        adopted: p.adoption?.status === 'adopted' || (!p.source_return_id && p.author.kind === 'human'),
+        ...(p.source_return_id ? { returnId: p.source_return_id, ...(a.returnLinks?.[p.product_id] ? { requestId: a.returnLinks[p.product_id].requestId, packageLinked: true } : {}) } : {}),
         createdAt: p.created_at, updatedAt: p.created_at, removedAt: p.removed_at,
         evidence: (p.evidence_refs ?? []).map((r: any) => ({ type: r.kind === 'test' ? 'test' : 'material', id: r.object_id, version: r.version })),
         ...(p.kind === 'test_plan' ? { cases: (p.structured_payload?.cases ?? []).map((c: any) => ({ ...c, question: c.query, expectation: c.declared_expected ?? '', refs: c.refs.map((r: any) => ({ id: r.object_id, version: r.version })) })) } : {}),

@@ -28,9 +28,86 @@ class RoleModelTransient(ProtocolError):
         super().__init__(code,"role model temporarily unavailable",status=503)
 
 
+_LOCAL_TEXT={
+    'zh':{'no_match':'本地资料中没有找到与这个问题直接相关的内容。','others':'其余可参考的资料（未展开）：',
+          'asked':'此前你问：','list_sep':'、','gap':' …… ','quote':'“{}”'},
+    'en':{'no_match':'No passage directly related to this question was found in the local sources.','others':'Other sources available (not expanded): ',
+          'asked':'Earlier you asked: ','list_sep':', ','gap':' … ','quote':'"{}"'},
+}
+# Function words carry no topic; they only make unrelated tables look relevant.
+_STOP_ZH={'什么','怎么','多少','可以','这个','那个','是否','需要','一下','一个','我们','你们','现在','如果','应该','还是','有没','没有',
+          '是不','不是','的话','一次','哪些','为什么','请问','能否','是多','少钱','多久','几个'}
+_STOP_EN={'what','which','when','where','how','the','and','for','with','that','this','would','could','should','does','did','are','was',
+          'were','have','has','had','can','will','now','take','much','many','about','from','into','your','you','our','there','their',
+          'they','them','then','than','who','why','any','all','not','but','its','also','just','been','being','get','got','need','needs'}
+_SHORT_SOURCE=240   # short fragments stay whole, so verified quotes remain exact
+_SEGMENT_LIMIT=200
+_MAX_SEGMENTS=3
+
+
+def _query_terms(question):
+    import re
+    terms={t for t in re.findall(r'[a-z0-9_]{3,}',question) if t not in _STOP_EN}
+    for phrase in re.findall('[\u4e00-\u9fff]+',question):
+        terms.update(b for b in (phrase[i:i+2] for i in range(len(phrase)-1)) if b not in _STOP_ZH)
+    return terms
+
+
+def _hits(text,terms):
+    folded=text.casefold()
+    return sum(term in folded for term in terms)
+
+
+def _readable_source(source,language):
+    """Readable text for one authorized source; structured records never appear as raw JSON."""
+    import json
+    text=source['text']
+    candidate=text.strip()
+    if candidate[:1] in ('{','['):
+        try:value=json.loads(candidate)
+        except (ValueError,TypeError):value=None
+        if value is not None:
+            if isinstance(value,dict) and isinstance(value.get('content'),str) and isinstance(value.get('title'),str):
+                return value['title']+'\n'+value['content']
+            if isinstance(value,dict) and isinstance(value.get('historical_question'),str):
+                question=' '.join(value['historical_question'].split())
+                if len(question)>120:question=question[:120]+'…'
+                return _LOCAL_TEXT[language]['asked']+_LOCAL_TEXT[language]['quote'].format(question)
+            return None
+    return text
+
+
+def _segments(text):
+    import re
+    out=[]
+    for line in text.split('\n'):
+        line=line.strip()
+        if not line or re.fullmatch(r'\|?[\s:|-]*-{3,}[\s:|-]*\|?',line):continue
+        if line.startswith('|') and line.endswith('|'):
+            cells=[c.strip() for c in line.strip('|').split('|')]
+            line=' / '.join(c for c in cells if c)
+        parts=re.split('(?<=[。！？；])|(?<=[.!?;])\\s+',line) if len(line)>_SEGMENT_LIMIT else [line]
+        out.extend(p.strip() for p in parts if p and p.strip())
+    return out
+
+
+def _clip(text,limit=_SEGMENT_LIMIT):
+    return text if len(text)<=limit else text[:limit].rstrip()+'…'
+
+
+def _candidates(text):
+    """Whole short fragments stay exact; long or tabular ones are split into passages."""
+    tabular=any(line.strip().startswith('|') for line in text.split('\n'))
+    return [text] if len(text)<=_SHORT_SOURCE and not tabular else _segments(text)
+
+
 class LocalRoleModel:
-    """Offline example only; continuity must be in context, never this model's echo."""
-    revision="w04-local-extractive-v4"
+    """Offline example only; continuity must be in context, never this model's echo.
+
+    It only quotes passages from already-authorized sources that share terms with
+    the question. It gives no judgement, advice or status of its own.
+    """
+    revision="w04-local-extractive-v5"
     retries=0
     def complete(self,messages,tools):
         import json
@@ -38,25 +115,33 @@ class LocalRoleModel:
         language=require_work_language(ctx.get('work_language'))
         separator='; ' if language=='en' else '；'
         lines=[role_text(language,'local_mode'), role_text(language,'responsibilities')+separator.join(ctx['responsibilities'])]
-        import re
-        question=messages[-1]['content'].casefold()
-        terms=set(re.findall(r'[a-z0-9_]{3,}',question))
-        for phrase in re.findall(r'[\u4e00-\u9fff]+',question):
-            terms.update(phrase[i:i+2] for i in range(len(phrase)-1))
+        terms=_query_terms(messages[-1]['content'].casefold())
         # Only rank already-authorized source excerpts. No inference or new advice.
-        sources=sorted(enumerate(ctx['sources']),key=lambda pair:(-sum(term in pair[1]['text'].casefold() for term in terms),pair[0]))
-        seen=set()
+        sources=sorted(enumerate(ctx['sources']),key=lambda pair:(-_hits(pair[1]['text'],terms),pair[0]))
+        groups={};recalled=set()
         for _,source in sources:
-            if source['display_name'] in seen:continue
-            seen.add(source['display_name']);text=source['text']
-            if source.get('channel') in {'received_share','attachment','memory'}:
-                try:
-                    work=json.loads(text)
-                    if isinstance(work,dict) and isinstance(work.get('content'),str) and isinstance(work.get('title'),str):
-                        text=work['title']+'\n'+work['content']
-                except (ValueError,TypeError):pass
-            lines.append(f"[{source['display_name']}] {text}")
-            if len(seen)==4:break
+            name=source['display_name']
+            if name not in groups:
+                if len(groups)==4:continue
+                groups[name]=[]
+            if source.get('channel')=='memory':recalled.add(name)
+            text=_readable_source(source,language)
+            if text:groups[name].extend(_candidates(text))
+        scored={name:[(_hits(c,terms),i,c) for i,c in enumerate(parts)] for name,parts in groups.items()}
+        # An earlier question naturally repeats the new one; it must not set the bar for documents.
+        best=max((h for name,parts in scored.items() if name not in recalled for h,_,_ in parts),default=0) or \
+             max((h for parts in scored.values() for h,_,_ in parts),default=0)
+        # A passage must share a fair part of the best match; one loose shared word is not relevance.
+        floor=max(1,-(-best*2//5))
+        others=[];quoted=0
+        for name,parts in scored.items():
+            chosen=sorted((x for x in parts if x[0]>=floor),key=lambda x:(-x[0],x[1]))[:_MAX_SEGMENTS]
+            if chosen:
+                excerpt=_LOCAL_TEXT[language]['gap'].join(_clip(c) if len(c)>_SHORT_SOURCE else c for _,_,c in sorted(chosen,key=lambda x:x[1]))
+                lines.append(f"[{name}] {excerpt}");quoted+=1
+            else:others.append(f"[{name}]")
+        if not quoted:lines.append(_LOCAL_TEXT[language]['no_match'])
+        if others:lines.append(_LOCAL_TEXT[language]['others']+_LOCAL_TEXT[language]['list_sep'].join(others))
         if ctx['omissions']['learner_scope']:lines.append(role_text(language,'scope_omitted'))
         return ModelReply(text="\n".join(lines))
 

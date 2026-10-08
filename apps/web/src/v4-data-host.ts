@@ -10,6 +10,8 @@ type V2Binding = Extract<V4SessionBinding, { protocol: 2 }>;
 export type JournalEntry = {
   command: Command; route: Route; input: Input; operation: string; createdAt: string;
   outcome: V4CommandResult; previousRequestId?: string;
+  /** Token-free record of an auth control-plane request; recovered by replaying the same command. */
+  controlPlane?: true;
 };
 export interface V4LocalRecord {
   schema: 2; sessionId: string;
@@ -47,7 +49,11 @@ export class V4DataHost implements V4HostAdapter {
   private storageError = false;
   private local: V4LocalRecord;
   private context: any;
+  private contextKey = '';
   private readonly unsavedDrafts = new Map<string, { slot: V4SlotId; key: string; value: unknown }>();
+  // The secret of the delegation issued on this page lives only in memory, for a one-time
+  // connection-config download. It never enters the request journal, drafts or storage.
+  private issued: { delegationId: string; token: string; label: string; issuedAt: string } | null = null;
   constructor(private readonly ports: V4HostPorts) {
     this.key = 'rolecraft.v4.session.' + ports.binding.sessionId;
     this.raw = createGatewayTransport(() => {
@@ -91,7 +97,8 @@ export class V4DataHost implements V4HostAdapter {
       state: this.context?.read_only && this.context?.state?.status !== 'submitted' ? 'paused' : this.context?.state?.status ?? 'unavailable', asOf: this.context?.as_of ?? null,
       currentTask: this.local.currentTask, currentProduct: this.local.currentProduct,
       busy: this.busy, storageError: this.storageError,
-      available: { ...this.context?.available, 'delegations.create': false, 'delegations.revoke': false },
+      available: { ...this.context?.available, 'delegations.create': this.context?.available?.['delegations.create'] === true,
+        'delegations.revoke': this.context?.available?.['delegations.revoke'] === true, 'delegations.list': this.context?.available?.['delegations.create'] === true },
       semantic: this.context?.semantic ?? { roles: 'unavailable', feedback: 'unavailable', assistant: 'unavailable' },
     });
   }
@@ -107,6 +114,11 @@ export class V4DataHost implements V4HostAdapter {
       return preview.result;
     }
     const result: any = await this.raw(this.path(readRoute(operation, input)));
+    if (operation === 'delegations.list' && Array.isArray(result?.result?.result?.items)) {
+      // Grants carry no label; show the name the person gave on this browser.
+      const labels = this.agentLabels();
+      for (const row of result.result.result.items) if (row && typeof row.id === 'string' && labels[row.id]) row.agent_label = labels[row.id];
+    }
     if (operation === 'session.read') return result.state;
     if (operation === 'objects.read') return result;
     if (operation === 'observation' && obj(result.result) && Array.isArray(result.result.visible_sources)) return result.result;
@@ -116,16 +128,98 @@ export class V4DataHost implements V4HostAdapter {
       if (!point(value.as_of) || value.session?.sessionId !== this.ports.binding.sessionId ||
           value.session.workLanguage !== this.ports.binding.workLanguage || value.session.scenarioHash !== this.ports.binding.scenarioHash ||
           !['active', 'paused', 'submitted'].includes(value.state?.status) || !obj(value.available) || !obj(value.semantic)) throw unconfirmed();
-      this.context = copy(value); this.emit();
+      // The workbench polls this read. Notify slots only when it changed, so an idle poll never rebuilds
+      // a control the person is pressing or has focused.
+      const key = JSON.stringify(value);
+      if (key !== this.contextKey) { this.contextKey = key; this.context = copy(value); this.emit(); }
     }
     this.ports.didRead?.(operation, copy(value), input);
     return value;
   }
   async command(operation: string, input: Input): Promise<V4CommandResult> {
-    // These service-mode responses carry a private secret and have no transaction
-    // receipt yet. Do not dispatch until the host control-plane adapter exists.
-    if (operation.startsWith('delegations.')) throw new ApiError('Agent control plane is not connected to this host yet', 503, 'delegation_host_not_ready');
+    // Service-mode control plane: the create response carries a private secret. Only a token-free
+    // request record is journaled, and only the token-free outcome is returned to the slot.
+    if (operation === 'delegations.create' || operation === 'delegations.revoke') return this.exclusive(() => this.delegate(operation, copy(input)));
     return this.exclusive(() => this.send(operation, copy(input)));
+  }
+  /**
+   * Auth control plane (service mode). The server does not journal these requests, but issuance is
+   * deterministic per request_id: replaying the identical command returns the same grant and never
+   * creates a second one. The host therefore keeps a token-free journal entry and recovers by replaying
+   * that exact command. The secret is returned only to memory, never to the journal, drafts or storage.
+   */
+  private async delegate(operation: string, input: Input, existingRequestId?: string): Promise<V4CommandResult> {
+    // Never send a secret-bearing request unless the server advertises this control-plane operation.
+    if (this.context?.available?.[operation] !== true) throw new ApiError('Agent control plane is not available on this server', 503, 'delegation_host_not_ready');
+    this.reload();
+    if (this.storageError) throw new ApiError('Keep the original browser data', 0, 'storage_unavailable');
+    if (this.context?.read_only) throw new ApiError(T('这个练习目前只读。', 'This practice is read-only.'), 409, 'session_read_only');
+    if (!existingRequestId && Object.values(this.local.requests).some(e => e.outcome.status === 'unconfirmed')) throw new ApiError('Recover the original request first', 409, 'request_unconfirmed');
+    this.busy = true; this.emit();
+    try {
+      // reload() replaces the journal objects. Resolve the original request from that
+      // current journal, so its recovered outcome is the one save() persists.
+      let entry = existingRequestId ? this.local.requests[existingRequestId] : undefined;
+      if (existingRequestId && !entry) throw new ApiError('Unknown request', 404, 'request_not_found');
+      if (!entry) {
+        const route = commandRoute(operation, input);
+        let state: any;
+        // Nothing has been sent yet: a failed pre-read is a definitive "not sent", never an unknown outcome.
+        try { state = await this.query('session.read'); } catch { state = null; }
+        if (state?.session_id !== this.ports.binding.sessionId || !point(state)) {
+          return { requestId: crypto.randomUUID(), status: 'failed', result: { code: 'not_sent', definitive: true } } as V4CommandResult;
+        }
+        const requestId = crypto.randomUUID();
+        const command: Command = { schema_version: 2, request_id: requestId, expected_version: state.business_seq,
+          expected_workspace_revision: state.workspace_revision, operation: route.action, payload: copy(input) };
+        entry = { command, route, input, operation, createdAt: new Date().toISOString(), controlPlane: true,
+          outcome: { requestId, status: 'unconfirmed', result: null } };
+        this.local.requests[requestId] = entry;
+        try { this.save(); } catch (error) { delete this.local.requests[requestId]; throw error; }
+      }
+      const requestId = entry.command.request_id;
+      let response: any;
+      try { response = await this.raw(this.path(entry.route.path), entry.command, entry.route.method); }
+      catch (error) {
+        // A 4xx is a rejection before any change; anything else may follow a committed grant.
+        if (error instanceof ApiError && error.status >= 400 && error.status < 500) {
+          entry.outcome = { requestId, status: 'failed', result: { code: error.code, message: error.message, definitive: true } };
+        } else {
+          this.ports.announce(T('授权请求结果未确认；可用“核对原请求结果”按原请求号核对，不会重复签发。', 'The access request is unconfirmed. Check the original request; it is replayed with the same ID and never issues a second grant.'), 'error');
+        }
+        this.save(); return copy(entry.outcome);
+      }
+      // Gateway envelope: { result: { schema_version, result: { delegation, token } } }.
+      const result: any = copy(obj(response?.result?.result) ? response.result.result : response?.result ?? {});
+      if (operation === 'delegations.create') {
+        const token = result.token; delete result.token;
+        if (typeof token === 'string' && typeof result.delegation?.id === 'string') {
+          this.issued = { delegationId: result.delegation.id, token, label: String(entry.input.agent_label ?? ''), issuedAt: new Date().toISOString() };
+          this.rememberAgentLabel(result.delegation.id, String(entry.input.agent_label ?? ''));
+          if (typeof document !== 'undefined') document.dispatchEvent(new CustomEvent('rolecraft:delegation-issued', { detail: { delegationId: result.delegation.id } }));
+        }
+      } else if (this.issued?.delegationId === entry.input.delegation_id) { this.issued = null; if (typeof document !== 'undefined') document.dispatchEvent(new CustomEvent('rolecraft:delegation-issued', { detail: null })); }
+      entry.outcome = { requestId, status: 'confirmed', result };
+      this.save();
+      return copy(entry.outcome);
+    } finally { this.busy = false; this.emit(); }
+  }
+  /** One-time private connection config for the delegation issued on this page. */
+  private agentLabels(): Record<string, string> {
+    try { const value = JSON.parse(this.ports.storage.getItem('rolecraft.v4.agent-labels.' + this.ports.binding.sessionId) ?? '{}'); return value && typeof value === 'object' ? value : {}; }
+    catch { return {}; }
+  }
+  private rememberAgentLabel(id: string, label: string) {
+    if (!label) return;
+    try { this.ports.storage.setItem('rolecraft.v4.agent-labels.' + this.ports.binding.sessionId, JSON.stringify({ ...this.agentLabels(), [id]: label.slice(0, 64) })); }
+    catch { /* A label is a convenience; the grant itself is already confirmed by the server. */ }
+  }
+  issuedDelegation() { return this.issued ? { delegationId: this.issued.delegationId, label: this.issued.label, issuedAt: this.issued.issuedAt } : null; }
+  takeConnectionConfig(apiUrl: string) {
+    if (!this.issued) return null;
+    const config = { api_url: apiUrl, session_id: this.ports.binding.sessionId, token: this.issued.token };
+    this.issued = null; if (typeof document !== 'undefined') document.dispatchEvent(new CustomEvent('rolecraft:delegation-issued', { detail: null }));
+    return config;
   }
   private async send(operation: string, input: Input, previousRequestId?: string): Promise<V4CommandResult> {
     this.reload();
@@ -185,12 +279,13 @@ export class V4DataHost implements V4HostAdapter {
     const last=Object.values(this.local.requests).filter(r=>['submissions.create','reviews.create','feedback.create'].includes(r.operation)).sort((a,b)=>a.createdAt.localeCompare(b.createdAt)).at(-1);
     if(last)await this.keepDraft('feedback','last-request',{requestId:last.outcome.requestId,status:last.outcome.status});
   }
-  pendingRequests() { return Object.values(this.local.requests).filter(e => ['pending', 'unconfirmed'].includes(e.outcome.status)).map(e => copy(e.outcome)); }
+  pendingRequests(options: { readOnly?: boolean } = {}) { return Object.values(this.local.requests).filter(e => (!options.readOnly || !e.controlPlane) && ['pending', 'unconfirmed'].includes(e.outcome.status)).map(e => copy(e.outcome)); }
   async recover(requestId: string): Promise<V4CommandResult> {
     return this.exclusive(async () => {
       this.reload();
       const entry = this.local.requests[requestId];
       if (!entry) throw new ApiError('Unknown request', 404, 'request_not_found');
+      if (entry.controlPlane) return this.delegate(entry.operation, entry.input, requestId);
       if (this.storageError) throw new ApiError('Keep the original browser data', 0, 'storage_unavailable');
       let response: any;
       try { response = await this.raw(this.path('/requests/' + encodeURIComponent(requestId))); }
@@ -211,6 +306,7 @@ export class V4DataHost implements V4HostAdapter {
   }
   async retry(requestId: string): Promise<V4CommandResult> {
     // Always inspect the persisted server result. Never replay a lost POST automatically.
+    if (this.local.requests[requestId]?.controlPlane) return this.recover(requestId);
     const recovered = await this.recover(requestId);
     if (!['failed', 'needs_context'].includes(recovered.status)) throw new ApiError('Request is not retryable', 409, 'retry_not_available');
     const response = recovered.result as any;

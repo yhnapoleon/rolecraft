@@ -5,6 +5,7 @@ import './v4-slot.css';
 import {mountImport} from './import-slot';
 import {canonicalPurpose,controlValue,writePurpose,disableControl,taskPriority} from './form-values';
 import {bindWorkspaceForm} from './form-slot';
+import { recipientShares, rememberRequest } from '../../roles-native/v4-data';
 
 /** Bind only nodes assigned by the v4 host. See v4-slot.md for exact node keys.
  * No application root, navigation, credentials, transport or request journal. */
@@ -58,12 +59,27 @@ export function mount(context:V4SlotContext):V4SlotHandle {
   const shareBox=el('div'),visibility=el('p','','muted'),shareVersion=el('p','','muted'),shareList=el('div');
   const recipient=el('select'),question=el('textarea');question.rows=2;
   for(const role of ['supervisor','business_lead','tech_lead']){const option=el('option');option.value=role;recipient.append(option);}
-  const share=button('分享已保存的这版','Share this saved version',async()=>{const text=question.value;const result=await controller.share(recipient.value,text);if(result.status==='confirmed'&&question.value===text){question.value='';rememberShare();}});
+  const share=button('分享已保存的这版','Share this saved version',async()=>{const text=question.value,role=recipient.value;const result=await controller.share(role,text);if(result.status==='confirmed'){if(question.value===text){question.value='';rememberShare();}await discuss(role,text);}});
   shareBox.append(visibility,shareVersion,recipient,question,share,shareList);add('sharing',shareBox);
   const historyBox=el('details'),historyCaption=el('summary'),historyRows=el('div');
   const loadHistory=button('读取已保存版本','Load saved versions',async()=>{const p=controller.selected();if(!p)return;const key=versionKey();const rows=await controller.versions(p.product_id);if(key===versionKey()){history=rows;historyKey=key;render();}});
   historyBox.append(historyCaption,loadHistory,historyRows);add('versions',historyBox);
-  const roleLabel=(role:string)=>({supervisor:T('经理','Manager'),business_lead:T('业务负责人','Business lead'),tech_lead:T('技术负责人','Technical lead')} as Record<string,string>)[role]??T('指定同事','Selected colleague');
+  const roleLabel=(role:string)=>({supervisor:T('经理','Manager'),business_lead:T('陈敏（业务负责人）','Chen Min (business lead)'),tech_lead:T('技术负责人','Technical lead')} as Record<string,string>)[role]??T('指定同事','Selected colleague');
+  // An explicit share opens a discussion with that colleague: the person's own question (or a plain
+  // note that they shared this exact version) is sent together with the colleague's current shares.
+  const discuss=async(role:string,text:string)=>{
+    const p=controller.selected();if(!p)return;
+    const words=text.trim()||T(`我分享了《${p.title||'作品'}》第 ${p.version} 版，想请你看看。`,`I shared “${p.title||'my work'}” v${p.version}. Could you take a look?`);
+    try{
+      const shares=await recipientShares(host,p.session_id,role);
+      const turn=await host.command('turns.create',{role_id:role,text:words,shares,...(p.task?{task:p.task}:{})});
+      await rememberRequest(host,'roles',turn);
+      // A colleague reply is a queued job, so an accepted message reports "pending".
+      if(turn.status!=='confirmed'&&turn.status!=='pending'){host.announce(T('已分享；对话请求尚未确认，可在同事对话里重试。','Shared. The message is not confirmed yet; retry it in the colleague conversation.'),'error');return;}
+      host.announce(T(`已分享，并请${roleLabel(role)}在对话里回应。`,`Shared. ${roleLabel(role)} will reply in the conversation.`),'status');
+      document.dispatchEvent(new CustomEvent('rolecraft:open-chat',{detail:{roleId:role}}));
+    }catch{host.announce(T('已分享；请到同事对话里继续讨论。','Shared. Continue the discussion in the colleague conversation.'),'status');}
+  };
   const versionKey=()=>controller.selected()?.session_id+':'+controller.selected()?.product_id+':'+JSON.stringify(controller.state.asOf);
   const hasDraft=()=>!!controller.draft();
 

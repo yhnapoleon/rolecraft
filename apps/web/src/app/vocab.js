@@ -4,16 +4,16 @@ import { T, locale } from './i18n';
 
 export const PRI = p => ({ first: T('先做', 'Do first'), next: T('随后', 'Up next'), later: T('暂放', 'Later') })[p] || p;
 export const STATUS = s => ({ open: T('待处理', 'Open'), working: T('正在做', 'In progress'), done: T('已处理', 'Done') })[s] || s;
-export const ROLE_TITLE = r => ({ manager: T('经理', 'Manager'), business: T('业务负责人', 'Business lead'), technical: T('技术负责人', 'Tech lead') })[r];
+export const ROLE_TITLE = r => ({ manager: T('经理', 'Manager'), business: T('业务负责人', 'Business lead'), technical: T('技术负责人', 'Technical lead') })[r];
 export const KNOWS = r => ({
   manager: T('目标、资源和先后顺序；能批准申请', 'Goals, resources and priorities; approves requests'),
   business: T('首批员工的需求、业务流程和政策', 'What first users need, how the business runs, policy'),
   technical: T('系统限制、索引和测试证据', 'System limits, indexing and test evidence')
 })[r];
 export const OPENER = r => ({
-  manager: T('目标、资源、先做什么，都可以找 Priya 谈。', 'Talk to Priya about goals, resources and what comes first.'),
-  business: T('首批员工真正要问什么、政策怎么变，Mei 最清楚。', 'Mei knows what first users actually ask and how policy changes.'),
-  technical: T('系统能做什么、索引多久更新、测试说明了什么，问 Daniel。', 'Ask Daniel what the system can do, how fresh the index is and what a test shows.')
+  manager: T('目标、资源、先做什么，都可以找经理谈。', 'Talk to the manager about goals, resources and what comes first.'),
+  business: T('首批员工真正要问什么、政策怎么变，陈敏最清楚。', 'Chen Min knows what first users actually ask and how policy changes.'),
+  technical: T('系统能做什么、索引多久更新、测试说明了什么，问技术负责人。', 'Ask the technical lead what the system can do, how fresh the index is and what a test shows.')
 })[r];
 
 export const CASE = id => ({

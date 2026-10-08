@@ -27,6 +27,16 @@ def build_catalog(factory,catalog_path,role_model,*,feedback_handler=None,store_
             if choice in primary.language_scenarios:raise ProtocolError('duplicate_scenario_language',status=503)
             primary.language_scenarios[choice]=registration
     primary.active_bindings=tuple(m.bindings for _,m in groups)
+    # Every request is dispatched through the primary registry, including operations mounted on it
+    # after this catalog is built (the Agent control plane, observation and tools). A language or
+    # variant registry reports its own operations, and defers to the primary for anything it lacks,
+    # so its workbench does not show a dispatchable operation as unavailable.
+    for r,_ in groups[1:]:
+        own=r.availability
+        def availability(name,own=own):
+            result=own(name)
+            return result if result.installed else primary.availability(name)
+        r.availability=availability
     for name,op in operations[default].items():
         if op.service_mode:continue
         def handler(view,payload,auth,name=name):

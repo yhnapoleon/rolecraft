@@ -2,6 +2,8 @@
 // Covers are drawn from the case's own constraints (launch day, seats), so the
 // picture carries information instead of decorating the page.
 
+import { T } from './i18n';
+
 const P = {
   edit: '<path d="m15.5 4.5 4 4M4.5 19.5l4.5-1L20 7.5a2.8 2.8 0 0 0-4-4L5 14.5z"/>',
   save: '<path d="M5 3.5h11l4.5 4.5v11.5a1 1 0 0 1-1 1h-15a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1z"/><path d="M7 3.5V9h9V3.5M7 20.5v-7h10v7"/>',
@@ -62,11 +64,19 @@ export const priMark = p => { const n = p === 'first' ? 3 : p === 'next' ? 2 : 1
 
 export const statusMark = s => `<svg class="status-mark ${s}" viewBox="0 0 24 24" aria-hidden="true">${s === 'done' ? P.done : s === 'working' ? P.half : P.circle}</svg>`;
 
-/** People and marks. Each hue names who: Priya violet, Mei magenta, Daniel teal, the assistant blue; your agent is ink like you. */
+/** People and marks. Names follow the confirmed scenario materials: only the business lead is
+ * named there (陈敏 / Chen Min); the manager and technical lead are known by their titles.
+ * Each hue names who: manager violet, business lead magenta, technical lead teal, the assistant
+ * blue; your agent is ink like you. `ref` is the in-sentence form, `subject` starts a sentence. */
+const person = (zh, en, enRef, initialEn, titled) => ({
+  get name() { return T(zh, en); }, get ref() { return T(zh, enRef); },
+  get subject() { return T(zh, enRef.charAt(0).toUpperCase() + enRef.slice(1)); },
+  get initial() { return T(zh.charAt(0), initialEn); }, titled
+});
 export const PEOPLE = {
-  manager: { name: 'Priya', initial: 'P' },
-  business: { name: 'Mei', initial: 'M' },
-  technical: { name: 'Daniel', initial: 'D' }
+  manager: person('经理', 'Manager', 'the manager', 'M', true),
+  business: person('陈敏', 'Chen Min', 'Chen Min', 'C', false),
+  technical: person('技术负责人', 'Technical lead', 'the technical lead', 'T', true)
 };
 export const ROLES = ['manager', 'business', 'technical'];
 

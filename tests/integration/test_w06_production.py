@@ -114,9 +114,9 @@ def test_w06_production_read_scope_and_missing_history_are_explicit(production):
     app.state.store.close()
 
 
-def test_w06_scenario_factory_preserves_original_binding_validation(tmp_path):
+def test_w06_scenario_factory_preserves_original_binding_validation(tmp_path,stale_contract_scenario):
     with pytest.raises(C.ProtocolError,match='runtime contract mismatch'):
-        create_scenario_app(database_url='sqlite:///'+str(tmp_path/'must-not-exist.db'),scenario_package=Path(__file__).parents[2]/'scenarios/pm_pilot/v2')
+        create_scenario_app(database_url='sqlite:///'+str(tmp_path/'must-not-exist.db'),scenario_package=stale_contract_scenario)
     assert not (tmp_path/'must-not-exist.db').exists()
 
 

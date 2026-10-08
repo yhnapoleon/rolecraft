@@ -73,7 +73,7 @@ export class V4LiveData {
       });
       const tests = rows.filter(r => r.ref.kind === 'test').map(r => {
         const t = r.content;
-        return { id: r.ref.object_id, query: t.query, answer: t.answer, fallback: t.status === 'fallback', stale: Object.keys(t.execution.source_versions).some(k => t.execution.source_versions[k] !== t.execution.indexed_versions[k]),
+        return { id: r.ref.object_id, query: t.query, answer: t.answer, fallback: t.status === 'fallback', stale: (t.citations ?? []).some((c: any) => c.kind === 'material' && c.version < t.execution.source_versions[c.object_id]),
           mode: context.semantic.assistant === 'waiting_model' ? 'waiting_model' : 'model',
           citations: (t.citations ?? []).map((c: any) => ({ material_id: c.object_id, version: c.version })),
           source_versions: t.execution.source_versions, indexed_versions: t.execution.indexed_versions,
@@ -137,7 +137,7 @@ export class V4LiveData {
   async poll(session: LocalSession) {
     const host = this.host(session);
     // Recovery remains GET-only; a failed model job is never restarted here.
-    for (const pending of host.pendingRequests()) await host.recover(pending.requestId).catch(error => this.store.report({ error: error.message }));
+    for (const pending of host.pendingRequests({ readOnly: true })) await host.recover(pending.requestId).catch(error => this.store.report({ error: error.message }));
     await this.sync(this.current(session.id));
   }
 }

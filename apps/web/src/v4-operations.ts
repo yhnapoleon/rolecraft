@@ -13,7 +13,7 @@ const reads: Record<string, string> = {
   'workbench.read': '/workbench', 'materials.list': '/materials', timeline: '/timeline',
   'tests.list': '/tests', 'submissions.list': '/submissions', 'work_items.list': '/work-items',
   'work_products.list': '/work-products', 'workspace_imports.list': '/workspace-imports',
-  observation: '/observation', tools: '/tools',
+  observation: '/observation', tools: '/tools', 'delegations.list': '/delegations',
 };
 export function readRoute(operation: string, input: Input = {}): string {
   let path = reads[operation];

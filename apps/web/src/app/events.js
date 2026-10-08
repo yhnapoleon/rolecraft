@@ -17,8 +17,8 @@ export function eventLine(a, e) {
     }
     case 'approve_request':
       return d.rule_id === 'capacity_approved'
-        ? { text: T(`Priya 批准扩容：上限 ${w.capacity} 人`, `Priya approved more seats: up to ${w.capacity}`), icon: 'check', tone: 'good', announce: 'info' }
-        : { text: T(`Priya 批准资源：${w.devDays} 人日，第 ${w.deadline} 天上线`, `Priya approved resources: ${w.devDays} person-days, launch on day ${w.deadline}`), icon: 'check', tone: 'good', announce: 'info' };
+        ? { text: T(`经理批准扩容：上限 ${w.capacity} 人`, `The manager approved more seats: up to ${w.capacity}`), icon: 'check', tone: 'good', announce: 'info' }
+        : { text: T(`经理批准资源：${w.devDays} 人日，第 ${w.deadline} 天上线`, `The manager approved resources: ${w.devDays} person-days, launch on day ${w.deadline}`), icon: 'check', tone: 'good', announce: 'info' };
     case 'approval_denied': return { text: serverText('', d.code, d.details), icon: 'hand' };
     case 'update_pilot': return { text: T('试点设置已保存', 'Pilot settings saved'), icon: 'gear' };
     case 'refresh_index': return { text: T('助手索引已刷新', 'Assistant index refreshed'), icon: 'refresh' };

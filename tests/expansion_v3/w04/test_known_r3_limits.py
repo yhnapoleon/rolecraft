@@ -60,14 +60,15 @@ def make_legacy_database(tmp_path,catalog,external=False):
     bindings=SessionBindings(scenario=catalog.binding,runtime=catalog.binding,evaluation=catalog.binding)
     world,token=store.create_session(bindings,AssistantConfig(id='c0',session_id='fixture',domains=('fixture',)),{})
     owner=store.authenticate(world.session_id,token);actor=owner
+    turn_id="turn-"+digest([world.session_id,"origin"])[:24]
     if external:
         grant=DelegationGrant(id='legacy-agent',session_id=owner.session_id,actor_id='learner',
             executor=Executor(id='agent',kind='external_agent',delegation_id='legacy-agent'),capabilities=('read','act'),
-            allowed_objects=('old-turn','old-reply','new-reply'),allowed_actions=('turns.create',),
+            allowed_objects=(turn_id,'old-reply','new-reply'),allowed_actions=('turns.create',),
             expires_at=datetime.now(timezone.utc)+timedelta(hours=1))
         token=store.issue_delegation(owner,grant);actor=store.authenticate(owner.session_id,token)
     body=TurnInput(role_id='tech_lead',text='原提问').model_dump(mode='json')
-    turn=RoleTurn(id='old-turn',session_id=actor.session_id,input=TurnInput.model_validate(body),as_of=point(world),executor=actor.executor)
+    turn=RoleTurn(id=turn_id,session_id=actor.session_id,input=TurnInput.model_validate(body),as_of=point(world),executor=actor.executor)
     turn_write=object_write('role_turn',turn)
     origin=Command(schema_version=2,request_id='origin',operation='turns.create',expected_version=0,expected_workspace_revision=0,payload=body)
     effect=origin.model_copy(update={'request_id':'effect','payload':{'subject':turn_write.ref.model_dump(mode='json')}})
@@ -106,8 +107,10 @@ def make_legacy_database(tmp_path,catalog,external=False):
     return HistoricalCase(store,actor,token,origin,effect,record,job_id,context,body)
 
 
-def test_frozen_w02_runtime_binding_is_not_forged(package):
-    with pytest.raises(ProtocolError,match='runtime contract mismatch'):ScenarioModule(package.root)
+def test_frozen_w02_runtime_binding_is_not_forged(stale_contract_scenario):
+    before={p.relative_to(stale_contract_scenario).as_posix():p.read_bytes() for p in stale_contract_scenario.rglob('*') if p.is_file()}
+    with pytest.raises(ProtocolError,match='runtime contract mismatch'):ScenarioModule(stale_contract_scenario)
+    assert before=={p.relative_to(stale_contract_scenario).as_posix():p.read_bytes() for p in stale_contract_scenario.rglob('*') if p.is_file()}
 
 
 @pytest.mark.parametrize('external',[False,True])
