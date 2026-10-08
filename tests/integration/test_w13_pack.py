@@ -39,7 +39,7 @@ def session(tmp_path, monkeypatch, request):
 
     trial = send("tests", "baseline", "tests.create", {"query": "What is the weather on Mars?" if request.param == "en" else "火星天气如何？", "config_version": 0})["result"]["test"]
     def cli(*args):
-        return subprocess.run([sys.executable, "-m", "career_lab.cli", "engineer", *args,
+        return subprocess.run([str(Path(sys.executable).parent / "career-lab-engineer"), *args,
             "--database", str(database), "--credentials", str(credentials),
             "--scenario", str(scenario)], capture_output=True, text=True)
     yield app, client, sid, headers, send, trial, cli, tmp_path, credentials
@@ -126,7 +126,7 @@ def test_export_includes_a_usable_language_specific_handoff_guide(session):
     app, _, _, _, _, trial, cli, root, _ = session
     assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
     guide = (root / "pack" / "README.md").read_text()
-    assert "career-lab engineer reproduce" in guide
+    assert "career-lab-engineer reproduce" in guide
     assert ("原始运行库" in guide) == (app.state.scenario_v2.work_language == "zh")
 
 

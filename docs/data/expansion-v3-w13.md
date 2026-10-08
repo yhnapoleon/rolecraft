@@ -11,21 +11,21 @@
 - 复现只比较记录中的行为是否重现，不代表答案正确或配置修复。父会话不新增测试、事件、作品或审批；复现结果是独立产物。
 - 同一输入重复导出得到相同包身份；已存在且内容不同的目录拒绝覆盖。中英文分别验证。
 
-测试入口为正式 `career-lab engineer` CLI，测试数据通过现有 HTTP API 创建，使用真实 SQLite、场景及助手。覆盖正常交接和复现、权限、版本漂移、篡改、重复执行与原会话不变。外部模型、PostgreSQL、工程师专用 UI 不属于本切片验收。
+测试入口为正式 `career-lab-engineer` CLI，测试数据通过现有 HTTP API 创建，使用真实 SQLite、场景及助手。覆盖正常交接和复现、权限、版本漂移、篡改、重复执行与原会话不变。外部模型、PostgreSQL、工程师专用 UI 不属于本切片验收。
 
 ## 使用
 
 在已有环境操作者的本机运行。需要原 SQLite 运行库、与会话绑定一致且通过当前运行源码校验的安装场景，以及现有 W06 私有配置文件。配置结构为 `api_url`、`session_id`、`token`，文件须属于当前用户且权限为 0600；命令不访问其中的 URL，不把 token 放入 argv 或输出。SQLite 以 `mode=ro` 打开，不创建新源库。
 
 ```sh
-career-lab engineer pack \
+career-lab-engineer pack \
   --database /path/to/source.db \
   --credentials /private/path/client.json \
   --scenario /path/to/installed/pm_pilot \
   --test EXISTING_TEST_ID \
   --output /private/path/handoff
 
-career-lab engineer reproduce \
+career-lab-engineer reproduce \
   --database /path/to/source.db \
   --credentials /private/path/client.json \
   --scenario /path/to/installed/pm_pilot \

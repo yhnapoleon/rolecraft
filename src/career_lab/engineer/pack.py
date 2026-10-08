@@ -62,7 +62,7 @@ Selected tests are investigation inputs. Reproducing behavior does not prove cor
 Run on the trusted local host with the original database, current credentials and matching installed scenario. These are not included in the package.
 Ask the environment operator to supply the paths below. Credentials use the private W06 JSON format (mode 0600); keep tokens out of command arguments.
 """
-    return (text + "\n```sh\ncareer-lab engineer reproduce --pack <package-directory> --database <original.db> --credentials <private.json> --scenario <installed-scenario-directory> --output <new-report-directory>\n```\n").encode("utf-8")
+    return (text + "\n```sh\ncareer-lab-engineer reproduce --pack <package-directory> --database <original.db> --credentials <private.json> --scenario <installed-scenario-directory> --output <new-report-directory>\n```\n").encode("utf-8")
 
 
 def capture(store, module, auth, test_ids, *, as_of=None):

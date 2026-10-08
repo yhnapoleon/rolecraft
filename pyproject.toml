@@ -23,6 +23,7 @@ dev = ["pytest==9.0.3"]
 
 [project.scripts]
 career-lab = "career_lab.cli:main"
+career-lab-engineer = "career_lab.engineer.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -31,4 +32,3 @@ where = ["src"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "--basetemp=.pytest_cache/tmp"
-

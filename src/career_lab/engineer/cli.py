@@ -1,5 +1,6 @@
 """Local commands. Credentials use the existing private W06 configuration format."""
 import json
+import argparse
 from pathlib import Path
 from urllib.parse import quote
 
@@ -11,8 +12,8 @@ from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.storage.v2_store import V2Store
 
 
-def register_commands(commands):
-    parser = commands.add_parser("engineer", help="Export and reproduce a fixed PM baseline")
+def main(argv=None):
+    parser = argparse.ArgumentParser(prog="career-lab-engineer", description="Export and reproduce a fixed PM baseline")
     operations = parser.add_subparsers(dest="engineer_operation", required=True)
     pack = operations.add_parser("pack", help="Export an authorized task package")
     pack.add_argument("--test", action="append", required=True, help="Existing test ID; repeat to select more")
@@ -24,7 +25,7 @@ def register_commands(commands):
         command.add_argument("--database", type=Path, required=True, help="Existing local SQLite database (read only)")
         command.add_argument("--credentials", type=Path, required=True, help="Private W06 JSON, mode 0600; never a token in argv")
         command.add_argument("--scenario", type=Path, required=True, help="Trusted installed scenario directory matching this session")
-        command.set_defaults(engineer_handler=run)
+    return run(parser.parse_args(argv))
 
 
 def run(args):
