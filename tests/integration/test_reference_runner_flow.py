@@ -94,10 +94,11 @@ def test_RUN_02_lost_http_response_recovers_only_the_original_request(
         assert len(recovered["results"]) == 1
 
 
-def test_RUN_01_formal_cli_executes_fixed_current_manifest(tmp_path: Path) -> None:
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_RUN_01_formal_cli_executes_fixed_current_manifest(tmp_path: Path, language: str) -> None:
     from runner_fixture import live_run
 
-    with live_run(tmp_path, "tests.create") as run:
+    with live_run(tmp_path, "tests.create", language=language) as run:
         names = {
             "manifest_path": "manifest",
             "registry_path": "registry",
@@ -234,3 +235,34 @@ def test_RUN_02_invalid_recovery_response_keeps_committed_action_unresolved(
         assert result["error_code"] == "request_result_invalid"
         assert result["dispatch_count"] == 1
         assert result["pending"] is not None
+
+
+def test_RUN_02_crash_after_first_saved_effect_resumes_remaining_actions(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import os
+
+    from runner_fixture import live_run
+
+    from career_lab.reference_agent.runner import run_checklist
+
+    original = os.replace
+    crashed = False
+
+    def disk_interrupt(source: str | os.PathLike[str], target: str | os.PathLike[str]) -> None:
+        nonlocal crashed
+        original(source, target)
+        if Path(target).name == "checkpoint.json":
+            value = json.loads(Path(target).read_text())["state"]
+            if not crashed and len(value["results"]) == 1 and value["pending"] is None:
+                crashed = True
+                raise OSError("crash after durable first effect")
+
+    with live_run(tmp_path, "tests.create", action_count=2) as run:
+        monkeypatch.setattr(os, "replace", disk_interrupt)
+        with pytest.raises(OSError, match="crash after durable"):
+            run_checklist(**run.arguments)
+        resumed = run_checklist(**run.arguments, resume=True)
+        assert resumed["status"] == "completed"
+        assert resumed["dispatch_count"] == 2
+        assert len(resumed["results"]) == 2

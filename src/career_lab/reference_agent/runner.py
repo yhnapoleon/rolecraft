@@ -11,6 +11,7 @@ from pydantic import ConfigDict, Field, JsonValue
 from career_lab.contracts.v2.core import (
     V2,
     ActualConsumption,
+    AuthContext,
     Command,
     ProtocolError,
     Timestamp,
@@ -18,7 +19,7 @@ from career_lab.contracts.v2.core import (
 )
 from career_lab.contracts.v2.data import ActionProposal
 from career_lab.contracts.v2.research import RequestResult, RunManifest, RuntimeBundle
-from career_lab.delegations.credentials import load_credentials
+from career_lab.delegations.credentials import Credentials, load_credentials
 from career_lab.reference_agent.journal import RunJournal
 from career_lab.reference_agent.ports import OPERATIONS, HttpEnvironment
 from career_lab.reference_agent.suite import load_manifest
@@ -87,20 +88,9 @@ def fixed_checklist(
     return checklist
 
 
-def run_checklist(
-    *,
-    manifest_path: Path,
-    registry_path: Path,
-    runtime_id: str,
-    evaluation_id: str,
-    database: Path,
-    credentials_path: Path,
-    scenario_root: Path,
-    output: Path,
-    resume: bool = False,
-) -> dict[str, JsonValue]:
-    manifest = load_manifest(manifest_path)
-    credentials = load_credentials(credentials_path)
+def authenticate_run(
+    manifest: RunManifest, credentials: Credentials, database: Path, scenario_root: Path
+) -> AuthContext:
     module = ScenarioModule(scenario_root)
     if module.release is None:
         raise ProtocolError("run_published_scenario_required")
@@ -124,6 +114,48 @@ def run_checklist(
             raise ProtocolError("run_session_binding_mismatch", status=409)
     finally:
         store.db.engine.dispose()
+    return auth
+
+
+def load_checkpoint(
+    journal: RunJournal, manifest: RunManifest, identity: str, code: str, resume: bool
+) -> Checkpoint:
+    saved = journal.load()
+    if saved is not None and not resume:
+        raise ProtocolError("run_exists_use_resume", status=409)
+    if saved is None and resume:
+        raise ProtocolError("run_not_found", status=404)
+    state = (
+        Checkpoint.model_validate(saved)
+        if saved is not None
+        else Checkpoint(
+            identity=identity,
+            executing_code_digest=code,
+            manifest=manifest,
+            status="running",
+            started_at=datetime.now(UTC),
+        )
+    )
+    if state.identity != identity:
+        raise ProtocolError("resume_identity_mismatch", status=409)
+    return state
+
+
+def run_checklist(
+    *,
+    manifest_path: Path,
+    registry_path: Path,
+    runtime_id: str,
+    evaluation_id: str,
+    database: Path,
+    credentials_path: Path,
+    scenario_root: Path,
+    output: Path,
+    resume: bool = False,
+) -> dict[str, JsonValue]:
+    manifest = load_manifest(manifest_path)
+    credentials = load_credentials(credentials_path)
+    auth = authenticate_run(manifest, credentials, database, scenario_root)
     checklist = fixed_checklist(manifest, BundleRegistry(registry_path), runtime_id, evaluation_id)
     code = source_digest()
     identity = digest(
@@ -136,24 +168,7 @@ def run_checklist(
     )
     journal = RunJournal(output)
     with journal.locked():
-        saved = journal.load()
-        if saved is not None and not resume:
-            raise ProtocolError("run_exists_use_resume", status=409)
-        if saved is None and resume:
-            raise ProtocolError("run_not_found", status=404)
-        state = (
-            Checkpoint.model_validate(saved)
-            if saved is not None
-            else Checkpoint(
-                identity=identity,
-                executing_code_digest=code,
-                manifest=manifest,
-                status="running",
-                started_at=datetime.now(UTC),
-            )
-        )
-        if state.identity != identity:
-            raise ProtocolError("resume_identity_mismatch", status=409)
+        state = load_checkpoint(journal, manifest, identity, code, resume)
         if state.status in {"completed", "failed"}:
             return state.model_dump(mode="json")
         environment = HttpEnvironment(credentials, auth.executor)
@@ -211,7 +226,7 @@ def advance(
                 state.results[-1] = result
             else:
                 state.results.append(result)
-            state.status = result.status
+            state.status = "running" if result.status == "completed" else result.status
             state.error_code = None
             if result.status != "completed":
                 save()
