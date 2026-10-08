@@ -15,7 +15,7 @@ base=importlib.util.module_from_spec(spec);spec.loader.exec_module(base)
 def variant(request,tmp_path,monkeypatch):
     sid,lang=request.param
     monkeypatch.setenv('W05_W02_COMBO_ROOT',str(ROOT))
-    monkeypatch.setenv('W05_W02_SCENE_ROOT',str(ROOT/'scenarios/pm_pilot/v2/installed/rubric-v2-c2-2.9.4'/sid))
+    monkeypatch.setenv('W05_W02_SCENE_ROOT',str(ROOT/'scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6'/sid))
     generator=base.combined.__wrapped__(SimpleNamespace(param=lang),tmp_path)
     value=next(generator);h=value[0]
     h.adapter=create_store_fact_adapter(h.store,h.module,h.gateway.registry)

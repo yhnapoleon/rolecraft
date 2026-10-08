@@ -23,7 +23,7 @@ ROOT = Path(__file__).resolve().parents[3]
 def exercise_standard(scenario, language, tmp_path, *, revise):
     evidence = Path(os.environ.get('W02_STANDARD_EVIDENCE_DIR', str(tmp_path))) / (scenario + '-' + language)
     evidence.mkdir(parents=True, exist_ok=False)
-    scene = ROOT / 'scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.5' / scenario
+    scene = ROOT / 'scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6' / scenario
     if language == 'en': scene = scene / 'locales/en'
     env = {k: v for k, v in os.environ.items() if k != 'PYTHONPATH'}
     env.update(CAREER_LAB_SCENARIO_V2=str(scene), PYTHONDONTWRITEBYTECODE='1')
@@ -43,7 +43,7 @@ def exercise_standard(scenario, language, tmp_path, *, revise):
                     except httpx.ConnectError: pass
                     time.sleep(.05)
                 else: pytest.fail('standard server startup timeout')
-                created = client.post('/sessions', json={'schema_version': 2, 'scenario': 'pm_pilot_v2', 'work_language': language})
+                created = client.post('/sessions', json={'schema_version': 2, 'scenario': scenario + '_v2', 'work_language': language})
                 assert created.status_code == 200, created.text
                 session = created.json(); sid = session['session_id']; prefix = '/sessions/' + sid
                 client.headers['Authorization'] = 'Bearer ' + session['token']

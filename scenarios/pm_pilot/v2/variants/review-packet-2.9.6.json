@@ -1,0 +1,172 @@
+{
+  "status": "ready_for_content_derivation_review",
+  "independent_review_completed": false,
+  "normal_entry_enabled": false,
+  "source": "existing promised urgent/capacity15 variants rebuilt against the v2 business world",
+  "review_questions": [
+    "Do deadline day 5 and capacity 15 create real, understandable constraints without a preferred answer?",
+    "Do both languages preserve the 429-minute claim versus SD-120 time definition, and the 45-minute observation offer versus a staffing commitment?",
+    "Can users narrow, negotiate or defer with evidence without learning hidden test answers?",
+    "Do role knowledge, approval terms and initial test records match the exact version and language?"
+  ],
+  "variants": [
+    {
+      "scenario_id": "pm_pilot_urgent",
+      "constraints": {
+        "capacity": 30,
+        "dev_days": 3,
+        "deadline_day": 5
+      },
+      "locales": {
+        "zh": {
+          "revision": "2.9.6",
+          "scenario_hash": "fb3735b5c66c7da57380650a05e1eeb8b573d33aea931016b6da9b7a88bcc967",
+          "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent",
+          "runtime_hash": "6e3ebca4843b55c77aca748fb08ad4650f89dd207f2218a9f0694b603cd3d2f6",
+          "evaluation_hash": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
+          "review_reading": {
+            "materials/brief-v1.md": "2c42a3ce06307ba38298606b34b601a9bba2fb07b73cda0f0aca3718b16c4310",
+            "materials/approvals-v1.md": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+            "materials/business_case-v1.md": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+            "materials/demand-v1.md": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+            "materials/coordination-v1.md": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+            "materials/restricted-v1.md": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+            "materials/failures-v1.md": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+            "materials/trial_details-v1.md": "ca1cae2c6c2d2951d162f3989483e147be1ec9b2cac11d632c58aa58d9cc67d8"
+          },
+          "public_material_count": 18,
+          "initial_snapshot": "/Users/jefmacmini/Projects/rolecraft-worktrees/033-w02/runs/local/expansion-v3/W02/20261007-041-M1M3-r11/pm_pilot_urgent-zh-initial.json",
+          "initial_snapshot_sha256": "24e5ae1f8db2547012ce4ac6e61b4042cd3bb2f80485e8d5116e5f28ea6240ef",
+          "canonical_fact_root_id": "pm-pilot-facts-abb2312ea40cab0e9c5f0e4703206a111d44b0b3cbf77892618c2b711c6f1201",
+          "component_id": "pm_pilot_v2_family",
+          "split": "train",
+          "facts": 52,
+          "previous_reviewed_scenario_hash": "09604036833180f0f5d16185798f24cb13e04184d86fa5b6c97a3cd09abea505",
+          "initial_snapshot_scope": "Original 2.9.0 source snapshot retained; 2.9.6 binding/startup verified separately",
+          "historical_standard_evidence": "runs/local/expansion-v3/W02/20261007-051-a577-rebind/standard-core-04/pm_pilot_urgent-zh/result.json",
+          "current_startup_evidence": "runs/local/merge-fixes-20261008/056-merge/final-release/release-startup/pm_pilot_urgent-zh/rebind.json"
+        },
+        "en": {
+          "revision": "2.9.6",
+          "scenario_hash": "4c39918e5f4bf77fd5fbdc5b8f9e6d0ce1fa04b8324febc905047655e548d4c1",
+          "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent/locales/en",
+          "runtime_hash": "46b05cf3050e9c164592af0889d245f47a0298d9e5c0786f663c9e81ae5437c0",
+          "evaluation_hash": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+          "review_reading": {
+            "materials/brief-v1.md": "8b843fae2248cd880c1a520fbd1acd3e862ccad1bfe74d74666815db91deda46",
+            "materials/approvals-v1.md": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+            "materials/business_case-v1.md": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+            "materials/demand-v1.md": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+            "materials/coordination-v1.md": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+            "materials/restricted-v1.md": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+            "materials/failures-v1.md": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+            "materials/trial_details-v1.md": "5b374266bfedb617c0b7991b1a2b05c4a996c750efb3aaac9bf11b0c88b8ead4"
+          },
+          "public_material_count": 18,
+          "initial_snapshot": "/Users/jefmacmini/Projects/rolecraft-worktrees/033-w02/runs/local/expansion-v3/W02/20261007-041-M1M3-r11/pm_pilot_urgent-en-initial.json",
+          "initial_snapshot_sha256": "64e92b358a5cccf24d042c5a641ec17f9e135ccb1abd3d5140fd5d03f05bcea5",
+          "canonical_fact_root_id": "pm-pilot-facts-abb2312ea40cab0e9c5f0e4703206a111d44b0b3cbf77892618c2b711c6f1201",
+          "component_id": "pm_pilot_v2_family",
+          "split": "train",
+          "facts": 52,
+          "previous_reviewed_scenario_hash": "6d151e276528bf27132d136b2a41bc256b7a6437f193c101596091484e252750",
+          "initial_snapshot_scope": "Original 2.9.0 source snapshot retained; 2.9.6 binding/startup verified separately",
+          "historical_standard_evidence": "runs/local/expansion-v3/W02/20261007-051-a577-rebind/standard-core-04/pm_pilot_urgent-en/result.json",
+          "current_startup_evidence": "runs/local/merge-fixes-20261008/056-merge/final-release/release-startup/pm_pilot_urgent-en/rebind.json"
+        }
+      },
+      "review_verdict": "pending_targeted_revision_review"
+    },
+    {
+      "scenario_id": "pm_pilot_capacity15",
+      "constraints": {
+        "capacity": 15,
+        "dev_days": 3,
+        "deadline_day": 7
+      },
+      "locales": {
+        "zh": {
+          "revision": "2.9.6",
+          "scenario_hash": "ad3204fd13a860a7e7d712882e683aa03cb9b306166e0c1056e1bc71cff9faee",
+          "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15",
+          "runtime_hash": "6e3ebca4843b55c77aca748fb08ad4650f89dd207f2218a9f0694b603cd3d2f6",
+          "evaluation_hash": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
+          "review_reading": {
+            "materials/brief-v1.md": "145dac78a7407b9d184cc867b722514e41031ca535d83e64a6cafeb8df8449a4",
+            "materials/approvals-v1.md": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
+            "materials/business_case-v1.md": "fb21f73b7435dd091d69dc189cffabf26bd2ed438fbebfe86c0dcfcbf7a0ef56",
+            "materials/demand-v1.md": "89a512e4f7c84c3bad0b03fcd7d8eb711da18ba6c0775843ec5863e665c472d2",
+            "materials/coordination-v1.md": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
+            "materials/restricted-v1.md": "9db7050934201673f67c3cfaeef9fb5b05eac0618fc0cdd34a34ddbdfd8cbf11",
+            "materials/failures-v1.md": "cb813e6a0667776c2537f21759f623a549e53f09d4a4fa9d96afbc45e380bb97",
+            "materials/trial_details-v1.md": "ad2b46f564598a05de777b7e94565b5c46648670ac06f482647ccc4cd3163f11"
+          },
+          "public_material_count": 18,
+          "initial_snapshot": "/Users/jefmacmini/Projects/rolecraft-worktrees/033-w02/runs/local/expansion-v3/W02/20261007-041-M1M3-r11/pm_pilot_capacity15-zh-initial.json",
+          "initial_snapshot_sha256": "a7cf3275c64725d864a6f531f1807eb702e2a4bb66e4407c9acea2dbbd0484f5",
+          "canonical_fact_root_id": "pm-pilot-facts-e3a28c6a93f634f91ce72763a94f5501a022bb9236a054f509c4b7c933f3b75b",
+          "component_id": "pm_pilot_v2_family",
+          "split": "train",
+          "facts": 52,
+          "previous_reviewed_scenario_hash": "0348f566f4f2f112d4e2f80e72e735c58c87a38f86991b347c6d5215981d36c7",
+          "initial_snapshot_scope": "Original 2.9.0 source snapshot retained; 2.9.6 binding/startup verified separately",
+          "historical_standard_evidence": "runs/local/expansion-v3/W02/20261007-051-a577-rebind/standard-core-04/pm_pilot_capacity15-zh/result.json",
+          "current_startup_evidence": "runs/local/merge-fixes-20261008/056-merge/final-release/release-startup/pm_pilot_capacity15-zh/rebind.json"
+        },
+        "en": {
+          "revision": "2.9.6",
+          "scenario_hash": "a4eeb6159d0a432318f8ecb60cd6ddde90bbbfcb932b0f62eb35154e7698a470",
+          "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15/locales/en",
+          "runtime_hash": "46b05cf3050e9c164592af0889d245f47a0298d9e5c0786f663c9e81ae5437c0",
+          "evaluation_hash": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+          "review_reading": {
+            "materials/brief-v1.md": "61da3cc1bb4d223174624fe701710e67900f71d16f236a5baf022a2ee4438353",
+            "materials/approvals-v1.md": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b",
+            "materials/business_case-v1.md": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc",
+            "materials/demand-v1.md": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648",
+            "materials/coordination-v1.md": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc",
+            "materials/restricted-v1.md": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402",
+            "materials/failures-v1.md": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8",
+            "materials/trial_details-v1.md": "ad3ec44d20a1aeb03cf26c42956fa1d7115c0224c0c121033bb06430bf91d1c4"
+          },
+          "public_material_count": 18,
+          "initial_snapshot": "/Users/jefmacmini/Projects/rolecraft-worktrees/033-w02/runs/local/expansion-v3/W02/20261007-041-M1M3-r11/pm_pilot_capacity15-en-initial.json",
+          "initial_snapshot_sha256": "fe912cdb76083caef1468a4349b897da2ac8913a5cb238cb45ea722ad024a144",
+          "canonical_fact_root_id": "pm-pilot-facts-e3a28c6a93f634f91ce72763a94f5501a022bb9236a054f509c4b7c933f3b75b",
+          "component_id": "pm_pilot_v2_family",
+          "split": "train",
+          "facts": 52,
+          "previous_reviewed_scenario_hash": "0e434a840f5fbb8e540f4ac5ce9aa9b5b3351373c0e982e4e2c7b7924f08f19b",
+          "initial_snapshot_scope": "Original 2.9.0 source snapshot retained; 2.9.6 binding/startup verified separately",
+          "historical_standard_evidence": "runs/local/expansion-v3/W02/20261007-051-a577-rebind/standard-core-04/pm_pilot_capacity15-en/result.json",
+          "current_startup_evidence": "runs/local/merge-fixes-20261008/056-merge/final-release/release-startup/pm_pilot_capacity15-en/rebind.json"
+        }
+      },
+      "review_verdict": "pending_targeted_revision_review"
+    }
+  ],
+  "supersedes_review_candidate": "2.9.5 derivation identity; original independent authored-content acceptance remains unchanged",
+  "prior_independent_review": {
+    "path": "/Users/jefmacmini/Projects/rolecraft-worktrees/033-w02/runs/local/expansion-v3/W02/20261007-041-M3-content-review/claude-content-review-r10.json",
+    "sha256": "cf36668e9d540a72b3dbf5dcb6024772ef0eec2fcb45d927c3d9ee80fb18a9c0",
+    "session_id": "c6745aba-0d3e-4df4-8612-17f449ba2aa6",
+    "verdict": "accepted_content_only",
+    "delivery_commit": "a8ec5b8e41e37f95630bc2a110072999df9a22a5"
+  },
+  "prior_independent_content_review": {
+    "path": "scenarios/pm_pilot/v2/variants/reviews/content-approval-2.9.0.json",
+    "sha256": "06ac5ac71e63d98bf73a0bb14730c2c6bc248354e134844e7c95240094a4dc10",
+    "verdict": "accepted",
+    "scope": "original 2.9.0 authored content only; identity preserved"
+  },
+  "derivation_proof": {
+    "path": "scenarios/pm_pilot/v2/variants/reviews/content-continuity-2.9.6.json",
+    "sha256": "e9f31d15614faec8d04ebd92e5d90fa52bdb5e4dc266f0489acc815bdf0366c1"
+  },
+  "review_scope": "Current 2.9.6 content continuity and two bilingual practice constraints; not W02 whole-package/runtime/UI acceptance",
+  "limitations": [
+    "2.9.6 normal v4 QA pending at package creation",
+    "actual human 20–30 minute duration unverified",
+    "real model quality and PostgreSQL not verified"
+  ]
+}

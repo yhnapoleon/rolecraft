@@ -1,0 +1,190 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "id": "pm_pilot_urgent-zh",
+      "title_zh": "期限提前的知识助手试点",
+      "title_en": "Knowledge-assistant pilot with an earlier deadline",
+      "work_language": "zh",
+      "bindings": {
+        "schema_version": 2,
+        "scenario": {
+          "schema_version": 2,
+          "path": "manifest.json",
+          "sha256": "fb3735b5c66c7da57380650a05e1eeb8b573d33aea931016b6da9b7a88bcc967",
+          "media_type": "application/json"
+        },
+        "runtime": {
+          "schema_version": 2,
+          "path": "runtime/bundle.json",
+          "sha256": "6e3ebca4843b55c77aca748fb08ad4650f89dd207f2218a9f0694b603cd3d2f6",
+          "media_type": "application/json"
+        },
+        "evaluation": {
+          "schema_version": 2,
+          "path": "runtime/evaluation.json",
+          "sha256": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
+          "media_type": "application/json"
+        },
+        "rules_revision": "rules-v4",
+        "rubric_revision": "rubric-v2",
+        "evidence_revision": "evidence-v2"
+      },
+      "criteria": [
+        "R3.resources",
+        "R4.staleness_test",
+        "R5.adjustment",
+        "R6.alternatives"
+      ],
+      "review_status": "approved",
+      "review": {
+        "schema_version": 2,
+        "path": "reviews/content-continuity-2.9.6.json",
+        "sha256": "e9f31d15614faec8d04ebd92e5d90fa52bdb5e4dc266f0489acc815bdf0366c1",
+        "media_type": "application/json"
+      },
+      "component_id": "pm_pilot_v2_family"
+    },
+    {
+      "id": "pm_pilot_urgent-en",
+      "title_zh": "期限提前的知识助手试点",
+      "title_en": "Knowledge-assistant pilot with an earlier deadline",
+      "work_language": "en",
+      "bindings": {
+        "schema_version": 2,
+        "scenario": {
+          "schema_version": 2,
+          "path": "manifest.json",
+          "sha256": "4c39918e5f4bf77fd5fbdc5b8f9e6d0ce1fa04b8324febc905047655e548d4c1",
+          "media_type": "application/json"
+        },
+        "runtime": {
+          "schema_version": 2,
+          "path": "runtime/bundle.json",
+          "sha256": "46b05cf3050e9c164592af0889d245f47a0298d9e5c0786f663c9e81ae5437c0",
+          "media_type": "application/json"
+        },
+        "evaluation": {
+          "schema_version": 2,
+          "path": "runtime/evaluation.json",
+          "sha256": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+          "media_type": "application/json"
+        },
+        "rules_revision": "rules-v4",
+        "rubric_revision": "rubric-v2",
+        "evidence_revision": "evidence-v2"
+      },
+      "criteria": [
+        "R3.resources",
+        "R4.staleness_test",
+        "R5.adjustment",
+        "R6.alternatives"
+      ],
+      "review_status": "approved",
+      "review": {
+        "schema_version": 2,
+        "path": "reviews/content-continuity-2.9.6.json",
+        "sha256": "e9f31d15614faec8d04ebd92e5d90fa52bdb5e4dc266f0489acc815bdf0366c1",
+        "media_type": "application/json"
+      },
+      "component_id": "pm_pilot_v2_family"
+    },
+    {
+      "id": "pm_pilot_capacity15-zh",
+      "title_zh": "容量收紧的知识助手试点",
+      "title_en": "Knowledge-assistant pilot with limited capacity",
+      "work_language": "zh",
+      "bindings": {
+        "schema_version": 2,
+        "scenario": {
+          "schema_version": 2,
+          "path": "manifest.json",
+          "sha256": "ad3204fd13a860a7e7d712882e683aa03cb9b306166e0c1056e1bc71cff9faee",
+          "media_type": "application/json"
+        },
+        "runtime": {
+          "schema_version": 2,
+          "path": "runtime/bundle.json",
+          "sha256": "6e3ebca4843b55c77aca748fb08ad4650f89dd207f2218a9f0694b603cd3d2f6",
+          "media_type": "application/json"
+        },
+        "evaluation": {
+          "schema_version": 2,
+          "path": "runtime/evaluation.json",
+          "sha256": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
+          "media_type": "application/json"
+        },
+        "rules_revision": "rules-v4",
+        "rubric_revision": "rubric-v2",
+        "evidence_revision": "evidence-v2"
+      },
+      "criteria": [
+        "R3.capacity",
+        "R4.staleness_test",
+        "R5.adjustment",
+        "R6.alternatives"
+      ],
+      "review_status": "approved",
+      "review": {
+        "schema_version": 2,
+        "path": "reviews/content-continuity-2.9.6.json",
+        "sha256": "e9f31d15614faec8d04ebd92e5d90fa52bdb5e4dc266f0489acc815bdf0366c1",
+        "media_type": "application/json"
+      },
+      "component_id": "pm_pilot_v2_family"
+    },
+    {
+      "id": "pm_pilot_capacity15-en",
+      "title_zh": "容量收紧的知识助手试点",
+      "title_en": "Knowledge-assistant pilot with limited capacity",
+      "work_language": "en",
+      "bindings": {
+        "schema_version": 2,
+        "scenario": {
+          "schema_version": 2,
+          "path": "manifest.json",
+          "sha256": "a4eeb6159d0a432318f8ecb60cd6ddde90bbbfcb932b0f62eb35154e7698a470",
+          "media_type": "application/json"
+        },
+        "runtime": {
+          "schema_version": 2,
+          "path": "runtime/bundle.json",
+          "sha256": "46b05cf3050e9c164592af0889d245f47a0298d9e5c0786f663c9e81ae5437c0",
+          "media_type": "application/json"
+        },
+        "evaluation": {
+          "schema_version": 2,
+          "path": "runtime/evaluation.json",
+          "sha256": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+          "media_type": "application/json"
+        },
+        "rules_revision": "rules-v4",
+        "rubric_revision": "rubric-v2",
+        "evidence_revision": "evidence-v2"
+      },
+      "criteria": [
+        "R3.capacity",
+        "R4.staleness_test",
+        "R5.adjustment",
+        "R6.alternatives"
+      ],
+      "review_status": "approved",
+      "review": {
+        "schema_version": 2,
+        "path": "reviews/content-continuity-2.9.6.json",
+        "sha256": "e9f31d15614faec8d04ebd92e5d90fa52bdb5e4dc266f0489acc815bdf0366c1",
+        "media_type": "application/json"
+      },
+      "component_id": "pm_pilot_v2_family"
+    }
+  ],
+  "roots_by_scenario_hash": {
+    "fb3735b5c66c7da57380650a05e1eeb8b573d33aea931016b6da9b7a88bcc967": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent",
+    "4c39918e5f4bf77fd5fbdc5b8f9e6d0ce1fa04b8324febc905047655e548d4c1": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent/locales/en",
+    "ad3204fd13a860a7e7d712882e683aa03cb9b306166e0c1056e1bc71cff9faee": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15",
+    "a4eeb6159d0a432318f8ecb60cd6ddde90bbbfcb932b0f62eb35154e7698a470": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15/locales/en"
+  },
+  "review_scope": "independently approved unchanged authored content; derived evaluation runtime author validated separately; no v4 or learning-gain claim",
+  "normal_entry_enabled": false,
+  "consumer": "W05 ReviewedPractice; reauthorize source feedback and candidate at each display/choice; W14 creates and links the new session"
+}

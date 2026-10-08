@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "revision": "2.9.5",
+  "revision": "2.9.6",
   "main": {
     "zh": {
-      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.5/pm_pilot",
-      "scenario_hash": "d10c22ca46ed0f88aa82d1af19ef2842f398de5ee4627829ee81039628ceeeca",
+      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot",
+      "scenario_hash": "65b58fc4d61ffa89f07926b915d2db523af773080f4dfb1a64af0cf060910ef6",
       "evaluation": {
         "schema_version": 2,
         "path": "runtime/evaluation.json",
@@ -13,8 +13,8 @@
       }
     },
     "en": {
-      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.5/pm_pilot/locales/en",
-      "scenario_hash": "3b78440ec8599fef7ee763c5f044d2e72a9ad22d6c006f925de857f295c1ff34",
+      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot/locales/en",
+      "scenario_hash": "b03ed3472cce3e156a96f31bf9505b0c8705798787cd476ffddcf0723dae2708",
       "evaluation": {
         "schema_version": 2,
         "path": "runtime/evaluation.json",
@@ -23,16 +23,18 @@
       }
     }
   },
-  "practice_catalog": "scenarios/pm_pilot/v2/variants/reviewed-options-2.9.5.json",
+  "practice_catalog": "scenarios/pm_pilot/v2/variants/reviewed-options-2.9.6.json",
   "source_inputs": {
-    "public_commit": "a5779eacd04220dc175d5ed592a2d30d2e7e34c7",
-    "w05_commit": "e2316724a4a9776ce60ea5364e9415d111c4b4ae"
+    "public_commit": "db3f818e5af6d2cc5225cf4ae4c5f633fda38c37",
+    "w05_commit": "e2316724a4a9776ce60ea5364e9415d111c4b4ae",
+    "release_tool_commit": "15f9cdc1ca39a8f391d603fb9f84ff40be150273"
   },
   "fact_adapter_factory": "career_lab.scenarios.v2.evidence_ports.store.create_store_fact_adapter",
   "normal_v4_verified": false,
   "historical_installations": [
     "rubric-v2-c2/pm_pilot (2.9.2)",
     "rubric-v2-c2-2.9.3/pm_pilot",
-    "rubric-v2-c2-2.9.4 (all six language packages)"
+    "rubric-v2-c2-2.9.4 (all six language packages)",
+    "rubric-v2-a577-2.9.5 (all six language packages)"
   ]
 }
