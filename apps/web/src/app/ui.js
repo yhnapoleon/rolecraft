@@ -1895,10 +1895,11 @@ function railChat(a, role) {
   const x = t && ui.obj && ui.obj.type === 'work' ? artifact() : null;
   const typing = typingRole(a) === role;
   const s = sessionOf(a);
+  const native = s?.protocol === 2;
   const failed = s?.failedTurn && ROLE_OF[s.failedTurn.body.role_id] === role;
-  return `<div class="chat who-${role}">
+  return `<div class="chat who-${role}" ${native ? 'data-v4-region="roles"' : ''}>
     <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}${PEOPLE[role].titled ? '' : `<small>${ROLE_TITLE(role)}</small>`}</p><p class="chat-knows">${esc(KNOWS(role))}</p></div></header>
-    <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${msgs.length ? msgs.map((m) => msgHtml(a, role, m)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(PEOPLE[role].name + '正在输入', PEOPLE[role].subject + ' is typing'))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}</div>
+    <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${native ? '' : `${msgs.length ? msgs.map((m) => msgHtml(a, role, m)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(`${PEOPLE[role].name}正在输入`, `${PEOPLE[role].subject} is typing`))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}`}</div>
     <div class="chat-context">${t ? `<span class="ctx" title="${esc(T('这条对话会记在这件事下', 'This conversation is filed under this task'))}">${icon('note', 'i-xs')}<span>${esc(taskTitle(t))}</span></span>` : ''}${x ? `<button type="button" class="ctx add" data-action="prefill-artifact">${icon('plus', 'i-xs')}${T('附上作品', 'Attach work')}</button>` : ''}${a.tests.length ? `<button type="button" class="ctx add" data-action="prefill-run">${icon('plus', 'i-xs')}${T('附上测试', 'Attach a test')}</button>` : ''}</div>
     ${(() => {
       const q = ui.chatQuotes[quoteKey(a, role)];
@@ -4901,7 +4902,7 @@ document.addEventListener('rolecraft:open-chat', (e) => {
   const role = ROLE_OF[e.detail?.roleId];
   if (role && current()) openChat(role);
 });
-document.addEventListener('rolecraft:quote-sent', (e) => {
+app.addEventListener('rolecraft:quote-sent', (e) => {
   const a = current();
   const role = ROLE_OF[e.detail?.roleId];
   if (a && role) {

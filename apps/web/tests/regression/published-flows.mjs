@@ -71,6 +71,11 @@ async function saveAndShare(context) {
       ?.innerText.includes(${JSON.stringify(text('可见', 'Visible'))})`,
   );
   await waitFor(browser, `!!document.querySelector('.rc-roles__reply')`);
+  assert.equal(
+    await browser.ev(`document.querySelectorAll('[data-v4-region="roles"]').length`),
+    1,
+    'One named region owns the real colleague conversation',
+  );
   await shot('shared');
 }
 
@@ -173,6 +178,7 @@ async function runLanguage(language) {
     console.log(`PASS ${language}: ${name}`);
   };
   const shot = async (name) => {
+    await browser.ev('document.fonts.ready.then(() => true)');
     if (name !== 'failure') {
       await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 0, y: 0 });
       await waitFor(browser, `!document.querySelector('#toast.visible')`);

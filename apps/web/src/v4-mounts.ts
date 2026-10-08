@@ -1,6 +1,6 @@
 /** Thin ownership/lifecycle bridge into the existing v4 DOM. No business rendering. */
 import { WorkspaceRegions } from './features/workspace/native-v4/regions';
-import { mount as mountRoles } from './features/roles-native/v4-slot';
+import { RolesRegions } from './features/roles-native/regions';
 import { mount as mountResources } from './features/roles-native/v4-request-slot';
 import { FeedbackRegions } from './features/feedback-native/regions';
 import { surfaceHost } from './v4-surface-host';
@@ -21,10 +21,12 @@ export class V4Mounts {
   private mounted = new Map<string, Mounted>();
   private generation = 0;
   private readonly feedback = new FeedbackRegions();
+  private readonly roles = new RolesRegions();
   constructor(private readonly workspace = new WorkspaceRegions()) {}
   destroy() {
     this.generation++;
     this.feedback.destroy();
+    this.roles.destroy();
     this.workspace.destroy();
     for (const item of this.mounted.values()) {
       item.handle.destroy();
@@ -45,10 +47,9 @@ export class V4Mounts {
     }
     this.workspace.prune(doc, host);
     this.feedback.prune(doc, host);
+    this.roles.prune(doc, host);
     if (host.snapshot().state === 'unavailable') await host.query('workbench.read');
     const roots = new Map<string, HTMLElement>();
-    const chat = doc.querySelector<HTMLElement>('#ws-rail .chat');
-    if (chat) roots.set('roles', chat);
     if (sheet?.open && sheet.querySelector('#res-form'))
       roots.set('resource-requests', sheet.querySelector('.sheet-body')!);
     const agentPanel = doc.querySelector<HTMLElement>('#ws-rail .agent-panel[data-agent-native]');
@@ -84,6 +85,7 @@ export class V4Mounts {
     await host.flushDrafts();
     if (epoch !== this.generation) return;
     this.feedback.sync(doc, host);
+    this.roles.sync(doc, host);
     if (session.v2NativeWorkspace) this.workspace.sync(doc, host);
     else this.workspace.destroy();
     for (const [id, root] of roots) {
@@ -96,10 +98,7 @@ export class V4Mounts {
         const node = within.querySelector<HTMLElement>(selector);
         if (node) nodes[name] = node;
       };
-      if (id === 'roles') {
-        pick('thread', '.thread');
-        pick('composer', '.composer');
-      } else if (id === 'agent') {
+      if (id === 'agent') {
         pick('connection', '[data-agent-connection]');
         pick('activity', '[data-agent-activity]');
         pick('returns', '[data-agent-returns]');
@@ -115,12 +114,7 @@ export class V4Mounts {
       let alive = true;
       const adapter = surfaceHost(host, () => alive);
       const context: V4SlotContext = { host: adapter, nodes };
-      const handle =
-        id === 'agent'
-          ? mountV4AgentSlot(context)
-          : id === 'roles'
-            ? mountRoles(context)
-            : mountResources(context);
+      const handle = id === 'agent' ? mountV4AgentSlot(context) : mountResources(context);
       this.mounted.set(id, {
         host,
         root,
