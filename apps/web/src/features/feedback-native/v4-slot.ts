@@ -1,3 +1,4 @@
+import type { V4Query, QueryInput, V4Command, CommandInput } from '../../v4-host-operations';
 /** W05 native v4 slot: no transport, credentials, Command envelope or journal. */
 import type {
   V4HostAdapter,
@@ -143,12 +144,12 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       void refresh();
     }
   }
-  async function page(operation: string, input: Row = {}) {
+  async function page(operation: V4Query, input: QueryInput<V4Query> = {}) {
     if (valid().available[operation] !== true)
       throw Error(text('这部分反馈服务尚未就绪。', 'This feedback service is not ready.'));
     return payload(await host.query(operation, input));
   }
-  async function pages(operation: string, input: Row = {}) {
+  async function pages(operation: V4Query, input: QueryInput<V4Query> = {}) {
     const rows: unknown[] = [];
     const cursors = new Set<number>();
     let cursor = 0;
@@ -469,7 +470,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
     await host.query('workbench.read');
     await refresh();
   }
-  async function command(operation: string, input: Row) {
+  async function command<K extends V4Command>(operation: K, input: CommandInput<K>) {
     const s = valid();
     if (s.available[operation] !== true)
       throw Error(text('当前操作尚未就绪。', 'This action is not ready.'));
@@ -531,7 +532,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       for (const ref of input.followup_of)
         if (reference(ref, sid!).kind !== 'feedback_response')
           throw Error('Invalid review followup');
-      return command(W05_V4_OPERATIONS.review, input as unknown as Row);
+      return command(W05_V4_OPERATIONS.review, input);
     },
     submit: (input) => {
       valid();

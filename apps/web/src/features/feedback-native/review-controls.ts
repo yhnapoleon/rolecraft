@@ -1,7 +1,12 @@
+import type { SubmitInput } from '../../contracts-v2';
 /** Optional, non-terminal review in the existing feedback surface. */
 import type { FeedbackNativeAdapter, ReviewDraft } from './index';
 import type { ObjectRef } from '../workspace/contract-types';
 import type { FeedbackLanguage } from './localization';
+
+export function isSubmitDecision(value: string): value is SubmitInput['decision'] {
+  return ['launch', 'launch_narrow', 'defer_with_conditions', 'no_go'].includes(value);
+}
 
 export function mountReviewControls(
   doc: Document,
@@ -128,7 +133,7 @@ export function mountReviewControls(
     void save();
   });
   decision.addEventListener('change', () => {
-    draft.decision = decision.value || null;
+    draft.decision = isSubmitDecision(decision.value) ? decision.value : null;
     void save();
   });
   const submit = el('button', t('评审选中的版本', 'Review selected versions'), 'btn');

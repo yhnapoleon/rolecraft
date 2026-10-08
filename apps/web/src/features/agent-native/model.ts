@@ -1,3 +1,4 @@
+import type { DelegationInput } from '../../contracts-v2';
 import type { V4HostSnapshot } from '../../v4-host';
 export type Ref = NonNullable<V4HostSnapshot['currentProduct']>;
 export type Language = 'zh' | 'en';
@@ -187,7 +188,7 @@ export function semanticLabel(language: Language, status?: string, verification?
     return t(language, '规则核实', 'Rule verified');
   return '';
 }
-export function grantInput(draft: Draft, sessionId: string, now: Date): Record<string, unknown> {
+export function grantInput(draft: Draft, sessionId: string, now: Date): DelegationInput {
   const name = draft.name.trim();
   if (!name || name.length > 64 || /[\x00-\x1f\x7f]/.test(name)) throw Error('agent_name_required');
   if (!draft.all && !draft.refs.length) throw Error('agent_scope_required');

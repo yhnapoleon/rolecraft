@@ -1,6 +1,7 @@
+import { fixtureHost, type HostFixture } from '../../host-test-support';
 import { describe, it, expect } from 'vitest';
 import { createV4FeedbackAdapter, W05_V4_OPERATIONS as op } from './v4-slot';
-import type { V4HostAdapter, V4HostSnapshot, V4CommandResult, V4SlotId } from '../../v4-host';
+import type { V4HostSnapshot, V4CommandResult, V4SlotId } from '../../v4-host';
 
 const ref = (kind: string, id: string, version = 1) => ({
   session_id: 's',
@@ -79,7 +80,7 @@ function fixture() {
         };
       throw Error('unexpected operation');
     };
-  const host: V4HostAdapter = {
+  const host: HostFixture = {
     snapshot: () => snapshot,
     subscribe: (fn) => {
       listeners.add(fn);
@@ -139,7 +140,7 @@ function fixture() {
 describe('W05 v4 host adapter', () => {
   it('reads exact records and submits domain input with authoritative config only', async () => {
     const f = fixture();
-    const ctl = createV4FeedbackAdapter(f.host);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     expect(ctl.adapter.snapshot().status).toBe('active');
     expect(ctl.adapter.snapshot().uiLanguage).toBe('en');
@@ -158,7 +159,7 @@ describe('W05 v4 host adapter', () => {
   });
   it('pending commands retain drafts and recover only on the explicit control', async () => {
     const f = fixture();
-    const ctl = createV4FeedbackAdapter(f.host);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     f.setResult({ requestId: 'original-key', status: 'unconfirmed', result: {} });
     await ctl.adapter.keepDraft('f:general', { text: 'Keep my wording', evidence: [] });
@@ -195,7 +196,7 @@ describe('W05 v4 host adapter', () => {
   });
   it('a saved submission with a pending feedback job is not a failed write', async () => {
     const f = fixture();
-    const ctl = createV4FeedbackAdapter(f.host);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     f.setResult({
       requestId: 'feedback-job',
@@ -215,7 +216,7 @@ describe('W05 v4 host adapter', () => {
   });
   it('does not treat colleague model mode as feedback readiness', async () => {
     const f = fixture();
-    const ctl = createV4FeedbackAdapter(f.host);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     expect(ctl.adapter.snapshot().reports[0].semantic_status).toBe('waiting_for_model');
     expect(ctl.adapter.snapshot().modelMode).toBeUndefined();
@@ -224,7 +225,7 @@ describe('W05 v4 host adapter', () => {
   it('legacy sessions make no v2 queries or commands', async () => {
     const f = fixture();
     f.setSnapshot({ session: { protocol: 1, sessionId: 'old', workLanguage: null } });
-    const ctl = createV4FeedbackAdapter(f.host);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     expect(f.queries).toEqual([]);
     expect(() => ctl.adapter.submit({ decision: 'no_go', products: [] })).toThrow();
@@ -241,7 +242,7 @@ describe('W05 v4 host adapter', () => {
           })
         : Promise.resolve({ items: [], next_cursor: null }),
     );
-    const ctl = createV4FeedbackAdapter(f.host);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     const running = ctl.refresh();
     f.setSnapshot({
       session: {
@@ -263,7 +264,7 @@ describe('W05 v4 host adapter', () => {
   });
   it('failed authorized reads remove server records while keeping user drafts', async () => {
     const f = fixture();
-    const ctl = createV4FeedbackAdapter(f.host);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     await ctl.adapter.keepDraft('revision', { text: 'keep', evidence: [] });
     f.setRead(async () => {
@@ -278,7 +279,7 @@ describe('W05 v4 host adapter', () => {
   });
   it('busy-only host notices do not start another query loop', async () => {
     const f = fixture();
-    const ctl = createV4FeedbackAdapter(f.host);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     const count = f.queries.length;
     f.setSnapshot({ busy: true });
@@ -289,7 +290,7 @@ describe('W05 v4 host adapter', () => {
   });
   it('changing UI language preserves fixed work language and stored feedback', async () => {
     const f = fixture();
-    const ctl = createV4FeedbackAdapter(f.host);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     const count = f.queries.length;
     f.setSnapshot({ uiLanguage: 'zh' });
@@ -314,7 +315,7 @@ describe('W05 non-terminal review via public host', () => {
   };
   it('records exact selected versions and optional unknown decision without submitting the session', async () => {
     const f = fixture(),
-      ctl = createV4FeedbackAdapter(f.host);
+      ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     await ctl.adapter.review!({
       subjects: review.subjects,
@@ -370,7 +371,7 @@ describe('W05 non-terminal review via public host', () => {
         };
       throw Error('unexpected operation');
     });
-    const ctl = createV4FeedbackAdapter(f.host);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     expect(ctl.adapter.snapshot().reviews).toEqual([review]);
     expect(ctl.adapter.snapshot().reviewHistoryAvailable).toBe(true);
@@ -382,7 +383,7 @@ describe('W05 non-terminal review via public host', () => {
   });
   it('keeps usable submission feedback when an older host lacks the collection route', async () => {
     const f = fixture(),
-      ctl = createV4FeedbackAdapter(f.host);
+      ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     f.setSnapshot({ available: { ...f.host.snapshot().available, [op.reviews]: false } });
     await ctl.refresh();
@@ -394,7 +395,7 @@ describe('W05 non-terminal review via public host', () => {
   });
   it('does not borrow another feedback response or cross-session review subject', async () => {
     const f = fixture(),
-      ctl = createV4FeedbackAdapter(f.host);
+      ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     expect(() =>
       ctl.adapter.review!({
@@ -421,7 +422,7 @@ describe('W05 non-terminal review via public host', () => {
   });
   it('a pending review job does not prevent recording a later, explicit user response', async () => {
     const f = fixture(),
-      ctl = createV4FeedbackAdapter(f.host);
+      ctl = createV4FeedbackAdapter(fixtureHost(f.host));
     await ctl.refresh();
     f.setResult({
       requestId: 'review-job',
@@ -456,7 +457,7 @@ it('restores a failed feedback pointer without retry and requires an explicit ne
   f.drafts.set('last-request', { requestId: 'original', status: 'pending' });
   f.setResult({ requestId: 'original', status: 'failed', result: {} });
   f.setSnapshot({ available: { ...f.host.snapshot().available, 'jobs.refresh': true } });
-  const ctl = createV4FeedbackAdapter(f.host);
+  const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
   await ctl.refresh();
   expect(ctl.adapter.snapshot().failedFeedback).toBe(true);
   expect(f.calls).toEqual([]);

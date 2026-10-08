@@ -47,6 +47,31 @@ const posts = (fetcher: ReturnType<typeof setup>['fetcher']) =>
   fetcher.mock.calls.filter((c) => c[1]?.body);
 
 describe('v4 single host persistence and recovery', () => {
+  it('returns the declared task page through the existing gateway envelope', async () => {
+    const { host, fetcher } = setup();
+    const task = {
+      id: 'task',
+      session_id: 's',
+      revision: 1,
+      title: 'Known task',
+      created_at: '2026-10-09T00:00:00Z',
+      updated_at: '2026-10-09T00:00:00Z',
+    };
+    fetcher.mockImplementation(async () =>
+      reply({
+        schema_version: 2,
+        result: { schema_version: 2, result: { items: [task], as_of: point, next_cursor: null } },
+      }),
+    );
+    const page = await host.query('work_items.list', { cursor: 0, limit: 20 });
+    expect(page.items[0].title).toBe('Known task');
+    expect(page.as_of).toEqual(point);
+    expect(fetcher).toHaveBeenCalledWith(
+      '/api/sessions/s/work-items?cursor=0&limit=20',
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(posts(fetcher)).toHaveLength(0);
+  });
   it('uses the exact server boundary, persists before POST and never stores/exposes credentials', async () => {
     const { host, fetcher, map } = setup();
     fetcher.mockImplementation(async (_url, init) => {
@@ -154,7 +179,10 @@ describe('v4 single host persistence and recovery', () => {
   });
   it('never retries a still-running job', async () => {
     const { host, fetcher } = setup();
-    const original = await host.command('turns.create', { text: 'Question' });
+    const original = await host.command('turns.create', {
+      role_id: 'supervisor',
+      text: 'Question',
+    });
     fetcher.mockImplementation(async () =>
       reply({
         schema_version: 2,
@@ -187,9 +215,12 @@ describe('v4 single host persistence and recovery', () => {
   it('cannot dispatch secret-bearing delegation services before the control-plane adapter exists', async () => {
     const { host, fetcher } = setup();
     expect(host.snapshot().available['delegations.create']).toBe(false);
-    await expect(host.command('delegations.create', { agent_label: 'test' })).rejects.toMatchObject(
-      { code: 'delegation_host_not_ready' },
-    );
+    await expect(
+      host.command('delegations.create', {
+        agent_label: 'test',
+        expires_at: new Date(Date.now() + 1800000).toISOString(),
+      }),
+    ).rejects.toMatchObject({ code: 'delegation_host_not_ready' });
     expect(fetcher).not.toHaveBeenCalled();
   });
   it('keeps an issued agent secret only in memory and hands the connection config out once', async () => {
@@ -223,7 +254,10 @@ describe('v4 single host persistence and recovery', () => {
       'delegations.create': true,
       'delegations.list': true,
     });
-    const issued = await host.command('delegations.create', { agent_label: 'Helper' });
+    const issued = await host.command('delegations.create', {
+      agent_label: 'Helper',
+      expires_at: new Date(Date.now() + 1800000).toISOString(),
+    });
     expect(issued.status).toBe('confirmed');
     expect(JSON.stringify(issued)).not.toContain('agent-secret');
     expect([...map.values()].join('')).not.toContain('agent-secret');
@@ -235,7 +269,10 @@ describe('v4 single host persistence and recovery', () => {
       token: 'agent-secret',
     });
     expect(host.takeConnectionConfig('http://127.0.0.1:1/api')).toBeNull();
-    await host.command('delegations.create', { agent_label: 'Second' });
+    await host.command('delegations.create', {
+      agent_label: 'Second',
+      expires_at: new Date(Date.now() + 1800000).toISOString(),
+    });
     await host.command('delegations.revoke', { delegation_id: 'd1' });
     expect(host.issuedDelegation()).toBeNull();
   });
@@ -273,7 +310,10 @@ describe('v4 single host persistence and recovery', () => {
       });
     });
     await host.query('workbench.read');
-    const lost = await host.command('delegations.create', { agent_label: 'Helper' });
+    const lost = await host.command('delegations.create', {
+      agent_label: 'Helper',
+      expires_at: new Date(Date.now() + 1800000).toISOString(),
+    });
     expect(lost.status).toBe('unconfirmed');
     expect([...map.values()].join('')).toContain(lost.requestId);
     await expect(
@@ -322,7 +362,10 @@ describe('v4 single host persistence and recovery', () => {
         : reply({ detail: 'down' }, 502),
     );
     await host.query('workbench.read');
-    const result = await host.command('delegations.create', { agent_label: 'Helper' });
+    const result = await host.command('delegations.create', {
+      agent_label: 'Helper',
+      expires_at: new Date(Date.now() + 1800000).toISOString(),
+    });
     expect(result).toMatchObject({
       status: 'failed',
       result: { code: 'not_sent', definitive: true },
@@ -343,10 +386,18 @@ describe('v4 single host persistence and recovery', () => {
       });
     });
     expect(
-      await host.query('workspace_imports', { package_id: 'p', mode: 'preview' }),
+      await host.query('workspace_imports', {
+        package_id: 'p',
+        mode: 'preview',
+        source_schema: 'practice.v4',
+        source_session_id: 'legacy',
+        package_hash: '0'.repeat(64),
+        items: [],
+      }),
     ).toMatchObject({ applied: false });
     expect(map.size).toBe(0);
     await expect(
+      // @ts-expect-error Deliberate invalid input still exercises the real runtime read guard.
       host.query('workspace_imports', { package_id: 'p', mode: 'apply' }),
     ).rejects.toMatchObject({ code: 'invalid_read' });
     expect(posts(fetcher)).toHaveLength(1);

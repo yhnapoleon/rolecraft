@@ -1,6 +1,17 @@
 /** v4 host contract for module-owned native slots. This declares the seam;
  * it does not provide a mock runtime, credentials or another application root. */
 import type { ObjectRef, EvidenceRefV2, VersionPoint } from './contracts-v2';
+import type {
+  V4Query,
+  V4Command,
+  QueryArguments,
+  QueryOutput,
+  CommandInput,
+  CommandOutput,
+  CommandFailure,
+  HostResult,
+  RecoveryResult,
+} from './v4-host-operations';
 
 export type WorkLanguage = 'zh' | 'en';
 export type V4SessionBinding =
@@ -23,23 +34,26 @@ export interface V4HostSnapshot {
   available: Readonly<Record<string, boolean>>;
 }
 
-export interface V4CommandResult {
+export interface V4CommandResult<Result = HostResult> {
   requestId: string;
   status: 'confirmed' | 'pending' | 'failed' | 'needs_context' | 'unconfirmed';
   /** Public server response; the module validates its owned DTO. */
-  result: unknown;
+  result: Result;
 }
 
 export interface V4HostAdapter {
   snapshot(): Readonly<V4HostSnapshot>;
   subscribe(changed: () => void): () => void;
   /** Read only, within the bound session and current authorization. */
-  query(operation: string, input?: Readonly<Record<string, unknown>>): Promise<unknown>;
+  query<K extends V4Query>(operation: K, ...args: QueryArguments<K>): Promise<QueryOutput<K>>;
   /** Domain input only: no token, raw URL, request key or guessed next version.
    * The host owns the single exact Command journal and server version binding. */
-  command(operation: string, input: Readonly<Record<string, unknown>>): Promise<V4CommandResult>;
+  command<K extends V4Command>(
+    operation: K,
+    input: CommandInput<K>,
+  ): Promise<V4CommandResult<CommandOutput<K> | CommandFailure | null>>;
   /** Read the existing journal/request. Never imply a new model invocation. */
-  recover(requestId: string): Promise<V4CommandResult>;
+  recover(requestId: string): Promise<V4CommandResult<RecoveryResult>>;
   /** Separate explicit user action; persists a fresh attempt record. */
   retry(requestId: string): Promise<V4CommandResult>;
   draft<T>(slot: V4SlotId, key: string): T | undefined;

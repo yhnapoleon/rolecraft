@@ -1,7 +1,8 @@
+import { fixtureHost, type HostFixture } from '../../../host-test-support';
 /** Development-only adapter fixture. No HTTP, model, credentials or persistence claim.
  * Tests the slot's DOM behavior while the shared host implementation is pending. */
 import { mount } from './v4-slot';
-import type { V4HostAdapter, V4HostSnapshot, V4CommandResult } from '../../../v4-host';
+import type { V4HostSnapshot, V4CommandResult } from '../../../v4-host';
 import type {
   WorkspaceProductRead,
   WorkspaceTask,
@@ -93,7 +94,7 @@ export function mountSlotFixture(container: HTMLElement) {
       ? 'shared'
       : 'private',
   });
-  const host: V4HostAdapter = {
+  const host: HostFixture = {
     snapshot: () => snapshot,
     subscribe: (fn: () => void) => {
       listeners.add(fn);
@@ -329,7 +330,7 @@ export function mountSlotFixture(container: HTMLElement) {
     );
     if (tasks.some((t) => t.id === previous)) select.value = previous;
   }
-  let slot = mount({ host, nodes });
+  let slot = mount({ host: fixtureHost(host), nodes });
   const control = (label: string, action: () => void) => {
     const button = doc.createElement('button');
     button.type = 'button';
@@ -350,7 +351,7 @@ export function mountSlotFixture(container: HTMLElement) {
     for (const radio of form.querySelectorAll<HTMLInputElement>('[name=priority]'))
       radio.checked = radio.value === ['first', 'next', 'later'][t.priority ?? 0];
     (form.elements.namedItem('split') as HTMLInputElement).value = '';
-    slot = mount({ host, nodes });
+    slot = mount({ host: fixtureHost(host), nodes });
   });
   control('English', () => {
     snapshot = { ...snapshot, uiLanguage: 'en' };
@@ -379,7 +380,7 @@ export function mountSlotFixture(container: HTMLElement) {
   });
   control('卸载再挂载', () => {
     slot.destroy();
-    slot = mount({ host, nodes });
+    slot = mount({ host: fixtureHost(host), nodes });
   });
   control('检查夹具记录', () => {
     announcement.textContent = JSON.stringify({

@@ -1,6 +1,7 @@
+import type { SubmitInput } from '../../contracts-v2';
 /** Native DOM submission/review surface. Inject the shared client; no credentials,
  * queue, mutation journal, global navigation or React root is created here. */
-import { mountReviewControls } from './review-controls';
+import { mountReviewControls, isSubmitDecision } from './review-controls';
 import { feedbackText, type FeedbackLanguage } from './localization';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 
@@ -52,7 +53,7 @@ export type ReviewDraft = {
   subjects: ObjectRef[];
   purpose: string;
   question: string;
-  decision: string | null;
+  decision: SubmitInput['decision'] | null;
   scope: string[];
   followup_of: ObjectRef[];
 };
@@ -91,7 +92,7 @@ export interface FeedbackNativeAdapter {
   snapshot(): FeedbackNativeState;
   subscribe(callback: () => void): () => void;
   review?(input: ReviewDraft): Promise<unknown>;
-  submit(input: { decision: string; products: ObjectRef[] }): Promise<unknown>;
+  submit(input: { decision: SubmitInput['decision']; products: ObjectRef[] }): Promise<unknown>;
   respond(input: {
     feedback_id: string;
     feedback_version: number;
@@ -283,7 +284,7 @@ export function mountNativeFeedback(
   const submit = button(
     T('提交选中的版本', 'Submit selected versions'),
     async () => {
-      if (!choice.value)
+      if (!isSubmitDecision(choice.value))
         throw Error(
           T(
             '请明确本次决定。停止或暂缓也可以交付。',

@@ -1,6 +1,7 @@
+import { fixtureHost, type HostFixture } from '../../../host-test-support';
 import { describe, it, expect, vi } from 'vitest';
 import { WorkspaceSlotController, productInput, productRef, readPage } from './slot-controller';
-import type { V4HostAdapter, V4HostSnapshot, V4CommandResult } from '../../../v4-host';
+import type { V4HostSnapshot, V4CommandResult } from '../../../v4-host';
 import type { WorkspaceProductRead } from '../contract-types';
 const at = { business_seq: 0, workspace_revision: 1, storage_revision: 1 };
 const product = (extra: Partial<WorkspaceProductRead> = {}): WorkspaceProductRead => ({
@@ -50,7 +51,7 @@ function fixture() {
     available: operations,
   };
   const page = (items: any[]) => ({ schema_version: 2, items, as_of: point, next_cursor: null });
-  const host: V4HostAdapter = {
+  const host: HostFixture = {
     snapshot: () => snapshot,
     subscribe: () => () => {},
     query: vi.fn(async (op) =>
@@ -107,7 +108,7 @@ function fixture() {
     }),
     announce: vi.fn(),
   };
-  const c = new WorkspaceSlotController(host);
+  const c = new WorkspaceSlotController(fixtureHost(host));
   c.update(snapshot);
   return {
     c,

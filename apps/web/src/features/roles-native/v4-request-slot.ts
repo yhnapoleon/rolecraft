@@ -1,3 +1,4 @@
+import type { CommandInput } from '../../v4-host-operations';
 /** Resource negotiation inside v4's existing res-form; no independent panel or rule engine. */
 import type { V4SlotContext, V4SlotHandle, V4HostSnapshot, V4CommandResult } from '../../v4-host';
 import type { EvidenceRefV2 } from '../../contracts-v2';
@@ -120,7 +121,9 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     !host.snapshot().storageError &&
     host.snapshot().state === 'active' &&
     !!host.snapshot().available[
-      ['request_business', 'accept_counteroffer'].includes(operation) ? 'actions' : operation
+      operation === 'request_business' || operation === 'accept_counteroffer'
+        ? 'actions'
+        : operation
     ];
   const fail = () => {
     if (!disposed)
@@ -199,7 +202,10 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     renderControls();
     await refresh();
   }
-  async function command(operation: string, input: Record<string, unknown>) {
+  async function command(
+    operation: 'request_business' | 'accept_counteroffer' | 'approvals.resolve',
+    input: CommandInput<'actions' | 'approvals.resolve'>,
+  ) {
     if (!writable(operation)) throw Error('Command unavailable');
     knownFailure = false;
     busy = true;
@@ -212,7 +218,9 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       session(host, sid);
       dispatched = true;
       result = await host.command(
-        ['request_business', 'accept_counteroffer'].includes(operation) ? 'actions' : operation,
+        operation === 'request_business' || operation === 'accept_counteroffer'
+          ? 'actions'
+          : operation,
         input,
       );
       await rememberRequest(host, 'resource-requests', result);

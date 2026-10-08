@@ -1,3 +1,4 @@
+import { fixtureHost, type HostFixture } from '../../host-test-support';
 /** Controlled host fixture, loaded only by test-page.html?mode=v4-slot. Not a runtime or v4 product route. */
 import type { V4HostAdapter, V4HostSnapshot, V4CommandResult } from '../../v4-host';
 import type { ObjectRef, EvidenceRefV2 } from '../../contracts-v2';
@@ -74,7 +75,7 @@ export async function start(root: HTMLElement, useRealHost = false) {
     rows
       .filter((r) => r.ref.kind === kind && r.ref.object_id === id)
       .sort((a, b) => b.ref.version - a.ref.version)[0];
-  const controlled: V4HostAdapter = {
+  const controlled: HostFixture = {
     snapshot: () => snapshot,
     subscribe: (fn) => {
       listeners.add(fn);
@@ -335,7 +336,7 @@ export async function start(root: HTMLElement, useRealHost = false) {
           return result;
         },
       }))
-    : controlled;
+    : fixtureHost(controlled);
   if (useRealHost) await host.query('workbench.read');
   let role = mountRole({ host, nodes: { thread, composer } });
   let requests = mountRequests({ host, nodes: { form, results } });

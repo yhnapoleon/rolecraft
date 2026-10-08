@@ -65,6 +65,7 @@ async function saveAndShare(context) {
     `document.querySelector('[data-v4-insertion="sharing"]')
       ?.innerText.includes(${JSON.stringify(text('可见', 'Visible'))})`,
   );
+  await waitFor(browser, `!!document.querySelector('.rc-roles__reply')`);
   await shot('shared');
 }
 
@@ -90,6 +91,13 @@ async function recoverAccess(context) {
       return (await host.query('delegations.list')).items.length;
     })()`);
   assert.equal(count, 1);
+  await waitFor(
+    browser,
+    `(() => {
+    const input = document.querySelector('.agent-v4-grant [name="agentName"]');
+    return !!input && !input.disabled;
+  })()`,
+  );
   await shot('recovered-access');
 }
 
@@ -133,7 +141,16 @@ async function reviseAndReadHistory(context) {
   await clickReady(browser, text('开始修订', 'Start a revision'));
   await waitFor(browser, `window.PracticeLive.store.active().world.status === 'active'`);
   await browser.goto(`${base}#/review`);
-  await waitFor(browser, `!!document.querySelector('.native-feedback')`);
+  await waitFor(
+    browser,
+    `document.querySelector('.native-feedback [role="status"]')
+    ?.textContent === ${JSON.stringify(
+      text(
+        '可以继续工作，选择准备交付的版本。',
+        'Continue your work and select versions for submission.',
+      ),
+    )}`,
+  );
   await shot('history');
   assert.equal(
     await browser.ev(`document.documentElement.scrollWidth > document.documentElement.clientWidth`),
@@ -150,7 +167,20 @@ async function runLanguage(language) {
     results.push({ language, name, status: 'passed' });
     console.log(`PASS ${language}: ${name}`);
   };
-  const shot = (name) => browser.shot(`${output}/screenshots/${language}-${name}.jpg`);
+  const shot = async (name) => {
+    if (name !== 'failure') {
+      await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 0, y: 0 });
+      await waitFor(browser, `!document.querySelector('#toast.visible')`);
+      // Normalize the camera position only. Do not edit DOM content or saved UI state.
+      await browser.ev(`(() => {
+        window.scrollTo(0, 0);
+        for (const node of document.querySelectorAll('*')) {
+          if (/auto|scroll/.test(getComputedStyle(node).overflowY)) node.scrollTop = 0;
+        }
+      })()`);
+    }
+    return browser.shot(`${output}/screenshots/${language}-${name}.jpg`);
+  };
   const title = text('回归：试点决定', 'Regression: pilot decision');
   const draft = text(
     '负责人和范围核实前暂缓，保留人工兜底。',

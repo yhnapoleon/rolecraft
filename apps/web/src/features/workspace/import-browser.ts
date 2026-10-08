@@ -56,7 +56,7 @@ export async function buildBrowserImport(
   attempt: any,
   selection: { taskIds: string[]; productIds: string[] },
   packageId?: string,
-): Promise<WorkspaceImport> {
+): Promise<WorkspaceImport & { mode: 'preview' }> {
   if (
     !attempt ||
     typeof attempt.id !== 'string' ||

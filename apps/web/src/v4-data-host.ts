@@ -15,6 +15,17 @@ import type {
   WorkLanguage,
 } from './v4-host';
 import { readRoute, commandRoute, type Route } from './v4-operations';
+import type {
+  V4Query,
+  V4Command,
+  QueryArguments,
+  QueryOutput,
+  CommandInput,
+  CommandOutput,
+  CommandFailure,
+  RecoveryResult,
+  WorkbenchContext,
+} from './v4-host-operations';
 
 type Input = Readonly<Record<string, unknown>>;
 type V2Binding = Extract<V4SessionBinding, { protocol: 2 }>;
@@ -76,7 +87,7 @@ export class V4DataHost implements V4HostAdapter {
   private busy = false;
   private storageError = false;
   private local: V4LocalRecord;
-  private context: any;
+  private context: WorkbenchContext | undefined;
   private contextKey = '';
   private readonly unsavedDrafts = new Map<
     string,
@@ -195,13 +206,14 @@ export class V4DataHost implements V4HostAdapter {
       },
     });
   }
+  query<K extends V4Query>(operation: K, ...args: QueryArguments<K>): Promise<QueryOutput<K>>;
   async query(operation: string, input: Input = {}): Promise<unknown> {
     if (input.session_id != null && input.session_id !== this.ports.binding.sessionId)
       throw new ApiError('Reference belongs to another session', 404, 'session_binding_mismatch');
     if (operation === 'workspace_imports') {
       if (input.mode !== 'preview')
         throw new ApiError('Only an import preview is a query', 400, 'invalid_read');
-      const state: any = await this.query('session.read');
+      const state = await this.query('session.read');
       if (!point(state)) throw unconfirmed();
       const preview: any = await this.raw(this.path('/workspace-imports'), {
         schema_version: 2,
@@ -260,6 +272,10 @@ export class V4DataHost implements V4HostAdapter {
     this.ports.didRead?.(operation, copy(value), input);
     return value;
   }
+  command<K extends V4Command>(
+    operation: K,
+    input: CommandInput<K>,
+  ): Promise<V4CommandResult<CommandOutput<K> | CommandFailure | null>>;
   async command(operation: string, input: Input): Promise<V4CommandResult> {
     // Service-mode control plane: the create response carries a private secret. Only a token-free
     // request record is journaled, and only the token-free outcome is returned to the slot.
@@ -486,7 +502,7 @@ export class V4DataHost implements V4HostAdapter {
     this.busy = true;
     this.emit();
     try {
-      const state: any = await this.query('session.read');
+      const state = await this.query('session.read');
       if (state?.session_id !== this.ports.binding.sessionId || !point(state)) throw unconfirmed();
       const requestId = crypto.randomUUID();
       const command: Command = {
@@ -607,6 +623,7 @@ export class V4DataHost implements V4HostAdapter {
       )
       .map((e) => copy(e.outcome));
   }
+  recover(requestId: string): Promise<V4CommandResult<RecoveryResult>>;
   async recover(requestId: string): Promise<V4CommandResult> {
     return this.exclusive(async () => {
       this.reload();

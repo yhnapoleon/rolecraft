@@ -1,3 +1,4 @@
+import type { V4Command, CommandInput } from '../../v4-host-operations';
 import type { V4CommandResult, V4HostSnapshot, V4SlotContext, V4SlotHandle } from '../../v4-host';
 import {
   activities,
@@ -265,7 +266,7 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
     await saveDraft();
     if (!destroyed) await refresh();
   }
-  async function command(operation: string, input: Record<string, unknown>) {
+  async function command<K extends V4Command>(operation: K, input: CommandInput<K>) {
     if (destroyed || locked() || draft.pending || !available(operation)) return;
     inFlight = true;
     renderControls();

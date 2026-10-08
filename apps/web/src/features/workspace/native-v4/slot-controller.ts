@@ -1,3 +1,4 @@
+import type { V4Query, QueryInput, V4Command, CommandInput } from '../../../v4-host-operations';
 import type { V4HostAdapter, V4CommandResult, V4HostSnapshot } from '../../../v4-host';
 import type {
   ObjectRef,
@@ -303,8 +304,8 @@ export class WorkspaceSlotController {
     await this.host.flushDrafts();
   }
   private async pages<T>(
-    operation: string,
-    input: Record<string, unknown>,
+    operation: V4Query,
+    input: QueryInput<V4Query>,
     kind: 'task' | 'product' | 'share',
     sid: string,
   ) {
@@ -469,7 +470,7 @@ export class WorkspaceSlotController {
     )
       this.host.selectProduct(productRef(product as WorkspaceProductRead));
   }
-  async command(operation: string, input: Record<string, unknown>, draft?: SlotDraft) {
+  async command<K extends V4Command>(operation: K, input: CommandInput<K>, draft?: SlotDraft) {
     if (!this.can(operation) || this.blocked()) throw Error('action_unavailable');
     const sid = this.session();
     this.inFlight = true;

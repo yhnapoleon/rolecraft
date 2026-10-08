@@ -1,3 +1,5 @@
+import type { V4Command } from './v4-host-operations';
+import type { V4CommandResult } from './v4-host';
 /** v2 data projection into the existing v4 view model. No UI or second journal. */
 import { V4DataHost } from './v4-data-host';
 import { locale, T } from './app/i18n';
@@ -93,7 +95,7 @@ export class V4LiveData {
     try {
       const host = this.host(session);
       await host.ensureFeedbackPointer();
-      const context: any = await host.query('workbench.read');
+      const context = await host.query('workbench.read');
       const s = this.current(session.id),
         timeline = context.timeline,
         w = timeline.workspace,
@@ -114,7 +116,7 @@ export class V4LiveData {
         config_version: config.config_version,
       });
       const rows: any[] = timeline.objects;
-      const materials: Material[] = context.materials.materials.map((m: any) => {
+      const materials: Material[] = context.materials.materials.map((m) => {
         const previous = s.materials.find((p) => p.id === m.id && p.version === m.version);
         return { id: m.id, version: m.version, title: m.title, content: previous?.content ?? '' };
       });
@@ -190,7 +192,7 @@ export class V4LiveData {
         timeline: {
           mode: context.semantic.roles,
           turns,
-          events: (timeline.events ?? []).map((e: any) => ({
+          events: (timeline.events ?? []).map((e) => ({
             seq: e.seq,
             event_type: e.type === 'material_read' ? 'read_material' : e.type,
             actor_id: e.executor.id,
@@ -219,7 +221,7 @@ export class V4LiveData {
   ) {
     const host = this.host(session);
     this.store.report({ error: '', notice: '' });
-    let operation: string, input: Record<string, unknown>;
+    let operation: V4Command, input: Record<string, unknown>;
     if (kind === 'test') {
       operation = 'tests.create';
       input = { query: body.query, config_version: body.config_version };
@@ -277,7 +279,15 @@ export class V4LiveData {
         409,
         'native_slot_required',
       );
-    const result = await host.command(operation, input);
+    // This pre-existing v1-shaped bridge is removed region by region. It shares the
+    // same host command journal; native slots use the operation-specific signature.
+    const legacyPort: {
+      command(
+        operation: V4Command,
+        input: Readonly<Record<string, unknown>>,
+      ): Promise<V4CommandResult>;
+    } = host;
+    const result = await legacyPort.command(operation, input);
     if (result.status === 'unconfirmed' || result.status === 'failed')
       throw new ApiError(
         T('请求尚未成功确认，输入已保留。', 'The request is not confirmed; your input is kept.'),
