@@ -11,13 +11,13 @@
         "scenario": {
           "schema_version": 2,
           "path": "manifest.json",
-          "sha256": "fb3735b5c66c7da57380650a05e1eeb8b573d33aea931016b6da9b7a88bcc967",
+          "sha256": "936ef761651b177ec66435a5de66ae33cbce562676e63a7bc5f3ff90208a959f",
           "media_type": "application/json"
         },
         "runtime": {
           "schema_version": 2,
           "path": "runtime/bundle.json",
-          "sha256": "6e3ebca4843b55c77aca748fb08ad4650f89dd207f2218a9f0694b603cd3d2f6",
+          "sha256": "96c65e273ab8bb37f870099d1afd3af920ce164e431b410683a64351dc1eb9df",
           "media_type": "application/json"
         },
         "evaluation": {
@@ -40,7 +40,7 @@
       "review": {
         "schema_version": 2,
         "path": "reviews/content-continuity-2.9.6.json",
-        "sha256": "e9f31d15614faec8d04ebd92e5d90fa52bdb5e4dc266f0489acc815bdf0366c1",
+        "sha256": "07d267b17202472606ed761a9e1b201f60b70a0a1555612f9c0c3a9f9af8b7c7",
         "media_type": "application/json"
       },
       "component_id": "pm_pilot_v2_family"
@@ -55,13 +55,13 @@
         "scenario": {
           "schema_version": 2,
           "path": "manifest.json",
-          "sha256": "4c39918e5f4bf77fd5fbdc5b8f9e6d0ce1fa04b8324febc905047655e548d4c1",
+          "sha256": "4809238c7defb485b6f82658ad1a222bc507fda9ed60e503712edf07c72abf24",
           "media_type": "application/json"
         },
         "runtime": {
           "schema_version": 2,
           "path": "runtime/bundle.json",
-          "sha256": "46b05cf3050e9c164592af0889d245f47a0298d9e5c0786f663c9e81ae5437c0",
+          "sha256": "75dec2d56e4b93790c9e5d5d86348fce61c866717d79bbb11a913b205fb096ef",
           "media_type": "application/json"
         },
         "evaluation": {
@@ -84,7 +84,7 @@
       "review": {
         "schema_version": 2,
         "path": "reviews/content-continuity-2.9.6.json",
-        "sha256": "e9f31d15614faec8d04ebd92e5d90fa52bdb5e4dc266f0489acc815bdf0366c1",
+        "sha256": "07d267b17202472606ed761a9e1b201f60b70a0a1555612f9c0c3a9f9af8b7c7",
         "media_type": "application/json"
       },
       "component_id": "pm_pilot_v2_family"
@@ -99,13 +99,13 @@
         "scenario": {
           "schema_version": 2,
           "path": "manifest.json",
-          "sha256": "ad3204fd13a860a7e7d712882e683aa03cb9b306166e0c1056e1bc71cff9faee",
+          "sha256": "355d1cb2d6e1f6999acdd0c35ac4f022e7e919b4542628431f728de910fc7c67",
           "media_type": "application/json"
         },
         "runtime": {
           "schema_version": 2,
           "path": "runtime/bundle.json",
-          "sha256": "6e3ebca4843b55c77aca748fb08ad4650f89dd207f2218a9f0694b603cd3d2f6",
+          "sha256": "96c65e273ab8bb37f870099d1afd3af920ce164e431b410683a64351dc1eb9df",
           "media_type": "application/json"
         },
         "evaluation": {
@@ -128,7 +128,7 @@
       "review": {
         "schema_version": 2,
         "path": "reviews/content-continuity-2.9.6.json",
-        "sha256": "e9f31d15614faec8d04ebd92e5d90fa52bdb5e4dc266f0489acc815bdf0366c1",
+        "sha256": "07d267b17202472606ed761a9e1b201f60b70a0a1555612f9c0c3a9f9af8b7c7",
         "media_type": "application/json"
       },
       "component_id": "pm_pilot_v2_family"
@@ -143,13 +143,13 @@
         "scenario": {
           "schema_version": 2,
           "path": "manifest.json",
-          "sha256": "a4eeb6159d0a432318f8ecb60cd6ddde90bbbfcb932b0f62eb35154e7698a470",
+          "sha256": "44907c23bd12fa6d7cd099f7009eccf7b730f1d78ecaa7146398f5c1771ecfa9",
           "media_type": "application/json"
         },
         "runtime": {
           "schema_version": 2,
           "path": "runtime/bundle.json",
-          "sha256": "46b05cf3050e9c164592af0889d245f47a0298d9e5c0786f663c9e81ae5437c0",
+          "sha256": "75dec2d56e4b93790c9e5d5d86348fce61c866717d79bbb11a913b205fb096ef",
           "media_type": "application/json"
         },
         "evaluation": {
@@ -172,17 +172,17 @@
       "review": {
         "schema_version": 2,
         "path": "reviews/content-continuity-2.9.6.json",
-        "sha256": "e9f31d15614faec8d04ebd92e5d90fa52bdb5e4dc266f0489acc815bdf0366c1",
+        "sha256": "07d267b17202472606ed761a9e1b201f60b70a0a1555612f9c0c3a9f9af8b7c7",
         "media_type": "application/json"
       },
       "component_id": "pm_pilot_v2_family"
     }
   ],
   "roots_by_scenario_hash": {
-    "fb3735b5c66c7da57380650a05e1eeb8b573d33aea931016b6da9b7a88bcc967": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent",
-    "4c39918e5f4bf77fd5fbdc5b8f9e6d0ce1fa04b8324febc905047655e548d4c1": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent/locales/en",
-    "ad3204fd13a860a7e7d712882e683aa03cb9b306166e0c1056e1bc71cff9faee": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15",
-    "a4eeb6159d0a432318f8ecb60cd6ddde90bbbfcb932b0f62eb35154e7698a470": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15/locales/en"
+    "936ef761651b177ec66435a5de66ae33cbce562676e63a7bc5f3ff90208a959f": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent",
+    "4809238c7defb485b6f82658ad1a222bc507fda9ed60e503712edf07c72abf24": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent/locales/en",
+    "355d1cb2d6e1f6999acdd0c35ac4f022e7e919b4542628431f728de910fc7c67": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15",
+    "44907c23bd12fa6d7cd099f7009eccf7b730f1d78ecaa7146398f5c1771ecfa9": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15/locales/en"
   },
   "review_scope": "independently approved unchanged authored content; derived evaluation runtime author validated separately; no v4 or learning-gain claim",
   "normal_entry_enabled": false,

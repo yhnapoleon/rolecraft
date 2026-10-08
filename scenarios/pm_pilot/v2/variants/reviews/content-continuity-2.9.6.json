@@ -18,7 +18,7 @@
       "scenario_id": "pm_pilot_urgent",
       "work_language": "zh",
       "reviewed_source_hash": "09604036833180f0f5d16185798f24cb13e04184d86fa5b6c97a3cd09abea505",
-      "installed_scenario_hash": "fb3735b5c66c7da57380650a05e1eeb8b573d33aea931016b6da9b7a88bcc967",
+      "installed_scenario_hash": "936ef761651b177ec66435a5de66ae33cbce562676e63a7bc5f3ff90208a959f",
       "authored_content_digest": "e389d2e90301a429f6130340bfb35f1b1fd1f291b41c6ca8ed89ac2f7c128a2b",
       "previous_installed_scenario_hash": "85463c3bcfe960ef79f8626743caf634b9adf058c3691927aefead3fc8e4f9af"
     },
@@ -26,7 +26,7 @@
       "scenario_id": "pm_pilot_urgent",
       "work_language": "en",
       "reviewed_source_hash": "6d151e276528bf27132d136b2a41bc256b7a6437f193c101596091484e252750",
-      "installed_scenario_hash": "4c39918e5f4bf77fd5fbdc5b8f9e6d0ce1fa04b8324febc905047655e548d4c1",
+      "installed_scenario_hash": "4809238c7defb485b6f82658ad1a222bc507fda9ed60e503712edf07c72abf24",
       "authored_content_digest": "ce2db9abe4b63504386b3200a9aa5df820facf85e551aa997a9753d4eeadec07",
       "previous_installed_scenario_hash": "8770eab8a4b7bfae9d3aa921a4362a8b3efb3e24c9141b299adb65627689ac01"
     },
@@ -34,7 +34,7 @@
       "scenario_id": "pm_pilot_capacity15",
       "work_language": "zh",
       "reviewed_source_hash": "0348f566f4f2f112d4e2f80e72e735c58c87a38f86991b347c6d5215981d36c7",
-      "installed_scenario_hash": "ad3204fd13a860a7e7d712882e683aa03cb9b306166e0c1056e1bc71cff9faee",
+      "installed_scenario_hash": "355d1cb2d6e1f6999acdd0c35ac4f022e7e919b4542628431f728de910fc7c67",
       "authored_content_digest": "bef93b1126f3d2e7fb530a9e3ecc3beec02675984a549cc347fb2ad3b0e20f1b",
       "previous_installed_scenario_hash": "d33aaac616a1b9b7406cdbf0ebd23f6d289cde53a6287e1c230d0b503a3760e1"
     },
@@ -42,12 +42,12 @@
       "scenario_id": "pm_pilot_capacity15",
       "work_language": "en",
       "reviewed_source_hash": "0e434a840f5fbb8e540f4ac5ce9aa9b5b3351373c0e982e4e2c7b7924f08f19b",
-      "installed_scenario_hash": "a4eeb6159d0a432318f8ecb60cd6ddde90bbbfcb932b0f62eb35154e7698a470",
+      "installed_scenario_hash": "44907c23bd12fa6d7cd099f7009eccf7b730f1d78ecaa7146398f5c1771ecfa9",
       "authored_content_digest": "8bffeec973e2592450f1f9fabf5fbd596de03259f7088c6a0fcaa9b0b9bad6e9",
       "previous_installed_scenario_hash": "915e76cfa8cf51dcb366d246998f4a713ed8b8ba0a50d82200727346d8bedfed"
     }
   ],
-  "public_contract_revision": "expansion-v3-805c1a7c37fd3ed124305e276b00f18717836eaed502a2213f4d436828f04fa9",
+  "public_contract_revision": "expansion-v3-7f64f17784ad7756fefc53682954b1318bddb58eecdc5dbe645f3187cbc321ed",
   "previous_continuity": {
     "path": "reviews/content-continuity-2.9.5.json",
     "sha256": "a97143ad10aa42f91eeaaa1e19b3dda8603dff64a7d806434715b26d8674c480"

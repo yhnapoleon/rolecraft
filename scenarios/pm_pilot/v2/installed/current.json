@@ -4,7 +4,7 @@
   "main": {
     "zh": {
       "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot",
-      "scenario_hash": "65b58fc4d61ffa89f07926b915d2db523af773080f4dfb1a64af0cf060910ef6",
+      "scenario_hash": "8943b931f6cfe0f4d48efab8672a7e229566b8757993fffb1c440685b4c3f278",
       "evaluation": {
         "schema_version": 2,
         "path": "runtime/evaluation.json",
@@ -14,7 +14,7 @@
     },
     "en": {
       "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot/locales/en",
-      "scenario_hash": "b03ed3472cce3e156a96f31bf9505b0c8705798787cd476ffddcf0723dae2708",
+      "scenario_hash": "43e77059fc825d0a144f6968bf96f9f8725b743730c4050352390b608dae8de4",
       "evaluation": {
         "schema_version": 2,
         "path": "runtime/evaluation.json",
@@ -25,7 +25,7 @@
   },
   "practice_catalog": "scenarios/pm_pilot/v2/variants/reviewed-options-2.9.6.json",
   "source_inputs": {
-    "public_commit": "db3f818e5af6d2cc5225cf4ae4c5f633fda38c37",
+    "public_commit": "0e1bd8b02fc2fcc280ef49684f6d8e7b81bc8bd8",
     "w05_commit": "e2316724a4a9776ce60ea5364e9415d111c4b4ae",
     "release_tool_commit": "15f9cdc1ca39a8f391d603fb9f84ff40be150273"
   },

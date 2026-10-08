@@ -229,7 +229,7 @@
     {
       "schema_version": 2,
       "path": "runtime/bundle.json",
-      "sha256": "559f7bf88ee90dea77251294f77129cfe20fa501372031df930b78d3f8bbc28e",
+      "sha256": "b95257376f5321dab8a383decc8316f4d56e837c91af1db50822886be41f2673",
       "media_type": "application/json"
     },
     {
@@ -265,7 +265,7 @@
     {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "79229b23018b2f133df3783a5bc71056b08157d261ca850a0e36e2990d726b10",
+      "sha256": "50c8447b6676d1af011e3fbaedbdd7b8d48a032e8853490bfe4f0cb95a58e3da",
       "media_type": "application/json"
     },
     {

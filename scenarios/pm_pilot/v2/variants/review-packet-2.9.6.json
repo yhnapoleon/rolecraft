@@ -20,9 +20,9 @@
       "locales": {
         "zh": {
           "revision": "2.9.6",
-          "scenario_hash": "fb3735b5c66c7da57380650a05e1eeb8b573d33aea931016b6da9b7a88bcc967",
+          "scenario_hash": "936ef761651b177ec66435a5de66ae33cbce562676e63a7bc5f3ff90208a959f",
           "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent",
-          "runtime_hash": "6e3ebca4843b55c77aca748fb08ad4650f89dd207f2218a9f0694b603cd3d2f6",
+          "runtime_hash": "96c65e273ab8bb37f870099d1afd3af920ce164e431b410683a64351dc1eb9df",
           "evaluation_hash": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
           "review_reading": {
             "materials/brief-v1.md": "2c42a3ce06307ba38298606b34b601a9bba2fb07b73cda0f0aca3718b16c4310",
@@ -44,13 +44,13 @@
           "previous_reviewed_scenario_hash": "09604036833180f0f5d16185798f24cb13e04184d86fa5b6c97a3cd09abea505",
           "initial_snapshot_scope": "Original 2.9.0 source snapshot retained; 2.9.6 binding/startup verified separately",
           "historical_standard_evidence": "runs/local/expansion-v3/W02/20261007-051-a577-rebind/standard-core-04/pm_pilot_urgent-zh/result.json",
-          "current_startup_evidence": "runs/local/merge-fixes-20261008/056-merge/final-release/release-startup/pm_pilot_urgent-zh/rebind.json"
+          "current_startup_evidence": "runs/local/merge-fixes-20261008/056-merge/entry-fix-release/release-startup/pm_pilot_urgent-zh/rebind.json"
         },
         "en": {
           "revision": "2.9.6",
-          "scenario_hash": "4c39918e5f4bf77fd5fbdc5b8f9e6d0ce1fa04b8324febc905047655e548d4c1",
+          "scenario_hash": "4809238c7defb485b6f82658ad1a222bc507fda9ed60e503712edf07c72abf24",
           "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent/locales/en",
-          "runtime_hash": "46b05cf3050e9c164592af0889d245f47a0298d9e5c0786f663c9e81ae5437c0",
+          "runtime_hash": "75dec2d56e4b93790c9e5d5d86348fce61c866717d79bbb11a913b205fb096ef",
           "evaluation_hash": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
           "review_reading": {
             "materials/brief-v1.md": "8b843fae2248cd880c1a520fbd1acd3e862ccad1bfe74d74666815db91deda46",
@@ -72,7 +72,7 @@
           "previous_reviewed_scenario_hash": "6d151e276528bf27132d136b2a41bc256b7a6437f193c101596091484e252750",
           "initial_snapshot_scope": "Original 2.9.0 source snapshot retained; 2.9.6 binding/startup verified separately",
           "historical_standard_evidence": "runs/local/expansion-v3/W02/20261007-051-a577-rebind/standard-core-04/pm_pilot_urgent-en/result.json",
-          "current_startup_evidence": "runs/local/merge-fixes-20261008/056-merge/final-release/release-startup/pm_pilot_urgent-en/rebind.json"
+          "current_startup_evidence": "runs/local/merge-fixes-20261008/056-merge/entry-fix-release/release-startup/pm_pilot_urgent-en/rebind.json"
         }
       },
       "review_verdict": "pending_targeted_revision_review"
@@ -87,9 +87,9 @@
       "locales": {
         "zh": {
           "revision": "2.9.6",
-          "scenario_hash": "ad3204fd13a860a7e7d712882e683aa03cb9b306166e0c1056e1bc71cff9faee",
+          "scenario_hash": "355d1cb2d6e1f6999acdd0c35ac4f022e7e919b4542628431f728de910fc7c67",
           "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15",
-          "runtime_hash": "6e3ebca4843b55c77aca748fb08ad4650f89dd207f2218a9f0694b603cd3d2f6",
+          "runtime_hash": "96c65e273ab8bb37f870099d1afd3af920ce164e431b410683a64351dc1eb9df",
           "evaluation_hash": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
           "review_reading": {
             "materials/brief-v1.md": "145dac78a7407b9d184cc867b722514e41031ca535d83e64a6cafeb8df8449a4",
@@ -111,13 +111,13 @@
           "previous_reviewed_scenario_hash": "0348f566f4f2f112d4e2f80e72e735c58c87a38f86991b347c6d5215981d36c7",
           "initial_snapshot_scope": "Original 2.9.0 source snapshot retained; 2.9.6 binding/startup verified separately",
           "historical_standard_evidence": "runs/local/expansion-v3/W02/20261007-051-a577-rebind/standard-core-04/pm_pilot_capacity15-zh/result.json",
-          "current_startup_evidence": "runs/local/merge-fixes-20261008/056-merge/final-release/release-startup/pm_pilot_capacity15-zh/rebind.json"
+          "current_startup_evidence": "runs/local/merge-fixes-20261008/056-merge/entry-fix-release/release-startup/pm_pilot_capacity15-zh/rebind.json"
         },
         "en": {
           "revision": "2.9.6",
-          "scenario_hash": "a4eeb6159d0a432318f8ecb60cd6ddde90bbbfcb932b0f62eb35154e7698a470",
+          "scenario_hash": "44907c23bd12fa6d7cd099f7009eccf7b730f1d78ecaa7146398f5c1771ecfa9",
           "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15/locales/en",
-          "runtime_hash": "46b05cf3050e9c164592af0889d245f47a0298d9e5c0786f663c9e81ae5437c0",
+          "runtime_hash": "75dec2d56e4b93790c9e5d5d86348fce61c866717d79bbb11a913b205fb096ef",
           "evaluation_hash": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
           "review_reading": {
             "materials/brief-v1.md": "61da3cc1bb4d223174624fe701710e67900f71d16f236a5baf022a2ee4438353",
@@ -139,7 +139,7 @@
           "previous_reviewed_scenario_hash": "0e434a840f5fbb8e540f4ac5ce9aa9b5b3351373c0e982e4e2c7b7924f08f19b",
           "initial_snapshot_scope": "Original 2.9.0 source snapshot retained; 2.9.6 binding/startup verified separately",
           "historical_standard_evidence": "runs/local/expansion-v3/W02/20261007-051-a577-rebind/standard-core-04/pm_pilot_capacity15-en/result.json",
-          "current_startup_evidence": "runs/local/merge-fixes-20261008/056-merge/final-release/release-startup/pm_pilot_capacity15-en/rebind.json"
+          "current_startup_evidence": "runs/local/merge-fixes-20261008/056-merge/entry-fix-release/release-startup/pm_pilot_capacity15-en/rebind.json"
         }
       },
       "review_verdict": "pending_targeted_revision_review"
@@ -161,7 +161,7 @@
   },
   "derivation_proof": {
     "path": "scenarios/pm_pilot/v2/variants/reviews/content-continuity-2.9.6.json",
-    "sha256": "e9f31d15614faec8d04ebd92e5d90fa52bdb5e4dc266f0489acc815bdf0366c1"
+    "sha256": "07d267b17202472606ed761a9e1b201f60b70a0a1555612f9c0c3a9f9af8b7c7"
   },
   "review_scope": "Current 2.9.6 content continuity and two bilingual practice constraints; not W02 whole-package/runtime/UI acceptance",
   "limitations": [

@@ -217,7 +217,7 @@
     {
       "schema_version": 2,
       "path": "runtime/bundle.json",
-      "sha256": "cdd1936ee6c8519dea6d06379f95f16cea398045901b3694af382c02cbe562f3",
+      "sha256": "6db5e8aebe2968e1c99adeaf6146fe358a3b1f01796fa7a2bb15d9c8de67881e",
       "media_type": "application/json"
     },
     {
@@ -253,7 +253,7 @@
     {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "0572db62abfe8778a72cd056575a192256a4363e0c0b82b3bdc43c498b00ba7c",
+      "sha256": "d4b04ecb4bb6f779bac6836228d44dd6c0c2f9fdfa9f65e3dfa091790d237cf4",
       "media_type": "application/json"
     },
     {
