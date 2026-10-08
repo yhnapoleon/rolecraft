@@ -2,10 +2,11 @@
 import { mountWorkspaceSlot } from './features/workspace/native-v4/v4-slot';
 import { mount as mountRoles } from './features/roles-native/v4-slot';
 import { mount as mountResources } from './features/roles-native/v4-request-slot';
-import { mountV4Feedback } from './features/feedback-native/v4-slot';
+import { FeedbackRegions } from './features/feedback-native/regions';
+import { surfaceHost } from './v4-surface-host';
 import { mountV4AgentSlot } from './features/agent-native/v4-slot';
 import type { V4DataHost } from './v4-data-host';
-import type { V4HostAdapter, V4SlotContext, V4SlotHandle } from './v4-host';
+import type { V4SlotContext, V4SlotHandle } from './v4-host';
 import type { LocalSession } from './types';
 import { T } from './app/i18n';
 
@@ -14,8 +15,10 @@ type Mounted = { host: V4DataHost; root: HTMLElement; content: Element | null; h
 export class V4Mounts {
   private mounted = new Map<string, Mounted>();
   private generation = 0;
+  private readonly feedback = new FeedbackRegions();
   destroy() {
     this.generation++;
+    this.feedback.destroy();
     for (const item of this.mounted.values()) { item.handle.destroy(); item.clean(); }
     this.mounted.clear();
   }
@@ -30,9 +33,6 @@ export class V4Mounts {
     const chat = doc.querySelector<HTMLElement>('#ws-rail .chat');
     if (chat) roots.set('roles', chat);
     if (sheet?.open && sheet.querySelector('#res-form')) roots.set('resource-requests', sheet.querySelector('.sheet-body')!);
-    if (sheet?.open && sheet.querySelector('[data-v4-submission]')) roots.set('submission', sheet.querySelector('[data-v4-submission]')!);
-    const feedback = doc.querySelector<HTMLElement>('[data-v4-feedback]');
-    if (feedback) roots.set('feedback', feedback);
     const agentPanel = doc.querySelector<HTMLElement>('#ws-rail .agent-panel[data-agent-native]');
     if (agentPanel && session.v2NativeWorkspace) roots.set('agent', agentPanel);
     for (const [id, current] of this.mounted) {
@@ -47,6 +47,7 @@ export class V4Mounts {
       product ? { session_id: session.id, kind: 'product', object_id: product.product_id, version: product.version } : null);
     await host.flushDrafts();
     if (epoch !== this.generation) return;
+    this.feedback.sync(doc, host);
     for (const [id, root] of roots) {
       if (this.mounted.has(id)) { this.mounted.get(id)!.handle.update(host.snapshot()); continue; }
       const owned: HTMLElement[] = [], restore: (() => void)[] = [];
@@ -112,24 +113,12 @@ export class V4Mounts {
       // A completion from a destroyed surface may save its authorized command,
       // but must not navigate the user back to a surface they already left.
       let alive = true;
-      const adapter: V4HostAdapter = {
-        snapshot: () => host.snapshot(), subscribe: fn => host.subscribe(fn), query: (op, input) => host.query(op, input),
-        command: (op, input) => host.command(op, input), recover: id => host.recover(id), retry: id => host.retry(id),
-        draft: (slot, key) => host.draft(slot, key), keepDraft: (slot, key, value) => host.keepDraft(slot, key, value), flushDrafts: () => host.flushDrafts(),
-        openReference: ref => host.openReference(ref), chooseEvidence: () => host.chooseEvidence(),
-        selectTask: ref => { if (alive) host.selectTask(ref); }, selectProduct: ref => { if (alive) host.selectProduct(ref); },
-        announce: (message, kind) => { if (alive) host.announce(message, kind); },
-      };
+      const adapter = surfaceHost(host, () => alive);
       const context: V4SlotContext = { host: adapter, nodes };
       const handle = id === 'agent' ? mountV4AgentSlot(context)
         : id === 'roles' ? mountRoles(context)
         : id === 'resource-requests' ? mountResources(context)
-        : id === 'submission' || id === 'feedback' ? mountV4Feedback({ ...context, surface: id === 'submission' ? 'submission' : 'feedback' })
         : mountWorkspaceSlot(context);
-      if (id === 'feedback' && root.dataset.openReview === 'true') {
-        const form=root.querySelector<HTMLDetailsElement>('section[aria-label="作品评审"] details, section[aria-label="Artifact review"] details');
-        if(form)form.open=true;
-      }
       this.mounted.set(id, { host, root, content: root.firstElementChild, handle, clean: () => { alive = false; restore.forEach(fn => fn()); owned.forEach(n => n.remove()); } });
     }
   }

@@ -1047,7 +1047,10 @@ function msgHtml(a, role, m) {
   return `<div class="msg ${mine ? 'me' : 'them'}${local ? ' local' : ''}"><div class="bubble"${zhAttr(m.text)}>${mine ? esc(text) : md(text)}</div>${time || tag || (mine && tk) ? `<span class="msg-foot">${tag}${mine && tk ? (task ? `<button type="button" class="msg-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : `<span class="msg-task" title="${esc(tk)}">${esc(T('关联事项：', 'Linked task: ') + Array.from(String(tk)).slice(0, 8).join('') + (Array.from(String(tk)).length > 8 ? '…' : ''))}</span>`) : ''}${time ? `<time title="${esc(time)}">${when(time)}</time>` : ''}</span>` : ''}</div>`;
 }
 function railFeedback(a, t) {
-  if (L.nativeWorkspace(a)) return `<div class="rail-pad fb-pad" data-v4-feedback data-open-review="${!!ui.reviewFor}"></div>`;
+  if (L.nativeWorkspace(a)) {
+    return `<div class="rail-pad fb-pad" data-v4-feedback
+      data-v4-region="feedback" data-open-review="${!!ui.reviewFor}"></div>`;
+  }
   const scoped = t && !ui.scopeAll;
   const items = Coach.observations(a, E, scoped ? t.id : null);
   const x = t && ui.obj && ui.obj.type === 'work' ? a.artifacts.find(y => y.id === ui.obj.id && !y.removedAt) : null;
@@ -1177,7 +1180,19 @@ function renderReview() {
   if (current() && L.nativeWorkspace(current())) return `${topbar(backBtn('to-board', T('工作板', 'Board')))}
     <main id="main" class="page review" tabindex="-1">
       <header class="review-hero"><div class="review-title"><p class="meta">${esc(CASE(current().scenarioId).title)}</p><h1 class="title-xl">${T('交付与反馈', 'Submission and feedback')}</h1></div></header>
-      <div class="review-grid"><div class="review-main" data-v4-feedback></div><aside class="review-side">${practiceOriginNote(current())}<section class="review-practice" data-v4-practice aria-live="polite">${practiceSection(current())}</section><div data-v4-reference-side><p class="meta">${T('打开依据，核对当时的原文与版本。', 'Open a reference to inspect its original text and version.')}</p></div></aside></div>
+      <div class="review-grid">
+        <div class="review-main" data-v4-feedback data-v4-region="feedback"></div>
+        <aside class="review-side">
+          ${practiceOriginNote(current())}
+          <section class="review-practice" data-v4-practice aria-live="polite">
+            ${practiceSection(current())}
+          </section>
+          <div data-v4-reference-side><p class="meta">${T(
+            '打开依据，核对当时的原文与版本。',
+            'Open a reference to inspect its original text and version.',
+          )}</p></div>
+        </aside>
+      </div>
     </main>`;
   const a = current(); const s = sessionOf(a); const fb = s?.feedback; const submission = s ? L.store.submissionId(s) : '';
   const pending = s?.pending && (s.pending.job?.kind ?? s.pending.kind) === 'feedback';
@@ -1459,7 +1474,13 @@ function bundleRisk(a, draft) {
 function sheetDeliver(readOnly = false) {
   const a = current(); const s = sessionOf(a);
   if (L.nativeWorkspace(a)) {
-    openSheet(T('交付试点决定', 'Submit your pilot decision'), '<div class="deliver-doc paper" data-v4-submission></div>', btn(T('查看提交与反馈', 'View submission and feedback'), 'v4-feedback', 'quiet'), 'wide doc');
+    openSheet(
+      T('交付试点决定', 'Submit your pilot decision'),
+      `<div class="deliver-doc paper"
+        data-v4-submission data-v4-region="submission"></div>`,
+      btn(T('查看提交与反馈', 'View submission and feedback'), 'v4-feedback', 'quiet'),
+      'wide doc',
+    );
     return;
   }
   if (s.world.status === 'submitted' && !readOnly) { closeSheet(true); go('review'); return; }
@@ -1492,9 +1513,18 @@ function sheetCitePicker() {
 }
 function sheetAbout() {
   const n = snap();
+  const native = !!current() && L.nativeWorkspace(current());
   openSheet(T('关于这个工作台', 'About this workspace'), `<div class="prose">
     <p>${T('资料、三位同事的回复、试点设置、申请审批、助手测试、交付和评审，都来自 RoleCraft 后端。', 'Documents, colleague replies, pilot settings, approvals, assistant tests, submission and review come from the RoleCraft server.')}</p>
-    <p>${T('事项、作品和 Agent 导入保存在这个浏览器；交付时由你合并进交付稿。', 'Tasks, work and agent imports are kept in this browser. You fold them into the deliverable when you submit.')}</p>
+    <p>${native ? T(
+      '事项、作品版本、分享、提交与反馈由服务端保存。未保存草稿与恢复信息保留在这个浏览器。',
+      'Tasks, work versions, shares, submissions and feedback are saved by the server. ' +
+      'Unsaved drafts and recovery information remain in this browser.',
+    ) : T(
+      '旧会话的事项、作品和 Agent 导入保存在这个浏览器；交付时由你合并进交付稿。',
+      'In legacy sessions, tasks, work and agent imports stay in this browser. ' +
+      'You fold them into the deliverable when you submit.',
+    )}</p>
     <dl class="kv"><div><dt>${T('后端', 'Server')}</dt><dd>${n.connected ? T('已连接', 'Connected') : T('未连接', 'Not connected')}</dd></div><div><dt>${T('同事与助手模式', 'Colleague and assistant mode')}</dt><dd>${esc(n.model || '—')}</dd></div></dl>
     <h3 class="mini-title">${T('颜色和形状', 'Colour and shape')}</h3>
     <ul class="legend">
@@ -1507,7 +1537,16 @@ function sheetAbout() {
       <li><span class="sw-shape">${priMark('first')}${priMark('next')}${priMark('later')}</span>${T('优先级：先做、随后、暂放', 'Priority: first, next, later')}</li>
       <li><span class="sw-shape">${statusMark('open')}${statusMark('working')}${statusMark('done')}</span>${T('进展：待处理、正在做、已处理', 'Progress: to do, in progress, done')}</li>
     </ul>
-    <p class="muted">${T('还没有：同事主动发言、跨回合记忆、交付后修订、MCP 直连、模型评审。', 'Not yet available: colleagues speaking first, memory across turns, revising after submission, direct MCP connection, model-based review.')}</p>
+    <p class="muted">${native ? T(
+      '支持关联修订与授权 MCP 协作。模型能力以当前界面标注为准；等待模型接入的内容尚未完成语义评审。',
+      'Linked revisions and authorized MCP collaboration are available. ' +
+      'Model capabilities follow the displayed status; awaiting model connection means ' +
+      'semantic review has not been completed.',
+    ) : T(
+      '当前旧会话保留原有交付与回读方式，模型能力以界面标注为准。',
+      'Legacy sessions retain their submission and history workflow. ' +
+      'Model capabilities follow the displayed status.',
+    )}</p>
   </div>`, `${btn(T('刷新连接', 'Reconnect'), 'live-refresh', 'quiet')}<span class="spacer"></span>${btn(T('好', 'OK'), 'close', 'primary')}`, 'narrow');
 }
 
@@ -1837,7 +1876,37 @@ async function act(el) {
     case 'close-advice': ui.advice = null; refreshWS(['stage']); break;
     case 'apply-advice': { const adv = Coach.advice(a, ui.advice); if (!adv.items.length) break; let before; flip(() => { before = E.applySuggestion(a, { roleId: adv.roleId, items: adv.items }); ui.advice = null; persist(); refreshWS(['stage']); }); notify(T('已按 ' + adv.name + ' 的看法排列', 'Arranged the way ' + adv.name + ' sees it'), { undo: () => { flip(() => { E.restoreOrder(a, before); persist(); refreshWS(['stage']); }); } }); break; }
     case 'ask-rank': { ui.menu = null; ui.advice = null; const list = a.tasks.map(t => taskTitle(t)).join(T('；', '; ')); openChat(el.dataset.role, T('这是我手头的事项：' + list + '。你觉得我该先弄清哪件，为什么？', 'Here is what I have on my plate: ' + list + '. What would you tackle first, and why?')); break; }
-    case 'situation-task': { const v = a.world.policyVersion; const st = situationTask(); const t = E.addTask(a, { title: st.title, note: st.note, priority: 'next' }); t.origin = 'situation'; a.acks = [...(a.acks || []), 'policy-v' + v]; persist(); openTask(t.id); break; }
+    case 'situation-task': {
+      if (ui.busy || !canWrite(a)) break;
+      const version = a.world.policyVersion;
+      const situation = situationTask();
+      const route = location.hash;
+      ui.busy = true;
+      try {
+        let taskId;
+        if (L.nativeWorkspace(a)) {
+          taskId = await L.createNativeTask(a, {
+            title: situation.title,
+            goal: situation.note,
+            priority: 1,
+          });
+        } else {
+          const item = E.addTask(a, {
+            title: situation.title,
+            note: situation.note,
+            priority: 'next',
+          });
+          item.origin = 'situation';
+          taskId = item.id;
+        }
+        a.acks = [...(a.acks || []), `policy-v${version}`];
+        persist();
+        if (current() === a && location.hash === route) openTask(taskId);
+      } finally {
+        ui.busy = false;
+      }
+      break;
+    }
     case 'ack': a.acks = [...new Set([...(a.acks || []), el.dataset.key])]; persist(); refreshWS(['stage', 'rail', 'toolbar']); break;
     case 'reply-note': { const n = (ui.notesCache || []).find(x => x.key === el.dataset.key); if (!n) break; a.acks = [...new Set([...(a.acks || []), 'note:' + n.key])]; persist(); openChat(n.role, T(`关于你说的“${n.text.slice(0, 60)}${n.text.length > 60 ? '…' : ''}”：`, `About what you said (“${n.text.slice(0, 60)}${n.text.length > 60 ? '…' : ''}”): `)); break; }
     case 'new-artifact': sheetNewArtifact(); break;

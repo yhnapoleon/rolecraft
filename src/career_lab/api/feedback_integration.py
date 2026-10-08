@@ -30,7 +30,14 @@ def install_feedback_recovery(registry):
         if not matches:raise ProtocolError('object_not_found',status=404)
         record=max(matches,key=lambda row:row.ref.version)
         # Preserve the exact historical object; absent fields stay absent in storage and wire.
-        return V2Response(result={'feedback':record.content,'sections':{name:'recorded' if record.content.get(name) is not None else 'not_recorded' for name in ('verified_facts','historical_responsibilities','rule_items')}})
+        sections = ('verified_facts', 'historical_responsibilities', 'rule_items', 'provenance')
+        return V2Response(result={
+            'feedback': record.content,
+            'sections': {
+                name: 'recorded' if record.content.get(name) is not None else 'not_recorded'
+                for name in sections
+            },
+        })
     def read_responses(view,page,auth):
         if page.feedback_id is not None:
             if not any(row.ref.kind=='feedback' and row.ref.object_id==page.feedback_id for row in view.objects):raise ProtocolError('object_not_found',status=404)

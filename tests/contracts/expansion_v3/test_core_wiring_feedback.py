@@ -58,7 +58,10 @@ def test_factual_sections_persist_and_reopen_without_reinterpretation(foundation
                 count=value['feedback']['verified_facts'][0]['activity_totals']['material_read']
                 assert count['count']==(0 if complete else None)
                 assert value['feedback']['historical_responsibilities'][0]['completeness']=='unknown'
-                assert value['sections']==dict.fromkeys(('verified_facts','historical_responsibilities','rule_items'),'recorded')
+                expected = dict.fromkeys(
+                    ('verified_facts', 'historical_responsibilities', 'rule_items'), 'recorded'
+                )
+                assert value['sections'] == expected | {'provenance': 'not_recorded'}
         finally:app.state.store.close()
     assert stored_bytes(store,ref)==before
 

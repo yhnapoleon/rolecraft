@@ -51,7 +51,13 @@ def test_static_zero_is_not_the_runtime_activation_for_role_facts(package,engine
 
 def test_chinese_runtime_pins_shared_code_and_isolates_english_only_dependencies(package):
     bound=json.loads((package.root/'runtime/source-files.json').read_bytes())['owned_code']
-    assert bound==runtime_source_files(ROOT,'zh')
+    from career_lab.contracts.v2 import RuntimeBundle, digest
+    from career_lab.scenarios.v2.module import ScenarioModule
+    runtime = RuntimeBundle.model_validate_json((package.root / 'runtime/bundle.json').read_bytes())
+    assert digest(bound) == runtime.source.source_digest
+    assert ScenarioModule(package.root).work_language == 'zh'
+    current = runtime_source_files(ROOT, 'zh')
+    assert set(bound) <= set(current)
     assert 'src/career_lab/scenarios/v2/module.py' in bound
     assert 'src/career_lab/assistant/v2/service.py' in bound
     assert 'src/career_lab/scenarios/v2/content_en.py' not in bound

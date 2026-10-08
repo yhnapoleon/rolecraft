@@ -4,21 +4,35 @@ Register these operations through the integrator's ExtensionRegistry. No app.py,
 storage implementation or global CLI mutation is performed here.
 """
 from dataclasses import asdict, replace
-import hashlib
-import json
-from pathlib import Path
 
 from career_lab.api.modules import ExtensionRegistry, Operation, ScenarioRegistration, V2Response
-from career_lab.contracts.v2 import (
-    ActionInput, ApprovalInput, AssistantConfig, BusinessRequest, BusinessDecision,
-    EvidenceRefV2, ExternalReference, FileRef, ObjectRef, ProtocolError, PublicEvent,
-    ResourcePage, ScenarioStateV2, SessionBindings, TestRequestV2, TestResultV2,
-    VersionPoint, RuntimeBundle, EvaluationBundle, canonical, digest, read_file,
-)
-from career_lab.storage.v2_store import Mutation, ObjectWrite, EventDraft, references
 from career_lab.assistant.v2 import Assistant
-from .loader import load_package
+from career_lab.contracts.v2 import (
+    ActionInput,
+    ApprovalInput,
+    AssistantConfig,
+    BusinessDecision,
+    BusinessRequest,
+    EvaluationBundle,
+    EvidenceRefV2,
+    ExternalReference,
+    FileRef,
+    ObjectRef,
+    ProtocolError,
+    PublicEvent,
+    ResourcePage,
+    RuntimeBundle,
+    ScenarioStateV2,
+    SessionBindings,
+    TestRequestV2,
+    TestResultV2,
+    VersionPoint,
+    read_file,
+)
+from career_lab.storage.v2_store import EventDraft, Mutation, ObjectWrite, references
+
 from .engine import ScenarioEngine, ScenarioSnapshot
+from .loader import load_package
 from .policy import evaluate_request
 
 
@@ -51,15 +65,9 @@ class ScenarioModule:
             runtime=self.files["runtime/bundle.json"],evaluation=self.files["runtime/evaluation.json"])
         runtime=RuntimeBundle.model_validate_json(read_file(self.package.root,self.bindings.runtime))
         EvaluationBundle.model_validate_json(read_file(self.package.root,self.bindings.evaluation))
-        source=json.loads(read_file(self.package.root,runtime.source.overlay))
-        repo=Path(__file__).resolve().parents[4]
-        from .localization import runtime_source_files
-        actual=runtime_source_files(repo,self.package.locale)
-        if actual!=source["owned_code"] or digest(actual)!=runtime.source.source_digest:
-            raise ProtocolError("runtime_source_mismatch",status=409)
-        foundation=repo/"docs/contracts/expansion-v3/manifest.json"
-        if hashlib.sha256(foundation.read_bytes()).hexdigest()!=source["foundation_contract_sha256"]:
-            raise ProtocolError("runtime_contract_mismatch",status=409)
+        from .release import validate_runtime
+
+        self.release = validate_runtime(self.package, runtime)
 
     def registration(self):
         baseline=self.package.bundle.baseline_config

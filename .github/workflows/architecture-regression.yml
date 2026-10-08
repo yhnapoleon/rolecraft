@@ -1,0 +1,39 @@
+name: Architecture regression (manual draft)
+
+# Draft gate: no push/PR trigger until the workflow is approved for publication.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - run: uv sync --locked --python 3.12
+      - run: npm ci --no-audit --no-fund
+        working-directory: apps/web
+      - run: .venv/bin/python -m scripts.regression.run --output runs/local/ci
+      # Browser/MCP evidence currently runs locally with CHROME_BIN. Provisioning
+      # a pinned headless Chrome on the runner is required before enabling it here.
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: regression-results
+          path: |
+            runs/local/ci/*.log
+            runs/local/ci/backend.xml
+            runs/local/ci/frontend.json

@@ -28,13 +28,20 @@ def verified_public_input(repo,expected_revision):
     path=repo/'docs/contracts/expansion-v3/manifest.json';raw=path.read_bytes()
     if expected_revision!='expansion-v3-'+sha(raw):raise ProtocolError('rebind_public_manifest_mismatch',status=409)
     data=json.loads(raw);checked={}
-    for relative,expected in data['source_files'].items():
-        source=(repo/relative).resolve()
-        if not source.is_relative_to(repo.resolve()):raise ProtocolError('rebind_public_path_invalid')
-        actual=sha(source.read_bytes())
-        if actual!=expected:raise ProtocolError('rebind_public_source_mismatch',status=409)
-        checked[relative]=actual
-    if not checked:raise ProtocolError('rebind_public_sources_missing')
+    from career_lab.contracts.v2.compatibility import without_provenance
+    from career_lab.contracts.v2.discovery import public_models
+
+    models = public_models()
+    for name, entry in data['schemas'].items():
+        source = path.parent / entry['schema']
+        actual = sha(source.read_bytes())
+        if actual != entry['schema_sha256']:
+            raise ProtocolError('rebind_public_source_mismatch', status=409)
+        if without_provenance(models[name].model_json_schema()) != json.loads(source.read_text()):
+            raise ProtocolError('rebind_public_protocol_mismatch', status=409)
+        checked[str(source.relative_to(repo))] = actual
+    if not checked:
+        raise ProtocolError('rebind_public_sources_missing')
     return sha(raw),checked
 
 
@@ -64,11 +71,25 @@ def verified_owned_input(repo, expected, locale, tooling_baseline=None):
                      'before_sha256': expected[tool], 'after_sha256': current[tool]}
 
 
-def rebind(source,destination,*,contract_revision,scenario_revision,runtime_revision,tooling_baseline=None):
+def rebind(
+    source: Path, destination: Path, *, contract_revision: str, scenario_revision: str,
+    runtime_revision: str, tooling_baseline: str | None = None, protocol: str | None = None,
+) -> dict[str, object]:
+    if protocol is not None:
+        from .release import PROTOCOL
+        from .release_migration import migrate
+
+        if protocol != PROTOCOL:
+            raise ProtocolError("release_protocol_unsupported", status=409)
+        return migrate(
+            source, destination, contract_revision=contract_revision,
+            scenario_revision=scenario_revision, runtime_revision=runtime_revision,
+        )
     repo=Path(__file__).resolve().parents[4]
     source=Path(source).resolve();destination=Path(destination).resolve()
     if destination.exists() or destination.is_relative_to(source):raise ProtocolError('rebind_destination_not_fresh',status=409)
     package=load_package(source)
+    contract_hash,public_files=verified_public_input(repo,contract_revision)
     previous=RuntimeBundle.model_validate_json((source/'runtime/bundle.json').read_bytes())
     overlay=json.loads((source/'runtime/source-files.json').read_bytes())
     code,tooling_update=verified_owned_input(repo,overlay['owned_code'],package.locale,tooling_baseline)
@@ -76,7 +97,6 @@ def rebind(source,destination,*,contract_revision,scenario_revision,runtime_revi
         raise ProtocolError('rebind_owned_code_mismatch',status=409)
     if not scenario_revision or scenario_revision==package.bundle.revision or not runtime_revision or runtime_revision==previous.revision:
         raise ProtocolError('rebind_new_revisions_required')
-    contract_hash,public_files=verified_public_input(repo,contract_revision)
     before={ref.path:sha((source/ref.path).read_bytes()) for ref in package.bundle.files}
     destination.mkdir(parents=True)
     for ref in package.bundle.files:
@@ -162,9 +182,10 @@ def main(argv=None):
     for name in ('source','output','contract-revision','scenario-revision','runtime-revision'):parser.add_argument('--'+name,required=True)
     parser.add_argument('--smoke-database',required=True)
     parser.add_argument('--tooling-baseline',help='Full Git commit for an explicitly authorized rebind-tool-only migration')
+    parser.add_argument("--protocol", choices=["scenario-release-v1"])
     args=parser.parse_args(argv)
     try:
-        result=rebind(args.source,args.output,contract_revision=args.contract_revision,scenario_revision=args.scenario_revision,runtime_revision=args.runtime_revision,tooling_baseline=args.tooling_baseline)
+        result=rebind(args.source,args.output,contract_revision=args.contract_revision,scenario_revision=args.scenario_revision,runtime_revision=args.runtime_revision,tooling_baseline=args.tooling_baseline,protocol=args.protocol)
         evidence=Path(args.output).parent/(Path(args.output).name+'-verification');evidence.mkdir()
         result['http_startup']=smoke_http(args.output,args.smoke_database,evidence)
         (evidence/'rebind.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
