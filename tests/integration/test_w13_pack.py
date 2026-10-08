@@ -66,6 +66,51 @@ def source_environment() -> dict[str, str]:
     return {**os.environ, "PYTHONPATH": str(ROOT / "src"), "PYTHONSAFEPATH": "1"}
 
 
+def published_split_fixture(root: Path, language: str, split: str) -> Path:
+    """Author an isolated test input, then publish its new identity through rebind."""
+    from career_lab.scenarios.v2.loader import load_package
+    from career_lab.scenarios.v2.rebind import rebind
+    from career_lab.scenarios.v2.release import PROTOCOL, read_release
+
+    catalog = json.loads((ROOT / "tests/regression/published-catalog-legacy.json").read_text())
+    entry = next(row for row in catalog["scenarios"] if row["work_language"] == language)
+    original = ROOT / entry["root"]
+    package = load_package(original)
+    assert package.content_hash == entry["scenario_hash"]
+    assert read_release(package) is None
+    draft = root / "authored-test-input"
+    draft.mkdir()
+    for ref in package.bundle.files:
+        target = draft / ref.path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(original / ref.path, target)
+    manifest = package.bundle.model_dump(mode="json")
+    manifest["split"] = split
+    locale_path = draft / "locale.json"
+    locale = json.loads(locale_path.read_text())
+    locale["split"] = split
+    locale_path.write_text(json.dumps(locale))
+    for member in manifest["files"]:
+        if member["path"] == "locale.json":
+            member["sha256"] = hashlib.sha256(locale_path.read_bytes()).hexdigest()
+    (draft / "manifest.json").write_text(json.dumps(manifest))
+    output = root / "published-test-candidate"
+    rebind(
+        draft,
+        output,
+        protocol=PROTOCOL,
+        contract_revision=(ROOT / "docs/contracts/expansion-v3/revision.txt").read_text().strip(),
+        scenario_revision="isolated-test-candidate",
+        runtime_revision="isolated-test-candidate",
+    )
+    candidate = load_package(output)
+    release = read_release(candidate)
+    assert release is not None and release.content_metadata["split"] == split
+    assert release.review.status == "not_recorded"
+    assert load_package(original).content_hash == entry["scenario_hash"]
+    return output
+
+
 @pytest.fixture(params=["zh", "en"])
 def session(
     tmp_path: Path,
@@ -80,20 +125,7 @@ def session(
     if language == "en":
         scenario = scenario / "locales" / "en"
     if isinstance(request.param, dict):
-        # A new, temporary fixture only. Never relabel a published scenario or dataset.
-        fixture = tmp_path / "isolated-split-fixture"
-        shutil.copytree(scenario, fixture)
-        manifest = json.loads((fixture / "manifest.json").read_text())
-        manifest["split"] = request.param["split"]
-        locale_path = fixture / "locale.json"
-        locale = json.loads(locale_path.read_text())
-        locale["split"] = request.param["split"]
-        locale_path.write_text(json.dumps(locale))
-        for member in manifest["files"]:
-            if member["path"] == "locale.json":
-                member["sha256"] = hashlib.sha256(locale_path.read_bytes()).hexdigest()
-        (fixture / "manifest.json").write_text(json.dumps(manifest))
-        scenario = fixture
+        scenario = published_split_fixture(tmp_path, language, request.param["split"])
     app = create_runtime_app("sqlite:///" + str(database), scenario_root=scenario)
     request.addfinalizer(app.state.store.close)
     with local_http(app) as client:

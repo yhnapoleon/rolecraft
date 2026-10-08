@@ -344,3 +344,30 @@ def test_text_payload_body_requires_explicit_selection(session: Session) -> None
         candidate["original_text"] == "Question?"
         and candidate["source_location"]["field"] == "body"
     )
+
+
+@pytest.mark.parametrize(
+    "session",
+    [{"language": "zh", "split": "test"}, {"language": "en", "split": "test"}],
+    indirect=True,
+    ids=["zh-test", "en-test"],
+)
+def test_published_split_fixture_rejects_changed_content(session: Session) -> None:
+    app, _, _, _, _, _, cli, root, _ = session
+    product = create_plan(session)
+    path = app.state.scenario_v2.package.root / "manifest.json"
+    manifest = json.loads(path.read_text())
+    manifest["lineage"].append("changed-after-publication")
+    path.write_text(json.dumps(manifest))
+    result = cli(
+        "probes-from-plan",
+        "--product",
+        product["product_id"],
+        "--product-version",
+        "1",
+        "--output",
+        str(root / "rejected"),
+    )
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert json.loads(result.stdout)["code"] == "release_content_mismatch"
+    assert not (root / "rejected").exists()
