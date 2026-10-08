@@ -1,14 +1,57 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.15/schema.json",
   "files": {
-    "includes": ["src/**", "tests/**", "vite.config.ts"],
+    "includes": [
+      "src/**",
+      "tests/**",
+      "public/**",
+      "connected/**",
+      "scripts/**",
+      "*.ts",
+      "*.html",
+      "!tests/screenshots"
+    ],
     "maxSize": 2000000
   },
-  "formatter": {"enabled": true, "indentStyle": "space", "indentWidth": 2, "lineWidth": 100},
-  "javascript": {"formatter": {"quoteStyle": "single"}},
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100,
+    "includes": [
+      "**/*.js",
+      "**/*.mjs",
+      "**/*.cjs",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.css",
+      "**/*.html",
+      "biome.json",
+      "!src/features/workspace/client.ts"
+    ]
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single"
+    }
+  },
   "linter": {
     "enabled": true,
-    "rules": {"preset": "recommended", "suspicious": {"noExplicitAny": "error"}}
+    "rules": {
+      "preset": "recommended",
+      "suspicious": {
+        "noExplicitAny": "error"
+      }
+    },
+    "includes": ["src/**", "tests/**", "scripts/**", "vite.config.ts"]
   },
-  "assist": {"enabled": false}
+  "assist": {
+    "enabled": false
+  },
+  "html": {
+    "formatter": {
+      "enabled": true,
+      "whitespaceSensitivity": "strict"
+    }
+  }
 }
