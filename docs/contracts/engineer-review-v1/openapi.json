@@ -592,6 +592,9 @@
             "title": "Affects Score",
             "type": "boolean"
           },
+          "applicability": {
+            "$ref": "#/components/schemas/EngineerReportApplicability"
+          },
           "claim_check": {
             "enum": [
               "matched",
@@ -686,6 +689,7 @@
           "work_language",
           "status",
           "claim_check",
+          "applicability",
           "public_results",
           "hidden",
           "findings",
@@ -794,6 +798,57 @@
           "advice"
         ],
         "title": "EngineerRegressionReport",
+        "type": "object"
+      },
+      "EngineerReportApplicability": {
+        "additionalProperties": false,
+        "properties": {
+          "base_config_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Base Config Hash",
+            "type": "string"
+          },
+          "config": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "effective_config_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Effective Config Hash",
+            "type": "string"
+          },
+          "probe_suite_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Probe Suite Hash",
+            "type": "string"
+          },
+          "reviewer_version_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Reviewer Version Hash",
+            "type": "string"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_as_of": {
+            "$ref": "#/components/schemas/VersionPoint"
+          }
+        },
+        "required": [
+          "scenario",
+          "config",
+          "base_config_hash",
+          "probe_suite_hash",
+          "reviewer_version_hash",
+          "effective_config_hash",
+          "source_as_of"
+        ],
+        "title": "EngineerReportApplicability",
         "type": "object"
       },
       "EngineerReviewInput": {

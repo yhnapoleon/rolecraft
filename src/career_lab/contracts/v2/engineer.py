@@ -212,7 +212,9 @@ class EngineerRegressionReport(V2):
             elif row.actual is None or row.error_code is not None:
                 raise ValueError("completed probe requires actual behavior and no execution error")
             if row.actual is not None and (
-                row.actual.config != self.input.resolved_config or row.actual.query != row.query
+                row.actual.config != self.input.resolved_config
+                or row.actual.query != row.query
+                or row.actual.as_of != self.input.source_as_of
             ):
                 raise ValueError("probe actual input mismatch")
         for finding in self.findings:
@@ -230,6 +232,16 @@ class EngineerProbeSummary(V2):
     errors: int = Field(ge=0)
 
 
+class EngineerReportApplicability(V2):
+    scenario: FileRef
+    config: FileRef
+    base_config_hash: Hash
+    probe_suite_hash: Hash
+    reviewer_version_hash: Hash
+    effective_config_hash: Hash
+    source_as_of: VersionPoint
+
+
 class EngineerPublicReport(V2):
     contract_version: Literal["engineer-review-v1"]
     id: Identifier
@@ -240,6 +252,7 @@ class EngineerPublicReport(V2):
     work_language: Literal["zh", "en"]
     status: Literal["verified", "report_mismatch", "incomplete"]
     claim_check: Literal["matched", "mismatch", "not_provided", "unverified"]
+    applicability: EngineerReportApplicability
     public_results: tuple[EngineerProbeResult, ...]
     hidden: EngineerProbeSummary
     findings: tuple[EngineerFinding, ...]
@@ -275,6 +288,15 @@ def public_engineer_report(report: EngineerRegressionReport) -> EngineerPublicRe
         work_language=report.input.work_language,
         status=report.status,
         claim_check=report.claim_check,
+        applicability=EngineerReportApplicability(
+            scenario=report.input.scenario,
+            config=report.input.config,
+            base_config_hash=report.input.baseline_config.sha256,
+            probe_suite_hash=report.input.probe_suite.sha256,
+            reviewer_version_hash=report.input.reviewer_version.sha256,
+            effective_config_hash=digest(report.input.resolved_config.effective),
+            source_as_of=report.input.source_as_of,
+        ),
         public_results=public,
         hidden=EngineerProbeSummary(
             passed=sum(row.result == "pass" for row in hidden),

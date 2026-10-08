@@ -94,6 +94,7 @@ export type EngineerProbeSummary = {
 export type EngineerPublicReport = {
   "advice": (EngineerAdvice | null);
   "affects_score"?: false;
+  "applicability": EngineerReportApplicability;
   "claim_check": "matched" | "mismatch" | "not_provided" | "unverified";
   "contract_version": "engineer-review-v1";
   "created_at": string;
@@ -125,6 +126,17 @@ export type EngineerRegressionReport = {
   "status": "verified" | "report_mismatch" | "incomplete";
   "submission": FileRef;
   "unresolved": ReadonlyArray<EngineerUnresolvedItem>;
+};
+
+export type EngineerReportApplicability = {
+  "base_config_hash": string;
+  "config": FileRef;
+  "effective_config_hash": string;
+  "probe_suite_hash": string;
+  "reviewer_version_hash": string;
+  "scenario": FileRef;
+  "schema_version"?: 2;
+  "source_as_of": VersionPoint;
 };
 
 export type EngineerReviewInput = {

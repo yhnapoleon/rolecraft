@@ -182,6 +182,7 @@ def report_payload() -> dict:
     fixed = review_input()
     actual = sample_model(TestResultV2).model_dump(mode="json")
     actual["config"] = fixed.resolved_config.model_dump(mode="json")
+    actual["as_of"] = fixed.source_as_of.model_dump(mode="json")
     actual["query"] = "public question"
     return {
         "contract_version": "engineer-review-v1",
@@ -410,3 +411,33 @@ def test_engineer_published_freeze_matches_all_production_models_and_resolves_re
 
     check(api)
     assert manifest["protocol"] == "engineer-review-v1"
+
+
+def test_engineer_actual_probe_cannot_use_a_different_source_point() -> None:
+    from pydantic import ValidationError
+
+    from career_lab.contracts.v2.engineer import EngineerRegressionReport
+
+    value = report_payload()
+    value["results"][0]["actual"]["as_of"]["business_seq"] += 1
+    with pytest.raises(ValidationError, match="probe actual input mismatch"):
+        EngineerRegressionReport.model_validate(value)
+
+
+def test_engineer_hidden_only_public_report_keeps_applicability_without_details() -> None:
+    from career_lab.contracts.v2 import digest
+    from career_lab.contracts.v2.engineer import EngineerRegressionReport, public_engineer_report
+
+    value = report_payload()
+    value["results"][0]["visibility"] = "hidden"
+    report = EngineerRegressionReport.model_validate(value)
+    public = public_engineer_report(report)
+    assert not public.public_results
+    assert public.applicability.scenario == report.input.scenario
+    assert public.applicability.probe_suite_hash == report.input.probe_suite.sha256
+    assert public.applicability.config == report.input.config
+    assert public.applicability.effective_config_hash == digest(
+        report.input.resolved_config.effective
+    )
+    assert public.applicability.source_as_of == report.input.source_as_of
+    assert "public question" not in public.model_dump_json()
