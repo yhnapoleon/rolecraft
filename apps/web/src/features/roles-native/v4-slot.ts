@@ -168,11 +168,18 @@ export function mount(context:V4SlotContext):V4SlotHandle {
   function update(snapshot:Readonly<V4HostSnapshot>){
     if(destroyed)return;
     if(snapshot.session?.sessionId!==sid || snapshot.session.protocol!==2){destroy();return;}
+    updateControls();
+    // Both the host subscription and V4Mounts call update. Recovery emits too,
+    // but an unchanged snapshot/request set is not new dialogue evidence.
+    const key=readSignal(snapshot);
+    if(key===lastSnapshot)return;
+    lastSnapshot=key;
     if(reading)readAgain=true;
-    updateControls();void view.refresh().catch(fail);
+    void view.refresh().catch(fail);
   }
-  let lastSnapshot=JSON.stringify(host.snapshot());
-  const unsubscribe=host.subscribe(()=>{const snapshot=host.snapshot();const key=JSON.stringify(snapshot);if(key===lastSnapshot)return;lastSnapshot=key;update(snapshot);});
+  const readSignal=(snapshot:Readonly<V4HostSnapshot>)=>JSON.stringify([snapshot,requestRefs(host,'roles'),pending]);
+  let lastSnapshot=readSignal(host.snapshot());
+  const unsubscribe=host.subscribe(()=>update(host.snapshot()));
   function destroy(){if(destroyed)return;destroyed=true;++readTicket;unsubscribe();form.removeEventListener('submit',onSubmit);inputNode.removeEventListener('input',onInput);view.destroy();}
   updateControls();
   return {update,destroy};
