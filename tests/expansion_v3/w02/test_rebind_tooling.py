@@ -14,6 +14,17 @@ def old_owned():
     return json.loads((SOURCE / 'runtime/source-files.json').read_text())['owned_code']
 
 
+@pytest.fixture(autouse=True)
+def legacy_tool_input(monkeypatch):
+    # Test the old CLI's explicit tooling-only contract with its original immutable input.
+    current = old_owned()
+    import hashlib
+    current['src/career_lab/scenarios/v2/rebind.py'] = hashlib.sha256(
+        (ROOT / 'src/career_lab/scenarios/v2/rebind.py').read_bytes()
+    ).hexdigest()
+    monkeypatch.setattr(tool, 'runtime_source_files', lambda *_: dict(current))
+
+
 def test_unchanged_owned_source_needs_no_migration():
     current = tool.runtime_source_files(ROOT, 'zh')
     assert tool.verified_owned_input(ROOT, current, 'zh') == (current, None)

@@ -2,10 +2,13 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-CATALOG = ROOT / "tests/regression/published-catalog.json"
+CATALOG = Path(
+    os.getenv("ROLECRAFT_REGRESSION_CATALOG", ROOT / "tests/regression/published-catalog.json")
+)
 
 
 def reviewed_identity(root: Path, language: str, installed_hash: str) -> str | None:
@@ -14,6 +17,12 @@ def reviewed_identity(root: Path, language: str, installed_hash: str) -> str | N
     Historical installation changed revision/evaluation metadata. Its full bytes
     are protected separately; the original review is never relabeled as a code review.
     """
+    from career_lab.scenarios.v2.loader import load_package
+    from career_lab.scenarios.v2.release import read_release
+
+    release = read_release(load_package(root))
+    if release is not None:
+        return release.review.reviewed_source_hash
     reviews = ROOT / "scenarios/pm_pilot/v2/variants/reviews"
     continuity = json.loads((reviews / "content-continuity-2.9.6.json").read_text())
     approval_bytes = (reviews / "content-approval-2.9.0.json").read_bytes()

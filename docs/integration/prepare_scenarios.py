@@ -1,8 +1,14 @@
 """Build locale runtimes offline from immutable W02 content; never repair at startup."""
-import argparse,json,hashlib,subprocess,sys,shutil
+import argparse
+import hashlib
+import json
+import subprocess
+import sys
 from pathlib import Path
+
 from career_lab.scenarios.v2.loader import load_package
 from career_lab.scenarios.v2.module import ScenarioModule
+
 
 def reviewed_authored_identity(source, package):
     """Prove unchanged authored bytes against the exact independently reviewed manifest."""
@@ -28,21 +34,51 @@ def reviewed_authored_identity(source, package):
 
 
 def main():
-    p=argparse.ArgumentParser();p.add_argument('--output',type=Path,required=True);args=p.parse_args()
-    args.output.mkdir(parents=True,exist_ok=True)
-    authored=Path('scenarios/pm_pilot/v2');sources=[authored,authored/'locales/en',*[source for name in ['pm_pilot_urgent','pm_pilot_capacity15'] for source in [authored/'variants'/name,authored/'variants'/name/'locales/en']]]
-    entries=[]
-    for source in sources:
-        package=load_package(source);locale=package.locale;target=args.output/package.bundle.id/locale
-        if target.exists():raise RuntimeError('Output exists; use a fresh build directory')
-        target.mkdir(parents=True);(target/'manifest.json').write_bytes((source/'manifest.json').read_bytes())
-        for ref in package.bundle.files:
-            path=target/ref.path;path.parent.mkdir(parents=True,exist_ok=True);shutil.copyfile(source/ref.path,path)
-        evidence=args.output/(package.bundle.id+'-'+locale+'-rebind.json')
-        result=subprocess.run([sys.executable,'docs/integration/rebind_runtime.py','--root',str(target),'--with-w05','--evidence',str(evidence)],capture_output=True,text=True)
-        if result.returncode:raise RuntimeError(result.stderr or result.stdout)
-        module=ScenarioModule(target)
-        entries.append({'root':str(target.resolve()),'work_language':locale,'scenario_hash':module.package.content_hash,'authored_manifest':package.content_hash,'reviewed_authored_manifest':reviewed_authored_identity(source,package),'content_unchanged':True,'rebind_evidence':str(evidence.resolve())})
-    index=args.output/'catalog.json';index.write_text(json.dumps({'schema_version':1,'scenarios':entries},ensure_ascii=False,indent=2)+'\n');print(index.resolve())
+    """Prepare fresh runtime fixtures with the formal content-preserving release CLI."""
+    from career_lab.scenarios.v2.release import read_release
 
-if __name__=='__main__':main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    args.output.mkdir(parents=True, exist_ok=False)
+    repo = Path.cwd()
+    current = json.loads((repo / 'scenarios/pm_pilot/v2/installed/current.json').read_text())
+    main = repo / current['main']['zh']['root']
+    sources = [main, main / 'locales/en']
+    for name in ('pm_pilot_urgent', 'pm_pilot_capacity15'):
+        sources.extend((main.parent / name, main.parent / name / 'locales/en'))
+    manifest = repo / 'docs/contracts/expansion-v3/manifest.json'
+    contract = 'expansion-v3-' + hashlib.sha256(manifest.read_bytes()).hexdigest()
+    entries = []
+    for source in sources:
+        package = load_package(source)
+        locale = package.locale
+        target = args.output / package.bundle.id / locale
+        result = subprocess.run([
+            sys.executable, '-m', 'career_lab.scenarios.v2.rebind',
+            '--source', str(source), '--output', str(target),
+            '--protocol', 'scenario-release-v1', '--contract-revision', contract,
+            '--scenario-revision', 'prepared-protocol-v1',
+            '--runtime-revision', 'prepared-protocol-v1-' + locale,
+            '--smoke-database', str(args.output / (package.bundle.id + '-' + locale + '.db')),
+        ], capture_output=True, text=True, check=False)
+        if result.returncode:
+            raise RuntimeError(result.stderr or result.stdout)
+        module = ScenarioModule(target)
+        release = read_release(module.package)
+        if release is None:
+            raise RuntimeError('Formal CLI did not produce the requested protocol')
+        entries.append({
+            'root': str(target.resolve()), 'work_language': locale,
+            'scenario_hash': module.package.content_hash,
+            'authored_manifest': release.original_release_identity,
+            'reviewed_authored_manifest': release.review.reviewed_source_hash,
+            'content_unchanged': True,
+        })
+    index = args.output / 'catalog.json'
+    index.write_text(json.dumps({'schema_version': 1, 'scenarios': entries}, indent=2) + '\n')
+    print(index.resolve())
+
+
+if __name__ == '__main__':
+    main()

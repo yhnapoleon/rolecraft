@@ -1,0 +1,1178 @@
+[
+  {
+    "work_language": "zh",
+    "session_id": "6b5b15bdba63406c9fc2ed3567d03272",
+    "subject": {
+      "schema_version": 2,
+      "session_id": "6b5b15bdba63406c9fc2ed3567d03272",
+      "kind": "submission",
+      "object_id": "4c528c4acb054912af1617d8a0d6dfb5",
+      "version": 1,
+      "config_version": null
+    },
+    "evaluation": {
+      "schema_version": 2,
+      "path": "runtime/evaluation.json",
+      "sha256": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
+      "media_type": "application/json"
+    },
+    "as_of": {
+      "schema_version": 2,
+      "business_seq": 0,
+      "workspace_revision": 1,
+      "storage_revision": 1
+    },
+    "common": {
+      "schema_version": 2,
+      "task_type": "criterion",
+      "subjects": [
+        {
+          "schema_version": 2,
+          "session_id": "6b5b15bdba63406c9fc2ed3567d03272",
+          "kind": "product",
+          "object_id": "9dad713eca4d26c171de50dd6f28c7ce127dc482e5df88c9877972fa09a0b4e3",
+          "version": 1,
+          "config_version": null,
+          "span_start": 0,
+          "span_end": 19,
+          "quote": "负责人和范围核实前暂缓，保留人工兜底。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        }
+      ],
+      "purpose": "commitment",
+      "as_of": {
+        "schema_version": 2,
+        "business_seq": 0,
+        "workspace_revision": 1,
+        "storage_revision": 1
+      },
+      "candidate_evidence": [
+        {
+          "schema_version": 2,
+          "id": "e-6e92196e83d256144c513728702370e7299994ac9419ea30b62a87f827280d0d",
+          "text": "负责人和范围核实前暂缓，保留人工兜底。",
+          "ref": {
+            "schema_version": 2,
+            "session_id": "6b5b15bdba63406c9fc2ed3567d03272",
+            "kind": "product",
+            "object_id": "9dad713eca4d26c171de50dd6f28c7ce127dc482e5df88c9877972fa09a0b4e3",
+            "version": 1,
+            "config_version": null,
+            "span_start": 0,
+            "span_end": 19,
+            "quote": "负责人和范围核实前暂缓，保留人工兜底。",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        },
+        {
+          "schema_version": 2,
+          "id": "e-733037dd70827f00436451e9c8c8a031670d6941a07bcae6cf1b7dfcdb2131d7",
+          "text": "# 差旅住宿与交通政策\n\n本案例的公司与业务资料为虚构训练设定。\n\n国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。\n\n出差出租车单程报销上限为200元；超限或特殊路线需走例外核验。\n\n政策解释与个案核验由业务负责人协调。助手可以引用规则，但不能判断某个人已经取得例外批准，也不能代替费用审批。\n",
+          "ref": {
+            "schema_version": 2,
+            "session_id": "6b5b15bdba63406c9fc2ed3567d03272",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        }
+      ],
+      "rule_bound": null,
+      "completeness": "complete",
+      "dropped_refs": [],
+      "missing_refs": []
+    },
+    "common_context": {
+      "facts": {
+        "change_log_complete": true,
+        "policy_changed": false
+      },
+      "fact_refs": {
+        "change_log_complete": [
+          {
+            "schema_version": 2,
+            "session_id": "6b5b15bdba63406c9fc2ed3567d03272",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "policy_changed": [
+          {
+            "schema_version": 2,
+            "session_id": "6b5b15bdba63406c9fc2ed3567d03272",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ]
+      },
+      "logs_complete": false,
+      "tests": [],
+      "config_version": null,
+      "technical_failures": [],
+      "decision": "defer_with_conditions",
+      "business_response": "",
+      "historical_responsibilities": [],
+      "source_issues": [],
+      "test_sources_complete": true,
+      "anchor_mode": "submission",
+      "requested_at": {
+        "schema_version": 2,
+        "business_seq": 0,
+        "workspace_revision": 1,
+        "storage_revision": 1
+      }
+    },
+    "packages": [
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R1.target",
+        "criterion": "R1.target",
+        "claim": "目标用户、业务目标与需求证据是否对应。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "84db9df2a7f45989dcad4015615949a2d6ec2b137b6df6e60e4ba82beaea58c2",
+        "rule_context": {
+          "mechanism": "v2.target"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R1.metrics",
+        "criterion": "R1.metrics",
+        "claim": "成功指标是否有定义、目标与可观察口径。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "9dd4d2dc870409be1b768d475b40387e5b6178b32ed12a483b75e02896379459",
+        "rule_context": {
+          "mechanism": "v2.metrics"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R2.support",
+        "criterion": "R2.support",
+        "claim": "关键判断是否由当时可知的证据支持。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "8a53fa1e8e437477c19adc26b738f4fbfa88c04a6e71e775f839f9e243cda001",
+        "rule_context": {
+          "mechanism": "v2.support"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R2.unknowns",
+        "criterion": "R2.unknowns",
+        "claim": "是否区分事实、假设与待确认资源。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "1d25cb9d4162202d5a30f40ca1febb6ca03ca566b0d2339a35fd3ac24d756374",
+        "rule_context": {
+          "mechanism": "v2.unknowns"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R2.failure_analysis",
+        "criterion": "R2.failure_analysis",
+        "claim": "是否引用或复现失败案例，并正确解释失败模式。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "70b5b3e939a89b4ae6e0c637326619a87c25e4b9c8b1e2a8b335622f3f64bfd7",
+        "rule_context": {
+          "mechanism": "v2.failure_analysis"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R3.capacity",
+        "criterion": "R3.capacity",
+        "claim": "正式开放人数是否符合当时有效容量。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "not_applicable",
+        "input_hash": "993c5d8f75810bfe21f01a4bb454145efd7bbe1b9b48a62a48951140c59fe621",
+        "rule_context": {
+          "mechanism": "v2.capacity"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R3.resources",
+        "criterion": "R3.resources",
+        "claim": "正式承诺的资源和时限是否有有效依据。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "not_applicable",
+        "input_hash": "c2fa26cac036c39f5853e23171630076bd93eee5814eeb60ce5e39eb3e3a2ebc",
+        "rule_context": {
+          "mechanism": "v2.resources"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R4.functional_tests",
+        "criterion": "R4.functional_tests",
+        "claim": "相关配置的实际测试是否覆盖已核验类别与验收标准。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "not_applicable",
+        "input_hash": "fa46784a09b9b3e973d441577590b6d40345a574a2cdc006a4913f6a42f8ff23",
+        "rule_context": {
+          "mechanism": "v2.functional_tests"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R4.staleness_test",
+        "criterion": "R4.staleness_test",
+        "claim": "政策更新后是否复测，最新相关动态测试是否使用有效版本。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "not_applicable",
+        "input_hash": "aa3b56f0b02037a344b963e6444cdeffaf0d767e2713ce1e0a54c515fc62f9c6",
+        "rule_context": {
+          "mechanism": "v2.staleness_test"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R5.impact",
+        "criterion": "R5.impact",
+        "claim": "是否说明已知变更对当前方案的影响范围。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "6ba8c4b70c7545897b615bd4600d3711b199c5bbe0c868404d173f51344f6821",
+        "rule_context": {
+          "mechanism": "v2.impact"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R5.adjustment",
+        "criterion": "R5.adjustment",
+        "claim": "受影响后是否实际调整并复测，而非只有计划声明。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "not_applicable",
+        "input_hash": "b1bef3c3668b4cd0f5aebf4844403b9c5294c9ddc3c6720b863abf6b9b05b862",
+        "rule_context": {
+          "mechanism": "v2.adjustment"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R6.consistency",
+        "criterion": "R6.consistency",
+        "claim": "文本、配置、实际结果与决定是否相互一致。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "93070c79ee2178e33581212736d28e6f95d05701f87523d457b115b96b24d57f",
+        "rule_context": {
+          "mechanism": "v2.consistency"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R6.operations",
+        "criterion": "R6.operations",
+        "claim": "负责人、观察窗口、退出条件和后续动作是否完整可执行。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "8ac977a7a634b738db8c1f8c8549668d3c8ac221b47afc719aea43bdeb0426e0",
+        "rule_context": {
+          "mechanism": "v2.operations"
+        }
+      },
+      {
+        "item_id": "4c528c4acb054912af1617d8a0d6dfb5:R6.alternatives",
+        "criterion": "R6.alternatives",
+        "claim": "是否比较可行替代方案，并说明取舍依据。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "74562e1ed3c217c47d2e07b8104f94ce7c5829255cfbd3d2b864fd0e3a0d9467",
+        "rule_context": {
+          "mechanism": "v2.alternatives"
+        }
+      }
+    ],
+    "expected_digest": "a44e016e1c6575ac70f9eb252386c9971a9c3ecbc2b7c6bdd93c053ea9da6f2e"
+  },
+  {
+    "work_language": "zh",
+    "session_id": "9dcdc37ba8744c9fbd5238e9256fe7e9",
+    "subject": {
+      "schema_version": 2,
+      "session_id": "9dcdc37ba8744c9fbd5238e9256fe7e9",
+      "kind": "submission",
+      "object_id": "d1c77f084ed9407485c4a0ff13b45bfe",
+      "version": 1,
+      "config_version": null
+    },
+    "evaluation": {
+      "schema_version": 2,
+      "path": "runtime/evaluation.json",
+      "sha256": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
+      "media_type": "application/json"
+    },
+    "as_of": {
+      "schema_version": 2,
+      "business_seq": 0,
+      "workspace_revision": 1,
+      "storage_revision": 1
+    },
+    "common": {
+      "schema_version": 2,
+      "task_type": "criterion",
+      "subjects": [
+        {
+          "schema_version": 2,
+          "session_id": "9dcdc37ba8744c9fbd5238e9256fe7e9",
+          "kind": "product",
+          "object_id": "d181961d3859e3493023785a5e5b028b2d6e20ec85167bbf9b945f5f84e338c2",
+          "version": 1,
+          "config_version": null,
+          "span_start": 0,
+          "span_end": 19,
+          "quote": "负责人和范围核实前暂缓，保留人工兜底。",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        }
+      ],
+      "purpose": "commitment",
+      "as_of": {
+        "schema_version": 2,
+        "business_seq": 0,
+        "workspace_revision": 1,
+        "storage_revision": 1
+      },
+      "candidate_evidence": [
+        {
+          "schema_version": 2,
+          "id": "e-d03a6a7f83efd1f100ee93d54a7608b65aa746d33c91178f1bb562010f6b11fa",
+          "text": "负责人和范围核实前暂缓，保留人工兜底。",
+          "ref": {
+            "schema_version": 2,
+            "session_id": "9dcdc37ba8744c9fbd5238e9256fe7e9",
+            "kind": "product",
+            "object_id": "d181961d3859e3493023785a5e5b028b2d6e20ec85167bbf9b945f5f84e338c2",
+            "version": 1,
+            "config_version": null,
+            "span_start": 0,
+            "span_end": 19,
+            "quote": "负责人和范围核实前暂缓，保留人工兜底。",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        },
+        {
+          "schema_version": 2,
+          "id": "e-5521fd74feed8529d3bd6a20378918aae59a331b8f671341538a96d3a34c7261",
+          "text": "# 差旅住宿与交通政策\n\n本案例的公司与业务资料为虚构训练设定。\n\n国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。\n\n出差出租车单程报销上限为200元；超限或特殊路线需走例外核验。\n\n政策解释与个案核验由业务负责人协调。助手可以引用规则，但不能判断某个人已经取得例外批准，也不能代替费用审批。\n",
+          "ref": {
+            "schema_version": 2,
+            "session_id": "9dcdc37ba8744c9fbd5238e9256fe7e9",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        }
+      ],
+      "rule_bound": null,
+      "completeness": "complete",
+      "dropped_refs": [],
+      "missing_refs": []
+    },
+    "common_context": {
+      "facts": {
+        "change_log_complete": true,
+        "policy_changed": false
+      },
+      "fact_refs": {
+        "change_log_complete": [
+          {
+            "schema_version": 2,
+            "session_id": "9dcdc37ba8744c9fbd5238e9256fe7e9",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "policy_changed": [
+          {
+            "schema_version": 2,
+            "session_id": "9dcdc37ba8744c9fbd5238e9256fe7e9",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ]
+      },
+      "logs_complete": false,
+      "tests": [],
+      "config_version": null,
+      "technical_failures": [],
+      "decision": "no_go",
+      "business_response": "",
+      "historical_responsibilities": [],
+      "source_issues": [],
+      "test_sources_complete": true,
+      "anchor_mode": "submission",
+      "requested_at": {
+        "schema_version": 2,
+        "business_seq": 0,
+        "workspace_revision": 1,
+        "storage_revision": 1
+      }
+    },
+    "packages": [
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R1.target",
+        "criterion": "R1.target",
+        "claim": "目标用户、业务目标与需求证据是否对应。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "1611187928b6679723f1ab0519169b014f5a608e9acc8fef7259bb27dc49f87f",
+        "rule_context": {
+          "mechanism": "v2.target"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R1.metrics",
+        "criterion": "R1.metrics",
+        "claim": "成功指标是否有定义、目标与可观察口径。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "b7f40613b641d48354aa161f568077b6c411510b2cc57991592dda96034cad8f",
+        "rule_context": {
+          "mechanism": "v2.metrics"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R2.support",
+        "criterion": "R2.support",
+        "claim": "关键判断是否由当时可知的证据支持。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "b04a6ba5beab7f9529dcffc9be8492d6a24437fc3212ebca850df9088133f744",
+        "rule_context": {
+          "mechanism": "v2.support"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R2.unknowns",
+        "criterion": "R2.unknowns",
+        "claim": "是否区分事实、假设与待确认资源。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "f024b473466eabe3ac08785426247e97373de29aeb956d38a5c45f3287c6dc79",
+        "rule_context": {
+          "mechanism": "v2.unknowns"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R2.failure_analysis",
+        "criterion": "R2.failure_analysis",
+        "claim": "是否引用或复现失败案例，并正确解释失败模式。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "d888f0823ef2a8dd1ceaf9f128ee4dac949bfefa8ae9d1194f044ad7755b824a",
+        "rule_context": {
+          "mechanism": "v2.failure_analysis"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R3.capacity",
+        "criterion": "R3.capacity",
+        "claim": "正式开放人数是否符合当时有效容量。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "not_applicable",
+        "input_hash": "4f62954061a35d8e4b100781679f1a9a40e3b07264360e1f94043732f437fe9a",
+        "rule_context": {
+          "mechanism": "v2.capacity"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R3.resources",
+        "criterion": "R3.resources",
+        "claim": "正式承诺的资源和时限是否有有效依据。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "not_applicable",
+        "input_hash": "d33f7e9fa0e057d4210e1577f12461841237d27c0b37c8a792629cc2b8ba5fb0",
+        "rule_context": {
+          "mechanism": "v2.resources"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R4.functional_tests",
+        "criterion": "R4.functional_tests",
+        "claim": "相关配置的实际测试是否覆盖已核验类别与验收标准。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "not_applicable",
+        "input_hash": "f80712fbf74ded41aeba9adedee7ef4b224393abf0d8e20619dfc7afacedfaba",
+        "rule_context": {
+          "mechanism": "v2.functional_tests"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R4.staleness_test",
+        "criterion": "R4.staleness_test",
+        "claim": "政策更新后是否复测，最新相关动态测试是否使用有效版本。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "not_applicable",
+        "input_hash": "ad2b70c6f3fc0c451d2f5036d5667a1aebff71296c4605a3fae37394188e2376",
+        "rule_context": {
+          "mechanism": "v2.staleness_test"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R5.impact",
+        "criterion": "R5.impact",
+        "claim": "是否说明已知变更对当前方案的影响范围。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "4b60b597e037696bb818ca1b011b1c69a374f5593aa3bdfa3ee6bd6aff196118",
+        "rule_context": {
+          "mechanism": "v2.impact"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R5.adjustment",
+        "criterion": "R5.adjustment",
+        "claim": "受影响后是否实际调整并复测，而非只有计划声明。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "not_applicable",
+        "input_hash": "38f0bc7fa739c71dfa5fc2cbb55e01bd60ff234c86812314ab3e7bf855983563",
+        "rule_context": {
+          "mechanism": "v2.adjustment"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R6.consistency",
+        "criterion": "R6.consistency",
+        "claim": "文本、配置、实际结果与决定是否相互一致。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "ae60634d1def9ff07ea7907b59255a7c807c6a893494d552405025ec07a74caa",
+        "rule_context": {
+          "mechanism": "v2.consistency"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R6.operations",
+        "criterion": "R6.operations",
+        "claim": "负责人、观察窗口、退出条件和后续动作是否完整可执行。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "9f511cc092b42e8abb15c114fe9d819ee75e542582f2252565d79568402a1171",
+        "rule_context": {
+          "mechanism": "v2.operations"
+        }
+      },
+      {
+        "item_id": "d1c77f084ed9407485c4a0ff13b45bfe:R6.alternatives",
+        "criterion": "R6.alternatives",
+        "claim": "是否比较可行替代方案，并说明取舍依据。先核用途与当时时点；no_go/暂缓不自动错，真实历史责任另核。普通文字与模板等价。MET须有完整支持；PARTIAL须有具体缺口；NOT_MET须有确定反证或完整记录证明缺失；未知或语义未验证用INSUFFICIENT。可接受缩小范围、人工处理或有依据的停止。禁止按kind、数量、结论枚举或Agent使用直接给能力标签。",
+        "applicability": "applicable",
+        "input_hash": "899521d9a6c25619b48d30bcbfc8d243b06d39ebbd386766da97e9c482f99feb",
+        "rule_context": {
+          "mechanism": "v2.alternatives"
+        }
+      }
+    ],
+    "expected_digest": "2a3446dd52dc1d1302f52d23af58069b1fe2c15ff45470d9c4d450ab985e7869"
+  },
+  {
+    "work_language": "en",
+    "session_id": "dc4ee0484b8a4e03a3cfb27cbabb8a2c",
+    "subject": {
+      "schema_version": 2,
+      "session_id": "dc4ee0484b8a4e03a3cfb27cbabb8a2c",
+      "kind": "submission",
+      "object_id": "aabfa40b1cb94f45be619255e543d7e4",
+      "version": 1,
+      "config_version": null
+    },
+    "evaluation": {
+      "schema_version": 2,
+      "path": "runtime/evaluation.json",
+      "sha256": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+      "media_type": "application/json"
+    },
+    "as_of": {
+      "schema_version": 2,
+      "business_seq": 0,
+      "workspace_revision": 1,
+      "storage_revision": 1
+    },
+    "common": {
+      "schema_version": 2,
+      "task_type": "criterion",
+      "subjects": [
+        {
+          "schema_version": 2,
+          "session_id": "dc4ee0484b8a4e03a3cfb27cbabb8a2c",
+          "kind": "product",
+          "object_id": "09c231be6171e4c7ff9f11a3b4b781975bb2ca516dc09cd9cadc5d4a6e39de4f",
+          "version": 1,
+          "config_version": null,
+          "span_start": 0,
+          "span_end": 66,
+          "quote": "Defer until the owner and scope are verified. Keep human fallback.",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        }
+      ],
+      "purpose": "commitment",
+      "as_of": {
+        "schema_version": 2,
+        "business_seq": 0,
+        "workspace_revision": 1,
+        "storage_revision": 1
+      },
+      "candidate_evidence": [
+        {
+          "schema_version": 2,
+          "id": "e-556b1cf2ac8d2bbd446855f3fd75c0a930f52c1206b4909a54a23ddcbbfd0e59",
+          "text": "Defer until the owner and scope are verified. Keep human fallback.",
+          "ref": {
+            "schema_version": 2,
+            "session_id": "dc4ee0484b8a4e03a3cfb27cbabb8a2c",
+            "kind": "product",
+            "object_id": "09c231be6171e4c7ff9f11a3b4b781975bb2ca516dc09cd9cadc5d4a6e39de4f",
+            "version": 1,
+            "config_version": null,
+            "span_start": 0,
+            "span_end": 66,
+            "quote": "Defer until the owner and scope are verified. Keep human fallback.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        },
+        {
+          "schema_version": 2,
+          "id": "e-d4965e1951e8c22a90ea214ce5483f3be84896f76fe003891eec393caf6e70b5",
+          "text": "# Travel policy: hotels and taxis\n\nThis company and its business information are fictional training material.\n\nFor domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts.\n\nThe taxi reimbursement limit is CNY 200 per single trip. Over-limit claims and unusual routes require exception review.\n\nThe business lead coordinates policy explanations and individual-case review. The assistant can cite a rule, but cannot establish that a particular employee has exception approval or approve an expense.\n",
+          "ref": {
+            "schema_version": 2,
+            "session_id": "dc4ee0484b8a4e03a3cfb27cbabb8a2c",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        }
+      ],
+      "rule_bound": null,
+      "completeness": "complete",
+      "dropped_refs": [],
+      "missing_refs": []
+    },
+    "common_context": {
+      "facts": {
+        "change_log_complete": true,
+        "policy_changed": false
+      },
+      "fact_refs": {
+        "change_log_complete": [
+          {
+            "schema_version": 2,
+            "session_id": "dc4ee0484b8a4e03a3cfb27cbabb8a2c",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "policy_changed": [
+          {
+            "schema_version": 2,
+            "session_id": "dc4ee0484b8a4e03a3cfb27cbabb8a2c",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ]
+      },
+      "logs_complete": false,
+      "tests": [],
+      "config_version": null,
+      "technical_failures": [],
+      "decision": "defer_with_conditions",
+      "business_response": "",
+      "historical_responsibilities": [],
+      "source_issues": [],
+      "test_sources_complete": true,
+      "anchor_mode": "submission",
+      "requested_at": {
+        "schema_version": 2,
+        "business_seq": 0,
+        "workspace_revision": 1,
+        "storage_revision": 1
+      }
+    },
+    "packages": [
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R1.target",
+        "criterion": "R1.target",
+        "claim": "Whether target users and business goals match the demand evidence. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "f85128fc6f6336aa1505bb61641c7a77b0d435312660865420fb862b6c374f06",
+        "rule_context": {
+          "mechanism": "v2.target"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R1.metrics",
+        "criterion": "R1.metrics",
+        "claim": "Whether success metrics have definitions, targets and observable measures. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "3e719d6b64f7b553248e434519338c6ad40327f1a5e283e1a465d716a28dbc53",
+        "rule_context": {
+          "mechanism": "v2.metrics"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R2.support",
+        "criterion": "R2.support",
+        "claim": "Whether key judgments are supported by evidence available at the time. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "655674f7752b378f69f4e802fba58d8a46d72a9f6c0c84ab2952e56e0ef7dda2",
+        "rule_context": {
+          "mechanism": "v2.support"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R2.unknowns",
+        "criterion": "R2.unknowns",
+        "claim": "Whether facts, assumptions and unconfirmed resources are distinguished. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "3ae9eeb34650c3c8420d5b01cf78d01d31cf01003e8980297ca8e3a6134ed1ec",
+        "rule_context": {
+          "mechanism": "v2.unknowns"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R2.failure_analysis",
+        "criterion": "R2.failure_analysis",
+        "claim": "Whether failure cases are cited or reproduced and their failure modes explained. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "b16ceb74f44487ab0ac73aeb4d1d280bf2659c9b12a36661f4f9ca099e0f146c",
+        "rule_context": {
+          "mechanism": "v2.failure_analysis"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R3.capacity",
+        "criterion": "R3.capacity",
+        "claim": "Whether committed launch participants fit the effective capacity. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "not_applicable",
+        "input_hash": "8ceb33af40e84d645bab75cc21e3db7c940c342c5b6707989a520aeb7a1a21ee",
+        "rule_context": {
+          "mechanism": "v2.capacity"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R3.resources",
+        "criterion": "R3.resources",
+        "claim": "Whether committed launch resources and timing have valid support. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "not_applicable",
+        "input_hash": "ded4f5b0f14d4f6b3a9297a508621a6ebda2997c86cd3515b1af43b419f59a8f",
+        "rule_context": {
+          "mechanism": "v2.resources"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R4.functional_tests",
+        "criterion": "R4.functional_tests",
+        "claim": "Whether actual tests on the relevant configuration cover verified categories and acceptance criteria. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "not_applicable",
+        "input_hash": "f6b57e56cffc751f6687f5a29178a67a055a6f000ae180233a882e7f7d4c3862",
+        "rule_context": {
+          "mechanism": "v2.functional_tests"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R4.staleness_test",
+        "criterion": "R4.staleness_test",
+        "claim": "Whether testing followed a policy update and the latest relevant dynamic test used current versions. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "not_applicable",
+        "input_hash": "2e5f30df5d0f9c07513a4fdae4159717e7faa8a4a51448a5430fd2fc74922f28",
+        "rule_context": {
+          "mechanism": "v2.staleness_test"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R5.impact",
+        "criterion": "R5.impact",
+        "claim": "Whether the effects of a known change on the current proposal are explained. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "6444408dafc1a819dbceb924a6f89c0cbc286c1aab8526453bb1cd4e1a7c80f7",
+        "rule_context": {
+          "mechanism": "v2.impact"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R5.adjustment",
+        "criterion": "R5.adjustment",
+        "claim": "Whether an affected proposal was actually adjusted and retested, beyond a stated intention. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "not_applicable",
+        "input_hash": "bdc0ebcc13ed9b89716185f4c1aaeed7bd9157ad5b640f2b44e6f9a93a9c762b",
+        "rule_context": {
+          "mechanism": "v2.adjustment"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R6.consistency",
+        "criterion": "R6.consistency",
+        "claim": "Whether text, configuration, actual results and the decision are consistent. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "221e246b0384fdffb49bfc465506512dff02c4d60986acd925c4bc0af90b7a84",
+        "rule_context": {
+          "mechanism": "v2.consistency"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R6.operations",
+        "criterion": "R6.operations",
+        "claim": "Whether owner, observation window, exit conditions and follow-up actions are complete and executable. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "b2c220cfddd58d017ee8591e757de39b69ec7d98ea74e1d2f34935657915da45",
+        "rule_context": {
+          "mechanism": "v2.operations"
+        }
+      },
+      {
+        "item_id": "aabfa40b1cb94f45be619255e543d7e4:R6.alternatives",
+        "criterion": "R6.alternatives",
+        "claim": "Whether viable alternatives are compared and trade-offs explained. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "298a376d3dce0e8b43c7f01fc041034d5548d524ba7857be3e0b4369fc785e41",
+        "rule_context": {
+          "mechanism": "v2.alternatives"
+        }
+      }
+    ],
+    "expected_digest": "4cf95500c8e0670370ccfe4b1e2226243da483e8c6dd5a539766e09226e1356c"
+  },
+  {
+    "work_language": "en",
+    "session_id": "5fb52651e0ba4ba3be60a3fdbc4ea04d",
+    "subject": {
+      "schema_version": 2,
+      "session_id": "5fb52651e0ba4ba3be60a3fdbc4ea04d",
+      "kind": "submission",
+      "object_id": "1f7484045ba448ec9f2d29121c9d76a9",
+      "version": 1,
+      "config_version": null
+    },
+    "evaluation": {
+      "schema_version": 2,
+      "path": "runtime/evaluation.json",
+      "sha256": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+      "media_type": "application/json"
+    },
+    "as_of": {
+      "schema_version": 2,
+      "business_seq": 0,
+      "workspace_revision": 1,
+      "storage_revision": 1
+    },
+    "common": {
+      "schema_version": 2,
+      "task_type": "criterion",
+      "subjects": [
+        {
+          "schema_version": 2,
+          "session_id": "5fb52651e0ba4ba3be60a3fdbc4ea04d",
+          "kind": "product",
+          "object_id": "aba11d2f88e29cdd9d26876bcbaf40cdea0aba3aa6777c8cb18c91499f01302c",
+          "version": 1,
+          "config_version": null,
+          "span_start": 0,
+          "span_end": 66,
+          "quote": "Defer until the owner and scope are verified. Keep human fallback.",
+          "observed_at_seq": 0,
+          "valid_from_seq": 0,
+          "valid_until_seq": null
+        }
+      ],
+      "purpose": "commitment",
+      "as_of": {
+        "schema_version": 2,
+        "business_seq": 0,
+        "workspace_revision": 1,
+        "storage_revision": 1
+      },
+      "candidate_evidence": [
+        {
+          "schema_version": 2,
+          "id": "e-c6ae4e46a0e59203d5133c723d6d0d09cf4cd9497635e29c9e474dbcb8d422c7",
+          "text": "Defer until the owner and scope are verified. Keep human fallback.",
+          "ref": {
+            "schema_version": 2,
+            "session_id": "5fb52651e0ba4ba3be60a3fdbc4ea04d",
+            "kind": "product",
+            "object_id": "aba11d2f88e29cdd9d26876bcbaf40cdea0aba3aa6777c8cb18c91499f01302c",
+            "version": 1,
+            "config_version": null,
+            "span_start": 0,
+            "span_end": 66,
+            "quote": "Defer until the owner and scope are verified. Keep human fallback.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        },
+        {
+          "schema_version": 2,
+          "id": "e-6f6fe4e8e873a36dc46fbfbb338cd0c5bebda762cf39f1ed1ab9d2f2d70a9579",
+          "text": "# Travel policy: hotels and taxis\n\nThis company and its business information are fictional training material.\n\nFor domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts.\n\nThe taxi reimbursement limit is CNY 200 per single trip. Over-limit claims and unusual routes require exception review.\n\nThe business lead coordinates policy explanations and individual-case review. The assistant can cite a rule, but cannot establish that a particular employee has exception approval or approve an expense.\n",
+          "ref": {
+            "schema_version": 2,
+            "session_id": "5fb52651e0ba4ba3be60a3fdbc4ea04d",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        }
+      ],
+      "rule_bound": null,
+      "completeness": "complete",
+      "dropped_refs": [],
+      "missing_refs": []
+    },
+    "common_context": {
+      "facts": {
+        "change_log_complete": true,
+        "policy_changed": false
+      },
+      "fact_refs": {
+        "change_log_complete": [
+          {
+            "schema_version": 2,
+            "session_id": "5fb52651e0ba4ba3be60a3fdbc4ea04d",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "policy_changed": [
+          {
+            "schema_version": 2,
+            "session_id": "5fb52651e0ba4ba3be60a3fdbc4ea04d",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": null,
+            "span_end": null,
+            "quote": null,
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ]
+      },
+      "logs_complete": false,
+      "tests": [],
+      "config_version": null,
+      "technical_failures": [],
+      "decision": "no_go",
+      "business_response": "",
+      "historical_responsibilities": [],
+      "source_issues": [],
+      "test_sources_complete": true,
+      "anchor_mode": "submission",
+      "requested_at": {
+        "schema_version": 2,
+        "business_seq": 0,
+        "workspace_revision": 1,
+        "storage_revision": 1
+      }
+    },
+    "packages": [
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R1.target",
+        "criterion": "R1.target",
+        "claim": "Whether target users and business goals match the demand evidence. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "b953b7cc98ff5edbc1a9f4cfea5ed3379dd89acb241c28f246d4d0f1404c3193",
+        "rule_context": {
+          "mechanism": "v2.target"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R1.metrics",
+        "criterion": "R1.metrics",
+        "claim": "Whether success metrics have definitions, targets and observable measures. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "e1c959ea8333f5264a6ec30b4ee11e3c6309fce297bdb91fcd2d7e20426a8443",
+        "rule_context": {
+          "mechanism": "v2.metrics"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R2.support",
+        "criterion": "R2.support",
+        "claim": "Whether key judgments are supported by evidence available at the time. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "5c978a8532cfe6b5ddbaf4cc7eb79e76425c3119925bdd025c55cb19a1ef297a",
+        "rule_context": {
+          "mechanism": "v2.support"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R2.unknowns",
+        "criterion": "R2.unknowns",
+        "claim": "Whether facts, assumptions and unconfirmed resources are distinguished. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "60d047b120574712c691f16caf234b747b0a819c52e0016065d6260bc0b1e5c8",
+        "rule_context": {
+          "mechanism": "v2.unknowns"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R2.failure_analysis",
+        "criterion": "R2.failure_analysis",
+        "claim": "Whether failure cases are cited or reproduced and their failure modes explained. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "143685368b688738e0b9ffd9a15f5f4682b09fbc406c4bbf852508e2fdce90be",
+        "rule_context": {
+          "mechanism": "v2.failure_analysis"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R3.capacity",
+        "criterion": "R3.capacity",
+        "claim": "Whether committed launch participants fit the effective capacity. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "not_applicable",
+        "input_hash": "c87e22dd9d463f3fdb4f430caf71666f7cf1048b63068c3c7d88299ed2e83092",
+        "rule_context": {
+          "mechanism": "v2.capacity"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R3.resources",
+        "criterion": "R3.resources",
+        "claim": "Whether committed launch resources and timing have valid support. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "not_applicable",
+        "input_hash": "406b4e4bd29def26223a9cd43787dd7ac4d6031253af95fd4dd5ef0f1aa532a2",
+        "rule_context": {
+          "mechanism": "v2.resources"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R4.functional_tests",
+        "criterion": "R4.functional_tests",
+        "claim": "Whether actual tests on the relevant configuration cover verified categories and acceptance criteria. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "not_applicable",
+        "input_hash": "5fdd53f8d7f5cc30190678b2be545d21885a865bcd91d8550669c1c7b7546307",
+        "rule_context": {
+          "mechanism": "v2.functional_tests"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R4.staleness_test",
+        "criterion": "R4.staleness_test",
+        "claim": "Whether testing followed a policy update and the latest relevant dynamic test used current versions. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "not_applicable",
+        "input_hash": "5ba375844486fde45959867a344a18a37ab72fd4f4621ceddca916e4cb3f7dd4",
+        "rule_context": {
+          "mechanism": "v2.staleness_test"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R5.impact",
+        "criterion": "R5.impact",
+        "claim": "Whether the effects of a known change on the current proposal are explained. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "9ce12e1c627e215302876b7fcadb89c85a4e5827c065d7ef5f66fcc0a39fba9c",
+        "rule_context": {
+          "mechanism": "v2.impact"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R5.adjustment",
+        "criterion": "R5.adjustment",
+        "claim": "Whether an affected proposal was actually adjusted and retested, beyond a stated intention. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "not_applicable",
+        "input_hash": "1b721726c2ecc8261224fbc891a75138952b6d6f9c26bcbeaad3c146752c7b9f",
+        "rule_context": {
+          "mechanism": "v2.adjustment"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R6.consistency",
+        "criterion": "R6.consistency",
+        "claim": "Whether text, configuration, actual results and the decision are consistent. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "b004a3d87e5a5080ac88988d5ba67e8635d46ba766b88fff566c5f76b267cf23",
+        "rule_context": {
+          "mechanism": "v2.consistency"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R6.operations",
+        "criterion": "R6.operations",
+        "claim": "Whether owner, observation window, exit conditions and follow-up actions are complete and executable. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "7344ea3c17e9dd47c1e13d8bdfe78c28a5461df77a0759c7844b44ea017a557b",
+        "rule_context": {
+          "mechanism": "v2.operations"
+        }
+      },
+      {
+        "item_id": "1f7484045ba448ec9f2d29121c9d76a9:R6.alternatives",
+        "criterion": "R6.alternatives",
+        "claim": "Whether viable alternatives are compared and trade-offs explained. Assess purpose and the historical time first. A no-go or deferral is not automatically wrong; assess actual historical duties separately. Free text and templates are equivalent. MET requires full support, PARTIAL a specific gap, and NOT_MET verified contradiction or complete evidence of absence; unknown or unverified semantics remain INSUFFICIENT. Narrow scope, manual handling and justified stopping are acceptable alternatives. Never infer capability from kind, counts, the decision enum or Agent use.",
+        "applicability": "applicable",
+        "input_hash": "ddb773f44d004a8029caff4c56078c78607091b628c07d07231d722a2b55734a",
+        "rule_context": {
+          "mechanism": "v2.alternatives"
+        }
+      }
+    ],
+    "expected_digest": "00dfe4d02c9d6d8e1dcbea2547339b161363aac21e2a2d594582c71aa75790bc"
+  }
+]

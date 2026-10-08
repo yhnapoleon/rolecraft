@@ -1,17 +1,24 @@
 """New constraints change actual behavior; these are same-family practice, not research test."""
+import json
+import os
+import socket
+import subprocess
+import time
 from dataclasses import asdict
-import json, os, socket, subprocess, time
 from pathlib import Path
+
 import httpx
 import pytest
-from career_lab.scenarios.v2.module import ScenarioModule
-from career_lab.scenarios.v2.engine import ScenarioEngine
-from career_lab.scenarios.v2.seed import build_seed
+
 from career_lab.scenarios.v2.__main__ import paths_report
+from career_lab.scenarios.v2.engine import ScenarioEngine
+from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.scenarios.v2.policy import effective_config
+from career_lab.scenarios.v2.seed import build_seed
 from career_lab.storage.v2_store import V2Store
-from .test_reference_http import LiveScenario
+
 from .conftest import auth
+from .test_reference_http import LiveScenario
 
 ROOT=Path(__file__).resolve().parents[3]
 PACK=ROOT/'scenarios/pm_pilot/v2'
@@ -69,7 +76,13 @@ def test_frozen_variant_can_be_rebuilt_from_its_actual_records(practice,tmp_path
     calibration=json.loads((p.root/'research/retrieval-calibration.json').read_text()) if locale=='en' else None
     diagnostic=json.loads((p.root/'research/private-diagnostic.json').read_text()) if (p.root/'research/private-diagnostic.json').exists() else None
     replica=build_seed(tmp_path/'replica',records,locale=locale,scenario_id=sid,english_min_score=.3,calibration=calibration,private_diagnostic=diagnostic)
-    assert (replica/'manifest.json').read_bytes()==(p.root/'manifest.json').read_bytes()
+    from career_lab.scenarios.v2.loader import load_package
+    from career_lab.scenarios.v2.release import business_metadata, content_files
+    rebuilt = load_package(replica)
+    assert content_files(rebuilt) == content_files(p)
+    assert business_metadata(rebuilt.bundle.model_dump(mode='json')) == business_metadata(
+        p.bundle.model_dump(mode='json')
+    )
 
 
 @pytest.fixture

@@ -3,13 +3,13 @@
 Only the frozen public source projection supplies material text. Business facts
 carry either the source quote or the actual saved approval/configuration ref.
 """
-import hashlib
 import json
-from pathlib import Path
+
 from sqlalchemy import select
+
 from career_lab.contracts import v2 as C
-from career_lab.storage.v2_tables import v2_snapshots
 from career_lab.storage.v2_lifecycle import point
+from career_lab.storage.v2_tables import v2_snapshots
 
 
 class ScenarioEvidencePort:
@@ -58,8 +58,8 @@ class ScenarioEvidencePort:
         cache_key=C.digest([auth.model_dump(mode='json'),at.model_dump(mode='json')])
         if cache_key in self._window_cache:return self._window_cache[cache_key]
         from career_lab.scenarios.v2.evaluation_facts import ScenarioEvidenceWindow
-        from career_lab.storage.v2_tables import v2_transactions
         from career_lab.storage.v2_store import TransactionResult
+        from career_lab.storage.v2_tables import v2_transactions
         points=self.points(auth,at)
         with self.store.db.engine.connect() as conn:
             transactions=[TransactionResult.model_validate_json(raw) for raw in conn.execute(select(v2_transactions.c.result).where(v2_transactions.c.session_id==auth.session_id)).scalars()]
@@ -104,15 +104,18 @@ def create_feedback_handler(module, *, model=None):
     protocol=json.loads(C.read_file(module.package.root,bundle.protocol))
     if not protocol.get('installed'):return None
     if protocol.get('owner')!='W05' or bundle.mode!='advisory':raise C.ProtocolError('evaluation_runtime_unavailable',status=503)
-    repo=Path(__file__).resolve().parents[3]
-    for name,expected in protocol['source_files'].items():
-        target=(repo/name).resolve()
-        if not target.is_relative_to(repo) or hashlib.sha256(target.read_bytes()).hexdigest()!=expected:
-            raise C.ProtocolError('evaluation_source_mismatch',status=409)
+    from career_lab.api.feedback_provenance import attach_provenance, feedback_provenance
+    from career_lab.contracts.v2.provenance import require_execution_snapshot
+    from career_lab.scenarios.v2.release import require_evaluation
+
+    require_evaluation(module.package.root, bundle, language=module.work_language)
+    provenance = feedback_provenance(module, bundle, model)
     policies=tuple(CriterionPolicy(**p) for p in protocol['policies'])
     def traced(plan,reader):
         from dataclasses import replace
+
         from career_lab.storage.v2_store import FeedbackReadTrace
+        plan = attach_provenance(plan, provenance)
         traces=[]
         for write in plan.writes:
             at=C.FeedbackV2.model_validate(write.content).as_of
@@ -132,12 +135,20 @@ def create_feedback_handler(module, *, model=None):
         return replace(plan,feedback_read_traces=tuple(traces))
 
     def run(store,view,envelope,auth):
+        from career_lab.api.reviews_v2 import (
+            create_review_evaluator,
+            prepare_review_feedback,
+            review_feedback_plan,
+        )
         from career_lab.evidence.v2.store_reader import StoreEvidenceReader
-        from career_lab.evidence.v2.submission_evaluator import SubmissionEvaluator,submission_feedback_plan
-        from career_lab.api.reviews_v2 import create_review_evaluator,prepare_review_feedback,review_feedback_plan
+        from career_lab.evidence.v2.submission_evaluator import (
+            SubmissionEvaluator,
+            submission_feedback_plan,
+        )
         from career_lab.rubrics.v4.feedback import FeedbackEngine
         from career_lab.rubrics.v4.judge import AdvisoryJudge
         from career_lab.rubrics.v4.support import EvidenceSupportVerifier
+        require_execution_snapshot(provenance.code)
         module.check_bindings(view.bindings)
         source=ScenarioEvidencePort(store,module)
         reader=StoreEvidenceReader(store,auth,policies=policies,source_reader=source.source,rule_provider=source.rules,submission_rule_provider=source.submission_rules)

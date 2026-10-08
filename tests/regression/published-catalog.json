@@ -2,34 +2,34 @@
   "schema_version": 1,
   "scenarios": [
     {
-      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot",
+      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot",
       "work_language": "zh",
-      "scenario_hash": "8943b931f6cfe0f4d48efab8672a7e229566b8757993fffb1c440685b4c3f278"
+      "scenario_hash": "25cc55e26eca602f746e93d5576122f63704e586099e30d3f357bee9ce547089"
     },
     {
-      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot/locales/en",
+      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot/locales/en",
       "work_language": "en",
-      "scenario_hash": "43e77059fc825d0a144f6968bf96f9f8725b743730c4050352390b608dae8de4"
+      "scenario_hash": "50d4666923ca98ab7b214c1efb9d40d2d3578dabdfafc9ef914344855e1b6abe"
     },
     {
-      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent",
+      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot_urgent",
       "work_language": "zh",
-      "scenario_hash": "936ef761651b177ec66435a5de66ae33cbce562676e63a7bc5f3ff90208a959f"
+      "scenario_hash": "82c5117b57ebb8eb130b37652f2082815c7b18fb891580482226601968f3199f"
     },
     {
-      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent/locales/en",
+      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot_urgent/locales/en",
       "work_language": "en",
-      "scenario_hash": "4809238c7defb485b6f82658ad1a222bc507fda9ed60e503712edf07c72abf24"
+      "scenario_hash": "680bf186c7abeea61e56fad77492c10662ed5783765d6ea71f87a067c88bbcf4"
     },
     {
-      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15",
+      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot_capacity15",
       "work_language": "zh",
-      "scenario_hash": "355d1cb2d6e1f6999acdd0c35ac4f022e7e919b4542628431f728de910fc7c67"
+      "scenario_hash": "b9382798213aaac29cff137010e1c1c11fb3d97d4142f4dedd1268c5a7536297"
     },
     {
-      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15/locales/en",
+      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot_capacity15/locales/en",
       "work_language": "en",
-      "scenario_hash": "44907c23bd12fa6d7cd099f7009eccf7b730f1d78ecaa7146398f5c1771ecfa9"
+      "scenario_hash": "3680a42a6ba6a5ae73507de794603e0942f7fd6d3e51ba8d59ba2525bf0a2a41"
     }
   ]
 }

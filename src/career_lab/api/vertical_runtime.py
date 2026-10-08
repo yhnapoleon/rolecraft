@@ -36,6 +36,7 @@ def configured_models(provider="local"):
         base_url=os.getenv("CAREER_LAB_BASE_URL", url),
         model=os.getenv("CAREER_LAB_MODEL", name), retries=0,
     )
+    model.provider = provider
     return model, model
 
 
