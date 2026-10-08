@@ -239,3 +239,24 @@ def test_REG_02_unreadable_store_is_an_explicit_protocol_failure(tmp_path: Path)
     with pytest.raises(ProtocolError) as rejected:
         registry.load(identity)
     assert rejected.value.code == "registry_storage_unavailable"
+
+
+@pytest.mark.parametrize("media_type", ["text/plain", "application/octet-stream"])
+def test_REG_03_mislabelled_configuration_does_not_bypass_secret_checks(
+    tmp_path: Path, media_type: str
+) -> None:
+    source = tmp_path / "source"
+    ref = runtime(source)
+    model = RuntimeBundle.model_validate_json((source / ref.path).read_bytes())
+    raw = b"api_key: synthetic-test-value\nmodel_path: /Users/author/model\n"
+    (source / "config.yaml").write_bytes(raw)
+    config = FileRef(
+        path="config.yaml", sha256=hashlib.sha256(raw).hexdigest(), media_type=media_type
+    )
+    ref = write_json(source, "runtime.json", model.model_copy(update={"model": config}))
+    with pytest.raises(ProtocolError) as rejected:
+        BundleRegistry(tmp_path / "registry").register("runtime", source, ref)
+    assert rejected.value.code in {
+        "registry_credentials_forbidden",
+        "registry_member_format_unsupported",
+    }
