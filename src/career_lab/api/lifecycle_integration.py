@@ -1,4 +1,4 @@
-"""Public lifecycle and queue assembly. W05 supplies the evidence/feedback plan."""
+"""Public lifecycle and queue assembly. evaluation supplies the evidence/feedback plan."""
 
 from dataclasses import replace
 

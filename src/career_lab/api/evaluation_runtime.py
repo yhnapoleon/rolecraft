@@ -1,4 +1,4 @@
-"""W02 authorized sources/rules -> W05 evidence -> the common fixed worker.
+"""scenario authorized sources/rules -> evaluation evidence -> the common fixed worker.
 
 Only the frozen public source projection supplies material text. Business facts
 carry either the source quote or the actual saved approval/configuration ref.
@@ -14,7 +14,7 @@ from career_lab.storage.v2_tables import v2_snapshots
 
 
 class ScenarioEvidencePort:
-    """Bind W02's owned fact producer to real authorized store history."""
+    """Bind scenario's owned fact producer to real authorized store history."""
 
     def __init__(self, store, module):
         from career_lab.scenarios.v2.evaluation_facts import ScenarioFactAdapter

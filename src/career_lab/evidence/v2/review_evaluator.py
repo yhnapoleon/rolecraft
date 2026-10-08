@@ -1,6 +1,6 @@
 """Read-only review handlers: local source gaps do not erase other feedback.
 
-Public DTOs, persisted identities, worker registration and objections remain W01
+Public DTOs, persisted identities, worker registration and objections remain shared protocol
 contracts. This owned boundary returns separately timed, inspectable sections.
 """
 

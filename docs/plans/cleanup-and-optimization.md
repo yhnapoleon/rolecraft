@@ -372,3 +372,12 @@ EVAL-01测试在独立进程执行实际格式化后的八个模块，经正式�
 ## 批次8独立排版
 
 从Ruff的extend-exclude移除八份评价实现文件，五份冻结v1契约仍保留排除。对八文件执行Ruff格式化；逐文件AST与迁移候选f40da83一致（rubric_v2已在上一批排版，本批无变化）。不改规则文档、评价版本、场景包、固定对照或测试断言。完整门禁仍包含排版副本的新旧六包反馈与规则输出变异反例。
+
+
+## 批次4：领域名称与纯依赖导入
+
+注释和docstring中的工作线称呼改为对应职责名；两处用户CLI文案改为私有委托配置、场景模块校验。工程师CLI/任务包在同步基线上已无待改W代号。MCP的serverInfo.version改读安装包career-lab版本，name、protocolVersion、capabilities与其余响应字段不变；现代响应元数据同样使用该serverInfo。所有hash盐、owner、提示修订、协议来源、业务错误原文及测试ID保留。
+
+低风险导入限三文件：移除v2_store重复的局部dataclasses.replace；将v2_snapshot的IntegrityError、role_memory的fields/is_dataclass/replace/TypeAdapter上移。所有打断导入环的延迟导入保留，不动事务边界。67份源码的AST在排除docstring、上述纯导入、两条精确help文案与MCP软件版本后相同；逐模块冷进程导入验证无循环。
+
+真实CLI帮助与完整MCP初始化响应分别先红后绿；固定反馈/快照验证和每批完整门禁覆盖稳定身份、历史、授权与丢响应恢复。

@@ -282,7 +282,7 @@ class HuggingFaceCandidate:
         return prediction(item, self.revision, p, e)
 
     def save_checkpoint(self, target):
-        """Optional backend checkpoint; W01 model-bundle registration stays separate."""
+        """Optional backend checkpoint; shared protocol model-bundle registration stays separate."""
         if self.training_report is None:
             raise ProtocolError("model_not_trained")
         target = Path(target)

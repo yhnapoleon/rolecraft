@@ -1,4 +1,4 @@
-"""W05 evidence assembly; the original v1 assembler remains unchanged."""
+"""evaluation evidence assembly; the original v1 assembler remains unchanged."""
 
 from .assembler import EvidenceAssemblerV2, model_input
 

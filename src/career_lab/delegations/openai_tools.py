@@ -1,4 +1,4 @@
-"""OpenAI function descriptions over the existing authorized W06 tools.
+"""OpenAI function descriptions over the existing authorized delegation tools.
 
 No provider SDK or model call is made here. Parameters, business request IDs and
 execution remain on the same HTTP boundary used by the MCP client.
@@ -89,7 +89,7 @@ def main(argv=None):
         description="Export currently authorized OpenAI function tools; no model call."
     )
     parser.add_argument(
-        "--config", required=True, help="Path to the private W06 delegate config (not a token)."
+        "--config", required=True, help="Path to the private delegation config (not a token)."
     )
     parser.add_argument("--api", choices=("responses", "chat_completions"), default="responses")
     args = parser.parse_args(argv)

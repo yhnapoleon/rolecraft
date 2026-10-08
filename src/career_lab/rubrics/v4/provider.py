@@ -37,7 +37,7 @@ def create_feedback_engine(
 
 
 def require_first_model_attempt(claim):
-    """W14 calls after authorized saved-result replay, BEFORE model generation.
+    """workbench calls after authorized saved-result replay, BEFORE model generation.
 
     A leased attempt beyond 1 may only replay an already committed result. It
     must not regenerate even when the previous attempt crashed before saving.

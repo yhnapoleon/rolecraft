@@ -1,7 +1,7 @@
 """Purpose-aware rule bounds for the frozen 14-item candidate.
 
 Only assembler-verified facts enter here. User/model declarations cannot be
-converted into these trusted facts; W02 owns their actual-source production.
+converted into these trusted facts; scenario owns their actual-source production.
 """
 
 from career_lab.contracts.v2.core import EvidenceRefV2

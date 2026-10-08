@@ -1,4 +1,4 @@
-"""Private model adapter types consuming W01's public inputs and labels."""
+"""Private model adapter types consuming shared protocol's public inputs and labels."""
 
 from dataclasses import dataclass
 from typing import Any

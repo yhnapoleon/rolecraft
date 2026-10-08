@@ -1,4 +1,4 @@
-"""Reproducible synthetic W07 publication for the W07→W08 boundary.
+"""Reproducible synthetic publication from reference agents to relation models.
 
 Uses the real exporter, G0 verifier, aggregation and publication audit. These
 numeric fixtures prove wiring only, never human validity or research quality.

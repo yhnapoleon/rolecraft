@@ -1,7 +1,7 @@
 """Versioned 14-criterion candidate and explicit installation for new sessions.
 
 No defaults, live bundle mutation, history rewriting, or automatic scoring.
-W02 installs these files into a new bundle; W14 binds its EvaluationBundle.
+scenario installs these files into a new bundle; workbench binds its EvaluationBundle.
 """
 
 from dataclasses import dataclass
@@ -327,7 +327,7 @@ def rules_document() -> dict[str, object]:
 
 
 def install_candidate(destination):
-    """Explicitly export immutable candidate files for W02/W14 bundle creation."""
+    """Explicitly export immutable candidate files for scenario/workbench bundle creation."""
     destination = Path(destination)
     destination.mkdir(parents=True, exist_ok=True)
     refs = {}

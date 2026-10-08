@@ -1,4 +1,4 @@
-"""Build W06 observations from public query handlers and authorized history.
+"""Build delegation observations from public query handlers and authorized history.
 
 The shared store supplies history inside the current query transaction. This
 module never reads SQL, private scenario state, role prompts or source files.

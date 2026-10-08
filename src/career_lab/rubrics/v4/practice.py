@@ -1,7 +1,7 @@
-"""Pure optional next-practice selection; W14 owns authorization and new sessions.
+"""Pure optional next-practice selection; workbench owns authorization and new sessions.
 
 Inputs are an authorized FeedbackV2 projection and a trusted independently
-reviewed W02 catalog. This module neither approves variants nor creates sessions.
+reviewed scenario catalog. This module neither approves variants nor creates sessions.
 """
 
 from dataclasses import dataclass
@@ -126,7 +126,7 @@ def suggestions(auth, feedback_ref, feedback, catalog, *, work_language):
 def selection_plan(auth, feedback_ref, feedback, catalog, shown, *, choice, option_id=None):
     """Validate an explicit choice against fresh authorized inputs; no mutation.
 
-    W14 must atomically create the new session and persist this source/target
+    workbench must atomically create the new session and persist this source/target
     relation. Calling this function or accepting a choice is not session creation.
     """
     fresh = suggestions(auth, feedback_ref, feedback, catalog, work_language=shown["work_language"])

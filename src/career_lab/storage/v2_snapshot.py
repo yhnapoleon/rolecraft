@@ -2,6 +2,7 @@
 
 from uuid import uuid4, uuid5, NAMESPACE_URL
 from sqlalchemy import insert, select
+from sqlalchemy.exc import IntegrityError
 from career_lab.contracts.v2 import *
 from .v2_store import V2Store, validate_graph
 from .v2_remap import NamespaceRemapper, identity_key, event_key, transaction_key
@@ -241,7 +242,6 @@ class SnapshotService:
             state=state,
             prefix_digest=digest(normalized),
         )
-        from sqlalchemy.exc import IntegrityError
 
         try:
             with self.store.db.transaction() as c:

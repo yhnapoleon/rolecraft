@@ -1,4 +1,4 @@
-"""Local, immutable advisory registrations for already-produced W08 bundles.
+"""Local, immutable advisory registrations for already-produced relation model bundles.
 
 This module never fits a model, downloads weights, or promotes scoring/quality.
 Only files referenced by the existing validated ModelBundle are copied.

@@ -1,15 +1,17 @@
-"""Versioned v4 extensions mounted beside W06; included in the public contract export.
+"""Versioned v4 extensions mounted beside delegation; included in the public contract export.
 
 - ``GET  /sessions/{sid}/delegations``: the person's own agent delegations. No token is ever returned.
   Agent labels are not part of the frozen grant, so the browser keeps the person's own label locally.
-- ``GET  /sessions/{sid}/practice?submission_id=``: optional reviewed practice for that feedback (W05 rules).
+- ``GET /sessions/{sid}/practice?submission_id=``: optional reviewed practice for that feedback
+  (evaluation rules).
 - ``POST /sessions/{sid}/practice/choices``: an explicit decline / continue / choose (a suggestion) /
   choose_other (any reviewed situation the person picks). Both choose paths create the new practice and
   record the source feedback -> new practice link. One choice is one request_id: the new session id and its
   credential are derived from the person's own credential and that request_id, so a lost response or a
   failure between the two writes is completed by retrying the same request, never by a second practice.
 
-Practice identity: the service runs packages prepared from the authored W02 sources. Independent review
+Practice identity: the service runs packages prepared from authored scenario sources.
+Independent review
 covers authored content only (``content-approval-2.9.0.json``). An option is offered only when the running
 package's authored manifest hash is one of the approved bundles; the approval is matched by content
 identity and never re-signed onto runtime bindings. Without a prepared catalog nothing is offered.
@@ -314,7 +316,8 @@ def mount_v4_extensions(app):
         feedback = C.FeedbackV2.model_validate(record.content)
         options, targets = catalog.options()
         if choice == "choose_other":
-            # Self-selection is not a suggestion: validate the source feedback with W05 rules, then the
+            # Validate self-selected practice against the source feedback and evaluation rules,
+            # then check the
             # option against the reviewed catalog of the same language; record it as the person's own pick.
             base = selection_plan(auth, ref, feedback, options, shown, choice="decline")
             target = next(

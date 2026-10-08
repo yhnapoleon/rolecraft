@@ -6,6 +6,7 @@ inferred from clientInfo or JSON-RPC IDs.
 """
 
 import json, re
+from importlib.metadata import version
 from pydantic import ValidationError
 from career_lab.delegations.http_client import RemoteFailure
 
@@ -14,7 +15,7 @@ LEGACY = "2025-11-25"
 VERSION = "io.modelcontextprotocol/protocolVersion"
 CAPABILITIES = "io.modelcontextprotocol/clientCapabilities"
 SERVER = "io.modelcontextprotocol/serverInfo"
-INFO = {"name": "rolecraft-workspace", "version": "w06-development-1"}
+INFO = {"name": "rolecraft-workspace", "version": version("career-lab")}
 
 
 class RpcFailure(Exception):

@@ -1,8 +1,8 @@
-"""Compose a fresh W02 bundle with exact, locally installed W05 evaluation files.
+"""Compose a fresh scenario bundle with exact, locally installed evaluation files.
 
 This offline authoring tool never mutates a source bundle, session or feedback.
-Runtime source hashes still describe runtime-consumed W02 files; the complete
-Git delivery digest additionally pins this build tool and inherited W05 inputs.
+Runtime source hashes still describe runtime-consumed scenario files; the complete
+Git delivery digest additionally pins this build tool and inherited evaluation inputs.
 """
 
 from pathlib import Path

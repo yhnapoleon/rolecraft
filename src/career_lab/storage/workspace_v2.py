@@ -1,7 +1,7 @@
-"""W03 persistence is owned solely by W01 V2Store.
+"""workspace persistence is owned solely by shared protocol V2Store.
 
 This compatibility module exports public plan types only. It declares no table,
-transaction, idempotency ledger or version clock. Install the W03 operations via
+transaction, idempotency ledger or version clock. Install the workspace operations via
 career_lab.workspace.extension.install_workspace_operations.
 """
 

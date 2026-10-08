@@ -1,4 +1,4 @@
-"""Trusted W02 fact producers for W05. No database, rubric policy or model calls.
+"""Trusted scenario fact producers for evaluation. No database, rubric policy or model calls.
 
 The integrator supplies exact authorized history windows and existing object /
 reference reads. A window is an in-process value, never an HTTP input schema.

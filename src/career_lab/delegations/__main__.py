@@ -1,4 +1,4 @@
-"""Run the W06 server factory; shared global CLI registration remains with W14."""
+"""Run the delegation server factory; shared global CLI registration remains with workbench."""
 
 import argparse
 import sys
