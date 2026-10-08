@@ -1,7 +1,6 @@
 """Capture one authorized database view and construct its verifiable data identity."""
 
 from collections.abc import Sequence
-from importlib.metadata import version as package_version
 from typing import Any
 
 from career_lab.contracts import v2 as C
@@ -13,6 +12,7 @@ from career_lab.storage.v2_store import TransactionView, V2Store
 
 from .files import RetainedDocumentation, encode, file_ref
 from .guide import handoff_guide
+from .identity import source_version
 
 LEGACY_REQUIREMENTS = (
     "Configuration-only handoff; no code execution.",
@@ -191,7 +191,7 @@ def add_index(
         index.update(
             tool_versions=retained[0].tool_versions
             if retained
-            else {"career-lab-engineer": package_version("career-lab")},
+            else {"career-lab-engineer": source_version()},
             template_version=retained[0].template_version if retained else "2",
         )
     files["index.json"] = encode(index)

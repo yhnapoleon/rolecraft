@@ -2,7 +2,6 @@
 
 import json
 from dataclasses import dataclass
-from importlib.metadata import version as package_version
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +13,7 @@ from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.v2_store import TransactionView, V2Store
 
 from .files import encode, file_ref, publish
+from .identity import source_version
 
 
 @dataclass(frozen=True)
@@ -130,7 +130,7 @@ def candidate_files(
         "kind": "engineer_probe_candidates",
         "source": source,
         "executor": auth.executor,
-        "tool_versions": {"career-lab-engineer": package_version("career-lab")},
+        "tool_versions": {"career-lab-engineer": source_version()},
         "suite_published": False,
         "probe_execution_performed": False,
         "candidates": candidates,

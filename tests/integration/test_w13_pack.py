@@ -19,6 +19,7 @@ import httpx
 import pytest
 import uvicorn
 from fastapi import FastAPI
+from test_w13_legacy_fixture import released_sources
 
 from career_lab.api.vertical_runtime import create_runtime_app, default_installed_scenario
 
@@ -437,17 +438,10 @@ def export_released_pack(session: Session) -> Path:
     # Run the unmodified released exporter over a real API-created session.
     # A copied release package avoids importing the installed checkout by accident.
     release = root / "release"
-    for relative in (
-        "src/career_lab/__init__.py",
-        "src/career_lab/engineer/__init__.py",
-        "src/career_lab/engineer/pack.py",
-        "src/career_lab/engineer/cli.py",
-    ):
+    for relative, content in released_sources().items():
         target = release / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(
-            subprocess.check_output(["git", "show", "73e14e9:" + relative], cwd=ROOT)
-        )
+        target.write_text(content)
     # Other imports resolve to the tested source; only the released exporter is pinned.
     package = release / "src/career_lab/__init__.py"
     package.write_text(
@@ -677,3 +671,62 @@ def test_legacy_requirements_cannot_be_replaced_by_rehashed_claims(session: Sess
     assert result.returncode == 1, result.stdout + result.stderr
     assert json.loads(result.stdout)["code"] == "engineer_pack_changed"
     assert not (root / "tampered-result").exists()
+
+
+@pytest.mark.parametrize("fault", ["distribution_metadata", "source_files"])
+def test_tool_identity_uses_available_source_or_returns_json(session: Session, fault: str) -> None:
+    app, _, _, _, _, trial, _, root, credentials = session
+    program = """
+import importlib.metadata as metadata
+import sys
+from pathlib import Path
+fault = sys.argv.pop(1)
+original_version = metadata.version
+original_read = Path.read_bytes
+def version(name):
+    if name == "career-lab":
+        raise metadata.PackageNotFoundError(name)
+    return original_version(name)
+def read(path):
+    if path.parent.name == "engineer" and path.suffix == ".py":
+        raise OSError("injected source read failure")
+    return original_read(path)
+if fault == "distribution_metadata":
+    metadata.version = version
+else:
+    Path.read_bytes = read
+from career_lab.engineer.cli import main
+raise SystemExit(main())
+"""
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            program,
+            fault,
+            "pack",
+            "--database",
+            str(root / "source.db"),
+            "--credentials",
+            str(credentials),
+            "--scenario",
+            str(app.state.scenario_v2.package.root),
+            "--test",
+            trial["id"],
+            "--output",
+            str(root / "identity-pack"),
+        ],
+        cwd=ROOT,
+        env=source_environment(),
+        capture_output=True,
+        text=True,
+    )
+    if fault == "distribution_metadata":
+        assert result.returncode == 0, result.stdout + result.stderr
+        index = json.loads((root / "identity-pack/index.json").read_text())
+        identity = index["tool_versions"]["career-lab-engineer"]
+        assert identity.startswith("source-sha256:") and len(identity.split(":")[1]) == 64
+    else:
+        assert result.returncode == 1, result.stdout + result.stderr
+        assert json.loads(result.stdout)["code"] == "engineer_tool_source_unavailable"
+        assert not result.stderr and not (root / "identity-pack").exists()
