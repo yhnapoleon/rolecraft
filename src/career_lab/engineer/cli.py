@@ -47,7 +47,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="Explicitly confirm selected source text as test intent, not truth",
     )
-    for command in (pack, reproduce, probes):
+    submit = operations.add_parser("submit", help="Validate and retain a configuration submission")
+    submit.add_argument("--pack", type=Path, required=True)
+    submit.add_argument("--input", type=Path, required=True, help="Frozen submission JSON file")
+    submit.add_argument(
+        "--output", type=Path, required=True, help="Immutable submission repository"
+    )
+    for command in (pack, reproduce, probes, submit):
         command.add_argument(
             "--database",
             type=Path,
@@ -86,6 +92,10 @@ def run(args: argparse.Namespace) -> int:
             result = export_pack(store, module, auth, args.test, args.output)
         elif args.engineer_operation == "reproduce":
             result = reproduce_pack(store, module, auth, args.pack, args.output)
+        elif args.engineer_operation == "submit":
+            from .submission import submit_configuration
+
+            result = submit_configuration(store, module, auth, args.pack, args.input, args.output)
         else:
             from .probes import TextSelection, export_candidates
 

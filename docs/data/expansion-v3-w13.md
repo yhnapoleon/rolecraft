@@ -1,6 +1,6 @@
 # 工程师任务包、基线复现与离线候选
 
-工程师命令从获准读取的 PM 会话交接固定配置、原始测试和公开失败案例，使用同一助手复现历史行为；也可把保存的测试计划或已确认的原文片段导出为待审 probe 候选。配置修改提交与完整回归 review、研究 suite 审查发布、PM 报告回引尚未实现。
+工程师命令从获准读取的 PM 会话交接固定配置、原始测试和公开失败案例，使用同一助手复现历史行为；也可把保存的测试计划或已确认的原文片段导出为待审 probe 候选。配置提交已提供冻结文件入口；完整回归 review、研究 suite 审查发布、PM 报告回引尚未实现。
 
 ## 读取与材料边界
 
@@ -59,4 +59,12 @@ career-lab-engineer probes-from-plan \
 
 测试通过动态端口真实 HTTP 创建与修订 PM 作品，CLI 子进程显式使用被测工作区源码并检查导入位置；原 `career-lab-engineer` 入口分别验证中英文。旧格式兼容使用校验固定的已发布导出器夹具，不依赖浅克隆中可能缺失的提交对象。
 
-冻结的 EngineerSubmission 尚不能表达基线 hash、自报报告引用、未修复项和创建时间；RegressionReport 也缺少完整复核状态、suite／reviewer 身份和实际生效配置的冻结映射。公共契约负责方完成兼容增量、集成人串行发布冻结输入后，才能接续 submit/review；不能把这些字段塞进说明字符串或另造平行公共协议。专用页面、任意代码执行、训练和付费模型调用均未由这些命令开放。
+新增的 engineer-review-v1 冻结协议已提供基线 hash、自报报告、未修复项、创建时间、逐probe结果与复核身份。当前submit已消费该增量；完整review仍待下一切片实现，PM回引另行接入。旧对象按原版本读取；专用页面、任意代码执行、训练和付费模型调用均未由这些命令开放。
+
+## 配置提交
+
+`career-lab-engineer submit --pack <原包目录> --input <submission.json> --output <提交仓库>`，另带上述database／credentials／scenario参数。输入采用`contracts.v2.engineer.EngineerSubmissionRecord`的`engineer-review-v1`协议；原pack引用固定为pack.json，候选配置与可选自报报告放在submission.json同目录，使用互不重名的单层相对文件引用。baseline.json与submission.json是输出保留名。各引用包含确切原件hash；字段与示例见[冻结协议](../contracts/engineer-review.md)。
+
+提交含原基线hash、候选文件、原始修改说明、显式null或EngineerClaimedReport引用、未修复项清单、当前认证执行者、带时区的创建时间及工作语言。所有事实由输入提供且完整保留；执行者不得冒用。候选严格解析AssistantConfig并经场景校验；未知字段、非法域／工作项、执行参数、另行指定的校准文件引用均拒绝。不执行输入文字、代码、命令或网络请求，也不改变PM配置或审批资源。
+
+输出仓库按submission ID的hash划分不可变目录，CLI返回directory；目录包含submission.json、baseline.json及引用原件。相同ID／内容回读原时间与文件，修改内容须另取ID；同ID不同内容或输出损坏明确冲突。每次调用都重新核验pack原始来源和当前权限，需要read及act/tests.create；只保留文件不能延续已撤销权限。提交成功表示合法记录已保存，不表示候选修复或自报结果已经通过复核。
