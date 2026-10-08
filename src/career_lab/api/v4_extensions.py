@@ -1,4 +1,4 @@
-"""Integration-owned v4 extensions mounted beside W06, without touching frozen routes.
+"""Versioned v4 extensions mounted beside W06; included in the public contract export.
 
 - ``GET  /sessions/{sid}/delegations``: the person's own agent delegations. No token is ever returned.
   Agent labels are not part of the frozen grant, so the browser keeps the person's own label locally.
@@ -22,8 +22,6 @@ import json
 import os
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field
 
 from fastapi import Depends
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -45,19 +43,8 @@ practice_links = Table(
 _VARIANTS = Path(__file__).resolve().parents[3] / 'scenarios/pm_pilot/v2/variants'
 
 
-class ShownPractice(BaseModel):
-    source_feedback: C.ObjectRef
-    source_feedback_hash: str = Field(pattern=r'^[0-9a-f]{64}$')
-    suggestion_hash: str = Field(pattern=r'^[0-9a-f]{64}$')
-    work_language: Literal['zh', 'en']
-
-
-class PracticeChoiceInput(BaseModel):
-    model_config = ConfigDict(extra='forbid')
-    request_id: str = Field(min_length=1, max_length=120, strict=True)
-    choice: Literal['choose', 'choose_other', 'decline', 'continue_revision']
-    option_id: str | None = None
-    shown: ShownPractice
+ShownPractice = C.ShownPractice
+PracticeChoiceInput = C.PracticeChoiceInput
 
 
 def _now():
@@ -110,7 +97,7 @@ class PracticeCatalog:
         if not path:
             return {}
         entries = json.loads(Path(path).read_text())['scenarios']
-        authored = {e['scenario_hash']: (e['authored_manifest'], e['work_language']) for e in entries}
+        authored = {e['scenario_hash']: (e.get('reviewed_authored_manifest') or e['authored_manifest'], e['work_language']) for e in entries}
         running = {}
         for (name, language), registration in getattr(self.registry, 'language_scenarios', {}).items():
             content = authored.get(registration.bindings.scenario.sha256)
@@ -187,12 +174,12 @@ def mount_v4_extensions(app):
     practice_links.create(store.db.engine, checkfirst=True)
     bearer = HTTPBearer(auto_error=False)
 
-    @app.get('/sessions/{session_id}/delegations')
+    @app.get('/sessions/{session_id}/delegations', response_model=C.DelegationListResponse)
     def delegations(session_id: str, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
         # Same envelope as the gateway's list reads.
         return {'schema_version': 2, 'result': {'schema_version': 2, 'result': list_delegations(store, _context(store, session_id, credentials))}}
 
-    @app.get('/sessions/{session_id}/practice')
+    @app.get('/sessions/{session_id}/practice', response_model=C.PracticeReadResponse)
     def practice(session_id: str, submission_id: str, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
         auth = _context(store, session_id, credentials); _human(auth)
         ref, feedback, view = _feedback_for(store, auth, submission_id)
@@ -206,7 +193,7 @@ def mount_v4_extensions(app):
                 'catalog': catalog.listing(own, {o['id'] for o in shown['options']}),
                 'links': _links(store, session_id, ref.object_id)}}
 
-    @app.post('/sessions/{session_id}/practice/choices')
+    @app.post('/sessions/{session_id}/practice/choices', response_model=C.PracticeChoiceResponse)
     async def choose(session_id: str, body: PracticeChoiceInput, credentials: HTTPAuthorizationCredentials | None = Depends(bearer)):
         auth = _context(store, session_id, credentials); _human(auth)
         shown, choice, option_id = body.shown.model_dump(mode='json'), body.choice, body.option_id

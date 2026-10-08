@@ -1,0 +1,18 @@
+{
+  "choice": "choose",
+  "creates_session": false,
+  "help_source": "optional_feedback_suggestion",
+  "learning_gain": "not_established",
+  "new_session_id": "example",
+  "source_feedback": {
+    "config_version": null,
+    "kind": "document",
+    "object_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "source_feedback_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "suggestion_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "target": {}
+}

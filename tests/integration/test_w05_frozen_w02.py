@@ -31,6 +31,8 @@ def combined(request,tmp_path):
     from career_lab.storage.v2_lifecycle import begin_revision
     registry.register(Operation('revision_cycles','act',C.BeginRevisionInput,begin_revision,action_name='begin_revision'))
     app=create_app('sqlite:///'+str(tmp_path/'combo.db'),extensions=registry);holder={}
+    from career_lab.api.vertical_reads import history_reader
+    app.state.v2_store.public_history_reader=history_reader(registry)
     def generate(view,envelope,actor):
         h=holder['h'];subject=C.FeedbackInput.model_validate(envelope.command.payload).subject
         submission=C.SubmissionV2.model_validate(view.get(subject).content)

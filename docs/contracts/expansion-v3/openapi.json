@@ -2616,6 +2616,84 @@
         "title": "DelegationJobCapacity",
         "type": "object"
       },
+      "DelegationListPage": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "complete": {
+            "const": true,
+            "default": true,
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DelegationSummary"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "default": null,
+            "title": "Next Cursor",
+            "type": "null"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "checked_at"
+        ],
+        "title": "DelegationListPage",
+        "type": "object"
+      },
+      "DelegationListResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/DelegationListResult"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "DelegationListResponse",
+        "type": "object"
+      },
+      "DelegationListResult": {
+        "additionalProperties": false,
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/DelegationListPage"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "DelegationListResult",
+        "type": "object"
+      },
       "DelegationRevoke": {
         "additionalProperties": false,
         "properties": {
@@ -2635,6 +2713,103 @@
           "delegation_id"
         ],
         "title": "DelegationRevoke",
+        "type": "object"
+      },
+      "DelegationSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "allowed_actions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Actions"
+          },
+          "allowed_objects": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allowed Objects"
+          },
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "create_under_tasks": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Create Under Tasks",
+            "type": "array"
+          },
+          "effective_status": {
+            "enum": [
+              "active",
+              "expired",
+              "revoked"
+            ],
+            "title": "Effective Status",
+            "type": "string"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "revoked": {
+            "title": "Revoked",
+            "type": "boolean"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "executor",
+          "capabilities",
+          "allowed_actions",
+          "allowed_objects",
+          "create_under_tasks",
+          "expires_at",
+          "revoked",
+          "effective_status"
+        ],
+        "title": "DelegationSummary",
         "type": "object"
       },
       "Deliverable": {
@@ -6580,6 +6755,342 @@
         "title": "PlanPayload",
         "type": "object"
       },
+      "PracticeChoiceInput": {
+        "additionalProperties": false,
+        "properties": {
+          "choice": {
+            "enum": [
+              "choose",
+              "choose_other",
+              "decline",
+              "continue_revision"
+            ],
+            "title": "Choice",
+            "type": "string"
+          },
+          "option_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Option Id"
+          },
+          "request_id": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "shown": {
+            "$ref": "#/components/schemas/ShownPractice"
+          }
+        },
+        "required": [
+          "request_id",
+          "choice",
+          "shown"
+        ],
+        "title": "PracticeChoiceInput",
+        "type": "object"
+      },
+      "PracticeChoiceResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/PracticeChoiceResult"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "PracticeChoiceResponse",
+        "type": "object"
+      },
+      "PracticeChoiceResult": {
+        "additionalProperties": false,
+        "properties": {
+          "duplicate": {
+            "title": "Duplicate",
+            "type": "boolean"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/PracticePlan"
+          },
+          "scenario": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scenario"
+          },
+          "session": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PracticeSession"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "plan",
+          "duplicate",
+          "session",
+          "scenario"
+        ],
+        "title": "PracticeChoiceResult",
+        "type": "object"
+      },
+      "PracticePlan": {
+        "additionalProperties": false,
+        "properties": {
+          "choice": {
+            "enum": [
+              "choose",
+              "choose_other",
+              "decline",
+              "continue_revision"
+            ],
+            "title": "Choice",
+            "type": "string"
+          },
+          "creates_session": {
+            "title": "Creates Session",
+            "type": "boolean"
+          },
+          "help_source": {
+            "enum": [
+              "optional_feedback_suggestion",
+              "self_selected"
+            ],
+            "title": "Help Source",
+            "type": "string"
+          },
+          "learning_gain": {
+            "const": "not_established",
+            "default": "not_established",
+            "title": "Learning Gain",
+            "type": "string"
+          },
+          "new_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Session Id"
+          },
+          "source_feedback": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "source_feedback_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source Feedback Hash",
+            "type": "string"
+          },
+          "suggestion_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Suggestion Hash",
+            "type": "string"
+          },
+          "target": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "$ref": "#/components/schemas/JsonValue"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target"
+          }
+        },
+        "required": [
+          "source_feedback",
+          "source_feedback_hash",
+          "suggestion_hash",
+          "choice",
+          "target",
+          "creates_session",
+          "new_session_id",
+          "help_source"
+        ],
+        "title": "PracticePlan",
+        "type": "object"
+      },
+      "PracticeReadResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/PracticeView"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "PracticeReadResponse",
+        "type": "object"
+      },
+      "PracticeSession": {
+        "additionalProperties": false,
+        "properties": {
+          "binding": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "title": "Binding",
+            "type": "object"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "state": {
+            "$ref": "#/components/schemas/PublicState"
+          },
+          "token": {
+            "title": "Token",
+            "type": "string"
+          }
+        },
+        "required": [
+          "session_id",
+          "token",
+          "state",
+          "binding"
+        ],
+        "title": "PracticeSession",
+        "type": "object"
+      },
+      "PracticeView": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "can_choose_other": {
+            "const": true,
+            "default": true,
+            "title": "Can Choose Other",
+            "type": "boolean"
+          },
+          "can_decline": {
+            "const": true,
+            "default": true,
+            "title": "Can Decline",
+            "type": "boolean"
+          },
+          "catalog": {
+            "items": {
+              "additionalProperties": {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              "type": "object"
+            },
+            "title": "Catalog",
+            "type": "array"
+          },
+          "learning_gain": {
+            "const": "not_established",
+            "default": "not_established",
+            "title": "Learning Gain",
+            "type": "string"
+          },
+          "links": {
+            "items": {
+              "additionalProperties": {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              "type": "object"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "options": {
+            "items": {
+              "additionalProperties": {
+                "$ref": "#/components/schemas/JsonValue"
+              },
+              "type": "object"
+            },
+            "title": "Options",
+            "type": "array"
+          },
+          "source_feedback": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "source_feedback_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source Feedback Hash",
+            "type": "string"
+          },
+          "suggestion_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Suggestion Hash",
+            "type": "string"
+          },
+          "work_language": {
+            "enum": [
+              "zh",
+              "en"
+            ],
+            "title": "Work Language",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_feedback",
+          "source_feedback_hash",
+          "suggestion_hash",
+          "work_language",
+          "options",
+          "note",
+          "available",
+          "catalog",
+          "links"
+        ],
+        "title": "PracticeView",
+        "type": "object"
+      },
       "ProductAdopt": {
         "additionalProperties": false,
         "properties": {
@@ -9764,6 +10275,39 @@
           "operation"
         ],
         "title": "ShareUpdate",
+        "type": "object"
+      },
+      "ShownPractice": {
+        "properties": {
+          "source_feedback": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "source_feedback_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Source Feedback Hash",
+            "type": "string"
+          },
+          "suggestion_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Suggestion Hash",
+            "type": "string"
+          },
+          "work_language": {
+            "enum": [
+              "zh",
+              "en"
+            ],
+            "title": "Work Language",
+            "type": "string"
+          }
+        },
+        "required": [
+          "source_feedback",
+          "source_feedback_hash",
+          "suggestion_hash",
+          "work_language"
+        ],
+        "title": "ShownPractice",
         "type": "object"
       },
       "SkillBundle": {
@@ -13331,6 +13875,48 @@
       }
     },
     "/sessions/{session_id}/delegations": {
+      "get": {
+        "operationId": "delegations_sessions__session_id__delegations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DelegationListResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Delegations"
+      },
       "post": {
         "operationId": "delegations_create_sessions__session_id__delegations_post",
         "parameters": [
@@ -14229,6 +14815,113 @@
           }
         ],
         "summary": "Observation"
+      }
+    },
+    "/sessions/{session_id}/practice": {
+      "get": {
+        "operationId": "practice_sessions__session_id__practice_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "submission_id",
+            "required": true,
+            "schema": {
+              "title": "Submission Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeReadResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Practice"
+      }
+    },
+    "/sessions/{session_id}/practice/choices": {
+      "post": {
+        "operationId": "choose_sessions__session_id__practice_choices_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PracticeChoiceInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PracticeChoiceResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Choose"
       }
     },
     "/sessions/{session_id}/relation-checks": {

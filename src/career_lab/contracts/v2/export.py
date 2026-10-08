@@ -47,6 +47,9 @@ CONSUMERS['W04'] += ['RoleAuditScope','RoleAuditReceivedShare','RoleAuditMemory'
 for consumer in ('W04','W05','W06','W09','W14'):
     CONSUMERS[consumer] += ['JobRefreshRecord']
 
+for consumer in ('W06','W14'):
+    CONSUMERS[consumer] += ['ShownPractice','PracticeChoiceInput','DelegationSummary','DelegationListPage','DelegationListResult','DelegationListResponse','PracticeView','PracticeReadResponse','PracticePlan','PracticeSession','PracticeChoiceResult','PracticeChoiceResponse']
+
 def integration_example(model):
     from career_lab.contracts.v2 import (ImportedTaskSource,WorkspaceImportReceipt,WorkspaceProductRead,WorkspaceProductPage,WorkspaceSharePage,WorkProductVersion,LegacyProvenance,ImportResult,ObjectRef,VersionPoint,Executor,digest)
     from career_lab.contracts.v2.examples import STAMP
@@ -94,10 +97,13 @@ def export(root:Path,output:Path):
         entries[name]={'owner':'W01','schema_version':2,'consumers':[wp for wp,names in CONSUMERS.items() if name in names] or ['shared-primitive'],'schema':f'schemas/{name}.json','schema_sha256':sha(output/'schemas'/f'{name}.json'),'example':f'examples/{name}.json','example_sha256':sha(output/'examples'/f'{name}.json'),'tests':['tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree']}
     (output/'examples/files').mkdir(exist_ok=True);(output/'examples/files/payload.json').write_text('{}')
     (output/'examples/labels').mkdir(exist_ok=True);(output/'examples/labels/example.json').write_text('{}')
-    app=create_app('sqlite:///:memory:');dump(output/'openapi.json',app.openapi());app.state.store.close()
+    app=create_app('sqlite:///:memory:')
+    from career_lab.api.v4_extensions import mount_v4_extensions
+    mount_v4_extensions(app)
+    dump(output/'openapi.json',app.openapi());app.state.store.close()
     # Only implementation files here: the complete source tree is identified by the delivery receipt.
     files=set((root/'src/career_lab/contracts').rglob('*.py'))
-    files|={root/p for p in ['src/career_lab/api/app.py','src/career_lab/cli.py','src/career_lab/api/vertical_runtime.py','src/career_lab/api/vertical_reads.py','src/career_lab/api/v4_config.py','src/career_lab/api/public_materials.py','src/career_lab/api/lifecycle_integration.py','src/career_lab/api/evaluation_runtime.py','src/career_lab/api/workspace_integration.py','src/career_lab/api/feedback_integration.py','src/career_lab/api/role_snapshot.py','src/career_lab/api/private_roles.py','src/career_lab/api/modules.py','src/career_lab/api/v2_routes.py','src/career_lab/storage/v2_tables.py','src/career_lab/storage/v2_store.py','src/career_lab/storage/v2_jobs.py','src/career_lab/storage/v2_snapshot.py','src/career_lab/storage/v2_lifecycle.py','src/career_lab/storage/v2_remap.py','src/career_lab/jobs/worker.py','src/career_lab/jobs/repository.py','src/career_lab/rubrics/registry.py']}
+    files|={root/p for p in ['src/career_lab/api/app.py','src/career_lab/api/v4_extensions.py','src/career_lab/cli.py','src/career_lab/api/vertical_runtime.py','src/career_lab/api/vertical_reads.py','src/career_lab/api/v4_config.py','src/career_lab/api/public_materials.py','src/career_lab/api/lifecycle_integration.py','src/career_lab/api/evaluation_runtime.py','src/career_lab/api/workspace_integration.py','src/career_lab/api/feedback_integration.py','src/career_lab/api/role_snapshot.py','src/career_lab/api/private_roles.py','src/career_lab/api/modules.py','src/career_lab/api/v2_routes.py','src/career_lab/storage/v2_tables.py','src/career_lab/storage/v2_store.py','src/career_lab/storage/v2_jobs.py','src/career_lab/storage/v2_snapshot.py','src/career_lab/storage/v2_lifecycle.py','src/career_lab/storage/v2_remap.py','src/career_lab/jobs/worker.py','src/career_lab/jobs/repository.py','src/career_lab/rubrics/registry.py']}
     source={str(p.relative_to(root)):sha(p) for p in sorted(files)}
     errors=[]
     import re

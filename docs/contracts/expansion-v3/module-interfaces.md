@@ -274,3 +274,14 @@ OperationAvailability明确installed/ready/capability/unavailable_code，注册�
 原生配额续接：JobRepository.enqueue/retry_failed中的会话v2任务先从真实凭据核session、actor、到期/撤销、能力和动作，再与V2Store共享同一个SQL容量函数；不复制第二份计数状态。重复enqueue/已重排retry不新占槽，failed→queued需在同一凭据锁/任务事务内重新取得容量；满额拒绝且不改任务或时间元数据。v1行为保持；历史内部空payload的v2诊断任务不具有session/delegate身份，也不是可执行Gateway JobEnvelope，不能由MCP当业务工具暴露。原生入队本身不代替Gateway对源对象、世界状态、WorkerClaim和结果的完整校验。
 
 每个真正session-v2入口的容量均按原delegate维度，任意新HTTP/MCP/worker适配仍须消费共同方法并验证公开能力ready。当前已固定W05r7 e249622，旧r6验收不改签；实际MCP/原生UI完整组合与移除行为门槛仍待后续。
+
+
+### 人类授权列表与补练扩展（056正式收编）
+
+公开导出包含 `GET /sessions/{session_id}/delegations`、`GET /sessions/{session_id}/practice?submission_id=...`、`POST /sessions/{session_id}/practice/choices`。三者使用现有会话 Bearer 身份，只允许本会话 human learner；授权列表另核 delegate 权限，严格响应 `DelegationListResponse` 不含 token/hash。补练请求和响应分别按 `ShownPractice`、`PracticeChoiceInput`、`PracticeReadResponse`、`PracticeChoiceResponse` 校验。扩展直接由正常运行入口挂载，不是开放给外部 Agent 的任意 Gateway 动作。
+
+选择固定 `request_id`、反馈对象及内容hash、显示建议hash、工作语言和选项。工作语言从服务端会话绑定核对，choose只能采用当时可核对建议，choose_other明确记self_selected；decline/continue_revision不创建会话。错误输入422、权限403、不可读源404、语言/目标/同号异选冲突409。返回 `creates_session/new_session_id` 必须对应实际创建结果，回传凭据只在授权的新会话创建/恢复响应中传递，不入关联表。
+
+独立新增 `v4_practice_links` 保存源会话、确切反馈hash、选择与目标会话；不改旧表。会话ID按源/反馈/请求确定，创建后关联写入失败或响应丢失可用原请求修复为同一会话；接口每次重新检查源授权、语言、实际运行包和独立内容审核，不从聊天或候选状态推定批准。原提交/反馈不更新，删除/清理/跨正式目录迁移不由本接口自动执行。SQLite重启与故障恢复有集成回归；多进程并发、PostgreSQL恢复仍未验证，不据本契约收编标完成。
+
+重绑后的作者包保留新 `authored_manifest`，prepare另以原审核manifest的真实hash与每份非runtime原件、完整成员集合和元数据比对，生成 `reviewed_authored_manifest`。仅内容审核结论沿确证谱系继承；运行绑定、模型质量及整包验收不继承。旧审核文件原字节保留。

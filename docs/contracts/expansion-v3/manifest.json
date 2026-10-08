@@ -147,7 +147,19 @@
       "RequestResultQuery",
       "RequestJobResult",
       "RequestResult",
-      "JobRefreshRecord"
+      "JobRefreshRecord",
+      "ShownPractice",
+      "PracticeChoiceInput",
+      "DelegationSummary",
+      "DelegationListPage",
+      "DelegationListResult",
+      "DelegationListResponse",
+      "PracticeView",
+      "PracticeReadResponse",
+      "PracticePlan",
+      "PracticeSession",
+      "PracticeChoiceResult",
+      "PracticeChoiceResponse"
     ],
     "W07": [
       "DatasetRecordV2",
@@ -261,7 +273,19 @@
       "PublicState",
       "PublicEvent",
       "PublicTransactionResult",
-      "JobRefreshRecord"
+      "JobRefreshRecord",
+      "ShownPractice",
+      "PracticeChoiceInput",
+      "DelegationSummary",
+      "DelegationListPage",
+      "DelegationListResult",
+      "DelegationListResponse",
+      "PracticeView",
+      "PracticeReadResponse",
+      "PracticePlan",
+      "PracticeSession",
+      "PracticeChoiceResult",
+      "PracticeChoiceResponse"
     ],
     "W15": [
       "AnnotationV2",
@@ -281,17 +305,18 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "2f393a2a47f8d489a77e3f83f4b17f2ae69a42473cb92c896196e1111086bb50"
+      "sha256": "e336ccc0359cb8b3e05443df92f0c09d121f1cd8cb0d22182503867caec36da3"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "f151ee744a1ccd16fe2da7aa9b7beb8e97a2b8a97fdbcfd6d9e4726208708d58"
+    "sha256": "1b5769974851ba90a5d4fa7acec7bc32d38dcc7bc9f183e51d045405a8a6f9a8"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
     "031-C8-01": "Store read/query/view/job-view and cached request/replay share feedback subject authorization and transient support projection; hidden quote/title/ID/derived prose removed; original records unchanged.",
     "056-role-call-guard": "Durable phase reservation keyed by original request and explicit refresh generation; worker/HTTP recovery and provider changes cannot reissue calls. Mechanical language/binding verifier only, semantic quality unverified; local replies unchanged. Controlled fixture workers inherit production no-retry policy.",
+    "056-v4-extension-contract": "Typed human-only delegation list and practice request/response schemas; exact OpenAPI mounted routes; durable source/target lifecycle and recovery documented. Authored content review lineage is verified against original manifest bytes and non-runtime files after rebinding.",
     "W02-S06": "Opt-in contextual resolver gets authoritative persisted-window ScenarioState; legacy four-argument behavior retained.",
     "W02-S07": "Verified command/result references are atomically anchored for read-request recovery.",
     "W02-projector-registration": "Conflicting declared public action/projector registrations are rejected before installation.",
@@ -320,10 +345,10 @@
   },
   "openapi": {
     "path": "openapi.json",
-    "sha256": "3f707d79c2cd15f92b5816aeb5798acb02baf9e4c7ff0121e42f3bb63326235a"
+    "sha256": "70ef74626bdfc017e878bc80ac42d26d389267eabe892cc0554f040a33c6096a"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-2b0629dbef16ce2cc4480949da7b50903a9a63f554145e7d0e268ae4a60a5e6e",
+  "previous_contract_revision": "expansion-v3-ae7c6f5534d71d6a33057fdb1ec7675ca8edcfffe6f616cf8a2c05bc0041f4c0",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -376,6 +401,7 @@
     "C-W01-03": "Withdrawn route-deleting candidate is not included. Public integration must use Gateway slots; W03 adapter remains separate integration work.",
     "C-W01-04": "Ordinary jobs require an active open current cycle before handler and at commit. Explicit refresh preserves question/command while moving context to the current cycle; fixed-subject feedback remains allowed. Deterministic failures stop; parked reason/history is queryable; research writes denied.",
     "P2-related": "Stable worker error codes; scoped v2 jobs GET; reverse-order object/resolver collision rejected.",
+    "QA055-13": "Formal schemas/OpenAPI/source inclusion and documented identity, authorization, recovery and error semantics. Multi-process/PostgreSQL and cross-directory migration remain unverified conditional checks.",
     "R01": "Actual WorkerClaim is passed and fenced at entry/commit; no lease borrowing.",
     "R02": "Fixed-subject derived FeedbackV2 may persist on submitted; ordinary writes stay forbidden.",
     "R03": "Model-directed remapping leaves arbitrary text and legacy provenance unchanged.",
@@ -895,6 +921,51 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "DelegationListPage": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/DelegationListPage.json",
+      "example_sha256": "ad9dfe2ac4cb67b68480d3446023b471bf87e494fbf63c87f1623f8b7ae69fb9",
+      "owner": "W01",
+      "schema": "schemas/DelegationListPage.json",
+      "schema_sha256": "968d014d139d25ffa5fe7f03f700ed33d22bcc05e34bd920f44572254417ce28",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DelegationListResponse": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/DelegationListResponse.json",
+      "example_sha256": "e0f267de2335353e14a3d79c39251de7125a02c6274e11646ca475021e11e22b",
+      "owner": "W01",
+      "schema": "schemas/DelegationListResponse.json",
+      "schema_sha256": "fa278bbf098b770b391415cc5b5e0bfe0f630fd07958e7413a94fa49e2374374",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DelegationListResult": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/DelegationListResult.json",
+      "example_sha256": "a3092db9b373aba0f39813548afb00ca4203c8739b53ce8b18d07fd48f332776",
+      "owner": "W01",
+      "schema": "schemas/DelegationListResult.json",
+      "schema_sha256": "118496eed14ccf90e10827cb7cd3d68046550459bb146db7dff5ff66102a0119",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "DelegationRevoke": {
       "consumers": [
         "W06"
@@ -904,6 +975,21 @@
       "owner": "W01",
       "schema": "schemas/DelegationRevoke.json",
       "schema_sha256": "a98b9b35983a936940e09c9bb32b1e3fa667506d161b274a7a86d5a694641729",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "DelegationSummary": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/DelegationSummary.json",
+      "example_sha256": "70464bd72b8d9bbf52022c1ea90833624f19b3b350e82e3a9ecf55b1e21e7ad9",
+      "owner": "W01",
+      "schema": "schemas/DelegationSummary.json",
+      "schema_sha256": "b76670bf18fd54b4d0c86dc3f90ccb0c7596e3036fcdd2fbd4d12049f25da85f",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1768,6 +1854,111 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "PracticeChoiceInput": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/PracticeChoiceInput.json",
+      "example_sha256": "34f391f6a669540c04251ea0df8b8937d9889f046233955583f45bb2209c9e68",
+      "owner": "W01",
+      "schema": "schemas/PracticeChoiceInput.json",
+      "schema_sha256": "93a5fd42cb0a73a57a204a9fcfb2c57893cf265d47a7b652164673c9d53455d4",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PracticeChoiceResponse": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/PracticeChoiceResponse.json",
+      "example_sha256": "9297ae138b92ea7dc2da78b993c684e59b26b7430af94363de4b25491f427d88",
+      "owner": "W01",
+      "schema": "schemas/PracticeChoiceResponse.json",
+      "schema_sha256": "1291ca6f1efb65dc414af634f106de8e8840916a9197f4135c2203ffa4e133e3",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PracticeChoiceResult": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/PracticeChoiceResult.json",
+      "example_sha256": "4e2340aad3b133542278be1df4f025ef9137c4fd83374db9d879d0ed094d53ef",
+      "owner": "W01",
+      "schema": "schemas/PracticeChoiceResult.json",
+      "schema_sha256": "644a909fc45784509a9a5fe890da79a6d9de8ef2d5494d6f8a5d555de4e6355a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PracticePlan": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/PracticePlan.json",
+      "example_sha256": "f2394ccfd5fcb779260c9368b18e96c28f6a9d8412be9db99ea5275dbea8fa47",
+      "owner": "W01",
+      "schema": "schemas/PracticePlan.json",
+      "schema_sha256": "ce499663aeb221847ba7a1819f4e7ee91c555600e4641271eed2a992e0053500",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PracticeReadResponse": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/PracticeReadResponse.json",
+      "example_sha256": "86352904611e9c5be65312acd6514db698f1a2ce75b064699eb4baf962f9fa70",
+      "owner": "W01",
+      "schema": "schemas/PracticeReadResponse.json",
+      "schema_sha256": "9a82774ffed38450841f53c6427227217378626639c9809a2917eaaa8d34a94d",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PracticeSession": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/PracticeSession.json",
+      "example_sha256": "c423c3cf16ebfd39e3e0bb292f6aaf284f88dcc164d81ec8aa80cc8282b41e89",
+      "owner": "W01",
+      "schema": "schemas/PracticeSession.json",
+      "schema_sha256": "22d567a36f92d459eed74cc72cb80fc2e80b360c107607112075e407984181ef",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "PracticeView": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/PracticeView.json",
+      "example_sha256": "6bf089cb9a5e91777867e68b2696fa9483a09cdf462194ffb251fb65f88b814a",
+      "owner": "W01",
+      "schema": "schemas/PracticeView.json",
+      "schema_sha256": "9d805da32cbde07617b974a7c63fd64001105dea27dd50f48e0253d9053e1e7f",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "ProductAdopt": {
       "consumers": [
         "W03"
@@ -2398,6 +2589,21 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "ShownPractice": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/ShownPractice.json",
+      "example_sha256": "e5b91159f9608629710e1a7ade643c2173b05e80232ab91a0da44fe31091d6a2",
+      "owner": "W01",
+      "schema": "schemas/ShownPractice.json",
+      "schema_sha256": "7483bf7908a5da7b5ff6ef8a1b21de240a87e3e11c4afa0060a25dc93c825376",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "SkillBundle": {
       "consumers": [
         "W12"
@@ -2980,6 +3186,7 @@
     "src/career_lab/api/role_snapshot.py": "19ea854aff520928b219f314bfa63608b90d62825603a3e36063a278ab563551",
     "src/career_lab/api/v2_routes.py": "91c8d42225aa52d460734e6460456b896c6a737f3ec131a406b0d1c9b791e96d",
     "src/career_lab/api/v4_config.py": "248ba9d11bd9cf5f16513f9407713a87c870b0df6bf98848c267e90de434d46f",
+    "src/career_lab/api/v4_extensions.py": "f050c0e6d4382c5c43b648c5d8a1ea9d1225e998835617c12875796a520b9673",
     "src/career_lab/api/vertical_reads.py": "95a8843b5e8b569a264ce28da9b4f3613e179ef29d41c171a6544e53a65acce8",
     "src/career_lab/api/vertical_runtime.py": "f071c46119cc5e9c54b8f23c9720648d43464315f4c88676661ad98a2ee36e6b",
     "src/career_lab/api/workspace_integration.py": "0b731ea27219d49767b72e07b65293edc810eae79872842f8a2459ef863e2604",
@@ -2990,13 +3197,14 @@
     "src/career_lab/contracts/deliverables.py": "0455a250f84c4008a823c0e54af7dc69cde277cca594d177e59b91cd7333a6f9",
     "src/career_lab/contracts/evaluation.py": "6dc4969cf02222543fa96ddffbd4d9fd19f4813ee1f9b85ea3d193797ac4ea23",
     "src/career_lab/contracts/scenario.py": "b191244dd1356503b153abf3a31921ce7911ec19b66534378b369b35d135e3b0",
-    "src/career_lab/contracts/v2/__init__.py": "bcb066dbbe937f00a366d9fd836a1411afef069472cb2c8765988f771bee55e7",
+    "src/career_lab/contracts/v2/__init__.py": "a785e74095d14713af0d98565017df553f06cab46c515a8805af46a3a1c24a47",
     "src/career_lab/contracts/v2/core.py": "6dc7ce6ab00d781f8c14f505a7c8f9ef482e8715dee7fb78a2e7ee3da1318fb5",
     "src/career_lab/contracts/v2/data.py": "bd0888c2937400bf00ceeac53b9e49260040c3782c7cbfaca62d10097841065b",
     "src/career_lab/contracts/v2/discovery.py": "93cc327208f8e269c57baf3016c09b820a1076d556e60ab40cb04ecc4dbd5db5",
     "src/career_lab/contracts/v2/evaluation.py": "0697b8f77246da064a43b31596acb12e7943405e6d5ea3b084c376e22dc37307",
     "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
-    "src/career_lab/contracts/v2/export.py": "0a064b09d3f66e33faa9e6144f5ee7b16a5034e2a6f24fb14d8ca0d77f971419",
+    "src/career_lab/contracts/v2/export.py": "b311582586734defdd313428b02f90b582b28f38ec53639f6d6e2db3ada01d1c",
+    "src/career_lab/contracts/v2/extensions.py": "6e66df02813583f8f7bd4d707a3815960558c93d7b45cadfa119eb6b70cf1be1",
     "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
     "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
     "src/career_lab/contracts/v2/projection.py": "24dd56480f1de6f8489241e9bd4d65cd7bf533427b2dbc91768318f1d733f896",

@@ -1,0 +1,203 @@
+{
+  "$defs": {
+    "DelegationListPage": {
+      "additionalProperties": false,
+      "properties": {
+        "checked_at": {
+          "format": "date-time",
+          "title": "Checked At",
+          "type": "string"
+        },
+        "complete": {
+          "const": true,
+          "default": true,
+          "title": "Complete",
+          "type": "boolean"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/DelegationSummary"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "next_cursor": {
+          "default": null,
+          "title": "Next Cursor",
+          "type": "null"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "items",
+        "checked_at"
+      ],
+      "title": "DelegationListPage",
+      "type": "object"
+    },
+    "DelegationSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_actions": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Allowed Actions"
+        },
+        "allowed_objects": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Allowed Objects"
+        },
+        "capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Capabilities",
+          "type": "array"
+        },
+        "create_under_tasks": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Create Under Tasks",
+          "type": "array"
+        },
+        "effective_status": {
+          "enum": [
+            "active",
+            "expired",
+            "revoked"
+          ],
+          "title": "Effective Status",
+          "type": "string"
+        },
+        "executor": {
+          "$ref": "#/$defs/Executor"
+        },
+        "expires_at": {
+          "anyOf": [
+            {
+              "format": "date-time",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Expires At"
+        },
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "revoked": {
+          "title": "Revoked",
+          "type": "boolean"
+        },
+        "session_id": {
+          "title": "Session Id",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "executor",
+        "capabilities",
+        "allowed_actions",
+        "allowed_objects",
+        "create_under_tasks",
+        "expires_at",
+        "revoked",
+        "effective_status"
+      ],
+      "title": "DelegationSummary",
+      "type": "object"
+    },
+    "Executor": {
+      "additionalProperties": false,
+      "properties": {
+        "delegation_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delegation Id"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "human",
+            "external_agent",
+            "reference_agent",
+            "system"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "Executor",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "result": {
+      "$ref": "#/$defs/DelegationListPage"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "result"
+  ],
+  "title": "DelegationListResult",
+  "type": "object"
+}

@@ -1,0 +1,101 @@
+{
+  "$defs": {
+    "JsonValue": {},
+    "PublicState": {
+      "additionalProperties": false,
+      "properties": {
+        "business_seq": {
+          "minimum": 0,
+          "title": "Business Seq",
+          "type": "integer"
+        },
+        "config_version": {
+          "minimum": 0,
+          "title": "Config Version",
+          "type": "integer"
+        },
+        "cycle_id": {
+          "minLength": 1,
+          "title": "Cycle Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "active",
+            "paused",
+            "submitted"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "storage_revision": {
+          "minimum": 0,
+          "title": "Storage Revision",
+          "type": "integer"
+        },
+        "workspace_revision": {
+          "minimum": 0,
+          "title": "Workspace Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "business_seq",
+        "workspace_revision",
+        "storage_revision",
+        "session_id",
+        "status",
+        "cycle_id",
+        "config_version"
+      ],
+      "title": "PublicState",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "binding": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "title": "Binding",
+      "type": "object"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "session_id": {
+      "title": "Session Id",
+      "type": "string"
+    },
+    "state": {
+      "$ref": "#/$defs/PublicState"
+    },
+    "token": {
+      "title": "Token",
+      "type": "string"
+    }
+  },
+  "required": [
+    "session_id",
+    "token",
+    "state",
+    "binding"
+  ],
+  "title": "PracticeSession",
+  "type": "object"
+}

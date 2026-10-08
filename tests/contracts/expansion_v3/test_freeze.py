@@ -18,6 +18,8 @@ def test_all_frozen_models_examples_and_openapi_agree():
         assert entry['owner']=='W01' and entry['consumers'] and entry['tests']
     for path,expected in manifest['source_files'].items():assert sha(ROOT/path)==expected,path
     app=create_app('sqlite:///:memory:')
+    from career_lab.api.v4_extensions import mount_v4_extensions
+    mount_v4_extensions(app)
     assert app.openapi()==json.loads((FREEZE/'openapi.json').read_text())
     assert set(REQUEST_MODELS)==set(manifest['request_payloads'])
     api=app.openapi()
