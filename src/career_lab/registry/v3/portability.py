@@ -14,10 +14,11 @@ CREDENTIAL_FIELDS = frozenset(
 )
 CREDENTIAL_ASSIGNMENT = re.compile(
     r"(?i)\b(?:api[_-]?key|authorization|password|session[_-]?token|access[_-]?token|"
-    r"secret[_-]?key)[\"']?\s*[:=]\s*\S|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
+    r"secret[_-]?key|secret)[\"']?\s*[:=]\s*\S|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
 )
 MACHINE_PATH = re.compile(
-    r"(?<![\w./\\:-])/(?:Users|home|private|tmp|Volumes|etc|root|var|opt|usr|mnt)/\S+"
+    r"(?<![\w./\\:-])(?:/(?:Users|home|private|tmp|Volumes|etc|root|var|opt|usr|mnt)/\S+"
+    r"|[A-Za-z]:[\\/]\S+|\\\\[^\s\\]+\\\S+)"
 )
 TEXT_MEDIA_TYPES = frozenset(
     {
@@ -52,12 +53,15 @@ def validate_portability(raw: bytes, ref: FileRef) -> None:
 
 
 def _structured_text(text: str, ref: FileRef) -> object:
-    if ref.media_type in {"text/plain", "text/markdown"}:
-        return text
+    suffix = PurePosixPath(ref.path).suffix.lower()
     try:
-        if "toml" in ref.media_type or ref.path.endswith((".toml", ".lock")):
+        if suffix == ".json":
+            return json.loads(text)
+        if "toml" in ref.media_type or suffix in {".toml", ".lock"}:
             return tomllib.loads(text)
-        return yaml.safe_load(text)
+        if suffix in {".yaml", ".yml"} or "yaml" in ref.media_type:
+            return yaml.safe_load(text)
+        return text
     except (ValueError, yaml.YAMLError, RecursionError) as exc:
         raise ProtocolError("registry_configuration_invalid") from exc
 

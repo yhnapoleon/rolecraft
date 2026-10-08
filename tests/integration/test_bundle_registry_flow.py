@@ -289,3 +289,25 @@ def test_REG_03_markdown_prompt_is_not_required_to_be_yaml(tmp_path: Path) -> No
     registry = BundleRegistry(tmp_path / "registry")
     registered = registry.register("runtime", source, ref)
     assert registry.resolve_file(registered, prompt) == raw
+
+
+@pytest.mark.parametrize(
+    ("raw", "code"),
+    [
+        (b"secret: synthetic-test-value\n", "registry_credentials_forbidden"),
+        (b"model_path: C:\\models\\local\n", "registry_machine_path_forbidden"),
+    ],
+)
+@pytest.mark.parametrize("filename", ["config.yaml", "config.txt"])
+def test_REG_03_plain_text_cannot_hide_secret_or_windows_path(
+    tmp_path: Path, raw: bytes, code: str, filename: str
+) -> None:
+    source = tmp_path / "source"
+    ref = runtime(source)
+    model = RuntimeBundle.model_validate_json((source / ref.path).read_bytes())
+    (source / filename).write_bytes(raw)
+    config = FileRef(path=filename, sha256=hashlib.sha256(raw).hexdigest(), media_type="text/plain")
+    ref = write_json(source, "runtime.json", model.model_copy(update={"model": config}))
+    with pytest.raises(ProtocolError) as rejected:
+        BundleRegistry(tmp_path / "registry").register("runtime", source, ref)
+    assert rejected.value.code == code
