@@ -13,8 +13,9 @@ def pytest_configure(config):
 
 @pytest.fixture
 def spec():
-    return load_scenario(Path(__file__).resolve().parents[1] / "scenarios/pm_pilot/v1/scenario.yaml")
-
+    return load_scenario(
+        Path(__file__).resolve().parents[1] / "scenarios/pm_pilot/v1/scenario.yaml"
+    )
 
 
 @pytest.fixture
@@ -29,20 +30,20 @@ def stale_contract_scenario(tmp_path):
     from career_lab.scenarios.v2.seed import build_seed
     from career_lab.scenarios.v2.module import ScenarioModule
 
-    root = build_seed(tmp_path / 'stale-contract-scenario')
+    root = build_seed(tmp_path / "stale-contract-scenario")
     ScenarioModule(root)  # Prove the positive fixture before making one field stale.
-    source = root / 'runtime/source-files.json'
+    source = root / "runtime/source-files.json"
     data = json.loads(source.read_text())
-    data['foundation_contract_sha256'] = '0' * 64
+    data["foundation_contract_sha256"] = "0" * 64
     source.write_text(json.dumps(data))
-    runtime = root / 'runtime/bundle.json'
+    runtime = root / "runtime/bundle.json"
     data = json.loads(runtime.read_text())
-    data['source']['overlay']['sha256'] = hashlib.sha256(source.read_bytes()).hexdigest()
+    data["source"]["overlay"]["sha256"] = hashlib.sha256(source.read_bytes()).hexdigest()
     runtime.write_text(json.dumps(data))
-    manifest = root / 'manifest.json'
+    manifest = root / "manifest.json"
     data = json.loads(manifest.read_text())
-    for ref in data['files']:
-        if ref['path'] in ('runtime/source-files.json', 'runtime/bundle.json'):
-            ref['sha256'] = hashlib.sha256((root / ref['path']).read_bytes()).hexdigest()
+    for ref in data["files"]:
+        if ref["path"] in ("runtime/source-files.json", "runtime/bundle.json"):
+            ref["sha256"] = hashlib.sha256((root / ref["path"]).read_bytes()).hexdigest()
     manifest.write_text(json.dumps(data))
     return root

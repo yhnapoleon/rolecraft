@@ -1,7 +1,11 @@
 from career_lab.contracts.evaluation import CandidateEvidence, EvidencePackage, GoldAnnotation
 from career_lab.evidence.serializer import seal_input
 
-LABELS = {"Entailment": "SUPPORTED", "Contradiction": "CONTRADICTED", "NotMentioned": "INSUFFICIENT"}
+LABELS = {
+    "Entailment": "SUPPORTED",
+    "Contradiction": "CONTRADICTED",
+    "NotMentioned": "INSUFFICIENT",
+}
 
 
 def import_contractnli(data, source_split, target_split):
@@ -22,12 +26,41 @@ def import_contractnli(data, source_split, target_split):
             if any(type(i) is not int or i < 0 or i >= len(spans) for i in annotation["spans"]):
                 raise ValueError("annotation span index out of range")
             iid = f"contractnli-{document['id']}-{label_id}"
-            item = seal_input(EvidencePackage(item_id=iid, task_type="relation", criterion=label_id,
-                claim=data["labels"][label_id]["hypothesis"], as_of_seq=0, candidate_evidence=tuple(evidence), completeness="complete"))
-            gold = GoldAnnotation(item_id=iid, label=LABELS[annotation["choice"]], label_tier="G1", acceptable_evidence_sets=(),
-                annotation_version="contractnli-original", evidence_evaluable=False)
-            result.append({"input": item.model_dump(mode="json"), "gold": gold.model_dump(mode="json"),
-                "source_span_ids": annotation["spans"], "source_spans": spans,
-                "lineage": {"item_id": iid, "template_id": f"contract-document-{document['id']}", "root_case_id": f"contract-document-{document['id']}",
-                            "parent_id": None, "split": target_split, "source_split": source_split, "language": "en", "source": "contractnli"}})
+            item = seal_input(
+                EvidencePackage(
+                    item_id=iid,
+                    task_type="relation",
+                    criterion=label_id,
+                    claim=data["labels"][label_id]["hypothesis"],
+                    as_of_seq=0,
+                    candidate_evidence=tuple(evidence),
+                    completeness="complete",
+                )
+            )
+            gold = GoldAnnotation(
+                item_id=iid,
+                label=LABELS[annotation["choice"]],
+                label_tier="G1",
+                acceptable_evidence_sets=(),
+                annotation_version="contractnli-original",
+                evidence_evaluable=False,
+            )
+            result.append(
+                {
+                    "input": item.model_dump(mode="json"),
+                    "gold": gold.model_dump(mode="json"),
+                    "source_span_ids": annotation["spans"],
+                    "source_spans": spans,
+                    "lineage": {
+                        "item_id": iid,
+                        "template_id": f"contract-document-{document['id']}",
+                        "root_case_id": f"contract-document-{document['id']}",
+                        "parent_id": None,
+                        "split": target_split,
+                        "source_split": source_split,
+                        "language": "en",
+                        "source": "contractnli",
+                    },
+                }
+            )
     return result

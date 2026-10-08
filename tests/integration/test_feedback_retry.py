@@ -30,7 +30,9 @@ def test_explicit_failed_retry_resets_budget_and_times_and_fences_old_worker(rep
     assert failed["finished_at"] == utc_timestamp(3.5)
     # Even stale result content must be removed when explicitly retrying.
     with repository.db.transaction() as conn:
-        conn.execute(update(jobs).where(jobs.c.id == jid).values(result='{"value": {"stale": true}}'))
+        conn.execute(
+            update(jobs).where(jobs.c.id == jid).values(result='{"value": {"stale": true}}')
+        )
     queued = repository.retry_failed(jid, now=10)
     assert queued["status"] == "queued"
     assert queued["attempt"] == 0

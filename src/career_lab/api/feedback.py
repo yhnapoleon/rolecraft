@@ -16,7 +16,9 @@ def generate_feedback(store, session_id, submission_id):
         return saved_feedback(store, session_id, submission_id)
     except KeyError:
         report = build_feedback(store, session_id, submission_id)
-        return store.save_derived(session_id, feedback_id(store, session_id, submission_id), "feedback", report)
+        return store.save_derived(
+            session_id, feedback_id(store, session_id, submission_id), "feedback", report
+        )
 
 
 def read_evidence(store, session_id, submission_id, criterion_id, evidence_id):
@@ -28,7 +30,11 @@ def read_evidence(store, session_id, submission_id, criterion_id, evidence_id):
     kind = ref["kind"]
     if kind == "document":
         view = store.project_view(session_id, "learner", seq)
-        material = next(m for m in view.permitted_materials if m.id == ref["object_id"] and m.version == ref["version"])
+        material = next(
+            m
+            for m in view.permitted_materials
+            if m.id == ref["object_id"] and m.version == ref["version"]
+        )
         content = material.content
     elif kind == "config":
         content = store.get_state(session_id, seq).configs
@@ -36,5 +42,7 @@ def read_evidence(store, session_id, submission_id, criterion_id, evidence_id):
         state = store.get_state(session_id, seq)
         content = {"resources": state.resources, "applied_rules": state.applied_rules}
     else:
-        content = store.get_object(session_id, ref["object_id"], "test" if kind == "test_result" else "artifact")
+        content = store.get_object(
+            session_id, ref["object_id"], "test" if kind == "test_result" else "artifact"
+        )
     return ref | {"content": content}

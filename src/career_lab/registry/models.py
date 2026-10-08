@@ -17,17 +17,32 @@ def register_candidate(model_manifest, run_manifest, *, rubric_hash):
     artifact = (model_manifest.parent / model["file"]).resolve()
     if not artifact.is_relative_to(model_manifest.parent) or file_hash(artifact) != model["sha256"]:
         raise ValueError("model hash mismatch")
-    if model["revision"] != run["config"]["candidate"] or model["dataset_hash"] != run["dataset_hash"]:
+    if (
+        model["revision"] != run["config"]["candidate"]
+        or model["dataset_hash"] != run["dataset_hash"]
+    ):
         raise ValueError("model/report candidate or dataset mismatch")
     metrics_path = run_manifest.parent / "metrics.json"
     metrics = json.loads(metrics_path.read_text(encoding="utf-8"))["overall"]
     for key in ("accuracy", "macro_f1", "false_deduction", "joint_correctness"):
-        if key not in metrics or not isinstance(metrics[key], (int,float)) or not math.isfinite(metrics[key]):
+        if (
+            key not in metrics
+            or not isinstance(metrics[key], (int, float))
+            or not math.isfinite(metrics[key])
+        ):
             raise ValueError("missing required evaluation metric")
-    record = {"model_revision": model["revision"], "rubric_hash": rubric_hash, "dataset_hash": model["dataset_hash"],
-              "evaluation_scope": run["config"]["split"], "metrics": metrics,
-              "files": {str(p): file_hash(p) for p in (model_manifest, artifact, run_manifest, metrics_path)},
-              "deployment_eligible": False, "purpose": "relation_eval_only"}
+    record = {
+        "model_revision": model["revision"],
+        "rubric_hash": rubric_hash,
+        "dataset_hash": model["dataset_hash"],
+        "evaluation_scope": run["config"]["split"],
+        "metrics": metrics,
+        "files": {
+            str(p): file_hash(p) for p in (model_manifest, artifact, run_manifest, metrics_path)
+        },
+        "deployment_eligible": False,
+        "purpose": "relation_eval_only",
+    }
     return record | {"id": digest(record)}
 
 

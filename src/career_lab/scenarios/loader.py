@@ -74,27 +74,49 @@ def validate_scenario(spec: ScenarioSpec) -> list[ValidationIssue]:
         elif source.available_after_event:
             issue("future_fact", fact.id, "initial facts cannot cite future materials")
         elif not set(fact.visible_to).issubset(source.visible_to):
-            issue("inaccessible_fact_source", fact.id, "fact recipients must be able to read its source")
+            issue(
+                "inaccessible_fact_source",
+                fact.id,
+                "fact recipients must be able to read its source",
+            )
     initial_ids = [m.id for m in spec.materials if m.available_after_event is None]
     if len(initial_ids) != len(set(initial_ids)):
         issue("ambiguous_initial_version", "materials", "one initial version per material required")
     for material in spec.materials:
         if material.available_after_event:
             event = events.get(material.available_after_event)
-            if not event or not any(v.material_id == material.id and v.version == material.version for v in event.effects.material_versions):
-                issue("missing_activation", material.id, "future material needs matching event effect")
+            if not event or not any(
+                v.material_id == material.id and v.version == material.version
+                for v in event.effects.material_versions
+            ):
+                issue(
+                    "missing_activation", material.id, "future material needs matching event effect"
+                )
     for event in spec.event_rules:
-        if event.trigger.kind == "approved_request" and event.trigger.authorized_role not in {r.id for r in spec.roles}:
+        if event.trigger.kind == "approved_request" and event.trigger.authorized_role not in {
+            r.id for r in spec.roles
+        }:
             issue("unknown_approver", event.id, "approval role does not exist")
         material_ids = [ref.material_id for ref in event.effects.material_versions]
         if len(material_ids) != len(set(material_ids)):
-            issue("ambiguous_material_effect", event.id, "one event can activate only one version per material")
+            issue(
+                "ambiguous_material_effect",
+                event.id,
+                "one event can activate only one version per material",
+            )
         for ref in event.effects.material_versions:
             material = materials.get((ref.material_id, ref.version))
             if material is None or material.available_after_event != event.id:
-                issue("invalid_material_effect", event.id, "event must activate its declared material version")
+                issue(
+                    "invalid_material_effect",
+                    event.id,
+                    "event must activate its declared material version",
+                )
     dimensions = {d.id for d in spec.rubric.dimensions}
-    if len(dimensions) != len(spec.rubric.dimensions) or sum(d.weight for d in spec.rubric.dimensions) != 100:
+    if (
+        len(dimensions) != len(spec.rubric.dimensions)
+        or sum(d.weight for d in spec.rubric.dimensions) != 100
+    ):
         issue("invalid_dimensions", "rubric", "unique dimensions must have total weight 100")
     criteria = [c.id for c in spec.rubric.criteria]
     if len(criteria) != len(set(criteria)):
@@ -110,10 +132,22 @@ def validate_scenario(spec: ScenarioSpec) -> list[ValidationIssue]:
     facts = {f.id: f for f in spec.facts}
     for name in ("capacity", "dev_days", "realtime_sync_days", "index_delay_hours", "deadline_day"):
         fact = facts.get(name)
-        if fact is None or type(fact.value) is not int or fact.value != getattr(spec.constraints, name):
-            issue("inconsistent_fact", name, "required numeric fact must match enforced initial constraint")
+        if (
+            fact is None
+            or type(fact.value) is not int
+            or fact.value != getattr(spec.constraints, name)
+        ):
+            issue(
+                "inconsistent_fact",
+                name,
+                "required numeric fact must match enforced initial constraint",
+            )
     if spec.constraints.minimum_participants > spec.constraints.capacity:
-        issue("impossible_participant_bounds", "constraints", "minimum participants exceeds initial capacity")
+        issue(
+            "impossible_participant_bounds",
+            "constraints",
+            "minimum participants exceeds initial capacity",
+        )
     return issues
 
 
@@ -131,8 +165,10 @@ def load_scenario(path: Path) -> ScenarioSpec:
         rubric = RubricSpec.model_validate(_yaml(rubric_path))
         spec = ScenarioSpec.model_validate({**data, "rubric": rubric})
         loaded = []
-        files = {path.relative_to(root).as_posix(): path.read_bytes(),
-                 rubric_path.relative_to(root).as_posix(): rubric_path.read_bytes()}
+        files = {
+            path.relative_to(root).as_posix(): path.read_bytes(),
+            rubric_path.relative_to(root).as_posix(): rubric_path.read_bytes(),
+        }
         for material in spec.materials:
             source = _inside(root, material.path)
             raw = source.read_bytes()
@@ -143,19 +179,38 @@ def load_scenario(path: Path) -> ScenarioSpec:
             if relative in files:
                 raise ScenarioLoadError(f"duplicate bundle file: {relative}")
             files[relative] = raw
-            loaded.append(material.model_copy(update={"content": text, "content_hash": hashlib.sha256(raw).hexdigest()}))
+            loaded.append(
+                material.model_copy(
+                    update={"content": text, "content_hash": hashlib.sha256(raw).hexdigest()}
+                )
+            )
         hashes = {key: hashlib.sha256(raw).hexdigest() for key, raw in sorted(files.items())}
         manifest = json.loads((root / "manifest.json").read_text(encoding="utf-8"))
         if manifest != {"scenario_id": spec.id, "version": spec.version, "files": hashes}:
-            raise ScenarioLoadError("bundle hash/identity mismatch; publish changes as a new version")
-        digest = hashlib.sha256(json.dumps(manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")).hexdigest()
+            raise ScenarioLoadError(
+                "bundle hash/identity mismatch; publish changes as a new version"
+            )
+        digest = hashlib.sha256(
+            json.dumps(manifest, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode(
+                "utf-8"
+            )
+        ).hexdigest()
         spec = spec.model_copy(update={"materials": tuple(loaded), "content_hash": digest})
         issues = validate_scenario(spec)
         if issues:
-            raise ScenarioLoadError("; ".join(f"{i.code}: {i.location}: {i.message}" for i in issues))
+            raise ScenarioLoadError(
+                "; ".join(f"{i.code}: {i.location}: {i.message}" for i in issues)
+            )
         return spec
     except ScenarioLoadError:
         raise
-    except (OSError, UnicodeError, yaml.YAMLError, ValidationError, ValueError, TypeError, KeyError) as exc:
+    except (
+        OSError,
+        UnicodeError,
+        yaml.YAMLError,
+        ValidationError,
+        ValueError,
+        TypeError,
+        KeyError,
+    ) as exc:
         raise ScenarioLoadError(f"cannot load {path.name}: {exc}") from exc
-

@@ -3,6 +3,7 @@
 The historical repository is test-only. Production transactions and clocks are
 owned by V2Store; this module neither persists nor authorizes new data sources.
 """
+
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Callable
@@ -25,21 +26,30 @@ class Snapshot:
 
     @property
     def point(self) -> VersionPoint:
-        return VersionPoint(business_seq=self.state.business_seq,
-                            workspace_revision=self.state.workspace_revision,
-                            storage_revision=self.state.storage_revision)
+        return VersionPoint(
+            business_seq=self.state.business_seq,
+            workspace_revision=self.state.workspace_revision,
+            storage_revision=self.state.storage_revision,
+        )
 
     @property
     def next_point(self) -> VersionPoint:
-        return VersionPoint(business_seq=self.state.business_seq,
-                            workspace_revision=self.state.workspace_revision + 1,
-                            storage_revision=self.state.storage_revision + 1)
+        return VersionPoint(
+            business_seq=self.state.business_seq,
+            workspace_revision=self.state.workspace_revision + 1,
+            storage_revision=self.state.storage_revision + 1,
+        )
 
     def get(self, kind: str, oid: str, version: int | None = None) -> StoredObject:
-        candidates = [o for o in self.objects if o.ref.kind == kind and o.ref.object_id == oid
-                      and (version is None or o.ref.version == version)]
+        candidates = [
+            o
+            for o in self.objects
+            if o.ref.kind == kind
+            and o.ref.object_id == oid
+            and (version is None or o.ref.version == version)
+        ]
         if not candidates:
-            raise ProtocolError('not_found', status=404)
+            raise ProtocolError("not_found", status=404)
         return max(candidates, key=lambda o: o.ref.version)
 
     def heads(self, kind: str) -> tuple[StoredObject, ...]:
@@ -50,6 +60,7 @@ class Snapshot:
 @dataclass(frozen=True)
 class Mutation:
     """Pure domain plan translated to W01 ObjectWrite/Mutation by extension.py."""
+
     writes: tuple[StoredObject, ...]
     result: dict
     event_type: str
@@ -57,14 +68,14 @@ class Mutation:
 
 def authorize(auth: AuthContext, now: datetime, operation: str | None = None) -> None:
     if auth.expires_at is not None and auth.expires_at <= now:
-        raise ProtocolError('credential_expired', status=401)
+        raise ProtocolError("credential_expired", status=401)
     if operation is None:
-        if 'read' not in auth.capabilities:
-            raise ProtocolError('capability_denied', status=403)
-    elif auth.actor_id != 'learner' or 'act' not in auth.capabilities:
-        raise ProtocolError('capability_denied', status=403)
+        if "read" not in auth.capabilities:
+            raise ProtocolError("capability_denied", status=403)
+    elif auth.actor_id != "learner" or "act" not in auth.capabilities:
+        raise ProtocolError("capability_denied", status=403)
     elif auth.allowed_actions is not None and operation not in auth.allowed_actions:
-        raise ProtocolError('action_denied', status=403)
+        raise ProtocolError("action_denied", status=403)
 
 
 def object_scope(auth: AuthContext, oid: str, snapshot: Snapshot | None = None) -> None:
@@ -73,4 +84,4 @@ def object_scope(auth: AuthContext, oid: str, snapshot: Snapshot | None = None) 
     else:
         allowed = auth.allowed_objects is None or oid in auth.allowed_objects
     if not allowed:
-        raise ProtocolError('not_found', status=404)
+        raise ProtocolError("not_found", status=404)

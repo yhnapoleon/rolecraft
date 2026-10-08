@@ -6,11 +6,15 @@ from career_lab.scenarios.loader import ScenarioLoadError, load_scenario
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="career-lab", description="ISY5002 career training backend tools")
+    parser = argparse.ArgumentParser(
+        prog="career-lab", description="ISY5002 career training backend tools"
+    )
     commands = parser.add_subparsers(dest="command", required=True)
     scenario = commands.add_parser("scenario", help="Scenario authoring tools")
     operations = scenario.add_subparsers(dest="operation", required=True)
-    validate = operations.add_parser("validate", help="Validate frozen scenario, references and content hashes")
+    validate = operations.add_parser(
+        "validate", help="Validate frozen scenario, references and content hashes"
+    )
     validate.add_argument("path", type=Path, help="Path to scenario.yaml")
     data = commands.add_parser("data", help="Dataset build and audit")
     data_ops = data.add_subparsers(dest="operation", required=True)
@@ -22,7 +26,9 @@ def main(argv: list[str] | None = None) -> int:
     eval_ops = evaluation.add_subparsers(dest="operation", required=True)
     run = eval_ops.add_parser("run")
     run.add_argument("--config", type=Path, required=True)
-    train = commands.add_parser("train-baselines", help="Fit CPU supervised models using train/dev only")
+    train = commands.add_parser(
+        "train-baselines", help="Fit CPU supervised models using train/dev only"
+    )
     train.add_argument("--manifest", type=Path, required=True)
     train.add_argument("--output", type=Path, required=True)
     demo = commands.add_parser("demo", help="Run full backend workflow without a frontend")
@@ -43,14 +49,26 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     if args.command == "demo":
         from career_lab.demo import run_demo
+
         result = run_demo(args.database_url, args.scenario)
         if args.output:
             args.output.parent.mkdir(parents=True, exist_ok=True)
-            args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(json.dumps({"session_id": result["session_id"], "status": result["state_status"], "replay_stable": result["replay_stable"]}))
+            args.output.write_text(
+                json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8"
+            )
+        print(
+            json.dumps(
+                {
+                    "session_id": result["session_id"],
+                    "status": result["state_status"],
+                    "replay_stable": result["replay_stable"],
+                }
+            )
+        )
         return 0
     if args.command == "package":
         from career_lab.packaging import package_release
+
         print(package_release(Path.cwd(), args.output))
         return 0
     if args.command in {"serve", "worker"}:
@@ -58,9 +76,11 @@ def main(argv: list[str] | None = None) -> int:
         import time
         from career_lab.api.vertical_runtime import create_runtime_app
         from career_lab.jobs.worker import Worker
+
         app = create_runtime_app(args.database_url, provider=args.provider)
         if args.command == "serve":
             import uvicorn
+
             uvicorn.run(app, host=args.host, port=args.port)
         else:
             worker = Worker(app.state.jobs, app.state.handlers)
@@ -73,17 +93,26 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "train-baselines":
         from career_lab.models.training import train_baselines
+
         print(json.dumps(train_baselines(args.manifest, args.output), indent=2))
         return 0
     if args.command == "data":
         from career_lab.datasets.release import build_release, audit_release
-        result = {"manifest": str(build_release(args.output))} if args.operation == "build" else audit_release(args.manifest)
+
+        result = (
+            {"manifest": str(build_release(args.output))}
+            if args.operation == "build"
+            else audit_release(args.manifest)
+        )
         print(json.dumps(result, indent=2))
         return 0
     if args.command == "eval":
         import yaml
         from career_lab.evals.runner import RunnerConfig, run_eval
-        config = RunnerConfig.model_validate(yaml.safe_load(args.config.read_text(encoding="utf-8")))
+
+        config = RunnerConfig.model_validate(
+            yaml.safe_load(args.config.read_text(encoding="utf-8"))
+        )
         print(run_eval(config).model_dump_json(indent=2))
         return 0
     try:
@@ -91,12 +120,22 @@ def main(argv: list[str] | None = None) -> int:
     except ScenarioLoadError as exc:
         print(json.dumps({"valid": False, "error": str(exc)}))
         return 1
-    print(json.dumps({"valid": True, "scenario_id": spec.id, "version": spec.version,
-                      "content_hash": spec.content_hash, "roles": len(spec.roles),
-                      "materials": len(spec.materials), "criteria": len(spec.rubric.criteria)}, indent=2))
+    print(
+        json.dumps(
+            {
+                "valid": True,
+                "scenario_id": spec.id,
+                "version": spec.version,
+                "content_hash": spec.content_hash,
+                "roles": len(spec.roles),
+                "materials": len(spec.materials),
+                "criteria": len(spec.rubric.criteria),
+            },
+            indent=2,
+        )
+    )
     return 0
 
 
 if __name__ == "__main__":
     raise SystemExit(main())
-

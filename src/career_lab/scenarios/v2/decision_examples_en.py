@@ -1,8 +1,16 @@
 """English authoring examples, private and never treated as grades or answers."""
-EXAMPLES=[
- {'decision':'defer_with_conditions','evidence':['demand','interviews','technical'],
-  'proposal':'I would not open automatic answers for dynamic policies yet. A stable-FAQ pilot remains feasible: invite a small group of new hires to test entry-point guidance and retain human handoff. The current sample combines waiting and handling time, so I cannot promise a proportional labor saving from the repeat rate. The Product Manager will organize actual questions and versions, the business lead will check handoff workload, and the technical lead will rerun freshness and scope tests. We will review the records together on day 3 and make a recommendation to the manager if error boundaries and handoff ownership are clear. Dynamic-policy answers need traceable synchronization or human-verification arrangements before reopening.',
-  'evaluation':'Pending contextual evaluation; no score is preassigned.'},
- {'decision':'no_go','evidence':[],'proposal':'Abandon everything without investigating.',
-  'evaluation':'Retain for discussion. Evaluate evidence and follow-up responsibility, not the decision label alone.'},
+
+EXAMPLES = [
+    {
+        "decision": "defer_with_conditions",
+        "evidence": ["demand", "interviews", "technical"],
+        "proposal": "I would not open automatic answers for dynamic policies yet. A stable-FAQ pilot remains feasible: invite a small group of new hires to test entry-point guidance and retain human handoff. The current sample combines waiting and handling time, so I cannot promise a proportional labor saving from the repeat rate. The Product Manager will organize actual questions and versions, the business lead will check handoff workload, and the technical lead will rerun freshness and scope tests. We will review the records together on day 3 and make a recommendation to the manager if error boundaries and handoff ownership are clear. Dynamic-policy answers need traceable synchronization or human-verification arrangements before reopening.",
+        "evaluation": "Pending contextual evaluation; no score is preassigned.",
+    },
+    {
+        "decision": "no_go",
+        "evidence": [],
+        "proposal": "Abandon everything without investigating.",
+        "evaluation": "Retain for discussion. Evaluate evidence and follow-up responsibility, not the decision label alone.",
+    },
 ]

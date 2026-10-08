@@ -40,6 +40,25 @@ addopts = "--basetemp=.pytest_cache/tmp"
 [tool.ruff]
 target-version = "py311"
 line-length = 100
+# Frozen v1 contract sources: tests compare them byte-for-byte with commit 80cf1f6.
+extend-exclude = [
+    "src/career_lab/contracts/actions.py",
+    "src/career_lab/contracts/base.py",
+    "src/career_lab/contracts/deliverables.py",
+    "src/career_lab/contracts/evaluation.py",
+    "src/career_lab/contracts/scenario.py",
+    # Rubric rule sources: installed evaluation bundles still bind these files' bytes
+    # (rubric_v2.rules_document). Format them only after that binding moves to the
+    # evaluation-version protocol through a formal rebind.
+    "src/career_lab/rubrics/v4/rubric_v2.py",
+    "src/career_lab/rubrics/v4/applicability.py",
+    "src/career_lab/rubrics/v4/rules_v2.py",
+    "src/career_lab/rubrics/v4/rules.py",
+    "src/career_lab/rubrics/v4/feedback.py",
+    "src/career_lab/rubrics/v4/judge.py",
+    "src/career_lab/rubrics/v4/support.py",
+    "src/career_lab/rubrics/v4/provider.py",
+]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B"]

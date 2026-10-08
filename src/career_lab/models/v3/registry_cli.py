@@ -1,4 +1,5 @@
 """Local registration/recovery/review tools. No training or network/provider calls."""
+
 import argparse
 import json
 from pathlib import Path
@@ -16,7 +17,9 @@ def main(argv=None):
     register.add_argument("--registry", type=Path, required=True)
     register.add_argument("--bundle-root", type=Path, required=True)
     register.add_argument("--bundle-hash", required=True)
-    register.add_argument("--scope", choices=["synthetic_fixture", "external_candidate"], required=True)
+    register.add_argument(
+        "--scope", choices=["synthetic_fixture", "external_candidate"], required=True
+    )
     for name in ("predict", "recover", "review"):
         command = commands.add_parser(name)
         command.add_argument("--registry", type=Path, required=True)
@@ -41,36 +44,71 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         if args.command == "register":
-            ref = register_bundle(args.registry, args.bundle_root,
-                                  FileRef(path="model-bundle.json", sha256=args.bundle_hash), scope=args.scope)
-            result = {"registration": ref.model_dump(mode="json"), "mode": "advisory",
-                      "quality_validated": False, "training_performed": False}
+            ref = register_bundle(
+                args.registry,
+                args.bundle_root,
+                FileRef(path="model-bundle.json", sha256=args.bundle_hash),
+                scope=args.scope,
+            )
+            result = {
+                "registration": ref.model_dump(mode="json"),
+                "mode": "advisory",
+                "quality_validated": False,
+                "training_performed": False,
+            }
         else:
             ref = FileRef(path=args.registration_path, sha256=args.registration_hash)
             if args.command in ("predict", "recover"):
-                adapter = RegisteredAdvisory(args.registry, ref, args.journal,
-                                            allow_synthetic=getattr(args, "allow_synthetic", False))
+                adapter = RegisteredAdvisory(
+                    args.registry,
+                    ref,
+                    args.journal,
+                    allow_synthetic=getattr(args, "allow_synthetic", False),
+                )
                 if args.command == "recover":
                     result = adapter.recover(args.request_id)
                 else:
                     item = INPUT.validate_json(args.input.read_bytes())
-                    result = adapter.predict(item, request_id=args.request_id,
-                                             work_language=args.language, retry_of=args.retry_of)
+                    result = adapter.predict(
+                        item,
+                        request_id=args.request_id,
+                        work_language=args.language,
+                        retry_of=args.retry_of,
+                    )
             else:
                 from career_lab.experiments.v3.training.data import ReleaseReader
                 from career_lab.experiments.v3.training.review import review_registered
-                reader = ReleaseReader(args.release_root, FileRef(path="manifest.json", sha256=args.release_hash),
-                                       FileRef(path="split-manifest.json", sha256=args.split_hash), allow_fixture=args.fixture)
+
+                reader = ReleaseReader(
+                    args.release_root,
+                    FileRef(path="manifest.json", sha256=args.release_hash),
+                    FileRef(path="split-manifest.json", sha256=args.split_hash),
+                    allow_fixture=args.fixture,
+                )
                 rows = reader.load(args.partition, args.task)
-                producer = json.loads(args.producer_predictions.read_bytes()) if args.producer_predictions else None
+                producer = (
+                    json.loads(args.producer_predictions.read_bytes())
+                    if args.producer_predictions
+                    else None
+                )
                 result = review_registered(args.registry, ref, rows, producer_predictions=producer)
                 result["release_scope"] = reader.scope_report()
         print(json.dumps(result, ensure_ascii=False, allow_nan=False))
         return 0
     except (ValueError, KeyError, OSError, TypeError) as error:
-        print(json.dumps({"error": getattr(error, "code", type(error).__name__),
-                          "record_id": getattr(error, "record_id", None), "quality_validated": False,
-                          "message": str(error) if isinstance(error, ProtocolError) else "invalid input or unavailable local artifact"}, ensure_ascii=False))
+        print(
+            json.dumps(
+                {
+                    "error": getattr(error, "code", type(error).__name__),
+                    "record_id": getattr(error, "record_id", None),
+                    "quality_validated": False,
+                    "message": str(error)
+                    if isinstance(error, ProtocolError)
+                    else "invalid input or unavailable local artifact",
+                },
+                ensure_ascii=False,
+            )
+        )
         return 2
 
 

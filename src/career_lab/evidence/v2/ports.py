@@ -3,10 +3,17 @@
 Facts must come from deterministic/historical services. Neither a learner request
 nor a Judge completion can populate these trusted ports directly.
 """
+
 from dataclasses import dataclass
 from typing import Protocol, Any, Literal
 
-from career_lab.contracts.v2.core import AuthContext, EvidenceRefV2, ObjectRef, VersionPoint, Executor
+from career_lab.contracts.v2.core import (
+    AuthContext,
+    EvidenceRefV2,
+    ObjectRef,
+    VersionPoint,
+    Executor,
+)
 from career_lab.contracts.v2.world import TestResultV2
 
 
@@ -16,6 +23,7 @@ class StructuredDecision:
 
     This is an adapter input, never inferred from free text or model output.
     """
+
     value: str
     subject: ObjectRef
     declared_at: VersionPoint
@@ -37,7 +45,7 @@ class SourceRecord:
     structured_decision: StructuredDecision | None = None
     # External source ports may authorize an object without authorizing a
     # synthetic quote spanning its whole serialized/document representation.
-    quote_scope: Literal['whole_text', 'explicit_only'] = 'whole_text'
+    quote_scope: Literal["whole_text", "explicit_only"] = "whole_text"
 
 
 @dataclass(frozen=True)
@@ -55,15 +63,16 @@ class ResponsibilityFact:
     the subject anchor, never at a later review-request time. Actual values must
     use actual_* facts; intended configuration does not prove actual execution.
     """
+
     criterion: str
-    kind: Literal['actual_action', 'commitment', 'completion_claim', 'unknown']
+    kind: Literal["actual_action", "commitment", "completion_claim", "unknown"]
     occurred_at: VersionPoint
     valid_from: VersionPoint
     scope: tuple[ObjectRef, ...]
     sources: tuple[EvidenceRefV2, ...]
     facts: tuple[VerifiedFact, ...] = ()
     valid_until: VersionPoint | None = None
-    state: Literal['active', 'withdrawn', 'unknown'] = 'active'
+    state: Literal["active", "withdrawn", "unknown"] = "active"
     actor_id: str | None = None
     executor: Executor | None = None
 
@@ -71,7 +80,9 @@ class ResponsibilityFact:
 @dataclass(frozen=True)
 class ActivityRecord:
     ref: EvidenceRefV2
-    kind: Literal['material_read', 'test_run', 'question_sent', 'reply_received', 'learner_displayed']
+    kind: Literal[
+        "material_read", "test_run", "question_sent", "reply_received", "learner_displayed"
+    ]
     occurred_at: VersionPoint
     executor: Executor
     actor_id: str
@@ -99,7 +110,7 @@ class RuleSnapshot:
     test_refs: tuple[EvidenceRefV2, ...] = ()
     config_version: int | None = None
     technical_failures: tuple[str, ...] = ()
-    business_response: str = ''
+    business_response: str = ""
     business_response_refs: tuple[EvidenceRefV2, ...] = ()
     responsibilities: tuple[ResponsibilityFact, ...] = ()
 
@@ -117,24 +128,57 @@ class EvidenceReader(Protocol):
 class CriterionPolicy:
     id: str
     description: str
-    mechanism: str = 'semantic'
-    purposes: tuple[str, ...] = ('exploration','option','plan','commitment','result')
+    mechanism: str = "semantic"
+    purposes: tuple[str, ...] = ("exploration", "option", "plan", "commitment", "result")
     launch_only: bool = False
 
     def to_dict(self):
-        return {'id':self.id,'description':self.description,'mechanism':self.mechanism,
-                'purposes':list(self.purposes),'launch_only':self.launch_only}
+        return {
+            "id": self.id,
+            "description": self.description,
+            "mechanism": self.mechanism,
+            "purposes": list(self.purposes),
+            "launch_only": self.launch_only,
+        }
 
 
 # Legacy seven-item policy set retained for existing fixtures and bindings.
 # New rubric-v2 sessions must explicitly install/load rubrics.v4.rubric_v2;
 # never substitute this set for that 14-item frozen candidate.
 DEFAULT_POLICIES = (
-    CriterionPolicy('R3.capacity','正式开放人数是否符合当时有效容量','capacity',('commitment','result'),True),
-    CriterionPolicy('R3.resources','正式承诺的资源和时间是否有依据','resources',('commitment','result'),True),
-    CriterionPolicy('R4.functional_tests','是否在相关配置下实际运行过验证；覆盖质量另行核验','tests',('commitment','result'),True),
-    CriterionPolicy('R6.comparison','比较内容是否说明方案、替代和取舍；不依赖作品模板',purposes=('option','plan','commitment','result')),
-    CriterionPolicy('decision.rationale','判断是否有目标、证据和风险/价值依据；结论枚举不决定质量'),
-    CriterionPolicy('decision.follow_up','决定之后的处理、责任和补证安排是否清楚',purposes=('plan','commitment','result')),
-    CriterionPolicy('result.claims','结果报告中的声明是否由实际记录支持',purposes=('result',)),
+    CriterionPolicy(
+        "R3.capacity",
+        "正式开放人数是否符合当时有效容量",
+        "capacity",
+        ("commitment", "result"),
+        True,
+    ),
+    CriterionPolicy(
+        "R3.resources",
+        "正式承诺的资源和时间是否有依据",
+        "resources",
+        ("commitment", "result"),
+        True,
+    ),
+    CriterionPolicy(
+        "R4.functional_tests",
+        "是否在相关配置下实际运行过验证；覆盖质量另行核验",
+        "tests",
+        ("commitment", "result"),
+        True,
+    ),
+    CriterionPolicy(
+        "R6.comparison",
+        "比较内容是否说明方案、替代和取舍；不依赖作品模板",
+        purposes=("option", "plan", "commitment", "result"),
+    ),
+    CriterionPolicy(
+        "decision.rationale", "判断是否有目标、证据和风险/价值依据；结论枚举不决定质量"
+    ),
+    CriterionPolicy(
+        "decision.follow_up",
+        "决定之后的处理、责任和补证安排是否清楚",
+        purposes=("plan", "commitment", "result"),
+    ),
+    CriterionPolicy("result.claims", "结果报告中的声明是否由实际记录支持", purposes=("result",)),
 )
