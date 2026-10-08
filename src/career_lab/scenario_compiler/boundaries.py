@@ -88,7 +88,16 @@ def validate_boundary(
             for error in exc.errors()
         )
         return BoundaryResult("needs_confirmation", issues)
-    if confirmed_digest != digest(declaration.model_dump(mode="json")):
+    # Bind the exact authored JSON, before numeric coercion (3 versus 3.0).
+    # The integration adapter must resolve this digest from a trusted confirmation.
+    authored = value.model_dump(mode="json") if isinstance(value, BoundaryDeclaration) else value
+    try:
+        content_digest = digest(authored)
+    except (TypeError, ValueError):
+        return BoundaryResult(
+            "needs_confirmation", (BoundaryIssue("declaration_not_json", "roles"),)
+        )
+    if confirmed_digest != content_digest:
         return BoundaryResult(
             "needs_confirmation", (BoundaryIssue("confirmation_missing_or_stale", "roles"),)
         )

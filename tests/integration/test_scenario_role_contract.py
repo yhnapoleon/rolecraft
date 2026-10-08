@@ -1,16 +1,22 @@
 """Author boundary checks; public build/entry wiring remains a separate integration gate."""
 
-from career_lab.scenario_compiler.boundaries import validate_boundary
+from collections.abc import Mapping
+from copy import deepcopy
+
+from pydantic import JsonValue
+
+from career_lab.contracts.v2.core import digest
+from career_lab.scenario_compiler.boundaries import BoundaryResult, validate_boundary
 
 
-def test_SCN_01_missing_role_and_confirmation_stays_candidate():
+def test_SCN_01_missing_role_and_confirmation_stays_candidate() -> None:
     result = validate_boundary({}, installed_effects={}, confirmed_digest=None)
     assert result.status == "needs_confirmation"
     assert {issue.location for issue in result.issues} >= {"roles", "extensions", "title"}
     assert result.public_description is None
 
 
-def declaration(role="aipm"):
+def declaration(role: str = "aipm") -> dict[str, JsonValue]:
     terms = {
         "inputs": ["brief"],
         "outputs": ["pilot_decision"],
@@ -35,9 +41,11 @@ def declaration(role="aipm"):
     }
 
 
-def check(value, confirmed=True, effects=None):
-    from career_lab.contracts.v2.core import digest
-
+def check(
+    value: object,
+    confirmed: bool = True,
+    effects: Mapping[str, frozenset[str]] | None = None,
+) -> BoundaryResult:
     return validate_boundary(
         value,
         installed_effects=effects
@@ -47,14 +55,14 @@ def check(value, confirmed=True, effects=None):
     )
 
 
-def test_SCN_02_pm_aliases_produce_one_aipm_description():
+def test_SCN_02_pm_aliases_produce_one_aipm_description() -> None:
     for alias in ("pm", "ai_pm", "aipm"):
         result = check(declaration(alias))
         assert result.status == "ready_for_review"
         assert [role.role for role in result.public_description.roles] == ["aipm"]
 
 
-def test_SCN_02_duplicate_alias_does_not_create_another_role():
+def test_SCN_02_duplicate_alias_does_not_create_another_role() -> None:
     value = declaration()
     value["roles"].append(declaration("pm")["roles"][0])
     result = check(value)
@@ -62,7 +70,7 @@ def test_SCN_02_duplicate_alias_does_not_create_another_role():
     assert "duplicate_role" in {issue.code for issue in result.issues}
 
 
-def test_SCN_03_engineer_cannot_repeat_aipm_task():
+def test_SCN_03_engineer_cannot_repeat_aipm_task() -> None:
     value = declaration()
     engineer = declaration("engineer")["roles"][0]
     engineer["execution_mode"] = "bounded_config"
@@ -72,7 +80,7 @@ def test_SCN_03_engineer_cannot_repeat_aipm_task():
     assert "role_responsibilities_overlap" in {issue.code for issue in result.issues}
 
 
-def test_SCN_03_arbitrary_code_is_not_a_supported_engineer_mode():
+def test_SCN_03_arbitrary_code_is_not_a_supported_engineer_mode() -> None:
     value = declaration("engineer")
     value["roles"][0]["execution_mode"] = "arbitrary_code"
     result = check(value)
@@ -80,7 +88,7 @@ def test_SCN_03_arbitrary_code_is_not_a_supported_engineer_mode():
     assert "execution_mode_unsupported" in {issue.code for issue in result.issues}
 
 
-def test_SCN_04_uninstalled_action_or_consequence_cannot_be_advertised():
+def test_SCN_04_uninstalled_action_or_consequence_cannot_be_advertised() -> None:
     for effects in ({}, {"test_assistant": frozenset({"different_consequence"})}):
         result = check(declaration(), effects=effects)
         assert result.status == "unsupported"
@@ -88,9 +96,7 @@ def test_SCN_04_uninstalled_action_or_consequence_cannot_be_advertised():
         assert result.public_description is None
 
 
-def test_SCN_05_translated_resource_or_permission_drift_is_rejected():
-    from copy import deepcopy
-
+def test_SCN_05_translated_resource_or_permission_drift_is_rejected() -> None:
     for field, replacement in (
         ("permissions", ["read", "approve"]),
         ("resources", [{"name": "operators", "unit": "seats", "amount": 30.0}]),
@@ -103,9 +109,7 @@ def test_SCN_05_translated_resource_or_permission_drift_is_rejected():
         assert "translated_business_terms_differ" in {issue.code for issue in result.issues}
 
 
-def test_SCN_01_stale_confirmation_does_not_authorize_changed_content():
-    from career_lab.contracts.v2.core import digest
-
+def test_SCN_01_stale_confirmation_does_not_authorize_changed_content() -> None:
     value = declaration()
     original_confirmation = digest(value)
     value["extensions"][0]["en"] = "Unlimited new domains"
@@ -118,13 +122,13 @@ def test_SCN_01_stale_confirmation_does_not_authorize_changed_content():
     assert result.public_description is None
 
 
-def test_SCN_01_missing_confirmation_never_returns_a_public_description():
+def test_SCN_01_missing_confirmation_never_returns_a_public_description() -> None:
     result = check(declaration(), confirmed=False)
     assert result.status == "needs_confirmation"
     assert result.public_description is None
 
 
-def test_SCN_03_renaming_same_task_does_not_create_engineer_responsibility():
+def test_SCN_03_renaming_same_task_does_not_create_engineer_responsibility() -> None:
     value = declaration()
     engineer = declaration("engineer")["roles"][0]
     engineer["task_id"] = "renamed_task"
@@ -133,3 +137,10 @@ def test_SCN_03_renaming_same_task_does_not_create_engineer_responsibility():
     result = check(value)
     assert result.status == "needs_confirmation"
     assert "role_responsibilities_overlap" in {issue.code for issue in result.issues}
+
+
+def test_SCN_01_confirmation_binds_exact_integer_resource_input() -> None:
+    value = declaration()
+    value["roles"][0]["zh"]["terms"]["resources"][0]["amount"] = 3
+    result = check(value)
+    assert result.status == "ready_for_review"
