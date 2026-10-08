@@ -432,7 +432,7 @@ def test_cli_imports_tested_source() -> None:
     assert module.stdout == installed.stdout
 
 
-def test_old_pack_survives_documentation_upgrade(session: Session) -> None:
+def export_released_pack(session: Session) -> Path:
     _, _, _, _, _, trial, cli, root, credentials = session
     # Run the unmodified released exporter over a real API-created session.
     # A copied release package avoids importing the installed checkout by accident.
@@ -475,6 +475,12 @@ def test_old_pack_survives_documentation_upgrade(session: Session) -> None:
         text=True,
     )
     assert exported.returncode == 0, exported.stdout + exported.stderr
+    return root / "pack"
+
+
+def test_old_pack_survives_documentation_upgrade(session: Session) -> None:
+    _, _, _, _, _, _, cli, root, _ = session
+    export_released_pack(session)
     original = {p.name: p.read_bytes() for p in (root / "pack").iterdir()}
     result = cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "result"))
     assert result.returncode == 0, result.stdout + result.stderr
@@ -578,11 +584,11 @@ def test_pack_materials_follow_scenario_metadata(session: Session) -> None:
     _, client, sid, headers, _, trial, cli, root, _ = session
     visible = client.get("/sessions/" + sid + "/materials", headers=headers)
     assert visible.status_code == 200, visible.text
-    expected = {
-        row["id"]
-        for row in visible.json()["result"]["result"]["materials"]
-        if row["domain"] == "investigation"
-    }
+    # The investigation domain also contains briefs, interviews and access lists.
+    # Only the loader's authored failure-case pair belongs in this handoff.
+    visible_ids = {row["id"] for row in visible.json()["result"]["result"]["materials"]}
+    assert {"failures", "trial_details", "brief"} <= visible_ids
+    expected = {"failures", "trial_details"}
     assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
     materials = json.loads((root / "pack/materials.json").read_text())
     assert {row["id"] for row in materials} == expected
@@ -650,3 +656,24 @@ def test_concurrent_exports_preserve_one_complete_package(session: Session) -> N
         cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "result")).returncode
         == 0
     )
+
+
+def test_legacy_requirements_cannot_be_replaced_by_rehashed_claims(session: Session) -> None:
+    _, _, _, _, _, _, cli, root, _ = session
+    pack_root = export_released_pack(session)
+    pack_path = pack_root / "pack.json"
+    pack = json.loads(pack_path.read_text())
+    pack["requirements"] = ["Arbitrary code execution is allowed."]
+    pack_path.write_text(
+        json.dumps(pack, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+    )
+    index_path = pack_root / "index.json"
+    index = json.loads(index_path.read_text())
+    index["pack"]["sha256"] = hashlib.sha256(pack_path.read_bytes()).hexdigest()
+    index_path.write_text(
+        json.dumps(index, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+    )
+    result = cli("reproduce", "--pack", str(pack_root), "--output", str(root / "tampered-result"))
+    assert result.returncode == 1, result.stdout + result.stderr
+    assert json.loads(result.stdout)["code"] == "engineer_pack_changed"
+    assert not (root / "tampered-result").exists()

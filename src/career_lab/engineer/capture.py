@@ -14,6 +14,12 @@ from career_lab.storage.v2_store import TransactionView, V2Store
 from .files import RetainedDocumentation, encode, file_ref
 from .guide import handoff_guide
 
+LEGACY_REQUIREMENTS = (
+    "Configuration-only handoff; no code execution.",
+    "Reproduce recorded behavior before changing configuration.",
+    "Recorded behavior is not a correctness grade.",
+)
+
 
 def capture(
     store: V2Store,
@@ -78,20 +84,11 @@ def case_materials(
     module: ScenarioModule,
     auth: C.AuthContext,
     snapshot: ScenarioSnapshot,
-    schema_version: int,
 ) -> list[dict[str, Any]]:
     materials: list[dict[str, Any]] = []
-    # The released format selected these two members. Keep that historical
-    # selection only when authenticating a format-1 package.
-    material_ids = (
-        ("failures", "trial_details")
-        if schema_version == 1
-        else sorted(
-            mid
-            for mid, version in snapshot.source_versions.items()
-            if module.package.material(mid, version).domain == "investigation"
-        )
-    )
+    # The scenario loader identifies this pair as authored public failure cases.
+    # Other investigation-domain material is outside the engineering handoff.
+    material_ids = ("failures", "trial_details")
     for mid in material_ids:
         version = snapshot.source_versions.get(mid)
         if version is None or (
@@ -127,7 +124,7 @@ def package_files(
     probes = [{"id": p["id"], "query": p["query"]} for p in export_public_probes(module.package)]
     files: dict[str, bytes] = {
         "config.json": encode(snapshot.config),
-        "materials.json": encode(case_materials(view, module, auth, snapshot, schema_version)),
+        "materials.json": encode(case_materials(view, module, auth, snapshot)),
         "public-probes.json": encode(probes),
         "README.md": retained[2] if retained else handoff_guide(module.work_language),
     }
@@ -156,7 +153,9 @@ def package_files(
         config=config_ref,
         failures=tuple(ref_for("test", t) for t in selected),
         public_probes=(file_ref("public-probes.json", files["public-probes.json"]),),
-        requirements=retained[1].requirements
+        requirements=LEGACY_REQUIREMENTS
+        if schema_version == 1
+        else retained[1].requirements
         if retained
         else (
             "Configuration-only handoff; no code execution.",
