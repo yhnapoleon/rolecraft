@@ -1,0 +1,46 @@
+{
+  "consumers": [
+    "engineer",
+    "integration",
+    "feedback"
+  ],
+  "decoder": "decode_engineer_document",
+  "files": {
+    "examples/EngineerAdvice.json": "566628980a224cda2d5645cd60ce8e1137bb02f2b5d445ecff30459dfd7799bc",
+    "examples/EngineerClaimedReport.json": "a8cc74ca8f8d78a41dd3a373eb08c5616e36effb5f5537ddc4d964207e299dfe",
+    "examples/EngineerFinding.json": "996e38962b7b1a1081ee39737607480718117f0086e04fbb69fa50c24b87c456",
+    "examples/EngineerProbeClaim.json": "9a690544cc346f966020b05822a13dd64be6b1d16a24260a3d631d9cf4867b87",
+    "examples/EngineerProbeExpectation.json": "e33d93dd42156c6873a2c53eea9a09311499b5833f760ca8485830e6cba2837f",
+    "examples/EngineerProbeResult.json": "1322ec97d97acdaf52274874d06eb608f98ac9754d635783315330b3eb864b35",
+    "examples/EngineerProbeSummary.json": "1f1f83a134bc25d54f3e3cd2b1590502e9f223d998b05fb2bd89b69fe6a3459c",
+    "examples/EngineerPublicReport.json": "5be3fe684405a1cd8bcbfbe52001c5710f13a1db691382fd3c1f9a48484140bf",
+    "examples/EngineerRegressionReport.json": "b3576fffc679b028b220b508b9054a25826776e9a74f80c24c31702f53602c41",
+    "examples/EngineerReviewInput.json": "2bb3a2f2c829e711487dadf88b97ddeea6157c3a206871a3c52803630cf94135",
+    "examples/EngineerSubmissionRecord.json": "dfaaaeed83a96b4195b9fe4cdc60198ae3def50b513748899167c75473fbfad0",
+    "examples/EngineerUnresolvedItem.json": "1c1eb002cb6e4a220c6273d101664001bc9fd896115820fb6007305852f21546",
+    "openapi.json": "db11f029c31cac7a92f20e3111f0a58cc209aab4712477dca1abb2670222222b",
+    "schemas/EngineerAdvice.json": "3b52a1fa03fd91459acc506b72f9086e29482f42235030c808c07ef8d765f78d",
+    "schemas/EngineerClaimedReport.json": "38e1fb406d178219d70b805d760d044c788edbea62001f490a32f87e499599a7",
+    "schemas/EngineerFinding.json": "6d589acc9aa9536325f3c90f7bf6ca7b7e236f38b7b0f8ce3bfdd9fc4d3757cb",
+    "schemas/EngineerProbeClaim.json": "9dfd8f96a6c1b66ad2b4dca16bb2a5565f5c8039f7559119b6f14f4ed724e1f4",
+    "schemas/EngineerProbeExpectation.json": "edbc7daf42f2b71e5c5f0ff2fa4bc77ef10f8f6a58ca2878065a01c60a3d4bfa",
+    "schemas/EngineerProbeResult.json": "141c004cc925f4f90d8102578839ea22d1dc0bded9a70822d9c86d673544d3cc",
+    "schemas/EngineerProbeSummary.json": "5d6affe8c2063f3a31a681681bda2250cf80d87b9c0fe8eac861b94499d2cda9",
+    "schemas/EngineerPublicReport.json": "90b5e1ba6b590aaa73174e56850b4627750972d4e4fc5b13f00136a3bcc7ba9f",
+    "schemas/EngineerRegressionReport.json": "f6be255a5a3fbe7d3a02b50a05ff9aa5a804e66be6c19fc6c353991f83e50283",
+    "schemas/EngineerReviewInput.json": "fb967aeb58fd4c8f241ec3384d990ed599962b2d593c3660c747066df436df85",
+    "schemas/EngineerSubmissionRecord.json": "8c3dca9512527253fae0a1a0194d3befa80a7fa73077c9fd40a05874d9c1a3a4",
+    "schemas/EngineerUnresolvedItem.json": "2d7dc303b3941574817100ccf20b97fcc7402d5a4e6e2dd103ac92d421073e82",
+    "types.ts": "e55fd8efd4a870fa8744d592dd4e77e3ebd65dd247521874aad7ae819af5805d"
+  },
+  "legacy_manifest_sha256": "7f64f17784ad7756fefc53682954b1318bddb58eecdc5dbe645f3187cbc321ed",
+  "legacy_namespace": "career_lab.contracts.v2.research",
+  "protocol": "engineer-review-v1",
+  "python_namespace": "career_lab.contracts.v2.engineer",
+  "revision": "engineer-review-v1-acce4830e2b487713300ba33066f7a711919f74e3c975aaabb29c5f7c516fdda",
+  "source_files": {
+    "engineer.py": "c9bb0ce90572322a0723c383f3a8e52da206fc0678a01b9cf7d708053a356a83",
+    "engineer_examples.py": "f9275d256a926de98e251c4a352e6488dd7326a80da13c42647e041cb4b05084",
+    "engineer_export.py": "cb03edb975fb004f2956ec1db93a40b7ed6a1dd473b74b9c9395ca5409e15342"
+  }
+}

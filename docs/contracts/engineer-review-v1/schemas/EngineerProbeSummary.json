@@ -1,0 +1,33 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "errors": {
+      "minimum": 0,
+      "title": "Errors",
+      "type": "integer"
+    },
+    "failed": {
+      "minimum": 0,
+      "title": "Failed",
+      "type": "integer"
+    },
+    "passed": {
+      "minimum": 0,
+      "title": "Passed",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "passed",
+    "failed",
+    "errors"
+  ],
+  "title": "EngineerProbeSummary",
+  "type": "object"
+}

@@ -1,0 +1,207 @@
+{
+  "$defs": {
+    "EngineerUnresolvedItem": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "probe_ids": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Probe Ids",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "visibility": {
+          "default": "public",
+          "enum": [
+            "public",
+            "hidden"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "description"
+      ],
+      "title": "EngineerUnresolvedItem",
+      "type": "object"
+    },
+    "Executor": {
+      "additionalProperties": false,
+      "properties": {
+        "delegation_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delegation Id"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "human",
+            "external_agent",
+            "reference_agent",
+            "system"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "Executor",
+      "type": "object"
+    },
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "base_config_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Base Config Hash",
+      "type": "string"
+    },
+    "config": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "contract_version": {
+      "const": "engineer-review-v1",
+      "title": "Contract Version",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "executor": {
+      "$ref": "#/$defs/Executor"
+    },
+    "explanation": {
+      "title": "Explanation",
+      "type": "string"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "pack": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "regression_report": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FileRef"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "unresolved": {
+      "items": {
+        "$ref": "#/$defs/EngineerUnresolvedItem"
+      },
+      "title": "Unresolved",
+      "type": "array"
+    },
+    "work_language": {
+      "enum": [
+        "zh",
+        "en"
+      ],
+      "title": "Work Language",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contract_version",
+    "id",
+    "pack",
+    "config",
+    "base_config_hash",
+    "regression_report",
+    "unresolved",
+    "explanation",
+    "executor",
+    "created_at",
+    "work_language"
+  ],
+  "title": "EngineerSubmissionRecord",
+  "type": "object"
+}

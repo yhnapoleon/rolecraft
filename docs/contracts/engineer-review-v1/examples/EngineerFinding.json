@@ -1,0 +1,10 @@
+{
+  "description": "Synthetic rule comparison",
+  "kind": "target_fix",
+  "probe_ids": [
+    "probe-1"
+  ],
+  "schema_version": 2,
+  "status": "pass",
+  "visibility": "public"
+}
