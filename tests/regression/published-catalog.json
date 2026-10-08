@@ -1,0 +1,35 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot",
+      "work_language": "zh",
+      "scenario_hash": "8943b931f6cfe0f4d48efab8672a7e229566b8757993fffb1c440685b4c3f278"
+    },
+    {
+      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot/locales/en",
+      "work_language": "en",
+      "scenario_hash": "43e77059fc825d0a144f6968bf96f9f8725b743730c4050352390b608dae8de4"
+    },
+    {
+      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent",
+      "work_language": "zh",
+      "scenario_hash": "936ef761651b177ec66435a5de66ae33cbce562676e63a7bc5f3ff90208a959f"
+    },
+    {
+      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_urgent/locales/en",
+      "work_language": "en",
+      "scenario_hash": "4809238c7defb485b6f82658ad1a222bc507fda9ed60e503712edf07c72abf24"
+    },
+    {
+      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15",
+      "work_language": "zh",
+      "scenario_hash": "355d1cb2d6e1f6999acdd0c35ac4f022e7e919b4542628431f728de910fc7c67"
+    },
+    {
+      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot_capacity15/locales/en",
+      "work_language": "en",
+      "scenario_hash": "44907c23bd12fa6d7cd099f7009eccf7b730f1d78ecaa7146398f5c1771ecfa9"
+    }
+  ]
+}
