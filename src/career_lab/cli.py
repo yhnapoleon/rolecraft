@@ -8,6 +8,8 @@ from career_lab.scenarios.loader import ScenarioLoadError, load_scenario
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="career-lab", description="ISY5002 career training backend tools")
     commands = parser.add_subparsers(dest="command", required=True)
+    from career_lab.engineer.cli import register_commands as register_engineer
+    register_engineer(commands)
     scenario = commands.add_parser("scenario", help="Scenario authoring tools")
     operations = scenario.add_subparsers(dest="operation", required=True)
     validate = operations.add_parser("validate", help="Validate frozen scenario, references and content hashes")
@@ -41,6 +43,8 @@ def main(argv: list[str] | None = None) -> int:
         else:
             server.add_argument("--once", action="store_true")
     args = parser.parse_args(argv)
+    if hasattr(args, "engineer_handler"):
+        return args.engineer_handler(args)
     if args.command == "demo":
         from career_lab.demo import run_demo
         result = run_demo(args.database_url, args.scenario)
@@ -99,4 +103,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
