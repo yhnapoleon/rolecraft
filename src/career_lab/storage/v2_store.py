@@ -15,18 +15,20 @@ from career_lab.contracts.v2 import *
 from .v2_tables import *
 from .v2_jobs import JobStoreMixin
 
-ROLE_REPLY_PRIVATE_FIELDS=frozenset({'prompt_messages','prompt_hash','context_hash','history_revision','source_versions','omitted_sources','attempts','actual_disclosures','received_shares','internal_disclosures','context'})
-
-def role_reply_has_private_fields(content):
-    """Validate the entire fixed public DTO, independent of registry replacement."""
-    from career_lab.storage.role_memory import RoleReply
-    if not isinstance(content,dict) or ROLE_REPLY_PRIVATE_FIELDS.intersection(content):return True
-    try:
-        # JSON round-trip prevents a preconstructed nested model from avoiding
-        # recursive validation. Never return the private validation input.
-        RoleReply.model_validate_json(canonical(content))
-    except (ValidationError,TypeError,ValueError):return True
-    return False
+from .object_plans import (
+    ROLE_REPLY_PRIVATE_FIELDS as ROLE_REPLY_PRIVATE_FIELDS,
+    ObjectPlanContext,
+    plan_object,
+    role_reply_has_private_fields,
+)
+from .record_invariants import validate_write_set
+from .reference_graph import (
+    full_references,
+    reference_values as reference_values,
+    references,
+    validate_graph,
+    validate_reference_times,
+)
 
 
 OBJECT_MODELS={
@@ -905,6 +907,9 @@ class V2Store(JobStoreMixin):
             if state.status=='paused' and command.operation!='resume' and not derived_feedback and not feedback_response and not reply_display and not refreshing:raise ProtocolError('session_paused')
             txn=uuid4().hex;sr=state.storage_revision+1;wr=state.workspace_revision+bool(mutation.writes);seq=state.business_seq
             planned=[]
+            plan_cycle = (
+                self._current_cycle(c, auth.session_id) if job_context is not None else None
+            )
             for write in mutation.writes:
                 ref=write.ref
                 parent=write.content.get('task') or {}
@@ -926,78 +931,13 @@ class V2Store(JobStoreMixin):
                 if existing and ref.kind!='scenario_state' and not self._visible(max(existing,key=lambda x:x.ref.version),auth):raise ProtocolError('object_not_found',status=404)
                 model=self.object_models.get(ref.kind)
                 if model is None:raise ProtocolError('object_kind_unavailable',status=503)
-                try:obj=model.model_validate(write.content)
-                except ValidationError as exc:raise ProtocolError('module_object_invalid',status=503) from exc
-                content=obj.model_dump(mode='json')
-                trace_deps=()
-                if ref.kind in {'feedback','feedback_response'}:
-                    if content.get('read_boundaries') is not None:raise ProtocolError('feedback_boundary_requires_server_trace',status=403)
-                    traces=[trace for trace in mutation.feedback_read_traces if trace.record==ref]
-                    if traces:
-                        from career_lab.contracts.v2.projection import feedback_segment
-                        if len({trace.path for trace in traces})!=len(traces):raise ProtocolError('feedback_trace_invalid',status=403)
-                        boundaries=[]
-                        for trace in traces:
-                            if not trace.dependencies or any(dep.session_id!=auth.session_id for dep in trace.dependencies):raise ProtocolError('feedback_trace_invalid',status=403)
-                            value=feedback_segment(content,trace.path)
-                            deps=tuple({canonical(dep):dep for dep in (*trace.dependencies,*references(value))}.values())
-                            boundaries.append(FeedbackReadBoundary(path=trace.path,content_hash=digest(value),dependencies=deps))
-                        content['read_boundaries']=[boundary.model_dump(mode='json') for boundary in boundaries]
-                        trace_deps=tuple({canonical(dep):dep for boundary in boundaries for dep in boundary.dependencies}.values())
-                if ref.kind not in {'cycle','scenario_state','job_context','role_context'} and auth.actor_id not in write.visible_to:raise ProtocolError('private_object_channel_required',status=403)
-                if job_context is not None:
-                    if ref.kind=='cycle':raise ProtocolError('async_cycle_write_forbidden',status=403)
-                    cycle_data=content.get('cycle')
-                    if ref.kind=='product' or (isinstance(cycle_data,dict) and cycle_data.get('kind')=='cycle'):
-                        target_cycle=ObjectRef.model_validate(cycle_data);current_cycle=self._current_cycle(c,auth.session_id)
-                        if current_cycle is None or target_cycle!=current_cycle.ref or current_cycle.content['status']!='open':raise ProtocolError('job_output_cycle_closed',status=409)
-                if structural_cycle and existing:
-                    original=max(existing,key=lambda x:x.ref.version).content
-                    if any(content[k]!=original[k] for k in original if k not in {'version','status'}) or content['status']!='submitted':raise ProtocolError('cycle_scope_invalid',status=403)
-                if ref.kind=='product' and set(write.visible_to)!={'learner'}:raise ProtocolError('product_requires_share',status=403)
-                if ref.kind in {'feedback','feedback_response'} and content.get('read_projection') is not None:raise ProtocolError('feedback_projection_not_persistable',status=403)
-                if ref.kind in {'feedback','feedback_response'} and (existing or ref.version!=1):raise ProtocolError('feedback_record_immutable',status=409)
-                if ref.kind=='feedback' and auth.allowed_objects is not None:
-                    report=FeedbackV2.model_validate(content)
-                    if any(total.status=='complete' for facts in report.verified_facts or () for total in facts.activity_totals.values()) or any(history.completeness=='complete' for history in report.historical_responsibilities or ()):raise ProtocolError('feedback_completeness_scope_unknown',status=403)
-                if ref.kind=='feedback_response' and (not feedback_response or set(write.visible_to)!={'learner'}):raise ProtocolError('feedback_response_operation_required',status=403)
-                if ref.kind=='workspace_import':
-                    if existing or set(write.visible_to)!={'learner'}:raise ProtocolError('import_receipt_immutable',status=403)
-                if ref.kind=='role_reply' and role_reply_has_private_fields(content):
-                    raise ProtocolError('role_reply_private_fields_forbidden',status=403)
-                if ref.kind=='role_context':
-                    if content.get('generation_audit') is not None and role_permit is None:raise ProtocolError('role_private_authority_required',status=403)
-                    if content['role_id'] in {'learner','system','research'} or not write.visible_to or not set(write.visible_to)<={'system',content['role_id']}:raise ProtocolError('role_context_private',status=403)
-                    if existing and any(x.content['role_id']!=content['role_id'] for x in existing):raise ProtocolError('role_context_identity_immutable',status=409)
-                if ref.kind=='config' and content['config_version']!=ref.config_version:raise ProtocolError('config_reference_mismatch')
-                if ref.kind=='business_request' and existing:
-                    original=min(existing,key=lambda x:x.ref.version).content
-                    if content['basis']!=original['basis']:raise ProtocolError('request_basis_immutable',status=409)
-                if ref.kind=='business_request' and content['basis']['config']['session_id']!=auth.session_id:raise ProtocolError('object_session_mismatch')
-                if ref.kind=='share' and existing:
-                    original=min(existing,key=lambda x:x.ref.version).content
-                    if any(content[k]!=original[k] for k in ('product','recipient_role','shared_at','question','purpose')):raise ProtocolError('share_identity_immutable',status=409)
-                if ref.kind=='scenario_state':
-                    if set(write.visible_to)!={'system'}:raise ProtocolError('scenario_state_private',status=403)
-                    previous=max(existing,key=lambda x:x.ref.version).content if existing else {}
-                    if auth.allowed_objects is not None:
-                        for name in ('source_versions','indexed_versions','material_activation'):
-                            before=previous.get(name,{});after=content[name]
-                            changed={k for k in set(before)|set(after) if before.get(k)!=after.get(k)}
-                            changed={k.rsplit(':',1)[0] if name=='material_activation' else k for k in changed}
-                            if not changed<=set(auth.allowed_objects):raise ProtocolError('object_scope_forbidden',status=403)
-                validate_reference_times(content,state.business_seq)
-                if content.get('session_id')!=auth.session_id:raise ProtocolError('object_session_mismatch')
-                actual_id=content.get('product_id') if ref.kind=='product' else content.get('id')
-                if actual_id is not None and actual_id!=ref.object_id:raise ProtocolError('object_identity_mismatch')
-                if content.get('version',content.get('revision',ref.version))!=ref.version:raise ProtocolError('object_identity_mismatch')
-                if content.get('executor') and content['executor']!=auth.executor.model_dump(mode='json'):raise ProtocolError('executor_spoofed',status=403)
-                deps=references(content)
-                declared=tuple({canonical(dep):dep for dep in (*write.dependencies,*trace_deps)}.values())
-                if set(canonical(x) for x in deps)-set(canonical(x) for x in declared):raise ProtocolError('undeclared_object_reference')
-                if ref.kind in {'submission','review'} and content.get('evaluation')!=bindings.evaluation.model_dump(mode='json'):raise ProtocolError('evaluation_binding_mismatch',status=409)
-                if ref.kind=='submission' and content.get('scenario')!=bindings.scenario.model_dump(mode='json'):raise ProtocolError('scenario_binding_mismatch',status=409)
-                planned.append(StoredObject(creator=auth.executor,ref=ref,content=content,visible_to=write.visible_to,dependencies=declared,created_storage_revision=sr))
+                context = ObjectPlanContext(
+                    auth=auth, state=state, bindings=bindings, existing=tuple(existing),
+                    current_cycle=plan_cycle, storage_revision=sr,
+                    structural_cycle=structural_cycle, asynchronous=job_context is not None,
+                    private_role=role_permit is not None, feedback_response=feedback_response,
+                )
+                planned.append(plan_object(write, model, context, mutation.feedback_read_traces))
             external={canonical(x.ref):x for x in self._external(c,auth.session_id)}
             # Read-only business actions may have no ObjectWrite. Their verified
             # command/result refs still need an atomic anchor for request recovery.
@@ -1084,6 +1024,9 @@ class V2Store(JobStoreMixin):
                 emitted.append(StoredEvent(id=uuid4().hex,session_id=auth.session_id,seq=seq,transaction_id=txn,type=draft.type,executor=auth.executor,visible_to=draft.visible_to,refs=draft.refs,data=draft.data))
             new=WorldStateV2.model_validate(state.model_dump(mode='json')|changes|{'business_seq':seq,'workspace_revision':int(wr),'storage_revision':sr,'resources':resources})
             if refreshing:self._refresh_queued_job(c,auth,command,mutation.refresh_job,new)
+            # Every command/import/worker/recovery write reaches these same final invariants.
+            # Keep them inside this transaction even when object planning moves between modules.
+            validate_write_set(records, (*planned, *cascaded), new.cycle_id)
             for record in (*planned,*cascaded):self._put(c,record)
             if fault:fault('after_objects')
             for event in emitted:c.execute(insert(v2_events).values(session_id=auth.session_id,seq=event.seq,record=canonical(event)))
@@ -1290,61 +1233,3 @@ class V2Store(JobStoreMixin):
             if prior is None:return None
             if not hmac.compare_digest(prior['fingerprint'],fp):raise ProtocolError('request_id_reused',status=409)
             return self._authorized_request_result(c,auth,command.request_id,capability)[1].model_copy(update={'replayed':True})
-
-
-
-def reference_values(value):
-    if {'source_schema','source_session_id','original_id','original_kind','raw','original_hash'}<=value.keys():
-        try:LegacyProvenance.model_validate(value)
-        except ValidationError:pass
-        else:return [v for k,v in value.items() if k!='raw']
-    return value.values()
-
-
-def references(value):
-    result=[]
-    if isinstance(value,dict):
-        if {'session_id','kind','object_id','version'}<=value.keys():
-            result.append(ObjectRef.model_validate({k:v for k,v in value.items() if k in ObjectRef.model_fields}))
-        else:
-            for v in reference_values(value):result.extend(references(v))
-    elif isinstance(value,list):
-        for v in value:result.extend(references(v))
-    return tuple({canonical(x):x for x in result}.values())
-
-def validate_graph(records,external_keys=frozenset()):
-    nodes={canonical(x.ref):x for x in records};done=set();active=set()
-    if len(nodes)!=len(records):raise ProtocolError('object_reference_duplicate')
-    def visit(key):
-        if key in active:raise ProtocolError('object_dependency_cycle')
-        if key in done:return
-        active.add(key)
-        for dep in nodes[key].dependencies:
-            k=canonical(dep)
-            if k in external_keys:continue
-            if k not in nodes:raise ProtocolError('object_reference_missing')
-            visit(k)
-        active.remove(key);done.add(key)
-    for key in nodes:visit(key)
-
-
-def validate_reference_times(value,business_seq):
-    if isinstance(value,dict):
-        if 'observed_at_seq' in value and value['observed_at_seq']>business_seq:raise ProtocolError('future_evidence')
-        if 'as_of' in value and isinstance(value['as_of'],dict) and value['as_of'].get('business_seq',0)>business_seq:raise ProtocolError('future_evidence')
-        for v in reference_values(value):validate_reference_times(v,business_seq)
-    elif isinstance(value,list):
-        for v in value:validate_reference_times(v,business_seq)
-
-
-def full_references(value):
-    result=[]
-    if isinstance(value,dict):
-        if {'session_id','kind','object_id','version'}<=value.keys():
-            cls=EvidenceRefV2 if 'observed_at_seq' in value else ObjectRef
-            result.append(cls.model_validate({k:v for k,v in value.items() if k in cls.model_fields}))
-        else:
-            for v in reference_values(value):result.extend(full_references(v))
-    elif isinstance(value,list):
-        for v in value:result.extend(full_references(v))
-    return result
