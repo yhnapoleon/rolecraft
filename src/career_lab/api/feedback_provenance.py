@@ -5,7 +5,8 @@ from dataclasses import replace
 from typing import Protocol
 
 from career_lab.contracts.v2 import EvaluationBundle, read_file
-from career_lab.contracts.v2.provenance import FeedbackProvenance, execution_identity
+from career_lab.contracts.v2.provenance import FeedbackProvenance
+from career_lab.runtime.provenance import execution_identity
 from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.scenarios.v2.release import EVALUATION_VERSION, PROMPT_VERSION
 from career_lab.storage.v2_store import Mutation

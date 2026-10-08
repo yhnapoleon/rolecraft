@@ -110,12 +110,6 @@ def require_evaluation(
     return signature
 
 
-def require_behavior(version: str, output_digest: str, expected: dict[str, str]) -> None:
-    """A changed behavior needs a new version and its own reviewed comparison evidence."""
-    if expected.get(version) != output_digest:
-        raise ProtocolError("evaluation_version_change_required", status=409)
-
-
 def original_review(package: "ScenarioPackage", identity: str) -> ReviewLink:
     directory = ROOT / "scenarios/pm_pilot/v2/variants/reviews"
     continuity_raw = (directory / "content-continuity-2.9.6.json").read_bytes()

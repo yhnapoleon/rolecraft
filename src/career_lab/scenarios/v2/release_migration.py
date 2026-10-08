@@ -5,7 +5,8 @@ import shutil
 from pathlib import Path
 
 from career_lab.contracts.v2 import FileRef, ProtocolError, RuntimeBundle, SourceIdentity
-from career_lab.contracts.v2.provenance import CodeIdentity, execution_identity
+from career_lab.contracts.v2.provenance import CodeIdentity
+from career_lab.runtime.provenance import execution_identity
 
 from .loader import ScenarioPackage, load_package
 from .release import (

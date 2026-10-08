@@ -1,24 +1,24 @@
 """Protocol migration retains bytes, semantic results and historical identities."""
 
+import importlib.util
 import json
 from pathlib import Path
 
 import pytest
 
 from career_lab.contracts import v2 as C
-from career_lab.contracts.v2.provenance import CodeIdentity, require_execution_snapshot
+from career_lab.contracts.v2.provenance import CodeIdentity
 from career_lab.rubrics.v4.feedback import FeedbackEngine
+from career_lab.runtime.provenance import require_execution_snapshot
 from career_lab.scenarios.v2.loader import load_package
 from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.scenarios.v2.rebind import rebind
 from career_lab.scenarios.v2.release import (
-    EVALUATION_VERSION,
     GENERATED,
     PROTOCOL,
     ROOT,
     content_files,
     describe,
-    require_behavior,
     sha,
 )
 
@@ -26,8 +26,7 @@ LEGACY = ROOT / "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot"
 CASES = json.loads(Path(__file__).with_name("engine-cases.json").read_text())
 
 
-@pytest.mark.parametrize("index", range(len(CASES)))
-def test_complete_feedback_semantics_match_original_execution(index: int) -> None:
+def complete_feedback_digest(index: int, engine: FeedbackEngine) -> str:
     case = CASES[index]
     packages = tuple(
         C.EvidencePackageV2.model_validate(
@@ -39,7 +38,7 @@ def test_complete_feedback_semantics_match_original_execution(index: int) -> Non
         )
         for row in case["packages"]
     )
-    report, diagnostics = FeedbackEngine().evaluate(
+    report, diagnostics = engine.evaluate(
         case["session_id"],
         C.ObjectRef.model_validate(case["subject"]),
         C.FileRef.model_validate(case["evaluation"]),
@@ -52,19 +51,69 @@ def test_complete_feedback_semantics_match_original_execution(index: int) -> Non
         "report": report.model_dump(mode="json", exclude={"provenance"}),
         "diagnostics": diagnostics,
     }
-    require_behavior(
-        EVALUATION_VERSION, C.digest(result), {EVALUATION_VERSION: case["expected_digest"]}
+    return C.digest(result)
+
+
+@pytest.mark.parametrize("index", range(len(CASES)))
+def test_complete_feedback_semantics_match_original_execution(index: int) -> None:
+    assert complete_feedback_digest(index, FeedbackEngine()) == CASES[index]["expected_digest"], (
+        "evaluation version change required"
     )
 
 
-def test_changed_evaluation_output_requires_a_new_version() -> None:
-    expected = {EVALUATION_VERSION: CASES[0]["expected_digest"]}
-    changed = C.digest({"items": [{"label": "MET", "source": "verified_rule"}]})
-    with pytest.raises(C.ProtocolError, match="evaluation version change required"):
-        require_behavior(EVALUATION_VERSION, changed, expected)
-    # Registering a distinct version and its own accepted evidence is the explicit path.
-    expected["candidate-new-semantics"] = changed
-    require_behavior("candidate-new-semantics", changed, expected)
+@pytest.mark.parametrize(
+    ("filename", "field", "accepted_digest"),
+    [
+        (
+            "feedback-baseline.json",
+            "comparison_baseline_sha256",
+            "800d1c602bf84cdf0adb482cdcbefdb25bfe604daf1c6485cfacddf1af7a8464",
+        ),
+        (
+            "engine-cases.json",
+            "engine_baseline_sha256",
+            "7b9d79e92355e98f1160f35219ac104bdc90bd05a32edfeb484adf68da21f891",
+        ),
+    ],
+)
+def test_registered_comparison_evidence_is_immutable(
+    filename: str, field: str, accepted_digest: str
+) -> None:
+    registry = json.loads((ROOT / "configs/evaluation/versions.json").read_text())
+    entry = registry["versions"]["feedback-rubric-v2-c2.1"]
+    assert entry[field] == accepted_digest, "existing evaluation version cannot be rewritten"
+    assert sha(Path(__file__).with_name(filename).read_bytes()) == entry[field], (
+        "evaluation version change required"
+    )
+
+
+def test_changed_evaluation_output_requires_a_new_version(tmp_path: Path) -> None:
+    # Execute a real source mutant: coverage is inverted for the same fixed inputs.
+    source = ROOT / "src/career_lab/rubrics/v4/feedback.py"
+    original = source.read_text()
+    changed = original.replace(
+        "verified_coverage=verified/denominator if denominator else 0",
+        "verified_coverage=0 if verified else 1",
+    )
+    assert changed != original, "coverage mutation must change the implementation"
+    path = tmp_path / "feedback_mutant.py"
+    path.write_text(changed)
+    spec = importlib.util.spec_from_file_location("career_lab.rubrics.v4.feedback_mutant", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    with pytest.raises(AssertionError, match="evaluation version change required"):
+        assert (
+            complete_feedback_digest(0, module.FeedbackEngine()) == CASES[0]["expected_digest"]
+        ), "evaluation version change required"
+
+
+def test_required_provenance_is_rejected_by_protocol_compatibility() -> None:
+    from career_lab.contracts.v2.compatibility import without_provenance
+
+    schema = {"title": "FeedbackV2", "properties": {"provenance": {}}, "required": ["provenance"]}
+    with pytest.raises(C.ProtocolError, match="provenance must remain optional"):
+        without_provenance(schema)
 
 
 @pytest.mark.parametrize("language", ["zh", "en"])
@@ -155,7 +204,7 @@ def test_business_file_edit_changes_content_identity_and_invalidates_old_review(
 def test_feedback_generation_requires_restart_after_code_changes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    from career_lab.contracts.v2 import provenance
+    from career_lab.runtime import provenance
 
     monkeypatch.setattr(provenance, "source_snapshot", lambda _root: "new-snapshot")
     with pytest.raises(C.ProtocolError, match="execution restart required"):

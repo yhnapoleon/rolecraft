@@ -13,7 +13,7 @@ def test_all_frozen_models_examples_and_openapi_agree():
     for name,entry in manifest['schemas'].items():
         assert sha(FREEZE/entry['schema'])==entry['schema_sha256']
         assert sha(FREEZE/entry['example'])==entry['example_sha256']
-        from tests.regression.protocol_compatibility import without_provenance
+        from career_lab.contracts.v2.compatibility import without_provenance
         expected = json.loads((FREEZE / entry['schema']).read_text())
         assert expected == without_provenance(models[name].model_json_schema())
         assert models[name].model_validate_json((FREEZE/entry['example']).read_text())
@@ -38,7 +38,14 @@ def test_all_frozen_models_examples_and_openapi_agree():
     app.state.store.close()
 
 def test_v1_scenarios_contracts_and_old_research_freeze_bytes_unchanged():
-    protected=['docs/reports/controlled-v2-freeze.json']
+    protected = [
+        'src/career_lab/contracts/actions.py',
+        'src/career_lab/contracts/base.py',
+        'src/career_lab/contracts/scenario.py',
+        'src/career_lab/contracts/evaluation.py',
+        'src/career_lab/contracts/deliverables.py',
+        'docs/reports/controlled-v2-freeze.json',
+    ]
     protected += subprocess.check_output(['git','ls-tree','-r','--name-only','80cf1f6189cd25610d609f44283ff9668582d759','--','scenarios'],cwd=ROOT,text=True).splitlines()
     for rel in protected:
         old=subprocess.check_output(['git','show','80cf1f6189cd25610d609f44283ff9668582d759:'+rel],cwd=ROOT)

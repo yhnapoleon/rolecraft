@@ -1,25 +1,3 @@
-"""Only the explicitly approved optional provenance envelope may differ from v2."""
+"""Compatibility import for existing regression consumers; implementation is shared."""
 
-from copy import deepcopy
-
-
-def without_provenance(schema: dict) -> dict:
-    result = deepcopy(schema)
-
-    def visit(node: object) -> None:
-        if isinstance(node, dict):
-            if node.get("title") == "FeedbackV2" and "properties" in node:
-                assert "provenance" not in node.get("required", [])
-                node["properties"].pop("provenance", None)
-            for name in ("$defs", "schemas"):
-                if name in node:
-                    node[name].pop("CodeIdentity", None)
-                    node[name].pop("FeedbackProvenance", None)
-            for value in node.values():
-                visit(value)
-        elif isinstance(node, list):
-            for value in node:
-                visit(value)
-
-    visit(result)
-    return result
+from career_lab.contracts.v2.compatibility import without_provenance as without_provenance

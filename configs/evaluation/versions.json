@@ -12,7 +12,8 @@
         ]
       },
       "prompt_version": "grounded-feedback-bilingual-v1",
-      "comparison_baseline_sha256": "800d1c602bf84cdf0adb482cdcbefdb25bfe604daf1c6485cfacddf1af7a8464"
+      "comparison_baseline_sha256": "800d1c602bf84cdf0adb482cdcbefdb25bfe604daf1c6485cfacddf1af7a8464",
+      "engine_baseline_sha256": "7b9d79e92355e98f1160f35219ac104bdc90bd05a32edfeb484adf68da21f891"
     }
   }
 }

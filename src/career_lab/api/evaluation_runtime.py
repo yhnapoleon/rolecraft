@@ -105,7 +105,7 @@ def create_feedback_handler(module, *, model=None):
     if not protocol.get('installed'):return None
     if protocol.get('owner')!='W05' or bundle.mode!='advisory':raise C.ProtocolError('evaluation_runtime_unavailable',status=503)
     from career_lab.api.feedback_provenance import attach_provenance, feedback_provenance
-    from career_lab.contracts.v2.provenance import require_execution_snapshot
+    from career_lab.runtime.provenance import require_execution_snapshot
     from career_lab.scenarios.v2.release import require_evaluation
 
     require_evaluation(module.package.root, bundle, language=module.work_language)
