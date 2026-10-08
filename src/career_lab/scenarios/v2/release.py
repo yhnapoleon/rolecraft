@@ -32,6 +32,7 @@ GENERATED = frozenset(
         "runtime/source-files.json",
         "runtime/evaluation.json",
         "runtime/evaluation-protocol.json",
+        "runtime/evaluation-rules.json",
         RELEASE_PATH,
     }
 )

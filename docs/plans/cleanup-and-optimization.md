@@ -356,3 +356,14 @@ logging使用标准库 logger，由入口配置一次；每请求一条完成摘
 | `src/career_lab/evidence/v2/review_ports.py` | `20847cb562c098da1efba55b039222d04cfb0e82` | 2236 / 50 | `9085b469c3faf0c0566fc0088812dffe90bd2ccd7f525b609996a90724354cb1` |
 
 原件按固定commit使用git show恢复。真实旧CLI与Python导入两条退役边界分别先红后绿，正式rebind CLI仍可调用；业务路径由全量门禁、六包加载、固定反馈及中英文正常入口/MCP覆盖。
+
+
+## 批次8：规则身份兼容迁移
+
+规则身份由`feedback-rubric-v2-c2.1`、规则与rubric修订、原两份固定对照摘要组成。已登记的28份旧rules原件具有同一固定SHA；读取时仍验FileRef，再仅接受该原件或精确语义描述，不读取当前实现文件的字节。原评价签名保留，追加中英等价语义描述签名；不改固定对照或评价输出。
+
+正式rebind在新六包内新增`runtime/evaluation-rules.json`并更新生成式EvaluationBundle/发布描述；旧evaluation业务原件逐文件保留，内容身份、原始manifest和审核链不变。候选目录为`semantic-rules-v1-2.9.6`，本分支current和回归catalog指向该候选；旧六包与全部旧代次保留。CLI生成的source身份描述本次导出代码，不构成审核通过声明。
+
+EVAL-01测试在独立进程执行实际格式化后的八个模块，经正式安装读取器、旧六包HTTP/worker和固定FeedbackEngine输出验证。EVAL-02沿原测试ID保留完整结果摘要反例，使用AST精确定位一个coverage表达式，避免依赖空格。EVAL-03覆盖旧源码清单与新对照摘要篡改，包含未更新/同时更新FileRef两种情况。EVAL-04由正式CLI及六包逐文件和审核链对照验证。
+
+本批实际修改的rubric_v2按统一代码标准排版，避免渐进lint对未排版旧行产生误报；未修改lint规则或基线。八文件extend-exclude仍在，解除排除与其余机械排版另交独立批次，届时逐文件AST相等（已排版文件允许无差异）。

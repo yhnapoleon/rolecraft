@@ -2,34 +2,34 @@
   "schema_version": 1,
   "scenarios": [
     {
-      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot",
+      "root": "scenarios/pm_pilot/v2/candidates/semantic-rules-v1-2.9.6/pm_pilot",
       "work_language": "zh",
-      "scenario_hash": "25cc55e26eca602f746e93d5576122f63704e586099e30d3f357bee9ce547089"
+      "scenario_hash": "bd1ef5c631a58029c8644b763a586def167cd3add1af4a458ed85a88a973191a"
     },
     {
-      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot/locales/en",
+      "root": "scenarios/pm_pilot/v2/candidates/semantic-rules-v1-2.9.6/pm_pilot/locales/en",
       "work_language": "en",
-      "scenario_hash": "50d4666923ca98ab7b214c1efb9d40d2d3578dabdfafc9ef914344855e1b6abe"
+      "scenario_hash": "42ad28a0285f453828c056e0864afd612b526b5c01ac337dec79b91d9ce95dee"
     },
     {
-      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot_urgent",
+      "root": "scenarios/pm_pilot/v2/candidates/semantic-rules-v1-2.9.6/pm_pilot_urgent",
       "work_language": "zh",
-      "scenario_hash": "82c5117b57ebb8eb130b37652f2082815c7b18fb891580482226601968f3199f"
+      "scenario_hash": "ca7b28a698993f54d2d7041c2260855e22796f0168795185356500fb97aefd19"
     },
     {
-      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot_urgent/locales/en",
+      "root": "scenarios/pm_pilot/v2/candidates/semantic-rules-v1-2.9.6/pm_pilot_urgent/locales/en",
       "work_language": "en",
-      "scenario_hash": "680bf186c7abeea61e56fad77492c10662ed5783765d6ea71f87a067c88bbcf4"
+      "scenario_hash": "6084dc25387009b8bc354bf0013242c4c9f1db75e5280dbd3cda6aa797a4f08e"
     },
     {
-      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot_capacity15",
+      "root": "scenarios/pm_pilot/v2/candidates/semantic-rules-v1-2.9.6/pm_pilot_capacity15",
       "work_language": "zh",
-      "scenario_hash": "b9382798213aaac29cff137010e1c1c11fb3d97d4142f4dedd1268c5a7536297"
+      "scenario_hash": "a7d3473c43a32a7a2b15d94611f075d6494f6cf48611c0c64a6e5d4f5041c1f7"
     },
     {
-      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot_capacity15/locales/en",
+      "root": "scenarios/pm_pilot/v2/candidates/semantic-rules-v1-2.9.6/pm_pilot_capacity15/locales/en",
       "work_language": "en",
-      "scenario_hash": "3680a42a6ba6a5ae73507de794603e0942f7fd6d3e51ba8d59ba2525bf0a2a41"
+      "scenario_hash": "7612621ce1891f73ee66628309b5e6571b8ffa262180838ec13be23f7efc175f"
     }
   ]
 }

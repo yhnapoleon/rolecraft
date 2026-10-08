@@ -4,8 +4,16 @@ import json
 import shutil
 from pathlib import Path
 
-from career_lab.contracts.v2 import FileRef, ProtocolError, RuntimeBundle, SourceIdentity
+from career_lab.contracts.v2 import (
+    EvaluationBundle,
+    FileRef,
+    ProtocolError,
+    RuntimeBundle,
+    SourceIdentity,
+    canonical,
+)
 from career_lab.contracts.v2.provenance import CodeIdentity
+from career_lab.rubrics.v4.rubric_v2 import load_installed_policies, rules_document
 from career_lab.runtime.provenance import execution_identity
 
 from .loader import ScenarioPackage, load_package
@@ -17,6 +25,7 @@ from .release import (
     content_files,
     describe,
     protocol_overlay,
+    require_evaluation,
     sha,
 )
 
@@ -52,18 +61,42 @@ def _write_runtime(
     (destination / "runtime/bundle.json").write_text(runtime.model_dump_json(indent=2) + "\n")
 
 
+def _write_evaluation(destination: Path, language: str) -> str:
+    path = "runtime/evaluation.json"
+    raw = (destination / path).read_bytes()
+    load_installed_policies(
+        destination, FileRef(path=path, sha256=sha(raw)), work_language=language
+    )
+    previous = EvaluationBundle.model_validate_json(raw)
+    rules_path = "runtime/evaluation-rules.json"
+    rules_raw = (canonical(rules_document()) + "\n").encode()
+    (destination / rules_path).write_bytes(rules_raw)
+    evaluation = previous.model_copy(
+        update={"rules": FileRef(path=rules_path, sha256=sha(rules_raw))}
+    )
+    (destination / path).write_text(evaluation.model_dump_json(indent=2) + "\n")
+    return require_evaluation(destination, evaluation, language=language)
+
+
 def _write_manifest(package: ScenarioPackage, destination: Path) -> None:
     files = tuple(
         ref.model_copy(update={"sha256": sha((destination / ref.path).read_bytes())})
         for ref in package.bundle.files
-        if ref.path != RELEASE_PATH
+        if ref.path not in {RELEASE_PATH, "runtime/evaluation-rules.json"}
     )
-    files += (FileRef(path=RELEASE_PATH, sha256=sha((destination / RELEASE_PATH).read_bytes())),)
+    files += tuple(
+        FileRef(path=path, sha256=sha((destination / path).read_bytes()))
+        for path in (RELEASE_PATH, "runtime/evaluation-rules.json")
+    )
     # Scenario revision belongs to authored scenario.yaml and stays byte-for-byte unchanged.
     bundle = package.bundle.model_copy(
         update={
             "files": files,
-            "private_files": tuple(dict.fromkeys((*package.bundle.private_files, RELEASE_PATH))),
+            "private_files": tuple(
+                dict.fromkeys(
+                    (*package.bundle.private_files, RELEASE_PATH, "runtime/evaluation-rules.json")
+                )
+            ),
         }
     )
     (destination / "manifest.json").write_text(bundle.model_dump_json(indent=2) + "\n")
@@ -101,7 +134,9 @@ def _receipt(
         "review": release.review.model_dump(mode="json"),
         "evaluation_version": release.evaluation_version,
         "allowed_generated_files": sorted(GENERATED),
-        "changed_generated_files": sorted(set(changed) | {RELEASE_PATH, "manifest.json"}),
+        "changed_generated_files": sorted(
+            set(changed) | {RELEASE_PATH, "manifest.json", "runtime/evaluation-rules.json"}
+        ),
         "content_files": content_files(candidate),
         "authored_content_unchanged": True,
         "source_unchanged": True,
@@ -137,6 +172,8 @@ def migrate(
     before = {ref.path: sha((source / ref.path).read_bytes()) for ref in package.bundle.files}
     original_manifest = (source / "manifest.json").read_bytes()
     _copy_members(package, destination)
+    signature = _write_evaluation(destination, package.locale)
+    release = release.model_copy(update={"evaluation_signature": signature})
     _write_runtime(destination, previous, release, runtime_revision, code)
     _write_manifest(package, destination)
     candidate = load_package(destination)

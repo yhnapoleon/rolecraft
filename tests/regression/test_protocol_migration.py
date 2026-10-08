@@ -1,5 +1,6 @@
 """Protocol migration retains bytes, semantic results and historical identities."""
 
+import ast
 import importlib.util
 import json
 from pathlib import Path
@@ -91,11 +92,16 @@ def test_changed_evaluation_output_requires_a_new_version(tmp_path: Path) -> Non
     # Execute a real source mutant: coverage is inverted for the same fixed inputs.
     source = ROOT / "src/career_lab/rubrics/v4/feedback.py"
     original = source.read_text()
-    changed = original.replace(
-        "verified_coverage=verified/denominator if denominator else 0",
-        "verified_coverage=0 if verified else 1",
-    )
-    assert changed != original, "coverage mutation must change the implementation"
+    tree = ast.parse(original)
+    targets = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.keyword) and node.arg == "verified_coverage"
+    ]
+    assert len(targets) == 1, "coverage mutation must target one real implementation expression"
+    targets[0].value = ast.parse("0 if verified else 1", mode="eval").body
+    changed = ast.unparse(tree)
+    assert ast.dump(ast.parse(changed)) != ast.dump(ast.parse(original))
     path = tmp_path / "feedback_mutant.py"
     path.write_text(changed)
     spec = importlib.util.spec_from_file_location("career_lab.rubrics.v4.feedback_mutant", path)
