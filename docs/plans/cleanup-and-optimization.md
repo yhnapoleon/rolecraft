@@ -314,3 +314,28 @@ logging使用标准库 logger，由入口配置一次；每请求一条完成摘
 预先确认的测试接缝为正式rebind CLI、六包HTTP/worker反馈和真实FeedbackEngine。EVAL-01：仅改变八个实现文件的排版后，旧/新六包仍能生成等值反馈；EVAL-02：同语义版本的规则输出被改变时，固定对照门禁必须失败，不能重生成expected消除失败；EVAL-03：旧rules内部文件内容或新规则描述被篡改，manifest/语义注册校验拒绝；EVAL-04：六包业务文件、内容身份和原审核链不变，历史反馈不重算。每个反例先红后绿并记录原始证据。
 
 迁移完整门禁通过后，另一个提交移除pyproject中八个rubric规则文件的extend-exclude并执行ruff format；五个v1契约仍排除。逐文件AST不变、完整门禁/逐ID/固定反馈再次通过才交候选。
+
+## 批次1：历史证据归档
+
+以下16份原件保留在固定Git提交 `2c07160b5e829ac08afb8a31667440bbda72df73`。当前工作树移除副本，既有工程说明指向原提交；研究freeze、全部场景和冻结契约保留。恢复使用 `git show <commit>:<path>`，逐条验证SHA；不要用新实验覆盖旧证据。
+
+| 原路径 | bytes | SHA-256 |
+|---|---:|---|
+| `docs/reports/controlled-v2-final-tests.xml` | 10127 | `243f90c01723cfc8f8e7e7cfcfad53a4818ce3203dcce07a1c86d1cc97a5295f` |
+| `docs/reports/controlled-v2-task2-tests.xml` | 9189 | `facc9a0255e78342f95b41d87b6ec0d77b6e1729563772981ae1c8a0c059573d` |
+| `docs/reports/task-01-tests.xml` | 3091 | `47645bcd3765fbbf2fe69d5993f56328394b091694fe277c866819a32ba67e9e` |
+| `docs/reports/task-02-tests.xml` | 3791 | `ed6cb8eb588246aa77d64f0a1f54cbd7d86edc40fdc810fe00d925249dbe0402` |
+| `docs/reports/task-03-tests.xml` | 4253 | `ae79fc8d410de53c4bef52cb54543316ce43f0d2020f52816e862abf77611600` |
+| `docs/reports/task-04-tests.xml` | 4506 | `744505dfc6e8762c8eed1f14c88c4cd67661761fa3557366a2c71a0498bcf272` |
+| `docs/reports/task-05-tests.xml` | 4850 | `5a4c0b42871cf896eedfbb5be49642e179e34a546c2e78068cb67c8fa9f7820d` |
+| `docs/reports/task-06-tests.xml` | 5911 | `bf044886e4355e1f826dd3b70a521b21cf8ce412f8216893a47fcbcbb3831c16` |
+| `docs/reports/task-07-tests.xml` | 6493 | `06453decbbe75b1c03e285477580410e566f0563a0ba872c5cd0a1b63be36240` |
+| `docs/reports/task-08-tests.xml` | 6835 | `827261c508c7649a864413bca8757ecb9fd13c059289fb551933737133e30762` |
+| `docs/reports/task-09-tests.xml` | 7068 | `7f31151d5255122d8c1ca6123050120de6e60b7ea919c08dbde2da2824a73ffc` |
+| `docs/reports/task-12-tests.xml` | 7319 | `ae9374c41f5b150eb84b650b6359dfae6fb1279d94738a4204e6900996292216` |
+| `docs/reports/task-13-tests.xml` | 7438 | `a5270c4b2c3beb8fab26282af038cdd50b22770881526c83bc49c3e90e02cd2d` |
+| `docs/reports/task-14-tests.xml` | 8322 | `222380eaf34c29d92235377dd465eee8e615a6147ab109c355658fa0b066dd0c` |
+| `docs/reports/controlled-v2-dev.json` | 669539 | `2131e6b23a09bac9c524df883d1ce743213558d935e65d9f8dce379f121934b4` |
+| `docs/integration/v4-fixed-inputs.json` | 200411 | `246743f33451805afadc5513962670bac03a2ecae687ba9fc450e4dfc9a23cc5` |
+
+报告生成器同步使用固定历史链接，重新执行真实CLI不会覆盖为失效的本地引用；报告指标和计算过程不变。`test_report_cli_keeps_archived_evidence_links`在原生成器上失败，修改两条证据引用后通过；测试使用固定历史输入并执行实际脚本，保留CSV产物检查。

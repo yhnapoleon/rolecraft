@@ -17,7 +17,7 @@ Pre-flight: Task1模板/事实协议供Task2生成器使用；Task2输出既有E
 
 - Task 1：完成。矩阵与规范已写入docs/data；test_scenario_catalog.py 2 passed，包含三值逻辑与边界测试。
 - Task 2：工程部分完成，人工双标待完成。100项盲标工作包及校验/导入已生成；全量71 passed/1 skipped。
-- Task 3：完成受控实验与最终回归（81 tests通过）。1152项/24模板，576/288/288；CPU三模型+有限规则+混合，E1/E5/E6与逐类指标已输出controlled-v2-dev.json。融合alpha=0，无增益。
+- Task 3：完成受控实验与最终回归（81 tests通过）。1152项/24模板，576/288/288；CPU三模型+有限规则+混合，E1/E5/E6与逐类指标已输出[controlled-v2-dev.json](https://github.com/yhnapoleon/rolecraft/blob/2c07160b5e829ac08afb8a31667440bbda72df73/docs/reports/controlled-v2-dev.json)。融合alpha=0，无增益。
 - Task 4：完成冻结、正式合成test和真实HTTP影子接入。混合test Macro-F1=0.6496、误扣分率0.3333，未过自动评分门槛；人工验证仍pending。
 
 ## Review focus
