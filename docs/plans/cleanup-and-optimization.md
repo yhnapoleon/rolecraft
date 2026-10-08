@@ -345,3 +345,14 @@ logging使用标准库 logger，由入口配置一次；每请求一条完成摘
 原542,720 bytes tar以确定性gzip（mtime=0、空文件名、level=9）保存，压缩后114,637 bytes，节省428,083 bytes；压缩文件SHA-256为 `d80f62b410c78f502f5c54df176935994d9175f974abeb308e7f9e11de8153f2`。门禁仅在自己的临时目录还原，先验证原大小及 `99297d18c80e69248624b7ad2177729c5ac2f3ccb19afeedb138f3d799030bf3`，再把路径传给原历史测试，结束后清理。两个原中英测试体及其整tar SHA断言原样保留。
 
 新增验证先证明还原入口缺失，再证明被替换但gzip格式合法的内容会被误接受；还原接口和写出前身份校验分别使测试转绿。生成器限制解压读取大小，并拒绝覆盖已有输出。回退可从gzip恢复逐字相同tar，或从父提交恢复原文件，不依赖当前规则生成历史源码。
+
+## 批次3：退役入口与历史恢复
+
+当前运行／测试源码无这两个入口的调用方：旧脚本会就地修改发布目录，正式prepare已经转用rebind CLI；ReviewAuthority只是已明确退役的私有事务Prototype Protocol，不承载未接P0/P1。原包中的来源记录和原W05 tar保持原样，兼容workspace转发与离线评价作者工具保留。
+
+| 原路径 | 原commit | bytes／行 | SHA-256 |
+|---|---|---:|---|
+| `docs/integration/rebind_runtime.py` | `20847cb562c098da1efba55b039222d04cfb0e82` | 6387 / 149 | `667b405c9fe77e7d78a9e749081cfceabd7dc6e2c75cb87806872dd1e44ec4dc` |
+| `src/career_lab/evidence/v2/review_ports.py` | `20847cb562c098da1efba55b039222d04cfb0e82` | 2236 / 50 | `9085b469c3faf0c0566fc0088812dffe90bd2ccd7f525b609996a90724354cb1` |
+
+原件按固定commit使用git show恢复。真实旧CLI与Python导入两条退役边界分别先红后绿，正式rebind CLI仍可调用；业务路径由全量门禁、六包加载、固定反馈及中英文正常入口/MCP覆盖。
