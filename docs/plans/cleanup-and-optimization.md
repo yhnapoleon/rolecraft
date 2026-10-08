@@ -381,3 +381,10 @@ EVAL-01测试在独立进程执行实际格式化后的八个模块，经正式�
 低风险导入限三文件：移除v2_store重复的局部dataclasses.replace；将v2_snapshot的IntegrityError、role_memory的fields/is_dataclass/replace/TypeAdapter上移。所有打断导入环的延迟导入保留，不动事务边界。67份源码的AST在排除docstring、上述纯导入、两条精确help文案与MCP软件版本后相同；逐模块冷进程导入验证无循环。
 
 真实CLI帮助与完整MCP初始化响应分别先红后绿；固定反馈/快照验证和每批完整门禁覆盖稳定身份、历史、授权与丢响应恢复。
+
+
+## 批次5：角色快照适配器归层
+
+FixedRoleSnapshotPort及其激活坐标辅助函数从api迁入runtime，原api路径保留同一对象的兼容转发。存储层仅修改begin_role_execution中的这一条延迟导入路径及该导入块的排序；其它代码逐字不变。迁移后适配器补完整类型与显式导入，五个函数除类型注解外的AST保持相同。事务、授权时窗、私有读取、事件接收、历史采用和模型调用位置均不动。
+
+真实V2Store角色输入验证在禁止HTTP模块导入的冷进程中先失败后通过；旧新导入对象恒等，既有角色快照和私有角色测试验证正常/历史/撤销边界。不扩展为存储层整体解耦，storage到runtime的其它依赖保留。

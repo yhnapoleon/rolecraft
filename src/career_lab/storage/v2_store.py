@@ -1298,8 +1298,8 @@ class V2Store(JobStoreMixin):
             return scenario, selected, events
 
     def begin_role_execution(self, view, envelope, auth, claim, catalog, *, max_context_chars):
-        from career_lab.api.role_snapshot import FixedRoleSnapshotPort
         from career_lab.runtime.context_v2 import ContextPort
+        from career_lab.runtime.role_snapshot import FixedRoleSnapshotPort
         from career_lab.storage.role_memory import RoleTurn
 
         request_ref = ObjectRef.model_validate(envelope.command.payload.get("subject"))
