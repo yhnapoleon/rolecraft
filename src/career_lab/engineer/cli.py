@@ -29,7 +29,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     reproduce.add_argument("--pack", type=Path, required=True)
     reproduce.add_argument("--output", type=Path, required=True)
-    for command in (pack, reproduce):
+    probes = operations.add_parser(
+        "probes-from-plan", help="Export a saved test plan as unverified review-only candidates"
+    )
+    probes.add_argument("--product", required=True, help="Existing PM work product ID")
+    probes.add_argument("--product-version", type=int, required=True)
+    probes.add_argument("--output", type=Path, required=True)
+    probes.add_argument(
+        "--span",
+        action="append",
+        default=[],
+        help="Confirmed source span START:END; Unicode characters, end exclusive",
+    )
+    probes.add_argument("--text-field", choices=("content", "body"), default="content")
+    probes.add_argument(
+        "--confirm-extraction",
+        action="store_true",
+        help="Explicitly confirm selected source text as test intent, not truth",
+    )
+    for command in (pack, reproduce, probes):
         command.add_argument(
             "--database",
             type=Path,
@@ -66,8 +84,20 @@ def run(args: argparse.Namespace) -> int:
 
         if args.engineer_operation == "pack":
             result = export_pack(store, module, auth, args.test, args.output)
-        else:
+        elif args.engineer_operation == "reproduce":
             result = reproduce_pack(store, module, auth, args.pack, args.output)
+        else:
+            from .probes import TextSelection, export_candidates
+
+            result = export_candidates(
+                store,
+                module,
+                auth,
+                args.product,
+                args.product_version,
+                args.output,
+                TextSelection(args.text_field, tuple(args.span), args.confirm_extraction),
+            )
         print(json.dumps(result, ensure_ascii=False))
         return 1 if result["status"] == "behavior_changed" else 0
     except ProtocolError as error:

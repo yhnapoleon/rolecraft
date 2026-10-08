@@ -1,7 +1,9 @@
 """Engineer handoff through the normal session API and public CLI."""
 
+import hashlib
 import json
 import os
+import shutil
 import socket
 import subprocess
 import sys
@@ -72,15 +74,31 @@ def session(
     monkeypatch.setenv("CAREER_LAB_SCENARIO_ARCHIVE", str(tmp_path / "archive"))
     monkeypatch.delenv("CAREER_LAB_SCENARIO_CATALOG", raising=False)
     database = tmp_path / "source.db"
+    language = request.param["language"] if isinstance(request.param, dict) else request.param
     scenario = default_installed_scenario()
-    if request.param == "en":
+    if language == "en":
         scenario = scenario / "locales" / "en"
+    if isinstance(request.param, dict):
+        # A new, temporary fixture only. Never relabel a published scenario or dataset.
+        fixture = tmp_path / "isolated-split-fixture"
+        shutil.copytree(scenario, fixture)
+        manifest = json.loads((fixture / "manifest.json").read_text())
+        manifest["split"] = request.param["split"]
+        locale_path = fixture / "locale.json"
+        locale = json.loads(locale_path.read_text())
+        locale["split"] = request.param["split"]
+        locale_path.write_text(json.dumps(locale))
+        for member in manifest["files"]:
+            if member["path"] == "locale.json":
+                member["sha256"] = hashlib.sha256(locale_path.read_bytes()).hexdigest()
+        (fixture / "manifest.json").write_text(json.dumps(manifest))
+        scenario = fixture
     app = create_runtime_app("sqlite:///" + str(database), scenario_root=scenario)
     request.addfinalizer(app.state.store.close)
     with local_http(app) as client:
         response = client.post(
             "/sessions",
-            json={"schema_version": 2, "scenario": "pm_pilot_v2", "work_language": request.param},
+            json={"schema_version": 2, "scenario": "pm_pilot_v2", "work_language": language},
         )
         assert response.status_code == 200, response.text
         created = response.json()
@@ -123,9 +141,7 @@ def session(
             "baseline",
             "tests.create",
             {
-                "query": "What is the weather on Mars?"
-                if request.param == "en"
-                else "火星天气如何？",
+                "query": "What is the weather on Mars?" if language == "en" else "火星天气如何？",
                 "config_version": 0,
             },
         )["result"]["test"]
