@@ -20,11 +20,12 @@ def main():
     parser.add_argument('--root',type=Path,default=Path('scenarios/pm_pilot/v2'))
     parser.add_argument('--evidence',type=Path,required=True)
     parser.add_argument('--with-w05',action='store_true')
+    parser.add_argument('--tooling-baseline',help='Full Git commit for an authorized rebind-tool-only migration')
     args=parser.parse_args()
     old=args.root
     overlay=json.loads((old/'runtime/source-files.json').read_text())
-    actual={name:sha(Path(name)) for name in overlay['owned_code']}
-    if actual != overlay['owned_code']: raise SystemExit('W02 owned source changed; obtain the fixed release first')
+    from career_lab.scenarios.v2.rebind import verified_owned_input
+    actual,tooling_update=verified_owned_input(Path.cwd(),overlay['owned_code'],json.loads((old/'locale.json').read_text())['locale'],args.tooling_baseline)
     foundation=Path('docs/contracts/expansion-v3/manifest.json')
     bundle_data=json.loads((old/'manifest.json').read_text())
     paths=['manifest.json',*[f['path'] for f in bundle_data['files']]]
@@ -62,7 +63,7 @@ def main():
         for name in changed: (old/name).write_bytes((generated/name).read_bytes())
     module=ScenarioModule(old)
     result={'generator':'career_lab.scenarios.v2.seed.build_seed',
-        'owned_source':actual,'foundation_contract_sha256':sha(foundation),
+        'owned_source':actual,'tooling_update':tooling_update,'foundation_contract_sha256':sha(foundation),
         'changed':changed,'before':before,'after':after,
         'content_unchanged':True,'scenario_sha256':module.package.content_hash,
         'evaluation_binding_status':'W05 frozen local advisory, semantic model pending' if args.with_w05 else 'W02 placeholder'}

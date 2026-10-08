@@ -38,15 +38,41 @@ def verified_public_input(repo,expected_revision):
     return sha(raw),checked
 
 
-def rebind(source,destination,*,contract_revision,scenario_revision,runtime_revision):
+def verified_owned_input(repo, expected, locale, tooling_baseline=None):
+    """An explicit migration may change only this release tool, never runtime logic.
+
+    Every original owned file must match the supplied full immutable Git commit;
+    every current file except this tool must still match those original bytes.
+    """
+    current = runtime_source_files(repo, locale)
+    if current == expected:
+        return current, None
+    tool = 'src/career_lab/scenarios/v2/rebind.py'
+    import re
+    if tooling_baseline is None or re.fullmatch(r'[0-9a-f]{40}', tooling_baseline) is None:
+        raise ProtocolError('rebind_owned_code_mismatch', status=409)
+    if set(current) != set(expected) or {p for p in current if current[p] != expected[p]} != {tool}:
+        raise ProtocolError('rebind_runtime_change_not_authorized', status=409)
+    for path, expected_hash in expected.items():
+        result = subprocess.run(['git', 'show', tooling_baseline + ':' + path], cwd=repo, capture_output=True)
+        if result.returncode:
+            raise ProtocolError('rebind_tooling_baseline_unavailable', status=409)
+        raw = result.stdout
+        if sha(raw) != expected_hash:
+            raise ProtocolError('rebind_tooling_baseline_mismatch', status=409)
+    return current, {'baseline_commit': tooling_baseline, 'changed_files': [tool],
+                     'before_sha256': expected[tool], 'after_sha256': current[tool]}
+
+
+def rebind(source,destination,*,contract_revision,scenario_revision,runtime_revision,tooling_baseline=None):
     repo=Path(__file__).resolve().parents[4]
     source=Path(source).resolve();destination=Path(destination).resolve()
     if destination.exists() or destination.is_relative_to(source):raise ProtocolError('rebind_destination_not_fresh',status=409)
     package=load_package(source)
     previous=RuntimeBundle.model_validate_json((source/'runtime/bundle.json').read_bytes())
     overlay=json.loads((source/'runtime/source-files.json').read_bytes())
-    code=runtime_source_files(repo,package.locale)
-    if overlay['owned_code']!=code or previous.source.source_digest!=digest(code):
+    code,tooling_update=verified_owned_input(repo,overlay['owned_code'],package.locale,tooling_baseline)
+    if previous.source.source_digest!=digest(overlay['owned_code']):
         raise ProtocolError('rebind_owned_code_mismatch',status=409)
     if not scenario_revision or scenario_revision==package.bundle.revision or not runtime_revision or runtime_revision==previous.revision:
         raise ProtocolError('rebind_new_revisions_required')
@@ -58,9 +84,10 @@ def rebind(source,destination,*,contract_revision,scenario_revision,runtime_revi
     rules=yaml.safe_load((destination/'scenario.yaml').read_bytes());rules['revision']=scenario_revision
     (destination/'scenario.yaml').write_text(yaml.safe_dump(rules,allow_unicode=True,sort_keys=True))
     overlay['foundation_contract_sha256']=contract_hash
+    overlay['owned_code']=code
     (destination/'runtime/source-files.json').write_text(json.dumps(overlay,ensure_ascii=False,indent=2)+'\n')
     runtime=previous.model_copy(update={'revision':runtime_revision,'source':previous.source.model_copy(update={
-        'overlay':FileRef(path='runtime/source-files.json',sha256=sha((destination/'runtime/source-files.json').read_bytes()))})})
+        'source_digest':digest(code),'overlay':FileRef(path='runtime/source-files.json',sha256=sha((destination/'runtime/source-files.json').read_bytes()))})})
     (destination/'runtime/bundle.json').write_text(runtime.model_dump_json(indent=2)+'\n')
     files=tuple(ref.model_copy(update={'sha256':sha((destination/ref.path).read_bytes())}) for ref in package.bundle.files)
     bundle=package.bundle.model_copy(update={'revision':scenario_revision,'files':files})
@@ -75,7 +102,7 @@ def rebind(source,destination,*,contract_revision,scenario_revision,runtime_revi
     return {'source_scenario_hash':package.content_hash,'target_scenario_hash':module.package.content_hash,
         'source_contract_hash':json.loads((source/'runtime/source-files.json').read_bytes())['foundation_contract_sha256'],
         'target_contract_revision':contract_revision,'verified_public_files':public_files,
-        'owned_source_digest':digest(code),'changed_generated_files':changed+['manifest.json'],
+        'tooling_update':tooling_update,'owned_source_digest':digest(code),'changed_generated_files':changed+['manifest.json'],
         'authored_content_unchanged':True,'source_unchanged':True,'constructor':'passed',
         'work_language':module.work_language,'output':str(destination),'accepted':False}
 
@@ -87,8 +114,9 @@ def smoke_http(root,database,report_dir):
     module=ScenarioModule(root);language=module.work_language
     report_dir.mkdir(parents=True,exist_ok=True);database.parent.mkdir(parents=True,exist_ok=True)
     with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
-    command=[sys.executable,'-m','career_lab.scenarios.v2','serve',str(root),'--database-url','sqlite:///'+str(database),'--port',str(port)]
-    env={k:v for k,v in os.environ.items() if k!='PYTHONPATH'};env['PYTHONDONTWRITEBYTECODE']='1'
+    command=[sys.executable,'-m','career_lab.cli','serve','--database-url','sqlite:///'+str(database),'--provider','local','--port',str(port)]
+    env={k:v for k,v in os.environ.items() if k not in {'PYTHONPATH','CAREER_LAB_SCENARIO_CATALOG','CAREER_LAB_SCENARIO_V2','CAREER_LAB_SCENARIO_ARCHIVE'}}
+    env.update(PYTHONDONTWRITEBYTECODE='1',CAREER_LAB_SCENARIO_V2=str(root),CAREER_LAB_SCENARIO_ARCHIVE=str(report_dir/'archive'))
     log=(report_dir/'startup-server.log').open('w');process=subprocess.Popen(command,cwd=Path(__file__).resolve().parents[4],env=env,stdout=log,stderr=subprocess.STDOUT)
     steps=[]
     def request(method,path,payload=None,token=None):
@@ -107,9 +135,11 @@ def smoke_http(root,database,report_dir):
             try:request('GET','/health');break
             except (ConnectionError,OSError):time.sleep(.05)
         else:raise RuntimeError('startup timeout')
-        payload={'schema_version':2,'scenario':'pm_pilot_v2'}
+        payload={'schema_version':2,'scenario':module.package.bundle.id+'_v2'}
         if 'work_language' in CreateSessionV2.model_fields:payload['work_language']=language
         created=request('POST','/sessions',payload);sid=created['session_id'];token=created['token']
+        if created['binding']['workLanguage']!=language or created['binding']['scenarioHash']!=module.package.content_hash:
+            raise RuntimeError('startup scenario/language binding mismatch')
         query='会议室预约入口' if language=='zh' else 'Where can I book a meeting room?'
         state=created['state']
         tested=request('POST',f'/sessions/{sid}/tests',{'schema_version':2,'request_id':'startup-c0','operation':'tests.create',
@@ -131,9 +161,10 @@ def main(argv=None):
     parser=argparse.ArgumentParser(description='Rebind an unchanged W02 release to exact verified public input.')
     for name in ('source','output','contract-revision','scenario-revision','runtime-revision'):parser.add_argument('--'+name,required=True)
     parser.add_argument('--smoke-database',required=True)
+    parser.add_argument('--tooling-baseline',help='Full Git commit for an explicitly authorized rebind-tool-only migration')
     args=parser.parse_args(argv)
     try:
-        result=rebind(args.source,args.output,contract_revision=args.contract_revision,scenario_revision=args.scenario_revision,runtime_revision=args.runtime_revision)
+        result=rebind(args.source,args.output,contract_revision=args.contract_revision,scenario_revision=args.scenario_revision,runtime_revision=args.runtime_revision,tooling_baseline=args.tooling_baseline)
         evidence=Path(args.output).parent/(Path(args.output).name+'-verification');evidence.mkdir()
         result['http_startup']=smoke_http(args.output,args.smoke_database,evidence)
         (evidence/'rebind.json').write_text(json.dumps(result,ensure_ascii=False,indent=2)+'\n')
