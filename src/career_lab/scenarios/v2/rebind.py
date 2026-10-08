@@ -72,9 +72,9 @@ def verified_owned_input(repo, expected, locale, tooling_baseline=None):
 
 
 def rebind(
-    source, destination, *, contract_revision, scenario_revision, runtime_revision,
-    tooling_baseline=None, protocol=None,
-):
+    source: Path, destination: Path, *, contract_revision: str, scenario_revision: str,
+    runtime_revision: str, tooling_baseline: str | None = None, protocol: str | None = None,
+) -> dict[str, object]:
     if protocol is not None:
         from .release import PROTOCOL
         from .release_migration import migrate

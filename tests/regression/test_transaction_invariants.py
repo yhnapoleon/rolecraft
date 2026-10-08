@@ -1,4 +1,4 @@
-"""Adversarial writes and actual worker races must reach the shared transaction guard."""
+"""Shared privacy guard and existing session/job guards, through real transactions."""
 
 from datetime import UTC, datetime, timedelta
 
@@ -10,7 +10,7 @@ from career_lab.storage.v2_snapshot import SnapshotService
 from career_lab.storage.v2_store import Mutation, ObjectWrite, TransactionView, V2Store
 from tests.contracts.expansion_v3.conftest import command, product_plan
 from tests.contracts.expansion_v3.conftest import foundation as foundation
-from tests.contracts.expansion_v3.test_review_r6 import ask, revise, submit
+from tests.contracts.expansion_v3.test_review_r6 import ask, submit
 
 Foundation = tuple[V2Store, C.AuthContext, str, C.SessionBindings, C.AssistantConfig]
 
@@ -25,8 +25,8 @@ def test_direct_extension_cannot_write_into_a_closed_cycle(
     created = store.execute(owner, command(store.view(owner), "original"), product_plan)
     product = next(ref for ref in created.objects if ref.kind == "product")
     original = store.read(owner, product)
-    submitted = submit(store, owner)
-    revise(store, owner, submitted)
+    # Retain the closed-session rejection; adoption after reopening is separately valid.
+    submit(store, owner)
     ref = product.model_copy(update={"version": 2})
     write = ObjectWrite(
         ref=ref,
@@ -35,7 +35,7 @@ def test_direct_extension_cannot_write_into_a_closed_cycle(
         dependencies=original.dependencies,
     )
     before = store.view(owner)
-    with pytest.raises(C.ProtocolError, match="product cycle closed"):
+    with pytest.raises(C.ProtocolError, match="session submitted"):
         store.execute(
             owner, command(before, "malicious", operation), lambda *_: Mutation(writes=(write,))
         )

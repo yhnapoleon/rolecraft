@@ -49,6 +49,8 @@ def role_reply_has_private_fields(content: object) -> bool:
     if not isinstance(content, dict) or ROLE_REPLY_PRIVATE_FIELDS.intersection(content):
         return True
     try:
+        # JSON round-trip prevents a preconstructed nested model from avoiding
+        # recursive validation. Never return the private validation input.
         RoleReply.model_validate_json(canonical(content))
     except (ValidationError, TypeError, ValueError):
         return True

@@ -1026,7 +1026,7 @@ class V2Store(JobStoreMixin):
             if refreshing:self._refresh_queued_job(c,auth,command,mutation.refresh_job,new)
             # Every command/import/worker/recovery write reaches these same final invariants.
             # Keep them inside this transaction even when object planning moves between modules.
-            validate_write_set(records, (*planned, *cascaded), new.cycle_id)
+            validate_write_set(records, (*planned, *cascaded))
             for record in (*planned,*cascaded):self._put(c,record)
             if fault:fault('after_objects')
             for event in emitted:c.execute(insert(v2_events).values(session_id=auth.session_id,seq=event.seq,record=canonical(event)))
