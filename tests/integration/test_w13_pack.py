@@ -1,17 +1,74 @@
 """Engineer handoff through the normal session API and public CLI."""
+
 import json
+import os
+import socket
 import subprocess
 import sys
+import threading
+import time
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
+from datetime import UTC
 from pathlib import Path
+from typing import Any
 
+import httpx
 import pytest
-from fastapi.testclient import TestClient
+import uvicorn
+from fastapi import FastAPI
 
 from career_lab.api.vertical_runtime import create_runtime_app, default_installed_scenario
 
+ROOT = Path(__file__).resolve().parents[2]
+
+
+Session = tuple[
+    FastAPI,
+    httpx.Client,
+    str,
+    dict[str, str],
+    Callable[..., dict[str, Any]],
+    dict[str, Any],
+    Callable[..., subprocess.CompletedProcess[str]],
+    Path,
+    Path,
+]
+
+
+@contextmanager
+def local_http(app: FastAPI) -> Iterator[httpx.Client]:
+    """Real HTTP on an OS-assigned port, with explicit server and socket cleanup."""
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    server = uvicorn.Server(uvicorn.Config(app, log_level="error"))
+    thread = threading.Thread(target=server.run, kwargs={"sockets": [sock]}, daemon=True)
+    thread.start()
+    try:
+        deadline = time.monotonic() + 10
+        while not server.started and thread.is_alive() and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert server.started, "HTTP server did not start"
+        url = "http://127.0.0.1:" + str(sock.getsockname()[1])
+        with httpx.Client(base_url=url, timeout=10, trust_env=False) as client:
+            yield client
+    finally:
+        server.should_exit = True
+        thread.join(timeout=10)
+        sock.close()
+        assert not thread.is_alive(), "HTTP server did not stop"
+
+
+def source_environment() -> dict[str, str]:
+    return {**os.environ, "PYTHONPATH": str(ROOT / "src"), "PYTHONSAFEPATH": "1"}
+
 
 @pytest.fixture(params=["zh", "en"])
-def session(tmp_path, monkeypatch, request):
+def session(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    request: pytest.FixtureRequest,
+) -> Iterator[Session]:
     monkeypatch.setenv("CAREER_LAB_SCENARIO_ARCHIVE", str(tmp_path / "archive"))
     monkeypatch.delenv("CAREER_LAB_SCENARIO_CATALOG", raising=False)
     database = tmp_path / "source.db"
@@ -19,34 +76,85 @@ def session(tmp_path, monkeypatch, request):
     if request.param == "en":
         scenario = scenario / "locales" / "en"
     app = create_runtime_app("sqlite:///" + str(database), scenario_root=scenario)
-    client = TestClient(app)
-    response = client.post("/sessions", json={"schema_version": 2, "scenario": "pm_pilot_v2", "work_language": request.param})
-    assert response.status_code == 200, response.text
-    created = response.json()
-    sid = created["session_id"]
-    headers = {"Authorization": "Bearer " + created["token"]}
-    credentials = tmp_path / "credentials.json"
-    credentials.write_text(json.dumps({"api_url": "http://127.0.0.1:18562", "session_id": sid, "token": created["token"]}))
-    credentials.chmod(0o600)
+    request.addfinalizer(app.state.store.close)
+    with local_http(app) as client:
+        response = client.post(
+            "/sessions",
+            json={"schema_version": 2, "scenario": "pm_pilot_v2", "work_language": request.param},
+        )
+        assert response.status_code == 200, response.text
+        created = response.json()
+        sid = created["session_id"]
+        headers = {"Authorization": "Bearer " + created["token"]}
+        credentials = tmp_path / "credentials.json"
+        credentials.write_text(
+            json.dumps(
+                {"api_url": str(client.base_url), "session_id": sid, "token": created["token"]}
+            )
+        )
+        credentials.chmod(0o600)
 
-    def send(path, key, operation, payload, method="POST"):
-        state = client.get("/sessions/" + sid, headers=headers).json()["state"]
-        result = client.request(method, "/sessions/" + sid + "/" + path, headers=headers, json={
-            "schema_version": 2, "request_id": key, "operation": operation, "payload": payload,
-            "expected_version": state["business_seq"], "expected_workspace_revision": state["workspace_revision"]})
-        assert result.status_code == 200, result.text
-        return result.json()
+        def send(
+            path: str,
+            key: str,
+            operation: str,
+            payload: dict[str, Any],
+            method: str = "POST",
+        ) -> dict[str, Any]:
+            state = client.get("/sessions/" + sid, headers=headers).json()["state"]
+            result = client.request(
+                method,
+                "/sessions/" + sid + "/" + path,
+                headers=headers,
+                json={
+                    "schema_version": 2,
+                    "request_id": key,
+                    "operation": operation,
+                    "payload": payload,
+                    "expected_version": state["business_seq"],
+                    "expected_workspace_revision": state["workspace_revision"],
+                },
+            )
+            assert result.status_code == 200, result.text
+            return result.json()
 
-    trial = send("tests", "baseline", "tests.create", {"query": "What is the weather on Mars?" if request.param == "en" else "火星天气如何？", "config_version": 0})["result"]["test"]
-    def cli(*args):
-        return subprocess.run([str(Path(sys.executable).parent / "career-lab-engineer"), *args,
-            "--database", str(database), "--credentials", str(credentials),
-            "--scenario", str(scenario)], capture_output=True, text=True)
-    yield app, client, sid, headers, send, trial, cli, tmp_path, credentials
-    app.state.store.close()
+        trial = send(
+            "tests",
+            "baseline",
+            "tests.create",
+            {
+                "query": "What is the weather on Mars?"
+                if request.param == "en"
+                else "火星天气如何？",
+                "config_version": 0,
+            },
+        )["result"]["test"]
+
+        def cli(*args: str) -> subprocess.CompletedProcess[str]:
+            return subprocess.run(
+                [
+                    sys.executable,
+                    "-m",
+                    "career_lab.engineer",
+                    args[0],
+                    "--database",
+                    str(database),
+                    "--credentials",
+                    str(credentials),
+                    "--scenario",
+                    str(scenario),
+                    *args[1:],
+                ],
+                capture_output=True,
+                text=True,
+                cwd=ROOT,
+                env=source_environment(),
+            )
+
+        yield app, client, sid, headers, send, trial, cli, tmp_path, credentials
 
 
-def test_pack_exports_actual_authorized_baseline_without_changing_session(session):
+def test_pack_exports_actual_authorized_baseline_without_changing_session(session: Session) -> None:
     app, client, sid, headers, send, trial, cli, root, credentials = session
     before = client.get("/sessions/" + sid + "/timeline", headers=headers).json()
     result = cli("pack", "--test", trial["id"], "--output", str(root / "pack"))
@@ -66,19 +174,35 @@ def test_pack_exports_actual_authorized_baseline_without_changing_session(sessio
     assert client.get("/sessions/" + sid + "/timeline", headers=headers).json() == before
 
 
-def test_reproduce_keeps_the_original_stale_index_after_parent_refresh(session):
+def test_reproduce_keeps_the_original_stale_index_after_parent_refresh(session: Session) -> None:
     from career_lab.scenarios.v2.module import ref_for
+
     app, client, sid, headers, send, trial, cli, root, _ = session
     base = app.state.scenario_v2.package.baseline(sid)
-    send("configuration", "apply", "configuration.apply", {"base": ref_for("config", base).model_dump(mode="json"),
-        "settings": {"work_items": ["scope_filter", "human_fallback"], "fallback": "human"}})
-    query = "What is the hotel reimbursement limit per night?" if app.state.scenario_v2.work_language == "en" else "住宿报销上限是多少？"
-    stale = send("tests", "stale", "tests.create", {"query": query, "config_version": 1})["result"]["test"]
+    send(
+        "configuration",
+        "apply",
+        "configuration.apply",
+        {
+            "base": ref_for("config", base).model_dump(mode="json"),
+            "settings": {"work_items": ["scope_filter", "human_fallback"], "fallback": "human"},
+        },
+    )
+    query = (
+        "What is the hotel reimbursement limit per night?"
+        if app.state.scenario_v2.work_language == "en"
+        else "住宿报销上限是多少？"
+    )
+    stale = send("tests", "stale", "tests.create", {"query": query, "config_version": 1})["result"][
+        "test"
+    ]
     assert stale["citations"][0]["version"] == 1 and "500" in stale["answer"]
     assert stale["execution"]["source_versions"]["policy"] == 2
     assert cli("pack", "--test", stale["id"], "--output", str(root / "pack")).returncode == 0
     send("actions", "refresh", "refresh_index", {"tool": "refresh_index"})
-    fresh = send("tests", "fresh", "tests.create", {"query": stale["query"], "config_version": 1})["result"]["test"]
+    fresh = send("tests", "fresh", "tests.create", {"query": stale["query"], "config_version": 1})[
+        "result"
+    ]["test"]
     assert "400" in fresh["answer"] and fresh["citations"][0]["version"] == 2
     before = client.get("/sessions/" + sid + "/timeline", headers=headers).json()
     result = cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "reproduction"))
@@ -89,7 +213,7 @@ def test_reproduce_keeps_the_original_stale_index_after_parent_refresh(session):
     assert client.get("/sessions/" + sid + "/timeline", headers=headers).json() == before
 
 
-def test_repeated_export_and_reproduction_are_immutable(session):
+def test_repeated_export_and_reproduction_are_immutable(session: Session) -> None:
     _, _, _, _, _, trial, cli, root, _ = session
     args = ("pack", "--test", trial["id"], "--output", str(root / "pack"))
     first = cli(*args)
@@ -105,8 +229,9 @@ def test_repeated_export_and_reproduction_are_immutable(session):
     assert (root / "reproduction" / "report.json").read_bytes() == report
 
 
-def test_rehashed_forged_pack_is_rejected_against_original_sources(session):
+def test_rehashed_forged_pack_is_rejected_against_original_sources(session: Session) -> None:
     import hashlib
+
     _, _, _, _, _, trial, cli, root, _ = session
     assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
     index_file = root / "pack" / "index.json"
@@ -122,7 +247,7 @@ def test_rehashed_forged_pack_is_rejected_against_original_sources(session):
     assert not (root / "reproduction").exists()
 
 
-def test_export_includes_a_usable_language_specific_handoff_guide(session):
+def test_export_includes_a_usable_language_specific_handoff_guide(session: Session) -> None:
     app, _, _, _, _, trial, cli, root, _ = session
     assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
     guide = (root / "pack" / "README.md").read_text()
@@ -130,7 +255,7 @@ def test_export_includes_a_usable_language_specific_handoff_guide(session):
     assert ("原始运行库" in guide) == (app.state.scenario_v2.work_language == "zh")
 
 
-def test_missing_test_and_invalid_credentials_never_publish_a_pack(session):
+def test_missing_test_and_invalid_credentials_never_publish_a_pack(session: Session) -> None:
     _, _, _, _, _, trial, cli, root, credentials = session
     result = cli("pack", "--test", "missing-test", "--output", str(root / "missing"))
     assert result.returncode == 1 and "engineer_test_unavailable" in result.stdout
@@ -143,85 +268,369 @@ def test_missing_test_and_invalid_credentials_never_publish_a_pack(session):
     assert not (root / "missing").exists() and not (root / "denied").exists()
 
 
-def test_revoked_delegation_cannot_reproduce_a_previously_exported_pack(session):
-    from datetime import datetime, timedelta, timezone
+def test_revoked_delegation_cannot_reproduce_a_previously_exported_pack(session: Session) -> None:
+    from datetime import datetime, timedelta
+
     _, client, sid, headers, send, trial, cli, root, credentials = session
-    delegation = send('delegations', 'grant', 'delegations.create', {
-        'agent_label': 'engineer', 'capabilities': ['read', 'act'],
-        'expires_at': (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()})['result']['result']
+    delegation = send(
+        "delegations",
+        "grant",
+        "delegations.create",
+        {
+            "agent_label": "engineer",
+            "capabilities": ["read", "act"],
+            "expires_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
+        },
+    )["result"]["result"]
     value = json.loads(credentials.read_text())
-    value['token'] = delegation['token']
+    value["token"] = delegation["token"]
     credentials.write_text(json.dumps(value))
     assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
-    did = delegation['delegation']['id']
-    send('delegations/' + did, 'revoke', 'delegations.revoke', {'delegation_id': did}, method='DELETE')
+    did = delegation["delegation"]["id"]
+    send(
+        "delegations/" + did,
+        "revoke",
+        "delegations.revoke",
+        {"delegation_id": did},
+        method="DELETE",
+    )
     result = cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "reproduction"))
     assert result.returncode == 1
     assert not (root / "reproduction").exists()
 
 
 @pytest.mark.parametrize("scope", ["read_only", "missing_config", "wrong_action"])
-def test_delegate_scope_is_preserved_by_engineering_commands(session, scope):
-    from datetime import datetime, timedelta, timezone
+def test_delegate_scope_is_preserved_by_engineering_commands(session: Session, scope: str) -> None:
+    from datetime import datetime, timedelta
+
     _, _, _, _, send, trial, cli, root, credentials = session
-    payload = {'agent_label': 'limited-engineer', 'capabilities': ['read'],
-               'expires_at': (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()}
-    if scope == 'missing_config':
-        payload['allowed_objects'] = [trial['id']]
-    if scope == 'wrong_action':
-        payload['allowed_actions'] = ['timeline']
-    delegation = send('delegations', 'grant', 'delegations.create', payload)['result']['result']
+    payload = {
+        "agent_label": "limited-engineer",
+        "capabilities": ["read"],
+        "expires_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
+    }
+    if scope == "missing_config":
+        payload["allowed_objects"] = [trial["id"]]
+    if scope == "wrong_action":
+        payload["allowed_actions"] = ["timeline"]
+    delegation = send("delegations", "grant", "delegations.create", payload)["result"]["result"]
     value = json.loads(credentials.read_text())
-    value['token'] = delegation['token']
+    value["token"] = delegation["token"]
     credentials.write_text(json.dumps(value))
-    packed = cli('pack', '--test', trial['id'], '--output', str(root / 'pack'))
-    if scope == 'read_only':
+    packed = cli("pack", "--test", trial["id"], "--output", str(root / "pack"))
+    if scope == "read_only":
         assert packed.returncode == 0, packed.stdout
-        result = cli('reproduce', '--pack', str(root / 'pack'), '--output', str(root / 'reproduction'))
-        assert result.returncode == 1 and 'capability_forbidden' in result.stdout
-        assert not (root / 'reproduction').exists()
+        result = cli(
+            "reproduce", "--pack", str(root / "pack"), "--output", str(root / "reproduction")
+        )
+        assert result.returncode == 1 and "capability_forbidden" in result.stdout
+        assert not (root / "reproduction").exists()
     else:
         assert packed.returncode == 1
-        assert not (root / 'pack').exists()
+        assert not (root / "pack").exists()
 
 
-@pytest.mark.parametrize('damage', ['changed_config', 'missing_member', 'path_escape'])
-def test_invalid_package_fails_without_a_success_report(session, damage):
+@pytest.mark.parametrize("damage", ["changed_config", "missing_member", "path_escape"])
+def test_invalid_package_fails_without_a_success_report(session: Session, damage: str) -> None:
     _, _, _, _, _, trial, cli, root, _ = session
-    assert cli('pack', '--test', trial['id'], '--output', str(root / 'pack')).returncode == 0
-    if damage == 'changed_config':
-        (root / 'pack' / 'config.json').write_text('{}')
-    elif damage == 'missing_member':
-        (root / 'pack' / 'public-probes.json').unlink()
+    assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
+    if damage == "changed_config":
+        (root / "pack" / "config.json").write_text("{}")
+    elif damage == "missing_member":
+        (root / "pack" / "public-probes.json").unlink()
     else:
-        path = root / 'pack' / 'index.json'
+        path = root / "pack" / "index.json"
         index = json.loads(path.read_text())
-        index['tests'][0]['path'] = '../credentials.json'
+        index["tests"][0]["path"] = "../credentials.json"
         path.write_text(json.dumps(index))
-    result = cli('reproduce', '--pack', str(root / 'pack'), '--output', str(root / 'reproduction'))
+    result = cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "reproduction"))
     assert result.returncode == 1 and not result.stderr
-    assert not (root / 'reproduction').exists()
+    assert not (root / "reproduction").exists()
 
 
-def test_reproduction_records_its_actual_executor_separately_from_the_original_test(session):
-    from datetime import datetime, timedelta, timezone
+def test_reproduction_records_its_actual_executor_separately_from_the_original_test(
+    session: Session,
+) -> None:
+    from datetime import datetime, timedelta
+
     _, _, _, _, send, trial, cli, root, credentials = session
-    assert cli('pack', '--test', trial['id'], '--output', str(root / 'pack')).returncode == 0
-    assert cli('reproduce', '--pack', str(root / 'pack'), '--output', str(root / 'human')).returncode == 0
-    human = json.loads((root / 'human' / 'report.json').read_text())
-    grant = send('delegations', 'grant', 'delegations.create', {
-        'agent_label': 'engineer', 'capabilities': ['read', 'act'],
-        'expires_at': (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()})['result']['result']
+    assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
+    assert (
+        cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "human")).returncode
+        == 0
+    )
+    human = json.loads((root / "human" / "report.json").read_text())
+    grant = send(
+        "delegations",
+        "grant",
+        "delegations.create",
+        {
+            "agent_label": "engineer",
+            "capabilities": ["read", "act"],
+            "expires_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
+        },
+    )["result"]["result"]
     value = json.loads(credentials.read_text())
-    value['token'] = grant['token']
+    value["token"] = grant["token"]
     credentials.write_text(json.dumps(value))
-    assert cli('reproduce', '--pack', str(root / 'pack'), '--output', str(root / 'agent')).returncode == 0
-    agent = json.loads((root / 'agent' / 'report.json').read_text())
-    assert human['executor']['kind'] == 'human'
-    assert agent['executor']['kind'] == 'external_agent'
-    assert agent['executor']['delegation_id'] == grant['delegation']['id']
-    assert human['results'] == agent['results']
+    assert (
+        cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "agent")).returncode
+        == 0
+    )
+    agent = json.loads((root / "agent" / "report.json").read_text())
+    assert human["executor"]["kind"] == "human"
+    assert agent["executor"]["kind"] == "external_agent"
+    assert agent["executor"]["delegation_id"] == grant["delegation"]["id"]
+    assert human["results"] == agent["results"]
     # The existing human report cannot be relabelled by another executor.
-    denied = cli('reproduce', '--pack', str(root / 'pack'), '--output', str(root / 'human'))
+    denied = cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "human"))
     assert denied.returncode == 1
-    assert json.loads((root / 'human' / 'report.json').read_text()) == human
+    assert json.loads((root / "human" / "report.json").read_text()) == human
+
+
+def test_cli_imports_tested_source() -> None:
+    probe = subprocess.run(
+        [sys.executable, "-c", "import career_lab.engineer; print(career_lab.engineer.__file__)"],
+        cwd=ROOT,
+        env=source_environment(),
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert Path(probe.stdout.strip()).resolve().is_relative_to(ROOT / "src")
+    module = subprocess.run(
+        [sys.executable, "-m", "career_lab.engineer", "--help"],
+        cwd=ROOT,
+        env=source_environment(),
+        capture_output=True,
+        text=True,
+    )
+    installed = subprocess.run(
+        [str(Path(sys.executable).parent / "career-lab-engineer"), "--help"],
+        cwd=ROOT,
+        env=source_environment(),
+        capture_output=True,
+        text=True,
+    )
+    assert module.returncode == installed.returncode == 0, module.stderr
+    assert module.stdout == installed.stdout
+
+
+def test_old_pack_survives_documentation_upgrade(session: Session) -> None:
+    _, _, _, _, _, trial, cli, root, credentials = session
+    # Run the unmodified released exporter over a real API-created session.
+    # A copied release package avoids importing the installed checkout by accident.
+    release = root / "release"
+    for relative in (
+        "src/career_lab/__init__.py",
+        "src/career_lab/engineer/__init__.py",
+        "src/career_lab/engineer/pack.py",
+        "src/career_lab/engineer/cli.py",
+    ):
+        target = release / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(
+            subprocess.check_output(["git", "show", "73e14e9:" + relative], cwd=ROOT)
+        )
+    # Other imports resolve to the tested source; only the released exporter is pinned.
+    package = release / "src/career_lab/__init__.py"
+    package.write_text(
+        package.read_text() + "\n__path__.append(" + repr(str(ROOT / "src/career_lab")) + ")\n"
+    )
+    argv = [
+        "pack",
+        "--test",
+        trial["id"],
+        "--output",
+        str(root / "pack"),
+        "--database",
+        str(root / "source.db"),
+        "--credentials",
+        str(credentials),
+        "--scenario",
+        str(session[0].state.scenario_v2.package.root),
+    ]
+    program = "from career_lab.engineer.cli import main; raise SystemExit(main())"
+    exported = subprocess.run(
+        [sys.executable, "-c", program, *argv],
+        cwd=root,
+        env={**source_environment(), "PYTHONPATH": str(release / "src")},
+        capture_output=True,
+        text=True,
+    )
+    assert exported.returncode == 0, exported.stdout + exported.stderr
+    original = {p.name: p.read_bytes() for p in (root / "pack").iterdir()}
+    result = cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "result"))
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert {p.name: p.read_bytes() for p in (root / "pack").iterdir()} == original
+    assert json.loads((root / "result/report.json").read_text())["status"] == "reproduced"
+
+
+def test_guide_and_help_describe_credentials(session: Session) -> None:
+    _, _, _, _, _, trial, cli, root, _ = session
+    assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
+    guide = (root / "pack/README.md").read_text()
+    help_text = cli("pack", "--help").stdout
+    for text in (guide, help_text):
+        assert "W06" not in text
+        assert all(field in text for field in ("api_url", "session_id", "token", "0600"))
+
+
+def test_reproduction_reports_execution_metadata(session: Session) -> None:
+    _, _, _, _, _, trial, cli, root, _ = session
+    assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
+    result = cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "result"))
+    assert result.returncode == 0, result.stdout
+    report = json.loads((root / "result/report.json").read_text())
+    assert report["results"][0]["execution"]["cost_complete"] is True
+    assert report["results"][0]["execution"]["attempts"] == []
+    assert report["model_calls"] == 0
+    assert report["mode"] == "isolated_reexecution_without_model_calls"
+
+
+def test_pack_versions_documentation_separately(session: Session) -> None:
+    _, _, _, _, _, trial, cli, root, _ = session
+    assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
+    index = json.loads((root / "pack/index.json").read_text())
+    assert index["schema_version"] == 2
+    assert index["tool_versions"]["career-lab-engineer"]
+    assert index["template_version"]
+    # Documentation has its own checksum and can evolve without changing data identity.
+    import hashlib
+
+    original_id = json.loads((root / "pack/pack.json").read_text())["id"]
+    guide = root / "pack/README.md"
+    guide.write_text(guide.read_text() + "\nUpdated environment operator instructions.\n")
+    index["guide"]["sha256"] = hashlib.sha256(guide.read_bytes()).hexdigest()
+    pack_path = root / "pack/pack.json"
+    pack = json.loads(pack_path.read_text())
+    pack["requirements"] = ["Configuration-only handoff; keep the source record."]
+    pack_path.write_text(
+        json.dumps(pack, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+    )
+    index["pack"]["sha256"] = hashlib.sha256(pack_path.read_bytes()).hexdigest()
+    index["template_version"] = "next-template"
+    (root / "pack/index.json").write_text(
+        json.dumps(index, ensure_ascii=False, sort_keys=True, separators=(",", ":")) + "\n"
+    )
+    result = cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "result"))
+    assert result.returncode == 0, result.stdout
+    assert json.loads(result.stdout)["pack_id"] == original_id
+
+
+def test_missing_source_database_fails(session: Session) -> None:
+    _, _, _, _, _, trial, cli, root, _ = session
+    absent = root / "missing.db"
+    result = cli(
+        "pack", "--test", trial["id"], "--output", str(root / "pack"), "--database", str(absent)
+    )
+    assert result.returncode == 1
+    assert json.loads(result.stdout)["code"] == "engineer_database_unavailable"
+    assert not absent.exists() and not (root / "pack").exists()
+
+
+def test_too_many_tests_fail(session: Session) -> None:
+    _, _, _, _, _, _, cli, root, _ = session
+    selection = [value for number in range(101) for value in ("--test", "test-" + str(number))]
+    result = cli("pack", *selection, "--output", str(root / "pack"))
+    assert result.returncode == 1
+    assert json.loads(result.stdout)["code"] == "engineer_test_selection_required"
+    assert not (root / "pack").exists()
+
+
+def test_wrong_scenario_fails(session: Session) -> None:
+    app, _, _, _, _, trial, cli, root, _ = session
+    assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
+    other = default_installed_scenario()
+    if app.state.scenario_v2.work_language == "zh":
+        other = other / "locales/en"
+    result = cli(
+        "reproduce",
+        "--pack",
+        str(root / "pack"),
+        "--output",
+        str(root / "result"),
+        "--scenario",
+        str(other),
+    )
+    assert result.returncode == 1
+    assert json.loads(result.stdout)["code"] == "scenario_binding_mismatch"
+    assert not (root / "result").exists()
+
+
+def test_pack_materials_follow_scenario_metadata(session: Session) -> None:
+    _, client, sid, headers, _, trial, cli, root, _ = session
+    visible = client.get("/sessions/" + sid + "/materials", headers=headers)
+    assert visible.status_code == 200, visible.text
+    expected = {
+        row["id"]
+        for row in visible.json()["result"]["result"]["materials"]
+        if row["domain"] == "investigation"
+    }
+    assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
+    materials = json.loads((root / "pack/materials.json").read_text())
+    assert {row["id"] for row in materials} == expected
+
+
+def test_behavior_change_is_not_success(session: Session) -> None:
+    from datetime import datetime, timedelta
+
+    app, client, sid, headers, send, _, cli, root, _ = session
+    grant = send(
+        "delegations",
+        "limited-source",
+        "delegations.create",
+        {
+            "agent_label": "limited-source",
+            "capabilities": ["read", "act"],
+            "allowed_objects": [app.state.scenario_v2.package.baseline(sid).id],
+            "expires_at": (datetime.now(UTC) + timedelta(hours=1)).isoformat(),
+        },
+    )["result"]["result"]
+    state = client.get("/sessions/" + sid, headers=headers).json()["state"]
+    response = client.post(
+        "/sessions/" + sid + "/tests",
+        headers={"Authorization": "Bearer " + grant["token"]},
+        json={
+            "schema_version": 2,
+            "request_id": "limited-test",
+            "operation": "tests.create",
+            "expected_version": state["business_seq"],
+            "expected_workspace_revision": state["workspace_revision"],
+            "payload": {
+                "query": "reimbursement" if app.state.scenario_v2.work_language == "en" else "报销",
+                "config_version": 0,
+            },
+        },
+    )
+    assert response.status_code == 200, response.text
+    trial = response.json()["result"]["test"]
+    assert trial["error_code"] == "no_retrieval_hit"
+    assert cli("pack", "--test", trial["id"], "--output", str(root / "pack")).returncode == 0
+    result = cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "result"))
+    assert result.returncode == 1, result.stdout
+    assert json.loads(result.stdout)["status"] == "behavior_changed"
+    report = json.loads((root / "result/report.json").read_text())
+    assert report["results"][0]["matches_record"] is False
+    assert report["correctness_assessed"] is False
+
+
+def test_concurrent_exports_preserve_one_complete_package(session: Session) -> None:
+    from concurrent.futures import ThreadPoolExecutor
+
+    _, _, _, _, _, trial, cli, root, _ = session
+    args = ("pack", "--test", trial["id"], "--output", str(root / "pack"))
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results = list(pool.map(lambda _: cli(*args), range(4)))
+    assert any(result.returncode == 0 for result in results)
+    assert all(
+        result.returncode == 0 or json.loads(result.stdout)["code"] == "publisher_busy"
+        for result in results
+    )
+    complete = {p.name: p.read_bytes() for p in (root / "pack").iterdir()}
+    assert cli(*args).returncode == 0
+    assert {p.name: p.read_bytes() for p in (root / "pack").iterdir()} == complete
+    assert (
+        cli("reproduce", "--pack", str(root / "pack"), "--output", str(root / "result")).returncode
+        == 0
+    )
