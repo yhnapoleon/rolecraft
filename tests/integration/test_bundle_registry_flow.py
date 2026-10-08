@@ -260,3 +260,32 @@ def test_REG_03_mislabelled_configuration_does_not_bypass_secret_checks(
         "registry_credentials_forbidden",
         "registry_member_format_unsupported",
     }
+
+
+def test_REG_03_relative_path_with_tmp_segment_remains_portable(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    ref = runtime(source)
+    model = RuntimeBundle.model_validate_json((source / ref.path).read_bytes())
+    config = write_json(source, "fixtures/tmp/config.json", {"mode": "fixture"})
+    ref = write_json(source, "runtime.json", model.model_copy(update={"model": config}))
+    registry = BundleRegistry(tmp_path / "registry")
+    registered = registry.register("runtime", source, ref)
+    assert registry.resolve_file(registered, config) == b'{"mode":"fixture"}'
+
+
+def test_REG_03_markdown_prompt_is_not_required_to_be_yaml(tmp_path: Path) -> None:
+    source = tmp_path / "source"
+    ref = runtime(source)
+    model = RuntimeBundle.model_validate_json((source / ref.path).read_bytes())
+    raw = (
+        b"# Skill\n\n**Goal:** Read authorized evidence.\n\n"
+        b"- Cite sources.\n- Preserve uncertainty.\n"
+    )
+    (source / "prompt.md").write_bytes(raw)
+    prompt = FileRef(
+        path="prompt.md", sha256=hashlib.sha256(raw).hexdigest(), media_type="text/markdown"
+    )
+    ref = write_json(source, "runtime.json", model.model_copy(update={"prompts": (prompt,)}))
+    registry = BundleRegistry(tmp_path / "registry")
+    registered = registry.register("runtime", source, ref)
+    assert registry.resolve_file(registered, prompt) == raw

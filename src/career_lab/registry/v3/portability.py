@@ -16,7 +16,9 @@ CREDENTIAL_ASSIGNMENT = re.compile(
     r"(?i)\b(?:api[_-]?key|authorization|password|session[_-]?token|access[_-]?token|"
     r"secret[_-]?key)[\"']?\s*[:=]\s*\S|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
 )
-MACHINE_PATH = re.compile(r"/(?:Users|home|private|tmp|Volumes|etc|root|var|opt|usr|mnt)/\S+")
+MACHINE_PATH = re.compile(
+    r"(?<![\w./\\:-])/(?:Users|home|private|tmp|Volumes|etc|root|var|opt|usr|mnt)/\S+"
+)
 TEXT_MEDIA_TYPES = frozenset(
     {
         "application/yaml",
@@ -50,6 +52,8 @@ def validate_portability(raw: bytes, ref: FileRef) -> None:
 
 
 def _structured_text(text: str, ref: FileRef) -> object:
+    if ref.media_type in {"text/plain", "text/markdown"}:
+        return text
     try:
         if "toml" in ref.media_type or ref.path.endswith((".toml", ".lock")):
             return tomllib.loads(text)
