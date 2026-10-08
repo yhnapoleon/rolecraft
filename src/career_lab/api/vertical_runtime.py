@@ -66,10 +66,24 @@ def build_registry(scenario_root, role_model, *, feedback_handler=None,store_pro
     return registry, module
 
 
+def default_installed_scenario():
+    """The standard entry consumes the current release, never author placeholders."""
+    import hashlib
+    import json
+    from career_lab.contracts.v2 import ProtocolError
+    repo = Path(__file__).resolve().parents[3]
+    index = json.loads((repo / 'scenarios/pm_pilot/v2/installed/current.json').read_text())
+    entry = index['main']['zh']
+    root = (repo / entry['root']).resolve()
+    if not root.is_relative_to(repo) or hashlib.sha256((root / 'manifest.json').read_bytes()).hexdigest() != entry['scenario_hash']:
+        raise ProtocolError('installed_scenario_identity_mismatch', status=409)
+    return root
+
+
 def create_runtime_app(database_url=None, *, provider="local", scenario_root=None,
                        feedback_handler=None):
     legacy_model, role_model = configured_models(provider)
-    root = Path(scenario_root or os.getenv("CAREER_LAB_SCENARIO_V2", "scenarios/pm_pilot/v2"))
+    root = Path(scenario_root or os.getenv("CAREER_LAB_SCENARIO_V2") or default_installed_scenario())
     holder={}
     options=dict(feedback_handler=feedback_handler,store_provider=lambda:holder["store"],scenario_archive=os.getenv("CAREER_LAB_SCENARIO_ARCHIVE","runs/local/scenario-archive"))
     if os.getenv('CAREER_LAB_SCENARIO_CATALOG'):

@@ -285,3 +285,5 @@ OperationAvailability明确installed/ready/capability/unavailable_code，注册�
 独立新增 `v4_practice_links` 保存源会话、确切反馈hash、选择与目标会话；不改旧表。会话ID按源/反馈/请求确定，创建后关联写入失败或响应丢失可用原请求修复为同一会话；接口每次重新检查源授权、语言、实际运行包和独立内容审核，不从聊天或候选状态推定批准。原提交/反馈不更新，删除/清理/跨正式目录迁移不由本接口自动执行。SQLite重启与故障恢复有集成回归；多进程并发、PostgreSQL恢复仍未验证，不据本契约收编标完成。
 
 重绑后的作者包保留新 `authored_manifest`，prepare另以原审核manifest的真实hash与每份非runtime原件、完整成员集合和元数据比对，生成 `reviewed_authored_manifest`。仅内容审核结论沿确证谱系继承；运行绑定、模型质量及整包验收不继承。旧审核文件原字节保留。
+
+标准无参数API/worker入口读取`installed/current.json`的中文当前安装，并核对其manifest真实hash；显式`scenario_root`、`CAREER_LAB_SCENARIO_V2`或多语言prepare目录继续按既有优先级使用。作者根保持可复现未安装评价口径，不作为默认有反馈的成品运行包。启动不重写包或修改绑定。

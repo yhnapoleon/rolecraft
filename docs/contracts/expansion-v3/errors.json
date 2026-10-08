@@ -75,6 +75,7 @@
     "human_required",
     "import_mode_mismatch",
     "import_receipt_immutable",
+    "installed_scenario_identity_mismatch",
     "invalid_settings",
     "job_context_invalid",
     "job_cycle_changed",

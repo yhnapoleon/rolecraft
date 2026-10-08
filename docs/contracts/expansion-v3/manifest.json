@@ -305,16 +305,17 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "e336ccc0359cb8b3e05443df92f0c09d121f1cd8cb0d22182503867caec36da3"
+      "sha256": "759f10925dcd68908c027f86eaff10d8424fe38dac011a09fe02eb6b5a97c2cd"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "1b5769974851ba90a5d4fa7acec7bc32d38dcc7bc9f183e51d045405a8a6f9a8"
+    "sha256": "2a6a8f4a44555f90e7cc799d61ace6ffa90e87b94595dad77455d40a0bb2778a"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
     "031-C8-01": "Store read/query/view/job-view and cached request/replay share feedback subject authorization and transient support projection; hidden quote/title/ID/derived prose removed; original records unchanged.",
+    "056-default-installed-runtime": "Default API/worker loads the current installed package and verifies its actual manifest identity; explicit roots remain authoritative. Author roots remain reproducible uninstalled inputs.",
     "056-role-call-guard": "Durable phase reservation keyed by original request and explicit refresh generation; worker/HTTP recovery and provider changes cannot reissue calls. Mechanical language/binding verifier only, semantic quality unverified; local replies unchanged. Controlled fixture workers inherit production no-retry policy.",
     "056-v4-extension-contract": "Typed human-only delegation list and practice request/response schemas; exact OpenAPI mounted routes; durable source/target lifecycle and recovery documented. Authored content review lineage is verified against original manifest bytes and non-runtime files after rebinding.",
     "W02-S06": "Opt-in contextual resolver gets authoritative persisted-window ScenarioState; legacy four-argument behavior retained.",
@@ -348,7 +349,7 @@
     "sha256": "70ef74626bdfc017e878bc80ac42d26d389267eabe892cc0554f040a33c6096a"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-ae7c6f5534d71d6a33057fdb1ec7675ca8edcfffe6f616cf8a2c05bc0041f4c0",
+  "previous_contract_revision": "expansion-v3-805c1a7c37fd3ed124305e276b00f18717836eaed502a2213f4d436828f04fa9",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -3188,7 +3189,7 @@
     "src/career_lab/api/v4_config.py": "248ba9d11bd9cf5f16513f9407713a87c870b0df6bf98848c267e90de434d46f",
     "src/career_lab/api/v4_extensions.py": "f050c0e6d4382c5c43b648c5d8a1ea9d1225e998835617c12875796a520b9673",
     "src/career_lab/api/vertical_reads.py": "95a8843b5e8b569a264ce28da9b4f3613e179ef29d41c171a6544e53a65acce8",
-    "src/career_lab/api/vertical_runtime.py": "f071c46119cc5e9c54b8f23c9720648d43464315f4c88676661ad98a2ee36e6b",
+    "src/career_lab/api/vertical_runtime.py": "4a5ff5e051e46de8d350d9b2c3cf47ba65ce3a80d5cbf07430b972b13282380c",
     "src/career_lab/api/workspace_integration.py": "0b731ea27219d49767b72e07b65293edc810eae79872842f8a2459ef863e2604",
     "src/career_lab/cli.py": "4085c8ce4b0f242734bccb4e4f8a8ac713d7c78ba42a724eea767b115b4469ce",
     "src/career_lab/contracts/__init__.py": "10140c7ad16ce4744487b7e5f3418b726caa52979d662feda985b44986e2d7ac",

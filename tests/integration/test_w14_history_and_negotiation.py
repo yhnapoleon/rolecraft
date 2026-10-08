@@ -9,7 +9,7 @@ from test_w14_vertical_runtime import connect
 
 def test_old_binding_is_readable_immutable_and_cannot_mutate(tmp_path,monkeypatch):
     monkeypatch.setenv('CAREER_LAB_SCENARIO_ARCHIVE',str(tmp_path/'archive'))
-    root=Path('scenarios/pm_pilot/v2');old=tmp_path/'old';old.mkdir()
+    root=Path(json.loads(Path('scenarios/pm_pilot/v2/installed/current.json').read_text())['main']['zh']['root']);old=tmp_path/'old';old.mkdir()
     bundle=C.ScenarioBundle.model_validate_json((root/'manifest.json').read_bytes())
     for ref in bundle.files:
         target=old/ref.path;target.parent.mkdir(parents=True,exist_ok=True);target.write_bytes(C.read_file(root,ref))
