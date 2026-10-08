@@ -145,6 +145,7 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
       draft!.text='';draft!.evidence=[];await persist(id,draft!);body.value='';evidence.textContent=T("补证引用尚未选择","No supporting references selected");
     };
     const objection=button(T("记录异议","Record a challenge"),send('objection'));const supplement=button(T("提交补证","Submit additional evidence"),send('supplement'));
+    objection.dataset.responseAction='objection';supplement.dataset.responseAction='supplement';
     objection.disabled=supplement.disabled=adapter.snapshot().busy || !!adapter.snapshot().pending || adapter.canRespond===false;
     form.append(body,evidence,choose,objection,supplement,el('p',T("记录关联后仍等待核验，不会自动改写原反馈或认定异议已解决。","Linked records still await verification. They do not rewrite earlier feedback or automatically resolve a challenge."),'muted'));
     return form;
@@ -203,6 +204,9 @@ export function mountNativeFeedback(host:HTMLElement,adapter:FeedbackNativeAdapt
       reports.replaceChildren(...[...state.reports].sort((a,b)=>Number(b.subject.object_id===state.submission?.ref.object_id)-Number(a.subject.object_id===state.submission?.ref.object_id)).map(reportPanel));
       for(const detail of reports.querySelectorAll<HTMLDetailsElement>('details[data-response-id]'))detail.open=expanded.has(detail.dataset.responseId);
     }
+    // Preserve the focused editor, but never preserve stale request permissions.
+    for(const action of reports.querySelectorAll<HTMLButtonElement>('button[data-response-action]'))
+      action.disabled=state.busy || !!state.pending || adapter.canRespond===false;
     responseHistory.replaceChildren();if(state.responses?.length){responseHistory.append(el('h3',T("已记录的异议与补证","Recorded challenges and additional evidence")));for(const response of state.responses){responseHistory.append(el('p',(response.kind==='objection'?T("异议已记录","Challenge recorded"):T("补证已记录","Additional evidence recorded"))+T(" · 等待核验"," · Awaiting verification")),el('blockquote',response.text));}}
     revisions.hidden=state.status!=='submitted';revise.disabled=state.busy||!!state.pending||!!state.awaitingFeedback||!state.submission;
     reports.hidden=!!state.error&&!state.reports.length;submissions.hidden=!!state.error&&!state.products.length;
