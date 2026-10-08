@@ -1,13 +1,13 @@
 import { waitFor, clickReady } from './browser-support.mjs';
 /** Normal v4 UI over real HTTP/worker and the unmodified published catalog. */
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { launch } from '../walkthrough/cdp.mjs';
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { delay, launch } from '../walkthrough/cdp.mjs';
 
 const base = process.env.BASE;
 const output = process.env.OUT;
 assert.ok(base && output, 'BASE and OUT are required');
-mkdirSync(`${output}/screenshots`, { recursive: true });
+mkdirSync(`${output}/screenshots/attempts`, { recursive: true });
 const results = [];
 
 async function enterWorkspace(context) {
@@ -16,6 +16,11 @@ async function enterWorkspace(context) {
   await browser.click('[data-action="open-career"]');
   await browser.click('.case-hero [data-action="take-case"]');
   await waitFor(browser, `location.hash === '#/work' && !!document.querySelector('.card-open')`);
+  assert.equal(
+    await browser.ev(`document.querySelectorAll('[data-v4-region="workspace"]').length`),
+    1,
+    'The normal entry allocates exactly one workspace owner',
+  );
   await shot('board');
   assert.equal(
     await browser.ev(`window.PracticeLive.store.active().v2Binding.workLanguage`),
@@ -179,7 +184,32 @@ async function runLanguage(language) {
         }
       })()`);
     }
-    return browser.shot(`${output}/screenshots/${language}-${name}.jpg`);
+    if (name === 'shared') {
+      await waitFor(
+        browser,
+        `document.querySelector('[data-v4-insertion="sharing"]')
+          ?.innerText.includes(${JSON.stringify(text('可见', 'Visible'))})`,
+      );
+    }
+    const frameState = `JSON.stringify({
+      text: document.body.innerText,
+      controls: [...document.querySelectorAll('button, input, select, textarea')]
+        .filter(node => node.offsetParent !== null)
+        .map(node => [node.id, node.disabled, node.value])
+    })`;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await waitFor(browser, '!window.PracticeLive.store.getSnapshot().busy');
+      const before = await browser.ev(frameState);
+      await delay(200);
+      if (before !== (await browser.ev(frameState))) continue;
+      const path = `${output}/screenshots/attempts/${language}-${name}-${attempt}.jpg`;
+      await browser.shot(path);
+      if (before === (await browser.ev(frameState))) {
+        copyFileSync(path, `${output}/screenshots/${language}-${name}.jpg`);
+        return;
+      }
+    }
+    throw new Error(`The ${language}/${name} screenshot did not reach a stable visible state`);
   };
   const title = text('回归：试点决定', 'Regression: pilot decision');
   const draft = text(

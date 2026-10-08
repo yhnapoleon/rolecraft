@@ -983,7 +983,7 @@ function renderWorkspace() {
   ui.notesCache = Coach.notes(a, E);
   const html = `<div class="ws view-${ui.route} ${arriving ? 'arriving' : ''} ${ui.railOpen ? 'rail-open' : ''}" data-status="${statusOf(a)}">
     ${wsToolbar(a)}
-    <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner">${wsStage(a)}</div></main>
+    <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${wsStage(a)}</div></main>
     <aside class="rail" id="ws-rail" aria-label="${esc(T('团队与上下文', 'Team and context'))}">${wsRail(a)}</aside>
     <button type="button" class="scrim" data-action="close-panels" aria-label="${esc(T('关闭面板', 'Close panel'))}" tabindex="-1"></button>
   </div>`;
@@ -1154,7 +1154,7 @@ function column(a, p) {
   const list = a.tasks.filter((t) => t.priority === p);
   return `<div class="col col-${p}" data-lane="${p}">
     <header class="col-head">${priMark(p)}<span class="col-name">${PRI(p)}</span><span class="col-count">${list.length}</span></header>
-    <ol class="cards" role="list">${list.map((t) => taskCard(a, t)).join('')}${!list.length ? `<li class="col-empty">${T('拖到这里', 'Drop here')}</li>` : ''}</ol>
+    <ol class="cards" role="list">${L.nativeWorkspace(a) ? '' : list.map((t) => taskCard(a, t)).join('')}${!L.nativeWorkspace(a) && !list.length ? `<li class="col-empty">${T('拖到这里', 'Drop here')}</li>` : ''}</ol>
   </div>`;
 }
 function taskCard(a, t) {
@@ -2601,11 +2601,11 @@ function evidenceLabel(a, fb, id) {
 }
 
 /* ---------- sheets ---------- */
-function openSheet(title, body, foot = '', cls = '') {
+function openSheet(title, body, foot = '', cls = '', region = '') {
   commit();
   if (!sheet.open) sheetReturn = focusKey();
   sheet.className = 'sheet ' + cls;
-  sheet.innerHTML = `<header class="sheet-head"><h2 id="sheet-title">${title}</h2>${btn(icon('x'), 'close', 'icon quiet small', `aria-label="${esc(T('关闭', 'Close'))}"`)}</header><div class="sheet-body">${body}</div>${foot ? `<footer class="sheet-foot">${foot}</footer>` : ''}`;
+  sheet.innerHTML = `<header class="sheet-head"><h2 id="sheet-title">${title}</h2>${btn(icon('x'), 'close', 'icon quiet small', `aria-label="${esc(T('关闭', 'Close'))}"`)}</header><div class="sheet-body" ${region ? `data-v4-region="${region}"` : ''}>${body}</div>${foot ? `<footer class="sheet-foot">${foot}</footer>` : ''}`;
   if (!sheet.open) sheet.showModal();
   (
     sheet.querySelector('[autofocus]') ||
@@ -2644,7 +2644,7 @@ function sheetTask(id) {
   const t = a.tasks.find((x) => x.id === id);
   openSheet(
     t ? T('编辑事项', 'Edit task') : T('新事项', 'New task'),
-    `<form data-form="task" data-id="${t ? t.id : ''}" class="stack" id="task-form">
+    `<form data-form="task" data-id="${t ? t.id : ''}" class="stack" id="task-form" data-revision="${t?.revision ?? ''}">
       <label class="field"><span>${T('要处理的事', 'What needs doing')}</span><input class="input" name="title" required maxlength="120" value="${esc(t ? taskTitle(t) : '')}" placeholder="${esc(T('例如：问清政策多久变一次', 'For example: find out how often policy changes'))}" autofocus></label>
       <label class="field"><span>${T('补充', 'Notes')} <small>${T('选填', 'optional')}</small></span><textarea class="textarea" name="note" rows="3" maxlength="5000">${esc(t ? taskNote(t) : '')}</textarea></label>
       <fieldset class="field"><legend>${T('优先级', 'Priority')}</legend><div class="choices">${['first', 'next', 'later'].map((k) => `<label class="choice"><input type="radio" name="priority" value="${k}" ${(t ? t.priority : 'next') === k ? 'checked' : ''}><span>${priMark(k)}${PRI(k)}</span></label>`).join('')}</div></fieldset>
@@ -2652,6 +2652,7 @@ function sheetTask(id) {
     </form>`,
     `${t ? `${btn(icon('back', 'i-sm') + T('上移', 'Move up'), 'move-task', 'quiet', `data-id="${t.id}" data-dir="-1"`)}${btn(T('下移', 'Move down'), 'move-task', 'quiet', `data-id="${t.id}" data-dir="1"`)}<span class="spacer"></span>` : ''}<button type="submit" form="task-form" class="btn primary">${t ? T('保存', 'Save') : T('加入', 'Add')}</button>`,
     'narrow',
+    L.nativeWorkspace(a) ? 'workspace-form' : '',
   );
 }
 function sheetNewArtifact(purpose) {
@@ -2666,6 +2667,7 @@ function sheetNewArtifact(purpose) {
   </form>`,
     `<button type="submit" form="artifact-form" class="btn primary">${T('开始写', 'Start writing')}</button>`,
     'narrow',
+    L.nativeWorkspace(a) ? 'workspace-form' : '',
   );
 }
 function configChecks(a, c) {
@@ -3109,7 +3111,8 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
     if (tb) tb.outerHTML = wsToolbar(a);
   }
   if (parts.includes('stage')) {
-    document.getElementById('ws-stage').innerHTML = wsStage(a);
+    document.getElementById('ws-stage').outerHTML =
+      `<div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${wsStage(a)}</div>`;
     if (stage) stage.scrollTop = y;
   }
   if (parts.includes('rail')) {
@@ -5614,7 +5617,7 @@ window.addEventListener('v4-selection', (event) => {
     }
   }
 });
-window.addEventListener('w03:form-confirmed', (event) => {
+sheet.addEventListener('w03:form-confirmed', (event) => {
   if (!event.detail.changedWhileWaiting && sheet.open && event.target.closest?.('#sheet')) {
     closeSheet(true);
     refreshWS();
