@@ -1,0 +1,31 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "probe_id": {
+      "minLength": 1,
+      "title": "Probe Id",
+      "type": "string"
+    },
+    "result": {
+      "enum": [
+        "pass",
+        "fail",
+        "error"
+      ],
+      "title": "Result",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "probe_id",
+    "result"
+  ],
+  "title": "EngineerProbeClaim",
+  "type": "object"
+}

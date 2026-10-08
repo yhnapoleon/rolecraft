@@ -1,0 +1,997 @@
+{
+  "$defs": {
+    "AssistantConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "chunk_size": {
+          "default": 500,
+          "exclusiveMinimum": 0,
+          "title": "Chunk Size",
+          "type": "integer"
+        },
+        "config_version": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Config Version",
+          "type": "integer"
+        },
+        "domains": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Domains",
+          "type": "array"
+        },
+        "fallback": {
+          "default": "human",
+          "enum": [
+            "human",
+            "none"
+          ],
+          "title": "Fallback",
+          "type": "string"
+        },
+        "freshness_guard": {
+          "default": "none",
+          "enum": [
+            "none",
+            "warn",
+            "fallback"
+          ],
+          "title": "Freshness Guard",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "launch_day": {
+          "default": 7,
+          "exclusiveMinimum": 0,
+          "title": "Launch Day",
+          "type": "integer"
+        },
+        "manual_domains": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Manual Domains",
+          "type": "array"
+        },
+        "min_score": {
+          "default": 0.35,
+          "minimum": 0,
+          "title": "Min Score",
+          "type": "number"
+        },
+        "min_score_calibration": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FileRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "participants": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Participants",
+          "type": "integer"
+        },
+        "prohibited_topics": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Prohibited Topics",
+          "type": "array"
+        },
+        "retrieval_limit": {
+          "default": 3,
+          "exclusiveMinimum": 0,
+          "title": "Retrieval Limit",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "scope_filter": {
+          "default": true,
+          "title": "Scope Filter",
+          "type": "boolean"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "update_strategy": {
+          "default": "daily",
+          "enum": [
+            "daily",
+            "realtime",
+            "manual_policy"
+          ],
+          "title": "Update Strategy",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        },
+        "work_items": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Work Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "domains"
+      ],
+      "title": "AssistantConfig",
+      "type": "object"
+    },
+    "EffectiveConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "differences": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "title": "Differences",
+          "type": "object"
+        },
+        "effective": {
+          "$ref": "#/$defs/AssistantConfig"
+        },
+        "requested": {
+          "$ref": "#/$defs/AssistantConfig"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "requested",
+        "effective"
+      ],
+      "title": "EffectiveConfig",
+      "type": "object"
+    },
+    "EngineerProbeExpectation": {
+      "additionalProperties": false,
+      "properties": {
+        "citation_versions": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "default": {},
+          "title": "Citation Versions",
+          "type": "object"
+        },
+        "contains": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Contains",
+          "type": "array"
+        },
+        "effective_update_strategy": {
+          "anyOf": [
+            {
+              "enum": [
+                "daily",
+                "realtime",
+                "manual_policy"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Effective Update Strategy"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "answered",
+            "answered_with_warning",
+            "fallback",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status"
+      ],
+      "title": "EngineerProbeExpectation",
+      "type": "object"
+    },
+    "EvidenceRefV2": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "observed_at_seq": {
+          "minimum": 0,
+          "title": "Observed At Seq",
+          "type": "integer"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quote"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "span_end": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span End"
+        },
+        "span_start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Start"
+        },
+        "valid_from_seq": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Valid From Seq",
+          "type": "integer"
+        },
+        "valid_until_seq": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until Seq"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version",
+        "observed_at_seq"
+      ],
+      "title": "EvidenceRefV2",
+      "type": "object"
+    },
+    "Executor": {
+      "additionalProperties": false,
+      "properties": {
+        "delegation_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delegation Id"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "human",
+            "external_agent",
+            "reference_agent",
+            "system"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "Executor",
+      "type": "object"
+    },
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    },
+    "ModelAttemptUsage": {
+      "additionalProperties": false,
+      "properties": {
+        "attempt_id": {
+          "minLength": 1,
+          "title": "Attempt Id",
+          "type": "string"
+        },
+        "cost": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Cost"
+        },
+        "elapsed_seconds": {
+          "minimum": 0,
+          "title": "Elapsed Seconds",
+          "type": "number"
+        },
+        "expected_model_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Model Revision"
+        },
+        "expected_provider": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Expected Provider"
+        },
+        "input_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Tokens"
+        },
+        "model_revision": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Model Revision"
+        },
+        "output_tokens": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Output Tokens"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Provider"
+        },
+        "request_id": {
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "success",
+            "failed",
+            "timeout",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "usage_known": {
+          "title": "Usage Known",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "request_id",
+        "attempt_id",
+        "provider",
+        "model_revision",
+        "status",
+        "elapsed_seconds",
+        "usage_known"
+      ],
+      "title": "ModelAttemptUsage",
+      "type": "object"
+    },
+    "ObjectRef": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version"
+      ],
+      "title": "ObjectRef",
+      "type": "object"
+    },
+    "RetrievedChunk": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "material_id": {
+          "minLength": 1,
+          "title": "Material Id",
+          "type": "string"
+        },
+        "ref": {
+          "$ref": "#/$defs/EvidenceRefV2"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "score": {
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "material_id",
+        "version",
+        "ref",
+        "score"
+      ],
+      "title": "RetrievedChunk",
+      "type": "object"
+    },
+    "TestExecutionMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "attempts": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ModelAttemptUsage"
+          },
+          "title": "Attempts",
+          "type": "array"
+        },
+        "chunks": {
+          "items": {
+            "$ref": "#/$defs/RetrievedChunk"
+          },
+          "title": "Chunks",
+          "type": "array"
+        },
+        "cost_complete": {
+          "default": false,
+          "title": "Cost Complete",
+          "type": "boolean"
+        },
+        "executed_at": {
+          "format": "date-time",
+          "title": "Executed At",
+          "type": "string"
+        },
+        "executor": {
+          "$ref": "#/$defs/Executor"
+        },
+        "indexed_versions": {
+          "additionalProperties": {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          "title": "Indexed Versions",
+          "type": "object"
+        },
+        "projection_actor": {
+          "minLength": 1,
+          "title": "Projection Actor",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_versions": {
+          "additionalProperties": {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          "title": "Source Versions",
+          "type": "object"
+        },
+        "used_versions": {
+          "additionalProperties": {
+            "exclusiveMinimum": 0,
+            "type": "integer"
+          },
+          "title": "Used Versions",
+          "type": "object"
+        }
+      },
+      "required": [
+        "executed_at",
+        "executor",
+        "source_versions",
+        "indexed_versions",
+        "used_versions",
+        "chunks",
+        "projection_actor"
+      ],
+      "title": "TestExecutionMetadata",
+      "type": "object"
+    },
+    "TestResultV2": {
+      "additionalProperties": false,
+      "properties": {
+        "answer": {
+          "title": "Answer",
+          "type": "string"
+        },
+        "as_of": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRefV2"
+          },
+          "title": "Citations",
+          "type": "array"
+        },
+        "config": {
+          "$ref": "#/$defs/EffectiveConfig"
+        },
+        "config_ref": {
+          "$ref": "#/$defs/ObjectRef"
+        },
+        "declared_category": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Declared Category"
+        },
+        "declared_expected": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Declared Expected"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        },
+        "execution": {
+          "$ref": "#/$defs/TestExecutionMetadata"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "observed_coverage": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Observed Coverage",
+          "type": "array"
+        },
+        "query": {
+          "title": "Query",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "answered",
+            "answered_with_warning",
+            "fallback",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "query",
+        "execution",
+        "config_ref",
+        "config",
+        "status",
+        "answer",
+        "citations",
+        "as_of"
+      ],
+      "title": "TestResultV2",
+      "type": "object"
+    },
+    "VersionPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "business_seq": {
+          "minimum": 0,
+          "title": "Business Seq",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "storage_revision": {
+          "minimum": 0,
+          "title": "Storage Revision",
+          "type": "integer"
+        },
+        "workspace_revision": {
+          "minimum": 0,
+          "title": "Workspace Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "business_seq",
+        "workspace_revision",
+        "storage_revision"
+      ],
+      "title": "VersionPoint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "actual": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TestResultV2"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "config_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Config Hash",
+      "type": "string"
+    },
+    "elapsed_seconds": {
+      "minimum": 0,
+      "title": "Elapsed Seconds",
+      "type": "number"
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Code"
+    },
+    "expected": {
+      "$ref": "#/$defs/EngineerProbeExpectation"
+    },
+    "probe_id": {
+      "minLength": 1,
+      "title": "Probe Id",
+      "type": "string"
+    },
+    "query": {
+      "title": "Query",
+      "type": "string"
+    },
+    "result": {
+      "enum": [
+        "pass",
+        "fail",
+        "error"
+      ],
+      "title": "Result",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "visibility": {
+      "enum": [
+        "public",
+        "hidden"
+      ],
+      "title": "Visibility",
+      "type": "string"
+    }
+  },
+  "required": [
+    "probe_id",
+    "visibility",
+    "query",
+    "expected",
+    "actual",
+    "result",
+    "config_hash",
+    "elapsed_seconds"
+  ],
+  "title": "EngineerProbeResult",
+  "type": "object"
+}
