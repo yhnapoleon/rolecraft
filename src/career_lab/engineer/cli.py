@@ -53,7 +53,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     submit.add_argument(
         "--output", type=Path, required=True, help="Immutable submission repository"
     )
-    for command in (pack, reproduce, probes, submit):
+    review = operations.add_parser("review", help="Re-run the trusted suite against a candidate")
+    review.add_argument("--pack", type=Path, required=True)
+    review.add_argument("--submission", type=Path, required=True)
+    review.add_argument("--output", type=Path, required=True, help="Public report repository")
+    review.add_argument(
+        "--private-output", type=Path, required=True, help="Trusted private review store"
+    )
+    for command in (pack, reproduce, probes, submit, review):
         command.add_argument(
             "--database",
             type=Path,
@@ -96,6 +103,18 @@ def run(args: argparse.Namespace) -> int:
             from .submission import submit_configuration
 
             result = submit_configuration(store, module, auth, args.pack, args.input, args.output)
+        elif args.engineer_operation == "review":
+            from .review import review_configuration
+
+            result = review_configuration(
+                store,
+                module,
+                auth,
+                args.pack,
+                args.submission,
+                args.output,
+                args.private_output,
+            )
         else:
             from .probes import TextSelection, export_candidates
 
@@ -109,7 +128,7 @@ def run(args: argparse.Namespace) -> int:
                 TextSelection(args.text_field, tuple(args.span), args.confirm_extraction),
             )
         print(json.dumps(result, ensure_ascii=False))
-        return 1 if result["status"] == "behavior_changed" else 0
+        return 1 if result["status"] in {"behavior_changed", "report_mismatch", "incomplete"} else 0
     except ProtocolError as error:
         print(json.dumps({"status": "failed", "code": error.code}))
         return 1

@@ -37,7 +37,7 @@ def prepare(session: Session, changes: dict[str, Any] | None = None) -> tuple[Pa
         explanation="调整配置 / Adjust configuration",
         executor=trial["execution"]["executor"],
         created_at=datetime(2026, 10, 9, tzinfo=UTC),
-        work_language="en" if "Mars" in trial["query"] else "zh",
+        work_language=session[0].state.scenario_v2.work_language,
     )
     path = source / "submission.json"
     path.write_bytes(encode(record))

@@ -15,6 +15,16 @@ from career_lab.storage.v2_store import V2Store
 from .capture import capture
 from .files import PackIndex, check_directory, encode, publish, retained_documentation
 
+RESERVED_FILES = {
+    "submission.json",
+    "baseline.json",
+    "input.json",
+    "scenario.json",
+    "probe-suite.json",
+    "reviewer.json",
+    "resources.json",
+}
+
 
 def verified_pack(
     store: V2Store, module: ScenarioModule, auth: C.AuthContext, root: Path
@@ -60,7 +70,7 @@ def submission_files(
         refs.append(record.regression_report)
     names = [ref.path for ref in refs]
     if len(set(names)) != len(names) or any(
-        Path(name).name != name or name in {"submission.json", "baseline.json"} for name in names
+        Path(name).name != name or name in RESERVED_FILES for name in names
     ):
         raise C.ProtocolError("engineer_submission_filename_invalid")
     files = {ref.path: C.read_file(source.parent, ref) for ref in refs}
