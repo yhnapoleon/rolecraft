@@ -74,6 +74,22 @@ def python_findings(path: str, content: str) -> Counter[str]:
     )
 
 
+def ruff_formatted(path: str, content: str) -> str:
+    """Return content as `ruff format` would write it.
+
+    Findings are keyed by line text, so comparing formatted text keeps them stable.
+    """
+    result = subprocess.run(
+        [str(ROOT / ".venv/bin/ruff"), "format", "--stdin-filename", path, "-"],
+        cwd=ROOT,
+        input=content,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return result.stdout if result.returncode == 0 else content
+
+
 def check_python(paths: list[str], base: str) -> list[str]:
     failures = []
     for path in paths:
@@ -83,18 +99,20 @@ def check_python(paths: list[str], base: str) -> list[str]:
             ["git", "show", f"{base}:{path}"], cwd=ROOT, capture_output=True, text=True, check=False
         )
         current = (ROOT / path).read_text()
-        new = python_findings(path, current) - python_findings(path, previous.stdout)
+        # Compare against the base as the formatter would write it: reformatting moves
+        # existing findings to new line text without adding any.
+        before = ruff_formatted(path, previous.stdout) if previous.returncode == 0 else ""
+        new = python_findings(path, current) - python_findings(path, before)
         failures.extend(path + ": " + key for key in new.elements())
-        if previous.returncode != 0:
-            formatted = subprocess.run(
-                [str(ROOT / ".venv/bin/ruff"), "format", "--check", path],
-                cwd=ROOT,
-                capture_output=True,
-                text=True,
-                check=False,
-            )
-            if formatted.returncode:
-                failures.append(path + ": format check failed")
+        formatted = subprocess.run(
+            [str(ROOT / ".venv/bin/ruff"), "format", "--check", "--force-exclude", path],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if formatted.returncode:
+            failures.append(path + ": format check failed")
     return failures
 
 

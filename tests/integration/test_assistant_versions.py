@@ -9,8 +9,14 @@ def setup_service(tmp_path, spec):
 
 
 def plan():
-    return {"participants": 20, "knowledge_domains": ["stable_faq", "policy"], "launch_day": 7,
-            "update_strategy": "daily", "fallback": "human", "work_items": ["scope_filter", "human_fallback"]}
+    return {
+        "participants": 20,
+        "knowledge_domains": ["stable_faq", "policy"],
+        "launch_day": 7,
+        "update_strategy": "daily",
+        "fallback": "human",
+        "work_items": ["scope_filter", "human_fallback"],
+    }
 
 
 def test_source_index_and_config_version_recorded(tmp_path, spec):
@@ -25,8 +31,13 @@ def test_source_index_and_config_version_recorded(tmp_path, spec):
     assert run["stale"] is True
     assert service.run_assistant_test("s", "住宿报销上限是多少？", 1, "test") == run
     current = service.store.get_state("s")
-    service.action("s", "update_pilot", {"plan": plan() | {"update_strategy": "manual_policy"}}, "config2", current.version)
+    service.action(
+        "s",
+        "update_pilot",
+        {"plan": plan() | {"update_strategy": "manual_policy"}},
+        "config2",
+        current.version,
+    )
     new = service.run_assistant_test("s", "住宿报销上限是多少？", 2, "test2")
     assert new["fallback"] is True
     assert new["config_version"] == 2
-

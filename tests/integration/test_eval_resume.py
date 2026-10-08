@@ -7,16 +7,34 @@ from career_lab.evals.runner import RunnerConfig, run_eval
 
 class Candidate:
     revision = "constant-v1"
+
     def __init__(self):
         self.calls = 0
+
     def judge(self, item):
         self.calls += 1
-        return JudgeDecision(label="SUPPORTED", evidence_ids=["e1"], reason_code="constant", explanation="test", model_revision=self.revision)
+        return JudgeDecision(
+            label="SUPPORTED",
+            evidence_ids=["e1"],
+            reason_code="constant",
+            explanation="test",
+            model_revision=self.revision,
+        )
 
 
 def test_resume_and_replicate(tmp_path):
     manifest = build_release(tmp_path / "data")
-    config = RunnerConfig(suite="smoke", dataset_manifest=str(manifest), candidate="constant-v1", prompt_version="v1", input_mode="oracle", decode={}, seeds=[0], concurrency=1, output_dir=str(tmp_path / "runs"))
+    config = RunnerConfig(
+        suite="smoke",
+        dataset_manifest=str(manifest),
+        candidate="constant-v1",
+        prompt_version="v1",
+        input_mode="oracle",
+        decode={},
+        seeds=[0],
+        concurrency=1,
+        output_dir=str(tmp_path / "runs"),
+    )
     model = Candidate()
     first = run_eval(config, model)
     assert model.calls == 30

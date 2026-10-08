@@ -1,4 +1,5 @@
 """Record a verified task result in both plan and append-only execution log."""
+
 import argparse
 from pathlib import Path
 

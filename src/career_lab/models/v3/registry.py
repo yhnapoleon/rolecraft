@@ -3,6 +3,7 @@
 This module never fits a model, downloads weights, or promotes scoring/quality.
 Only files referenced by the existing validated ModelBundle are copied.
 """
+
 from pathlib import Path
 import json
 import os
@@ -20,17 +21,27 @@ PROTOCOL = "w08-advisory-registration-v1"
 
 def inference_runtime():
     root = Path(__file__).resolve().parents[2]
-    files = {p.relative_to(root).as_posix(): sha(p.read_bytes()) for p in sorted(root.rglob("*.py"))}
-    return {"source_digest": digest(files),
-            "dependencies": {name: version(name) for name in ("numpy", "scikit-learn", "pydantic")}}
+    files = {
+        p.relative_to(root).as_posix(): sha(p.read_bytes()) for p in sorted(root.rglob("*.py"))
+    }
+    return {
+        "source_digest": digest(files),
+        "dependencies": {name: version(name) for name in ("numpy", "scikit-learn", "pydantic")},
+    }
 
 
 def _collect(root, ref, prefix="", depth=0):
     """Use the same explicit component layout supported by load_bundle."""
     root = Path(root)
     bundle = ModelBundle.model_validate_json(read_file(root, ref))
-    refs = [ref, bundle.preprocessing, bundle.training_release,
-            bundle.split_manifest, *bundle.weights, *bundle.source.dependency_locks]
+    refs = [
+        ref,
+        bundle.preprocessing,
+        bundle.training_release,
+        bundle.split_manifest,
+        *bundle.weights,
+        *bundle.source.dependency_locks,
+    ]
     if bundle.source.overlay:
         refs.append(bundle.source.overlay)
     files = {}
@@ -50,8 +61,12 @@ def _collect(root, ref, prefix="", depth=0):
             child_root = (root / relative).resolve()
             if not child_root.is_relative_to(root.resolve()):
                 raise ProtocolError("component_outside_bundle")
-            additions = _collect(child_root, FileRef.model_validate(child["manifest"]),
-                                 prefix + relative + "/", depth + 1)
+            additions = _collect(
+                child_root,
+                FileRef.model_validate(child["manifest"]),
+                prefix + relative + "/",
+                depth + 1,
+            )
             for name, raw in additions.items():
                 if name in files and files[name] != raw:
                     raise ProtocolError("registered_artifact_collision")
@@ -68,9 +83,13 @@ def register_bundle(registry_root, bundle_root, bundle_ref, *, scope):
     if release.get("fixture") is True and scope != "synthetic_fixture":
         raise ProtocolError("fixture_cannot_be_registered_as_external")
     files = _collect(bundle_root, bundle_ref)
-    identity = {"protocol": PROTOCOL, "bundle": bundle_ref.model_dump(mode="json"),
-                "scope": scope, "inference_runtime": inference_runtime(),
-                "files": {p: sha(raw) for p, raw in sorted(files.items())}}
+    identity = {
+        "protocol": PROTOCOL,
+        "bundle": bundle_ref.model_dump(mode="json"),
+        "scope": scope,
+        "inference_runtime": inference_runtime(),
+        "files": {p: sha(raw) for p, raw in sorted(files.items())},
+    }
     identifier = "w08-" + digest(identity)[:32]
     registry_root = Path(registry_root).resolve()
     registry_root.mkdir(parents=True, exist_ok=True)
@@ -82,10 +101,15 @@ def register_bundle(registry_root, bundle_root, bundle_ref, *, scope):
         raise ProtocolError("model_registration_busy", status=409) from None
     stage = None
     try:
-        entry = identity | {"id": identifier, "task_type": bundle.task_type,
-                            "model_revision": bundle.model_revision,
-                            "labels": list(bundle.labels), "mode": "advisory",
-                            "affects_score": False, "quality_validated": False}
+        entry = identity | {
+            "id": identifier,
+            "task_type": bundle.task_type,
+            "model_revision": bundle.model_revision,
+            "labels": list(bundle.labels),
+            "mode": "advisory",
+            "affects_score": False,
+            "quality_validated": False,
+        }
         entry_hash = sha(json_bytes(entry))
         ref = FileRef(path=identifier + "/registration.json", sha256=entry_hash)
         if destination.exists():
@@ -116,7 +140,11 @@ def load_registration(registry_root, registration_ref):
     entry = json.loads(read_file(root, registration_ref))
     if entry.get("protocol") != PROTOCOL or entry.get("scope") not in SCOPES:
         raise ProtocolError("model_registration_protocol_invalid")
-    if entry.get("mode") != "advisory" or entry.get("affects_score") is not False or entry.get("quality_validated") is not False:
+    if (
+        entry.get("mode") != "advisory"
+        or entry.get("affects_score") is not False
+        or entry.get("quality_validated") is not False
+    ):
         raise ProtocolError("registration_cannot_promote_scoring_or_quality")
     identity = {k: entry[k] for k in ("protocol", "bundle", "scope", "files", "inference_runtime")}
     expected = "w08-" + digest(identity)[:32]
@@ -128,13 +156,28 @@ def load_registration(registry_root, registration_ref):
     for path, expected_hash in entry["files"].items():
         read_file(artifact, FileRef(path=path, sha256=expected_hash))
     model, bundle = load_bundle(artifact, FileRef.model_validate(entry["bundle"]))
-    if (entry["task_type"] != bundle.task_type or entry["model_revision"] != bundle.model_revision
-            or tuple(entry["labels"]) != bundle.labels):
+    if (
+        entry["task_type"] != bundle.task_type
+        or entry["model_revision"] != bundle.model_revision
+        or tuple(entry["labels"]) != bundle.labels
+    ):
         raise ProtocolError("registered_model_identity_mismatch")
     return model, entry
 
 
 def public_registration(entry):
     """Public identity only; do not expose artifact paths, labels/gold files or source overlays."""
-    return {key: entry[key] for key in ("id", "task_type", "model_revision", "labels", "scope",
-                                       "mode", "affects_score", "quality_validated", "inference_runtime")}
+    return {
+        key: entry[key]
+        for key in (
+            "id",
+            "task_type",
+            "model_revision",
+            "labels",
+            "scope",
+            "mode",
+            "affects_score",
+            "quality_validated",
+            "inference_runtime",
+        )
+    }

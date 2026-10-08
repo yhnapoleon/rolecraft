@@ -1,4 +1,5 @@
 """W06 assembly on the existing FastAPI/Gateway/store, with no extra persistence."""
+
 from pathlib import Path
 
 from career_lab.api.app import create_app as shared_app
@@ -22,19 +23,22 @@ def mount_delegations(app, *, history_reader=stored_history, synchronous=None):
     # A field on TransactionView is only a seam. The actual same-window history
     # reader must be installed before tools advertise an available observation.
     if history_reader is stored_history and not callable(app.state.v2_store.public_history_reader):
-        source.unavailable_code = 'observation_history_unavailable'
+        source.unavailable_code = "observation_history_unavailable"
     bind = install_delegations(registry, source_provider=source, synchronous=synchronous)
     app.state.w06 = bind(gateway)
     # v4 integration extensions (delegation list, reviewed practice) share this post-install mount,
     # so frozen routes and the shared app factory stay unchanged.
-    if not getattr(app.state, 'v4_extensions', False):
+    if not getattr(app.state, "v4_extensions", False):
         from career_lab.api.v4_extensions import mount_v4_extensions
+
         mount_v4_extensions(app)
         app.state.v4_extensions = True
     return app.state.w06
 
 
-def create_delegated_app(*, database_url, registry, history_reader=stored_history, synchronous=None):
+def create_delegated_app(
+    *, database_url, registry, history_reader=stored_history, synchronous=None
+):
     """Usable for standard server loading without editing the shared factory."""
     app = shared_app(database_url=database_url, extensions=registry)
     try:
@@ -58,11 +62,27 @@ def create_scenario_app(*, database_url, scenario_package, history_reader=stored
     install_workspace_operations(registry, roles=roles)
     install_workspace_recovery(registry, roles=roles)
     install_feedback_recovery(registry)
-    registry.register(Operation('submissions.create', 'submit', C.SubmitInput, record_submission, action_name='submit'))
-    registry.register(Operation('revision_cycles', 'act', C.BeginRevisionInput, begin_revision, action_name='begin_revision'))
+    registry.register(
+        Operation(
+            "submissions.create", "submit", C.SubmitInput, record_submission, action_name="submit"
+        )
+    )
+    registry.register(
+        Operation(
+            "revision_cycles",
+            "act",
+            C.BeginRevisionInput,
+            begin_revision,
+            action_name="begin_revision",
+        )
+    )
     # Only the exact synchronous W02 implementation above is enabled. No role,
     # review or feedback generation is registered without its real runtime.
-    app = create_delegated_app(database_url=database_url, registry=registry, history_reader=history_reader,
-        synchronous=SYNC_OPERATIONS | {'actions', 'approvals.resolve', 'tests.create'})
+    app = create_delegated_app(
+        database_url=database_url,
+        registry=registry,
+        history_reader=history_reader,
+        synchronous=SYNC_OPERATIONS | {"actions", "approvals.resolve", "tests.create"},
+    )
     app.state.scenario_v2 = scenario
     return app

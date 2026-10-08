@@ -1,4 +1,5 @@
 """Private pipeline utilities; public data shapes belong to contracts.v2."""
+
 from contextlib import contextmanager
 from pathlib import Path
 import hashlib
@@ -55,11 +56,24 @@ def immutable_directory(target):
         lock.rmdir()
 
 
-FORBIDDEN_KEYS = frozenset({
-    "gold", "gold_label", "label_tier", "label_ref", "acceptable_evidence_sets",
-    "source_map", "answer_key", "solutions", "hidden_probes", "probe_expected",
-    "authoring", "verifier_id", "annotation", "annotation_version",
-})
+FORBIDDEN_KEYS = frozenset(
+    {
+        "gold",
+        "gold_label",
+        "label_tier",
+        "label_ref",
+        "acceptable_evidence_sets",
+        "source_map",
+        "answer_key",
+        "solutions",
+        "hidden_probes",
+        "probe_expected",
+        "authoring",
+        "verifier_id",
+        "annotation",
+        "annotation_version",
+    }
+)
 
 
 def check_payload(value):
