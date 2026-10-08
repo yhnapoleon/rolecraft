@@ -1,7 +1,7 @@
 /** Thin ownership/lifecycle bridge into the existing v4 DOM. No business rendering. */
 import { WorkspaceRegions } from './features/workspace/native-v4/regions';
 import { RolesRegions } from './features/roles-native/regions';
-import { mount as mountResources } from './features/roles-native/v4-request-slot';
+import { ResourceRegions } from './features/roles-native/resource-regions';
 import { FeedbackRegions } from './features/feedback-native/regions';
 import { surfaceHost } from './v4-surface-host';
 import { mountV4AgentSlot } from './features/agent-native/v4-slot';
@@ -22,11 +22,13 @@ export class V4Mounts {
   private generation = 0;
   private readonly feedback = new FeedbackRegions();
   private readonly roles = new RolesRegions();
+  private readonly resources = new ResourceRegions();
   constructor(private readonly workspace = new WorkspaceRegions()) {}
   destroy() {
     this.generation++;
     this.feedback.destroy();
     this.roles.destroy();
+    this.resources.destroy();
     this.workspace.destroy();
     for (const item of this.mounted.values()) {
       item.handle.destroy();
@@ -40,7 +42,6 @@ export class V4Mounts {
     host: V4DataHost | null,
     selection: Selection,
   ) {
-    const sheet = doc.querySelector<HTMLDialogElement>('#sheet');
     if (session?.protocol !== 2 || !host) {
       this.destroy();
       return;
@@ -48,10 +49,9 @@ export class V4Mounts {
     this.workspace.prune(doc, host);
     this.feedback.prune(doc, host);
     this.roles.prune(doc, host);
+    this.resources.prune(doc, host);
     if (host.snapshot().state === 'unavailable') await host.query('workbench.read');
     const roots = new Map<string, HTMLElement>();
-    if (sheet?.open && sheet.querySelector('#res-form'))
-      roots.set('resource-requests', sheet.querySelector('.sheet-body')!);
     const agentPanel = doc.querySelector<HTMLElement>('#ws-rail .agent-panel[data-agent-native]');
     if (agentPanel && session.v2NativeWorkspace) roots.set('agent', agentPanel);
     for (const [id, current] of this.mounted) {
@@ -86,6 +86,7 @@ export class V4Mounts {
     if (epoch !== this.generation) return;
     this.feedback.sync(doc, host);
     this.roles.sync(doc, host);
+    this.resources.sync(doc, host);
     if (session.v2NativeWorkspace) this.workspace.sync(doc, host);
     else this.workspace.destroy();
     for (const [id, root] of roots) {
@@ -102,9 +103,6 @@ export class V4Mounts {
         pick('connection', '[data-agent-connection]');
         pick('activity', '[data-agent-activity]');
         pick('returns', '[data-agent-returns]');
-      } else if (id === 'resource-requests') {
-        pick('form', '#res-form');
-        pick('submit', '[form="res-form"][type="submit"]', sheet!);
       } else {
         nodes.content = root;
       }
@@ -114,7 +112,7 @@ export class V4Mounts {
       let alive = true;
       const adapter = surfaceHost(host, () => alive);
       const context: V4SlotContext = { host: adapter, nodes };
-      const handle = id === 'agent' ? mountV4AgentSlot(context) : mountResources(context);
+      const handle = mountV4AgentSlot(context);
       this.mounted.set(id, {
         host,
         root,

@@ -2759,6 +2759,7 @@ function sheetResources() {
     ${pending.length ? `<section class="pending"><h3 class="mini-title">${T('等待经理处理', 'Waiting for the manager')}</h3>${pending.map((rule) => `<div class="pending-row">${avatar('manager', 'sm')}<span class="grow">${rule === 'capacity_approved' ? T('扩容申请', 'Seat request') : T('资源与延期申请', 'Resource request')}</span>${btn(T('请经理处理', 'Ask the manager to decide'), 'live-approval', 'small', `data-id="${esc(rule)}"`)}</div>`).join('')}</section>` : ''}`,
     `<button type="submit" form="res-form" class="btn primary">${T('提交申请', 'Send request')}</button>`,
     'narrow',
+    s?.protocol === 2 ? 'resource-requests' : '',
   );
 }
 // Which pieces of local work go into the deliverable is the learner's choice.

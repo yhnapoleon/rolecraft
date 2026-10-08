@@ -28,6 +28,24 @@ async function enterWorkspace(context) {
   );
 }
 
+async function inspectResourceRegion(context) {
+  const { browser, shot } = context;
+  await browser.click('.product-bar [data-action="resources"]');
+  await waitFor(browser, `!!document.querySelector('#res-form [name="capacity"]')`);
+  assert.equal(
+    await browser.ev(`document.querySelectorAll('[data-v4-region="resource-requests"]').length`),
+    1,
+    'The original resource dialog has exactly one named owner',
+  );
+  assert.equal(
+    await browser.ev(`document.querySelector('[form="res-form"][type="submit"]').form.id`),
+    'res-form',
+  );
+  await shot('resources');
+  await browser.click('#sheet [data-action="close"]');
+  await waitFor(browser, `!document.querySelector('#sheet').open`);
+}
+
 async function readAndTest(context) {
   const { browser, text, shot } = context;
   await browser.click('.doc-card[data-id="brief"]');
@@ -247,6 +265,9 @@ async function runLanguage(language) {
     );
     await browser.goto(base);
     await step('normal entry and fixed work language', () => enterWorkspace(context));
+    await step('resource dialog keeps its assigned form and controls', () =>
+      inspectResourceRegion(context),
+    );
     await step('source reading and actual assistant test', () => readAndTest(context));
     await step('unsaved draft survives route change and reload', () => restoreDraft(context));
     await step('save and share the exact work version', () => saveAndShare(context));
