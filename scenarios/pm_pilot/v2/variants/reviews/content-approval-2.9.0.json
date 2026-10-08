@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "review_id": "W02-M3-targeted-revision-review",
+  "verdict": "accepted",
+  "scope": "authored_content_only",
+  "reviewer": "independent Claude review",
+  "session_id": "c6745aba-0d3e-4df4-8612-17f449ba2aa6",
+  "reviewed_delivery_commit": "da4e1a2b51f1f9e820cb851764578bf9c3220e94",
+  "reviewed_source_digest": "baae19347dbd8c87e2265da2019f2d4e0089f93785ebfc70b375c74633b1918f",
+  "private_report_sha256": "5b0cbf4ebceb23a36c266760790e7e6ffd297d025df76c5c11a6ec58b5b99841",
+  "bundles": [
+    {
+      "scenario_id": "pm_pilot_urgent",
+      "work_language": "zh",
+      "scenario_hash": "09604036833180f0f5d16185798f24cb13e04184d86fa5b6c97a3cd09abea505"
+    },
+    {
+      "scenario_id": "pm_pilot_urgent",
+      "work_language": "en",
+      "scenario_hash": "6d151e276528bf27132d136b2a41bc256b7a6437f193c101596091484e252750"
+    },
+    {
+      "scenario_id": "pm_pilot_capacity15",
+      "work_language": "zh",
+      "scenario_hash": "0348f566f4f2f112d4e2f80e72e735c58c87a38f86991b347c6d5215981d36c7"
+    },
+    {
+      "scenario_id": "pm_pilot_capacity15",
+      "work_language": "en",
+      "scenario_hash": "0e434a840f5fbb8e540f4ac5ce9aa9b5b3351373c0e982e4e2c7b7924f08f19b"
+    }
+  ],
+  "normal_v4_verified": false,
+  "qa13_verified": false,
+  "learning_gain": "not_established"
+}

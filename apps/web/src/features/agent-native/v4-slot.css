@@ -1,0 +1,11 @@
+.agent-v4-slot { min-width: 0; color: var(--ink); font: inherit; }
+.agent-v4-connection, .agent-v4-grant, .agent-v4-returns { display: grid; gap: 8px; }
+.agent-v4-field { display: grid; gap: 4px; font-size: 12.5px; }
+.agent-v4-field input, .agent-v4-field select { box-sizing: border-box; min-width: 0; max-width: 100%; width: 100%; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 9px; padding: 7px 9px; }
+.agent-v4-slot button { max-width: 100%; white-space: normal; }
+.agent-v4-slot p { overflow-wrap: anywhere; margin: 0; }
+.agent-v4-slot :focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.agent-v4-pending, .agent-v4-access-row, .agent-v4-work-row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 0; }
+.agent-v4-access-row + .agent-v4-access-row, .agent-v4-work-row + .agent-v4-work-row { box-shadow: inset 0 1px var(--line); }
+.agent-v4-access-row p, .agent-v4-work-row p, .agent-v4-pending p { flex-basis: 100%; }
+.agent-v4-slot [hidden] { display: none !important; }

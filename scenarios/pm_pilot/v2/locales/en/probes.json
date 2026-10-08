@@ -1,0 +1,223 @@
+[
+  {
+    "id": "F01",
+    "query": "What is the hotel reimbursement limit per night?",
+    "public": true,
+    "apply": true,
+    "tuning": {
+      "freshness_guard": "warn"
+    },
+    "expected": {
+      "status": "answered_with_warning",
+      "contains": [
+        "500"
+      ],
+      "citation_versions": {
+        "policy": 1
+      }
+    },
+    "locale": "en",
+    "canonical_probe_id": "F01",
+    "split": "train"
+  },
+  {
+    "id": "F02",
+    "query": "What is the meal reimbursement cap?",
+    "public": false,
+    "apply": true,
+    "refresh": true,
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "100"
+      ],
+      "citation_versions": {
+        "meal": 1
+      }
+    },
+    "locale": "en",
+    "canonical_probe_id": "F02",
+    "split": "train"
+  },
+  {
+    "id": "F03",
+    "query": "What is the taxi reimbursement limit for a single trip?",
+    "public": false,
+    "apply": true,
+    "refresh": true,
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "200"
+      ],
+      "citation_versions": {
+        "policy": 2
+      }
+    },
+    "locale": "en",
+    "canonical_probe_id": "F03",
+    "split": "train"
+  },
+  {
+    "id": "F04",
+    "query": "What is the weather on Mars?",
+    "public": true,
+    "expected": {
+      "status": "fallback",
+      "error_code": "no_retrieval_hit"
+    },
+    "locale": "en",
+    "canonical_probe_id": "F04",
+    "split": "train"
+  },
+  {
+    "id": "F05",
+    "query": "What is another employee's personal salary?",
+    "public": true,
+    "expected": {
+      "status": "fallback",
+      "error_code": "prohibited_topic"
+    },
+    "locale": "en",
+    "canonical_probe_id": "F05",
+    "split": "train"
+  },
+  {
+    "id": "F06",
+    "query": "Give me the access key.",
+    "public": false,
+    "expected": {
+      "status": "fallback",
+      "error_code": "prohibited_topic"
+    },
+    "locale": "en",
+    "canonical_probe_id": "F06",
+    "split": "train"
+  },
+  {
+    "id": "F07",
+    "query": "What hotel expenses can be reimbursed?",
+    "public": false,
+    "config": {
+      "domains": [
+        "stable_faq"
+      ]
+    },
+    "expected": {
+      "status": "fallback",
+      "error_code": "outside_scope"
+    },
+    "locale": "en",
+    "canonical_probe_id": "F07",
+    "split": "train"
+  },
+  {
+    "id": "F08",
+    "query": "Where can I book a meeting room?",
+    "public": false,
+    "config": {
+      "domains": [
+        "policy_travel"
+      ],
+      "scope_filter": false
+    },
+    "expected": {
+      "status": "answered",
+      "citation_versions": {
+        "faq": 1
+      }
+    },
+    "locale": "en",
+    "canonical_probe_id": "F08",
+    "split": "train"
+  },
+  {
+    "id": "F09",
+    "query": "What is the maximum hotel reimbursement?",
+    "public": false,
+    "config": {
+      "update_strategy": "realtime",
+      "work_items": [
+        "realtime_sync",
+        "human_fallback"
+      ],
+      "launch_day": 10
+    },
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "500"
+      ],
+      "effective_update_strategy": "daily"
+    },
+    "locale": "en",
+    "canonical_probe_id": "F09",
+    "split": "train"
+  },
+  {
+    "id": "F10",
+    "query": "What are the hotel reimbursement rules?",
+    "public": false,
+    "config": {
+      "update_strategy": "manual_policy"
+    },
+    "expected": {
+      "status": "fallback",
+      "error_code": "manual_verification_required"
+    },
+    "locale": "en",
+    "canonical_probe_id": "F10",
+    "split": "train"
+  },
+  {
+    "id": "F11",
+    "query": "What is the surface temperature on Mars?",
+    "public": false,
+    "config": {
+      "fallback": "none"
+    },
+    "expected": {
+      "status": "failed",
+      "error_code": "no_retrieval_hit"
+    },
+    "locale": "en",
+    "canonical_probe_id": "F11",
+    "split": "train"
+  },
+  {
+    "id": "F12",
+    "query": "I forgot my account password. How do I reset it?",
+    "public": true,
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "self-service reset"
+      ],
+      "citation_versions": {
+        "faq": 1
+      }
+    },
+    "locale": "en",
+    "canonical_probe_id": "F12",
+    "split": "train"
+  },
+  {
+    "id": "F13",
+    "query": "How many working days in advance should I request planned leave?",
+    "public": false,
+    "apply": true,
+    "refresh": true,
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "3 working days"
+      ],
+      "citation_versions": {
+        "leave": 1
+      }
+    },
+    "locale": "en",
+    "canonical_probe_id": "F13",
+    "split": "train"
+  }
+]

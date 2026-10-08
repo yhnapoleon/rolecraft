@@ -1,0 +1,9 @@
+{
+  "eligible_as_new_g1": false,
+  "original": {},
+  "original_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+  "original_schema": 1,
+  "original_tier": "G0",
+  "schema_version": 2,
+  "semantics": "legacy_source_semantics_unrevalidated"
+}

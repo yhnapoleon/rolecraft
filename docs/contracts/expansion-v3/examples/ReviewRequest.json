@@ -1,0 +1,39 @@
+{
+  "as_of": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "decision": null,
+  "evaluation": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "executor": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "followup_of": [],
+  "id": "example",
+  "purpose": "example",
+  "question": "",
+  "schema_version": 2,
+  "scope": [],
+  "session_id": "example",
+  "subjects": [
+    {
+      "config_version": null,
+      "kind": "document",
+      "object_id": "example",
+      "schema_version": 2,
+      "session_id": "example",
+      "version": 1
+    }
+  ],
+  "version": 1
+}

@@ -1,0 +1,138 @@
+{
+  "$defs": {
+    "JsonValue": {},
+    "ObjectRef": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version"
+      ],
+      "title": "ObjectRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "choice": {
+      "enum": [
+        "choose",
+        "choose_other",
+        "decline",
+        "continue_revision"
+      ],
+      "title": "Choice",
+      "type": "string"
+    },
+    "creates_session": {
+      "title": "Creates Session",
+      "type": "boolean"
+    },
+    "help_source": {
+      "enum": [
+        "optional_feedback_suggestion",
+        "self_selected"
+      ],
+      "title": "Help Source",
+      "type": "string"
+    },
+    "learning_gain": {
+      "const": "not_established",
+      "default": "not_established",
+      "title": "Learning Gain",
+      "type": "string"
+    },
+    "new_session_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "New Session Id"
+    },
+    "source_feedback": {
+      "$ref": "#/$defs/ObjectRef"
+    },
+    "source_feedback_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Source Feedback Hash",
+      "type": "string"
+    },
+    "suggestion_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Suggestion Hash",
+      "type": "string"
+    },
+    "target": {
+      "anyOf": [
+        {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Target"
+    }
+  },
+  "required": [
+    "source_feedback",
+    "source_feedback_hash",
+    "suggestion_hash",
+    "choice",
+    "target",
+    "creates_session",
+    "new_session_id",
+    "help_source"
+  ],
+  "title": "PracticePlan",
+  "type": "object"
+}

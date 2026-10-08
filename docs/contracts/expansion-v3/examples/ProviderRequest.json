@@ -1,0 +1,15 @@
+{
+  "attempt_id": "example",
+  "deadline": "2026-10-06T12:00:00Z",
+  "decode": {},
+  "messages": [],
+  "model_revision": "example",
+  "output_limit": 1,
+  "prompt_revision": "example",
+  "provider": "example",
+  "request_id": "example",
+  "schema_version": 2,
+  "seed": null,
+  "tools": [],
+  "tools_digest": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+}

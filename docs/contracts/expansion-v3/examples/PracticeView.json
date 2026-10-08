@@ -1,0 +1,21 @@
+{
+  "available": false,
+  "can_choose_other": true,
+  "can_decline": true,
+  "catalog": [],
+  "learning_gain": "not_established",
+  "links": [],
+  "note": "example",
+  "options": [],
+  "source_feedback": {
+    "config_version": null,
+    "kind": "document",
+    "object_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "source_feedback_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "suggestion_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+  "work_language": "zh"
+}

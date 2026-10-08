@@ -1,0 +1,17 @@
+{
+  "allowed_actions": [],
+  "allowed_objects": [],
+  "capabilities": [],
+  "create_under_tasks": [],
+  "effective_status": "active",
+  "executor": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "expires_at": "2026-10-06T12:00:00Z",
+  "id": "example",
+  "revoked": false,
+  "session_id": "example"
+}

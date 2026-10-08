@@ -11,6 +11,13 @@ export class WorkspaceStore {
   private listeners = new Set<() => void>();
   private state: Snapshot;
   private polling = false;
+  private v2?: {
+    sync(session: LocalSession): Promise<void>;
+    write(session: LocalSession, kind: Operation['kind'], body: Record<string, unknown>, localRun?: LocalTestRun): Promise<void>;
+    poll(session: LocalSession): Promise<void>;
+  };
+  installV2(bridge: NonNullable<WorkspaceStore['v2']>) { this.v2 = bridge; }
+  report(patch: Partial<Pick<Snapshot, 'busy' | 'error' | 'notice' | 'connected'>>) { this.emit(patch); }
   constructor(private storage: Pick<Storage, 'getItem' | 'setItem'>, private transport: Transport = request) {
     let workspace: Workspace = { schema: 1, sessions: [] }, error = '';
     try {
@@ -42,15 +49,20 @@ export class WorkspaceStore {
     try { const result = await this.transport('/health'); this.emit({ connected: true, model: result.model }); }
     catch { this.emit({ connected: false, model: '' }); }
   }
-  async create(scenario: Scenario) {
+  /** `creator` replaces the plain POST /sessions when another confirmed server action creates the session. */
+  async create(scenario: Scenario, workLanguage?: 'zh' | 'en', creator?: () => Promise<any>) {
     if (this.state.busy || this.state.storageError) return;
     // Prove local persistence works before creating a non-idempotent session.
     if (!this.persist()) return;
     this.emit({ busy: true, error: '', notice: '' });
     try {
-      const result = await this.transport('/sessions', { scenario });
+      const result = creator ? await creator() : await this.transport('/sessions', workLanguage ? { schema_version: 2, scenario: scenario === 'pm_pilot' ? 'pm_pilot_v2' : scenario + '_v2', work_language: workLanguage } : { scenario });
+      if (workLanguage && (result.schema_version !== 2 || result.binding?.protocol !== 2 || result.binding?.sessionId !== result.session_id || result.binding?.workLanguage !== workLanguage || typeof result.binding?.scenarioHash !== 'string')) throw new ApiError('Session binding is unconfirmed', 0, 'response_unconfirmed');
+      // A retried confirmed creation (same request) may return a session this browser already holds.
+      if (this.state.workspace.sessions.some(s => s.id === result.session_id)) { this.select(result.session_id); return result.session_id as string; }
+      const world = workLanguage ? { session_id: result.session_id, version: result.state.business_seq, logical_time: 0, resources: {}, configs: {}, material_versions: {}, indexed_versions: {}, applied_rules: [], pending_requests: [], action_count: 0, config_version: result.state.config_version, status: result.state.status } : result.state;
       const session: LocalSession = {
-        id: result.session_id, token: result.token, scenario, world: result.state,
+        id: result.session_id, token: result.token, scenario, world, ...(workLanguage ? { protocol: 2, v2Binding: result.binding } : {}),
         created: new Date().toISOString(), materials: [], timeline: { events: [], turns: [], mode: '' },
         draft: emptyDraft(), tests: [], questions: {}, testNotes: {},
         inputs: { question: '', expected: '', messages: {}, capacityReason: '', resourceReason: '' },
@@ -65,6 +77,7 @@ export class WorkspaceStore {
   async sync(id = this.state.workspace.active) {
     const s = this.state.workspace.sessions.find(s => s.id === id);
     if (!s) return;
+    if (s.protocol === 2) { if (!this.v2) throw new Error("V4 host unavailable"); return this.v2.sync(s); }
     try {
       const optionalList = async (suffix: string) => {
         try { return await this.transport(sessionPath(s, suffix), undefined, s); }
@@ -104,6 +117,7 @@ export class WorkspaceStore {
   async write(kind: Operation['kind'], suffix: string, body: Record<string, unknown>, label: string, localRun?: LocalTestRun) {
     const s = this.active();
     if (!s || this.state.busy || s.pending || this.state.storageError) return;
+    if (s.protocol === 2) { if (!this.v2) throw new Error('V4 host unavailable'); return this.v2.write(s, kind, body, localRun); }
     if (!['feedback', 'action', 'relation'].includes(kind) && s.world.status !== 'active') return;
     const operation: Operation = { kind, path: suffix, body, label, created: new Date().toISOString(), ...(kind === 'test' ? { localExpected: localRun?.expectation ?? s.inputs.expected, ...(localRun ? { localRun: structuredClone(localRun) } : {}) } : {}) };
     if (!this.update(s.id, { pending: operation })) return;
@@ -141,6 +155,7 @@ export class WorkspaceStore {
   approval(rule: string) { const s = this.active(); if (!s) return; return this.write('approval', '/approvals/resolve', { rule_id: rule, request_id: crypto.randomUUID(), expected_version: s.world.version }, T('按场景规则审核申请', 'Approval')); }
   async execute(id = this.state.workspace.active) {
     const s = this.state.workspace.sessions.find(s => s.id === id);
+    if (s?.protocol === 2) { if (!this.v2) throw new Error('V4 host unavailable'); return this.v2.poll(s); }
     if (!s?.pending || this.state.busy || this.state.storageError) return;
     if (s.pending.jobId) { await this.poll(id); return; }
     this.emit({ busy: true, error: '', notice: '' });
@@ -186,6 +201,7 @@ export class WorkspaceStore {
   }
   async poll(id = this.state.workspace.active) {
     const s = this.state.workspace.sessions.find(s => s.id === id);
+    if (s?.protocol === 2) { if (!this.v2 || this.polling || this.state.busy) return; this.polling = true; try { await this.v2.poll(s); } finally { this.polling = false; } return; }
     if (!s?.pending?.jobId || this.polling || this.state.busy) return;
     this.polling = true;
     const op = s.pending;
@@ -252,10 +268,10 @@ export function serverText(detail: string, code?: string, details?: Record<strin
     not_found: T('找不到这条记录。', 'This record was not found.'),
     invalid_request: T('请求未被接受，请检查输入。', 'The request was not accepted. Check the input.'),
     approval_no_pending_request: T('没有等待处理的这项申请。', 'There is no pending request of this kind.'),
-    approval_needs_config: T('先保存要申请的试点设置，再请 Priya 处理。', 'Save the requested pilot settings before asking Priya to decide.'),
-    approval_plan_incomplete: T('Priya 没有批准：方案缺少必要工作或人工兜底。', 'Priya did not approve: required work or a human fallback is missing.'),
-    approval_unsupported_rule: T('Priya 暂不能处理这类申请。', 'Priya cannot handle this type of request.'),
-    approval_not_needed_or_over_limit: T('Priya 没有批准：当前设置不需要这项申请，或超出了可批范围。', 'Priya did not approve: the current settings do not need it, or it exceeds what she can approve.'),
+    approval_needs_config: T('先保存要申请的试点设置，再请经理处理。', 'Save the requested pilot settings before asking the manager to decide.'),
+    approval_plan_incomplete: T('经理没有批准：方案缺少必要工作或人工兜底。', 'The manager did not approve: required work or a human fallback is missing.'),
+    approval_unsupported_rule: T('经理暂不能处理这类申请。', 'The manager cannot handle this type of request.'),
+    approval_not_needed_or_over_limit: T('经理没有批准：当前设置不需要这项申请，或超出了可批范围。', 'The manager did not approve: the current settings do not need it, or it exceeds what she can approve.'),
   };
   if (code === 'approval_plan_incomplete' && details?.missing) {
     const missing = details.missing;
@@ -263,7 +279,7 @@ export function serverText(detail: string, code?: string, details?: Record<strin
     const reasons = (missing.work_items || []).map((w: string) => T('缺少', 'Missing ') + (workNames[w] || w));
     if (missing.human_fallback) reasons.push(T('缺人工兜底', 'Missing human fallback'));
     if (missing.minimum_participants) reasons.push(T('人数低于下限 ' + details.minimum_participants, 'Participants below the minimum of ' + details.minimum_participants));
-    if (reasons.length) return T('Priya 没有批准：', 'Priya did not approve: ') + reasons.join(T('；', '; ')) + T('。', '.');
+    if (reasons.length) return T('经理没有批准：', 'The manager did not approve: ') + reasons.join(T('；', '; ')) + T('。', '.');
   }
   if (code === 'approval_not_needed_or_over_limit' && details?.requested && details?.current && details?.limit) {
     const names: Record<string, string> = { capacity: T('人数', 'Seats'), dev_days: T('人日', 'Person-days'), deadline_day: T('上线日', 'Launch day') };
@@ -274,7 +290,7 @@ export function serverText(detail: string, code?: string, details?: Record<strin
   if (/session is submitted/.test(d)) return T('已交付，这次练习只读。', 'Already submitted; this practice is read-only.');
   if (/config version is not current/.test(d)) return T('试点设置刚变过，请重新运行。', 'The pilot settings just changed. Run it again.');
   if (/artifact\/config version mismatch/.test(d)) return T('交付稿保存后设置又变过，请先重新保存。', 'Settings changed after you saved the deliverable. Save it again first.');
-  if (/request is unnecessary or exceeds/.test(d)) return T('Priya 没有批准：当前设置不需要这项申请，或超出了可批范围。', 'Priya did not approve: the current settings do not need it, or it exceeds what she can approve.');
+  if (/request is unnecessary or exceeds/.test(d)) return T('经理没有批准：当前设置不需要这项申请，或超出了可批范围。', 'The manager did not approve: the current settings do not need it, or it exceeds what she can approve.');
   if (/material unavailable/.test(d)) return T('这份资料现在不可读。', 'This document is not available now.');
   if (/invalid pause\/resume/.test(d)) return T('练习状态已变，现在不能暂停或恢复。', 'The practice state changed; it cannot be paused or resumed now.');
   if (/frozen relation study is not configured/.test(d)) return T('辅助证据判断尚未在服务器上配置。', 'The evidence checker is not configured on the server.');
@@ -286,7 +302,7 @@ export function serverText(detail: string, code?: string, details?: Record<strin
 }
 
 function validSession(s: any): s is LocalSession {
-  return !!s && typeof s.id === 'string' && typeof s.token === 'string' && !!s.token &&
+  return !!s && (s.protocol == null || s.protocol === 1 || (s.protocol === 2 && s.v2Binding?.protocol === 2 && s.v2Binding?.sessionId === s.id && ['zh', 'en'].includes(s.v2Binding?.workLanguage) && typeof s.v2Binding?.scenarioHash === 'string')) && typeof s.id === 'string' && typeof s.token === 'string' && !!s.token &&
     ['pm_pilot', 'pm_pilot_urgent', 'pm_pilot_capacity15'].includes(s.scenario) &&
     s.world?.session_id === s.id && ['active', 'paused', 'submitted'].includes(s.world?.status) &&
     Number.isInteger(s.world?.version) && !!s.world.resources && !!s.world.configs &&

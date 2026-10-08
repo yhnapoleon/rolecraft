@@ -1,0 +1,34 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "decode_parameters": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Decode Parameters",
+      "type": "array"
+    },
+    "max_output_tokens": {
+      "exclusiveMinimum": 0,
+      "title": "Max Output Tokens",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "seed_supported": {
+      "title": "Seed Supported",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "seed_supported",
+    "decode_parameters",
+    "max_output_tokens"
+  ],
+  "title": "ProviderCapabilities",
+  "type": "object"
+}

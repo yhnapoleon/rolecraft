@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "revision": "2.9.6",
+  "main": {
+    "zh": {
+      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot",
+      "scenario_hash": "8943b931f6cfe0f4d48efab8672a7e229566b8757993fffb1c440685b4c3f278",
+      "evaluation": {
+        "schema_version": 2,
+        "path": "runtime/evaluation.json",
+        "sha256": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
+        "media_type": "application/json"
+      }
+    },
+    "en": {
+      "root": "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot/locales/en",
+      "scenario_hash": "43e77059fc825d0a144f6968bf96f9f8725b743730c4050352390b608dae8de4",
+      "evaluation": {
+        "schema_version": 2,
+        "path": "runtime/evaluation.json",
+        "sha256": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+        "media_type": "application/json"
+      }
+    }
+  },
+  "practice_catalog": "scenarios/pm_pilot/v2/variants/reviewed-options-2.9.6.json",
+  "source_inputs": {
+    "public_commit": "0e1bd8b02fc2fcc280ef49684f6d8e7b81bc8bd8",
+    "w05_commit": "e2316724a4a9776ce60ea5364e9415d111c4b4ae",
+    "release_tool_commit": "15f9cdc1ca39a8f391d603fb9f84ff40be150273"
+  },
+  "fact_adapter_factory": "career_lab.scenarios.v2.evidence_ports.store.create_store_fact_adapter",
+  "normal_v4_verified": false,
+  "historical_installations": [
+    "rubric-v2-c2/pm_pilot (2.9.2)",
+    "rubric-v2-c2-2.9.3/pm_pilot",
+    "rubric-v2-c2-2.9.4 (all six language packages)",
+    "rubric-v2-a577-2.9.5 (all six language packages)"
+  ]
+}

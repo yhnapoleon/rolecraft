@@ -1,0 +1,43 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "product_id": {
+      "minLength": 1,
+      "title": "Product Id",
+      "type": "string"
+    },
+    "product_version": {
+      "exclusiveMinimum": 0,
+      "title": "Product Version",
+      "type": "integer"
+    },
+    "purpose": {
+      "default": "discussion",
+      "title": "Purpose",
+      "type": "string"
+    },
+    "question": {
+      "default": "",
+      "title": "Question",
+      "type": "string"
+    },
+    "recipient_role": {
+      "minLength": 1,
+      "title": "Recipient Role",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "product_id",
+    "product_version",
+    "recipient_role"
+  ],
+  "title": "ShareCreate",
+  "type": "object"
+}

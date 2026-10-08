@@ -1,0 +1,37 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "scenario": {
+      "minLength": 1,
+      "title": "Scenario",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "work_language": {
+      "anyOf": [
+        {
+          "enum": [
+            "zh",
+            "en"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Work Language"
+    }
+  },
+  "required": [
+    "schema_version",
+    "scenario"
+  ],
+  "title": "CreateSessionV2",
+  "type": "object"
+}

@@ -1,0 +1,12 @@
+{
+  "expected_request_revision": 1,
+  "request": {
+    "config_version": null,
+    "kind": "business_request",
+    "object_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "schema_version": 2
+}

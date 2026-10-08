@@ -1,0 +1,59 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "actions": {
+      "minimum": 0,
+      "title": "Actions",
+      "type": "integer"
+    },
+    "currency_limit": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Currency Limit"
+    },
+    "model_calls": {
+      "minimum": 0,
+      "title": "Model Calls",
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "tokens": {
+      "anyOf": [
+        {
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Tokens"
+    },
+    "wall_seconds": {
+      "exclusiveMinimum": 0,
+      "title": "Wall Seconds",
+      "type": "number"
+    }
+  },
+  "required": [
+    "model_calls",
+    "actions",
+    "wall_seconds"
+  ],
+  "title": "Budget",
+  "type": "object"
+}

@@ -1,0 +1,28 @@
+{
+  "as_of": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "countered": {},
+  "decider": "example",
+  "evidence_refs": [],
+  "granted": {},
+  "id": "example",
+  "reason": "example",
+  "reason_code": "example",
+  "request": {
+    "config_version": null,
+    "kind": "business_request",
+    "object_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "rule_revision": "example",
+  "schema_version": 2,
+  "session_id": "example",
+  "status": "approved",
+  "version": 1
+}

@@ -1,0 +1,46 @@
+{
+  "schema_version": 1,
+  "scope": "independent content acceptance carried only across byte-identical authored content; runtime composition is author verified",
+  "independent_review": {
+    "schema_version": 2,
+    "path": "reviews/content-approval-2.9.0.json",
+    "sha256": "06ac5ac71e63d98bf73a0bb14730c2c6bc248354e134844e7c95240094a4dc10",
+    "media_type": "application/json"
+  },
+  "reviewed_delivery_commit": "da4e1a2b51f1f9e820cb851764578bf9c3220e94",
+  "private_report_sha256": "5b0cbf4ebceb23a36c266760790e7e6ffd297d025df76c5c11a6ec58b5b99841",
+  "runtime_candidate": "2.9.4",
+  "content_identity_verified_by": "rolecraft-033-scenarios",
+  "normal_v4_verified": false,
+  "learning_gain": "not_established",
+  "bindings": [
+    {
+      "scenario_id": "pm_pilot_urgent",
+      "work_language": "zh",
+      "reviewed_source_hash": "09604036833180f0f5d16185798f24cb13e04184d86fa5b6c97a3cd09abea505",
+      "installed_scenario_hash": "30a297ef278920933ad0c67a31e901e0b42f8e55b104dd534b176367e24d8c49",
+      "authored_content_digest": "e389d2e90301a429f6130340bfb35f1b1fd1f291b41c6ca8ed89ac2f7c128a2b"
+    },
+    {
+      "scenario_id": "pm_pilot_urgent",
+      "work_language": "en",
+      "reviewed_source_hash": "6d151e276528bf27132d136b2a41bc256b7a6437f193c101596091484e252750",
+      "installed_scenario_hash": "a9906fcba342bdd0d14936599187692758325e382f08e696ec0a02678f628ba4",
+      "authored_content_digest": "ce2db9abe4b63504386b3200a9aa5df820facf85e551aa997a9753d4eeadec07"
+    },
+    {
+      "scenario_id": "pm_pilot_capacity15",
+      "work_language": "zh",
+      "reviewed_source_hash": "0348f566f4f2f112d4e2f80e72e735c58c87a38f86991b347c6d5215981d36c7",
+      "installed_scenario_hash": "6586cf2cb06e0caf94029fdf831913ce5c6f989ee01ae8046e64fd35acba7b16",
+      "authored_content_digest": "bef93b1126f3d2e7fb530a9e3ecc3beec02675984a549cc347fb2ad3b0e20f1b"
+    },
+    {
+      "scenario_id": "pm_pilot_capacity15",
+      "work_language": "en",
+      "reviewed_source_hash": "0e434a840f5fbb8e540f4ac5ce9aa9b5b3351373c0e982e4e2c7b7924f08f19b",
+      "installed_scenario_hash": "c6baf36342bd11f5179c9c34f9c4c01fbbc2baefa860225b8c5f30d9545f59b5",
+      "authored_content_digest": "8bffeec973e2592450f1f9fabf5fbd596de03259f7088c6a0fcaa9b0b9bad6e9"
+    }
+  ]
+}

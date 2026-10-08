@@ -1,0 +1,39 @@
+{
+  "adoption_record": null,
+  "as_of": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "business_response": "example",
+  "evaluation": {
+    "media_type": "application/json",
+    "path": "files/payload.json",
+    "schema_version": 2,
+    "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+  },
+  "historical_responsibilities": null,
+  "id": "example",
+  "independent_understanding": "unobserved",
+  "items": [],
+  "mode": "advisory",
+  "model_coverage": 1.0,
+  "next_options": [],
+  "read_boundaries": null,
+  "read_projection": null,
+  "rule_items": null,
+  "schema_version": 2,
+  "session_id": "example",
+  "subject": {
+    "config_version": null,
+    "kind": "document",
+    "object_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "verified_coverage": 1.0,
+  "verified_facts": null,
+  "version": 1
+}

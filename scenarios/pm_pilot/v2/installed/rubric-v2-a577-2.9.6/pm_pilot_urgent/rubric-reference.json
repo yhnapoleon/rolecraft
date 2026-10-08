@@ -1,0 +1,25 @@
+{
+  "rules_revision": "rules-v4-rubric-v2-c2",
+  "rubric_revision": "rubric-v2-candidate-2",
+  "provider": "W05",
+  "status": "installed_advisory_definitions",
+  "w02_produces_scores": false,
+  "normal_v4_validated": false,
+  "semantic_status": "waiting_for_model",
+  "criteria": [
+    "R1.target",
+    "R1.metrics",
+    "R2.support",
+    "R2.unknowns",
+    "R2.failure_analysis",
+    "R3.capacity",
+    "R3.resources",
+    "R4.functional_tests",
+    "R4.staleness_test",
+    "R5.impact",
+    "R5.adjustment",
+    "R6.consistency",
+    "R6.operations",
+    "R6.alternatives"
+  ]
+}

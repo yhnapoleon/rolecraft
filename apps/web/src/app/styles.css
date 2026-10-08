@@ -595,6 +595,26 @@ button.crumb:hover { color: var(--ink); }
 .ctx { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; height: 26px; padding: 0 9px; border: 0; border-radius: 999px; background: var(--fill); color: var(--ink-2); font-size: 12px; }
 .ctx span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
 .ctx.add { color: var(--accent-ink); background: var(--accent-tint); }
+/* A quoted test travels with the next message; it is shown, not edited. */
+.review-practice { display: grid; gap: 10px; }
+.practice-option { display: grid; gap: 8px; padding: 12px; border-radius: 12px; background: var(--glass-strong); }
+.practice-option .row-title { margin: 0; font-size: 13.5px; }
+.practice-basis { display: grid; gap: 4px; margin: 0; padding-left: 1.1em; list-style: disc; color: var(--ink-2); font-size: 12.5px; line-height: 1.5; }
+.practice-option .btn { justify-self: start; }
+.practice-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.practice-browse { display: grid; gap: 8px; }
+.review-practice .warn-line .btn { flex: none; }
+.practice-links { display: grid; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.practice-link { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
+.practice-origin { display: flex; align-items: center; gap: 8px; margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--fill); color: var(--ink-2); font-size: 12.5px; line-height: 1.5; }
+.row-title .tag { margin-left: 6px; vertical-align: 1px; }
+.agent-config { display: grid; gap: 6px; margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--fill); font-size: 12.5px; line-height: 1.5; }
+.agent-config p { margin: 0; }
+.agent-config .btn { justify-self: start; }
+.chat-quote { position: relative; margin: 0 12px 8px; padding: 8px 34px 8px 10px; border-radius: 12px; background: var(--fill); color: var(--ink-2); font-size: 12.5px; line-height: 1.5; }
+.chat-quote-label { display: inline-flex; align-items: center; gap: 5px; color: var(--ink-3); font-size: 11.5px; }
+.chat-quote-text { margin: 3px 0 0; max-height: 7.5em; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.chat-quote .btn { position: absolute; top: 4px; right: 4px; }
 .composer { display: flex; align-items: flex-end; gap: 8px; margin: 0 12px 12px; padding: 8px 8px 8px 12px; border-radius: 16px; background: var(--surface); box-shadow: var(--shadow-card); }
 .composer textarea { flex: 1; min-height: 40px; max-height: 180px; resize: none; border: 0; background: none; padding: 6px 0; font-size: 13.5px; line-height: 1.5; outline: none; }
 @supports (field-sizing: content) { .composer textarea { field-sizing: content; } }

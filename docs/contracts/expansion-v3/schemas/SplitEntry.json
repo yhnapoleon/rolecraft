@@ -1,0 +1,95 @@
+{
+  "$defs": {
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "ancestors": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Ancestors",
+      "type": "array"
+    },
+    "component_id": {
+      "minLength": 1,
+      "title": "Component Id",
+      "type": "string"
+    },
+    "file": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "record_id": {
+      "minLength": 1,
+      "title": "Record Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "seen_test": {
+      "default": false,
+      "title": "Seen Test",
+      "type": "boolean"
+    },
+    "split": {
+      "enum": [
+        "train",
+        "dev",
+        "test",
+        "regression"
+      ],
+      "title": "Split",
+      "type": "string"
+    },
+    "structure_id": {
+      "minLength": 1,
+      "title": "Structure Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "record_id",
+    "structure_id",
+    "component_id",
+    "split",
+    "file"
+  ],
+  "title": "SplitEntry",
+  "type": "object"
+}

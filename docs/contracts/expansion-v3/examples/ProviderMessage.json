@@ -1,0 +1,6 @@
+{
+  "content": "example",
+  "role": "system",
+  "schema_version": 2,
+  "tool_call_id": null
+}

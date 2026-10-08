@@ -1,0 +1,12 @@
+{
+  "parent_submission": {
+    "config_version": null,
+    "kind": "submission",
+    "object_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "reason": "example",
+  "schema_version": 2
+}

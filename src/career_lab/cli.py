@@ -56,15 +56,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in {"serve", "worker"}:
         import os
         import time
-        from career_lab.api.app import create_app
-        from career_lab.runtime.model_adapter import LocalModel, OpenAICompatibleModel
+        from career_lab.api.vertical_runtime import create_runtime_app
         from career_lab.jobs.worker import Worker
-        model = LocalModel()
-        if args.provider != "local":
-            defaults = {"deepseek": ("ds.txt", "https://api.deepseek.com", "deepseek-chat"), "openai": ("openai.txt", "https://api.openai.com/v1", "gpt-4.1-mini")}
-            key_file, url, name = defaults[args.provider]
-            model = OpenAICompatibleModel.from_key_file(Path(os.getenv("CAREER_LAB_KEY_FILE", key_file)), base_url=os.getenv("CAREER_LAB_BASE_URL", url), model=os.getenv("CAREER_LAB_MODEL", name))
-        app = create_app(args.database_url, model=model)
+        app = create_runtime_app(args.database_url, provider=args.provider)
         if args.command == "serve":
             import uvicorn
             uvicorn.run(app, host=args.host, port=args.port)

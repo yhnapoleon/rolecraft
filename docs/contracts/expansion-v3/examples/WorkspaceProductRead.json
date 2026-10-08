@@ -1,0 +1,47 @@
+{
+  "adoption": {
+    "adopted_at": null,
+    "adopter": null,
+    "schema_version": 2,
+    "status": "unadopted"
+  },
+  "author": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "content": "",
+  "content_hash": "b3a959a7421ad56fe983a7592f23da8c9b52ec39bad3e1b522ae09b3817f4d0a",
+  "created_at": "2026-10-06T12:00:00Z",
+  "cycle": {
+    "config_version": null,
+    "kind": "cycle",
+    "object_id": "example",
+    "schema_version": 2,
+    "session_id": "example",
+    "version": 1
+  },
+  "draft": true,
+  "evidence_refs": [],
+  "executor": {
+    "delegation_id": null,
+    "id": "example",
+    "kind": "human",
+    "schema_version": 2
+  },
+  "kind": "text",
+  "legacy": null,
+  "product_id": "example",
+  "purpose": "exploration",
+  "removed_at": null,
+  "schema_version": 2,
+  "session_id": "example",
+  "shares": [],
+  "source_return_id": null,
+  "structured_payload": null,
+  "task": null,
+  "title": "",
+  "version": 1,
+  "visibility": null
+}
