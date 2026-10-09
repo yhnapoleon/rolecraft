@@ -1,0 +1,115 @@
+{
+  "$defs": {
+    "EngineerProbeClaim": {
+      "additionalProperties": false,
+      "properties": {
+        "probe_id": {
+          "minLength": 1,
+          "title": "Probe Id",
+          "type": "string"
+        },
+        "result": {
+          "enum": [
+            "pass",
+            "fail",
+            "error"
+          ],
+          "title": "Result",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "probe_id",
+        "result"
+      ],
+      "title": "EngineerProbeClaim",
+      "type": "object"
+    },
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "config": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "contract_version": {
+      "const": "engineer-review-v1",
+      "title": "Contract Version",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "pack": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "results": {
+      "items": {
+        "$ref": "#/$defs/EngineerProbeClaim"
+      },
+      "minItems": 1,
+      "title": "Results",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "contract_version",
+    "id",
+    "pack",
+    "config",
+    "created_at",
+    "results"
+  ],
+  "title": "EngineerClaimedReport",
+  "type": "object"
+}

@@ -1,0 +1,270 @@
+{
+  "advice": {
+    "affects_score": false,
+    "model": null,
+    "schema_version": 2,
+    "status": "waiting_model",
+    "text": null,
+    "visibility": "hidden"
+  },
+  "claim_check": "not_provided",
+  "contract_version": "engineer-review-v1",
+  "created_at": "2026-10-06T12:00:00Z",
+  "findings": [
+    {
+      "description": "Synthetic rule comparison",
+      "kind": "target_fix",
+      "probe_ids": [
+        "probe-1"
+      ],
+      "schema_version": 2,
+      "status": "pass",
+      "visibility": "public"
+    }
+  ],
+  "id": "review-1",
+  "input": {
+    "baseline_config": {
+      "media_type": "application/json",
+      "path": "files/example.json",
+      "schema_version": 2,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "config": {
+      "media_type": "application/json",
+      "path": "files/example.json",
+      "schema_version": 2,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "contract_version": "engineer-review-v1",
+    "model": null,
+    "pack": {
+      "media_type": "application/json",
+      "path": "files/example.json",
+      "schema_version": 2,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "probe_ids": [
+      "probe-1"
+    ],
+    "probe_suite": {
+      "media_type": "application/json",
+      "path": "files/example.json",
+      "schema_version": 2,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "resolved_config": {
+      "differences": {},
+      "effective": {
+        "chunk_size": 500,
+        "config_version": 0,
+        "domains": [],
+        "fallback": "human",
+        "freshness_guard": "none",
+        "id": "example",
+        "launch_day": 7,
+        "manual_domains": [],
+        "min_score": 0.35,
+        "min_score_calibration": null,
+        "participants": 0,
+        "prohibited_topics": [],
+        "retrieval_limit": 3,
+        "schema_version": 2,
+        "scope_filter": true,
+        "session_id": "example",
+        "update_strategy": "daily",
+        "version": 1,
+        "work_items": []
+      },
+      "requested": {
+        "chunk_size": 500,
+        "config_version": 0,
+        "domains": [],
+        "fallback": "human",
+        "freshness_guard": "none",
+        "id": "example",
+        "launch_day": 7,
+        "manual_domains": [],
+        "min_score": 0.35,
+        "min_score_calibration": null,
+        "participants": 0,
+        "prohibited_topics": [],
+        "retrieval_limit": 3,
+        "schema_version": 2,
+        "scope_filter": true,
+        "session_id": "example",
+        "update_strategy": "daily",
+        "version": 1,
+        "work_items": []
+      },
+      "schema_version": 2
+    },
+    "resource_snapshot": {
+      "media_type": "application/json",
+      "path": "files/example.json",
+      "schema_version": 2,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "reviewer_version": {
+      "media_type": "application/json",
+      "path": "files/example.json",
+      "schema_version": 2,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "scenario": {
+      "media_type": "application/json",
+      "path": "files/example.json",
+      "schema_version": 2,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "schema_version": 2,
+    "source_as_of": {
+      "business_seq": 0,
+      "schema_version": 2,
+      "storage_revision": 0,
+      "workspace_revision": 0
+    },
+    "submission": {
+      "media_type": "application/json",
+      "path": "files/example.json",
+      "schema_version": 2,
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "work_language": "en"
+  },
+  "input_hash": "9ff5b8616f045a08f0a1d5585c01d66e193109d80f377b883a370cf0ce2cb553",
+  "results": [
+    {
+      "actual": {
+        "answer": "example",
+        "as_of": {
+          "business_seq": 0,
+          "schema_version": 2,
+          "storage_revision": 0,
+          "workspace_revision": 0
+        },
+        "citations": [],
+        "config": {
+          "differences": {},
+          "effective": {
+            "chunk_size": 500,
+            "config_version": 0,
+            "domains": [],
+            "fallback": "human",
+            "freshness_guard": "none",
+            "id": "example",
+            "launch_day": 7,
+            "manual_domains": [],
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "participants": 0,
+            "prohibited_topics": [],
+            "retrieval_limit": 3,
+            "schema_version": 2,
+            "scope_filter": true,
+            "session_id": "example",
+            "update_strategy": "daily",
+            "version": 1,
+            "work_items": []
+          },
+          "requested": {
+            "chunk_size": 500,
+            "config_version": 0,
+            "domains": [],
+            "fallback": "human",
+            "freshness_guard": "none",
+            "id": "example",
+            "launch_day": 7,
+            "manual_domains": [],
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "participants": 0,
+            "prohibited_topics": [],
+            "retrieval_limit": 3,
+            "schema_version": 2,
+            "scope_filter": true,
+            "session_id": "example",
+            "update_strategy": "daily",
+            "version": 1,
+            "work_items": []
+          },
+          "schema_version": 2
+        },
+        "config_ref": {
+          "config_version": 0,
+          "kind": "config",
+          "object_id": "example",
+          "schema_version": 2,
+          "session_id": "example",
+          "version": 1
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "error_code": null,
+        "execution": {
+          "attempts": [],
+          "chunks": [],
+          "cost_complete": false,
+          "executed_at": "2026-10-06T12:00:00Z",
+          "executor": {
+            "delegation_id": null,
+            "id": "example",
+            "kind": "human",
+            "schema_version": 2
+          },
+          "indexed_versions": {},
+          "projection_actor": "example",
+          "schema_version": 2,
+          "source_versions": {},
+          "used_versions": {}
+        },
+        "id": "example",
+        "observed_coverage": [],
+        "query": "example",
+        "schema_version": 2,
+        "session_id": "example",
+        "status": "answered",
+        "version": 1
+      },
+      "config_hash": "dd88de2633870259c10363eaebc421357d242bb83e0b41a3d1ec379628fce65d",
+      "elapsed_seconds": 0.0,
+      "error_code": null,
+      "expected": {
+        "citation_versions": {},
+        "contains": [],
+        "effective_update_strategy": null,
+        "error_code": null,
+        "schema_version": 2,
+        "status": "answered"
+      },
+      "probe_id": "probe-1",
+      "query": "example",
+      "result": "pass",
+      "schema_version": 2,
+      "visibility": "public"
+    }
+  ],
+  "reviewer": {
+    "delegation_id": null,
+    "id": "example-reviewer",
+    "kind": "system",
+    "schema_version": 2
+  },
+  "schema_version": 2,
+  "status": "verified",
+  "submission": {
+    "media_type": "application/json",
+    "path": "files/example.json",
+    "schema_version": 2,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "unresolved": [
+    {
+      "description": "Synthetic open item",
+      "id": "open-1",
+      "probe_ids": [],
+      "schema_version": 2,
+      "visibility": "public"
+    }
+  ]
+}

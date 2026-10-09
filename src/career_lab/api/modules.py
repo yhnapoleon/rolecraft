@@ -135,6 +135,8 @@ class ExtensionRegistry:
         self.scenarios[name] = scenario
 
     def register(self, operation: Operation):
+        if operation.ready and not callable(operation.handler):
+            raise ValueError("ready operation requires a callable handler")
         if operation.name == "requests.read" and (
             operation.mutates or operation.capability != "read"
         ):
