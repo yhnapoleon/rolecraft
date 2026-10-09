@@ -146,7 +146,7 @@ function generationDetails(run) {
     unavailable: T('未配置模型', 'Model not configured'),
     failed: T('失败', 'Failed'),
   };
-  const label = Object.hasOwn(labels, mode) ? labels[mode] : T('模式未记录', 'Mode not recorded');
+  const label = Object.hasOwn(labels, mode) ? labels[mode] : T('模式信息暂不可用', 'Mode information unavailable');
   const sources = [...new Set(run.citations.map((c) => `${c.title || c.id} v${c.version}`))];
   const identity = [run.generation?.provider, run.generation?.model_revision].filter(Boolean);
   return `<div class="test-generation" data-generation-mode="${esc(Object.hasOwn(labels, mode) ? mode : 'unknown')}">
@@ -154,7 +154,7 @@ function generationDetails(run) {
     ${identity.length ? `<span>${esc(identity.join(' / '))}</span>` : ''}
     ${mode === 'llm' ? `<span>${T('回答待核验', 'Answer awaiting verification')}</span>` : ''}
     ${sources.length ? `<span>${T('引用：', 'Citations: ')}${esc(sources.join(' · '))}</span>` : ''}
-    ${run.effectiveConfig ? `<details class="test-effective-config"><summary>${T('本次有效配置', 'Effective configuration for this run')}</summary><pre>${esc(JSON.stringify(run.effectiveConfig, null, 2))}</pre></details>` : `<span>${T('本次有效配置未记录', 'Effective configuration not recorded')}</span>`}
+    ${run.effectiveConfig ? `<details class="test-effective-config"><summary>${T('本次有效配置', 'Effective configuration for this run')}</summary><pre>${esc(JSON.stringify(run.effectiveConfig, null, 2))}</pre></details>` : `<span>${T('本次有效配置暂不可用', 'Effective configuration unavailable')}</span>`}
   </div>`;
 }
 

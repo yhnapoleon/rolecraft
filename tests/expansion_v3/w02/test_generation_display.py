@@ -39,6 +39,18 @@ try {
         ? '本次有效配置' : 'Effective configuration for this run';
       assert.ok(html.includes(configLabel));
       assert.equal(JSON.stringify(run), before);
+      const unavailable = testRunView({
+        run: {...run, mode: 'waiting_model', effectiveConfig: undefined}, runs: [run],
+        item: {id: 'case', revision: 2}, work: {adopted: true},
+        session: {testNotes: {}, world: {status: 'active'}}, md: (value) => value,
+      });
+      const missingMode = language === 'zh'
+        ? '模式信息暂不可用' : 'Mode information unavailable';
+      const missingConfig = language === 'zh'
+        ? '本次有效配置暂不可用' : 'Effective configuration unavailable';
+      assert.ok(unavailable.includes(missingMode));
+      assert.ok(unavailable.includes(missingConfig));
+      assert.ok(!unavailable.includes('未记录') && !unavailable.includes('not recorded'));
     }
   }
 } finally { await server.close(); }
