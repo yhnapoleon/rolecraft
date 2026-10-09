@@ -1,3 +1,4 @@
+import { presentReply } from './reply-presentation';
 /** Native v4 colleague slot. The injected client owns API calls, journals and jobs. */
 import { T, onLocaleChange } from '../../app/i18n';
 import './roles.css';
@@ -30,6 +31,8 @@ export interface ConversationTurn {
   status: TurnStatus;
   reply?: string;
   materials?: readonly MaterialReference[];
+  omissionCount?: number;
+  stale?: boolean;
   /** Only a learner-safe explanation already projected by the real client. */
   explanation?: string;
   canRetry?: boolean;
@@ -178,6 +181,7 @@ export function mount(
   const drafts = new Map<RoleId, string>();
   const people = new Map<RoleId, HTMLButtonElement>();
   const displayAttempts = new Set<string>();
+  const expandedReplies = new Set<string>();
   const visibleReplies = new Map<HTMLElement, { turnId: string; visible: boolean }>();
   const markDisplayed = (node: HTMLElement) => {
     const entry = visibleReplies.get(node);
@@ -349,9 +353,45 @@ export function mount(
       if (turn.status === 'completed' && turn.reply !== undefined) {
         const replyLabel = el('strong');
         replyLabel.textContent = colleague?.name || roleTitle(selected);
+        const presentation = presentReply(turn.reply);
+        const replyStatus = el('p', 'rc-roles__reply-status');
+        replyStatus.textContent = presentation.status;
+        const preview = el('p', 'rc-roles__preview');
+        preview.textContent = presentation.summary;
+        item.append(replyLabel, replyStatus, preview);
+        if (presentation.versionNote) {
+          const versionNote = el('p', 'rc-roles__limitation');
+          versionNote.textContent = presentation.versionNote;
+          item.append(versionNote);
+        }
+        if (turn.omissionCount) {
+          const limitation = el('p', 'rc-roles__limitation');
+          limitation.textContent = T(
+            '部分资料因授权或上下文限额未纳入本次回复。',
+            'Some sources were omitted because of access or context limits.',
+          );
+          item.append(limitation);
+        }
+        if (turn.stale) {
+          const stale = el('p', 'rc-roles__limitation');
+          stale.textContent = T(
+            '引用包含旧版本；原回复按当时记录保留。',
+            'Citations include an older version; the original reply is retained.',
+          );
+          item.append(stale);
+        }
+        const details = el('details', 'rc-roles__details');
+        details.open = expandedReplies.has(turn.id);
+        const summary = el('summary');
+        summary.textContent = T('完整原话与条件', 'Full reply and conditions');
         const reply = el('p', 'rc-roles__reply');
         reply.textContent = turn.reply;
-        item.append(replyLabel, reply);
+        details.append(summary, reply);
+        details.addEventListener('toggle', () => {
+          if (details.open) expandedReplies.add(turn.id);
+          else expandedReplies.delete(turn.id);
+        });
+        item.append(details);
         if (displayObserver && turn.canRecordDisplay !== false && !turn.displayRecorded) {
           visibleReplies.set(reply, { turnId: turn.id, visible: false });
           displayObserver.observe(reply);
@@ -359,7 +399,7 @@ export function mount(
         if (turn.materials?.length) {
           const refs = el('div', 'rc-roles__materials');
           refs.setAttribute('aria-label', T('引用材料', 'Referenced materials'));
-          for (const ref of turn.materials) {
+          for (const [index, ref] of turn.materials.entries()) {
             const text = (ref.title.trim() || T('材料', 'Material')) + ' · v' + ref.version;
             const link = adapter.openMaterial
               ? button('rc-roles__material')
@@ -376,7 +416,8 @@ export function mount(
                     }
                   });
               });
-            refs.append(link);
+            if (index === 0) refs.append(link);
+            else details.append(link);
           }
           item.append(refs);
         }

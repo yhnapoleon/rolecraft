@@ -22,7 +22,10 @@ class Form {
   removeEventListener() {}
 }
 beforeEach(() => vi.stubGlobal('HTMLFormElement', Form));
-function setup(changeDuringRead: boolean) {
+function setup(
+  changeDuringRead: boolean,
+  presentation?: { text: string; omissionCount: number; currentVersion: number },
+) {
   let calls = 0,
     handle: V4SlotHandle;
   let snapshot: V4HostSnapshot = {
@@ -52,7 +55,8 @@ function setup(changeDuringRead: boolean) {
       session_id: 's',
       role_id: 'supervisor',
       question: 'question',
-      text: 'reply',
+      text: presentation?.text ?? 'reply',
+      omission_count: presentation?.omissionCount ?? 0,
       request: turn.ref,
     },
   };
@@ -62,6 +66,10 @@ function setup(changeDuringRead: boolean) {
     query: async () => ({
       objects: changeDuringRead && calls === 0 ? [turn] : [turn, reply],
       role_mode: 'local_reference',
+      workspace: {
+        material_titles: { 'policy:1': 'Policy' },
+        source_versions: { policy: presentation?.currentVersion ?? 1 },
+      },
     }),
     recover: async () => {
       calls++;
@@ -113,6 +121,23 @@ it('rereads once when a new reply revision arrives during recovery', async () =>
     const view = await test.read();
     expect(test.calls()).toBe(2);
     expect(view.turns[0].reply).toBe('reply');
+  } finally {
+    test.destroy();
+  }
+});
+
+it('keeps access limits and old source versions in the public colleague view', async () => {
+  const test = setup(false, {
+    text: '[Policy · v1] This applies only after explicit approval.',
+    omissionCount: 2,
+    currentVersion: 2,
+  });
+  try {
+    const view = await test.read();
+    expect(view.turns[0].omissionCount).toBe(2);
+    expect(view.turns[0].stale).toBe(true);
+    expect(view.turns[0].materials).toEqual([{ id: 'policy', title: 'Policy', version: 1 }]);
+    expect(view.turns[0].reply).toBe('[Policy · v1] This applies only after explicit approval.');
   } finally {
     test.destroy();
   }

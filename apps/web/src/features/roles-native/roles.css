@@ -286,3 +286,28 @@
 .rc-resource-fields [hidden] {
   display: none !important;
 }
+
+.rc-roles__reply-status,
+.rc-roles__limitation {
+  color: var(--ink-2, #4b505b);
+  font-size: 12px;
+}
+.rc-roles__preview,
+.rc-roles__details,
+.rc-roles__details p {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+.rc-roles__details summary {
+  cursor: pointer;
+  color: var(--ink-2, #4b505b);
+  padding-block: 8px;
+}
+.rc-roles__details summary:focus-visible {
+  outline: 2px solid var(--focus, var(--accent, #15171c));
+  outline-offset: 2px;
+}
+.rc-roles__details[open] > .rc-roles__reply {
+  padding-top: 8px;
+}

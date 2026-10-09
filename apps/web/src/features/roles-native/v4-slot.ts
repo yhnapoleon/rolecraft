@@ -258,6 +258,16 @@ export function mount(context: V4SlotContext): V4SlotHandle {
           status,
           reply: reply?.content.text,
           materials,
+          omissionCount:
+            reply &&
+            Number.isInteger(reply.content.omission_count) &&
+            reply.content.omission_count > 0
+              ? Number(reply.content.omission_count)
+              : 0,
+          stale: materials.some((material) => {
+            const current = publicData.data.workspace?.source_versions?.[material.id];
+            return typeof current === 'number' && current > material.version;
+          }),
           canRecordDisplay:
             !!host.snapshot().available['turns.display'] &&
             !pending &&
