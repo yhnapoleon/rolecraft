@@ -4,6 +4,7 @@ from pathlib import Path
 import argparse, json, hashlib, inspect
 from career_lab.contracts.v2.discovery import public_models, REQUEST_MODELS
 from career_lab.contracts.v2.examples import sample_model
+from career_lab.contracts.v2.compatibility import without_provenance
 
 CONSUMERS = {
     "W02": [
@@ -214,7 +215,8 @@ CONSUMERS["W03"] += [
     "WorkspaceProductPage",
     "WorkspaceSharePage",
 ]
-CONSUMERS["W05"] += ["FeedbackReadBoundary"]
+CONSUMERS["W05"] += ["FeedbackReadBoundary", "RegisteredModelAdvice"]
+CONSUMERS["W08"] += ["RegisteredModelAdvice"]
 CONSUMERS["W05"] += [
     "FeedbackReferenceCheck",
     "FeedbackActivity",
@@ -407,6 +409,17 @@ def integration_example(model):
         return model(items=(), shares=(), sharing_complete=True, as_of=sample_model(VersionPoint))
     if model is WorkspaceSharePage:
         return model(items=(), sharing_complete=True, as_of=sample_model(VersionPoint))
+    from career_lab.contracts.v2 import RegisteredModelAdvice
+
+    if model is RegisteredModelAdvice:
+        return model(
+            request_id="example-request",
+            job_id="example-job",
+            input_hash=None,
+            registration=None,
+            status="unavailable",
+            error_code="model_unavailable",
+        )
     return sample_model(model)
 
 
@@ -427,7 +440,7 @@ def export(root: Path, output: Path):
     entries = {}
     for name, model in models.items():
         example = integration_example(model)
-        dump(output / "schemas" / f"{name}.json", model.model_json_schema())
+        dump(output / "schemas" / f"{name}.json", without_provenance(model.model_json_schema()))
         dump(output / "examples" / f"{name}.json", example.model_dump(mode="json"))
         entries[name] = {
             "owner": "W01",
@@ -450,7 +463,7 @@ def export(root: Path, output: Path):
     from career_lab.api.v4_extensions import mount_v4_extensions
 
     mount_v4_extensions(app)
-    dump(output / "openapi.json", app.openapi())
+    dump(output / "openapi.json", without_provenance(app.openapi()))
     app.state.store.close()
     # Only implementation files here: the complete source tree is identified by the delivery receipt.
     files = set((root / "src/career_lab/contracts").rglob("*.py"))
@@ -732,6 +745,47 @@ def export(root: Path, output: Path):
     )
     manifest["integration_changes"]["native-runtime-slice"] = (
         "One standard API/worker assembly; native investigation, assistant trials, resource decisions and colleague slots. Explicit failed-job refresh, no automatic model retry including expired leases, exact historical public event/source reads, real material activation in recovered role provenance. W05 r9 production evidence, atomic feedback and native callbacks are assembled with frozen advisory policies; W03 native composition remains pending."
+    )
+    manifest["previous_contract_revision"] = (
+        "expansion-v3-7f64f17784ad7756fefc53682954b1318bddb58eecdc5dbe645f3187cbc321ed"
+    )
+    manifest["integration_changes"]["056-default-installed-runtime"] = (
+        "Default API/worker loads the current installed package and verifies its actual "
+        "manifest identity; explicit roots remain authoritative. Author roots remain "
+        "reproducible uninstalled inputs."
+    )
+    manifest["integration_changes"]["056-role-call-guard"] = (
+        "Durable phase reservation keyed by original request and explicit refresh generation; "
+        "worker/HTTP recovery and provider changes cannot reissue calls. Mechanical "
+        "language/binding verifier only, semantic quality unverified; local replies unchanged. "
+        "Controlled fixture workers inherit production no-retry policy."
+    )
+    manifest["integration_changes"]["056-v4-extension-contract"] = (
+        "Typed human-only delegation list and practice request/response schemas; exact OpenAPI "
+        "mounted routes; durable source/target lifecycle and recovery documented. Authored "
+        "content review lineage is verified against original manifest bytes and non-runtime "
+        "files after rebinding."
+    )
+    manifest["review_fixes"]["056-role-call-guard"] = (
+        "Durable phase reservation keyed by original request and explicit refresh generation; "
+        "worker/HTTP recovery and provider changes cannot reissue calls. Mechanical "
+        "language/binding verifier only, semantic quality unverified; local replies unchanged. "
+        "Controlled fixture workers inherit production no-retry policy."
+    )
+    manifest["review_fixes"]["QA055-13"] = (
+        "Formal schemas/OpenAPI/source inclusion and documented identity, authorization, "
+        "recovery and error semantics. Multi-process/PostgreSQL and cross-directory migration "
+        "remain unverified conditional checks."
+    )
+    manifest["boundaries"].append(
+        "056: preceding stage boundaries are historical. Private non-local plumbing now has "
+        "controlled no-network regression evidence, not real provider quality, PostgreSQL or "
+        "final package acceptance. W02 must rebind to this new contract before standard "
+        "installed runtime acceptance."
+    )
+    manifest["integration_changes"]["registered-model-advice"] = (
+        "Optional advisory-only relation results and registration identity; complete input traces "
+        "gate each new advice segment. Missing fields retain historical wire bytes."
     )
     dump(output / "manifest.json", manifest)
     revision = "expansion-v3-" + sha(output / "manifest.json")
