@@ -1,0 +1,184 @@
+{
+  "revision": "engineer-rubric-v1-final-20261009",
+  "status": "final",
+  "approved_on": "2026-10-09",
+  "role": "engineer",
+  "mode": "advisory",
+  "label_order": [
+    "MET",
+    "PARTIAL",
+    "NOT_MET",
+    "INSUFFICIENT",
+    "NOT_APPLICABLE"
+  ],
+  "definition_source": {
+    "technical_section": "Expansion specification v2.2 section 13.1",
+    "product_decision": "项目定义 / 2026-10-09 评价标准 rubric-v2 定稿"
+  },
+  "publication": {
+    "installed": false,
+    "rebind_after": "phase_Q_release",
+    "existing_bundles": "unchanged",
+    "running_sessions": "retain original evaluation binding"
+  },
+  "score_policy": {
+    "single_total_score": false,
+    "weights": null,
+    "reason": "No engineer weights were assigned in the approved source; no aggregate grade is defined."
+  },
+  "annotation_policy": {
+    "label_conditions": "criterion-specific conditions below; every label must remain inside the supplied verified rule bound, including a PARTIAL lower bound",
+    "technical_failure": "generation status only, not a semantic training label",
+    "model_unavailable": "waiting_model; no invented semantic conclusion",
+    "retries": 0,
+    "format": "free text and templates are equivalent",
+    "unobserved": "not proof of absence"
+  },
+  "criteria": [
+    {
+      "id": "E1.target_fixed",
+      "title": {
+        "zh": "目标失败已修复",
+        "en": "Target failures repaired"
+      },
+      "evaluation_mode": "rule",
+      "rule_calibratable": true,
+      "label_conditions": {
+        "zh": {
+          "MET": "在固定任务包和提交配置的可信复跑中，全部目标失败用例通过其有效验收条件。",
+          "PARTIAL": "部分目标失败已通过、其余仍失败，且目标集合与复跑记录完整可比。",
+          "NOT_MET": "完整可信复跑确认目标失败均未修复，或声称修复的目标仍明确失败且没有已修复部分。",
+          "INSUFFICIENT": "任务包、配置版本、目标集合或复跑证据不足；执行故障单列，不能当作修复失败。",
+          "NOT_APPLICABLE": "明确的任务包没有需修复的目标失败；任务包缺失不等于无目标。"
+        },
+        "en": {
+          "MET": "A trustworthy rerun on the fixed pack and submitted configuration passes the valid acceptance conditions for every target failure.",
+          "PARTIAL": "Some target failures pass while others still fail, with a complete comparable target set and rerun ledger.",
+          "NOT_MET": "A complete trustworthy rerun confirms no target failure was repaired, or claimed repairs still fail with no verified repaired portion.",
+          "INSUFFICIENT": "The pack, configuration version, target set or rerun evidence is insufficient. Execution failures are recorded separately, not treated as unsuccessful repair.",
+          "NOT_APPLICABLE": "The explicit task pack contains no target failure requiring repair. A missing pack is not an empty target set."
+        }
+      },
+      "description": {
+        "zh": "目标失败已修复\nMET: 在固定任务包和提交配置的可信复跑中，全部目标失败用例通过其有效验收条件。\nPARTIAL: 部分目标失败已通过、其余仍失败，且目标集合与复跑记录完整可比。\nNOT_MET: 完整可信复跑确认目标失败均未修复，或声称修复的目标仍明确失败且没有已修复部分。\nINSUFFICIENT: 任务包、配置版本、目标集合或复跑证据不足；执行故障单列，不能当作修复失败。\nNOT_APPLICABLE: 明确的任务包没有需修复的目标失败；任务包缺失不等于无目标。",
+        "en": "Target failures repaired\nMET: A trustworthy rerun on the fixed pack and submitted configuration passes the valid acceptance conditions for every target failure.\nPARTIAL: Some target failures pass while others still fail, with a complete comparable target set and rerun ledger.\nNOT_MET: A complete trustworthy rerun confirms no target failure was repaired, or claimed repairs still fail with no verified repaired portion.\nINSUFFICIENT: The pack, configuration version, target set or rerun evidence is insufficient. Execution failures are recorded separately, not treated as unsuccessful repair.\nNOT_APPLICABLE: The explicit task pack contains no target failure requiring repair. A missing pack is not an empty target set."
+      }
+    },
+    {
+      "id": "E2.no_regressions",
+      "title": {
+        "zh": "无回归",
+        "en": "No regressions"
+      },
+      "evaluation_mode": "rule",
+      "rule_calibratable": true,
+      "label_conditions": {
+        "zh": {
+          "MET": "同一冻结suite与可比环境的完整复跑没有新增失败，原先通过的用例均保持通过。",
+          "PARTIAL": "本项二元无回归判定不输出PARTIAL；已确认新增失败为NOT_MET，覆盖不足为INSUFFICIENT。",
+          "NOT_MET": "可比完整复跑证明至少一个原先通过的用例变为失败；新增失败不能被目标用例改善抵消。",
+          "INSUFFICIENT": "基线、suite、配置或运行环境不具可比性，或复跑覆盖／记录不完整，无法判断是否新增失败。",
+          "NOT_APPLICABLE": "经任务定义明确无需与既有行为比较；没有提供基线不能自动标为不适用。"
+        },
+        "en": {
+          "MET": "A complete rerun of the same frozen suite in a comparable environment introduces no failure; all previously passing cases still pass.",
+          "PARTIAL": "This binary no-regression criterion does not emit PARTIAL. A verified new failure is NOT_MET; incomplete coverage is INSUFFICIENT.",
+          "NOT_MET": "A complete comparable rerun establishes at least one previously passing case now fails. Target-case improvement cannot cancel a regression.",
+          "INSUFFICIENT": "The baseline, suite, configuration or environment is not comparable, or rerun coverage/records are incomplete, so regression status is unknown.",
+          "NOT_APPLICABLE": "The task explicitly requires no comparison with existing behavior. Absence of a supplied baseline does not establish inapplicability."
+        }
+      },
+      "description": {
+        "zh": "无回归\nMET: 同一冻结suite与可比环境的完整复跑没有新增失败，原先通过的用例均保持通过。\nPARTIAL: 本项二元无回归判定不输出PARTIAL；已确认新增失败为NOT_MET，覆盖不足为INSUFFICIENT。\nNOT_MET: 可比完整复跑证明至少一个原先通过的用例变为失败；新增失败不能被目标用例改善抵消。\nINSUFFICIENT: 基线、suite、配置或运行环境不具可比性，或复跑覆盖／记录不完整，无法判断是否新增失败。\nNOT_APPLICABLE: 经任务定义明确无需与既有行为比较；没有提供基线不能自动标为不适用。",
+        "en": "No regressions\nMET: A complete rerun of the same frozen suite in a comparable environment introduces no failure; all previously passing cases still pass.\nPARTIAL: This binary no-regression criterion does not emit PARTIAL. A verified new failure is NOT_MET; incomplete coverage is INSUFFICIENT.\nNOT_MET: A complete comparable rerun establishes at least one previously passing case now fails. Target-case improvement cannot cancel a regression.\nINSUFFICIENT: The baseline, suite, configuration or environment is not comparable, or rerun coverage/records are incomplete, so regression status is unknown.\nNOT_APPLICABLE: The task explicitly requires no comparison with existing behavior. Absence of a supplied baseline does not establish inapplicability."
+      }
+    },
+    {
+      "id": "E3.change_consistency",
+      "title": {
+        "zh": "修改说明与配置差异一致",
+        "en": "Change explanation matches configuration diff"
+      },
+      "evaluation_mode": "rule",
+      "rule_calibratable": true,
+      "label_conditions": {
+        "zh": {
+          "MET": "修改说明可为普通文字或结构化内容；其中经可信核准、可逐项比较的变更陈述覆盖全部实际配置差异，路径与前后值一致。规则比较已核准陈述，不推断动机是否合理。",
+          "PARTIAL": "已声明的可核准修改与实际一致，但在完整差异中漏述部分修改，且没有已证实的相反声明。",
+          "NOT_MET": "已核准的修改声明与真实路径、前后值或是否修改直接矛盾，或声称未变而实际已变。",
+          "INSUFFICIENT": "普通文字或结构化说明中的变更陈述尚无法可信核准为可比较信息，或父配置、提交配置及说明／差异绑定缺失；格式本身不导致待核，未核准内容不假装已理解。",
+          "NOT_APPLICABLE": "明确任务不要求修改说明且无配置修改责任；空说明或零差异不会自动免除已约定的说明责任。"
+        },
+        "en": {
+          "MET": "The explanation may be free text or structured content. Its reliably verified, item-comparable change claims cover the actual configuration diff with matching paths and before/after values. The rule compares verified claims without inferring whether motivations are reasonable.",
+          "PARTIAL": "Verifiable declared changes match reality, but some changes in the complete diff are omitted, with no verified contradictory declaration.",
+          "NOT_MET": "A verified change declaration contradicts actual paths, values or whether a change occurred, including an unchanged claim where a change exists.",
+          "INSUFFICIENT": "Claims in either free-text or structured explanations cannot yet be reliably verified as comparable information, or parent/submitted configurations or explanation-to-diff bindings are missing. Format alone is not the reason for uncertainty; do not pretend unverified content was understood.",
+          "NOT_APPLICABLE": "The explicit task requires no change explanation and carries no configuration-change duty. Empty notes or a zero diff do not waive an agreed explanation duty."
+        }
+      },
+      "description": {
+        "zh": "修改说明与配置差异一致\nMET: 修改说明可为普通文字或结构化内容；其中经可信核准、可逐项比较的变更陈述覆盖全部实际配置差异，路径与前后值一致。规则比较已核准陈述，不推断动机是否合理。\nPARTIAL: 已声明的可核准修改与实际一致，但在完整差异中漏述部分修改，且没有已证实的相反声明。\nNOT_MET: 已核准的修改声明与真实路径、前后值或是否修改直接矛盾，或声称未变而实际已变。\nINSUFFICIENT: 普通文字或结构化说明中的变更陈述尚无法可信核准为可比较信息，或父配置、提交配置及说明／差异绑定缺失；格式本身不导致待核，未核准内容不假装已理解。\nNOT_APPLICABLE: 明确任务不要求修改说明且无配置修改责任；空说明或零差异不会自动免除已约定的说明责任。",
+        "en": "Change explanation matches configuration diff\nMET: The explanation may be free text or structured content. Its reliably verified, item-comparable change claims cover the actual configuration diff with matching paths and before/after values. The rule compares verified claims without inferring whether motivations are reasonable.\nPARTIAL: Verifiable declared changes match reality, but some changes in the complete diff are omitted, with no verified contradictory declaration.\nNOT_MET: A verified change declaration contradicts actual paths, values or whether a change occurred, including an unchanged claim where a change exists.\nINSUFFICIENT: Claims in either free-text or structured explanations cannot yet be reliably verified as comparable information, or parent/submitted configurations or explanation-to-diff bindings are missing. Format alone is not the reason for uncertainty; do not pretend unverified content was understood.\nNOT_APPLICABLE: The explicit task requires no change explanation and carries no configuration-change duty. Empty notes or a zero diff do not waive an agreed explanation duty."
+      }
+    },
+    {
+      "id": "E4.reproducibility",
+      "title": {
+        "zh": "报告可复现",
+        "en": "Report reproducible"
+      },
+      "evaluation_mode": "rule",
+      "rule_calibratable": true,
+      "label_conditions": {
+        "zh": {
+          "MET": "报告绑定固定任务包、提交配置与suite，正式完整复跑逐项复现其声明的结果，摘要与原始记录一致。",
+          "PARTIAL": "报告明确限定的部分结果可复现，但已知要求范围尚未覆盖完整；不能把局部复现包装成完整验证。",
+          "NOT_MET": "在输入、版本与执行条件可比且记录完整时，正式复跑与报告声称的结果矛盾，或摘要与原始结果不符。",
+          "INSUFFICIENT": "报告身份、输入、执行条件或可信复跑记录缺失／冲突，或基础设施失败使复现结论不可得。",
+          "NOT_APPLICABLE": "明确任务范围没有回归报告或复现义务；缺报告不能自动标为不适用。"
+        },
+        "en": {
+          "MET": "The report binds the fixed pack, submitted configuration and suite, and an official complete rerun reproduces each claimed result with summaries matching raw records.",
+          "PARTIAL": "An explicitly limited part of the report is reproducible, but known required scope remains uncovered. Partial reproduction is not complete verification.",
+          "NOT_MET": "With comparable inputs, versions and execution conditions and complete records, the official rerun contradicts reported outcomes or summaries disagree with raw results.",
+          "INSUFFICIENT": "Report identity, inputs, execution conditions or trustworthy rerun records are missing/conflicting, or infrastructure failure prevents a reproducibility conclusion.",
+          "NOT_APPLICABLE": "The explicit task carries no regression-report or reproduction duty. A missing report does not make the duty inapplicable."
+        }
+      },
+      "description": {
+        "zh": "报告可复现\nMET: 报告绑定固定任务包、提交配置与suite，正式完整复跑逐项复现其声明的结果，摘要与原始记录一致。\nPARTIAL: 报告明确限定的部分结果可复现，但已知要求范围尚未覆盖完整；不能把局部复现包装成完整验证。\nNOT_MET: 在输入、版本与执行条件可比且记录完整时，正式复跑与报告声称的结果矛盾，或摘要与原始结果不符。\nINSUFFICIENT: 报告身份、输入、执行条件或可信复跑记录缺失／冲突，或基础设施失败使复现结论不可得。\nNOT_APPLICABLE: 明确任务范围没有回归报告或复现义务；缺报告不能自动标为不适用。",
+        "en": "Report reproducible\nMET: The report binds the fixed pack, submitted configuration and suite, and an official complete rerun reproduces each claimed result with summaries matching raw records.\nPARTIAL: An explicitly limited part of the report is reproducible, but known required scope remains uncovered. Partial reproduction is not complete verification.\nNOT_MET: With comparable inputs, versions and execution conditions and complete records, the official rerun contradicts reported outcomes or summaries disagree with raw results.\nINSUFFICIENT: Report identity, inputs, execution conditions or trustworthy rerun records are missing/conflicting, or infrastructure failure prevents a reproducibility conclusion.\nNOT_APPLICABLE: The explicit task carries no regression-report or reproduction duty. A missing report does not make the duty inapplicable."
+      }
+    },
+    {
+      "id": "E5.remaining_explanation",
+      "title": {
+        "zh": "对未修复项有说明",
+        "en": "Unresolved items explained"
+      },
+      "evaluation_mode": "semantic_advice",
+      "rule_calibratable": false,
+      "label_conditions": {
+        "zh": {
+          "MET": "对所有已核准未修复项说明当前证据、未解决原因、影响、限制与相称后续措施，解释与实际结果一致；此结论仍是语义建议。",
+          "PARTIAL": "部分未修复项解释充分，但有可定位的原因、影响或后续措施缺口。",
+          "NOT_MET": "完整内容核验确认没有说明应交代的未修复项，或说明与可靠事实明确矛盾并掩盖关键未解决问题。",
+          "INSUFFICIENT": "未修复项清单、所需证据或说明含义不足以核验；未接模型和技术故障单列生成状态，不伪造语义标签。",
+          "NOT_APPLICABLE": "完整可信复跑确认没有未修复项，且任务没有其他待解释问题；未提供清单不证明没有问题。"
+        },
+        "en": {
+          "MET": "Explain the evidence, cause, impact, limits and proportionate next steps for every verified unresolved item, consistently with actual results. The conclusion remains semantic advice.",
+          "PARTIAL": "Some unresolved items are adequately explained, but identifiable gaps remain in causes, impact or next steps.",
+          "NOT_MET": "Complete content review establishes no explanation for unresolved items that must be addressed, or reliable facts contradict an explanation that conceals a material unresolved problem.",
+          "INSUFFICIENT": "The unresolved-item list, required evidence or meaning of the explanation cannot be verified. Missing models and technical failures use generation status rather than fabricated semantic labels.",
+          "NOT_APPLICABLE": "A complete trustworthy rerun establishes no unresolved item and no other explanation duty. A missing list does not prove there are no problems."
+        }
+      },
+      "description": {
+        "zh": "对未修复项有说明\nMET: 对所有已核准未修复项说明当前证据、未解决原因、影响、限制与相称后续措施，解释与实际结果一致；此结论仍是语义建议。\nPARTIAL: 部分未修复项解释充分，但有可定位的原因、影响或后续措施缺口。\nNOT_MET: 完整内容核验确认没有说明应交代的未修复项，或说明与可靠事实明确矛盾并掩盖关键未解决问题。\nINSUFFICIENT: 未修复项清单、所需证据或说明含义不足以核验；未接模型和技术故障单列生成状态，不伪造语义标签。\nNOT_APPLICABLE: 完整可信复跑确认没有未修复项，且任务没有其他待解释问题；未提供清单不证明没有问题。",
+        "en": "Unresolved items explained\nMET: Explain the evidence, cause, impact, limits and proportionate next steps for every verified unresolved item, consistently with actual results. The conclusion remains semantic advice.\nPARTIAL: Some unresolved items are adequately explained, but identifiable gaps remain in causes, impact or next steps.\nNOT_MET: Complete content review establishes no explanation for unresolved items that must be addressed, or reliable facts contradict an explanation that conceals a material unresolved problem.\nINSUFFICIENT: The unresolved-item list, required evidence or meaning of the explanation cannot be verified. Missing models and technical failures use generation status rather than fabricated semantic labels.\nNOT_APPLICABLE: A complete trustworthy rerun establishes no unresolved item and no other explanation duty. A missing list does not prove there are no problems."
+      }
+    }
+  ]
+}
