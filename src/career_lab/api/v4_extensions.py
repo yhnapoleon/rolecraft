@@ -20,19 +20,26 @@ identity and never re-signed onto runtime bindings. Without a prepared catalog n
 from __future__ import annotations
 
 import hashlib
-import hmac
 import json
 import os
+from collections.abc import Mapping
+from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from fastapi import Depends
+from fastapi import Depends, FastAPI
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from sqlalchemy import Column, MetaData, String, Table, insert, select
+from sqlalchemy import Column, Integer, MetaData, String, Table, insert, select, update
+from sqlalchemy.engine import Connection
 
 from career_lab.contracts import v2 as C
 from career_lab.rubrics.v4.practice import ReviewedPractice, selection_plan, suggestions
 from career_lab.storage.v2_tables import v2_credentials
+
+if TYPE_CHECKING:
+    from career_lab.api.modules import Gateway
+    from career_lab.storage.v2_store import V2Store
 
 _META = MetaData()
 # A separate integration table; the frozen v2 tables are not altered.
@@ -48,6 +55,18 @@ practice_links = Table(
     Column("target_session_id", String, nullable=True),
     Column("suggestion_hash", String),
     Column("created_at", String),
+)
+
+practice_intents = Table(
+    "v4_practice_intents",
+    _META,
+    Column("id", String, primary_key=True),
+    Column("source_session_id", String, nullable=False, index=True),
+    Column("feedback_id", String, nullable=False),
+    Column("choice", String, nullable=False),
+    Column("option_id", String, nullable=True),
+    Column("fingerprint", String, nullable=False),
+    Column("completed", Integer, nullable=False),
 )
 
 _VARIANTS = Path(__file__).resolve().parents[3] / "scenarios/pm_pilot/v2/variants"
@@ -248,11 +267,99 @@ def _links(store, sid, feedback_id):
     ]
 
 
-def mount_v4_extensions(app):
+def _require_original_legacy_request(
+    connection: Connection,
+    source_id: str,
+    feedback_id: str,
+    choice: str,
+    option_id: str | None,
+    link_id: str,
+) -> None:
+    from career_lab.security.credentials import derivations
+
+    prior = connection.execute(
+        select(practice_links).where(
+            practice_links.c.source_session_id == source_id,
+            practice_links.c.feedback_id == feedback_id,
+            practice_links.c.choice == choice,
+            practice_links.c.option_id == option_id,
+            practice_links.c.id != link_id,
+            practice_links.c.target_session_id.is_not(None),
+        )
+    ).mappings()
+    for link in prior:
+        signed = (
+            connection.execute(
+                select(
+                    v2_credentials.c.token_hash,
+                    derivations.c.token_hash.label("derived_hash"),
+                )
+                .join(derivations, derivations.c.credential_id == v2_credentials.c.id)
+                .where(
+                    v2_credentials.c.session_id == link["target_session_id"],
+                    derivations.c.purpose == "practice-session",
+                )
+            )
+            .mappings()
+            .first()
+        )
+        if signed is None or signed["token_hash"] != signed["derived_hash"]:
+            raise C.ProtocolError("practice_request_reused", status=409)
+
+
+def _check_choice_link(
+    existing: Mapping[str, object] | None, selection: dict[str, C.JsonValue]
+) -> None:
+    if existing and any(existing[key] != selection[key] for key in selection):
+        raise C.ProtocolError("practice_request_reused", status=409)
+
+
+def _reserve_practice_intent(
+    connection: Connection,
+    link_id: str,
+    source_id: str,
+    feedback_id: str,
+    selection: dict[str, C.JsonValue],
+    fingerprint: str,
+) -> None:
+    previous = (
+        connection.execute(select(practice_intents).where(practice_intents.c.id == link_id))
+        .mappings()
+        .first()
+    )
+    if previous:
+        if previous["fingerprint"] != fingerprint:
+            raise C.ProtocolError("practice_request_reused", status=409)
+        return
+    pending = connection.execute(
+        select(practice_intents.c.id).where(
+            practice_intents.c.source_session_id == source_id,
+            practice_intents.c.feedback_id == feedback_id,
+            practice_intents.c.choice == selection["choice"],
+            practice_intents.c.option_id == selection["option_id"],
+            practice_intents.c.completed == 0,
+        )
+    ).first()
+    if pending:
+        raise C.ProtocolError("practice_request_reused", status=409)
+    connection.execute(
+        insert(practice_intents).values(
+            id=link_id,
+            source_session_id=source_id,
+            feedback_id=feedback_id,
+            choice=selection["choice"],
+            option_id=selection["option_id"],
+            fingerprint=fingerprint,
+            completed=0,
+        )
+    )
+
+
+def mount_v4_extensions(app: FastAPI) -> None:
     store = app.state.v2_store
     gateway = app.state.gateway
     catalog = PracticeCatalog(gateway.registry)
-    practice_links.create(store.db.engine, checkfirst=True)
+    _META.create_all(store.db.engine)
     bearer = HTTPBearer(auto_error=False)
 
     @app.get("/sessions/{session_id}/delegations", response_model=C.DelegationListResponse)
@@ -298,7 +405,7 @@ def mount_v4_extensions(app):
         session_id: str,
         body: PracticeChoiceInput,
         credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
-    ):
+    ) -> C.PracticeChoiceResponse:
         auth = _context(store, session_id, credentials)
         _human(auth)
         shown, choice, option_id = body.shown.model_dump(mode="json"), body.choice, body.option_id
@@ -352,29 +459,61 @@ def mount_v4_extensions(app):
                 auth, ref, feedback, options, shown, choice=choice, option_id=option_id
             )
         link_id = C.digest([session_id, ref.object_id, request_id])
-        with store.db.engine.connect() as c:
+        selection = {
+            "choice": plan["choice"],
+            "option_id": option_id,
+            "feedback_hash": plan["source_feedback_hash"],
+            "suggestion_hash": plan["suggestion_hash"],
+        }
+        fingerprint = C.digest(
+            {
+                "source_session": session_id,
+                "feedback": ref.model_dump(mode="json"),
+                "request_id": request_id,
+                "selection": selection,
+            }
+        )
+        session = None
+        with store.db.transaction() as c:
+            store._auth(c, auth, "read")
+            _require_original_legacy_request(
+                c, session_id, ref.object_id, plan["choice"], option_id, link_id
+            )
+            _reserve_practice_intent(c, link_id, session_id, ref.object_id, selection, fingerprint)
             existing = (
                 c.execute(select(practice_links).where(practice_links.c.id == link_id))
                 .mappings()
                 .first()
             )
-        if existing and (
-            existing["choice"] != plan["choice"] or existing["option_id"] != option_id
-        ):
-            raise C.ProtocolError("practice_request_reused", status=409)
-        session = None
-        if plan["choice"] in {"choose", "choose_other"}:
-            name, language = targets[option_id]
-            session = _practice_session(
-                store, gateway, auth, name, language, session_id, ref.object_id, request_id
+            _check_choice_link(existing, selection)
+            if plan["choice"] in {"choose", "choose_other"}:
+                name, language = targets[option_id]
+                session = _practice_session(
+                    store,
+                    gateway,
+                    auth,
+                    name,
+                    language,
+                    session_id,
+                    ref.object_id,
+                    request_id,
+                    selection=selection,
+                    _connection=c,
+                )
+                if (
+                    session["binding"]["scenarioHash"]
+                    != plan["target"]["bindings"]["scenario"]["sha256"]
+                ):
+                    raise C.ProtocolError("practice_target_binding_changed", status=409)
+        with store.db.transaction() as c:
+            store._auth(c, auth, "read")
+            existing = (
+                c.execute(select(practice_links).where(practice_links.c.id == link_id))
+                .mappings()
+                .first()
             )
-            if (
-                session["binding"]["scenarioHash"]
-                != plan["target"]["bindings"]["scenario"]["sha256"]
-            ):
-                raise C.ProtocolError("practice_target_binding_changed", status=409)
-        if not existing:
-            with store.db.engine.begin() as c:
+            _check_choice_link(existing, selection)
+            if not existing:
                 c.execute(
                     insert(practice_links).values(
                         id=link_id,
@@ -388,62 +527,119 @@ def mount_v4_extensions(app):
                         created_at=_now(),
                     )
                 )
-        return {
-            "schema_version": 2,
-            "result": {
-                "plan": {
-                    **plan,
-                    "creates_session": session is not None,
-                    "new_session_id": session["session_id"] if session else None,
+            c.execute(
+                update(practice_intents).where(practice_intents.c.id == link_id).values(completed=1)
+            )
+        return C.PracticeChoiceResponse.model_validate(
+            {
+                "schema_version": 2,
+                "result": {
+                    "plan": {
+                        **plan,
+                        "creates_session": session is not None,
+                        "new_session_id": session["session_id"] if session else None,
+                    },
+                    "duplicate": bool(existing),
+                    "session": session,
+                    "scenario": targets[option_id][0] if session else None,
                 },
-                "duplicate": bool(existing),
-                "session": session,
-                "scenario": targets[option_id][0] if session else None,
-            },
-        }
+            }
+        )
 
 
 def _practice_session(
-    store, gateway, owner, name, language, source_session_id, feedback_id, request_id
-):
-    """Create, or return again, the one practice session that belongs to this choice.
+    store: V2Store,
+    gateway: Gateway,
+    owner: C.AuthContext,
+    name: str,
+    language: str,
+    source_session_id: str,
+    feedback_id: str,
+    request_id: str,
+    *,
+    selection: dict[str, C.JsonValue] | None = None,
+    _connection: Connection | None = None,
+) -> dict[str, C.JsonValue]:
+    """Persist target identity and signing provenance together; resume the same target."""
+    from uuid import uuid4
 
-    The id and credential are derived from the person's credential and the request, as delegation grants
-    are, so the same authenticated person retrying the same choice receives the same session and access.
-    """
     from career_lab.api.modules import public_state
+    from career_lab.security.credentials import signed_credential
+    from career_lab.storage.v2_store import session_owner
+    from career_lab.storage.v2_tables import v2_sessions
 
     registration = getattr(gateway.registry, "language_scenarios", {}).get((name, language))
     if registration is None or registration.work_language != language:
         raise C.ProtocolError("scenario_module_unavailable", status=503)
+    if owner.session_id != source_session_id or owner.executor.kind != "human":
+        raise C.ProtocolError("human_required", status=403)
     sid = C.digest([source_session_id, feedback_id, request_id, "practice-session"])[:32]
-    with store.db.engine.connect() as c:
-        key = c.execute(
-            select(v2_credentials.c.token_hash).where(v2_credentials.c.id == owner.credential_id)
-        ).scalar_one()
-    token = hmac.new(key.encode(), ("practice-session:" + sid).encode(), hashlib.sha256).hexdigest()
-    if not store.contains(sid):
-        store.create_session(
-            registration.bindings,
-            registration.baseline_config,
-            registration.resources,
-            scenario_state=registration.scenario_state,
-            session_id=sid,
-            token=token,
-        )
-    auth = store.authenticate(sid, token)
-    view = store.view(auth)
-    if view.bindings != registration.bindings:
-        raise C.ProtocolError("practice_target_binding_changed", status=409)
-    return {
-        "schema_version": 2,
-        "session_id": sid,
-        "token": token,
-        "state": public_state(view.state),
-        "binding": {
-            "protocol": 2,
-            "sessionId": sid,
-            "workLanguage": language,
-            "scenarioHash": registration.bindings.scenario.sha256,
-        },
+    request = {
+        "source_session": source_session_id,
+        "feedback": feedback_id,
+        "request_id": request_id,
+        "scenario": name,
+        "language": language,
+        "selection": selection,
     }
+    with (
+        nullcontext(_connection) if _connection is not None else store.db.transaction()
+    ) as connection:
+        store._auth(connection, owner, "read")
+        previous = (
+            connection.execute(select(v2_sessions).where(v2_sessions.c.id == sid).with_for_update())
+            .mappings()
+            .first()
+        )
+        if previous:
+            if C.SessionBindings.model_validate_json(previous["bindings"]) != registration.bindings:
+                raise C.ProtocolError("practice_target_binding_changed", status=409)
+            contexts = [
+                C.AuthContext.model_validate_json(raw)
+                for raw in connection.execute(
+                    select(v2_credentials.c.context).where(v2_credentials.c.session_id == sid)
+                ).scalars()
+            ]
+            humans = [context for context in contexts if context.executor.kind == "human"]
+            if len(humans) != 1:
+                raise C.ProtocolError("credential_derivation_unavailable", status=503)
+            target = humans[0]
+            store._auth(connection, target, "read")
+            state = C.WorldStateV2.model_validate_json(previous["state"])
+        else:
+            target = session_owner(sid, uuid4().hex)
+        token = signed_credential(
+            connection,
+            store.credential_key_provider,
+            "practice-session",
+            owner,
+            target,
+            request,
+        )
+        if not previous:
+            state, _ = store.create_session(
+                registration.bindings,
+                registration.baseline_config,
+                registration.resources,
+                scenario_state=registration.scenario_state,
+                session_id=sid,
+                token=token,
+                _connection=connection,
+                _credential_id=target.credential_id,
+            )
+        store._auth(connection, target, "read")
+    # Existing callers consume a JSON mapping; the domain model owns its shape.
+    return C.PracticeSession.model_validate(
+        {
+            "schema_version": 2,
+            "session_id": sid,
+            "token": token,
+            "state": public_state(state),
+            "binding": {
+                "protocol": 2,
+                "sessionId": sid,
+                "workLanguage": language,
+                "scenarioHash": registration.bindings.scenario.sha256,
+            },
+        }
+    ).model_dump(mode="json")
