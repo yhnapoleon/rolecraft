@@ -5093,6 +5093,13 @@ document.addEventListener('input', (e) => {
   if (!el.dataset.edit) return;
   const x = artifact();
   if (!a || !canEditWork(a, x)) return;
+  if (L.nativeWorkspace(a) && ['title', 'body', 'purpose'].includes(el.dataset.edit)) {
+    const field = el.dataset.edit === 'body' ? 'content' : el.dataset.edit;
+    void L.keepNativeProductDraft(a, x.id, { [field]: el.value }).catch((error) =>
+      notify(errText(error)),
+    );
+    return;
+  }
   if (x.kind === 'investigation') {
     queueInvestigationDraft(a, x, { [el.dataset.edit]: el.value });
     return;

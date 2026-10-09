@@ -53,6 +53,47 @@ export type SlotDraft = {
   value: ProductCreate;
   status: 'dirty' | 'saved';
 };
+function productDraftKey(id: string, sessionId: string): string {
+  return `${sessionId}:product:${id}`;
+}
+function editedProductDraft(
+  product: WorkspaceProductRead,
+  prior: SlotDraft | undefined,
+  patch: Partial<ProductCreate>,
+): SlotDraft {
+  const value = { ...(prior?.value ?? productInput(product)), ...structuredClone(patch) };
+  value.kind = product.kind ?? 'text';
+  if (value.purpose !== undefined) value.purpose = canonicalPurpose(value.purpose);
+  return {
+    schema: 1,
+    sessionId: product.session_id,
+    productId: product.product_id,
+    baseVersion: prior?.baseVersion ?? product.version,
+    token: crypto.randomUUID(),
+    value,
+    status: 'dirty',
+  };
+}
+/** Keep input before the editor mounts in the same host-owned journal it will restore. */
+export async function keepProductDraft(
+  host: V4HostAdapter,
+  product: WorkspaceProductRead,
+  patch: Partial<ProductCreate>,
+): Promise<void> {
+  if (host.snapshot().session?.sessionId !== product.session_id) throw Error('session_changed');
+  if (product.removed_at) throw Error('editing_unavailable');
+  const key = productDraftKey(product.product_id, product.session_id);
+  const stored = host.draft<SlotDraft>('workspace', key);
+  const prior =
+    stored?.schema === 1 &&
+    stored.status === 'dirty' &&
+    stored.sessionId === product.session_id &&
+    stored.productId === product.product_id
+      ? stored
+      : undefined;
+  await host.keepDraft('workspace', key, editedProductDraft(product, prior, patch));
+}
+
 export type RequestPointer = {
   requestId: string;
   status: V4CommandResult['status'];
@@ -183,7 +224,7 @@ export class WorkspaceSlotController {
     return s.sessionId;
   }
   private key(id: string, sid = this.session()) {
-    return sid + ':product:' + id;
+    return productDraftKey(id, sid);
   }
   private receiptKey(sid = this.session()) {
     return sid + ':request-pointer';
@@ -258,20 +299,7 @@ export class WorkspaceSlotController {
     const p = this.selected();
     if (!p || p.removed_at || !this.can('work_products.versions.create'))
       throw Error('editing_unavailable');
-    const prior = this.draft(p);
-    const value = { ...(prior?.value ?? productInput(p)), ...structuredClone(patch) };
-    // Editing text never changes an existing kind or clears unrelated structured data.
-    value.kind = p.kind ?? 'text';
-    if (value.purpose !== undefined) value.purpose = canonicalPurpose(value.purpose);
-    await this.persist(this.key(p.product_id), {
-      schema: 1,
-      sessionId: p.session_id,
-      productId: p.product_id,
-      baseVersion: prior?.baseVersion ?? p.version,
-      token: crypto.randomUUID(),
-      value,
-      status: 'dirty',
-    });
+    await this.persist(this.key(p.product_id), editedProductDraft(p, this.draft(p), patch));
   }
   async editInvestigation(field: 'question' | 'review_focus' | 'review_note', value: string) {
     const p = this.selected();

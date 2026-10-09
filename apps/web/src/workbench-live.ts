@@ -4,6 +4,8 @@ import { T, locale } from './app/i18n';
 import { V4LiveData } from './v4-live-data';
 import { V4Mounts } from './v4-mounts';
 import { projectNativeWorkspace } from './v4-workspace-projection';
+import { keepProductDraft } from './features/workspace/native-v4/slot-controller';
+import type { ProductCreate, WorkspaceProductRead } from './contracts-v2';
 import { canonicalPurpose } from './features/workspace/native-v4/form-values';
 import { blankPilot, WorkspaceStore } from './store';
 import type {
@@ -538,6 +540,20 @@ export class LiveWorkbench {
         ),
       );
     await this.v4.sync(this.store.getSnapshot().workspace.sessions.find((x) => x.id === s.id)!);
+  }
+  async keepNativeProductDraft(a: Attempt, id: string, patch: Partial<ProductCreate>) {
+    const session = this.session(a);
+    const product: WorkspaceProductRead | undefined = session?.v2Workspace?.products.find(
+      (item: { product_id: string }) => item.product_id === id,
+    );
+    if (
+      session?.protocol !== 2 ||
+      !session.v2NativeWorkspace ||
+      session.world.status !== 'active' ||
+      !product
+    )
+      throw new Error(T('当前无法保存作品草稿。', 'The work draft cannot be saved right now.'));
+    await keepProductDraft(this.v4.host(session), product, patch);
   }
   nativeWorkspace(a: Attempt) {
     return this.session(a)?.v2NativeWorkspace === true;
