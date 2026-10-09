@@ -1,10 +1,17 @@
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 import json
+import sqlite3
+from pathlib import Path
+from uuid import UUID
+
+import career_lab.storage.v2_snapshot as snapshot_module
 import pytest
 from sqlalchemy import select
+from career_lab.contracts import v2 as C
 from career_lab.contracts.v2 import *
 from career_lab.storage.v2_store import *
+from career_lab.storage.v2_store import V2Store
 from career_lab.storage.v2_tables import *
 from career_lab.storage.v2_lifecycle import *
 from career_lab.storage.v2_snapshot import SnapshotService
@@ -300,3 +307,59 @@ globals().pop("TestPlanPayload", None)
 globals().pop("TestCampaign", None)
 
 globals().pop("TestExecutionMetadata", None)
+
+
+@pytest.mark.parametrize("changed", ["request", "snapshot"])
+def test_restore_derivation_separates_request_and_snapshot(
+    foundation: tuple[V2Store, C.AuthContext, str, C.SessionBindings, C.AssistantConfig],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    changed: str,
+) -> None:
+    store, auth, *_ = foundation
+    service = SnapshotService(store)
+    research = store.research_context(auth.session_id)
+    first = service.export(research, C.digest("first-source"))
+    second = service.export(research, C.digest("second-source")) if changed == "snapshot" else first
+    # Freeze the random target credential ID, parent identity and child session across forks.
+    # Only the request ID or the snapshot hash changes between the two restore inputs.
+    monkeypatch.setattr(snapshot_module, "uuid4", lambda: UUID(int=1))
+    tokens = []
+    for index, snapshot in enumerate((first, second)):
+        path = tmp_path / f"fork-{index}.db"
+        source = store.db.engine.raw_connection()
+        destination = sqlite3.connect(path)
+        try:
+            source.driver_connection.backup(destination)
+        finally:
+            destination.close()
+            source.close()
+        isolated = V2Store("sqlite:///" + str(path))
+        try:
+            request = f"request-{index}" if changed == "request" else "request"
+            result, token = SnapshotService(isolated).restore(
+                snapshot, session_id="same-child", request_id=request
+            )
+            assert isolated.authenticate(result.session_id, token).executor.kind == "human"
+            tokens.append(token)
+        finally:
+            isolated.db.engine.dispose()
+    assert tokens[0] != tokens[1]
+
+
+def test_restore_concurrent_replay_returns_one_credential(
+    foundation: tuple[V2Store, C.AuthContext, str, C.SessionBindings, C.AssistantConfig],
+) -> None:
+    store, auth, *_ = foundation
+    service = SnapshotService(store)
+    snapshot = service.export(store.research_context(auth.session_id), C.digest("source"))
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(
+            pool.map(
+                lambda _: service.restore(snapshot, session_id="child", request_id="restore"),
+                range(2),
+            )
+        )
+    assert sum(result.replayed for result, _ in results) == 1
+    assert results[0][1] == results[1][1]
+    assert store.authenticate("child", results[0][1]).executor.kind == "human"
