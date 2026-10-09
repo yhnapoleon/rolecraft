@@ -155,7 +155,7 @@ class RegisteredAdvisory:
 
 
 def to_public_prediction(outcome, item):
-    """Existing W01 DTO projection. Fixture predictions never become product advice."""
+    """Existing shared protocol DTO projection. Fixture predictions never become product advice."""
     from career_lab.contracts.v2.research import ModelPrediction
 
     item = checked_input(item)

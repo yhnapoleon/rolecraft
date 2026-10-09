@@ -1,6 +1,6 @@
 """Common persistence/recovery for factual feedback and learner follow-ups.
 
-The W05 evaluator supplies reports through a trusted server adapter. This module
+The evaluator supplies reports through a trusted server adapter. This module
 never infers facts, completeness, actual actions or model quality from a request.
 """
 

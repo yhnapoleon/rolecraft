@@ -4,16 +4,21 @@
       "protocol_signatures": {
         "zh": [
           "7fc753da7bdb81d6f80b52591534d662bcdde69136afbb012b065fc524ab03fb",
-          "b268bf8e661bd990f274a6957e91496e889cd87bad15684aeac7407dd7315161"
+          "b268bf8e661bd990f274a6957e91496e889cd87bad15684aeac7407dd7315161",
+          "2a021ccdbb4c0b3e32b71b66e0f0afed1b8ee3241d67aaefe952324762e6c275"
         ],
         "en": [
           "97d70e6d74a26dafc6849a7a2652d302df066e0df65c7f1a00abfe1c2510240f",
-          "b268bf8e661bd990f274a6957e91496e889cd87bad15684aeac7407dd7315161"
+          "b268bf8e661bd990f274a6957e91496e889cd87bad15684aeac7407dd7315161",
+          "cb8dde62ca546ac749a0f3cb3be178b5dc3f675d2aa8b6db8bd6811d10147cdb"
         ]
       },
       "prompt_version": "grounded-feedback-bilingual-v1",
       "comparison_baseline_sha256": "800d1c602bf84cdf0adb482cdcbefdb25bfe604daf1c6485cfacddf1af7a8464",
-      "engine_baseline_sha256": "7b9d79e92355e98f1160f35219ac104bdc90bd05a32edfeb484adf68da21f891"
+      "engine_baseline_sha256": "7b9d79e92355e98f1160f35219ac104bdc90bd05a32edfeb484adf68da21f891",
+      "legacy_rules_sha256": [
+        "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f"
+      ]
     }
   }
 }

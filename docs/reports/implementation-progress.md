@@ -19,11 +19,11 @@
 | 13 | 反馈/回放后端完成 | 前端排除；规则升级至rules-v2 |
 | 14 | 自动演示、干净安装、打包完成 | 真人试用及课程材料待做 |
 
-最终验证：67 tests通过（含PostgreSQL），干净解压环境66通过/1项PG跳过；详细证据见task-14-tests.xml、task-14-clean-install.json和final-results.md。下方逐项记录保留当时测试数量与规则版本，最新修订以最终验收为准。
+最终验证：67 tests通过（含PostgreSQL），干净解压环境66通过/1项PG跳过；详细证据见[task-14-tests.xml](https://github.com/yhnapoleon/rolecraft/blob/2c07160b5e829ac08afb8a31667440bbda72df73/docs/reports/task-14-tests.xml)、task-14-clean-install.json和final-results.md。下方逐项记录保留当时测试数量与规则版本，最新修订以最终验收为准。
 
 ## Task 2：代码与本机数据库验证完成
 
-全量29 tests通过，包含真实PostgreSQL持久化恢复；报告task-02-tests.xml。schema 001，SQLite支持离线测试，PostgreSQL使用55439端口。历史视图从指定快照生成；事件、状态、幂等结果同事务。未做Git提交。
+全量29 tests通过，包含真实PostgreSQL持久化恢复；报告[task-02-tests.xml](https://github.com/yhnapoleon/rolecraft/blob/2c07160b5e829ac08afb8a31667440bbda72df73/docs/reports/task-02-tests.xml)。schema 001，SQLite支持离线测试，PostgreSQL使用55439端口。历史视图从指定快照生成；事件、状态、幂等结果同事务。未做Git提交。
 
 ## Task 3：代码与真实模型联调完成
 
@@ -89,7 +89,7 @@
 
 ## 场景实验阶段 Task 3（2026-10-03）
 
-正式受控G0 v2为1152项，24结构模板，训练576/开发288/测试288，标签各384项。完成线性、MLP、融合训练及常量/有限规则/混合对照、E5检索和E6风格/排序/事实对照。开发Macro-F1：0.5455/0.3692/0.5455；有限规则初版0.5333（弃权误计，修复后0.5000）、混合0.7076。融合无收益；MLP训练loss=0.0265但dev弱，提示过拟合。报告controlled-v2-dev.json；未读取test做候选选择。独立审查与最终回归进行中。
+正式受控G0 v2为1152项，24结构模板，训练576/开发288/测试288，标签各384项。完成线性、MLP、融合训练及常量/有限规则/混合对照、E5检索和E6风格/排序/事实对照。开发Macro-F1：0.5455/0.3692/0.5455；有限规则初版0.5333（弃权误计，修复后0.5000）、混合0.7076。融合无收益；MLP训练loss=0.0265但dev弱，提示过拟合。报告[controlled-v2-dev.json](https://github.com/yhnapoleon/rolecraft/blob/2c07160b5e829ac08afb8a31667440bbda72df73/docs/reports/controlled-v2-dev.json)；未读取test做候选选择。独立审查与最终回归进行中。
 
 ## 场景实验阶段 Task 4（2026-10-03）
 

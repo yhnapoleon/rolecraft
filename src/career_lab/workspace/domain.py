@@ -109,7 +109,7 @@ def visible_product(snapshot: Snapshot, auth: AuthContext, oid: str, version: in
             visible_product(snapshot, auth, dependency.object_id, dependency.version)
         elif not snapshot.reference_allowed(dependency):
             # A share does not grant access to private source quotes or tests.
-            # W04 may later offer an explicitly filtered excerpt instead.
+            # role collaboration may later offer an explicitly filtered excerpt instead.
             raise ProtocolError("not_found", status=404)
     return product
 

@@ -1,4 +1,4 @@
-"""W06 registrations only; the integrator owns app/CLI/production source wiring."""
+"""delegation registrations only; the integrator owns app/CLI/production source wiring."""
 
 from career_lab.api.modules import Operation, V2Response
 from career_lab.contracts import v2 as C

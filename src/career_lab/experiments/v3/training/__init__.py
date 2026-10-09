@@ -1,1 +1,1 @@
-"""W08 isolated training and evaluation orchestration."""
+"""relation model isolated training and evaluation orchestration."""

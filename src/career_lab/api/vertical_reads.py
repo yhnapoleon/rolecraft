@@ -128,7 +128,7 @@ def public_event_history(store, registry, auth, at, *, since_seq=0, view=None):
 def public_material_resolver(module, scenario_resolver=None):
     """Permit a whole-file citation only when every original fragment is public.
 
-    W05 emits whole-file spans for document-level rule proofs. Preserve the exact
+    evaluation emits whole-file spans for document-level rule proofs. Preserve the exact
     span and text; never trim proof text or admit a partially disclosed file.
     """
     from career_lab.contracts.v2 import EvidenceRefV2, read_file

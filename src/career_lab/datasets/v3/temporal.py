@@ -1,4 +1,4 @@
-"""Shared W07/W08 semantics: judge at the claim/behavior's explicit historical frame.
+"""Reference agents and relation models use the claim's explicit historical frame.
 
 Open-ended validity is known only when the source adapter explicitly attests it.
 An unknown frame or interval is pending, never silently converted into bad work.

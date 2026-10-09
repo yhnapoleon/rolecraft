@@ -4,6 +4,15 @@ import csv
 import json
 from pathlib import Path
 
+HISTORICAL_REPORTS = (
+    "https://github.com/yhnapoleon/rolecraft/blob/"
+    "2c07160b5e829ac08afb8a31667440bbda72df73/docs/reports"
+)
+
+
+def historical_evidence(name: str) -> str:
+    return f"[{name}]({HISTORICAL_REPORTS}/{name})"
+
 
 def main():
     root = Path("runs/controlled-v2")
@@ -99,8 +108,11 @@ def main():
         "",
         "## 证据与后续",
         "",
-        "- 81 tests通过（含PostgreSQL），见controlled-v2-final-tests.xml；独立审查与回归见controlled-v2-review.md。",
-        "- 逐类precision/recall/F1、混淆矩阵、按模板置信区间、paired差值、p95和训练成本见controlled-v2-dev.json及controlled-v2-test.json。",
+        "- 81 tests通过（含PostgreSQL），见"
+        f"{historical_evidence('controlled-v2-final-tests.xml')}；"
+        "独立审查与回归见controlled-v2-review.md。",
+        "- 逐类precision/recall/F1、混淆矩阵、按模板置信区间、paired差值、p95和训练成本见"
+        f"{historical_evidence('controlled-v2-dev.json')}及controlled-v2-test.json。",
         "- 实际HTTP验证见controlled-v2-live-shadow.json。复现命令与标注步骤见../data/experiments-v2-runbook.md。",
         "- 两位真实成员应先独立完成data/annotation/v2-pilot中的前30项，再裁决标准并补全100项。当前没有人类标注结果。",
         "- 下一轮优先改进语义数据和证据选择；已看过的test不能继续充当新的未见选型集。需要新版本和新的未见模板来支持进一步确认性结论。",

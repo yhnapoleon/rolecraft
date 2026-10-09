@@ -1,4 +1,4 @@
-"""W14 integration of fixed W03 plans. Gateway and V2Store remain authoritative."""
+"""workbench integration of fixed workspace plans. Gateway and V2Store remain authoritative."""
 
 from dataclasses import replace
 from datetime import datetime, timezone
@@ -93,7 +93,7 @@ class _ReadView:
 
 
 def install_workspace_recovery(registry, *, roles, clock=None):
-    """Call after W03.install_workspace_operations; no route replacement or DB layer."""
+    """Call after workspace.install_workspace_operations; no route replacement or DB layer."""
     clock = clock or (lambda: datetime.now(timezone.utc))
     registry.register(
         Operation(

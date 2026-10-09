@@ -1,7 +1,7 @@
-"""Actual persisted W02 history through existing authorized public read adapters.
+"""Actual persisted scenario history through existing authorized public read adapters.
 
 No private SQL/table access, shadow database, in-memory action capture, synthetic
-clock or external call. The W05 evaluation bundle pins this adapter separately
+clock or external call. The evaluation bundle pins this adapter separately
 from the scenario engine's runtime dependency set.
 """
 
@@ -38,7 +38,7 @@ def create_store_fact_adapter(store, module, registry):
                 if born is None:
                     raise C.ProtocolError("event_time_unknown")
                 events.append((event, born))
-            # This assertion concerns W02's immutable committed test outcomes and
+            # This assertion concerns scenario's immutable committed test outcomes and
             # relevant business events, not all learner activity or failed HTTP
             # attempts. Finite object grants never prove absence outside scope.
             producers = []

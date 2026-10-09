@@ -1,4 +1,4 @@
-"""W02 adapter to the frozen W01 public store; all handlers are pure plans.
+"""scenario adapter to the frozen shared protocol public store; all handlers are pure plans.
 
 Register these operations through the integrator's ExtensionRegistry. No app.py,
 storage implementation or global CLI mutation is performed here.

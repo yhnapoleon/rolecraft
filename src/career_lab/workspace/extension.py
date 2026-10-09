@@ -1,6 +1,6 @@
-"""Pure W03 operations for the frozen Gateway; no database or private clock.
+"""Pure workspace operations for the frozen Gateway; no database or private clock.
 
-Public app/CLI assembly remains owned by032. Import persistence registration is
+The application assembles public app/CLI entry points. Import persistence registration is
 installed only when its formal receipt contract is available.
 """
 

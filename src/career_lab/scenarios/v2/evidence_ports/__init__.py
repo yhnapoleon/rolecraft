@@ -1,1 +1,1 @@
-"""W02 evaluation read ports, pinned by EvaluationBundle protocol.source_files."""
+"""scenario evaluation read ports, pinned by EvaluationBundle protocol.source_files."""

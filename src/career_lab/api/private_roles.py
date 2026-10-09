@@ -275,7 +275,7 @@ def install_private_role_runtime(
 ):
     """Same registry for API/worker. Real business activation remains opt-in.
 
-    Keep enable_generation false until the coordinator-fixed repaired W04 input
+    Keep enable_generation false until the coordinator-fixed repaired role collaboration input
     and cumulative acceptance are installed. Tests use labelled controlled models.
     """
     for kind, model_type in (

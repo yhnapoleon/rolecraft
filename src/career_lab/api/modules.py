@@ -481,7 +481,8 @@ class Gateway:
                 ):
                     raise ProtocolError("event_projection_identity_mismatch")
             else:
-                # Default output contains no unfiltered scenario payload. W02 installs a scoped projector.
+                # Default output contains no unfiltered scenario payload.
+                # The scenario installs a scoped projector.
                 projected = PublicEvent.model_validate(
                     event.model_dump(mode="json", exclude={"visible_to", "data"}) | {"data": {}}
                 )

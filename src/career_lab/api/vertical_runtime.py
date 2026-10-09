@@ -25,7 +25,7 @@ from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.workspace.extension import install_workspace_operations
 
 
-# The normal-input repair must be a coordinator-fixed W04 backend input.
+# The normal-input repair must be a coordinator-fixed role collaboration backend input.
 ROLE_RUNTIME_READY = True
 
 

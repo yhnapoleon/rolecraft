@@ -1,4 +1,4 @@
-"""Immutable W01 ModelBundle creation and hash-verified, non-pickle loading."""
+"""Immutable shared protocol ModelBundle creation and hash-verified, non-pickle loading."""
 
 from pathlib import Path
 import hashlib

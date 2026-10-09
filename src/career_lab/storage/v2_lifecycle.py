@@ -1,4 +1,4 @@
-"""Common lifecycle plans; business review/evaluation is provided by W05."""
+"""Common lifecycle plans; business review/evaluation is provided by evaluation."""
 
 from uuid import uuid4
 from career_lab.contracts.v2 import *

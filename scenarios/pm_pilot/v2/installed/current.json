@@ -1,24 +1,24 @@
 {
   "schema_version": 1,
-  "revision": "protocol-v1",
+  "revision": "semantic-rules-v1",
   "main": {
     "zh": {
-      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot",
-      "scenario_hash": "25cc55e26eca602f746e93d5576122f63704e586099e30d3f357bee9ce547089",
+      "root": "scenarios/pm_pilot/v2/candidates/semantic-rules-v1-2.9.6/pm_pilot",
+      "scenario_hash": "bd1ef5c631a58029c8644b763a586def167cd3add1af4a458ed85a88a973191a",
       "evaluation": {
         "schema_version": 2,
         "path": "runtime/evaluation.json",
-        "sha256": "823b49e86d829bdc51963aa7559ead42425ff57d02bbfccf0edda41d80ac3d03",
+        "sha256": "f3d784e8ed9fdda097f91e35321a6a43346f883a98b0d6082c59054536480aeb",
         "media_type": "application/json"
       }
     },
     "en": {
-      "root": "scenarios/pm_pilot/v2/candidates/protocol-v1-2.9.6/pm_pilot/locales/en",
-      "scenario_hash": "50d4666923ca98ab7b214c1efb9d40d2d3578dabdfafc9ef914344855e1b6abe",
+      "root": "scenarios/pm_pilot/v2/candidates/semantic-rules-v1-2.9.6/pm_pilot/locales/en",
+      "scenario_hash": "42ad28a0285f453828c056e0864afd612b526b5c01ac337dec79b91d9ce95dee",
       "evaluation": {
         "schema_version": 2,
         "path": "runtime/evaluation.json",
-        "sha256": "bd2ae2fefa04d1ab1584f9ef8ba25d64254fdd81a47405590477da2117f0b080",
+        "sha256": "7a5b80d1ba284329a3e92de28fed2d3272270d05b42c683c73070531c62b7c80",
         "media_type": "application/json"
       }
     }

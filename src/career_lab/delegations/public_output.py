@@ -32,7 +32,7 @@ def validate_public_output(value):
 
 
 def project_public_output(value, *, operation=None):
-    """Strip W02 fact keys only in an authoritative material-read envelope.
+    """Strip scenario fact keys only in an authoritative material-read envelope.
 
     User-authored payloads are never recursively rewritten based on key names.
     Role validation runs first, preserving the existing fail-closed boundary.

@@ -140,7 +140,7 @@ def paths_report(package):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="W02 module validation and local deterministic execution (not public API)."
+        description="Scenario module validation and local deterministic execution (not public API)."
     )
     parser.add_argument(
         "command", choices=["validate", "paths", "probes", "public-probes", "serve"]

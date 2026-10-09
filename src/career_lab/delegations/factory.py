@@ -1,4 +1,4 @@
-"""W06 assembly on the existing FastAPI/Gateway/store, with no extra persistence."""
+"""delegation assembly on the existing FastAPI/Gateway/store, with no extra persistence."""
 
 from pathlib import Path
 
@@ -50,7 +50,7 @@ def create_delegated_app(
 
 
 def create_scenario_app(*, database_url, scenario_package, history_reader=stored_history):
-    """Load the exact W02 package, preserving its source/contract hash checks.
+    """Load the exact scenario package, preserving its source/contract hash checks.
 
     The caller must supply a coordinator-fixed package. This function neither
     regenerates it nor enables role/model jobs or makes a new queue.
@@ -76,7 +76,7 @@ def create_scenario_app(*, database_url, scenario_package, history_reader=stored
             action_name="begin_revision",
         )
     )
-    # Only the exact synchronous W02 implementation above is enabled. No role,
+    # Only the exact synchronous scenario implementation above is enabled. No role,
     # review or feedback generation is registered without its real runtime.
     app = create_delegated_app(
         database_url=database_url,

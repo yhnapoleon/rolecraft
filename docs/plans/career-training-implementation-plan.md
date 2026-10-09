@@ -150,7 +150,7 @@ docs/
 
 ### Task 2 实现状态转换与事件存储
 
-**2026-10-02 实施状态：代码与本机数据库验证完成。** 全量29 tests通过，包含真实PostgreSQL持久化恢复；报告task-02-tests.xml。schema 001，SQLite支持离线测试，PostgreSQL使用55439端口。历史视图从指定快照生成；事件、状态、幂等结果同事务。未做Git提交。
+**2026-10-02 实施状态：代码与本机数据库验证完成。** 全量29 tests通过，包含真实PostgreSQL持久化恢复；报告[task-02-tests.xml](https://github.com/yhnapoleon/rolecraft/blob/2c07160b5e829ac08afb8a31667440bbda72df73/docs/reports/task-02-tests.xml)。schema 001，SQLite支持离线测试，PostgreSQL使用55439端口。历史视图从指定快照生成；事件、状态、幂等结果同事务。未做Git提交。
 
 
 **Files:**
@@ -496,9 +496,9 @@ Task 13 早期可以用规则或 SFT stub 开发，不必等 Task 12；图中依
 | 1 | 代码与场景已实现；当时未单独提交，后续已纳入仓库 | Codex，用户发起 | [实施与验证记录](../reports/task-01-implementation.md)；后续状态见仓库 README 与 Git 历史 |
 | 2–9 | 后端工程与pilot完成，人工验收另列 | Codex，用户授权 | 各Task状态及reports/task-02至09证据 |
 | 10–11 | 本轮排除后训练 | — | 未执行SFT/GRPO |
-| 12 | 候选注册完成；正式对照待做 | Codex | task-12-tests.xml；model-card-pilot.md |
-| 13 | 当轮后端完成；后续已有本地连接版，开放工作闭环待补 | Codex | task-13-tests.xml、最终回归及[前端验证](../../apps/web/README.md) |
-| 14 | 自动交付完成；真人/课程材料待做 | Codex | task-14-tests.xml、task-14-clean-install.json |
+| 12 | 候选注册完成；正式对照待做 | Codex | [task-12-tests.xml](https://github.com/yhnapoleon/rolecraft/blob/2c07160b5e829ac08afb8a31667440bbda72df73/docs/reports/task-12-tests.xml)；model-card-pilot.md |
+| 13 | 当轮后端完成；后续已有本地连接版，开放工作闭环待补 | Codex | [task-13-tests.xml](https://github.com/yhnapoleon/rolecraft/blob/2c07160b5e829ac08afb8a31667440bbda72df73/docs/reports/task-13-tests.xml)、最终回归及[前端验证](../../apps/web/README.md) |
+| 14 | 自动交付完成；真人/课程材料待做 | Codex | [task-14-tests.xml](https://github.com/yhnapoleon/rolecraft/blob/2c07160b5e829ac08afb8a31667440bbda72df73/docs/reports/task-14-tests.xml)、task-14-clean-install.json |
 
 ## 本计划自检结果
 

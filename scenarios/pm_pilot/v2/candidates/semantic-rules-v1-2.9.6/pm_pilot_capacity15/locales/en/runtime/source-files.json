@@ -1,0 +1,10 @@
+{
+  "protocol": "scenario-release-v1",
+  "content_identity": "59f9f5cc924391d6f7272f69b5f302c38fa7757c7c16aad3987fcb278050195e",
+  "evaluation_version": "feedback-rubric-v2-c2.1",
+  "exporter": {
+    "status": "modified",
+    "commit": "c9faac199103e6fc6d23c404c71166f02d357ce6",
+    "snapshot": "456d8733b414d1fe76b395c3a7ccd05f6f31cd93231efc0fed9981766e019661"
+  }
+}

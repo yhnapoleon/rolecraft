@@ -1,4 +1,4 @@
-"""W04 negotiation over the actual W02 policy and business follow-up reducer."""
+"""role collaboration negotiation over the actual scenario policy and business follow-up reducer."""
 
 from dataclasses import replace
 from career_lab.api.approvals_v2 import NegotiationService, ScenarioApprovalPort

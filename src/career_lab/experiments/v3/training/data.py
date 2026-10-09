@@ -1,4 +1,4 @@
-"""Partition-scoped W07 release reads, with metadata and errors bound to record IDs."""
+"""Partition-scoped reference agent release reads, with metadata and errors bound to record IDs."""
 
 from collections import Counter
 from pathlib import Path

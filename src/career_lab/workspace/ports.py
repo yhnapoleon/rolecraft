@@ -1,4 +1,4 @@
-"""Pure W03 plans and authorized snapshots for the public Gateway adapter.
+"""Pure workspace plans and authorized snapshots for the public Gateway adapter.
 
 The historical repository is test-only. Production transactions and clocks are
 owned by V2Store; this module neither persists nor authorizes new data sources.
@@ -59,7 +59,7 @@ class Snapshot:
 
 @dataclass(frozen=True)
 class Mutation:
-    """Pure domain plan translated to W01 ObjectWrite/Mutation by extension.py."""
+    """Pure domain plan translated to shared protocol ObjectWrite/Mutation by extension.py."""
 
     writes: tuple[StoredObject, ...]
     result: dict

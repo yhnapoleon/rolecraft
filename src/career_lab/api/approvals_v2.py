@@ -1,6 +1,6 @@
-"""Negotiation plans using the scenario's deterministic policy and W01 store.
+"""Negotiation plans using the scenario's deterministic policy and shared protocol store.
 
-W02 supplies evaluate(request, view, auth) and legal candidate terms. This module
+scenario supplies evaluate(request, view, auth) and legal candidate terms. This module
 does not maintain a second approval rule set and never writes resource state.
 """
 
@@ -40,9 +40,9 @@ class ScenarioApprovalPort:
 
     @classmethod
     def from_w02(cls, package, evaluate, *, decision_followup=None):
-        """Use hash-checked W02 limits, without changing its necessity/basis rules.
+        """Use hash-checked scenario limits, without changing its necessity/basis rules.
 
-        `evaluate` is the installed W02 adapter from BusinessRequest and the real
+        `evaluate` is the installed scenario adapter from BusinessRequest and the real
         TransactionView to its immutable scenario Snapshot. No active paths/imports.
         """
         from career_lab.runtime.context_v2 import ScenarioKnowledge
@@ -270,8 +270,8 @@ class NegotiationService:
             if self.policy.decision_followup is not None:
                 return self.policy.decision_followup(view, request, decision, plan)
             if self.policy.followup_required:
-                # Do not silently skip W02's capacity-approved business event or
-                # manufacture a parallel scenario state transition in W04.
+                # Do not silently skip scenario's capacity-approved business event or
+                # manufacture a parallel scenario state transition in role collaboration.
                 raise ProtocolError("role_decision_followup_unavailable", status=409)
         return plan
 
@@ -332,7 +332,7 @@ class NegotiationService:
     def action_operation(
         self, downstream_handler, *, downstream_policy=None, downstream_projector=None
     ):
-        # ActionInput.tool is Literal, so W01 can recover this projector from the
+        # ActionInput.tool is Literal, so shared protocol can recover this projector from the
         # persisted action on job results, request replays and historical reads.
         return Operation(
             "actions",

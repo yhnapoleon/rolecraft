@@ -1,4 +1,4 @@
-"""Lineage, partition, provenance and input-isolation checks for W07."""
+"""Lineage, partition, provenance and input-isolation checks for reference agent."""
 
 from collections import Counter, defaultdict
 import re
