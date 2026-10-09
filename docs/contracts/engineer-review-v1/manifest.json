@@ -45,9 +45,9 @@
   "legacy_namespace": "career_lab.contracts.v2.research",
   "protocol": "engineer-review-v1",
   "python_namespace": "career_lab.contracts.v2.engineer",
-  "revision": "engineer-review-v1-4e6d70cbbd5db14afee7bf987645a85e12f3cb087f401f58b5db462f74c5a438",
+  "revision": "engineer-review-v1-ef583b5c32ea2e01726f71fb4bbc567fd70f6d8bafd0e222916f8e6649e931d9",
   "source_files": {
-    "engineer.py": "778b0e359137c8e8afd03698c7463c5812bbc3166a86c346db80a4dc54d393a5",
+    "engineer.py": "d57e9e8a956c3b377e627f28f45f59afe9a6ed50b497181f1e78226a15d001af",
     "engineer_examples.py": "a315164248b834f1bea068f558e2881b95782d0693202e3ceb83f7719ecf997b",
     "engineer_export.py": "cb03edb975fb004f2956ec1db93a40b7ed6a1dd473b74b9c9395ca5409e15342"
   }

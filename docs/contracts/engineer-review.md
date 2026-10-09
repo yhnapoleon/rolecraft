@@ -54,7 +54,7 @@ No new frontend host, command registry, catalog pointer, scenario package, crede
 
 ## Standalone public completion validation
 
-Private and public reports use the same completion rule. Any execution error, including hidden errors, or an unverified claim check requires `incomplete`; a completed mismatching claim requires `report_mismatch`; otherwise `verified` is allowed even when business probes fail. Independently decoded public reports reject contradictory status combinations and duplicate public probe IDs. Valid hidden-only summaries remain readable. This tightens the unmerged engineer protocol revision; the three legacy objects and published scenario bytes are unchanged.
+Private and public reports use the same completion rule. Any execution error, including hidden errors, or an unverified claim check requires `incomplete`; a completed mismatching claim requires `report_mismatch`; otherwise `verified` is allowed even when business probes fail. Independently decoded public reports reject contradictory status combinations and duplicate public probe IDs. Private and public probe rows share a completion check: `pass`/`fail` require actual behavior (the public `actual_status`) and no execution error code; `error` requires an error code from the existing type (the public stable-code enum), and may retain candidate actual behavior when baseline execution failed. Valid hidden-only summaries remain readable. This tightens the unmerged engineer protocol revision; the three legacy objects and published scenario bytes are unchanged.
 
 
 ## Projection privacy and compatibility

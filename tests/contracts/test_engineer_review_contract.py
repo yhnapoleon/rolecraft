@@ -4,10 +4,15 @@ import hashlib
 from pathlib import Path
 
 import pytest
-from pydantic import JsonValue
+from pydantic import JsonValue, ValidationError
 
 from career_lab.contracts.v2 import canonical
-from career_lab.contracts.v2.engineer import EngineerReviewInput, decode_engineer_document
+from career_lab.contracts.v2.engineer import (
+    EngineerPublicReport,
+    EngineerReviewInput,
+    decode_engineer_document,
+)
+from career_lab.contracts.v2.engineer_examples import engineer_examples
 
 FREEZE = Path(__file__).resolve().parents[2] / "docs/contracts/expansion-v3/examples"
 
@@ -488,7 +493,9 @@ def test_public_report_direct_decode_rejects_contradictory_completion(case: str)
     elif case in {"mismatch", "unverified"}:
         value["claim_check"] = case
     elif case == "public_error":
-        value["public_results"][0]["result"] = "error"
+        value["public_results"][0].update(
+            result="error", error_code="engineer_probe_execution_failed"
+        )
     elif case == "duplicate":
         value["public_results"] *= 2
     else:
@@ -525,6 +532,8 @@ def test_public_report_direct_decode_keeps_consistent_and_hidden_only_summaries(
     value.update(status=status, claim_check=claim)
     value["hidden"] = {"passed": 1, "failed": 1, "errors": errors}
     value["public_results"][0]["result"] = result
+    if result == "error":
+        value["public_results"][0]["error_code"] = "engineer_probe_execution_failed"
     if hidden_only:
         value.update(public_results=[], findings=[], unresolved=[])
     parsed = EngineerPublicReport.model_validate_json(canonical(value))
@@ -590,3 +599,50 @@ def test_public_advice_success_requires_a_model_identity(
         }
     )
     assert valid.model.sha256 == "a" * 64 and valid.text is None
+
+
+@pytest.mark.parametrize(
+    "change,status",
+    [
+        ({"result": "pass", "actual_status": None}, "verified"),
+        ({"result": "fail", "actual_status": None}, "verified"),
+        ({"result": "pass", "error_code": "engineer_probe_execution_failed"}, "verified"),
+        ({"result": "fail", "error_code": "engineer_probe_execution_failed"}, "verified"),
+        ({"result": "error", "error_code": None}, "incomplete"),
+    ],
+    ids=[
+        "pass_without_actual",
+        "fail_without_actual",
+        "pass_with_execution_error",
+        "fail_with_execution_error",
+        "error_without_code",
+    ],
+)
+def test_engineer_07_09_public_probe_rejects_contradictory_execution_completion(
+    change: dict[str, JsonValue], status: str
+) -> None:
+    value = engineer_examples()["EngineerPublicReport"].model_dump(mode="json")
+    value["status"] = status
+    value["public_results"][0].update(change)
+    with pytest.raises(ValidationError):
+        EngineerPublicReport.model_validate(value)
+
+
+@pytest.mark.parametrize(
+    "result,error_code,status",
+    [
+        ("fail", None, "verified"),
+        ("error", "engineer_baseline_execution_failed", "incomplete"),
+    ],
+    ids=["business_fail_with_actual", "baseline_error_preserves_candidate_actual"],
+)
+def test_engineer_07_09_legal_completed_and_baseline_error_summaries_remain_valid(
+    result: str, error_code: str | None, status: str
+) -> None:
+    value = engineer_examples()["EngineerPublicReport"].model_dump(mode="json")
+    value["status"] = status
+    value["public_results"][0].update(result=result, error_code=error_code)
+    report = EngineerPublicReport.model_validate(value)
+    assert report.public_results[0].actual_status is not None
+    assert report.public_results[0].result == result
+    assert report.status == status

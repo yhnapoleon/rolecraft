@@ -212,6 +212,17 @@ def verification_status(claim_check: ClaimCheck, *, has_errors: bool) -> ReviewS
     return "report_mismatch" if claim_check == "mismatch" else "verified"
 
 
+def validate_probe_completion(
+    result: Literal["pass", "fail", "error"], *, has_actual: bool, error_code: str | None
+) -> None:
+    """An execution fault can retain candidate behavior when the baseline failed."""
+    if result == "error":
+        if error_code is None:
+            raise ValueError("probe error requires a failure code")
+    elif not has_actual or error_code is not None:
+        raise ValueError("completed probe requires actual behavior and no execution error")
+
+
 class EngineerRegressionReport(V2):
     contract_version: Literal["engineer-review-v1"]
     id: Identifier
@@ -247,11 +258,9 @@ class EngineerRegressionReport(V2):
         for row in self.results:
             if row.config_hash != digest(self.input.resolved_config.effective):
                 raise ValueError("probe config hash mismatch")
-            if row.result == "error":
-                if row.error_code is None:
-                    raise ValueError("probe error requires a failure code")
-            elif row.actual is None or row.error_code is not None:
-                raise ValueError("completed probe requires actual behavior and no execution error")
+            validate_probe_completion(
+                row.result, has_actual=row.actual is not None, error_code=row.error_code
+            )
             if row.actual is not None and (
                 row.actual.config != self.input.resolved_config
                 or row.actual.query != row.query
@@ -300,6 +309,13 @@ class EngineerPublicProbeResult(V2):
     indexed_versions: dict[str, int]
     elapsed_seconds: Annotated[float, Field(ge=0)]
     error_code: PublicErrorCode | None
+
+    @model_validator(mode="after")
+    def consistent_completion(self) -> Self:
+        validate_probe_completion(
+            self.result, has_actual=self.actual_status is not None, error_code=self.error_code
+        )
+        return self
 
 
 class EngineerPublicAdvice(V2):
