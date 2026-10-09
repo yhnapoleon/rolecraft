@@ -18,6 +18,7 @@
     "config_session_mismatch",
     "config_write_required",
     "context_stale",
+    "credential_derivation_unavailable",
     "credential_expired",
     "credential_revoked_or_invalid",
     "cycle_scope_invalid",
