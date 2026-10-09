@@ -1,13 +1,13 @@
 import { waitFor, clickReady } from './browser-support.mjs';
 /** Normal v4 UI over real HTTP/worker and the unmodified published catalog. */
 import assert from 'node:assert/strict';
-import { mkdirSync, writeFileSync } from 'node:fs';
-import { launch } from '../walkthrough/cdp.mjs';
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
+import { delay, launch } from '../walkthrough/cdp.mjs';
 
 const base = process.env.BASE;
 const output = process.env.OUT;
 assert.ok(base && output, 'BASE and OUT are required');
-mkdirSync(`${output}/screenshots`, { recursive: true });
+mkdirSync(`${output}/screenshots/attempts`, { recursive: true });
 const results = [];
 
 async function enterWorkspace(context) {
@@ -16,11 +16,34 @@ async function enterWorkspace(context) {
   await browser.click('[data-action="open-career"]');
   await browser.click('.case-hero [data-action="take-case"]');
   await waitFor(browser, `location.hash === '#/work' && !!document.querySelector('.card-open')`);
+  assert.equal(
+    await browser.ev(`document.querySelectorAll('[data-v4-region="workspace"]').length`),
+    1,
+    'The normal entry allocates exactly one workspace owner',
+  );
   await shot('board');
   assert.equal(
     await browser.ev(`window.PracticeLive.store.active().v2Binding.workLanguage`),
     language,
   );
+}
+
+async function inspectResourceRegion(context) {
+  const { browser, shot } = context;
+  await browser.click('.product-bar [data-action="resources"]');
+  await waitFor(browser, `!!document.querySelector('#res-form [name="capacity"]')`);
+  assert.equal(
+    await browser.ev(`document.querySelectorAll('[data-v4-region="resource-requests"]').length`),
+    1,
+    'The original resource dialog has exactly one named owner',
+  );
+  assert.equal(
+    await browser.ev(`document.querySelector('[form="res-form"][type="submit"]').form.id`),
+    'res-form',
+  );
+  await shot('resources');
+  await browser.click('#sheet [data-action="close"]');
+  await waitFor(browser, `!document.querySelector('#sheet').open`);
 }
 
 async function readAndTest(context) {
@@ -66,6 +89,11 @@ async function saveAndShare(context) {
       ?.innerText.includes(${JSON.stringify(text('可见', 'Visible'))})`,
   );
   await waitFor(browser, `!!document.querySelector('.rc-roles__reply')`);
+  assert.equal(
+    await browser.ev(`document.querySelectorAll('[data-v4-region="roles"]').length`),
+    1,
+    'One named region owns the real colleague conversation',
+  );
   await shot('shared');
 }
 
@@ -73,6 +101,11 @@ async function recoverAccess(context) {
   const { browser, text, shot } = context;
   await browser.click('.rail-tabs [data-tab="agent"]');
   await waitFor(browser, `!!document.querySelector('[name="agentName"]')`);
+  assert.equal(
+    await browser.ev(`document.querySelectorAll('[data-v4-region="agent"]').length`),
+    1,
+    'One named region owns the Agent controls',
+  );
   await browser.type('[name="agentName"]', 'Recovery check');
   await browser.click(
     `[aria-label="${text('授权整个工作区的可见内容', 'Allow visible content across the workspace')}"]`,
@@ -97,6 +130,11 @@ async function recoverAccess(context) {
     const input = document.querySelector('.agent-v4-grant [name="agentName"]');
     return !!input && !input.disabled;
   })()`,
+  );
+  assert.equal(
+    await browser.ev(`document.querySelectorAll('[data-action="download-agent-config"]').length`),
+    1,
+    'Recovered access exposes the one-time config control through the host subscription',
   );
   await shot('recovered-access');
 }
@@ -168,6 +206,7 @@ async function runLanguage(language) {
     console.log(`PASS ${language}: ${name}`);
   };
   const shot = async (name) => {
+    await browser.ev('document.fonts.ready.then(() => true)');
     if (name !== 'failure') {
       await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 0, y: 0 });
       await waitFor(browser, `!document.querySelector('#toast.visible')`);
@@ -179,7 +218,32 @@ async function runLanguage(language) {
         }
       })()`);
     }
-    return browser.shot(`${output}/screenshots/${language}-${name}.jpg`);
+    if (name === 'shared') {
+      await waitFor(
+        browser,
+        `document.querySelector('[data-v4-insertion="sharing"]')
+          ?.innerText.includes(${JSON.stringify(text('可见', 'Visible'))})`,
+      );
+    }
+    const frameState = `JSON.stringify({
+      text: document.body.innerText,
+      controls: [...document.querySelectorAll('button, input, select, textarea')]
+        .filter(node => node.offsetParent !== null)
+        .map(node => [node.id, node.disabled, node.value])
+    })`;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      await waitFor(browser, '!window.PracticeLive.store.getSnapshot().busy');
+      const before = await browser.ev(frameState);
+      await delay(200);
+      if (before !== (await browser.ev(frameState))) continue;
+      const path = `${output}/screenshots/attempts/${language}-${name}-${attempt}.jpg`;
+      await browser.shot(path);
+      if (before === (await browser.ev(frameState))) {
+        copyFileSync(path, `${output}/screenshots/${language}-${name}.jpg`);
+        return;
+      }
+    }
+    throw new Error(`The ${language}/${name} screenshot did not reach a stable visible state`);
   };
   const title = text('回归：试点决定', 'Regression: pilot decision');
   const draft = text(
@@ -211,6 +275,9 @@ async function runLanguage(language) {
     );
     await browser.goto(base);
     await step('normal entry and fixed work language', () => enterWorkspace(context));
+    await step('resource dialog keeps its assigned form and controls', () =>
+      inspectResourceRegion(context),
+    );
     await step('source reading and actual assistant test', () => readAndTest(context));
     await step('unsaved draft survives route change and reload', () => restoreDraft(context));
     await step('save and share the exact work version', () => saveAndShare(context));
