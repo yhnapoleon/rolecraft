@@ -1,12 +1,12 @@
 # W08 模型与实验管线
 
-## 现行职责与验证边界（2026-10-07）
+## 现行职责与验证边界（2026-10-09）
 
 我方仅推进运行导出、注册接入与独立复核；负责方承担数据生成/标注/划分、全部训练融合、SFT/GRPO、评价项五分类、E2/Jev及预算算力。以下既有训练/标注命令保留供负责方和历史复现使用，不表示本轮已执行或我方继续训练。v2-r1交接ZIP与数据保持原样。
 
 本轮接续原035双语增量，新增检查只用合成记录或已保全产物，均标synthetic。语言、hash/span、译本同split和分别统计只证明机制；真实中英v4运行、外部真实回传和质量仍独立验收。未接真实模型的产品位置显示“等待模型接入”，事实规则显示“规则核实”；注册输出仅advisory，真实调用及外层恢复均零自动重试。
 
-当前为 **implementation_only / partial**，消费031固定的c5公共候选`expansion-v3-deb8023ca664946f45c52692c65e3524703d77194c5100e0ee42939ae26cff4b`（commit `d82d7fe690ed0491744cb716df377a77bc2ed4b4`）。本模块已实现可运行代码及小数据管线验证；W07合法fixture发布已实际消费；正式业务release、W11真实多结构和产品加载仍未接齐，不能据此宣称新E1/E2、模型质量或课程交付完成。
+当前工程能力包括受支持产物注册、正常反馈的关系建议接缝和正式回传复核CLI；使用方式见下方服务消费与回传复核章节。原v4折叠展示另行验收，完整候选门禁由总协调在临时重绑环境验证；本手册不把局部测试作为整包放行。既有W07 fixture已用于机制核对，负责方真实数据、checkpoint、训练执行、分语言质量和E1/E2实验结论仍待交付。历史c5及各轮训练记录保留其原时点范围。
 
 所有候选输出固定为advisory、affects_score=false。G2v只代表模型复核标签；独立人工语义校准与正式scoring采用不由本模块自动开启。
 
@@ -257,7 +257,26 @@ uv sync --locked --python 3.12
 
 ### 服务消费与回退边界
 
-本节交付的是注册与加载前置。正常反馈的模型工厂、可选公开协议和v4消费尚未接入，不能把登记成功当作产品接通；运行配置与应用安装命令将在对应消费切片实际交付后补入。当前可回读既有注册与调用收据；恢复不执行生产者命令或重新推理。撤销一次候选使用应改回服务持有的旧注册引用并重启服务，保留原产物、旧反馈与收据；不覆盖旧注册文件。
+正常API与worker的默认反馈工厂现已消费服务端注册配置。原规则、评分和14项定义保持；R2.support单独追加关系建议。输入使用作品的完整原文，保留条件与否定，作品自身及其局部自引不会充当支持证据；它不声称完成了原子陈述提取。公开字段带实际注册身份、正式request/job、输入hash和建议状态，所有建议固定advisory、affects_score=false；synthetic不公开语义标签。原v4中的折叠展示属于后续UI切片，服务字段存在不等于该界面已经验收。
+
+API与worker应继承同一数据库、注册引用及journal配置。注册命令输出中的`registration`对象须完整保存为JSON文件（文件内容为FileRef对象，不包含外层`registration`键）。以下命令中的路径和hash替换为该次真实登记结果：
+
+```sh
+export CAREER_LAB_MODEL_REGISTRY=/path/to/registry
+export CAREER_LAB_MODEL_REGISTRATION="$(cat /path/to/registration-ref.json)"
+export CAREER_LAB_MODEL_JOURNAL=/path/to/persistent-model-journal
+uv run --locked career-lab serve --host 127.0.0.1 --port 19812 \
+  --database-url sqlite:///runs/local/model-session.db --provider local
+# 从相同环境另开worker进程
+uv run --locked career-lab worker \
+  --database-url sqlite:///runs/local/model-session.db --provider local
+```
+
+PR #17之后，签发或恢复委托等凭据另需部署环境提供`CAREER_LAB_CREDENTIAL_KEY_ID`与`CAREER_LAB_CREDENTIAL_KEY`，API/worker保持一致；密钥不写入本手册、模型配置文件或运行回执。本地验收使用临时随机测试密钥，生产没有默认密钥。
+
+装配时解析一次并固定服务实例的注册引用，运行中改环境变量不会切换它；新配置需要重启API/worker。该范围不包含跨重启后旧会话新请求的持久模型绑定。旧反馈保存原身份与内容；同一正式请求的已有模型收据优先回读，即使此时权重漂移、加载不可用也不重新推理。并发重试共享原job和收据；显式新尝试由既有job/request机制区分。
+
+缺引用、文件/运行时漂移、缺可选依赖、超时、基础设施失败和无效推理结果分别给出安全状态，已核实规则与作品保留。完整输入的任一依赖失去权限时，对应建议清除标签、证据和输入hash，保留公开注册身份；不重算旧反馈。关闭新建议时清除两个模型配置变量并重启两进程；切换候选时指定已登记的准确引用并重启，保留原模型、反馈及journal，不覆盖旧登记。
 
 ## 正式回传复核 CLI（2026-10-09）
 

@@ -479,6 +479,7 @@ def export(root: Path, output: Path):
             "src/career_lab/api/public_materials.py",
             "src/career_lab/api/lifecycle_integration.py",
             "src/career_lab/api/evaluation_runtime.py",
+            "src/career_lab/api/registered_models.py",
             "src/career_lab/api/workspace_integration.py",
             "src/career_lab/api/feedback_integration.py",
             "src/career_lab/api/role_snapshot.py",
@@ -747,7 +748,7 @@ def export(root: Path, output: Path):
         "One standard API/worker assembly; native investigation, assistant trials, resource decisions and colleague slots. Explicit failed-job refresh, no automatic model retry including expired leases, exact historical public event/source reads, real material activation in recovered role provenance. W05 r9 production evidence, atomic feedback and native callbacks are assembled with frozen advisory policies; W03 native composition remains pending."
     )
     manifest["previous_contract_revision"] = (
-        "expansion-v3-7f64f17784ad7756fefc53682954b1318bddb58eecdc5dbe645f3187cbc321ed"
+        "expansion-v3-937a1ca295a889ac0bec2cc52a6fd2651050bcedc042a8e4b9754ac0b912c865"
     )
     manifest["integration_changes"]["056-default-installed-runtime"] = (
         "Default API/worker loads the current installed package and verifies its actual "

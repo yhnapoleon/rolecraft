@@ -417,6 +417,9 @@ class RegisteredModelAdvice(V2):
         Literal[
             "model_unavailable",
             "model_load_failed",
+            "pretrained_encoder_dependencies_unavailable",
+            "model_timeout",
+            "model_infrastructure_failed",
             "model_files_changed",
             "model_reference_invalid",
             "evidence_unavailable",

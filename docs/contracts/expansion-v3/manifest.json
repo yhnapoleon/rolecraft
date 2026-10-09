@@ -312,7 +312,7 @@
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "8171238c8d28696c9fb93be6d87b4bedcca2f42c040064989047bdfbf7d2b601"
+    "sha256": "a79cf9beb8e139306cb79112500e2c2046017b9dab806b970eb1e7c4cfecab1c"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
@@ -349,10 +349,10 @@
   },
   "openapi": {
     "path": "openapi.json",
-    "sha256": "96397a967ff174d843dd9af43643f034e385fa5a01bda6385d5977b00b36cde1"
+    "sha256": "332abafd504fc2cc0af0e04ccf31d45ad04cf31daeab012b84c418bc4c7f2e02"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-7f64f17784ad7756fefc53682954b1318bddb58eecdc5dbe645f3187cbc321ed",
+  "previous_contract_revision": "expansion-v3-937a1ca295a889ac0bec2cc52a6fd2651050bcedc042a8e4b9754ac0b912c865",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -1363,7 +1363,7 @@
       "example_sha256": "d801545eb5a4ae55713c934a40ae0feec7c356b7ceb3bb0c11b176d4627e039c",
       "owner": "W01",
       "schema": "schemas/FeedbackV2.json",
-      "schema_sha256": "4b337382d8ad8ca98d876c2d0917a2c2394b2b2a13eae4607ca69bb6853bb92e",
+      "schema_sha256": "d7535636117d2e6ff37cf7cccb47d1653e2d9f6000e41d6892ad421d4173dbb8",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -2231,7 +2231,7 @@
       "example_sha256": "30534a704a533b28c8528d3ad3dc3e76b1f3b9674d0daa97eed1696ac1be00c4",
       "owner": "W01",
       "schema": "schemas/RegisteredModelAdvice.json",
-      "schema_sha256": "b0c563b560afa36dda56c171246f66d75901d2a0945a71ee550a5651a6b0f8df",
+      "schema_sha256": "78bb319e73046c536d362f34d8e297d0d6cddb65ab2c476504b7808fc171430e",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -3195,21 +3195,22 @@
     }
   },
   "source_files": {
-    "src/career_lab/api/app.py": "50e570c71dad548ec9956dbfd03f8267d8b390dbff1d665c7447d2a8865e8659",
-    "src/career_lab/api/evaluation_runtime.py": "8ede9e5eafa7c2ae6367c55e2046309fb4873544ecbfd33bec575702db6fec96",
+    "src/career_lab/api/app.py": "64eafa7d2504ed8c7257df60a2f144775e353e5c749b5bca3c571f9ca40a23b6",
+    "src/career_lab/api/evaluation_runtime.py": "9f2b78eb2c4da1edef7cbb1377a2283031c226d71fd18ff389ed5646d3e79ff8",
     "src/career_lab/api/feedback_integration.py": "b90696b99e5e353c68e0d0dd2eb155f8cc314d365859acfdb180265928273495",
     "src/career_lab/api/lifecycle_integration.py": "c78cc5391833321cef245bad2601575711599d29a964a45bf8715d1604cf9caa",
     "src/career_lab/api/modules.py": "e47c4e2c6051eb156dc06615dbf0caa28279bcbc02d7a8c5a547ecf47c70cd48",
     "src/career_lab/api/private_roles.py": "d38ddaf8fb1f9bd261223a855096bb2cffca92c7eb2a52c8725c4fda5f05e8bd",
     "src/career_lab/api/public_materials.py": "2b67e940dbe0eac60897b0d770b03b1f974f015cbcb114ab8b19402917762426",
+    "src/career_lab/api/registered_models.py": "4746212ad50a8a2c6dffa84af4cd6aa8bd188604df8316c586c5eddaa1a2f1de",
     "src/career_lab/api/role_snapshot.py": "1da85f5f6712db361077f9303e57be1a2c22ce54f39152249a0d0fffeb5268dd",
     "src/career_lab/api/v2_routes.py": "1d829a6949974dfc9e21f429368583b0ef3ebab120b66f1bf7b66ed7941f4483",
     "src/career_lab/api/v4_config.py": "88c84e33e659619b0c1160ce3d398eeb1efe96c78d6be4fa180a539bd1c597ae",
     "src/career_lab/api/v4_extensions.py": "1ee9ee7a6601ee38db8fcb8c9806575b81f7560c4dea4b4b8254fd64fa20e81c",
     "src/career_lab/api/vertical_reads.py": "b02858ca838446a813ae781b25367f1f0377b26516016bb6516d44a8d6e3c346",
-    "src/career_lab/api/vertical_runtime.py": "fb15b89575af6e94c4e010171aea34757da11c4bed85374abd18bf0e2e8846a8",
+    "src/career_lab/api/vertical_runtime.py": "b27a60df08e468bb8a31a1e43b7bb5cf348ffbe3dbbebfe2e818a5e34cc8e223",
     "src/career_lab/api/workspace_integration.py": "580d03db16bf1310e4713965501cf8fe924472d8646d6890fa85d4b30045559b",
-    "src/career_lab/cli.py": "2ecca7ab1cce149a1a58a1ffbd83826c74cc7098a375255c16e8eb4c00c69db7",
+    "src/career_lab/cli.py": "fb94e26661446cf1c886ba7c1fb40347cdc790b5b2845645f3c1069ecd7f3e25",
     "src/career_lab/contracts/__init__.py": "650246fed3d082cc58505d728f750218b601580ff7a00a03ae8e610bd9d316bc",
     "src/career_lab/contracts/actions.py": "835fbb62979891cbf97d0580e0843c2a8f97b8a8bcc08c8a01afecec36f919ac",
     "src/career_lab/contracts/base.py": "e62af2f4c8d827a994ae7f69d2022d50b5a42581d885348aab070fa407de2a77",
@@ -3224,9 +3225,9 @@
     "src/career_lab/contracts/v2/engineer.py": "4b6ef136dae623be177c51cbbc7b1b85a36d7449bb40b96bc4f63efb410176ea",
     "src/career_lab/contracts/v2/engineer_examples.py": "f9275d256a926de98e251c4a352e6488dd7326a80da13c42647e041cb4b05084",
     "src/career_lab/contracts/v2/engineer_export.py": "cb03edb975fb004f2956ec1db93a40b7ed6a1dd473b74b9c9395ca5409e15342",
-    "src/career_lab/contracts/v2/evaluation.py": "f16411ada8a7d23195df33bf0cc308260685ab0ff3c9fd88798f7aedefb7d42f",
+    "src/career_lab/contracts/v2/evaluation.py": "bdd383ccf1aa02bbf3d8e9dc9bda5c7d60d22582fadb69242c45936c4a26818b",
     "src/career_lab/contracts/v2/examples.py": "0ae0d567f8d8d476b13e52b08f56a109b40fddf5e671fd3a4e5a10a6d88c09f9",
-    "src/career_lab/contracts/v2/export.py": "c170a21a22292f21f82be8bc8f8ca18b97206dbce97b5b514d6ccdf4775192b7",
+    "src/career_lab/contracts/v2/export.py": "50a0e0376e336831800333c46b9fbbb0d4262f661fabd085bd6278507ef17fa5",
     "src/career_lab/contracts/v2/extensions.py": "cd47aa1195d1d934e67a815e9e30494aba146d6c7e64266b6be613818523b7cd",
     "src/career_lab/contracts/v2/files.py": "3b3f8e9ac47acacfcdd3052f7b0d94698ff8622c0ca34299b47a544bad048577",
     "src/career_lab/contracts/v2/legacy.py": "47a9fb0d4414326b2e05ba863ce29a905f9734b1eb881a85b41af769df5fbbd5",
