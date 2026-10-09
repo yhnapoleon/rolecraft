@@ -2,25 +2,29 @@
 
 from datetime import datetime
 
+from pydantic import ValidationError
+
 from career_lab.contracts.v2.core import AuthContext, Command, ProtocolError, canonical, digest
 from career_lab.contracts.v2.legacy import normalize_legacy_product
 from career_lab.contracts.v2.workspace import (
-    WorkspaceImport,
-    ImportResult,
-    ImportReference,
-    WorkspaceTask,
-    WorkProductVersion,
-    TestPlanPayload,
-    TestCase,
     Adoption,
-    LegacyProvenance,
-    InvestigationPayload,
-    InvestigationBlock,
     ImportConflict,
+    ImportReference,
+    ImportResult,
     ImportVersionMap,
+    InvestigationBlock,
+    InvestigationPayload,
+    LegacyProvenance,
+    TestCase,
+    TestPlanPayload,
+    WorkProductVersion,
+    WorkspaceImport,
+    WorkspaceTask,
 )
-from .ports import Snapshot, Mutation
-from .domain import stored, reference, _new_scope
+from career_lab.errors import InternalFailure
+
+from .domain import _new_scope, reference, stored
+from .ports import Mutation, Snapshot
 
 # Explicit limits bound both historical writes and missing-version metadata.
 # Large original revision labels are rejected, never silently renumbered/dropped.
@@ -159,7 +163,10 @@ def _legacy_structure(snapshot, auth, p, item, image, kind):
                 ) == raw.get("version"):
                     from career_lab.contracts.v2.core import EvidenceRefV2
 
-                    ref = EvidenceRefV2.model_validate(citation)
+                    try:
+                        ref = EvidenceRefV2.model_validate(citation)
+                    except ValidationError as error:
+                        raise InternalFailure("invalid persisted source citation") from error
                     if snapshot.reference_allowed(ref):
                         return ref
         return None
