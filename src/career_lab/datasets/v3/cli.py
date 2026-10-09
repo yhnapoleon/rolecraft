@@ -192,9 +192,7 @@ def dispatch(args):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(
-        description="W07 module pipeline (draft contracts; not full W07 acceptance)"
-    )
+    parser = argparse.ArgumentParser(description="Dataset export and annotation tools")
     register_commands(parser.add_subparsers(dest="command", required=True))
     args = parser.parse_args(argv)
     try:
@@ -206,7 +204,7 @@ def main(argv=None):
             )
         )
         return 2
-    except (ValueError, KeyError, OSError) as exc:
+    except (ValueError, KeyError, TypeError, OSError) as exc:
         message = (
             str(exc)
             if isinstance(exc, ProtocolError)

@@ -501,3 +501,40 @@ def test_failed_execution_is_counted_without_a_semantic_label(live: LiveSession)
     assert manifest["execution_failures"][0]["ref"]["object_id"] == trial["result"]["test"]["id"]
     assert manifest["families"]["relation"]["records"] == 0
     assert manifest["training_ready"] is False
+
+
+@pytest.mark.parametrize("attack", ["unmanifested_symlink", "unbound_index", "replay_symlink"])
+def test_export_audit_keeps_file_reads_inside_the_package(live: LiveSession, attack: str) -> None:
+    import hashlib
+
+    live.authorize()
+    output = live.root / "export"
+    response = live.export(output)
+    assert response.returncode == 0, response.stdout + response.stderr
+    clean = command("validate-data", "--export", output)
+    assert clean.returncode == 0, clean.stdout + clean.stderr
+    outside = live.root / "outside.json"
+    outside.write_text(json.dumps({"outside": {"language": "private-canary"}}))
+    index = output / "audit/source-index.json"
+    manifest_path = output / "dataset-manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    if attack in {"unmanifested_symlink", "replay_symlink"}:
+        index.unlink()
+        index.symlink_to(outside)
+        del manifest["files"]["audit/source-index.json"]
+    else:
+        index.write_bytes(outside.read_bytes())
+        manifest["files"]["audit/source-index.json"] = {
+            "sha256": hashlib.sha256(index.read_bytes()).hexdigest(),
+            "size": index.stat().st_size,
+        }
+    manifest_path.write_bytes(json_bytes(manifest))
+    rejected = (
+        live.export(output)
+        if attack == "replay_symlink"
+        else command("validate-data", "--export", output)
+    )
+    assert rejected.returncode != 0
+    assert "private-canary" not in rejected.stdout + rejected.stderr
+    if attack == "replay_symlink":
+        assert json.loads(rejected.stdout)["error"] == "export_output_symlink"

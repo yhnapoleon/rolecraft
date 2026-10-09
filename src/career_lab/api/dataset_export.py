@@ -23,6 +23,7 @@ from career_lab.datasets.v3.export import (
     export_from_port,
     object_key,
 )
+from career_lab.datasets.v3.projection import SOURCE_KINDS, SourceIndexEntry
 from career_lab.evidence.v2.assembler import EvidenceAssemblerV2, base_ref
 from career_lab.evidence.v2.ports import CriterionPolicy, SourceRecord
 from career_lab.evidence.v2.store_reader import StoreEvidenceReader
@@ -36,22 +37,6 @@ from career_lab.research.authorization import (
 from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.storage.v2_snapshot import SnapshotPortAdapter
 
-SOURCE_KINDS = frozenset(
-    {
-        "product",
-        "test",
-        "material",
-        "config",
-        "business_request",
-        "business_decision",
-        "submission",
-        "review",
-        "event",
-        "role_turn",
-        "role_reply",
-    }
-)
-
 
 @dataclass(frozen=True)
 class LiveCapture:
@@ -60,7 +45,7 @@ class LiveCapture:
     authorization: dict[str, object]
     snapshot_hash: str
     empty_reasons: dict[str, str]
-    source_index: dict[str, dict[str, object]]
+    source_index: dict[str, SourceIndexEntry]
     execution_failures: tuple[dict[str, object], ...]
 
 
@@ -84,7 +69,7 @@ class AuthorizedSnapshotPort:
         self.execution_failures: list[dict[str, object]] = []
         self.sources: dict[str, SourceObject] = {}
         self.files: dict[str, bytes] = {}
-        self.source_index: dict[str, dict[str, object]] = {}
+        self.source_index: dict[str, SourceIndexEntry] = {}
         self.snapshot_hash = ""
         self.empty_reasons: dict[str, str] = {}
         self.grant: ResearchAuthorization | None = None
@@ -187,15 +172,15 @@ class AuthorizedSnapshotPort:
         path = "audit/sources/" + key + ".txt"
         data = source.text.encode("utf-8")
         self.files[path] = data
-        self.source_index[path] = {
-            "ref": bare.model_dump(mode="json"),
-            "available_at": source.created_at.model_dump(mode="json"),
-            "sha256": sha(data),
-            "language": self.module.work_language,
-            "span_start": 0,
-            "span_end": len(source.text),
-            "executor": source.executor.model_dump(mode="json") if source.executor else None,
-        }
+        self.source_index[path] = SourceIndexEntry(
+            ref=bare,
+            available_at=source.created_at,
+            sha256=sha(data),
+            language=self.module.work_language,
+            span_start=0,
+            span_end=len(source.text),
+            executor=source.executor,
+        )
         return source, C.FileRef(path=path, sha256=sha(data), media_type="text/plain")
 
     def _unit(

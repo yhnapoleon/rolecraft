@@ -14,10 +14,11 @@ if TYPE_CHECKING:
     from career_lab.api.dataset_export import LiveCapture
 
 
-def _files(root: Path) -> dict[str, bytes]:
-    return {
-        str(path.relative_to(root)): path.read_bytes() for path in root.rglob("*") if path.is_file()
-    }
+def _files(root: Path) -> dict[str, Path]:
+    paths = list(root.rglob("*"))
+    if any(path.is_symlink() for path in paths):
+        raise ProtocolError("export_output_symlink", status=409)
+    return {str(path.relative_to(root)): path for path in paths if path.is_file()}
 
 
 def save_capture(target: Path, capture: "LiveCapture") -> dict[str, object]:
@@ -27,7 +28,10 @@ def save_capture(target: Path, capture: "LiveCapture") -> dict[str, object]:
         with TemporaryDirectory(prefix=".export-check-", dir=target.parent) as temporary:
             stage = Path(temporary)
             manifest = _write_capture(stage, capture)
-            if _files(stage) != _files(target):
+            expected, existing = _files(stage), _files(target)
+            if expected.keys() != existing.keys() or any(
+                expected[name].read_bytes() != existing[name].read_bytes() for name in expected
+            ):
                 raise ProtocolError("export_output_conflict", status=409)
             return manifest
     with immutable_directory(target) as root:
@@ -43,7 +47,10 @@ def _write_capture(root: Path, capture: "LiveCapture") -> dict[str, object]:
         destination.write_bytes(raw)
     write_new(root / "audit/authorization.json", capture.authorization)
     write_new(root / "audit/source-map.json", result.source_maps)
-    write_new(root / "audit/source-index.json", capture.source_index)
+    write_new(
+        root / "audit/source-index.json",
+        {name: entry.model_dump(mode="json") for name, entry in capture.source_index.items()},
+    )
     families = Counter(row.family for row in result.records)
     metadata = []
     for split in sorted({row.split for row in result.records}):
