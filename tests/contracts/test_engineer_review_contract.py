@@ -452,9 +452,11 @@ def test_engineer_hidden_only_public_report_keeps_applicability_without_details(
     report = EngineerRegressionReport.model_validate(value)
     public = public_engineer_report(report)
     assert not public.public_results
-    assert public.applicability.scenario == report.input.scenario
+    assert public.applicability.scenario.sha256 == report.input.scenario.sha256
+    assert public.applicability.scenario.kind == "scenario"
     assert public.applicability.probe_suite_hash == report.input.probe_suite.sha256
-    assert public.applicability.config == report.input.config
+    assert public.applicability.config.sha256 == report.input.config.sha256
+    assert public.applicability.config.kind == "configuration"
     assert public.applicability.effective_config_hash == digest(
         report.input.resolved_config.effective
     )
@@ -529,3 +531,62 @@ def test_public_report_direct_decode_keeps_consistent_and_hidden_only_summaries(
     assert parsed.status == status and parsed.claim_check == claim
     assert parsed.hidden.passed == 1 and parsed.hidden.failed == 1
     assert bool(parsed.public_results) is not hidden_only
+
+
+def test_public_projection_keeps_prose_file_names_and_quote_text_out_of_shared_dto() -> None:
+    from career_lab.contracts.v2 import digest
+    from career_lab.contracts.v2.engineer import EngineerRegressionReport, public_engineer_report
+
+    marker = "PRIVATE-FREE-TEXT-AND-FILE-METADATA"
+    value = report_payload()
+    for field in ("config", "scenario", "submission"):
+        value["input"][field].update(path=marker + ".json", media_type=marker)
+    value["submission"] = value["input"]["submission"]
+    value["results"][0]["actual"]["answer"] = marker
+    for reference in value["results"][0]["actual"]["citations"]:
+        reference["quote"] = marker
+    value["findings"] = [
+        {
+            "kind": "target_fix",
+            "status": "pass",
+            "visibility": "public",
+            "description": marker,
+            "probe_ids": ["public-1"],
+        }
+    ]
+    value["unresolved"] = [{"id": marker, "description": marker, "visibility": "public"}]
+    value["advice"] = {
+        "status": "success",
+        "text": marker,
+        "visibility": "public",
+        "model": {"path": marker + ".json", "sha256": "e" * 64, "media_type": marker},
+    }
+    value["input"]["model"] = value["advice"]["model"]
+    value["input_hash"] = digest(EngineerReviewInput.model_validate(value["input"]))
+    report = EngineerRegressionReport.model_validate(value)
+    private_before = report.model_dump_json()
+    public = public_engineer_report(report)
+    assert marker not in public.model_dump_json()
+    assert report.model_dump_json() == private_before
+    assert marker in private_before
+    assert public.public_results[0].query == "public question"
+    assert public.applicability.config.sha256 == report.input.config.sha256
+
+
+@pytest.mark.parametrize("model", [None, {"kind": "configuration", "sha256": "a" * 64}])
+def test_public_advice_success_requires_a_model_identity(
+    model: dict[str, JsonValue] | None,
+) -> None:
+    from pydantic import ValidationError
+
+    from career_lab.contracts.v2.engineer import EngineerPublicAdvice
+
+    with pytest.raises(ValidationError):
+        EngineerPublicAdvice.model_validate({"status": "success", "model": model})
+    valid = EngineerPublicAdvice.model_validate(
+        {
+            "status": "success",
+            "model": {"kind": "model", "sha256": "a" * 64},
+        }
+    )
+    assert valid.model.sha256 == "a" * 64 and valid.text is None

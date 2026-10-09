@@ -243,6 +243,38 @@
         "title": "EngineerAdvice",
         "type": "object"
       },
+      "EngineerArtifactIdentity": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "submission",
+              "scenario",
+              "configuration",
+              "model"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "sha256"
+        ],
+        "title": "EngineerArtifactIdentity",
+        "type": "object"
+      },
       "EngineerClaimedReport": {
         "additionalProperties": false,
         "properties": {
@@ -573,13 +605,193 @@
         "title": "EngineerProbeSummary",
         "type": "object"
       },
+      "EngineerPublicAdvice": {
+        "additionalProperties": false,
+        "properties": {
+          "affects_score": {
+            "const": false,
+            "default": false,
+            "title": "Affects Score",
+            "type": "boolean"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EngineerArtifactIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "waiting_model",
+              "success",
+              "unavailable",
+              "invalid",
+              "timeout"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "default": null,
+            "title": "Text",
+            "type": "null"
+          },
+          "visibility": {
+            "const": "public",
+            "default": "public",
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "model"
+        ],
+        "title": "EngineerPublicAdvice",
+        "type": "object"
+      },
+      "EngineerPublicProbeResult": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "answered",
+                  "answered_with_warning",
+                  "fallback",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Status"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "config_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Config Hash",
+            "type": "string"
+          },
+          "elapsed_seconds": {
+            "minimum": 0,
+            "title": "Elapsed Seconds",
+            "type": "number"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "engineer_probe_execution_failed",
+                  "engineer_baseline_execution_failed",
+                  "engineer_review_interrupted",
+                  "engineer_verification_failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "expected_status": {
+            "enum": [
+              "answered",
+              "answered_with_warning",
+              "fallback",
+              "failed"
+            ],
+            "title": "Expected Status",
+            "type": "string"
+          },
+          "indexed_versions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Indexed Versions",
+            "type": "object"
+          },
+          "probe_id": {
+            "minLength": 1,
+            "title": "Probe Id",
+            "type": "string"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "pass",
+              "fail",
+              "error"
+            ],
+            "title": "Result",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_versions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Source Versions",
+            "type": "object"
+          },
+          "visibility": {
+            "const": "public",
+            "default": "public",
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "probe_id",
+          "query",
+          "expected_status",
+          "actual_status",
+          "result",
+          "config_hash",
+          "citations",
+          "source_versions",
+          "indexed_versions",
+          "elapsed_seconds",
+          "error_code"
+        ],
+        "title": "EngineerPublicProbeResult",
+        "type": "object"
+      },
       "EngineerPublicReport": {
         "additionalProperties": false,
         "properties": {
           "advice": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/EngineerAdvice"
+                "$ref": "#/components/schemas/EngineerPublicAdvice"
               },
               {
                 "type": "null"
@@ -637,7 +849,7 @@
           },
           "public_results": {
             "items": {
-              "$ref": "#/components/schemas/EngineerProbeResult"
+              "$ref": "#/components/schemas/EngineerPublicProbeResult"
             },
             "title": "Public Results",
             "type": "array"
@@ -661,12 +873,13 @@
             "type": "string"
           },
           "submission": {
-            "$ref": "#/components/schemas/FileRef"
+            "$ref": "#/components/schemas/EngineerArtifactIdentity"
           },
           "unresolved": {
             "items": {
               "$ref": "#/components/schemas/EngineerUnresolvedItem"
             },
+            "maxItems": 0,
             "title": "Unresolved",
             "type": "array"
           },
@@ -809,12 +1022,29 @@
             "type": "string"
           },
           "config": {
-            "$ref": "#/components/schemas/FileRef"
+            "$ref": "#/components/schemas/EngineerArtifactIdentity"
           },
           "effective_config_hash": {
             "pattern": "^[0-9a-f]{64}$",
             "title": "Effective Config Hash",
             "type": "string"
+          },
+          "effective_settings_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Effective Settings Hash",
+            "type": "string"
+          },
+          "indexed_versions_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indexed Versions Hash"
           },
           "probe_suite_hash": {
             "pattern": "^[0-9a-f]{64}$",
@@ -827,7 +1057,7 @@
             "type": "string"
           },
           "scenario": {
-            "$ref": "#/components/schemas/FileRef"
+            "$ref": "#/components/schemas/EngineerArtifactIdentity"
           },
           "schema_version": {
             "const": 2,
@@ -837,6 +1067,18 @@
           },
           "source_as_of": {
             "$ref": "#/components/schemas/VersionPoint"
+          },
+          "source_versions_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Versions Hash"
           }
         },
         "required": [
@@ -846,6 +1088,9 @@
           "probe_suite_hash",
           "reviewer_version_hash",
           "effective_config_hash",
+          "effective_settings_hash",
+          "source_versions_hash",
+          "indexed_versions_hash",
           "source_as_of"
         ],
         "title": "EngineerReportApplicability",
