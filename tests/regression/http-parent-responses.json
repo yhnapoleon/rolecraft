@@ -1,0 +1,178 @@
+{
+  "test_case_revision_zero": {
+    "status": 422,
+    "body": {
+      "error": "1 validation error for TestCase\nrevision\n  Input should be greater than 0 [type=greater_than, input_value=0, input_type=int]\n    For further information visit https://errors.pydantic.dev/2.12/v/greater_than",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-length": "246",
+      "content-type": "application/json"
+    }
+  },
+  "investigation_block_revision_zero": {
+    "status": 422,
+    "body": {
+      "error": "1 validation error for InvestigationBlock\nrevision\n  Input should be greater than 0 [type=greater_than, input_value=0, input_type=int]\n    For further information visit https://errors.pydantic.dev/2.12/v/greater_than",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-length": "256",
+      "content-type": "application/json"
+    }
+  },
+  "investigation_review_focus_invalid": {
+    "status": 422,
+    "body": {
+      "error": "1 validation error for InvestigationPayload\nreview_focus\n  Input should be 'index', 'source', 'uncertain' or 'other' [type=literal_error, input_value='invalid', input_type=str]\n    For further information visit https://errors.pydantic.dev/2.12/v/literal_error",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-length": "299",
+      "content-type": "application/json"
+    }
+  },
+  "test_case_id_missing": {
+    "status": 404,
+    "body": {
+      "error": "not found",
+      "code": "not_found"
+    },
+    "headers": {
+      "content-length": "40",
+      "content-type": "application/json"
+    }
+  },
+  "legacy_raw_purpose": {
+    "status": 422,
+    "body": {
+      "error": "1 validation error for LegacyProvenance\noriginal_purpose\n  Input should be a valid string [type=string_type, input_value=7, input_type=int]\n    For further information visit https://errors.pydantic.dev/2.12/v/string_type",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-length": "260",
+      "content-type": "application/json"
+    }
+  },
+  "empty_pilot_plan": {
+    "status": 422,
+    "body": {
+      "error": "6 validation errors for PilotPlan\nparticipants\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nknowledge_domains\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nlaunch_day\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nupdate_strategy\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nfallback\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nwork_items\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-length": "1018",
+      "content-type": "application/json"
+    }
+  },
+  "invalid_object_version": {
+    "status": 422,
+    "body": {
+      "error": "1 validation error for ObjectRef\nversion\n  Input should be greater than 0 [type=greater_than, input_value=0, input_type=int]\n    For further information visit https://errors.pydantic.dev/2.12/v/greater_than",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-length": "246",
+      "content-type": "application/json"
+    }
+  },
+  "negative_configuration_participants": {
+    "status": 422,
+    "body": {
+      "error": "1 validation error for AssistantConfig\nparticipants\n  Input should be greater than or equal to 0 [type=greater_than_equal, input_value=-1, input_type=int]\n    For further information visit https://errors.pydantic.dev/2.12/v/greater_than_equal",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-length": "282",
+      "content-type": "application/json"
+    }
+  },
+  "unclassified_value": {
+    "status": 422,
+    "body": {
+      "error": "parent validation text",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-length": "59",
+      "content-type": "application/json"
+    }
+  },
+  "unclassified_key": {
+    "status": 404,
+    "body": {
+      "error": "not found",
+      "code": "not_found"
+    },
+    "headers": {
+      "content-length": "40",
+      "content-type": "application/json"
+    }
+  },
+  "persisted_sources_missing": {
+    "status": 404,
+    "body": {
+      "error": "not found",
+      "code": "not_found"
+    },
+    "headers": {
+      "content-length": "40",
+      "content-type": "application/json"
+    }
+  },
+  "persisted_coordinate_missing": {
+    "status": 404,
+    "body": {
+      "error": "not found",
+      "code": "not_found"
+    },
+    "headers": {
+      "content-length": "40",
+      "content-type": "application/json"
+    }
+  },
+  "persisted_state_invalid": {
+    "status": 422,
+    "body": {
+      "error": "6 validation errors for WorldState\nsession_id\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nversion\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nlogical_time\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nresources\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nconfigs\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nmaterial_versions\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-length": "1009",
+      "content-type": "application/json"
+    }
+  },
+  "persisted_source_ref_invalid": {
+    "status": 422,
+    "body": {
+      "error": "3 validation errors for EvidenceRefV2\nsession_id\n  Field required [type=missing, input_value={'object_id': 'damaged-source', 'version': 1}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nkind\n  Field required [type=missing, input_value={'object_id': 'damaged-source', 'version': 1}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nobserved_at_seq\n  Field required [type=missing, input_value={'object_id': 'damaged-source', 'version': 1}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-length": "670",
+      "content-type": "application/json"
+    }
+  },
+  "unknown_scenario": {
+    "status": 422,
+    "body": {
+      "error": "unknown scenario",
+      "code": "unknown_scenario"
+    },
+    "headers": {
+      "content-length": "54",
+      "content-type": "application/json"
+    }
+  },
+  "unknown_role": {
+    "status": 422,
+    "body": {
+      "error": "unknown role",
+      "code": "unknown_role"
+    },
+    "headers": {
+      "content-length": "46",
+      "content-type": "application/json"
+    }
+  }
+}
