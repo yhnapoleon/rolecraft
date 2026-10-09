@@ -1,17 +1,44 @@
 """Internal snapshot/restore: never queue a job, call a model, or reuse credentials."""
 
-from uuid import uuid4, uuid5, NAMESPACE_URL
-from sqlalchemy import insert, select
-from sqlalchemy.exc import IntegrityError
-from career_lab.contracts.v2 import *
-from .v2_store import V2Store, validate_graph
-from .v2_remap import NamespaceRemapper, identity_key, event_key, transaction_key
-from .v2_tables import *
 import json
 import secrets
-import hashlib
-import hmac
 from datetime import datetime, timezone
+from uuid import NAMESPACE_URL, uuid4, uuid5
+
+from sqlalchemy import insert, select
+from sqlalchemy.engine import Connection
+from sqlalchemy.exc import IntegrityError
+
+from career_lab.contracts.v2 import (
+    ActionBoundary,
+    ActionProposal,
+    AuthContext,
+    Executor,
+    ObjectRef,
+    ProtocolError,
+    RestoreResult,
+    SnapshotExport,
+    StoredEvent,
+    StoredObject,
+    VersionPoint,
+    WorldStateV2,
+    canonical,
+    digest,
+)
+from career_lab.security.credentials import derivations, signed_credential
+
+from .record_invariants import validate_history
+from .v2_remap import NamespaceRemapper, event_key, identity_key, transaction_key
+from .v2_store import V2Store, validate_graph
+from .v2_tables import (
+    v2_credentials,
+    v2_events,
+    v2_external_refs,
+    v2_restores,
+    v2_sessions,
+    v2_snapshots,
+    v2_transactions,
+)
 
 
 class SnapshotService:
@@ -99,7 +126,42 @@ class SnapshotService:
             }
             return SnapshotExport.model_validate(value | {"snapshot_hash": digest(value)})
 
-    def restore(self, snapshot: SnapshotExport, *, session_id=None, token=None, request_id=None):
+    def _human_context(self, connection: Connection, session_id: str, error: str) -> AuthContext:
+        rows = connection.execute(
+            select(v2_credentials.c.context).where(v2_credentials.c.session_id == session_id)
+        ).scalars()
+        for raw in rows:
+            context = AuthContext.model_validate_json(raw)
+            if context.executor.kind == "human":
+                return context
+        raise ProtocolError(error, status=403)
+
+    def _restore_credential(
+        self,
+        connection: Connection,
+        snapshot: SnapshotExport,
+        target: AuthContext,
+        request_id: str,
+    ) -> str:
+        parent = self._human_context(connection, snapshot.session_id, "restore_parent_auth_missing")
+        self.store._auth(connection, parent, "delegate")
+        return signed_credential(
+            connection,
+            self.store.credential_key_provider,
+            "snapshot-restore",
+            parent,
+            target,
+            canonical([target.session_id, request_id, snapshot.snapshot_hash]),
+        )
+
+    def restore(
+        self,
+        snapshot: SnapshotExport,
+        *,
+        session_id: str | None = None,
+        token: str | None = None,
+        request_id: str | None = None,
+    ) -> tuple[RestoreResult, str]:
         # Revalidate rather than trust callers' model_copy(update=...) values.
         snapshot = SnapshotExport.model_validate(snapshot.model_dump(mode="json"))
         validate_graph(
@@ -124,33 +186,6 @@ class SnapshotService:
         if snapshot.state.session_id != snapshot.session_id:
             raise ProtocolError("snapshot_session_mismatch")
         sid = session_id or uuid4().hex
-        if request_id and token is None:
-            with self.store.db.engine.connect() as c:
-                rows = (
-                    c.execute(
-                        select(v2_credentials).where(
-                            v2_credentials.c.session_id == snapshot.session_id
-                        )
-                    )
-                    .mappings()
-                    .all()
-                )
-                parent = next(
-                    (
-                        r
-                        for r in rows
-                        if AuthContext.model_validate_json(r["context"]).executor.kind == "human"
-                    ),
-                    None,
-                )
-                if parent is None:
-                    raise ProtocolError("restore_parent_auth_missing", status=403)
-                token = hmac.new(
-                    parent["token_hash"].encode(),
-                    canonical([sid, request_id, snapshot.snapshot_hash]).encode(),
-                    hashlib.sha256,
-                ).hexdigest()
-        token = token or secrets.token_urlsafe(32)
         if sid == snapshot.session_id:
             raise ProtocolError("restore_requires_new_session", status=409)
         local_keys = {identity_key(x.ref.kind, x.ref.object_id) for x in snapshot.objects}
@@ -257,6 +292,19 @@ class SnapshotService:
                         or previous["snapshot_hash"] != snapshot.snapshot_hash
                     ):
                         raise ProtocolError("restore_id_reused", status=409)
+                    if request_id and token is None:
+                        target = self._human_context(c, sid, "restore_token_conflict")
+                        # Compatibility policy forbids reconstructing historical plaintext
+                        # to classify unmarked rows. Preserve their original token requirement.
+                        provenance = c.execute(
+                            select(derivations.c.credential_id).where(
+                                derivations.c.credential_id == target.credential_id
+                            )
+                        ).first()
+                        if provenance is None:
+                            raise ProtocolError("restore_token_conflict", status=409)
+                        self.store._auth(c, target)
+                        token = self._restore_credential(c, snapshot, target, request_id)
                     credentials = (
                         c.execute(
                             select(v2_credentials).where(
@@ -283,9 +331,12 @@ class SnapshotService:
                     ), token
                 if c.execute(select(v2_sessions.c.id).where(v2_sessions.c.id == sid)).first():
                     raise ProtocolError("restore_target_exists", status=409)
-                from .record_invariants import validate_history
-
                 validate_history(objects)
+                token = (
+                    self._restore_credential(c, snapshot, owner, request_id)
+                    if request_id and token is None
+                    else token or secrets.token_urlsafe(32)
+                )
                 c.execute(
                     insert(v2_sessions).values(
                         id=sid,
