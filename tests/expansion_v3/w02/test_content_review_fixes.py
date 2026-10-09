@@ -1,13 +1,10 @@
 """Reproductions for independent M3 review findings; do not grade the whole package."""
 
 import json
-
-import pytest
-
-from career_lab.scenarios.v2.module import ScenarioModule
 from tests.support.scenario_packages import installed_root
-
-from .test_evaluation_facts import facts, history, question
+import pytest
+from career_lab.scenarios.v2.module import ScenarioModule
+from .test_evaluation_facts import history, question, facts
 
 PACK = installed_root()
 VARIANTS = [

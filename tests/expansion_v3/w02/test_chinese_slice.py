@@ -1,6 +1,5 @@
 """Focused Chinese-slice content and immutable-runtime handoff checks."""
 
-import hashlib
 import json
 from pathlib import Path
 
