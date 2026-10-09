@@ -8,3 +8,7 @@ class CodedValueError(ValueError):
         super().__init__(message)
         self.code = code or self.code
         self.details = details
+
+
+class InternalFailure(RuntimeError):
+    """Explicitly classified invalid server state or output, never client input."""
