@@ -1,16 +1,27 @@
-name: Architecture regression (manual draft)
+name: Architecture regression
 
-# Draft gate: no push/PR trigger until the workflow is approved for publication.
+# Core regression gate (lint delta, backend, frontend, 72 state checks, build,
+# per-ID comparison) on every push to main and every pull request into main.
+# Browser/MCP evidence still runs locally with CHROME_BIN; a pinned headless
+# Chrome on the runner is required before enabling it here.
 on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: regression-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   regression:
     runs-on: ubuntu-latest
-    timeout-minutes: 35
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
         with:
@@ -27,8 +38,6 @@ jobs:
       - run: npm ci --no-audit --no-fund
         working-directory: apps/web
       - run: .venv/bin/python -m scripts.regression.run --output runs/local/ci
-      # Browser/MCP evidence currently runs locally with CHROME_BIN. Provisioning
-      # a pinned headless Chrome on the runner is required before enabling it here.
       - uses: actions/upload-artifact@v4
         if: always()
         with:
