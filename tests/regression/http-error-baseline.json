@@ -1,0 +1,126 @@
+{
+  "HTTP-01": {
+    "status": 403,
+    "body": {
+      "error": "capability forbidden",
+      "code": "capability_forbidden"
+    },
+    "headers": {
+      "content-type": "application/json"
+    }
+  },
+  "HTTP-02": {
+    "status": 422,
+    "body": {
+      "error": "learner request requires a reason",
+      "code": "reason_required",
+      "details": {
+        "field": "reason"
+      }
+    },
+    "headers": {
+      "content-type": "application/json"
+    }
+  },
+  "HTTP-03": {
+    "status": 422,
+    "body": {
+      "detail": [
+        {
+          "type": "string_type",
+          "loc": [
+            "body",
+            "scenario"
+          ],
+          "msg": "Input should be a valid string",
+          "input": 7
+        }
+      ],
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-type": "application/json"
+    }
+  },
+  "HTTP-04": {
+    "status": 422,
+    "body": {
+      "error": "1 validation error for ProductCreate\nkind\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-type": "application/json"
+    }
+  },
+  "HTTP-06": {
+    "status": 404,
+    "body": {
+      "error": "not found",
+      "code": "not_found"
+    },
+    "headers": {
+      "content-type": "application/json"
+    }
+  },
+  "HTTP-08-route": {
+    "status": 404,
+    "body": {
+      "detail": "Not Found",
+      "code": "not_found"
+    },
+    "headers": {
+      "content-type": "application/json"
+    }
+  },
+  "HTTP-08-method": {
+    "status": 405,
+    "body": {
+      "detail": "Method Not Allowed",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-type": "application/json",
+      "allow": "POST"
+    }
+  },
+  "HTTP-08-auth": {
+    "status": 401,
+    "body": {
+      "detail": "session token required",
+      "code": "token_required"
+    },
+    "headers": {
+      "content-type": "application/json"
+    }
+  },
+  "HTTP-05": {
+    "status": 422,
+    "body": {
+      "error": "future evidence rejected",
+      "code": "invalid_request"
+    },
+    "headers": {
+      "content-type": "application/json"
+    }
+  },
+  "HTTP-07-criterion": {
+    "status": 404,
+    "body": {
+      "error": "not found",
+      "code": "not_found"
+    },
+    "headers": {
+      "content-type": "application/json"
+    }
+  },
+  "HTTP-07-evidence": {
+    "status": 404,
+    "body": {
+      "error": "not found",
+      "code": "not_found"
+    },
+    "headers": {
+      "content-type": "application/json"
+    }
+  }
+}

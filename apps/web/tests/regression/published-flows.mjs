@@ -28,6 +28,72 @@ async function enterWorkspace(context) {
   );
 }
 
+async function restoreColleagueDrafts(context) {
+  const { browser, text, shot } = context;
+  const examples = [
+    ['manager', 'supervisor', text('经理问题草稿，尚未发送。', 'Manager draft, not sent.')],
+    ['technical', 'tech_lead', text('技术问题草稿，尚未发送。', 'Technical draft, not sent.')],
+  ];
+  const back = () => browser.click('[data-action="rail"][data-rail="team"]');
+  for (const [role, roleId, draft] of examples) {
+    await browser.click(`.person[data-role="${role}"]`);
+    await waitFor(browser, `!!document.querySelector('.rc-roles--v4-history')`);
+    await browser.type('#chat-input', draft);
+    await waitFor(
+      browser,
+      `window.PracticeLive.v4Host(window.PracticeLive.engine
+      .getAttempt(window.PracticeLive.state)).draft('roles', 'question:${roleId}')
+      === ${JSON.stringify(draft)}`,
+    );
+    await back();
+  }
+  await browser.goto(`${base}#/work`);
+  await waitFor(browser, `!!document.querySelector('.person[data-role="manager"]')`);
+  await browser.ev(`(() => {
+    const live = window.PracticeLive;
+    const host = live.v4Host(live.engine.getAttempt(live.state));
+    const reflect = host.reflectSelection;
+    let release;
+    const waiting = new Promise(resolve => { release = resolve; });
+    host.reflectSelection = async (...args) => {
+      await waiting;
+      return reflect.apply(host, args);
+    };
+    window.releaseDraftMount = () => {
+      host.reflectSelection = reflect;
+      release();
+    };
+  })()`);
+  await browser.click('.person[data-role="manager"]');
+  await waitFor(browser, `!!document.querySelector('#chat-input')`);
+  const changed = text('挂载等待期间的新问题。', 'New question while mounting.');
+  await browser.type('#chat-input', changed);
+  await browser.ev('window.releaseDraftMount()');
+  await waitFor(browser, `!!document.querySelector('.rc-roles--v4-history')`);
+  assert.equal(await browser.ev(`document.querySelector('#chat-input').value`), changed);
+  await back();
+  await browser.click('.person[data-role="manager"]');
+  await waitFor(browser, `!!document.querySelector('.rc-roles--v4-history')`);
+  assert.equal(await browser.ev(`document.querySelector('#chat-input').value`), changed);
+  await browser.type('#chat-input', examples[0][2]);
+  await back();
+
+  for (const [role, , draft] of examples) {
+    await browser.click(`.person[data-role="${role}"]`);
+    await waitFor(browser, `!!document.querySelector('.rc-roles--v4-history')`);
+    assert.equal(await browser.ev(`document.querySelector('#chat-input').value`), draft);
+    assert.equal(await browser.ev(`document.querySelectorAll('#chat-input').length`), 1);
+    assert.equal(await browser.ev(`document.querySelectorAll('.chat .composer').length`), 1);
+    await shot(`${role}-draft`);
+    await browser.type('#chat-input', '');
+    await back();
+    await browser.click(`.person[data-role="${role}"]`);
+    await waitFor(browser, `!!document.querySelector('.rc-roles--v4-history')`);
+    assert.equal(await browser.ev(`document.querySelector('#chat-input').value`), '');
+    await back();
+  }
+}
+
 async function inspectResourceRegion(context) {
   const { browser, shot } = context;
   await browser.click('.product-bar [data-action="resources"]');
@@ -275,6 +341,9 @@ async function runLanguage(language) {
     );
     await browser.goto(base);
     await step('normal entry and fixed work language', () => enterWorkspace(context));
+    await step('colleague drafts restore once and retain deliberate clearing', () =>
+      restoreColleagueDrafts(context),
+    );
     await step('resource dialog keeps its assigned form and controls', () =>
       inspectResourceRegion(context),
     );

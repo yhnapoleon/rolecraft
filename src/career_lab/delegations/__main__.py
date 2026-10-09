@@ -4,6 +4,7 @@ import argparse
 import sys
 
 from career_lab.contracts import v2 as C
+
 from .factory import create_scenario_app
 
 
@@ -23,7 +24,11 @@ def main(argv=None):
         return 1
     import uvicorn
 
-    uvicorn.run(app, host=args.host, port=args.port)
+    from career_lab.api.error_boundary import configure_http_logging
+
+    configure_http_logging()
+
+    uvicorn.run(app, host=args.host, port=args.port, access_log=False, log_config=None)
     return 0
 
 

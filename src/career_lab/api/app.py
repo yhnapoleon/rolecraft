@@ -3,14 +3,15 @@ import secrets
 from pathlib import Path
 from typing import Literal
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import Field
-from career_lab.contracts.v2 import Command, ProtocolError
-from career_lab.storage.v2_store import V2Store
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+from career_lab.api.error_boundary import install_safe_logging, internal_error, log_failure
 from career_lab.api.modules import (
     CreateSessionV2,
     ExtensionRegistry,
@@ -18,20 +19,20 @@ from career_lab.api.modules import (
     SessionAccess,
     public_state,
 )
-from career_lab.api.v2_routes import mount_v2_routes
-from starlette.exceptions import HTTPException as StarletteHTTPException
-
 from career_lab.api.presentation import learner_state, object_list, object_response
+from career_lab.api.v2_routes import mount_v2_routes
 from career_lab.assistant.service import TrainingService
 from career_lab.contracts.base import Contract, Identifier, NonNegativeInt, PositiveInt
 from career_lab.contracts.deliverables import Deliverable
-from career_lab.errors import CodedValueError
+from career_lab.contracts.v2 import Command, ProtocolError
+from career_lab.errors import CodedValueError, InternalFailure
 from career_lab.jobs.repository import JobRepository
 from career_lab.runtime.loop import AgentRuntime
 from career_lab.runtime.model_adapter import LocalModel, OpenAICompatibleModel
 from career_lab.scenarios.loader import load_scenario
 from career_lab.scenarios.reducer import InvalidAction, VersionConflict
 from career_lab.storage.sessions import IdempotencyConflict, SessionStore
+from career_lab.storage.v2_store import V2Store
 
 
 class CreateSession(Contract):
@@ -128,7 +129,7 @@ def create_app(database_url=None, scenario_path=None, model=None, study_path=Non
         jobs,
         runtime,
     )
-    from career_lab.api.feedback import generate_feedback, saved_feedback, read_evidence
+    from career_lab.api.feedback import generate_feedback, read_evidence, saved_feedback
     from career_lab.api.timeline import timeline
 
     app.state.handlers = {
@@ -164,8 +165,12 @@ def create_app(database_url=None, scenario_path=None, model=None, study_path=Non
             raise CodedHTTPException(401, "invalid session token", "token_invalid")
         return session_id
 
+    install_safe_logging(app)
+    app.add_exception_handler(Exception, internal_error)
+    app.add_exception_handler(InternalFailure, internal_error)
+
     @app.exception_handler(ValueError)
-    async def invalid(_, exc):
+    async def invalid(_: Request, exc: ValueError) -> JSONResponse:
         status = (
             exc.status
             if isinstance(exc, ProtocolError)
@@ -174,21 +179,24 @@ def create_app(database_url=None, scenario_path=None, model=None, study_path=Non
         body = {"error": str(exc), "code": getattr(exc, "code", "invalid_request")}
         if getattr(exc, "details", None) is not None:
             body["details"] = exc.details
+        log_failure(_, exc, status, body["code"])
         return JSONResponse(body, status_code=status)
 
     @app.exception_handler(KeyError)
-    async def missing(_, exc):
+    async def missing(_: Request, exc: KeyError) -> JSONResponse:
+        log_failure(_, exc, 404, "not_found")
         return JSONResponse({"error": "not found", "code": "not_found"}, status_code=404)
 
     @app.exception_handler(StarletteHTTPException)
-    async def http_error(_, exc):
+    async def http_error(_: Request, exc: StarletteHTTPException) -> JSONResponse:
         code = getattr(exc, "code", "not_found" if exc.status_code == 404 else "invalid_request")
+        log_failure(_, exc, exc.status_code, code)
         return JSONResponse(
             {"detail": exc.detail, "code": code}, status_code=exc.status_code, headers=exc.headers
         )
 
     @app.exception_handler(RequestValidationError)
-    async def validation_error(_, exc):
+    async def validation_error(_: Request, exc: RequestValidationError) -> JSONResponse:
         errors = exc.errors()
         legacy_models = {
             "CreateSession",
@@ -219,6 +227,7 @@ def create_app(database_url=None, scenario_path=None, model=None, study_path=Non
             )
             else "invalid_request"
         )
+        log_failure(_, exc, 422, code)
         return JSONResponse({"detail": jsonable_encoder(normalized), "code": code}, status_code=422)
 
     @app.get("/health")
