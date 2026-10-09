@@ -287,3 +287,8 @@ OperationAvailability明确installed/ready/capability/unavailable_code，注册�
 重绑后的作者包保留新 `authored_manifest`，prepare另以原审核manifest的真实hash与每份非runtime原件、完整成员集合和元数据比对，生成 `reviewed_authored_manifest`。仅内容审核结论沿确证谱系继承；运行绑定、模型质量及整包验收不继承。旧审核文件原字节保留。
 
 标准无参数API/worker入口读取`installed/current.json`的中文当前安装，并核对其manifest真实hash；显式`scenario_root`、`CAREER_LAB_SCENARIO_V2`或多语言prepare目录继续按既有优先级使用。作者根保持可复现未安装评价口径，不作为默认有反馈的成品运行包。启动不重写包或修改绑定。
+
+
+### 怎样新增一条 manifest 变更记录
+
+在 `src/career_lab/contracts/v2/manifest_history.py` 的 `MANIFEST_HISTORY` 尾部追加记录，不修改旧条目；`integration_changes` 记录集成变化，`review_fixes` 记录审查修复，二者使用新键及准确文案，`previous_contract_revision` 指向本次输入的已发布 revision，`input_contract_revision` 记录实际采用的输入标签。记录按顺序应用：字典字段合并，标量和列表以最后一次声明为准；需要更新历史键或边界说明时，在新记录中明确覆盖，保留旧记录。`source_files`、`documents` 是原发布登记的历史指纹，不代表当前源码或文档字节，也不随本次重构刷新；当前完整源码身份进入交付回执。公共错误码在同文件 `ERROR_CODES` 尾部追加，内部异常不自动进入公共契约；既有可选 provenance 由现行兼容函数剥离，其他 schema／OpenAPI 仍直接生成。序列化固定 UTF-8、键排序、两空格缩进及末尾换行。先在自己的分支用 `uv run --locked python -m career_lab.contracts.v2.export --output <临时空目录>` 生成并核对变更；仅在获准更新冻结物时更新入库版，再运行 `tests/contracts/expansion_v3/test_export_reproducible.py`。080 集成各线后按此格式追加各线记录、以集成输入确定前序 revision，再统一生成一次；不得手改生成 JSON。本次修复保持已提交生成物及 revision 原字节不变。
