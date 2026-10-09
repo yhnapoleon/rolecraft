@@ -11,7 +11,7 @@ from .freeze import verify_freeze
 
 def register_commands(commands):
     train = commands.add_parser(
-        "train-v3", help="Local W08 train/dev pipeline; no held-out evaluation"
+        "train-v3", help="Local train/dev pipeline; no held-out evaluation"
     )
     train.add_argument("--release-root", type=Path, required=True)
     train.add_argument("--release-hash", required=True)
@@ -72,7 +72,7 @@ def dispatch(args):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="W08 draft-contract development tools; all outputs advisory"
+        description="Development training tools; all outputs advisory"
     )
     register_commands(parser.add_subparsers(dest="command", required=True))
     args = parser.parse_args(argv)
