@@ -587,6 +587,9 @@ def generate_plan(
         generation_cycle=generation_cycle,
         spoken_evidence=public,
         omission_count=len(omitted) + snapshot.permission_omissions(auth),
+        received_versions_only=any(
+            source.channel in {"received_share", "attachment"} for source in selected
+        ),
     )
     context = snapshot.context.model_copy(update={"actual_disclosures": internal})
     private = PrivateGeneration(

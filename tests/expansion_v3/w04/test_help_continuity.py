@@ -6,7 +6,9 @@ from pathlib import Path
 import pytest
 from test_cooperative_help import Dialogue
 
+from career_lab.contracts.v2 import canonical, digest
 from career_lab.runtime.roles_v2 import LocalRoleModel
+from career_lab.storage.role_memory import parse_public_reply
 
 
 @pytest.mark.parametrize("language", ["zh", "en"])
@@ -63,6 +65,7 @@ def test_mem_01_unshared_new_version_stays_private_until_explicit_share(
         assert second["status"] == "completed", second
         shown = json.dumps(dialogue.reply(), ensure_ascii=False)
         assert old in shown and new not in shown and note in shown
+        assert dialogue.reply()["result"]["result"]["content"]["received_versions_only"] is True
         share2 = dialogue.command(
             "work_products.shares.create",
             {
@@ -83,6 +86,7 @@ def test_mem_01_unshared_new_version_stays_private_until_explicit_share(
         assert dialogue.jobs.get(final["result"]["queued_jobs"][0])["status"] == "completed"
         shown = json.dumps(dialogue.reply(), ensure_ascii=False)
         assert new in shown and "v2" in shown
+        assert dialogue.reply()["result"]["result"]["content"]["received_versions_only"] is True
     finally:
         dialogue.close()
 
@@ -282,4 +286,24 @@ def test_mem_05_narrower_delegation_cannot_recover_a_previously_shared_draft(
         ) in shown
     finally:
         dialogue.auth = owner
+        dialogue.close()
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_reply_version_scope_is_explicit_and_legacy_bytes_are_preserved(
+    tmp_path: Path, language: str
+) -> None:
+    dialogue = Dialogue(tmp_path, language, LocalRoleModel())
+    try:
+        job = dialogue.ask("当前容量是多少？" if language == "zh" else "What is the capacity?")
+        assert job["status"] == "completed", job
+        content = dialogue.reply()["result"]["result"]["content"]
+        assert content["received_versions_only"] is False
+        legacy = {key: value for key, value in content.items() if key != "received_versions_only"}
+        restored = parse_public_reply(legacy)
+        assert canonical(restored) == canonical(legacy)
+        assert digest(restored) == digest(legacy)
+        assert "received_versions_only" not in restored.model_dump(mode="json")
+        assert content == dialogue.reply()["result"]["result"]["content"]
+    finally:
         dialogue.close()

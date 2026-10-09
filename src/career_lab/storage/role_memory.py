@@ -10,7 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass, fields, is_dataclass, replace
 from typing import TYPE_CHECKING, Literal, Protocol
 
-from pydantic import TypeAdapter, ValidationError, model_validator
+from pydantic import Field, TypeAdapter, ValidationError, model_validator
 
 from career_lab.contracts.v2 import (
     V2,
@@ -71,6 +71,10 @@ class RoleReply(V2):
     # material. Internal fact/source mapping lives in PrivateGeneration.context.
     spoken_evidence: tuple[PublicSpokenEvidence, ...] = ()
     omission_count: int = 0
+    # None means an older reply never recorded this scope; do not invent metadata on read.
+    received_versions_only: bool | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def uttered_evidence_only(self):

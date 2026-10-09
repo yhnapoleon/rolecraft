@@ -25,7 +25,12 @@ class Form {
 beforeEach(() => vi.stubGlobal('HTMLFormElement', Form));
 function setup(
   changeDuringRead: boolean,
-  presentation?: { text: string; omissionCount: number; currentVersion: number },
+  presentation?: {
+    text: string;
+    omissionCount: number;
+    currentVersion: number;
+    receivedVersionsOnly?: boolean;
+  },
 ) {
   let calls = 0,
     handle: V4SlotHandle;
@@ -58,6 +63,7 @@ function setup(
       question: 'question',
       text: presentation?.text ?? 'reply',
       omission_count: presentation?.omissionCount ?? 0,
+      received_versions_only: presentation?.receivedVersionsOnly,
       request: turn.ref,
     },
   };
@@ -132,10 +138,13 @@ it('keeps access limits and old source versions in the public colleague view', a
     text: '[Policy · v1] This applies only after explicit approval.',
     omissionCount: 2,
     currentVersion: 2,
+    receivedVersionsOnly: true,
   });
   try {
     const view = await test.read();
     expect(view.turns[0].omissionCount).toBe(2);
+    expect(view.turns[0].receivedVersionsOnly).toBe(true);
+    expect(view.mode).toBe('local_reference');
     expect(view.turns[0].stale).toBe(true);
     expect(view.turns[0].materials).toEqual([{ id: 'policy', title: 'Policy', version: 1 }]);
     expect(view.turns[0].reply).toBe('[Policy · v1] This applies only after explicit approval.');

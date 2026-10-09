@@ -258,6 +258,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
           status,
           reply: reply?.content.text,
           materials,
+          receivedVersionsOnly: reply?.content.received_versions_only === true,
           omissionCount:
             reply &&
             Number.isInteger(reply.content.omission_count) &&

@@ -1,4 +1,4 @@
-import { presentReply } from './reply-presentation';
+import { presentReply, type RoleMode } from './reply-presentation';
 /** Native v4 colleague slot. The injected client owns API calls, journals and jobs. */
 import { T, onLocaleChange } from '../../app/i18n';
 import './roles.css';
@@ -32,6 +32,7 @@ export interface ConversationTurn {
   reply?: string;
   materials?: readonly MaterialReference[];
   omissionCount?: number;
+  receivedVersionsOnly?: boolean;
   stale?: boolean;
   /** Only a learner-safe explanation already projected by the real client. */
   explanation?: string;
@@ -44,7 +45,7 @@ export interface ConversationTurn {
 export interface RolesView {
   sessionId: string;
   workLanguage: WorkLanguage;
-  mode: 'local_reference' | 'model' | 'unavailable';
+  mode: RoleMode;
   colleagues: readonly Colleague[];
   turns: readonly ConversationTurn[];
   canSend: boolean;
@@ -357,7 +358,11 @@ export function mount(
       if (turn.status === 'completed' && turn.reply !== undefined) {
         const replyLabel = el('strong');
         replyLabel.textContent = colleague?.name || roleTitle(selected);
-        const presentation = presentReply(turn.reply);
+        const presentation = presentReply(turn.reply, {
+          roleMode: view?.mode ?? 'unavailable',
+          receivedVersionsOnly: turn.receivedVersionsOnly,
+          omissionCount: turn.omissionCount,
+        });
         const replyStatus = el('p', 'rc-roles__reply-status');
         replyStatus.textContent = presentation.status;
         const preview = el('p', 'rc-roles__preview');
@@ -368,12 +373,9 @@ export function mount(
           versionNote.textContent = presentation.versionNote;
           item.append(versionNote);
         }
-        if (turn.omissionCount) {
+        if (presentation.omissionNote) {
           const limitation = el('p', 'rc-roles__limitation');
-          limitation.textContent = T(
-            '部分资料因授权或上下文限额未纳入本次回复。',
-            'Some sources were omitted because of access or context limits.',
-          );
+          limitation.textContent = presentation.omissionNote;
           item.append(limitation);
         }
         if (turn.stale) {
