@@ -258,3 +258,35 @@ uv sync --locked --python 3.12
 ### 服务消费与回退边界
 
 本节交付的是注册与加载前置。正常反馈的模型工厂、可选公开协议和v4消费尚未接入，不能把登记成功当作产品接通；运行配置与应用安装命令将在对应消费切片实际交付后补入。当前可回读既有注册与调用收据；恢复不执行生产者命令或重新推理。撤销一次候选使用应改回服务持有的旧注册引用并重启服务，保留原产物、旧反馈与收据；不覆盖旧注册文件。
+
+## 正式回传复核 CLI（2026-10-09）
+
+`verify-return`只读接收既有的label/evidence v2回传，不训练、不下载、不执行清单中的生产者命令。当前支持交接包的可移植布局：固定的`dataset-manifest.json`、`data/dev.inputs.jsonl`、`data/dev.labels.jsonl`、`audit/original-annotations.jsonl`与`audit/metadata.jsonl`；这些文件均须由manifest逐文件绑定。后续真实负责方若采用其他布局，须先明确格式，不能按文件名猜测。
+
+先核对回传格式与分语言指标：
+
+```sh
+uv run --locked python -m career_lab.models.v3.registry_cli verify-return \
+  --dataset-root /path/to/frozen-dataset \
+  --dataset-hash '<dataset-manifest.json 的 SHA-256>' \
+  --predictions /path/to/predictions.dev.jsonl
+```
+
+再加入上一节注册命令返回的准确引用，执行两次独立重载及逐条比较：
+
+```sh
+uv run --locked python -m career_lab.models.v3.registry_cli verify-return \
+  --dataset-root /path/to/frozen-dataset \
+  --dataset-hash '<固定 dataset manifest SHA-256>' \
+  --predictions /path/to/predictions.dev.jsonl \
+  --checkpoint-manifest /path/to/checkpoint-manifest.json \
+  --registry /path/to/registry \
+  --registration-path '<注册返回的相对路径>' \
+  --registration-hash '<注册返回的 SHA-256>'
+```
+
+输入以外层`record_id/input_hash`对齐，标签仍与推理输入分离。接收器拒绝重复JSON键、错误schema版本、概率顺序/形状、选中证据的候选hash错误和test选型；概率和误差上限为`1e-6`。每语分别报告macro-F1、逐类P/R/F1、混淆、证据F1、联合正确率、格式失败、弃权与覆盖；label-only从证据与联合分母排除，错误行保留在所属语言的分类分母中。证据F1取可接受集合最大值，额外引用不能得到joint正确。
+
+退出码0表示完成所提供材料的检查，报告仍可能为`partial`，不表示训练或质量通过；无注册引用是`blocked_missing_registration`，缺语言是`blocked_missing_language`。格式错误、身份/文件漂移、test污染、回传与模型预测不一致或重载不一致返回非零。原件不改写，原始错误保留。`checkpoint.candidate_eligible`不会仅凭完成声明或任意文件清单变成true；静态声明缺checkpoint验证或训练执行证据时逐项报告待补。实际模型重载是否一致单列在`reload`，训练始终区分`not_verified`与`mechanism_only`。
+
+实跑fixture v2格式样例：英文6条、证据/联合分母5，中文0；样例由gold构造，其满分只说明格式与指标机制。另用既有固定synthetic权重完成真实注册、两次加载及匹配预测，低分类结果和全引文导致的joint零分保留。把格式样例直接与这组权重比较会如实失败。负责方真实checkpoint、训练执行与双语质量仍待交；不因命令可运行关闭真实实验验收。
