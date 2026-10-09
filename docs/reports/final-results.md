@@ -10,7 +10,7 @@
 
 ## 验证与结果
 
-- 最终本机全套 **67 tests通过**，含真实PostgreSQL；见 task-14-tests.xml。一条上游依赖弃用警告。
+- 最终本机全套 **67 tests通过**，含真实PostgreSQL；见 [task-14-tests.xml](https://github.com/yhnapoleon/rolecraft/blob/2c07160b5e829ac08afb8a31667440bbda72df73/docs/reports/task-14-tests.xml)。一条上游依赖弃用警告。
 - 独立解压环境安装及8条复现命令均通过，66 tests通过、1项PostgreSQL测试因未配置而跳过；重建训练与E1 dev得到相同Macro-F1，见task-14-clean-install.json。
 - 最新真实HTTP服务通过扩容/延期、当前政策检索、提交、独立worker反馈及重复回放；见task-14-live-final.json。服务仍监听本机8502。
 - 主场景、紧急期限、15人容量变体均完成提交与重开数据库回放；见 task-14-demo-*.json。

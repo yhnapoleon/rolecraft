@@ -1,16 +1,16 @@
 """Public dialogue records and private, sourced generation data.
 
 PrivateGeneration is an in-process plan, never a registered storage kind. Only a
-future W01 protected audit port may persist it. Public objects contain no prompt,
+trusted protected audit port may persist it. Public objects contain no prompt,
 private provenance, context hashes or internal fact keys.
 """
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, is_dataclass, replace
 from typing import TYPE_CHECKING, Literal, Protocol
 
-from pydantic import ValidationError, model_validator
+from pydantic import TypeAdapter, ValidationError, model_validator
 
 from career_lab.contracts.v2 import (
     V2,
@@ -168,7 +168,7 @@ class PrivateGeneration:
 
 
 class PrivateGenerationPort(Protocol):
-    """Implemented by the fixed W01 protected carrier, never by a user DTO.
+    """Implemented by the fixed protected storage carrier, never by a user DTO.
 
     prepare returns official protected ObjectWrite(s) for the same Mutation as
     the public reply. The audit may reference the reply; reverse edges are banned.
@@ -210,7 +210,7 @@ PRIVATE_REPLY_FIELDS = frozenset(
 
 
 def parse_public_reply(content):
-    """Fail closed on r1 raw records until W01 installs a trusted legacy projection."""
+    """Fail closed on r1 raw records until a trusted legacy projection is installed."""
     if PRIVATE_REPLY_FIELDS.intersection(content):
         raise ProtocolError("role_legacy_reply_requires_projection", status=409)
     try:
@@ -230,7 +230,7 @@ def install_role_storage(store):
                 raise ValueError("incompatible role object registration")
         else:
             store.register_object(kind, model)
-    # No private kind is registered here. Missing W01 protected persistence blocks
+    # No private kind is registered here. Missing protected persistence blocks
     # generation before model invocation, rather than changing a DTO's visibility.
 
 
@@ -434,7 +434,6 @@ class StanceResolution:
 
 def _stance_json(value):
     """Internal canonical data for binding a support decision to exact inputs."""
-    from dataclasses import fields, is_dataclass
 
     if hasattr(value, "model_dump"):
         return value.model_dump(mode="json")
@@ -472,7 +471,6 @@ def resolve_stance(state, proposal, known_facts, as_of, verifier=None, *, before
     Caller pressure, quoted rationale, duplicate refs and newer version numbers
     never themselves authorize a change. The default runtime has no verifier.
     """
-    from dataclasses import replace
 
     def result(status, code, basis=(), support=None, new=None, change=None):
         return StanceResolution(
@@ -644,7 +642,6 @@ def restore_stance_memory(records, *, session_id, role_id, binding, as_of, work_
     The caller supplies only records from the fixed job snapshot. Omitted records
     are not reconstructed here, and a malformed record never resets the stance.
     """
-    from pydantic import TypeAdapter
 
     adapter = TypeAdapter(RoleStanceMemory)
     decoded = []
@@ -766,7 +763,6 @@ def read_generation_audit_extension(payload, reply, *, binding, as_of, work_lang
     """
     if payload is None:
         return None
-    from pydantic import TypeAdapter
 
     from career_lab.contracts.v2 import digest
 

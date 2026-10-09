@@ -1,0 +1,49 @@
+{
+  "schema_version": 2,
+  "id": "w02-runtime",
+  "revision": "semantic-rules-v1",
+  "model": {
+    "schema_version": 2,
+    "path": "runtime/model.json",
+    "sha256": "03563770e0616230ccf7ae58009fdbf87ff9c8d2181de4074c64caae1202ec7a",
+    "media_type": "application/json"
+  },
+  "prompts": [],
+  "skills": null,
+  "acquisition": {
+    "schema_version": 2,
+    "path": "runtime/acquisition.json",
+    "sha256": "473f1762b05e81d6e8317c6eb4182c1316be7a8bcd3814b7bb853d6791ea8b26",
+    "media_type": "application/json"
+  },
+  "retrieval": {
+    "schema_version": 2,
+    "path": "runtime/retrieval.json",
+    "sha256": "6bcc03f28fa46e6f5dfbd9689df0502ddd086eb240258c31bdb13fbf692a945d",
+    "media_type": "application/json"
+  },
+  "decision": {
+    "schema_version": 2,
+    "path": "runtime/decision.json",
+    "sha256": "b6e2e59033261274a5459c4239889356fb95430f6d92be019b30b72a59141e6c",
+    "media_type": "application/json"
+  },
+  "tools": {
+    "schema_version": 2,
+    "path": "runtime/tools.json",
+    "sha256": "d77c524afa1af4a98faefe9484e592e9b2e7cc6398518a700c1acc5182bd180b",
+    "media_type": "application/json"
+  },
+  "source": {
+    "schema_version": 2,
+    "base_commit": "c9faac199103e6fc6d23c404c71166f02d357ce6",
+    "source_digest": "456d8733b414d1fe76b395c3a7ccd05f6f31cd93231efc0fed9981766e019661",
+    "overlay": {
+      "schema_version": 2,
+      "path": "runtime/source-files.json",
+      "sha256": "ac7a08d834be2a5b355b2e768079441d2961865bd9015f49c6e2d1787cf05e55",
+      "media_type": "application/json"
+    },
+    "dependency_locks": []
+  }
+}

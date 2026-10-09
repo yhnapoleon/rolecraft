@@ -980,7 +980,7 @@ def _save_review(port, payload):
     from career_lab.contracts.v2 import FileRef
 
     # The trusted writer returns a receipt only after persisting the exact canonical
-    # record in protected storage. W04 never invents a file path or success receipt.
+    # record in protected storage. role collaboration never invents a file path or success receipt.
     ref = port.record_review(payload)
     if not isinstance(ref, FileRef) or ref.sha256 != digest(payload):
         raise ProtocolError("role_review_evidence_invalid", status=409)

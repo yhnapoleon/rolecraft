@@ -28,7 +28,7 @@
 - 增加两项一致性回归：事实账本中的数字必须与初始约束一致；最小人数不能大于初始容量。两项先失败再修复，全量22项通过。
 - 独立只读审查确认1项P2：同一事件可激活同一材料的两个版本。新增回归测试复现失败，再增加按material_id去重校验；修复后全量通过。
 - 审查的非阻塞边界：仅包含政策且全部转人工的方案可能通过局部可行性检查，但不代表有助手价值或rubric达标。保留由Task 6按业务目标与交付评价，此处不将局部可行性升级为任务成功结论。
-- 最终命令 `uv run pytest -q --junitxml=docs/reports/task-01-tests.xml`：**23 passed in 1.79s**，退出码0；机器可读记录见 [task-01-tests.xml](task-01-tests.xml)。
+- 最终命令 `uv run pytest -q --junitxml=docs/reports/task-01-tests.xml`：**23 passed in 1.79s**，退出码0；机器可读记录见 [task-01-tests.xml](https://github.com/yhnapoleon/rolecraft/blob/2c07160b5e829ac08afb8a31667440bbda72df73/docs/reports/task-01-tests.xml)。
 - 最终场景CLI校验退出码0，hash、角色、材料与rubric数量保持一致。
 - `uv build --quiet` 成功生成Python wheel与sdist。此构建验证Python包，不是课程完整发布包；运行示例仍需工作区中的独立场景目录。
 - 代码验证完成，Git归档未做，后续直接消费者为Task 2状态引擎与事件存储。

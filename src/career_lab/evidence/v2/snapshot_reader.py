@@ -1,6 +1,6 @@
 """Real read-only reader of an immutable, caller-authorized evidence snapshot.
 
-This private adapter format is not a replacement public contract. W01 must
+This private adapter format is not a replacement public contract. shared protocol must
 produce the authorized snapshot and validate current credentials before calling
 it. No world state, event, queue, or responsibility is invented by this reader.
 """

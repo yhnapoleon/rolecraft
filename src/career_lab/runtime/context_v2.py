@@ -150,7 +150,7 @@ class ScenarioKnowledge:
 
     @classmethod
     def from_package(cls, package):
-        # Caller uses W02's real hash-checking load_package. This does not construct
+        # Caller uses scenario's real hash-checking load_package. This does not construct
         # ScenarioModule or rewrite its c2 runtime binding for a c4 environment.
         from career_lab.contracts.v2 import read_file
 

@@ -1,4 +1,4 @@
-"""W05 production integration boundary, awaiting coordinator-pinned W01 input.
+"""evaluation production integration boundary, awaiting coordinator-pinned shared protocol input.
 
 The evidence assembler and advisory evaluator are usable pure modules. HTTP,
 lifecycle transitions, idempotency, and jobs must be registered on the shared

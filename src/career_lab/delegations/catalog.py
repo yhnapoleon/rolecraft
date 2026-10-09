@@ -61,7 +61,7 @@ ROUTES = {
     "submissions.list": Route("GET", "/submissions"),
     "revision_cycles": Route("POST", "/revision-cycles"),
 }
-# Fixed synchronous W03/lifecycle operations. Asynchronous/model-backed entries
+# Fixed synchronous workspace/lifecycle operations. Asynchronous/model-backed entries
 # cannot be activated by MCP while the common atomic delegate-job limit is absent.
 SYNC_OPERATIONS = frozenset(
     {

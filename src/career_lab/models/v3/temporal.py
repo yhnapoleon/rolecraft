@@ -1,6 +1,6 @@
-"""Consumer of W07 historical-evidence-time-v1; no current-clock substitution.
+"""Consumer of reference agent historical-evidence-time-v1; no current-clock substitution.
 
-The same versioned rule is exercised across the serialized W07→W08 boundary.
+The same versioned rule is exercised across the serialized reference agent→relation model boundary.
 Reference time is the evaluated claim/behavior horizon, not export capture time.
 """
 

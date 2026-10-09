@@ -1,6 +1,6 @@
 # v4 原位工作台运行与验证
 
-2026-10-07，052主流程检查点。v4仍为唯一用户入口；开发外壳不作为验收。最新精确输入在[v4-fixed-inputs.json](v4-fixed-inputs.json)。原032 c18输入和运行证据保存在对应交接/回执。
+2026-10-07，052主流程检查点。v4仍为唯一用户入口；开发外壳不作为验收。最新精确输入在[v4-fixed-inputs.json](https://github.com/yhnapoleon/rolecraft/blob/2c07160b5e829ac08afb8a31667440bbda72df73/docs/integration/v4-fixed-inputs.json)。原032 c18输入和运行证据保存在对应交接/回执。
 
 ## 当前原位能力
 

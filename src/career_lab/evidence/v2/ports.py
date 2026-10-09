@@ -1,4 +1,4 @@
-"""Private typed adapter ports, not replacement W01 public schemas.
+"""Private typed adapter ports, not replacement shared protocol public schemas.
 
 Facts must come from deterministic/historical services. Neither a learner request
 nor a Judge completion can populate these trusted ports directly.

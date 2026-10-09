@@ -1,0 +1,28 @@
+{
+  "schema_version": 2,
+  "id": "w05-rubric-v2",
+  "revision": "2.9.4",
+  "rubric": {
+    "schema_version": 2,
+    "path": "evaluation/rubric-v2-candidate-2.json",
+    "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+    "media_type": "application/json"
+  },
+  "rules": {
+    "schema_version": 2,
+    "path": "runtime/evaluation-rules.json",
+    "sha256": "73328c72c4bcbdf0f59099caa0dc5f57ca06fd17b0178b04e8b4bd14eb6fc1a8",
+    "media_type": "application/json"
+  },
+  "graders": [],
+  "calibration": null,
+  "model": null,
+  "protocol": {
+    "schema_version": 2,
+    "path": "runtime/evaluation-protocol.json",
+    "sha256": "34b3bab45e16c7f872046360c7b17955413731018e20de46faddd97acac50288",
+    "media_type": "application/json"
+  },
+  "mode": "advisory",
+  "adoption_record": null
+}

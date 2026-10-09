@@ -1,4 +1,4 @@
-"""Retired W05 private persistence entry point.
+"""Retired evaluation private persistence entry point.
 
 The historical prototype is retained only in explicit test fixtures. Production
 reviews must use the common V2Store, lifecycle plans, and claimed worker. This

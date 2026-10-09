@@ -279,7 +279,7 @@ class StoreEvidenceReader:
             if ref.kind == "material":
                 self.store.can_reference(auth, ref)
             elif ref.kind == "event":
-                # Events are not V2 objects. The trusted W02 source port must
+                # Events are not V2 objects. The trusted scenario source port must
                 # resolve them only from the caller's projected public window.
                 # Current credential/object scope still applies before entry.
                 self.store.authorize(auth, "read", object_ids=(ref.object_id,))

@@ -7,6 +7,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+from scripts.regression.fixtures import materialize_historical_rules
 from scripts.regression.published import ROOT
 
 
@@ -37,7 +38,6 @@ def main() -> None:
     env = {key: value for key, value in os.environ.items() if not key.startswith("CAREER_LAB_")}
     env.pop("PYTHONPATH", None)
     env.update(
-        W02_W05_R10_ARCHIVE=str(ROOT / "tests/regression/fixtures/w05-r10-owned-source.tar"),
         CAREER_LAB_SCENARIO_ARCHIVE=str(output / "archive"),
         PYTHONDONTWRITEBYTECODE="1",
     )
@@ -46,6 +46,9 @@ def main() -> None:
     # Short independent paths avoid SQLite and socket path limitations in old fixture helpers.
     with tempfile.TemporaryDirectory(prefix="rolecraft-regression-") as temporary:
         env["TMPDIR"] = temporary
+        env["W02_W05_R10_ARCHIVE"] = str(
+            materialize_historical_rules(Path(temporary) / "historical-rules.tar")
+        )
         run(
             "backend",
             [
@@ -62,6 +65,7 @@ def main() -> None:
             ROOT,
         )
     env.pop("TMPDIR", None)
+    env.pop("W02_W05_R10_ARCHIVE", None)
     web = ROOT / "apps/web"
     run(
         "frontend",

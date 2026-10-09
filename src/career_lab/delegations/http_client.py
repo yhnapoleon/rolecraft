@@ -217,7 +217,7 @@ class HttpAgentClient:
         except (KeyError, TypeError):
             raise RemoteFailure("workspace_contract_invalid") from None
         current = next((p for p in rows if p.get("version") == head.version), None)
-        # Never guess across a truncated history page; future DTO/endpoint by032.
+        # Never guess across a truncated history page; require an explicit result endpoint.
         return current is not None and current.get("removed_at") is None
 
     def wait_request(self, session_id, request_id, *, seconds=5.0, interval=0.1):

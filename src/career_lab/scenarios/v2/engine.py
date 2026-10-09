@@ -1,4 +1,4 @@
-"""Pure W02 state planning. Persistence, idempotent commits and HTTP belong to W01.
+"""Pure scenario state planning. Persistence, idempotent commits and HTTP belong to shared protocol.
 
 ScenarioSnapshot and PlannedTransition are module-internal implementation values,
 not replacement wire schemas. Never install this module as an alternate database.
@@ -86,7 +86,7 @@ class ScenarioEngine:
                 raise ProtocolError("credential_expired", status=403)
         if auth.actor_id not in {"learner"} | {role.id for role in self.package.bundle.role_specs}:
             raise ProtocolError("unknown_role", status=403)
-        # AuthContext is constructed by W01's credential resolver, never a user payload.
+        # AuthContext is constructed by shared protocol's credential resolver, never a user payload.
 
     def catalog(self, snapshot, auth):
         """Read-only actor catalog; never returns world-private material bodies."""
@@ -177,7 +177,7 @@ class ScenarioEngine:
     def role_knowledge(self, snapshot, role_auth, known_versions=None):
         """Internal role baseline knowledge, independent of the questioner's scope.
 
-        W04 supplies a server-issued role reader and actual received version map.
+        role collaboration supplies a server-issued role reader and actual received version map.
         Missing received versions default to the initial window, not current world.
         """
         self.authorize(role_auth, snapshot, "read_material", "read")

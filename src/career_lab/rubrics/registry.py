@@ -1,4 +1,4 @@
-"""Versioned rules. v4 business semantics are installed by W05, never aliased to v3."""
+"""Versioned rules. v4 business semantics are installed by evaluation, never aliased to v3."""
 
 from career_lab.contracts.v2 import ProtocolError
 from career_lab.rubrics.checks import run_rule_checks
