@@ -83,16 +83,34 @@ def install_safe_logging(app: FastAPI) -> None:
     app.add_middleware(SafeHttpBoundary)
 
 
+class SafeServerErrorFormatter(logging.Formatter):
+    def format(self, record: logging.LogRecord) -> str:
+        # Ignore message, args and traceback: startup errors can contain local configuration.
+        return "HTTP server error; check the configured host and port."
+
+
 def configure_http_logging() -> None:
-    """Own process logging at serve entry points; emit only safe HTTP summaries."""
+    """Keep loggers enabled; only owned HTTP and safe server diagnostics may emit."""
+    for logger in tuple(logging.Logger.manager.loggerDict.values()):
+        if isinstance(logger, logging.Logger):
+            logger.handlers.clear()
+            logger.propagate = True
     dictConfig(
         {
             "version": 1,
-            "disable_existing_loggers": True,
-            "formatters": {"message": {"format": "%(message)s"}},
+            "disable_existing_loggers": False,
+            "formatters": {
+                "message": {"format": "%(message)s"},
+                "server_error": {"()": SafeServerErrorFormatter},
+            },
             "handlers": {
                 "safe_http": {"class": "logging.StreamHandler", "formatter": "message"},
                 "discard": {"class": "logging.NullHandler"},
+                "safe_server_error": {
+                    "class": "logging.StreamHandler",
+                    "level": "ERROR",
+                    "formatter": "server_error",
+                },
             },
             "root": {"level": "WARNING", "handlers": ["discard"]},
             "loggers": {
@@ -100,7 +118,12 @@ def configure_http_logging() -> None:
                     "level": "INFO",
                     "handlers": ["safe_http"],
                     "propagate": False,
-                }
+                },
+                "uvicorn.error": {
+                    "level": "ERROR",
+                    "handlers": ["safe_server_error"],
+                    "propagate": False,
+                },
             },
         }
     )
