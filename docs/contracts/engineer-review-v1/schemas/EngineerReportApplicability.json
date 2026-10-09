@@ -1,0 +1,150 @@
+{
+  "$defs": {
+    "EngineerArtifactIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "submission",
+            "scenario",
+            "configuration",
+            "model"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "sha256"
+      ],
+      "title": "EngineerArtifactIdentity",
+      "type": "object"
+    },
+    "VersionPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "business_seq": {
+          "minimum": 0,
+          "title": "Business Seq",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "storage_revision": {
+          "minimum": 0,
+          "title": "Storage Revision",
+          "type": "integer"
+        },
+        "workspace_revision": {
+          "minimum": 0,
+          "title": "Workspace Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "business_seq",
+        "workspace_revision",
+        "storage_revision"
+      ],
+      "title": "VersionPoint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "base_config_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Base Config Hash",
+      "type": "string"
+    },
+    "config": {
+      "$ref": "#/$defs/EngineerArtifactIdentity"
+    },
+    "effective_config_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Effective Config Hash",
+      "type": "string"
+    },
+    "effective_settings_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Effective Settings Hash",
+      "type": "string"
+    },
+    "indexed_versions_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Indexed Versions Hash"
+    },
+    "probe_suite_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Probe Suite Hash",
+      "type": "string"
+    },
+    "reviewer_version_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Reviewer Version Hash",
+      "type": "string"
+    },
+    "scenario": {
+      "$ref": "#/$defs/EngineerArtifactIdentity"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_as_of": {
+      "$ref": "#/$defs/VersionPoint"
+    },
+    "source_versions_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Source Versions Hash"
+    }
+  },
+  "required": [
+    "scenario",
+    "config",
+    "base_config_hash",
+    "probe_suite_hash",
+    "reviewer_version_hash",
+    "effective_config_hash",
+    "effective_settings_hash",
+    "source_versions_hash",
+    "indexed_versions_hash",
+    "source_as_of"
+  ],
+  "title": "EngineerReportApplicability",
+  "type": "object"
+}

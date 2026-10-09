@@ -9,6 +9,7 @@ from career_lab.contracts.v2.core import FileRef, ProtocolError, digest
 from .bundle import json_bytes
 from .core import checked_input, Prediction
 from .registry import load_registration, public_registration
+from .temporal import legal_evidence_ids
 
 
 def _atomic(path, value):
@@ -181,6 +182,13 @@ def to_public_prediction(outcome, item):
         ).validate(item)
         if prediction.model_revision != identity["model_revision"]:
             raise ProtocolError("advisory_model_revision_mismatch")
+        if prediction.status == "ok":
+            try:
+                allowed = legal_evidence_ids(item)
+            except ProtocolError as error:
+                return ModelPrediction(**base, status="invalid", error_code=error.code)
+            if set(prediction.evidence_ids) - allowed:
+                return ModelPrediction(**base, status="invalid", error_code="invalid_evidence_time")
         return ModelPrediction(
             **base,
             status="success" if prediction.status == "ok" else "unavailable",

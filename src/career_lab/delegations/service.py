@@ -81,6 +81,8 @@ class ToolService:
                 code = "action_forbidden"
             elif b.operation == "work_products.adopt" and auth.executor.kind != "human":
                 code = "human_adoption_required"
+            elif not self.gateway.registry.availability(b.operation).ready:
+                code = self.gateway.registry.availability(b.operation).unavailable_code
             elif b.operation in NEVER_ENABLE:
                 code = "private_worker_unavailable"
             elif b.mutates and b.operation not in self.synchronous:

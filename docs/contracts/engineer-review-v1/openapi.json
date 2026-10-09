@@ -1,0 +1,1994 @@
+{
+  "components": {
+    "schemas": {
+      "AssistantConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "chunk_size": {
+            "default": 500,
+            "exclusiveMinimum": 0,
+            "title": "Chunk Size",
+            "type": "integer"
+          },
+          "config_version": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Config Version",
+            "type": "integer"
+          },
+          "domains": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Domains",
+            "type": "array"
+          },
+          "fallback": {
+            "default": "human",
+            "enum": [
+              "human",
+              "none"
+            ],
+            "title": "Fallback",
+            "type": "string"
+          },
+          "freshness_guard": {
+            "default": "none",
+            "enum": [
+              "none",
+              "warn",
+              "fallback"
+            ],
+            "title": "Freshness Guard",
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "launch_day": {
+            "default": 7,
+            "exclusiveMinimum": 0,
+            "title": "Launch Day",
+            "type": "integer"
+          },
+          "manual_domains": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Manual Domains",
+            "type": "array"
+          },
+          "min_score": {
+            "default": 0.35,
+            "minimum": 0,
+            "title": "Min Score",
+            "type": "number"
+          },
+          "min_score_calibration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FileRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "participants": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Participants",
+            "type": "integer"
+          },
+          "prohibited_topics": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Prohibited Topics",
+            "type": "array"
+          },
+          "retrieval_limit": {
+            "default": 3,
+            "exclusiveMinimum": 0,
+            "title": "Retrieval Limit",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "scope_filter": {
+            "default": true,
+            "title": "Scope Filter",
+            "type": "boolean"
+          },
+          "session_id": {
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "update_strategy": {
+            "default": "daily",
+            "enum": [
+              "daily",
+              "realtime",
+              "manual_policy"
+            ],
+            "title": "Update Strategy",
+            "type": "string"
+          },
+          "version": {
+            "default": 1,
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          },
+          "work_items": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Work Items",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "domains"
+        ],
+        "title": "AssistantConfig",
+        "type": "object"
+      },
+      "EffectiveConfig": {
+        "additionalProperties": false,
+        "properties": {
+          "differences": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "default": {},
+            "title": "Differences",
+            "type": "object"
+          },
+          "effective": {
+            "$ref": "#/components/schemas/AssistantConfig"
+          },
+          "requested": {
+            "$ref": "#/components/schemas/AssistantConfig"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "requested",
+          "effective"
+        ],
+        "title": "EffectiveConfig",
+        "type": "object"
+      },
+      "EngineerAdvice": {
+        "additionalProperties": false,
+        "properties": {
+          "affects_score": {
+            "const": false,
+            "default": false,
+            "title": "Affects Score",
+            "type": "boolean"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FileRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "waiting_model",
+              "success",
+              "unavailable",
+              "invalid",
+              "timeout"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "visibility": {
+            "default": "hidden",
+            "enum": [
+              "public",
+              "hidden"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "text",
+          "model"
+        ],
+        "title": "EngineerAdvice",
+        "type": "object"
+      },
+      "EngineerArtifactIdentity": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "submission",
+              "scenario",
+              "configuration",
+              "model"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "sha256"
+        ],
+        "title": "EngineerArtifactIdentity",
+        "type": "object"
+      },
+      "EngineerClaimedReport": {
+        "additionalProperties": false,
+        "properties": {
+          "config": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "contract_version": {
+            "const": "engineer-review-v1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "pack": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/EngineerProbeClaim"
+            },
+            "minItems": 1,
+            "title": "Results",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "contract_version",
+          "id",
+          "pack",
+          "config",
+          "created_at",
+          "results"
+        ],
+        "title": "EngineerClaimedReport",
+        "type": "object"
+      },
+      "EngineerFinding": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "target_fix",
+              "new_regression",
+              "claim_consistency",
+              "unresolved"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "probe_ids": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Probe Ids",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "pass",
+              "fail",
+              "unverified"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "visibility": {
+            "enum": [
+              "public",
+              "hidden"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "status",
+          "visibility",
+          "description"
+        ],
+        "title": "EngineerFinding",
+        "type": "object"
+      },
+      "EngineerProbeClaim": {
+        "additionalProperties": false,
+        "properties": {
+          "probe_id": {
+            "minLength": 1,
+            "title": "Probe Id",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "pass",
+              "fail",
+              "error"
+            ],
+            "title": "Result",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "probe_id",
+          "result"
+        ],
+        "title": "EngineerProbeClaim",
+        "type": "object"
+      },
+      "EngineerProbeExpectation": {
+        "additionalProperties": false,
+        "properties": {
+          "citation_versions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "default": {},
+            "title": "Citation Versions",
+            "type": "object"
+          },
+          "contains": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Contains",
+            "type": "array"
+          },
+          "effective_update_strategy": {
+            "anyOf": [
+              {
+                "enum": [
+                  "daily",
+                  "realtime",
+                  "manual_policy"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Effective Update Strategy"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "answered",
+              "answered_with_warning",
+              "fallback",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "EngineerProbeExpectation",
+        "type": "object"
+      },
+      "EngineerProbeResult": {
+        "additionalProperties": false,
+        "properties": {
+          "actual": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TestResultV2"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "config_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Config Hash",
+            "type": "string"
+          },
+          "elapsed_seconds": {
+            "minimum": 0,
+            "title": "Elapsed Seconds",
+            "type": "number"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "expected": {
+            "$ref": "#/components/schemas/EngineerProbeExpectation"
+          },
+          "probe_id": {
+            "minLength": 1,
+            "title": "Probe Id",
+            "type": "string"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "pass",
+              "fail",
+              "error"
+            ],
+            "title": "Result",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "visibility": {
+            "enum": [
+              "public",
+              "hidden"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "probe_id",
+          "visibility",
+          "query",
+          "expected",
+          "actual",
+          "result",
+          "config_hash",
+          "elapsed_seconds"
+        ],
+        "title": "EngineerProbeResult",
+        "type": "object"
+      },
+      "EngineerProbeSummary": {
+        "additionalProperties": false,
+        "properties": {
+          "errors": {
+            "minimum": 0,
+            "title": "Errors",
+            "type": "integer"
+          },
+          "failed": {
+            "minimum": 0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "passed": {
+            "minimum": 0,
+            "title": "Passed",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "passed",
+          "failed",
+          "errors"
+        ],
+        "title": "EngineerProbeSummary",
+        "type": "object"
+      },
+      "EngineerPublicAdvice": {
+        "additionalProperties": false,
+        "properties": {
+          "affects_score": {
+            "const": false,
+            "default": false,
+            "title": "Affects Score",
+            "type": "boolean"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EngineerArtifactIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "waiting_model",
+              "success",
+              "unavailable",
+              "invalid",
+              "timeout"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "text": {
+            "default": null,
+            "title": "Text",
+            "type": "null"
+          },
+          "visibility": {
+            "const": "public",
+            "default": "public",
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "model"
+        ],
+        "title": "EngineerPublicAdvice",
+        "type": "object"
+      },
+      "EngineerPublicProbeResult": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "answered",
+                  "answered_with_warning",
+                  "fallback",
+                  "failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Status"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "config_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Config Hash",
+            "type": "string"
+          },
+          "elapsed_seconds": {
+            "minimum": 0,
+            "title": "Elapsed Seconds",
+            "type": "number"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "engineer_probe_execution_failed",
+                  "engineer_baseline_execution_failed",
+                  "engineer_review_interrupted",
+                  "engineer_verification_failed"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "expected_status": {
+            "enum": [
+              "answered",
+              "answered_with_warning",
+              "fallback",
+              "failed"
+            ],
+            "title": "Expected Status",
+            "type": "string"
+          },
+          "indexed_versions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Indexed Versions",
+            "type": "object"
+          },
+          "probe_id": {
+            "minLength": 1,
+            "title": "Probe Id",
+            "type": "string"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "result": {
+            "enum": [
+              "pass",
+              "fail",
+              "error"
+            ],
+            "title": "Result",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_versions": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Source Versions",
+            "type": "object"
+          },
+          "visibility": {
+            "const": "public",
+            "default": "public",
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "probe_id",
+          "query",
+          "expected_status",
+          "actual_status",
+          "result",
+          "config_hash",
+          "citations",
+          "source_versions",
+          "indexed_versions",
+          "elapsed_seconds",
+          "error_code"
+        ],
+        "title": "EngineerPublicProbeResult",
+        "type": "object"
+      },
+      "EngineerPublicReport": {
+        "additionalProperties": false,
+        "properties": {
+          "advice": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EngineerPublicAdvice"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "affects_score": {
+            "const": false,
+            "default": false,
+            "title": "Affects Score",
+            "type": "boolean"
+          },
+          "applicability": {
+            "$ref": "#/components/schemas/EngineerReportApplicability"
+          },
+          "claim_check": {
+            "enum": [
+              "matched",
+              "mismatch",
+              "not_provided",
+              "unverified"
+            ],
+            "title": "Claim Check",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "engineer-review-v1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/EngineerFinding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "hidden": {
+            "$ref": "#/components/schemas/EngineerProbeSummary"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "input_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "public_results": {
+            "items": {
+              "$ref": "#/components/schemas/EngineerPublicProbeResult"
+            },
+            "title": "Public Results",
+            "type": "array"
+          },
+          "reviewer": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "verified",
+              "report_mismatch",
+              "incomplete"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submission": {
+            "$ref": "#/components/schemas/EngineerArtifactIdentity"
+          },
+          "unresolved": {
+            "items": {
+              "$ref": "#/components/schemas/EngineerUnresolvedItem"
+            },
+            "maxItems": 0,
+            "title": "Unresolved",
+            "type": "array"
+          },
+          "work_language": {
+            "enum": [
+              "zh",
+              "en"
+            ],
+            "title": "Work Language",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_version",
+          "id",
+          "submission",
+          "input_hash",
+          "reviewer",
+          "created_at",
+          "work_language",
+          "status",
+          "claim_check",
+          "applicability",
+          "public_results",
+          "hidden",
+          "findings",
+          "unresolved",
+          "advice"
+        ],
+        "title": "EngineerPublicReport",
+        "type": "object"
+      },
+      "EngineerRegressionReport": {
+        "additionalProperties": false,
+        "properties": {
+          "advice": {
+            "$ref": "#/components/schemas/EngineerAdvice"
+          },
+          "claim_check": {
+            "enum": [
+              "matched",
+              "mismatch",
+              "not_provided",
+              "unverified"
+            ],
+            "title": "Claim Check",
+            "type": "string"
+          },
+          "contract_version": {
+            "const": "engineer-review-v1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/EngineerFinding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "input": {
+            "$ref": "#/components/schemas/EngineerReviewInput"
+          },
+          "input_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Input Hash",
+            "type": "string"
+          },
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/EngineerProbeResult"
+            },
+            "minItems": 1,
+            "title": "Results",
+            "type": "array"
+          },
+          "reviewer": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "verified",
+              "report_mismatch",
+              "incomplete"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "submission": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "unresolved": {
+            "items": {
+              "$ref": "#/components/schemas/EngineerUnresolvedItem"
+            },
+            "title": "Unresolved",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contract_version",
+          "id",
+          "submission",
+          "input",
+          "input_hash",
+          "reviewer",
+          "created_at",
+          "status",
+          "claim_check",
+          "results",
+          "findings",
+          "unresolved",
+          "advice"
+        ],
+        "title": "EngineerRegressionReport",
+        "type": "object"
+      },
+      "EngineerReportApplicability": {
+        "additionalProperties": false,
+        "properties": {
+          "base_config_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Base Config Hash",
+            "type": "string"
+          },
+          "config": {
+            "$ref": "#/components/schemas/EngineerArtifactIdentity"
+          },
+          "effective_config_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Effective Config Hash",
+            "type": "string"
+          },
+          "effective_settings_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Effective Settings Hash",
+            "type": "string"
+          },
+          "indexed_versions_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Indexed Versions Hash"
+          },
+          "probe_suite_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Probe Suite Hash",
+            "type": "string"
+          },
+          "reviewer_version_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Reviewer Version Hash",
+            "type": "string"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/EngineerArtifactIdentity"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_as_of": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "source_versions_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Versions Hash"
+          }
+        },
+        "required": [
+          "scenario",
+          "config",
+          "base_config_hash",
+          "probe_suite_hash",
+          "reviewer_version_hash",
+          "effective_config_hash",
+          "effective_settings_hash",
+          "source_versions_hash",
+          "indexed_versions_hash",
+          "source_as_of"
+        ],
+        "title": "EngineerReportApplicability",
+        "type": "object"
+      },
+      "EngineerReviewInput": {
+        "additionalProperties": false,
+        "description": "Canonical digest of this entire object is the immutable review input hash.",
+        "properties": {
+          "baseline_config": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "config": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "contract_version": {
+            "const": "engineer-review-v1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FileRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "pack": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "probe_ids": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "title": "Probe Ids",
+            "type": "array"
+          },
+          "probe_suite": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "resolved_config": {
+            "$ref": "#/components/schemas/EffectiveConfig"
+          },
+          "resource_snapshot": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "reviewer_version": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "scenario": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_as_of": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "submission": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "work_language": {
+            "enum": [
+              "zh",
+              "en"
+            ],
+            "title": "Work Language",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_version",
+          "pack",
+          "baseline_config",
+          "config",
+          "scenario",
+          "probe_suite",
+          "reviewer_version",
+          "resource_snapshot",
+          "submission",
+          "probe_ids",
+          "source_as_of",
+          "resolved_config",
+          "work_language",
+          "model"
+        ],
+        "title": "EngineerReviewInput",
+        "type": "object"
+      },
+      "EngineerSubmissionRecord": {
+        "additionalProperties": false,
+        "properties": {
+          "base_config_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Base Config Hash",
+            "type": "string"
+          },
+          "config": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "contract_version": {
+            "const": "engineer-review-v1",
+            "title": "Contract Version",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "explanation": {
+            "title": "Explanation",
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "pack": {
+            "$ref": "#/components/schemas/FileRef"
+          },
+          "regression_report": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FileRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "unresolved": {
+            "items": {
+              "$ref": "#/components/schemas/EngineerUnresolvedItem"
+            },
+            "title": "Unresolved",
+            "type": "array"
+          },
+          "work_language": {
+            "enum": [
+              "zh",
+              "en"
+            ],
+            "title": "Work Language",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_version",
+          "id",
+          "pack",
+          "config",
+          "base_config_hash",
+          "regression_report",
+          "unresolved",
+          "explanation",
+          "executor",
+          "created_at",
+          "work_language"
+        ],
+        "title": "EngineerSubmissionRecord",
+        "type": "object"
+      },
+      "EngineerUnresolvedItem": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "title": "Description",
+            "type": "string"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "probe_ids": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Probe Ids",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "visibility": {
+            "default": "public",
+            "enum": [
+              "public",
+              "hidden"
+            ],
+            "title": "Visibility",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "description"
+        ],
+        "title": "EngineerUnresolvedItem",
+        "type": "object"
+      },
+      "EvidenceRefV2": {
+        "additionalProperties": false,
+        "properties": {
+          "config_version": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Config Version"
+          },
+          "kind": {
+            "minLength": 1,
+            "title": "Kind",
+            "type": "string"
+          },
+          "object_id": {
+            "minLength": 1,
+            "title": "Object Id",
+            "type": "string"
+          },
+          "observed_at_seq": {
+            "minimum": 0,
+            "title": "Observed At Seq",
+            "type": "integer"
+          },
+          "quote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Quote"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "span_end": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Span End"
+          },
+          "span_start": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Span Start"
+          },
+          "valid_from_seq": {
+            "default": 0,
+            "minimum": 0,
+            "title": "Valid From Seq",
+            "type": "integer"
+          },
+          "valid_until_seq": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Valid Until Seq"
+          },
+          "version": {
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "kind",
+          "object_id",
+          "version",
+          "observed_at_seq"
+        ],
+        "title": "EvidenceRefV2",
+        "type": "object"
+      },
+      "Executor": {
+        "additionalProperties": false,
+        "properties": {
+          "delegation_id": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Delegation Id"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "human",
+              "external_agent",
+              "reference_agent",
+              "system"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "title": "Executor",
+        "type": "object"
+      },
+      "FileRef": {
+        "additionalProperties": false,
+        "properties": {
+          "media_type": {
+            "default": "application/json",
+            "title": "Media Type",
+            "type": "string"
+          },
+          "path": {
+            "minLength": 1,
+            "title": "Path",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Sha256",
+            "type": "string"
+          }
+        },
+        "required": [
+          "path",
+          "sha256"
+        ],
+        "title": "FileRef",
+        "type": "object"
+      },
+      "ModelAttemptUsage": {
+        "additionalProperties": false,
+        "properties": {
+          "attempt_id": {
+            "minLength": 1,
+            "title": "Attempt Id",
+            "type": "string"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Cost"
+          },
+          "elapsed_seconds": {
+            "minimum": 0,
+            "title": "Elapsed Seconds",
+            "type": "number"
+          },
+          "expected_model_revision": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expected Model Revision"
+          },
+          "expected_provider": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Expected Provider"
+          },
+          "input_tokens": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Input Tokens"
+          },
+          "model_revision": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Revision"
+          },
+          "output_tokens": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Output Tokens"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "request_id": {
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "success",
+              "failed",
+              "timeout",
+              "unknown"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "usage_known": {
+            "title": "Usage Known",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "request_id",
+          "attempt_id",
+          "provider",
+          "model_revision",
+          "status",
+          "elapsed_seconds",
+          "usage_known"
+        ],
+        "title": "ModelAttemptUsage",
+        "type": "object"
+      },
+      "ObjectRef": {
+        "additionalProperties": false,
+        "properties": {
+          "config_version": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Config Version"
+          },
+          "kind": {
+            "minLength": 1,
+            "title": "Kind",
+            "type": "string"
+          },
+          "object_id": {
+            "minLength": 1,
+            "title": "Object Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "version": {
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "session_id",
+          "kind",
+          "object_id",
+          "version"
+        ],
+        "title": "ObjectRef",
+        "type": "object"
+      },
+      "RetrievedChunk": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "material_id": {
+            "minLength": 1,
+            "title": "Material Id",
+            "type": "string"
+          },
+          "ref": {
+            "$ref": "#/components/schemas/EvidenceRefV2"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "score": {
+            "minimum": 0,
+            "title": "Score",
+            "type": "number"
+          },
+          "version": {
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "material_id",
+          "version",
+          "ref",
+          "score"
+        ],
+        "title": "RetrievedChunk",
+        "type": "object"
+      },
+      "TestExecutionMetadata": {
+        "additionalProperties": false,
+        "properties": {
+          "attempts": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ModelAttemptUsage"
+            },
+            "title": "Attempts",
+            "type": "array"
+          },
+          "chunks": {
+            "items": {
+              "$ref": "#/components/schemas/RetrievedChunk"
+            },
+            "title": "Chunks",
+            "type": "array"
+          },
+          "cost_complete": {
+            "default": false,
+            "title": "Cost Complete",
+            "type": "boolean"
+          },
+          "executed_at": {
+            "format": "date-time",
+            "title": "Executed At",
+            "type": "string"
+          },
+          "executor": {
+            "$ref": "#/components/schemas/Executor"
+          },
+          "indexed_versions": {
+            "additionalProperties": {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            "title": "Indexed Versions",
+            "type": "object"
+          },
+          "projection_actor": {
+            "minLength": 1,
+            "title": "Projection Actor",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_versions": {
+            "additionalProperties": {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            "title": "Source Versions",
+            "type": "object"
+          },
+          "used_versions": {
+            "additionalProperties": {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            "title": "Used Versions",
+            "type": "object"
+          }
+        },
+        "required": [
+          "executed_at",
+          "executor",
+          "source_versions",
+          "indexed_versions",
+          "used_versions",
+          "chunks",
+          "projection_actor"
+        ],
+        "title": "TestExecutionMetadata",
+        "type": "object"
+      },
+      "TestResultV2": {
+        "additionalProperties": false,
+        "properties": {
+          "answer": {
+            "title": "Answer",
+            "type": "string"
+          },
+          "as_of": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "citations": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "config": {
+            "$ref": "#/components/schemas/EffectiveConfig"
+          },
+          "config_ref": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "declared_category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Declared Category"
+          },
+          "declared_expected": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Declared Expected"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "execution": {
+            "$ref": "#/components/schemas/TestExecutionMetadata"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "observed_coverage": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Observed Coverage",
+            "type": "array"
+          },
+          "query": {
+            "title": "Query",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "session_id": {
+            "minLength": 1,
+            "title": "Session Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "answered",
+              "answered_with_warning",
+              "fallback",
+              "failed"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "version": {
+            "default": 1,
+            "exclusiveMinimum": 0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "session_id",
+          "query",
+          "execution",
+          "config_ref",
+          "config",
+          "status",
+          "answer",
+          "citations",
+          "as_of"
+        ],
+        "title": "TestResultV2",
+        "type": "object"
+      },
+      "VersionPoint": {
+        "additionalProperties": false,
+        "properties": {
+          "business_seq": {
+            "minimum": 0,
+            "title": "Business Seq",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "storage_revision": {
+            "minimum": 0,
+            "title": "Storage Revision",
+            "type": "integer"
+          },
+          "workspace_revision": {
+            "minimum": 0,
+            "title": "Workspace Revision",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "business_seq",
+          "workspace_revision",
+          "storage_revision"
+        ],
+        "title": "VersionPoint",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Engineer file contracts",
+    "version": "1"
+  },
+  "openapi": "3.1.0",
+  "paths": {},
+  "x-file-contracts": {
+    "claimed_report": "EngineerClaimedReport",
+    "public_review": "EngineerPublicReport",
+    "submission": "EngineerSubmissionRecord",
+    "trusted_review": "EngineerRegressionReport"
+  }
+}

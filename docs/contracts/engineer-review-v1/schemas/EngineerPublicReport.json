@@ -1,0 +1,690 @@
+{
+  "$defs": {
+    "EngineerArtifactIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "enum": [
+            "submission",
+            "scenario",
+            "configuration",
+            "model"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "sha256"
+      ],
+      "title": "EngineerArtifactIdentity",
+      "type": "object"
+    },
+    "EngineerFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "target_fix",
+            "new_regression",
+            "claim_consistency",
+            "unresolved"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "probe_ids": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Probe Ids",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "pass",
+            "fail",
+            "unverified"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "visibility": {
+          "enum": [
+            "public",
+            "hidden"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "status",
+        "visibility",
+        "description"
+      ],
+      "title": "EngineerFinding",
+      "type": "object"
+    },
+    "EngineerProbeSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "errors": {
+          "minimum": 0,
+          "title": "Errors",
+          "type": "integer"
+        },
+        "failed": {
+          "minimum": 0,
+          "title": "Failed",
+          "type": "integer"
+        },
+        "passed": {
+          "minimum": 0,
+          "title": "Passed",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "passed",
+        "failed",
+        "errors"
+      ],
+      "title": "EngineerProbeSummary",
+      "type": "object"
+    },
+    "EngineerPublicAdvice": {
+      "additionalProperties": false,
+      "properties": {
+        "affects_score": {
+          "const": false,
+          "default": false,
+          "title": "Affects Score",
+          "type": "boolean"
+        },
+        "model": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EngineerArtifactIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "waiting_model",
+            "success",
+            "unavailable",
+            "invalid",
+            "timeout"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "text": {
+          "default": null,
+          "title": "Text",
+          "type": "null"
+        },
+        "visibility": {
+          "const": "public",
+          "default": "public",
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "status",
+        "model"
+      ],
+      "title": "EngineerPublicAdvice",
+      "type": "object"
+    },
+    "EngineerPublicProbeResult": {
+      "additionalProperties": false,
+      "properties": {
+        "actual_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "answered",
+                "answered_with_warning",
+                "fallback",
+                "failed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Actual Status"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "title": "Citations",
+          "type": "array"
+        },
+        "config_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Config Hash",
+          "type": "string"
+        },
+        "elapsed_seconds": {
+          "minimum": 0,
+          "title": "Elapsed Seconds",
+          "type": "number"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "enum": [
+                "engineer_probe_execution_failed",
+                "engineer_baseline_execution_failed",
+                "engineer_review_interrupted",
+                "engineer_verification_failed"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Error Code"
+        },
+        "expected_status": {
+          "enum": [
+            "answered",
+            "answered_with_warning",
+            "fallback",
+            "failed"
+          ],
+          "title": "Expected Status",
+          "type": "string"
+        },
+        "indexed_versions": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Indexed Versions",
+          "type": "object"
+        },
+        "probe_id": {
+          "minLength": 1,
+          "title": "Probe Id",
+          "type": "string"
+        },
+        "query": {
+          "title": "Query",
+          "type": "string"
+        },
+        "result": {
+          "enum": [
+            "pass",
+            "fail",
+            "error"
+          ],
+          "title": "Result",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_versions": {
+          "additionalProperties": {
+            "type": "integer"
+          },
+          "title": "Source Versions",
+          "type": "object"
+        },
+        "visibility": {
+          "const": "public",
+          "default": "public",
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "probe_id",
+        "query",
+        "expected_status",
+        "actual_status",
+        "result",
+        "config_hash",
+        "citations",
+        "source_versions",
+        "indexed_versions",
+        "elapsed_seconds",
+        "error_code"
+      ],
+      "title": "EngineerPublicProbeResult",
+      "type": "object"
+    },
+    "EngineerReportApplicability": {
+      "additionalProperties": false,
+      "properties": {
+        "base_config_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Base Config Hash",
+          "type": "string"
+        },
+        "config": {
+          "$ref": "#/$defs/EngineerArtifactIdentity"
+        },
+        "effective_config_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Effective Config Hash",
+          "type": "string"
+        },
+        "effective_settings_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Effective Settings Hash",
+          "type": "string"
+        },
+        "indexed_versions_hash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Indexed Versions Hash"
+        },
+        "probe_suite_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Probe Suite Hash",
+          "type": "string"
+        },
+        "reviewer_version_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Reviewer Version Hash",
+          "type": "string"
+        },
+        "scenario": {
+          "$ref": "#/$defs/EngineerArtifactIdentity"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_as_of": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "source_versions_hash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Versions Hash"
+        }
+      },
+      "required": [
+        "scenario",
+        "config",
+        "base_config_hash",
+        "probe_suite_hash",
+        "reviewer_version_hash",
+        "effective_config_hash",
+        "effective_settings_hash",
+        "source_versions_hash",
+        "indexed_versions_hash",
+        "source_as_of"
+      ],
+      "title": "EngineerReportApplicability",
+      "type": "object"
+    },
+    "EngineerUnresolvedItem": {
+      "additionalProperties": false,
+      "properties": {
+        "description": {
+          "title": "Description",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "probe_ids": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Probe Ids",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "visibility": {
+          "default": "public",
+          "enum": [
+            "public",
+            "hidden"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "description"
+      ],
+      "title": "EngineerUnresolvedItem",
+      "type": "object"
+    },
+    "Executor": {
+      "additionalProperties": false,
+      "properties": {
+        "delegation_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Delegation Id"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "human",
+            "external_agent",
+            "reference_agent",
+            "system"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "kind"
+      ],
+      "title": "Executor",
+      "type": "object"
+    },
+    "ObjectRef": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version"
+      ],
+      "title": "ObjectRef",
+      "type": "object"
+    },
+    "VersionPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "business_seq": {
+          "minimum": 0,
+          "title": "Business Seq",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "storage_revision": {
+          "minimum": 0,
+          "title": "Storage Revision",
+          "type": "integer"
+        },
+        "workspace_revision": {
+          "minimum": 0,
+          "title": "Workspace Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "business_seq",
+        "workspace_revision",
+        "storage_revision"
+      ],
+      "title": "VersionPoint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "advice": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EngineerPublicAdvice"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "affects_score": {
+      "const": false,
+      "default": false,
+      "title": "Affects Score",
+      "type": "boolean"
+    },
+    "applicability": {
+      "$ref": "#/$defs/EngineerReportApplicability"
+    },
+    "claim_check": {
+      "enum": [
+        "matched",
+        "mismatch",
+        "not_provided",
+        "unverified"
+      ],
+      "title": "Claim Check",
+      "type": "string"
+    },
+    "contract_version": {
+      "const": "engineer-review-v1",
+      "title": "Contract Version",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "findings": {
+      "items": {
+        "$ref": "#/$defs/EngineerFinding"
+      },
+      "title": "Findings",
+      "type": "array"
+    },
+    "hidden": {
+      "$ref": "#/$defs/EngineerProbeSummary"
+    },
+    "id": {
+      "minLength": 1,
+      "title": "Id",
+      "type": "string"
+    },
+    "input_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Input Hash",
+      "type": "string"
+    },
+    "public_results": {
+      "items": {
+        "$ref": "#/$defs/EngineerPublicProbeResult"
+      },
+      "title": "Public Results",
+      "type": "array"
+    },
+    "reviewer": {
+      "$ref": "#/$defs/Executor"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "verified",
+        "report_mismatch",
+        "incomplete"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "submission": {
+      "$ref": "#/$defs/EngineerArtifactIdentity"
+    },
+    "unresolved": {
+      "items": {
+        "$ref": "#/$defs/EngineerUnresolvedItem"
+      },
+      "maxItems": 0,
+      "title": "Unresolved",
+      "type": "array"
+    },
+    "work_language": {
+      "enum": [
+        "zh",
+        "en"
+      ],
+      "title": "Work Language",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contract_version",
+    "id",
+    "submission",
+    "input_hash",
+    "reviewer",
+    "created_at",
+    "work_language",
+    "status",
+    "claim_check",
+    "applicability",
+    "public_results",
+    "hidden",
+    "findings",
+    "unresolved",
+    "advice"
+  ],
+  "title": "EngineerPublicReport",
+  "type": "object"
+}

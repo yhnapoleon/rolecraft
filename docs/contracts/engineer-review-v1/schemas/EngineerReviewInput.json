@@ -1,0 +1,336 @@
+{
+  "$defs": {
+    "AssistantConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "chunk_size": {
+          "default": 500,
+          "exclusiveMinimum": 0,
+          "title": "Chunk Size",
+          "type": "integer"
+        },
+        "config_version": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Config Version",
+          "type": "integer"
+        },
+        "domains": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Domains",
+          "type": "array"
+        },
+        "fallback": {
+          "default": "human",
+          "enum": [
+            "human",
+            "none"
+          ],
+          "title": "Fallback",
+          "type": "string"
+        },
+        "freshness_guard": {
+          "default": "none",
+          "enum": [
+            "none",
+            "warn",
+            "fallback"
+          ],
+          "title": "Freshness Guard",
+          "type": "string"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "launch_day": {
+          "default": 7,
+          "exclusiveMinimum": 0,
+          "title": "Launch Day",
+          "type": "integer"
+        },
+        "manual_domains": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Manual Domains",
+          "type": "array"
+        },
+        "min_score": {
+          "default": 0.35,
+          "minimum": 0,
+          "title": "Min Score",
+          "type": "number"
+        },
+        "min_score_calibration": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FileRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "participants": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Participants",
+          "type": "integer"
+        },
+        "prohibited_topics": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Prohibited Topics",
+          "type": "array"
+        },
+        "retrieval_limit": {
+          "default": 3,
+          "exclusiveMinimum": 0,
+          "title": "Retrieval Limit",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "scope_filter": {
+          "default": true,
+          "title": "Scope Filter",
+          "type": "boolean"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "update_strategy": {
+          "default": "daily",
+          "enum": [
+            "daily",
+            "realtime",
+            "manual_policy"
+          ],
+          "title": "Update Strategy",
+          "type": "string"
+        },
+        "version": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        },
+        "work_items": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Work Items",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "domains"
+      ],
+      "title": "AssistantConfig",
+      "type": "object"
+    },
+    "EffectiveConfig": {
+      "additionalProperties": false,
+      "properties": {
+        "differences": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "default": {},
+          "title": "Differences",
+          "type": "object"
+        },
+        "effective": {
+          "$ref": "#/$defs/AssistantConfig"
+        },
+        "requested": {
+          "$ref": "#/$defs/AssistantConfig"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "requested",
+        "effective"
+      ],
+      "title": "EffectiveConfig",
+      "type": "object"
+    },
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    },
+    "VersionPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "business_seq": {
+          "minimum": 0,
+          "title": "Business Seq",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "storage_revision": {
+          "minimum": 0,
+          "title": "Storage Revision",
+          "type": "integer"
+        },
+        "workspace_revision": {
+          "minimum": 0,
+          "title": "Workspace Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "business_seq",
+        "workspace_revision",
+        "storage_revision"
+      ],
+      "title": "VersionPoint",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Canonical digest of this entire object is the immutable review input hash.",
+  "properties": {
+    "baseline_config": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "config": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "contract_version": {
+      "const": "engineer-review-v1",
+      "title": "Contract Version",
+      "type": "string"
+    },
+    "model": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/FileRef"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "pack": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "probe_ids": {
+      "items": {
+        "minLength": 1,
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Probe Ids",
+      "type": "array"
+    },
+    "probe_suite": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "resolved_config": {
+      "$ref": "#/$defs/EffectiveConfig"
+    },
+    "resource_snapshot": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "reviewer_version": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "scenario": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_as_of": {
+      "$ref": "#/$defs/VersionPoint"
+    },
+    "submission": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "work_language": {
+      "enum": [
+        "zh",
+        "en"
+      ],
+      "title": "Work Language",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contract_version",
+    "pack",
+    "baseline_config",
+    "config",
+    "scenario",
+    "probe_suite",
+    "reviewer_version",
+    "resource_snapshot",
+    "submission",
+    "probe_ids",
+    "source_as_of",
+    "resolved_config",
+    "work_language",
+    "model"
+  ],
+  "title": "EngineerReviewInput",
+  "type": "object"
+}
