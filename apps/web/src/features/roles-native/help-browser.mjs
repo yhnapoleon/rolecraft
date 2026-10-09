@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { launch, delay } from '../../../tests/walkthrough/cdp.mjs';
-import { waitFor } from '../../../tests/regression/browser-support.mjs';
+import { waitFor, clickReady } from '../../../tests/regression/browser-support.mjs';
 const base = process.env.BASE;
 const out = process.env.OUT;
 mkdirSync(out, { recursive: true });
@@ -44,16 +44,20 @@ for (const language of ['zh', 'en']) {
     const condition = language === 'zh'
       ? '只有明确申请获批并生效后才能扩容。'
       : 'Capacity changes only after explicit approval is committed.';
-    const workText = (language === 'zh' ? '容量可扩至80人。' : 'Capacity can reach 80 users.') + '\n' + condition;
+    const workText = `${language === 'zh' ? '容量可扩至80人。' : 'Capacity can reach 80 users.'}\n${condition}`;
     await browser.type('#new-title', workTitle);
     await browser.type('#new-body', workText);
     await browser.clickText(language === 'zh' ? '保存为作品' : 'Save as work');
     await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
     await browser.click('.ol-row[data-type="work"]');
     await waitFor(browser, `!!document.querySelector('[data-v4-insertion="sharing"] select')`);
+    const shareLabel = language === 'zh' ? '分享已保存的这版' : 'Share this saved version';
+    await waitFor(browser, `Array.from(document.querySelectorAll('button')).some(n => n.textContent.trim() === ${JSON.stringify(shareLabel)} && !n.disabled)`);
     await browser.select('[data-v4-insertion="sharing"] select', 'tech_lead');
+    await waitFor(browser, `document.querySelector('[data-v4-insertion="sharing"] select')?.value === 'tech_lead'`);
+    await waitFor(browser, `document.querySelectorAll('.rc-roles__reply').length === ${questions.length}`);
     const beforeShare = await browser.ev(`document.querySelectorAll('.rc-roles__reply').length`);
-    await browser.clickText(language === 'zh' ? '分享已保存的这版' : 'Share this saved version');
+    await clickReady(browser, shareLabel);
     await waitFor(browser, `document.querySelectorAll('.rc-roles__reply').length > ${beforeShare}`, 60000);
     const preview = await browser.ev(`Array.from(document.querySelectorAll('.rc-roles__preview')).at(-1).textContent`);
     assert.ok(!preview.includes('80') || preview.includes(condition), 'Preview must preserve the complete condition');
