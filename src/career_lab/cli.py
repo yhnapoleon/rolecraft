@@ -74,6 +74,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.command in {"serve", "worker"}:
         import os
         import time
+
         from career_lab.api.vertical_runtime import create_runtime_app
         from career_lab.jobs.worker import Worker
 
@@ -81,7 +82,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "serve":
             import uvicorn
 
-            uvicorn.run(app, host=args.host, port=args.port)
+            from career_lab.api.error_boundary import configure_http_logging
+
+            configure_http_logging()
+            uvicorn.run(app, host=args.host, port=args.port, access_log=False, log_config=None)
         else:
             worker = Worker(app.state.jobs, app.state.handlers)
             while True:
@@ -97,7 +101,7 @@ def main(argv: list[str] | None = None) -> int:
         print(json.dumps(train_baselines(args.manifest, args.output), indent=2))
         return 0
     if args.command == "data":
-        from career_lab.datasets.release import build_release, audit_release
+        from career_lab.datasets.release import audit_release, build_release
 
         result = (
             {"manifest": str(build_release(args.output))}
@@ -108,6 +112,7 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "eval":
         import yaml
+
         from career_lab.evals.runner import RunnerConfig, run_eval
 
         config = RunnerConfig.model_validate(
