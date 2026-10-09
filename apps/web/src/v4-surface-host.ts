@@ -5,7 +5,7 @@ export function surfaceHost(host: V4HostAdapter, active: () => boolean): V4HostA
   return {
     snapshot: () => host.snapshot(),
     subscribe: (callback) => host.subscribe(callback),
-    query: (operation, input) => host.query(operation, input),
+    query: (operation, ...args) => host.query(operation, ...args),
     command: (operation, input) => host.command(operation, input),
     recover: (requestId) => host.recover(requestId),
     retry: (requestId) => host.retry(requestId),

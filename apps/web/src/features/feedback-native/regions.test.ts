@@ -17,7 +17,7 @@ function host(): V4HostAdapter {
   return {
     snapshot: () => snapshot,
     subscribe: () => () => {},
-    query: vi.fn(async () => ({})),
+    query: vi.fn<V4HostAdapter['query']>(),
     command: vi.fn(async () => ({
       requestId: 'original',
       status: 'confirmed' as const,

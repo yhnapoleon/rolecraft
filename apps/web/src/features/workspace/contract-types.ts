@@ -1,38 +1,40 @@
-// Generated from W01 manifest SHA256 5edc886f3e862b53b11c19dbcf9955042d02c7ff18dd4ecf51fee8bb3d7c108c. Do not edit.
-export type Adoption = { "adopted_at"?: (string | null); "adopter"?: (Executor | null); "schema_version"?: 2; "status"?: "unadopted" | "adopted" | "rejected" };
-export type Command = { "expected_version": number; "expected_workspace_revision": number; "operation": string; "payload"?: Record<string, JsonValue>; "request_id": string; "schema_version": 2 };
-export type EvidenceRefV2 = { "config_version"?: (number | null); "kind": string; "object_id": string; "observed_at_seq": number; "quote"?: (string | null); "schema_version"?: 2; "session_id": string; "span_end"?: (number | null); "span_start"?: (number | null); "valid_from_seq"?: number; "valid_until_seq"?: (number | null); "version": number };
-export type Executor = { "delegation_id"?: (string | null); "id": string; "kind": "human" | "external_agent" | "reference_agent" | "system"; "schema_version"?: 2 };
-export type ImportConflict = { "existing"?: (ObjectRef | null); "original_id": string; "original_version"?: (number | null); "reason": "missing_history" | "version_conflict" | "content_conflict" | "foreign_session" | "unresolved_reference"; "schema_version"?: 2; "source_content_hash"?: (string | null) };
-export type ImportReference = { "original_id": string; "original_session_id": string; "resolved"?: (ObjectRef | null); "schema_version"?: 2; "status": "resolved" | "missing" | "foreign_session" | "unverified_local" };
-export type ImportResult = { "applied": boolean; "as_of": VersionPoint; "conflicts"?: (ImportConflict)[]; "id_map": Record<string, ObjectRef>; "mode": "preview" | "apply"; "package_id": string; "schema_version"?: 2; "unresolved": (ImportReference)[]; "version_map"?: (ImportVersionMap)[] };
-export type ImportVersionMap = { "original_id": string; "original_session_id": string; "original_version": number; "schema_version"?: 2; "status": "resolved" | "unresolved" | "unverified_local"; "target"?: (ObjectRef | null) };
-export type ImportedTaskSource = { "schema_version"?: 2; "source": LegacyProvenance; "task": ObjectRef };
-export type InvestigationBlock = { "id": string; "revision"?: number; "schema_version"?: 2; "source_ref"?: (EvidenceRefV2 | null); "test_ref"?: (ObjectRef | null); "test_refs"?: (ObjectRef)[]; "text"?: string; "title"?: string; "type": "text" | "note" | "source_check" | "retest" | "test_compare" };
-export type InvestigationPayload = { "blocks"?: (InvestigationBlock)[]; "question"?: string; "review_direction"?: "unknown" | "supports" | "contradicts" | "mixed"; "review_focus"?: "index" | "source" | "uncertain" | "other"; "review_note"?: string; "schema_version"?: 2; "type"?: "investigation" };
-export type JsonValue = unknown;
-export type LegacyProvenance = { "original_hash": string; "original_id": string; "original_kind": string; "original_purpose"?: (string | null); "raw": Record<string, JsonValue>; "schema_version"?: 2; "source_schema": string; "source_session_id": string };
-export type ObjectRef = { "config_version"?: (number | null); "kind": string; "object_id": string; "schema_version"?: 2; "session_id": string; "version": number };
-export type Option = { "id": string; "rationale"?: string; "schema_version"?: 2; "title": string; "tradeoffs"?: (string)[] };
-export type OptionsPayload = { "options"?: (Option)[]; "schema_version"?: 2; "type"?: "options" };
-export type PlanPayload = { "schema_version"?: 2; "sections": Record<string, string>; "type"?: "plan" };
-export type ProductAdopt = { "expected_head": number; "product_id": string; "product_version": number; "schema_version"?: 2; "status": "unadopted" | "adopted" | "rejected" };
-export type ProductCreate = { "content"?: string; "evidence_refs"?: (EvidenceRefV2)[]; "kind": "text" | "plan" | "test_plan" | "options" | "investigation"; "legacy"?: (LegacyProvenance | null); "purpose"?: string; "schema_version"?: 2; "source_return_id"?: (string | null); "structured_payload"?: ((TextPayload | PlanPayload | TestPlanPayload | OptionsPayload | InvestigationPayload) | null); "task"?: (ObjectRef | null); "title"?: string };
-export type ProductEdit = { "content"?: string; "evidence_refs"?: (EvidenceRefV2)[]; "expected_head": number; "kind": "text" | "plan" | "test_plan" | "options" | "investigation"; "legacy"?: (LegacyProvenance | null); "product_id": string; "purpose"?: string; "removed"?: boolean; "schema_version"?: 2; "source_return_id"?: (string | null); "structured_payload"?: ((TextPayload | PlanPayload | TestPlanPayload | OptionsPayload | InvestigationPayload) | null); "task"?: (ObjectRef | null); "title"?: string };
-export type ProductShare = { "id": string; "product": ObjectRef; "purpose"?: string; "question"?: string; "recipient_role": string; "revoked_at"?: (VersionPoint | null); "schema_version"?: 2; "session_id": string; "shared_at": VersionPoint; "version": number };
-export type ShareCreate = { "product_id": string; "product_version": number; "purpose"?: string; "question"?: string; "recipient_role": string; "schema_version"?: 2 };
-export type ShareUpdate = { "expected_revision": number; "operation": "revoke" | "restore"; "product_id": string; "schema_version"?: 2; "share_id": string };
-export type TaskBatch = { "creates"?: (TaskCreate)[]; "schema_version"?: 2; "updates"?: (TaskPatch)[] };
-export type TaskCreate = { "goal"?: string; "order"?: number; "parent"?: (ObjectRef | null); "priority"?: number; "relations"?: (ObjectRef)[]; "schema_version"?: 2; "title": string };
-export type TaskPatch = { "clear_parent"?: boolean; "expected_revision": number; "goal"?: (string | null); "item_id": string; "order"?: (number | null); "parent"?: (ObjectRef | null); "priority"?: (number | null); "relations"?: ((ObjectRef)[] | null); "schema_version"?: 2; "status"?: ("open" | "active" | "paused" | "blocked" | "done" | "removed" | null); "title"?: (string | null) };
-export type TestCase = { "declared_category"?: (string | null); "declared_expected"?: (string | null); "id": string; "intent"?: string; "query": string; "refs"?: (EvidenceRefV2)[]; "revision"?: number; "run"?: (ObjectRef | null); "schema_version"?: 2 };
-export type TestPlanPayload = { "cases"?: (TestCase)[]; "schema_version"?: 2; "type"?: "test_plan" };
-export type TextPayload = { "body": string; "schema_version"?: 2; "type"?: "text" };
-export type VersionPoint = { "business_seq": number; "schema_version"?: 2; "storage_revision": number; "workspace_revision": number };
-export type WorkProductVersion = { "adoption"?: Adoption; "author": Executor; "content"?: string; "content_hash": string; "created_at": string; "cycle": ObjectRef; "draft"?: boolean; "evidence_refs"?: (EvidenceRefV2)[]; "executor": Executor; "kind"?: "text" | "plan" | "test_plan" | "options" | "investigation"; "legacy"?: (LegacyProvenance | null); "product_id": string; "purpose"?: string; "removed_at"?: (string | null); "schema_version"?: 2; "session_id": string; "shares"?: (ObjectRef)[]; "source_return_id"?: (string | null); "structured_payload"?: ((TextPayload | PlanPayload | TestPlanPayload | OptionsPayload | InvestigationPayload) | null); "task"?: (ObjectRef | null); "title"?: string; "version": number; "visibility"?: "private" | "shared" };
-export type WorkspaceImport = { "items": (LegacyProvenance)[]; "mode": "preview" | "apply"; "package_hash": string; "package_id": string; "preview_storage_revision"?: (number | null); "references"?: (ImportReference)[]; "schema_version"?: 2; "source_schema": string; "source_session_id": string };
-export type WorkspaceImportReceipt = { "created_at": string; "executor": Executor; "fingerprint": string; "id": string; "package_hash": string; "package_id": string; "result": ImportResult; "schema_version"?: 2; "session_id": string; "source_schema": string; "source_session_id": string; "task_sources"?: (ImportedTaskSource)[]; "version"?: number };
-export type WorkspaceProductPage = { "as_of": VersionPoint; "items": (WorkspaceProductRead)[]; "next_cursor"?: (number | null); "schema_version"?: 2; "shares": (ProductShare)[]; "sharing_complete": boolean };
-export type WorkspaceProductRead = { "adoption"?: Adoption; "author": Executor; "content"?: string; "content_hash": string; "created_at": string; "cycle": ObjectRef; "draft"?: boolean; "evidence_refs"?: (EvidenceRefV2)[]; "executor": Executor; "kind"?: "text" | "plan" | "test_plan" | "options" | "investigation"; "legacy"?: (LegacyProvenance | null); "product_id": string; "purpose"?: string; "removed_at"?: (string | null); "schema_version"?: 2; "session_id": string; "shares"?: (ObjectRef)[]; "source_return_id"?: (string | null); "structured_payload"?: ((TextPayload | PlanPayload | TestPlanPayload | OptionsPayload | InvestigationPayload) | null); "task"?: (ObjectRef | null); "title"?: string; "version": number; "visibility"?: ("private" | "shared" | null) };
-export type WorkspaceSharePage = { "as_of": VersionPoint; "items": (ProductShare)[]; "next_cursor"?: (number | null); "schema_version"?: 2; "sharing_complete": boolean };
-export type WorkspaceTask = { "created_at": string; "goal"?: string; "id": string; "order"?: number; "parent"?: (ObjectRef | null); "priority"?: number; "relations"?: (ObjectRef)[]; "revision": number; "schema_version"?: 2; "session_id": string; "status"?: "open" | "active" | "paused" | "blocked" | "done" | "removed"; "title": string; "updated_at": string };
+/** Workspace wire types share the generated public contract source. */
+export type {
+  Adoption,
+  Command,
+  EvidenceRefV2,
+  Executor,
+  ImportConflict,
+  ImportReference,
+  ImportResult,
+  ImportVersionMap,
+  ImportedTaskSource,
+  InvestigationBlock,
+  InvestigationPayload,
+  JsonValue,
+  LegacyProvenance,
+  ObjectRef,
+  Option,
+  OptionsPayload,
+  PlanPayload,
+  ProductAdopt,
+  ProductCreate,
+  ProductEdit,
+  ProductShare,
+  ShareCreate,
+  ShareUpdate,
+  TaskBatch,
+  TaskCreate,
+  TaskPatch,
+  TestCase,
+  TestPlanPayload,
+  TextPayload,
+  VersionPoint,
+  WorkProductVersion,
+  WorkspaceImport,
+  WorkspaceImportReceipt,
+  WorkspaceProductPage,
+  WorkspaceProductRead,
+  WorkspaceSharePage,
+  WorkspaceTask,
+} from '../../contracts-v2';

@@ -1,75 +1,340 @@
-function resourceTerms(value:any){return Object.entries(value||{}).map(([key,val])=>`${({capacity:T('容量','Capacity'),dev_days:T('开发人日','Developer-days'),deadline_day:T('截止日','Deadline day')} as any)[key]||key} ${val}`).join(' · ');}
+function resourceTerms(value: any) {
+  return Object.entries(value || {})
+    .map(
+      ([key, val]) =>
+        `${({ capacity: T('容量', 'Capacity'), dev_days: T('开发人日', 'Developer-days'), deadline_day: T('截止日', 'Deadline day') } as any)[key] || key} ${val}`,
+    )
+    .join(' · ');
+}
 import { VerticalClient, VerticalSessions, type Ref } from './vertical-client';
 import { T, locale, setPreference, onLocaleChange } from './app/i18n';
 import './vertical-workbench.css';
 
-type Mount=(node:HTMLElement,client:VerticalClient,open:(ref:Ref)=>Promise<void>)=>(()=>void)|void;
-export type NativeParts={workspace?:Mount;roles?:Mount;feedback?:Mount};
-const esc=(value:any)=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]!));
-const labels:any={investigate:['调查与资料','Investigation'],trial:['知识助手试用','Try the assistant'],workspace:['我的作品','My work'],requests:['资源申请','Resources'],feedback:['提交与反馈','Submission & feedback']};
-const action=(id:string,zh:string,en:string,primary=false)=>`<button class="btn ${primary?'primary':''}" data-do="${id}">${T(zh,en)}</button>`;
+type Mount = (
+  node: HTMLElement,
+  client: VerticalClient,
+  open: (ref: Ref) => Promise<void>,
+) => (() => void) | void;
+export type NativeParts = { workspace?: Mount; roles?: Mount; feedback?: Mount };
+const esc = (value: any) =>
+  String(value ?? '').replace(
+    /[&<>"']/g,
+    (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!,
+  );
+const labels: any = {
+  investigate: ['调查与资料', 'Investigation'],
+  trial: ['知识助手试用', 'Try the assistant'],
+  workspace: ['我的作品', 'My work'],
+  requests: ['资源申请', 'Resources'],
+  feedback: ['提交与反馈', 'Submission & feedback'],
+};
+const action = (id: string, zh: string, en: string, primary = false) =>
+  `<button class="btn ${primary ? 'primary' : ''}" data-do="${id}">${T(zh, en)}</button>`;
 
-export async function mountVerticalWorkbench(root:HTMLElement,storage:Storage,parts:NativeParts={}) {
-  const label=document.createElement('aside');
-  label.dataset.v2DevelopmentNotice='true';label.setAttribute('role','note');
-  label.textContent='开发自测 · 非用户入口 · 不作为纵切验收依据';
-  label.style.cssText='position:sticky;top:0;z-index:10000;padding:10px 16px;background:#fff2d8;color:#6b3b00;border-bottom:1px solid #d6ad68;font:14px system-ui';
-  root.before(label);document.title='开发自测 · v2接线';
-  const sessions=new VerticalSessions(storage);
-  let client:VerticalClient|undefined, page=Object.hasOwn(labels,location.hash.slice(1))?location.hash.slice(1):'investigate',selected:Ref|undefined,doc:any,notice='',error='',busy=false;
-  let cleanups:(()=>void)[]=[];
-  const clearParts=()=>{cleanups.forEach(fn=>fn());cleanups=[];};
-  const message=(e:unknown)=>e instanceof Error?e.message:String(e);
-  async function run(fn:()=>Promise<unknown>) {if(busy)return;busy=true;error='';status();try{await fn();}catch(e){error=message(e);}finally{busy=false;render();}}
-  function status(){const node=root.querySelector('#v2-status');if(node){node.textContent=error||notice||(busy?T('正在保存…','Saving…'):'');node.setAttribute('role',error?'alert':'status');}}
-  function mountPart(name:keyof NativeParts,id:string) {const node=root.querySelector<HTMLElement>(id);if(!node||!client)return;
-    const mount=parts[name];if(mount){const off=mount(node,client,open);if(off)cleanups.push(off);}else node.innerHTML=`<p class="v2-muted">${T('此部件正在接入，已保存的记录保持可用。','This component is being connected. Saved records are retained.')}</p>`;
+export async function mountVerticalWorkbench(
+  root: HTMLElement,
+  storage: Storage,
+  parts: NativeParts = {},
+) {
+  const label = document.createElement('aside');
+  label.dataset.v2DevelopmentNotice = 'true';
+  label.setAttribute('role', 'note');
+  label.textContent = '开发自测 · 非用户入口 · 不作为纵切验收依据';
+  label.style.cssText =
+    'position:sticky;top:0;z-index:10000;padding:10px 16px;background:#fff2d8;color:#6b3b00;border-bottom:1px solid #d6ad68;font:14px system-ui';
+  root.before(label);
+  document.title = '开发自测 · v2接线';
+  const sessions = new VerticalSessions(storage);
+  let client: VerticalClient | undefined,
+    page = Object.hasOwn(labels, location.hash.slice(1)) ? location.hash.slice(1) : 'investigate',
+    selected: Ref | undefined,
+    doc: any,
+    notice = '',
+    error = '',
+    busy = false;
+  let cleanups: (() => void)[] = [];
+  const clearParts = () => {
+    cleanups.forEach((fn) => fn());
+    cleanups = [];
+  };
+  const message = (e: unknown) => (e instanceof Error ? e.message : String(e));
+  async function run(fn: () => Promise<unknown>) {
+    if (busy) return;
+    busy = true;
+    error = '';
+    status();
+    try {
+      await fn();
+    } catch (e) {
+      error = message(e);
+    } finally {
+      busy = false;
+      render();
+    }
   }
-  async function open(ref:Ref){if(!client)return;const value=await client.read(ref);selected=ref;doc=value.content;page='investigate';render();}
-  function materialTitle(ref:Ref){return client?.timeline.workspace?.material_titles?.[ref.object_id+':'+ref.version]||client?.materials.find(m=>m.id===ref.object_id&&m.version===ref.version)?.title||ref.object_id;}
-  function documentPanel(){if(!selected||!doc)return `<article class="paper v2-paper"><p class="eyebrow">${T('调查','Investigation')}</p><h1>${T('先弄清发生了什么','Understand the situation')}</h1><p>${T('从经理委托开始，也可以直接打开材料、问同事或试用助手。工作顺序由你决定。','Start with the brief, open a document, ask a colleague or try the assistant. You decide the order.')}</p><p class="v2-muted">${T('你可以保留不同判断，再用作品、试用和申请检验它们。','Keep alternative judgements and test them through your work and actions.')}</p></article>`;
-    const text=doc.fragments?.map((f:any)=>f.text).join('\n\n')??doc.content??doc.answer??doc.text??JSON.stringify(doc,null,2);
-    return `<article class="paper v2-paper"><p class="eyebrow">${T('确切版本','Exact version')} · v${selected.version}</p><h1>${esc(materialTitle(selected))}</h1><div class="v2-document">${esc(text)}</div></article>`;
+  function status() {
+    const node = root.querySelector('#v2-status');
+    if (node) {
+      node.textContent = error || notice || (busy ? T('正在保存…', 'Saving…') : '');
+      node.setAttribute('role', error ? 'alert' : 'status');
+    }
   }
-  function trialPanel(){const cfg=client!.timeline.workspace?.config;if(!cfg)return '<p>配置尚不可用</p>';
-    const draft=JSON.parse(client!.draft('config',JSON.stringify(cfg)));
-    const tests=client!.objects('test').slice().reverse();
-    return `<div class="v2-two"><section class="paper v2-paper"><p class="eyebrow">${T('知识助手','Knowledge assistant')}</p><h1>${T('试用后再判断','Test before deciding')}</h1><form id="v2-trial"><label for="trial-query">${T('以员工的说法提问','Ask as an employee')}</label><textarea id="trial-query" name="query" required maxlength="4000">${esc(client!.draft('query','住宿报销上限是多少？'))}</textarea><div class="v2-actions">${action('test','运行测试','Run test',true)}${action('refresh-index','更新索引','Refresh index')}</div></form><p class="v2-muted">${T('当前差旅材料','Current travel source')} v${client!.timeline.workspace.source_versions.policy} · ${T('当前索引','Current index')} v${client!.timeline.workspace.indexed_versions.policy}</p><p class="v2-muted">${T('材料版本与索引版本分别保存，更新材料不会自动更新索引。','Source and index versions are separate. Updating source material does not refresh the index.')}</p><div id="v2-test-history">${tests.map((row:any)=>{const t=row.content;return `<article class="v2-test"><h3>${esc(t.query)}</h3><p>${esc(t.answer)}</p><p class="v2-muted">${esc(t.status)} · ${T('配置','Configuration')} c${t.config_ref?.config_version}</p><div>${(t.citations||[]).map((ref:Ref)=>`<button class="btn small quiet" data-ref='${esc(JSON.stringify(ref))}'>${esc(materialTitle(ref))} · v${ref.version}</button>`).join('')}</div></article>`;}).join('')}</div></section>
-      <section class="paper v2-paper"><h2>${T('试点配置','Pilot configuration')}</h2><form id="v2-config"><label>${T('人数','Participants')}<input name="participants" type="number" min="1" value="${draft.participants}"></label><label>${T('上线日','Launch day')}<input name="launch_day" type="number" min="1" value="${draft.launch_day}"></label><fieldset><legend>${T('知识范围','Knowledge scope')}</legend>${[['stable_faq','稳定 FAQ'],['onboarding','入职'],['policy_travel','差旅政策'],['policy_meal','餐费政策'],['policy_leave','请假政策']].map(([id,label])=>`<label class="v2-check"><input type="checkbox" name="domains" value="${id}" ${draft.domains.includes(id)?'checked':''}>${label}</label>`).join('')}</fieldset><label>${T('更新方式','Update strategy')}<select name="update_strategy">${[['daily','定期更新'],['manual_policy','政策人工核验'],['realtime','实时同步']].map(([id,name])=>`<option value="${id}" ${draft.update_strategy===id?'selected':''}>${name}</option>`).join('')}</select></label><label>${T('检索匹配阈值','Retrieval threshold')}<input name="min_score" type="number" min="0" max="1" step="0.05" value="${draft.min_score}"></label><p class="v2-muted">${T('阈值尚未统一校准，请用实际问题验证。','The threshold is not fully calibrated. Test it with actual questions.')}</p>${action('apply','保存并应用配置','Save & apply',true)}</form></section></div>`;
+  function mountPart(name: keyof NativeParts, id: string) {
+    const node = root.querySelector<HTMLElement>(id);
+    if (!node || !client) return;
+    const mount = parts[name];
+    if (mount) {
+      const off = mount(node, client, open);
+      if (off) cleanups.push(off);
+    } else
+      node.innerHTML = `<p class="v2-muted">${T('此部件正在接入，已保存的记录保持可用。', 'This component is being connected. Saved records are retained.')}</p>`;
   }
-  function requestsPanel(){const workspace=client!.timeline.workspace;const requests=client!.objects('business_request').filter((r:any)=>!client!.objects('business_request').some((x:any)=>x.ref.object_id===r.ref.object_id&&x.ref.version>r.ref.version));
-    const decisions=client!.objects('business_decision');return `<div class="v2-two"><section class="paper v2-paper"><h1>${T('资源与业务申请','Resources & business requests')}</h1><p>${T('申请根据当前方案和依据判断。批准或接受还价成功后，资源才生效。','Requests are assessed against the current plan and evidence. Resources take effect only after approval or accepting a counteroffer.')}</p><form id="v2-request"><label>${T('申请容量','Requested capacity')}<input name="capacity" type="number" min="1" value="${workspace?.resources.capacity??30}"></label><label>${T('开发人日','Developer-days')}<input name="dev_days" type="number" min="1" value="${workspace?.resources.dev_days??3}"></label><label>${T('截止日','Deadline day')}<input name="deadline_day" type="number" min="1" value="${workspace?.resources.deadline_day??7}"></label><label>${T('理由与依据','Reason and basis')}<textarea name="reason" required>${esc(client!.draft('request-reason'))}</textarea></label>${action('request','提交申请','Send request',true)}</form></section><section class="paper v2-paper"><h2>${T('当前实际资源','Actual resources')}</h2><p>${workspace?.resources.capacity??'—'} ${T('人容量','people')} · ${workspace?.resources.dev_days??'—'} ${T('人日','developer-days')} · ${T('截止第','Day')} ${workspace?.resources.deadline_day??'—'}</p><h2>${T('申请记录','Request history')}</h2>${requests.map((row:any)=>{const req=row.content;const decision=decisions.find((d:any)=>d.content.request?.object_id===row.ref.object_id);return `<article class="v2-test"><h3>${esc(req.reason)}</h3><p>${T('期望','Requested')}: ${esc(resourceTerms(req.requested))}</p><p>${T('规则核实','Rule check')} · ${esc(({pending:T('待处理','Pending'),approved:T('已批准','Approved'),rejected:T('未批准','Rejected'),countered:T('提出还价','Counteroffer'),accepted:T('已接受','Accepted')} as any)[req.status]||req.status)}</p>${decision?`<p>${esc(decision.content.explanation||decision.content.reason||decision.content.status)}</p><p>${esc(resourceTerms(Object.keys(decision.content.granted||{}).length?decision.content.granted:decision.content.countered||{}))}</p>`:`<button class="btn" data-resolve='${esc(JSON.stringify(row.ref))}'>${T('查看业务决定','Get business decision')}</button>`}</article>`;}).join('')}</section></div>`;
+  async function open(ref: Ref) {
+    if (!client) return;
+    const value = await client.read(ref);
+    selected = ref;
+    doc = value.content;
+    page = 'investigate';
+    render();
   }
-  function render(){clearParts();
-    if(!client){root.innerHTML=`<div class="v2-entry"><header class="topbar"><span class="wordmark">Practice</span></header><main id="main" class="paper v2-paper"><p class="eyebrow">AI 产品经理 · 中文工作情境</p><h1>接手知识助手试点</h1><p>在一个完整工作区里调查、试用、与同事协作，形成你的决定。</p><p class="v2-muted">同事与反馈的语义模型等待接入。可核实的事实和实际业务规则照常记录。</p>${action('start','进入工作区','Enter workspace',true)}<p id="v2-status" role="status"></p><a href="?legacy=1">打开旧版会话</a></main></div>`;bind();status();return;}
-    const nav=Object.entries(labels).map(([id,text]:[string,any])=>`<button class="v2-nav ${id===page?'on':''}" data-page="${id}" ${id===page?'aria-current="page"':''}>${T(text[0],text[1])}</button>`).join('');
-    root.innerHTML=`<div class="ws vertical-workbench"><header class="ws-toolbar"><span class="wordmark">Practice</span><span class="v2-title">${T('知识助手试点','Knowledge assistant pilot')}</span><span class="spacer"></span><span class="v2-status-chip">${client.state?.status==='submitted'?T('已提交','Submitted'):T('进行中','In progress')}</span>${action('reload','刷新','Refresh')}${action('start','新练习','New session')}<button class="btn quiet" data-do="lang">${locale()==='zh'?'EN':'中文'}</button></header><nav class="v2-navigation" aria-label="${T('工作区','Workspace')}">${nav}</nav><p id="v2-status" class="v2-status" role="status"></p><main id="main" class="v2-main" tabindex="-1">${page==='investigate'?`<div class="v2-doc-layout"><nav class="v2-doc-list" aria-label="${T('材料','Materials')}">${client.materials.map((m:any)=>`<button class="v2-doc-link" data-material="${esc(m.id)}" data-version="${m.version}"><span>${esc(m.title)}</span><small>v${m.version}</small></button>`).join('')}</nav>${documentPanel()}</div>`:page==='trial'?trialPanel():page==='requests'?requestsPanel():page==='workspace'?'<section id="native-workspace"></section>':'<section id="native-feedback"></section>'}</main><aside class="rail v2-role-rail" aria-label="${T('三位同事','Three colleagues')}"><h2>${T('与你协作的人','Your colleagues')}</h2><div id="native-roles"></div></aside></div>`;
-    mountPart('workspace','#native-workspace');mountPart('feedback','#native-feedback');mountPart('roles','#native-roles');bind();status();
+  function materialTitle(ref: Ref) {
+    return (
+      client?.timeline.workspace?.material_titles?.[ref.object_id + ':' + ref.version] ||
+      client?.materials.find((m) => m.id === ref.object_id && m.version === ref.version)?.title ||
+      ref.object_id
+    );
   }
-  function configFromForm(){const form=root.querySelector<HTMLFormElement>('#v2-config')!;const data=new FormData(form);const cfg={...client!.timeline.workspace.config};
-    for(const k of ['participants','launch_day','min_score'])cfg[k]=Number(data.get(k));cfg.domains=data.getAll('domains');cfg.update_strategy=data.get('update_strategy');cfg.work_items=cfg.update_strategy==='realtime'?['realtime_sync','human_fallback']:['scope_filter','human_fallback'];return cfg;
+  function documentPanel() {
+    if (!selected || !doc)
+      return `<article class="paper v2-paper"><p class="eyebrow">${T('调查', 'Investigation')}</p><h1>${T('先弄清发生了什么', 'Understand the situation')}</h1><p>${T('从经理委托开始，也可以直接打开材料、问同事或试用助手。工作顺序由你决定。', 'Start with the brief, open a document, ask a colleague or try the assistant. You decide the order.')}</p><p class="v2-muted">${T('你可以保留不同判断，再用作品、试用和申请检验它们。', 'Keep alternative judgements and test them through your work and actions.')}</p></article>`;
+    const text =
+      doc.fragments?.map((f: any) => f.text).join('\n\n') ??
+      doc.content ??
+      doc.answer ??
+      doc.text ??
+      JSON.stringify(doc, null, 2);
+    return `<article class="paper v2-paper"><p class="eyebrow">${T('确切版本', 'Exact version')} · v${selected.version}</p><h1>${esc(materialTitle(selected))}</h1><div class="v2-document">${esc(text)}</div></article>`;
   }
-  function bind(){root.querySelectorAll<HTMLButtonElement>('[data-page]').forEach(node=>node.onclick=()=>{page=node.dataset.page!;history.replaceState(null,'','#'+page);notice='';render();});
-    root.querySelectorAll<HTMLButtonElement>('[data-material]').forEach(node=>node.onclick=()=>run(()=>open(client!.ref('material',node.dataset.material!,Number(node.dataset.version)))));
-    root.querySelectorAll<HTMLButtonElement>('[data-ref]').forEach(node=>node.onclick=()=>run(()=>open(JSON.parse(node.dataset.ref!))));
-    root.querySelectorAll<HTMLButtonElement>('[data-resolve]').forEach(node=>node.onclick=()=>run(async()=>{const ref=JSON.parse(node.dataset.resolve!);await client!.command('/approvals/resolve','resolve_approval',{request:ref,expected_request_revision:ref.version});}));
-    root.querySelectorAll<HTMLButtonElement>('[data-accept]').forEach(node=>node.onclick=()=>run(async()=>{await client!.command('/actions','accept_counteroffer',{tool:'accept_counteroffer',request:JSON.parse(node.dataset.accept!)});}));
-    root.querySelectorAll<HTMLFormElement>('form').forEach(node=>node.onsubmit=e=>e.preventDefault());
-    root.querySelector<HTMLTextAreaElement>('#trial-query')?.addEventListener('input',e=>client!.keep('query',(e.target as HTMLTextAreaElement).value));
-    root.querySelector<HTMLFormElement>('#v2-config')?.addEventListener('change',()=>client!.keep('config',JSON.stringify(configFromForm())));
-    root.querySelector<HTMLTextAreaElement>('[name="reason"]')?.addEventListener('input',e=>client!.keep('request-reason',(e.target as HTMLTextAreaElement).value));
-    root.querySelectorAll<HTMLButtonElement>('[data-do]').forEach(node=>node.onclick=()=>run(async()=>{
-      const which=node.dataset.do;
-      if(which==='start'){const session=await sessions.create();client=new VerticalClient(session,storage);await client.refresh();}
-      if(which==='reload')await client!.refresh();
-      if(which==='lang'){setPreference(locale()==='zh'?'en':'zh',storage);return;}
-      if(which==='test'){const query=(root.querySelector('#trial-query') as HTMLTextAreaElement).value;await client!.command('/tests','tests.create',{query,config_version:client!.state.config_version});notice=T('测试已保存。','Test saved.');}
-      if(which==='refresh-index'){await client!.command('/actions','refresh_index',{tool:'refresh_index'});notice=T('索引已更新，重新提问可比较前后结果。','Index refreshed. Run the same question to compare.');}
-      if(which==='apply'){const config=configFromForm();config.version=client!.state.config_version+2;config.config_version=client!.state.config_version+1;await client!.command('/actions','apply_config',{tool:'apply_config',config});client!.keep('config',JSON.stringify(client!.timeline.workspace.config));notice=T('配置已应用，请核对材料与索引版本。','Configuration applied. Check source and index versions.');}
-      if(which==='request'){const data=new FormData(root.querySelector<HTMLFormElement>('#v2-request')!);await client!.command('/actions','request_business',{tool:'request_business',terms:Object.fromEntries(['capacity','dev_days','deadline_day'].map(k=>[k,Number(data.get(k))]).filter(([k,v])=>v!==client!.timeline.workspace.resources[k as string])),reason:data.get('reason')});notice=T('申请已保存，资源尚未改变。','Request saved; resources have not changed.');}
-    }));
+  function trialPanel() {
+    const cfg = client!.timeline.workspace?.config;
+    if (!cfg) return '<p>配置尚不可用</p>';
+    const draft = JSON.parse(client!.draft('config', JSON.stringify(cfg)));
+    const tests = client!.objects('test').slice().reverse();
+    return `<div class="v2-two"><section class="paper v2-paper"><p class="eyebrow">${T('知识助手', 'Knowledge assistant')}</p><h1>${T('试用后再判断', 'Test before deciding')}</h1><form id="v2-trial"><label for="trial-query">${T('以员工的说法提问', 'Ask as an employee')}</label><textarea id="trial-query" name="query" required maxlength="4000">${esc(client!.draft('query', '住宿报销上限是多少？'))}</textarea><div class="v2-actions">${action('test', '运行测试', 'Run test', true)}${action('refresh-index', '更新索引', 'Refresh index')}</div></form><p class="v2-muted">${T('当前差旅材料', 'Current travel source')} v${client!.timeline.workspace.source_versions.policy} · ${T('当前索引', 'Current index')} v${client!.timeline.workspace.indexed_versions.policy}</p><p class="v2-muted">${T('材料版本与索引版本分别保存，更新材料不会自动更新索引。', 'Source and index versions are separate. Updating source material does not refresh the index.')}</p><div id="v2-test-history">${tests
+      .map((row: any) => {
+        const t = row.content;
+        return `<article class="v2-test"><h3>${esc(t.query)}</h3><p>${esc(t.answer)}</p><p class="v2-muted">${esc(t.status)} · ${T('配置', 'Configuration')} c${t.config_ref?.config_version}</p><div>${(t.citations || []).map((ref: Ref) => `<button class="btn small quiet" data-ref='${esc(JSON.stringify(ref))}'>${esc(materialTitle(ref))} · v${ref.version}</button>`).join('')}</div></article>`;
+      })
+      .join('')}</div></section>
+      <section class="paper v2-paper"><h2>${T('试点配置', 'Pilot configuration')}</h2><form id="v2-config"><label>${T('人数', 'Participants')}<input name="participants" type="number" min="1" value="${draft.participants}"></label><label>${T('上线日', 'Launch day')}<input name="launch_day" type="number" min="1" value="${draft.launch_day}"></label><fieldset><legend>${T('知识范围', 'Knowledge scope')}</legend>${[
+        ['stable_faq', '稳定 FAQ'],
+        ['onboarding', '入职'],
+        ['policy_travel', '差旅政策'],
+        ['policy_meal', '餐费政策'],
+        ['policy_leave', '请假政策'],
+      ]
+        .map(
+          ([id, label]) =>
+            `<label class="v2-check"><input type="checkbox" name="domains" value="${id}" ${draft.domains.includes(id) ? 'checked' : ''}>${label}</label>`,
+        )
+        .join(
+          '',
+        )}</fieldset><label>${T('更新方式', 'Update strategy')}<select name="update_strategy">${[
+        ['daily', '定期更新'],
+        ['manual_policy', '政策人工核验'],
+        ['realtime', '实时同步'],
+      ]
+        .map(
+          ([id, name]) =>
+            `<option value="${id}" ${draft.update_strategy === id ? 'selected' : ''}>${name}</option>`,
+        )
+        .join(
+          '',
+        )}</select></label><label>${T('检索匹配阈值', 'Retrieval threshold')}<input name="min_score" type="number" min="0" max="1" step="0.05" value="${draft.min_score}"></label><p class="v2-muted">${T('阈值尚未统一校准，请用实际问题验证。', 'The threshold is not fully calibrated. Test it with actual questions.')}</p>${action('apply', '保存并应用配置', 'Save & apply', true)}</form></section></div>`;
+  }
+  function requestsPanel() {
+    const workspace = client!.timeline.workspace;
+    const requests = client!
+      .objects('business_request')
+      .filter(
+        (r: any) =>
+          !client!
+            .objects('business_request')
+            .some((x: any) => x.ref.object_id === r.ref.object_id && x.ref.version > r.ref.version),
+      );
+    const decisions = client!.objects('business_decision');
+    return `<div class="v2-two"><section class="paper v2-paper"><h1>${T('资源与业务申请', 'Resources & business requests')}</h1><p>${T('申请根据当前方案和依据判断。批准或接受还价成功后，资源才生效。', 'Requests are assessed against the current plan and evidence. Resources take effect only after approval or accepting a counteroffer.')}</p><form id="v2-request"><label>${T('申请容量', 'Requested capacity')}<input name="capacity" type="number" min="1" value="${workspace?.resources.capacity ?? 30}"></label><label>${T('开发人日', 'Developer-days')}<input name="dev_days" type="number" min="1" value="${workspace?.resources.dev_days ?? 3}"></label><label>${T('截止日', 'Deadline day')}<input name="deadline_day" type="number" min="1" value="${workspace?.resources.deadline_day ?? 7}"></label><label>${T('理由与依据', 'Reason and basis')}<textarea name="reason" required>${esc(client!.draft('request-reason'))}</textarea></label>${action('request', '提交申请', 'Send request', true)}</form></section><section class="paper v2-paper"><h2>${T('当前实际资源', 'Actual resources')}</h2><p>${workspace?.resources.capacity ?? '—'} ${T('人容量', 'people')} · ${workspace?.resources.dev_days ?? '—'} ${T('人日', 'developer-days')} · ${T('截止第', 'Day')} ${workspace?.resources.deadline_day ?? '—'}</p><h2>${T('申请记录', 'Request history')}</h2>${requests
+      .map((row: any) => {
+        const req = row.content;
+        const decision = decisions.find(
+          (d: any) => d.content.request?.object_id === row.ref.object_id,
+        );
+        return `<article class="v2-test"><h3>${esc(req.reason)}</h3><p>${T('期望', 'Requested')}: ${esc(resourceTerms(req.requested))}</p><p>${T('规则核实', 'Rule check')} · ${esc(({ pending: T('待处理', 'Pending'), approved: T('已批准', 'Approved'), rejected: T('未批准', 'Rejected'), countered: T('提出还价', 'Counteroffer'), accepted: T('已接受', 'Accepted') } as any)[req.status] || req.status)}</p>${decision ? `<p>${esc(decision.content.explanation || decision.content.reason || decision.content.status)}</p><p>${esc(resourceTerms(Object.keys(decision.content.granted || {}).length ? decision.content.granted : decision.content.countered || {}))}</p>` : `<button class="btn" data-resolve='${esc(JSON.stringify(row.ref))}'>${T('查看业务决定', 'Get business decision')}</button>`}</article>`;
+      })
+      .join('')}</section></div>`;
+  }
+  function render() {
+    clearParts();
+    if (!client) {
+      root.innerHTML = `<div class="v2-entry"><header class="topbar"><span class="wordmark">Practice</span></header><main id="main" class="paper v2-paper"><p class="eyebrow">AI 产品经理 · 中文工作情境</p><h1>接手知识助手试点</h1><p>在一个完整工作区里调查、试用、与同事协作，形成你的决定。</p><p class="v2-muted">同事与反馈的语义模型等待接入。可核实的事实和实际业务规则照常记录。</p>${action('start', '进入工作区', 'Enter workspace', true)}<p id="v2-status" role="status"></p><a href="?legacy=1">打开旧版会话</a></main></div>`;
+      bind();
+      status();
+      return;
+    }
+    const nav = Object.entries(labels)
+      .map(
+        ([id, text]: [string, any]) =>
+          `<button class="v2-nav ${id === page ? 'on' : ''}" data-page="${id}" ${id === page ? 'aria-current="page"' : ''}>${T(text[0], text[1])}</button>`,
+      )
+      .join('');
+    root.innerHTML = `<div class="ws vertical-workbench"><header class="ws-toolbar"><span class="wordmark">Practice</span><span class="v2-title">${T('知识助手试点', 'Knowledge assistant pilot')}</span><span class="spacer"></span><span class="v2-status-chip">${client.state?.status === 'submitted' ? T('已提交', 'Submitted') : T('进行中', 'In progress')}</span>${action('reload', '刷新', 'Refresh')}${action('start', '新练习', 'New session')}<button class="btn quiet" data-do="lang">${locale() === 'zh' ? 'EN' : '中文'}</button></header><nav class="v2-navigation" aria-label="${T('工作区', 'Workspace')}">${nav}</nav><p id="v2-status" class="v2-status" role="status"></p><main id="main" class="v2-main" tabindex="-1">${page === 'investigate' ? `<div class="v2-doc-layout"><nav class="v2-doc-list" aria-label="${T('材料', 'Materials')}">${client.materials.map((m: any) => `<button class="v2-doc-link" data-material="${esc(m.id)}" data-version="${m.version}"><span>${esc(m.title)}</span><small>v${m.version}</small></button>`).join('')}</nav>${documentPanel()}</div>` : page === 'trial' ? trialPanel() : page === 'requests' ? requestsPanel() : page === 'workspace' ? '<section id="native-workspace"></section>' : '<section id="native-feedback"></section>'}</main><aside class="rail v2-role-rail" aria-label="${T('三位同事', 'Three colleagues')}"><h2>${T('与你协作的人', 'Your colleagues')}</h2><div id="native-roles"></div></aside></div>`;
+    mountPart('workspace', '#native-workspace');
+    mountPart('feedback', '#native-feedback');
+    mountPart('roles', '#native-roles');
+    bind();
+    status();
+  }
+  function configFromForm() {
+    const form = root.querySelector<HTMLFormElement>('#v2-config')!;
+    const data = new FormData(form);
+    const cfg = { ...client!.timeline.workspace.config };
+    for (const k of ['participants', 'launch_day', 'min_score']) cfg[k] = Number(data.get(k));
+    cfg.domains = data.getAll('domains');
+    cfg.update_strategy = data.get('update_strategy');
+    cfg.work_items =
+      cfg.update_strategy === 'realtime'
+        ? ['realtime_sync', 'human_fallback']
+        : ['scope_filter', 'human_fallback'];
+    return cfg;
+  }
+  function bind() {
+    root.querySelectorAll<HTMLButtonElement>('[data-page]').forEach(
+      (node) =>
+        (node.onclick = () => {
+          page = node.dataset.page!;
+          history.replaceState(null, '', '#' + page);
+          notice = '';
+          render();
+        }),
+    );
+    root
+      .querySelectorAll<HTMLButtonElement>('[data-material]')
+      .forEach(
+        (node) =>
+          (node.onclick = () =>
+            run(() =>
+              open(client!.ref('material', node.dataset.material!, Number(node.dataset.version))),
+            )),
+      );
+    root
+      .querySelectorAll<HTMLButtonElement>('[data-ref]')
+      .forEach((node) => (node.onclick = () => run(() => open(JSON.parse(node.dataset.ref!)))));
+    root.querySelectorAll<HTMLButtonElement>('[data-resolve]').forEach(
+      (node) =>
+        (node.onclick = () =>
+          run(async () => {
+            const ref = JSON.parse(node.dataset.resolve!);
+            await client!.command('/approvals/resolve', 'resolve_approval', {
+              request: ref,
+              expected_request_revision: ref.version,
+            });
+          })),
+    );
+    root.querySelectorAll<HTMLButtonElement>('[data-accept]').forEach(
+      (node) =>
+        (node.onclick = () =>
+          run(async () => {
+            await client!.command('/actions', 'accept_counteroffer', {
+              tool: 'accept_counteroffer',
+              request: JSON.parse(node.dataset.accept!),
+            });
+          })),
+    );
+    root
+      .querySelectorAll<HTMLFormElement>('form')
+      .forEach((node) => (node.onsubmit = (e) => e.preventDefault()));
+    root
+      .querySelector<HTMLTextAreaElement>('#trial-query')
+      ?.addEventListener('input', (e) =>
+        client!.keep('query', (e.target as HTMLTextAreaElement).value),
+      );
+    root
+      .querySelector<HTMLFormElement>('#v2-config')
+      ?.addEventListener('change', () => client!.keep('config', JSON.stringify(configFromForm())));
+    root
+      .querySelector<HTMLTextAreaElement>('[name="reason"]')
+      ?.addEventListener('input', (e) =>
+        client!.keep('request-reason', (e.target as HTMLTextAreaElement).value),
+      );
+    root.querySelectorAll<HTMLButtonElement>('[data-do]').forEach(
+      (node) =>
+        (node.onclick = () =>
+          run(async () => {
+            const which = node.dataset.do;
+            if (which === 'start') {
+              const session = await sessions.create();
+              client = new VerticalClient(session, storage);
+              await client.refresh();
+            }
+            if (which === 'reload') await client!.refresh();
+            if (which === 'lang') {
+              setPreference(locale() === 'zh' ? 'en' : 'zh', storage);
+              return;
+            }
+            if (which === 'test') {
+              const query = (root.querySelector('#trial-query') as HTMLTextAreaElement).value;
+              await client!.command('/tests', 'tests.create', {
+                query,
+                config_version: client!.state.config_version,
+              });
+              notice = T('测试已保存。', 'Test saved.');
+            }
+            if (which === 'refresh-index') {
+              await client!.command('/actions', 'refresh_index', { tool: 'refresh_index' });
+              notice = T(
+                '索引已更新，重新提问可比较前后结果。',
+                'Index refreshed. Run the same question to compare.',
+              );
+            }
+            if (which === 'apply') {
+              const config = configFromForm();
+              config.version = client!.state.config_version + 2;
+              config.config_version = client!.state.config_version + 1;
+              await client!.command('/actions', 'apply_config', { tool: 'apply_config', config });
+              client!.keep('config', JSON.stringify(client!.timeline.workspace.config));
+              notice = T(
+                '配置已应用，请核对材料与索引版本。',
+                'Configuration applied. Check source and index versions.',
+              );
+            }
+            if (which === 'request') {
+              const data = new FormData(root.querySelector<HTMLFormElement>('#v2-request')!);
+              await client!.command('/actions', 'request_business', {
+                tool: 'request_business',
+                terms: Object.fromEntries(
+                  ['capacity', 'dev_days', 'deadline_day']
+                    .map((k) => [k, Number(data.get(k))])
+                    .filter(([k, v]) => v !== client!.timeline.workspace.resources[k as string]),
+                ),
+                reason: data.get('reason'),
+              });
+              notice = T(
+                '申请已保存，资源尚未改变。',
+                'Request saved; resources have not changed.',
+              );
+            }
+          })),
+    );
   }
   onLocaleChange(render);
-  try{const prior=sessions.active();if(prior){client=new VerticalClient(prior,storage);await client.refresh();}}catch(e){error=message(e);}
+  try {
+    const prior = sessions.active();
+    if (prior) {
+      client = new VerticalClient(prior, storage);
+      await client.refresh();
+    }
+  } catch (e) {
+    error = message(e);
+  }
   render();
 }
