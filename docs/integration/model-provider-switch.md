@@ -1,6 +1,6 @@
 # 模型提供方切换与验证
 
-当前标准启动入口已验证：同事对话和语义 Judge 可以仅改变运行配置，接到本地 OpenAI-compatible 测试服务；中英文分别通过调用、失败和回读检查。知识助手的生成模块已通过真实 HTTP／worker 组装验证，但公共契约增量冻结、标准工厂的模型透传、v4 元数据与受限 Agent 派生记录尚待集成。**三条标准入口全部贯通尚未完成。** 本次没有调用真实在线模型，也没有验证模型语义质量。
+当前标准启动入口已验证：知识助手、同事对话和语义 Judge 可以仅改变运行配置，接到本地 OpenAI-compatible 测试服务；中文、英文分别核验。助手同时覆盖 openai／deepseek，local 角色替身不会作为生成模型。本次没有调用真实在线模型，也没有验证模型语义质量。v4 单次元数据／异步恢复和受限 Agent 派生授权仍由宿主与公共存储负责人接入。
 
 ## 配置位置
 
@@ -47,8 +47,8 @@ uv run --locked pytest -q tests/integration/test_provider_switch.py --basetemp=.
 uv run --locked pytest -q tests/expansion_v3/w02/test_generation_display.py --basetemp=.pytest_cache/tmp-082-display
 ```
 
-- 生成模块：标准 `tests.create → Worker → tests.list`，保留问题、请求／实际配置、索引、候选和引用；候选外、未来、私有引用整条拒绝。模型运输仅为受控替身。主装配未透传模型时返回 `assistant_model_unavailable`，零调用。
-- 正式提供方切换：使用 `create_runtime_app(provider="openai")` 和临时 HTTP 服务；每种语言，同事回复一次、单项 Judge 一次。HTTP 错误／坏 JSON 分别验证两条路径，恢复读取不再调用。故障时反馈保留作品和待核验状态，不转成业务判错。
+- 生成模块：标准 `tests.create → Worker → tests.list`，保留问题、请求／实际配置、索引、候选和引用；候选外、未来、私有引用整条拒绝。模型运输仅为受控替身。正式工厂已透传模型；local 模式返回 `assistant_model_unavailable`，零调用。
+- 正式提供方切换：使用 `create_runtime_app(provider="openai")` 和临时 HTTP 服务；每种语言，助手、同事回复、单项 Judge 各调用一次；助手另覆盖 deepseek。HTTP 错误／坏 JSON 分别验证两条路径，恢复读取不再调用。故障时反馈保留作品和待核验状态，不转成业务判错。
 - worker 中断：在运输边界模拟进程终止，再让真实队列过期并接管；第二个 worker 不再调用。原问题可从 `requests.read` 回读。显式另发请求产生新尝试。
 - 密钥检查：测试随机产生 key，仅在临时 key 文件与 Authorization 头使用；扫描 SQLite 主文件／WAL、响应、请求正文和日志，断言没有该字符串。测试 key 不参与 fixture 对象的 repr。
 - 组件显示：Vite 实际加载 `test-set-view.js`，检查中英模式、引用版本、有效配置展开及原记录不变。此证据不代表宿主元数据或正常浏览器生成链已接通。
@@ -66,22 +66,25 @@ uv run --locked pytest -q tests/expansion_v3/w02/test_generation_display.py --ba
 
 测试台只展示单次记录提供的实际模式和有效配置。当前宿主未透传这些字段时显示“模式信息暂不可用／本次有效配置暂不可用”；缺少界面数据不代表服务端没有保存，不能用当前全局模型设置推断历史执行。生成失败保留原问题、旧结果与具体错误；页面读取不触发新模型调用。
 
-## 待集成的最小接缝
+## 公共冻结与装配
+
+`AssistantConfig.generator` 是唯一新增的契约字段，类型为 `extractive|llm`，可选、默认 extractive；默认值仍省略于序列化。新公共 revision 为 `expansion-v3-a2fb5d317ece34100c29840fb603b93b67ccdcbe16b40e23e931abb3e3ad4590`，previous 链接原 `expansion-v3-7f64f17784ad7756fefc53682954b1318bddb58eecdc5dbe645f3187cbc321ed`。标准导出后沿现有 `without_provenance` 兼容方式保留 schema，旧 examples 字节不变；原 documents／review_fixes 保全。依赖该公共 manifest 的工程师契约由标准导出器在新目录生成后同步。错误码目录补收既有代码中已有的代码，未新增这些业务行为。
+
+`build_registry` 仅用三行构造参数透传已配置模型；`LocalRoleModel` 映射为 None。当前两类冻结测试已通过，包括 v1 场景、契约和旧研究冻结原字节检查。当前契约保护清单只重钉此次获准替换的11项产物；历史冻结、场景包和所有旧实例保留，原公共及工程师冻结目录另有原件归档。
+
+080允许各线在自己的分支重生成冻结，最终合并结果由080再次重生成；本分支 revision 不替代最终组合身份。
+
+## 留给宿主与公共存储的接缝
 
 | 责任接点 | 最小改动与原因 |
 |---|---|
-| 公共契约导出／冻结 | `generator` 保留旧实例字节，但新增了 JSON Schema 字段。现有 expansion-v3 schema 一致性测试及 engineer-review-v1 不可变导出测试均因此失败。公共契约负责人需按现行版本协议发布增量 schema／manifest，并保全旧冻结物；本线不能覆盖 `docs/contracts/**` 或隐藏该字段来绕过门禁。 |
-| `api/vertical_runtime.py::build_registry` | 将构造改为 `ScenarioModule(scenario_root, model=None if isinstance(role_model, LocalRoleModel) else role_model)`，约 1–3 行。两种语言均经此工厂；local 角色替身不能传为生成模型。当前文件由公共装配负责人独占。 |
-| v4 数据宿主／`api/vertical_reads.py::timeline` | 将单次 `assistant_execution` 关联到 test，并传出 `run.generation` 与测试结果内的 `config.effective`；抽取按该次配置识别。需要宿主负责人同时承接异步 `tests.create` 的原请求恢复、队列结果和配置模式选择。预计多个小接点，不能仅改界面标签宣称贯通。 |
-| 公共存储的派生对象授权 | 承认 `assistant_execution` 和已授权 test 的不可变派生关系，并在窄授权读取中复核全部候选依赖。当前 unknown kind 不能用于 scoped derivative；本线对 `allowed_objects` 有限制的 llm 测试在调用前返回 `assistant_scoped_generation_unavailable`。存储负责人完成后再放开该保护并补组合验收。 |
+| 092：v4 数据宿主／`api/vertical_reads.py::timeline` | 将单次 `assistant_execution` 关联到 test，并传出 `run.generation` 与测试结果内的 `config.effective`；抽取按该次配置识别。同时承接异步 `tests.create` 原请求恢复、队列结果和模式选择。 |
+| 093：公共存储的派生对象授权 | 承认 `assistant_execution` 和已授权 test 的不可变派生关系，并在窄授权读取中复核全部候选依赖。当前 unknown kind 不能用于 scoped derivative；本线对 `allowed_objects` 有限制的 llm 测试继续在调用前返回 `assistant_scoped_generation_unavailable`。 |
 
-上述接点未在本分支越权修改。正式入口三路生成、受限 Agent 生成、完整中英文浏览器验证和真实语义质量均不能据现有机制测试关闭。
+这两处按080续行裁定保持未接通，不由本线越界实现。真实语义质量也不能由回环服务验证代替。
 
+## 验证证据的范围
 
-## 完整门禁中的已知停点
+续行定向覆盖生成27项、provider14项、renderer1项、公共freeze2项及工程师契约28项。完整门禁必须取得 `/private/tmp/claude-501/gate.lock` 后执行；最终结果、逐ID对照及任何负载型超时的三次重跑记录见续行回执 `runs/local/082/finish/receipt.json`。
 
-当前组合门禁出现两项可独立复现的公共冻结契约不一致（上表第一项），另有八项 W02 安装态测试失败。独立复跑其中的中文主场景用例定位为固定启动窗口超时；停止并发全量后，同一树连续三次通过，并保留每次 uptime。其余七项尚未逐个复跑，不能一并记为通过。
-
-收到 080 的机器级串行指示后，已核实并停止本线无锁全量轮次；没有终止其他线进程。下次全量必须先取得 `/private/tmp/claude-501/gate.lock`。本轮收集的 2344 个 ID 相对指定基线零缺失、新增 40 个，但只执行到部分进度，完整状态比较未完成。两项 schema 失败仍在，不能使用负载超时例外放行。
-
-固定反馈及原执行语义的 18 项定向比较通过。正常 v4 英文八步通过，中文两次在反馈等待阶段超时，其中一次后台已完成、一次仍在运行。完整后端结果以本地候选回执和逐 ID 比较为准，不能把这些失败写成全量通过，也没有放宽断言或修改其他工作线。
+此前无锁轮次按080指示中止，其旧失败／部分进度不作为续行完整门禁通过证据；历史日志仍保留。此前固定反馈／原语义18项、正常v4英文八步及中英390px组件检查通过，中文曾在反馈等待阶段超时。宿主未接通的生成界面仍不据这些结果称完成。

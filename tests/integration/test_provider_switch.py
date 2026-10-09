@@ -1,7 +1,7 @@
 """Configuration-only runtime checks against a loopback OpenAI-compatible server.
 
-This intentionally records the missing assistant factory seam as unavailable;
-it must not be mistaken for a completed three-consumer provider switch.
+The assistant, colleagues and Judge share the formally configured provider.
+Controlled replies demonstrate wiring and recovery, never semantic quality.
 """
 
 import json
@@ -100,7 +100,10 @@ class RuntimeSession:
 def runtime(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, request: pytest.FixtureRequest
 ) -> Iterator[RuntimeSession]:
-    provider = Provider(request.param)
+    language, configured_provider = (
+        request.param if isinstance(request.param, tuple) else (request.param, "openai")
+    )
+    provider = Provider(language)
 
     class Handler(BaseHTTPRequestHandler):
         def do_POST(self) -> None:
@@ -140,8 +143,8 @@ def runtime(
     monkeypatch.delenv("CAREER_LAB_SCENARIO_CATALOG", raising=False)
     app = create_runtime_app(
         "sqlite:///" + str(tmp_path / "runtime.db"),
-        provider="openai",
-        scenario_root=locale_root(default_installed_scenario(), request.param),
+        provider=configured_provider,
+        scenario_root=locale_root(default_installed_scenario(), language),
     )
     try:
         with TestClient(app) as client:
@@ -150,7 +153,7 @@ def runtime(
                 json={
                     "schema_version": 2,
                     "scenario": "pm_pilot_v2",
-                    "work_language": request.param,
+                    "work_language": language,
                 },
             )
             assert response.status_code == 200, response.text
@@ -218,6 +221,16 @@ def test_configured_runtime_colleague_and_judge_reach_provider(runtime: RuntimeS
 
 
 def test_formal_factory_retains_missing_assistant_provider_status(runtime: RuntimeSession):
+    """Retain the historical test ID while verifying the now-connected factory."""
+    assert_assistant_generation(runtime, "openai")
+
+
+@pytest.mark.parametrize("runtime", [("zh", "deepseek"), ("en", "deepseek")], indirect=True)
+def test_deepseek_runtime_assistant_uses_same_configuration_path(runtime: RuntimeSession):
+    assert_assistant_generation(runtime, "deepseek")
+
+
+def assert_assistant_generation(runtime: RuntimeSession, expected_provider: str) -> None:
     config = runtime.get("/workbench").json()["result"]["result"]["timeline"]["workspace"]["config"]
     base = {
         "session_id": runtime.session["session_id"],
@@ -246,9 +259,21 @@ def test_formal_factory_retains_missing_assistant_provider_status(runtime: Runti
             "config_version": 1,
         },
     )
-    assert result["result"]["test"]["error_code"] == "assistant_model_unavailable"
-    assert result["result"]["generation"]["mode"] == "unavailable"
+    assert result["result"]["status"] == "queued"
     assert runtime.provider.calls == []
+    runtime.run()
+    saved = runtime.get("/requests/assistant").json()
+    assert saved["status"] == "completed", saved
+    result = saved["jobs"][0]["effect"]["result"]
+    assert result["test"]["status"] == "answered"
+    assert result["generation"]["mode"] == "llm"
+    assert result["generation"]["work_language"] == runtime.provider.language
+    assert result["generation"]["provider"] == expected_provider
+    assert result["test"]["citations"][0]["version"] == 1
+    assert len(runtime.provider.calls) == 1
+    assert runtime.get("/requests/assistant").json() == saved
+    assert len(runtime.provider.calls) == 1
+    assert runtime.key not in json.dumps([saved, runtime.provider.calls])
 
 
 @pytest.mark.parametrize("failure", ["http", "json"])

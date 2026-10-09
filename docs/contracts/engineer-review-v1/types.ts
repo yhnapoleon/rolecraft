@@ -5,6 +5,7 @@ export type AssistantConfig = {
   "domains": ReadonlyArray<string>;
   "fallback"?: "human" | "none";
   "freshness_guard"?: "none" | "warn" | "fallback";
+  "generator"?: "extractive" | "llm";
   "id": string;
   "launch_day"?: number;
   "manual_domains"?: ReadonlyArray<string>;

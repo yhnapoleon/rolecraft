@@ -22,7 +22,8 @@
     "AuthContext/DelegationGrant adds explicit create_under_tasks; derived results remain tied to the actual executor, unrelated existing artifacts are not inherited.",
     "SnapshotExport now includes immutable external source references; restore supports exact target/idempotency and structured action remapping. Regenerate draft snapshots under the new revision.",
     "WorkProduct/import DTOs retain intent/refs, test_compare, review_focus distinct from direction, source return identity, adoption and version conflicts.",
-    "PublicTransactionResult is the HTTP/worker wire result; TransactionResult remains the internal authoritative record."
+    "PublicTransactionResult is the HTTP/worker wire result; TransactionResult remains the internal authoritative record.",
+    "Only add optional AssistantConfig.generator (extractive|llm), default extractive. The default is omitted from serialization; all previous examples and instance bytes remain unchanged. Provider wiring uses the configured model, with local role substitutes mapped to None."
   ],
   "consumer_interfaces": {
     "W02": [
@@ -310,7 +311,7 @@
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "2a6a8f4a44555f90e7cc799d61ace6ffa90e87b94595dad77455d40a0bb2778a"
+    "sha256": "8171238c8d28696c9fb93be6d87b4bedcca2f42c040064989047bdfbf7d2b601"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
@@ -335,6 +336,7 @@
     "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.",
     "W07-W08-empty-joint-target": "Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.",
     "W07-W08-semantic-consensus": "Only independent-pass consensus uses semantic_decision_key; G2/G2v final remains bound by the full normalized decision_key to the actual selected pass.",
+    "assistant-generator": "Only add optional AssistantConfig.generator (extractive|llm), default extractive. The default is omitted from serialization; all previous examples and instance bytes remain unchanged. Provider wiring uses the configured model, with local role substitutes mapped to None.",
     "authoritative-segment-traces": "A declared trace always constrains text hash and complete dependencies, including cited explanations and history; visible citations do not bypass it. The most-specific complete trace is authoritative for a field.",
     "feedback-segment-scope": "Server-only complete input traces bind exact content hashes and dependencies per segment; fully authorized finite-scope readers retain proved text, missing or hidden dependencies degrade only affected parts.",
     "native-runtime-slice": "One standard API/worker assembly; native investigation, assistant trials, resource decisions and colleague slots. Explicit failed-job refresh, no automatic model retry including expired leases, exact historical public event/source reads, real material activation in recovered role provenance. W05 r9 production evidence, atomic feedback and native callbacks are assembled with frozen advisory policies; W03 native composition remains pending.",
@@ -346,10 +348,10 @@
   },
   "openapi": {
     "path": "openapi.json",
-    "sha256": "70ef74626bdfc017e878bc80ac42d26d389267eabe892cc0554f040a33c6096a"
+    "sha256": "6c6a3d9c9c6f52d40f0650da93b684b9501d2db42817e587517ee97d6c2ca5b9"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-805c1a7c37fd3ed124305e276b00f18717836eaed502a2213f4d436828f04fa9",
+  "previous_contract_revision": "expansion-v3-7f64f17784ad7756fefc53682954b1318bddb58eecdc5dbe645f3187cbc321ed",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -438,7 +440,7 @@
       "example_sha256": "d9f2e6dfa634d671cb3de2812f8c8249def0267f7368e89e2f69aab8e960bf87",
       "owner": "W01",
       "schema": "schemas/ActionInput.json",
-      "schema_sha256": "b803de4069b2c2385f12aa42402f8e3408709c5fac886d21b9b889056c4db1a3",
+      "schema_sha256": "df3efea19039badbdf012495efd8df2603bf65564dc8e8ee4ee6f079d6702c2e",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -556,7 +558,7 @@
       "example_sha256": "1ef567fdb53c1a41df05ef9f64e5e0dc1de0052c4f7771fa87328fde3e9ad7f5",
       "owner": "W01",
       "schema": "schemas/AssistantConfig.json",
-      "schema_sha256": "adaf9554ca493a68bdbde3d1fbeaf9eb950b9d0c00b6f257fa00392701c6bda1",
+      "schema_sha256": "1690d6b14cdaef9f5259dd98cf2ea1dde57df7d06be14291c24d3e2941b1784a",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -656,7 +658,7 @@
       "example_sha256": "571941bc53aafc650b37205e483d38b7dd382a95df841ffe4e67cd1e87bbd45c",
       "owner": "W01",
       "schema": "schemas/BusinessBasis.json",
-      "schema_sha256": "df1d7f5c7b7e548c9b626cafcac3b30d0052f306f1f028df698819ceb7a07aaa",
+      "schema_sha256": "dede54b1385ed48b5a103a55f077458f65108eba7671c565f175fc150dd6b8da",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -686,7 +688,7 @@
       "example_sha256": "6af514383dfb3c54b234e3f6dc82988534102c01d9c84bb41e34bacff19f8bc5",
       "owner": "W01",
       "schema": "schemas/BusinessRequest.json",
-      "schema_sha256": "bc877787f2fbbdbc186236c118986f840f698d388aa6bd963bbae5f3ddc03bdb",
+      "schema_sha256": "1ceb816e7b3b26344ac811a198f3072b03689b8842befbd5dbe63a0173aa6483",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -1060,7 +1062,7 @@
       "example_sha256": "1d849ad99301929d9ba7da0016c4c588477e94a045c907b4d7ba49c53e7abb2a",
       "owner": "W01",
       "schema": "schemas/EffectiveConfig.json",
-      "schema_sha256": "95b37a005df2fbf8c09eab37fdd6467b119656050be514bc90f999a66c0334be",
+      "schema_sha256": "319da1e8870ec9800d12624387bc5cb09d07fb0950945e528c72c239256f71d8",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -2514,7 +2516,7 @@
       "example_sha256": "b6f2e48da29004392e052b42ddd27a3bb1b6cd3d239b3991bc7248eb8de35c99",
       "owner": "W01",
       "schema": "schemas/ScenarioBundle.json",
-      "schema_sha256": "470c84d3d3fd598a8804d00e1cef7fc8097a15725df3a0adb07ac24cca83d69f",
+      "schema_sha256": "96bef193c71a2d00c843f33e7fcf17ad90e8f17c31860fe2e4bfaa467fb054b3",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -2916,7 +2918,7 @@
       "example_sha256": "b759a125bdffb31774a6a92be39fa73e17c6a67ccbd0e295fc47fc13ac6587ee",
       "owner": "W01",
       "schema": "schemas/TestResultV2.json",
-      "schema_sha256": "9e30ab1734c96612012a473184119e7b02ead0e8d5613f94551081f33b7138ac",
+      "schema_sha256": "52b1feb4238c57b434f6f5ffb697758b364f5665ca991879dd44ca0c7306228e",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -3177,53 +3179,61 @@
     }
   },
   "source_files": {
-    "src/career_lab/api/app.py": "9f073708c893c2ed5fac7a06b69d5c173af67e9d4fda94f868b06bebdf46be68",
-    "src/career_lab/api/evaluation_runtime.py": "365731dd38b21e28b7e2653434a7afd089e5e01b22ac3734636963ce3628d9a4",
-    "src/career_lab/api/feedback_integration.py": "ab0adab1472101b5bfb4bfade4b237f5a918ccdbb47ef1452d887d2c449b66c4",
-    "src/career_lab/api/lifecycle_integration.py": "099f37bdb5b1678f5e3c86ae42c8f6788a2c1ad20f89f7fcaa26a932c5a75066",
-    "src/career_lab/api/modules.py": "db74178fab5ddfe27a7b949aaa195dbbb9abcfe15859bf8f3428c5d830cb0542",
-    "src/career_lab/api/private_roles.py": "e12889119d1c78109cc2d503ee70c143fe0d58008f4e59670f55540a6e684759",
-    "src/career_lab/api/public_materials.py": "dfdd1b42af9501541d75cfa7875297edb91887bc46db79595107cc31efaa2faf",
-    "src/career_lab/api/role_snapshot.py": "19ea854aff520928b219f314bfa63608b90d62825603a3e36063a278ab563551",
-    "src/career_lab/api/v2_routes.py": "91c8d42225aa52d460734e6460456b896c6a737f3ec131a406b0d1c9b791e96d",
-    "src/career_lab/api/v4_config.py": "248ba9d11bd9cf5f16513f9407713a87c870b0df6bf98848c267e90de434d46f",
-    "src/career_lab/api/v4_extensions.py": "f050c0e6d4382c5c43b648c5d8a1ea9d1225e998835617c12875796a520b9673",
-    "src/career_lab/api/vertical_reads.py": "95a8843b5e8b569a264ce28da9b4f3613e179ef29d41c171a6544e53a65acce8",
-    "src/career_lab/api/vertical_runtime.py": "4a5ff5e051e46de8d350d9b2c3cf47ba65ce3a80d5cbf07430b972b13282380c",
-    "src/career_lab/api/workspace_integration.py": "0b731ea27219d49767b72e07b65293edc810eae79872842f8a2459ef863e2604",
-    "src/career_lab/cli.py": "4085c8ce4b0f242734bccb4e4f8a8ac713d7c78ba42a724eea767b115b4469ce",
-    "src/career_lab/contracts/__init__.py": "10140c7ad16ce4744487b7e5f3418b726caa52979d662feda985b44986e2d7ac",
+    "src/career_lab/api/app.py": "50e570c71dad548ec9956dbfd03f8267d8b390dbff1d665c7447d2a8865e8659",
+    "src/career_lab/api/evaluation_runtime.py": "8ede9e5eafa7c2ae6367c55e2046309fb4873544ecbfd33bec575702db6fec96",
+    "src/career_lab/api/feedback_integration.py": "b90696b99e5e353c68e0d0dd2eb155f8cc314d365859acfdb180265928273495",
+    "src/career_lab/api/lifecycle_integration.py": "c78cc5391833321cef245bad2601575711599d29a964a45bf8715d1604cf9caa",
+    "src/career_lab/api/modules.py": "e47c4e2c6051eb156dc06615dbf0caa28279bcbc02d7a8c5a547ecf47c70cd48",
+    "src/career_lab/api/private_roles.py": "d38ddaf8fb1f9bd261223a855096bb2cffca92c7eb2a52c8725c4fda5f05e8bd",
+    "src/career_lab/api/public_materials.py": "2b67e940dbe0eac60897b0d770b03b1f974f015cbcb114ab8b19402917762426",
+    "src/career_lab/api/role_snapshot.py": "1da85f5f6712db361077f9303e57be1a2c22ce54f39152249a0d0fffeb5268dd",
+    "src/career_lab/api/v2_routes.py": "1d829a6949974dfc9e21f429368583b0ef3ebab120b66f1bf7b66ed7941f4483",
+    "src/career_lab/api/v4_config.py": "23b5678779c9925c86e545c4b953497672895d32a6636c1e5c9f3196556ad5e4",
+    "src/career_lab/api/v4_extensions.py": "1ee9ee7a6601ee38db8fcb8c9806575b81f7560c4dea4b4b8254fd64fa20e81c",
+    "src/career_lab/api/vertical_reads.py": "b02858ca838446a813ae781b25367f1f0377b26516016bb6516d44a8d6e3c346",
+    "src/career_lab/api/vertical_runtime.py": "105a27ac11e4c5e2fe0569881d5e612ebf96f76b17b656b206d920a0a07eac56",
+    "src/career_lab/api/workspace_integration.py": "580d03db16bf1310e4713965501cf8fe924472d8646d6890fa85d4b30045559b",
+    "src/career_lab/cli.py": "2ecca7ab1cce149a1a58a1ffbd83826c74cc7098a375255c16e8eb4c00c69db7",
+    "src/career_lab/contracts/__init__.py": "650246fed3d082cc58505d728f750218b601580ff7a00a03ae8e610bd9d316bc",
     "src/career_lab/contracts/actions.py": "835fbb62979891cbf97d0580e0843c2a8f97b8a8bcc08c8a01afecec36f919ac",
     "src/career_lab/contracts/base.py": "e62af2f4c8d827a994ae7f69d2022d50b5a42581d885348aab070fa407de2a77",
     "src/career_lab/contracts/deliverables.py": "0455a250f84c4008a823c0e54af7dc69cde277cca594d177e59b91cd7333a6f9",
     "src/career_lab/contracts/evaluation.py": "6dc4969cf02222543fa96ddffbd4d9fd19f4813ee1f9b85ea3d193797ac4ea23",
     "src/career_lab/contracts/scenario.py": "b191244dd1356503b153abf3a31921ce7911ec19b66534378b369b35d135e3b0",
     "src/career_lab/contracts/v2/__init__.py": "a785e74095d14713af0d98565017df553f06cab46c515a8805af46a3a1c24a47",
-    "src/career_lab/contracts/v2/core.py": "6dc7ce6ab00d781f8c14f505a7c8f9ef482e8715dee7fb78a2e7ee3da1318fb5",
-    "src/career_lab/contracts/v2/data.py": "bd0888c2937400bf00ceeac53b9e49260040c3782c7cbfaca62d10097841065b",
-    "src/career_lab/contracts/v2/discovery.py": "93cc327208f8e269c57baf3016c09b820a1076d556e60ab40cb04ecc4dbd5db5",
-    "src/career_lab/contracts/v2/evaluation.py": "0697b8f77246da064a43b31596acb12e7943405e6d5ea3b084c376e22dc37307",
-    "src/career_lab/contracts/v2/examples.py": "a7ccad36f83ede154220f28689eb9f81f6d5f41569c6ed3319cdf916eb7fec4a",
-    "src/career_lab/contracts/v2/export.py": "b311582586734defdd313428b02f90b582b28f38ec53639f6d6e2db3ada01d1c",
-    "src/career_lab/contracts/v2/extensions.py": "6e66df02813583f8f7bd4d707a3815960558c93d7b45cadfa119eb6b70cf1be1",
-    "src/career_lab/contracts/v2/files.py": "c521605a5e630e5a3010cfcec217ae37ac67507c98169ff3ac4a04758866dc30",
-    "src/career_lab/contracts/v2/legacy.py": "9c09304cfe65e663839719f00d9237e44a7dfc924c13e6ad6dc799f8c25defd3",
-    "src/career_lab/contracts/v2/projection.py": "24dd56480f1de6f8489241e9bd4d65cd7bf533427b2dbc91768318f1d733f896",
-    "src/career_lab/contracts/v2/provider.py": "8ef69da0f37b0e91ec235ab6ac039b2c81d1be14c7affb1eb8e71dda3c815306",
-    "src/career_lab/contracts/v2/requests.py": "0bf9ee25aeaba3a21f7d218588a8262ae383524161d0cb6af955e28ac0c3658f",
-    "src/career_lab/contracts/v2/research.py": "6319d233b5c1ad6833236bd9c51daf2b7d140d5aaade6853a672b4ad76561629",
-    "src/career_lab/contracts/v2/workspace.py": "32662a94bb7e728f1def9fdfe11c4570f8f0651afff4fbab8b16f78bfdc6e878",
-    "src/career_lab/contracts/v2/world.py": "afa8e26e1e27200260d61ade7eb987a5ea70a38e99af4cb89e658ad8de6ad03a",
-    "src/career_lab/contracts/versioning.py": "da1fc0d7a3bb7b1110cc33d1b7a7f68dcc6dbb8c061f81f3778a113a7ae809fb",
-    "src/career_lab/jobs/repository.py": "dbf999faadb779f386fa3661acf51f335fdbb7426d024a70416102e8d2f04283",
-    "src/career_lab/jobs/worker.py": "a91bffb17fdd295db6ce259cc84f9fa3c0e7deb8debfa915954b1eb380aad437",
-    "src/career_lab/rubrics/registry.py": "204f90efa1b93bc010d638f7310ef396148caf2aed3af132c7a5e064442700de",
-    "src/career_lab/storage/v2_jobs.py": "397b36937d61acbd3283bce7b2ef8f4e5c6f9fabe691288ddf43f1a490383890",
-    "src/career_lab/storage/v2_lifecycle.py": "820df180088bd3c09a550912aab838f4586042955b3220553ae294167a97c857",
-    "src/career_lab/storage/v2_remap.py": "05ded384d8682e2cef5a14828c7418eeb427ad9ee1e9b5614846c74b786debee",
-    "src/career_lab/storage/v2_snapshot.py": "e4d295e54c3ffe9813bb93ebd90d57a9b65368d91f1e83d4dda502e902108f0f",
-    "src/career_lab/storage/v2_store.py": "54ae8a6353e3e09e72ac41dcbafe4604984a1963bef161f1199afdf40fdde014",
-    "src/career_lab/storage/v2_tables.py": "db85ef5684efbee9dd0788d41377801eecd8acd1c7802c591f54e0688e02fcac"
+    "src/career_lab/contracts/v2/compatibility.py": "743d53322a06fdb51cd2614e05d7f962c6cf5afb37dbface8ebacbd8d21db26b",
+    "src/career_lab/contracts/v2/core.py": "ae0c03efe8c5fa85b4aed4c196b9ba0a7301f705bd7082abf35e0893261210a8",
+    "src/career_lab/contracts/v2/data.py": "8ff6375682f1a8e5435e3a87eba351b970234ed260d89f07ab80deb85d4aae85",
+    "src/career_lab/contracts/v2/discovery.py": "71f250ef0f37028d747e349ec6fe9881e19a09b6e51f21eb8d3a8de448984358",
+    "src/career_lab/contracts/v2/engineer.py": "4b6ef136dae623be177c51cbbc7b1b85a36d7449bb40b96bc4f63efb410176ea",
+    "src/career_lab/contracts/v2/engineer_examples.py": "f9275d256a926de98e251c4a352e6488dd7326a80da13c42647e041cb4b05084",
+    "src/career_lab/contracts/v2/engineer_export.py": "cb03edb975fb004f2956ec1db93a40b7ed6a1dd473b74b9c9395ca5409e15342",
+    "src/career_lab/contracts/v2/evaluation.py": "bfb5b328711647d477e038e1e75f9447bcf45c26adb21ff175064154a32a5453",
+    "src/career_lab/contracts/v2/examples.py": "0ae0d567f8d8d476b13e52b08f56a109b40fddf5e671fd3a4e5a10a6d88c09f9",
+    "src/career_lab/contracts/v2/export.py": "5991be7e331493fbd85f8ae8d833d48b697c26dfba959c153e3910d94d4271d2",
+    "src/career_lab/contracts/v2/extensions.py": "cd47aa1195d1d934e67a815e9e30494aba146d6c7e64266b6be613818523b7cd",
+    "src/career_lab/contracts/v2/files.py": "3b3f8e9ac47acacfcdd3052f7b0d94698ff8622c0ca34299b47a544bad048577",
+    "src/career_lab/contracts/v2/legacy.py": "47a9fb0d4414326b2e05ba863ce29a905f9734b1eb881a85b41af769df5fbbd5",
+    "src/career_lab/contracts/v2/projection.py": "f57194237f706f80eff01258d7184f0d0525b34107af41ec6aa271558e835a7e",
+    "src/career_lab/contracts/v2/provenance.py": "f779c6063857119d3038443a5bf9526857900bd5495ba7f1beffdac1a55e9956",
+    "src/career_lab/contracts/v2/provider.py": "97b6f25a7ba7e93a84b77af980b00d6d371d770239cc59f6bc09ceb0ebf4994d",
+    "src/career_lab/contracts/v2/requests.py": "a26378f3444e93e77f54d35de2bfae3a702d09bce71f303e7cc8624def31caab",
+    "src/career_lab/contracts/v2/research.py": "887c95fe6880db270ff1f14e9b7d0a4787b169d756d277c6b308fdac369459d5",
+    "src/career_lab/contracts/v2/workspace.py": "834945e4d70f60141cd9b6ea9725a40b30db9553437f4084b3bba5cd21544710",
+    "src/career_lab/contracts/v2/world.py": "4574df08f3548eedcf73dea35647e032c7db2002371cf53f73a4f6e37ea6ab44",
+    "src/career_lab/contracts/versioning.py": "23ef383486be9575e6e4ead243965bcf905122c509f6a257ad8729c077b3e506",
+    "src/career_lab/jobs/repository.py": "583c03ea8172027b6fa7c7130a1f2747ed9405415557bebc2d912c0b49d4324f",
+    "src/career_lab/jobs/worker.py": "a773253fa493e26705466c8d9e58cd9d6458b8f43db6b5f4a27940465dbad642",
+    "src/career_lab/rubrics/registry.py": "2a4b32a9e641e299e7e498832ee8cb5adcd78be295dcbc885abf22e0172a2c04",
+    "src/career_lab/storage/object_plans.py": "1fb37cc03155ba11d886772fd90f9e0fb4906294fbae4d5c3991ee840b6b6fbf",
+    "src/career_lab/storage/record_invariants.py": "c3ff8e8d74466c90a41b613bef10cda5efd2efe726ee23c249406cf5e8c9fef3",
+    "src/career_lab/storage/reference_graph.py": "5b129e5ecae5d5d2ec3dab5ad272077e0031946e97d74763e7303a29a61e9259",
+    "src/career_lab/storage/v2_jobs.py": "18637654b37f18cd857b6d77bc53a44d946b8c9777029bcf59e9967dd14ca442",
+    "src/career_lab/storage/v2_lifecycle.py": "58e87fde67f79f2e710d3a41bc292b3c646b3f3c77add04d8ecb756ffb8360c2",
+    "src/career_lab/storage/v2_remap.py": "5e8f46530ea30f32ef68829f77a99271a0f89e202ec0d6734fd97c5c5d6a6556",
+    "src/career_lab/storage/v2_snapshot.py": "a1096393cd8d8401ee849637ae3a9b31eec1cdb21e39b9d0dd377d230a2d51db",
+    "src/career_lab/storage/v2_store.py": "03289e36fbebc5349edc0f6e91200cac04f8666a7aa454b116307864ded58ad2",
+    "src/career_lab/storage/v2_tables.py": "a4fdf78207723a2ed48c66e3ec3aaa99a62fb632f984e0828b950ceb90434164"
   },
   "status": "frozen_candidate_pending_independent_review",
   "v1_dirty_included": false
