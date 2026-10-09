@@ -172,3 +172,21 @@ def test_T1_separate_json_email_field_is_not_url_userinfo(tmp_path: Path) -> Non
     assert result.returncode == 0, result.stdout + result.stderr
     identity = json.loads(result.stdout)["identity"]
     assert BundleRegistry(registry).resolve_file(identity, config) == content.encode()
+
+
+@pytest.mark.parametrize("suffix", ["json", "yaml", "toml"])
+def test_T1_url_credentials_in_mapping_keys_are_rejected(tmp_path: Path, suffix: str) -> None:
+    endpoint = f"https://review-user:{SECRET}@example.invalid/v1"
+    if suffix == "json":
+        content = json.dumps({"endpoints": {endpoint: {"enabled": True}}})
+    elif suffix == "yaml":
+        content = f'endpoints:\n  "{endpoint}":\n    enabled: true\n'
+    else:
+        content = f'[endpoints."{endpoint}"]\nenabled = true\n'
+    result, registry, _ = register_config(tmp_path, suffix, content, FORMATS[suffix])
+    assert result.returncode != 0
+    assert json.loads(result.stdout)["error"] == "registry_credentials_forbidden"
+    assert SECRET not in result.stdout + result.stderr
+    assert all(
+        SECRET.encode() not in file.read_bytes() for file in registry.rglob("*") if file.is_file()
+    )

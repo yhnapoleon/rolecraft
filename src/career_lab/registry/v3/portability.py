@@ -85,7 +85,8 @@ def _check(value: object, ancestors: frozenset[int]) -> None:
     if isinstance(value, dict):
         if any(is_credential_field(str(key)) for key in value):
             raise ProtocolError("registry_credentials_forbidden", status=403)
-        for child in value.values():
+        for key, child in value.items():
+            _check(key, ancestors)
             _check(child, ancestors)
     elif isinstance(value, (list, tuple)):
         for child in value:
