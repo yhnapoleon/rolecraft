@@ -1,14 +1,18 @@
 """Module-only commands. No API/worker/product-QA claim is made."""
 
-import argparse, json
+import argparse
+import json
 from dataclasses import asdict
 from pathlib import Path
+
 from pydantic import ValidationError
+
+from career_lab.assistant.v2 import Assistant
 from career_lab.contracts.v2.core import AuthContext, Command, Executor, ProtocolError
 from career_lab.contracts.v2.world import TestRequestV2
-from career_lab.scenarios.v2 import load_package, ScenarioEngine
-from career_lab.assistant.v2 import Assistant
-from .localization import text, locale_root
+from career_lab.scenarios.v2 import ScenarioEngine, load_package
+
+from .localization import locale_root, text
 
 
 def auth(sid, approval=False):
@@ -154,20 +158,27 @@ def main(argv=None):
         if args.command == "serve":
             if not args.database_url:
                 raise ProtocolError("database_url_required")
-            from career_lab.api.app import create_app
-            from career_lab.api.modules import ExtensionRegistry
-            from .module import ScenarioModule
             import uvicorn
+
+            from career_lab.api.app import create_app
+            from career_lab.api.error_boundary import configure_http_logging
+            from career_lab.api.modules import ExtensionRegistry
+
+            from .module import ScenarioModule
+
+            configure_http_logging()
 
             module = ScenarioModule(args.root, work_language=args.work_language)
             uvicorn.run(
                 create_app(args.database_url, extensions=module.install(ExtensionRegistry())),
                 host="127.0.0.1",
                 port=args.port,
+                access_log=False,
+                log_config=None,
             )
             return 0
         package = load_package(locale_root(args.root, args.work_language))
-        from .probes import run_probes, export_public_probes
+        from .probes import export_public_probes, run_probes
 
         if args.command == "public-probes":
             print(

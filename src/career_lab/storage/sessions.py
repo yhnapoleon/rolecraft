@@ -2,23 +2,24 @@ import hashlib
 import json
 from uuid import uuid4
 
+from pydantic import ValidationError
 from sqlalchemy import insert, select, update
 
 from career_lab.contracts.actions import Action, Event, TransitionResult, WorldState
 from career_lab.contracts.scenario import ScenarioSpec
-from career_lab.errors import CodedValueError
+from career_lab.errors import CodedValueError, InternalFailure
 from career_lab.scenarios.reducer import VersionConflict, apply_action, initial_state
 from career_lab.scenarios.visibility import project_view
 from career_lab.storage.database import (
     Database,
+    actions,
+    event_times,
+    events,
+    object_metadata,
+    object_times,
+    objects,
     sessions,
     snapshots,
-    events,
-    actions,
-    objects,
-    event_times,
-    object_times,
-    object_metadata,
     utc_timestamp,
 )
 
@@ -93,7 +94,10 @@ class SessionStore:
                 ).scalar_one_or_none()
                 if raw is None:
                     raise KeyError("snapshot not found")
-            return WorldState.model_validate_json(raw)
+            try:
+                return WorldState.model_validate_json(raw)
+            except ValidationError as error:
+                raise InternalFailure("invalid persisted world state") from error
 
     def events(self, session_id) -> tuple[Event, ...]:
         with self.db.engine.connect() as conn:
