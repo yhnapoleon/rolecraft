@@ -10,8 +10,9 @@ vi.mock('./index', () => ({
 }));
 vi.mock('../../app/i18n', () => ({ T: (zh: string) => zh }));
 import { mount } from './v4-slot';
+import { regionHost } from '../../v4-region-test-support';
 class Form {
-  input = { value: '', addEventListener() {}, removeEventListener() {} };
+  input = Object.assign(new EventTarget(), { value: '', defaultValue: '' });
   querySelector() {
     return this.input;
   }
@@ -115,5 +116,101 @@ it('rereads once when a new reply revision arrives during recovery', async () =>
     expect(view.turns[0].reply).toBe('reply');
   } finally {
     test.destroy();
+  }
+});
+
+for (const language of ['zh', 'en'] as const) {
+  it(`restores each saved colleague draft into a focused empty composer (${language})`, () => {
+    const host = regionHost();
+    const snapshot = host.snapshot();
+    if (!snapshot.session) throw Error('Expected active session');
+    const session = snapshot.session;
+    host.snapshot = () => ({
+      ...snapshot,
+      uiLanguage: language,
+      session: { ...session, workLanguage: language },
+    });
+    const saved = new Map([
+      [
+        'question:supervisor',
+        language === 'zh' ? '经理问题草稿，尚未发送。' : 'Manager draft, not sent.',
+      ],
+      [
+        'question:tech_lead',
+        language === 'zh' ? '技术问题草稿，尚未发送。' : 'Technical draft, not sent.',
+      ],
+    ]);
+    host.draft = <T>(_slot: string, key: string) => saved.get(key) as T | undefined;
+    for (const roleId of ['supervisor', 'tech_lead']) {
+      const form = new Form();
+      vi.stubGlobal('document', { activeElement: form.input });
+      const handle = mount({
+        host,
+        nodes: {
+          thread: { dataset: { roleId }, replaceChildren() {} } as unknown as HTMLElement,
+          composer: form as unknown as HTMLElement,
+        },
+      });
+      try {
+        expect(form.input.value).toBe(saved.get(`question:${roleId}`));
+        expect(host.keepDraft).not.toHaveBeenCalled();
+      } finally {
+        handle.destroy();
+      }
+    }
+  });
+}
+
+it.each([
+  ['new text before mounting', 'New question', ''],
+  ['cleared restored text before mounting', '', 'Saved question'],
+])('preserves %s', (_name, value, defaultValue) => {
+  const host = regionHost();
+  host.draft = <T>(_slot: string, key: string) =>
+    (key === 'question:supervisor' ? 'Saved question' : undefined) as T | undefined;
+  const form = new Form();
+  form.input.value = value;
+  form.input.defaultValue = defaultValue;
+  vi.stubGlobal('document', { activeElement: form.input });
+  const handle = mount({
+    host,
+    nodes: {
+      thread: { dataset: { roleId: 'supervisor' }, replaceChildren() {} } as unknown as HTMLElement,
+      composer: form as unknown as HTMLElement,
+    },
+  });
+  try {
+    expect(form.input.value).toBe(value);
+    expect(host.command).not.toHaveBeenCalled();
+    expect(host.keepDraft).not.toHaveBeenCalled();
+  } finally {
+    handle.destroy();
+  }
+});
+
+it('retains new input and deliberate clearing across later host updates', async () => {
+  const host = regionHost();
+  host.draft = <T>(_slot: string, key: string) =>
+    (key === 'question:supervisor' ? 'Saved question' : undefined) as T | undefined;
+  const form = new Form();
+  const handle = mount({
+    host,
+    nodes: {
+      thread: { dataset: { roleId: 'supervisor' }, replaceChildren() {} } as unknown as HTMLElement,
+      composer: form as unknown as HTMLElement,
+    },
+  });
+  try {
+    for (const value of ['New question', '']) {
+      form.input.value = value;
+      form.input.dispatchEvent(new Event('input'));
+      await Promise.resolve();
+      handle.update(host.snapshot());
+      expect(form.input.value).toBe(value);
+      expect(host.keepDraft).toHaveBeenLastCalledWith('roles', 'question:supervisor', value);
+    }
+    expect(host.command).not.toHaveBeenCalled();
+  } finally {
+    handle.destroy();
   }
 });

@@ -176,33 +176,45 @@ MCP版本的预期差异仅 JSON-RPC initialize 响应中 `serverInfo.version`�
 
 只收敛**当前代码重复解析同一个指针**且返回相同值的部分；历史commit、场景revision、评价版本和已冻结source paths不抽成“永远最新版”常量。`FastAPI version='0.2.0'`参与冻结OpenAPI，保留；MCP服务软件版本按第6节单独变更。`scripts.regression.lint`的原git基点保留，新执行批次额外用明确批次base检查；不随意更新基线吞掉问题。
 
-## 8. 错误分类与安全日志：逐项 HTTP 契约
+## 8. 错误分类与安全日志：默认保持，显式升级
 
-现状：`api/app.py`把所有 ValueError当业务422并返回 `str(exc)`；所有 KeyError当404；未注册通用Exception处理。仅注册 ValueError 子类仍不够，Pydantic输出验证或内部字典错误也可能被错报为用户错误。
+按074续行决定，默认ValueError（含ValidationError）保留父提交1881ed5的422及原error/code/details；KeyError保留404及原not_found正文。ProtocolError、CodedValueError、RequestValidationError、HTTPException的状态、消息、details、headers不变。不以异常消息猜类型，不将未分类ValueError/KeyError全局转500。输入错误或资源缺失的兼容遗漏直接恢复父版响应并补对照，不再触发停点。
 
-方案保留现有 `CodedValueError`、`ProtocolError` 和 conflict 子类，在**明确输入边界与资源查找处**标记领域错误，随后将未分类异常转为统一500。不能按异常消息文本猜类型，也不能给所有 Pydantic ValidationError统一业务422。存储和业务层保持对异常的原有捕获/回滚语义，新增类型尽量继承原基类。
+仅下表四个明确持久化读取位置把异常显式标为InternalFailure，HTTP返回500及`{"error":"internal server error","code":"internal_error"}`。未被既有handler分类的异常（HTTP-11）也统一此JSON500，不重试、不记录内部文本。其它已分类异常保持父版，包括既有module_response_invalid 503；不将其扩大为500。
 
-统一内部错误候选响应：HTTP500，`{"error":"internal server error","code":"internal_error"}`。以下表是完整的拟议HTTP变化清单，执行前逐行固定旧/新测试样本；除此表与第9节不得产生HTTP差异。
+| 显式升级位置 | 内部错误证据 | 父版响应 | 新响应 | 参数化测试样本 |
+|---|---|---|---|---|
+| api/feedback.read_evidence读取report.sources | report来自保存的feedback对象，用户只选择criterion/evidence | 404 / not_found | JSON500 / internal_error | persisted_sources_missing |
+| 同处读取ref.observed_at_seq及report.as_of_seq | 已保存证据坐标缺键；选择不存在仍原404 | 404 / not_found | 同上 | persisted_coordinate_missing |
+| storage/sessions.get_state的WorldState.model_validate_json | raw来自数据库session或snapshot，非请求内容 | 422 / invalid_request，完整ValidationError正文 | 同上 | persisted_state_invalid |
+| workspace/imports._legacy_structure.source_ref的EvidenceRefV2校验 | citation来自snapshot中已存test记录，raw仅提供查询id/version | 422 / invalid_request，完整ValidationError正文 | 同上 | persisted_source_ref_invalid |
 
-| ID／位置 | 原响应 | 拟响应与边界 | 测试接缝 |
-|---|---|---|---|
-| HTTP-01 `app.invalid`：ProtocolError | 自带status/code/message/details | **完全保持**，包括401/403/404/409/422/503；不改诸如module_unavailable消息 | v2真实HTTP认证、授权、缺对象、冲突、模块未接入 |
-| HTTP-02 同处：CodedValueError、InvalidAction、VersionConflict、IdempotencyConflict | 422或409；现有code/error/details | **完全保持**，继承关系与公开code/消息不变 | v1 actions/tests/artifacts/submissions/approvals/turns/relation-checks |
-| HTTP-03 `RequestValidationError` | 422的规范化detail/code及原loc | **完全保持**（包括输入内容结构）；不把其改成500 | v1/v2 union 请求、路径/查询/请求体错误 |
-| HTTP-04 Gateway／扩展内部请求model_validate | 当前由ValueError兜底的422 `invalid_request` | 对能归因于调用者输入的错误显式包装，保持原状态/code/message/details；仅包解析输入语句，不包整个handler | 同一payload的错误响应对照；输入验证与输出验证分开 |
-| HTTP-05 `scenarios.visibility` 的 `unknown role`，`api.feedback.read_evidence` 的 `future evidence rejected` | 裸ValueError→422 `invalid_request` | 显式领域错误，**保留同样422和原消息**；不借机更改原业务归类 | 真实GET evidence及受控未来引用；unknown role只保留原内部调用语义（materials路由未开放actor参数） |
-| HTTP-06 SessionStore 的 session/snapshot/object缺失、JobRepository真实job缺失、app.jobs读取／归属不存在 | KeyError→404 `not_found` / `not found` | 查无记录处使用可识别missing子类，**保留404和原body**；内部dict异常不冒充未找到 | 原GET session/materials/object/feedback/evidence/jobs/timeline；认证缺会话仍401 |
-| HTTP-07 evidence 的 criterion/evidence选择不存在 | 字典KeyError→同样404 | 在用户选择的查找点显式missing，**保持404**；记录结构损坏另属内部错误 | 不存在criterion/evidence与损坏持久化结构两条反例 |
-| HTTP-08 `StarletteHTTPException`、CodedHTTPException | status/detail/code/headers | **全部保持**，包括未知路由404、405与认证401 | 原未找到路由、错误方法、token缺失/无效 |
-| HTTP-09 未分类ValueError | 422，暴露原异常文字 | **变为通用500**；排除上面的明确校验/业务错误。relation.py 的 `shadow evaluation report mismatch`、`invalid model citation`是内部结果失败，纳入此项 | 真实HTTP relation-checks故障注入、通用handler抛含敏感哨兵ValueError |
-| HTTP-10 未分类KeyError | 404 `not_found` | **变为通用500**，避免误报内部程序／结果结构错误 | handler内部缺键，与HTTP-06/07正常缺资源对照 |
-| HTTP-11 未分类Exception（含内部输出ValidationError、OSError、数据库异常等） | 默认500 `Internal Server Error`或上层服务器异常 | **变为同一JSON500**，无堆栈／内部文本；不重试、不伪成功 | TestClient关闭异常上抛、ASGI正常HTTP；真实事务故障前后库一致 |
+### 父版HTTP样本矩阵
 
-注册／启动时的错误（如重复module、provider重试配置、缺API key）继续使启动明确失败，本轮不把它们伪造为某个用户HTTP响应；模型没有接入不变为成功。`unknown approval`作者校验、离线seed/calibration也不因HTTP handler变化改CLI业务语义。
+`tests/regression/http_samples.py`只构造正式HTTP请求及隔离数据库损坏；`http-parent-responses.json`由完整1881ed5归档源码和锁定依赖执行产生，不由候选实现生成expected。单一参数化测试`test_http_matches_fixed_parent_response`对以下12条默认样本逐字段比较status、body与全部响应headers；上述4条显式升级样本断言固定JSON500完整响应。原HTTP-01–08基线另保留，覆盖ProtocolError、CodedValueError、外层请求验证、Gateway请求、资源选择、404/405和认证等。
 
-logging使用标准库 logger，由入口配置一次；每请求一条完成摘要，异常一条分类诊断。白名单为服务器生成关联ID、方法、**路由模板**、获准操作名、状态/code、耗时、异常类型、安全代码版本；会话标识仅用服务器验证后的受限关联值。禁止原始URL/query/header/token、DB URL、部署秘密、请求/响应正文、私人作品、材料、模型原文、`str(exc)`、`repr(exc)`和默认带异常文本的 `exc_info=True`。确需堆栈定位时仅取服务器自身模块／函数／行号，不取locals与异常消息；测试以敏感哨兵覆盖所有出口。保留安全诊断能力不等于记录输入内容。
+| 样本 | 父版与候选均保持 |
+|---|---|
+| empty_pilot_plan：v1 update_pilot plan={} | 422 / invalid_request，PilotPlan完整错误正文 |
+| invalid_object_version：v2对象路径version=0 | 422 / invalid_request，ObjectRef完整错误正文 |
+| negative_configuration_participants：当前base配participants=-1 | 422 / invalid_request，AssistantConfig完整错误正文 |
+| test_case_revision_zero：导入case revision=0 | 422 / invalid_request，TestCase完整错误正文 |
+| investigation_block_revision_zero：导入block revision=0 | 422 / invalid_request，InvestigationBlock完整错误正文 |
+| investigation_review_focus_invalid：导入review.focus=invalid | 422 / invalid_request，InvestigationPayload完整错误正文 |
+| test_case_id_missing：导入case缺id | 404 / not_found，原正文 |
+| legacy_raw_purpose：contracts/v2/legacy.py解析raw.purpose=7 | 422 / invalid_request，LegacyProvenance完整错误正文 |
+| unclassified_value：未显式分类ValueError | 422 / invalid_request，原正文 |
+| unclassified_key：未显式分类KeyError | 404 / not_found，原正文 |
+| unknown_scenario：未知v1场景 | 422 / unknown_scenario，原正文 |
+| unknown_role：v1 turn未知角色 | 422 / unknown_role，原正文 |
 
-范围为HTTP边界及本次凭据服务；不顺手重写worker持久化错误对象和MCP业务错误契约。现有重试次数、HTTP状态分支、数据库回滚及模型调用次数各自验明。
+### 横向输入清单
+
+v1 actions参数与PilotPlan、v2对象路径与查询、configuration.apply的SettingsInput和合成AssistantConfig、Gateway命令/query/payload、workspace raw晚解析、scenario/approval/feedback/import模型，均保留原handler映射，不再需要逐输入窄包装。FastAPI外层请求验证及既有业务异常照旧。存储资源缺失与evidence选择缺失照旧；只有上表已证实持久化损坏升级。注册/安装/离线CLI错误不改变，worker持久化错误对象与MCP业务错误契约不扩大。
+
+### 日志
+
+三正式serve入口（主CLI、delegations、scenarios/v2）共享白名单logging配置；root不启用依赖INFO，依赖日志不向外输出；Uvicorn关闭原始access日志且不重装默认配置。每请求一条摘要、错误一条类型分类诊断，允许字段仅event、服务端request_id、方法、路由模板、状态/code、耗时、异常类型和安装包版本；禁止原始URL/query/header/token/DB URL/请求响应正文/私人材料/异常文本与exc_info。默认422正文依法保持原输入内容，但日志不复制该正文。当前接口无流式响应；四handler与read_evidence签名完整。
 
 ## 9. 凭据派生修复（063-02，独立安全批次）
 
@@ -262,7 +274,7 @@ logging使用标准库 logger，由入口配置一次；每请求一条完成摘
 | CODE-02 | 存储拆分漏掉最终权限／竞态检查 | 现有撤销、过期、job结束、分享、修订、旧轮采用与恢复的真实Gateway/worker回归 |
 | NAME-01 | 改名改变持久化ID或prompt/发布hash | 对同输入的test/feedback/ref身份及prompt版本逐值比对 |
 | NAME-02 | MCP版本改动影响协议或工具 | 真实initialize/ping/tools/list/call/撤销/未知结果恢复，仅serverInfo.version有批准差异 |
-| HTTP-01…HTTP-11 | 错误类型、消息、状态或回滚不符第8节 | 每行独立HTTP测试；未知异常哨兵不外泄，业务与输入样本兼容 |
+| HTTP现行矩阵 | 错误类型、消息、状态、headers或回滚不符第8节 | 同一参数化父版对照覆盖兼容及四处显式升级；默认ValueError正文保留，日志出口不泄漏；未分类HTTP-11为安全JSON500 |
 | LOG-01 | 日志暴露token/私人正文/异常文本 | caplog＋HTTP出口哨兵；仅白名单字段，无exc_text/locals/query |
 | CRED-01…CRED-07 | 见W14原任务单及第9节 | 逐ID独立正式签发／补练HTTP回归，另加内部参考Agent同根反例 |
 | GATE-01 | 清理漏测、隐藏skip或丢ID | 原开工基线、新main基线、每批候选三方比对，缺失/失败/新增skip均非零 |
@@ -388,3 +400,10 @@ EVAL-01测试在独立进程执行实际格式化后的八个模块，经正式�
 FixedRoleSnapshotPort及其激活坐标辅助函数从api迁入runtime，原api路径保留同一对象的兼容转发。存储层仅修改begin_role_execution中的这一条延迟导入路径及该导入块的排序；其它代码逐字不变。迁移后适配器补完整类型与显式导入，五个函数除类型注解外的AST保持相同。事务、授权时窗、私有读取、事件接收、历史采用和模型调用位置均不动。
 
 真实V2Store角色输入验证在禁止HTTP模块导入的冷进程中先失败后通过；旧新导入对象恒等，既有角色快照和私有角色测试验证正常/历史/撤销边界。不扩展为存储层整体解耦，storage到runtime的其它依赖保留。
+
+
+## 批次6：默认HTTP兼容与安全日志
+
+实施按第8节现行表。早期“未分类全部500”草稿已被074续行决定取代，旧草稿和停点证据留在独立runs目录，不作为当前实现。多余输入包装与ResourceNotFound改动撤回，减少无必要类型和存储改动。
+
+父版对照10样本首次7失败/3通过，恢复默认映射后10通过；持久化反馈、会话状态、source_ref各自先红后绿。日志三个入口的真实进程测试沿用已有红绿，HTTP输出回滚反例使用未分类OSError（父版默认500）验证原事务与显式重试。仅尚未提交的探索测试按最新批准更新默认ValueError/KeyError断言，所有1881ed5已提交测试ID、expected和断言保持原样。
