@@ -7,10 +7,10 @@ from career_lab.api.modules import V2Response
 from .catalog import bindings, SYNC_OPERATIONS, NEVER_ENABLE
 
 
-def require_learner(auth):
+def require_learner(auth: C.AuthContext) -> None:
     if (
         auth.actor_id != "learner"
-        or auth.executor.kind not in {"human", "external_agent"}
+        or auth.executor.kind not in {"human", "external_agent", "reference_agent"}
         or "research" in auth.capabilities
     ):
         raise C.ProtocolError("public_actor_required", status=403)

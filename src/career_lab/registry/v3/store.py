@@ -227,6 +227,13 @@ class BundleRegistry:
         if baseline.evaluation_id != candidate.evaluation_id:
             raise ProtocolError("registry_evaluation_changed", status=409)
 
+    def resolve_manifest(self, identity: str, ref: FileRef) -> bytes:
+        """Bind the root manifest, whose record pins logical ID, revision and exact bytes."""
+        record, members = self._load(identity)
+        if record.manifest != ref:
+            raise ProtocolError("registry_manifest_mismatch", status=409)
+        return members[ref.path]
+
     def resolve_file(self, identity: str, ref: FileRef) -> bytes:
         record, members = self._load(identity)
         if record.files.get(ref.path) != ref:

@@ -266,3 +266,177 @@ def test_RUN_02_crash_after_first_saved_effect_resumes_remaining_actions(
         assert resumed["status"] == "completed"
         assert resumed["dispatch_count"] == 2
         assert len(resumed["results"]) == 2
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_RUN_reference_observation_uses_actual_public_acquisition(
+    tmp_path: Path, language: str
+) -> None:
+    import httpx
+    from runner_fixture import live_run
+
+    from career_lab.contracts.v2.world import Observation
+
+    with live_run(tmp_path, "tests.create", language=language) as run:
+        credentials = json.loads(run.arguments["credentials_path"].read_text())
+        prefix = credentials["api_url"] + "/sessions/" + credentials["session_id"]
+        with httpx.Client(
+            headers={"Authorization": "Bearer " + run.token}, trust_env=False
+        ) as client:
+            response = client.get(prefix + "/observation")
+            assert response.status_code == 200, response.text
+            observation = Observation.model_validate(response.json()["result"])
+            assert observation.actor.kind == "reference_agent"
+            assert observation.visible_sources == ()
+            assert observation.catalog
+            assert not any(
+                t.available and t.name == "work_products.adopt" for t in observation.tools
+            )
+            assert any(t.available and t.name == "read_material" for t in observation.tools)
+            state = observation.as_of.model_dump(mode="json")
+            result = client.post(
+                prefix + "/actions",
+                json={
+                    "schema_version": 2,
+                    "operation": "read_material",
+                    "request_id": "acquire-brief",
+                    "expected_version": state["business_seq"],
+                    "expected_workspace_revision": state["workspace_revision"],
+                    "payload": {
+                        "tool": "read_material",
+                        "material": {
+                            "session_id": credentials["session_id"],
+                            "kind": "material",
+                            "object_id": observation.catalog[0].id,
+                            "version": observation.catalog[0].version,
+                        },
+                    },
+                },
+            )
+            assert result.status_code == 200, result.text
+            acquired = client.get(prefix + "/observation")
+            assert acquired.status_code == 200, acquired.text
+            observed = Observation.model_validate(acquired.json()["result"])
+            assert observed.visible_sources
+            assert all(not f.fact_ids for f in observed.visible_sources)
+            assert all(f.acquired_via == "material_read" for f in observed.visible_sources)
+            assert all(f.ref.kind == "material" for f in observed.visible_sources)
+
+
+def test_S1_checklist_requires_the_registered_evaluation_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import httpx
+    from runner_fixture import live_run
+    from test_bundle_registry_flow import write_json
+
+    from career_lab.contracts.v2.core import ProtocolError
+    from career_lab.contracts.v2.research import RunManifest
+    from career_lab.reference_agent.runner import run_checklist
+    from career_lab.registry.v3.store import BundleRegistry
+
+    with live_run(tmp_path, "tests.create") as run:
+        registry = BundleRegistry(run.arguments["registry_path"])
+        original = registry.load(run.arguments["evaluation_id"])
+        manifest = RunManifest.model_validate_json(run.arguments["manifest_path"].read_bytes())
+        other = original.model_copy(
+            update={
+                "id": "different-evaluation",
+                "revision": "replacement",
+                "graders": (*original.graders, manifest.evaluation),
+            }
+        )
+        source = tmp_path / "source"
+        root = write_json(source, "other-evaluation.json", other)
+        run.arguments["evaluation_id"] = registry.register("evaluation", source, root)
+        calls = []
+        request = httpx.Client.request
+
+        def observed_request(
+            client: httpx.Client, method: str, url: str | httpx.URL, *args: object, **kwargs: object
+        ) -> httpx.Response:
+            calls.append(method)
+            return request(client, method, url, *args, **kwargs)
+
+        monkeypatch.setattr(httpx.Client, "request", observed_request)
+        with pytest.raises(ProtocolError) as rejected:
+            run_checklist(**run.arguments)
+        assert rejected.value.code == "registry_manifest_mismatch"
+        assert calls == []
+        assert not run.arguments["output"].exists()
+
+
+def test_S2_same_run_name_with_new_fixed_command_has_its_own_result(tmp_path: Path) -> None:
+    from runner_fixture import live_run
+    from test_bundle_registry_flow import write_json
+
+    from career_lab.contracts.v2.research import RunManifest
+    from career_lab.reference_agent.runner import run_checklist
+    from career_lab.registry.v3.store import BundleRegistry
+
+    with live_run(tmp_path, "tests.create") as run:
+        first = run_checklist(**run.arguments)
+        registry = BundleRegistry(run.arguments["registry_path"])
+        manifest = RunManifest.model_validate_json(run.arguments["manifest_path"].read_bytes())
+        runtime = registry.load(run.arguments["runtime_id"])
+        checklist = json.loads(registry.resolve_file(run.arguments["runtime_id"], manifest.policy))
+        query = "A different question for the replacement run"
+        checklist["actions"][0]["arguments"]["query"] = query
+        source = tmp_path / "source"
+        policy = write_json(source, "reference/replacement-checklist.json", checklist)
+        runtime_ref = write_json(
+            source,
+            "reference/replacement-runtime.json",
+            runtime.model_copy(update={"revision": "replacement", "tools": policy}),
+        )
+        arguments = dict(run.arguments)
+        arguments["runtime_id"] = registry.register("runtime", source, runtime_ref)
+        arguments["manifest_path"] = tmp_path / "replacement-run.json"
+        arguments["manifest_path"].write_text(
+            manifest.model_copy(update={"runtime": runtime_ref, "policy": policy}).model_dump_json()
+        )
+        arguments["output"] = tmp_path / "replacement-output"
+        second = run_checklist(**arguments)
+        recovered = run_checklist(**arguments, resume=True)
+        assert second["status"] == "completed", second["error_code"]
+        assert recovered == second
+        assert second["results"][0]["request_id"] != first["results"][0]["request_id"]
+        assert second["results"][0]["response"]["result"]["test"]["query"] == query
+        assert first["results"][0]["response"]["result"]["test"]["query"] != query
+
+
+def test_S2_confirmed_request_conflict_never_recovers_another_command(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import httpx
+    from runner_fixture import live_run
+
+    from career_lab.reference_agent.runner import run_checklist
+
+    with live_run(tmp_path, "tests.create") as run:
+        request = httpx.Client.request
+        claimed = False
+        recoveries = []
+
+        def conflicting_request(
+            client: httpx.Client, method: str, url: str | httpx.URL, *args: object, **kwargs: object
+        ) -> httpx.Response:
+            nonlocal claimed
+            if method == "POST" and str(url).endswith("/tests") and not claimed:
+                claimed = True
+                other = json.loads(json.dumps(kwargs["json"]))
+                other["payload"]["query"] = "Another command owns this request identity"
+                competing = request(client, method, url, *args, **(kwargs | {"json": other}))
+                assert competing.status_code == 200
+            if method == "GET" and "/requests/" in str(url):
+                recoveries.append(str(url))
+            return request(client, method, url, *args, **kwargs)
+
+        monkeypatch.setattr(httpx.Client, "request", conflicting_request)
+        first = run_checklist(**run.arguments)
+        resumed = run_checklist(**run.arguments, resume=True)
+        assert first["status"] == "failed"
+        assert first["error_code"] == "request_id_reused"
+        assert resumed == first
+        assert recoveries == []
+        assert first["results"] == []

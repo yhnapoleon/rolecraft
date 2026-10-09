@@ -67,11 +67,11 @@ def fixed_checklist(
     if not isinstance(runtime, RuntimeBundle) or runtime.source != manifest.source:
         raise ProtocolError("run_runtime_mismatch")
     if (
-        RuntimeBundle.model_validate_json(registry.resolve_file(runtime_id, manifest.runtime))
+        RuntimeBundle.model_validate_json(registry.resolve_manifest(runtime_id, manifest.runtime))
         != runtime
     ):
         raise ProtocolError("run_runtime_mismatch")
-    registry.resolve_file(evaluation_id, manifest.evaluation)
+    registry.resolve_manifest(evaluation_id, manifest.evaluation)
     if manifest.policy is None or runtime.skills is not None:
         raise ProtocolError("reference_policy_unavailable", status=503)
     if (
@@ -182,6 +182,9 @@ def run_checklist(
 def advance(
     state: Checkpoint, checklist: Checklist, environment: HttpEnvironment, journal: RunJournal
 ) -> None:
+    if state.status == "failed":
+        return
+
     def save() -> None:
         now = datetime.now(UTC)
         terminal = state.status in {"completed", "failed"}
@@ -212,7 +215,9 @@ def advance(
                 timeout = remaining_seconds(state)
                 state.pending = Command(
                     schema_version=2,
-                    request_id=digest([state.manifest.id, len(state.results)]),
+                    request_id=digest(
+                        [state.identity, len(state.results), action.model_dump(mode="json")]
+                    ),
                     expected_version=public.business_seq,
                     expected_workspace_revision=public.workspace_revision,
                     operation=action.tool,
@@ -235,7 +240,8 @@ def advance(
             save()
         state.status = "completed"
     except ProtocolError as error:
-        state.status = "unresolved" if state.pending is not None else "failed"
+        confirmed_conflict = error.status == 409 and error.code == "request_id_reused"
+        state.status = "failed" if confirmed_conflict or state.pending is None else "unresolved"
         state.error_code = error.code
     save()
 

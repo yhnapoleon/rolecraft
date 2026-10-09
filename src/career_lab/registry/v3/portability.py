@@ -4,18 +4,28 @@ import json
 import re
 import tomllib
 from pathlib import PurePosixPath, PureWindowsPath
+from urllib.parse import urlsplit
 
 import yaml
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError
+from career_lab.delegations.credential_fields import CREDENTIAL_ASSIGNMENT, is_credential_field
 
-CREDENTIAL_FIELDS = frozenset(
-    {"apikey", "authorization", "password", "sessiontoken", "accesstoken", "secretkey", "secret"}
-)
-CREDENTIAL_ASSIGNMENT = re.compile(
-    r"(?i)\b(?:api[_-]?key|authorization|password|session[_-]?token|access[_-]?token|"
-    r"secret[_-]?key|secret)[\"']?\s*[:=]\s*\S|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"
-)
+URI = re.compile(r"(?i)(?:[a-z][a-z0-9+.-]*://|//)[^\s<>\"'`)}]+")
+
+
+def reject_url_credentials(value: str) -> None:
+    for candidate in URI.findall(value):
+        try:
+            url = urlsplit(candidate)
+            if url.username is not None or url.password is not None:
+                raise ProtocolError("registry_credentials_forbidden", status=403)
+        except ValueError as error:
+            if isinstance(error, ProtocolError):
+                raise
+            raise ProtocolError("registry_configuration_invalid") from None
+
+
 MACHINE_PATH = re.compile(
     r"(?<![\w./\\:-])(?:/(?:Users|home|private|tmp|Volumes|etc|root|var|opt|usr|mnt)/\S+"
     r"|[A-Za-z]:[\\/]\S+|\\\\[^\s\\]+\\\S+)"
@@ -41,6 +51,7 @@ def validate_portability(raw: bytes, ref: FileRef) -> None:
         raise ProtocolError("registry_member_format_unsupported") from exc
     if CREDENTIAL_ASSIGNMENT.search(text):
         raise ProtocolError("registry_credentials_forbidden", status=403)
+    reject_url_credentials(text)
     if MACHINE_PATH.search(text):
         raise ProtocolError("registry_machine_path_forbidden", status=403)
     try:
@@ -72,15 +83,14 @@ def _check(value: object, ancestors: frozenset[int]) -> None:
             raise ProtocolError("registry_configuration_invalid")
         ancestors = ancestors | {id(value)}
     if isinstance(value, dict):
-        fields = {str(key).lower().replace("-", "").replace("_", "") for key in value}
-        if fields & CREDENTIAL_FIELDS:
+        if any(is_credential_field(str(key)) for key in value):
             raise ProtocolError("registry_credentials_forbidden", status=403)
         for child in value.values():
             _check(child, ancestors)
     elif isinstance(value, (list, tuple)):
         for child in value:
             _check(child, ancestors)
-    elif isinstance(value, str) and (
-        PurePosixPath(value).is_absolute() or PureWindowsPath(value).is_absolute()
-    ):
-        raise ProtocolError("registry_machine_path_forbidden", status=403)
+    elif isinstance(value, str):
+        reject_url_credentials(value)
+        if PurePosixPath(value).is_absolute() or PureWindowsPath(value).is_absolute():
+            raise ProtocolError("registry_machine_path_forbidden", status=403)
