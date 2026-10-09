@@ -342,6 +342,10 @@ export function mount(
     const turns = view?.turns.filter((t) => t.roleId === selected) ?? [];
     displayObserver?.disconnect();
     visibleReplies.clear();
+    const focusedTurnId =
+      doc.activeElement?.tagName === 'SUMMARY' && list.contains(doc.activeElement)
+        ? doc.activeElement.closest<HTMLElement>('[data-turn-id]')?.dataset.turnId
+        : undefined;
     const fragments = turns.map((turn) => {
       const item = el('li', 'rc-roles__turn');
       item.dataset.turnId = turn.id;
@@ -393,8 +397,9 @@ export function mount(
         });
         item.append(details);
         if (displayObserver && turn.canRecordDisplay !== false && !turn.displayRecorded) {
-          visibleReplies.set(reply, { turnId: turn.id, visible: false });
-          displayObserver.observe(reply);
+          const visibleText = presentation.summary === turn.reply.trim() ? preview : reply;
+          visibleReplies.set(visibleText, { turnId: turn.id, visible: false });
+          displayObserver.observe(visibleText);
         }
         if (turn.materials?.length) {
           const refs = el('div', 'rc-roles__materials');
@@ -440,6 +445,12 @@ export function mount(
       return item;
     });
     list.replaceChildren(...fragments);
+    if (focusedTurnId) {
+      fragments
+        .find((item) => item.dataset.turnId === focusedTurnId)
+        ?.querySelector('summary')
+        ?.focus({ preventScroll: true });
+    }
     empty.hidden = turns.length > 0;
     empty.textContent = loaded
       ? T(
