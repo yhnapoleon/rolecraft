@@ -7,7 +7,7 @@ and explicit model-input fields can leave the process.
 
 import json
 from collections.abc import Iterable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 
 from career_lab.api.evaluation_runtime import ScenarioEvidencePort
@@ -67,6 +67,7 @@ class AuthorizedSnapshotPort:
         self.identity = identity
         self.units: list[ExportUnit] = []
         self.execution_failures: list[dict[str, object]] = []
+        self.quarantined: list[dict[str, object]] = []
         self.sources: dict[str, SourceObject] = {}
         self.files: dict[str, bytes] = {}
         self.source_index: dict[str, SourceIndexEntry] = {}
@@ -125,8 +126,16 @@ class AuthorizedSnapshotPort:
         for row in raw.objects:
             if row.ref.kind not in {"test", "submission"}:
                 continue
+            safe_ref = None
             try:
-                self.gateway.store.read(self.auth, row.ref, storage_revision=point.storage_revision)
+                parent = reader.read(self.auth, row.ref, point)
+                if parent.created_at is None:
+                    raise C.ProtocolError("source_time_unknown")
+                if not within(grant.from_point, parent.created_at) or not within(
+                    parent.created_at, grant.through_point
+                ):
+                    raise C.ProtocolError("research_authorization_window", status=403)
+                safe_ref = row.ref
                 if row.ref.kind == "test":
                     self._test(reader, C.TestResultV2.model_validate(row.content), row.ref)
                 else:
@@ -134,8 +143,16 @@ class AuthorizedSnapshotPort:
             except C.ProtocolError as error:
                 if error.status not in {403, 404}:
                     raise
-                # An inaccessible object contributes no body or identity to the export.
-                continue
+                # Only a currently readable, in-window parent may identify an exclusion.
+                rejected: dict[str, object] = {
+                    "family": "relation" if row.ref.kind == "test" else "criterion",
+                    "reason": "research_authorization_window"
+                    if error.code == "research_authorization_window"
+                    else "source_unavailable",
+                }
+                if safe_ref is not None:
+                    rejected["ref"] = safe_ref.model_dump(mode="json")
+                self.quarantined.append(rejected)
         return FrozenSnapshot(
             session_id,
             self.auth.actor_id,
@@ -331,6 +348,7 @@ def capture_session(
 ) -> LiveCapture:
     port = AuthorizedSnapshotPort(gateway, module, auth, authorization, key, identity)
     result = export_from_port(port, auth.session_id, point, lambda _: port.units)
+    result = replace(result, quarantined=(*result.quarantined, *port.quarantined))
     assert port.grant is not None
     return LiveCapture(
         result,

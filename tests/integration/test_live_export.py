@@ -538,3 +538,130 @@ def test_export_audit_keeps_file_reads_inside_the_package(live: LiveSession, att
     assert "private-canary" not in rejected.stdout + rejected.stderr
     if attack == "replay_symlink":
         assert json.loads(rejected.stdout)["error"] == "export_output_symlink"
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+@pytest.mark.parametrize("excluded", ["source", "parent"])
+def test_export_window_rejections_keep_safe_parent_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str, excluded: str
+) -> None:
+    from career_lab.research.authorization import issue
+
+    monkeypatch.delenv("CAREER_LAB_SCENARIO_CATALOG", raising=False)
+    monkeypatch.setenv("CAREER_LAB_SCENARIO_ARCHIVE", str(tmp_path / "archive"))
+    session = LiveSession(tmp_path, language)
+    try:
+        session.send(
+            "work-products",
+            "note",
+            "work_products.create",
+            {
+                "kind": "text",
+                "purpose": "exploration",
+                "title": "Notes",
+                "content": "Observe sources.",
+            },
+        )
+        start = VersionPoint(**{key: session.state()[key] for key in VersionPoint.model_fields})
+        first = session.send(
+            "tests",
+            "sourced-trial",
+            "tests.create",
+            {
+                "query": "What is the hotel reimbursement limit?"
+                if language == "en"
+                else "住宿报销上限是多少？",
+                "config_version": 0,
+            },
+        )["result"]["test"]
+        assert first["status"] != "failed" and first["citations"]
+        if excluded == "parent":
+            session.send(
+                "work-products",
+                "later-note",
+                "work_products.create",
+                {
+                    "kind": "text",
+                    "purpose": "exploration",
+                    "title": "Later notes",
+                    "content": "Inspect a later interval.",
+                },
+            )
+            start = VersionPoint(**{key: session.state()[key] for key in VersionPoint.model_fields})
+        other = session.send(
+            "tests",
+            "unsourced-trial",
+            "tests.create",
+            {
+                "query": "How many rings does Saturn have?"
+                if language == "en"
+                else "土星有多少个环？",
+                "config_version": 0,
+            },
+        )["result"]["test"]
+        assert other["status"] != "failed" and not other["citations"]
+        end = VersionPoint(**{key: session.state()[key] for key in VersionPoint.model_fields})
+        session.point_file.write_bytes(json_bytes(end))
+        auth = session.app.state.v2_store.authenticate(
+            session.session_id, session.token_file.read_text()
+        )
+        signed = issue(
+            auth,
+            purpose="dataset_export",
+            from_point=start,
+            through_point=end,
+            expires_at=datetime.now(UTC) + timedelta(hours=1),
+            key=session.key_file.read_bytes(),
+        )
+        session.grant_file.write_bytes(json_bytes(signed.model_dump(mode="json")))
+        response = session.export(tmp_path / "export")
+        assert response.returncode == 0, response.stdout + response.stderr
+        report = json.loads(response.stdout)
+        assert report["families"]["relation"]["records"] == 1
+        assert len(report["quarantined"]) == 1
+        rejected = report["quarantined"][0]
+        if excluded == "source":
+            assert rejected["ref"]["object_id"] == first["id"]
+        else:
+            assert "ref" not in rejected
+            exported_text = "\n".join(
+                path.read_text() for path in (tmp_path / "export").rglob("*") if path.is_file()
+            )
+            assert first["id"] not in exported_text
+            assert first["query"] not in exported_text
+        assert rejected["reason"] == "research_authorization_window"
+        assert first["answer"] not in json.dumps(rejected, ensure_ascii=False)
+        assert first["citations"][0]["object_id"] not in json.dumps(rejected, ensure_ascii=False)
+        before = {
+            str(path.relative_to(tmp_path / "export")): path.read_bytes()
+            for path in (tmp_path / "export").rglob("*")
+            if path.is_file()
+        }
+        state = session.state()
+        repeated = session.export(tmp_path / "export")
+        assert repeated.returncode == 0, repeated.stdout + repeated.stderr
+        assert repeated.stdout == response.stdout
+        assert before == {
+            str(path.relative_to(tmp_path / "export")): path.read_bytes()
+            for path in (tmp_path / "export").rglob("*")
+            if path.is_file()
+        }
+        assert session.state() == state
+        policies = tmp_path / "unapproved-policies.json"
+        policies.write_bytes(json_bytes({}))
+        refused = command(
+            "publish",
+            "--export",
+            tmp_path / "export/audit/export",
+            "--source-root",
+            tmp_path / "export",
+            "--policies",
+            policies,
+            "--output",
+            tmp_path / "release",
+        )
+        assert refused.returncode == 2
+        assert json.loads(refused.stdout)["error"] == "no_publishable_records"
+        assert not (tmp_path / "release").exists()
+    finally:
+        session.close()
