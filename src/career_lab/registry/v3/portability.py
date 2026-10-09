@@ -11,7 +11,8 @@ import yaml
 from career_lab.contracts.v2.core import FileRef, ProtocolError
 from career_lab.delegations.credential_fields import CREDENTIAL_ASSIGNMENT, is_credential_field
 
-URI = re.compile(r"(?i)(?:[a-z][a-z0-9+.-]*://|//)[^\s<>\"'`)}]+")
+# Keep authority punctuation intact; splitting before @ can conceal URL userinfo.
+URI = re.compile(r"(?i)(?:[a-z][a-z0-9+.-]*://|//)[^\s<>]+")
 
 
 def reject_url_credentials(value: str) -> None:
@@ -51,7 +52,6 @@ def validate_portability(raw: bytes, ref: FileRef) -> None:
         raise ProtocolError("registry_member_format_unsupported") from exc
     if CREDENTIAL_ASSIGNMENT.search(text):
         raise ProtocolError("registry_credentials_forbidden", status=403)
-    reject_url_credentials(text)
     if MACHINE_PATH.search(text):
         raise ProtocolError("registry_machine_path_forbidden", status=403)
     try:

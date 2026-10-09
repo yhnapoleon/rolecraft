@@ -11,6 +11,7 @@ from career_lab.contracts.v2.world import PublicState
 from career_lab.delegations.catalog import ROUTES
 from career_lab.delegations.credentials import Credentials
 from career_lab.delegations.http_client import safe_id
+from career_lab.reference_agent.request_identity import RequestIdentity
 
 # Only installed, bounded business operations used by fixed reference checklists.
 OPERATIONS = {
@@ -27,9 +28,12 @@ OPERATIONS = {
 
 
 class HttpEnvironment:
-    def __init__(self, credentials: Credentials, executor: Executor) -> None:
+    def __init__(
+        self, credentials: Credentials, executor: Executor, identity: RequestIdentity
+    ) -> None:
         self.credentials = credentials
         self.executor = executor
+        self.identity = identity
         self.prefix = "/sessions/" + safe_id(credentials.session_id)
         self.client = httpx.Client(
             base_url=credentials.api_url,
@@ -80,6 +84,7 @@ class HttpEnvironment:
         self.request(route.method, route.path, command, timeout=timeout)
 
     def recover(self, command: Command) -> RequestResult:
+        transaction_id = self.identity.transaction_for(command, OPERATIONS[command.operation])
         try:
             result = RequestResult.model_validate(
                 self.request("GET", "/requests/" + safe_id(command.request_id))
@@ -92,5 +97,7 @@ class HttpEnvironment:
             command.operation,
             self.executor,
         ):
+            raise ProtocolError("request_result_identity_mismatch", status=409)
+        if result.response.transaction_id != transaction_id:
             raise ProtocolError("request_result_identity_mismatch", status=409)
         return result

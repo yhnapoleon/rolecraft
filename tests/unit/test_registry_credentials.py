@@ -143,3 +143,32 @@ def test_T1_ipv6_url_authority_uses_the_same_credential_boundary(
         )
     else:
         assert result.returncode == 0, result.stdout + result.stderr
+
+
+@pytest.mark.parametrize("suffix", FORMATS)
+@pytest.mark.parametrize("punctuation", [")", "'", "`", "}"])
+def test_T1_url_userinfo_punctuation_cannot_truncate_credential_detection(
+    tmp_path: Path, suffix: str, punctuation: str
+) -> None:
+    value = f"https://review-user:{SECRET}{punctuation}tail@example.invalid/v1"
+    if suffix == "json":
+        content = json.dumps({"endpoint": value})
+    elif suffix == "yaml":
+        content = f'endpoint: "{value}"\n'
+    else:
+        content = f'endpoint = "{value}"\n'
+    result, registry, _ = register_config(tmp_path, suffix, content, FORMATS[suffix])
+    assert result.returncode != 0
+    assert json.loads(result.stdout)["error"] == "registry_credentials_forbidden"
+    assert SECRET not in result.stdout + result.stderr
+    assert all(
+        SECRET.encode() not in file.read_bytes() for file in registry.rglob("*") if file.is_file()
+    )
+
+
+def test_T1_separate_json_email_field_is_not_url_userinfo(tmp_path: Path) -> None:
+    content = '{"endpoint":"https://example.invalid","contact":"reviewer@example.invalid"}'
+    result, registry, config = register_config(tmp_path, "json", content, "application/json")
+    assert result.returncode == 0, result.stdout + result.stderr
+    identity = json.loads(result.stdout)["identity"]
+    assert BundleRegistry(registry).resolve_file(identity, config) == content.encode()

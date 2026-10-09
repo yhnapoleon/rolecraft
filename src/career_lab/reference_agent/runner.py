@@ -22,6 +22,7 @@ from career_lab.contracts.v2.research import RequestResult, RunManifest, Runtime
 from career_lab.delegations.credentials import Credentials, load_credentials
 from career_lab.reference_agent.journal import RunJournal
 from career_lab.reference_agent.ports import OPERATIONS, HttpEnvironment
+from career_lab.reference_agent.request_identity import RequestIdentity
 from career_lab.reference_agent.suite import load_manifest
 from career_lab.registry.v3.store import BundleRegistry
 from career_lab.scenarios.v2.module import ScenarioModule
@@ -171,7 +172,9 @@ def run_checklist(
         state = load_checkpoint(journal, manifest, identity, code, resume)
         if state.status in {"completed", "failed"}:
             return state.model_dump(mode="json")
-        environment = HttpEnvironment(credentials, auth.executor)
+        environment = HttpEnvironment(
+            credentials, auth.executor, RequestIdentity(database, credentials, auth.executor)
+        )
         try:
             advance(state, checklist, environment, journal)
         finally:

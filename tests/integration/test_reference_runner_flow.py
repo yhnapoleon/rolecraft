@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 import pytest
+from pydantic import JsonValue
 
 
 def test_RUN_01_cli_rejects_implicit_draft_protocol(tmp_path: Path) -> None:
@@ -440,3 +441,48 @@ def test_S2_confirmed_request_conflict_never_recovers_another_command(
         assert resumed == first
         assert recoveries == []
         assert first["results"] == []
+
+
+def test_S2_conflict_before_checkpoint_commit_cannot_recover_the_competing_command(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import httpx
+    from runner_fixture import live_run
+
+    from career_lab.reference_agent.journal import RunJournal
+    from career_lab.reference_agent.runner import run_checklist
+
+    with live_run(tmp_path, "tests.create") as run:
+        request = httpx.Client.request
+        save = RunJournal.save
+        claimed = False
+        crashed = False
+
+        def competing_request(
+            client: httpx.Client, method: str, url: str | httpx.URL, *args: object, **kwargs: object
+        ) -> httpx.Response:
+            nonlocal claimed
+            if method == "POST" and str(url).endswith("/tests") and not claimed:
+                claimed = True
+                other = json.loads(json.dumps(kwargs["json"]))
+                other["payload"]["query"] = "A competing command owns the request"
+                competing = request(client, method, url, *args, **(kwargs | {"json": other}))
+                assert competing.status_code == 200
+            return request(client, method, url, *args, **kwargs)
+
+        def interrupted_save(journal: RunJournal, state: dict[str, JsonValue]) -> None:
+            nonlocal crashed
+            if not crashed and state["status"] == "failed":
+                crashed = True
+                raise OSError("interrupted before conflict checkpoint commit")
+            return save(journal, state)
+
+        monkeypatch.setattr(httpx.Client, "request", competing_request)
+        monkeypatch.setattr(RunJournal, "save", interrupted_save)
+        with pytest.raises(OSError, match="before conflict checkpoint"):
+            run_checklist(**run.arguments)
+        resumed = run_checklist(**run.arguments, resume=True)
+        assert resumed["status"] == "failed"
+        assert resumed["error_code"] == "request_id_reused"
+        assert resumed["results"] == []
+        assert resumed["dispatch_count"] == 1
