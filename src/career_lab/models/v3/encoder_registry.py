@@ -1,17 +1,14 @@
 """Immutable local registrations for the agreed dual-head encoder return format."""
 
 import json
-import os
-import shutil
-import tempfile
 from pathlib import Path
 from typing import Any
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_file
-from career_lab.models.v3.bundle import json_bytes, sha, write_json
 from career_lab.models.v3.core import LABELS
 from career_lab.models.v3.encoder_artifact import EncoderArtifact, inspect_encoder, verify_file
 from career_lab.models.v3.huggingface import HuggingFaceCandidate
+from career_lab.models.v3.registry import _publish_registration
 
 PROTOCOL = "advisory-encoder-registration-v1"
 
@@ -44,39 +41,23 @@ def register_encoder(
 ) -> FileRef:
     artifact = inspect_encoder(bundle_root, ref, scope=scope)
     entry = _entry(artifact, ref, scope, runtime)
-    registry_root = registry_root.resolve()
-    registry_root.mkdir(parents=True, exist_ok=True)
-    destination = registry_root / entry["id"]
-    registration = FileRef(path=entry["id"] + "/registration.json", sha256=sha(json_bytes(entry)))
-    lock = destination.with_suffix(".lock")
-    try:
-        lock.mkdir()
-    except FileExistsError:
-        raise ProtocolError("model_registration_busy", status=409) from None
-    stage = None
-    try:
-        if destination.exists():
-            existing = inspect_registration(registry_root, registration, runtime=runtime)
-            if existing != entry:
-                raise ProtocolError("model_registration_drift")
-            return registration
-        stage = Path(tempfile.mkdtemp(prefix=".registration-", dir=registry_root))
+
+    def write_artifact(target: Path) -> None:
         for name, checksum in artifact.files.items():
-            target = stage / "artifact" / name
-            target.parent.mkdir(parents=True, exist_ok=True)
-            with target.open("xb") as stream:
+            path = target / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open("xb") as stream:
                 verify_file(bundle_root, FileRef(path=name, sha256=checksum), stream)
-        copied = inspect_encoder(stage / "artifact", ref, scope=scope)
+        copied = inspect_encoder(target, ref, scope=scope)
         if _entry(copied, ref, scope, runtime) != entry:
             raise ProtocolError("model_registration_drift")
-        write_json(stage / "registration.json", entry)
-        os.rename(stage, destination)
-        stage = None
-        return registration
-    finally:
-        if stage is not None:
-            shutil.rmtree(stage)
-        lock.rmdir()
+
+    return _publish_registration(
+        registry_root,
+        entry,
+        write_artifact,
+        lambda registration: inspect_registration(registry_root, registration, runtime=runtime),
+    )
 
 
 def inspect_registration(root: Path, ref: FileRef, *, runtime: dict[str, Any]) -> dict[str, Any]:

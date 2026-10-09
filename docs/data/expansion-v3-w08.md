@@ -204,7 +204,7 @@ label-only导出与读取仍合法，既有分类标签及证据分母排除规�
 ReleaseReader初始化已有SplitManifest.isolation，structure/component/ancestor跨区会在metadata/input/label/test正文读取之前拒绝。本轮入口反例验证该既有防线，不另复制一套校验。W07的全谱系与来源闸门、真实authority要求仍保持。origin-binding-v1跨包兼容继续用实际W07发布物→W08读取验证。
 
 
-最低joint门槛与候选自身的训练条件分别生效。LR证据选择头要求正、负两类证据pair；例如唯一可评行为INSUFFICIENT且合法目标为空时，所有pair都为负，仍以evidence_selector_class_coverage_missing拒绝。当前pipeline保留候选失败即中止的fail-closed行为，不用dev补齐、不降低LR覆盖、不新增分类模式；至少一条可评记录不保证每个候选都能训练，更不保证质量。HF门槛目前仅做源码检查，真实运行继续blocked；没有安装依赖、下载checkpoint或付费验证。
+最低joint门槛与候选自身的训练条件分别生效。LR证据选择头要求正、负两类证据pair；例如唯一可评行为INSUFFICIENT且合法目标为空时，所有pair都为负，仍以evidence_selector_class_coverage_missing拒绝。当前pipeline保留候选失败即中止的fail-closed行为，不用dev补齐、不降低LR覆盖、不新增分类模式；至少一条可评记录不保证每个候选都能训练，更不保证质量。本节原轮次仅核对HF源码，未安装依赖或运行HF。后续已通过可选CPU依赖实跑随机微型BERT的双输出、保存与重载（见下方本地编码器注册）；真实XLM-R权重、实际训练交付和语义质量仍blocked，没有下载外部checkpoint或调用付费模型。
 
 
 ## 本地编码器回传注册

@@ -53,6 +53,29 @@ def file_map(value: object) -> dict[str, str]:
     return result
 
 
+def verify_encoder_files(root: Path, files: object, manifest_path: str) -> dict[str, str]:
+    """Shared local-only member policy for registration and actual HF loading."""
+    if (
+        not isinstance(files, dict)
+        or "config.json" not in files
+        or not any(name.endswith(".safetensors") for name in files)
+    ):
+        raise ProtocolError("local_checkpoint_files_incomplete")
+    files = file_map(files)
+    for name, checksum in files.items():
+        if Path(name).suffix not in {".json", ".safetensors", ".model", ".txt", ".md"}:
+            raise ProtocolError("checkpoint_file_type_not_allowed")
+        verify_file(root, FileRef(path=name, sha256=checksum))
+    actual = {
+        path.relative_to(root).as_posix()
+        for path in root.rglob("*")
+        if path.is_file() and path.relative_to(root).as_posix() != manifest_path
+    }
+    if actual != set(files):
+        raise ProtocolError("local_checkpoint_member_set_mismatch")
+    return files
+
+
 def read_json(root: Path, name: str, files: dict[str, str]) -> dict[str, Any]:
     if name not in files:
         raise ProtocolError("checkpoint_files_incomplete")
@@ -150,10 +173,6 @@ def inspect_encoder(root: Path, manifest_ref: FileRef, *, scope: str) -> Encoder
         or config.get("model_revision") != manifest["model_revision"]
     ):
         raise ProtocolError("checkpoint_model_identity_mismatch")
-    if "config.json" not in local_files or not any(
-        name.endswith(".safetensors") for name in local_files
-    ):
-        raise ProtocolError("local_checkpoint_files_incomplete")
     if not any(
         "tokenizer" in name or name in {"vocab.txt", "sentencepiece.bpe.model"}
         for name in local_files
@@ -168,18 +187,11 @@ def inspect_encoder(root: Path, manifest_ref: FileRef, *, scope: str) -> Encoder
     }
     if set(members) != expected_members or not expected_members | {"checkpoint.json"} <= set(files):
         raise ProtocolError("checkpoint_member_set_mismatch")
-    actual_encoder = {
-        p.relative_to(root / "encoder").as_posix()
-        for p in (root / "encoder").rglob("*")
-        if p.is_file()
-    }
-    if actual_encoder != set(local_files) | {"local-files.json"}:
-        raise ProtocolError("local_checkpoint_member_set_mismatch")
-    for name in local_files:
-        if Path(name).suffix not in {".json", ".safetensors", ".model", ".txt", ".md"}:
-            raise ProtocolError("checkpoint_file_type_not_allowed")
+    verify_encoder_files(root / "encoder", local_files, "local-files.json")
+    verified = {"encoder/" + name for name in local_files}
     for name, checksum in files.items():
-        verify_file(root, FileRef(path=name, sha256=checksum))
+        if name not in verified:
+            verify_file(root, FileRef(path=name, sha256=checksum))
     return EncoderArtifact(
         manifest["model_revision"],
         config["source_revision"],
