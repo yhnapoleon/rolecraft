@@ -1,0 +1,109 @@
+{
+  "baseline_config": {
+    "media_type": "application/json",
+    "path": "files/example.json",
+    "schema_version": 2,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "config": {
+    "media_type": "application/json",
+    "path": "files/example.json",
+    "schema_version": 2,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "contract_version": "engineer-review-v1",
+  "model": null,
+  "pack": {
+    "media_type": "application/json",
+    "path": "files/example.json",
+    "schema_version": 2,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "probe_ids": [
+    "probe-1"
+  ],
+  "probe_suite": {
+    "media_type": "application/json",
+    "path": "files/example.json",
+    "schema_version": 2,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "resolved_config": {
+    "differences": {},
+    "effective": {
+      "chunk_size": 500,
+      "config_version": 0,
+      "domains": [],
+      "fallback": "human",
+      "freshness_guard": "none",
+      "id": "example",
+      "launch_day": 7,
+      "manual_domains": [],
+      "min_score": 0.35,
+      "min_score_calibration": null,
+      "participants": 0,
+      "prohibited_topics": [],
+      "retrieval_limit": 3,
+      "schema_version": 2,
+      "scope_filter": true,
+      "session_id": "example",
+      "update_strategy": "daily",
+      "version": 1,
+      "work_items": []
+    },
+    "requested": {
+      "chunk_size": 500,
+      "config_version": 0,
+      "domains": [],
+      "fallback": "human",
+      "freshness_guard": "none",
+      "id": "example",
+      "launch_day": 7,
+      "manual_domains": [],
+      "min_score": 0.35,
+      "min_score_calibration": null,
+      "participants": 0,
+      "prohibited_topics": [],
+      "retrieval_limit": 3,
+      "schema_version": 2,
+      "scope_filter": true,
+      "session_id": "example",
+      "update_strategy": "daily",
+      "version": 1,
+      "work_items": []
+    },
+    "schema_version": 2
+  },
+  "resource_snapshot": {
+    "media_type": "application/json",
+    "path": "files/example.json",
+    "schema_version": 2,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "reviewer_version": {
+    "media_type": "application/json",
+    "path": "files/example.json",
+    "schema_version": 2,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "scenario": {
+    "media_type": "application/json",
+    "path": "files/example.json",
+    "schema_version": 2,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "schema_version": 2,
+  "source_as_of": {
+    "business_seq": 0,
+    "schema_version": 2,
+    "storage_revision": 0,
+    "workspace_revision": 0
+  },
+  "submission": {
+    "media_type": "application/json",
+    "path": "files/example.json",
+    "schema_version": 2,
+    "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+  },
+  "work_language": "en"
+}

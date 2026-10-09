@@ -1,0 +1,72 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "citation_versions": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "default": {},
+      "title": "Citation Versions",
+      "type": "object"
+    },
+    "contains": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "title": "Contains",
+      "type": "array"
+    },
+    "effective_update_strategy": {
+      "anyOf": [
+        {
+          "enum": [
+            "daily",
+            "realtime",
+            "manual_policy"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Effective Update Strategy"
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "minLength": 1,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Error Code"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "status": {
+      "enum": [
+        "answered",
+        "answered_with_warning",
+        "fallback",
+        "failed"
+      ],
+      "title": "Status",
+      "type": "string"
+    }
+  },
+  "required": [
+    "status"
+  ],
+  "title": "EngineerProbeExpectation",
+  "type": "object"
+}

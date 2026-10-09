@@ -23,7 +23,12 @@ def legal_evidence_ids(item):
         raise ProtocolError("temporal_reference_mismatch")
     expected = {c.id for c in package.candidate_evidence}
     known = context.get("validity_known_ids")
-    if not isinstance(known, list) or len(known) != len(set(known)) or set(known) != expected:
+    if (
+        not isinstance(known, list)
+        or any(not isinstance(value, str) for value in known)
+        or len(known) != len(set(known))
+        or set(known) != expected
+    ):
         raise ProtocolError("evidence_validity_undetermined")
     point = package.as_of.business_seq
     return {
