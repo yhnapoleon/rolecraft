@@ -4,27 +4,36 @@ import argparse
 import json
 from pathlib import Path
 
-from career_lab.contracts.v2.core import ObjectRef, VersionPoint, Executor, ProtocolError
+from career_lab.contracts.v2.core import Executor, ObjectRef, ProtocolError, VersionPoint
 from career_lab.contracts.v2.data import Lineage, Provenance
+
 from .common import read_json
-from .export import FrozenSnapshot, SourceObject, ExportUnit, export_snapshot
-from .release import save_export, load_export, publish_release, publish_exports, audit_release
-from .quality import QualityError
+from .export import ExportUnit, FrozenSnapshot, SourceObject, export_snapshot
 from .labeling import AnnotationBatch
+from .live_cli import authorize, connection_arguments, export_live, register_authorization
+from .quality import QualityError
+from .release import audit_release, load_export, publish_exports, publish_release, save_export
 
 
 def register_commands(commands):
     """Accept the existing argparse subparser collection; do not replace its CLI."""
     export = commands.add_parser(
-        "export", help="Convert an explicit frozen snapshot; not a live storage adapter"
+        "export", help="Export an authorized live session or an explicit fixture snapshot"
     )
     export.set_defaults(w07_handler=dispatch)
-    export.add_argument("--snapshot", type=Path, required=True)
-    export.add_argument("--units", type=Path, required=True)
+    source = export.add_mutually_exclusive_group(required=True)
+    source.add_argument("--snapshot", type=Path)
+    source.add_argument("--live", action="store_true")
+    export.add_argument("--units", type=Path)
+    export.add_argument("--authorization", type=Path)
+    connection_arguments(export)
+    register_authorization(commands).set_defaults(w07_handler=dispatch)
     export.add_argument("--output", type=Path, required=True)
     validate = commands.add_parser("validate-data")
     validate.set_defaults(w07_handler=dispatch)
-    validate.add_argument("--release", type=Path, required=True)
+    validation_source = validate.add_mutually_exclusive_group(required=True)
+    validation_source.add_argument("--release", type=Path)
+    validation_source.add_argument("--export", type=Path, action="append")
     label = commands.add_parser("label")
     label.set_defaults(w07_handler=dispatch)
     ops = label.add_subparsers(dest="operation", required=True)
@@ -65,7 +74,13 @@ def register_commands(commands):
 
 
 def dispatch(args):
+    if args.command == "authorize":
+        return authorize(args)
     if args.command == "export":
+        if args.live:
+            return export_live(args)
+        if args.units is None:
+            raise ProtocolError("offline_units_required")
         raw = read_json(args.snapshot)
         # Offline supplied snapshots cannot attest live runtime provenance.
         if raw["origin"] != "fixture":
@@ -112,6 +127,10 @@ def dispatch(args):
             "origin": result.origin,
         }
     if args.command == "validate-data":
+        if args.export:
+            from .export_audit import audit_exports
+
+            return audit_exports(args.export)
         return audit_release(args.release)
     if args.command == "label":
         if args.operation == "prepare":
