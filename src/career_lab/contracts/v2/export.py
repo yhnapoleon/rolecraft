@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import re
 from copy import deepcopy
 from pathlib import Path
 
@@ -11,11 +12,10 @@ from pydantic import JsonValue
 from career_lab.contracts.v2.compatibility import without_provenance
 from career_lab.contracts.v2.discovery import REQUEST_MODELS, public_models
 from career_lab.contracts.v2.examples import sample_model
-from career_lab.contracts.v2.manifest_history import (
-    ERROR_CODES,
-    ERROR_HTTP_POLICY,
-    MANIFEST_HISTORY,
-)
+from career_lab.contracts.v2.manifest_history import MANIFEST_HISTORY
+
+# Raised only while validating the export compatibility policy, never an HTTP result.
+INTERNAL_ERROR_CODES = frozenset({"provenance_must_remain_optional"})
 
 CONSUMERS = {
     "W02": [
@@ -418,6 +418,72 @@ def integration_example(model):
     return sample_model(model)
 
 
+def _implementation_files(root: Path) -> list[Path]:
+    files = set((root / "src/career_lab/contracts").rglob("*.py"))
+    files |= {
+        root / p
+        for p in [
+            "src/career_lab/api/app.py",
+            "src/career_lab/api/v4_extensions.py",
+            "src/career_lab/cli.py",
+            "src/career_lab/api/vertical_runtime.py",
+            "src/career_lab/api/vertical_reads.py",
+            "src/career_lab/api/v4_config.py",
+            "src/career_lab/api/public_materials.py",
+            "src/career_lab/api/lifecycle_integration.py",
+            "src/career_lab/api/evaluation_runtime.py",
+            "src/career_lab/api/workspace_integration.py",
+            "src/career_lab/api/feedback_integration.py",
+            "src/career_lab/api/role_snapshot.py",
+            "src/career_lab/runtime/role_snapshot.py",
+            "src/career_lab/api/private_roles.py",
+            "src/career_lab/api/modules.py",
+            "src/career_lab/api/v2_routes.py",
+            "src/career_lab/storage/v2_tables.py",
+            "src/career_lab/storage/v2_store.py",
+            "src/career_lab/storage/v2_jobs.py",
+            "src/career_lab/storage/v2_snapshot.py",
+            "src/career_lab/storage/v2_lifecycle.py",
+            "src/career_lab/storage/v2_remap.py",
+            "src/career_lab/jobs/worker.py",
+            "src/career_lab/jobs/repository.py",
+            "src/career_lab/rubrics/registry.py",
+        ]
+    }
+    files |= {
+        root / "src/career_lab/storage" / name
+        for name in (
+            "object_plans.py",
+            "reference_graph.py",
+            "record_invariants.py",
+        )
+    }
+    return sorted(files)
+
+
+def _error_codes(root: Path, files: list[Path]) -> list[str]:
+    codes = {
+        code
+        for path in files
+        for code in re.findall(r"ProtocolError\(['\"]([^'\"]+)", path.read_text(encoding="utf-8"))
+    }
+    # Preserve published codes even when their runtime path has been retired.
+    previous_errors = root / "docs/contracts/expansion-v3/errors.json"
+    if previous_errors.is_file():
+        codes.update(json.loads(previous_errors.read_text(encoding="utf-8"))["codes"])
+    codes.update({"job_result_identity_conflict", "job_execution_failed"})
+    return sorted(codes - INTERNAL_ERROR_CODES)
+
+
+def _document_fingerprints(root: Path) -> dict[str, JsonValue]:
+    documents = root / "docs/contracts/expansion-v3"
+    return {
+        name: {"path": name, "sha256": sha(documents / name)}
+        for name in ("compatibility.md", "module-interfaces.md", "consumer-request-resolution.json")
+        if (documents / name).is_file()
+    }
+
+
 def manifest_metadata() -> dict[str, JsonValue]:
     """Replay publication records without reading or modifying generated artifacts."""
     manifest: dict[str, JsonValue] = {}
@@ -443,11 +509,7 @@ def sha(path: Path) -> str:
 
 
 def export(root: Path, output: Path) -> dict[str, int | str]:
-    """Export public wire contracts; root remains accepted for existing callers.
-
-    Historical publication fingerprints come from the ordered metadata records,
-    so an empty output directory and changes to source layout do not alter them.
-    """
+    """Generate current contracts and root-based fingerprints with preserved history."""
     from career_lab.api.app import create_app
 
     output.mkdir(parents=True, exist_ok=True)
@@ -480,13 +542,27 @@ def export(root: Path, output: Path) -> dict[str, int | str]:
     mount_v4_extensions(app)
     dump(output / "openapi.json", without_provenance(app.openapi()))
     app.state.store.close()
+    files = _implementation_files(root)
     dump(
         output / "errors.json",
-        {"schema_version": 2, "codes": sorted(set(ERROR_CODES)), "http_policy": ERROR_HTTP_POLICY},
+        {
+            "schema_version": 2,
+            "codes": _error_codes(root, files),
+            "http_policy": {
+                "401": "missing/invalid authentication",
+                "403": "capability/scope denied",
+                "404": "not found or unauthorized object",
+                "409": "version/hash/identity conflict",
+                "422": "invalid request/business precondition",
+                "503": "uninstalled/unavailable module or invalid server result",
+            },
+        },
     )
     manifest = manifest_metadata()
     manifest.update(
         {
+            "source_files": {str(path.relative_to(root)): sha(path) for path in files},
+            "documents": _document_fingerprints(root),
             "schemas": entries,
             "consumer_interfaces": CONSUMERS,
             "request_payloads": REQUEST_MODELS,
