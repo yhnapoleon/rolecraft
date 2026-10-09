@@ -1,6 +1,6 @@
 # 模型提供方切换与验证
 
-当前标准启动入口已验证：同事对话和语义 Judge 可以仅改变运行配置，接到本地 OpenAI-compatible 测试服务；中英文分别通过调用、失败和回读检查。知识助手的生成模块已通过真实 HTTP／worker 组装验证，但标准工厂的模型透传、v4 元数据与受限 Agent 派生记录尚待集成。**三条标准入口全部贯通尚未完成。** 本次没有调用真实在线模型，也没有验证模型语义质量。
+当前标准启动入口已验证：同事对话和语义 Judge 可以仅改变运行配置，接到本地 OpenAI-compatible 测试服务；中英文分别通过调用、失败和回读检查。知识助手的生成模块已通过真实 HTTP／worker 组装验证，但公共契约增量冻结、标准工厂的模型透传、v4 元数据与受限 Agent 派生记录尚待集成。**三条标准入口全部贯通尚未完成。** 本次没有调用真实在线模型，也没有验证模型语义质量。
 
 ## 配置位置
 
@@ -70,8 +70,14 @@ uv run --locked pytest -q tests/expansion_v3/w02/test_generation_display.py --ba
 
 | 责任接点 | 最小改动与原因 |
 |---|---|
+| 公共契约导出／冻结 | `generator` 保留旧实例字节，但新增了 JSON Schema 字段。现有 expansion-v3 schema 一致性测试及 engineer-review-v1 不可变导出测试均因此失败。公共契约负责人需按现行版本协议发布增量 schema／manifest，并保全旧冻结物；本线不能覆盖 `docs/contracts/**` 或隐藏该字段来绕过门禁。 |
 | `api/vertical_runtime.py::build_registry` | 将构造改为 `ScenarioModule(scenario_root, model=None if isinstance(role_model, LocalRoleModel) else role_model)`，约 1–3 行。两种语言均经此工厂；local 角色替身不能传为生成模型。当前文件由公共装配负责人独占。 |
 | v4 数据宿主／`api/vertical_reads.py::timeline` | 将单次 `assistant_execution` 关联到 test，并传出 `run.generation` 与测试结果内的 `config.effective`；抽取按该次配置识别。需要宿主负责人同时承接异步 `tests.create` 的原请求恢复、队列结果和配置模式选择。预计多个小接点，不能仅改界面标签宣称贯通。 |
 | 公共存储的派生对象授权 | 承认 `assistant_execution` 和已授权 test 的不可变派生关系，并在窄授权读取中复核全部候选依赖。当前 unknown kind 不能用于 scoped derivative；本线对 `allowed_objects` 有限制的 llm 测试在调用前返回 `assistant_scoped_generation_unavailable`。存储负责人完成后再放开该保护并补组合验收。 |
 
 上述接点未在本分支越权修改。正式入口三路生成、受限 Agent 生成、完整中英文浏览器验证和真实语义质量均不能据现有机制测试关闭。
+
+
+## 完整门禁中的已知停点
+
+当前组合门禁出现两项可独立复现的公共冻结契约不一致（上表第一项）。W02 安装态标准入口的八项测试还遇到固定启动窗口超时；单项复跑显示服务尚未写出启动日志便到达该窗口。正常 v4 英文八步通过，中文两次在反馈等待阶段超时，其中一次后台已完成、一次仍在运行。完整后端结果以本地候选回执和逐 ID 比较为准，不能把这些失败写成全量通过，也没有放宽断言或修改其他工作线。
