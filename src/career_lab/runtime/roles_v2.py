@@ -290,6 +290,10 @@ class LocalRoleModel:
             lines.append(
                 _LOCAL_TEXT[language]["others"] + _LOCAL_TEXT[language]["list_sep"].join(others)
             )
+        if any(
+            source.get("channel") in {"received_share", "attachment"} for source in ctx["sources"]
+        ):
+            lines.append(role_text(language, "received_versions_only"))
         if ctx["omissions"]["learner_scope"]:
             lines.append(role_text(language, "scope_omitted"))
         return ModelReply(text="\n".join(lines))

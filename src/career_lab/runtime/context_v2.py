@@ -55,6 +55,7 @@ _ROLE_TEXT = {
         "pending_stance": "这项变化仍需核对依据。",
         "colleague_note": "同事说明",
         "shared_work": "共享作品",
+        "received_versions_only": "仅按已收到的版本引用作品；新版本需明确分享后才能讨论。",
         "conversation": "对话记录",
         "material": "材料",
         "history_meaning": "过去对话原文，保留其时点；意见不自动成为公司事实",
@@ -90,6 +91,10 @@ _ROLE_TEXT = {
         "pending_stance": "The evidence for this proposed change still needs to be checked.",
         "colleague_note": "Colleague explanation",
         "shared_work": "Shared work",
+        "received_versions_only": (
+            "Only the received versions are cited; "
+            "share a new version explicitly before discussing it."
+        ),
         "conversation": "Conversation",
         "material": "Material",
         "history_meaning": "Original conversation at its recorded time; opinions do not automatically become company facts.",
