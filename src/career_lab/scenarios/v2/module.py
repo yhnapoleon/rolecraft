@@ -12,8 +12,10 @@ from career_lab.contracts.v2 import (
     ActionInput,
     ApprovalInput,
     AssistantConfig,
+    AuthContext,
     BusinessDecision,
     BusinessRequest,
+    Command,
     EvaluationBundle,
     EvidenceRefV2,
     ExternalReference,
@@ -30,7 +32,14 @@ from career_lab.contracts.v2 import (
     VersionPoint,
     read_file,
 )
-from career_lab.storage.v2_store import EventDraft, Mutation, ObjectWrite, references
+from career_lab.runtime.model_adapter import ModelAdapter
+from career_lab.storage.v2_store import (
+    EventDraft,
+    Mutation,
+    ObjectWrite,
+    TransactionView,
+    references,
+)
 
 from .engine import ScenarioEngine, ScenarioSnapshot
 from .loader import load_package
@@ -65,13 +74,13 @@ def latest(view, kind):
 
 
 class ScenarioModule:
-    def __init__(self, root, *, work_language=None):
+    def __init__(self, root, *, work_language=None, model: ModelAdapter | None = None):
         from .localization import locale_root
 
         self.package = load_package(locale_root(root, work_language))
         self.work_language = self.package.locale
         self.engine = ScenarioEngine(self.package)
-        self.assistant = Assistant(self.package)
+        self.assistant = Assistant(self.package, model)
         self.files = {f.path: f for f in self.package.bundle.files}
         self.bindings = SessionBindings(
             scenario=FileRef(path="manifest.json", sha256=self.package.content_hash),
@@ -448,23 +457,40 @@ class ScenarioModule:
         )
 
     def test(self, view, command, auth):
+        from career_lab.assistant.v2.generation import configured
+        from career_lab.assistant.v2.jobs import queue_generation
+
+        snapshot = self.snapshot(view)
+        if snapshot.config.generator == "llm" and auth.allowed_objects is not None:
+            # The shared store must admit the execution metadata as a scoped derivative first.
+            raise ProtocolError("assistant_scoped_generation_unavailable", status=503)
+        if snapshot.config.generator == "llm" and configured(self.assistant.model):
+            # Validate the request and all deterministic guards before queuing.
+            return queue_generation(self, snapshot, command, auth)
+        return self.test_result(view, command, auth)
+
+    def test_result(
+        self,
+        view: TransactionView,
+        command: Command,
+        auth: AuthContext,
+        *,
+        generation_permitted: bool = False,
+    ) -> Mutation:
+        from career_lab.assistant.v2.jobs import result_plan
+
         request = TestRequestV2.model_validate(command.payload)
         run = self.assistant.run(
-            self.snapshot(view), request, auth, command.request_id, operation_name=command.operation
+            self.snapshot(view),
+            request,
+            auth,
+            command.request_id,
+            operation_name=command.operation,
+            generation_permitted=generation_permitted,
         )
         for ref in run.result.citations:
             self.check_evidence(view, auth, ref)
-        return Mutation(
-            writes=(self.write(run.result, "test", 0),),
-            events=(
-                EventDraft(
-                    type="test_assistant",
-                    visible_to=(auth.actor_id,),
-                    refs=(ref_for("test", run.result),),
-                ),
-            ),
-            result={"test": run.result.model_dump(mode="json")},
-        )
+        return result_plan(self, run)
 
     def list_tests(self, view, payload, auth):
         self.check_bindings(view.bindings)
@@ -479,9 +505,13 @@ class ScenarioModule:
             ):
                 continue
             result.append(item.model_dump(mode="json"))
-        return V2Response(
-            result={"tests": sorted(result, key=lambda x: (x["as_of"]["business_seq"], x["id"]))}
-        )
+        from career_lab.assistant.v2.jobs import listed_generations
+
+        data = {"tests": sorted(result, key=lambda x: (x["as_of"]["business_seq"], x["id"]))}
+        generations = listed_generations(view, {item["id"] for item in result})
+        if generations:
+            data["generations"] = generations
+        return V2Response(result=data)
 
     def materials(self, view, payload, auth):
         self.check_bindings(view.bindings)
@@ -599,4 +629,7 @@ class ScenarioModule:
         registry.register_reference_resolver("material", self.reference_resolver, contextual=True)
         for operation in self.operations():
             registry.register(operation)
+        from career_lab.assistant.v2.jobs import install_generation
+
+        install_generation(registry, self)
         return registry

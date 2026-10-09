@@ -36,6 +36,7 @@ def install_settings(registry, module):
             "min_score",
             "retrieval_limit",
             "chunk_size",
+            "generator",
         }
         if not body.settings or set(body.settings) - allowed:
             raise ProtocolError("invalid_settings", status=422)

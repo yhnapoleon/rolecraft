@@ -104,6 +104,9 @@ class AssistantConfig(V2):
     work_items: tuple[str, ...] = ()
     participants: NonNegativeInt = 0
     launch_day: PositiveInt = 7
+    generator: Literal["extractive", "llm"] = Field(
+        default="extractive", exclude_if=lambda value: value == "extractive"
+    )
 
 
 class EffectiveConfig(V2):
