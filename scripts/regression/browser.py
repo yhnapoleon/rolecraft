@@ -59,6 +59,8 @@ def main() -> None:
     api = f"http://127.0.0.1:{args.api_port}"
     web = f"http://127.0.0.1:{args.web_port}"
     env.update(
+        CAREER_LAB_CREDENTIAL_KEY_ID="regression-fixture-v1",
+        CAREER_LAB_CREDENTIAL_KEY="isolated-regression-credential-key-not-for-deployment",
         CAREER_LAB_SCENARIO_CATALOG=str(write_catalog(output / "catalog.json")),
         CAREER_LAB_SCENARIO_ARCHIVE=str(output / "archive"),
         ROLECRAFT_API_TARGET=api,

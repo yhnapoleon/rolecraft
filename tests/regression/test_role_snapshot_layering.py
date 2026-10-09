@@ -49,3 +49,9 @@ def test_old_role_snapshot_imports_forward_to_the_same_adapter() -> None:
     assert legacy.FixedRoleSnapshotPort is runtime.FixedRoleSnapshotPort
     assert legacy.activated_catalog is runtime.activated_catalog
     assert legacy.activated_reference is runtime.activated_reference
+    assert legacy._before is runtime._before
+    assert {name for name in vars(legacy) if not name.startswith("_")} == {
+        "FixedRoleSnapshotPort",
+        "activated_catalog",
+        "activated_reference",
+    }

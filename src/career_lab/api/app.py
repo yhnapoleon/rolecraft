@@ -31,6 +31,7 @@ from career_lab.runtime.loop import AgentRuntime
 from career_lab.runtime.model_adapter import LocalModel, OpenAICompatibleModel
 from career_lab.scenarios.loader import load_scenario
 from career_lab.scenarios.reducer import InvalidAction, VersionConflict
+from career_lab.security.credentials import deployment_key
 from career_lab.storage.sessions import IdempotencyConflict, SessionStore
 from career_lab.storage.v2_store import V2Store
 
@@ -107,7 +108,7 @@ def create_app(database_url=None, scenario_path=None, model=None, study_path=Non
     store = SessionStore(
         database_url or os.getenv("CAREER_LAB_DATABASE_URL", "sqlite:///career_lab.db")
     )
-    v2_store = V2Store(store.db)
+    v2_store = V2Store(store.db, credential_key_provider=deployment_key)
     extensions = extensions or ExtensionRegistry()
     for kind, resolver in extensions.reference_resolvers.items():
         v2_store.register_reference_resolver(
