@@ -1,23 +1,43 @@
 """Atomic v2 storage and authentication hooks for independently installed modules."""
 
-from dataclasses import dataclass, field, replace
-from datetime import datetime, timezone
-from uuid import uuid4
 import hmac
-import hashlib
 import json
 import secrets
 import time
-from pydantic import ValidationError
+from collections.abc import Callable
+from contextlib import nullcontext
+from dataclasses import dataclass, field, replace
+from datetime import datetime, timezone
+from uuid import uuid4
 
-from sqlalchemy import insert, select, update
-from career_lab.storage.database import Database
+from pydantic import ValidationError
+from sqlalchemy import insert, or_, select, update
+from sqlalchemy.engine import Connection
+
 from career_lab.contracts.v2 import *
-from .v2_tables import *
-from .v2_jobs import JobStoreMixin
+from career_lab.contracts.v2 import (
+    AuthContext,
+    DelegationGrant,
+    Executor,
+    JsonValue,
+    ScenarioStateV2,
+    WorldStateV2,
+    canonical,
+    digest,
+)
+from career_lab.security.credentials import (
+    DeploymentKey,
+    aliases,
+    deployment_key,
+    require_original_delegation_request,
+    signed_credential,
+)
+from career_lab.storage.database import Database
 
 from .object_plans import (
     ROLE_REPLY_PRIVATE_FIELDS as ROLE_REPLY_PRIVATE_FIELDS,
+)
+from .object_plans import (
     ObjectPlanContext,
     plan_object,
     role_reply_has_private_fields,
@@ -25,12 +45,16 @@ from .object_plans import (
 from .record_invariants import validate_write_set
 from .reference_graph import (
     full_references,
-    reference_values as reference_values,
     references,
     validate_graph,
     validate_reference_times,
 )
-
+from .reference_graph import (
+    reference_values as reference_values,
+)
+from .v2_jobs import JobStoreMixin
+from .v2_tables import *
+from .v2_tables import v2_credentials
 
 OBJECT_MODELS = {
     "task": WorkspaceTask,
@@ -149,8 +173,24 @@ class TransactionView:
         return found
 
 
+def session_owner(session_id: str, credential_id: str) -> AuthContext:
+    return AuthContext(
+        session_id=session_id,
+        actor_id="learner",
+        executor=Executor(id="human:" + session_id, kind="human"),
+        capabilities=("read", "act", "submit", "delegate"),
+        credential_id=credential_id,
+    )
+
+
 class V2Store(JobStoreMixin):
-    def __init__(self, url_or_db):
+    def __init__(
+        self,
+        url_or_db: str | Database,
+        *,
+        credential_key_provider: Callable[[], DeploymentKey] = deployment_key,
+    ) -> None:
+        self.credential_key_provider = credential_key_provider
         self._role_execution_seal = object()
         self.db = url_or_db if isinstance(url_or_db, Database) else Database(url_or_db)
         # v2 table definitions are registered before this additive create_all.
@@ -300,12 +340,14 @@ class V2Store(JobStoreMixin):
         self,
         bindings: SessionBindings,
         config: AssistantConfig,
-        resources: dict,
+        resources: dict[str, JsonValue],
         *,
-        session_id=None,
-        token=None,
-        scenario_state=None,
-    ):
+        session_id: str | None = None,
+        token: str | None = None,
+        scenario_state: ScenarioStateV2 | None = None,
+        _connection: Connection | None = None,
+        _credential_id: str | None = None,
+    ) -> tuple[WorldStateV2, str]:
         sid = session_id or uuid4().hex
         token = token or secrets.token_urlsafe(32)
         cycle = uuid4().hex
@@ -317,13 +359,7 @@ class V2Store(JobStoreMixin):
             cycle_id=cycle,
             resources=resources,
         )
-        owner = AuthContext(
-            session_id=sid,
-            actor_id="learner",
-            executor=Executor(id="human:" + sid, kind="human"),
-            capabilities=("read", "act", "submit", "delegate"),
-            credential_id=uuid4().hex,
-        )
+        owner = session_owner(sid, _credential_id or uuid4().hex)
         config = AssistantConfig.model_validate(
             config.model_dump(mode="json") | {"session_id": sid, "config_version": 0, "version": 1}
         )
@@ -337,7 +373,7 @@ class V2Store(JobStoreMixin):
             ),
             base_state_ref=digest(state),
         )
-        with self.db.transaction() as c:
+        with nullcontext(_connection) if _connection is not None else self.db.transaction() as c:
             c.execute(
                 insert(v2_sessions).values(
                     id=sid, bindings=canonical(bindings), state=canonical(state), storage_revision=0
@@ -460,13 +496,20 @@ class V2Store(JobStoreMixin):
             and (latest.get("task") or {}).get("object_id") in auth.create_under_tasks
         )
 
-    def authenticate(self, sid, token):
+    def authenticate(self, sid: str, token: str) -> AuthContext:
         with self.db.engine.connect() as c:
             r = (
                 c.execute(
                     select(v2_credentials).where(
                         v2_credentials.c.session_id == sid,
-                        v2_credentials.c.token_hash == digest(token),
+                        or_(
+                            v2_credentials.c.token_hash == digest(token),
+                            v2_credentials.c.id.in_(
+                                select(aliases.c.credential_id).where(
+                                    aliases.c.token_hash == digest(token)
+                                )
+                            ),
+                        ),
                     )
                 )
                 .mappings()
@@ -480,17 +523,19 @@ class V2Store(JobStoreMixin):
         with self.db.engine.connect() as c:
             return self._auth(c, auth, capability, operation, object_ids)
 
-    def issue_delegation(self, owner: AuthContext, grant: DelegationGrant, *, max_active_jobs=2):
+    def issue_delegation(
+        self,
+        owner: AuthContext,
+        grant: DelegationGrant,
+        *,
+        max_active_jobs: int = 2,
+        request_fingerprint: str | None = None,
+    ) -> str:
         if type(max_active_jobs) is not int or not 1 <= max_active_jobs <= 2:
             raise ProtocolError("delegation_job_limit_invalid")
         with self.db.transaction() as c:
             self._auth(c, owner, "delegate")
-            key = c.execute(
-                select(v2_credentials.c.token_hash).where(
-                    v2_credentials.c.id == owner.credential_id
-                )
-            ).scalar_one()
-            token = hmac.new(key.encode(), canonical(grant).encode(), hashlib.sha256).hexdigest()
+
             if (
                 grant.session_id != owner.session_id
                 or grant.actor_id != owner.actor_id
@@ -543,13 +588,23 @@ class V2Store(JobStoreMixin):
             if previous and (policy if policy is not None else 2) != max_active_jobs:
                 raise ProtocolError("delegation_id_reused", status=409)
             if previous:
-                if (
-                    previous["revoked"]
-                    or previous["context"] != canonical(context)
-                    or previous["token_hash"] != digest(token)
-                ):
+                if previous["revoked"] or previous["context"] != canonical(context):
                     raise ProtocolError("delegation_id_reused", status=409)
-            else:
+            if not previous:
+                require_original_delegation_request(c, owner, context)
+            token = signed_credential(
+                c,
+                self.credential_key_provider,
+                "delegation",
+                owner,
+                context,
+                {
+                    "grant": grant.model_dump(mode="json"),
+                    "max_active_jobs": max_active_jobs,
+                    "request_fingerprint": request_fingerprint,
+                },
+            )
+            if not previous:
                 self._credential(c, context, token)
             if policy is None:
                 c.execute(
@@ -615,7 +670,7 @@ class V2Store(JobStoreMixin):
             self._credential(c, context, token)
         return context
 
-    def reference_agent_token(self, owner):
+    def reference_agent_token(self, owner: AuthContext) -> str:
         """Internal research namespace only; never exposed as a learner delegation option."""
         with self.db.transaction() as c:
             self._auth(c, owner, "delegate")
@@ -627,12 +682,6 @@ class V2Store(JobStoreMixin):
                 capabilities=("read", "act", "submit"),
                 credential_id=cid,
             )
-            key = c.execute(
-                select(v2_credentials.c.token_hash).where(
-                    v2_credentials.c.id == owner.credential_id
-                )
-            ).scalar_one()
-            token = hmac.new(key.encode(), canonical(context).encode(), hashlib.sha256).hexdigest()
             previous = (
                 c.execute(select(v2_credentials).where(v2_credentials.c.id == cid))
                 .mappings()
@@ -641,7 +690,15 @@ class V2Store(JobStoreMixin):
             if previous:
                 if previous["revoked"] or previous["context"] != canonical(context):
                     raise ProtocolError("credential_revoked_or_invalid", status=403)
-            else:
+            token = signed_credential(
+                c,
+                self.credential_key_provider,
+                "reference-agent",
+                owner,
+                context,
+                {"session_id": owner.session_id, "credential_id": cid},
+            )
+            if not previous:
                 self._credential(c, context, token)
         return token
 

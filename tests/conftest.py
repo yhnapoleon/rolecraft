@@ -27,8 +27,9 @@ def stale_contract_scenario(tmp_path):
     """
     import hashlib
     import json
-    from career_lab.scenarios.v2.seed import build_seed
+
     from career_lab.scenarios.v2.module import ScenarioModule
+    from career_lab.scenarios.v2.seed import build_seed
 
     root = build_seed(tmp_path / "stale-contract-scenario")
     ScenarioModule(root)  # Prove the positive fixture before making one field stale.
@@ -47,3 +48,12 @@ def stale_contract_scenario(tmp_path):
             ref["sha256"] = hashlib.sha256((root / ref["path"]).read_bytes()).hexdigest()
     manifest.write_text(json.dumps(data))
     return root
+
+
+@pytest.fixture(autouse=True)
+def local_credential_signing_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Tests explicitly provision a fake deployment key; production has no default."""
+    monkeypatch.setenv("CAREER_LAB_CREDENTIAL_KEY_ID", "test-key-v1")
+    monkeypatch.setenv(
+        "CAREER_LAB_CREDENTIAL_KEY", "isolated-credential-test-key-not-for-deployment-074"
+    )
