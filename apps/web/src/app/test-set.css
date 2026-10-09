@@ -667,3 +667,28 @@ html[data-input="keyboard"] .test-set-work .btn:active {
 .outline .ol-head {
   min-width: 0;
 }
+
+.test-generation {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  padding-top: 12px;
+  color: var(--ink-3);
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.test-generation-label {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.test-generation[data-generation-mode='failed'] .test-generation-label,
+.test-generation[data-generation-mode='unavailable'] .test-generation-label {
+  color: var(--warn);
+}
+.test-effective-config summary {
+  cursor: pointer;
+}
+.test-effective-config pre {
+  max-width: 100%;
+  white-space: pre-wrap;
+}
