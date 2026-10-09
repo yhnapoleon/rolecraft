@@ -483,6 +483,7 @@ def export(root: Path, output: Path):
             "src/career_lab/api/workspace_integration.py",
             "src/career_lab/api/feedback_integration.py",
             "src/career_lab/api/role_snapshot.py",
+            "src/career_lab/runtime/role_snapshot.py",
             "src/career_lab/api/private_roles.py",
             "src/career_lab/api/modules.py",
             "src/career_lab/api/v2_routes.py",

@@ -62,7 +62,6 @@ extend-exclude = [
     "src/career_lab/contracts/deliverables.py",
     "src/career_lab/contracts/evaluation.py",
     "src/career_lab/contracts/scenario.py",
-
 ]
 
 [tool.ruff.lint]
