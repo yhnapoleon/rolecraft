@@ -1,29 +1,16 @@
 """No arbitrary HTTP proxy: only the fixed public business routes are callable."""
 
-import time, re, asyncio, json
-from urllib.parse import quote
-import httpx
+import time
+
 from pydantic import ValidationError
+
 from career_lab.contracts import v2 as C
+
+from . import http_transport
 from .catalog import ROUTES
 from .credentials import load_credentials, redact
-
-
-class RemoteFailure(Exception):
-    def __init__(self, code, status=0):
-        self.code, self.status = code, status
-        super().__init__(code)
-
-
-def safe_id(value):
-    if (
-        not isinstance(value, str)
-        or not value
-        or any(c in value for c in "/\\%\r\n")
-        or value in {".", ".."}
-    ):
-        raise RemoteFailure("route_object_invalid", 422)
-    return quote(value, safe="")
+from .http_transport import RemoteFailure as RemoteFailure
+from .http_transport import safe_id as safe_id
 
 
 class HttpAgentClient:
@@ -36,51 +23,15 @@ class HttpAgentClient:
     def _request(
         self, credentials, method, suffix, body=None, query=None, deadline=None, *, operation=None
     ):
-        url = credentials.api_url + "/sessions/" + safe_id(credentials.session_id) + suffix
         timeout = (
             self.timeout
             if deadline is None
             else min(self.timeout, max(0.001, deadline - time.monotonic()))
         )
 
-        async def execute():
-            async with asyncio.timeout(timeout):
-                async with httpx.AsyncClient(
-                    timeout=timeout, follow_redirects=False, trust_env=False
-                ) as client:
-                    async with client.stream(
-                        method,
-                        url,
-                        headers={"Authorization": "Bearer " + credentials.token},
-                        json=body,
-                        params=query,
-                    ) as response:
-                        raw = bytearray()
-                        async for chunk in response.aiter_bytes():
-                            raw.extend(chunk)
-                            if len(raw) > 8_000_000:
-                                raise RemoteFailure("response_unconfirmed")
-                        return response.status_code, bytes(raw)
-
-        try:
-            status, raw = asyncio.run(execute())
-        except (httpx.HTTPError, TimeoutError):
-            raise RemoteFailure("response_unconfirmed") from None
-        try:
-            value = json.loads(raw)
-        except ValueError:
-            raise RemoteFailure("response_unconfirmed") from None
-        if not 200 <= status < 300:
-            code = value.get("code") if isinstance(value, dict) else None
-            if (
-                not isinstance(code, str)
-                or not re.fullmatch(r"[a-z][a-z0-9_]{0,95}", code)
-                or credentials.token in code
-            ):
-                code = "request_failed"
-            raise RemoteFailure(code, status)
-        if not isinstance(value, dict) or value.get("schema_version") != 2:
-            raise RemoteFailure("response_unconfirmed")
+        value = http_transport.request_json(
+            credentials, method, suffix, body=body, query=query, timeout=timeout
+        )
         from .public_output import project_public_output
 
         return redact(project_public_output(value, operation=operation), credentials.token)

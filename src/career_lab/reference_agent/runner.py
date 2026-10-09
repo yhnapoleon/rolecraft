@@ -20,7 +20,7 @@ from career_lab.contracts.v2.core import (
 from career_lab.contracts.v2.data import ActionProposal
 from career_lab.contracts.v2.research import RequestResult, RunManifest, RuntimeBundle
 from career_lab.delegations.credentials import Credentials, load_credentials
-from career_lab.reference_agent.journal import RunJournal
+from career_lab.reference_agent.journal import CheckpointSink, RunJournal
 from career_lab.reference_agent.ports import OPERATIONS, HttpEnvironment
 from career_lab.reference_agent.request_identity import RequestIdentity
 from career_lab.reference_agent.suite import load_manifest
@@ -57,12 +57,12 @@ def source_digest() -> str:
     )
 
 
-def fixed_checklist(
+def bound_runtime(
     manifest: RunManifest,
     registry: BundleRegistry,
     runtime_id: str,
     evaluation_id: str,
-) -> Checklist:
+) -> RuntimeBundle:
     registry.bind(runtime_id, evaluation_id)
     runtime = registry.load(runtime_id)
     if not isinstance(runtime, RuntimeBundle) or runtime.source != manifest.source:
@@ -73,6 +73,16 @@ def fixed_checklist(
     ):
         raise ProtocolError("run_runtime_mismatch")
     registry.resolve_manifest(evaluation_id, manifest.evaluation)
+    return runtime
+
+
+def fixed_checklist(
+    manifest: RunManifest,
+    registry: BundleRegistry,
+    runtime_id: str,
+    evaluation_id: str,
+) -> Checklist:
+    runtime = bound_runtime(manifest, registry, runtime_id, evaluation_id)
     if manifest.policy is None or runtime.skills is not None:
         raise ProtocolError("reference_policy_unavailable", status=503)
     if (
@@ -175,15 +185,12 @@ def run_checklist(
         environment = HttpEnvironment(
             credentials, auth.executor, RequestIdentity(database, credentials, auth.executor)
         )
-        try:
-            advance(state, checklist, environment, journal)
-        finally:
-            environment.close()
+        advance(state, checklist, environment, journal)
         return state.model_dump(mode="json")
 
 
 def advance(
-    state: Checkpoint, checklist: Checklist, environment: HttpEnvironment, journal: RunJournal
+    state: Checkpoint, checklist: Checklist, environment: HttpEnvironment, journal: CheckpointSink
 ) -> None:
     if state.status == "failed":
         return

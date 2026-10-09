@@ -8,6 +8,9 @@ from pathlib import Path
 import pytest
 from pydantic import JsonValue
 
+from career_lab.delegations import http_transport
+from career_lab.delegations.credentials import Credentials
+
 
 def test_RUN_01_cli_rejects_implicit_draft_protocol(tmp_path: Path) -> None:
     path = tmp_path / "old-run.json"
@@ -62,35 +65,34 @@ def test_RUN_02_fixed_http_test_completes_and_recovers_original_result(tmp_path:
 def test_RUN_02_lost_http_response_recovers_only_the_original_request(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import httpx
     from runner_fixture import live_run
 
     from career_lab.reference_agent.runner import run_checklist
 
-    original = httpx.Client.request
+    original = http_transport.request_json
     sent = []
     reads = []
 
     def lost_response(
-        client: httpx.Client, method: str, url: httpx.URL | str, *args: object, **kwargs: object
-    ) -> httpx.Response:
-        response = original(client, method, url, *args, **kwargs)
-        if method == "POST" and str(url).endswith("/tests"):
-            sent.append(response.status_code)
-            raise httpx.ReadError("response lost after commit")
-        if method == "GET" and "/requests/" in str(url):
-            reads.append(str(url))
+        credentials: Credentials, method: str, suffix: str, *args: object, **kwargs: object
+    ) -> dict[str, JsonValue]:
+        response = original(credentials, method, suffix, *args, **kwargs)
+        if method == "POST" and suffix.endswith("/tests"):
+            sent.append(response["boundary"]["request_id"])
+            raise http_transport.RemoteFailure("response_unconfirmed")
+        if method == "GET" and "/requests/" in suffix:
+            reads.append(suffix)
         return response
 
     with live_run(tmp_path, "tests.create") as run:
-        monkeypatch.setattr(httpx.Client, "request", lost_response)
+        monkeypatch.setattr(http_transport, "request_json", lost_response)
         interrupted = run_checklist(**run.arguments)
         assert interrupted["status"] == "unresolved"
         assert interrupted["error_code"] == "request_result_unresolved"
         recovered = run_checklist(**run.arguments, resume=True)
         assert recovered["status"] == "completed"
         assert recovered["dispatch_count"] == 1
-        assert sent == [200]
+        assert sent == [recovered["results"][0]["request_id"]]
         assert len(reads) == 1
         assert len(recovered["results"]) == 1
 
@@ -126,22 +128,21 @@ def test_RUN_budget_expires_during_state_read_without_dispatch(
 ) -> None:
     import time
 
-    import httpx
     from runner_fixture import live_run
 
     from career_lab.reference_agent.runner import run_checklist
 
-    original = httpx.Client.request
+    original = http_transport.request_json
     posts = []
 
     def delayed_state(
-        client: httpx.Client, method: str, url: httpx.URL | str, *args: object, **kwargs: object
-    ) -> httpx.Response:
-        response = original(client, method, url, *args, **kwargs)
-        if method == "GET" and "/requests/" not in str(url):
+        credentials: Credentials, method: str, suffix: str, *args: object, **kwargs: object
+    ) -> dict[str, JsonValue]:
+        response = original(credentials, method, suffix, *args, **kwargs)
+        if method == "GET" and "/requests/" not in suffix:
             time.sleep(0.05)
         if method == "POST":
-            posts.append(str(url))
+            posts.append(suffix)
         return response
 
     with live_run(tmp_path, "tests.create") as run:
@@ -149,7 +150,7 @@ def test_RUN_budget_expires_during_state_read_without_dispatch(
         manifest = json.loads(manifest_path.read_text())
         manifest["budget"]["wall_seconds"] = 0.02
         manifest_path.write_text(json.dumps(manifest))
-        monkeypatch.setattr(httpx.Client, "request", delayed_state)
+        monkeypatch.setattr(http_transport, "request_json", delayed_state)
         result = run_checklist(**run.arguments)
         assert result["status"] == "failed"
         assert result["error_code"] == "run_budget_exhausted"
@@ -214,23 +215,22 @@ def test_RUN_03_worker_ack_without_effect_stays_unresolved(tmp_path: Path) -> No
 def test_RUN_02_invalid_recovery_response_keeps_committed_action_unresolved(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import httpx
     from runner_fixture import live_run
 
     from career_lab.reference_agent.runner import run_checklist
 
-    original = httpx.Client.request
+    original = http_transport.request_json
 
     def malformed(
-        client: httpx.Client, method: str, url: httpx.URL | str, *args: object, **kwargs: object
-    ) -> httpx.Response:
-        response = original(client, method, url, *args, **kwargs)
-        if "/requests/" in str(url):
-            return httpx.Response(200, json={"schema_version": 2}, request=response.request)
+        credentials: Credentials, method: str, suffix: str, *args: object, **kwargs: object
+    ) -> dict[str, JsonValue]:
+        response = original(credentials, method, suffix, *args, **kwargs)
+        if "/requests/" in suffix:
+            return {"schema_version": 2}
         return response
 
     with live_run(tmp_path, "tests.create") as run:
-        monkeypatch.setattr(httpx.Client, "request", malformed)
+        monkeypatch.setattr(http_transport, "request_json", malformed)
         result = run_checklist(**run.arguments)
         assert result["status"] == "unresolved"
         assert result["error_code"] == "request_result_invalid"
@@ -327,7 +327,6 @@ def test_RUN_reference_observation_uses_actual_public_acquisition(
 def test_S1_checklist_requires_the_registered_evaluation_root(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import httpx
     from runner_fixture import live_run
     from test_bundle_registry_flow import write_json
 
@@ -351,15 +350,15 @@ def test_S1_checklist_requires_the_registered_evaluation_root(
         root = write_json(source, "other-evaluation.json", other)
         run.arguments["evaluation_id"] = registry.register("evaluation", source, root)
         calls = []
-        request = httpx.Client.request
+        request = http_transport.request_json
 
         def observed_request(
-            client: httpx.Client, method: str, url: str | httpx.URL, *args: object, **kwargs: object
-        ) -> httpx.Response:
+            credentials: Credentials, method: str, suffix: str, *args: object, **kwargs: object
+        ) -> dict[str, JsonValue]:
             calls.append(method)
-            return request(client, method, url, *args, **kwargs)
+            return request(credentials, method, suffix, *args, **kwargs)
 
-        monkeypatch.setattr(httpx.Client, "request", observed_request)
+        monkeypatch.setattr(http_transport, "request_json", observed_request)
         with pytest.raises(ProtocolError) as rejected:
             run_checklist(**run.arguments)
         assert rejected.value.code == "registry_manifest_mismatch"
@@ -409,31 +408,32 @@ def test_S2_same_run_name_with_new_fixed_command_has_its_own_result(tmp_path: Pa
 def test_S2_confirmed_request_conflict_never_recovers_another_command(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import httpx
     from runner_fixture import live_run
 
     from career_lab.reference_agent.runner import run_checklist
 
     with live_run(tmp_path, "tests.create") as run:
-        request = httpx.Client.request
+        request = http_transport.request_json
         claimed = False
         recoveries = []
 
         def conflicting_request(
-            client: httpx.Client, method: str, url: str | httpx.URL, *args: object, **kwargs: object
-        ) -> httpx.Response:
+            credentials: Credentials, method: str, suffix: str, *args: object, **kwargs: object
+        ) -> dict[str, JsonValue]:
             nonlocal claimed
-            if method == "POST" and str(url).endswith("/tests") and not claimed:
+            if method == "POST" and suffix.endswith("/tests") and not claimed:
                 claimed = True
-                other = json.loads(json.dumps(kwargs["json"]))
+                other = json.loads(json.dumps(kwargs["body"]))
                 other["payload"]["query"] = "Another command owns this request identity"
-                competing = request(client, method, url, *args, **(kwargs | {"json": other}))
-                assert competing.status_code == 200
-            if method == "GET" and "/requests/" in str(url):
-                recoveries.append(str(url))
-            return request(client, method, url, *args, **kwargs)
+                competing = request(
+                    credentials, method, suffix, *args, **(kwargs | {"body": other})
+                )
+                assert competing["schema_version"] == 2
+            if method == "GET" and "/requests/" in suffix:
+                recoveries.append(suffix)
+            return request(credentials, method, suffix, *args, **kwargs)
 
-        monkeypatch.setattr(httpx.Client, "request", conflicting_request)
+        monkeypatch.setattr(http_transport, "request_json", conflicting_request)
         first = run_checklist(**run.arguments)
         resumed = run_checklist(**run.arguments, resume=True)
         assert first["status"] == "failed"
@@ -446,29 +446,30 @@ def test_S2_confirmed_request_conflict_never_recovers_another_command(
 def test_S2_conflict_before_checkpoint_commit_cannot_recover_the_competing_command(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import httpx
     from runner_fixture import live_run
 
     from career_lab.reference_agent.journal import RunJournal
     from career_lab.reference_agent.runner import run_checklist
 
     with live_run(tmp_path, "tests.create") as run:
-        request = httpx.Client.request
+        request = http_transport.request_json
         save = RunJournal.save
         claimed = False
         crashed = False
 
         def competing_request(
-            client: httpx.Client, method: str, url: str | httpx.URL, *args: object, **kwargs: object
-        ) -> httpx.Response:
+            credentials: Credentials, method: str, suffix: str, *args: object, **kwargs: object
+        ) -> dict[str, JsonValue]:
             nonlocal claimed
-            if method == "POST" and str(url).endswith("/tests") and not claimed:
+            if method == "POST" and suffix.endswith("/tests") and not claimed:
                 claimed = True
-                other = json.loads(json.dumps(kwargs["json"]))
+                other = json.loads(json.dumps(kwargs["body"]))
                 other["payload"]["query"] = "A competing command owns the request"
-                competing = request(client, method, url, *args, **(kwargs | {"json": other}))
-                assert competing.status_code == 200
-            return request(client, method, url, *args, **kwargs)
+                competing = request(
+                    credentials, method, suffix, *args, **(kwargs | {"body": other})
+                )
+                assert competing["schema_version"] == 2
+            return request(credentials, method, suffix, *args, **kwargs)
 
         def interrupted_save(journal: RunJournal, state: dict[str, JsonValue]) -> None:
             nonlocal crashed
@@ -477,7 +478,7 @@ def test_S2_conflict_before_checkpoint_commit_cannot_recover_the_competing_comma
                 raise OSError("interrupted before conflict checkpoint commit")
             return save(journal, state)
 
-        monkeypatch.setattr(httpx.Client, "request", competing_request)
+        monkeypatch.setattr(http_transport, "request_json", competing_request)
         monkeypatch.setattr(RunJournal, "save", interrupted_save)
         with pytest.raises(OSError, match="before conflict checkpoint"):
             run_checklist(**run.arguments)
@@ -486,3 +487,30 @@ def test_S2_conflict_before_checkpoint_commit_cannot_recover_the_competing_comma
         assert resumed["error_code"] == "request_id_reused"
         assert resumed["results"] == []
         assert resumed["dispatch_count"] == 1
+
+
+def test_reference_transport_rejects_oversized_http_response(tmp_path: Path) -> None:
+    from fastapi import FastAPI
+    from runner_fixture import server_url
+
+    from career_lab.contracts.v2.core import Executor, ProtocolError
+    from career_lab.delegations.credentials import Credentials
+    from career_lab.reference_agent.ports import HttpEnvironment
+    from career_lab.reference_agent.request_identity import RequestIdentity
+
+    app = FastAPI()
+
+    @app.get("/sessions/session")
+    def oversized() -> dict[str, JsonValue]:
+        return {"schema_version": 2, "body": "x" * 8_000_001}
+
+    with server_url(app) as url:
+        credentials = Credentials(url, "session", "synthetic-transport-secret")
+        executor = Executor(kind="reference_agent", id="reference")
+        environment = HttpEnvironment(
+            credentials, executor, RequestIdentity(tmp_path / "unused.db", credentials, executor)
+        )
+        with pytest.raises(ProtocolError) as rejected:
+            environment.request("GET", "")
+        assert rejected.value.code == "request_result_unresolved"
+        assert credentials.token not in str(rejected.value)

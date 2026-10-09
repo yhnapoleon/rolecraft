@@ -17,11 +17,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     validate = commands.add_parser("validate")
     validate.add_argument("--manifest", type=Path, required=True)
     run = commands.add_parser("run", help="Execute or recover a fixed local checklist")
-    for name in ("manifest", "registry", "database", "credentials", "scenario-root", "output"):
-        run.add_argument("--" + name, type=Path, required=True)
-    run.add_argument("--runtime-id", required=True)
-    run.add_argument("--evaluation-id", required=True)
-    run.add_argument("--resume", action="store_true")
+    loop = commands.add_parser("loop", help="Run or recover an ordinary or active tool loop")
+    for command in (run, loop):
+        for name in ("manifest", "registry", "database", "credentials", "scenario-root", "output"):
+            command.add_argument("--" + name, type=Path, required=True)
+        command.add_argument("--runtime-id", required=True)
+        command.add_argument("--evaluation-id", required=True)
+        command.add_argument("--resume", action="store_true")
+    loop.add_argument("--strategy", choices=("ordinary", "active"), required=True)
+    loop.add_argument("--goal", required=True)
     args = parser.parse_args(argv)
     try:
         if args.command == "validate":
@@ -30,7 +34,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             from career_lab.reference_agent.runner import run_checklist
 
-            report = run_checklist(
+            if args.command == "loop":
+                from career_lab.reference_agent.loop import run_loop
+
+                runner = run_loop
+                strategy = {"strategy": args.strategy, "goal": args.goal}
+            else:
+                runner = run_checklist
+                strategy = {}
+            report = runner(
                 manifest_path=args.manifest,
                 registry_path=args.registry,
                 runtime_id=args.runtime_id,
@@ -40,6 +52,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 scenario_root=args.scenario_root,
                 output=args.output,
                 resume=args.resume,
+                **strategy,
             )
     except (ValueError, OSError, SQLAlchemyError) as error:
         report = {

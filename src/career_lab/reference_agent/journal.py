@@ -6,10 +6,15 @@ import os
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
+from typing import Protocol
 
 from pydantic import JsonValue
 
 from career_lab.contracts.v2.core import ProtocolError, canonical, digest
+
+
+class CheckpointSink(Protocol):
+    def save(self, state: dict[str, JsonValue]) -> None: ...
 
 
 class RunJournal:

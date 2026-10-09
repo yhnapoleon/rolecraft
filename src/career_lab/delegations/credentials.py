@@ -67,5 +67,7 @@ def redact(value, token):
         return {
             k: ("[REDACTED]" if is_credential_field(str(k)) else redact(v, token))
             for k, v in value.items()
+            # Omit credential-bearing keys; renaming could collide with a safe key.
+            if not (token and token in str(k))
         }
     return value
