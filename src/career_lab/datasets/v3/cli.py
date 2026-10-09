@@ -9,6 +9,7 @@ from career_lab.contracts.v2.data import Lineage, Provenance
 
 from .common import read_json
 from .export import ExportUnit, FrozenSnapshot, SourceObject, export_snapshot
+from .handoff import validate_handoff
 from .labeling import AnnotationBatch
 from .live_cli import authorize, connection_arguments, export_live, register_authorization
 from .quality import QualityError
@@ -17,6 +18,14 @@ from .release import audit_release, load_export, publish_exports, publish_releas
 
 def register_commands(commands):
     """Accept the existing argparse subparser collection; do not replace its CLI."""
+    handoff = commands.add_parser(
+        "validate-handoff", help="Review responsible-party files without executing models"
+    )
+    handoff.set_defaults(w07_handler=dispatch)
+    handoff.add_argument("--package", type=Path, required=True)
+    handoff.add_argument("--output", type=Path, required=True)
+    handoff.add_argument("--checkpoint-manifest", type=Path)
+    handoff.add_argument("--split", choices=("train", "dev", "test", "regression"), default="dev")
     export = commands.add_parser(
         "export", help="Export an authorized live session or an explicit fixture snapshot"
     )
@@ -51,6 +60,11 @@ def register_commands(commands):
     issue.add_argument("--record-id", required=True)
     issue.add_argument("--phase", type=int, choices=(1, 2, 3), required=True)
     issue.add_argument("--retry-failed", action="store_true")
+    issue.add_argument(
+        "--retry-unknown",
+        action="store_true",
+        help="Explicitly record a new attempt after an unknown outcome",
+    )
     receive = ops.add_parser("receive")
     receive.add_argument("--batch", type=Path, required=True)
     receive.add_argument("--receipt", type=Path, required=True)
@@ -74,6 +88,10 @@ def register_commands(commands):
 
 
 def dispatch(args):
+    if args.command == "validate-handoff":
+        return validate_handoff(
+            args.package, args.output, checkpoint=args.checkpoint_manifest, split=args.split
+        )
     if args.command == "authorize":
         return authorize(args)
     if args.command == "export":
@@ -146,7 +164,12 @@ def dispatch(args):
             return batch.manifest
         batch = AnnotationBatch(args.batch)
         if args.operation == "issue":
-            return batch.claim(args.record_id, args.phase, retry_failed=args.retry_failed)
+            return batch.claim(
+                args.record_id,
+                args.phase,
+                retry_failed=args.retry_failed,
+                retry_unknown=args.retry_unknown,
+            )
         if args.operation == "receive":
             return batch.receive(read_json(args.receipt))
         return {
@@ -218,4 +241,9 @@ def main(argv=None):
         )
         return 2
     print(json.dumps(result, ensure_ascii=False, allow_nan=False))
+    if args.command == "validate-handoff" and (
+        any(row["status"] != "accept" for row in result["records"])
+        or not result.get("model_return", {}).get("format_valid", True)
+    ):
+        return 2
     return 0
