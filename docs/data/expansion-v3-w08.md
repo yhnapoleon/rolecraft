@@ -261,7 +261,7 @@ uv sync --locked --python 3.12
 
 ## 正式回传复核 CLI（2026-10-09）
 
-`verify-return`只读接收既有的label/evidence v2回传，不训练、不下载、不执行清单中的生产者命令。当前支持交接包的可移植布局：固定的`dataset-manifest.json`、`data/dev.inputs.jsonl`、`data/dev.labels.jsonl`、`audit/original-annotations.jsonl`与`audit/metadata.jsonl`；这些文件均须由manifest逐文件绑定。后续真实负责方若采用其他布局，须先明确格式，不能按文件名猜测。
+`verify-return`只读接收既有的label/evidence v2回传，不训练、不下载、不执行清单中的生产者命令。当前支持交接包的可移植布局：固定的`dataset-manifest.json`、`data/dev.inputs.jsonl`、`data/dev.labels.jsonl`、`audit/original-annotations.jsonl`与`audit/metadata.jsonl`；这些文件均须由manifest逐文件绑定。该布局共用一份annotations，因此只接受无test的train/dev包：先核manifest和全量metadata分区，再读取标签；含test或未知分区明确拒绝。后续含test的数据须按split独立冻结标签，不能先读取全量再过滤。后续真实负责方若采用其他布局，须先明确格式，不能按文件名猜测。
 
 先核对回传格式与分语言指标：
 

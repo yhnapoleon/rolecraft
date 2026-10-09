@@ -37,6 +37,7 @@ class DatasetManifest(BaseModel):
     schema_version: Literal[1]
     dataset_id: str = Field(min_length=1)
     status: str
+    test_included: bool = False
     task_type: Literal["relation"]
     label_order: list[str]
     files: dict[str, FileIdentity]
@@ -83,15 +84,21 @@ def load_return_dataset(root: Path, checksum: str, partition: str) -> ReturnData
         raise C.ProtocolError("return_dataset_protocol_invalid") from error
     if manifest.label_order != list(LABELS["relation"]):
         raise C.ProtocolError("return_dataset_protocol_invalid")
+    if manifest.test_included or not set(manifest.splits) <= {"train", "dev"}:
+        raise C.ProtocolError("return_held_out_bundle_forbidden", status=403)
 
     def records(name: str) -> dict[str, dict[str, Any]]:
         ref = C.FileRef(path=name, sha256=manifest.files[name].sha256)
         return unique_records(json_lines(C.read_file(root, ref)))
 
+    # The portable format has one shared annotation file. Check its entire
+    # declared partition inventory before opening any labels, not after filtering.
+    metadata = records("audit/metadata.jsonl")
+    if any(row.get("split") not in {"train", "dev"} for row in metadata.values()):
+        raise C.ProtocolError("return_shared_annotation_partition_forbidden", status=403)
     inputs = records(f"data/{partition}.inputs.jsonl")
     labels = records(f"data/{partition}.labels.jsonl")
     annotations = records("audit/original-annotations.jsonl")
-    metadata = records("audit/metadata.jsonl")
     if (
         not inputs
         or inputs.keys() != labels.keys()

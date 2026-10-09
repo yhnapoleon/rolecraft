@@ -444,3 +444,43 @@ def test_ret_04_chinese_fixture_is_reported_separately(return_case, capsys) -> N
     assert result["languages"]["en"]["status"] == "blocked_missing_language"
     assert result["scope"] == "synthetic_fixture"
     assert result["quality_validated"] is False
+
+
+@pytest.mark.parametrize(
+    "case", ["manifest_test", "test_flag", "metadata_test", "unknown_partition"]
+)
+def test_ret_03_rejects_shared_held_out_audit_before_reading_labels(
+    return_case,
+    capsys,
+    monkeypatch: pytest.MonkeyPatch,
+    case: str,
+) -> None:
+    root, _, predictions = return_case
+    path = root / "dataset-manifest.json"
+    manifest = json.loads(path.read_text())
+    if case == "manifest_test":
+        manifest["splits"]["test"] = {"records": 1, "language": {"en": 1}}
+    elif case == "test_flag":
+        manifest["test_included"] = True
+    else:
+        metadata = root / "audit/metadata.jsonl"
+        rows = [json.loads(line) for line in metadata.read_text().splitlines()]
+        rows[0]["split"] = "test" if case == "metadata_test" else "unknown"
+        metadata.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    path.write_text(json.dumps(manifest))
+    checksum = reseal_dataset(root)
+    opened = []
+    original = Path.read_bytes
+
+    def recording_read(target: Path) -> bytes:
+        opened.append(target.resolve())
+        return original(target)
+
+    monkeypatch.setattr(Path, "read_bytes", recording_read)
+    code, result = invoke((root, checksum, predictions), capsys)
+    assert code == 2
+    assert result["error"] in {
+        "return_held_out_bundle_forbidden",
+        "return_shared_annotation_partition_forbidden",
+    }
+    assert (root / "audit/original-annotations.jsonl").resolve() not in opened
