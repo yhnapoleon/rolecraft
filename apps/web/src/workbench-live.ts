@@ -4,8 +4,12 @@ import { T, locale } from './app/i18n';
 import { V4LiveData } from './v4-live-data';
 import { V4Mounts } from './v4-mounts';
 import { projectNativeWorkspace } from './v4-workspace-projection';
-import { keepProductDraft } from './features/workspace/native-v4/slot-controller';
+import {
+  keepProductDraft,
+  WorkspaceSlotController,
+} from './features/workspace/native-v4/slot-controller';
 import type { ProductCreate, WorkspaceProductRead } from './contracts-v2';
+import { workspaceActionMessage } from './features/workspace/native-v4/messages';
 import { canonicalPurpose } from './features/workspace/native-v4/form-values';
 import { blankPilot, WorkspaceStore } from './store';
 import type {
@@ -554,6 +558,30 @@ export class LiveWorkbench {
     )
       throw new Error(T('当前无法保存作品草稿。', 'The work draft cannot be saved right now.'));
     await keepProductDraft(this.v4.host(session), product, patch);
+  }
+  async restoreNativeProduct(a: Attempt, productId: string): Promise<void> {
+    const session = this.session(a);
+    const host = this.v4Host(a);
+    if (!session?.v2NativeWorkspace || !host)
+      throw new Error(T('当前无法恢复作品。', 'Work cannot be restored right now.'));
+    const controller = new WorkspaceSlotController(host);
+    try {
+      await controller.refresh();
+      const product = controller.state.products.find((item) => item.product_id === productId);
+      if (!product) throw new Error('product_unavailable');
+      if (!product.removed_at) return;
+      const result = await controller.remove(false, productId);
+      if (result.status !== 'confirmed') throw new Error(`restore_${result.status}`);
+      const current = this.store
+        .getSnapshot()
+        .workspace.sessions.find((item) => item.id === session.id);
+      if (current) await this.v4.sync(current);
+      this.changed();
+    } catch (error) {
+      throw new Error(workspaceActionMessage(error instanceof Error ? error.message : '', T));
+    } finally {
+      controller.destroy();
+    }
   }
   nativeWorkspace(a: Attempt) {
     return this.session(a)?.v2NativeWorkspace === true;

@@ -589,8 +589,11 @@ export class WorkspaceSlotController {
       operation: 'revoke',
     });
   }
-  remove(removed: boolean) {
-    const p = this.selected();
+  remove(removed: boolean, productId?: string) {
+    const p =
+      productId !== undefined
+        ? this.state.products.find((product) => product.product_id === productId)
+        : this.selected();
     if (!p || this.draft(p)) throw Error('save_before_removing');
     return this.command('work_products.versions.create', {
       ...productInput(p),

@@ -1351,14 +1351,30 @@ function removedWorksSheet(scopeTaskId = task()?.id || null) {
     'narrow',
   );
 }
-function restoreWork(a, id) {
+function restoreWork(a, id, trigger) {
   const x = a.artifacts.find((w) => w.id === id);
   if (!x || statusOf(a) !== 'active' || storageIssue || snap().storageError)
     throw new Error(T('当前无法恢复作品。', 'Work cannot be restored right now.'));
+  const finish = () => {
+    closeSheet(true);
+    openTask(x.taskId, { type: 'work', id });
+    notify(T('已恢复《' + shown(x).title + '》', 'Restored “' + shown(x).title + '”'));
+  };
+  if (L.nativeWorkspace(a)) {
+    return L.restoreNativeProduct(a, id).then(() => {
+      if (current()?.id === a.id && sheet.open && trigger?.isConnected) finish();
+    });
+  }
   localWorkChange(a, () => E.restoreArtifact(a, id));
-  closeSheet(true);
-  openTask(x.taskId, { type: 'work', id });
-  notify(T('已恢复《' + shown(x).title + '》', 'Restored “' + shown(x).title + '”'));
+  finish();
+}
+async function restoreWorkFromControl(a, id, trigger) {
+  trigger.disabled = true;
+  try {
+    await restoreWork(a, id, trigger);
+  } finally {
+    if (trigger.isConnected) trigger.disabled = false;
+  }
 }
 function workView(a, t, x) {
   if (x.kind === 'test_set') return structuredWorkView(a, t, x);
@@ -3706,7 +3722,7 @@ async function act(el) {
       break;
     }
     case 'restore-work':
-      restoreWork(a, id);
+      await restoreWorkFromControl(a, id, el);
       break;
     case 'test-toggle': {
       commit();
