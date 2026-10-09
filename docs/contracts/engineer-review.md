@@ -50,3 +50,8 @@ Persist submission ID and canonical payload together atomically. Same ID/same pa
 | W13 M1 / AIPM report consumer | New Python contracts and generated `types.ts` | Consume the manifest's exact revision. Engineer runtime and public report mounting remain follow-on work. |
 
 No new frontend host, command registry, catalog pointer, scenario package, credential derivation, or protected backend file is changed by this contract slice. Existing transaction, private-draft, closed-cycle, feedback immutability and content/evaluation/code identity regressions remain the acceptance gates.
+
+
+## Standalone public completion validation
+
+Private and public reports use the same completion rule. Any execution error, including hidden errors, or an unverified claim check requires `incomplete`; a completed mismatching claim requires `report_mismatch`; otherwise `verified` is allowed even when business probes fail. Independently decoded public reports reject contradictory status combinations and duplicate public probe IDs. Valid hidden-only summaries remain readable. This tightens the unmerged engineer protocol revision; the three legacy objects and published scenario bytes are unchanged.

@@ -165,6 +165,17 @@ class EngineerAdvice(V2):
         return self
 
 
+ReviewStatus = Literal["verified", "report_mismatch", "incomplete"]
+ClaimCheck = Literal["matched", "mismatch", "not_provided", "unverified"]
+
+
+def verification_status(claim_check: ClaimCheck, *, has_errors: bool) -> ReviewStatus:
+    """Completion is execution plus claim comparison; business failures remain valid results."""
+    if has_errors or claim_check == "unverified":
+        return "incomplete"
+    return "report_mismatch" if claim_check == "mismatch" else "verified"
+
+
 class EngineerRegressionReport(V2):
     contract_version: Literal["engineer-review-v1"]
     id: Identifier
@@ -173,8 +184,8 @@ class EngineerRegressionReport(V2):
     input_hash: Hash
     reviewer: Executor
     created_at: Timestamp
-    status: Literal["verified", "report_mismatch", "incomplete"]
-    claim_check: Literal["matched", "mismatch", "not_provided", "unverified"]
+    status: ReviewStatus
+    claim_check: ClaimCheck
     results: tuple[EngineerProbeResult, ...] = Field(min_length=1)
     findings: tuple[EngineerFinding, ...]
     unresolved: tuple[EngineerUnresolvedItem, ...]
@@ -194,13 +205,7 @@ class EngineerRegressionReport(V2):
         if len(ids) != len(set(ids)):
             raise ValueError("duplicate probe result")
         errors = any(row.result == "error" for row in self.results)
-        expected_status = (
-            "incomplete"
-            if errors or self.claim_check == "unverified"
-            else "report_mismatch"
-            if self.claim_check == "mismatch"
-            else "verified"
-        )
+        expected_status = verification_status(self.claim_check, has_errors=errors)
         if self.status != expected_status:
             raise ValueError("report status disagrees with verification outcome")
         for row in self.results:
@@ -250,8 +255,8 @@ class EngineerPublicReport(V2):
     reviewer: Executor
     created_at: Timestamp
     work_language: Literal["zh", "en"]
-    status: Literal["verified", "report_mismatch", "incomplete"]
-    claim_check: Literal["matched", "mismatch", "not_provided", "unverified"]
+    status: ReviewStatus
+    claim_check: ClaimCheck
     applicability: EngineerReportApplicability
     public_results: tuple[EngineerProbeResult, ...]
     hidden: EngineerProbeSummary
@@ -267,7 +272,17 @@ class EngineerPublicReport(V2):
             raise ValueError("hidden records cannot enter a public report")
         if self.advice is not None and self.advice.visibility != "public":
             raise ValueError("hidden advice cannot enter a public report")
-        ids = {row.probe_id for row in self.public_results}
+        probe_ids = [row.probe_id for row in self.public_results]
+        if len(probe_ids) != len(set(probe_ids)):
+            raise ValueError("duplicate public probe result")
+        expected_status = verification_status(
+            self.claim_check,
+            has_errors=self.hidden.errors > 0
+            or any(row.result == "error" for row in self.public_results),
+        )
+        if self.status != expected_status:
+            raise ValueError("report status disagrees with verification outcome")
+        ids = set(probe_ids)
         if any(not set(row.probe_ids) <= ids for row in (*self.findings, *self.unresolved)):
             raise ValueError("public finding references a non-public probe")
         return self
