@@ -1897,6 +1897,11 @@ function railChat(a, role) {
   const typing = typingRole(a) === role;
   const s = sessionOf(a);
   const native = s?.protocol === 2;
+  const question = native
+    ? (L.v4Host(a)?.draft('roles', `question:${ROLE_ID[role]}`) ??
+      s.inputs.messages[ROLE_ID[role]] ??
+      '')
+    : s?.inputs.messages[ROLE_ID[role]] || '';
   const failed = s?.failedTurn && ROLE_OF[s.failedTurn.body.role_id] === role;
   return `<div class="chat who-${role}" ${native ? 'data-v4-region="roles"' : ''}>
     <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}${PEOPLE[role].titled ? '' : `<small>${ROLE_TITLE(role)}</small>`}</p><p class="chat-knows">${esc(KNOWS(role))}</p></div></header>
@@ -1908,7 +1913,7 @@ function railChat(a, role) {
         ? `<div class="chat-quote" data-quote="${esc(q)}"><span class="chat-quote-label">${icon('quote', 'i-xs')}${T('一起发送的测试引用', 'Test quote sent with your message')}</span><p class="chat-quote-text">${esc(q)}</p><button type="button" class="btn icon quiet small" data-action="drop-quote" aria-label="${esc(T('移除这段引用', 'Remove this quote'))}">${icon('x', 'i-xs')}</button></div>`
         : '';
     })()}
-    <form class="composer" data-form="chat"><label class="sr-only" for="chat-input">${esc(T('给' + PEOPLE[role].name + '的消息', 'Message to ' + PEOPLE[role].ref))}</label><textarea id="chat-input" name="text" rows="2" maxlength="4000" required placeholder="${esc(ui.chatQuotes[quoteKey(a, role)] ? T('你想就这次测试确认什么？', 'What do you want to check about this test?') : T('写给' + PEOPLE[role].name + '…', 'Message ' + PEOPLE[role].ref + '…'))}">${esc(s?.inputs.messages[ROLE_ID[role]] || '')}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></form>
+    <form class="composer" data-form="chat"><label class="sr-only" for="chat-input">${esc(T(`给${PEOPLE[role].name}的消息`, `Message to ${PEOPLE[role].ref}`))}</label><textarea id="chat-input" name="text" rows="2" maxlength="4000" required placeholder="${esc(ui.chatQuotes[quoteKey(a, role)] ? T('你想就这次测试确认什么？', 'What do you want to check about this test?') : T(`写给${PEOPLE[role].name}…`, `Message ${PEOPLE[role].ref}…`))}">${esc(question)}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></form>
   </div>`;
 }
 // The server's local provider answers with a fact list, not a reply. Label it so nobody mistakes it for the colleague.
@@ -4973,6 +4978,13 @@ document.addEventListener('input', (e) => {
   if (a && ['lab-q', 'lab-e', 'chat-input'].includes(el.id)) {
     const s = sessionOf(a);
     if (s) {
+      if (el.id === 'chat-input' && ui.chatRole && s.protocol === 2) {
+        const host = L.v4Host(a);
+        void host
+          .keepDraft('roles', `question:${ROLE_ID[ui.chatRole]}`, el.value)
+          .catch((error) => notify(errText(error)));
+        return;
+      }
       const inputs = { ...s.inputs, messages: { ...s.inputs.messages } };
       if (el.id === 'lab-q') inputs.question = el.value;
       if (el.id === 'lab-e') inputs.expected = el.value;

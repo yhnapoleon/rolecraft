@@ -119,7 +119,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     void save().catch(fail);
   };
   const saved = host.draft<string>('roles', draftKey);
-  if (typeof saved === 'string' && !inputNode.value && document.activeElement !== inputNode)
+  if (typeof saved === 'string' && !inputNode.value && !inputNode.defaultValue)
     inputNode.value = saved;
 
   const admitted = (result: V4CommandResult) => {
