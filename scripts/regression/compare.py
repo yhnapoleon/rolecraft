@@ -3,6 +3,7 @@
 import argparse
 import hashlib
 import json
+import sys
 from collections import Counter
 from pathlib import Path
 from xml.etree import ElementTree
@@ -51,6 +52,22 @@ def regressions(baseline: dict[str, str], current: dict[str, str]) -> list[str]:
     return sorted(problems)
 
 
+def platform_baseline(baseline: dict, overrides: dict, platform: str) -> dict:
+    """Apply the documented per-platform outcome overrides to the frozen baseline.
+
+    Only listed tests change, and only to the listed outcome; each entry carries a reason.
+    """
+    result = {kind: dict(values) for kind, values in baseline.items() if isinstance(values, dict)}
+    result.update({k: v for k, v in baseline.items() if not isinstance(v, dict)})
+    for kind, entries in overrides.get(platform, {}).items():
+        for key, entry in entries.items():
+            if key not in result[kind] or not entry.get("reason"):
+                raise ValueError("baseline override without a baseline entry or reason: " + key)
+            result[kind][key] = entry["status"]
+            print(f"baseline override ({platform}): {key} -> {entry['status']}")
+    return result
+
+
 def protected_changes() -> list[str]:
     expected = json.loads((FIXTURES / "release-identity.json").read_text())["protected"]
     problems = []
@@ -66,7 +83,11 @@ def main() -> None:
     parser.add_argument("--backend", type=Path)
     parser.add_argument("--frontend", type=Path)
     args = parser.parse_args()
-    expected = json.loads((FIXTURES / "test-baseline.json").read_text())
+    expected = platform_baseline(
+        json.loads((FIXTURES / "test-baseline.json").read_text()),
+        json.loads((FIXTURES / "test-baseline-overrides.json").read_text()),
+        sys.platform,
+    )
     problems = protected_changes()
     for kind, report, read in (
         ("backend", args.backend, backend_results),

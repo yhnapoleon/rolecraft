@@ -1,0 +1,15 @@
+{
+  "note": "Outcomes that differ from tests/regression/test-baseline.json on one platform. Every entry needs a reason; an entry only accepts the listed outcome for the listed test and never widens any other check.",
+  "linux": {
+    "backend": {
+      "tests.e2e.test_w06_codex_client::test_w06_official_codex_reads_writes_recovers_and_observes_revocation": {
+        "status": "skipped",
+        "reason": "The GitHub Actions runner has no official Codex executable; the test skips itself with 'Official Codex executable not installed'."
+      },
+      "tests.e2e.test_w06_service_check::test_w06_public_client_acquires_returns_recovers_and_revokes[codex]": {
+        "status": "skipped",
+        "reason": "The codex transport of this check needs the official Codex executable, which the GitHub Actions runner does not have; the http transport still runs."
+      }
+    }
+  }
+}

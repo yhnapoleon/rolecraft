@@ -9,7 +9,7 @@ from career_lab.scenarios.v2.seed import build_seed
 from career_lab.scenarios.v2.module import ScenarioModule
 
 
-@pytest.mark.parametrize("collision", [errno.EEXIST, errno.ENOTEMPTY])
+@pytest.mark.parametrize("collision", [errno.EEXIST, errno.ENOTEMPTY], ids=["EEXIST", "ENOTEMPTY"])
 def test_another_process_can_win_initial_archive_capture(tmp_path, monkeypatch, collision):
     module = ScenarioModule(build_seed(tmp_path / "scenario"))
     archive = tmp_path / "archive"
