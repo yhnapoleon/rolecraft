@@ -3,6 +3,7 @@
 import ast
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -87,15 +88,18 @@ def test_formatted_rule_modules_generate_legacy_feedback(tmp_path: Path) -> None
     formatted.mkdir(parents=True)
     for source in (ROOT / "src/career_lab/rubrics/v4").glob("*.py"):
         (formatted / source.name).write_bytes(source.read_bytes())
+    ruff = shutil.which("ruff")
+    assert ruff is not None, "Ruff is required to verify formatting-only changes"
     for name in RULE_MODULES:
         original = (ROOT / "src/career_lab/rubrics/v4" / name).read_text()
         result = subprocess.run(
-            [str(ROOT / ".venv/bin/ruff"), "format", "--isolated", "--line-length", "100", "-"],
-            input=original,
+            [ruff, "format", "--isolated", "--line-length", "100", "-"],
+            input=original + "\n# Formatting-only regression probe; executable AST is unchanged.\n",
             capture_output=True,
             text=True,
             check=True,
         )
+        assert result.stdout.encode() != original.encode(), name + ": formatting must change bytes"
         assert ast.dump(ast.parse(result.stdout)) == ast.dump(ast.parse(original))
         (formatted / name).write_text(result.stdout)
     script = """

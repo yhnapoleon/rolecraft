@@ -5,9 +5,13 @@ fetch, tasks extension or server-initiated requests. Business identity is never
 inferred from clientInfo or JSON-RPC IDs.
 """
 
-import json, re
-from importlib.metadata import version
+import json
+import re
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as package_version
+
 from pydantic import ValidationError
+
 from career_lab.delegations.http_client import RemoteFailure
 
 MODERN = "2026-07-28"
@@ -15,7 +19,14 @@ LEGACY = "2025-11-25"
 VERSION = "io.modelcontextprotocol/protocolVersion"
 CAPABILITIES = "io.modelcontextprotocol/clientCapabilities"
 SERVER = "io.modelcontextprotocol/serverInfo"
-INFO = {"name": "rolecraft-workspace", "version": version("career-lab")}
+
+
+def server_info() -> dict[str, str]:
+    try:
+        installed_version = package_version("career-lab")
+    except PackageNotFoundError:
+        installed_version = "0.0.0+uninstalled"
+    return {"name": "rolecraft-workspace", "version": installed_version}
 
 
 class RpcFailure(Exception):
@@ -54,7 +65,7 @@ class Protocol:
 
     def _result(self, result, version, *, cache=False):
         if version == MODERN:
-            result = {"resultType": "complete", **result, "_meta": {SERVER: INFO}}
+            result = {"resultType": "complete", **result, "_meta": {SERVER: server_info()}}
             if cache:
                 result.update(ttlMs=0, cacheScope="private")
         return result
@@ -89,7 +100,7 @@ class Protocol:
             return {
                 "protocolVersion": LEGACY,
                 "capabilities": {"tools": {}},
-                "serverInfo": INFO,
+                "serverInfo": server_info(),
                 "instructions": "Only explicitly delegated RoleCraft operations. JSON-RPC id is not the business request_id.",
             }
         version, params = self._metadata(request)
