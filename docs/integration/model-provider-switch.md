@@ -68,7 +68,7 @@ uv run --locked pytest -q tests/expansion_v3/w02/test_generation_display.py --ba
 
 ## 公共冻结与装配
 
-`AssistantConfig.generator` 是唯一新增的契约字段，类型为 `extractive|llm`，可选、默认 extractive；默认值仍省略于序列化。新公共 revision 为 `expansion-v3-a2fb5d317ece34100c29840fb603b93b67ccdcbe16b40e23e931abb3e3ad4590`，previous 链接原 `expansion-v3-7f64f17784ad7756fefc53682954b1318bddb58eecdc5dbe645f3187cbc321ed`。标准导出后沿现有 `without_provenance` 兼容方式保留 schema，旧 examples 字节不变；原 documents／review_fixes 保全。依赖该公共 manifest 的工程师契约由标准导出器在新目录生成后同步。错误码目录补收既有代码中已有的代码，未新增这些业务行为。
+`AssistantConfig.generator` 是唯一新增的契约字段，类型为 `extractive|llm`，可选、默认 extractive；默认值仍省略于序列化。新公共 revision 为 `expansion-v3-497382cedd5e14aed23ed353b6c8167e0a9b1dfa7ce802c5aebf06b0bd7913ba`，previous 链接原 `expansion-v3-7f64f17784ad7756fefc53682954b1318bddb58eecdc5dbe645f3187cbc321ed`。标准导出后沿现有 `without_provenance` 兼容方式保留 schema，旧 examples 字节不变；原 documents／review_fixes 保全。依赖该公共 manifest 的工程师契约由标准导出器在新目录生成后同步。错误码目录补收既有代码中已有的代码，未新增这些业务行为。
 
 `build_registry` 仅用三行构造参数透传已配置模型；`LocalRoleModel` 映射为 None。当前两类冻结测试已通过，包括 v1 场景、契约和旧研究冻结原字节检查。当前契约保护清单只重钉此次获准替换的11项产物；历史冻结、场景包和所有旧实例保留，原公共及工程师冻结目录另有原件归档。
 
@@ -88,3 +88,6 @@ uv run --locked pytest -q tests/expansion_v3/w02/test_generation_display.py --ba
 续行定向覆盖生成27项、provider14项、renderer1项、公共freeze2项及工程师契约28项。完整门禁必须取得 `/private/tmp/claude-501/gate.lock` 后执行；最终结果、逐ID对照及任何负载型超时的三次重跑记录见续行回执 `runs/local/082/finish/receipt.json`。
 
 此前无锁轮次按080指示中止，其旧失败／部分进度不作为续行完整门禁通过证据；历史日志仍保留。此前固定反馈／原语义18项、正常v4英文八步及中英390px组件检查通过，中文曾在反馈等待阶段超时。宿主未接通的生成界面仍不据这些结果称完成。
+
+
+080补充裁定：新公共 revision 与旧安装包绑定不同导致的 `runtime_contract_mismatch` 单列“待统一重绑”，不在功能分支重绑安装包或修改catalog／测试。统一重绑由080在质量阶段放行后的集成树单独PR执行。完整门禁仅此类失败可按“可合入｜待统一重绑”交付，其余后端、前端、状态、构建及逐ID要求不变；未完成的门禁不能预填通过。

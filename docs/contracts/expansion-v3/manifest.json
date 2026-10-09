@@ -3179,7 +3179,7 @@
     }
   },
   "source_files": {
-    "src/career_lab/api/app.py": "50e570c71dad548ec9956dbfd03f8267d8b390dbff1d665c7447d2a8865e8659",
+    "src/career_lab/api/app.py": "64eafa7d2504ed8c7257df60a2f144775e353e5c749b5bca3c571f9ca40a23b6",
     "src/career_lab/api/evaluation_runtime.py": "8ede9e5eafa7c2ae6367c55e2046309fb4873544ecbfd33bec575702db6fec96",
     "src/career_lab/api/feedback_integration.py": "b90696b99e5e353c68e0d0dd2eb155f8cc314d365859acfdb180265928273495",
     "src/career_lab/api/lifecycle_integration.py": "c78cc5391833321cef245bad2601575711599d29a964a45bf8715d1604cf9caa",
@@ -3193,7 +3193,7 @@
     "src/career_lab/api/vertical_reads.py": "b02858ca838446a813ae781b25367f1f0377b26516016bb6516d44a8d6e3c346",
     "src/career_lab/api/vertical_runtime.py": "105a27ac11e4c5e2fe0569881d5e612ebf96f76b17b656b206d920a0a07eac56",
     "src/career_lab/api/workspace_integration.py": "580d03db16bf1310e4713965501cf8fe924472d8646d6890fa85d4b30045559b",
-    "src/career_lab/cli.py": "2ecca7ab1cce149a1a58a1ffbd83826c74cc7098a375255c16e8eb4c00c69db7",
+    "src/career_lab/cli.py": "fb94e26661446cf1c886ba7c1fb40347cdc790b5b2845645f3c1069ecd7f3e25",
     "src/career_lab/contracts/__init__.py": "650246fed3d082cc58505d728f750218b601580ff7a00a03ae8e610bd9d316bc",
     "src/career_lab/contracts/actions.py": "835fbb62979891cbf97d0580e0843c2a8f97b8a8bcc08c8a01afecec36f919ac",
     "src/career_lab/contracts/base.py": "e62af2f4c8d827a994ae7f69d2022d50b5a42581d885348aab070fa407de2a77",
