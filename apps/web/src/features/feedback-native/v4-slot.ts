@@ -1,3 +1,4 @@
+import { readRegisteredAdvice } from './model-advice';
 import type { V4Query, QueryInput, V4Command, CommandInput } from '../../v4-host-operations';
 /** W05 native v4 slot: no transport, credentials, Command envelope or journal. */
 import type {
@@ -312,7 +313,10 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
             subject.version !== submission.version
           )
             throw Error('Feedback subject mismatch');
-          if (!reports.some((old) => old.id === row.id)) reports.push(row as unknown as Report);
+          if (!reports.some((old) => old.id === row.id)) {
+            const modelAdvice = readRegisteredAdvice(row.model_advice, sid);
+            reports.push({ ...row, model_advice: modelAdvice } as unknown as Report);
+          }
           if (current.available[W05_V4_OPERATIONS.responses])
             for (const response of await pages(W05_V4_OPERATIONS.responses, {
               feedback_id: row.id,

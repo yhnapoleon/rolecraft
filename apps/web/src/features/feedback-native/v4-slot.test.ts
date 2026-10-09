@@ -475,3 +475,146 @@ it('restores a failed feedback pointer without retry and requires an explicit ne
   expect(ctl.adapter.snapshot().awaitingFeedback).toBe(true);
   ctl.destroy();
 });
+
+const registeredAdvice = {
+  criterion: 'R2.support',
+  status: 'completed',
+  registration: {
+    id: 'candidate',
+    model_revision: 'fixed',
+    scope: 'external_candidate',
+    quality_validated: false,
+  },
+  label: 'SUPPORTED',
+  evidence_ids: ['source'],
+  citations: [ref('product', 'p', 2)],
+  mode: 'advisory',
+  affects_score: false,
+  error_code: null,
+  request_id: 'private-request',
+  input_hash: 'private-input',
+  job_id: 'private-job',
+};
+
+describe('registered advice through the feedback host', () => {
+  it('MODEL-04: malformed advice stays local to the suggestion and preserves readable rules', async () => {
+    const f = fixture();
+    Object.assign(f.report, {
+      model_advice: [
+        { ...registeredAdvice, citations: [{ ...ref('product', 'p'), session_id: 'other' }] },
+      ],
+    });
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    try {
+      await ctl.refresh();
+      const state = ctl.adapter.snapshot();
+      expect(state.error).toBeUndefined();
+      expect(state.reports[0].business_response).toBe('原反馈不翻译');
+      expect(state.reports[0].model_advice?.[0]).toMatchObject({
+        status: 'unavailable',
+        error_code: 'model_prediction_invalid',
+        label: null,
+        citations: [],
+      });
+      expect(f.calls).toEqual([]);
+    } finally {
+      ctl.destroy();
+    }
+  });
+});
+
+it('MODEL-03/05: refresh reads the persisted result and public fields without inference or private identity', async () => {
+  const f = fixture();
+  Object.assign(f.report, { model_advice: [registeredAdvice] });
+  const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+  try {
+    await ctl.refresh();
+    const original = ctl.adapter.snapshot().reports[0];
+    expect(original.model_advice?.[0]).toMatchObject({
+      status: 'completed',
+      label: 'SUPPORTED',
+      registration: { id: 'candidate', model_revision: 'fixed' },
+    });
+    expect(JSON.stringify(original.model_advice)).not.toMatch(
+      /private-request|private-input|private-job/,
+    );
+    f.setSnapshot({
+      semantic: { roles: 'waiting_model', feedback: 'model', assistant: 'waiting_model' },
+    });
+    await ctl.refresh();
+    expect(ctl.adapter.snapshot().reports[0]).toEqual(original);
+    Object.assign(f.report, {
+      model_advice: [
+        {
+          ...registeredAdvice,
+          status: 'unavailable',
+          label: null,
+          evidence_ids: [],
+          citations: [],
+          error_code: 'evidence_unavailable',
+        },
+        registeredAdvice,
+      ],
+    });
+    await ctl.refresh();
+    expect(ctl.adapter.snapshot().reports[0].model_advice?.map((entry) => entry.status)).toEqual([
+      'unavailable',
+      'completed',
+    ]);
+    expect(f.calls).toEqual([]);
+    expect(f.recovery).toEqual([]);
+  } finally {
+    ctl.destroy();
+  }
+});
+
+const invalidCases: [string, unknown][] = [
+  ['scoring', { ...registeredAdvice, affects_score: true }],
+  ['task domain', { ...registeredAdvice, criterion: 'R3.capacity' }],
+  ['relation label', { ...registeredAdvice, label: 'MET' }],
+  [
+    'synthetic conclusion',
+    {
+      ...registeredAdvice,
+      registration: { ...registeredAdvice.registration, scope: 'synthetic_fixture' },
+    },
+  ],
+  [
+    'quality claim',
+    {
+      ...registeredAdvice,
+      registration: { ...registeredAdvice.registration, quality_validated: true },
+    },
+  ],
+  ['missing reference', { ...registeredAdvice, citations: [] }],
+  ['stale failed result', { ...registeredAdvice, status: 'failed', error_code: 'model_timeout' }],
+  ['unknown status', { ...registeredAdvice, status: 'ready' }],
+];
+it.each(invalidCases)(
+  'MODEL-01/02/04: rejects %s within one public suggestion',
+  async (_name, invalid) => {
+    const f = fixture();
+    Object.assign(f.report, { model_advice: [invalid, registeredAdvice] });
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    try {
+      await ctl.refresh();
+      const report = ctl.adapter.snapshot().reports[0];
+      expect(report.business_response).toBe('原反馈不翻译');
+      expect(report.model_advice?.[0]).toEqual({
+        criterion: 'R2.support',
+        status: 'unavailable',
+        registration: null,
+        label: null,
+        evidence_ids: [],
+        citations: [],
+        error_code: 'model_prediction_invalid',
+        mode: 'advisory',
+        affects_score: false,
+      });
+      expect(report.model_advice?.[1].label).toBe('SUPPORTED');
+      expect(f.calls).toEqual([]);
+    } finally {
+      ctl.destroy();
+    }
+  },
+);
