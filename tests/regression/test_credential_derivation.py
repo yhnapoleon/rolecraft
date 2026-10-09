@@ -7,12 +7,13 @@ from typing import Any
 
 import httpx
 import pytest
-from sqlalchemy import select
+from sqlalchemy import delete, event, func, select, update
 from sqlalchemy.engine import Connection
 
 from career_lab.contracts import v2 as C
-from career_lab.security.credentials import DeploymentKey
-from career_lab.storage.v2_tables import v2_credentials
+from career_lab.security.credentials import DeploymentKey, aliases, derivations
+from career_lab.storage.v2_snapshot import SnapshotService
+from career_lab.storage.v2_tables import v2_credentials, v2_restores, v2_sessions
 
 from .conftest import PublishedSession
 
@@ -803,3 +804,253 @@ def test_delegation_same_request_rejects_changed_agent_label(
     assert conflict.status_code == 409, conflict.text
     replay = session.client.post(session.url("delegations"), headers=session.headers, json=command)
     assert replay.status_code == 200 and replay.json() == first.json()
+
+
+def restore_fixture(session: PublishedSession) -> tuple[SnapshotService, C.SnapshotExport]:
+    store = session.app.state.v2_store
+    service = SnapshotService(store)
+    snapshot = service.export(
+        store.research_context(session.session_id), C.digest("restore-source")
+    )
+    return service, snapshot
+
+
+def restore_counts(service: SnapshotService) -> list[int]:
+    with service.store.db.engine.connect() as connection:
+        return [
+            connection.execute(select(func.count()).select_from(table)).scalar_one()
+            for table in (v2_sessions, v2_credentials, v2_restores, derivations, aliases)
+        ]
+
+
+def child_read(session: PublishedSession, sid: str, token: str) -> httpx.Response:
+    return session.client.get("/sessions/" + sid, headers={"Authorization": "Bearer " + token})
+
+
+def test_snapshot_restore_rejects_database_digest_prediction(
+    published_session: PublishedSession,
+) -> None:
+    service, snapshot = restore_fixture(published_session)
+    restored, token = service.restore(snapshot, session_id="child", request_id="restore")
+    with service.store.db.engine.connect() as connection:
+        rows = connection.execute(
+            select(v2_credentials).where(v2_credentials.c.session_id == snapshot.session_id)
+        ).mappings()
+        parent_digest = next(
+            row["token_hash"]
+            for row in rows
+            if C.AuthContext.model_validate_json(row["context"]).executor.kind == "human"
+        )
+    # Attacker knows only the database digest and restore parameters, never the signing key.
+    predicted = hmac.new(
+        parent_digest.encode(),
+        C.canonical(["child", "restore", snapshot.snapshot_hash]).encode(),
+        hashlib.sha256,
+    ).hexdigest()
+    assert child_read(published_session, restored.session_id, predicted).status_code == 401
+    assert child_read(published_session, restored.session_id, token).status_code == 200
+
+
+def test_snapshot_restore_replay_preserves_identity_and_credential(
+    published_session: PublishedSession,
+) -> None:
+    service, snapshot = restore_fixture(published_session)
+    restored, token = service.restore(snapshot, session_id="child", request_id="restore")
+    before = restore_counts(service)
+    replay, replay_token = SnapshotService(service.store).restore(
+        snapshot, session_id="child", request_id="restore"
+    )
+    assert replay.replayed and replay.model_copy(update={"replayed": False}) == restored
+    assert replay_token == token
+    assert restore_counts(service) == before
+    assert child_read(published_session, replay.session_id, replay_token).status_code == 200
+
+
+@pytest.mark.parametrize("missing", ["CAREER_LAB_CREDENTIAL_KEY_ID", "CAREER_LAB_CREDENTIAL_KEY"])
+def test_snapshot_restore_missing_key_fails_without_writes(
+    published_session: PublishedSession, monkeypatch: pytest.MonkeyPatch, missing: str
+) -> None:
+    service, snapshot = restore_fixture(published_session)
+    before = restore_counts(service)
+    monkeypatch.delenv(missing)
+    with pytest.raises(C.ProtocolError) as failed:
+        service.restore(snapshot, session_id="child", request_id="restore")
+    assert (failed.value.status, failed.value.code) == (503, "credential_derivation_unavailable")
+    assert restore_counts(service) == before
+    restored, token = service.restore(
+        snapshot,
+        session_id="explicit-child",
+        request_id="explicit",
+        token="isolated-explicit-token",
+    )
+    assert child_read(published_session, restored.session_id, token).status_code == 200
+    assert (
+        service.restore(snapshot, session_id="explicit-child", request_id="explicit", token=token)[
+            1
+        ]
+        == token
+    )
+
+
+def test_snapshot_restore_records_provenance_without_secrets(
+    published_session: PublishedSession, caplog: pytest.LogCaptureFixture
+) -> None:
+    service, snapshot = restore_fixture(published_session)
+    restored, token = service.restore(snapshot, session_id="child", request_id="restore")
+    auth = service.store.authenticate(restored.session_id, token)
+    with service.store.db.engine.connect() as connection:
+        record = (
+            connection.execute(
+                select(derivations).where(derivations.c.credential_id == auth.credential_id)
+            )
+            .mappings()
+            .one_or_none()
+        )
+    assert record is not None
+    assert record["purpose"] == "snapshot-restore"
+    assert record["scheme"] == "hmac-sha256-v1" and record["key_id"] == "test-key-v1"
+    assert len(record["fingerprint"]) == 64
+    assert record["token_hash"] == C.digest(token)
+    connection = service.store.db.engine.raw_connection()
+    try:
+        dump = "\n".join(connection.driver_connection.iterdump())
+    finally:
+        connection.close()
+    assert TEST_KEY not in dump and token not in dump
+    assert TEST_KEY not in caplog.text and token not in caplog.text
+    assert TEST_KEY not in C.canonical(snapshot)
+
+
+@pytest.mark.parametrize("drift", ["key", "key_id", "missing"])
+def test_snapshot_restore_key_drift_preserves_existing_access(
+    published_session: PublishedSession, monkeypatch: pytest.MonkeyPatch, drift: str
+) -> None:
+    service, snapshot = restore_fixture(published_session)
+    restored, token = service.restore(snapshot, session_id="child", request_id="restore")
+    before = restore_counts(service)
+    if drift == "key":
+        monkeypatch.setenv("CAREER_LAB_CREDENTIAL_KEY", TEST_KEY + "-changed")
+    elif drift == "key_id":
+        monkeypatch.setenv("CAREER_LAB_CREDENTIAL_KEY_ID", "test-key-v2")
+    else:
+        monkeypatch.delenv("CAREER_LAB_CREDENTIAL_KEY")
+    with pytest.raises(C.ProtocolError) as failed:
+        service.restore(snapshot, session_id="child", request_id="restore")
+    assert (failed.value.status, failed.value.code) == (503, "credential_derivation_unavailable")
+    assert restore_counts(service) == before
+    assert child_read(published_session, restored.session_id, token).status_code == 200
+
+
+def test_snapshot_restore_legacy_token_and_explicit_replay_preserve_old_row(
+    published_session: PublishedSession,
+) -> None:
+    service, snapshot = restore_fixture(published_session)
+    # Retained historical credential fixture; no reconstruction of old plaintext.
+    legacy = "isolated-historical-snapshot-token-kept-by-owner"
+    restored, _ = service.restore(snapshot, session_id="child", request_id="restore", token=legacy)
+    with service.store.db.engine.connect() as connection:
+        before = dict(
+            connection.execute(select(v2_credentials).where(v2_credentials.c.session_id == "child"))
+            .mappings()
+            .one()
+        )
+    counts = restore_counts(service)
+    with pytest.raises(C.ProtocolError, match="restore token conflict"):
+        service.restore(snapshot, session_id="child", request_id="restore")
+    replay, token = service.restore(
+        snapshot, session_id="child", request_id="restore", token=legacy
+    )
+    assert replay.replayed and replay.session_id == restored.session_id and token == legacy
+    assert child_read(published_session, "child", legacy).status_code == 200
+    assert restore_counts(service) == counts
+    with service.store.db.engine.connect() as connection:
+        assert (
+            dict(
+                connection.execute(
+                    select(v2_credentials).where(v2_credentials.c.session_id == "child")
+                )
+                .mappings()
+                .one()
+            )
+            == before
+        )
+
+
+@pytest.mark.parametrize("revoked_session", ["parent", "child"])
+def test_snapshot_restore_rechecks_current_authorization(
+    published_session: PublishedSession, revoked_session: str
+) -> None:
+    service, snapshot = restore_fixture(published_session)
+    service.restore(snapshot, session_id="child", request_id="restore")
+    sid = snapshot.session_id if revoked_session == "parent" else "child"
+    with service.store.db.transaction() as connection:
+        connection.execute(
+            update(v2_credentials).where(v2_credentials.c.session_id == sid).values(revoked=1)
+        )
+    before = restore_counts(service)
+    with pytest.raises(C.ProtocolError) as failed:
+        service.restore(snapshot, session_id="child", request_id="restore")
+    assert (failed.value.status, failed.value.code) == (403, "credential_revoked_or_invalid")
+    assert restore_counts(service) == before
+
+
+def test_snapshot_restore_rejects_missing_provenance(
+    published_session: PublishedSession,
+) -> None:
+    service, snapshot = restore_fixture(published_session)
+    _, token = service.restore(snapshot, session_id="child", request_id="restore")
+    auth = service.store.authenticate("child", token)
+    with service.store.db.transaction() as connection:
+        connection.execute(
+            delete(derivations).where(derivations.c.credential_id == auth.credential_id)
+        )
+    with pytest.raises(C.ProtocolError, match="restore token conflict"):
+        service.restore(snapshot, session_id="child", request_id="restore")
+    assert child_read(published_session, "child", token).status_code == 200
+
+
+@pytest.mark.parametrize("failed_table", ["v2_credentials", "v2_restores"])
+def test_snapshot_restore_rolls_back_derivation_with_target(
+    published_session: PublishedSession, failed_table: str
+) -> None:
+    service, snapshot = restore_fixture(published_session)
+    before = restore_counts(service)
+    engine = service.store.db.engine
+
+    def fail_write(
+        connection: Connection,
+        cursor: object,
+        statement: str,
+        parameters: object,
+        context: object,
+        executemany: bool,
+    ) -> None:
+        if statement.lower().startswith("insert into " + failed_table + " "):
+            raise OSError("isolated storage failure")
+
+    event.listen(engine, "before_cursor_execute", fail_write)
+    try:
+        with pytest.raises(OSError, match="isolated storage failure"):
+            service.restore(snapshot, session_id="child", request_id="restore")
+    finally:
+        event.remove(engine, "before_cursor_execute", fail_write)
+    assert restore_counts(service) == before
+    restored, token = service.restore(snapshot, session_id="child", request_id="restore")
+    assert child_read(published_session, restored.session_id, token).status_code == 200
+
+
+def test_snapshot_restore_revoked_parent_cannot_create_target(
+    published_session: PublishedSession,
+) -> None:
+    service, snapshot = restore_fixture(published_session)
+    with service.store.db.transaction() as connection:
+        connection.execute(
+            update(v2_credentials)
+            .where(v2_credentials.c.session_id == snapshot.session_id)
+            .values(revoked=1)
+        )
+    before = restore_counts(service)
+    with pytest.raises(C.ProtocolError) as failed:
+        service.restore(snapshot, session_id="new-child", request_id="new-restore")
+    assert (failed.value.status, failed.value.code) == (403, "credential_revoked_or_invalid")
+    assert restore_counts(service) == before
