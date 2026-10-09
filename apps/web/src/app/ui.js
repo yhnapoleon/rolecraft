@@ -620,6 +620,7 @@ function mountNativeSlots() {
   });
 }
 function afterRender() {
+  refreshAgentIssued();
   mountNativeSlots();
   // Only the workbench's own scroll regions move; browser focus must not shift
   // the entire fixed-height workspace (especially after viewport changes).
@@ -983,7 +984,7 @@ function renderWorkspace() {
   ui.notesCache = Coach.notes(a, E);
   const html = `<div class="ws view-${ui.route} ${arriving ? 'arriving' : ''} ${ui.railOpen ? 'rail-open' : ''}" data-status="${statusOf(a)}">
     ${wsToolbar(a)}
-    <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner">${wsStage(a)}</div></main>
+    <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${wsStage(a)}</div></main>
     <aside class="rail" id="ws-rail" aria-label="${esc(T('团队与上下文', 'Team and context'))}">${wsRail(a)}</aside>
     <button type="button" class="scrim" data-action="close-panels" aria-label="${esc(T('关闭面板', 'Close panel'))}" tabindex="-1"></button>
   </div>`;
@@ -1154,7 +1155,7 @@ function column(a, p) {
   const list = a.tasks.filter((t) => t.priority === p);
   return `<div class="col col-${p}" data-lane="${p}">
     <header class="col-head">${priMark(p)}<span class="col-name">${PRI(p)}</span><span class="col-count">${list.length}</span></header>
-    <ol class="cards" role="list">${list.map((t) => taskCard(a, t)).join('')}${!list.length ? `<li class="col-empty">${T('拖到这里', 'Drop here')}</li>` : ''}</ol>
+    <ol class="cards" role="list">${L.nativeWorkspace(a) ? '' : list.map((t) => taskCard(a, t)).join('')}${!L.nativeWorkspace(a) && !list.length ? `<li class="col-empty">${T('拖到这里', 'Drop here')}</li>` : ''}</ol>
   </div>`;
 }
 function taskCard(a, t) {
@@ -1895,10 +1896,11 @@ function railChat(a, role) {
   const x = t && ui.obj && ui.obj.type === 'work' ? artifact() : null;
   const typing = typingRole(a) === role;
   const s = sessionOf(a);
+  const native = s?.protocol === 2;
   const failed = s?.failedTurn && ROLE_OF[s.failedTurn.body.role_id] === role;
-  return `<div class="chat who-${role}">
+  return `<div class="chat who-${role}" ${native ? 'data-v4-region="roles"' : ''}>
     <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}${PEOPLE[role].titled ? '' : `<small>${ROLE_TITLE(role)}</small>`}</p><p class="chat-knows">${esc(KNOWS(role))}</p></div></header>
-    <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${msgs.length ? msgs.map((m) => msgHtml(a, role, m)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(PEOPLE[role].name + '正在输入', PEOPLE[role].subject + ' is typing'))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}</div>
+    <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${native ? '' : `${msgs.length ? msgs.map((m) => msgHtml(a, role, m)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(`${PEOPLE[role].name}正在输入`, `${PEOPLE[role].subject} is typing`))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}`}</div>
     <div class="chat-context">${t ? `<span class="ctx" title="${esc(T('这条对话会记在这件事下', 'This conversation is filed under this task'))}">${icon('note', 'i-xs')}<span>${esc(taskTitle(t))}</span></span>` : ''}${x ? `<button type="button" class="ctx add" data-action="prefill-artifact">${icon('plus', 'i-xs')}${T('附上作品', 'Attach work')}</button>` : ''}${a.tests.length ? `<button type="button" class="ctx add" data-action="prefill-run">${icon('plus', 'i-xs')}${T('附上测试', 'Attach a test')}</button>` : ''}</div>
     ${(() => {
       const q = ui.chatQuotes[quoteKey(a, role)];
@@ -1980,6 +1982,16 @@ function fbItem(a, i, full = false) {
     <div class="fb-dispute">${ui.disputeOpen === key ? `<form class="dispute" data-form="dispute" data-key="${esc(key)}"><label class="sr-only" for="dispute-text">${T('你的不同看法', 'Your view')}</label><textarea id="dispute-text" class="textarea" name="text" rows="2" required maxlength="2000" placeholder="${esc(T('哪里不对？', 'What is wrong with it?'))}"></textarea><div class="row-actions"><button type="submit" class="btn small primary">${T('记下', 'Save')}</button>${btn(T('取消', 'Cancel'), 'dispute', 'small quiet', `data-key="${esc(key)}"`)}</div></form>` : `<button type="button" class="link quiet" data-action="dispute" data-key="${esc(key)}">${T('我有不同看法', 'I see it differently')}</button>`}${disputes.map((d) => `<p class="dispute-note">${icon('bubble', 'i-xs')}<span${zhAttr(d.text)}>${esc(d.text)}</span></p>`).join('')}</div>
   </div></li>`;
 }
+const issuedViews = new WeakMap();
+function refreshAgentIssued() {
+  const a = current();
+  const target = document.querySelector('[data-agent-issued]');
+  if (!a || !target) return;
+  const identity = JSON.stringify([a.id, locale(), L.v4Host(a)?.issuedDelegation()]);
+  if (issuedViews.get(target) === identity) return;
+  issuedViews.set(target, identity);
+  target.innerHTML = agentIssued(a);
+}
 function agentIssued(a) {
   const issued = L.nativeWorkspace(a) ? L.v4Host(a)?.issuedDelegation() : null;
   return issued
@@ -1993,7 +2005,7 @@ function railAgent(a, t) {
   const scopeWorks = (t ? works(a).filter((w) => w.taskId === t.id) : works(a)).length;
   const log = agentLog(a, t && !ui.scopeAll ? t.id : null);
   const native = L.nativeWorkspace(a);
-  return `<div class="rail-pad agent-panel" ${native ? 'data-agent-native' : ''}>
+  return `<div class="rail-pad agent-panel" ${native ? 'data-agent-native data-v4-region="agent"' : ''}>
     <section class="agent-conn">
       <div class="conn-row">${agentMark('md')}<div class="grow"><p class="agent-name">${T('我的 Agent', 'My agent')}</p><p class="meta">${T('你自己的工具：只看到你交出去的内容', 'Your own tool: it only sees what you hand over')}</p></div></div>
       <div class="conn-ways" data-agent-connection>
@@ -2601,11 +2613,11 @@ function evidenceLabel(a, fb, id) {
 }
 
 /* ---------- sheets ---------- */
-function openSheet(title, body, foot = '', cls = '') {
+function openSheet(title, body, foot = '', cls = '', region = '') {
   commit();
   if (!sheet.open) sheetReturn = focusKey();
   sheet.className = 'sheet ' + cls;
-  sheet.innerHTML = `<header class="sheet-head"><h2 id="sheet-title">${title}</h2>${btn(icon('x'), 'close', 'icon quiet small', `aria-label="${esc(T('关闭', 'Close'))}"`)}</header><div class="sheet-body">${body}</div>${foot ? `<footer class="sheet-foot">${foot}</footer>` : ''}`;
+  sheet.innerHTML = `<header class="sheet-head"><h2 id="sheet-title">${title}</h2>${btn(icon('x'), 'close', 'icon quiet small', `aria-label="${esc(T('关闭', 'Close'))}"`)}</header><div class="sheet-body" ${region ? `data-v4-region="${region}"` : ''}>${body}</div>${foot ? `<footer class="sheet-foot">${foot}</footer>` : ''}`;
   if (!sheet.open) sheet.showModal();
   (
     sheet.querySelector('[autofocus]') ||
@@ -2644,7 +2656,7 @@ function sheetTask(id) {
   const t = a.tasks.find((x) => x.id === id);
   openSheet(
     t ? T('编辑事项', 'Edit task') : T('新事项', 'New task'),
-    `<form data-form="task" data-id="${t ? t.id : ''}" class="stack" id="task-form">
+    `<form data-form="task" data-id="${t ? t.id : ''}" class="stack" id="task-form" data-revision="${t?.revision ?? ''}">
       <label class="field"><span>${T('要处理的事', 'What needs doing')}</span><input class="input" name="title" required maxlength="120" value="${esc(t ? taskTitle(t) : '')}" placeholder="${esc(T('例如：问清政策多久变一次', 'For example: find out how often policy changes'))}" autofocus></label>
       <label class="field"><span>${T('补充', 'Notes')} <small>${T('选填', 'optional')}</small></span><textarea class="textarea" name="note" rows="3" maxlength="5000">${esc(t ? taskNote(t) : '')}</textarea></label>
       <fieldset class="field"><legend>${T('优先级', 'Priority')}</legend><div class="choices">${['first', 'next', 'later'].map((k) => `<label class="choice"><input type="radio" name="priority" value="${k}" ${(t ? t.priority : 'next') === k ? 'checked' : ''}><span>${priMark(k)}${PRI(k)}</span></label>`).join('')}</div></fieldset>
@@ -2652,6 +2664,7 @@ function sheetTask(id) {
     </form>`,
     `${t ? `${btn(icon('back', 'i-sm') + T('上移', 'Move up'), 'move-task', 'quiet', `data-id="${t.id}" data-dir="-1"`)}${btn(T('下移', 'Move down'), 'move-task', 'quiet', `data-id="${t.id}" data-dir="1"`)}<span class="spacer"></span>` : ''}<button type="submit" form="task-form" class="btn primary">${t ? T('保存', 'Save') : T('加入', 'Add')}</button>`,
     'narrow',
+    L.nativeWorkspace(a) ? 'workspace-form' : '',
   );
 }
 function sheetNewArtifact(purpose) {
@@ -2666,6 +2679,7 @@ function sheetNewArtifact(purpose) {
   </form>`,
     `<button type="submit" form="artifact-form" class="btn primary">${T('开始写', 'Start writing')}</button>`,
     'narrow',
+    L.nativeWorkspace(a) ? 'workspace-form' : '',
   );
 }
 function configChecks(a, c) {
@@ -2756,6 +2770,7 @@ function sheetResources() {
     ${pending.length ? `<section class="pending"><h3 class="mini-title">${T('等待经理处理', 'Waiting for the manager')}</h3>${pending.map((rule) => `<div class="pending-row">${avatar('manager', 'sm')}<span class="grow">${rule === 'capacity_approved' ? T('扩容申请', 'Seat request') : T('资源与延期申请', 'Resource request')}</span>${btn(T('请经理处理', 'Ask the manager to decide'), 'live-approval', 'small', `data-id="${esc(rule)}"`)}</div>`).join('')}</section>` : ''}`,
     `<button type="submit" form="res-form" class="btn primary">${T('提交申请', 'Send request')}</button>`,
     'narrow',
+    s?.protocol === 2 ? 'resource-requests' : '',
   );
 }
 // Which pieces of local work go into the deliverable is the learner's choice.
@@ -2933,6 +2948,7 @@ function sheetAbout() {
 /* ---------- live world: connection, typing, arrivals ---------- */
 function onLive(changed) {
   const n = snap();
+  refreshAgentIssued();
   noticeArrivals();
   if (sheet.open && sheet.querySelector('.res-now') && current())
     sheet.querySelector('.res-now').innerHTML = conditions(current(), 'compact');
@@ -3109,7 +3125,8 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
     if (tb) tb.outerHTML = wsToolbar(a);
   }
   if (parts.includes('stage')) {
-    document.getElementById('ws-stage').innerHTML = wsStage(a);
+    document.getElementById('ws-stage').outerHTML =
+      `<div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${wsStage(a)}</div>`;
     if (stage) stage.scrollTop = y;
   }
   if (parts.includes('rail')) {
@@ -4888,17 +4905,11 @@ function evidenceView(a, value) {
 }
 
 /* ---------- events ---------- */
-document.addEventListener('rolecraft:delegation-issued', () => {
-  // Updating the one-time download must not unmount a grant/recovery that is still acknowledging.
-  const a = current(),
-    target = document.querySelector('[data-agent-issued]');
-  if (a && target) target.innerHTML = agentIssued(a);
-});
 document.addEventListener('rolecraft:open-chat', (e) => {
   const role = ROLE_OF[e.detail?.roleId];
   if (role && current()) openChat(role);
 });
-document.addEventListener('rolecraft:quote-sent', (e) => {
+app.addEventListener('rolecraft:quote-sent', (e) => {
   const a = current();
   const role = ROLE_OF[e.detail?.roleId];
   if (a && role) {
@@ -5614,7 +5625,7 @@ window.addEventListener('v4-selection', (event) => {
     }
   }
 });
-window.addEventListener('w03:form-confirmed', (event) => {
+sheet.addEventListener('w03:form-confirmed', (event) => {
   if (!event.detail.changedWhileWaiting && sheet.open && event.target.closest?.('#sheet')) {
     closeSheet(true);
     refreshWS();

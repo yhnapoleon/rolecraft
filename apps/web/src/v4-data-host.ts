@@ -404,17 +404,9 @@ export class V4DataHost implements V4HostAdapter {
             issuedAt: new Date().toISOString(),
           };
           this.rememberAgentLabel(result.delegation.id, String(entry.input.agent_label ?? ''));
-          if (typeof document !== 'undefined')
-            document.dispatchEvent(
-              new CustomEvent('rolecraft:delegation-issued', {
-                detail: { delegationId: result.delegation.id },
-              }),
-            );
         }
       } else if (this.issued?.delegationId === entry.input.delegation_id) {
         this.issued = null;
-        if (typeof document !== 'undefined')
-          document.dispatchEvent(new CustomEvent('rolecraft:delegation-issued', { detail: null }));
       }
       entry.outcome = { requestId, status: 'confirmed', result };
       this.save();
@@ -464,8 +456,7 @@ export class V4DataHost implements V4HostAdapter {
       token: this.issued.token,
     };
     this.issued = null;
-    if (typeof document !== 'undefined')
-      document.dispatchEvent(new CustomEvent('rolecraft:delegation-issued', { detail: null }));
+    this.emit();
     return config;
   }
   private async send(
