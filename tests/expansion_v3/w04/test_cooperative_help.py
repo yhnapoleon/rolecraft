@@ -390,3 +390,70 @@ def test_help_01_approved_colleague_explanation_has_no_private_source_metadata(
         assert quote in shown and "tech_private" not in shown and "private-source-" not in shown
     finally:
         dialogue.close()
+
+
+@pytest.mark.parametrize("context", ["shared_work", "history"])
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_help_01_contextual_acknowledgement_cannot_skip_semantic_review(
+    tmp_path: Path, context: str, language: str
+) -> None:
+    answer = "我会核对当前依据。" if language == "zh" else "I will check the available evidence."
+    question = "请核对当前依据。" if language == "zh" else "Please check the available evidence."
+    title = (
+        "经理委托：内部知识助手试点"
+        if language == "zh"
+        else "Manager brief: an internal knowledge-assistant pilot"
+    )
+    fact = "当前容量是30人。" if language == "zh" else "The current capacity is 30 users."
+    replies = []
+    if context == "history":
+        replies = [
+            ModelReply(text=f"[{title} · v1] {fact}"),
+            assessment(),
+        ]
+    model = ScriptedModel([*replies, ModelReply(text=answer), assessment(facts_answered=False)])
+    dialogue = Dialogue(tmp_path, language, model)
+    try:
+        shares = []
+        if context == "shared_work":
+            product = dialogue.command(
+                "work_products.create",
+                {
+                    "kind": "text",
+                    "title": "容量核对" if language == "zh" else "Capacity check",
+                    "content": "当前容量是否仍为30人？"
+                    if language == "zh"
+                    else "Is capacity still 30 users?",
+                },
+            )["result"]["ref"]
+            shares = [
+                dialogue.command(
+                    "work_products.shares.create",
+                    {
+                        "product_id": product["object_id"],
+                        "product_version": 1,
+                        "recipient_role": "tech_lead",
+                    },
+                )["result"]["ref"]
+            ]
+        else:
+            assert (
+                dialogue.ask(
+                    "当前容量是多少？" if language == "zh" else "What is the current capacity?"
+                )["status"]
+                == "completed"
+            )
+        queued = dialogue.command(
+            "turns.create",
+            {
+                "role_id": "tech_lead",
+                "text": question,
+                "shares": shares,
+            },
+        )
+        dialogue.worker.run_once()
+        job = dialogue.jobs.get(queued["result"]["queued_jobs"][0])
+        assert job["status"] == "failed" and job["error"] == "role_help_unverified", job
+        assert answer not in json.dumps(dialogue.history(), ensure_ascii=False)
+    finally:
+        dialogue.close()

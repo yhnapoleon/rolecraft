@@ -1261,16 +1261,23 @@ class CooperativeHelpVerifier:
             )
             if not acknowledgement_request:
                 raise ProtocolError("role_help_unverified", status=409)
-            from career_lab.api.private_roles import RuleReplyVerifier
-
-            return RuleReplyVerifier().check(
-                snapshot,
-                auth,
-                request,
-                text,
-                record_attempt=record_attempt,
-                begin_call=begin_call,
+            standalone = not (
+                request.input.shares
+                or request.input.task
+                or snapshot.memories
+                or snapshot.received_shares
             )
+            if standalone:
+                from career_lab.api.private_roles import RuleReplyVerifier
+
+                return RuleReplyVerifier().check(
+                    snapshot,
+                    auth,
+                    request,
+                    text,
+                    record_attempt=record_attempt,
+                    begin_call=begin_call,
+                )
         begin_call("role_help_review", self.revision + ":" + self.model.revision)
         inputs = {
             "policy_revision": HELP_POLICY_REVISION,
