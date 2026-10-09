@@ -22,6 +22,10 @@ from career_lab.scenarios.v2.release import (
     describe,
     sha,
 )
+from tests.support.scenario_packages import (
+    current_contract_revision,
+    legacy_matches_current_contract,
+)
 
 LEGACY = ROOT / "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6/pm_pilot"
 CASES = json.loads(Path(__file__).with_name("engine-cases.json").read_text())
@@ -154,21 +158,34 @@ def test_formal_protocol_migration_preserves_each_business_file_and_old_release(
 
 
 def test_implementation_layout_does_not_change_content_or_review_identity(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     from career_lab.scenarios.v2 import localization
 
     before = describe(load_package(LEGACY), "before")
+    released = tmp_path / "released"
+    rebind(
+        LEGACY,
+        released,
+        protocol=PROTOCOL,
+        contract_revision=current_contract_revision(),
+        scenario_revision="protocol-v1",
+        runtime_revision="protocol-v1",
+    )
+    # The legacy runtime can only be constructed while its pinned contract is current.
+    roots = [released]
+    if legacy_matches_current_contract(LEGACY):
+        roots.append(LEGACY)
 
     # The old source-layout function must never be consulted by either protocol's runtime.
     def moved_implementation(*_args: object) -> dict[str, str]:
         raise AssertionError("Implementation file layout is not a content admission condition")
 
     monkeypatch.setattr(localization, "runtime_source_files", moved_implementation)
-    module = ScenarioModule(LEGACY)
-    after = describe(module.package, "after")
-    assert after.content_identity == before.content_identity
-    assert after.review == before.review
+    for root in roots:
+        after = describe(ScenarioModule(root).package, "after")
+        assert after.content_identity == before.content_identity
+        assert after.review == before.review
 
 
 def test_business_file_edit_changes_content_identity_and_invalidates_old_review(

@@ -13,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.scenarios.v2.release import ROOT
+from tests.support.scenario_packages import runtime_root
 
 from .conftest import PublishedSession
 from .test_published_catalog import submit
@@ -51,7 +52,10 @@ def exercise_feedback(catalog: Path, directory: Path) -> None:
             == 14
         )
         os.environ.pop("CAREER_LAB_SCENARIO_CATALOG", None)
-        os.environ["CAREER_LAB_SCENARIO_V2"] = str(ROOT / row["root"])
+        # Historical packages pin one foundation contract; serve a formally rebound
+        # copy when that contract is no longer current (content identity unchanged).
+        served = runtime_root(root, directory / f"runtime-{index}")
+        os.environ["CAREER_LAB_SCENARIO_V2"] = str(served)
         os.environ["CAREER_LAB_SCENARIO_ARCHIVE"] = str(directory / f"archive-{index}")
         app = create_runtime_app(f"sqlite:///{directory}/feedback-{index}.db", provider="local")
         try:

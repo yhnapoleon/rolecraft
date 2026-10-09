@@ -1,14 +1,15 @@
 """Local policy fixtures, NOT a credential resolver or real API/worker."""
 
-from pathlib import Path
 import pytest
+
 from career_lab.contracts.v2.core import AuthContext, Command, Executor
-from career_lab.scenarios.v2 import load_package, ScenarioEngine
+from career_lab.scenarios.v2 import ScenarioEngine, load_package
+from tests.support.scenario_packages import LEGACY_ROOT
 
 
 @pytest.fixture
 def package():
-    return load_package(Path(__file__).resolve().parents[3] / "scenarios/pm_pilot/v2")
+    return load_package(LEGACY_ROOT)
 
 
 @pytest.fixture
