@@ -1,5 +1,6 @@
+from career_lab.errors import CodedValueError, InternalFailure
 from career_lab.rubrics.feedback import build_feedback
-from career_lab.storage.sessions import digest
+from career_lab.storage.sessions import SessionStore, digest
 
 
 def feedback_id(store, session_id, submission_id):
@@ -21,12 +22,34 @@ def generate_feedback(store, session_id, submission_id):
         )
 
 
-def read_evidence(store, session_id, submission_id, criterion_id, evidence_id):
+def read_evidence(
+    store: SessionStore,
+    session_id: str,
+    submission_id: str,
+    criterion_id: str,
+    evidence_id: str,
+) -> dict[str, object]:
     report = saved_feedback(store, session_id, submission_id)
-    ref = report["sources"][criterion_id][evidence_id]
-    seq = ref["observed_at_seq"]
-    if seq > report["as_of_seq"]:
-        raise ValueError("future evidence rejected")
+    try:
+        sources = report["sources"]
+    except KeyError as error:
+        raise InternalFailure("invalid persisted feedback") from error
+    if not isinstance(sources, dict):
+        raise TypeError("invalid persisted feedback sources")
+    if criterion_id not in sources:
+        raise KeyError(criterion_id)
+    criterion = sources[criterion_id]
+    if not isinstance(criterion, dict):
+        raise TypeError("invalid persisted criterion sources")
+    if evidence_id not in criterion:
+        raise KeyError(evidence_id)
+    ref = criterion[evidence_id]
+    try:
+        seq, as_of_seq = ref["observed_at_seq"], report["as_of_seq"]
+    except KeyError as error:
+        raise InternalFailure("invalid persisted evidence coordinates") from error
+    if seq > as_of_seq:
+        raise CodedValueError("future evidence rejected")
     kind = ref["kind"]
     if kind == "document":
         view = store.project_view(session_id, "learner", seq)

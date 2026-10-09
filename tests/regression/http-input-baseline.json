@@ -1,0 +1,23 @@
+{
+  "empty_pilot_plan": {
+    "status": 422,
+    "body": {
+      "error": "6 validation errors for PilotPlan\nparticipants\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nknowledge_domains\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nlaunch_day\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nupdate_strategy\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nfallback\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing\nwork_items\n  Field required [type=missing, input_value={}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/missing",
+      "code": "invalid_request"
+    }
+  },
+  "invalid_object_version": {
+    "status": 422,
+    "body": {
+      "error": "1 validation error for ObjectRef\nversion\n  Input should be greater than 0 [type=greater_than, input_value=0, input_type=int]\n    For further information visit https://errors.pydantic.dev/2.12/v/greater_than",
+      "code": "invalid_request"
+    }
+  },
+  "negative_configuration_participants": {
+    "status": 422,
+    "body": {
+      "error": "1 validation error for AssistantConfig\nparticipants\n  Input should be greater than or equal to 0 [type=greater_than_equal, input_value=-1, input_type=int]\n    For further information visit https://errors.pydantic.dev/2.12/v/greater_than_equal",
+      "code": "invalid_request"
+    }
+  }
+}
