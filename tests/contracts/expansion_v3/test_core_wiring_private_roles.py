@@ -44,6 +44,24 @@ class ControlledModel:
             raise TimeoutError("controlled")
         if self.mode == "dump":
             return ModelReply(text=messages[0]["content"])
+        if messages[0]["content"].startswith("Review the actual reply"):
+            return ModelReply(
+                text=json.dumps(
+                    {
+                        "request_kinds": ["business_judgment"],
+                        "facts_answered": True,
+                        "citations_supported": True,
+                        "within_knowledge": True,
+                        "preserves_stance": True,
+                        "no_complete_solution": True,
+                        "no_resource_approval": True,
+                        "one_main_question": True,
+                        "conditions_preserved": True,
+                        "language_match": True,
+                        "decision": "supported",
+                    }
+                )
+            )
         return ModelReply(
             text="已收到。我会继续核对依据。", usage={"prompt_tokens": 11, "completion_tokens": 7}
         )
@@ -430,11 +448,19 @@ def test_three_rounds_use_persisted_private_history_across_api_worker_instances(
         jid, _ = queue(api, "round-" + str(n))
         api["worker"].run_once()
         assert api["jobs"].get(jid)["status"] == "completed"
-    assert len(api["model"].calls) == 3
-    assert "已收到。我会继续核对依据。" in api["model"].calls[1][0]["content"]
-    assert "已收到。我会继续核对依据。" in api["model"].calls[2][0]["content"]
+    generation_calls = [call for call in api["model"].calls if "\nCONTEXT\n" in call[0]["content"]]
+    review_calls = [
+        call
+        for call in api["model"].calls
+        if call[0]["content"].startswith("Review the actual reply")
+    ]
+    assert len(generation_calls) == 3
+    assert len(review_calls) == 2
+    assert len(api["model"].calls) == 5
+    assert "已收到。我会继续核对依据。" in generation_calls[1][0]["content"]
+    assert "已收到。我会继续核对依据。" in generation_calls[2][0]["content"]
     records = private_records(api)
-    assert len(records) == 6
+    assert len(records) == 8
     assert len([r for r in store.view(api["owner"]).objects if r.ref.kind == "role_reply"]) == 3
     assert not any(r.ref.kind == "role_display" for r in store.view(api["owner"]).objects)
 
@@ -531,7 +557,16 @@ def test_actual_event_reference_and_attachment_history_survive_private_commit_an
     api["worker"].run_once()
     row = api["jobs"].get(jid)
     assert row["status"] == "completed", row["error"]
-    assert "draft with an uncertain claim" in api["model"].calls[-1][0]["content"]
+    generation_calls = [call for call in api["model"].calls if "\nCONTEXT\n" in call[0]["content"]]
+    review_calls = [
+        call
+        for call in api["model"].calls
+        if call[0]["content"].startswith("Review the actual reply")
+    ]
+    assert len(generation_calls) == 2
+    assert len(review_calls) == 2
+    assert len(api["model"].calls) == 4
+    assert "draft with an uncertain claim" in generation_calls[-1][0]["content"]
     audits = private_records(api)
     latest = max(
         (r for r in audits if r.content["generation_audit"]["phase"] == "completed"),
