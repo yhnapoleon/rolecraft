@@ -6,9 +6,10 @@ import { V4Mounts } from './v4-mounts';
 import { projectNativeWorkspace } from './v4-workspace-projection';
 import {
   keepProductDraft,
+  readProduct,
   WorkspaceSlotController,
 } from './features/workspace/native-v4/slot-controller';
-import type { ProductCreate, WorkspaceProductRead } from './contracts-v2';
+import type { ProductCreate } from './contracts-v2';
 import { workspaceActionMessage } from './features/workspace/native-v4/messages';
 import { canonicalPurpose } from './features/workspace/native-v4/form-values';
 import { blankPilot, WorkspaceStore } from './store';
@@ -545,18 +546,29 @@ export class LiveWorkbench {
       );
     await this.v4.sync(this.store.getSnapshot().workspace.sessions.find((x) => x.id === s.id)!);
   }
+  private nativeProduct(session: LocalSession | undefined, id: string) {
+    if (session?.protocol !== 2 || !session.v2NativeWorkspace) return;
+    const products: readonly unknown[] = session.v2Workspace?.products ?? [];
+    const product = products.find(
+      (item) =>
+        !!item && typeof item === 'object' && 'product_id' in item && item.product_id === id,
+    );
+    return product ? readProduct(product, session.id) : undefined;
+  }
+  nativeProductEditable(a: Attempt): boolean {
+    const host = this.v4Host(a);
+    return !!host && new WorkspaceSlotController(host).can('work_products.versions.create');
+  }
+  nativeProductValue(a: Attempt, id: string): ProductCreate | undefined {
+    const session = this.session(a);
+    const product = this.nativeProduct(session, id);
+    if (!session || !product) return;
+    return new WorkspaceSlotController(this.v4.host(session)).value(product);
+  }
   async keepNativeProductDraft(a: Attempt, id: string, patch: Partial<ProductCreate>) {
     const session = this.session(a);
-    const product: WorkspaceProductRead | undefined = session?.v2Workspace?.products.find(
-      (item: { product_id: string }) => item.product_id === id,
-    );
-    if (
-      session?.protocol !== 2 ||
-      !session.v2NativeWorkspace ||
-      session.world.status !== 'active' ||
-      !product
-    )
-      throw new Error(T('当前无法保存作品草稿。', 'The work draft cannot be saved right now.'));
+    const product = this.nativeProduct(session, id);
+    if (session?.world.status !== 'active' || !product) throw new Error('editing_unavailable');
     await keepProductDraft(this.v4.host(session), product, patch);
   }
   async restoreNativeProduct(a: Attempt, productId: string): Promise<void> {

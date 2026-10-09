@@ -287,6 +287,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
         });
     };
     on(n, name === 'purpose' ? 'change' : 'input', update);
+    if (name === 'purpose') on(n, 'input', (event) => event.stopPropagation());
     on(n, 'compositionend', update);
     on(n, 'focusout', (e) => e.stopPropagation());
   }

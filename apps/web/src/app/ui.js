@@ -51,6 +51,8 @@ import {
   FIELD_HINT,
   errText,
 } from './vocab.js';
+import { canonicalPurpose } from '../features/workspace/native-v4/form-values';
+import { workspaceActionMessage } from '../features/workspace/native-v4/messages';
 import { pendingTurnRole, serverText } from '../store';
 import { eventLine, isFeedEvent } from './events.js';
 import { testSetView, testSetPreview, caseState, testRunView } from './test-set-view.js';
@@ -192,6 +194,19 @@ const isEarlier = (a, x) => x.adopted && !works(a).some((y) => y.id === x.id);
 const taskWorks = (a, id) =>
   a.artifacts.filter((x) => x.taskId === id && !x.removedAt && !isEarlier(a, x));
 const shown = (x) => (x.draft ? Object.assign({}, x, x.draft) : x);
+function editorView(a, x) {
+  const view = shown(x);
+  if (!L.nativeWorkspace(a) || ui.previewWorkId === x.id) return view;
+  const value = L.nativeProductValue(a, x.id);
+  if (!value) return view;
+  return {
+    ...view,
+    title: value.title,
+    body: value.content,
+    purpose:
+      E.PURPOSES.find((purpose) => canonicalPurpose(purpose) === value.purpose) ?? value.purpose,
+  };
+}
 // What a piece of work is for: flask = a test plan, branch = options, stamp = the decision you will submit.
 const purposeGlyph = (intent) =>
   ({ plan: 'flask', option: 'branch', commit: 'stamp' })[intent]
@@ -1302,7 +1317,14 @@ function startView(a, t) {
   </div>`;
 }
 function canEditWork(a, x) {
-  return !!x && !x.removedAt && statusOf(a) === 'active' && !storageIssue && !snap().storageError;
+  return (
+    !!x &&
+    !x.removedAt &&
+    statusOf(a) === 'active' &&
+    !storageIssue &&
+    !snap().storageError &&
+    (!L.nativeWorkspace(a) || L.nativeProductEditable(a))
+  );
 }
 function workControls(a, x, editable, structured = false) {
   const mutable = canEditWork(a, x);
@@ -1380,10 +1402,12 @@ function workView(a, t, x) {
   if (x.kind === 'test_set') return structuredWorkView(a, t, x);
   if (x.kind === 'investigation') return structuredInvestigationView(a, t, x);
   const list = taskWorks(a, t.id);
-  const view = shown(x);
+  const view = editorView(a, x);
   const intent = E.intentOf(view.purpose);
   const prog = E.agentProgress(a, x);
   const editable = canEditWork(a, x) && ui.previewWorkId !== x.id;
+  const showEditor =
+    editable || (L.nativeWorkspace(a) && statusOf(a) === 'active' && ui.previewWorkId !== x.id);
   const notes = (ui.notesCache || []).filter(
     (n) => n.targetId === x.id || (!n.targetId && n.taskId === t.id),
   );
@@ -1400,7 +1424,7 @@ function workView(a, t, x) {
           <span>${x.source === 'user' ? T('你写的', 'By you') : x.requestId ? T('来自你的 Agent', 'From your agent') : T('导入的作品', 'Imported work')}</span>
           <span class="save" data-save title="${esc(T('作品保存在本机；交付时可合并进交付稿', 'Work stays on this device; fold it into your deliverable when you submit'))}"></span>
         </div>
-        ${editable ? `<label class="sr-only" for="editor-body">${T('正文', 'Body')}</label><textarea id="editor-body" class="editor-body" data-edit="body" maxlength="50000" spellcheck="false" placeholder="${esc(T('写判断、问题，或直接起草方案。## 写小标题，- 写列表。', 'Write a judgement, questions or a draft plan. ## for headings, - for lists.'))}">${esc(view.body)}</textarea>` : `<div class="prose">${md(view.body)}</div>`}
+        ${showEditor ? `<label class="sr-only" for="editor-body">${T('正文', 'Body')}</label><textarea id="editor-body" class="editor-body" data-edit="body" ${editable ? '' : 'readonly'} maxlength="50000" spellcheck="false" placeholder="${esc(T('写判断、问题，或直接起草方案。## 写小标题，- 写列表。', 'Write a judgement, questions or a draft plan. ## for headings, - for lists.'))}">${esc(view.body)}</textarea>` : `<div class="prose">${md(view.body)}</div>`}
         ${x.evidence.length ? `<div class="evidence-row"><span class="meta">${T('依据', 'Evidence')}</span>${x.evidence.map((ev) => `<button type="button" class="chip" data-action="view-evidence" data-id="${esc(ev.id)}" data-version="${esc(ev.version ?? '')}">${icon(ev.type === 'test' ? 'flask' : 'doc', 'i-xs')}<span>${esc(evTitle(ev))}</span>${ev.version ? `<span class="ver">v${ev.version}</span>` : ''}</button>`).join('')}</div>` : ''}
       </article>
       ${notes.length ? `<aside class="margin" aria-label="${esc(T('同事的提醒', 'Reminders from colleagues'))}">${notes.map(marginNote).join('')}</aside>` : ''}
@@ -1417,10 +1441,9 @@ function workView(a, t, x) {
   </div>`;
 }
 function structuredWorkView(a, t, x) {
-  const view = shown(x);
+  const view = editorView(a, x);
   const prog = E.agentProgress(a, x);
-  const editable =
-    (x.adopted || ui.editPending === x.id) && statusOf(a) === 'active' && !storageIssue;
+  const editable = (x.adopted || ui.editPending === x.id) && canEditWork(a, x);
   const evidence = x.evidence.length
     ? `<div class="evidence-row test-set-evidence"><span class="meta">${T('这份计划的依据', 'Evidence for this plan')}</span>${x.evidence.map((ev) => `<button type="button" class="chip" data-action="view-evidence" data-id="${esc(ev.id)}" data-version="${esc(ev.version ?? '')}">${icon(ev.type === 'test' ? 'flask' : 'doc', 'i-xs')}<span>${esc(evTitle(ev))}</span></button>`).join('')}</div>`
     : '';
@@ -1444,7 +1467,7 @@ function structuredInvestigationView(a, t, x) {
   const mutable = canEditWork(a, x) && (x.adopted || ui.editPending === x.id);
   const prog = E.agentProgress(a, x);
   return investigationView({
-    work: shown(x),
+    work: editorView(a, x),
     attempt: a,
     session: sessionOf(a),
     mutable,
@@ -5112,7 +5135,7 @@ document.addEventListener('input', (e) => {
   if (L.nativeWorkspace(a) && ['title', 'body', 'purpose'].includes(el.dataset.edit)) {
     const field = el.dataset.edit === 'body' ? 'content' : el.dataset.edit;
     void L.keepNativeProductDraft(a, x.id, { [field]: el.value }).catch((error) =>
-      notify(errText(error)),
+      notify(workspaceActionMessage(error instanceof Error ? error.message : '', T)),
     );
     return;
   }

@@ -81,6 +81,22 @@ async function saveAndShare(context) {
 
 async function waitingEditorRefresh(context) {
   const { browser, text, taskRoute } = context;
+  const unsaved = text(
+    '已有未保存的长段落，必须保留。',
+    'Existing long unsaved paragraph must survive.',
+  );
+  const unsavedTitle = text('已有未保存标题', 'Existing unsaved title');
+  await browser.type('#editor-body', unsaved);
+  await browser.type('#editor-title', unsavedTitle);
+  await waitFor(
+    browser,
+    `(() => {
+    const live = window.PracticeLive;
+    const host = live.v4Host(live.engine.getAttempt(live.state));
+    const snap = host.snapshot();
+    return host.draft('workspace', snap.session.sessionId + ':product:' + snap.currentProduct.object_id)?.value.content === ${JSON.stringify(unsaved)};
+  })()`,
+  );
   await browser.click('[data-action="to-board"]');
   await browser.ev(`(() => {
     const live = window.PracticeLive;
@@ -98,10 +114,23 @@ async function waitingEditorRefresh(context) {
   await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
   await browser.click('.ol-row[data-type="work"]');
   await waitFor(browser, `!!document.querySelector('#editor-body')`);
-  const changed = text('等待挂载期间编辑的原文', 'Text edited while mounting');
-  await browser.type('#editor-body', changed);
-  const changedTitle = text('需要核实的作品', 'Work to verify');
-  await browser.type('#editor-title', changedTitle);
+  const changed = `${unsaved}x`;
+  const changedTitle = `${unsavedTitle}x`;
+  const beforeTyping = await browser.ev(`({
+    content: document.querySelector('#editor-body').value,
+    title: document.querySelector('#editor-title').value,
+  })`);
+  writeFileSync(
+    `${output}/${context.language}-before-mount-input.json`,
+    JSON.stringify(beforeTyping, null, 2),
+  );
+  await browser.ev(`(() => {
+    for (const selector of ['#editor-body', '#editor-title']) {
+      const node = document.querySelector(selector);
+      node.value += 'x';
+      node.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  })()`);
   await browser.ev(`(() => {
     const select = document.querySelector('[data-edit="purpose"]');
     select.value = '方案比较';
@@ -123,22 +152,107 @@ async function waitingEditorRefresh(context) {
   );
   assert.equal(actual, changed, 'The pending edit survives refresh');
   assert.equal(await browser.ev(`document.querySelector('#editor-title').value`), changedTitle);
-  assert.equal(await browser.ev(`document.querySelector('[data-edit="purpose"]').value`), '方案比较');
-  // Mounted selectors follow their normal input/change sequence as well.
+  assert.equal(
+    await browser.ev(`document.querySelector('[data-edit="purpose"]').value`),
+    '方案比较',
+  );
+  // Mounted input/change events must have only the slot as their writer.
   await browser.ev(`(() => {
+    window.purposeInputBubbles = 0;
+    document.addEventListener('input', event => {
+      if (event.target.matches('[data-edit="purpose"]')) window.purposeInputBubbles++;
+    });
     const select = document.querySelector('[data-edit="purpose"]');
     select.value = '探索笔记';
     select.dispatchEvent(new Event('input', { bubbles: true }));
     select.dispatchEvent(new Event('change', { bubbles: true }));
   })()`);
   await delay(400);
-  assert.equal(await browser.ev(`document.querySelector('[data-edit="purpose"]').value`), '探索笔记');
+  assert.equal(
+    await browser.ev(`document.querySelector('[data-edit="purpose"]').value`),
+    '探索笔记',
+  );
+  assert.equal(await browser.ev('window.purposeInputBubbles'), 0);
   assert.equal(await browser.ev(`document.querySelectorAll('#editor-body').length`), 1);
   for (const value of [text('新输入不能被覆盖', 'Keep the new input'), '']) {
     await browser.type('#editor-body', value);
-    await browser.ev(`window.PracticeLive.store.report({ notice: '' })`);
     await delay(400);
+    await browser.click('[data-action="to-board"]');
+    await browser.goto(base + taskRoute);
+    await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
+    await browser.click('.ol-row[data-type="work"]');
+    await waitFor(browser, `!!document.querySelector('#editor-body')`);
+    await delay(400);
+    assert.equal(
+      await browser.ev(`(() => {
+      const live = window.PracticeLive;
+      const host = live.v4Host(live.engine.getAttempt(live.state));
+      const snap = host.snapshot();
+      return host.draft('workspace', snap.session.sessionId + ':product:' + snap.currentProduct.object_id)?.value.content;
+    })()`),
+      value,
+    );
     assert.equal(await browser.ev(`document.querySelector('#editor-body').value`), value);
+  }
+}
+
+async function initialPermissionRead(context) {
+  const { browser, text } = context;
+  const probe = await browser.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `(() => {
+      const send = window.fetch.bind(window);
+      let release;
+      const waiting = new Promise(resolve => { release = resolve; });
+      window.releaseWorkspaceRead = release;
+      window.fetch = async (input, options) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (url.includes('/workbench')) {
+          window.workspaceReadWaiting = true;
+          await waiting;
+        }
+        return send(input, options);
+      };
+    })()`,
+  });
+  try {
+    await browser.send('Page.reload', { ignoreCache: true });
+    await waitFor(
+      browser,
+      `window.workspaceReadWaiting && !!document.querySelector('.ol-row[data-type="work"]')`,
+    );
+    await browser.click('.ol-row[data-type="work"]');
+    await waitFor(browser, `!!document.querySelector('#editor-title')`);
+    const locked = await browser.ev(`({
+      title: document.querySelector('#editor-title').readOnly,
+      body: !document.querySelector('#editor-body') || document.querySelector('#editor-body').readOnly,
+      purpose: document.querySelector('[data-edit="purpose"]').disabled,
+    })`);
+    writeFileSync(
+      `${output}/${context.language}-initial-permissions.json`,
+      JSON.stringify(locked, null, 2),
+    );
+    assert.deepEqual(locked, { title: true, body: true, purpose: true });
+    await browser.ev('window.releaseWorkspaceRead()');
+    await waitFor(
+      browser,
+      `!!document.querySelector('#editor-body') && !document.querySelector('#editor-body').readOnly && !document.querySelector('#editor-title').readOnly && !document.querySelector('[data-edit="purpose"]').disabled`,
+    );
+    const value = text('权限核实后的新输入', 'New input after permissions are checked');
+    await browser.type('#editor-body', value);
+    await waitFor(
+      browser,
+      `(() => {
+      const live = window.PracticeLive;
+      const host = live.v4Host(live.engine.getAttempt(live.state));
+      const snap = host.snapshot();
+      return host.draft('workspace', snap.session.sessionId + ':product:' + snap.currentProduct.object_id)?.value.content === ${JSON.stringify(value)};
+    })()`,
+    );
+  } finally {
+    await browser.ev('window.releaseWorkspaceRead?.()');
+    await browser.send('Page.removeScriptToEvaluateOnNewDocument', {
+      identifier: probe.identifier,
+    });
   }
 }
 
@@ -206,9 +320,18 @@ async function runLanguage(language) {
     await browser.goto(base);
     await step('normal entry and fixed work language', () => enterWorkspace(context));
     await step('source reading and actual assistant test', () => readAndTest(context));
-    await step('unsaved draft survives leaving and reopening its route', () => restoreDraft(context));
+    await step('unsaved draft survives leaving and reopening its route', () =>
+      restoreDraft(context),
+    );
     await step('save and share the exact work version', () => saveAndShare(context));
-    await step('editing while mounting survives refresh', () => waitingEditorRefresh(context));
+    if (process.env.DRAFT_CASE !== 'permissions')
+      await step('existing unsaved work survives pre-mount input and real remounts', () =>
+        waitingEditorRefresh(context),
+      );
+    if (process.env.DRAFT_CASE !== 'existing')
+      await step('initial permission read keeps input locked until the host is ready', () =>
+        initialPermissionRead(context),
+      );
     assert.deepEqual(
       browser.logs.filter((item) => item.level === 'exception'),
       [],

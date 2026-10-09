@@ -80,18 +80,21 @@ export async function keepProductDraft(
   product: WorkspaceProductRead,
   patch: Partial<ProductCreate>,
 ): Promise<void> {
-  if (host.snapshot().session?.sessionId !== product.session_id) throw Error('session_changed');
-  if (product.removed_at) throw Error('editing_unavailable');
-  const key = productDraftKey(product.product_id, product.session_id);
-  const stored = host.draft<SlotDraft>('workspace', key);
-  const prior =
-    stored?.schema === 1 &&
-    stored.status === 'dirty' &&
-    stored.sessionId === product.session_id &&
-    stored.productId === product.product_id
-      ? stored
-      : undefined;
-  await host.keepDraft('workspace', key, editedProductDraft(product, prior, patch));
+  await new WorkspaceSlotController(host).editProduct(product, patch);
+}
+
+/** Validate the same common product fields for API pages and the pre-mount projection. */
+export function readProduct(value: unknown, sessionId: string): WorkspaceProductRead {
+  if (!object(value) || value.session_id !== sessionId) throw Error('invalid_workspace_identity');
+  if (
+    typeof value.product_id !== 'string' ||
+    !integer(value.version) ||
+    value.version < 1 ||
+    typeof value.title !== 'string' ||
+    typeof value.content !== 'string'
+  )
+    throw Error('invalid_product');
+  return value as WorkspaceProductRead;
 }
 
 export type RequestPointer = {
@@ -140,15 +143,7 @@ export function readPage<T>(
     throw Error('invalid_workspace_page');
   for (const row of v.items) {
     if (!object(row) || row.session_id !== sessionId) throw Error('invalid_workspace_identity');
-    if (
-      kind === 'product' &&
-      (!(typeof row.product_id === 'string') ||
-        !integer(row.version) ||
-        row.version < 1 ||
-        typeof row.title !== 'string' ||
-        typeof row.content !== 'string')
-    )
-      throw Error('invalid_product');
+    if (kind === 'product') readProduct(row, sessionId);
     if (
       kind === 'task' &&
       (typeof row.id !== 'string' ||
@@ -212,7 +207,6 @@ export class WorkspaceSlotController {
   private disposed = false;
   private inFlight = false;
   private boundSession: string | null = null;
-  private drafts = new Map<string, SlotDraft>();
   private writes: Promise<void> = Promise.resolve();
   constructor(
     readonly host: V4HostAdapter,
@@ -246,15 +240,16 @@ export class WorkspaceSlotController {
   }
   draft(p = this.selected()): SlotDraft | undefined {
     if (!p) return;
-    const local = this.drafts.get(this.key(p.product_id, p.session_id));
-    const stored = this.host.draft<SlotDraft>('workspace', this.key(p.product_id, p.session_id));
-    const d = local ?? stored;
+    const d = this.host.draft<SlotDraft>('workspace', this.key(p.product_id, p.session_id));
     return d?.schema === 1 &&
       d.status === 'dirty' &&
       d.sessionId === p.session_id &&
       d.productId === p.product_id
       ? d
       : undefined;
+  }
+  value(product: WorkspaceProductRead): ProductCreate {
+    return this.draft(product)?.value ?? productInput(product);
   }
   conflict(p = this.selected()) {
     return !!p && !!this.draft(p) && this.draft(p)!.baseVersion !== p.version;
@@ -279,15 +274,13 @@ export class WorkspaceSlotController {
     );
   }
   private persist(key: string, value: SlotDraft) {
-    this.drafts.set(key, value);
+    // Host.keepDraft stages synchronously and serializes persistence across all surfaces.
+    const write = this.host.keepDraft('workspace', key, structuredClone(value)).catch(() => {
+      throw Error('draft_storage_failed');
+    });
     this.emit();
-    const write = this.writes
-      .then(() => this.host.keepDraft('workspace', key, structuredClone(value)))
-      .then(() => {
-        if (value.status === 'saved' && this.drafts.get(key)?.token === value.token)
-          this.drafts.delete(key);
-      });
-    this.writes = write.catch((error) => {
+    const pending = Promise.all([this.writes, write]).then(() => {});
+    this.writes = pending.catch((error) => {
       this.state.error = 'draft_storage_failed';
       this.emit();
       throw error;
@@ -296,10 +289,18 @@ export class WorkspaceSlotController {
     return write;
   }
   async edit(patch: Partial<ProductCreate>) {
-    const p = this.selected();
-    if (!p || p.removed_at || !this.can('work_products.versions.create'))
+    const product = this.selected();
+    if (!product) throw Error('editing_unavailable');
+    await this.editProduct(product, patch);
+  }
+  async editProduct(product: WorkspaceProductRead, patch: Partial<ProductCreate>) {
+    if (this.session() !== product.session_id) throw Error('session_changed');
+    if (this.disposed || product.removed_at || !this.can('work_products.versions.create'))
       throw Error('editing_unavailable');
-    await this.persist(this.key(p.product_id), editedProductDraft(p, this.draft(p), patch));
+    await this.persist(
+      this.key(product.product_id),
+      editedProductDraft(product, this.draft(product), patch),
+    );
   }
   async editInvestigation(field: 'question' | 'review_focus' | 'review_note', value: string) {
     const p = this.selected();
@@ -452,7 +453,7 @@ export class WorkspaceSlotController {
       p = body.object;
     if (pointer.productId && pointer.draftToken) {
       const key = this.key(pointer.productId, pointer.sessionId),
-        draft = this.drafts.get(key) ?? this.host.draft<SlotDraft>('workspace', key);
+        draft = this.host.draft<SlotDraft>('workspace', key);
       if (
         !object(p) ||
         p.session_id !== pointer.sessionId ||

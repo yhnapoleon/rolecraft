@@ -18,6 +18,10 @@ export function workspaceActionMessage(code: string, T: Translate): string {
           'Restoration is unconfirmed. Check the original request result.',
         ),
         product_unavailable: T('找不到这份作品。', 'This work is unavailable.'),
+        editing_unavailable: T(
+          '当前无法保存作品草稿。',
+          'The work draft cannot be saved right now.',
+        ),
         draft_conflict: T(
           '工作区有新版本；草稿已保留，请比较后保存或另存。',
           'The workspace has a newer version. Compare before saving, or save a copy.',
