@@ -77,6 +77,7 @@ def feedback_segment(content, path):
     import re
 
     allowed = (
+        r"/outcomes/[0-9]+",
         r"/(business_response|next_options|independent_understanding|text)",
         r"/(items|rule_items)/[0-9]+(?:/explanation)?",
         r"/verified_facts/[0-9]+(?:/(summary|activity_totals|activity_window|source_snapshot_hash))?",
@@ -155,6 +156,27 @@ def project_feedback_content(content, source_readable, *, limited_scope=False):
     def text_allowed(path):
         return proof(path) or (not limited_scope and not hidden and not declared(path))
 
+    if data.get("preview_kind") is not None:
+        data["basis_refs"] = [ref for ref in data.get("basis_refs") or () if source_readable(ref)]
+        data["available_actions"] = [
+            action
+            for action in data.get("available_actions") or ()
+            if not limited_scope and all(source_readable(ref) for ref in action["objects"])
+        ]
+        if hidden:
+            data["conditions"] = []
+        for index, outcome in enumerate(data.get("outcomes") or ()):
+            if not proof(f"/outcomes/{index}"):
+                outcome.update(
+                    kind="pending_verification",
+                    summary="Supporting evidence is unavailable under current permissions."
+                    if data.get("preview_language") == "en"
+                    else "当前权限下支持依据不可核验。",
+                    basis_refs=[r for r in outcome["basis_refs"] if source_readable(r)],
+                    conditions=[],
+                    missing_inputs=["authorized_basis"],
+                    values={},
+                )
     message = "当前权限下部分支持依据不可核验，相关判断待核验。"
     for name in ("items", "rule_items"):
         for index, item in enumerate(data.get(name) or ()):

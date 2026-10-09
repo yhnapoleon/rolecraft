@@ -1,6 +1,7 @@
 from typing import Annotated, Literal, Union
 from pydantic import Field, JsonValue, model_validator
 from .core import *
+from .world import AssistantConfig
 
 
 class WorkspaceTask(V2):
@@ -205,6 +206,21 @@ class RevisionCycle(V2):
 
 
 class ReviewRequest(V2):
+    preview_on_save: bool | None = Field(
+        default=None, strict=True, exclude_if=lambda value: value is None
+    )
+    requested_outcomes: tuple[Annotated[str, Field(min_length=1, max_length=500)], ...] | None = (
+        Field(default=None, max_length=20, exclude_if=lambda value: value is None)
+    )
+    candidate_config: AssistantConfig | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    available_operations: tuple[str, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    preview_kind: Literal["rules", "advisory"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     id: Identifier
     session_id: Identifier
     version: PositiveInt = 1

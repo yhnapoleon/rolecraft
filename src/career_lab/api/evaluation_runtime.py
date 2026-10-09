@@ -248,6 +248,11 @@ def create_feedback_handler(module, *, model=None):
                     }
                 )
                 deps[C.canonical(ref)] = ref
+            for index, outcome in enumerate(write.content.get("outcomes") or ()):
+                from career_lab.storage.v2_store import references
+
+                sources = references(outcome) or references(write.content.get("input_refs", ()))
+                traces.append(FeedbackReadTrace(write.ref, f"/outcomes/{index}", sources))
             for name in ("verified_facts", "historical_responsibilities"):
                 for i, _ in enumerate(write.content.get(name) or ()):
                     traces.append(
@@ -308,6 +313,11 @@ def create_feedback_handler(module, *, model=None):
             ).evaluate(auth, submitted)
             return traced(submission_feedback_plan(view, envelope.command, auth, prepared), reader)
         request = C.ReviewRequest.model_validate(view.get(subject).content)
+        if request.preview_kind is not None:
+            from career_lab.evidence.v2.preview import prepare_preview_feedback
+
+            prepared = prepare_preview_feedback(reader, request, auth, module.work_language, source)
+            return traced(review_feedback_plan(view, envelope.command, auth, prepared), reader)
         prepared = prepare_review_feedback(
             create_review_evaluator(reader, engine=engine, work_language=module.work_language),
             auth,

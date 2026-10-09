@@ -5,7 +5,10 @@ lifecycle transitions, idempotency, and jobs must be registered on the shared
 Gateway/V2Store. Never mount the historical test router as a production fallback.
 """
 
+from career_lab.api.modules import ExtensionRegistry
+from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.core import ProtocolError
+from career_lab.storage.v2_store import Mutation, TransactionView
 
 
 def create_service(*args, **kwargs):
@@ -118,4 +121,71 @@ def review_feedback_plan(view, command, auth, prepared):
             "followup_status": prepared["followup_status"],
             "followup_evidence_status": prepared["followup_evidence_status"],
         },
+    )
+
+
+def record_review_request(
+    view: TransactionView, command: C.Command, auth: C.AuthContext, *, registry: ExtensionRegistry
+) -> Mutation:
+    """Dispatch opt-in previews; legacy reviews retain their original plan and bytes."""
+    from dataclasses import replace
+
+    from career_lab.contracts import v2 as C
+    from career_lab.storage.v2_lifecycle import record_review
+
+    body = C.ReviewInput.model_validate(command.payload)
+    plan = record_review(view, command, auth)
+    if body.preview_kind is None:
+        if any(
+            value is not None
+            for value in (body.preview_on_save, body.candidate_config, body.requested_outcomes)
+        ):
+            raise C.ProtocolError("preview_kind_required")
+        return plan
+    if body.preview_on_save is not None and auth.executor.kind != "human":
+        raise C.ProtocolError("human_preference_required", status=403)
+    if not body.subjects or any(ref.kind != "product" for ref in body.subjects):
+        raise C.ProtocolError("preview_subject_required")
+    if view.current_cycle is None or view.current_cycle.content["status"] != "open":
+        raise C.ProtocolError("preview_cycle_closed", status=409)
+    for ref in body.subjects:
+        view.get(ref)
+    if body.candidate_config is not None and body.candidate_config.session_id != auth.session_id:
+        raise C.ProtocolError("config_session_mismatch", status=403)
+    operations = permitted_preview_operations(registry, auth)
+    writes = tuple(
+        write.model_copy(
+            update={
+                "content": C.ReviewRequest.model_validate(
+                    {
+                        **write.content,
+                        "preview_kind": body.preview_kind,
+                        "candidate_config": body.candidate_config,
+                        "requested_outcomes": body.requested_outcomes,
+                        "preview_on_save": body.preview_on_save,
+                        "available_operations": operations,
+                    }
+                ).model_dump(mode="json")
+            }
+        )
+        for write in plan.writes
+    )
+    return replace(plan, writes=writes)
+
+
+def permitted_preview_operations(
+    registry: ExtensionRegistry, auth: C.AuthContext
+) -> tuple[str, ...]:
+    """Finite installed capabilities only; this is a suggestion, never an authorization grant."""
+    return tuple(
+        name
+        for name in (
+            "reviews.create",
+            "work_products.shares.create",
+            "configuration.apply",
+            "tests.create",
+        )
+        if registry.availability(name).ready
+        and registry.availability(name).capability in auth.capabilities
+        and (auth.allowed_actions is None or name in auth.allowed_actions)
     )

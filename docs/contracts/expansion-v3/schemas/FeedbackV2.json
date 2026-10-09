@@ -715,6 +715,7 @@
       "title": "HistoricalResponsibilityFinding",
       "type": "object"
     },
+    "JsonValue": {},
     "ObjectRef": {
       "additionalProperties": false,
       "properties": {
@@ -1044,6 +1045,109 @@
       ],
       "title": "VersionPoint",
       "type": "object"
+    },
+    "_OutcomeAction": {
+      "additionalProperties": false,
+      "properties": {
+        "objects": {
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "title": "Objects",
+          "type": "array"
+        },
+        "operation": {
+          "enum": [
+            "reviews.create",
+            "work_products.shares.create",
+            "configuration.apply",
+            "tests.create"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "operation",
+        "objects"
+      ],
+      "title": "_OutcomeAction",
+      "type": "object"
+    },
+    "_OutcomeItem": {
+      "additionalProperties": false,
+      "properties": {
+        "basis_refs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EvidenceRefV2"
+          },
+          "title": "Basis Refs",
+          "type": "array"
+        },
+        "conditions": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Conditions",
+          "type": "array"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "fact",
+            "conditional_prediction",
+            "pending_verification",
+            "unsupported"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "missing_inputs": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Inputs",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "default": {},
+          "title": "Values",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "summary"
+      ],
+      "title": "_OutcomeItem",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -1062,12 +1166,102 @@
     "as_of": {
       "$ref": "#/$defs/VersionPoint"
     },
+    "available_actions": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/_OutcomeAction"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Available Actions"
+    },
+    "basis_refs": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Basis Refs"
+    },
     "business_response": {
       "title": "Business Response",
       "type": "string"
     },
+    "clarification": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Clarification"
+    },
+    "conditions": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Conditions"
+    },
     "evaluation": {
       "$ref": "#/$defs/FileRef"
+    },
+    "evaluation_as_of": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "generation_status": {
+      "anyOf": [
+        {
+          "enum": [
+            "rules_verified",
+            "waiting_model",
+            "advisory",
+            "failed",
+            "unknown"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Generation Status"
     },
     "historical_responsibilities": {
       "anyOf": [
@@ -1098,12 +1292,42 @@
       "title": "Independent Understanding",
       "type": "string"
     },
+    "input_refs": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Input Refs"
+    },
     "items": {
       "items": {
         "$ref": "#/$defs/FeedbackItem"
       },
       "title": "Items",
       "type": "array"
+    },
+    "missing_inputs": {
+      "anyOf": [
+        {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Missing Inputs"
     },
     "mode": {
       "default": "advisory",
@@ -1126,6 +1350,53 @@
       },
       "title": "Next Options",
       "type": "array"
+    },
+    "outcomes": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/_OutcomeItem"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Outcomes"
+    },
+    "preview_kind": {
+      "anyOf": [
+        {
+          "enum": [
+            "rules",
+            "advisory"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Preview Kind"
+    },
+    "preview_language": {
+      "anyOf": [
+        {
+          "enum": [
+            "zh",
+            "en"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Preview Language"
     },
     "read_boundaries": {
       "anyOf": [

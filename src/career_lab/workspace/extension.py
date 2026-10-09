@@ -122,9 +122,12 @@ def install_workspace_operations(registry, *, roles, clock=None):
     for name, model in WRITE_MODELS.items():
 
         def handler(view, command, auth):
-            return workspace_plan(
+            plan = workspace_plan(
                 view, command, auth, roles=roles, resolvers=resolvers, clock=clock
             )
+            from .preview import after_saved_version
+
+            return after_saved_version(registry, view, command, auth, plan)
 
         registry.register(Operation(name, "act", model, handler))
     for name, kind in [
