@@ -8,6 +8,7 @@ from uuid import UUID
 import career_lab.storage.v2_snapshot as snapshot_module
 import pytest
 from sqlalchemy import select
+from career_lab.security.credentials import derivations
 from career_lab.contracts import v2 as C
 from career_lab.contracts.v2 import *
 from career_lab.storage.v2_store import *
@@ -309,6 +310,17 @@ globals().pop("TestCampaign", None)
 globals().pop("TestExecutionMetadata", None)
 
 
+def copy_restore_database(store: V2Store, path: Path) -> V2Store:
+    source = store.db.engine.raw_connection()
+    destination = sqlite3.connect(path)
+    try:
+        source.driver_connection.backup(destination)
+    finally:
+        destination.close()
+        source.close()
+    return V2Store("sqlite:///" + str(path))
+
+
 @pytest.mark.parametrize("changed", ["request", "snapshot"])
 def test_restore_derivation_separates_request_and_snapshot(
     foundation: tuple[V2Store, C.AuthContext, str, C.SessionBindings, C.AssistantConfig],
@@ -327,14 +339,7 @@ def test_restore_derivation_separates_request_and_snapshot(
     tokens = []
     for index, snapshot in enumerate((first, second)):
         path = tmp_path / f"fork-{index}.db"
-        source = store.db.engine.raw_connection()
-        destination = sqlite3.connect(path)
-        try:
-            source.driver_connection.backup(destination)
-        finally:
-            destination.close()
-            source.close()
-        isolated = V2Store("sqlite:///" + str(path))
+        isolated = copy_restore_database(store, path)
         try:
             request = f"request-{index}" if changed == "request" else "request"
             result, token = SnapshotService(isolated).restore(
@@ -363,3 +368,49 @@ def test_restore_concurrent_replay_returns_one_credential(
     assert sum(result.replayed for result, _ in results) == 1
     assert results[0][1] == results[1][1]
     assert store.authenticate("child", results[0][1]).executor.kind == "human"
+
+
+@pytest.mark.parametrize("changed", ["secret", "key_id"])
+def test_restore_new_derivation_changes_with_deployment_key(
+    foundation: tuple[V2Store, C.AuthContext, str, C.SessionBindings, C.AssistantConfig],
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    changed: str,
+) -> None:
+    store, auth, *_ = foundation
+    service = SnapshotService(store)
+    snapshot = service.export(store.research_context(auth.session_id), C.digest("source"))
+    # Each fork starts before issuance with identical owner, target and request identities.
+    monkeypatch.setattr(snapshot_module, "uuid4", lambda: UUID(int=1))
+    tokens = []
+    key_ids = []
+    for index in range(2):
+        if index == 1:
+            if changed == "secret":
+                monkeypatch.setenv(
+                    "CAREER_LAB_CREDENTIAL_KEY",
+                    "isolated-rotated-credential-key-not-for-deployment",
+                )
+            else:
+                monkeypatch.setenv("CAREER_LAB_CREDENTIAL_KEY_ID", "test-key-v2")
+        isolated = copy_restore_database(store, tmp_path / f"rotated-{index}.db")
+        try:
+            restored, token = SnapshotService(isolated).restore(
+                snapshot, session_id="same-child", request_id="same-request"
+            )
+            owner = isolated.authenticate(restored.session_id, token)
+            tokens.append(token)
+            with isolated.db.engine.connect() as connection:
+                key_ids.append(
+                    connection.execute(
+                        select(derivations.c.key_id).where(
+                            derivations.c.credential_id == owner.credential_id
+                        )
+                    ).scalar_one_or_none()
+                )
+        finally:
+            isolated.db.engine.dispose()
+    tokens_are_distinct = tokens[0] != tokens[1]
+    assert tokens_are_distinct
+    expected_key_id = "test-key-v2" if changed == "key_id" else "test-key-v1"
+    assert key_ids == ["test-key-v1", expected_key_id]

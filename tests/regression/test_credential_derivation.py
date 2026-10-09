@@ -907,7 +907,7 @@ def test_snapshot_restore_records_provenance_without_secrets(
             .one_or_none()
         )
     assert record is not None
-    assert record["purpose"] == "snapshot_restore"
+    assert record["purpose"] == "snapshot-restore"
     assert record["scheme"] == "hmac-sha256-v1" and record["key_id"] == "test-key-v1"
     assert len(record["fingerprint"]) == 64
     assert record["token_hash"] == C.digest(token)
@@ -990,7 +990,7 @@ def test_snapshot_restore_rechecks_current_authorization(
     before = restore_counts(service)
     with pytest.raises(C.ProtocolError) as failed:
         service.restore(snapshot, session_id="child", request_id="restore")
-    assert failed.value.status in (403, 409)
+    assert (failed.value.status, failed.value.code) == (403, "credential_revoked_or_invalid")
     assert restore_counts(service) == before
 
 
@@ -1037,3 +1037,20 @@ def test_snapshot_restore_rolls_back_derivation_with_target(
     assert restore_counts(service) == before
     restored, token = service.restore(snapshot, session_id="child", request_id="restore")
     assert child_read(published_session, restored.session_id, token).status_code == 200
+
+
+def test_snapshot_restore_revoked_parent_cannot_create_target(
+    published_session: PublishedSession,
+) -> None:
+    service, snapshot = restore_fixture(published_session)
+    with service.store.db.transaction() as connection:
+        connection.execute(
+            update(v2_credentials)
+            .where(v2_credentials.c.session_id == snapshot.session_id)
+            .values(revoked=1)
+        )
+    before = restore_counts(service)
+    with pytest.raises(C.ProtocolError) as failed:
+        service.restore(snapshot, session_id="new-child", request_id="new-restore")
+    assert (failed.value.status, failed.value.code) == (403, "credential_revoked_or_invalid")
+    assert restore_counts(service) == before

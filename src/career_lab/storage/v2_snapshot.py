@@ -148,7 +148,7 @@ class SnapshotService:
         return signed_credential(
             connection,
             self.store.credential_key_provider,
-            "snapshot_restore",
+            "snapshot-restore",
             parent,
             target,
             canonical([target.session_id, request_id, snapshot.snapshot_hash]),
@@ -294,8 +294,8 @@ class SnapshotService:
                         raise ProtocolError("restore_id_reused", status=409)
                     if request_id and token is None:
                         target = self._human_context(c, sid, "restore_token_conflict")
-                        # Historical rows cannot distinguish explicit from digest-derived tokens.
-                        # Preserve their original token requirement; never invent provenance.
+                        # Compatibility policy forbids reconstructing historical plaintext
+                        # to classify unmarked rows. Preserve their original token requirement.
                         provenance = c.execute(
                             select(derivations.c.credential_id).where(
                                 derivations.c.credential_id == target.credential_id
