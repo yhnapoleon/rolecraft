@@ -4,20 +4,21 @@ The module-owned RoleService remains responsible for dialogue behavior. This por
 only binds it to the common fixed snapshot, actual lease and private persistence.
 """
 
-from pathlib import Path
 import hashlib
 import re
+from pathlib import Path
+
 from sqlalchemy import Column, Integer, String, Table, insert, select
 from sqlalchemy.exc import IntegrityError
-from career_lab.storage.database import metadata, utc_timestamp
-from career_lab.contracts.v2 import *
+
 from career_lab.api.modules import Operation, StoreJobHandler
 from career_lab.api.role_snapshot import FixedRoleSnapshotPort, activated_catalog
+from career_lab.contracts.v2 import *
 from career_lab.runtime.context_v2 import ContextPort
-from career_lab.runtime.roles_v2 import RoleService, LocalRoleModel
-from career_lab.storage.role_memory import RoleTurn, RoleReply, RoleDisplay
+from career_lab.runtime.roles_v2 import CooperativeHelpVerifier, LocalRoleModel, RoleService
+from career_lab.storage.database import metadata, utc_timestamp
+from career_lab.storage.role_memory import RoleDisplay, RoleReply, RoleTurn
 from career_lab.storage.v2_store import ObjectWrite, references
-
 
 # Additive private journal. A claim commits before transport and is never refunded.
 role_model_calls = Table(
@@ -194,7 +195,11 @@ class PrivateRoleGenerationPort:
 
     def record_attempt(self, envelope, auth, attempt, error_code):
         self.require_available()
-        if envelope != self.envelope or auth != self.auth or self.attempts:
+        if (
+            envelope != self.envelope
+            or auth != self.auth
+            or any(previous.attempt_id == attempt.attempt_id for previous in self.attempts)
+        ):
             raise ProtocolError("role_attempt_identity_invalid", status=403)
         if (error_code is None) != (attempt.status == "success"):
             raise ProtocolError("role_attempt_status_invalid", status=403)
@@ -310,7 +315,11 @@ def install_private_role_runtime(
             private_port=port,
             reply_verifier=reply_verifier
             if reply_verifier is not None
-            else (None if type(model) is LocalRoleModel else RuleReplyVerifier()),
+            else (
+                None
+                if type(model) is LocalRoleModel
+                else CooperativeHelpVerifier(model, max_context_chars=max_context_chars)
+            ),
         )
         return port.authorize(service.generate(view, envelope, auth))
 
