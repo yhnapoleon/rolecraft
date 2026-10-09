@@ -71,7 +71,9 @@ def register_config(
 
 
 @pytest.mark.parametrize("suffix", FORMATS)
-@pytest.mark.parametrize("kind", ["token", "refresh_token", "url_userinfo"])
+@pytest.mark.parametrize(
+    "kind", ["token", "refresh_token", "url_userinfo", "CAREER_LAB_CREDENTIAL_KEY"]
+)
 def test_T1_registry_cli_rejects_credentials_without_persisting_bytes(
     tmp_path: Path, suffix: str, kind: str
 ) -> None:

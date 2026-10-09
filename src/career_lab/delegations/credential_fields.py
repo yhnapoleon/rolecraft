@@ -5,6 +5,7 @@ import re
 CREDENTIAL_FIELD_NAMES = frozenset(
     {
         "api_key",
+        "career_lab_credential_key",
         "api_token",
         "authorization",
         "password",
