@@ -4,16 +4,17 @@ This module never fits a model, downloads weights, or promotes scoring/quality.
 Only files referenced by the existing validated ModelBundle are copied.
 """
 
-from pathlib import Path
 import json
 import os
 import shutil
 import tempfile
 from importlib.metadata import version
+from pathlib import Path
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_file
 from career_lab.contracts.v2.research import ModelBundle
-from .bundle import load_bundle, write_json, sha, json_bytes
+
+from .bundle import json_bytes, load_bundle, sha, write_json
 
 SCOPES = {"synthetic_fixture", "external_candidate"}
 PROTOCOL = "w08-advisory-registration-v1"
@@ -78,6 +79,17 @@ def register_bundle(registry_root, bundle_root, bundle_ref, *, scope):
     if scope not in SCOPES:
         raise ProtocolError("registration_scope_required")
     bundle_ref = FileRef.model_validate(bundle_ref)
+    manifest = json.loads(read_file(Path(bundle_root), bundle_ref))
+    if isinstance(manifest, dict) and "return_protocol" in manifest:
+        from .encoder_registry import register_encoder
+
+        return register_encoder(
+            Path(registry_root),
+            Path(bundle_root),
+            bundle_ref,
+            scope=scope,
+            runtime=inference_runtime(),
+        )
     _, bundle = load_bundle(bundle_root, bundle_ref)
     release = json.loads(read_file(Path(bundle_root), bundle.training_release))
     if release.get("fixture") is True and scope != "synthetic_fixture":
@@ -138,6 +150,11 @@ def load_registration(registry_root, registration_ref):
     registration_ref = FileRef.model_validate(registration_ref)
     root = Path(registry_root).resolve()
     entry = json.loads(read_file(root, registration_ref))
+    from .encoder_registry import PROTOCOL as encoder_protocol
+    from .encoder_registry import load_encoder
+
+    if entry.get("protocol") == encoder_protocol:
+        return load_encoder(root, registration_ref, runtime=inference_runtime())
     if entry.get("protocol") != PROTOCOL or entry.get("scope") not in SCOPES:
         raise ProtocolError("model_registration_protocol_invalid")
     if (

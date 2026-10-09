@@ -84,7 +84,7 @@ relation三类和criterion五类的实际类别覆盖、evidence_evaluable与独
 | LR | train-only字符TF-IDF、多分类LR及单独的二分类证据选择头 | 真实fit、概率顺序和NPZ重载测试 |
 | 旧字符MLP | 复用保留的字符特征+tanh MLP，仍引用全部候选 | 明确命名legacy_character_mlp；额外引用被joint惩罚 |
 | 微型上下文编码器 | 从零初始化embedding和单头self-attention，残差tanh；关系和证据损失均反传 | NumPy真实梯度更新；整包/逐证据两结构；梯度有限差分、padding mask和重载一致性 |
-| 预训练编码器 | 显式固定revision、仅本地权重的Hugging Face适配，带监督fit/predict/checkpoint重载接口 | 当前torch/transformers及XLM-R权重未就绪，代码路径尚未实跑，不能称XLM-R已训练 |
+| 预训练编码器 | 显式固定revision、仅本地权重的Hugging Face适配，带监督fit/predict/checkpoint重载接口 | 可选CPU依赖下已实跑本地随机微型BERT的pack/pair保存、注册与重载；真实XLM-R产物和语义质量仍待负责方交付 |
 | SFT/GRPO | completion mask、固定奖励和含active adapter的参考策略hash机制 | 仅机制测试；没有执行SFT或GRPO训练 |
 
 微型编码器的pair结构先编码claim–单条证据，按预声明候选比较概率均值与logit均值，训练损失针对整包标签；不把整包标签冒充每一条证据的独立真值。pack结构在一个上下文中编码全部候选。证据监督在多组充分集合中确定性选择一个最小集合；评估仍对全部可接受集合取最佳set-F1。
@@ -205,3 +205,56 @@ ReleaseReader初始化已有SplitManifest.isolation，structure/component/ancest
 
 
 最低joint门槛与候选自身的训练条件分别生效。LR证据选择头要求正、负两类证据pair；例如唯一可评行为INSUFFICIENT且合法目标为空时，所有pair都为负，仍以evidence_selector_class_coverage_missing拒绝。当前pipeline保留候选失败即中止的fail-closed行为，不用dev补齐、不降低LR覆盖、不新增分类模式；至少一条可评记录不保证每个候选都能训练，更不保证质量。HF门槛目前仅做源码检查，真实运行继续blocked；没有安装依赖、下载checkpoint或付费验证。
+
+
+## 本地编码器回传注册
+
+注册支持两种现有格式：原有 `model-bundle.json`（NumPy线性、attention、旧MLP与融合）和负责方回传的 `checkpoint-manifest.json`（本地HF编码器）。HF路径不把大权重送入NumPy的64MB加载器；它流式校验并复制清单文件，在独立副本全部校验后发布不可变注册。注册后不依赖生产者目录，不执行清单中的 `load_and_predict_command` 或生产者Python代码。
+
+HF回传目录需要 `checkpoint.json`、`heads.npz`、`encoder/local-files.json`、本地encoder safetensors、config与tokenizer。外层清单沿fixture v2：`return_protocol=rolecraft-label-evidence-v2`、relation任务、固定标签顺序、`template=false`、`completed=true`、`evidence_selection_implemented=true`。目录清单与外层逐文件SHA-256必须一致；编码器清单的`source_revision`、`weights_stage=supervised_finetuned`须与checkpoint及训练记录身份相符。注册只确认所交文件及声明的身份，不证明真实训练或质量。
+
+在回传目录已准备好后，用文件实际SHA登记（路径可以包含空格）：
+
+```sh
+export MODEL_RETURN_ROOT='/path/to/encoder-return'
+export MODEL_REGISTRY_ROOT='runs/local/model-registry'
+uv run --locked python - <<'PYTHON'
+import hashlib
+import os
+import subprocess
+import sys
+from pathlib import Path
+root = Path(os.environ['MODEL_RETURN_ROOT'])
+manifest = root / 'checkpoint-manifest.json'
+subprocess.run([
+    sys.executable, '-m', 'career_lab.models.v3.registry_cli', 'register',
+    '--registry', os.environ['MODEL_REGISTRY_ROOT'],
+    '--bundle-root', str(root), '--bundle-path', manifest.name,
+    '--bundle-hash', hashlib.sha256(manifest.read_bytes()).hexdigest(),
+    '--scope', 'external_candidate',
+], check=True)
+PYTHON
+```
+
+合成回传必须使用`--scope synthetic_fixture`。CLI返回不可变registration的相对路径和hash；两者必须一起保存。相同产物重复登记回读同一身份。文件漂移、标签顺序/任务域错误、模板或未完成声明、test参与选型均拒绝。已知fixture不能登记成external候选；`quality_validated`和`affects_score`始终为false。
+
+### 可选CPU加载环境
+
+默认`uv sync --locked`不安装encoder依赖。注册身份无需torch/transformers；实际`load_registration`缺少依赖时返回`pretrained_encoder_dependencies_unavailable`，协议状态503；CLI以非零退出，不自动安装、下载或换模型。
+
+```sh
+uv sync --locked --python 3.12 --extra encoder
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .venv/bin/python -m pytest -q \
+  tests/optional_encoder/check_local_encoder.py \
+  --basetemp=.pytest_cache/tmp-encoder-check
+# 回到默认产品依赖
+uv sync --locked --python 3.12
+```
+
+依赖固定为torch 2.8.0、transformers 4.57.1、safetensors 0.6.2。Linux/Windows使用CPU wheel源；本地适配始终把模型放在CPU。加载使用本地文件、禁用remote code；参见[Transformers 4.57.1本地加载说明](https://huggingface.co/docs/transformers/v4.57.1/installation)与[PyTorch安装说明](https://pytorch.org/get-started/locally/)。
+
+可选测试文件采用显式运行的`check_`文件名，不进入默认pytest发现；没有新增skip。测试自己随机初始化小于200KB的微型BERT，用现有数值fixture进行最小优化步骤，再保存、注册、重载和比较预测，同时阻断socket连接。pack/pair两种结构已实跑；公开预测仍是`synthetic_mechanism_only`/unavailable。这只验证实际加载与双输出机制，不是预训练模型、英文质量、真实XLM-R或融合增益的证据。
+
+### 服务消费与回退边界
+
+本节交付的是注册与加载前置。正常反馈的模型工厂、可选公开协议和v4消费尚未接入，不能把登记成功当作产品接通；运行配置与应用安装命令将在对应消费切片实际交付后补入。当前可回读既有注册与调用收据；恢复不执行生产者命令或重新推理。撤销一次候选使用应改回服务持有的旧注册引用并重启服务，保留原产物、旧反馈与收据；不覆盖旧注册文件。

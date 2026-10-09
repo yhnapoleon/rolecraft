@@ -5,9 +5,10 @@ import json
 from pathlib import Path
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError
+
+from .advisory import RegisteredAdvisory
 from .core import INPUT
 from .registry import register_bundle
-from .advisory import RegisteredAdvisory
 
 
 def main(argv=None):
@@ -17,6 +18,7 @@ def main(argv=None):
     register.add_argument("--registry", type=Path, required=True)
     register.add_argument("--bundle-root", type=Path, required=True)
     register.add_argument("--bundle-hash", required=True)
+    register.add_argument("--bundle-path", default="model-bundle.json")
     register.add_argument(
         "--scope", choices=["synthetic_fixture", "external_candidate"], required=True
     )
@@ -47,7 +49,7 @@ def main(argv=None):
             ref = register_bundle(
                 args.registry,
                 args.bundle_root,
-                FileRef(path="model-bundle.json", sha256=args.bundle_hash),
+                FileRef(path=args.bundle_path, sha256=args.bundle_hash),
                 scope=args.scope,
             )
             result = {
