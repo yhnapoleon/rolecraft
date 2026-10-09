@@ -11,11 +11,27 @@ from career_lab.api.modules import ExtensionRegistry
 from career_lab.scenarios.v2.module import ScenarioModule
 from .migration_support import inspect_transition, stage_registered_migration
 from career_lab.scenarios.v2.loader import load_package
+from tests.support.scenario_packages import installed_root
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCE = ROOT / "scenarios/pm_pilot/v2"
 CURRENT = ROOT / "docs/contracts/expansion-v3/manifest.json"
 REVISION = "expansion-v3-" + hashlib.sha256(CURRENT.read_bytes()).hexdigest()
+
+
+def bound_source(tmp_path):
+    """The legacy source rebuilt under the current registered input, so that
+    preflight compares the current contract with a candidate instead of
+    tripping on the historical digest the authoring root still pins."""
+    destination = tmp_path / "bound-source"
+    stage_registered_migration(
+        SOURCE,
+        destination,
+        expected_revision=REVISION,
+        scenario_revision="2.3.1-preflight",
+        runtime_revision="preflight-current-input",
+    )
+    return destination
 
 
 def test_preflight_does_not_treat_equal_schemas_as_semantic_compatibility(tmp_path):
@@ -27,7 +43,7 @@ def test_preflight_does_not_treat_equal_schemas_as_semantic_compatibility(tmp_pa
     path = tmp_path / "candidate.json"
     path.write_text(json.dumps(candidate))
     revision = "expansion-v3-" + hashlib.sha256(path.read_bytes()).hexdigest()
-    result = inspect_transition(SOURCE, CURRENT, path, revision)
+    result = inspect_transition(bound_source(tmp_path), CURRENT, path, revision)
     assert result["requires_rebuild"]
     assert result["changed_consumed_schemas"] == []
     assert not result["semantic_compatibility_verified"]
@@ -156,9 +172,10 @@ def test_constructor_still_rejects_a_fully_resealed_wrong_foundation(tmp_path):
 
 
 def test_current_delivery_constructor_matches_its_manifest():
+    installed = installed_root()
     assert (
-        ScenarioModule(SOURCE).package.content_hash
-        == hashlib.sha256((SOURCE / "manifest.json").read_bytes()).hexdigest()
+        ScenarioModule(installed).package.content_hash
+        == hashlib.sha256((installed / "manifest.json").read_bytes()).hexdigest()
     )
 
 
@@ -171,7 +188,9 @@ def test_preflight_reports_removed_public_implementation(tmp_path):
     revision = "expansion-v3-" + hashlib.sha256(path.read_bytes()).hexdigest()
     assert (
         removed
-        in inspect_transition(SOURCE, CURRENT, path, revision)["changed_public_implementations"]
+        in inspect_transition(bound_source(tmp_path), CURRENT, path, revision)[
+            "changed_public_implementations"
+        ]
     )
 
 

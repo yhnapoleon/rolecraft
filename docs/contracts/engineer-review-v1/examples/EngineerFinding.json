@@ -1,5 +1,5 @@
 {
-  "description": "Synthetic rule comparison",
+  "description": "Target checked against the frozen suite expectation.",
   "kind": "target_fix",
   "probe_ids": [
     "probe-1"

@@ -37,6 +37,12 @@ export type EngineerAdvice = {
   "visibility"?: "public" | "hidden";
 };
 
+export type EngineerArtifactIdentity = {
+  "kind": "submission" | "scenario" | "configuration" | "model";
+  "schema_version"?: 2;
+  "sha256": string;
+};
+
 export type EngineerClaimedReport = {
   "config": FileRef;
   "contract_version": "engineer-review-v1";
@@ -91,8 +97,33 @@ export type EngineerProbeSummary = {
   "schema_version"?: 2;
 };
 
+export type EngineerPublicAdvice = {
+  "affects_score"?: false;
+  "model": (EngineerArtifactIdentity | null);
+  "schema_version"?: 2;
+  "status": "waiting_model" | "success" | "unavailable" | "invalid" | "timeout";
+  "text"?: null;
+  "visibility"?: "public";
+};
+
+export type EngineerPublicProbeResult = {
+  "actual_status": ("answered" | "answered_with_warning" | "fallback" | "failed" | null);
+  "citations": ReadonlyArray<ObjectRef>;
+  "config_hash": string;
+  "elapsed_seconds": number;
+  "error_code": ("engineer_probe_execution_failed" | "engineer_baseline_execution_failed" | "engineer_review_interrupted" | "engineer_verification_failed" | null);
+  "expected_status": "answered" | "answered_with_warning" | "fallback" | "failed";
+  "indexed_versions": Record<string, number>;
+  "probe_id": string;
+  "query": string;
+  "result": "pass" | "fail" | "error";
+  "schema_version"?: 2;
+  "source_versions": Record<string, number>;
+  "visibility"?: "public";
+};
+
 export type EngineerPublicReport = {
-  "advice": (EngineerAdvice | null);
+  "advice": (EngineerPublicAdvice | null);
   "affects_score"?: false;
   "applicability": EngineerReportApplicability;
   "claim_check": "matched" | "mismatch" | "not_provided" | "unverified";
@@ -102,11 +133,11 @@ export type EngineerPublicReport = {
   "hidden": EngineerProbeSummary;
   "id": string;
   "input_hash": string;
-  "public_results": ReadonlyArray<EngineerProbeResult>;
+  "public_results": ReadonlyArray<EngineerPublicProbeResult>;
   "reviewer": Executor;
   "schema_version"?: 2;
   "status": "verified" | "report_mismatch" | "incomplete";
-  "submission": FileRef;
+  "submission": EngineerArtifactIdentity;
   "unresolved": ReadonlyArray<EngineerUnresolvedItem>;
   "work_language": "zh" | "en";
 };
@@ -130,13 +161,16 @@ export type EngineerRegressionReport = {
 
 export type EngineerReportApplicability = {
   "base_config_hash": string;
-  "config": FileRef;
+  "config": EngineerArtifactIdentity;
   "effective_config_hash": string;
+  "effective_settings_hash": string;
+  "indexed_versions_hash": (string | null);
   "probe_suite_hash": string;
   "reviewer_version_hash": string;
-  "scenario": FileRef;
+  "scenario": EngineerArtifactIdentity;
   "schema_version"?: 2;
   "source_as_of": VersionPoint;
+  "source_versions_hash": (string | null);
 };
 
 export type EngineerReviewInput = {
