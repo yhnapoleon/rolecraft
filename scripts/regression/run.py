@@ -38,6 +38,8 @@ def main() -> None:
     env = {key: value for key, value in os.environ.items() if not key.startswith("CAREER_LAB_")}
     env.pop("PYTHONPATH", None)
     env.update(
+        CAREER_LAB_CREDENTIAL_KEY_ID="regression-fixture-v1",
+        CAREER_LAB_CREDENTIAL_KEY="isolated-regression-credential-key-not-for-deployment",
         CAREER_LAB_SCENARIO_ARCHIVE=str(output / "archive"),
         PYTHONDONTWRITEBYTECODE="1",
     )

@@ -44,7 +44,7 @@ def issue(store, payload, auth, request_id, *, max_ttl_seconds=3600):
         create_under_tasks=payload.create_under_tasks,
         expires_at=payload.expires_at,
     )
-    token = store.issue_delegation(auth, grant)
+    token = store.issue_delegation(auth, grant, request_fingerprint=C.digest(payload))
     # Issuance intentionally returns the secret only to the authorized human.
     # Never expose this control-plane operation as an Agent/MCP tool.
     return V2Response(result={"delegation": grant.model_dump(mode="json"), "token": token})
