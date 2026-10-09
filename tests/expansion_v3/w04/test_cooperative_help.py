@@ -457,3 +457,42 @@ def test_help_01_contextual_acknowledgement_cannot_skip_semantic_review(
         assert answer not in json.dumps(dialogue.history(), ensure_ascii=False)
     finally:
         dialogue.close()
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+@pytest.mark.parametrize("wording", ["original", "paraphrase"])
+@pytest.mark.parametrize("supported", [True, False])
+def test_help_acknowledgements_use_structured_review_for_equivalent_requests(
+    tmp_path: Path, language: str, wording: str, supported: bool
+) -> None:
+    questions = {
+        "zh": {"original": "请核对当前依据。", "paraphrase": "麻烦检查一下现有材料的依据。"},
+        "en": {
+            "original": "Please check the available evidence.",
+            "paraphrase": "Could you examine the evidence we have so far?",
+        },
+    }
+    answer = "我会核对当前依据。" if language == "zh" else "I will check the available evidence."
+    model = ScriptedModel(
+        [
+            ModelReply(text=answer),
+            assessment(
+                kinds=("business_judgment",), decision="supported" if supported else "unsupported"
+            ),
+        ]
+    )
+    dialogue = Dialogue(tmp_path, language, model)
+    try:
+        job = dialogue.ask(questions[language][wording])
+        assert job["status"] == ("completed" if supported else "failed"), job
+        assert len(model.calls) == 2, "Every model reply requires the structured help review."
+        reviewed = json.loads(model.calls[1][-1]["content"])
+        assert reviewed["question"] == questions[language][wording]
+        assert reviewed["reply"] == answer and reviewed["sources"]
+        if supported:
+            assert answer in json.dumps(dialogue.reply(), ensure_ascii=False)
+        else:
+            assert job["error"] == "role_help_unverified"
+            assert answer not in json.dumps(dialogue.history(), ensure_ascii=False)
+    finally:
+        dialogue.close()

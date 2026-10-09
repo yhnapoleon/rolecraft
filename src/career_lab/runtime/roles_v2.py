@@ -1211,6 +1211,58 @@ class HelpAssessment(BaseModel):
         )
 
 
+class RuleReplyVerifier:
+    """Mechanical script/binding check only; consistent never means semantic quality.
+
+    Mixed or indeterminate language is withheld. No provider call, score, stance
+    change, or claim that the reply follows the role's position is made here.
+    """
+
+    retries = 0
+    revision = "role-reply-mechanical-v1"
+
+    def check(
+        self,
+        snapshot: ContextSnapshot,
+        auth: AuthContext,
+        request: RoleTurn,
+        text: str,
+        *,
+        record_attempt: Callable[[ModelAttemptUsage, str | None], None],
+        begin_call: Callable[[str, str], None] | None = None,
+    ) -> ReplyVerification:
+        if begin_call is None:
+            raise ProtocolError("role_attempt_guard_unavailable", status=409)
+        begin_call("role_reply_review", self.revision)
+        han = len(re.findall(r"[\u3400-\u9fff]", text))
+        latin = len(re.findall(r"[A-Za-z]", text))
+        # This is a conservative script check, not natural-language understanding.
+        match = (
+            (han > 0 and han >= latin)
+            if snapshot.work_language == "zh"
+            else (latin > 0 and han == 0)
+            if snapshot.work_language == "en"
+            else False
+        )
+        identity = (
+            request.session_id == auth.session_id == snapshot.context.session_id
+            and request.input.role_id == snapshot.context.role_id
+            and request.executor == auth.executor
+        )
+        source = Path(__file__)
+        return ReplyVerification(
+            "consistent" if match and identity else "undetermined",
+            True if match and identity else None,
+            stance_digest(snapshot.stance_state),
+            digest(text),
+            snapshot.context.as_of,
+            FileRef(
+                path="src/career_lab/runtime/roles_v2.py",
+                sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+            ),
+        )
+
+
 class CooperativeHelpVerifier:
     """One bounded semantic review using exactly the generation source projection.
 
@@ -1247,37 +1299,6 @@ class CooperativeHelpVerifier:
         ]
         if any(label not in labels for label in citations):
             raise ProtocolError("role_help_citation_invalid", status=422)
-        # Legacy acknowledgements contain no business claim, advice, or question.
-        # This exact grammar is a mechanical safe subset, not inferred semantics.
-        neutral = re.fullmatch(
-            r"(?:已收到[。！]?)?(?:我(?:会|需要))?(?:继续|先)?核对(?:当前|更多)?依据[。！]?"
-            r"|I will check the available evidence\.",
-            text,
-        )
-        if neutral:
-            acknowledgement_request = re.fullmatch(
-                r"(?:请)?核对当前依据[。.!]?|Please check the available evidence\.",
-                request.input.text,
-            )
-            if not acknowledgement_request:
-                raise ProtocolError("role_help_unverified", status=409)
-            standalone = not (
-                request.input.shares
-                or request.input.task
-                or snapshot.memories
-                or snapshot.received_shares
-            )
-            if standalone:
-                from career_lab.api.private_roles import RuleReplyVerifier
-
-                return RuleReplyVerifier().check(
-                    snapshot,
-                    auth,
-                    request,
-                    text,
-                    record_attempt=record_attempt,
-                    begin_call=begin_call,
-                )
         begin_call("role_help_review", self.revision + ":" + self.model.revision)
         inputs = {
             "policy_revision": HELP_POLICY_REVISION,

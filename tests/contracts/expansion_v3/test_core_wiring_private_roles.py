@@ -60,7 +60,8 @@ class ControlledModel:
                         "language_match": True,
                         "decision": "supported",
                     }
-                )
+                ),
+                usage={"prompt_tokens": 13, "completion_tokens": 9},
             )
         return ModelReply(
             text="已收到。我会继续核对依据。", usage={"prompt_tokens": 11, "completion_tokens": 7}
@@ -161,11 +162,22 @@ def test_real_private_port_commits_reply_and_audit_without_public_recovery(role_
     assert api["worker"].run_once()
     job = api["jobs"].get(jid)
     assert job["status"] == "completed", job["error"]
-    assert len(api["model"].calls) == 1
+    assert len(api["model"].calls) == 2
     records = private_records(api)
-    assert len(records) == 2
-    phases = {r.content["generation_audit"]["phase"]: r for r in records}
-    assert set(phases) == {"attempt", "completed"}
+    assert len(records) == 3
+    phases = [r.content["generation_audit"]["phase"] for r in records]
+    assert phases.count("attempt") == 2 and phases.count("completed") == 1
+    review_input = json.loads(api["model"].calls[1][-1]["content"])
+    assert review_input["question"] == "请核对当前依据。"
+    assert review_input["reply"] == "已收到。我会继续核对依据。"
+    assert review_input["sources"] and "current_stance" in review_input
+    attempts = [
+        attempt
+        for record in records
+        if record.content["generation_audit"]["phase"] == "attempt"
+        for attempt in record.content["generation_audit"]["attempts"]
+    ]
+    assert sorted((a["input_tokens"], a["output_tokens"]) for a in attempts) == [(11, 7), (13, 9)]
     for record in records:
         assert set(record.visible_to) == {"system", "tech_lead"}
         audit = record.content["generation_audit"]
@@ -174,10 +186,11 @@ def test_real_private_port_commits_reply_and_audit_without_public_recovery(role_
             and audit["worker_id"]
             and audit["lease_token_hash"]
         )
-        assert (
-            audit["attempts"][0]["input_tokens"] == 11
-            and audit["attempts"][0]["output_tokens"] == 7
-        )
+        if audit["phase"] == "completed":
+            assert [(a["input_tokens"], a["output_tokens"]) for a in audit["attempts"]] == [
+                (11, 7),
+                (13, 9),
+            ]
         with pytest.raises(C.ProtocolError):
             api["store"].read(api["owner"], record.ref)
     view = api["store"].view(api["owner"])
@@ -201,7 +214,7 @@ def test_real_private_port_commits_reply_and_audit_without_public_recovery(role_
         .post(f"/sessions/{api['owner'].session_id}/turns", json=cmd.model_dump(mode="json"))
         .json()["replayed"]
     )
-    assert len(api["model"].calls) == 1
+    assert len(api["model"].calls) == 2
 
 
 def test_scoped_agent_uses_original_executor_without_private_scope_expansion(role_api):
@@ -317,9 +330,11 @@ def test_real_worker_rejects_missing_or_wrong_private_audience(role_api, monkeyp
         "role_private_audit_incomplete",
         "role_private_audit_invalid",
     }
-    assert len(api["model"].calls) == 1
+    assert len(api["model"].calls) == 2
     records = private_records(api)
-    assert len(records) == 1 and records[0].content["generation_audit"]["phase"] == "attempt"
+    assert len(records) == 2 and all(
+        r.content["generation_audit"]["phase"] == "attempt" for r in records
+    )
     assert not any(r.ref.kind == "role_reply" for r in api["store"].view(api["owner"]).objects)
 
 
@@ -345,11 +360,11 @@ def test_reply_and_completed_audit_rollback_together_but_real_attempt_remains(
     jid, _ = queue(api)
     api["worker"].run_once()
     assert api["jobs"].get(jid)["status"] == "failed"
-    assert len(private_records(api)) == 1 and not any(
+    assert len(private_records(api)) == 2 and not any(
         r.ref.kind == "role_reply" for r in api["store"].view(api["owner"]).objects
     )
     assert not api["worker"].run_once()
-    assert len(api["model"].calls) == 1
+    assert len(api["model"].calls) == 2
     store = api["store"]
     owner = api["owner"]
     refresh = command(store.view(owner), "explicit-retry", "jobs.refresh").model_copy(
@@ -359,9 +374,9 @@ def test_reply_and_completed_audit_rollback_together_but_real_attempt_remains(
     api["worker"].run_once()
     assert api["jobs"].get(jid)["status"] == "completed"
     records = private_records(api)
-    assert sum(r.content["generation_audit"]["phase"] == "attempt" for r in records) == 2
+    assert sum(r.content["generation_audit"]["phase"] == "attempt" for r in records) == 4
     assert sum(r.content["generation_audit"]["phase"] == "completed" for r in records) == 1
-    assert len(api["model"].calls) == 2
+    assert len(api["model"].calls) == 4
 
 
 def test_pause_during_invocation_keeps_audit_and_original_question_then_explicit_refresh(role_api):
@@ -404,7 +419,7 @@ def test_pause_during_invocation_keeps_audit_and_original_question_then_explicit
     assert completed.content["generation_audit"]["refresh_count"] == 1 and completed.content[
         "generation_audit"
     ]["request"] == turn.ref.model_dump(mode="json")
-    assert len(api["model"].calls) == 2
+    assert len(api["model"].calls) == 3
 
 
 def test_revocation_during_model_call_keeps_only_system_audit(role_api):
@@ -455,12 +470,12 @@ def test_three_rounds_use_persisted_private_history_across_api_worker_instances(
         if call[0]["content"].startswith("Review the actual reply")
     ]
     assert len(generation_calls) == 3
-    assert len(review_calls) == 2
-    assert len(api["model"].calls) == 5
+    assert len(review_calls) == 3
+    assert len(api["model"].calls) == 6
     assert "已收到。我会继续核对依据。" in generation_calls[1][0]["content"]
     assert "已收到。我会继续核对依据。" in generation_calls[2][0]["content"]
     records = private_records(api)
-    assert len(records) == 8
+    assert len(records) == 9
     assert len([r for r in store.view(api["owner"]).objects if r.ref.kind == "role_reply"]) == 3
     assert not any(r.ref.kind == "role_display" for r in store.view(api["owner"]).objects)
 
