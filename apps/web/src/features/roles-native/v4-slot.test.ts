@@ -1,5 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import type { RolesNativeAdapter } from './index';
+import type { RolesNativeAdapter, RolesView } from './index';
+import { setPreference } from '../../app/i18n';
+import { presentReply } from './reply-presentation';
 import type { V4HostAdapter, V4HostSnapshot, V4SlotHandle } from '../../v4-host';
 const capture = vi.hoisted(() => ({ adapter: undefined as RolesNativeAdapter | undefined }));
 vi.mock('./index', () => ({
@@ -8,7 +10,6 @@ vi.mock('./index', () => ({
     return { refresh: () => adapter.read().then(() => undefined), destroy() {} };
   },
 }));
-vi.mock('../../app/i18n', () => ({ T: (zh: string) => zh }));
 import { mount } from './v4-slot';
 import { regionHost } from '../../v4-region-test-support';
 class Form {
@@ -22,7 +23,11 @@ class Form {
   addEventListener() {}
   removeEventListener() {}
 }
-beforeEach(() => vi.stubGlobal('HTMLFormElement', Form));
+beforeEach(() => {
+  vi.unstubAllGlobals();
+  vi.stubGlobal('HTMLFormElement', Form);
+  setPreference('zh');
+});
 function setup(
   changeDuringRead: boolean,
   presentation?: {
@@ -30,8 +35,11 @@ function setup(
     omissionCount: number;
     currentVersion: number;
     receivedVersionsOnly?: boolean;
+    generationMode?: 'local' | 'model';
+    currentMode?: RolesView['mode'];
   },
 ) {
+  let currentMode = presentation?.currentMode ?? 'local_reference';
   let calls = 0,
     handle: V4SlotHandle;
   let snapshot: V4HostSnapshot = {
@@ -64,15 +72,17 @@ function setup(
       text: presentation?.text ?? 'reply',
       omission_count: presentation?.omissionCount ?? 0,
       received_versions_only: presentation?.receivedVersionsOnly,
+      generation_mode: presentation?.generationMode,
       request: turn.ref,
     },
   };
+  const records = [turn, reply];
   const host = {
     snapshot: () => snapshot,
     subscribe: () => () => {},
     query: async () => ({
-      objects: changeDuringRead && calls === 0 ? [turn] : [turn, reply],
-      role_mode: 'local_reference',
+      objects: changeDuringRead && calls === 0 ? [turn] : records,
+      role_mode: currentMode,
       workspace: {
         material_titles: { 'policy:1': 'Policy' },
         source_versions: { policy: presentation?.currentVersion ?? 1 },
@@ -109,6 +119,23 @@ function setup(
   return {
     read: () => capture.adapter!.read(),
     calls: () => calls,
+    switchMode: (mode: RolesView['mode']) => {
+      currentMode = mode;
+    },
+    addReply: (mode: 'local' | 'model') => {
+      const nextTurn = { ...turn, ref: reference('role_turn', 'new-turn') };
+      const nextReply = {
+        ...reply,
+        ref: reference('role_reply', 'new-reply'),
+        content: {
+          ...reply.content,
+          request: nextTurn.ref,
+          text: 'new reply',
+          generation_mode: mode,
+        },
+      };
+      records.push(nextTurn, nextReply);
+    },
     destroy: () => handle.destroy(),
   };
 }
@@ -248,3 +275,50 @@ it('retains new input and deliberate clearing across later host updates', async 
     handle.destroy();
   }
 });
+
+for (const language of ['zh', 'en'] as const) {
+  for (const originalMode of ['local', 'model'] as const) {
+    it(`retains ${originalMode} reply labels when the panel mode switches (${language})`, async () => {
+      setPreference(language);
+      const test = setup(false, {
+        text: 'historical reply',
+        omissionCount: 0,
+        currentVersion: 1,
+        generationMode: originalMode,
+        currentMode: originalMode === 'local' ? 'local_reference' : 'model',
+      });
+      const label = {
+        local:
+          language === 'zh'
+            ? '本地来源：规则核实 · 判断等待模型接入'
+            : 'Sources checked by rules · judgment waiting for model connection',
+        model:
+          language === 'zh'
+            ? '模型建议（不计分） · 保留原回复'
+            : 'Model advice (not scored) · original reply retained',
+      };
+      try {
+        const before = await test.read();
+        expect(before.turns[0].generationMode).toBe(originalMode);
+        if (before.turns[0].reply === undefined) throw Error('Expected historical reply');
+        expect(presentReply(before.turns[0].reply, before.turns[0]).status).toBe(
+          label[originalMode],
+        );
+        const nextMode = originalMode === 'local' ? 'model' : 'local';
+        test.switchMode(nextMode === 'local' ? 'local_reference' : 'model');
+        test.addReply(nextMode);
+        const after = await test.read();
+        expect(after.mode).toBe(nextMode === 'local' ? 'local_reference' : 'model');
+        expect(after.turns[0].reply).toBe('historical reply');
+        if (after.turns[0].reply === undefined || after.turns[1].reply === undefined)
+          throw Error('Expected historical and new replies');
+        expect(after.turns[0].generationMode).toBe(originalMode);
+        expect(presentReply(after.turns[0].reply, after.turns[0]).status).toBe(label[originalMode]);
+        expect(after.turns[1].generationMode).toBe(nextMode);
+        expect(presentReply(after.turns[1].reply, after.turns[1]).status).toBe(label[nextMode]);
+      } finally {
+        test.destroy();
+      }
+    });
+  }
+}

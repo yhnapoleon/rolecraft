@@ -1,4 +1,9 @@
-import { presentReply, type RoleMode } from './reply-presentation';
+import {
+  currentModeNotice,
+  presentReply,
+  type GenerationMode,
+  type RoleMode,
+} from './reply-presentation';
 /** Native v4 colleague slot. The injected client owns API calls, journals and jobs. */
 import { T, onLocaleChange } from '../../app/i18n';
 import './roles.css';
@@ -33,6 +38,7 @@ export interface ConversationTurn {
   materials?: readonly MaterialReference[];
   omissionCount?: number;
   receivedVersionsOnly?: boolean;
+  generationMode?: GenerationMode;
   stale?: boolean;
   /** Only a learner-safe explanation already projected by the real client. */
   explanation?: string;
@@ -309,18 +315,7 @@ export function mount(
       : '';
     reload.textContent = T('刷新对话', 'Refresh conversation');
     reload.disabled = busy;
-    mode.textContent =
-      view?.mode === 'local_reference'
-        ? T(
-            '本地资料参考；需要同事判断的部分等待模型接入。',
-            'Local source reference; colleague judgment is waiting for model connection.',
-          )
-        : view?.mode === 'unavailable'
-          ? T(
-              '同事对话暂不可用，已有记录仍保留。',
-              'Colleague replies are unavailable; existing records are retained.',
-            )
-          : '';
+    mode.textContent = view ? currentModeNotice(view.mode) : '';
     mode.hidden = !mode.textContent;
     for (const [id, item] of people) {
       const colleague = view?.colleagues.find((c) => c.id === id);
@@ -359,15 +354,19 @@ export function mount(
         const replyLabel = el('strong');
         replyLabel.textContent = colleague?.name || roleTitle(selected);
         const presentation = presentReply(turn.reply, {
-          roleMode: view?.mode ?? 'unavailable',
+          generationMode: turn.generationMode,
           receivedVersionsOnly: turn.receivedVersionsOnly,
           omissionCount: turn.omissionCount,
         });
-        const replyStatus = el('p', 'rc-roles__reply-status');
-        replyStatus.textContent = presentation.status;
+        item.append(replyLabel);
+        if (presentation.status) {
+          const replyStatus = el('p', 'rc-roles__reply-status');
+          replyStatus.textContent = presentation.status;
+          item.append(replyStatus);
+        }
         const preview = el('p', 'rc-roles__preview');
         preview.textContent = presentation.summary;
-        item.append(replyLabel, replyStatus, preview);
+        item.append(preview);
         if (presentation.versionNote) {
           const versionNote = el('p', 'rc-roles__limitation');
           versionNote.textContent = presentation.versionNote;

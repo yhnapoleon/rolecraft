@@ -76,6 +76,11 @@ class RoleReply(V2):
         default=None, exclude_if=lambda value: value is None
     )
 
+    # The actual generator for this reply, never inferred from current configuration.
+    generation_mode: Literal["local", "model"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+
     @model_validator(mode="after")
     def uttered_evidence_only(self):
         if any(not item.quote or item.quote not in self.text for item in self.spoken_evidence):

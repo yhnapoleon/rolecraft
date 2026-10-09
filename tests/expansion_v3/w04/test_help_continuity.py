@@ -2,13 +2,20 @@
 
 import json
 from pathlib import Path
+from typing import Literal
 
 import pytest
-from test_cooperative_help import Dialogue
+from test_cooperative_help import ROOT, Dialogue, assessment
 
+from career_lab.api.modules import Gateway
+from career_lab.api.vertical_runtime import build_registry
 from career_lab.contracts.v2 import canonical, digest
+from career_lab.jobs.repository import JobRepository
+from career_lab.jobs.worker import ClaimedHandler, Worker
+from career_lab.runtime.model_adapter import ModelAdapter, ModelReply, ScriptedModel
 from career_lab.runtime.roles_v2 import LocalRoleModel
 from career_lab.storage.role_memory import parse_public_reply
+from career_lab.storage.v2_store import V2Store
 
 
 @pytest.mark.parametrize("language", ["zh", "en"])
@@ -299,11 +306,67 @@ def test_reply_version_scope_is_explicit_and_legacy_bytes_are_preserved(
         assert job["status"] == "completed", job
         content = dialogue.reply()["result"]["result"]["content"]
         assert content["received_versions_only"] is False
-        legacy = {key: value for key, value in content.items() if key != "received_versions_only"}
-        restored = parse_public_reply(legacy)
-        assert canonical(restored) == canonical(legacy)
-        assert digest(restored) == digest(legacy)
-        assert "received_versions_only" not in restored.model_dump(mode="json")
+        for absent in (
+            {"generation_mode"},
+            {"generation_mode", "received_versions_only"},
+        ):
+            legacy = {key: value for key, value in content.items() if key not in absent}
+            restored = parse_public_reply(legacy)
+            assert canonical(restored) == canonical(legacy)
+            assert digest(restored) == digest(legacy)
+            assert all(key not in restored.model_dump(mode="json") for key in absent)
         assert content == dialogue.reply()["result"]["result"]["content"]
+    finally:
+        dialogue.close()
+
+
+def reply_model(mode: Literal["local", "model"], language: str) -> ModelAdapter:
+    if mode == "local":
+        return LocalRoleModel()
+    answer = "这些依据仍需核验。" if language == "zh" else "This evidence still needs checking."
+    return ScriptedModel([ModelReply(text=answer), assessment(kinds=("business_judgment",))])
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+@pytest.mark.parametrize("original_mode", ["local", "model"])
+def test_reply_generation_mode_survives_runtime_configuration_switch(
+    tmp_path: Path, language: str, original_mode: Literal["local", "model"]
+) -> None:
+    dialogue = Dialogue(tmp_path, language, reply_model(original_mode, language))
+    try:
+        question = "请核对当前依据。" if language == "zh" else "Please check the evidence."
+        first = dialogue.ask(question)
+        assert first["status"] == "completed", first
+        saved = dialogue.reply()["result"]["result"]
+        assert saved["content"]["generation_mode"] == original_mode
+        next_mode = "model" if original_mode == "local" else "local"
+        model = reply_model(next_mode, language)
+        source = ROOT / "scenarios/pm_pilot/v2"
+        if language == "en":
+            source /= "locales/en"
+        registry, _ = build_registry(source, model)
+        database_url = str(dialogue.store.db.engine.url)
+        dialogue.store.db.engine.dispose()
+        dialogue.store = V2Store(database_url)
+        dialogue.gateway = Gateway(dialogue.store, registry)
+        dialogue.jobs = JobRepository(dialogue.store.db)
+        dialogue.worker = Worker(
+            dialogue.jobs,
+            {
+                "v2.role_turn": ClaimedHandler(
+                    lambda payload, claim: dialogue.gateway.run_job(
+                        "v2.role_turn", payload, claim=claim
+                    ),
+                    retry_on_error=False,
+                )
+            },
+        )
+        second = dialogue.ask(question)
+        assert second["status"] == "completed", second
+        assert dialogue.reply()["result"]["result"]["content"]["generation_mode"] == next_mode
+        restored = dialogue.gateway.dispatch(dialogue.auth, "objects.read", {"ref": saved["ref"]})[
+            "result"
+        ]["result"]
+        assert restored == saved
     finally:
         dialogue.close()

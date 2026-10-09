@@ -1,16 +1,17 @@
 import { T } from '../../app/i18n';
 
 export type RoleMode = 'local_reference' | 'model' | 'unavailable';
+export type GenerationMode = 'local' | 'model';
 
 export interface ReplyPresentationContext {
-  roleMode: RoleMode;
+  generationMode?: GenerationMode;
   receivedVersionsOnly?: boolean;
   omissionCount?: number;
 }
 
 export interface ReplyPresentation {
   summary: string;
-  status: string;
+  status?: string;
   versionNote?: string;
   omissionNote?: string;
 }
@@ -41,19 +42,34 @@ export function presentReply(text: string, context: ReplyPresentationContext): R
           )
         : undefined,
     status:
-      context.roleMode === 'local_reference'
+      context.generationMode === 'local'
         ? T(
-            '当前同事模式：本地来源／规则核实 · 判断等待模型接入',
-            'Current colleague mode: local sources / rule checks · judgment waiting for model connection',
+            '本地来源：规则核实 · 判断等待模型接入',
+            'Sources checked by rules · judgment waiting for model connection',
           )
-        : context.roleMode === 'model'
+        : context.generationMode === 'model'
           ? T(
-              '当前同事模式：模型建议（不计分） · 保留原回复',
-              'Current colleague mode: model advice (not scored) · original reply retained',
+              '模型建议（不计分） · 保留原回复',
+              'Model advice (not scored) · original reply retained',
             )
-          : T(
-              '当前同事模式：不可用 · 保留原回复',
-              'Current colleague mode: unavailable · original reply retained',
-            ),
+          : undefined,
   };
+}
+
+/** Panel configuration is independent of the generator recorded on each reply. */
+export function currentModeNotice(mode: RoleMode): string {
+  if (mode === 'local_reference')
+    return T(
+      '本地资料参考；需要同事判断的部分等待模型接入。',
+      'Local source reference; colleague judgment is waiting for model connection.',
+    );
+  if (mode === 'unavailable')
+    return T(
+      '同事对话暂不可用，已有记录仍保留。',
+      'Colleague replies are unavailable; existing records are retained.',
+    );
+  return T(
+    '当前同事模式：模型建议（不计分）。',
+    'Current colleague mode: model advice (not scored).',
+  );
 }

@@ -587,6 +587,7 @@ def generate_plan(
         generation_cycle=generation_cycle,
         spoken_evidence=public,
         omission_count=len(omitted) + snapshot.permission_omissions(auth),
+        generation_mode="local" if type(model) is LocalRoleModel else "model",
         received_versions_only=any(
             source.channel in {"received_share", "attachment"} for source in selected
         ),
@@ -1215,8 +1216,9 @@ class HelpAssessment(BaseModel):
 
 
 class RuleReplyVerifier:
-    """Mechanical script/binding check only; consistent never means semantic quality.
+    """Injectable mechanical verifier, disabled by default; never semantic quality.
 
+    The default installation uses CooperativeHelpVerifier for model replies.
     Mixed or indeterminate language is withheld. No provider call, score, stance
     change, or claim that the reply follows the role's position is made here.
     """
