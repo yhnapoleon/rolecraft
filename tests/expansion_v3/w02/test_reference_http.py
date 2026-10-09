@@ -4,13 +4,13 @@ Credential narrowing is explicit admin fault injection because this candidate ha
 no supported update-grant endpoint. Business state is never edited for a test.
 """
 
-from datetime import datetime, timedelta, timezone
-from pathlib import Path
 import json
 import os
 import socket
 import subprocess
 import time
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import httpx
 import pytest
@@ -26,6 +26,7 @@ from career_lab.storage.v2_tables import (
     v2_objects,
     v2_transactions,
 )
+from tests.support.scenario_packages import installed_root
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -132,8 +133,8 @@ class LiveScenario:
 
 @pytest.fixture
 def live(tmp_path):
-    # This is the real current package, not a controlled source fixture.
-    module = ScenarioModule(ROOT / "scenarios/pm_pilot/v2")
+    # This is the real installed package, not a controlled source fixture.
+    module = ScenarioModule(installed_root())
     database = "sqlite:///" + str(tmp_path / "http.db")
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
@@ -509,7 +510,7 @@ def test_private_diagnostic_has_actual_configuration_consequences_without_mandat
     assert private.status_code == 404
     # Actual server-issued role identity plus the authoritative current state.
     # This validates W02 knowledge availability, not a generated W04 dialogue.
-    module = ScenarioModule(ROOT / "scenarios/pm_pilot/v2")
+    module = ScenarioModule(installed_root())
     snapshot = module.snapshot(live.store.view(live.owner))
     knowledge = module.engine.role_knowledge(
         snapshot, live.store.role_reader(live.sid, "tech_lead")

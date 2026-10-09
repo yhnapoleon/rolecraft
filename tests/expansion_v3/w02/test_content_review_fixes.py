@@ -1,12 +1,15 @@
 """Reproductions for independent M3 review findings; do not grade the whole package."""
 
 import json
-from pathlib import Path
-import pytest
-from career_lab.scenarios.v2.module import ScenarioModule
-from .test_evaluation_facts import history, question, facts
 
-PACK = Path(__file__).resolve().parents[3] / "scenarios/pm_pilot/v2"
+import pytest
+
+from career_lab.scenarios.v2.module import ScenarioModule
+from tests.support.scenario_packages import installed_root
+
+from .test_evaluation_facts import facts, history, question
+
+PACK = installed_root()
 VARIANTS = [
     (sid, lang) for sid in ["pm_pilot_capacity15", "pm_pilot_urgent"] for lang in ["zh", "en"]
 ]
@@ -44,7 +47,7 @@ def test_policy_fix_remains_verified_when_capacity_or_date_is_pending(history, d
 
 @pytest.mark.parametrize("sid,lang", VARIANTS)
 def test_trial_cards_explain_unchanged_excess_and_draft_numbers_have_facts(sid, lang):
-    p = ScenarioModule(PACK / "variants" / sid, work_language=lang).package
+    p = ScenarioModule(installed_root(sid), work_language=lang).package
     text = (p.root / "materials/trial_details-v1.md").read_text()
     assert (
         "超出当前额度（未自动修改）"
@@ -67,7 +70,7 @@ def test_trial_cards_explain_unchanged_excess_and_draft_numbers_have_facts(sid, 
 
 @pytest.mark.parametrize("sid", ["pm_pilot", "pm_pilot_urgent", "pm_pilot_capacity15"])
 def test_english_technical_diagnostic_matches_frozen_actual_results(sid):
-    root = PACK if sid == "pm_pilot" else PACK / "variants" / sid
+    root = installed_root(sid)
     p = ScenarioModule(root, work_language="en").package
     records = json.loads((p.root / "research/private-diagnostic.json").read_text())
     trials = {

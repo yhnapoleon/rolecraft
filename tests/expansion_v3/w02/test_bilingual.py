@@ -17,9 +17,10 @@ from career_lab.storage.v2_store import V2Store
 from career_lab.assistant.v2 import Assistant
 from .conftest import auth, apply
 from .test_reference_http import LiveScenario, redact
+from tests.support.scenario_packages import installed_root
 
 ROOT = Path(__file__).resolve().parents[3]
-PACK = ROOT / "scenarios/pm_pilot/v2"
+PACK = installed_root()
 
 
 def packages():

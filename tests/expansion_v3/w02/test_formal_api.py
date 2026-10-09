@@ -10,13 +10,14 @@ from career_lab.api.app import create_app
 from career_lab.api.modules import ExtensionRegistry
 from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.contracts.v2 import DelegationGrant, Executor
+from tests.support.scenario_packages import installed_root
 
 ROOT = Path(__file__).resolve().parents[3]
 
 
 @pytest.fixture
 def api(tmp_path):
-    module = ScenarioModule(ROOT / "scenarios/pm_pilot/v2")
+    module = ScenarioModule(installed_root())
     app = create_app(
         "sqlite:///" + str(tmp_path / "formal.db"), extensions=module.install(ExtensionRegistry())
     )
