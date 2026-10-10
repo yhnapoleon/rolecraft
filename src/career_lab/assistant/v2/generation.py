@@ -22,7 +22,7 @@ from career_lab.contracts.v2.core import (
 )
 from career_lab.contracts.v2.provenance import CodeIdentity
 from career_lab.contracts.v2.world import RetrievedChunk, TestExecutionMetadata
-from career_lab.runtime.model_adapter import LocalModel, ModelAdapter
+from career_lab.runtime.model_adapter import LocalModel, ModelAdapter, ModelTransportTimeout
 from career_lab.scenarios.v2.localization import text as localized_text
 
 PROMPT_REVISION = "assistant-generation-v1"
@@ -195,7 +195,7 @@ def generate(
             raise ValueError("tools_not_allowed")
         answer, citations = parse_answer(reply.text, candidates)
         status, error = "success", None
-    except TimeoutError:
+    except (TimeoutError, ModelTransportTimeout):
         status = "timeout"
     except Exception:
         # Raw provider errors and invalid output are deliberately never persisted or logged.

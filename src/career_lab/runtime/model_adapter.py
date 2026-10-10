@@ -21,6 +21,10 @@ class ModelReply(Contract):
     usage: dict = Field(default_factory=dict)
 
 
+class ModelTransportTimeout(RuntimeError):
+    """The bounded transport timed out; still a RuntimeError for existing callers."""
+
+
 class ModelAdapter(Protocol):
     revision: str
 
@@ -101,7 +105,12 @@ class OpenAICompatibleModel:
                 return ModelReply(
                     text=message.get("content") or "", tool_calls=calls, usage=data.get("usage", {})
                 )
-            except httpx.TransportError:
+            except httpx.TransportError as error:
                 if attempt == self.retries:
-                    raise RuntimeError("model transport failed after bounded retries") from None
+                    failure = (
+                        ModelTransportTimeout
+                        if isinstance(error, httpx.TimeoutException)
+                        else RuntimeError
+                    )
+                    raise failure("model transport failed after bounded retries") from None
         raise RuntimeError("model exhausted retries")

@@ -28,6 +28,7 @@ class Provider:
     language: str
     calls: list[dict] = field(default_factory=list)
     failure: str | None = None
+    released: threading.Event = field(default_factory=threading.Event)
 
     def reply(self, payload: dict) -> str:
         self.calls.append(payload)
@@ -128,6 +129,8 @@ def runtime(
             assert self.path == "/chat/completions"
             payload = json.loads(self.rfile.read(int(self.headers["Content-Length"])))
             content = provider.reply(payload)
+            if provider.failure == "stall":
+                provider.released.wait(timeout=10)
             status = 503 if provider.failure == "http" else 200
             body = (
                 b"{broken"
@@ -177,6 +180,7 @@ def runtime(
             assert response.status_code == 200, response.text
             yield RuntimeSession(app, client, response.json(), provider, key, tmp_path)
     finally:
+        provider.released.set()
         app.state.store.close()
         server.shutdown()
         server.server_close()
@@ -420,6 +424,43 @@ def test_configured_deployment_records_agent_llm_generator(runtime: RuntimeSessi
     assert after["version"] == before["version"] + 1
     assert after["config_version"] == before["config_version"] + 1
     assert runtime.provider.calls == []
+
+
+def test_assistant_provider_timeout_is_recorded_as_timeout(runtime: RuntimeSession):
+    runtime.provider.failure = "stall"
+    # Deployments keep the 45 s transport bound; the stalled loopback provider needs less.
+    runtime.app.state.scenario_v2.assistant.model.timeout = 0.2
+    config = current_config(runtime)
+    runtime.send(
+        "/configuration",
+        "llm-mode",
+        "configuration.apply",
+        {"base": config_ref(runtime, config), "settings": {"generator": "llm"}},
+    )
+    queued = runtime.send(
+        "/tests",
+        "assistant",
+        "tests.create",
+        {
+            "query": "住宿报销上限是多少？"
+            if runtime.provider.language == "zh"
+            else "What is the hotel reimbursement limit?",
+            "config_version": config["config_version"] + 1,
+        },
+    )
+    assert queued["result"]["status"] == "queued"
+    runtime.run()
+    saved = runtime.get("/requests/assistant").json()
+    assert saved["status"] == "completed", saved
+    result = saved["jobs"][0]["effect"]["result"]
+    assert result["test"]["status"] == "failed"
+    assert result["test"]["error_code"] == "assistant_generation_failed"
+    assert [attempt["status"] for attempt in result["test"]["execution"]["attempts"]] == ["timeout"]
+    assert result["generation"]["mode"] == "failed"
+    assert len(runtime.provider.calls) == 1
+    assert not Worker(runtime.app.state.jobs, runtime.app.state.handlers).run_once()
+    assert runtime.get("/requests/assistant").json() == saved
+    assert len(runtime.provider.calls) == 1
 
 
 @pytest.mark.parametrize("failure", ["http", "json"])
