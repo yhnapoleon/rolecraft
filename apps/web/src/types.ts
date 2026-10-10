@@ -7,6 +7,8 @@ export interface Pilot {
   update_strategy: 'daily' | 'realtime' | 'manual_policy';
   fallback: 'human' | 'none';
   work_items: string[];
+  /** v2 only: how the knowledge assistant answers; omitted means the server keeps its value. */
+  generator?: 'extractive' | 'llm';
 }
 export interface World {
   session_id: string;

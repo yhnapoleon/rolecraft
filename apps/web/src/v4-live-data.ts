@@ -107,6 +107,7 @@ export class V4LiveData {
         update_strategy: config.update_strategy,
         fallback: config.fallback,
         work_items: config.work_items,
+        generator: config.generator ?? 'extractive',
       };
       this.configRefs.set(s.id, {
         session_id: s.id,
@@ -263,6 +264,8 @@ export class V4LiveData {
             update_strategy: plan.update_strategy,
             fallback: plan.fallback,
             work_items: plan.work_items,
+            // The visible generator choice is always sent; it is never carried silently.
+            ...(plan.generator ? { generator: plan.generator } : {}),
           },
         };
       } else if (['pause', 'resume', 'refresh_index'].includes(String(body.tool)))

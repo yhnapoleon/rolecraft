@@ -50,6 +50,7 @@ export const fromPilot = (p: Pilot) => ({
   fallback: p.fallback,
   workItems: p.work_items.map((w) => Object.keys(workIds).find((k) => workIds[k] === w) || w),
   launchDay: p.launch_day,
+  ...(p.generator ? { generator: p.generator } : {}),
 });
 export function toPilot(c: any): Pilot {
   if (
@@ -67,6 +68,8 @@ export function toPilot(c: any): Pilot {
     c.workItems.some((w: string) => !workIds[w])
   )
     throw new Error(T('未知知识范围或工作项。', 'Unknown knowledge area or work item.'));
+  if (c.generator !== undefined && !['extractive', 'llm'].includes(c.generator))
+    throw new Error(T('这项设置没有对应的后端接口。', 'This setting has no server equivalent.'));
   return {
     participants: c.participants,
     knowledge_domains: c.domains.map((d: string) => (d === 'faq' ? 'stable_faq' : d)),
@@ -74,6 +77,7 @@ export function toPilot(c: any): Pilot {
     update_strategy: c.update === 'manual' ? 'manual_policy' : c.update,
     fallback: c.fallback,
     work_items: c.workItems.map((w: string) => workIds[w]),
+    ...(c.generator ? { generator: c.generator } : {}),
   };
 }
 

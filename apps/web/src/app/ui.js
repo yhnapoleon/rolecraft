@@ -56,7 +56,7 @@ import { workspaceActionMessage } from '../features/workspace/native-v4/messages
 import { pendingTurnRole, serverText } from '../store';
 import { eventLine, isFeedEvent } from './events.js';
 import { testSetView, testSetPreview, caseState, testRunView } from './test-set-view.js';
-import { answerModeLine } from './assistant-mode';
+import { answerModeLine, generatorField, submittedGenerator } from './assistant-mode';
 import './test-set.css';
 import {
   investigationView,
@@ -2780,6 +2780,7 @@ function sheetConfig() {
     <fieldset class="field"><legend>${T('政策怎么保持最新', 'Keeping policy current')}</legend><div class="choices wrap">${['daily', 'realtime', 'manual'].map((k) => `<label class="choice"><input type="radio" name="update" value="${k}" ${c.update === k ? 'checked' : ''}><span>${UPDATE(k)}</span></label>`).join('')}</div></fieldset>
     <fieldset class="field"><legend>${T('答不了或不确定时', 'When it cannot answer')}</legend><div class="choices">${['human', 'none'].map((k) => `<label class="choice"><input type="radio" name="fallback" value="${k}" ${c.fallback === k ? 'checked' : ''}><span>${FALLBACK(k)}</span></label>`).join('')}</div></fieldset>
     <fieldset class="field"><legend>${T('要安排的开发', 'Engineering work')}</legend><div class="choices wrap">${['scope', 'fallback', 'realtime'].map((k) => `<label class="choice"><input type="checkbox" name="workItems" value="${k}" ${c.workItems.includes(k) ? 'checked' : ''}><span>${WORK_ITEM(k)}<small>${T(WORK_COST[k] + ' 人日', WORK_COST[k] + ' pd')}</small></span></label>`).join('')}</div></fieldset>
+    ${a.assistantMode ? generatorField(c.generator || 'extractive', a.assistantMode) : ''}
     ${configChecks(a, c)}
   </form>`,
     `${btn(icon('hand', 'i-sm') + T('申请资源', 'Request resources'), 'resources', 'quiet')}<span class="spacer"></span><button type="submit" form="config-form" class="btn primary">${T('保存设置', 'Save settings')}</button>`,
@@ -5377,6 +5378,9 @@ document.addEventListener('submit', async (e) => {
           fallback: String(f.get('fallback')),
           workItems: f.getAll('workItems'),
           launchDay: Number(f.get('launchDay')),
+          ...(a.assistantMode
+            ? { generator: submittedGenerator(f, a.config.generator || 'extractive') }
+            : {}),
         });
         closeSheet();
         {
