@@ -73,6 +73,17 @@ _LOCAL_TEXT = {
         "list_sep": "、",
         "gap": " …… ",
         "quote": "“{}”",
+        "decision": "已保存的业务决定：{}。",
+        "approved": "已批准",
+        "accepted": "已接受还价",
+        "rejected": "未批准，资源不变",
+        "countered": "提出还价，接受前资源不变",
+        "granted": "生效资源：{}。",
+        "offered": "还价条件：{}。",
+        "item_sep": "、",
+        "amount": "{} {}",
+        # Same names as the approval rules; scenario-owned policy code stays untouched.
+        "resources": {"capacity": "容量", "dev_days": "开发人日", "deadline_day": "正式试点期限"},
     },
     "en": {
         "no_match": "No passage directly related to this question was found in the local sources.",
@@ -81,6 +92,20 @@ _LOCAL_TEXT = {
         "list_sep": ", ",
         "gap": " … ",
         "quote": '"{}"',
+        "decision": "Committed business decision: {}.",
+        "approved": "approved",
+        "accepted": "counteroffer accepted",
+        "rejected": "not approved; resources unchanged",
+        "countered": "counteroffer made; resources unchanged until accepted",
+        "granted": "Effective resources: {}.",
+        "offered": "Counteroffer terms: {}.",
+        "item_sep": ", ",
+        "amount": "{} {}",
+        "resources": {
+            "capacity": "Capacity",
+            "dev_days": "Developer-days",
+            "deadline_day": "Pilot deadline day",
+        },
     },
 }
 # Function words carry no topic; they only make unrelated tables look relevant.
@@ -192,18 +217,53 @@ def _hits(text, terms):
     return sum(term in folded for term in terms)
 
 
+def _record(source):
+    """The structured record behind a source, or None for plain text."""
+    candidate = source["text"].strip()
+    if candidate[:1] not in ("{", "["):
+        return None
+    try:
+        return json.loads(candidate)
+    except (ValueError, TypeError):
+        return None
+
+
+def _committed_decision(value):
+    return isinstance(value, dict) and value.get("record_kind") == "committed_business_decision"
+
+
+def _decision_text(value, language):
+    """A recorded business decision as a plain statement; only granted terms are in effect."""
+    words = _LOCAL_TEXT[language]
+    labels = words["resources"]
+    status = value.get("status")
+    if status not in ("approved", "accepted", "rejected", "countered"):
+        return None
+
+    def terms(values):
+        return words["item_sep"].join(
+            words["amount"].format(labels.get(key, key), amount)
+            for key, amount in sorted(values.items())
+        )
+
+    parts = [words["decision"].format(words[status])]
+    if status in ("approved", "accepted") and value.get("granted"):
+        parts.append(words["granted"].format(terms(value["granted"])))
+    if status == "countered" and value.get("countered"):
+        parts.append(words["offered"].format(terms(value["countered"])))
+    if isinstance(value.get("reason"), str) and value["reason"].strip():
+        parts.append(value["reason"].strip())
+    return "".join(parts) if language == "zh" else " ".join(parts)
+
+
 def _readable_source(source, language):
     """Readable text for one authorized source; structured records never appear as raw JSON."""
-    import json
-
     text = source["text"]
-    candidate = text.strip()
-    if candidate[:1] in ("{", "["):
-        try:
-            value = json.loads(candidate)
-        except (ValueError, TypeError):
-            value = None
+    if text.strip()[:1] in ("{", "["):
+        value = _record(source)
         if value is not None:
+            if _committed_decision(value):
+                return _decision_text(value, language)
             if (
                 isinstance(value, dict)
                 and isinstance(value.get("content"), str)
@@ -225,10 +285,11 @@ class LocalRoleModel:
     """Offline example only; continuity must be in context, never this model's echo.
 
     It only quotes passages from already-authorized sources that share terms with
-    the question. It gives no judgement, advice or status of its own.
+    the question, and states committed business decisions the role knows. It gives
+    no judgement, advice or status of its own.
     """
 
-    revision = "colleague-local-reference-v6"
+    revision = "colleague-local-reference-v7"
     retries = 0
 
     def complete(self, messages, tools):
@@ -242,10 +303,17 @@ class LocalRoleModel:
             role_text(language, "responsibilities") + separator.join(ctx["responsibilities"]),
         ]
         terms = _query_terms(messages[-1]["content"].casefold())
+
+        def rank(pair):
+            # A committed decision on the asked subject precedes the initial materials it
+            # supersedes; everything else keeps term-overlap order. No inference.
+            if _committed_decision(_record(pair[1])):
+                hits = _hits(_readable_source(pair[1], language) or "", terms)
+                return (hits == 0, -hits, pair[0])
+            return (True, -_hits(pair[1]["text"], terms), pair[0])
+
         # Only rank already-authorized source excerpts. No inference or new advice.
-        sources = sorted(
-            enumerate(ctx["sources"]), key=lambda pair: (-_hits(pair[1]["text"], terms), pair[0])
-        )
+        sources = sorted(enumerate(ctx["sources"]), key=rank)
         groups = {}
         recalled = set()
         for _, source in sources:
