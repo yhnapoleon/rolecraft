@@ -297,9 +297,8 @@ def install_native_reads(
                     if role_mode == "local_reference"
                     else "unavailable",
                     "feedback": feedback_mode,
-                    "assistant": "model"
-                    if configured(current.assistant.model)
-                    else "waiting_model",
+                    # The deployment's state; an archived reader never generates or relabels.
+                    "assistant": "model" if configured(module.assistant.model) else "waiting_model",
                 },
                 "timeline": timeline(view, page, auth).result,
                 "materials": registry.operations["materials.list"]
