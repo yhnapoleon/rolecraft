@@ -1,11 +1,15 @@
 """Focused Chinese-slice content and immutable-runtime handoff checks."""
 
+import json
 from pathlib import Path
-import hashlib, json
+
 import pytest
+
 from career_lab.contracts.v2 import ProtocolError
 from career_lab.scenarios.v2.localization import runtime_source_files
 from career_lab.scenarios.v2.rebind import rebind
+from tests.support.scenario_packages import installed_root
+
 from .conftest import apply
 from .test_content_redesign import role_auth
 
@@ -62,7 +66,8 @@ def test_chinese_runtime_pins_shared_code_and_isolates_english_only_dependencies
 
     runtime = RuntimeBundle.model_validate_json((package.root / "runtime/bundle.json").read_bytes())
     assert digest(bound) == runtime.source.source_digest
-    assert ScenarioModule(package.root).work_language == "zh"
+    # The authoring root pins a historical contract; the installed zh package is the runtime.
+    assert ScenarioModule(installed_root()).work_language == "zh"
     current = runtime_source_files(ROOT, "zh")
     assert set(bound) <= set(current)
     assert "src/career_lab/scenarios/v2/module.py" in bound

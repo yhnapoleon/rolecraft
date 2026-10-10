@@ -4,9 +4,15 @@ import hashlib
 from pathlib import Path
 
 import pytest
+from pydantic import JsonValue, ValidationError
 
 from career_lab.contracts.v2 import canonical
-from career_lab.contracts.v2.engineer import decode_engineer_document
+from career_lab.contracts.v2.engineer import (
+    EngineerPublicReport,
+    EngineerReviewInput,
+    decode_engineer_document,
+)
+from career_lab.contracts.v2.engineer_examples import engineer_examples
 
 FREEZE = Path(__file__).resolve().parents[2] / "docs/contracts/expansion-v3/examples"
 
@@ -28,7 +34,7 @@ LEGACY_HASHES = {
 }
 
 
-def submission_payload() -> dict:
+def submission_payload() -> dict[str, JsonValue]:
     import json
 
     old = json.loads((FREEZE / "EngineerSubmission.json").read_text())
@@ -70,7 +76,9 @@ def test_engineer_02_submission_roundtrip_keeps_structured_facts() -> None:
         {"unresolved": None},
     ],
 )
-def test_engineer_03_05_invalid_version_fields_and_time_rejected(change: dict) -> None:
+def test_engineer_03_05_invalid_version_fields_and_time_rejected(
+    change: dict[str, JsonValue],
+) -> None:
     import json
 
     from pydantic import ValidationError
@@ -87,7 +95,7 @@ def test_engineer_04_submission_binds_trusted_pack_and_config_bytes(tmp_path: Pa
     from career_lab.contracts.v2 import FileRef, ProtocolError
     from career_lab.contracts.v2.engineer import validate_submission_files
 
-    def file(name: str, value: dict) -> FileRef:
+    def file(name: str, value: dict[str, JsonValue]) -> FileRef:
         raw = json.dumps(value).encode()
         (tmp_path / name).write_bytes(raw)
         return FileRef(path=name, sha256=hashlib.sha256(raw).hexdigest())
@@ -123,7 +131,7 @@ def test_engineer_04_submission_binds_trusted_pack_and_config_bytes(tmp_path: Pa
         validate_submission_files(tmp_path, record, expected_pack=pack_ref, baseline=base)
 
 
-def review_input():
+def review_input() -> EngineerReviewInput:
     from career_lab.contracts.v2 import EffectiveConfig
     from career_lab.contracts.v2.engineer import EngineerReviewInput
     from career_lab.contracts.v2.examples import sample_model
@@ -159,6 +167,7 @@ def test_engineer_06_review_identity_binds_every_fixed_input() -> None:
         "probe_suite",
         "reviewer_version",
         "resource_snapshot",
+        "submission",
     ):
         changed = original.model_copy(
             update={name: getattr(original, name).model_copy(update={"sha256": "b" * 64})}
@@ -173,9 +182,24 @@ def test_engineer_06_review_identity_binds_every_fixed_input() -> None:
         }
     )
     assert digest(original.model_copy(update={"resolved_config": changed})) != digest(original)
+    requested = original.resolved_config.requested.model_copy(
+        update={"participants": original.resolved_config.requested.participants + 1}
+    )
+    changed_requested = original.resolved_config.model_copy(update={"requested": requested})
+    assert digest(original.model_copy(update={"resolved_config": changed_requested})) != digest(
+        original
+    )
+    changed_point = original.source_as_of.model_copy(
+        update={"business_seq": original.source_as_of.business_seq + 1}
+    )
+    assert digest(original.model_copy(update={"source_as_of": changed_point})) != digest(original)
+    from career_lab.contracts.v2 import FileRef
+
+    model = FileRef(path="evaluation-model.json", sha256="d" * 64)
+    assert digest(original.model_copy(update={"model": model})) != digest(original)
 
 
-def report_payload() -> dict:
+def report_payload() -> dict[str, JsonValue]:
     from career_lab.contracts.v2 import TestResultV2, digest
     from career_lab.contracts.v2.examples import sample_model
 
@@ -433,11 +457,192 @@ def test_engineer_hidden_only_public_report_keeps_applicability_without_details(
     report = EngineerRegressionReport.model_validate(value)
     public = public_engineer_report(report)
     assert not public.public_results
-    assert public.applicability.scenario == report.input.scenario
+    assert public.applicability.scenario.sha256 == report.input.scenario.sha256
+    assert public.applicability.scenario.kind == "scenario"
     assert public.applicability.probe_suite_hash == report.input.probe_suite.sha256
-    assert public.applicability.config == report.input.config
+    assert public.applicability.config.sha256 == report.input.config.sha256
+    assert public.applicability.config.kind == "configuration"
     assert public.applicability.effective_config_hash == digest(
         report.input.resolved_config.effective
     )
     assert public.applicability.source_as_of == report.input.source_as_of
     assert "public question" not in public.model_dump_json()
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        "hidden_errors",
+        "mismatch",
+        "unverified",
+        "public_error",
+        "duplicate",
+        "false_mismatch",
+        "false_incomplete",
+    ],
+)
+def test_public_report_direct_decode_rejects_contradictory_completion(case: str) -> None:
+    from pydantic import ValidationError
+
+    from career_lab.contracts.v2.engineer import EngineerPublicReport
+    from career_lab.contracts.v2.engineer_examples import engineer_examples
+
+    value = engineer_examples()["EngineerPublicReport"].model_dump(mode="json")
+    if case == "hidden_errors":
+        value["hidden"]["errors"] = 1
+    elif case in {"mismatch", "unverified"}:
+        value["claim_check"] = case
+    elif case == "public_error":
+        value["public_results"][0].update(
+            result="error", error_code="engineer_probe_execution_failed"
+        )
+    elif case == "duplicate":
+        value["public_results"] *= 2
+    else:
+        value["status"] = "report_mismatch" if case == "false_mismatch" else "incomplete"
+    with pytest.raises(ValidationError):
+        EngineerPublicReport.model_validate_json(canonical(value))
+
+
+@pytest.mark.parametrize(
+    "status,claim,errors,result,hidden_only",
+    [
+        ("verified", "not_provided", 0, "pass", False),
+        ("verified", "matched", 0, "fail", False),
+        ("report_mismatch", "mismatch", 0, "fail", False),
+        ("incomplete", "unverified", 0, "pass", False),
+        ("incomplete", "matched", 1, "pass", False),
+        ("incomplete", "mismatch", 1, "error", False),
+        ("verified", "matched", 0, "pass", True),
+        ("report_mismatch", "mismatch", 0, "fail", True),
+        ("incomplete", "unverified", 1, "error", True),
+    ],
+)
+def test_public_report_direct_decode_keeps_consistent_and_hidden_only_summaries(
+    status: str,
+    claim: str,
+    errors: int,
+    result: str,
+    hidden_only: bool,
+) -> None:
+    from career_lab.contracts.v2.engineer import EngineerPublicReport
+    from career_lab.contracts.v2.engineer_examples import engineer_examples
+
+    value = engineer_examples()["EngineerPublicReport"].model_dump(mode="json")
+    value.update(status=status, claim_check=claim)
+    value["hidden"] = {"passed": 1, "failed": 1, "errors": errors}
+    value["public_results"][0]["result"] = result
+    if result == "error":
+        value["public_results"][0]["error_code"] = "engineer_probe_execution_failed"
+    if hidden_only:
+        value.update(public_results=[], findings=[], unresolved=[])
+    parsed = EngineerPublicReport.model_validate_json(canonical(value))
+    assert parsed.status == status and parsed.claim_check == claim
+    assert parsed.hidden.passed == 1 and parsed.hidden.failed == 1
+    assert bool(parsed.public_results) is not hidden_only
+
+
+def test_public_projection_keeps_prose_file_names_and_quote_text_out_of_shared_dto() -> None:
+    from career_lab.contracts.v2 import digest
+    from career_lab.contracts.v2.engineer import EngineerRegressionReport, public_engineer_report
+
+    marker = "PRIVATE-FREE-TEXT-AND-FILE-METADATA"
+    value = report_payload()
+    for field in ("config", "scenario", "submission"):
+        value["input"][field].update(path=marker + ".json", media_type=marker)
+    value["submission"] = value["input"]["submission"]
+    value["results"][0]["actual"]["answer"] = marker
+    for reference in value["results"][0]["actual"]["citations"]:
+        reference["quote"] = marker
+    value["findings"] = [
+        {
+            "kind": "target_fix",
+            "status": "pass",
+            "visibility": "public",
+            "description": marker,
+            "probe_ids": ["public-1"],
+        }
+    ]
+    value["unresolved"] = [{"id": marker, "description": marker, "visibility": "public"}]
+    value["advice"] = {
+        "status": "success",
+        "text": marker,
+        "visibility": "public",
+        "model": {"path": marker + ".json", "sha256": "e" * 64, "media_type": marker},
+    }
+    value["input"]["model"] = value["advice"]["model"]
+    value["input_hash"] = digest(EngineerReviewInput.model_validate(value["input"]))
+    report = EngineerRegressionReport.model_validate(value)
+    private_before = report.model_dump_json()
+    public = public_engineer_report(report)
+    assert marker not in public.model_dump_json()
+    assert report.model_dump_json() == private_before
+    assert marker in private_before
+    assert public.public_results[0].query == "public question"
+    assert public.applicability.config.sha256 == report.input.config.sha256
+
+
+@pytest.mark.parametrize("model", [None, {"kind": "configuration", "sha256": "a" * 64}])
+def test_public_advice_success_requires_a_model_identity(
+    model: dict[str, JsonValue] | None,
+) -> None:
+    from pydantic import ValidationError
+
+    from career_lab.contracts.v2.engineer import EngineerPublicAdvice
+
+    with pytest.raises(ValidationError):
+        EngineerPublicAdvice.model_validate({"status": "success", "model": model})
+    valid = EngineerPublicAdvice.model_validate(
+        {
+            "status": "success",
+            "model": {"kind": "model", "sha256": "a" * 64},
+        }
+    )
+    assert valid.model.sha256 == "a" * 64 and valid.text is None
+
+
+@pytest.mark.parametrize(
+    "change,status",
+    [
+        ({"result": "pass", "actual_status": None}, "verified"),
+        ({"result": "fail", "actual_status": None}, "verified"),
+        ({"result": "pass", "error_code": "engineer_probe_execution_failed"}, "verified"),
+        ({"result": "fail", "error_code": "engineer_probe_execution_failed"}, "verified"),
+        ({"result": "error", "error_code": None}, "incomplete"),
+    ],
+    ids=[
+        "pass_without_actual",
+        "fail_without_actual",
+        "pass_with_execution_error",
+        "fail_with_execution_error",
+        "error_without_code",
+    ],
+)
+def test_engineer_07_09_public_probe_rejects_contradictory_execution_completion(
+    change: dict[str, JsonValue], status: str
+) -> None:
+    value = engineer_examples()["EngineerPublicReport"].model_dump(mode="json")
+    value["status"] = status
+    value["public_results"][0].update(change)
+    with pytest.raises(ValidationError):
+        EngineerPublicReport.model_validate(value)
+
+
+@pytest.mark.parametrize(
+    "result,error_code,status",
+    [
+        ("fail", None, "verified"),
+        ("error", "engineer_baseline_execution_failed", "incomplete"),
+    ],
+    ids=["business_fail_with_actual", "baseline_error_preserves_candidate_actual"],
+)
+def test_engineer_07_09_legal_completed_and_baseline_error_summaries_remain_valid(
+    result: str, error_code: str | None, status: str
+) -> None:
+    value = engineer_examples()["EngineerPublicReport"].model_dump(mode="json")
+    value["status"] = status
+    value["public_results"][0].update(result=result, error_code=error_code)
+    report = EngineerPublicReport.model_validate(value)
+    assert report.public_results[0].actual_status is not None
+    assert report.public_results[0].result == result
+    assert report.status == status

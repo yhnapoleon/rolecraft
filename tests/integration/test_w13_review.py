@@ -597,3 +597,46 @@ def test_review_malformed_cache_index_is_json_error(session: Session, shape: obj
     assert not rejected.stderr
     assert json.loads(rejected.stdout) == {"status": "failed", "code": "engineer_review_changed"}
     assert path.read_bytes() == malformed
+
+
+@pytest.mark.parametrize(
+    "channel", ["configuration_text", "candidate_filename", "candidate_media_type"]
+)
+def test_public_projection_keeps_learner_configuration_and_reference_text_private(
+    session: Session,
+    channel: str,
+) -> None:
+    from career_lab.engineer.files import encode
+
+    marker = "PRIVATE-LEARNER-CONFIGURATION-CONTENT"
+    pack, source = prepare(
+        session,
+        {"prohibited_topics": [marker]} if channel == "configuration_text" else None,
+    )
+    record = json.loads(source.read_bytes())
+    if channel == "candidate_filename":
+        original = source.parent / record["config"]["path"]
+        filename = marker + ".json"
+        (source.parent / filename).write_bytes(original.read_bytes())
+        record["config"]["path"] = filename
+    elif channel == "candidate_media_type":
+        record["config"]["media_type"] = marker
+    source.write_bytes(encode(record))
+    submitted = submit(session, pack, source)
+    assert submitted.returncode == 0, submitted.stdout + submitted.stderr
+    folder = session[7] / "submissions" / json.loads(submitted.stdout)["directory"]
+    result = review(session, pack, folder)
+    assert result.returncode == 0, result.stdout + result.stderr
+    identity = json.loads(result.stdout)["review_id"]
+    private = session[7] / "private-reviews" / "reports" / identity
+    private_before = {path.name: path.read_bytes() for path in private.iterdir()}
+    assert marker in private_before["report.json"].decode()
+    public = session[7] / "public-reviews" / identity / "report.json"
+    public_before = public.read_bytes()
+    assert marker not in public_before.decode()
+    assert all("actual" not in row for row in json.loads(public_before)["public_results"])
+    again = review(session, pack, folder)
+    assert again.returncode == 0, again.stdout + again.stderr
+    assert json.loads(again.stdout)["review_id"] == identity
+    assert public.read_bytes() == public_before
+    assert {path.name: path.read_bytes() for path in private.iterdir()} == private_before

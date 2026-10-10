@@ -1,16 +1,16 @@
 {
   "$defs": {
-    "FileRef": {
+    "EngineerArtifactIdentity": {
       "additionalProperties": false,
       "properties": {
-        "media_type": {
-          "default": "application/json",
-          "title": "Media Type",
-          "type": "string"
-        },
-        "path": {
-          "minLength": 1,
-          "title": "Path",
+        "kind": {
+          "enum": [
+            "submission",
+            "scenario",
+            "configuration",
+            "model"
+          ],
+          "title": "Kind",
           "type": "string"
         },
         "schema_version": {
@@ -26,10 +26,10 @@
         }
       },
       "required": [
-        "path",
+        "kind",
         "sha256"
       ],
-      "title": "FileRef",
+      "title": "EngineerArtifactIdentity",
       "type": "object"
     },
     "VersionPoint": {
@@ -74,12 +74,29 @@
       "type": "string"
     },
     "config": {
-      "$ref": "#/$defs/FileRef"
+      "$ref": "#/$defs/EngineerArtifactIdentity"
     },
     "effective_config_hash": {
       "pattern": "^[0-9a-f]{64}$",
       "title": "Effective Config Hash",
       "type": "string"
+    },
+    "effective_settings_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Effective Settings Hash",
+      "type": "string"
+    },
+    "indexed_versions_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Indexed Versions Hash"
     },
     "probe_suite_hash": {
       "pattern": "^[0-9a-f]{64}$",
@@ -92,7 +109,7 @@
       "type": "string"
     },
     "scenario": {
-      "$ref": "#/$defs/FileRef"
+      "$ref": "#/$defs/EngineerArtifactIdentity"
     },
     "schema_version": {
       "const": 2,
@@ -102,6 +119,18 @@
     },
     "source_as_of": {
       "$ref": "#/$defs/VersionPoint"
+    },
+    "source_versions_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Source Versions Hash"
     }
   },
   "required": [
@@ -111,6 +140,9 @@
     "probe_suite_hash",
     "reviewer_version_hash",
     "effective_config_hash",
+    "effective_settings_hash",
+    "source_versions_hash",
+    "indexed_versions_hash",
     "source_as_of"
   ],
   "title": "EngineerReportApplicability",

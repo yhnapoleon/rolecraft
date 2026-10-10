@@ -244,7 +244,9 @@ v1 actions参数与PilotPlan、v2对象路径与查询、configuration.apply的S
 
 **2026-10-09 080续行裁定：** `agent_label`属于委托请求内容，同request_id改标签必须409；同ID同内容仍200且身份不变。`delegations/service.py::issue`只增加一行完整payload摘要透传，存储将该摘要纳入现有派生指纹，不保存标签正文。该hunk获准纳入093，086在同文件的工具目录／参考身份增量由080合并；本线不改其余部分。
 
-三处签发共用`security/credentials.py`；部署通过`CAREER_LAB_CREDENTIAL_KEY_ID`及`CAREER_LAB_CREDENTIAL_KEY`提供至少32字节秘密，由装配注入提供器，生产无默认值。服务只在签发/恢复时读取配置；已有token认证不依赖部署key。配置缺失、版本/内容漂移、提供器异常及已损坏的派生认证链统一503 `credential_derivation_unavailable`，正文为`credential derivation unavailable`，无秘密或内部异常文本。
+四处签发共用`security/credentials.py`；部署通过`CAREER_LAB_CREDENTIAL_KEY_ID`及`CAREER_LAB_CREDENTIAL_KEY`提供至少32字节秘密，由装配注入提供器，生产无默认值。服务只在签发/恢复时读取配置；已有token认证不依赖部署key。配置缺失、版本/内容漂移、提供器异常及已损坏的派生认证链统一503 `credential_derivation_unavailable`，正文为`credential derivation unavailable`，无秘密或内部异常文本。
+
+补修snapshot restore遗漏路径：带request_id且未显式提供token的新恢复使用同一签名器、`snapshot-restore`用途和同一组部署配置；绑定父human授权、子身份及目标session/request/snapshot hash，来源与子会话同事务落库。重放重检当前授权、固定派生版本及指纹，返回同一凭据；缺配置或key漂移503且不改记录。历史restore凭据缺少派生来源；按074裁定不复算旧明文，因此不区分显式token与旧摘要派生token，不自动加别名；旧token及显式携token重放仍有效，省略token时409 `restore_token_conflict`。仅新restore走新派生；本提交前派生的restore token仍可凭数据库读权限推导，直至撤销。是否撤销持久库中历史派生凭据由用户决定。
 
 新增两张凭据表只存scheme/key_id、完整请求与授权指纹、token摘要及原credential_id别名；不改原凭据摘要、上下文或撤销位。别名认证仍进入原凭据的session、scope、撤销和到期检查。新旧token在原授权有效时同时有效；不声称旧DB摘要推导出的同一历史token已失效。
 

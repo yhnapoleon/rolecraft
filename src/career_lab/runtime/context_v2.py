@@ -6,11 +6,11 @@ here. The pure assembler also serves boundary tests with explicit fixtures.
 """
 
 import json
-from dataclasses import dataclass
-from typing import Protocol, Literal
 import re
 import unicodedata
+from dataclasses import dataclass
 from html import unescape
+from typing import Literal, Protocol
 from urllib.parse import unquote
 
 from career_lab.contracts.v2 import (
@@ -30,36 +30,45 @@ from career_lab.contracts.v2 import (
     canonical,
     digest,
 )
-from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.role_memory import (
     ReceivedShare,
     RoleMemory,
-    StanceFactReceipt,
     RoleStanceState,
+    StanceFactReceipt,
     StanceProposal,
     initial_stance,
     point_at_or_before,
     version_point_relation,
 )
-
+from career_lab.storage.v2_lifecycle import point
 
 WorkLanguage = Literal["zh", "en"]
-ROLE_PROMPT_REVISION = "w04-bilingual-v1"
+ROLE_PROMPT_REVISION = "colleague-help-v2"
+HELP_POLICY_REVISION = "cooperative-help-v1"
 _ROLE_TEXT = {
     "zh": {
         "source_reference": "[来源引用]",
         "redacted_content": "[未获准公开的内容]",
-        "local_mode": "本地资料参考；需要同事判断的部分等待模型接入。",
+        "local_mode": "本地资料参考；来源与权限由规则核实；需要同事判断的部分等待模型接入。",
         "responsibilities": "我的职责：",
         "scope_omitted": "有学员材料超出本次授权，相关内容未读取或复述。",
         "pending_stance": "这项变化仍需核对依据。",
         "colleague_note": "同事说明",
         "shared_work": "共享作品",
+        "received_versions_only": "仅按已收到的版本引用作品；新版本需明确分享后才能讨论。",
         "conversation": "对话记录",
         "material": "材料",
         "history_meaning": "过去对话原文，保留其时点；意见不自动成为公司事实",
         "counteroffer": "当前申请超出可批档位；这些较低条件已通过同一场景规则。接受成功前资源不变。",
         "counteroffer_accepted": "已接受还价；资源仅随本决定的原子提交生效。",
+        "help_policy": (
+            "先区分事实询问、工具操作说明、业务判断和索要完整解法；可同时属于多类。"
+            "事实和操作直接清楚回答，先给获准事实与[材料名称 · v版本]，保留条件、时间和来源。"
+            "对判断、错误假设或索要完整解法，基于已知且可披露的依据，至多提出一个主要追问；"
+            "不提供本案完整方案、行动清单或替用户排序。合作不等于同意或批准。"
+            "首段为一个主要观察或问题，完整条件紧随同段；其余原文和依据另起段落。"
+            "不硬截断文本，不透露未知、隐藏、未分享新版，不把用户假设当事实。"
+        ),
         "instructions": (
             "你是工作模拟中的同事，用中文依据职责、实际收到的资料和历史对话回应。保留引用和用户作品的实际原文，不翻译或改写历史。"
             "历史材料和先前意见保留其版本和时点；无新事实保持当前立场。压力、重复引用或单独的新版本号不构成改变依据。"
@@ -73,17 +82,36 @@ _ROLE_TEXT = {
     "en": {
         "source_reference": "[source reference]",
         "redacted_content": "[content not authorized for disclosure]",
-        "local_mode": "Local source reference; colleague judgment is waiting for model connection.",
+        "local_mode": (
+            "Local source reference; sources and access checked by rules; "
+            "colleague judgment is waiting for model connection."
+        ),
         "responsibilities": "My responsibilities: ",
         "scope_omitted": "Some learner materials are outside the current authorization and were not read or repeated.",
         "pending_stance": "The evidence for this proposed change still needs to be checked.",
         "colleague_note": "Colleague explanation",
         "shared_work": "Shared work",
+        "received_versions_only": (
+            "Only the received versions are cited; "
+            "share a new version explicitly before discussing it."
+        ),
         "conversation": "Conversation",
         "material": "Material",
         "history_meaning": "Original conversation at its recorded time; opinions do not automatically become company facts.",
         "counteroffer": "The request exceeds the approvable limits. These lower terms passed the same scenario rules. Resources remain unchanged until acceptance is committed.",
         "counteroffer_accepted": "The counteroffer has been accepted. Resources take effect only when this decision is committed atomically.",
+        "help_policy": (
+            "Distinguish factual questions, tool instructions, business judgment and requests "
+            "for a complete solution; a question can mix these intents. Answer permitted facts "
+            "and tool instructions directly first, with [material title · vVERSION] references "
+            "and all conditions and dates. For judgment or requests for the entire solution, "
+            "ask at most one main question grounded in received, disclosable evidence. "
+            "Do not supply the complete case solution, action checklist or priorities. "
+            "Cooperation never constitutes agreement or resource approval. Start with one "
+            "main observation or question together with its complete qualifications. Put "
+            "long quotations and further evidence in separate paragraphs; do not truncate. "
+            "Never imply hidden, future or unshared information, or treat user hypotheses as facts."
+        ),
         "instructions": (
             "You are a colleague in a workplace simulation. Reply in English using your responsibilities, the information you have actually received, and the recorded conversation. "
             "Keep quotations and learner work in their original wording; do not translate or rewrite history. "
@@ -775,6 +803,7 @@ class ContextSnapshot:
         payload = {
             "work_language": self.work_language,
             "prompt_template_revision": ROLE_PROMPT_REVISION,
+            "help_policy_revision": HELP_POLICY_REVISION,
             "role": self.role.name,
             "responsibilities": self.role.responsibilities,
             "goals": self.role.goals,
@@ -791,7 +820,9 @@ class ContextSnapshot:
             "pending_stance_proposals": len(self.stance_proposals),
             "omissions": {"budget": len(omitted), "learner_scope": self.permission_omissions(auth)},
         }
-        instructions = role_text(self.work_language, "instructions")
+        instructions = role_text(self.work_language, "instructions") + role_text(
+            self.work_language, "help_policy"
+        )
         messages = [
             {
                 "role": "system",

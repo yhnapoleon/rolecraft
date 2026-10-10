@@ -1,3 +1,5 @@
+import { feedbackCoverageText } from './coverage';
+import { updateRegisteredAdvice, type RegisteredAdvice, type AdviceFallback } from './model-advice';
 import type { SubmitInput } from '../../contracts-v2';
 /** Native DOM submission/review surface. Inject the shared client; no credentials,
  * queue, mutation journal, global navigation or React root is created here. */
@@ -10,6 +12,7 @@ export type SelectedProduct = Pick<
   'session_id' | 'product_id' | 'version' | 'title' | 'removed_at' | 'author'
 >;
 type Item = {
+  applicability?: 'applicable' | 'not_applicable' | 'unknown';
   criterion: string;
   explanation: string;
   source: string;
@@ -19,6 +22,7 @@ type Item = {
 };
 export type FeedbackSemanticStatus = 'waiting_for_model' | 'available' | 'pending' | 'failed';
 export type Report = {
+  model_advice?: RegisteredAdvice[];
   semantic_status?: FeedbackSemanticStatus;
   id: string;
   version: number;
@@ -136,6 +140,13 @@ export function feedbackSemanticPresentation(
     waitingForModel:
       status === 'waiting_for_model' || (status === undefined && advice.length === 0),
   };
+}
+
+function adviceFallback(report: Report | undefined, state: FeedbackNativeState): AdviceFallback {
+  if (!report) return 'unavailable';
+  const semantic = feedbackSemanticPresentation(report, state);
+  if (semantic.status === 'failed') return 'failed';
+  return semantic.waitingForModel ? 'waiting' : 'pending';
 }
 
 /** Display names of rubric criteria; shared by the feedback panel and the optional-practice basis. */
@@ -626,25 +637,32 @@ export function mountNativeFeedback(
       } else panel.append(section);
     }
     if (inactive) panel.append(notApplicable);
+    const coverage = el(
+      'p',
+      feedbackCoverageText(
+        report,
+        feedbackSemanticPresentation(report, adapter.snapshot()).advice,
+        language,
+      ),
+      'muted',
+    );
+    coverage.dataset.feedbackCoverage = report.id;
+    panel.append(coverage);
     const semantic = el('section');
     semantic.append(el('h3', T('理由与证据的支持关系', 'Support between reasoning and evidence')));
-    const { advice, waitingForModel } = feedbackSemanticPresentation(report, adapter.snapshot());
-    if (!advice.length)
-      semantic.append(
-        el(
-          'p',
-          !waitingForModel
-            ? T(
-                '支持关系仍待核验；当前没有已完成的模型建议。',
-                'Support remains unverified; no completed model advice is available.',
-              )
-            : T(
-                '等待模型接入。当前只展示已核事实与规则，不对理由是否合理作模板判断。',
-                'Awaiting model connection. Only verified facts and rules are shown; no template judgment of reasoning quality is made.',
-              ),
-          'muted',
-        ),
+    const { advice } = feedbackSemanticPresentation(report, adapter.snapshot());
+    if (!advice.length || report.model_advice !== undefined) {
+      const block = el('div');
+      block.dataset.modelAdviceReport = report.id;
+      semantic.append(block);
+      updateRegisteredAdvice(
+        block,
+        report.model_advice,
+        language,
+        (ref) => adapter.openReference(ref),
+        adviceFallback(report, adapter.snapshot()),
       );
+    }
     for (const item of advice) {
       semantic.append(el('p', T('模型建议 · ', 'Model advice · ') + item.explanation));
       refs(semantic, item.citations);
@@ -752,6 +770,11 @@ export function mountNativeFeedback(
     // Do not rebuild the response editor while it holds focus. Its content is
     // retained in the per-report draft even when the shared client refreshes.
     if (!reports.contains(doc.activeElement)) {
+      const expandedModels = new Set(
+        [...reports.querySelectorAll<HTMLElement>('[data-model-advice-report]')]
+          .filter((node) => node.querySelector<HTMLDetailsElement>('[data-model-advice]')?.open)
+          .map((node) => node.dataset.modelAdviceReport),
+      );
       const expanded = new Set(
         [...reports.querySelectorAll<HTMLDetailsElement>('details[data-response-id][open]')].map(
           (n) => n.dataset.responseId,
@@ -770,6 +793,27 @@ export function mountNativeFeedback(
         'details[data-response-id]',
       ))
         detail.open = expanded.has(detail.dataset.responseId);
+      for (const node of reports.querySelectorAll<HTMLElement>('[data-model-advice-report]')) {
+        const detail = node.querySelector<HTMLDetailsElement>('[data-model-advice]');
+        if (detail) detail.open = expandedModels.has(node.dataset.modelAdviceReport);
+      }
+    }
+    // Model references must reflect current permissions even while this report holds focus.
+    for (const node of reports.querySelectorAll<HTMLElement>('[data-model-advice-report]')) {
+      const report = state.reports.find((entry) => entry.id === node.dataset.modelAdviceReport);
+      updateRegisteredAdvice(
+        node,
+        report?.model_advice,
+        language,
+        (ref) => adapter.openReference(ref),
+        adviceFallback(report, state),
+      );
+    }
+    for (const node of reports.querySelectorAll<HTMLElement>('[data-feedback-coverage]')) {
+      const report = state.reports.find((entry) => entry.id === node.dataset.feedbackCoverage);
+      node.textContent = report
+        ? feedbackCoverageText(report, feedbackSemanticPresentation(report, state).advice, language)
+        : '';
     }
     // Preserve the focused editor, but never preserve stale request permissions.
     for (const action of reports.querySelectorAll<HTMLButtonElement>(

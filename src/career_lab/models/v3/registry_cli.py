@@ -5,9 +5,10 @@ import json
 from pathlib import Path
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError
+
+from .advisory import RegisteredAdvisory
 from .core import INPUT
 from .registry import register_bundle
-from .advisory import RegisteredAdvisory
 
 
 def main(argv=None):
@@ -17,6 +18,7 @@ def main(argv=None):
     register.add_argument("--registry", type=Path, required=True)
     register.add_argument("--bundle-root", type=Path, required=True)
     register.add_argument("--bundle-hash", required=True)
+    register.add_argument("--bundle-path", default="model-bundle.json")
     register.add_argument(
         "--scope", choices=["synthetic_fixture", "external_candidate"], required=True
     )
@@ -41,13 +43,37 @@ def main(argv=None):
             command.add_argument("--task", choices=["relation", "criterion"], required=True)
             command.add_argument("--fixture", action="store_true")
             command.add_argument("--producer-predictions", type=Path)
+    verify = commands.add_parser("verify-return", help="Check a frozen label/evidence return")
+    verify.add_argument("--dataset-root", type=Path, required=True)
+    verify.add_argument("--dataset-hash", required=True)
+    verify.add_argument("--predictions", type=Path, required=True)
+    verify.add_argument("--partition", default="dev")
+    verify.add_argument("--checkpoint-manifest", type=Path)
+    verify.add_argument("--registry", type=Path)
+    verify.add_argument("--registration-path")
+    verify.add_argument("--registration-hash")
     args = parser.parse_args(argv)
     try:
+        if args.command == "verify-return":
+            from .return_verification import verify_return
+
+            result = verify_return(
+                args.dataset_root,
+                args.dataset_hash,
+                args.predictions,
+                partition=args.partition,
+                checkpoint_manifest=args.checkpoint_manifest,
+                registry_root=args.registry,
+                registration_path=args.registration_path,
+                registration_hash=args.registration_hash,
+            )
+            print(json.dumps(result, ensure_ascii=False, allow_nan=False))
+            return 2 if result["status"] == "rejected" else 0
         if args.command == "register":
             ref = register_bundle(
                 args.registry,
                 args.bundle_root,
-                FileRef(path="model-bundle.json", sha256=args.bundle_hash),
+                FileRef(path=args.bundle_path, sha256=args.bundle_hash),
                 scope=args.scope,
             )
             result = {
