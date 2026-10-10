@@ -1,0 +1,17 @@
+{
+  "revision": "rubric-final-set-20261009",
+  "status": "final_definition_not_installed",
+  "files": {
+    "rubric-v2-final-20261009.json": {
+      "sha256": "aa0de4302ca42368a262dc516fd3d8dab83286dd10dff7350c35b0c3772321cd",
+      "bytes": 88971,
+      "revision": "rubric-v2-final-20261009"
+    },
+    "engineer-rubric-v1-final-20261009.json": {
+      "sha256": "ed7691eda3bfe733fa5cd3517daec9999db764445e4a5de00a134ca719ccd8f4",
+      "bytes": 19481,
+      "revision": "engineer-rubric-v1-final-20261009"
+    }
+  },
+  "source_candidate_sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040"
+}

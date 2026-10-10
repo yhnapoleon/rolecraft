@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 e36fa98225e1810d3ce4439965a1f971fadb7d6a66aa75180954ad76625e1d71. Do not edit.
+// Generated from frozen manifest SHA256 f9edfe270e6bb39ef3661061ca37be65827bb99cae96a1ca4abadea736e53952. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -42,7 +42,6 @@ export type AssistantConfig = {
   domains: string[];
   fallback?: 'human' | 'none';
   freshness_guard?: 'none' | 'warn' | 'fallback';
-  generator?: 'extractive' | 'llm';
   id: string;
   launch_day?: number;
   manual_domains?: string[];
@@ -324,6 +323,17 @@ export type FeedbackV2 = {
   verified_facts?: VerifiedFactsSnapshot[] | null;
   historical_responsibilities?: HistoricalResponsibilitiesSnapshot[] | null;
   rule_items?: FeedbackItem[] | null;
+  basis_refs?: ObjectRef[] | null;
+  conditions?: string[] | null;
+  available_actions?: _OutcomeAction[] | null;
+  outcomes?: _OutcomeItem[] | null;
+  preview_language?: 'zh' | 'en' | null;
+  preview_kind?: 'rules' | 'advisory' | null;
+  input_refs?: ObjectRef[] | null;
+  evaluation_as_of?: VersionPoint | null;
+  missing_inputs?: string[] | null;
+  clarification?: string[] | null;
+  generation_status?: 'rules_verified' | 'waiting_model' | 'advisory' | 'failed' | 'unknown' | null;
 };
 export type FileRef = { media_type?: string; path: string; schema_version?: 2; sha256: string };
 export type HistoricalResponsibilitiesSnapshot = {
@@ -678,23 +688,32 @@ export type RetrievedChunk = {
   version: number;
 };
 export type ReviewInput = {
+  candidate_config?: AssistantConfig | null;
   decision?: 'launch' | 'launch_narrow' | 'defer_with_conditions' | 'no_go' | null;
   followup_of?: ObjectRef[];
+  preview_kind?: 'rules' | 'advisory' | null;
+  preview_on_save?: boolean | null;
   purpose: string;
   question?: string;
+  requested_outcomes?: string[] | null;
   schema_version?: 2;
   scope: string[];
   subjects: ObjectRef[];
 };
 export type ReviewRequest = {
   as_of: VersionPoint;
+  available_operations?: string[] | null;
+  candidate_config?: AssistantConfig | null;
   decision?: 'launch' | 'launch_narrow' | 'defer_with_conditions' | 'no_go' | null;
   evaluation: FileRef;
   executor: Executor;
   followup_of?: ObjectRef[];
   id: string;
+  preview_kind?: 'rules' | 'advisory' | null;
+  preview_on_save?: boolean | null;
   purpose: string;
   question?: string;
+  requested_outcomes?: string[] | null;
   schema_version?: 2;
   scope: string[];
   session_id: string;
@@ -919,6 +938,7 @@ export type WorkspaceProductPage = {
   as_of: VersionPoint;
   items: WorkspaceProductRead[];
   next_cursor?: number | null;
+  previews?: FeedbackV2[] | null;
   schema_version?: 2;
   shares: ProductShare[];
   sharing_complete: boolean;
@@ -971,4 +991,23 @@ export type WorkspaceTask = {
   status?: 'open' | 'active' | 'paused' | 'blocked' | 'done' | 'removed';
   title: string;
   updated_at: string;
+};
+export type _OutcomeAction = {
+  schema_version?: 2;
+  operation:
+    | 'reviews.create'
+    | 'work_products.shares.create'
+    | 'configuration.apply'
+    | 'tests.create';
+  objects: ObjectRef[];
+};
+export type _OutcomeItem = {
+  schema_version?: 2;
+  id: string;
+  kind: 'fact' | 'conditional_prediction' | 'pending_verification' | 'unsupported';
+  summary: string;
+  basis_refs?: EvidenceRefV2[];
+  conditions?: string[];
+  missing_inputs?: string[];
+  values?: Record<string, JsonValue>;
 };

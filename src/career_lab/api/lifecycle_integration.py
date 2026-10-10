@@ -1,6 +1,7 @@
 """Public lifecycle and queue assembly. evaluation supplies the evidence/feedback plan."""
 
 from dataclasses import replace
+from functools import partial
 
 from career_lab.contracts.v2 import (
     BeginRevisionInput,
@@ -14,7 +15,8 @@ from career_lab.contracts.v2 import (
     digest,
 )
 from career_lab.api.modules import Operation, StoreJobHandler, V2Response
-from career_lab.storage.v2_lifecycle import begin_revision, point, record_review, record_submission
+from career_lab.storage.v2_lifecycle import begin_revision, point, record_submission
+from career_lab.api.reviews_v2 import record_review_request as record_review
 from career_lab.storage.v2_store import JobRequest, Mutation
 
 
@@ -127,7 +129,12 @@ def install_lifecycle(registry, *, feedback_handler=None):
         )
     )
     registry.register(
-        Operation("reviews.create", "act", ReviewInput, save(record_review, "review"))
+        Operation(
+            "reviews.create",
+            "act",
+            ReviewInput,
+            save(partial(record_review, registry=registry), "review"),
+        )
     )
     registry.register(
         Operation(

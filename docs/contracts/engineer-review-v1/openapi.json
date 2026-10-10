@@ -42,15 +42,6 @@
             "title": "Freshness Guard",
             "type": "string"
           },
-          "generator": {
-            "default": "extractive",
-            "enum": [
-              "extractive",
-              "llm"
-            ],
-            "title": "Generator",
-            "type": "string"
-          },
           "id": {
             "minLength": 1,
             "title": "Id",

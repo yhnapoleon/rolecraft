@@ -4,7 +4,7 @@ from pydantic import Field, model_validator
 
 from . import provenance as _provenance
 from .core import *
-from .core import V2, EvidenceRefV2, Hash, Identifier
+from .core import V2, EvidenceRefV2, Hash, Identifier, JsonValue, ObjectRef, VersionPoint
 
 Applicability = Literal["applicable", "not_applicable", "undetermined"]
 CriterionLabel = Literal["MET", "PARTIAL", "NOT_MET", "INSUFFICIENT", "NOT_APPLICABLE"]
@@ -403,6 +403,31 @@ class FeedbackResponseRecord(V2):
         return self
 
 
+class _OutcomeAction(V2):
+    operation: Literal[
+        "reviews.create", "work_products.shares.create", "configuration.apply", "tests.create"
+    ]
+    objects: tuple[ObjectRef, ...]
+
+
+class _OutcomeItem(V2):
+    id: Identifier
+    kind: Literal["fact", "conditional_prediction", "pending_verification", "unsupported"]
+    summary: str
+    basis_refs: tuple[EvidenceRefV2, ...] = ()
+    conditions: tuple[str, ...] = ()
+    missing_inputs: tuple[str, ...] = ()
+    values: dict[str, JsonValue] = {}
+
+    @model_validator(mode="after")
+    def grounded(self) -> "_OutcomeItem":
+        if self.kind in {"fact", "conditional_prediction"} and not self.basis_refs:
+            raise ValueError("verified outcomes require exact sources")
+        if self.kind == "conditional_prediction" and not self.conditions:
+            raise ValueError("predictions require explicit conditions")
+        return self
+
+
 class RegisteredModelAdvice(V2):
     criterion: Literal["R2.support"] = "R2.support"
     request_id: Identifier
@@ -484,6 +509,37 @@ class FeedbackV2(V2):
     verified_facts: tuple[VerifiedFactsSnapshot, ...] | None = None
     historical_responsibilities: tuple[HistoricalResponsibilitiesSnapshot, ...] | None = None
     rule_items: tuple[FeedbackItem, ...] | None = None
+    basis_refs: tuple[ObjectRef, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    conditions: tuple[str, ...] | None = Field(default=None, exclude_if=lambda value: value is None)
+    available_actions: tuple[_OutcomeAction, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    outcomes: tuple[_OutcomeItem, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    preview_language: Literal["zh", "en"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    preview_kind: Literal["rules", "advisory"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    input_refs: tuple[ObjectRef, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    evaluation_as_of: VersionPoint | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    missing_inputs: tuple[str, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    clarification: tuple[str, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    generation_status: (
+        Literal["rules_verified", "waiting_model", "advisory", "failed", "unknown"] | None
+    ) = Field(default=None, exclude_if=lambda value: value is None)
 
     @model_validator(mode="after")
     def advice_scope(self) -> "FeedbackV2":

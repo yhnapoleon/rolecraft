@@ -789,15 +789,6 @@
             "title": "Freshness Guard",
             "type": "string"
           },
-          "generator": {
-            "default": "extractive",
-            "enum": [
-              "extractive",
-              "llm"
-            ],
-            "title": "Generator",
-            "type": "string"
-          },
           "id": {
             "minLength": 1,
             "title": "Id",
@@ -4373,12 +4364,102 @@
           "as_of": {
             "$ref": "#/components/schemas/VersionPoint"
           },
+          "available_actions": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/_OutcomeAction"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Available Actions"
+          },
+          "basis_refs": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ObjectRef"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Basis Refs"
+          },
           "business_response": {
             "title": "Business Response",
             "type": "string"
           },
+          "clarification": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Clarification"
+          },
+          "conditions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Conditions"
+          },
           "evaluation": {
             "$ref": "#/components/schemas/FileRef"
+          },
+          "evaluation_as_of": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionPoint"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "generation_status": {
+            "anyOf": [
+              {
+                "enum": [
+                  "rules_verified",
+                  "waiting_model",
+                  "advisory",
+                  "failed",
+                  "unknown"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Generation Status"
           },
           "historical_responsibilities": {
             "anyOf": [
@@ -4409,12 +4490,42 @@
             "title": "Independent Understanding",
             "type": "string"
           },
+          "input_refs": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ObjectRef"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Input Refs"
+          },
           "items": {
             "items": {
               "$ref": "#/components/schemas/FeedbackItem"
             },
             "title": "Items",
             "type": "array"
+          },
+          "missing_inputs": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Missing Inputs"
           },
           "mode": {
             "default": "advisory",
@@ -4452,6 +4563,53 @@
             },
             "title": "Next Options",
             "type": "array"
+          },
+          "outcomes": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/_OutcomeItem"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Outcomes"
+          },
+          "preview_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "rules",
+                  "advisory"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preview Kind"
+          },
+          "preview_language": {
+            "anyOf": [
+              {
+                "enum": [
+                  "zh",
+                  "en"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preview Language"
           },
           "read_boundaries": {
             "anyOf": [
@@ -9085,6 +9243,17 @@
       "ReviewInput": {
         "additionalProperties": false,
         "properties": {
+          "candidate_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssistantConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "decision": {
             "anyOf": [
               {
@@ -9111,6 +9280,34 @@
             "title": "Followup Of",
             "type": "array"
           },
+          "preview_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "rules",
+                  "advisory"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preview Kind"
+          },
+          "preview_on_save": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preview On Save"
+          },
           "purpose": {
             "title": "Purpose",
             "type": "string"
@@ -9119,6 +9316,24 @@
             "default": "",
             "title": "Question",
             "type": "string"
+          },
+          "requested_outcomes": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 500,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Requested Outcomes"
           },
           "schema_version": {
             "const": 2,
@@ -9154,6 +9369,32 @@
         "properties": {
           "as_of": {
             "$ref": "#/components/schemas/VersionPoint"
+          },
+          "available_operations": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Available Operations"
+          },
+          "candidate_config": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AssistantConfig"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
           },
           "decision": {
             "anyOf": [
@@ -9192,6 +9433,34 @@
             "title": "Id",
             "type": "string"
           },
+          "preview_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "rules",
+                  "advisory"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preview Kind"
+          },
+          "preview_on_save": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preview On Save"
+          },
           "purpose": {
             "title": "Purpose",
             "type": "string"
@@ -9200,6 +9469,24 @@
             "default": "",
             "title": "Question",
             "type": "string"
+          },
+          "requested_outcomes": {
+            "anyOf": [
+              {
+                "items": {
+                  "maxLength": 500,
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Requested Outcomes"
           },
           "schema_version": {
             "const": 2,
@@ -13232,6 +13519,21 @@
             "default": null,
             "title": "Next Cursor"
           },
+          "previews": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FeedbackV2"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Previews"
+          },
           "schema_version": {
             "const": 2,
             "default": 2,
@@ -13692,6 +13994,109 @@
           "resources"
         ],
         "title": "WorldStateV2",
+        "type": "object"
+      },
+      "_OutcomeAction": {
+        "additionalProperties": false,
+        "properties": {
+          "objects": {
+            "items": {
+              "$ref": "#/components/schemas/ObjectRef"
+            },
+            "title": "Objects",
+            "type": "array"
+          },
+          "operation": {
+            "enum": [
+              "reviews.create",
+              "work_products.shares.create",
+              "configuration.apply",
+              "tests.create"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "operation",
+          "objects"
+        ],
+        "title": "_OutcomeAction",
+        "type": "object"
+      },
+      "_OutcomeItem": {
+        "additionalProperties": false,
+        "properties": {
+          "basis_refs": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Basis Refs",
+            "type": "array"
+          },
+          "conditions": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Conditions",
+            "type": "array"
+          },
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "fact",
+              "conditional_prediction",
+              "pending_verification",
+              "unsupported"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "missing_inputs": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Missing Inputs",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "summary": {
+            "title": "Summary",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "default": {},
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "summary"
+        ],
+        "title": "_OutcomeItem",
         "type": "object"
       }
     },
