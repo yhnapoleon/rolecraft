@@ -102,7 +102,7 @@ describe('named feedback ownership', () => {
     f.regions.sync(f.document, data);
     expect(f.mounts).toEqual([]);
     f.roots.set('[data-v4-region="feedback"]', [f.root, f.root]);
-    expect(() => f.regions.sync(f.document, host())).toThrow('Duplicate v4 region');
+    expect(() => f.regions.sync(f.document, host())).toThrow('Duplicate v4 region: feedback');
     expect(f.mounts).toEqual([]);
   });
 });

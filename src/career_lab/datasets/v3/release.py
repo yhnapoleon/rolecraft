@@ -183,7 +183,7 @@ def publish_release(
         selected_labels.append(annotation)
     if not accepted:
         error = ProtocolError("no_publishable_records")
-        error.record_id = excluded[0]["record_id"] if excluded else None
+        error.record_id = excluded[0].get("record_id") if excluded else None
         error.report = {"excluded": excluded}
         raise error
     translation_metadata = verify_pairs(accepted, translation_pairs, contexts)

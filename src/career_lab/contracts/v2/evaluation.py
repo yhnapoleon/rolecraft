@@ -4,6 +4,7 @@ from pydantic import Field, model_validator
 
 from . import provenance as _provenance
 from .core import *
+from .core import V2, EvidenceRefV2, Hash, Identifier
 
 Applicability = Literal["applicable", "not_applicable", "undetermined"]
 CriterionLabel = Literal["MET", "PARTIAL", "NOT_MET", "INSUFFICIENT", "NOT_APPLICABLE"]
@@ -402,7 +403,64 @@ class FeedbackResponseRecord(V2):
         return self
 
 
+class RegisteredModelAdvice(V2):
+    criterion: Literal["R2.support"] = "R2.support"
+    request_id: Identifier
+    job_id: Identifier
+    input_hash: Hash | None
+    registration: _provenance.RegisteredModelIdentity | None
+    status: Literal["completed", "failed", "unavailable", "synthetic_mechanism_only"]
+    label: RelationLabel | None = None
+    evidence_ids: tuple[Identifier, ...] = ()
+    citations: tuple[EvidenceRefV2, ...] = ()
+    error_code: (
+        Literal[
+            "model_unavailable",
+            "model_load_failed",
+            "pretrained_encoder_dependencies_unavailable",
+            "model_timeout",
+            "model_infrastructure_failed",
+            "model_files_changed",
+            "model_reference_invalid",
+            "evidence_unavailable",
+            "model_result_unconfirmed",
+            "model_prediction_invalid",
+            "claim_not_available",
+            "synthetic_mechanism_only",
+        ]
+        | None
+    ) = None
+    mode: Literal["advisory"] = "advisory"
+    affects_score: Literal[False] = False
+
+    @model_validator(mode="after")
+    def consistent(self) -> "RegisteredModelAdvice":
+        if len(set(self.evidence_ids)) != len(self.evidence_ids):
+            raise ValueError("duplicate selected evidence")
+        if len(self.evidence_ids) != len(self.citations):
+            raise ValueError("selected evidence needs exact citations")
+        if self.status == "completed":
+            if (
+                self.registration is None
+                or self.registration.scope != "external_candidate"
+                or self.input_hash is None
+                or self.label is None
+                or self.error_code is not None
+            ):
+                raise ValueError("completed advice needs a registered external result")
+        elif self.label is not None or self.evidence_ids or self.citations:
+            raise ValueError("unavailable or synthetic advice cannot expose semantic results")
+        if self.status == "synthetic_mechanism_only" and (
+            self.registration is None or self.registration.scope != "synthetic_fixture"
+        ):
+            raise ValueError("mechanism result needs a synthetic registration")
+        return self
+
+
 class FeedbackV2(V2):
+    model_advice: tuple[RegisteredModelAdvice, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
     provenance: _provenance.FeedbackProvenance | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
@@ -426,6 +484,16 @@ class FeedbackV2(V2):
     verified_facts: tuple[VerifiedFactsSnapshot, ...] | None = None
     historical_responsibilities: tuple[HistoricalResponsibilitiesSnapshot, ...] | None = None
     rule_items: tuple[FeedbackItem, ...] | None = None
+
+    @model_validator(mode="after")
+    def advice_scope(self) -> "FeedbackV2":
+        for advice in self.model_advice or ():
+            if any(
+                ref.session_id != self.session_id or ref.observed_at_seq > self.as_of.business_seq
+                for ref in advice.citations
+            ):
+                raise ValueError("advice citation scope or time mismatch")
+        return self
 
     @model_validator(mode="after")
     def adoption(self):

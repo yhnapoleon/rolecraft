@@ -1,12 +1,12 @@
 # W08 模型与实验管线
 
-## 现行职责与验证边界（2026-10-07）
+## 现行职责与验证边界（2026-10-09）
 
 我方仅推进运行导出、注册接入与独立复核；负责方承担数据生成/标注/划分、全部训练融合、SFT/GRPO、评价项五分类、E2/Jev及预算算力。以下既有训练/标注命令保留供负责方和历史复现使用，不表示本轮已执行或我方继续训练。v2-r1交接ZIP与数据保持原样。
 
 本轮接续原035双语增量，新增检查只用合成记录或已保全产物，均标synthetic。语言、hash/span、译本同split和分别统计只证明机制；真实中英v4运行、外部真实回传和质量仍独立验收。未接真实模型的产品位置显示“等待模型接入”，事实规则显示“规则核实”；注册输出仅advisory，真实调用及外层恢复均零自动重试。
 
-当前为 **implementation_only / partial**，消费031固定的c5公共候选`expansion-v3-deb8023ca664946f45c52692c65e3524703d77194c5100e0ee42939ae26cff4b`（commit `d82d7fe690ed0491744cb716df377a77bc2ed4b4`）。本模块已实现可运行代码及小数据管线验证；W07合法fixture发布已实际消费；正式业务release、W11真实多结构和产品加载仍未接齐，不能据此宣称新E1/E2、模型质量或课程交付完成。
+当前工程能力包括受支持产物注册、正常反馈的关系建议接缝和正式回传复核CLI；使用方式见下方服务消费与回传复核章节。原v4折叠展示另行验收，完整候选门禁与历史fixture兼容由总协调继续核验；契约不匹配不能自动归因为现行安装包需要切换。本手册不把局部测试作为整包放行。既有W07 fixture已用于机制核对，负责方真实数据、checkpoint、训练执行、分语言质量和E1/E2实验结论仍待交付。历史c5及各轮训练记录保留其原时点范围。
 
 所有候选输出固定为advisory、affects_score=false。G2v只代表模型复核标签；独立人工语义校准与正式scoring采用不由本模块自动开启。
 
@@ -84,7 +84,7 @@ relation三类和criterion五类的实际类别覆盖、evidence_evaluable与独
 | LR | train-only字符TF-IDF、多分类LR及单独的二分类证据选择头 | 真实fit、概率顺序和NPZ重载测试 |
 | 旧字符MLP | 复用保留的字符特征+tanh MLP，仍引用全部候选 | 明确命名legacy_character_mlp；额外引用被joint惩罚 |
 | 微型上下文编码器 | 从零初始化embedding和单头self-attention，残差tanh；关系和证据损失均反传 | NumPy真实梯度更新；整包/逐证据两结构；梯度有限差分、padding mask和重载一致性 |
-| 预训练编码器 | 显式固定revision、仅本地权重的Hugging Face适配，带监督fit/predict/checkpoint重载接口 | 当前torch/transformers及XLM-R权重未就绪，代码路径尚未实跑，不能称XLM-R已训练 |
+| 预训练编码器 | 显式固定revision、仅本地权重的Hugging Face适配，带监督fit/predict/checkpoint重载接口 | 可选CPU依赖下已实跑本地随机微型BERT的pack/pair保存、注册与重载；真实XLM-R产物和语义质量仍待负责方交付 |
 | SFT/GRPO | completion mask、固定奖励和含active adapter的参考策略hash机制 | 仅机制测试；没有执行SFT或GRPO训练 |
 
 微型编码器的pair结构先编码claim–单条证据，按预声明候选比较概率均值与logit均值，训练损失针对整包标签；不把整包标签冒充每一条证据的独立真值。pack结构在一个上下文中编码全部候选。证据监督在多组充分集合中确定性选择一个最小集合；评估仍对全部可接受集合取最佳set-F1。
@@ -204,4 +204,108 @@ label-only导出与读取仍合法，既有分类标签及证据分母排除规�
 ReleaseReader初始化已有SplitManifest.isolation，structure/component/ancestor跨区会在metadata/input/label/test正文读取之前拒绝。本轮入口反例验证该既有防线，不另复制一套校验。W07的全谱系与来源闸门、真实authority要求仍保持。origin-binding-v1跨包兼容继续用实际W07发布物→W08读取验证。
 
 
-最低joint门槛与候选自身的训练条件分别生效。LR证据选择头要求正、负两类证据pair；例如唯一可评行为INSUFFICIENT且合法目标为空时，所有pair都为负，仍以evidence_selector_class_coverage_missing拒绝。当前pipeline保留候选失败即中止的fail-closed行为，不用dev补齐、不降低LR覆盖、不新增分类模式；至少一条可评记录不保证每个候选都能训练，更不保证质量。HF门槛目前仅做源码检查，真实运行继续blocked；没有安装依赖、下载checkpoint或付费验证。
+最低joint门槛与候选自身的训练条件分别生效。LR证据选择头要求正、负两类证据pair；例如唯一可评行为INSUFFICIENT且合法目标为空时，所有pair都为负，仍以evidence_selector_class_coverage_missing拒绝。当前pipeline保留候选失败即中止的fail-closed行为，不用dev补齐、不降低LR覆盖、不新增分类模式；至少一条可评记录不保证每个候选都能训练，更不保证质量。本节原轮次仅核对HF源码，未安装依赖或运行HF。后续已通过可选CPU依赖实跑随机微型BERT的双输出、保存与重载（见下方本地编码器注册）；真实XLM-R权重、实际训练交付和语义质量仍blocked，没有下载外部checkpoint或调用付费模型。
+
+
+## 本地编码器回传注册
+
+注册支持两种现有格式：原有 `model-bundle.json`（NumPy线性、attention、旧MLP与融合）和负责方回传的 `checkpoint-manifest.json`（本地HF编码器）。HF路径不把大权重送入NumPy的64MB加载器；它流式校验并复制清单文件，在独立副本全部校验后发布不可变注册。注册后不依赖生产者目录，不执行清单中的 `load_and_predict_command` 或生产者Python代码。
+
+HF回传目录需要 `checkpoint.json`、`heads.npz`、`encoder/local-files.json`、本地encoder safetensors、config与tokenizer。外层清单沿fixture v2：`return_protocol=rolecraft-label-evidence-v2`、relation任务、固定标签顺序、`template=false`、`completed=true`、`evidence_selection_implemented=true`。目录清单与外层逐文件SHA-256必须一致；编码器清单的`source_revision`、`weights_stage=supervised_finetuned`须与checkpoint及训练记录身份相符。注册只确认所交文件及声明的身份，不证明真实训练或质量。
+
+在回传目录已准备好后，用文件实际SHA登记（路径可以包含空格）：
+
+```sh
+export MODEL_RETURN_ROOT='/path/to/encoder-return'
+export MODEL_REGISTRY_ROOT='runs/local/model-registry'
+uv run --locked python - <<'PYTHON'
+import hashlib
+import os
+import subprocess
+import sys
+from pathlib import Path
+root = Path(os.environ['MODEL_RETURN_ROOT'])
+manifest = root / 'checkpoint-manifest.json'
+subprocess.run([
+    sys.executable, '-m', 'career_lab.models.v3.registry_cli', 'register',
+    '--registry', os.environ['MODEL_REGISTRY_ROOT'],
+    '--bundle-root', str(root), '--bundle-path', manifest.name,
+    '--bundle-hash', hashlib.sha256(manifest.read_bytes()).hexdigest(),
+    '--scope', 'external_candidate',
+], check=True)
+PYTHON
+```
+
+合成回传必须使用`--scope synthetic_fixture`。CLI返回不可变registration的相对路径和hash；两者必须一起保存。相同产物重复登记回读同一身份。文件漂移、标签顺序/任务域错误、模板或未完成声明、test参与选型均拒绝。已知fixture不能登记成external候选；`quality_validated`和`affects_score`始终为false。
+
+### 可选CPU加载环境
+
+默认`uv sync --locked`不安装encoder依赖。注册身份无需torch/transformers；实际`load_registration`缺少依赖时返回`pretrained_encoder_dependencies_unavailable`，协议状态503；CLI以非零退出，不自动安装、下载或换模型。
+
+```sh
+uv sync --locked --python 3.12 --extra encoder
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 .venv/bin/python -m pytest -q \
+  tests/optional_encoder/check_local_encoder.py \
+  --basetemp=.pytest_cache/tmp-encoder-check
+# 回到默认产品依赖
+uv sync --locked --python 3.12
+```
+
+依赖固定为torch 2.8.0、transformers 4.57.1、safetensors 0.6.2。Linux/Windows使用CPU wheel源；本地适配始终把模型放在CPU。加载使用本地文件、禁用remote code；参见[Transformers 4.57.1本地加载说明](https://huggingface.co/docs/transformers/v4.57.1/installation)与[PyTorch安装说明](https://pytorch.org/get-started/locally/)。
+
+可选测试文件采用显式运行的`check_`文件名，不进入默认pytest发现；没有新增skip。测试自己随机初始化小于200KB的微型BERT，用现有数值fixture进行最小优化步骤，再保存、注册、重载和比较预测，同时阻断socket连接。pack/pair两种结构已实跑；公开预测仍是`synthetic_mechanism_only`/unavailable。这只验证实际加载与双输出机制，不是预训练模型、英文质量、真实XLM-R或融合增益的证据。
+
+### 服务消费与回退边界
+
+正常API与worker的默认反馈工厂现已消费服务端注册配置。原规则、评分和14项定义保持；R2.support单独追加关系建议。输入使用作品的完整原文，保留条件与否定，作品自身及其局部自引不会充当支持证据；它不声称完成了原子陈述提取。公开字段带实际注册身份、正式request/job、输入hash和建议状态，所有建议固定advisory、affects_score=false；synthetic不公开语义标签。原v4中的折叠展示属于后续UI切片，服务字段存在不等于该界面已经验收。
+
+API与worker应继承同一数据库、注册引用及journal配置。注册命令输出中的`registration`对象须完整保存为JSON文件（文件内容为FileRef对象，不包含外层`registration`键）。以下命令中的路径和hash替换为该次真实登记结果：
+
+```sh
+export CAREER_LAB_MODEL_REGISTRY=/path/to/registry
+export CAREER_LAB_MODEL_REGISTRATION="$(cat /path/to/registration-ref.json)"
+export CAREER_LAB_MODEL_JOURNAL=/path/to/persistent-model-journal
+uv run --locked career-lab serve --host 127.0.0.1 --port 19812 \
+  --database-url sqlite:///runs/local/model-session.db --provider local
+# 从相同环境另开worker进程
+uv run --locked career-lab worker \
+  --database-url sqlite:///runs/local/model-session.db --provider local
+```
+
+PR #17之后，签发或恢复委托等凭据另需部署环境提供`CAREER_LAB_CREDENTIAL_KEY_ID`与`CAREER_LAB_CREDENTIAL_KEY`，API/worker保持一致；密钥不写入本手册、模型配置文件或运行回执。本地验收使用临时随机测试密钥，生产没有默认密钥。
+
+装配时解析一次并固定服务实例的注册引用，运行中改环境变量不会切换它；新配置需要重启API/worker。该范围不包含跨重启后旧会话新请求的持久模型绑定。旧反馈保存原身份与内容；同一正式请求的已有模型收据优先回读，即使此时权重漂移、加载不可用也不重新推理。并发重试共享原job和收据；显式新尝试由既有job/request机制区分。
+
+缺引用、文件/运行时漂移、缺可选依赖、超时、基础设施失败和无效推理结果分别给出安全状态，已核实规则与作品保留。完整输入的任一依赖失去权限时，对应建议清除标签、证据和输入hash，保留公开注册身份；不重算旧反馈。关闭新建议时清除两个模型配置变量并重启两进程；切换候选时指定已登记的准确引用并重启，保留原模型、反馈及journal，不覆盖旧登记。
+
+## 正式回传复核 CLI（2026-10-09）
+
+`verify-return`只读接收既有的label/evidence v2回传，不训练、不下载、不执行清单中的生产者命令。当前支持交接包的可移植布局：固定的`dataset-manifest.json`、`data/dev.inputs.jsonl`、`data/dev.labels.jsonl`、`audit/original-annotations.jsonl`与`audit/metadata.jsonl`；这些文件均须由manifest逐文件绑定。该布局共用一份annotations，因此只接受无test的train/dev包：先核manifest和全量metadata分区，再读取标签；含test或未知分区明确拒绝。后续含test的数据须按split独立冻结标签，不能先读取全量再过滤。后续真实负责方若采用其他布局，须先明确格式，不能按文件名猜测。
+
+先核对回传格式与分语言指标：
+
+```sh
+uv run --locked python -m career_lab.models.v3.registry_cli verify-return \
+  --dataset-root /path/to/frozen-dataset \
+  --dataset-hash '<dataset-manifest.json 的 SHA-256>' \
+  --predictions /path/to/predictions.dev.jsonl
+```
+
+再加入上一节注册命令返回的准确引用，执行两次独立重载及逐条比较：
+
+```sh
+uv run --locked python -m career_lab.models.v3.registry_cli verify-return \
+  --dataset-root /path/to/frozen-dataset \
+  --dataset-hash '<固定 dataset manifest SHA-256>' \
+  --predictions /path/to/predictions.dev.jsonl \
+  --checkpoint-manifest /path/to/checkpoint-manifest.json \
+  --registry /path/to/registry \
+  --registration-path '<注册返回的相对路径>' \
+  --registration-hash '<注册返回的 SHA-256>'
+```
+
+输入以外层`record_id/input_hash`对齐，标签仍与推理输入分离。接收器拒绝重复JSON键、错误schema版本、概率顺序/形状、选中证据的候选hash错误和test选型；概率和误差上限为`1e-6`。每语分别报告macro-F1、逐类P/R/F1、混淆、证据F1、联合正确率、格式失败、弃权与覆盖；label-only从证据与联合分母排除，错误行保留在所属语言的分类分母中。证据F1取可接受集合最大值，额外引用不能得到joint正确。
+
+退出码0表示完成所提供材料的检查，报告仍可能为`partial`，不表示训练或质量通过；无注册引用是`blocked_missing_registration`，缺语言是`blocked_missing_language`。格式错误、身份/文件漂移、test污染、回传与模型预测不一致或重载不一致返回非零。原件不改写，原始错误保留。`checkpoint.candidate_eligible`不会仅凭完成声明或任意文件清单变成true；静态声明缺checkpoint验证或训练执行证据时逐项报告待补。实际模型重载是否一致单列在`reload`，训练始终区分`not_verified`与`mechanism_only`。
+
+实跑fixture v2格式样例：英文6条、证据/联合分母5，中文0；样例由gold构造，其满分只说明格式与指标机制。另用既有固定synthetic权重完成真实注册、两次加载及匹配预测，低分类结果和全引文导致的joint零分保留。把格式样例直接与这组权重比较会如实失败。负责方真实checkpoint、训练执行与双语质量仍待交；不因命令可运行关闭真实实验验收。

@@ -1,3 +1,9 @@
+import {
+  currentModeNotice,
+  presentReply,
+  type GenerationMode,
+  type RoleMode,
+} from './reply-presentation';
 /** Native v4 colleague slot. The injected client owns API calls, journals and jobs. */
 import { T, onLocaleChange } from '../../app/i18n';
 import './roles.css';
@@ -30,6 +36,10 @@ export interface ConversationTurn {
   status: TurnStatus;
   reply?: string;
   materials?: readonly MaterialReference[];
+  omissionCount?: number;
+  receivedVersionsOnly?: boolean;
+  generationMode?: GenerationMode;
+  stale?: boolean;
   /** Only a learner-safe explanation already projected by the real client. */
   explanation?: string;
   canRetry?: boolean;
@@ -41,7 +51,7 @@ export interface ConversationTurn {
 export interface RolesView {
   sessionId: string;
   workLanguage: WorkLanguage;
-  mode: 'local_reference' | 'model' | 'unavailable';
+  mode: RoleMode;
   colleagues: readonly Colleague[];
   turns: readonly ConversationTurn[];
   canSend: boolean;
@@ -178,6 +188,7 @@ export function mount(
   const drafts = new Map<RoleId, string>();
   const people = new Map<RoleId, HTMLButtonElement>();
   const displayAttempts = new Set<string>();
+  const expandedReplies = new Set<string>();
   const visibleReplies = new Map<HTMLElement, { turnId: string; visible: boolean }>();
   const markDisplayed = (node: HTMLElement) => {
     const entry = visibleReplies.get(node);
@@ -304,18 +315,7 @@ export function mount(
       : '';
     reload.textContent = T('刷新对话', 'Refresh conversation');
     reload.disabled = busy;
-    mode.textContent =
-      view?.mode === 'local_reference'
-        ? T(
-            '本地资料参考；需要同事判断的部分等待模型接入。',
-            'Local source reference; colleague judgment is waiting for model connection.',
-          )
-        : view?.mode === 'unavailable'
-          ? T(
-              '同事对话暂不可用，已有记录仍保留。',
-              'Colleague replies are unavailable; existing records are retained.',
-            )
-          : '';
+    mode.textContent = view ? currentModeNotice(view.mode) : '';
     mode.hidden = !mode.textContent;
     for (const [id, item] of people) {
       const colleague = view?.colleagues.find((c) => c.id === id);
@@ -338,6 +338,10 @@ export function mount(
     const turns = view?.turns.filter((t) => t.roleId === selected) ?? [];
     displayObserver?.disconnect();
     visibleReplies.clear();
+    const focusedTurnId =
+      doc.activeElement?.tagName === 'SUMMARY' && list.contains(doc.activeElement)
+        ? doc.activeElement.closest<HTMLElement>('[data-turn-id]')?.dataset.turnId
+        : undefined;
     const fragments = turns.map((turn) => {
       const item = el('li', 'rc-roles__turn');
       item.dataset.turnId = turn.id;
@@ -349,17 +353,59 @@ export function mount(
       if (turn.status === 'completed' && turn.reply !== undefined) {
         const replyLabel = el('strong');
         replyLabel.textContent = colleague?.name || roleTitle(selected);
+        const presentation = presentReply(turn.reply, {
+          generationMode: turn.generationMode,
+          receivedVersionsOnly: turn.receivedVersionsOnly,
+          omissionCount: turn.omissionCount,
+        });
+        item.append(replyLabel);
+        if (presentation.status) {
+          const replyStatus = el('p', 'rc-roles__reply-status');
+          replyStatus.textContent = presentation.status;
+          item.append(replyStatus);
+        }
+        const preview = el('p', 'rc-roles__preview');
+        preview.textContent = presentation.summary;
+        item.append(preview);
+        if (presentation.versionNote) {
+          const versionNote = el('p', 'rc-roles__limitation');
+          versionNote.textContent = presentation.versionNote;
+          item.append(versionNote);
+        }
+        if (presentation.omissionNote) {
+          const limitation = el('p', 'rc-roles__limitation');
+          limitation.textContent = presentation.omissionNote;
+          item.append(limitation);
+        }
+        if (turn.stale) {
+          const stale = el('p', 'rc-roles__limitation');
+          stale.textContent = T(
+            '引用包含旧版本；原回复按当时记录保留。',
+            'Citations include an older version; the original reply is retained.',
+          );
+          item.append(stale);
+        }
+        const details = el('details', 'rc-roles__details');
+        details.open = expandedReplies.has(turn.id);
+        const summary = el('summary');
+        summary.textContent = T('完整原话与条件', 'Full reply and conditions');
         const reply = el('p', 'rc-roles__reply');
         reply.textContent = turn.reply;
-        item.append(replyLabel, reply);
+        details.append(summary, reply);
+        details.addEventListener('toggle', () => {
+          if (details.open) expandedReplies.add(turn.id);
+          else expandedReplies.delete(turn.id);
+        });
+        item.append(details);
         if (displayObserver && turn.canRecordDisplay !== false && !turn.displayRecorded) {
-          visibleReplies.set(reply, { turnId: turn.id, visible: false });
-          displayObserver.observe(reply);
+          const visibleText = presentation.summary === turn.reply.trim() ? preview : reply;
+          visibleReplies.set(visibleText, { turnId: turn.id, visible: false });
+          displayObserver.observe(visibleText);
         }
         if (turn.materials?.length) {
           const refs = el('div', 'rc-roles__materials');
           refs.setAttribute('aria-label', T('引用材料', 'Referenced materials'));
-          for (const ref of turn.materials) {
+          for (const [index, ref] of turn.materials.entries()) {
             const text = (ref.title.trim() || T('材料', 'Material')) + ' · v' + ref.version;
             const link = adapter.openMaterial
               ? button('rc-roles__material')
@@ -376,7 +422,8 @@ export function mount(
                     }
                   });
               });
-            refs.append(link);
+            if (index === 0) refs.append(link);
+            else details.append(link);
           }
           item.append(refs);
         }
@@ -399,6 +446,12 @@ export function mount(
       return item;
     });
     list.replaceChildren(...fragments);
+    if (focusedTurnId) {
+      fragments
+        .find((item) => item.dataset.turnId === focusedTurnId)
+        ?.querySelector('summary')
+        ?.focus({ preventScroll: true });
+    }
     empty.hidden = turns.length > 0;
     empty.textContent = loaded
       ? T(

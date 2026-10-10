@@ -3,6 +3,7 @@
 import ast
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -12,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.scenarios.v2.release import ROOT
+from tests.support.scenario_packages import runtime_root
 
 from .conftest import PublishedSession
 from .test_published_catalog import submit
@@ -50,7 +52,10 @@ def exercise_feedback(catalog: Path, directory: Path) -> None:
             == 14
         )
         os.environ.pop("CAREER_LAB_SCENARIO_CATALOG", None)
-        os.environ["CAREER_LAB_SCENARIO_V2"] = str(ROOT / row["root"])
+        # Historical packages pin one foundation contract; serve a formally rebound
+        # copy when that contract is no longer current (content identity unchanged).
+        served = runtime_root(root, directory / f"runtime-{index}")
+        os.environ["CAREER_LAB_SCENARIO_V2"] = str(served)
         os.environ["CAREER_LAB_SCENARIO_ARCHIVE"] = str(directory / f"archive-{index}")
         app = create_runtime_app(f"sqlite:///{directory}/feedback-{index}.db", provider="local")
         try:
@@ -87,15 +92,18 @@ def test_formatted_rule_modules_generate_legacy_feedback(tmp_path: Path) -> None
     formatted.mkdir(parents=True)
     for source in (ROOT / "src/career_lab/rubrics/v4").glob("*.py"):
         (formatted / source.name).write_bytes(source.read_bytes())
+    ruff = shutil.which("ruff")
+    assert ruff is not None, "Ruff is required to verify formatting-only changes"
     for name in RULE_MODULES:
         original = (ROOT / "src/career_lab/rubrics/v4" / name).read_text()
         result = subprocess.run(
-            [str(ROOT / ".venv/bin/ruff"), "format", "--isolated", "--line-length", "100", "-"],
-            input=original,
+            [ruff, "format", "--isolated", "--line-length", "100", "-"],
+            input=original + "\n# Formatting-only regression probe; executable AST is unchanged.\n",
             capture_output=True,
             text=True,
             check=True,
         )
+        assert result.stdout.encode() != original.encode(), name + ": formatting must change bytes"
         assert ast.dump(ast.parse(result.stdout)) == ast.dump(ast.parse(original))
         (formatted / name).write_text(result.stdout)
     script = """

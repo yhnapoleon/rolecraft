@@ -789,15 +789,6 @@
             "title": "Freshness Guard",
             "type": "string"
           },
-          "generator": {
-            "default": "extractive",
-            "enum": [
-              "extractive",
-              "llm"
-            ],
-            "title": "Generator",
-            "type": "string"
-          },
           "id": {
             "minLength": 1,
             "title": "Id",
@@ -4424,6 +4415,21 @@
             ],
             "title": "Mode",
             "type": "string"
+          },
+          "model_advice": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/RegisteredModelAdvice"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Model Advice"
           },
           "model_coverage": {
             "maximum": 1,
@@ -8365,6 +8371,182 @@
           "result"
         ],
         "title": "PublicTransactionResult",
+        "type": "object"
+      },
+      "RegisteredModelAdvice": {
+        "additionalProperties": false,
+        "properties": {
+          "affects_score": {
+            "const": false,
+            "default": false,
+            "title": "Affects Score",
+            "type": "boolean"
+          },
+          "citations": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Citations",
+            "type": "array"
+          },
+          "criterion": {
+            "const": "R2.support",
+            "default": "R2.support",
+            "title": "Criterion",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "enum": [
+                  "model_unavailable",
+                  "model_load_failed",
+                  "pretrained_encoder_dependencies_unavailable",
+                  "model_timeout",
+                  "model_infrastructure_failed",
+                  "model_files_changed",
+                  "model_reference_invalid",
+                  "evidence_unavailable",
+                  "model_result_unconfirmed",
+                  "model_prediction_invalid",
+                  "claim_not_available",
+                  "synthetic_mechanism_only"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "evidence_ids": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Evidence Ids",
+            "type": "array"
+          },
+          "input_hash": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9a-f]{64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Hash"
+          },
+          "job_id": {
+            "minLength": 1,
+            "title": "Job Id",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "enum": [
+                  "SUPPORTED",
+                  "CONTRADICTED",
+                  "INSUFFICIENT"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Label"
+          },
+          "mode": {
+            "const": "advisory",
+            "default": "advisory",
+            "title": "Mode",
+            "type": "string"
+          },
+          "registration": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RegisteredModelIdentity"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "request_id": {
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "completed",
+              "failed",
+              "unavailable",
+              "synthetic_mechanism_only"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "request_id",
+          "job_id",
+          "input_hash",
+          "registration",
+          "status"
+        ],
+        "title": "RegisteredModelAdvice",
+        "type": "object"
+      },
+      "RegisteredModelIdentity": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "model_revision": {
+            "minLength": 1,
+            "title": "Model Revision",
+            "type": "string"
+          },
+          "quality_validated": {
+            "const": false,
+            "default": false,
+            "title": "Quality Validated",
+            "type": "boolean"
+          },
+          "scope": {
+            "enum": [
+              "synthetic_fixture",
+              "external_candidate"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "model_revision",
+          "scope"
+        ],
+        "title": "RegisteredModelIdentity",
         "type": "object"
       },
       "RegressionReport": {

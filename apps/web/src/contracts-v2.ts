@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 7f64f17784ad7756fefc53682954b1318bddb58eecdc5dbe645f3187cbc321ed. Do not edit.
+// Generated from frozen manifest SHA256 c75f25bc522ba73b49990b40269665d773deed4f5ae6804a4296cc89e78dd6ef. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -239,6 +239,7 @@ export type FeedbackProvenance = {
   provider: string;
   model: string;
   retries?: 0;
+  registered_model?: RegisteredModelIdentity | null;
 };
 export type FeedbackReadBoundary = {
   schema_version?: 2;
@@ -301,6 +302,7 @@ export type FeedbackResponseRecord = {
 };
 export type FeedbackV2 = {
   schema_version?: 2;
+  model_advice?: RegisteredModelAdvice[] | null;
   provenance?: FeedbackProvenance | null;
   read_boundaries?: FeedbackReadBoundary[] | null;
   read_projection?: 'partial' | null;
@@ -609,6 +611,40 @@ export type PublicTransactionResult = {
   schema_version?: 2;
   state: PublicState;
   transaction_id: string;
+};
+export type RegisteredModelAdvice = {
+  schema_version?: 2;
+  criterion?: 'R2.support';
+  request_id: string;
+  job_id: string;
+  input_hash: string | null;
+  registration: RegisteredModelIdentity | null;
+  status: 'completed' | 'failed' | 'unavailable' | 'synthetic_mechanism_only';
+  label?: 'SUPPORTED' | 'CONTRADICTED' | 'INSUFFICIENT' | null;
+  evidence_ids?: string[];
+  citations?: EvidenceRefV2[];
+  error_code?:
+    | 'model_unavailable'
+    | 'model_load_failed'
+    | 'pretrained_encoder_dependencies_unavailable'
+    | 'model_timeout'
+    | 'model_infrastructure_failed'
+    | 'model_files_changed'
+    | 'model_reference_invalid'
+    | 'evidence_unavailable'
+    | 'model_result_unconfirmed'
+    | 'model_prediction_invalid'
+    | 'claim_not_available'
+    | 'synthetic_mechanism_only'
+    | null;
+  mode?: 'advisory';
+  affects_score?: false;
+};
+export type RegisteredModelIdentity = {
+  id: string;
+  model_revision: string;
+  scope: 'synthetic_fixture' | 'external_candidate';
+  quality_validated?: false;
 };
 export type RequestJobResult = {
   effect?: PublicTransactionResult | null;
