@@ -50,7 +50,9 @@ def configured_models(provider="local"):
 def build_registry(
     scenario_root, role_model, *, feedback_handler=None, store_provider=None, scenario_archive=None
 ):
-    module = ScenarioModule(scenario_root)
+    module = ScenarioModule(
+        scenario_root, model=None if isinstance(role_model, LocalRoleModel) else role_model
+    )
     registry = module.install(ExtensionRegistry(), name=module.package.bundle.id + "_v2")
     from career_lab.api.scenario_history import ScenarioReadCatalog
     from career_lab.api.negotiation_runtime import install_negotiation

@@ -638,4 +638,52 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "as reviews; pages without previews retain their bytes."
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-f9edfe270e6bb39ef3661061ca37be65827bb99cae96a1ca4abadea736e53952"
+        ),
+        "changes_since_draft": [
+            "Command.schema_version and CreateSessionV2.schema_version are now "
+            "required for explicit envelopes.",
+            "Added ModelPrediction; ModelBundle validates ordered task label vocabulary.",
+            "G2v compares evidence sets independent of ordering, requires "
+            "reordered evidence only when more than one item exists.",
+            "API/storage/atomic job queue/isolated restore implementations and "
+            "their public models are now included.",
+            "AssistantConfig adds finite min_score (initial 0.35, uncalibrated), "
+            "freshness_guard none/warn/fallback and manual_domains; TestResultV2 "
+            "requires execution metadata and exact config_ref.",
+            "BusinessRequest requires immutable proposed/applied BusinessBasis. "
+            "ScenarioStateV2 is private transaction state, not an observation.",
+            "Observation.visible_sources now requires ObservedFragment with "
+            "explicit learner acquisition/audience; catalog is separate. "
+            "StepResult/ObservedStep bind actual request identities, points and "
+            "executor.",
+            "AnnotationPass successful passes require actual invocation "
+            "identity; G2v also requires separate context IDs, independence "
+            "method/reason and truthful evidence order policy.",
+            "AuthContext/DelegationGrant adds explicit create_under_tasks; "
+            "derived results remain tied to the actual executor, unrelated "
+            "existing artifacts are not inherited.",
+            "SnapshotExport now includes immutable external source references; "
+            "restore supports exact target/idempotency and structured action "
+            "remapping. Regenerate draft snapshots under the new revision.",
+            "WorkProduct/import DTOs retain intent/refs, test_compare, "
+            "review_focus distinct from direction, source return identity, "
+            "adoption and version conflicts.",
+            "PublicTransactionResult is the HTTP/worker wire result; "
+            "TransactionResult remains the internal authoritative record.",
+            "Only add optional AssistantConfig.generator (extractive|llm), default "
+            "extractive. The default is omitted from serialization; all previous examples "
+            "and instance bytes remain unchanged. Provider wiring uses the configured "
+            "model, with local role substitutes mapped to None.",
+        ],
+        "integration_changes": {
+            "assistant-generator": "Only add optional AssistantConfig.generator "
+            "(extractive|llm), default extractive. The default is omitted from "
+            "serialization; all previous examples and instance bytes remain unchanged. "
+            "Provider wiring uses the configured model, with local role substitutes "
+            "mapped to None."
+        },
+    },
 )

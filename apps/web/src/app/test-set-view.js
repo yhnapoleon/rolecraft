@@ -138,6 +138,26 @@ export function testSetView({
   </div>`;
 }
 
+function generationDetails(run) {
+  const mode = run.generation?.mode ?? run.mode;
+  const labels = {
+    extractive: T('原文抽取', 'Source extraction'),
+    llm: T('模型生成', 'Model generation'),
+    unavailable: T('未配置模型', 'Model not configured'),
+    failed: T('失败', 'Failed'),
+  };
+  const label = Object.hasOwn(labels, mode) ? labels[mode] : T('模式信息暂不可用', 'Mode information unavailable');
+  const sources = [...new Set(run.citations.map((c) => `${c.title || c.id} v${c.version}`))];
+  const identity = [run.generation?.provider, run.generation?.model_revision].filter(Boolean);
+  return `<div class="test-generation" data-generation-mode="${esc(Object.hasOwn(labels, mode) ? mode : 'unknown')}">
+    <span class="test-generation-label">${esc(label)}</span>
+    ${identity.length ? `<span>${esc(identity.join(' / '))}</span>` : ''}
+    ${mode === 'llm' ? `<span>${T('回答待核验', 'Answer awaiting verification')}</span>` : ''}
+    ${sources.length ? `<span>${T('引用：', 'Citations: ')}${esc(sources.join(' · '))}</span>` : ''}
+    ${run.effectiveConfig ? `<details class="test-effective-config"><summary>${T('本次有效配置', 'Effective configuration for this run')}</summary><pre>${esc(JSON.stringify(run.effectiveConfig, null, 2))}</pre></details>` : `<span>${T('本次有效配置暂不可用', 'Effective configuration unavailable')}</span>`}
+  </div>`;
+}
+
 export function testRunView({ run, runs, item, work, session, md }) {
   const old = run.caseRevision !== item.revision;
   const cited = work.evidence?.some((e) => e.type === 'test' && e.id === run.id);
@@ -146,7 +166,8 @@ export function testRunView({ run, runs, item, work, session, md }) {
     <header class="test-result-head"><span>${assistantMark('xs')}<b>${T('实际回答', 'Actual answer')}</b></span><label class="test-history"><span class="sr-only">${T('选择一次运行', 'Select a run')}</span><select data-case-history="${esc(item.id)}" aria-label="${esc(T('选择一次运行', 'Select a run'))}">${runs.map((r, i) => `<option value="${esc(r.id)}" ${r.id === run.id ? 'selected' : ''}>${i === 0 ? T('最近一次', 'Latest run') : T('第 ' + (runs.length - i) + ' 次', 'Run ' + (runs.length - i))} · ${T('问题 v', 'Question v')}${r.caseRevision}</option>`).join('')}</select>${icon('down', 'i-xs')}</label></header>
     ${old ? `<p class="test-history-warning">${icon('history', 'i-xs')}${T('这是较早问题版本的结果，当前内容尚未被这次运行验证。', 'This result belongs to an earlier question. It does not verify your current edits.')}</p>` : ''}
     <div class="test-answer prose"${isChinese(run.answer) ? ' lang="zh-CN"' : ''}>${md(run.answer)}${locale() === 'en' && isChinese(run.answer) ? '<p class="msg-local">Chinese source</p>' : ''}</div>
-    <div class="test-run-facts"><span>${T('配置 v', 'Config v')}${run.configVersion}</span><span>${T('政策源 v', 'Policy v')}${run.policyVersion ?? '—'}</span><span>${T('使用版本 v', 'Used version v')}${run.indexVersion ?? '—'}</span>${run.createdAt ? `<time>${esc(when(run.createdAt))}</time>` : ''}${run.stale ? `<span class="warn">${icon('stale', 'i-xs')}${T('引用了旧版本', 'Cites an older version')}</span>` : ''}${run.fallback ? `<span>${T('兜底回答', 'Fallback response')}</span>` : ''}</div>
+    ${generationDetails(run)}
+    <div class="test-run-facts"><span>${T('配置 v', 'Config v')}${run.configVersion}</span><span>${T('政策源 v', 'Policy v')}${run.policyVersion ?? '—'}</span><span>${T('索引 v', 'Index v')}${run.indexVersion ?? '—'}</span>${run.createdAt ? `<time>${esc(when(run.createdAt))}</time>` : ''}${run.stale ? `<span class="warn">${icon('stale', 'i-xs')}${T('引用了旧版本', 'Cites an older version')}</span>` : ''}${run.fallback ? `<span>${T('兜底回答', 'Fallback response')}</span>` : ''}</div>
     <div class="test-result-actions">${run.citations.length ? action('run-source', icon('doc', 'i-xs') + T('查看来源', 'View sources'), `data-run="${esc(run.id)}"`) : `<span class="meta">${T('没有返回引用', 'No sources returned')}</span>`}${action('test-cite', icon(cited ? 'check' : 'quote', 'i-xs') + (cited ? T('已作为依据', 'Added as evidence') : T('作为这份计划的依据', 'Use as plan evidence')), `data-id="${esc(run.id)}" ${cited || session?.world.status !== 'active' || !work.adopted ? 'disabled' : ''}`)}<span class="spacer"></span></div>
     <label class="test-observation"><span>${T('你的观察', 'Your observation')}<small>${T('由你判断是否符合预期', 'You decide whether it meets expectations')}</small></span><textarea id="run-note-${esc(run.id)}" data-test-note="${esc(run.id)}" rows="2" maxlength="2000" placeholder="${esc(T('记录发现、疑问，或下一步要验证的事…', 'Record a finding, a question, or what to check next…'))}" ${session?.world.status === 'active' ? '' : 'readonly'}>${esc(note)}</textarea></label>
   </section>`;

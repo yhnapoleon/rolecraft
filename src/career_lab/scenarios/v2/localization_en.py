@@ -19,6 +19,11 @@ MESSAGES_EN = {
     "given.",
     "stale_source_guard": "The source and index versions differ. The freshness guard prevented an automatic answer.",
     "no_fallback": "An automatic answer is not sufficiently supported, and human fallback is not provisioned.",
+    "assistant_model_unavailable": "Model not configured. Awaiting model connection; question and "
+    "configuration saved.",
+    "assistant_generation_failed": "Generation failed. Your question and configuration are saved.",
+    "generator_unavailable": "No model is configured for this deployment, so model generation "
+    "cannot be selected. The configuration is unchanged.",
     "tech_summary": "A preparation-stage test reproduced this question: I've already signed up for company training. "
     "Does that mean I can simply turn up to attend the class? At thresholds 0.35 and the current "
     "default 0.3 it retrieved no supported passage. At 0.2 it returned Device repair, which does "

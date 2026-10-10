@@ -7,6 +7,8 @@ import re
 from typing import Literal
 
 from career_lab.assistant.retrieval import tokens
+from career_lab.assistant.v2 import generation
+from career_lab.runtime.model_adapter import ModelAdapter
 from career_lab.contracts.v2.core import ProtocolError, VersionPoint, ObjectRef, digest
 from career_lab.contracts.v2.world import TestResultV2, TestExecutionMetadata, RetrievedChunk
 from career_lab.scenarios.v2.engine import ScenarioEngine
@@ -114,8 +116,9 @@ def chunks(material, fragments, size):
 
 
 class Assistant:
-    def __init__(self, package):
+    def __init__(self, package, model: ModelAdapter | None = None):
         self.package = package
+        self.model = model
 
     def run(
         self,
@@ -127,6 +130,7 @@ class Assistant:
         tuning=None,
         now=None,
         operation_name="test_assistant",
+        generation_permitted: bool = False,
     ):
         engine = ScenarioEngine(self.package)
         engine.authorize(auth, snapshot, operation_name)
@@ -332,6 +336,18 @@ class Assistant:
             version=snapshot.config.version,
             config_version=snapshot.config.config_version,
         )
+        generated = generation.answer_for_config(
+            cfg.generator,
+            self.model,
+            request.query,
+            execution.chunks,
+            permitted=generation_permitted,
+            language=getattr(self.package, "locale", "zh"),
+            request_id=request_id,
+        )
+        if generated is not None:
+            answer, refs, code = generated.answer, generated.citations, generated.error_code
+            status, execution = generated.applied(status, execution)
         result = TestResultV2(
             id=rid,
             execution=execution,
@@ -359,7 +375,7 @@ class Assistant:
         return TestExecution(
             result,
             {
-                "mode": "local-extractive-v2",
+                **generation.execution_mode(cfg.generator, generated),
                 "scenario_hash": self.package.content_hash,
                 "created_at": executed_at.isoformat(),
                 "source_versions": {

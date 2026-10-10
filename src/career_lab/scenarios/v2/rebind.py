@@ -329,7 +329,7 @@ def smoke_http(root, database, report_dir):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(
-        description="Rebind an unchanged W02 release to exact verified public input."
+        description="Rebind an unchanged scenario release to exact verified public input."
     )
     for name in ("source", "output", "contract-revision", "scenario-revision", "runtime-revision"):
         parser.add_argument("--" + name, required=True)
