@@ -71,9 +71,9 @@ def test_out_10_a_note_is_not_staled_by_unrelated_business_conditions(
     decision = save(session, "commitment", parent=task(session, TASK[session.language]))
     apply_config(session, participants=30)
     pages = {
-        name: session.get(
-            "work-products/" + found["saved"]["ref"]["object_id"] + "/versions"
-        )["preview_states"][0]
+        name: session.get("work-products/" + found["saved"]["ref"]["object_id"] + "/versions")[
+            "preview_states"
+        ][0]
         for name, found in (("note", note), ("decision", decision))
     }
     assert pages["note"]["status"] == "current" and pages["note"]["actual"] == []
