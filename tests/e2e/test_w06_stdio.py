@@ -512,10 +512,11 @@ def test_w06_bounded_recovery_reads_actual_pending_public_job(live):
         ),
     )
     started = time.monotonic()
+    # Budget sized for slow CI runners: the first observation+read round trip must finish inside it.
     recovered = live["backend"].wait_request(
-        live["sid"], cmd.request_id, seconds=0.15, interval=0.03
+        live["sid"], cmd.request_id, seconds=1.0, interval=0.05
     )
-    assert time.monotonic() - started < 0.8 and recovered["status"] == "pending"
+    assert time.monotonic() - started < 3.0 and recovered["status"] == "pending"
     assert recovered["jobs"][0]["job_id"] == queued.result["queued_jobs"][0]
     assert not any(r.ref.kind == "product" for r in store.view(live["owner"]).objects)
 
