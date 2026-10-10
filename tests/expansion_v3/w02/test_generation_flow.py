@@ -106,9 +106,7 @@ def test_gen_01_unconfigured_generation_is_saved_without_extractive_success(gene
     assert result["execution"]["attempts"] == []
     assert result["citations"] == []
     assert result["config"]["requested"]["generator"] == "llm"
-    assert ("等待模型接入" if language == "zh" else "Waiting for model connection") in result[
-        "answer"
-    ]
+    assert ("等待模型接入" if language == "zh" else "Awaiting model connection") in result["answer"]
     saved = client.get("/sessions/" + session["session_id"] + "/tests", headers=headers(session))
     assert saved.status_code == 200, saved.text
     assert saved.json()["result"]["result"]["tests"] == [result]

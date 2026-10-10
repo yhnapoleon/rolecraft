@@ -336,29 +336,18 @@ class Assistant:
             version=snapshot.config.version,
             config_version=snapshot.config.config_version,
         )
-        generated = None
-        if cfg.generator == "llm":
-            if not generation.configured(self.model):
-                generated = generation.unavailable(getattr(self.package, "locale", "zh"))
-            elif not generation_permitted:
-                raise ProtocolError("assistant_worker_required", status=409)
-            elif selected:
-                generated = generation.generate(
-                    self.model,
-                    request.query,
-                    execution.chunks,
-                    language=getattr(self.package, "locale", "zh"),
-                    request_id=request_id,
-                )
-            if generated is not None:
-                answer, refs, code = generated.answer, generated.citations, generated.error_code
-                status = status if generated.mode == "llm" else "failed"
-                execution = execution.model_copy(
-                    update={
-                        "attempts": generated.attempts,
-                        "cost_complete": not generated.attempts,
-                    }
-                )
+        generated = generation.answer_for_config(
+            cfg.generator,
+            self.model,
+            request.query,
+            execution.chunks,
+            permitted=generation_permitted,
+            language=getattr(self.package, "locale", "zh"),
+            request_id=request_id,
+        )
+        if generated is not None:
+            answer, refs, code = generated.answer, generated.citations, generated.error_code
+            status, execution = generated.applied(status, execution)
         result = TestResultV2(
             id=rid,
             execution=execution,
@@ -386,10 +375,7 @@ class Assistant:
         return TestExecution(
             result,
             {
-                "mode": generated.mode
-                if generated
-                else ("failed" if cfg.generator == "llm" else "local-extractive-v2"),
-                **({"prompt_hash": generated.prompt_hash} if generated else {}),
+                **generation.execution_mode(cfg.generator, generated),
                 "scenario_hash": self.package.content_hash,
                 "created_at": executed_at.isoformat(),
                 "source_versions": {

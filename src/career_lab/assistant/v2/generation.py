@@ -16,12 +16,14 @@ from career_lab.contracts.v2.core import (
     ModelAttemptUsage,
     ObjectRef,
     PositiveInt,
+    ProtocolError,
     canonical,
     digest,
 )
 from career_lab.contracts.v2.provenance import CodeIdentity
-from career_lab.contracts.v2.world import RetrievedChunk
+from career_lab.contracts.v2.world import RetrievedChunk, TestExecutionMetadata
 from career_lab.runtime.model_adapter import LocalModel, ModelAdapter
+from career_lab.scenarios.v2.localization import text as localized_text
 
 PROMPT_REVISION = "assistant-generation-v1"
 
@@ -56,6 +58,17 @@ class GeneratedAnswer:
     error_code: str | None = None
     prompt_hash: str | None = None
 
+    def applied(
+        self, status: str, execution: TestExecutionMetadata
+    ) -> tuple[str, TestExecutionMetadata]:
+        """Result status and execution metadata once this outcome replaces the extract."""
+        return (
+            status if self.mode == "llm" else "failed",
+            execution.model_copy(
+                update={"attempts": self.attempts, "cost_complete": not self.attempts}
+            ),
+        )
+
 
 def configured(model: ModelAdapter | None) -> bool:
     return model is not None and not isinstance(model, LocalModel)
@@ -64,13 +77,38 @@ def configured(model: ModelAdapter | None) -> bool:
 def unavailable(language: str) -> GeneratedAnswer:
     return GeneratedAnswer(
         "unavailable",
-        "未配置模型。等待模型接入；问题与配置已保留。"
-        if language == "zh"
-        else (
-            "Model not configured. Waiting for model connection; question and configuration saved."
-        ),
+        localized_text(language, "assistant_model_unavailable"),
         error_code="assistant_model_unavailable",
     )
+
+
+def answer_for_config(
+    generator: str,
+    model: ModelAdapter | None,
+    query: str,
+    chunks: tuple[RetrievedChunk, ...],
+    *,
+    permitted: bool,
+    language: str,
+    request_id: str,
+) -> GeneratedAnswer | None:
+    """Outcome of the configured generator; None keeps the extractive answer unchanged."""
+    if generator != "llm":
+        return None
+    if not configured(model):
+        return unavailable(language)
+    if not permitted:
+        raise ProtocolError("assistant_worker_required", status=409)
+    if not chunks:
+        return None
+    return generate(model, query, chunks, language=language, request_id=request_id)
+
+
+def execution_mode(generator: str, generated: GeneratedAnswer | None) -> dict[str, JsonValue]:
+    """Recorded mode; an llm configuration without a generated outcome made no call."""
+    if generated is None:
+        return {"mode": "failed" if generator == "llm" else "local-extractive-v2"}
+    return {"mode": generated.mode, "prompt_hash": generated.prompt_hash}
 
 
 def prompt(
@@ -146,11 +184,7 @@ def generate(
     prompt_hash = digest(messages)
     started = time.monotonic()
     usage: dict[str, JsonValue] = {}
-    answer = (
-        "生成失败，问题与配置已保留。"
-        if language == "zh"
-        else ("Generation failed. Your question and configuration are saved.")
-    )
+    answer = localized_text(language, "assistant_generation_failed")
     citations: tuple[EvidenceRefV2, ...] = ()
     error = "assistant_generation_failed"
     status: Literal["success", "failed", "timeout"] = "failed"

@@ -8,6 +8,13 @@ from dataclasses import asdict, replace
 
 from career_lab.api.modules import ExtensionRegistry, Operation, ScenarioRegistration, V2Response
 from career_lab.assistant.v2 import Assistant
+from career_lab.assistant.v2.generation import configured
+from career_lab.assistant.v2.jobs import (
+    install_generation,
+    listed_generations,
+    queue_generation,
+    result_plan,
+)
 from career_lab.contracts.v2 import (
     ActionInput,
     ApprovalInput,
@@ -457,9 +464,6 @@ class ScenarioModule:
         )
 
     def test(self, view, command, auth):
-        from career_lab.assistant.v2.generation import configured
-        from career_lab.assistant.v2.jobs import queue_generation
-
         snapshot = self.snapshot(view)
         if snapshot.config.generator == "llm" and auth.allowed_objects is not None:
             # The shared store must admit the execution metadata as a scoped derivative first.
@@ -477,8 +481,6 @@ class ScenarioModule:
         *,
         generation_permitted: bool = False,
     ) -> Mutation:
-        from career_lab.assistant.v2.jobs import result_plan
-
         request = TestRequestV2.model_validate(command.payload)
         run = self.assistant.run(
             self.snapshot(view),
@@ -505,8 +507,6 @@ class ScenarioModule:
             ):
                 continue
             result.append(item.model_dump(mode="json"))
-        from career_lab.assistant.v2.jobs import listed_generations
-
         data = {"tests": sorted(result, key=lambda x: (x["as_of"]["business_seq"], x["id"]))}
         generations = listed_generations(view, {item["id"] for item in result})
         if generations:
@@ -629,7 +629,5 @@ class ScenarioModule:
         registry.register_reference_resolver("material", self.reference_resolver, contextual=True)
         for operation in self.operations():
             registry.register(operation)
-        from career_lab.assistant.v2.jobs import install_generation
-
         install_generation(registry, self)
         return registry
