@@ -80,6 +80,7 @@ def feedback_segment(content, path):
         r"/outcomes/[0-9]+",
         r"/(business_response|next_options|independent_understanding|text)",
         r"/(items|rule_items)/[0-9]+(?:/explanation)?",
+        r"/model_advice/[0-9]+",
         r"/verified_facts/[0-9]+(?:/(summary|activity_totals|activity_window|source_snapshot_hash))?",
         r"/historical_responsibilities/[0-9]+(?:/(coverage|source_snapshot_hash)|/entries/[0-9]+(?:/explanation)?)?",
     )
@@ -280,6 +281,18 @@ def project_feedback_content(content, source_readable, *, limited_scope=False):
             history.update(completeness="unknown", coverage=None)
         if not text_allowed(base + "/source_snapshot_hash"):
             history["source_snapshot_hash"] = None
+    for index, advice in enumerate(data.get("model_advice") or ()):
+        if not proof(f"/model_advice/{index}") or any(
+            not source_readable(ref) for ref in advice.get("citations", ())
+        ):
+            advice.update(
+                status="unavailable",
+                label=None,
+                input_hash=None,
+                evidence_ids=[],
+                citations=[],
+                error_code="evidence_unavailable",
+            )
     if not text_allowed("/business_response"):
         data["business_response"] = message
     if not text_allowed("/next_options"):

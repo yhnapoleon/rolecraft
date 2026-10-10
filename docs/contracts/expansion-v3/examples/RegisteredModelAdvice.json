@@ -1,0 +1,15 @@
+{
+  "affects_score": false,
+  "citations": [],
+  "criterion": "R2.support",
+  "error_code": "model_unavailable",
+  "evidence_ids": [],
+  "input_hash": null,
+  "job_id": "example-job",
+  "label": null,
+  "mode": "advisory",
+  "registration": null,
+  "request_id": "example-request",
+  "schema_version": 2,
+  "status": "unavailable"
+}

@@ -13,23 +13,26 @@ import pytest
 
 from career_lab.scenarios.v2.__main__ import paths_report
 from career_lab.scenarios.v2.engine import ScenarioEngine
+from career_lab.scenarios.v2.loader import load_package
+from career_lab.scenarios.v2.localization import locale_root
 from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.scenarios.v2.policy import effective_config
 from career_lab.scenarios.v2.seed import build_seed
 from career_lab.storage.v2_store import V2Store
+from tests.support.scenario_packages import LEGACY_ROOT, installed_root
 
 from .conftest import auth
 from .test_reference_http import LiveScenario
 
 ROOT = Path(__file__).resolve().parents[3]
-PACK = ROOT / "scenarios/pm_pilot/v2"
+PACK = installed_root()
 IDS = ("pm_pilot_urgent", "pm_pilot_capacity15")
 
 
 @pytest.fixture(params=[(sid, locale) for sid in IDS for locale in ("zh", "en")])
 def practice(request):
     sid, locale = request.param
-    module = ScenarioModule(PACK / "variants" / sid, work_language=locale)
+    module = ScenarioModule(installed_root(sid), work_language=locale)
     return sid, locale, module
 
 
@@ -37,7 +40,7 @@ def test_constraint_facts_language_lineage_initial_snapshot_and_record_inputs(pr
     sid, locale, module = practice
     p = module.package
     pair = ScenarioModule(
-        PACK / "variants" / sid, work_language="en" if locale == "zh" else "zh"
+        installed_root(sid), work_language="en" if locale == "zh" else "zh"
     ).package
     base = ScenarioModule(PACK, work_language=locale).package
     limits = {
@@ -95,8 +98,9 @@ def test_variant_keeps_multiple_viable_choices_and_optional_approval(practice):
 
 
 def test_frozen_variant_can_be_rebuilt_from_its_actual_records(practice, tmp_path):
-    sid, locale, module = practice
-    p = module.package
+    sid, locale, _module = practice
+    # The authoring variant is the frozen input the seed records reproduce.
+    p = load_package(locale_root(LEGACY_ROOT / "variants" / sid, locale))
     records = json.loads((p.root / "research/public-case-records.json").read_text())
     calibration = (
         json.loads((p.root / "research/retrieval-calibration.json").read_text())
@@ -117,7 +121,6 @@ def test_frozen_variant_can_be_rebuilt_from_its_actual_records(practice, tmp_pat
         calibration=calibration,
         private_diagnostic=diagnostic,
     )
-    from career_lab.scenarios.v2.loader import load_package
     from career_lab.scenarios.v2.release import business_metadata, content_files
 
     rebuilt = load_package(replica)

@@ -71,6 +71,9 @@ def build_registry(
         feedback_handler = create_feedback_handler(
             module, model=None if isinstance(role_model, LocalRoleModel) else role_model
         )
+        from career_lab.api.registered_models import install_registered_models
+
+        feedback_handler = install_registered_models(module, feedback_handler, role_model)
     from career_lab.api.v4_config import install_settings
 
     install_settings(registry, module)

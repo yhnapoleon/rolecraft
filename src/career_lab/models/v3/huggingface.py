@@ -4,24 +4,26 @@ API reference: https://huggingface.co/docs/transformers/main_classes/model
 Dependency/weight availability is a separate check from having this source file.
 """
 
-from pathlib import Path
 import hashlib
 import json
 import re
 import time
+from pathlib import Path
+
 import numpy as np
 
-from career_lab.contracts.v2.core import ProtocolError, FileRef, read_file, digest
-from .temporal import temporal_text
+from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_file
+
 from .core import (
     LABELS,
-    training_examples,
-    evidence_target,
-    checked_input,
-    input_problem,
     abstention,
+    checked_input,
+    evidence_target,
+    input_problem,
     prediction,
+    training_examples,
 )
+from .temporal import temporal_text
 
 
 def dependencies():
@@ -43,24 +45,9 @@ def verify_local_checkpoint(local_dir, revision, manifest_ref):
         or manifest.get("source_revision") != revision
     ):
         raise ProtocolError("local_checkpoint_revision_mismatch")
-    files = manifest.get("files")
-    if (
-        not isinstance(files, dict)
-        or "config.json" not in files
-        or not any(p.endswith(".safetensors") for p in files)
-    ):
-        raise ProtocolError("local_checkpoint_files_incomplete")
-    for name, expected in files.items():
-        if Path(name).suffix not in {".json", ".safetensors", ".model", ".txt", ".md"}:
-            raise ProtocolError("checkpoint_file_type_not_allowed")
-        read_file(root, FileRef(path=name, sha256=expected))
-    actual = {
-        p.relative_to(root).as_posix()
-        for p in root.rglob("*")
-        if p.is_file() and p.relative_to(root).as_posix() != manifest_ref.path
-    }
-    if actual != set(files):
-        raise ProtocolError("local_checkpoint_member_set_mismatch")
+    from .encoder_artifact import verify_encoder_files
+
+    files = verify_encoder_files(root, manifest.get("files"), manifest_ref.path)
     return manifest | {
         "verified_files_digest": digest(files),
         "manifest_sha256": manifest_ref.sha256,
@@ -339,7 +326,7 @@ class HuggingFaceCandidate:
 
     @classmethod
     def load_checkpoint(cls, target):
-        from career_lab.contracts.v2.core import FileRef, read_file
+        from career_lab.contracts.v2.core import read_file
 
         target = Path(target)
         config = json.loads((target / "checkpoint.json").read_text())

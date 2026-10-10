@@ -5,12 +5,16 @@ carry either the source quote or the actual saved approval/configuration ref.
 """
 
 import json
+from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
 from career_lab.contracts import v2 as C
 from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.v2_tables import v2_snapshots
+
+if TYPE_CHECKING:
+    from career_lab.api.registered_models import RegisteredModelFactory
 
 
 class ScenarioEvidencePort:
@@ -205,7 +209,9 @@ class OncePerInputModel:
         return self.model.complete(messages, tools)
 
 
-def create_feedback_handler(module, *, model=None):
+def create_feedback_handler(
+    module, *, model=None, engine_factory: "RegisteredModelFactory | None" = None
+):
     from career_lab.evidence.v2.ports import CriterionPolicy
 
     bundle = C.EvaluationBundle.model_validate_json(
@@ -221,10 +227,15 @@ def create_feedback_handler(module, *, model=None):
     from career_lab.scenarios.v2.release import require_evaluation
 
     require_evaluation(module.package.root, bundle, language=module.work_language)
-    provenance = feedback_provenance(module, bundle, model)
+    provenance = feedback_provenance(
+        module,
+        bundle,
+        model,
+        registered_model=engine_factory.identity if engine_factory is not None else None,
+    )
     policies = tuple(CriterionPolicy(**p) for p in protocol["policies"])
 
-    def traced(plan, reader):
+    def traced(plan, reader, engine):
         from dataclasses import replace
 
         from career_lab.storage.v2_store import FeedbackReadTrace
@@ -268,6 +279,15 @@ def create_feedback_handler(module, *, model=None):
             for name in ("business_response", "next_options", "independent_understanding"):
                 if name in write.content:
                     traces.append(FeedbackReadTrace(write.ref, "/" + name, tuple(deps.values())))
+            if engine_factory is not None:
+                for index, advice in enumerate(write.content.get("model_advice") or ()):
+                    traces.append(
+                        FeedbackReadTrace(
+                            write.ref,
+                            f"/model_advice/{index}",
+                            engine.dependencies[advice["input_hash"]],
+                        )
+                    )
         return replace(plan, feedback_read_traces=tuple(traces))
 
     def run(store, view, envelope, auth):
@@ -305,24 +325,30 @@ def create_feedback_handler(module, *, model=None):
             if model is not None
             else FeedbackEngine()
         )
+        if engine_factory is not None:
+            engine = engine_factory.create(engine, envelope)
         subject = C.FeedbackInput.model_validate(envelope.command.payload).subject
         if subject.kind == "submission":
             submitted = C.SubmissionV2.model_validate(view.get(subject).content)
             prepared = SubmissionEvaluator(
                 reader, engine=engine, work_language=module.work_language
             ).evaluate(auth, submitted)
-            return traced(submission_feedback_plan(view, envelope.command, auth, prepared), reader)
+            return traced(
+                submission_feedback_plan(view, envelope.command, auth, prepared), reader, engine
+            )
         request = C.ReviewRequest.model_validate(view.get(subject).content)
         if request.preview_kind is not None:
             from career_lab.evidence.v2.preview import prepare_preview_feedback
 
             prepared = prepare_preview_feedback(reader, request, auth, module.work_language, source)
-            return traced(review_feedback_plan(view, envelope.command, auth, prepared), reader)
+            return traced(
+                review_feedback_plan(view, envelope.command, auth, prepared), reader, engine
+            )
         prepared = prepare_review_feedback(
             create_review_evaluator(reader, engine=engine, work_language=module.work_language),
             auth,
             request,
         )
-        return traced(review_feedback_plan(view, envelope.command, auth, prepared), reader)
+        return traced(review_feedback_plan(view, envelope.command, auth, prepared), reader, engine)
 
     return run

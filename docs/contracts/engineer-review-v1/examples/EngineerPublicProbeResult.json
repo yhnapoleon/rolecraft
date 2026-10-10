@@ -1,0 +1,15 @@
+{
+  "actual_status": "answered",
+  "citations": [],
+  "config_hash": "dd88de2633870259c10363eaebc421357d242bb83e0b41a3d1ec379628fce65d",
+  "elapsed_seconds": 0.0,
+  "error_code": null,
+  "expected_status": "answered",
+  "indexed_versions": {},
+  "probe_id": "probe-1",
+  "query": "example",
+  "result": "pass",
+  "schema_version": 2,
+  "source_versions": {},
+  "visibility": "public"
+}

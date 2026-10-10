@@ -1,183 +1,5 @@
 {
   "$defs": {
-    "AssistantConfig": {
-      "additionalProperties": false,
-      "properties": {
-        "chunk_size": {
-          "default": 500,
-          "exclusiveMinimum": 0,
-          "title": "Chunk Size",
-          "type": "integer"
-        },
-        "config_version": {
-          "default": 0,
-          "minimum": 0,
-          "title": "Config Version",
-          "type": "integer"
-        },
-        "domains": {
-          "items": {
-            "type": "string"
-          },
-          "title": "Domains",
-          "type": "array"
-        },
-        "fallback": {
-          "default": "human",
-          "enum": [
-            "human",
-            "none"
-          ],
-          "title": "Fallback",
-          "type": "string"
-        },
-        "freshness_guard": {
-          "default": "none",
-          "enum": [
-            "none",
-            "warn",
-            "fallback"
-          ],
-          "title": "Freshness Guard",
-          "type": "string"
-        },
-        "id": {
-          "minLength": 1,
-          "title": "Id",
-          "type": "string"
-        },
-        "launch_day": {
-          "default": 7,
-          "exclusiveMinimum": 0,
-          "title": "Launch Day",
-          "type": "integer"
-        },
-        "manual_domains": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "title": "Manual Domains",
-          "type": "array"
-        },
-        "min_score": {
-          "default": 0.35,
-          "minimum": 0,
-          "title": "Min Score",
-          "type": "number"
-        },
-        "min_score_calibration": {
-          "anyOf": [
-            {
-              "$ref": "#/$defs/FileRef"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "default": null
-        },
-        "participants": {
-          "default": 0,
-          "minimum": 0,
-          "title": "Participants",
-          "type": "integer"
-        },
-        "prohibited_topics": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "title": "Prohibited Topics",
-          "type": "array"
-        },
-        "retrieval_limit": {
-          "default": 3,
-          "exclusiveMinimum": 0,
-          "title": "Retrieval Limit",
-          "type": "integer"
-        },
-        "schema_version": {
-          "const": 2,
-          "default": 2,
-          "title": "Schema Version",
-          "type": "integer"
-        },
-        "scope_filter": {
-          "default": true,
-          "title": "Scope Filter",
-          "type": "boolean"
-        },
-        "session_id": {
-          "minLength": 1,
-          "title": "Session Id",
-          "type": "string"
-        },
-        "update_strategy": {
-          "default": "daily",
-          "enum": [
-            "daily",
-            "realtime",
-            "manual_policy"
-          ],
-          "title": "Update Strategy",
-          "type": "string"
-        },
-        "version": {
-          "default": 1,
-          "exclusiveMinimum": 0,
-          "title": "Version",
-          "type": "integer"
-        },
-        "work_items": {
-          "default": [],
-          "items": {
-            "type": "string"
-          },
-          "title": "Work Items",
-          "type": "array"
-        }
-      },
-      "required": [
-        "id",
-        "session_id",
-        "domains"
-      ],
-      "title": "AssistantConfig",
-      "type": "object"
-    },
-    "FileRef": {
-      "additionalProperties": false,
-      "properties": {
-        "media_type": {
-          "default": "application/json",
-          "title": "Media Type",
-          "type": "string"
-        },
-        "path": {
-          "minLength": 1,
-          "title": "Path",
-          "type": "string"
-        },
-        "schema_version": {
-          "const": 2,
-          "default": 2,
-          "title": "Schema Version",
-          "type": "integer"
-        },
-        "sha256": {
-          "pattern": "^[0-9a-f]{64}$",
-          "title": "Sha256",
-          "type": "string"
-        }
-      },
-      "required": [
-        "path",
-        "sha256"
-      ],
-      "title": "FileRef",
-      "type": "object"
-    },
     "ObjectRef": {
       "additionalProperties": false,
       "properties": {
@@ -233,17 +55,6 @@
   },
   "additionalProperties": false,
   "properties": {
-    "candidate_config": {
-      "anyOf": [
-        {
-          "$ref": "#/$defs/AssistantConfig"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null
-    },
     "decision": {
       "anyOf": [
         {
@@ -270,34 +81,6 @@
       "title": "Followup Of",
       "type": "array"
     },
-    "preview_kind": {
-      "anyOf": [
-        {
-          "enum": [
-            "rules",
-            "advisory"
-          ],
-          "type": "string"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Preview Kind"
-    },
-    "preview_on_save": {
-      "anyOf": [
-        {
-          "type": "boolean"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Preview On Save"
-    },
     "purpose": {
       "title": "Purpose",
       "type": "string"
@@ -306,24 +89,6 @@
       "default": "",
       "title": "Question",
       "type": "string"
-    },
-    "requested_outcomes": {
-      "anyOf": [
-        {
-          "items": {
-            "maxLength": 500,
-            "minLength": 1,
-            "type": "string"
-          },
-          "maxItems": 20,
-          "type": "array"
-        },
-        {
-          "type": "null"
-        }
-      ],
-      "default": null,
-      "title": "Requested Outcomes"
     },
     "schema_version": {
       "const": 2,

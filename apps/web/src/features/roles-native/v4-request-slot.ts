@@ -96,6 +96,9 @@ export function mount(context: V4SlotContext): V4SlotHandle {
   let evidence: readonly EvidenceRefV2[] = [];
   let editRevision = 0;
   let knownFailure = false;
+  let lastInput: string | undefined;
+  const readInput = (snapshot: Readonly<V4HostSnapshot>) =>
+    JSON.stringify([snapshot, requestRefs(host, 'resource-requests')]);
   const kind = () => String(new FormData(formNode).get('kind') ?? '');
   const current = (): Draft => ({
     kind: kind(),
@@ -192,6 +195,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
   };
   async function recover(id: string) {
     const result = await host.recover(id);
+    if (disposed) return;
     session(host, sid);
     if (['pending', 'unconfirmed'].includes(result.status)) {
       pending = id;
@@ -258,10 +262,14 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     parent.append(b);
   }
   async function refresh() {
+    if (disposed) return;
+    lastInput = readInput(host.snapshot());
     const ticket = ++readTicket;
     const data = await timeline(host, sid);
+    if (disposed || ticket !== readTicket) return;
     let unresolved: string | undefined;
     for (const id of requestRefs(host, 'resource-requests')) {
+      if (disposed || ticket !== readTicket) return;
       try {
         const result = await host.recover(id);
         if (['pending', 'unconfirmed'].includes(result.status)) unresolved = id;
@@ -435,14 +443,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     renderControls();
     void refresh().catch(fail);
   });
-  let lastSnapshot = JSON.stringify(host.snapshot());
-  const unsubscribe = host.subscribe(() => {
-    const snapshot = host.snapshot();
-    const key = JSON.stringify(snapshot);
-    if (key === lastSnapshot) return;
-    lastSnapshot = key;
-    update(snapshot);
-  });
+  const unsubscribe = host.subscribe(() => update(host.snapshot()));
   function update(snapshot: Readonly<V4HostSnapshot>) {
     if (disposed) return;
     if (snapshot.session?.sessionId !== sid || snapshot.session.protocol !== 2) {
@@ -450,6 +451,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       return;
     }
     renderControls();
+    if (readInput(snapshot) === lastInput) return;
     void refresh().catch(fail);
   }
   function destroy() {

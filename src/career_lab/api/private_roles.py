@@ -4,20 +4,24 @@ The module-owned RoleService remains responsible for dialogue behavior. This por
 only binds it to the common fixed snapshot, actual lease and private persistence.
 """
 
-from pathlib import Path
-import hashlib
-import re
 from sqlalchemy import Column, Integer, String, Table, insert, select
 from sqlalchemy.exc import IntegrityError
-from career_lab.storage.database import metadata, utc_timestamp
-from career_lab.contracts.v2 import *
+
 from career_lab.api.modules import Operation, StoreJobHandler
 from career_lab.api.role_snapshot import FixedRoleSnapshotPort, activated_catalog
+from career_lab.contracts.v2 import *
 from career_lab.runtime.context_v2 import ContextPort
-from career_lab.runtime.roles_v2 import RoleService, LocalRoleModel
-from career_lab.storage.role_memory import RoleTurn, RoleReply, RoleDisplay
+from career_lab.runtime.roles_v2 import (
+    CooperativeHelpVerifier,
+    LocalRoleModel,
+    RoleService,
+)
+from career_lab.runtime.roles_v2 import (
+    RuleReplyVerifier as RuleReplyVerifier,
+)
+from career_lab.storage.database import metadata, utc_timestamp
+from career_lab.storage.role_memory import RoleDisplay, RoleReply, RoleTurn
 from career_lab.storage.v2_store import ObjectWrite, references
-
 
 # Additive private journal. A claim commits before transport and is never refunded.
 role_model_calls = Table(
@@ -30,51 +34,6 @@ role_model_calls = Table(
     Column("model_revision", String, nullable=False),
     Column("claimed_at", String, nullable=False),
 )
-
-
-class RuleReplyVerifier:
-    """Mechanical script/binding check only; consistent never means semantic quality.
-
-    Mixed or indeterminate language is withheld. No provider call, score, stance
-    change, or claim that the reply follows the role's position is made here.
-    """
-
-    retries = 0
-    revision = "role-reply-mechanical-v1"
-
-    def check(self, snapshot, auth, request, text, *, record_attempt, begin_call=None):
-        from career_lab.storage.role_memory import ReplyVerification, stance_digest
-
-        if begin_call is None:
-            raise ProtocolError("role_attempt_guard_unavailable", status=409)
-        begin_call("role_reply_review", self.revision)
-        han = len(re.findall(r"[\u3400-\u9fff]", text))
-        latin = len(re.findall(r"[A-Za-z]", text))
-        # This is a conservative script check, not natural-language understanding.
-        match = (
-            (han > 0 and han >= latin)
-            if snapshot.work_language == "zh"
-            else (latin > 0 and han == 0)
-            if snapshot.work_language == "en"
-            else False
-        )
-        identity = (
-            request.session_id == auth.session_id == snapshot.context.session_id
-            and request.input.role_id == snapshot.context.role_id
-            and request.executor == auth.executor
-        )
-        source = Path(__file__)
-        return ReplyVerification(
-            "consistent" if match and identity else "undetermined",
-            True if match and identity else None,
-            stance_digest(snapshot.stance_state),
-            digest(text),
-            snapshot.context.as_of,
-            FileRef(
-                path="src/career_lab/api/private_roles.py",
-                sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
-            ),
-        )
 
 
 class PrivateRoleGenerationPort:
@@ -194,7 +153,11 @@ class PrivateRoleGenerationPort:
 
     def record_attempt(self, envelope, auth, attempt, error_code):
         self.require_available()
-        if envelope != self.envelope or auth != self.auth or self.attempts:
+        if (
+            envelope != self.envelope
+            or auth != self.auth
+            or any(previous.attempt_id == attempt.attempt_id for previous in self.attempts)
+        ):
             raise ProtocolError("role_attempt_identity_invalid", status=403)
         if (error_code is None) != (attempt.status == "success"):
             raise ProtocolError("role_attempt_status_invalid", status=403)
@@ -296,6 +259,10 @@ def install_private_role_runtime(
         )
     )
 
+    verifier = reply_verifier
+    if verifier is None and type(model) is not LocalRoleModel:
+        verifier = CooperativeHelpVerifier(model, max_context_chars=max_context_chars)
+
     def generate(store, view, envelope, auth):
         if not enable_generation:
             raise ProtocolError("role_integration_not_accepted", status=409)
@@ -308,9 +275,7 @@ def install_private_role_runtime(
             model,
             max_context_chars=max_context_chars,
             private_port=port,
-            reply_verifier=reply_verifier
-            if reply_verifier is not None
-            else (None if type(model) is LocalRoleModel else RuleReplyVerifier()),
+            reply_verifier=verifier,
         )
         return port.authorize(service.generate(view, envelope, auth))
 

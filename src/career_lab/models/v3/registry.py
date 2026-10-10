@@ -1,19 +1,22 @@
 """Local, immutable advisory registrations for already-produced relation model bundles.
 
 This module never fits a model, downloads weights, or promotes scoring/quality.
-Only files referenced by the existing validated ModelBundle are copied.
+Only files referenced by a validated ModelBundle or local encoder return are copied.
 """
 
-from pathlib import Path
 import json
 import os
 import shutil
 import tempfile
+from collections.abc import Callable
 from importlib.metadata import version
+from pathlib import Path
+from typing import Any
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_file
 from career_lab.contracts.v2.research import ModelBundle
-from .bundle import load_bundle, write_json, sha, json_bytes
+
+from .bundle import json_bytes, load_bundle, sha, write_json
 
 SCOPES = {"synthetic_fixture", "external_candidate"}
 PROTOCOL = "w08-advisory-registration-v1"
@@ -74,10 +77,62 @@ def _collect(root, ref, prefix="", depth=0):
     return files
 
 
-def register_bundle(registry_root, bundle_root, bundle_ref, *, scope):
+def _publish_registration(
+    registry_root: Path,
+    entry: dict[str, Any],
+    write_artifact: Callable[[Path], None],
+    verify_existing: Callable[[FileRef], dict[str, Any]],
+) -> FileRef:
+    """One lock/stage/publish lifecycle for each supported artifact format."""
+    registry_root = registry_root.resolve()
+    registry_root.mkdir(parents=True, exist_ok=True)
+    identifier = entry["id"]
+    destination = registry_root / identifier
+    lock = registry_root / (identifier + ".lock")
+    try:
+        lock.mkdir()
+    except FileExistsError:
+        raise ProtocolError("model_registration_busy", status=409) from None
+    stage = None
+    try:
+        ref = FileRef(path=identifier + "/registration.json", sha256=sha(json_bytes(entry)))
+        if destination.exists():
+            if verify_existing(ref) != entry:
+                raise ProtocolError("model_registration_drift")
+            return ref
+        stage = Path(tempfile.mkdtemp(prefix=".registration-", dir=registry_root))
+        write_artifact(stage / "artifact")
+        write_json(stage / "registration.json", entry)
+        os.rename(stage, destination)
+        stage = None
+        return ref
+    finally:
+        if stage is not None:
+            shutil.rmtree(stage)
+        lock.rmdir()
+
+
+def register_bundle(
+    registry_root: Path | str,
+    bundle_root: Path | str,
+    bundle_ref: FileRef | dict[str, Any],
+    *,
+    scope: str,
+) -> FileRef:
     if scope not in SCOPES:
         raise ProtocolError("registration_scope_required")
     bundle_ref = FileRef.model_validate(bundle_ref)
+    manifest = json.loads(read_file(Path(bundle_root), bundle_ref))
+    if isinstance(manifest, dict) and "return_protocol" in manifest:
+        from .encoder_registry import register_encoder
+
+        return register_encoder(
+            Path(registry_root),
+            Path(bundle_root),
+            bundle_ref,
+            scope=scope,
+            runtime=inference_runtime(),
+        )
     _, bundle = load_bundle(bundle_root, bundle_ref)
     release = json.loads(read_file(Path(bundle_root), bundle.training_release))
     if release.get("fixture") is True and scope != "synthetic_fixture":
@@ -90,54 +145,40 @@ def register_bundle(registry_root, bundle_root, bundle_ref, *, scope):
         "inference_runtime": inference_runtime(),
         "files": {p: sha(raw) for p, raw in sorted(files.items())},
     }
-    identifier = "w08-" + digest(identity)[:32]
-    registry_root = Path(registry_root).resolve()
-    registry_root.mkdir(parents=True, exist_ok=True)
-    destination = registry_root / identifier
-    lock = registry_root / (identifier + ".lock")
-    try:
-        lock.mkdir()
-    except FileExistsError:
-        raise ProtocolError("model_registration_busy", status=409) from None
-    stage = None
-    try:
-        entry = identity | {
-            "id": identifier,
-            "task_type": bundle.task_type,
-            "model_revision": bundle.model_revision,
-            "labels": list(bundle.labels),
-            "mode": "advisory",
-            "affects_score": False,
-            "quality_validated": False,
-        }
-        entry_hash = sha(json_bytes(entry))
-        ref = FileRef(path=identifier + "/registration.json", sha256=entry_hash)
-        if destination.exists():
-            _, existing = load_registration(registry_root, ref)
-            if existing != entry:
-                raise ProtocolError("model_registration_drift")
-            return ref
-        stage = Path(tempfile.mkdtemp(prefix=".registration-", dir=registry_root))
+    entry = identity | {
+        "id": "w08-" + digest(identity)[:32],
+        "task_type": bundle.task_type,
+        "model_revision": bundle.model_revision,
+        "labels": list(bundle.labels),
+        "mode": "advisory",
+        "affects_score": False,
+        "quality_validated": False,
+    }
+
+    def write_artifact(target: Path) -> None:
         for name, raw in files.items():
-            path = stage / "artifact" / name
+            path = target / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(raw)
-        # Verify the copied artifact before publication; no producer directory dependency.
-        load_bundle(stage / "artifact", bundle_ref)
-        write_json(stage / "registration.json", entry)
-        os.rename(stage, destination)
-        stage = None
-        return ref
-    finally:
-        if stage is not None:
-            shutil.rmtree(stage)
-        lock.rmdir()
+        load_bundle(target, bundle_ref)
+
+    return _publish_registration(
+        Path(registry_root),
+        entry,
+        write_artifact,
+        lambda ref: load_registration(registry_root, ref)[1],
+    )
 
 
 def load_registration(registry_root, registration_ref):
     registration_ref = FileRef.model_validate(registration_ref)
     root = Path(registry_root).resolve()
     entry = json.loads(read_file(root, registration_ref))
+    from .encoder_registry import PROTOCOL as encoder_protocol
+    from .encoder_registry import load_encoder
+
+    if entry.get("protocol") == encoder_protocol:
+        return load_encoder(root, registration_ref, runtime=inference_runtime())
     if entry.get("protocol") != PROTOCOL or entry.get("scope") not in SCOPES:
         raise ProtocolError("model_registration_protocol_invalid")
     if (

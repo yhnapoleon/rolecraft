@@ -4,27 +4,45 @@ import argparse
 import json
 from pathlib import Path
 
-from career_lab.contracts.v2.core import ObjectRef, VersionPoint, Executor, ProtocolError
+from career_lab.contracts.v2.core import Executor, ObjectRef, ProtocolError, VersionPoint
 from career_lab.contracts.v2.data import Lineage, Provenance
+
 from .common import read_json
-from .export import FrozenSnapshot, SourceObject, ExportUnit, export_snapshot
-from .release import save_export, load_export, publish_release, publish_exports, audit_release
-from .quality import QualityError
+from .export import ExportUnit, FrozenSnapshot, SourceObject, export_snapshot
+from .handoff import validate_handoff
 from .labeling import AnnotationBatch
+from .live_cli import authorize, connection_arguments, export_live, register_authorization
+from .quality import QualityError
+from .release import audit_release, load_export, publish_exports, publish_release, save_export
 
 
 def register_commands(commands):
     """Accept the existing argparse subparser collection; do not replace its CLI."""
+    handoff = commands.add_parser(
+        "validate-handoff", help="Review responsible-party files without executing models"
+    )
+    handoff.set_defaults(w07_handler=dispatch)
+    handoff.add_argument("--package", type=Path, required=True)
+    handoff.add_argument("--output", type=Path, required=True)
+    handoff.add_argument("--checkpoint-manifest", type=Path)
+    handoff.add_argument("--split", choices=("train", "dev", "test", "regression"), default="dev")
     export = commands.add_parser(
-        "export", help="Convert an explicit frozen snapshot; not a live storage adapter"
+        "export", help="Export an authorized live session or an explicit fixture snapshot"
     )
     export.set_defaults(w07_handler=dispatch)
-    export.add_argument("--snapshot", type=Path, required=True)
-    export.add_argument("--units", type=Path, required=True)
+    source = export.add_mutually_exclusive_group(required=True)
+    source.add_argument("--snapshot", type=Path)
+    source.add_argument("--live", action="store_true")
+    export.add_argument("--units", type=Path)
+    export.add_argument("--authorization", type=Path)
+    connection_arguments(export)
+    register_authorization(commands).set_defaults(w07_handler=dispatch)
     export.add_argument("--output", type=Path, required=True)
     validate = commands.add_parser("validate-data")
     validate.set_defaults(w07_handler=dispatch)
-    validate.add_argument("--release", type=Path, required=True)
+    validation_source = validate.add_mutually_exclusive_group(required=True)
+    validation_source.add_argument("--release", type=Path)
+    validation_source.add_argument("--export", type=Path, action="append")
     label = commands.add_parser("label")
     label.set_defaults(w07_handler=dispatch)
     ops = label.add_subparsers(dest="operation", required=True)
@@ -42,6 +60,11 @@ def register_commands(commands):
     issue.add_argument("--record-id", required=True)
     issue.add_argument("--phase", type=int, choices=(1, 2, 3), required=True)
     issue.add_argument("--retry-failed", action="store_true")
+    issue.add_argument(
+        "--retry-unknown",
+        action="store_true",
+        help="Explicitly record a new attempt after an unknown outcome",
+    )
     receive = ops.add_parser("receive")
     receive.add_argument("--batch", type=Path, required=True)
     receive.add_argument("--receipt", type=Path, required=True)
@@ -65,7 +88,17 @@ def register_commands(commands):
 
 
 def dispatch(args):
+    if args.command == "validate-handoff":
+        return validate_handoff(
+            args.package, args.output, checkpoint=args.checkpoint_manifest, split=args.split
+        )
+    if args.command == "authorize":
+        return authorize(args)
     if args.command == "export":
+        if args.live:
+            return export_live(args)
+        if args.units is None:
+            raise ProtocolError("offline_units_required")
         raw = read_json(args.snapshot)
         # Offline supplied snapshots cannot attest live runtime provenance.
         if raw["origin"] != "fixture":
@@ -112,6 +145,10 @@ def dispatch(args):
             "origin": result.origin,
         }
     if args.command == "validate-data":
+        if args.export:
+            from .export_audit import audit_exports
+
+            return audit_exports(args.export)
         return audit_release(args.release)
     if args.command == "label":
         if args.operation == "prepare":
@@ -127,7 +164,12 @@ def dispatch(args):
             return batch.manifest
         batch = AnnotationBatch(args.batch)
         if args.operation == "issue":
-            return batch.claim(args.record_id, args.phase, retry_failed=args.retry_failed)
+            return batch.claim(
+                args.record_id,
+                args.phase,
+                retry_failed=args.retry_failed,
+                retry_unknown=args.retry_unknown,
+            )
         if args.operation == "receive":
             return batch.receive(read_json(args.receipt))
         return {
@@ -173,9 +215,7 @@ def dispatch(args):
 
 
 def main(argv=None):
-    parser = argparse.ArgumentParser(
-        description="W07 module pipeline (draft contracts; not full W07 acceptance)"
-    )
+    parser = argparse.ArgumentParser(description="Dataset export and annotation tools")
     register_commands(parser.add_subparsers(dest="command", required=True))
     args = parser.parse_args(argv)
     try:
@@ -187,7 +227,7 @@ def main(argv=None):
             )
         )
         return 2
-    except (ValueError, KeyError, OSError) as exc:
+    except (ValueError, KeyError, TypeError, OSError) as exc:
         message = (
             str(exc)
             if isinstance(exc, ProtocolError)
@@ -201,4 +241,9 @@ def main(argv=None):
         )
         return 2
     print(json.dumps(result, ensure_ascii=False, allow_nan=False))
+    if args.command == "validate-handoff" and (
+        any(row["status"] != "accept" for row in result["records"])
+        or not result.get("model_return", {}).get("format_valid", True)
+    ):
+        return 2
     return 0

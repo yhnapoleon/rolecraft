@@ -4,6 +4,13 @@ import { T, locale } from './app/i18n';
 import { V4LiveData } from './v4-live-data';
 import { V4Mounts } from './v4-mounts';
 import { projectNativeWorkspace } from './v4-workspace-projection';
+import {
+  keepProductDraft,
+  readProduct,
+  WorkspaceSlotController,
+} from './features/workspace/native-v4/slot-controller';
+import type { ProductCreate } from './contracts-v2';
+import { workspaceActionMessage } from './features/workspace/native-v4/messages';
 import { canonicalPurpose } from './features/workspace/native-v4/form-values';
 import { blankPilot, WorkspaceStore } from './store';
 import type {
@@ -538,6 +545,55 @@ export class LiveWorkbench {
         ),
       );
     await this.v4.sync(this.store.getSnapshot().workspace.sessions.find((x) => x.id === s.id)!);
+  }
+  private nativeProduct(session: LocalSession | undefined, id: string) {
+    if (session?.protocol !== 2 || !session.v2NativeWorkspace) return;
+    const products: readonly unknown[] = session.v2Workspace?.products ?? [];
+    const product = products.find(
+      (item) =>
+        !!item && typeof item === 'object' && 'product_id' in item && item.product_id === id,
+    );
+    return product ? readProduct(product, session.id) : undefined;
+  }
+  nativeProductEditable(a: Attempt): boolean {
+    const host = this.v4Host(a);
+    return !!host && new WorkspaceSlotController(host).can('work_products.versions.create');
+  }
+  nativeProductValue(a: Attempt, id: string): ProductCreate | undefined {
+    const session = this.session(a);
+    const product = this.nativeProduct(session, id);
+    if (!session || !product) return;
+    return new WorkspaceSlotController(this.v4.host(session)).value(product);
+  }
+  async keepNativeProductDraft(a: Attempt, id: string, patch: Partial<ProductCreate>) {
+    const session = this.session(a);
+    const product = this.nativeProduct(session, id);
+    if (session?.world.status !== 'active' || !product) throw new Error('editing_unavailable');
+    await keepProductDraft(this.v4.host(session), product, patch);
+  }
+  async restoreNativeProduct(a: Attempt, productId: string): Promise<void> {
+    const session = this.session(a);
+    const host = this.v4Host(a);
+    if (!session?.v2NativeWorkspace || !host)
+      throw new Error(T('当前无法恢复作品。', 'Work cannot be restored right now.'));
+    const controller = new WorkspaceSlotController(host);
+    try {
+      await controller.refresh();
+      const product = controller.state.products.find((item) => item.product_id === productId);
+      if (!product) throw new Error('product_unavailable');
+      if (!product.removed_at) return;
+      const result = await controller.remove(false, productId);
+      if (result.status !== 'confirmed') throw new Error(`restore_${result.status}`);
+      const current = this.store
+        .getSnapshot()
+        .workspace.sessions.find((item) => item.id === session.id);
+      if (current) await this.v4.sync(current);
+      this.changed();
+    } catch (error) {
+      throw new Error(workspaceActionMessage(error instanceof Error ? error.message : '', T));
+    } finally {
+      controller.destroy();
+    }
   }
   nativeWorkspace(a: Attempt) {
     return this.session(a)?.v2NativeWorkspace === true;
