@@ -9,6 +9,7 @@ import secrets
 import threading
 from collections.abc import Iterator
 from dataclasses import dataclass, field
+from datetime import UTC, datetime, timedelta
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
@@ -291,6 +292,134 @@ def assert_assistant_generation(runtime: RuntimeSession, expected_provider: str)
     assert runtime.get("/requests/assistant").json() == saved
     assert len(runtime.provider.calls) == 1
     assert runtime.key not in json.dumps([saved, runtime.provider.calls])
+
+
+def delegated_agent(runtime: RuntimeSession) -> dict[str, str]:
+    created = runtime.send(
+        "/delegations",
+        "agent",
+        "delegations.create",
+        {
+            "capabilities": ["read", "act"],
+            "expires_at": (datetime.now(UTC) + timedelta(minutes=30)).isoformat(),
+            "agent_label": "provider-switch-agent",
+        },
+    )
+    return {"Authorization": "Bearer " + created["result"]["result"]["token"]}
+
+
+def current_config(runtime: RuntimeSession) -> dict:
+    return runtime.get("/workbench").json()["result"]["result"]["timeline"]["workspace"]["config"]
+
+
+def config_ref(runtime: RuntimeSession, config: dict) -> dict:
+    return {
+        "session_id": runtime.session["session_id"],
+        "kind": "config",
+        "object_id": config["id"],
+        "version": config["version"],
+        "config_version": config["config_version"],
+    }
+
+
+def submit(
+    runtime: RuntimeSession,
+    token: dict[str, str],
+    path: str,
+    key: str,
+    operation: str,
+    payload: dict,
+) -> httpx.Response:
+    state = runtime.get("").json()["state"]
+    return runtime.client.post(
+        "/sessions/" + runtime.session["session_id"] + path,
+        headers=token,
+        json={
+            "schema_version": 2,
+            "request_id": key,
+            "operation": operation,
+            "payload": payload,
+            "expected_version": state["business_seq"],
+            "expected_workspace_revision": state["workspace_revision"],
+        },
+    )
+
+
+@pytest.mark.parametrize("runtime", [("zh", "local"), ("en", "local")], indirect=True)
+def test_unconfigured_deployment_rejects_agent_llm_generator(runtime: RuntimeSession):
+    agent = delegated_agent(runtime)
+    before = current_config(runtime)
+    state = runtime.get("").json()["state"]
+    rejected = submit(
+        runtime,
+        agent,
+        "/configuration",
+        "agent-llm",
+        "configuration.apply",
+        {"base": config_ref(runtime, before), "settings": {"generator": "llm"}},
+    )
+    assert rejected.status_code == 409, rejected.text
+    assert rejected.json()["code"] == "generator_unavailable"
+    assert (
+        "当前部署未配置模型" if runtime.provider.language == "zh" else "No model is configured"
+    ) in rejected.json()["error"]
+    explicit = before | {
+        "generator": "llm",
+        "version": before["version"] + 1,
+        "config_version": before["config_version"] + 1,
+    }
+    action = submit(
+        runtime,
+        agent,
+        "/actions",
+        "agent-llm-action",
+        "apply_config",
+        {"tool": "apply_config", "config": explicit},
+    )
+    assert action.status_code == 409, action.text
+    assert action.json()["code"] == "generator_unavailable"
+    assert current_config(runtime) == before
+    after = runtime.get("").json()["state"]
+    assert (after["business_seq"], after["workspace_revision"], after["config_version"]) == (
+        state["business_seq"],
+        state["workspace_revision"],
+        state["config_version"],
+    )
+    # The rejected attempts consume no configuration version.
+    accepted = submit(
+        runtime,
+        agent,
+        "/configuration",
+        "agent-retrieval",
+        "configuration.apply",
+        {"base": config_ref(runtime, before), "settings": {"retrieval_limit": 2}},
+    )
+    assert accepted.status_code == 200, accepted.text
+    changed = current_config(runtime)
+    assert changed["version"] == before["version"] + 1
+    assert changed["config_version"] == before["config_version"] + 1
+    assert changed["retrieval_limit"] == 2
+    assert "generator" not in changed
+    assert runtime.provider.calls == []
+
+
+def test_configured_deployment_records_agent_llm_generator(runtime: RuntimeSession):
+    agent = delegated_agent(runtime)
+    before = current_config(runtime)
+    response = submit(
+        runtime,
+        agent,
+        "/configuration",
+        "agent-llm",
+        "configuration.apply",
+        {"base": config_ref(runtime, before), "settings": {"generator": "llm"}},
+    )
+    assert response.status_code == 200, response.text
+    after = current_config(runtime)
+    assert after["generator"] == "llm"
+    assert after["version"] == before["version"] + 1
+    assert after["config_version"] == before["config_version"] + 1
+    assert runtime.provider.calls == []
 
 
 @pytest.mark.parametrize("failure", ["http", "json"])

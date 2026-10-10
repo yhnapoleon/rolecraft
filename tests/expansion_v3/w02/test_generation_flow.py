@@ -3,6 +3,7 @@
 import json
 from datetime import UTC
 from pathlib import Path
+from secrets import token_hex
 
 import pytest
 from fastapi.testclient import TestClient
@@ -83,9 +84,92 @@ def set_generator(client: TestClient, session: dict, mode: str = "llm") -> dict:
     return response.json()
 
 
-def test_gen_01_unconfigured_generation_is_saved_without_extractive_success(generation_api):
+def select_llm_on_configured_deployment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, session: dict
+) -> None:
+    """Select llm where a provider exists; the generation_api deployment then has none."""
+    key_file = tmp_path / "provider.key"
+    key_file.write_text("sk-" + token_hex(24))
+    monkeypatch.setenv("CAREER_LAB_KEY_FILE", str(key_file))
+    monkeypatch.setenv("CAREER_LAB_BASE_URL", "http://127.0.0.1:1")
+    monkeypatch.setenv("CAREER_LAB_MODEL", "controlled-mechanism")
+    app = create_runtime_app("sqlite:///" + str(tmp_path / "generation.db"), provider="openai")
+    try:
+        with TestClient(app) as client:
+            set_generator(client, session)
+    finally:
+        app.state.store.close()
+
+
+def test_gen_01_unconfigured_deployment_rejects_selecting_llm(generation_api):
     client, session, language = generation_api
-    set_generator(client, session)
+    before = client.get(
+        "/sessions/" + session["session_id"] + "/workbench", headers=headers(session)
+    ).json()["result"]["result"]["timeline"]["workspace"]["config"]
+    response = post(
+        client,
+        session,
+        "configuration",
+        "llm",
+        "configuration.apply",
+        {
+            "base": {
+                "session_id": session["session_id"],
+                "kind": "config",
+                "object_id": before["id"],
+                "version": before["version"],
+                "config_version": before["config_version"],
+            },
+            "settings": {"generator": "llm"},
+        },
+    )
+    assert response.status_code == 409, response.text
+    assert response.json()["code"] == "generator_unavailable"
+    after = client.get(
+        "/sessions/" + session["session_id"] + "/workbench", headers=headers(session)
+    ).json()["result"]["result"]["timeline"]["workspace"]["config"]
+    assert after == before
+
+
+def test_gen_01_existing_llm_configuration_stays_editable_without_provider(
+    generation_api, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    client, session, _ = generation_api
+    select_llm_on_configured_deployment(tmp_path, monkeypatch, session)
+    config = client.get(
+        "/sessions/" + session["session_id"] + "/workbench", headers=headers(session)
+    ).json()["result"]["result"]["timeline"]["workspace"]["config"]
+    response = post(
+        client,
+        session,
+        "configuration",
+        "retrieval",
+        "configuration.apply",
+        {
+            "base": {
+                "session_id": session["session_id"],
+                "kind": "config",
+                "object_id": config["id"],
+                "version": config["version"],
+                "config_version": config["config_version"],
+            },
+            "settings": {"retrieval_limit": 2},
+        },
+    )
+    assert response.status_code == 200, response.text
+    changed = client.get(
+        "/sessions/" + session["session_id"] + "/workbench", headers=headers(session)
+    ).json()["result"]["result"]["timeline"]["workspace"]["config"]
+    assert changed["generator"] == "llm"
+    assert changed["retrieval_limit"] == 2
+    assert changed["version"] == config["version"] + 1
+
+
+def test_gen_01_unconfigured_generation_is_saved_without_extractive_success(
+    generation_api, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    client, session, language = generation_api
+    select_llm_on_configured_deployment(tmp_path, monkeypatch, session)
     response = post(
         client,
         session,

@@ -50,6 +50,7 @@ from career_lab.storage.v2_store import (
 
 from .engine import ScenarioEngine, ScenarioSnapshot
 from .loader import load_package
+from .localization import text as localized_text
 from .policy import evaluate_request
 
 
@@ -320,6 +321,8 @@ class ScenarioModule:
             self.check_evidence(view, auth, ref)
         planned = self.engine.plan(before, command, auth)
         after = planned.snapshot
+        if args.tool == "apply_config":
+            self.check_generator(before.config, after.config)
         writes = []
         if after.config != before.config:
             writes.append(self.write(after.config, "config", before.config.version))
@@ -372,6 +375,17 @@ class ScenarioModule:
                 "request_data": planned.result.model_dump(mode="json"),
             }
         return Mutation(writes=tuple(writes), events=events, state_changes=changes, result=result)
+
+    def check_generator(self, current: AssistantConfig, requested: AssistantConfig) -> None:
+        """Only a deployment with a configured provider can switch the assistant to llm."""
+        if (
+            requested.generator == "llm"
+            and current.generator != "llm"
+            and not configured(self.assistant.model)
+        ):
+            raise ProtocolError(
+                "generator_unavailable", localized_text(self.package, "generator_unavailable"), 409
+            )
 
     def approval_policy(self, view, command, auth):
         if auth.allowed_objects is not None:

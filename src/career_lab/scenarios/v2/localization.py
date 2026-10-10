@@ -122,6 +122,7 @@ MESSAGES = {
         "no_fallback": "当前无法可靠自动回答，且人工兜底尚未生效。",
         "assistant_model_unavailable": "未配置模型。等待模型接入；问题与配置已保留。",
         "assistant_generation_failed": "生成失败，问题与配置已保留。",
+        "generator_unavailable": "当前部署未配置模型，不能切换为模型生成；配置保持不变。",
         "tech_summary": "筹备期复现过一个培训报名问法：公司培训我已提交报名是不是就能去听课。匹配阈值0.35时未命中，0.2时返回FAQ中的培训报名段；无关问题仍未命中。这只是一次局部对照，未完成统一校准。",
         "tech_register_summary": "技术诊断保存了培训报名原问法、两档阈值和无关问题对照；内部登记号不对外转述。",
         "path_question": "住宿报销上限是多少？",
