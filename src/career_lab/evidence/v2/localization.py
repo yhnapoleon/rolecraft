@@ -424,6 +424,29 @@ EN = {
     "决定之后的处理、责任和补证安排是否清楚": "Whether follow-up actions, responsibility, and evidence collection after the decision "
     "are clear",
     "结果报告中的声明是否由实际记录支持": "Whether claims in the result report are supported by actual records",
+    # Conditional outcome previews (rules only; no model claim).
+    "尚未声明决定，可以继续探索。": "No decision has been declared; you can continue exploring.",
+    "当前场景未建模此结果；原始请求已保留。": (
+        "This outcome is not modeled. Your original request is retained."
+    ),
+    "候选配置或资源依据尚未核实。": (
+        "Candidate configuration or resource evidence could not be verified."
+    ),
+    "若明确应用此候选方案，其生效配置将受当前已记录资源约束。": (
+        "If applied, this candidate is constrained by the recorded allocation."
+    ),
+    "已记录资源与基础配置保持不变。": (
+        "The recorded resource allocation and base configuration remain unchanged."
+    ),
+    "仍需明确的授权动作；此预览未批准或执行。": (
+        "Explicit action is still required. This preview has not approved or executed anything."
+    ),
+    "已核实保存的作品版本（规则核实）。": "Saved version verified (rule checked).",
+    "候选条件仍需澄清。": "Candidate conditions need clarification.",
+    "希望用这份作品判断什么？": "What would you like to evaluate this work for?",
+    "希望核对哪份候选配置？": "Which candidate configuration should be checked?",
+    "请补充可访问的资源和配置依据。": "Provide accessible resource and configuration evidence.",
+    "未执行业务动作。": "No business action was executed.",
 }
 
 

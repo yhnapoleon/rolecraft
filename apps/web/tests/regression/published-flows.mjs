@@ -233,6 +233,30 @@ async function submitDeferral(context) {
     browser,
     `document.querySelectorAll('[data-action="practice-choose"]').length === 2`,
   );
+  // The submission's own feedback is shown first; this flow never requests a review.
+  const reportHeadings = JSON.stringify(
+    `.native-feedback [aria-label="${text('分段反馈', 'Feedback sections')}"] > article > h2`,
+  );
+  await waitFor(
+    browser,
+    `document.querySelector('.native-feedback [role="status"]')?.textContent === ${JSON.stringify(
+      text(
+        '本次提交已保存，可以看反馈、提出异议或开始修订。',
+        'Submission saved. Review feedback, raise a challenge or start revising.',
+      ),
+    )} && [...document.querySelectorAll(${reportHeadings})].map((node) => node.textContent)[0] === ${JSON.stringify(
+      text('最近提交的反馈', 'Latest submission feedback'),
+    )}`,
+    30000,
+  );
+  assert.ok(
+    !(await browser.ev(
+      `[...document.querySelectorAll(${reportHeadings})].some((node) => node.textContent === ${JSON.stringify(
+        text('作品评审反馈', 'Artifact review feedback'),
+      )})`,
+    )),
+    'an unrequested review report is shown',
+  );
   await shot('feedback');
 }
 
