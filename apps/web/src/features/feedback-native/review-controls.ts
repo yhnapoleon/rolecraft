@@ -2,7 +2,8 @@ import type { SubmitInput } from '../../contracts-v2';
 /** Optional, non-terminal review in the existing feedback surface. */
 import type { FeedbackNativeAdapter, ReviewDraft } from './index';
 import type { ObjectRef } from '../workspace/contract-types';
-import type { FeedbackLanguage } from './localization';
+import { feedbackCopy, type FeedbackLanguage } from './localization';
+import { isPurposeChoice } from './short-summary';
 
 export function isSubmitDecision(value: string): value is SubmitInput['decision'] {
   return ['launch', 'launch_narrow', 'defer_with_conditions', 'no_go'].includes(value);
@@ -292,7 +293,11 @@ export function mountReviewControls(
         el('h3', r.question || t('作品评审', 'Artifact review'), 'row-title'),
         el(
           'p',
-          r.purpose === 'undetermined' ? t('用途待明确', 'Purpose not specified') : r.purpose,
+          r.purpose === 'undetermined'
+            ? t('用途待明确', 'Purpose not specified')
+            : isPurposeChoice(r.purpose)
+              ? feedbackCopy(language, r.purpose)
+              : r.purpose,
         ),
       );
       for (const ref of r.subjects) {
