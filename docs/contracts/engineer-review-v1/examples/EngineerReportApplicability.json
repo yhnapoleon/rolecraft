@@ -1,17 +1,17 @@
 {
   "base_config_hash": "0000000000000000000000000000000000000000000000000000000000000000",
   "config": {
-    "media_type": "application/json",
-    "path": "files/example.json",
+    "kind": "configuration",
     "schema_version": 2,
     "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
   },
   "effective_config_hash": "dd88de2633870259c10363eaebc421357d242bb83e0b41a3d1ec379628fce65d",
+  "effective_settings_hash": "98472f73ed1589d824ab732e279f3a06238feead72b9def12ec19c233a72e12a",
+  "indexed_versions_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
   "probe_suite_hash": "0000000000000000000000000000000000000000000000000000000000000000",
   "reviewer_version_hash": "0000000000000000000000000000000000000000000000000000000000000000",
   "scenario": {
-    "media_type": "application/json",
-    "path": "files/example.json",
+    "kind": "scenario",
     "schema_version": 2,
     "sha256": "0000000000000000000000000000000000000000000000000000000000000000"
   },
@@ -21,5 +21,6 @@
     "schema_version": 2,
     "storage_revision": 0,
     "workspace_revision": 0
-  }
+  },
+  "source_versions_hash": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
 }

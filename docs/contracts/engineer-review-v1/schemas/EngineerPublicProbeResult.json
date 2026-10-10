@@ -1,0 +1,179 @@
+{
+  "$defs": {
+    "ObjectRef": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version"
+      ],
+      "title": "ObjectRef",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "actual_status": {
+      "anyOf": [
+        {
+          "enum": [
+            "answered",
+            "answered_with_warning",
+            "fallback",
+            "failed"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Actual Status"
+    },
+    "citations": {
+      "items": {
+        "$ref": "#/$defs/ObjectRef"
+      },
+      "title": "Citations",
+      "type": "array"
+    },
+    "config_hash": {
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Config Hash",
+      "type": "string"
+    },
+    "elapsed_seconds": {
+      "minimum": 0,
+      "title": "Elapsed Seconds",
+      "type": "number"
+    },
+    "error_code": {
+      "anyOf": [
+        {
+          "enum": [
+            "engineer_probe_execution_failed",
+            "engineer_baseline_execution_failed",
+            "engineer_review_interrupted",
+            "engineer_verification_failed"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "title": "Error Code"
+    },
+    "expected_status": {
+      "enum": [
+        "answered",
+        "answered_with_warning",
+        "fallback",
+        "failed"
+      ],
+      "title": "Expected Status",
+      "type": "string"
+    },
+    "indexed_versions": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Indexed Versions",
+      "type": "object"
+    },
+    "probe_id": {
+      "minLength": 1,
+      "title": "Probe Id",
+      "type": "string"
+    },
+    "query": {
+      "title": "Query",
+      "type": "string"
+    },
+    "result": {
+      "enum": [
+        "pass",
+        "fail",
+        "error"
+      ],
+      "title": "Result",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "source_versions": {
+      "additionalProperties": {
+        "type": "integer"
+      },
+      "title": "Source Versions",
+      "type": "object"
+    },
+    "visibility": {
+      "const": "public",
+      "default": "public",
+      "title": "Visibility",
+      "type": "string"
+    }
+  },
+  "required": [
+    "probe_id",
+    "query",
+    "expected_status",
+    "actual_status",
+    "result",
+    "config_hash",
+    "citations",
+    "source_versions",
+    "indexed_versions",
+    "elapsed_seconds",
+    "error_code"
+  ],
+  "title": "EngineerPublicProbeResult",
+  "type": "object"
+}

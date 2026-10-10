@@ -94,6 +94,12 @@ def engineer_examples() -> dict[str, V2]:
             for child in value:
                 visit(child)
 
-    for value in (submission, report, claimed, E.public_engineer_report(report)):
+    for value in (
+        submission,
+        report,
+        claimed,
+        E.public_engineer_report(report),
+        E.EngineerPublicAdvice(status="waiting_model", model=None),
+    ):
         visit(value)
     return examples

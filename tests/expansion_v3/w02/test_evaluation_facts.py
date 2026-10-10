@@ -24,6 +24,7 @@ from career_lab.scenarios.v2.module import ScenarioModule, point
 from career_lab.scenarios.v2.evaluation_facts import ScenarioFactAdapter, ScenarioEvidenceWindow
 from career_lab.workspace.extension import install_workspace_operations
 from career_lab.storage.v2_lifecycle import record_submission
+from tests.support.scenario_packages import installed_root
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -158,10 +159,7 @@ class History:
 @pytest.fixture(params=["zh", "en"])
 def history(request, tmp_path):
     sid, lang = request.param if isinstance(request.param, tuple) else ("pm_pilot", request.param)
-    root = ROOT / "scenarios/pm_pilot/v2"
-    if sid != "pm_pilot":
-        root = root / "variants" / sid
-    module = ScenarioModule(root, work_language=lang)
+    module = ScenarioModule(installed_root(sid), work_language=lang)
     registry = module.install(ExtensionRegistry())
     install_workspace_operations(
         registry, roles=tuple(r.id for r in module.package.bundle.role_specs)
