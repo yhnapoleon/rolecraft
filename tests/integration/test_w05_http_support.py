@@ -149,7 +149,7 @@ def work_session(
     sock = socket.socket()
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     try:
-        sock.bind(("127.0.0.1", 19862))
+        sock.bind(("127.0.0.1", 0))
     except OSError:
         app.state.store.close()
         app.state.v2_store.db.engine.dispose()
@@ -163,7 +163,8 @@ def work_session(
         while not server.started and thread.is_alive() and time.monotonic() < deadline:
             time.sleep(0.01)
         assert server.started, "HTTP server did not start"
-        with httpx.Client(base_url="http://127.0.0.1:19862", timeout=90, trust_env=False) as client:
+        base_url = "http://127.0.0.1:" + str(sock.getsockname()[1])
+        with httpx.Client(base_url=base_url, timeout=90, trust_env=False) as client:
             yield WorkSession(app, client, language)
     finally:
         server.should_exit = True
