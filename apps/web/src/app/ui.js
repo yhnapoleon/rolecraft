@@ -56,7 +56,12 @@ import { workspaceActionMessage } from '../features/workspace/native-v4/messages
 import { pendingTurnRole, serverText } from '../store';
 import { eventLine, isFeedEvent } from './events.js';
 import { testSetView, testSetPreview, caseState, testRunView } from './test-set-view.js';
-import { answerModeLine, generatorField, submittedGenerator } from './assistant-mode';
+import {
+  answerModeLine,
+  assistantText,
+  generatorField,
+  submittedGenerator,
+} from './assistant-mode';
 import './test-set.css';
 import {
   investigationView,
@@ -1611,7 +1616,7 @@ async function runInvestigationBlock(blockId) {
   delete ui.investigationErrors[blockId];
   refreshWS(['stage']);
   try {
-    await L.test(a, {
+    const rerun = await L.test(a, {
       question: baseline.question,
       expectation: baseline.expectation || '',
       taskId: work.taskId,
@@ -1629,7 +1634,9 @@ async function runInvestigationBlock(blockId) {
         ),
       );
     announce(
-      T('重测结果已返回，原始记录仍保留。', 'The rerun is back. The original record is kept.'),
+      rerun?.queued
+        ? assistantText('assistant_mode_queued')
+        : T('重测结果已返回，原始记录仍保留。', 'The rerun is back. The original record is kept.'),
     );
   } catch (err) {
     ui.investigationErrors[blockId] = errText(err);
@@ -1730,8 +1737,10 @@ async function runTestCase(id) {
       caseRevision: c.revision,
     });
     ui.lastRun = r.id;
-    ui.testHistory[id] = r.id;
-    ui.testModes[id] = 'result';
+    if (!r.queued) {
+      ui.testHistory[id] = r.id;
+      ui.testModes[id] = 'result';
+    }
     startWorking(a, task());
     if (!persist())
       throw new Error(
@@ -1741,7 +1750,9 @@ async function runTestCase(id) {
         ),
       );
     announce(
-      T('这条问题已有回答，请检查结果。', 'This question has an answer. Review the result.'),
+      r.queued
+        ? assistantText('assistant_mode_queued')
+        : T('这条问题已有回答，请检查结果。', 'This question has an answer. Review the result.'),
     );
   } catch (err) {
     ui.testErrors[id] = errText(err);
@@ -1827,14 +1838,25 @@ function bench(a, t) {
       </form>
     </section>
     ${t ? `<div class="runs-head"><div class="segmented" role="group"><span class="thumb"></span><button type="button" aria-pressed="${!ui.benchAll}" data-action="bench-scope" data-all="0">${T('这件事的测试', 'This task')}</button><button type="button" aria-pressed="${!!ui.benchAll}" data-action="bench-scope" data-all="1">${T('全部测试', 'All tests')}</button></div></div>` : ''}
-    <div class="runs">${
+    <div class="runs">${queuedRuns(a, t)}${
       runs.length
         ? groupRuns({ tests: runs })
             .map((g) => runGroup(a, g))
             .join('')
-        : `<p class="empty-line">${T('还没有测试。和预期不符的回答，往往最有用。', 'No tests yet. Surprising answers are the useful ones.')}</p>`
+        : (a.queuedTests || []).length
+          ? ''
+          : `<p class="empty-line">${T('还没有测试。和预期不符的回答，往往最有用。', 'No tests yet. Surprising answers are the useful ones.')}</p>`
     }</div>
   </div>`;
+}
+function queuedRuns(a, t) {
+  return (a.queuedTests || [])
+    .filter((q) => !t || ui.benchAll || q.taskId === t.id)
+    .map(
+      (q) =>
+        `<article class="run is-queued" data-queued-request="${esc(q.requestId)}"><header class="run-q"><span class="run-asker">${T('你问', 'You asked')}</span><h3${zhAttr(q.question)}>${esc(q.question)}</h3></header><p class="answer-mode" data-answer-mode="queued" role="status">${esc(assistantText('assistant_mode_queued'))}</p></article>`,
+    )
+    .join('');
 }
 function groupRuns(a) {
   const map = new Map();
@@ -3468,7 +3490,11 @@ async function runQuestion(question, expectation) {
     ui.lastRun = run.id;
     startWorking(a, t);
     persist();
-    announce(T('知识助手回答：', 'The assistant answered: ') + run.answer);
+    announce(
+      run.queued
+        ? assistantText('assistant_mode_queued')
+        : T('知识助手回答：', 'The assistant answered: ') + run.answer,
+    );
   } catch (err) {
     notify(errText(err));
   } finally {

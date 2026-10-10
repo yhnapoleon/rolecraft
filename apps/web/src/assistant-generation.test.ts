@@ -3,7 +3,7 @@ import { setPreference } from './app/i18n';
 import { V4LiveData } from './v4-live-data';
 import { fromPilot, toPilot } from './workbench-live';
 import type { WorkspaceStore } from './store';
-import type { LocalSession, Pilot } from './types';
+import type { LocalSession, LocalTestRun, Pilot } from './types';
 
 const point = { business_seq: 4, workspace_revision: 2, storage_revision: 6 };
 const config = {
@@ -81,6 +81,20 @@ function harness(assistant: 'model' | 'waiting_model', generator?: 'llm') {
   return { session, report, host, data, objects };
 }
 
+const origin: LocalTestRun = {
+  taskId: 'task-1',
+  workId: 'plan',
+  workRevision: 2,
+  caseId: 'case-1',
+  caseRevision: 1,
+  sessionId: 's',
+  requestId: 'local',
+  query: 'What is the hotel limit?',
+  expectation: 'Cites policy',
+  config: null,
+  createdAt: '2026-10-11T00:00:00Z',
+};
+
 afterEach(() => setPreference('zh'));
 
 describe('assistant generator in the v4 data host', () => {
@@ -120,5 +134,71 @@ describe('assistant generator in the v4 data host', () => {
       version: 3,
       config_version: 2,
     });
+  });
+
+  it('keeps a queued generation linked to its test-plan row until the worker saves it', async () => {
+    const { session, host, data, objects, report } = harness('model', 'llm');
+    host.command.mockResolvedValue({
+      requestId: 'r-1',
+      status: 'pending',
+      result: { status: 'queued' },
+    });
+    const outcome = await data.write(
+      session,
+      'test',
+      { query: origin.query, config_version: 2 },
+      origin,
+    );
+    expect(outcome).toEqual({ queued: 'r-1' });
+    expect(session.queuedTestRuns?.['r-1']).toMatchObject({ caseId: 'case-1', requestId: 'r-1' });
+    expect(session.testRunMeta).toEqual({});
+    // Still running: polling reads the original request and keeps waiting.
+    host.recover.mockResolvedValueOnce({ requestId: 'r-1', status: 'pending', result: {} });
+    await data.poll(session);
+    expect(Object.keys(session.queuedTestRuns ?? {})).toEqual(['r-1']);
+    objects.push(savedTest('generated', 'llm', { generator: 'llm' }));
+    host.recover.mockResolvedValueOnce({
+      requestId: 'r-1',
+      status: 'confirmed',
+      result: {
+        jobs: [{ status: 'completed', effect: { result: { test: { id: 'generated' } } } }],
+      },
+    });
+    await data.poll(session);
+    expect(host.recover).toHaveBeenCalledWith('r-1');
+    expect(session.queuedTestRuns).toEqual({});
+    expect(session.testRunMeta?.generated).toMatchObject({
+      workId: 'plan',
+      caseId: 'case-1',
+      requestId: 'r-1',
+    });
+    expect(session.testNotes.generated).toEqual({ expected: 'Cites policy', diagnosis: '' });
+    expect(session.tests.map((t) => t.mode)).toEqual(['llm']);
+    expect(report.mock.calls.every(([patch]) => !patch.error)).toBe(true);
+    expect(host.command).toHaveBeenCalledTimes(1);
+  });
+
+  it('stops waiting with a visible message when the queued request failed', async () => {
+    setPreference('en');
+    const { session, host, data, report } = harness('model', 'llm');
+    host.command.mockResolvedValue({
+      requestId: 'r-2',
+      status: 'pending',
+      result: { status: 'queued' },
+    });
+    await data.write(session, 'test', { query: origin.query, config_version: 2 }, origin);
+    host.recover.mockResolvedValueOnce({
+      requestId: 'r-2',
+      status: 'failed',
+      result: { jobs: [] },
+    });
+    await data.poll(session);
+    expect(session.queuedTestRuns).toEqual({});
+    expect(session.testRunMeta).toEqual({});
+    expect(report).toHaveBeenCalledWith({
+      error: 'This test did not produce a result. The question is kept; run it again when ready.',
+    });
+    // Recovery never starts another model call.
+    expect(host.command).toHaveBeenCalledTimes(1);
   });
 });

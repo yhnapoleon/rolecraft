@@ -968,8 +968,14 @@ export class LiveWorkbench {
       });
     }
     const before = new Set(s.tests.map((t) => t.id));
-    await this.perform(a, () => this.store.test(input.question, origin));
+    let outcome: unknown;
+    await this.perform(a, async () => {
+      outcome = await this.store.test(input.question, origin);
+    });
     const t = this.session(a)!.tests.find((t) => !before.has(t.id));
+    const queued = (outcome as { queued?: string } | undefined)?.queued;
+    // Model generation runs in the worker; the saved answer appears when it is done.
+    if (!t && queued) return { queued, id: null };
     if (!t)
       throw new Error(
         T(

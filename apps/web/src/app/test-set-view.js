@@ -17,10 +17,15 @@ export function caseState(work, item, attempt, pending, busy) {
     .slice()
     .reverse();
   const current = runs.find((r) => r.caseRevision === item.revision);
+  // A model-generated answer is saved by the worker; until then the case is waiting for it.
+  const queued = (attempt.queuedTests || []).some(
+    (q) => q.workId === work.id && q.caseId === item.id,
+  );
   const waiting =
-    pending?.kind === 'test' &&
-    pending.localRun?.workId === work.id &&
-    pending.localRun?.caseId === item.id;
+    queued ||
+    (pending?.kind === 'test' &&
+      pending.localRun?.workId === work.id &&
+      pending.localRun?.caseId === item.id);
   const changed =
     current &&
     (current.configVersion !== attempt.configVersion ||
@@ -32,19 +37,22 @@ export function caseState(work, item, attempt, pending, busy) {
     runs,
     current,
     waiting,
+    queued,
     changed,
     tone: waiting || changed || (runs.length && !current) ? 'attention' : '',
-    label: waiting
-      ? busy
-        ? T('正在运行', 'Running')
-        : T('结果待确认', 'Awaiting confirmation')
-      : !current && runs.length
-        ? T('内容已改，待重测', 'Edited · run again')
-        : changed
-          ? T('条件已变', 'Conditions changed')
-          : current
-            ? T('已有结果', 'Result available')
-            : T('未运行', 'Not run'),
+    label: queued
+      ? assistantText('assistant_mode_queued_short')
+      : waiting
+        ? busy
+          ? T('正在运行', 'Running')
+          : T('结果待确认', 'Awaiting confirmation')
+        : !current && runs.length
+          ? T('内容已改，待重测', 'Edited · run again')
+          : changed
+            ? T('条件已变', 'Conditions changed')
+            : current
+              ? T('已有结果', 'Result available')
+              : T('未运行', 'Not run'),
   };
 }
 
@@ -125,7 +133,7 @@ export function testSetView({
             ${(c.refs || []).length ? `<div class="test-sources"><span>${T('计划参考', 'Plan references')}</span>${c.refs.map((r) => `<button type="button" class="chip" data-action="test-ref" data-id="${esc(r.id)}" data-version="${r.version}">${icon('doc', 'i-xs')}${esc(refTitle(r, attempt.backend?.materials || []))}<span class="ver">v${r.version}</span></button>`).join('')}</div>` : ''}
             </div>
             ${errors[c.id] ? `<div class="test-inline-error" role="alert">${icon('warn', 'i-sm')}<span>${esc(errors[c.id])}</span></div>` : ''}
-            ${pendingHere && !busy ? `<div class="test-context-note">${icon('sync', 'i-sm')}<span>${T('结果还未确认。恢复原请求会保留这次运行，不会另外发起测试。', 'The result is unconfirmed. Resume the original request to recover this run.')}</span>${action('live-retry', T('恢复原请求', 'Resume request'), '', 'primary')}</div>` : ''}
+            ${s.queued ? `<div class="test-context-note" role="status">${icon('sync', 'i-sm')}<span>${esc(assistantText('assistant_mode_queued'))}</span></div>` : pendingHere && !busy ? `<div class="test-context-note">${icon('sync', 'i-sm')}<span>${T('结果还未确认。恢复原请求会保留这次运行，不会另外发起测试。', 'The result is unconfirmed. Resume the original request to recover this run.')}</span>${action('live-retry', T('恢复原请求', 'Resume request'), '', 'primary')}</div>` : ''}
             ${run && mode === 'result' ? testRunView({ run, runs: s.runs, item: c, work, session, md }) : !run ? `<div class="test-run-empty">${icon('flask', 'i-sm')}<p>${T('运行后，回答和引用会留在这里。', 'The answer and its sources will appear here after a run.')}</p></div>` : ''}
             <div class="test-case-foot"><span>v${c.revision} · ${T('每次重测另存结果', 'Every rerun keeps a new result')}</span>${editable ? action('test-remove', T('移除问题', 'Remove question'), `data-id="${esc(c.id)}"`, 'quiet test-remove') : ''}</div>
           </div>

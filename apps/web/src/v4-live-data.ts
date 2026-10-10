@@ -3,6 +3,7 @@ import type { V4CommandResult } from './v4-host';
 /** v2 data projection into the existing v4 view model. No UI or second journal. */
 import { V4DataHost } from './v4-data-host';
 import { locale, T } from './app/i18n';
+import { assistantText } from './app/assistant-mode';
 import { ApiError } from './api';
 import type { WorkspaceStore } from './store';
 import type { LocalSession, LocalTestRun, Operation, Pilot, Material } from './types';
@@ -322,25 +323,68 @@ export class V4LiveData {
         ).values(),
       ]);
     }
-    if (kind === 'test' && value.test && origin) {
-      const s = this.current(session.id),
-        testId = value.test.id;
+    if (kind === 'test' && value.test && origin)
+      this.linkTest(session.id, value.test.id, origin, result.requestId);
+    // A model-generated answer is produced by the worker; keep the origin until it is saved.
+    const queued = kind === 'test' && result.status === 'pending' && value?.status === 'queued';
+    if (queued && origin) {
+      const s = this.current(session.id);
       this.store.update(s.id, {
-        testRunMeta: { ...s.testRunMeta, [testId]: { ...origin, requestId: result.requestId } },
-        testNotes: { ...s.testNotes, [testId]: { expected: origin.expectation, diagnosis: '' } },
+        queuedTestRuns: {
+          ...s.queuedTestRuns,
+          [result.requestId]: { ...origin, requestId: result.requestId },
+        },
       });
     }
     if (kind === 'action' && body.tool === 'update_pilot')
       this.store.update(session.id, { configDraft: undefined });
     await this.sync(this.current(session.id));
+    return queued ? { queued: result.requestId } : undefined;
+  }
+  private linkTest(id: string, testId: string, origin: LocalTestRun, requestId: string) {
+    const s = this.current(id);
+    this.store.update(s.id, {
+      testRunMeta: { ...s.testRunMeta, [testId]: { ...origin, requestId } },
+      testNotes: { ...s.testNotes, [testId]: { expected: origin.expectation, diagnosis: '' } },
+    });
+  }
+  /** Attach a queued run to its saved test, or drop it with the server's failure. */
+  private settleQueued(id: string, requestId: string, recovered: V4CommandResult<unknown>) {
+    const s = this.current(id),
+      origin = s.queuedTestRuns?.[requestId];
+    if (!origin || recovered.status === 'pending' || recovered.status === 'unconfirmed') return;
+    type QueuedJob = { effect?: { result?: { test?: { id?: unknown } } } | null };
+    const jobs = (recovered.result as { jobs?: QueuedJob[] } | null)?.jobs ?? [];
+    const testId = jobs
+      .map((job) => job.effect?.result?.test?.id)
+      .find((value): value is string => typeof value === 'string');
+    if (recovered.status === 'confirmed' && testId) this.linkTest(id, testId, origin, requestId);
+    else this.store.report({ error: assistantText('assistant_mode_queued_failed') });
+    const { [requestId]: _settled, ...rest } = this.current(id).queuedTestRuns ?? {};
+    this.store.update(id, { queuedTestRuns: rest });
   }
   async poll(session: LocalSession) {
     const host = this.host(session);
     // Recovery remains GET-only; a failed model job is never restarted here.
-    for (const pending of host.pendingRequests({ readOnly: true }))
+    const queued = Object.keys(this.current(session.id).queuedTestRuns ?? {});
+    const ids = new Set([
+      ...host.pendingRequests({ readOnly: true }).map((pending) => pending.requestId),
+      ...queued,
+    ]);
+    for (const requestId of ids)
       await host
-        .recover(pending.requestId)
-        .catch((error) => this.store.report({ error: error.message }));
+        .recover(requestId)
+        .then((recovered) => this.settleQueued(session.id, requestId, recovered))
+        .catch((error) => {
+          this.store.report({ error: error.message });
+          // A queued run whose original request is no longer readable stops waiting.
+          if (queued.includes(requestId))
+            this.settleQueued(session.id, requestId, {
+              requestId,
+              status: 'failed',
+              result: null,
+            });
+        });
     await this.sync(this.current(session.id));
   }
 }
