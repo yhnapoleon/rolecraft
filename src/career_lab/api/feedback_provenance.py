@@ -35,7 +35,12 @@ def feedback_provenance(
     return FeedbackProvenance(
         code=execution_identity(),
         registered_model=registered_model,
-        evaluation_version=EVALUATION_VERSION,
+        # A released package names its own installed evaluation; legacy packages predate it.
+        evaluation_version=(
+            module.release.evaluation_version
+            if getattr(module, "release", None) is not None
+            else EVALUATION_VERSION
+        ),
         rules_version=rules.get("revision", "not_recorded"),
         prompt_version=PROMPT_VERSION,
         provider="not_configured" if model is None else getattr(model, "provider", "not_recorded"),

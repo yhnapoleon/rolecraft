@@ -326,6 +326,15 @@ def rules_document() -> dict[str, object]:
     return rules_identity(RULES_REVISION, RUBRIC_REVISION)
 
 
+def final_rules_document() -> dict[str, object]:
+    """Same rules revision; the evaluation and rubric identities are the final ones."""
+    from career_lab.rubrics.evaluation_identity import FINAL_EVALUATION_VERSION, rules_identity
+
+    from .final_rubric import FINAL_RUBRIC_REVISION
+
+    return rules_identity(RULES_REVISION, FINAL_RUBRIC_REVISION, FINAL_EVALUATION_VERSION)
+
+
 def install_candidate(destination):
     """Explicitly export immutable candidate files for scenario/workbench bundle creation."""
     destination = Path(destination)
@@ -348,15 +357,26 @@ def install_candidate(destination):
 def load_installed_policies(
     root: str | Path, evaluation: C.FileRef, *, work_language: str = "zh"
 ) -> tuple[CriterionPolicy, ...]:
-    """Validate actual EvaluationBundle references, then return its 14 policies."""
+    """Validate actual EvaluationBundle references, then return its 14 policies.
+
+    The bound rubric selects the policies: candidate-2 or the byte-exact final file.
+    """
     from career_lab.contracts.v2.core import read_file
 
     bundle = C.EvaluationBundle.model_validate_json(read_file(Path(root), evaluation))
     if bundle.mode != "advisory":
         raise C.ProtocolError("rubric_candidate_requires_advisory")
-    from career_lab.rubrics.evaluation_identity import validate_rules
+    from career_lab.rubrics.evaluation_identity import FINAL_EVALUATION_VERSION, validate_rules
 
-    if json.loads(read_file(Path(root), bundle.rubric)) != rubric_document():
+    from .final_rubric import final_definition_bytes, final_policies
+
+    rubric = read_file(Path(root), bundle.rubric)
+    if rubric == final_definition_bytes():
+        validate_rules(
+            read_file(Path(root), bundle.rules), final_rules_document(), FINAL_EVALUATION_VERSION
+        )
+        return final_policies(work_language=work_language)
+    if json.loads(rubric) != rubric_document():
         raise C.ProtocolError("rubric_candidate_version_mismatch")
     validate_rules(read_file(Path(root), bundle.rules), rules_document())
     return policies(work_language=work_language)

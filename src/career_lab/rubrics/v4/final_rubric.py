@@ -1,4 +1,7 @@
-"""Read immutable final definitions; installation and runtime evaluation remain separate."""
+"""Read immutable final definitions and the policies a final-rubric installation binds.
+
+Installing them into a scenario package is a separate, explicit formal rebind.
+"""
 
 import argparse
 import hashlib
@@ -11,12 +14,15 @@ from typing import Literal
 from pydantic import JsonValue, TypeAdapter
 
 from career_lab.contracts.v2 import FeedbackV2, digest
+from career_lab.evidence.v2.ports import CriterionPolicy
+from career_lab.rubrics.evaluation_identity import FINAL_DEFINITIONS, FINAL_EVALUATION_VERSION
 
-DEFINITIONS = Path(__file__).with_name("definitions")
+DEFINITIONS = FINAL_DEFINITIONS
 FILES = {
     "aipm": "rubric-v2-final-20261009.json",
     "engineer": "engineer-rubric-v1-final-20261009.json",
 }
+FINAL_RUBRIC_REVISION = "rubric-v2-final-20261009"
 JSON_OBJECT = TypeAdapter(dict[str, JsonValue])
 
 
@@ -41,6 +47,41 @@ def _load_artifact(role: Literal["aipm", "engineer"]) -> tuple[dict[str, JsonVal
     ):
         raise ValueError("Final rubric status or role mismatch")
     return value, expected["sha256"]
+
+
+def final_definition_bytes() -> bytes:
+    """The approved AIPM definition file, byte for byte, after its manifest identity check."""
+    _load_artifact("aipm")
+    return (DEFINITIONS / FILES["aipm"]).read_bytes()
+
+
+def final_policies(*, work_language: str = "zh") -> tuple[CriterionPolicy, ...]:
+    """Fourteen policies carrying the final five-label conditions as their description.
+
+    Rule applicability still reads the candidate flags (rules.run_rules), so every
+    non-description field must stay identical to rubric-v2-candidate-2.
+    """
+    from .rubric_v2 import policies as candidate_policies
+
+    if work_language not in {"zh", "en"}:
+        raise ValueError("fixed language required")
+    definition = load_final_definition("aipm")
+    result = tuple(
+        CriterionPolicy(
+            row[work_language]["id"],
+            row[work_language]["description"],
+            row[work_language]["mechanism"],
+            tuple(row[work_language]["purposes"]),
+            row[work_language]["launch_only"],
+        )
+        for row in definition["criteria"]
+    )
+    candidate = candidate_policies(work_language=work_language)
+    if [(p.id, p.mechanism, p.purposes, p.launch_only) for p in result] != [
+        (p.id, p.mechanism, p.purposes, p.launch_only) for p in candidate
+    ]:
+        raise ValueError("Final policies diverge from the installed rule applicability")
+    return result
 
 
 def criterion_weights(definition: dict[str, JsonValue]) -> dict[str, "Fraction"]:
@@ -136,10 +177,14 @@ def coverage_report(report: FeedbackV2) -> dict[str, JsonValue]:
         name: sum((weights[identifier] for identifier in identifiers), Fraction())
         for name, identifiers in groups.items()
     }
+    installed = (
+        report.provenance is not None
+        and report.provenance.evaluation_version == FINAL_EVALUATION_VERSION
+    )
     return {
         "weight_definition_revision": definition["revision"],
         "weight_definition_sha256": definition_sha,
-        "definition_installed": False,
+        "definition_installed": installed,
         "source_provenance": report.provenance.model_dump(mode="json")
         if report.provenance
         else None,
@@ -147,8 +192,11 @@ def coverage_report(report: FeedbackV2) -> dict[str, JsonValue]:
         "source_feedback_sha256": digest(report),
         "source_evaluation": report.evaluation.model_dump(mode="json"),
         "scope": (
-            "final-definition weights applied to existing feedback; "
-            "this delivery does not install or execute the new definition"
+            "final-definition weights applied to feedback produced under the installed "
+            "final definition"
+            if installed
+            else "final-definition weights applied to existing feedback; "
+            "that feedback was not produced under the final definition"
         ),
         "denominator": 100,
         "criterion_weight_fractions": {name: str(weight) for name, weight in weights.items()},
