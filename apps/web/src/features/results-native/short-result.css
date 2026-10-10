@@ -84,3 +84,44 @@
     opacity: 0;
   }
 }
+/* A short question inside a result, e.g. which purpose a review should use. */
+.short-result__prompt {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 4px 0;
+  padding: 0;
+  border: 0;
+}
+.short-result__prompt legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--ink, #15171c);
+}
+.short-result__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+.short-result__choices label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 2px 12px 2px 9px;
+  border-radius: 999px;
+  background: var(--fill, rgba(20, 24, 32, 0.05));
+  cursor: pointer;
+}
+.short-result__choices input {
+  margin: 0;
+  accent-color: var(--ink, #15171c);
+}
+.short-result__choices label:focus-within {
+  outline: 2px solid var(--focus, var(--ink, #15171c));
+  outline-offset: 2px;
+}
+.short-result__prompt > .btn {
+  justify-self: start;
+}
