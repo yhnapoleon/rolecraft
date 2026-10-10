@@ -207,6 +207,925 @@
       "title": "Executor",
       "type": "object"
     },
+    "FeedbackActivity": {
+      "additionalProperties": false,
+      "properties": {
+        "actor_id": {
+          "minLength": 1,
+          "title": "Actor Id",
+          "type": "string"
+        },
+        "counterparty": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Counterparty"
+        },
+        "executor": {
+          "$ref": "#/$defs/Executor"
+        },
+        "kind": {
+          "enum": [
+            "material_read",
+            "test_run",
+            "question_sent",
+            "reply_received",
+            "learner_displayed"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "occurred_at": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "ref": {
+          "$ref": "#/$defs/EvidenceRefV2"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "target": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ObjectRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "kind",
+        "ref",
+        "occurred_at",
+        "executor",
+        "actor_id"
+      ],
+      "title": "FeedbackActivity",
+      "type": "object"
+    },
+    "FeedbackActivityCount": {
+      "additionalProperties": false,
+      "properties": {
+        "count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Count"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "default": "unknown",
+          "enum": [
+            "complete",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "verified_records": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Verified Records",
+          "type": "integer"
+        }
+      },
+      "title": "FeedbackActivityCount",
+      "type": "object"
+    },
+    "FeedbackActivityWindow": {
+      "additionalProperties": false,
+      "properties": {
+        "captured_at": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "covered_from": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "covered_through": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "covered_from",
+        "covered_through",
+        "captured_at"
+      ],
+      "title": "FeedbackActivityWindow",
+      "type": "object"
+    },
+    "FeedbackItem": {
+      "additionalProperties": false,
+      "properties": {
+        "applicability": {
+          "enum": [
+            "applicable",
+            "not_applicable",
+            "undetermined"
+          ],
+          "title": "Applicability",
+          "type": "string"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRefV2"
+          },
+          "title": "Citations",
+          "type": "array"
+        },
+        "criterion": {
+          "minLength": 1,
+          "title": "Criterion",
+          "type": "string"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "label": {
+          "enum": [
+            "MET",
+            "PARTIAL",
+            "NOT_MET",
+            "INSUFFICIENT",
+            "NOT_APPLICABLE"
+          ],
+          "title": "Label",
+          "type": "string"
+        },
+        "rule_bound": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuleBound"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source": {
+          "enum": [
+            "verified_rule",
+            "model_advice",
+            "pending"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "criterion",
+        "label",
+        "applicability",
+        "source",
+        "explanation",
+        "citations"
+      ],
+      "title": "FeedbackItem",
+      "type": "object"
+    },
+    "FeedbackReadBoundary": {
+      "additionalProperties": false,
+      "properties": {
+        "attestation": {
+          "const": "common_store_trace_v1",
+          "default": "common_store_trace_v1",
+          "title": "Attestation",
+          "type": "string"
+        },
+        "content_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Content Hash",
+          "type": "string"
+        },
+        "dependencies": {
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "minItems": 1,
+          "title": "Dependencies",
+          "type": "array"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "path",
+        "content_hash",
+        "dependencies"
+      ],
+      "title": "FeedbackReadBoundary",
+      "type": "object"
+    },
+    "FeedbackReferenceCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "semantic_support": {
+          "const": "not_established",
+          "default": "not_established",
+          "title": "Semantic Support",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "exact_reference_verified",
+            "unavailable",
+            "future_evidence",
+            "evidence_version_mismatch",
+            "evidence_quote_mismatch",
+            "evidence_time_mismatch",
+            "source_time_unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "submitted_reference_hash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Submitted Reference Hash"
+        },
+        "valid_at_subject": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid At Subject"
+        },
+        "verified_ref": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/EvidenceRefV2"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "submitted_reference_hash",
+        "status"
+      ],
+      "title": "FeedbackReferenceCheck",
+      "type": "object"
+    },
+    "FeedbackV2": {
+      "additionalProperties": false,
+      "properties": {
+        "adoption_record": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FileRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "as_of": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "available_actions": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/_OutcomeAction"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Available Actions"
+        },
+        "basis_refs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/ObjectRef"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Basis Refs"
+        },
+        "business_response": {
+          "title": "Business Response",
+          "type": "string"
+        },
+        "clarification": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Clarification"
+        },
+        "conditions": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Conditions"
+        },
+        "evaluation": {
+          "$ref": "#/$defs/FileRef"
+        },
+        "evaluation_as_of": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionPoint"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "generation_status": {
+          "anyOf": [
+            {
+              "enum": [
+                "rules_verified",
+                "waiting_model",
+                "advisory",
+                "failed",
+                "unknown"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Generation Status"
+        },
+        "historical_responsibilities": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/HistoricalResponsibilitiesSnapshot"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Historical Responsibilities"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "independent_understanding": {
+          "default": "unobserved",
+          "enum": [
+            "unobserved",
+            "observed_with_evidence"
+          ],
+          "title": "Independent Understanding",
+          "type": "string"
+        },
+        "input_refs": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/ObjectRef"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Input Refs"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/FeedbackItem"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "missing_inputs": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Missing Inputs"
+        },
+        "mode": {
+          "default": "advisory",
+          "enum": [
+            "advisory",
+            "scoring"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "model_advice": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RegisteredModelAdvice"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Model Advice"
+        },
+        "model_coverage": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Model Coverage",
+          "type": "number"
+        },
+        "next_options": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Next Options",
+          "type": "array"
+        },
+        "outcomes": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/_OutcomeItem"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Outcomes"
+        },
+        "preview_kind": {
+          "anyOf": [
+            {
+              "enum": [
+                "rules",
+                "advisory"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preview Kind"
+        },
+        "preview_language": {
+          "anyOf": [
+            {
+              "enum": [
+                "zh",
+                "en"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Preview Language"
+        },
+        "read_boundaries": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/FeedbackReadBoundary"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Read Boundaries"
+        },
+        "read_projection": {
+          "anyOf": [
+            {
+              "const": "partial",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Read Projection"
+        },
+        "rule_items": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/FeedbackItem"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rule Items"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/ObjectRef"
+        },
+        "verified_coverage": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Verified Coverage",
+          "type": "number"
+        },
+        "verified_facts": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/VerifiedFactsSnapshot"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verified Facts"
+        },
+        "version": {
+          "default": 1,
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "id",
+        "session_id",
+        "subject",
+        "evaluation",
+        "as_of",
+        "items",
+        "business_response",
+        "next_options",
+        "verified_coverage",
+        "model_coverage"
+      ],
+      "title": "FeedbackV2",
+      "type": "object"
+    },
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    },
+    "HistoricalResponsibilitiesSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionPoint"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "captured_at": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "completeness": {
+          "default": "unknown",
+          "enum": [
+            "complete",
+            "partial",
+            "unknown"
+          ],
+          "title": "Completeness",
+          "type": "string"
+        },
+        "coverage": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FeedbackActivityWindow"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "entries": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/HistoricalResponsibilityFinding"
+          },
+          "title": "Entries",
+          "type": "array"
+        },
+        "requested_at": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_snapshot_hash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Snapshot Hash"
+        },
+        "subject": {
+          "$ref": "#/$defs/ObjectRef"
+        }
+      },
+      "required": [
+        "subject",
+        "as_of",
+        "requested_at",
+        "captured_at",
+        "source_snapshot_hash"
+      ],
+      "title": "HistoricalResponsibilitiesSnapshot",
+      "type": "object"
+    },
+    "HistoricalResponsibilityFinding": {
+      "additionalProperties": false,
+      "properties": {
+        "actor_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actor Id"
+        },
+        "criterion": {
+          "minLength": 1,
+          "title": "Criterion",
+          "type": "string"
+        },
+        "evaluated_at": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "executor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Executor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "finding": {
+          "enum": [
+            "unknown",
+            "recorded_commitment",
+            "verified_breach",
+            "verified_within_limit",
+            "claim_matches_record",
+            "verified_claim_mismatch",
+            "claim_has_run_records",
+            "recorded_action"
+          ],
+          "title": "Finding",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "actual_action",
+            "commitment",
+            "completion_claim",
+            "unknown"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "occurred_at": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionPoint"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "scope": {
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "minItems": 1,
+          "title": "Scope",
+          "type": "array"
+        },
+        "sources": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EvidenceRefV2"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "state": {
+          "enum": [
+            "active",
+            "withdrawn",
+            "unknown"
+          ],
+          "title": "State",
+          "type": "string"
+        }
+      },
+      "required": [
+        "criterion",
+        "kind",
+        "state",
+        "occurred_at",
+        "evaluated_at",
+        "scope",
+        "finding",
+        "explanation"
+      ],
+      "title": "HistoricalResponsibilityFinding",
+      "type": "object"
+    },
     "InvestigationBlock": {
       "additionalProperties": false,
       "properties": {
@@ -625,6 +1544,217 @@
       "title": "ProductShare",
       "type": "object"
     },
+    "RegisteredModelAdvice": {
+      "additionalProperties": false,
+      "properties": {
+        "affects_score": {
+          "const": false,
+          "default": false,
+          "title": "Affects Score",
+          "type": "boolean"
+        },
+        "citations": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EvidenceRefV2"
+          },
+          "title": "Citations",
+          "type": "array"
+        },
+        "criterion": {
+          "const": "R2.support",
+          "default": "R2.support",
+          "title": "Criterion",
+          "type": "string"
+        },
+        "error_code": {
+          "anyOf": [
+            {
+              "enum": [
+                "model_unavailable",
+                "model_load_failed",
+                "pretrained_encoder_dependencies_unavailable",
+                "model_timeout",
+                "model_infrastructure_failed",
+                "model_files_changed",
+                "model_reference_invalid",
+                "evidence_unavailable",
+                "model_result_unconfirmed",
+                "model_prediction_invalid",
+                "claim_not_available",
+                "synthetic_mechanism_only"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Error Code"
+        },
+        "evidence_ids": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "input_hash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Input Hash"
+        },
+        "job_id": {
+          "minLength": 1,
+          "title": "Job Id",
+          "type": "string"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "enum": [
+                "SUPPORTED",
+                "CONTRADICTED",
+                "INSUFFICIENT"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "mode": {
+          "const": "advisory",
+          "default": "advisory",
+          "title": "Mode",
+          "type": "string"
+        },
+        "registration": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RegisteredModelIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "request_id": {
+          "minLength": 1,
+          "title": "Request Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "completed",
+            "failed",
+            "unavailable",
+            "synthetic_mechanism_only"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "request_id",
+        "job_id",
+        "input_hash",
+        "registration",
+        "status"
+      ],
+      "title": "RegisteredModelAdvice",
+      "type": "object"
+    },
+    "RegisteredModelIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "model_revision": {
+          "minLength": 1,
+          "title": "Model Revision",
+          "type": "string"
+        },
+        "quality_validated": {
+          "const": false,
+          "default": false,
+          "title": "Quality Validated",
+          "type": "boolean"
+        },
+        "scope": {
+          "enum": [
+            "synthetic_fixture",
+            "external_candidate"
+          ],
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "model_revision",
+        "scope"
+      ],
+      "title": "RegisteredModelIdentity",
+      "type": "object"
+    },
+    "RuleBound": {
+      "additionalProperties": false,
+      "properties": {
+        "lower": {
+          "enum": [
+            "NOT_MET",
+            "PARTIAL",
+            "MET"
+          ],
+          "title": "Lower",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "upper": {
+          "enum": [
+            "NOT_MET",
+            "PARTIAL",
+            "MET"
+          ],
+          "title": "Upper",
+          "type": "string"
+        }
+      },
+      "required": [
+        "lower",
+        "upper"
+      ],
+      "title": "RuleBound",
+      "type": "object"
+    },
     "TestCase": {
       "additionalProperties": false,
       "properties": {
@@ -756,6 +1886,216 @@
         "body"
       ],
       "title": "TextPayload",
+      "type": "object"
+    },
+    "VerifiedFactsSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "activity_records": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FeedbackActivity"
+          },
+          "title": "Activity Records",
+          "type": "array"
+        },
+        "activity_totals": {
+          "additionalProperties": {
+            "$ref": "#/$defs/FeedbackActivityCount"
+          },
+          "default": {},
+          "propertyNames": {
+            "enum": [
+              "material_read",
+              "test_run",
+              "question_sent",
+              "reply_received",
+              "learner_displayed"
+            ]
+          },
+          "title": "Activity Totals",
+          "type": "object"
+        },
+        "activity_window": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/FeedbackActivityWindow"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "actor_id": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Actor Id"
+        },
+        "adopter": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Executor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "as_of": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionPoint"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "author": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Executor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "captured_at": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "conclusion_quality": {
+          "const": "not_scored",
+          "default": "not_scored",
+          "title": "Conclusion Quality",
+          "type": "string"
+        },
+        "declared_citation_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Declared Citation Count"
+        },
+        "declared_source_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Declared Source Count"
+        },
+        "executor": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Executor"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "independent_understanding": {
+          "const": "unobserved",
+          "default": "unobserved",
+          "title": "Independent Understanding",
+          "type": "string"
+        },
+        "references": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/FeedbackReferenceCheck"
+          },
+          "title": "References",
+          "type": "array"
+        },
+        "requested_at": {
+          "$ref": "#/$defs/VersionPoint"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_snapshot_hash": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Snapshot Hash"
+        },
+        "status": {
+          "enum": [
+            "verified",
+            "partial",
+            "unknown"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/ObjectRef"
+        },
+        "summary": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Summary",
+          "type": "array"
+        },
+        "verified_source_count": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Verified Source Count"
+        }
+      },
+      "required": [
+        "subject",
+        "status",
+        "as_of",
+        "requested_at",
+        "captured_at",
+        "source_snapshot_hash"
+      ],
+      "title": "VerifiedFactsSnapshot",
       "type": "object"
     },
     "VersionPoint": {
@@ -1005,6 +2345,109 @@
       ],
       "title": "WorkspaceProductRead",
       "type": "object"
+    },
+    "_OutcomeAction": {
+      "additionalProperties": false,
+      "properties": {
+        "objects": {
+          "items": {
+            "$ref": "#/$defs/ObjectRef"
+          },
+          "title": "Objects",
+          "type": "array"
+        },
+        "operation": {
+          "enum": [
+            "reviews.create",
+            "work_products.shares.create",
+            "configuration.apply",
+            "tests.create"
+          ],
+          "title": "Operation",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "operation",
+        "objects"
+      ],
+      "title": "_OutcomeAction",
+      "type": "object"
+    },
+    "_OutcomeItem": {
+      "additionalProperties": false,
+      "properties": {
+        "basis_refs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EvidenceRefV2"
+          },
+          "title": "Basis Refs",
+          "type": "array"
+        },
+        "conditions": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Conditions",
+          "type": "array"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "fact",
+            "conditional_prediction",
+            "pending_verification",
+            "unsupported"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "missing_inputs": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Missing Inputs",
+          "type": "array"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "summary": {
+          "title": "Summary",
+          "type": "string"
+        },
+        "values": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "default": {},
+          "title": "Values",
+          "type": "object"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "summary"
+      ],
+      "title": "_OutcomeItem",
+      "type": "object"
     }
   },
   "additionalProperties": false,
@@ -1031,6 +2474,21 @@
       ],
       "default": null,
       "title": "Next Cursor"
+    },
+    "previews": {
+      "anyOf": [
+        {
+          "items": {
+            "$ref": "#/$defs/FeedbackV2"
+          },
+          "type": "array"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Previews"
     },
     "schema_version": {
       "const": 2,

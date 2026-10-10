@@ -13519,6 +13519,21 @@
             "default": null,
             "title": "Next Cursor"
           },
+          "previews": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/FeedbackV2"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Previews"
+          },
           "schema_version": {
             "const": 2,
             "default": 2,

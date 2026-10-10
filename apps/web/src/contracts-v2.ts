@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 5a6973f07fd1435762d11b5f753a1da78c0b936ad58aca679c86e0e40a40db27. Do not edit.
+// Generated from frozen manifest SHA256 f9edfe270e6bb39ef3661061ca37be65827bb99cae96a1ca4abadea736e53952. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -938,6 +938,7 @@ export type WorkspaceProductPage = {
   as_of: VersionPoint;
   items: WorkspaceProductRead[];
   next_cursor?: number | null;
+  previews?: FeedbackV2[] | null;
   schema_version?: 2;
   shares: ProductShare[];
   sharing_complete: boolean;
