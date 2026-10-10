@@ -20,7 +20,7 @@ const zh = {
   changeMaterials: '{n} 份资料有了新版本',
   newer: '较新的版本已有自己的预览。',
   refreshHint: '保存新版本或请求评审，才会得到新的预览；这条旧预览保持原样。',
-  actualTitle: '之后实际发生（各有记录；上面的预测未改写）',
+  actualTitle: '之后实际发生（各有记录；上面的预览未改写）',
   actualConfiguration: '已应用第 {v} 版试点配置',
   actualApproval: '资源申请{status}',
   actualTests: '已运行测试 {n} 次，最近一次{status}（第 {v} 版配置）',
@@ -68,7 +68,7 @@ const en: Record<OutcomeKey, string> = {
   newer: 'A newer version has its own preview.',
   refreshHint:
     'Saving a new version or requesting a review gives a new preview; this earlier one stays as it was.',
-  actualTitle: 'Recorded afterwards (separate records; the prediction above is unchanged)',
+  actualTitle: 'Recorded afterwards (separate records; the preview above is unchanged)',
   actualConfiguration: 'Pilot configuration v{v} applied',
   actualApproval: 'Resource request {status}',
   actualTests: 'Test runs: {n}; latest {status} (configuration v{v})',
