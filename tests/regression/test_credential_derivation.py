@@ -258,6 +258,27 @@ def test_reference_agent_token_cannot_reach_another_session(
     route = "/sessions/" + other["session_id"]
     for path in ("", "/tools", "/observation", "/work-products"):
         assert session.client.get(route + path, headers=reference).status_code == 401
+    owner = {"Authorization": "Bearer " + other["token"]}
+    before = session.client.get(route, headers=owner).json()["state"]
+    write = {
+        "schema_version": 2,
+        "request_id": "reference-cross-session",
+        "expected_version": before["business_seq"],
+        "expected_workspace_revision": before["workspace_revision"],
+        "operation": "work_products.create",
+        "payload": {
+            "kind": "text",
+            "purpose": "exploration",
+            "title": "Cross-session note",
+            "content": "Written only by the session owner.",
+        },
+    }
+    written = session.client.post(route + "/work-products", headers=reference, json=write)
+    assert written.status_code == 401
+    assert session.client.get(route, headers=owner).json()["state"] == before
+    # The same command is valid for the owning session, so the rejection is the credential.
+    accepted = session.client.post(route + "/work-products", headers=owner, json=write)
+    assert accepted.status_code == 200, accepted.text
     assert session.client.get(session.url("tools"), headers=reference).status_code == 200
 
 
