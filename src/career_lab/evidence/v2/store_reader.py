@@ -12,7 +12,7 @@ from career_lab.contracts import v2 as C
 from career_lab.storage.v2_tables import v2_snapshots, v2_events
 from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.role_memory import RoleTurn, RoleReply, RoleDisplay
-from .ports import SourceRecord, ActivityRecord, ActivityLedger, RuleSnapshot
+from .ports import SourceRecord, ActivityRecord, ActivityLedger, RuleSnapshot, model_generated
 from .assembler import base_ref, product_text
 from .history import before
 from .localization import message
@@ -96,7 +96,7 @@ class StoreEvidenceReader:
                 elif row.ref.kind == "test":
                     test = C.TestResultV2.model_validate(row.content)
                     text = test.query + "\n" + test.answer
-                    if any(attempt.status == "success" for attempt in test.execution.attempts):
+                    if model_generated(test):
                         language = languages.get(row.ref.object_id, "zh")
                         text = (
                             test.query

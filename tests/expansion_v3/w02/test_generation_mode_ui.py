@@ -17,6 +17,8 @@ from career_lab.jobs.worker import Worker
 from career_lab.scenarios.v2.localization import text as localized_text
 
 QUESTION = {"zh": "住宿报销上限是多少？", "en": "What is the hotel reimbursement limit?"}
+# The fact producer's hotel-limit question; it retrieves the limit paragraph in both languages.
+RETEST = {"zh": "住宿报销上限是多少？", "en": "What is the hotel reimbursement limit per night?"}
 MISS = {"zh": "公司年会在哪个城市举办？", "en": "Which city hosts the annual company party?"}
 GENERATED = {"zh": "生成：住宿上限见政策。", "en": "Generated: see the hotel policy."}
 
@@ -293,3 +295,76 @@ def test_evidence_reader_marks_generated_answer_text(environment, language):
     plain = records[extractive]
     assert plain.origin == "record"
     assert plain.text == QUESTION[language] + "\n" + rows[extractive]["content"]["answer"]
+
+
+def submitted_feedback(app, session: Session, language: str) -> dict:
+    """Commit one saved work on the current configuration and read its stored feedback."""
+    made = session.post(
+        "work-products",
+        "commit-work",
+        "work_products.create",
+        {
+            "kind": "text",
+            "purpose": "commitment",
+            "title": "试点决定" if language == "zh" else "Pilot decision",
+            "content": "复测后上线。" if language == "zh" else "Launch after the retest.",
+        },
+    )
+    assert made.status_code == 200, made.text
+    product = next(ref for ref in made.json()["objects"] if ref["kind"] == "product")
+    config = session.workbench()["timeline"]["workspace"]["config"]
+    base = {
+        "session_id": session.id,
+        "kind": "config",
+        "object_id": config["id"],
+        "version": config["version"],
+        "config_version": config["config_version"],
+    }
+    saved = session.post(
+        "submissions",
+        "submit",
+        "submissions.create",
+        {"decision": "launch", "products": [product], "config": base},
+    )
+    assert saved.status_code == 200, saved.text
+    run_worker(app)
+    subject = saved.json()["result"]["submission"]["object_id"]
+    response = session.client.get(
+        "/sessions/" + session.id + "/feedback/" + subject, headers=session.headers
+    )
+    assert response.status_code == 200, response.text
+    return response.json()["result"]["result"]["items"][0]
+
+
+def test_feedback_keeps_a_generated_retest_pending(environment, language):
+    database, fake = environment
+    adjustment = {}
+    for generator in ("llm", "extractive"):
+        with deployment(database, "openai") as (app, client):
+            session = start(client, language)
+            session.ask("initial", RETEST[language])
+            assert session.configure("warn", {"freshness_guard": "warn"}).status_code == 200
+            refreshed = session.post(
+                "actions", "refresh", "refresh_index", {"tool": "refresh_index"}
+            )
+            assert refreshed.status_code == 200, refreshed.text
+            if generator == "llm":
+                assert session.configure("llm", {"generator": "llm"}).status_code == 200
+                assert session.ask("retest", RETEST[language])["status"] == "queued"
+                run_worker(app)
+            else:
+                session.ask("retest", RETEST[language])
+            retest = latest(session)
+        assert retest["assistant"]["mode"] == generator
+        # The feedback runs on a deployment without a model, so only rules evaluate.
+        with deployment(database, "local") as (app, client):
+            report = submitted_feedback(app, session.on(client), language)
+        items = {item["criterion"]: item for item in report["items"]}
+        adjustment[generator] = items["R5.adjustment"]
+        assert "R5.adjustment" in {item["criterion"] for item in report["rule_items"]}
+    generated, extractive = adjustment["llm"], adjustment["extractive"]
+    assert (generated["label"], generated["source"]) == ("INSUFFICIENT", "pending")
+    assert ("模型生成" if language == "zh" else "Model-generated") in generated["explanation"]
+    assert GENERATED[language] not in json.dumps(generated["citations"], ensure_ascii=False)
+    assert (extractive["label"], extractive["source"]) == ("MET", "verified_rule")
+    assert len(fake.calls) == 1

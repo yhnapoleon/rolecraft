@@ -85,7 +85,7 @@ CHROME_BIN=<chrome-headless-shell> OUT=<新目录> node tests/regression/assista
 - **worker 中断**：在运输边界模拟进程终止，等真实队列过期后由另一个 worker 接管，第二个 worker 不再调用。原问题可以从 `requests.read` 回读。显式另发请求会产生新的尝试。
 - **密钥检查**：测试随机生成 key，只在临时 key 文件和 Authorization 头中使用；扫描 SQLite 主文件和 WAL、响应、请求正文和日志，断言都不含该字符串。
 - **组件显示**：用 Vite 实际加载 `test-set-view.js`，检查中英模式、引用版本、有效配置展开，以及原记录不变。
-- **宿主与正常入口**：`test_generation_mode_ui.py` 经标准 HTTP 与 worker 核对 `workbench.read` 按单次记录给出模式、过期警告在生成答案前保留、生成答案在评价证据中标为 `model_generated`、未配置部署上可改回 extractive；浏览器检查在中英、桌面与 390px 下核对答案标签只出现一次、测试计划模式行与有效配置、设置面板的回答方式与重置。
+- **宿主与正常入口**：`test_generation_mode_ui.py` 经标准 HTTP 与 worker 核对 `workbench.read` 按单次记录给出模式、过期警告在生成答案前保留、生成答案在评价证据中标为 `model_generated`、提交后的反馈把生成的复测留在待核验、未配置部署上可改回 extractive；`test_evaluation_facts.py` 核对引用了正确政策片段的生成复测不进入通过列表，而同题抽取复测照常通过；浏览器检查在中英、桌面与 390px 下核对答案标签只出现一次、测试计划模式行与有效配置、设置面板的回答方式与重置，以及生成复测后提交的反馈中该项显示为等待核验。
 
 合入前运行仓库回归门禁：`uv run --locked python -m scripts.regression.run --output <新目录>`，需要浏览器检查时加 `--browser`。
 
@@ -104,7 +104,7 @@ CHROME_BIN=<chrome-headless-shell> OUT=<新目录> node tests/regression/assista
 - `workbench.read` 的 `semantic.assistant` 反映部署是否接入模型（`model`／`waiting_model`），时间线中每个 test 另带 `assistant`：该次答案保存时的模式、provider、模型版本和配置版本。模式来自单次 `assistant_execution` 记录；llm 配置下因规则守卫没有调用模型的答案仍是抽取路径的原答案，记为 `extractive`。
 - 测试台与测试计划只按单次记录显示一个模式标签：未接入模型时抽取答案显示“等待模型接入（当前为原文检索结果）”，接入后显示“原文抽取”；生成答案显示“模型生成 · 回答待核验”；另有“未配置模型”“生成失败”。答案正文不再加前缀，当前部署状态不会改写历史答案的标签。测试计划的模式行显示 provider／模型版本和“本次有效配置 · v<n>”。
 - 来源过期且 `freshness_guard=warn` 时，生成答案前保留与抽取答案相同的过期警告句，引用仍是原版本，界面照常标“引用了旧版本”。
-- 评价证据读取把成功生成的回答标为 `model_generated`，并在问题与回答之间加“模型生成回答（待核验）”标记，不当作规则核实的原文片段。
+- 评价证据读取把成功生成的回答标为 `model_generated`，并在问题与回答之间加“模型生成回答（待核验）”标记，不当作规则核实的原文片段。规则事实也不把生成答案计为复测通过：相关复测由模型生成时 `passing_dynamic_test_ids` 保持未知，反馈中“实际调整与复测”一项为待核验，并写明“最新相关复测的回答为模型生成，待核验”；规则仍可核对它实际使用的材料版本。
 - 试点设置面板显示回答方式。未接入模型时“模型生成”不可选并说明原因；已保存为 llm 的配置仍显示且可随时改回原文抽取。保存时总是发送面板上可见的选择。
 - llm 测试由 worker 生成：界面先显示“等待模型生成”，之后按原请求读取结果并归入原事项、测试计划行或调查重测；失败时提示并停止等待，不会再发起模型调用。生成失败时保留原问题、旧结果和具体错误；读取页面不会触发新的模型调用。
 

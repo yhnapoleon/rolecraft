@@ -17,6 +17,14 @@ from career_lab.contracts.v2.core import (
 from career_lab.contracts.v2.world import TestResultV2
 
 
+def model_generated(test: TestResultV2) -> bool:
+    """A successful model call wrote this saved answer: advisory, awaiting verification.
+
+    Its text is never a rule-verified source excerpt or a rule-passing result.
+    """
+    return any(attempt.status == "success" for attempt in test.execution.attempts)
+
+
 @dataclass(frozen=True)
 class StructuredDecision:
     """Trusted structured-field declaration bound to this exact work version.

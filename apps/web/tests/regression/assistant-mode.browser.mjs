@@ -15,7 +15,7 @@ import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { delay, launch } from '../walkthrough/cdp.mjs';
-import { waitFor } from './browser-support.mjs';
+import { clickReady, waitFor } from './browser-support.mjs';
 
 const WEB = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ROOT = resolve(WEB, '../..');
@@ -41,6 +41,10 @@ const COPY = {
     config: '本次有效配置',
     stale: '来源索引版本落后，以下内容须核验当前政策。',
     oldVersion: '这次回答引用的版本已经不是最新。',
+    pendingGenerated: '最新相关复测的回答为模型生成，待核验',
+    awaiting: '等待核验',
+    verifiedByRules: '规则核实',
+    submit: '提交选中的版本',
   },
   en: {
     waiting: 'Awaiting model connection (showing extractive result)',
@@ -54,6 +58,10 @@ const COPY = {
     stale:
       'The index is behind the source version. Verify the current policy before relying on the following passage.',
     oldVersion: 'This answer cites a version that is no longer current.',
+    pendingGenerated: 'Model-generated answer on the latest relevant retest: awaiting verification',
+    awaiting: 'Awaiting verification',
+    verifiedByRules: 'Verified by rules',
+    submit: 'Submit selected versions',
   },
 };
 
@@ -354,6 +362,51 @@ const applyAsAgent = (browser, settings) =>
     return response.status;
   })()`);
 
+/** Commit a saved pilot decision after a generated retest and read its stored feedback. */
+async function submitAfterGeneratedRetest(browser, language, calls, before) {
+  const text = COPY[language];
+  await openBench(browser);
+  await openSettings(browser);
+  await browser.click('#config-form input[value="llm"]');
+  await saveSettings(browser);
+  await ask(browser);
+  await waitFor(
+    browser,
+    `!!document.querySelector('.runs .run .answer-mode[data-answer-mode="llm"]')`,
+    30000,
+  );
+  assert.equal(calls.assistant, before + 1);
+  await browser.goto(`${BASE}#/work`);
+  await waitFor(browser, `!!document.querySelector('.card-open')`);
+  await browser.click('.card-open');
+  await waitFor(browser, `!!document.querySelector('#new-body')`);
+  await browser.select('[data-new="purpose"]', '试点决定');
+  await browser.type('#new-title', language === 'zh' ? '试点决定' : 'Pilot decision');
+  await browser.type('#new-body', language === 'zh' ? '复测后上线。' : 'Launch after the retest.');
+  await browser.clickText(language === 'zh' ? '保存为作品' : 'Save as work');
+  await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
+  await browser.click('[data-action="to-board"]');
+  await browser.click('.ws-toolbar [data-action="submit"]');
+  await waitFor(browser, `!!document.querySelector('.native-feedback input[type="checkbox"]')`);
+  await browser.click('.native-feedback input[type="checkbox"]');
+  await browser.select('.native-feedback select', 'launch');
+  await clickReady(browser, text.submit, '#sheet button');
+  await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`);
+  await browser.ev(`document.querySelector('#sheet')?.close()`);
+  await browser.goto(`${BASE}#/review`);
+  await waitFor(
+    browser,
+    `document.querySelector('.native-feedback')?.innerText.includes(${JSON.stringify(text.pendingGenerated)})`,
+    60000,
+  );
+  return browser.ev(`(() => {
+    const section = [...document.querySelectorAll('.native-feedback section')].find((node) =>
+      node.innerText.includes(${JSON.stringify(text.pendingGenerated)}));
+    section?.scrollIntoView({ block: 'center' });
+    return { text: section?.innerText ?? '', status: section?.querySelector('p.muted')?.textContent ?? '' };
+  })()`);
+}
+
 async function step(deployment, language, name, action) {
   await action();
   results.push({ deployment, language, name, status: 'passed' });
@@ -533,6 +586,21 @@ async function configured(language, calls) {
     );
   } finally {
     await browser.close();
+  }
+  const review = await enter('desktop', language);
+  try {
+    await step('configured', language, 'feedback keeps a generated retest pending', async () => {
+      const section = await submitAfterGeneratedRetest(review, language, calls, calls.assistant);
+      assert.equal(section.status, text.awaiting);
+      assert.ok(!section.text.includes(text.verifiedByRules), section.text);
+      await review.shot(`${OUT}/screenshots/configured-${language}-feedback-pending-desktop.jpg`);
+    });
+    assert.deepEqual(
+      review.logs.filter((entry) => entry.level === 'exception'),
+      [],
+    );
+  } finally {
+    await review.close();
   }
   const mobile = await enter('mobile', language);
   try {
