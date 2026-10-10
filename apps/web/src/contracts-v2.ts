@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 c75f25bc522ba73b49990b40269665d773deed4f5ae6804a4296cc89e78dd6ef. Do not edit.
+// Generated from frozen manifest SHA256 e36fa98225e1810d3ce4439965a1f971fadb7d6a66aa75180954ad76625e1d71. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -42,6 +42,7 @@ export type AssistantConfig = {
   domains: string[];
   fallback?: 'human' | 'none';
   freshness_guard?: 'none' | 'warn' | 'fallback';
+  generator?: 'extractive' | 'llm';
   id: string;
   launch_day?: number;
   manual_domains?: string[];
