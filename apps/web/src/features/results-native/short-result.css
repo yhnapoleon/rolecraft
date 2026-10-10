@@ -125,3 +125,8 @@
 .short-result__prompt > .btn {
   justify-self: start;
 }
+/* Section headings of supported components stay quieter than the result itself. */
+.short-result h3.row-title {
+  font-size: 14px;
+  color: var(--ink-2, #4b505b);
+}
