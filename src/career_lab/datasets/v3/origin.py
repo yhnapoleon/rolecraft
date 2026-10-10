@@ -5,7 +5,10 @@ real-world truth without the separately configured source authority.
 """
 
 import json
+from collections.abc import Iterable
+
 from career_lab.contracts.v2.core import ProtocolError, digest, read_file
+from career_lab.contracts.v2.data import DatasetRecordV2
 
 PROTOCOL = "w07-source-origin-v1"
 
@@ -29,8 +32,21 @@ def verify_sources(record, snapshot, root, authority=None):
         raise ProtocolError("source_origin_bucket_mismatch")
     if snapshot["session_id"] != record.lineage.session_id:
         raise ProtocolError("source_origin_lineage_mismatch")
-    for source in record.provenance.actual_sources:
-        raw = read_file(root, source)
+    verify_source_bodies(
+        record, (read_file(root, source) for source in record.provenance.actual_sources)
+    )
+    if record.bucket != "fixture":
+        # A caller's record, sidecar or review checkbox cannot authenticate itself.
+        if authority is None:
+            raise ProtocolError("authoritative_source_reader_required")
+        if authority(record, snapshot, tuple(record.provenance.actual_sources)) != expected:
+            raise ProtocolError("authoritative_source_binding_mismatch")
+    return expected
+
+
+def verify_source_bodies(record: DatasetRecordV2, sources: Iterable[bytes]) -> None:
+    """Check source declarations after the caller verifies path and hash bindings."""
+    for raw in sources:
         try:
             body = json.loads(raw)
         except (ValueError, UnicodeDecodeError):
@@ -47,10 +63,3 @@ def verify_sources(record, snapshot, root, authority=None):
             session = body.get("session_id", body.get("session"))
             if session is not None and session != record.lineage.session_id:
                 raise ProtocolError("source_file_session_mismatch")
-    if record.bucket != "fixture":
-        # A caller's record, sidecar or review checkbox cannot authenticate itself.
-        if authority is None:
-            raise ProtocolError("authoritative_source_reader_required")
-        if authority(record, snapshot, tuple(record.provenance.actual_sources)) != expected:
-            raise ProtocolError("authoritative_source_binding_mismatch")
-    return expected
