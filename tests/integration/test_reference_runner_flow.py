@@ -7,9 +7,15 @@ from pathlib import Path
 
 import pytest
 from pydantic import JsonValue
+from runner_fixture import live_run
+from test_bundle_registry_flow import write_json
 
+from career_lab.contracts.v2.core import ProtocolError
+from career_lab.contracts.v2.research import RunManifest
 from career_lab.delegations import http_transport
 from career_lab.delegations.credentials import Credentials
+from career_lab.reference_agent.runner import run_checklist
+from career_lab.registry.v3.store import BundleRegistry
 
 
 def test_RUN_01_cli_rejects_implicit_draft_protocol(tmp_path: Path) -> None:
@@ -403,6 +409,49 @@ def test_S2_same_run_name_with_new_fixed_command_has_its_own_result(tmp_path: Pa
         assert second["results"][0]["request_id"] != first["results"][0]["request_id"]
         assert second["results"][0]["response"]["result"]["test"]["query"] == query
         assert first["results"][0]["response"]["result"]["test"]["query"] != query
+
+
+def test_S2_resume_with_changed_manifest_keeps_checkpoint_and_sends_nothing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    with live_run(tmp_path, "tests.create") as run:
+        first = run_checklist(**run.arguments)
+        assert first["status"] == "completed", first["error_code"]
+        output = run.arguments["output"]
+        before = {path: path.read_bytes() for path in output.rglob("*") if path.is_file()}
+        registry = BundleRegistry(run.arguments["registry_path"])
+        manifest = RunManifest.model_validate_json(run.arguments["manifest_path"].read_bytes())
+        runtime = registry.load(run.arguments["runtime_id"])
+        checklist = json.loads(registry.resolve_file(run.arguments["runtime_id"], manifest.policy))
+        checklist["actions"][0]["arguments"]["query"] = "A changed question for the same output"
+        source = tmp_path / "source"
+        policy = write_json(source, "reference/changed-checklist.json", checklist)
+        runtime_ref = write_json(
+            source,
+            "reference/changed-runtime.json",
+            runtime.model_copy(update={"revision": "changed", "tools": policy}),
+        )
+        arguments = dict(run.arguments)
+        arguments["runtime_id"] = registry.register("runtime", source, runtime_ref)
+        arguments["manifest_path"] = tmp_path / "changed-run.json"
+        arguments["manifest_path"].write_text(
+            manifest.model_copy(update={"runtime": runtime_ref, "policy": policy}).model_dump_json()
+        )
+        methods = []
+        request = http_transport.request_json
+
+        def observed_request(
+            credentials: Credentials, method: str, suffix: str, *args: object, **kwargs: object
+        ) -> dict[str, JsonValue]:
+            methods.append(method)
+            return request(credentials, method, suffix, *args, **kwargs)
+
+        monkeypatch.setattr(http_transport, "request_json", observed_request)
+        with pytest.raises(ProtocolError) as rejected:
+            run_checklist(**arguments, resume=True)
+        assert (rejected.value.status, rejected.value.code) == (409, "resume_identity_mismatch")
+        assert [method for method in methods if method != "GET"] == []
+        assert {path: path.read_bytes() for path in output.rglob("*") if path.is_file()} == before
 
 
 def test_S2_confirmed_request_conflict_never_recovers_another_command(

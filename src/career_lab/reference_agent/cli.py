@@ -8,6 +8,8 @@ from pathlib import Path
 from sqlalchemy.exc import SQLAlchemyError
 
 from career_lab.contracts.v2.core import ProtocolError
+from career_lab.reference_agent.loop import run_loop
+from career_lab.reference_agent.runner import run_checklist
 from career_lab.reference_agent.suite import load_manifest
 
 
@@ -32,11 +34,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             manifest = load_manifest(args.manifest)
             report = {"run_id": manifest.id, "protocol_valid": True, "executed": False}
         else:
-            from career_lab.reference_agent.runner import run_checklist
-
             if args.command == "loop":
-                from career_lab.reference_agent.loop import run_loop
-
                 runner = run_loop
                 strategy = {"strategy": args.strategy, "goal": args.goal}
             else:
