@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Literal
 
 import pytest
-from test_cooperative_help import ROOT, Dialogue, assessment
+from test_cooperative_help import Dialogue, assessment
 
 from career_lab.api.modules import Gateway
 from career_lab.api.vertical_runtime import build_registry
@@ -16,6 +16,7 @@ from career_lab.runtime.model_adapter import ModelAdapter, ModelReply, ScriptedM
 from career_lab.runtime.roles_v2 import LocalRoleModel
 from career_lab.storage.role_memory import parse_public_reply
 from career_lab.storage.v2_store import V2Store
+from tests.support.scenario_packages import installed_locale_root
 
 
 @pytest.mark.parametrize("language", ["zh", "en"])
@@ -341,10 +342,7 @@ def test_reply_generation_mode_survives_runtime_configuration_switch(
         assert saved["content"]["generation_mode"] == original_mode
         next_mode = "model" if original_mode == "local" else "local"
         model = reply_model(next_mode, language)
-        source = ROOT / "scenarios/pm_pilot/v2"
-        if language == "en":
-            source /= "locales/en"
-        registry, _ = build_registry(source, model)
+        registry, _ = build_registry(installed_locale_root("pm_pilot", language), model)
         database_url = str(dialogue.store.db.engine.url)
         dialogue.store.db.engine.dispose()
         dialogue.store = V2Store(database_url)
