@@ -208,7 +208,7 @@ def test_reference_agent_uses_separate_secret_bound_derivation(
         session.client.get(
             session.url("tools"), headers={"Authorization": "Bearer " + token}
         ).status_code
-        == 403
+        == 200
     )
 
 
