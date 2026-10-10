@@ -17,6 +17,7 @@ import {
   taskPriority,
 } from './form-values';
 import { bindWorkspaceForm } from './form-slot';
+import { outcomeView, renderOutcome, type PreviewEntry } from './outcome-preview';
 import { recipientShares, rememberRequest } from '../../roles-native/v4-data';
 
 /** Bind only nodes assigned by the v4 host. See v4-slot.md for exact node keys.
@@ -203,6 +204,53 @@ export function mount(context: V4SlotContext): V4SlotHandle {
   });
   historyBox.append(historyCaption, loadHistory, historyRows);
   add('versions', historyBox);
+  // Saved outcome previews of the shown version: read only, never re-evaluated or executed.
+  const outcomeBox = el('div');
+  add('outcome', outcomeBox);
+  let outcomeEntries: PreviewEntry[] = [],
+    outcomeFor = '',
+    outcomeLoading = '',
+    outcomeShown = '';
+  function showOutcome(p: WorkspaceProductRead | undefined, hasDraft: boolean) {
+    if (!nodes.outcome) return;
+    const language = host.snapshot().uiLanguage === 'en' ? 'en' : 'zh';
+    const identity = p ? `${p.session_id}:${p.product_id}:` : '';
+    if (p) {
+      const key = `${identity}${p.version}:${JSON.stringify(controller.state.asOf)}`;
+      if (key !== outcomeFor && key !== outcomeLoading) {
+        outcomeLoading = key;
+        void controller.previews(p.product_id).then(
+          (entries) => {
+            if (destroyed || outcomeLoading !== key) return;
+            outcomeEntries = entries;
+            outcomeFor = key;
+            outcomeLoading = '';
+            render();
+          },
+          () => {
+            // Keep what was shown; a later workspace change reads again.
+            if (outcomeLoading === key) outcomeLoading = '';
+            if (!outcomeFor.startsWith(identity)) outcomeEntries = [];
+            outcomeFor = key;
+          },
+        );
+      }
+    }
+    const view =
+      p && outcomeFor.startsWith(identity)
+        ? outcomeView(outcomeEntries, { version: p.version, hasDraft }, language, (operation) =>
+            controller.can(operation),
+          )
+        : null;
+    const signature = JSON.stringify([view, language]);
+    if (signature === outcomeShown) return;
+    outcomeShown = signature;
+    const open = [...outcomeBox.querySelectorAll('details')].map((node) => node.open);
+    outcomeBox.replaceChildren(...(view ? [renderOutcome(doc, view, language)] : []));
+    outcomeBox.querySelectorAll('details').forEach((node, index) => {
+      if (open[index]) node.open = true;
+    });
+  }
   const roleLabel = (role: string) =>
     (
       ({
@@ -747,6 +795,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     loadHistory.textContent = T('读取已保存版本', 'Load saved versions');
     loadHistory.disabled = !p || controller.state.loading;
     if (historyKey !== versionKey()) history = [];
+    showOutcome(p ?? undefined, !!d);
     historyRows.replaceChildren(
       ...history.map((v) => {
         const row = el('details');

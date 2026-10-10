@@ -15,6 +15,7 @@
 | actions | 原作品操作区的独占内部容器；保存、另存、比较、确切引用、只读恢复、显式重试、移除/恢复、采用；不含页头/导航 |
 | sharing | 原作品分享/同事可见说明区域的内部容器；确切版本、接收者、问题和当前分享/撤回 |
 | versions | 原作品历史区域；按需读取已保存版本，正文只读，引用交 `host.openReference` |
+| outcome | 作品纸面内、分享区之前的独占容器；显示所选作品已保存版本的 outcome 预览（见下节） |
 | investigation | 原 investigation workpaper 的节点；绑定原 question/review 控件和 `investigation-review-save`。`data-w03-block-text=<确切块ID>` 可绑定已有块的文字输入；保留其他块、ID、引用和原版结构，不另建调查表单 |
 | taskForm | 原 `#task-form` 整表单；直接读取 name=title/note/priority/split、data-id。编辑须在挂载前由宿主把所展示的真实task.revision写入data-revision，或提供同任务的确切currentTask ref；不推算版本。外部form=task-form提交按钮可用，优先级first/next/later映射0/1/2，编辑＋拆分用同一batch。 |
 | productForm | 原 `#artifact-form` 整表单；直接读取title、purpose radio组及taskId select，绑定所选实际事项ref，保持普通文字作品。 |
@@ -40,6 +41,14 @@
 旧存档预览调用 `host.query('workspace_imports', {...input, mode:'preview'})`。这是已有 Operation 的 `preview_handler`，宿主必须映射到只读预览，不能当成 apply，也不能另造 preview operation。apply 用 `host.command('workspace_imports', {...input, mode:'apply', preview_storage_revision:真实预览值})`。input 来自原有 buildBrowserImport 纯函数；会话凭据、密钥键和未完成请求字段排除，只发送明确勾选的对象。host draft 只保存选择ID和已准备的脱敏输入/预览，不存未选中的私人作品。改变已恢复的选择时重新选择原存档；不删除原文件或浏览器记录。真实 id_map / version_map / unresolved 由服务端返回，旧测试不伪装为新练习运行。
 
 `workspace` 的 host draft 键以 sessionId 开头，保存编辑草稿的 baseVersion/token/value，创建表单文字、分享问题与导入选择。`request-pointer` 只存宿主返回的 requestId、状态、operation 以及用于确认草稿的标识，不存 Command/payload、重试次数或第二本网络日志。`recover` 仅响应用户点击并读取原请求；`retry` 仅在用户主动点击时调用。失败、未确认和needs_context不会自动重发。保存中继续输入时，旧ACK不得清除新token的文字；比较确认也绑定所看head和草稿token。
+
+## outcome 预览
+
+保存后的规则预览只从 `work_products.versions.list` 读取：页面上的 `previews` 与同序的 `preview_states`。读取键为会话、作品、当前版本与工作区 `as_of`，变化时重读一次；迟到的结果按键丢弃，从不触碰标题、正文、光标或焦点。显示当前已保存版本的预览；该版本没有预览时显示较早版本的预览并标为旧预览，不会静默换掉。其他版本的预览收在“更早版本的预览”里，保持原样。
+
+块内先给结论：计算所依据的确切版本、“规则核实”与模型状态（`generation_status` 为 `waiting_model` 时显示“语义判断：等待模型接入”）、业务回应、各项结果（事实、条件预测、待核验、未支持）各一行，以及一个澄清问题；成立条件、还缺的输入和依据收在可展开部分。`preview_states` 为 `stale` 时显示“旧预览，条件已变 / Earlier preview, conditions changed”，逐项列出变化的条件；之后实际发生的动作（应用配置、资源申请、运行测试、提交、分享）单独列出，上面的预测文字不改。相关操作按钮只带原 v4 的 `data-action`（`open-bench`、`config`、`resources`、`submit`、`request-review`），由原工具重新鉴权和校验版本；块本身不发命令。文案全部来自 `outcome-copy.ts` 的中英对照表，两边键相同。
+
+`preview.browser.mjs` 在正式 v4 入口、真实 HTTP 与 worker 上依次检查：保存试点决定→看到当前预览与澄清问题→从预览打开原设置工具应用配置并运行一次测试→同一预览标为旧预览、列出配置变化与实际动作且预测原文不变→保存第 2 版得到新预览、第 1 版预览保留在更早列表里。中英文各一遍，桌面与 390px 截图。
 
 ## 验证边界
 
