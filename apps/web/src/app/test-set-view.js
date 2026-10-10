@@ -1,6 +1,7 @@
 import { T, when, locale, isChinese } from './i18n';
 import { icon, agentMark, assistantMark } from './art.js';
 import { materialTitle } from './vocab.js';
+import { answerModeLabel, assistantText } from './assistant-mode';
 
 const esc = (v) =>
   String(v ?? '').replace(
@@ -139,22 +140,16 @@ export function testSetView({
 }
 
 function generationDetails(run) {
-  const mode = run.generation?.mode ?? run.mode;
-  const labels = {
-    extractive: T('原文抽取', 'Source extraction'),
-    llm: T('模型生成', 'Model generation'),
-    unavailable: T('未配置模型', 'Model not configured'),
-    failed: T('失败', 'Failed'),
-  };
-  const label = Object.hasOwn(labels, mode) ? labels[mode] : T('模式信息暂不可用', 'Mode information unavailable');
+  // Exactly one mode label, from this run's own record; the answer text carries no prefix.
+  const label = answerModeLabel(run);
   const sources = [...new Set(run.citations.map((c) => `${c.title || c.id} v${c.version}`))];
   const identity = [run.generation?.provider, run.generation?.model_revision].filter(Boolean);
-  return `<div class="test-generation" data-generation-mode="${esc(Object.hasOwn(labels, mode) ? mode : 'unknown')}">
-    <span class="test-generation-label">${esc(label)}</span>
+  const config = assistantText('assistant_mode_effective_config');
+  return `<div class="test-generation" data-generation-mode="${esc(label.mode)}">
+    <span class="test-generation-label"${label.hint ? ` title="${esc(label.hint)}"` : ''}>${esc(label.text)}</span>
     ${identity.length ? `<span>${esc(identity.join(' / '))}</span>` : ''}
-    ${mode === 'llm' ? `<span>${T('回答待核验', 'Answer awaiting verification')}</span>` : ''}
     ${sources.length ? `<span>${T('引用：', 'Citations: ')}${esc(sources.join(' · '))}</span>` : ''}
-    ${run.effectiveConfig ? `<details class="test-effective-config"><summary>${T('本次有效配置', 'Effective configuration for this run')}</summary><pre>${esc(JSON.stringify(run.effectiveConfig, null, 2))}</pre></details>` : `<span>${T('本次有效配置暂不可用', 'Effective configuration unavailable')}</span>`}
+    ${run.effectiveConfig ? `<details class="test-effective-config"><summary>${esc(config)} · v${esc(run.configVersion)}</summary><pre>${esc(JSON.stringify(run.effectiveConfig, null, 2))}</pre></details>` : `<span>${esc(assistantText('assistant_mode_effective_config_unavailable'))}</span>`}
   </div>`;
 }
 

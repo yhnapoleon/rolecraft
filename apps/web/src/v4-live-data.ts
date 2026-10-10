@@ -155,7 +155,12 @@ export class V4LiveData {
               (c: any) =>
                 c.kind === 'material' && c.version < t.execution.source_versions[c.object_id],
             ),
-            mode: context.semantic.assistant === 'waiting_model' ? 'waiting_model' : 'model',
+            // Each answer keeps its own saved mode; the deployment state is reported separately.
+            mode: r.assistant?.mode ?? 'unknown',
+            generation: r.assistant
+              ? { provider: r.assistant.provider, model_revision: r.assistant.model_revision }
+              : null,
+            effective_config: t.config?.effective ?? null,
             citations: (t.citations ?? []).map((c: any) => ({
               material_id: c.object_id,
               version: c.version,
@@ -168,6 +173,7 @@ export class V4LiveData {
         });
       this.store.update(s.id, {
         v2MaterialTitles: w.material_titles,
+        v2Assistant: context.semantic.assistant,
         v2ReadOnly: context.read_only === true,
         v2Domains: context.configuration_domains ?? s.v2Domains ?? config.domains,
         world: {

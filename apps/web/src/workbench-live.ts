@@ -77,6 +77,12 @@ export function toPilot(c: any): Pilot {
   };
 }
 
+/** The saved effective configuration, without identifiers that do not describe behaviour. */
+export function effectiveSummary(config: Record<string, unknown>) {
+  const { id: _id, session_id: _session, schema_version: _schema, ...rest } = config;
+  return { ...rest, generator: rest.generator ?? 'extractive' };
+}
+
 export class LiveWorkbench {
   readonly store: WorkspaceStore;
   readonly fromPilot = fromPilot;
@@ -231,6 +237,8 @@ export class LiveWorkbench {
         s.feedbackFailure,
         s.failedTurn,
         s.v2Workspace,
+        s.v2Assistant,
+        s.queuedTestRuns,
       ]),
     );
     const changed = signature !== this.signature;
@@ -259,6 +267,17 @@ export class LiveWorkbench {
       submissionId: this.store.submissionId(s),
     };
     a.nudges = [];
+    // Deployment state only: each answer below is labelled from its own saved mode.
+    a.assistantMode = s.protocol === 2 ? (s.v2Assistant ?? null) : null;
+    a.queuedTests = Object.values(s.queuedTestRuns ?? {}).map((q) => ({
+      requestId: q.requestId,
+      question: q.query,
+      taskId: q.taskId,
+      workId: q.workId,
+      caseId: q.caseId,
+      blockId: q.blockId,
+      createdAt: q.createdAt,
+    }));
     a.tests = s.tests.map((t) => {
       const previous = a.tests.find((p: any) => p.id === t.id) || {};
       const saved = s.testRunMeta?.[t.id];
@@ -267,13 +286,7 @@ export class LiveWorkbench {
         id: t.id,
         question: t.query,
         rawAnswer: t.answer,
-        answer:
-          (s.protocol === 2 && t.mode === 'waiting_model'
-            ? T(
-                '等待模型接入（当前为原文检索结果）\n\n',
-                'Waiting for model connection (source retrieval result)\n\n',
-              )
-            : '') + t.answer,
+        answer: t.answer,
         citations: t.citations.map((c) => ({
           id: c.material_id,
           version: c.version,
@@ -305,6 +318,9 @@ export class LiveWorkbench {
         intent: meta.intent || '',
         refs: meta.refs || [],
         mode: t.mode,
+        assistant: s.protocol === 2 ? (s.v2Assistant ?? null) : null,
+        generation: t.generation ?? null,
+        effectiveConfig: t.effective_config ? effectiveSummary(t.effective_config) : null,
         asOfSeq: t.as_of_seq,
         fallback: t.fallback,
         stale: t.stale,
