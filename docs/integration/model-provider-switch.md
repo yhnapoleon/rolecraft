@@ -68,11 +68,11 @@ uv run --locked pytest -q tests/expansion_v3/w02/test_generation_display.py --ba
 
 ## 公共冻结与装配
 
-`AssistantConfig.generator` 是唯一新增的契约字段，类型为 `extractive|llm`，可选、默认 extractive；默认值仍省略于序列化。新公共 revision 为 `expansion-v3-497382cedd5e14aed23ed353b6c8167e0a9b1dfa7ce802c5aebf06b0bd7913ba`，previous 链接原 `expansion-v3-7f64f17784ad7756fefc53682954b1318bddb58eecdc5dbe645f3187cbc321ed`。标准导出后沿现有 `without_provenance` 兼容方式保留 schema，旧 examples 字节不变；原 documents／review_fixes 保全。依赖该公共 manifest 的工程师契约由标准导出器在新目录生成后同步。错误码目录补收既有代码中已有的代码，未新增这些业务行为。
+`AssistantConfig.generator` 是唯一新增的契约字段，类型为 `extractive|llm`，可选、默认 extractive；默认值仍省略于序列化。并入 main `218d558` 后重新生成的公共 revision 为 `expansion-v3-e36fa98225e1810d3ce4439965a1f971fadb7d6a66aa75180954ad76625e1d71`，previous 链接 main 当时的 `expansion-v3-c75f25bc522ba73b49990b40269665d773deed4f5ae6804a4296cc89e78dd6ef`。发布历史只在 `manifest_history.py` 末尾追加一条记录：changes_since_draft 增加该字段说明，integration_changes 新增 `assistant-generator`。导出沿现有 `without_provenance` 兼容方式，含 AssistantConfig 的 7 个 schema 与 openapi 增加该可选字段；examples 与 errors 字节不变，原 documents／review_fixes 保全。工程师契约 `engineer-review-v1` 内嵌 AssistantConfig，因此由标准导出器重新生成后，除绑定的上游 manifest hash 外，EngineerProbeResult、EngineerRegressionReport、EngineerReviewInput 三个 schema、openapi 与 types.ts 也带上同一可选字段，revision 为 `engineer-review-v1-470a3e9c17c916f0a92fa11958dd93d9b80e50f0528b99d229af590739020214`。
 
-`build_registry` 仅用三行构造参数透传已配置模型；`LocalRoleModel` 映射为 None。当前两类冻结测试已通过，包括 v1 场景、契约和旧研究冻结原字节检查。当前契约保护清单只重钉此次获准替换的11项产物；历史冻结、场景包和所有旧实例保留，原公共及工程师冻结目录另有原件归档。
+`build_registry` 仅用三行构造参数透传已配置模型；`LocalRoleModel` 映射为 None。发布身份用 `scripts/regression/release_identity.py --refresh` 按当前字节重算：受保护清单中本次重生成的 10 项（manifest、openapi、revision 与 7 个 schema）更新，无新增，`commit` 不变；历史冻结、场景包和所有旧实例保留。
 
-080允许各线在自己的分支重生成冻结，最终合并结果由080再次重生成；本分支 revision 不替代最终组合身份。
+上述 revision 是本分支与 main `218d558` 的组合结果。main 若在合入前前进，须按同样方式在末尾追加记录、指向 main 当时的 revision 并重新生成。
 
 ## 留给宿主与公共存储的接缝
 
@@ -85,9 +85,9 @@ uv run --locked pytest -q tests/expansion_v3/w02/test_generation_display.py --ba
 
 ## 验证证据的范围
 
-续行定向覆盖生成27项、provider14项、renderer1项、公共freeze2项及工程师契约28项。完整门禁必须取得 `/private/tmp/claude-501/gate.lock` 后执行；最终结果、逐ID对照及任何负载型超时的三次重跑记录见续行回执 `runs/local/082/finish/receipt.json`。
+定向覆盖生成27项、provider14项、renderer1项、公共freeze2项及工程师契约28项。完整门禁须在机器锁下执行，结果、逐ID对照及负载型超时的重跑记录写入集成回执。
 
 此前无锁轮次按080指示中止，其旧失败／部分进度不作为续行完整门禁通过证据；历史日志仍保留。此前固定反馈／原语义18项、正常v4英文八步及中英390px组件检查通过，中文曾在反馈等待阶段超时。宿主未接通的生成界面仍不据这些结果称完成。
 
 
-080补充裁定：新公共 revision 与旧安装包绑定不同导致的 `runtime_contract_mismatch` 单列“待统一重绑”，不在功能分支重绑安装包或修改catalog／测试。统一重绑由080在质量阶段放行后的集成树单独PR执行。完整门禁仅此类失败可按“可合入｜待统一重绑”交付，其余后端、前端、状态、构建及逐ID要求不变；未完成的门禁不能预填通过。
+旧安装包绑定与新 revision 不同引起的 `runtime_contract_mismatch` 不再作为本线例外：main 的业务测试经 `tests/support/scenario_packages.py` 读取正式安装的发布包，旧作者根只用于迁移与身份测试，因此新 revision 下无需重绑安装包、改 catalog 或改测试。后端、前端、状态、构建及逐ID要求不变；未完成的门禁不能预填通过。
