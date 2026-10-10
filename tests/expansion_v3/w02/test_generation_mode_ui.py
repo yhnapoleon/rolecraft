@@ -12,6 +12,7 @@ from fastapi.testclient import TestClient
 
 from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.jobs.worker import Worker
+from career_lab.scenarios.v2.localization import text as localized_text
 
 QUESTION = {"zh": "住宿报销上限是多少？", "en": "What is the hotel reimbursement limit?"}
 MISS = {"zh": "公司年会在哪个城市举办？", "en": "Which city hosts the annual company party?"}
@@ -236,3 +237,27 @@ def test_learner_resets_generator_to_extractive_without_provider(environment, la
     assert result["execution"]["attempts"] == []
     assert row["assistant"]["mode"] == "extractive"
     assert fake.calls == []
+
+
+def test_generated_answer_keeps_stale_source_warning(environment, language):
+    database, fake = environment
+    with deployment(database, "openai") as (app, client):
+        session = start(client, language)
+        session.ask("initial", QUESTION[language])
+        response = session.configure("warn", {"freshness_guard": "warn", "generator": "llm"})
+        assert response.status_code == 200, response.text
+        workspace = session.workbench()["timeline"]["workspace"]
+        assert workspace["source_versions"]["policy"] > workspace["indexed_versions"]["policy"]
+        session.ask("stale", QUESTION[language])
+        run_worker(app)
+        row = latest(session)
+    result = row["content"]
+    warning = localized_text(language, "stale_warning")
+    assert row["assistant"]["mode"] == "llm"
+    assert result["status"] == "answered_with_warning"
+    assert result["answer"] == warning + GENERATED[language]
+    cited = result["citations"][0]
+    # The interface marks "cites an older version" from these exact recorded versions.
+    assert cited["object_id"] == "policy"
+    assert cited["version"] < result["execution"]["source_versions"]["policy"]
+    assert len(fake.calls) == 1
