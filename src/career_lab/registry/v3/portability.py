@@ -9,7 +9,11 @@ from urllib.parse import urlsplit
 import yaml
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError
-from career_lab.delegations.credential_fields import CREDENTIAL_ASSIGNMENT, is_credential_field
+from career_lab.delegations.credential_fields import (
+    CREDENTIAL_ASSIGNMENT,
+    is_credential_field,
+    is_credential_value,
+)
 
 # Keep authority punctuation intact; splitting before @ can conceal URL userinfo.
 URI = re.compile(r"(?i)(?:[a-z][a-z0-9+.-]*://|//)[^\s<>]+")
@@ -83,15 +87,42 @@ def _check(value: object, ancestors: frozenset[int]) -> None:
             raise ProtocolError("registry_configuration_invalid")
         ancestors = ancestors | {id(value)}
     if isinstance(value, dict):
-        if any(is_credential_field(str(key)) for key in value):
+        if any(is_credential_field(str(key)) for key in value) or _named_credential(value):
             raise ProtocolError("registry_credentials_forbidden", status=403)
         for key, child in value.items():
             _check(key, ancestors)
             _check(child, ancestors)
     elif isinstance(value, (list, tuple)):
+        if _credential_pair(value):
+            raise ProtocolError("registry_credentials_forbidden", status=403)
         for child in value:
             _check(child, ancestors)
     elif isinstance(value, str):
+        if is_credential_value(value):
+            raise ProtocolError("registry_credentials_forbidden", status=403)
         reject_url_credentials(value)
         if PurePosixPath(value).is_absolute() or PureWindowsPath(value).is_absolute():
             raise ProtocolError("registry_machine_path_forbidden", status=403)
+
+
+def _credential_pair(value: list | tuple) -> bool:
+    """Header pairs such as ["Authorization", "..."] carry the secret beside its name."""
+    return (
+        len(value) == 2
+        and all(isinstance(part, str) for part in value)
+        and is_credential_field(value[0])
+        and bool(value[1].strip())
+    )
+
+
+def _named_credential(value: dict) -> bool:
+    """Name/value header records such as {"name": "X-Api-Key", "value": "..."}."""
+    secret = value.get("value")
+    return (
+        isinstance(secret, str)
+        and bool(secret.strip())
+        and any(
+            isinstance(value.get(label), str) and is_credential_field(value[label])
+            for label in ("name", "key", "header")
+        )
+    )
