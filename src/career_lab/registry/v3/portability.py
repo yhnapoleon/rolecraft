@@ -10,7 +10,8 @@ import yaml
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError
 from career_lab.delegations.credential_fields import (
-    CREDENTIAL_ASSIGNMENT,
+    has_credential_text,
+    is_collection_field,
     is_credential_field,
     is_credential_value,
 )
@@ -35,6 +36,7 @@ MACHINE_PATH = re.compile(
     r"(?<![\w./\\:-])(?:/(?:Users|home|private|tmp|Volumes|etc|root|var|opt|usr|mnt)/\S+"
     r"|[A-Za-z]:[\\/]\S+|\\\\[^\s\\]+\\\S+)"
 )
+HEADER_NAME = re.compile(r"[A-Z][A-Za-z0-9]*(?:-[A-Za-z0-9]+)*")
 TEXT_MEDIA_TYPES = frozenset(
     {
         "application/yaml",
@@ -54,7 +56,7 @@ def validate_portability(raw: bytes, ref: FileRef) -> None:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise ProtocolError("registry_member_format_unsupported") from exc
-    if CREDENTIAL_ASSIGNMENT.search(text):
+    if has_credential_text(text):
         raise ProtocolError("registry_credentials_forbidden", status=403)
     if MACHINE_PATH.search(text):
         raise ProtocolError("registry_machine_path_forbidden", status=403)
@@ -87,7 +89,7 @@ def _check(value: object, ancestors: frozenset[int]) -> None:
             raise ProtocolError("registry_configuration_invalid")
         ancestors = ancestors | {id(value)}
     if isinstance(value, dict):
-        if any(is_credential_field(str(key)) for key in value) or _named_credential(value):
+        if _secret_mapping(value):
             raise ProtocolError("registry_credentials_forbidden", status=403)
         for key, child in value.items():
             _check(key, ancestors)
@@ -105,11 +107,44 @@ def _check(value: object, ancestors: frozenset[int]) -> None:
             raise ProtocolError("registry_machine_path_forbidden", status=403)
 
 
+def _is_text(value: object) -> bool:
+    return isinstance(value, str) and bool(value.strip())
+
+
+def _holds_text(value: object) -> bool:
+    """Any non-empty string inside a value; cycles and depth stay bounded like _check."""
+    pending, seen = [(value, 0)], set()
+    while pending:
+        item, depth = pending.pop()
+        if _is_text(item):
+            return True
+        if isinstance(item, (dict, list, tuple)) and id(item) not in seen and depth < 64:
+            seen.add(id(item))
+            children = item.values() if isinstance(item, dict) else item
+            pending.extend((child, depth + 1) for child in children)
+    return False
+
+
+def _secret_mapping(value: dict) -> bool:
+    """Only text is a secret: null, flags, numbers and nested schemas are not."""
+    for key, child in value.items():
+        name = str(key)
+        if is_collection_field(name) and _holds_text(child):
+            return True
+        if is_credential_field(name) and (
+            _is_text(child) or (isinstance(child, (list, tuple)) and _holds_text(child))
+        ):
+            return True
+    # Provider blocks commonly name their secret plainly: {"provider": ..., "key": ...}.
+    return ("provider" in value and _is_text(value.get("key"))) or _named_credential(value)
+
+
 def _credential_pair(value: list | tuple) -> bool:
     """Header pairs such as ["Authorization", "..."] carry the secret beside its name."""
     return (
         len(value) == 2
         and all(isinstance(part, str) for part in value)
+        and bool(HEADER_NAME.fullmatch(value[0]))
         and is_credential_field(value[0])
         and bool(value[1].strip())
     )
@@ -117,12 +152,7 @@ def _credential_pair(value: list | tuple) -> bool:
 
 def _named_credential(value: dict) -> bool:
     """Name/value header records such as {"name": "X-Api-Key", "value": "..."}."""
-    secret = value.get("value")
-    return (
-        isinstance(secret, str)
-        and bool(secret.strip())
-        and any(
-            isinstance(value.get(label), str) and is_credential_field(value[label])
-            for label in ("name", "key", "header")
-        )
+    return _is_text(value.get("value")) and any(
+        isinstance(value.get(label), str) and is_credential_field(value[label])
+        for label in ("name", "key", "header")
     )
