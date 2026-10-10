@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 90a362db7068f8b9707406a9633cf25f3da6c8be38df18c24da3edadf069326b. Do not edit.
+// Generated from frozen manifest SHA256 53111eedfd72566e749dfc208a272e4a4ed55d9cde0ef29dcea80bd5c04820e5. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -335,6 +335,7 @@ export type FeedbackV2 = {
   missing_inputs?: string[] | null;
   clarification?: string[] | null;
   generation_status?: 'rules_verified' | 'waiting_model' | 'advisory' | 'failed' | 'unknown' | null;
+  preview_conditions?: _PreviewConditions | null;
 };
 export type FileRef = { media_type?: string; path: string; schema_version?: 2; sha256: string };
 export type HistoricalResponsibilitiesSnapshot = {
@@ -939,6 +940,7 @@ export type WorkspaceProductPage = {
   as_of: VersionPoint;
   items: WorkspaceProductRead[];
   next_cursor?: number | null;
+  preview_states?: _PreviewState[] | null;
   previews?: FeedbackV2[] | null;
   schema_version?: 2;
   shares: ProductShare[];
@@ -999,7 +1001,9 @@ export type _OutcomeAction = {
     | 'reviews.create'
     | 'work_products.shares.create'
     | 'configuration.apply'
-    | 'tests.create';
+    | 'tests.create'
+    | 'actions'
+    | 'submissions.create';
   objects: ObjectRef[];
 };
 export type _OutcomeItem = {
@@ -1011,4 +1015,39 @@ export type _OutcomeItem = {
   conditions?: string[];
   missing_inputs?: string[];
   values?: Record<string, JsonValue>;
+};
+export type _PreviewActual = {
+  at?: VersionPoint | null;
+  operation:
+    | 'configuration.apply'
+    | 'actions'
+    | 'tests.create'
+    | 'submissions.create'
+    | 'work_products.shares.create';
+  ref: ObjectRef;
+  schema_version?: 2;
+  status: string;
+  values?: Record<string, JsonValue>;
+};
+export type _PreviewChange = {
+  after?: JsonValue;
+  before?: JsonValue;
+  condition: 'input' | 'configuration' | 'resources' | 'materials';
+  ref?: ObjectRef | null;
+  schema_version?: 2;
+};
+export type _PreviewConditions = {
+  schema_version?: 2;
+  config_version?: number | null;
+  resources?: Record<string, number> | null;
+  source_versions?: Record<string, number> | null;
+};
+export type _PreviewState = {
+  actual?: _PreviewActual[];
+  changes?: _PreviewChange[];
+  checked_at: VersionPoint;
+  feedback: ObjectRef;
+  schema_version?: 2;
+  status: 'current' | 'stale';
+  superseded_by?: ObjectRef | null;
 };

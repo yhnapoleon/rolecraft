@@ -686,4 +686,18 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "mapped to None."
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-90a362db7068f8b9707406a9633cf25f3da6c8be38df18c24da3edadf069326b"
+        ),
+        "integration_changes": {
+            "outcome-preview-freshness": "Optional recorded preview conditions on FeedbackV2 "
+            "and read-time preview states on WorkspaceProductPage: stale previews name each "
+            "changed input, configuration, resource or material condition, point to a newer "
+            "preview and list later recorded business actions beside the unchanged prediction. "
+            "Outcome actions may also name approval requests and submissions. Save-time checks "
+            "follow the work purpose and task. Records and pages without previews retain "
+            "their bytes; reads never evaluate again."
+        },
+    },
 )

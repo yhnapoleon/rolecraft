@@ -1237,7 +1237,9 @@
             "reviews.create",
             "work_products.shares.create",
             "configuration.apply",
-            "tests.create"
+            "tests.create",
+            "actions",
+            "submissions.create"
           ],
           "title": "Operation",
           "type": "string"
@@ -1323,6 +1325,65 @@
         "summary"
       ],
       "title": "_OutcomeItem",
+      "type": "object"
+    },
+    "_PreviewConditions": {
+      "additionalProperties": false,
+      "description": "Key business conditions read when a preview was formed; None means not a key condition.",
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "resources": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "minimum": 0,
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Resources"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source_versions": {
+          "anyOf": [
+            {
+              "additionalProperties": {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              "type": "object"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Versions"
+        }
+      },
+      "title": "_PreviewConditions",
       "type": "object"
     }
   },
@@ -1556,6 +1617,17 @@
       ],
       "default": null,
       "title": "Outcomes"
+    },
+    "preview_conditions": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/_PreviewConditions"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "preview_kind": {
       "anyOf": [
