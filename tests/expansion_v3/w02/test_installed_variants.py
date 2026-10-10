@@ -7,6 +7,7 @@ import pytest
 from career_lab.contracts import v2 as C
 from career_lab.scenarios.v2.evidence_ports.store import create_store_fact_adapter
 from career_lab.scenarios.v2.module import point
+from tests.support.scenario_packages import installed_root
 
 ROOT = Path(__file__).resolve().parents[3]
 spec = importlib.util.spec_from_file_location(
@@ -26,7 +27,7 @@ def variant(request, tmp_path, monkeypatch):
     monkeypatch.setenv("W05_W02_COMBO_ROOT", str(ROOT))
     monkeypatch.setenv(
         "W05_W02_SCENE_ROOT",
-        str(ROOT / "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6" / sid),
+        str(installed_root(sid)),
     )
     generator = base.combined.__wrapped__(SimpleNamespace(param=lang), tmp_path)
     value = next(generator)

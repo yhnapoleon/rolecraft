@@ -1,6 +1,6 @@
 # 工程师任务包、基线复现与离线候选
 
-工程师命令从获准读取的 PM 会话交接固定配置、原始测试和公开失败案例，使用同一助手复现历史行为；也可把保存的测试计划或已确认的原文片段导出为待审 probe 候选。配置修改提交与完整回归 review、研究 suite 审查发布、PM 报告回引尚未实现。
+工程师命令从获准读取的 PM 会话交接固定配置、原始测试和公开失败案例，使用同一助手复现历史行为；也可把保存的测试计划或已确认的原文片段导出为待审 probe 候选。配置提交与完整suite复核已提供冻结文件入口；研究 suite 审查发布和 PM 报告回引尚未实现。
 
 ## 读取与材料边界
 
@@ -59,4 +59,43 @@ career-lab-engineer probes-from-plan \
 
 测试通过动态端口真实 HTTP 创建与修订 PM 作品，CLI 子进程显式使用被测工作区源码并检查导入位置；原 `career-lab-engineer` 入口分别验证中英文。旧格式兼容使用校验固定的已发布导出器夹具，不依赖浅克隆中可能缺失的提交对象。
 
-冻结的 EngineerSubmission 尚不能表达基线 hash、自报报告引用、未修复项和创建时间；RegressionReport 也缺少完整复核状态、suite／reviewer 身份和实际生效配置的冻结映射。公共契约负责方完成兼容增量、集成人串行发布冻结输入后，才能接续 submit/review；不能把这些字段塞进说明字符串或另造平行公共协议。专用页面、任意代码执行、训练和付费模型调用均未由这些命令开放。
+新增的 engineer-review-v1 冻结协议已提供基线 hash、自报报告、未修复项、创建时间、逐probe结果与复核身份。submit与review已消费该增量；PM回引另行接入。旧对象按原版本读取；专用页面、任意代码执行、训练和付费模型调用均未由这些命令开放。
+
+## 配置提交
+
+`career-lab-engineer submit --pack <原包目录> --input <submission.json> --output <提交仓库>`，另带上述database／credentials／scenario参数。输入采用`contracts.v2.engineer.EngineerSubmissionRecord`的`engineer-review-v1`协议；原pack引用固定为pack.json，候选配置与可选自报报告放在submission.json同目录，使用互不重名的单层相对文件引用。baseline.json、submission.json、input.json、scenario.json、probe-suite.json、reviewer.json和resources.json是内部保留名。各引用包含确切原件hash；字段与示例见[冻结协议](../contracts/engineer-review.md)。
+
+提交含原基线hash、候选文件、原始修改说明、显式null或EngineerClaimedReport引用、未修复项清单、当前认证执行者、带时区的创建时间及工作语言。所有事实由输入提供且完整保留；执行者不得冒用。候选严格解析AssistantConfig并经场景校验；未知字段、非法域／工作项、执行参数、另行指定的校准文件引用均拒绝。不执行输入文字、代码、命令或网络请求，也不改变PM配置或审批资源。
+
+输出仓库按submission ID的hash划分不可变目录，CLI返回directory；目录包含submission.json、baseline.json及引用原件。相同ID／内容回读原时间与文件，修改内容须另取ID；同ID不同内容或输出损坏明确冲突。每次调用都重新核验pack原始来源和当前权限，需要read及act/tests.create；只保留文件不能延续已撤销权限。提交成功表示合法记录已保存，不表示候选修复或自报结果已经通过复核。
+
+## 配置复核
+
+```sh
+career-lab-engineer review \
+  --database /path/to/source.db --credentials /private/path/client.json \
+  --scenario /path/to/installed/scenario \
+  --pack /private/path/handoff --submission /private/path/submissions/submission-HASH \
+  --private-output /trusted/private-reviews --output /path/to/public-reports
+```
+
+review由持有原运行库与受信场景的本地复核端执行；提交者不能提供suite或预期。当前调用者须与提交执行者一致且仍有获准读取及测试权限，源库只读。私有仓库须由本机复核者保管，目录权限0700；它与公开输出必须分开，禁止将私有仓库放进公开目录。目录hash与清单保证完整性，不为能修改整个受信仓库的操作者提供数字签名背书。
+
+复核固定原pack的来源时点、基线、完整场景suite、候选、实际资源、执行者权限范围与复核实现身份。全部probe分别使用基线和候选实际生效配置运行；不会采用作者probe自带的config／grant／refresh代替候选或批准资源。已有suite包含作者场景条件，因此报告可以出现条件不适用导致的失败；这些按原冻结预期如实呈现，并与同条件基线比较，不能宣称某个配置必能全过。目标query没有匹配可信预期时保留未核验。
+
+私有inputs目录保存确切提交、自报、suite、来源资源与复核输入；reports目录保留冻结完整报告、逐probe基线和候选原始结果及config-diff.json。逐项记录query、预期类型、真实行为、来源版本、requested／effective配置、配置hash、执行者、耗时及pass/fail/error。报告给出目标修复、新增回归、声明一致性和未修复探针；没有个人能力总分。
+
+自报报告应包含当前公开suite的完整probe ID集合（当前为4项），逐项保留实际pass/fail/error。缺项、额外项或结果不同均为report_mismatch；原自报和实际报告分别保留。隐藏结果由复核端产生，提交者不自定隐藏真值。`verified`表示执行与核对完成，可以包含业务失败；`report_mismatch`表示声明不符；`incomplete`表示执行故障或核验未完成。后两者命令非零退出，配置业务失败与进程故障分别记录。
+
+公开目录使用窄投影：作者冻结的公开问题、预期/实际状态枚举、逐项结果、无正文的引用身份、配置hash、耗时及隐藏集计数。完整actual、requested/effective配置、回答/引用正文、用户文件名和media_type均留私有端。finding仅用固定中英规则文字；自报未修复原文与模型建议原文不公开，visibility标记本身不授予发布权限。配置差异仍是规则事实；本切片不新增或改写已定稿的工程师五条rubric。未接语义能力时保留waiting_model（等待模型接入）、text=null、affects_score=false，不调用模型。
+
+相同规范化输入得到相同review身份。重复请求每次重新授权并验证来源，再回读原报告及时间，不执行probe。复核锁由操作系统随进程释放，原持久预约保留：发现预约但没有完成报告时生成incomplete，所有尚不能证明完成的probe标error，不自动再次执行。同一私有仓库内并发请求返回engineer_review_busy；报告文件、清单或输入变化明确拒绝。共用不可变发布器若在文件发布阶段留下崩溃锁，将明确返回publisher_busy并保留原件；本命令不自动抢锁或清锁。私有仓库丢失后不能声称恢复了原复核；另选新私有仓库属于独立运行。
+
+工程师报告只提供配置回归证据，不自动采用配置、批准资源或改变PM业务状态。PM引用／适用性展示尚未接入；说明语义质量与真实模型仍待后续。
+
+
+### 公开投影版本更新
+
+公开产物引用只给出kind/hash，不再携带提交者提供的文件名或media_type。完整输入、原始配置和所有私有报告继续保留。读取既有私有报告并输出新投影不会重写私有原件；公开输出采用旧格式时，使用新的 `--output` 目录，保留原目录，不直接覆盖。正常同输入恢复仍返回原review身份和时间，不执行probe或模型。
+
+后续AIPM回引需消费新的窄DTO；不能在引用对象或适用性说明中再次附上原始配置/自由原文。协议变更、私有执行结果与五条rubric的定稿分别维护，隐私修复不代表完整工程师评分或前端已完成。

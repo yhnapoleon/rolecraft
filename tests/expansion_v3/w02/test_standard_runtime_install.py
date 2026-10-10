@@ -17,6 +17,7 @@ import httpx
 import pytest
 
 from career_lab.contracts import v2 as C
+from tests.support.scenario_packages import installed_locale_root
 
 ROOT = Path(__file__).resolve().parents[3]
 
@@ -26,9 +27,7 @@ def exercise_standard(scenario, language, tmp_path, *, revise):
         scenario + "-" + language
     )
     evidence.mkdir(parents=True, exist_ok=False)
-    scene = ROOT / "scenarios/pm_pilot/v2/installed/rubric-v2-a577-2.9.6" / scenario
-    if language == "en":
-        scene = scene / "locales/en"
+    scene = installed_locale_root(scenario, language)
     env = {k: v for k, v in os.environ.items() if k != "PYTHONPATH"}
     env.update(CAREER_LAB_SCENARIO_V2=str(scene), PYTHONDONTWRITEBYTECODE="1")
     db = "sqlite:///" + str(evidence / "standard.db")
