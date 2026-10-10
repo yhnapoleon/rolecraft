@@ -35,6 +35,7 @@ SOURCE = ROOT / "scenarios/pm_pilot/v2/candidates/semantic-rules-v1-2.9.6"
 FINAL = "rubric-v2-final-20261009"
 FINAL_SHA256 = "aa0de4302ca42368a262dc516fd3d8dab83286dd10dff7350c35b0c3772321cd"
 LANGUAGE_ROOTS = {"zh": "pm_pilot", "en": "pm_pilot/locales/en"}
+FINAL_SOURCE = ROOT / "scenarios/pm_pilot/v2/candidates/rubric-final-v1-2.9.6/pm_pilot"
 
 
 def members(root: Path) -> dict[str, str]:
@@ -239,3 +240,27 @@ def test_same_submission_feedback_differs_only_in_evaluation_identity(
     assert len(new["items"]) == 14
     assert learner_visible(new) == learner_visible(old)
     assert final_definition_bytes() == (final / "runtime/evaluation-rubric.json").read_bytes()
+
+
+def test_rebind_without_evaluation_keeps_an_installed_final_rubric(tmp_path: Path) -> None:
+    # Fixture preparation rebinds whatever is installed; the final rubric must survive it.
+    for language, source in (("zh", FINAL_SOURCE), ("en", FINAL_SOURCE / "locales/en")):
+        destination = tmp_path / language
+        rebind(
+            source,
+            destination,
+            protocol=PROTOCOL,
+            contract_revision=current_contract_revision(),
+            scenario_revision="keep-final",
+            runtime_revision="keep-final",
+        )
+        for path in (
+            "runtime/evaluation.json",
+            "runtime/evaluation-rubric.json",
+            "runtime/evaluation-rules.json",
+            "runtime/evaluation-protocol.json",
+        ):
+            assert (destination / path).read_bytes() == (source / path).read_bytes(), path
+        release = read_release(load_package(destination))
+        assert release is not None and release.evaluation_version == FINAL_EVALUATION_VERSION
+        assert content_files(load_package(destination)) == content_files(load_package(source))
