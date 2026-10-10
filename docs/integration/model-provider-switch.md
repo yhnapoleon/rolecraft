@@ -100,12 +100,12 @@ uv run --locked python -m pytest -q tests/expansion_v3/w02/test_generation_displ
 
 | 契约 | 新 revision | 变化 |
 |---|---|---|
-| expansion-v3 | `expansion-v3-e36fa98225e1810d3ce4439965a1f971fadb7d6a66aa75180954ad76625e1d71`（previous 为 `expansion-v3-c75f25bc522ba73b49990b40269665d773deed4f5ae6804a4296cc89e78dd6ef`） | 7 个含 AssistantConfig 的 schema 和 openapi 增加该可选字段 |
-| engineer-review-v1 | `engineer-review-v1-470a3e9c17c916f0a92fa11958dd93d9b80e50f0528b99d229af590739020214` | 内嵌 AssistantConfig。除绑定的上游 manifest hash 外，EngineerProbeResult、EngineerRegressionReport、EngineerReviewInput 三个 schema、openapi 和 types.ts 也带上同一可选字段 |
+| expansion-v3 | `expansion-v3-90a362db7068f8b9707406a9633cf25f3da6c8be38df18c24da3edadf069326b`（previous 为 `expansion-v3-f9edfe270e6bb39ef3661061ca37be65827bb99cae96a1ca4abadea736e53952`） | 9 个含 AssistantConfig 的 schema（ActionInput、AssistantConfig、BusinessBasis、BusinessRequest、EffectiveConfig、ReviewInput、ReviewRequest、ScenarioBundle、TestResultV2）和 openapi 增加该可选字段 |
+| engineer-review-v1 | `engineer-review-v1-5dd7f7efbeffd3c3bdf2192b6407157d0f7c54a3757c0aea860a75c2921ed5f5` | 内嵌 AssistantConfig。除绑定的上游 manifest hash 外，EngineerProbeResult、EngineerRegressionReport、EngineerReviewInput 三个 schema、openapi 和 types.ts 也带上同一可选字段 |
 
 - 发布历史只在 `manifest_history.py` 末尾追加一条记录：changes_since_draft 增加该字段说明，integration_changes 新增 `assistant-generator`。
 - 导出沿用现有的 `without_provenance` 兼容方式；examples 与 errors 字节不变，原 documents 和 review_fixes 保全。
-- 发布身份用 `scripts/regression/release_identity.py --refresh` 按当前字节重算：受保护清单中重新生成的 10 项更新，无新增，`commit` 不变。历史冻结、场景包和所有旧实例保留。
+- 发布身份用 `scripts/regression/release_identity.py --refresh` 按当前字节重算：受保护清单中重新生成的 12 项更新，无新增，`commit` 不变。历史冻结、场景包和所有旧实例保留。
 - 装配方面，`build_registry` 只用三行构造参数透传已配置的模型，`LocalRoleModel` 映射为 None。
 - main 若在合入前前进，须在历史末尾追加记录、指向 main 当时的 revision，并重新生成导出。
 
