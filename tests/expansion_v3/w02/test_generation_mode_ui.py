@@ -11,6 +11,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from career_lab.api.vertical_runtime import create_runtime_app
+from career_lab.evidence.v2.ports import DEFAULT_POLICIES
+from career_lab.evidence.v2.store_reader import StoreEvidenceReader
 from career_lab.jobs.worker import Worker
 from career_lab.scenarios.v2.localization import text as localized_text
 
@@ -261,3 +263,33 @@ def test_generated_answer_keeps_stale_source_warning(environment, language):
     assert cited["object_id"] == "policy"
     assert cited["version"] < result["execution"]["source_versions"]["policy"]
     assert len(fake.calls) == 1
+
+
+def test_evidence_reader_marks_generated_answer_text(environment, language):
+    database, _ = environment
+    with deployment(database, "openai") as (app, client):
+        session = start(client, language)
+        session.ask("extractive", QUESTION[language])
+        assert session.configure("llm", {"generator": "llm"}).status_code == 200
+        session.ask("generated", QUESTION[language])
+        run_worker(app)
+        rows = session.tests()
+        store = app.state.v2_store
+        auth = store.authenticate(session.id, session.token)
+        reader = StoreEvidenceReader(store, auth, policies=DEFAULT_POLICIES)
+    records = {
+        record.ref.object_id: record
+        for record in reader.records.values()
+        if record.ref.kind == "test"
+    }
+    generated = next(key for key, row in rows.items() if row["assistant"]["mode"] == "llm")
+    extractive = next(key for key, row in rows.items() if row["assistant"]["mode"] == "extractive")
+    marked = records[generated]
+    assert marked.origin == "model_generated"
+    assert marked.text.startswith(QUESTION[language])
+    assert marked.text.endswith(GENERATED[language])
+    marker = marked.text[len(QUESTION[language]) : -len(GENERATED[language])]
+    assert ("模型生成" if language == "zh" else "Model-generated") in marker
+    plain = records[extractive]
+    assert plain.origin == "record"
+    assert plain.text == QUESTION[language] + "\n" + rows[extractive]["content"]["answer"]

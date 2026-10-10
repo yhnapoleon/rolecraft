@@ -15,6 +15,7 @@ from career_lab.storage.role_memory import RoleTurn, RoleReply, RoleDisplay
 from .ports import SourceRecord, ActivityRecord, ActivityLedger, RuleSnapshot
 from .assembler import base_ref, product_text
 from .history import before
+from .localization import message
 
 
 class StoreEvidenceReader:
@@ -71,6 +72,11 @@ class StoreEvidenceReader:
             self.points = {state.storage_revision: point(state) for state in states}
             self.states = {C.canonical(point(state)): state for state in states}
             allowed = {C.canonical(row.ref): row for row in view.objects}
+            languages = {
+                row.content["test"]["object_id"]: row.content["work_language"]
+                for row in view.objects
+                if row.ref.kind == "assistant_execution"
+            }
             for row in view.objects:
                 born = self.points.get(row.created_storage_revision)
                 text = None
@@ -79,6 +85,7 @@ class StoreEvidenceReader:
                 activity = None
                 target = None
                 other = None
+                origin = "record"
                 if row.ref.kind == "product":
                     product = C.WorkProductVersion.model_validate(row.content)
                     text = product_text(product)
@@ -89,6 +96,14 @@ class StoreEvidenceReader:
                 elif row.ref.kind == "test":
                     test = C.TestResultV2.model_validate(row.content)
                     text = test.query + "\n" + test.answer
+                    if any(attempt.status == "success" for attempt in test.execution.attempts):
+                        language = languages.get(row.ref.object_id, "zh")
+                        text = (
+                            test.query
+                            + message(language, "\n模型生成回答（待核验）：")
+                            + test.answer
+                        )
+                        origin = "model_generated"
                     executor = test.execution.executor
                     activity = "test_run"
                 elif row.ref.kind == "role_turn":
@@ -140,6 +155,7 @@ class StoreEvidenceReader:
                     quote_scope="whole_text"
                     if row.ref.kind == "product" and product.content.strip()
                     else "explicit_only",
+                    origin=origin,
                 )
                 self.records[self.key(ref)] = record
                 if activity and born is not None and executor is not None:

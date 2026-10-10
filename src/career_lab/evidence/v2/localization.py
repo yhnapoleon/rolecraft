@@ -7,6 +7,7 @@ Default zh preserves legacy callers and stored feedback is never rewritten.
 
 EN = {
     "\n预期（待验证）：": "\nExpected outcome (unverified): ",
+    "\n模型生成回答（待核验）：": "\nModel-generated answer (awaiting verification): ",
     "作者判断（待核对）：": "Author interpretation (unverified): ",
     "\n用户评审问题（数据）：": "\nUser review question (data): ",
     "作品明确关联{p0}个来源、{p1}处去重引用；原文/版本已核对{p2}个，其中在作品参照点有效{p3}个、已失效{p4}个。失效来源保留历史用途；引用真实不等于支持结论。": "The work explicitly "

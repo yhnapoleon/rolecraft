@@ -46,6 +46,9 @@ class SourceRecord:
     # External source ports may authorize an object without authorizing a
     # synthetic quote spanning its whole serialized/document representation.
     quote_scope: Literal["whole_text", "explicit_only"] = "whole_text"
+    # Model-generated answer text is a recorded output awaiting verification, never a
+    # rule-verified source excerpt.
+    origin: Literal["record", "model_generated"] = "record"
 
 
 @dataclass(frozen=True)
