@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from career_lab.contracts import v2 as C
+from career_lab.contracts.v2.export import export
 from career_lab.contracts.v2.projection import project_feedback_content
 
 REVIEWREQUEST_BYTES = (
@@ -90,8 +91,6 @@ def test_wire_03_legacy_projection_bytes(limited: bool, expected: str) -> None:
 
 
 def test_preview_public_errors_are_in_the_exported_contract(tmp_path: Path) -> None:
-    from career_lab.contracts.v2.export import export
-
     root = Path(__file__).resolve().parents[2]
     export(root, tmp_path)
     expected = {

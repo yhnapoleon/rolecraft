@@ -5,9 +5,12 @@ lifecycle transitions, idempotency, and jobs must be registered on the shared
 Gateway/V2Store. Never mount the historical test router as a production fallback.
 """
 
+from dataclasses import replace
+
 from career_lab.api.modules import ExtensionRegistry
 from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.core import ProtocolError
+from career_lab.storage.v2_lifecycle import record_review
 from career_lab.storage.v2_store import Mutation, TransactionView
 
 
@@ -128,11 +131,6 @@ def record_review_request(
     view: TransactionView, command: C.Command, auth: C.AuthContext, *, registry: ExtensionRegistry
 ) -> Mutation:
     """Dispatch opt-in previews; legacy reviews retain their original plan and bytes."""
-    from dataclasses import replace
-
-    from career_lab.contracts import v2 as C
-    from career_lab.storage.v2_lifecycle import record_review
-
     body = C.ReviewInput.model_validate(command.payload)
     plan = record_review(view, command, auth)
     if body.preview_kind is None:

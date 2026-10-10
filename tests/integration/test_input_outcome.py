@@ -1,7 +1,11 @@
 """The preview must enter through normal reviews.create, never a test-only router."""
 
-from test_w05_http_support import WorkSession
+from datetime import UTC, datetime, timedelta
+
+from test_w05_http_support import WorkSession, referenced_ids
 from test_w05_http_support import work_session as work_session
+
+from career_lab.contracts import v2 as C
 
 
 def test_out_01_saved_input_can_request_specific_clarification(work_session: WorkSession) -> None:
@@ -31,8 +35,6 @@ def test_out_02_unknown_decision_keeps_facts_without_launch(work_session: WorkSe
 
 
 def test_wire_03_legacy_review_request_bytes_stay_fixed() -> None:
-    from career_lab.contracts import v2 as C
-
     request = C.ReviewInput(
         subjects=(
             C.ObjectRef(session_id="fixed-session", kind="product", object_id="draft", version=1),
@@ -98,8 +100,6 @@ def test_out_04_preview_changes_no_business_state_or_shares(work_session: WorkSe
 
 
 def test_out_05_private_preview_is_unavailable_without_its_work(work_session: WorkSession) -> None:
-    from test_w05_http_support import referenced_ids
-
     session = work_session
     secret = "PRIVATE_DRAFT_NOT_SHARED_9ac4"
     product = session.product(secret, title=secret)
@@ -150,8 +150,6 @@ def test_out_06_unmodelled_outcomes_remain_unsupported_and_original_is_saved(
 def test_out_07_historical_work_and_current_preview_have_distinct_windows(
     work_session: WorkSession,
 ) -> None:
-    from career_lab.contracts import v2 as C
-
     session = work_session
     product = session.product("旧时点判断" if session.language == "zh" else "Earlier judgment")
     original = session.review(product, preview_kind="rules")
@@ -269,8 +267,6 @@ def test_out_01_saved_request_replay_has_one_private_check(work_session: WorkSes
 def test_out_05_scoped_agent_save_is_not_blocked_by_private_checks(
     work_session: WorkSession,
 ) -> None:
-    from datetime import UTC, datetime, timedelta
-
     session = work_session
     product = session.product(
         "授权修改的作品" if session.language == "zh" else "Work the agent may edit"

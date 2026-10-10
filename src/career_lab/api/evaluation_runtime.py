@@ -10,7 +10,9 @@ from typing import TYPE_CHECKING
 from sqlalchemy import select
 
 from career_lab.contracts import v2 as C
+from career_lab.evidence.v2.preview import prepare_preview_feedback
 from career_lab.storage.v2_lifecycle import point
+from career_lab.storage.v2_store import references
 from career_lab.storage.v2_tables import v2_snapshots
 
 if TYPE_CHECKING:
@@ -260,8 +262,6 @@ def create_feedback_handler(
                 )
                 deps[C.canonical(ref)] = ref
             for index, outcome in enumerate(write.content.get("outcomes") or ()):
-                from career_lab.storage.v2_store import references
-
                 sources = references(outcome) or references(write.content.get("input_refs", ()))
                 traces.append(FeedbackReadTrace(write.ref, f"/outcomes/{index}", sources))
             for name in ("verified_facts", "historical_responsibilities"):
@@ -338,8 +338,6 @@ def create_feedback_handler(
             )
         request = C.ReviewRequest.model_validate(view.get(subject).content)
         if request.preview_kind is not None:
-            from career_lab.evidence.v2.preview import prepare_preview_feedback
-
             prepared = prepare_preview_feedback(reader, request, auth, module.work_language, source)
             return traced(
                 review_feedback_plan(view, envelope.command, auth, prepared), reader, engine
