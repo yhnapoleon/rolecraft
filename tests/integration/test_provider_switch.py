@@ -40,6 +40,23 @@ class Provider:
                     "citation_ids": [data["candidates"][0]["id"]],
                 }
             )
+        if system.startswith("Review the actual reply"):
+            # The cooperative help review that main runs on every configured colleague reply.
+            return json.dumps(
+                {
+                    "request_kinds": ["business_judgment"],
+                    "facts_answered": True,
+                    "citations_supported": True,
+                    "within_knowledge": True,
+                    "preserves_stance": True,
+                    "no_complete_solution": True,
+                    "no_resource_approval": True,
+                    "one_main_question": True,
+                    "conditions_preserved": True,
+                    "language_match": True,
+                    "decision": "supported",
+                }
+            )
         if "citation_ids" in system:
             data = json.loads(messages[1]["content"])
             return json.dumps(
@@ -177,11 +194,11 @@ def test_configured_runtime_colleague_and_judge_reach_provider(runtime: RuntimeS
         },
     )
     runtime.run()
-    assert len(runtime.provider.calls) == 1
+    assert len(runtime.provider.calls) == 2
     role = runtime.get("/requests/colleague").json()
     assert role["status"] == "completed", role
     assert runtime.get("/requests/colleague").json() == role
-    assert len(runtime.provider.calls) == 1
+    assert len(runtime.provider.calls) == 2
     product = runtime.send(
         "/work-products",
         "work",
@@ -208,10 +225,10 @@ def test_configured_runtime_colleague_and_judge_reach_provider(runtime: RuntimeS
     runtime.run()
     review = runtime.get("/requests/review").json()
     assert review["status"] == "completed", review
-    assert len(runtime.provider.calls) == 2
+    assert len(runtime.provider.calls) == 3
     assert runtime.get("/requests/review").json() == review
     assert not Worker(runtime.app.state.jobs, runtime.app.state.handlers).run_once()
-    assert len(runtime.provider.calls) == 2
+    assert len(runtime.provider.calls) == 3
     assert all(call["model"] == "controlled-mechanism" for call in runtime.provider.calls)
     assert runtime.key not in json.dumps([role, review, runtime.provider.calls])
     assert runtime.key not in caplog.text
