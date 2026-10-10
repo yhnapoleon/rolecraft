@@ -6,6 +6,7 @@ from career_lab.api.reviews_v2 import create_review_evaluator, prepare_review_fe
 from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.evaluation import _OutcomeAction as OutcomeAction
 from career_lab.contracts.v2.evaluation import _OutcomeItem as OutcomeItem
+from career_lab.contracts.v2.evaluation import _PreviewConditions as PreviewConditions
 from career_lab.evidence.v2.localization import message
 from career_lab.evidence.v2.store_reader import StoreEvidenceReader
 from career_lab.scenarios.v2.policy import effective_config
@@ -72,11 +73,27 @@ def prepare_preview_feedback(
                 "missing_inputs": missing,
                 "clarification": questions,
                 "generation_status": "waiting_model",
+                "preview_conditions": recorded_conditions(source, request, auth),
             }
         )
         for report in prepared["reports"]
     )
     return prepared
+
+
+def recorded_conditions(
+    source: "ScenarioEvidencePort", request: C.ReviewRequest, auth: C.AuthContext
+) -> PreviewConditions | None:
+    """Key conditions at the request point, so later reads can name what changed."""
+    try:
+        snapshot = source.window(auth, request.as_of).snapshot
+    except C.ProtocolError:
+        return None
+    return PreviewConditions(
+        config_version=snapshot.world.config_version,
+        resources=dict(snapshot.world.resources),
+        source_versions=dict(snapshot.source_versions),
+    )
 
 
 def input_outcomes(

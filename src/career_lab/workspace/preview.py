@@ -26,6 +26,7 @@ from career_lab.storage.v2_store import (
     TransactionView,
     references,
 )
+from career_lab.workspace.preview_state import current_conditions, preview_state
 
 SAVE_OPERATIONS = frozenset({"work_products.create", "work_products.versions.create"})
 
@@ -146,6 +147,7 @@ def saved_version_preview(
             saved_input_outcome(write.ref, proof, 1, language),
             pending_configuration(missing, language),
         ),
+        preview_conditions=current_conditions(view),
     )
 
 
@@ -155,7 +157,8 @@ def with_saved_previews(
     """Attach the authorized save-time previews of the listed exact versions to a versions page.
 
     The read view has already projected each feedback record for this caller; hidden records are
-    absent and partially readable ones keep their projection. Without previews the page is
+    absent and partially readable ones keep their projection. Each preview is accompanied by its
+    read-time state (stale conditions, later recorded actions). Without previews the page is
     returned unchanged.
     """
     if auth.actor_id != "learner" or not product_id:
@@ -176,5 +179,9 @@ def with_saved_previews(
     if not rows:
         return page
     return C.WorkspaceProductPage.model_validate(
-        {**page, "previews": [row.content for row in rows]}
+        {
+            **page,
+            "previews": [row.content for row in rows],
+            "preview_states": [preview_state(view, row) for row in rows],
+        }
     ).model_dump(mode="json")

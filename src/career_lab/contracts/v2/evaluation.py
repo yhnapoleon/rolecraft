@@ -4,7 +4,17 @@ from pydantic import Field, model_validator
 
 from . import provenance as _provenance
 from .core import *
-from .core import V2, EvidenceRefV2, Hash, Identifier, JsonValue, ObjectRef, VersionPoint
+from .core import (
+    V2,
+    EvidenceRefV2,
+    Hash,
+    Identifier,
+    JsonValue,
+    NonNegativeInt,
+    ObjectRef,
+    PositiveInt,
+    VersionPoint,
+)
 
 Applicability = Literal["applicable", "not_applicable", "undetermined"]
 CriterionLabel = Literal["MET", "PARTIAL", "NOT_MET", "INSUFFICIENT", "NOT_APPLICABLE"]
@@ -428,6 +438,58 @@ class _OutcomeItem(V2):
         return self
 
 
+class _PreviewConditions(V2):
+    """Key business conditions read when a preview was formed; None means not a key condition."""
+
+    config_version: NonNegativeInt | None = None
+    resources: dict[str, NonNegativeInt] | None = None
+    source_versions: dict[str, PositiveInt] | None = None
+
+
+class _PreviewChange(V2):
+    """A key condition that differs from the recorded one at a later read."""
+
+    condition: Literal["input", "configuration", "resources", "materials"]
+    before: JsonValue = None
+    after: JsonValue = None
+    ref: ObjectRef | None = None
+
+
+class _PreviewActual(V2):
+    """A business action recorded after the preview; never merged into the prediction."""
+
+    operation: Literal[
+        "configuration.apply",
+        "actions",
+        "tests.create",
+        "submissions.create",
+        "work_products.shares.create",
+    ]
+    ref: ObjectRef
+    status: Identifier
+    at: VersionPoint | None = None
+    values: dict[str, JsonValue] = {}
+
+
+class _PreviewState(V2):
+    """Read-time freshness of one immutable preview record; the record itself is unchanged."""
+
+    feedback: ObjectRef
+    status: Literal["current", "stale"]
+    changes: tuple[_PreviewChange, ...] = ()
+    superseded_by: ObjectRef | None = None
+    actual: tuple[_PreviewActual, ...] = ()
+    checked_at: VersionPoint
+
+    @model_validator(mode="after")
+    def consistent(self) -> "_PreviewState":
+        if (self.status == "stale") != bool(self.changes):
+            raise ValueError("stale previews name their changed conditions")
+        if self.feedback.kind != "feedback":
+            raise ValueError("preview state belongs to a feedback record")
+        return self
+
+
 class RegisteredModelAdvice(V2):
     criterion: Literal["R2.support"] = "R2.support"
     request_id: Identifier
@@ -540,6 +602,9 @@ class FeedbackV2(V2):
     generation_status: (
         Literal["rules_verified", "waiting_model", "advisory", "failed", "unknown"] | None
     ) = Field(default=None, exclude_if=lambda value: value is None)
+    preview_conditions: _PreviewConditions | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def advice_scope(self) -> "FeedbackV2":
