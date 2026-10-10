@@ -208,8 +208,78 @@ def test_reference_agent_uses_separate_secret_bound_derivation(
         session.client.get(
             session.url("tools"), headers={"Authorization": "Bearer " + token}
         ).status_code
-        == 403
+        == 200
     )
+
+
+def reference_headers(session: PublishedSession) -> dict[str, str]:
+    store = session.app.state.v2_store
+    owner = store.authenticate(
+        session.session_id, session.headers["Authorization"].split(" ", 1)[1]
+    )
+    return {"Authorization": "Bearer " + store.reference_agent_token(owner)}
+
+
+def test_reference_agent_cannot_issue_or_revoke_delegations(
+    published_session: PublishedSession,
+) -> None:
+    session = published_session
+    reference = reference_headers(session)
+    issued, command = issue(session)
+    assert issued.status_code == 200, issued.text
+    grant = issued.json()["result"]["result"]
+    created = session.client.post(
+        session.url("delegations"),
+        headers=reference,
+        json=command | {"request_id": "reference-grant"},
+    )
+    assert (created.status_code, created.json()["code"]) == (403, "capability_forbidden")
+    grant_id = grant["delegation"]["id"]
+    revoked = session.client.request(
+        "DELETE",
+        session.url("delegations/" + grant_id),
+        headers=reference,
+        json=session.command("reference-revoke", "delegations.revoke", {"delegation_id": grant_id}),
+    )
+    assert (revoked.status_code, revoked.json()["code"]) == (403, "capability_forbidden")
+    agent = {"Authorization": "Bearer " + grant["token"]}
+    assert session.client.get(session.url(""), headers=agent).status_code == 200
+
+
+def test_reference_agent_token_cannot_reach_another_session(
+    published_session: PublishedSession,
+) -> None:
+    session = published_session
+    reference = reference_headers(session)
+    other = session.client.post(
+        "/sessions",
+        json={"schema_version": 2, "scenario": "pm_pilot_v2", "work_language": session.language},
+    ).json()
+    route = "/sessions/" + other["session_id"]
+    for path in ("", "/tools", "/observation", "/work-products"):
+        assert session.client.get(route + path, headers=reference).status_code == 401
+    owner = {"Authorization": "Bearer " + other["token"]}
+    before = session.client.get(route, headers=owner).json()["state"]
+    write = {
+        "schema_version": 2,
+        "request_id": "reference-cross-session",
+        "expected_version": before["business_seq"],
+        "expected_workspace_revision": before["workspace_revision"],
+        "operation": "work_products.create",
+        "payload": {
+            "kind": "text",
+            "purpose": "exploration",
+            "title": "Cross-session note",
+            "content": "Written only by the session owner.",
+        },
+    }
+    written = session.client.post(route + "/work-products", headers=reference, json=write)
+    assert written.status_code == 401
+    assert session.client.get(route, headers=owner).json()["state"] == before
+    # The same command is valid for the owning session, so the rejection is the credential.
+    accepted = session.client.post(route + "/work-products", headers=owner, json=write)
+    assert accepted.status_code == 200, accepted.text
+    assert session.client.get(session.url("tools"), headers=reference).status_code == 200
 
 
 def practice_request(session: PublishedSession) -> dict[str, Any]:

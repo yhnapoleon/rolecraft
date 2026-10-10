@@ -4,6 +4,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import json, os, stat
 from urllib.parse import urlsplit
+from .credential_fields import is_credential_field
 
 
 @dataclass(frozen=True)
@@ -64,12 +65,9 @@ def redact(value, token):
         return [redact(x, token) for x in value]
     if isinstance(value, dict):
         return {
-            k: (
-                "[REDACTED]"
-                if k.lower()
-                in {"token", "authorization", "api_key", "access_token", "refresh_token"}
-                else redact(v, token)
-            )
+            k: ("[REDACTED]" if is_credential_field(str(k)) else redact(v, token))
             for k, v in value.items()
+            # Omit credential-bearing keys; renaming could collide with a safe key.
+            if not (token and token in str(k))
         }
     return value
