@@ -24,6 +24,7 @@ from career_lab.contracts.v2 import (
 from career_lab.storage.v2_store import ObjectWrite, Mutation, references
 from .domain import handle, product_dependencies
 from .ports import Snapshot
+from .preview import after_saved_version, with_saved_previews
 from .service import WorkspaceService
 
 
@@ -125,8 +126,6 @@ def install_workspace_operations(registry, *, roles, clock=None):
             plan = workspace_plan(
                 view, command, auth, roles=roles, resolvers=resolvers, clock=clock
             )
-            from .preview import after_saved_version
-
             return after_saved_version(registry, view, command, auth, plan)
 
         registry.register(Operation(name, "act", model, handler))
@@ -140,9 +139,10 @@ def install_workspace_operations(registry, *, roles, clock=None):
             def reader(view, payload, auth):
                 snapshot = snapshot_from_view(view, auth, roles, resolvers)
                 service = WorkspaceService(_ReadView(snapshot))
-                return V2Response(
-                    result=service.list(auth, resource_kind, payload, product_id=payload.product_id)
-                )
+                result = service.list(auth, resource_kind, payload, product_id=payload.product_id)
+                if resource_kind == "versions":
+                    result = with_saved_previews(view, auth, result, payload.product_id)
+                return V2Response(result=result)
 
             return reader
 

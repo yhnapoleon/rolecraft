@@ -1,5 +1,6 @@
 from typing import Annotated, Literal, Union
 from pydantic import Field, JsonValue, model_validator
+from . import evaluation as _evaluation
 from .core import *
 from .world import AssistantConfig
 
@@ -381,11 +382,23 @@ class WorkspaceProductPage(V2):
     sharing_complete: bool
     as_of: VersionPoint
     next_cursor: NonNegativeInt | None = None
+    # Save-time rule previews of the listed exact versions; absent when none was recorded.
+    previews: tuple[_evaluation.FeedbackV2, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def projection(self):
         if len({s.id for s in self.shares}) != len(self.shares):
             raise ValueError("duplicate share page entry")
+        listed = {(p.product_id, p.version) for p in self.items}
+        for preview in self.previews or ():
+            if (
+                preview.preview_kind is None
+                or preview.subject.kind != "product"
+                or (preview.subject.object_id, preview.subject.version) not in listed
+            ):
+                raise ValueError("preview outside product page")
         ids = {p.product_id for p in self.items}
         if any(s.product.object_id not in ids for s in self.shares):
             raise ValueError("share outside product page")

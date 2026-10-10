@@ -633,7 +633,9 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "conditional-outcome-preview": "Optional exact-version preview requests and four "
             "exclusive outcome kinds; per-item authorized basis and registered action "
             "identifiers. Legacy request and feedback wire bytes retain fixed comparisons. "
-            "Preview creation never executes business actions."
+            "Preview creation never executes business actions. Save-time rule previews are "
+            "feedback on the exact saved version, listed only on its versions page and never "
+            "as reviews; pages without previews retain their bytes."
         },
     },
 )

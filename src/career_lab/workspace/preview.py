@@ -1,4 +1,9 @@
-"""One cheap private rule check in the successful save transaction; no job or model."""
+"""One cheap private rule check in the successful save transaction; no job or model.
+
+The result belongs to the saved work-product version: one rules-only FeedbackV2 preview whose
+subject is that exact version. It is never a review, so review lists, review feedback and the
+submission flow stay unchanged; the product versions read carries it as ``previews``.
+"""
 
 import os
 from dataclasses import replace
@@ -7,6 +12,7 @@ from career_lab.api.modules import ExtensionRegistry
 from career_lab.api.reviews_v2 import permitted_preview_operations
 from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.evaluation import _OutcomeAction as OutcomeAction
+from career_lab.evidence.v2.localization import message
 from career_lab.evidence.v2.preview import (
     clarification_questions,
     configuration_missing,
@@ -21,6 +27,8 @@ from career_lab.storage.v2_store import (
     references,
 )
 
+SAVE_OPERATIONS = frozenset({"work_products.create", "work_products.versions.create"})
+
 
 def after_saved_version(
     registry: ExtensionRegistry,
@@ -29,7 +37,7 @@ def after_saved_version(
     auth: C.AuthContext,
     plan: Mutation,
 ) -> Mutation:
-    if command.operation not in {"work_products.create", "work_products.versions.create"}:
+    if command.operation not in SAVE_OPERATIONS:
         return plan
     if os.environ.get("CAREER_LAB_PREVIEW_ON_SAVE", "1").lower() in {"0", "false", "off"}:
         return plan
@@ -59,55 +67,46 @@ def after_saved_version(
         return plan
     language = next(iter(languages))
     assert language is not None
+    operations = permitted_preview_operations(registry, auth)
     writes = []
     traces = []
-    review_ref = feedback_ref = None
+    feedback_ref = None
     for write in plan.writes:
         if write.ref.kind != "product":
             continue
-        request, report = saved_version_check(
-            view, command, auth, write, language, permitted_preview_operations(registry, auth)
-        )
-        review_ref = C.ObjectRef(
-            session_id=auth.session_id, kind="review", object_id=request.id, version=1
-        )
+        report = saved_version_preview(view, command, auth, write, language, operations)
         feedback_ref = C.ObjectRef(
             session_id=auth.session_id, kind="feedback", object_id=report.id, version=1
         )
-        for ref, model in ((review_ref, request), (feedback_ref, report)):
-            content = model.model_dump(mode="json")
-            writes.append(
-                ObjectWrite(
-                    ref=ref, expected_head=0, content=content, dependencies=references(content)
-                )
+        content = report.model_dump(mode="json")
+        writes.append(
+            ObjectWrite(
+                ref=feedback_ref,
+                expected_head=0,
+                content=content,
+                dependencies=references(content),
             )
+        )
         for index, _ in enumerate(report.outcomes or ()):
-            traces.append(
-                FeedbackReadTrace(feedback_ref, f"/outcomes/{index}", (write.ref, review_ref))
-            )
-    if not writes:
+            traces.append(FeedbackReadTrace(feedback_ref, f"/outcomes/{index}", (write.ref,)))
+    if feedback_ref is None:
         return plan
-    assert review_ref is not None and feedback_ref is not None
     return replace(
         plan,
         writes=(*plan.writes, *writes),
         feedback_read_traces=(*plan.feedback_read_traces, *traces),
-        result={
-            **plan.result,
-            "preview_review": review_ref.model_dump(mode="json"),
-            "preview_feedback": feedback_ref.model_dump(mode="json"),
-        },
+        result={**plan.result, "preview_feedback": feedback_ref.model_dump(mode="json")},
     )
 
 
-def saved_version_check(
+def saved_version_preview(
     view: TransactionView,
     command: C.Command,
     auth: C.AuthContext,
     write: ObjectWrite,
     language: str,
     operations: tuple[str, ...],
-) -> tuple[C.ReviewRequest, C.FeedbackV2]:
+) -> C.FeedbackV2:
     product = C.WorkProductVersion.model_validate(write.content)
     # The common core advances these two clocks once for this atomic write set.
     at = C.VersionPoint(
@@ -115,32 +114,17 @@ def saved_version_check(
         workspace_revision=view.state.workspace_revision + 1,
         storage_revision=view.state.storage_revision + 1,
     )
-    request = C.ReviewRequest(
-        id=C.digest([command.request_id, write.ref.model_dump(mode="json"), "saved-rule-check"]),
-        session_id=auth.session_id,
-        subjects=(write.ref,),
-        purpose=product.purpose,
-        scope=(),
-        as_of=at,
-        evaluation=view.bindings.evaluation,
-        executor=auth.executor,
-        preview_kind="rules",
-        available_operations=operations,
-    )
-    ref = C.ObjectRef(session_id=auth.session_id, kind="review", object_id=request.id, version=1)
     proof = C.EvidenceRefV2(**write.ref.model_dump(), observed_at_seq=at.business_seq)
     missing = configuration_missing(product.purpose, None)
     questions = clarification_questions(missing, language)
-    report = C.FeedbackV2(
-        id=C.digest([request.id, "saved-rule-feedback"]),
+    return C.FeedbackV2(
+        id=C.digest([command.request_id, write.ref.model_dump(mode="json"), "saved-rule-preview"]),
         session_id=auth.session_id,
-        subject=ref,
+        subject=write.ref,
         evaluation=view.bindings.evaluation,
         as_of=at,
         items=(),
-        business_response="No business action was executed."
-        if language == "en"
-        else "未执行业务动作。",
+        business_response=message(language, "未执行业务动作。"),
         next_options=questions,
         verified_coverage=0,
         model_coverage=0,
@@ -163,4 +147,34 @@ def saved_version_check(
             pending_configuration(missing, language),
         ),
     )
-    return request, report
+
+
+def with_saved_previews(
+    view: TransactionView, auth: C.AuthContext, page: dict, product_id: str | None
+) -> dict:
+    """Attach the authorized save-time previews of the listed exact versions to a versions page.
+
+    The read view has already projected each feedback record for this caller; hidden records are
+    absent and partially readable ones keep their projection. Without previews the page is
+    returned unchanged.
+    """
+    if auth.actor_id != "learner" or not product_id:
+        return page
+    listed = {item["version"] for item in page["items"]}
+    rows = sorted(
+        (
+            row
+            for row in view.objects
+            if row.ref.kind == "feedback"
+            and row.content.get("preview_kind") is not None
+            and row.content["subject"]["kind"] == "product"
+            and row.content["subject"]["object_id"] == product_id
+            and row.content["subject"]["version"] in listed
+        ),
+        key=lambda row: (row.content["subject"]["version"], row.created_storage_revision),
+    )
+    if not rows:
+        return page
+    return C.WorkspaceProductPage.model_validate(
+        {**page, "previews": [row.content for row in rows]}
+    ).model_dump(mode="json")
