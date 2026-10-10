@@ -12,8 +12,7 @@ from career_lab.jobs.worker import ClaimedHandler, Worker
 from career_lab.runtime.model_adapter import ModelAdapter, ModelReply, ScriptedModel
 from career_lab.runtime.roles_v2 import LocalRoleModel
 from career_lab.storage.v2_store import V2Store
-
-ROOT = Path(__file__).resolve().parents[3]
+from tests.support.scenario_packages import installed_locale_root
 
 
 class Dialogue:
@@ -22,9 +21,7 @@ class Dialogue:
     def __init__(self, path: Path, language: str, model: ModelAdapter) -> None:
         self.model = model
         self.store = V2Store("sqlite:///" + str(path / "help.db"))
-        source = ROOT / "scenarios/pm_pilot/v2"
-        if language == "en":
-            source /= "locales/en"
+        source = installed_locale_root("pm_pilot", language)
         self.registry, self.module = build_registry(source, model)
         self.gateway = Gateway(self.store, self.registry)
         created = self.gateway.create(CreateSessionV2(schema_version=2, scenario="pm_pilot_v2"))

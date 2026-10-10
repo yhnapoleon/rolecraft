@@ -36,6 +36,7 @@ IMPLEMENTATION_INPUTS = (
     "src/career_lab/api/public_materials.py",
     "src/career_lab/api/lifecycle_integration.py",
     "src/career_lab/api/evaluation_runtime.py",
+    "src/career_lab/api/registered_models.py",
     "src/career_lab/api/workspace_integration.py",
     "src/career_lab/api/feedback_integration.py",
     "src/career_lab/api/role_snapshot.py",

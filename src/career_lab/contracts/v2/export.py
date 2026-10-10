@@ -9,6 +9,7 @@ from pathlib import Path
 
 from pydantic import JsonValue
 
+from career_lab.contracts.v2 import RegisteredModelAdvice
 from career_lab.contracts.v2.compatibility import without_provenance
 from career_lab.contracts.v2.discovery import REQUEST_MODELS, public_models
 from career_lab.contracts.v2.examples import sample_model
@@ -226,7 +227,8 @@ CONSUMERS["W03"] += [
     "WorkspaceProductPage",
     "WorkspaceSharePage",
 ]
-CONSUMERS["W05"] += ["FeedbackReadBoundary"]
+CONSUMERS["W05"] += ["FeedbackReadBoundary", "RegisteredModelAdvice"]
+CONSUMERS["W08"] += ["RegisteredModelAdvice"]
 CONSUMERS["W05"] += [
     "FeedbackReferenceCheck",
     "FeedbackActivity",
@@ -415,6 +417,15 @@ def integration_example(model):
         return model(items=(), shares=(), sharing_complete=True, as_of=sample_model(VersionPoint))
     if model is WorkspaceSharePage:
         return model(items=(), sharing_complete=True, as_of=sample_model(VersionPoint))
+    if model is RegisteredModelAdvice:
+        return model(
+            request_id="example-request",
+            job_id="example-job",
+            input_hash=None,
+            registration=None,
+            status="unavailable",
+            error_code="model_unavailable",
+        )
     return sample_model(model)
 
 
@@ -432,6 +443,7 @@ def _implementation_files(root: Path) -> list[Path]:
             "src/career_lab/api/public_materials.py",
             "src/career_lab/api/lifecycle_integration.py",
             "src/career_lab/api/evaluation_runtime.py",
+            "src/career_lab/api/registered_models.py",
             "src/career_lab/api/workspace_integration.py",
             "src/career_lab/api/feedback_integration.py",
             "src/career_lab/api/role_snapshot.py",

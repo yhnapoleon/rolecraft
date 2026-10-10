@@ -615,4 +615,14 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "unverified conditional checks.",
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-7f64f17784ad7756fefc53682954b1318bddb58eecdc5dbe645f3187cbc321ed"
+        ),
+        "integration_changes": {
+            "registered-model-advice": "Optional advisory-only relation results and "
+            "registration identity; complete input traces gate each new "
+            "advice segment. Missing fields retain historical wire bytes."
+        },
+    },
 )
