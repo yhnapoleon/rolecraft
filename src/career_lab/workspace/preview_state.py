@@ -35,10 +35,7 @@ def preview_state(view: TransactionView, record: C.StoredObject) -> PreviewState
     inputs = tuple(
         ref for ref in (preview.input_refs or (preview.subject,)) if ref.kind == "product"
     )
-    # Records without recorded conditions predate this check; treat them as business previews.
-    business = preview.preview_conditions is None or any(
-        value is not None for value in preview.preview_conditions.model_dump().values()
-    )
+    business = depends_on_business(preview.preview_conditions)
     changes = input_changes(view, inputs)
     if business:
         changes += condition_changes(view, preview, record)
@@ -53,6 +50,14 @@ def preview_state(view: TransactionView, record: C.StoredObject) -> PreviewState
                 include={"business_seq", "workspace_revision", "storage_revision"}
             )
         ),
+    )
+
+
+def depends_on_business(conditions: PreviewConditions | None) -> bool:
+    # Records without recorded conditions predate this check; treat them as business previews.
+    return conditions is None or any(
+        value is not None
+        for value in (conditions.config_version, conditions.resources, conditions.source_versions)
     )
 
 

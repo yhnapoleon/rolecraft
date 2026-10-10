@@ -415,7 +415,12 @@ class FeedbackResponseRecord(V2):
 
 class _OutcomeAction(V2):
     operation: Literal[
-        "reviews.create", "work_products.shares.create", "configuration.apply", "tests.create"
+        "reviews.create",
+        "work_products.shares.create",
+        "configuration.apply",
+        "tests.create",
+        "actions",
+        "submissions.create",
     ]
     objects: tuple[ObjectRef, ...]
 

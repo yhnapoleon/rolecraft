@@ -7,12 +7,21 @@ from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.evaluation import _OutcomeAction as OutcomeAction
 from career_lab.contracts.v2.evaluation import _OutcomeItem as OutcomeItem
 from career_lab.contracts.v2.evaluation import _PreviewConditions as PreviewConditions
+from career_lab.evidence.v2.assembler import purpose_of
 from career_lab.evidence.v2.localization import message
 from career_lab.evidence.v2.store_reader import StoreEvidenceReader
 from career_lab.scenarios.v2.policy import effective_config
 
 if TYPE_CHECKING:
     from career_lab.api.evaluation_runtime import ScenarioEvidencePort
+
+
+class SavedCheck(TypedDict):
+    outcomes: tuple[OutcomeItem, ...]
+    missing: tuple[str, ...]
+    questions: tuple[str, ...]
+    operations: tuple[str, ...]
+    business: bool
 
 
 class PreparedPreview(TypedDict):
@@ -224,3 +233,152 @@ def pending_configuration(missing: tuple[str, ...], language: str) -> OutcomeIte
         missing_inputs=missing,
         summary=message(language, "候选条件仍需澄清。"),
     )
+
+
+# Purposes whose outcome depends on the live configuration, resources and source materials.
+BUSINESS_PURPOSES = frozenset({"plan", "option", "commitment", "result"})
+# Existing tools each purpose leads to; a preview links to them and never runs them.
+PURPOSE_OPERATIONS = {
+    "plan": ("tests.create", "configuration.apply"),
+    "option": ("configuration.apply",),
+    "commitment": ("submissions.create", "actions", "configuration.apply"),
+    "result": ("submissions.create",),
+}
+TASK_QUESTIONS = {
+    "plan": "这份测试计划要支持哪件事？",
+    "option": "这次方案比较是为哪件事做的？",
+    "commitment": "这项试点决定针对哪件事？",
+    "result": "这份结果报告对应哪件事？",
+}
+TASK_SPECIFIC_QUESTIONS = {
+    "test_cases": "「{task}」要在测试台上运行哪些问题？",
+    "candidate_config": "「{task}」要核对哪份候选配置？",
+    "decision_evidence": "「{task}」的决定依据哪些资料或测试结果？",
+    "result_evidence": "「{task}」的结果引用了哪些测试运行？",
+}
+
+
+def saved_version_check(
+    product: C.WorkProductVersion,
+    task_title: str | None,
+    proof: C.EvidenceRefV2,
+    config: C.EvidenceRefV2 | None,
+    language: str,
+) -> SavedCheck:
+    """Rules-only outcome of one saved version, chosen by its purpose and task.
+
+    Only what is missing for this purpose is asked, one short question at a time; a note that
+    needs nothing has no question. Free text is never classified and nothing is executed.
+    """
+    purpose = purpose_of(product.purpose) if product.purpose.strip() else None
+    business = purpose in BUSINESS_PURPOSES
+    missing = saved_version_missing(product, purpose)
+    outcomes = [saved_input_outcome(proof, proof, 1, language)]
+    if not product.purpose.strip():
+        outcomes.append(
+            OutcomeItem(
+                id="purpose",
+                kind="pending_verification",
+                summary=message(language, "用途未说明，暂不判断业务结果。"),
+                missing_inputs=("purpose",),
+            )
+        )
+    elif purpose == "plan":
+        if config is not None:
+            outcomes.append(
+                OutcomeItem(
+                    id="test-run",
+                    kind="conditional_prediction",
+                    summary=message(
+                        language,
+                        "若在测试台明确运行，这些问题将按第 {config} 版配置和当前资料版本回答。",
+                        config=config.config_version,
+                    ),
+                    basis_refs=(proof, config),
+                    conditions=(
+                        message(language, "运行前配置与资料版本保持不变。"),
+                        message(language, "需要你在测试台明确运行；此预览未运行测试。"),
+                    ),
+                    values={"config_version": config.config_version},
+                )
+            )
+        outcomes.append(
+            OutcomeItem(
+                id="test-results",
+                kind="pending_verification",
+                summary=message(language, "回答是否符合预期要实际运行后才能核实。"),
+                missing_inputs=("test_run",),
+            )
+        )
+    elif purpose == "option":
+        outcomes.append(pending_configuration(("candidate_config",), language))
+    elif purpose in {"commitment", "result"}:
+        if config is not None:
+            outcomes.append(
+                OutcomeItem(
+                    id="submission",
+                    kind="conditional_prediction",
+                    summary=message(
+                        language,
+                        "若明确提交，交付将固定这份作品第 {version} 版和第 {config} 版配置。",
+                        version=product.version,
+                        config=config.config_version,
+                    ),
+                    basis_refs=(proof, config),
+                    conditions=(
+                        message(language, "提交前作品与配置保持不变。"),
+                        message(language, "需要你明确提交；此预览未提交，也未申请审批。"),
+                    ),
+                    values={"version": product.version, "config_version": config.config_version},
+                )
+            )
+        outcomes.append(
+            OutcomeItem(
+                id="acceptance",
+                kind="pending_verification",
+                summary=message(language, "经理是否接受、业务是否达成要在提交和评审后才能知道。"),
+                missing_inputs=("submission_review",),
+            )
+        )
+    return {
+        "outcomes": tuple(outcomes),
+        "missing": missing,
+        "questions": saved_version_questions(missing[:1], purpose, task_title, language),
+        "operations": ("reviews.create", "work_products.shares.create")
+        + PURPOSE_OPERATIONS.get(purpose or "", ()),
+        "business": business,
+    }
+
+
+def saved_version_missing(product: C.WorkProductVersion, purpose: str | None) -> tuple[str, ...]:
+    """Ordered structural gaps for this purpose; the text itself is not classified."""
+    if not product.purpose.strip():
+        return ("purpose",)
+    if purpose not in BUSINESS_PURPOSES:
+        return ()
+    missing = [] if product.task is not None else ["task"]
+    payload = product.structured_payload
+    if purpose == "plan" and payload is not None and payload.type == "test_plan":
+        missing += [] if payload.cases else ["test_cases"]
+    elif purpose == "option":
+        missing.append("candidate_config")
+    elif purpose == "commitment" and not product.evidence_refs:
+        missing.append("decision_evidence")
+    elif purpose == "result" and not product.evidence_refs:
+        missing.append("result_evidence")
+    return tuple(missing)
+
+
+def saved_version_questions(
+    missing: tuple[str, ...], purpose: str | None, task_title: str | None, language: str
+) -> tuple[str, ...]:
+    questions = []
+    for key in missing:
+        if key == "purpose":
+            questions.append(message(language, CLARIFICATION_QUESTIONS["purpose"]))
+        elif key == "task":
+            questions.append(message(language, TASK_QUESTIONS[purpose or ""]))
+        else:
+            task = task_title or message(language, "这件事")
+            questions.append(message(language, TASK_SPECIFIC_QUESTIONS[key], task=task))
+    return tuple(questions)
