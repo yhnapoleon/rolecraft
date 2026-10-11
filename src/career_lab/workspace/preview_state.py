@@ -21,16 +21,58 @@ COUNTED = frozenset({"tests.create", "work_products.shares.create"})
 
 
 def current_conditions(view: TransactionView) -> PreviewConditions:
-    """The key business conditions a preview formed now would depend on."""
+    """The key business conditions a preview formed now would depend on.
+
+    Only materials the saving reader may open are recorded, so a preview never names sources the
+    learner's own material list does not show.
+    """
     scenario = view.private_scenario_state
     return PreviewConditions(
         config_version=view.state.config_version,
         resources=dict(view.state.resources),
-        source_versions=dict(scenario.source_versions) if scenario is not None else None,
+        source_versions=readable_versions(view, dict(scenario.source_versions))
+        if scenario is not None
+        else None,
     )
 
 
-def preview_state(view: TransactionView, record: C.StoredObject) -> PreviewState:
+def readable_versions(view: TransactionView, versions: dict[str, int]) -> dict[str, int]:
+    """Material versions this view's reader may open, via the transaction's own predicate."""
+    allowed = view.reference_allowed
+    if allowed is None:
+        return {}
+    readable = {}
+    for material, version in sorted(versions.items()):
+        ref = C.ObjectRef(
+            session_id=view.state.session_id, kind="material", object_id=material, version=version
+        )
+        try:
+            if allowed(ref):
+                readable[material] = version
+        except C.ProtocolError:
+            continue
+    return readable
+
+
+def scoped(auth: C.AuthContext) -> bool:
+    """A finite object grant never sees session-wide resources or source versions."""
+    return auth.allowed_objects is not None
+
+
+def withheld_preview(content: dict) -> dict:
+    """A preview record for a finite-scope reader: resource values and material ids withheld."""
+    conditions = content.get("preview_conditions")
+    if not conditions:
+        return content
+    return {
+        **content,
+        "preview_conditions": {**conditions, "resources": None, "source_versions": None},
+    }
+
+
+def preview_state(
+    view: TransactionView, record: C.StoredObject, auth: C.AuthContext
+) -> PreviewState:
     preview = C.FeedbackV2.model_validate(record.content)
     inputs = tuple(
         ref for ref in (preview.input_refs or (preview.subject,)) if ref.kind == "product"
@@ -38,7 +80,7 @@ def preview_state(view: TransactionView, record: C.StoredObject) -> PreviewState
     business = depends_on_business(preview.preview_conditions)
     changes = input_changes(view, inputs)
     if business:
-        changes += condition_changes(view, preview, record)
+        changes += condition_changes(view, preview, record, scoped(auth))
     return PreviewState(
         feedback=record.ref,
         status="stale" if changes else "current",
@@ -81,8 +123,10 @@ def input_changes(view: TransactionView, inputs: tuple[C.ObjectRef, ...]) -> tup
 
 
 def condition_changes(
-    view: TransactionView, preview: C.FeedbackV2, record: C.StoredObject
+    view: TransactionView, preview: C.FeedbackV2, record: C.StoredObject, withheld: bool
 ) -> tuple:
+    """Changed key conditions. A finite-scope reader learns only that resources or materials
+    changed; their values and material ids stay withheld."""
     recorded = preview.preview_conditions
     changes = []
     before = (
@@ -104,7 +148,9 @@ def condition_changes(
         keys = sorted(
             k for k in {*now, *recorded.resources} if now.get(k) != recorded.resources.get(k)
         )
-        if keys:
+        if keys and withheld:
+            changes.append(PreviewChange(condition="resources"))
+        elif keys:
             decisions = [
                 row
                 for row in view.objects
@@ -123,17 +169,22 @@ def condition_changes(
             )
     scenario = view.private_scenario_state
     if recorded is not None and recorded.source_versions is not None and scenario is not None:
-        now = dict(scenario.source_versions)
+        current = dict(scenario.source_versions)
         old = recorded.source_versions
-        keys = sorted(k for k in {*now, *old} if now.get(k) != old.get(k))
-        if keys:
-            changes.append(
-                PreviewChange(
-                    condition="materials",
-                    before={k: old.get(k) for k in keys},
-                    after={k: now.get(k) for k in keys},
+        if withheld:
+            if any(current.get(k) != v for k, v in old.items()):
+                changes.append(PreviewChange(condition="materials"))
+        else:
+            # New or newer versions the learner may open; others never become visible here.
+            now = readable_versions(view, {k: v for k, v in current.items() if old.get(k) != v})
+            if now:
+                changes.append(
+                    PreviewChange(
+                        condition="materials",
+                        before={k: old.get(k) for k in now},
+                        after=now,
+                    )
                 )
-            )
     return tuple(changes)
 
 

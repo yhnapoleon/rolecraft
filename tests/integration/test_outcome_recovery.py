@@ -239,3 +239,81 @@ def test_out_14_scoped_reader_states_cite_only_what_it_can_read(
     assert referenced_ids(state) <= allowed
     without_preview = session.delegate({product_id, cycle_id})
     assert "preview_states" not in page(session, saved["ref"], headers=without_preview)
+
+
+HIDDEN = ("world_private", "tech_private", "tech_diagnostics")
+
+
+def raw(session: WorkSession, path: str, headers: dict[str, str]) -> str:
+    response = session.client.get(f"/sessions/{session.sid}/{path}", headers=headers)
+    assert response.status_code == 200, response.text
+    return response.text
+
+
+def test_out_14_recorded_materials_are_only_those_the_learner_can_open(
+    work_session: WorkSession,
+) -> None:
+    session = work_session
+    listed = {row["id"] for row in session.get("materials")["materials"]}
+    saved = save(session)
+    recorded = state_preview(session, saved)["preview_conditions"]["source_versions"]
+    assert set(recorded) == listed
+    assert not set(recorded) & set(HIDDEN)
+    report = session.review(saved["ref"], preview_kind="rules", purpose="commitment")
+    assert set(report["preview_conditions"]["source_versions"]) == listed
+
+
+def state_preview(session: WorkSession, saved: dict[str, Any]) -> dict[str, Any]:
+    return session.get("feedback-records/" + saved["preview_feedback"]["object_id"])["feedback"]
+
+
+def test_out_14_scoped_reader_learns_only_that_withheld_conditions_changed(
+    work_session: WorkSession,
+) -> None:
+    session = work_session
+    saved = save(session)
+    product_id = saved["ref"]["object_id"]
+    preview_id = saved["preview_feedback"]["object_id"]
+    cycle_id = page(session, saved["ref"])["items"][0]["cycle"]["object_id"]
+    report = session.review(saved["ref"], preview_kind="rules", purpose="commitment")
+    review_id = report["subject"]["object_id"]
+    apply_config(session, participants=50)
+    asked = session.post(
+        "actions",
+        "request_business",
+        {"tool": "request_business", "terms": {"capacity": 60}, "reason": "Pilot capacity"},
+    )
+    session.post(
+        "approvals/resolve",
+        "resolve_approval",
+        {"request": asked["result"]["request"], "expected_request_revision": 1},
+    )
+    # The learner's own view keeps values and names only materials it can open.
+    learner = state_of(session, saved)
+    changes = {row["condition"]: row for row in learner["changes"]}
+    assert changes["resources"]["after"] == {"capacity": 60}
+    assert set(changes["materials"]["after"]) <= {
+        row["id"] for row in session.get("materials")["materials"]
+    }
+    headers = session.delegate({product_id, cycle_id, preview_id, review_id, report["id"]})
+    texts = {
+        "versions": raw(session, f"work-products/{product_id}/versions", headers),
+        "record": raw(session, "feedback-records/" + preview_id, headers),
+        "explicit": raw(session, "feedback-records/" + report["id"], headers),
+        "review": raw(session, "feedback/" + review_id, headers),
+        "object": raw(session, f"objects/feedback/{preview_id}/1", headers),
+    }
+    for name, text in texts.items():
+        assert not [word for word in HIDDEN if word in text], name
+        for word in ('"capacity"', '"policy"', '"demo"', '"dev_days"'):
+            assert word not in text, (name, word)
+    scoped_state = session.get(f"work-products/{product_id}/versions", headers=headers)
+    rows = {row["condition"]: row for row in scoped_state["preview_states"][0]["changes"]}
+    assert rows["configuration"]["before"] == 0 and rows["configuration"]["after"] == 1
+    for condition in ("resources", "materials"):
+        assert rows[condition]["before"] is None and rows[condition]["after"] is None
+        assert rows[condition]["ref"] is None
+    conditions = scoped_state["previews"][0]["preview_conditions"]
+    assert conditions["resources"] is None and conditions["source_versions"] is None
+    # The learner still reads the stored values.
+    assert state_preview(session, saved)["preview_conditions"]["resources"]["capacity"] == 30

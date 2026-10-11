@@ -9,7 +9,7 @@ from career_lab.contracts.v2 import *
 from career_lab.api.modules import Operation, V2Response
 from career_lab.storage.v2_store import Mutation, ObjectWrite, references, FeedbackReadTrace
 from career_lab.storage.v2_lifecycle import point
-from career_lab.workspace.preview_state import preview_state
+from career_lab.workspace.preview_state import preview_state, scoped, withheld_preview
 
 
 def record_feedback_response(view, command, auth):
@@ -93,7 +93,7 @@ def install_feedback_recovery(registry):
         # Preserve the exact historical object; absent fields stay absent in storage and wire.
         sections = ("verified_facts", "historical_responsibilities", "rule_items", "provenance")
         result = {
-            "feedback": record.content,
+            "feedback": withheld_preview(record.content) if scoped(auth) else record.content,
             "sections": {
                 name: "recorded" if record.content.get(name) is not None else "not_recorded"
                 for name in sections
@@ -101,7 +101,7 @@ def install_feedback_recovery(registry):
         }
         if record.content.get("preview_kind") is not None:
             # Freshness is read beside the unchanged preview; other records keep their bytes.
-            result["preview_state"] = preview_state(view, record).model_dump(mode="json")
+            result["preview_state"] = preview_state(view, record, auth).model_dump(mode="json")
         return V2Response(result=result)
 
     def read_responses(view, page, auth):

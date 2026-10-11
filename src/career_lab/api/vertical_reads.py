@@ -7,6 +7,7 @@ from career_lab.storage.v2_tables import v2_transactions, v2_request_meta
 from sqlalchemy import select
 from career_lab.storage.v2_lifecycle import point
 from career_lab.runtime.roles_v2 import record_reply_display
+from career_lab.workspace.preview_state import scoped, withheld_preview
 
 
 def history_reader(registry):
@@ -356,6 +357,8 @@ def install_native_reads(
             }
         else:
             content = view.get(ref).content
+            if ref.kind == "feedback" and scoped(auth):
+                content = withheld_preview(content)
         return V2Response(
             result={"schema_version": 2, "ref": ref.model_dump(mode="json"), "content": content}
         )

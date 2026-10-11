@@ -26,6 +26,8 @@ from career_lab.workspace.preview_state import (
     current_conditions,
     current_configuration,
     preview_state,
+    scoped,
+    withheld_preview,
 )
 
 SAVE_OPERATIONS = frozenset({"work_products.create", "work_products.versions.create"})
@@ -220,10 +222,13 @@ def with_saved_previews(
     )
     if not rows:
         return page
+    withheld = scoped(auth)
     return C.WorkspaceProductPage.model_validate(
         {
             **page,
-            "previews": [row.content for row in rows],
-            "preview_states": [preview_state(view, row) for row in rows],
+            "previews": [
+                withheld_preview(row.content) if withheld else row.content for row in rows
+            ],
+            "preview_states": [preview_state(view, row, auth) for row in rows],
         }
     ).model_dump(mode="json")

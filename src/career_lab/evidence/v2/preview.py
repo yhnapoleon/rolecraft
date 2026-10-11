@@ -98,10 +98,14 @@ def recorded_conditions(
         snapshot = source.window(auth, request.as_of).snapshot
     except C.ProtocolError:
         return None
+    # Only materials the requester may open, as in the requester's own material list.
+    visible = source.module.package.visible_materials(
+        snapshot.source_versions, auth.actor_id, snapshot.world.business_seq, auth.session_id
+    )
     return PreviewConditions(
         config_version=snapshot.world.config_version,
         resources=dict(snapshot.world.resources),
-        source_versions=dict(snapshot.source_versions),
+        source_versions={material.id: material.version for material, _ in visible},
     )
 
 
