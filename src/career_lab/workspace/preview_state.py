@@ -18,6 +18,8 @@ from career_lab.storage.v2_store import TransactionView
 CONFIG_IDENTITY = frozenset({"id", "session_id", "version", "config_version"})
 # Repeated tools also report how many separate records were made after the preview.
 COUNTED = frozenset({"tests.create", "work_products.shares.create"})
+# Saved fields a preview depends on; adoption, removal, sharing and executor are lifecycle only.
+SUBSTANCE = ("kind", "purpose", "title", "content_hash", "task", "evidence_refs")
 
 
 def current_conditions(view: TransactionView) -> PreviewConditions:
@@ -104,22 +106,35 @@ def depends_on_business(conditions: PreviewConditions | None) -> bool:
 
 
 def input_changes(view: TransactionView, inputs: tuple[C.ObjectRef, ...]) -> tuple:
+    """A newer version changes the input only if its saved substance differs.
+
+    Adoption, removal, restoration and sharing write new versions with identical content; the
+    preview of the earlier version still describes that content.
+    """
     changes = []
     for ref in inputs:
-        head = max(
-            (
-                row.ref
-                for row in view.objects
-                if row.ref.kind == "product" and row.ref.object_id == ref.object_id
-            ),
-            key=lambda found: found.version,
-            default=ref,
-        )
-        if head.version > ref.version:
-            changes.append(
-                PreviewChange(condition="input", before=ref.version, after=head.version, ref=head)
+        versions = {
+            row.ref.version: row
+            for row in view.objects
+            if row.ref.kind == "product" and row.ref.object_id == ref.object_id
+        }
+        head = versions[max(versions)] if versions else None
+        if head is None or head.ref.version <= ref.version:
+            continue
+        formed = versions.get(ref.version)
+        if formed is not None and substance(formed.content) == substance(head.content):
+            continue
+        changes.append(
+            PreviewChange(
+                condition="input", before=ref.version, after=head.ref.version, ref=head.ref
             )
+        )
     return tuple(changes)
+
+
+def substance(content: dict) -> tuple:
+    """What a save-time check reads; lifecycle and provenance fields are left out."""
+    return tuple(content.get(key) for key in SUBSTANCE)
 
 
 def condition_changes(

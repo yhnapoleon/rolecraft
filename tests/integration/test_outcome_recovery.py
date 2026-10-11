@@ -317,3 +317,69 @@ def test_out_14_scoped_reader_learns_only_that_withheld_conditions_changed(
     assert conditions["resources"] is None and conditions["source_versions"] is None
     # The learner still reads the stored values.
     assert state_preview(session, saved)["preview_conditions"]["resources"]["capacity"] == 30
+
+
+def test_out_10_lifecycle_only_versions_keep_the_earlier_preview_current(
+    work_session: WorkSession,
+) -> None:
+    session = work_session
+    saved = save(session)
+    product_id = saved["ref"]["object_id"]
+    adopted = session.post(
+        f"work-products/{product_id}/adoption",
+        "work_products.adopt",
+        {"product_id": product_id, "expected_head": 1, "product_version": 1, "status": "adopted"},
+    )["result"]
+    assert adopted["ref"]["version"] == 2
+    found = page(session, saved["ref"])
+    assert [row["subject"]["version"] for row in found["previews"]] == [1]
+    assert found["preview_states"][0]["status"] == "current"
+    assert found["preview_states"][0]["changes"] == []
+    removed = session.post(
+        f"work-products/{product_id}/versions",
+        "work_products.versions.create",
+        {
+            "product_id": product_id,
+            "expected_head": 2,
+            "kind": "text",
+            "purpose": "commitment",
+            "title": "Pilot decision",
+            "content": NOTE[session.language],
+            "removed": True,
+        },
+    )["result"]
+    first = page(session, saved["ref"])["preview_states"][0]
+    assert first["status"] == "current"
+    assert first["superseded_by"] == removed["preview_feedback"]
+    restored = session.post(
+        f"work-products/{product_id}/versions",
+        "work_products.versions.create",
+        {
+            "product_id": product_id,
+            "expected_head": 3,
+            "kind": "text",
+            "purpose": "commitment",
+            "title": "Pilot decision",
+            "content": NOTE[session.language],
+            "removed": False,
+        },
+    )["result"]
+    assert page(session, saved["ref"])["preview_states"][0]["status"] == "current"
+    edited = session.post(
+        f"work-products/{product_id}/versions",
+        "work_products.versions.create",
+        {
+            "product_id": product_id,
+            "expected_head": restored["ref"]["version"],
+            "kind": "text",
+            "purpose": "commitment",
+            "title": "Pilot decision",
+            "content": "Changed decision",
+            "removed": False,
+        },
+    )["result"]
+    first = page(session, saved["ref"])["preview_states"][0]
+    assert first["status"] == "stale"
+    assert [(row["condition"], row["before"], row["after"]) for row in first["changes"]] == [
+        ("input", 1, edited["ref"]["version"])
+    ]
