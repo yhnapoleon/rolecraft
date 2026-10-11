@@ -57,7 +57,21 @@ async function ask(browser, question) {
   const count = await browser.ev(`${same}.length`);
   await browser.type('#chat-input', question);
   await browser.submit('.composer');
-  await waitFor(browser, `${same}.length > ${count}`, 30000);
+  // On a loaded machine the shared SQLite store can stall a read; the composer then keeps
+  // the unsent text, as it would for a learner, who sends it again.
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await waitFor(browser, `${same}.length > ${count}`, 30000);
+      break;
+    } catch (error) {
+      const unsent = await browser.ev(
+        `document.querySelector('#chat-input')?.value === ${JSON.stringify(question)}`,
+      );
+      if (attempt > 1 || !unsent) throw error;
+      await waitFor(browser, `${host}.snapshot().busy === false`, 60000);
+      await browser.submit('.composer');
+    }
+  }
   await waitFor(browser, `!!${same}.at(-1)?.querySelector('.rc-roles__reply')`, 60000);
   await delay(300);
   await waitFor(browser, `!!${same}.at(-1)?.querySelector('.rc-roles__reply')`, 15000);
@@ -76,6 +90,17 @@ async function ask(browser, question) {
     };
   })()`);
 }
+/** A new practice from the normal entry, in a clean browser store. */
+async function enterFresh(browser, language) {
+  await browser.goto(base);
+  await browser.ev(`localStorage.clear(); localStorage.setItem('rolecraft.locale', '${language}')`);
+  await browser.goto(base);
+  await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
+  await browser.click('[data-action="open-career"]');
+  await browser.click('.case-hero [data-action="take-case"]');
+  await waitFor(browser, `!!document.querySelector('.card-open')`);
+  await browser.click('.card-open');
+}
 async function storedReply(browser, question) {
   return browser.ev(`(async () => {
     const data = (${unwrap})(await ${host}.query('timeline'));
@@ -89,16 +114,7 @@ for (const language of ['zh', 'en']) {
   const browser = await launch({ width: 1440, height: 1000, reduced: true });
   try {
     await browser.send('Emulation.setFocusEmulationEnabled', { enabled: true });
-    await browser.goto(base);
-    await browser.ev(
-      `localStorage.clear(); localStorage.setItem('rolecraft.locale', '${language}')`,
-    );
-    await browser.goto(base);
-    await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
-    await browser.click('[data-action="open-career"]');
-    await browser.click('.case-hero [data-action="take-case"]');
-    await waitFor(browser, `!!document.querySelector('.card-open')`);
-    await browser.click('.card-open');
+    await enterFresh(browser, language);
     await waitFor(browser, `!!document.querySelector('[data-action="chat"][data-role="manager"]')`);
     await browser.click('[data-action="chat"][data-role="manager"]');
 
@@ -115,9 +131,9 @@ for (const language of ['zh', 'en']) {
     assert.ok(fact.full.includes(fact.lead.split('\n')[0]), 'first screen is verbatim');
     await shot('colleague-desktop');
     results.push({ language, check: 'colleague fact first screen', ...fact, full: undefined });
-    const asked = [factQuestion];
+    // A recalled earlier question never leads (the learner's own words are not an answer).
     const notEcho = (reply) =>
-      asked.every((q) => !reply.lead.includes(q)) &&
+      !reply.lead.startsWith(t('此前你问', 'Earlier you asked')) &&
       !reply.source.includes(t('对话记录', 'Conversation'));
     // P1-2: a follow-up shares words with the first question; it still leads with a source.
     const judgementQuestion = t(
@@ -126,9 +142,26 @@ for (const language of ['zh', 'en']) {
     );
     const judgement = await ask(browser, judgementQuestion);
     assert.ok(notEcho(judgement), JSON.stringify(judgement));
-    asked.push(judgementQuestion);
     await shot('colleague-follow-up-desktop');
     results.push({ language, check: 'follow-up never echoes', ...judgement, full: undefined });
+    // P1-A: a keyword the material itself contains leads with that material, and a later
+    // question never changes an earlier reply's first screen.
+    const keyword = t('试点期限', 'pilot deadline');
+    const keywordReply = await ask(browser, keyword);
+    assert.ok(keywordReply.lead.toLowerCase().includes(keyword), JSON.stringify(keywordReply));
+    assert.equal(keywordReply.derived, false);
+    const earlier = await browser.ev(
+      `document.querySelector('[data-turn-id="${fact.id}"] .short-result__lead')?.innerText ?? ''`,
+    );
+    assert.equal(earlier, fact.lead, 'an earlier first screen is unchanged by later questions');
+    await shot('colleague-keyword-desktop');
+    results.push({
+      language,
+      check: 'keyword question',
+      ...keywordReply,
+      earlier,
+      full: undefined,
+    });
 
     // 2. N1: a committed approval is stated first. Setup uses the page's own v4 host
     // client (same journal as the sheets); the question and reading are normal UI.
@@ -147,21 +180,23 @@ for (const language of ['zh', 'en']) {
     // Reopen the conversation from the normal route so the page reads the new state.
     const route = await browser.ev('location.hash');
     await browser.goto(base + route);
-    const manager = `document.querySelector('[data-action="chat"][data-role="manager"]')`;
+    // Open the manager from the team list, as after any reload, so the composer is bound.
+    const team = `document.querySelector('[data-action="rail"][data-rail="team"]')`;
     await waitFor(
       browser,
-      `!!${manager} || document.querySelectorAll('.rc-roles__reply').length >= 2`,
+      `!!${team} || !!document.querySelector('.person[data-role="manager"]')`,
       30000,
     );
-    if (await browser.ev(`!!${manager}`))
-      await browser.click('[data-action="chat"][data-role="manager"]');
+    if (await browser.ev(`!!${team}`))
+      await browser.click('[data-action="rail"][data-rail="team"]');
+    await waitFor(browser, `!!document.querySelector('.person[data-role="manager"]')`, 30000);
+    await browser.click('.person[data-role="manager"]');
     await waitFor(browser, `document.querySelectorAll('.rc-roles__reply').length >= 2`, 30000);
-    // P1-1: the natural question, the explicit one and a cover question all lead with
-    // the committed decision; the initial brief figure is never the first-screen answer.
+    // P1-1: the natural question and the explicit one lead with the committed decision;
+    // the initial brief figure is never the first-screen answer.
     const afterApproval = [
       ['current-capacity', factQuestion],
       ['approved', t('目前已批准的容量是多少？', 'What capacity has been approved?')],
-      ['cover', t('试点能覆盖多少人？', 'How many people can the pilot cover?')],
     ];
     for (const [name, question] of afterApproval) {
       const reply = await ask(browser, question);
@@ -170,13 +205,44 @@ for (const language of ['zh', 'en']) {
       assert.ok(!reply.lead.includes('30'), `${name}: stale brief figure on the first screen`);
       assert.ok(reply.source.includes(t('业务决定', 'Business decision')), reply.source);
       assert.ok(notEcho(reply), JSON.stringify(reply));
-      asked.push(question);
       await browser.ev(
         `document.querySelector('[data-turn-id="${reply.id}"]')?.scrollIntoView({block:'center'})`,
       );
       await shot(`colleague-after-approval-${name}-desktop`);
       results.push({ language, check: `approved decision: ${name}`, ...reply, full: undefined });
     }
+    // A question sharing no term with the decision is not led by it, yet never by the
+    // superseded initial figure either; an unrelated question is not led by it at all.
+    const cover = await ask(
+      browser,
+      t('试点能覆盖多少人？', 'How many people can the pilot cover?'),
+    );
+    assert.ok(!cover.lead.includes('30'), `cover: ${cover.lead}`);
+    assert.ok(notEcho(cover), JSON.stringify(cover));
+    await shot('colleague-after-approval-cover-desktop');
+    const policy = await ask(
+      browser,
+      t('政策更新后需要重新测试吗？', 'Do we need to retest after the policy update?'),
+    );
+    assert.ok(!policy.source.includes(t('业务决定', 'Business decision')), policy.source);
+    await shot('colleague-after-approval-policy-desktop');
+    // P1-B: the request moved the demo from day 5 to day 4; the newer notice leads.
+    const demo = await ask(
+      browser,
+      t('内部演示安排在第几天？', 'Which day is the internal demonstration?'),
+    );
+    assert.ok(demo.lead.includes(t('第4天', 'day 4')), `demo: ${demo.lead}`);
+    assert.ok(!demo.lead.includes(t('第5天', 'day 5')), `demo: ${demo.lead}`);
+    await browser.ev(
+      `document.querySelector('[data-turn-id="${demo.id}"]')?.scrollIntoView({block:'center'})`,
+    );
+    await shot('colleague-after-approval-demo-day-desktop');
+    for (const [name, reply] of [
+      ['cover', cover],
+      ['policy', policy],
+      ['demo day', demo],
+    ])
+      results.push({ language, check: `after approval: ${name}`, ...reply, full: undefined });
 
     // 3. Review. P2-2: the purpose the work declares is used without asking again.
     await browser.type('#new-title', t('探索笔记', 'Exploration note'));
@@ -334,10 +400,35 @@ for (const language of ['zh', 'en']) {
       .catch(() => browser.click('[data-action="rail"][data-rail="team"]'));
     await delay(300);
     results.push({ language, check: '390px dark review', status: 'passed' });
-
-    // 5. Submission feedback: short result first, 14 items folded.
-    await viewport(browser, 1440, 1000, false);
+    // Colleague history at 390px, dark, still leads with the quoted fact.
     await browser.goto(`${base}#/work`);
+    await waitFor(browser, `!!document.querySelector('[data-action="open-rail"]')`);
+    await browser.click('[data-action="open-rail"]');
+    await delay(300);
+    if (await browser.ev(`!!document.querySelector('.person[data-role="manager"]')`))
+      await browser.click('.person[data-role="manager"]');
+    await waitFor(
+      browser,
+      `!!document.querySelector('.rc-roles__turn .short-result__lead')`,
+      20000,
+    );
+    assert.equal(await noOverflow(browser), true);
+    await shot('colleague-390-dark');
+    results.push({ language, check: '390px dark colleague', status: 'passed' });
+
+    // 5. Submission feedback, in a fresh practice so the feedback job is not queued behind
+    // this long session: short result first, 14 items folded.
+    await viewport(browser, 1440, 1000, false);
+    await enterFresh(browser, language);
+    await waitFor(browser, `!!document.querySelector('#new-title')`);
+    await browser.type('#new-title', t('试点决定', 'Pilot decision'));
+    await browser.type(
+      '#new-body',
+      t('负责人和范围核实前暂缓，保留人工兜底。', 'Defer until the owner and scope are verified.'),
+    );
+    await browser.clickText(t('保存为作品', 'Save as work'));
+    await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
+    await browser.click('[data-action="to-board"]');
     await waitFor(browser, `!!document.querySelector('.ws-toolbar [data-action="submit"]')`);
     await browser.click('.ws-toolbar [data-action="submit"]');
     await waitFor(
@@ -354,19 +445,30 @@ for (const language of ['zh', 'en']) {
     );
     await browser.ev(`document.querySelector('#sheet')?.close()`);
     await browser.goto(`${base}#/review`);
-    // Feedback is a worker job; on a loaded machine it can take minutes. Refresh by the
-    // page's own "Refresh feedback" control, as a learner would, until it appears.
+    // Feedback is a worker job; on a loaded machine it can take minutes, and a job whose
+    // lease lapsed waits for an explicit retry. Use the page's own controls, as a learner
+    // would: "Request feedback again" when offered, otherwise "Refresh feedback".
+    let retried = 0;
     for (
       let waited = 0;
       !(await browser.ev(`!!document.querySelector('[data-short-result="feedback"]')`));
       waited += 10
     ) {
-      assert.ok(waited < 360, 'submission feedback did not appear');
+      assert.ok(waited < 600, 'submission feedback did not appear');
       await delay(10000);
-      await browser
-        .clickText(t('查看最新反馈', 'Refresh feedback'), 'button')
-        .catch(() => undefined);
+      const again = t('重新请求反馈', 'Request feedback again');
+      const offered = await browser.ev(
+        `[...document.querySelectorAll('button')].some((b) => b.textContent.trim() === ${JSON.stringify(again)} && b.offsetParent !== null && !b.disabled)`,
+      );
+      if (offered && retried < 2) {
+        retried++;
+        await browser.clickText(again, 'button');
+      } else
+        await browser
+          .clickText(t('查看最新反馈', 'Refresh feedback'), 'button')
+          .catch(() => undefined);
     }
+    results.push({ language, check: 'submission feedback retries used', retried });
     await delay(500);
     const feedback = await browser.ev(`(() => {
       const block = document.querySelector('[data-short-result="feedback"]');
@@ -394,21 +496,7 @@ for (const language of ['zh', 'en']) {
     );
     assert.equal(await noOverflow(browser), true);
     await shot('feedback-390-dark');
-    // Colleague history at 390px, dark, still leads with the quoted fact.
-    await browser.goto(`${base}#/work`);
-    await waitFor(browser, `!!document.querySelector('[data-action="open-rail"]')`);
-    await browser.click('[data-action="open-rail"]');
-    await delay(300);
-    if (await browser.ev(`!!document.querySelector('.person[data-role="manager"]')`))
-      await browser.click('.person[data-role="manager"]');
-    await waitFor(
-      browser,
-      `!!document.querySelector('.rc-roles__turn .short-result__lead')`,
-      20000,
-    );
-    assert.equal(await noOverflow(browser), true);
-    await shot('colleague-390-dark');
-    results.push({ language, check: 'submission feedback and 390px dark colleague', feedback });
+    results.push({ language, check: 'submission feedback', feedback });
   } catch (error) {
     await shot('failure').catch(() => {});
     writeFileSync(

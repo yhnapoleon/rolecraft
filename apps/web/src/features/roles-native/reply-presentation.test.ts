@@ -126,6 +126,7 @@ const LOCAL = {
     'Other sources available (not expanded): [Technical handover: capabilities and configuration · v1]',
   ].join('\n'),
 };
+const CURRENT_Q = { zh: '当前试点容量是多少？', en: 'What is the current pilot capacity?' };
 const OLD_META = {
   zh: '回复包含完整条件与来源，请展开原文核对。',
   en: 'Open the original reply to check its full conditions and sources.',
@@ -186,30 +187,40 @@ describe.each(['zh', 'en'] as const)('first screen from the reply structure (%s)
     expect(shown.source).toBe(language === 'zh' ? '业务决定 · v1' : 'Business decision · v1');
   });
 
-  it("P1-2 never leads with the learner's own earlier question", () => {
-    const earlier =
-      language === 'zh' ? '当前试点容量是多少？' : 'What is the current pilot capacity?';
-    const recall =
-      language === 'zh'
-        ? `[对话记录 · v1] 此前你问：“${earlier}”`
-        : `[Conversation · v1] Earlier you asked: "${earlier}"`;
-    const fact =
-      language === 'zh'
-        ? '[经理委托：内部知识助手试点 · v1] 我在第5天安排了内部演示。'
-        : '[Manager brief · v1] I have booked an internal demonstration for day 5.';
-    const reply = `${LOCAL[language].split('\n')[0]}\n${recall}\n${fact}`;
-    const shown = presentReply(reply, {
+  it('P1-A: a keyword question leads with the passage that contains the keyword', () => {
+    // The reviewer's case: the learner asks "试点期限"; the cited material contains it.
+    const keyword = language === 'zh' ? '正式试点期限' : 'pilot deadline';
+    const shown = presentReply(LOCAL[language], { generationMode: 'local' });
+    expect(shown.summary).toContain(keyword);
+    expect(shown.derived).toBe(false);
+    // Questions asked in the session no longer reach the presentation at all, so a later
+    // question cannot change an earlier reply's first screen.
+    const withSessionData = presentReply(LOCAL[language], {
       generationMode: 'local',
-      learnerQuestions: [earlier, language === 'zh' ? '现在开放吗？' : 'Open now?'],
+      ...({ learnerQuestions: [keyword, CURRENT_Q[language]] } as object),
     });
-    expect(shown.summary).toBe(fact.replace(/^\[[^\]]+\] /, ''));
-    expect(shown.source).not.toContain(language === 'zh' ? '对话记录' : 'Conversation');
-    const onlyRecall = presentReply(`${LOCAL[language].split('\n')[0]}\n${recall}`, {
+    expect(withSessionData).toEqual(shown);
+  });
+
+  it('P1-A: says "no excerpt" only when the reply cites no passage at all', () => {
+    const head = LOCAL[language].split('\n')[0];
+    const long = presentReply(`${head}\n[Rules · v1] ${'很长的一句'.repeat(80)}。`, {
       generationMode: 'local',
-      learnerQuestions: [earlier],
     });
-    expect(onlyRecall.derived).toBe(true);
-    expect(onlyRecall.summary).not.toContain(earlier);
+    expect(long).toMatchObject({ derived: true, sourceCount: 1 });
+    expect(long.summary).toBe(
+      language === 'zh'
+        ? '首条引用的原文较长，引用 1 份资料，见原文。'
+        : 'The first cited passage is long; sources cited: 1. See the full reply.',
+    );
+    const recalledOnly = presentReply(`${head}\nnone\nOthers: [对话记录 · v1]`, {
+      generationMode: 'local',
+    });
+    expect(recalledOnly.summary).toBe(
+      language === 'zh'
+        ? '这次回复没有直接相关的原文摘录，列出了 1 份可参考资料。'
+        : 'This reply quotes no directly related passage; sources listed for reference: 1.',
+    );
   });
 
   it('describes a local reply without any quoted passage from its structure', () => {

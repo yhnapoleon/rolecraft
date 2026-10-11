@@ -8,8 +8,6 @@ export interface ReplyPresentationContext {
   generationMode?: GenerationMode;
   receivedVersionsOnly?: boolean;
   omissionCount?: number;
-  /** Questions the learner asked in this session; never shown back as the answer. */
-  learnerQuestions?: readonly string[];
 }
 
 export interface ReplyPresentation {
@@ -41,6 +39,7 @@ const zh = {
   noPassage: '这次回复没有直接相关的原文摘录。',
   noPassageListed: '这次回复没有直接相关的原文摘录，列出了 {n} 份可参考资料。',
   longReply: '完整回复较长，引用 {n} 份资料。',
+  longExcerpt: '首条引用的原文较长，引用 {n} 份资料，见原文。',
   longReplyUncited: '完整回复较长。',
 };
 const COPY: CopyTable<keyof typeof zh> = {
@@ -59,6 +58,7 @@ const COPY: CopyTable<keyof typeof zh> = {
     noPassageListed:
       'This reply quotes no directly related passage; sources listed for reference: {n}.',
     longReply: 'The full reply is long; sources cited: {n}.',
+    longExcerpt: 'The first cited passage is long; sources cited: {n}. See the full reply.',
     longReplyUncited: 'The full reply is long.',
   },
 };
@@ -105,41 +105,27 @@ function leading(fragment: string): string | undefined {
   return shown && shown.length <= SENTENCE_CHARS ? shown : undefined;
 }
 
-const ECHO_CHARS = 40;
-/** True when a text repeats one of the learner's own earlier questions. */
-function echoes(text: string, questions: readonly string[]): boolean {
-  return questions.some((question) => {
-    const probe = question.split(/\s+/).filter(Boolean).join(' ').slice(0, ECHO_CHARS);
-    return probe.length >= 4 && text.includes(probe);
-  });
-}
-
-/** First cited passage: one rule-checked excerpt or recorded decision with its source.
- * A recalled earlier question is the learner's own words and is skipped. */
-function firstPassage(reply: string, questions: readonly string[]): Chosen {
+/** The reply's first cited passage: one rule-checked excerpt or recorded decision with its
+ * source. The backend orders citations (decisions on the asked subject, newer notices,
+ * then initial materials; recalled questions last), so only the first is considered. */
+function firstPassage(reply: string): Chosen {
   const lines = reply.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    const match = PASSAGE.exec(lines[i]);
-    if (!match) continue;
-    const body = [match[2]];
-    for (const line of lines.slice(i + 1)) {
-      if (line.startsWith('[') || CITES.test(line)) break;
-      body.push(line);
-    }
-    const fragment = body.join('\n').split(GAP)[0];
-    if (echoes(fragment, questions)) continue;
-    const shown = leading(fragment);
-    if (shown) return { summary: shown, source: match[1] };
+  const start = lines.findIndex((line) => PASSAGE.test(line));
+  const match = start < 0 ? null : PASSAGE.exec(lines[start]);
+  if (!match) return undefined;
+  const body = [match[2]];
+  for (const line of lines.slice(start + 1)) {
+    if (line.startsWith('[') || CITES.test(line)) break;
+    body.push(line);
   }
-  return undefined;
+  const shown = leading(body.join('\n').split(GAP)[0]);
+  return shown ? { summary: shown, source: match[1] } : undefined;
 }
 
 /** A model reply leads with one observation or question and its conditions. */
-function firstParagraph(reply: string, questions: readonly string[]): Chosen {
+function firstParagraph(reply: string): Chosen {
   const first = reply.split('\n')[0].trim();
-  return first && first.length <= PARAGRAPH_CHARS && !echoes(first, questions)
-    ? { summary: first }
-    : undefined;
+  return first && first.length <= PARAGRAPH_CHARS ? { summary: first } : undefined;
 }
 
 const singleLine = (reply: string): Chosen =>
@@ -153,20 +139,24 @@ export function presentReply(reply: string, context: ReplyPresentationContext): 
     context.generationMode === 'local'
       ? [firstPassage, singleLine]
       : [firstParagraph, firstPassage];
-  const questions = context.learnerQuestions ?? [];
   let chosen: Chosen;
-  for (const pick of order) chosen ??= pick(whole, questions);
+  for (const pick of order) chosen ??= pick(whole);
   const derived = !chosen;
   const local = context.generationMode === 'local';
+  // A derived line says only what the structure shows: "no excerpt" only when no
+  // passage is cited at all, otherwise that the cited text is too long to lead with.
+  const cited = whole.split('\n').some((line) => PASSAGE.test(line));
   const summary =
     chosen?.summary ??
-    (local
-      ? sourceCount
-        ? text('noPassageListed', { n: sourceCount })
-        : text('noPassage')
-      : sourceCount
-        ? text('longReply', { n: sourceCount })
-        : text('longReplyUncited'));
+    (local && cited
+      ? text('longExcerpt', { n: sourceCount })
+      : local
+        ? sourceCount
+          ? text('noPassageListed', { n: sourceCount })
+          : text('noPassage')
+        : sourceCount
+          ? text('longReply', { n: sourceCount })
+          : text('longReplyUncited'));
   return {
     summary,
     source: chosen?.source,

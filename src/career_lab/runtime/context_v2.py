@@ -710,9 +710,12 @@ class ContextSnapshot:
         sources = self.generation_sources(auth)
         ordered = [s for s in sources if s.channel in {"attachment", "received_share"}]
         ordered += list(reversed([s for s in sources if s.channel == "memory"]))
-        ordered += [
-            s for s in sources if s.channel not in {"attachment", "received_share", "memory"}
-        ]
+        rest = [s for s in sources if s.channel not in {"attachment", "received_share", "memory"}]
+        # A material that arrived with a later world change (e.g. a schedule notice) is
+        # kept ahead of the initial materials it updates when the budget runs out.
+        start = min((s.ref.observed_at_seq for s in rest), default=0)
+        ordered += [s for s in rest if s.ref.observed_at_seq > start]
+        ordered += [s for s in rest if s.ref.observed_at_seq <= start]
         selected = []
         omitted = []
         used = 0

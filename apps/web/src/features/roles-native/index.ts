@@ -344,7 +344,6 @@ export function mount(
       doc.activeElement?.tagName === 'SUMMARY' && list.contains(doc.activeElement)
         ? doc.activeElement.closest<HTMLElement>('[data-turn-id]')?.dataset.turnId
         : undefined;
-    const learnerQuestions = (view?.turns ?? []).map((turn) => turn.question);
     const fragments = turns.map((turn) => {
       const item = el('li', 'rc-roles__turn');
       item.dataset.turnId = turn.id;
@@ -360,7 +359,6 @@ export function mount(
           generationMode: turn.generationMode,
           receivedVersionsOnly: turn.receivedVersionsOnly,
           omissionCount: turn.omissionCount,
-          learnerQuestions,
         });
         item.append(replyLabel);
         const reply = el('p', 'rc-roles__reply');

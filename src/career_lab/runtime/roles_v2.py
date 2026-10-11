@@ -249,7 +249,8 @@ def _decision_text(value, language, *, note=True):
     """A recorded business decision as a plain statement; only granted terms are in effect.
 
     The record itself states that initial resource materials do not override it, so
-    the statement says which figures it supersedes (`note`). Matching leaves it out.
+    the statement says which figures it supersedes (`note`). Matching uses only what was
+    decided (`note=False`): the note and the rule's reason text are not its subject.
     """
     words = _LOCAL_TEXT[language]
     labels = words["resources"]
@@ -271,9 +272,15 @@ def _decision_text(value, language, *, note=True):
             parts.append(words["supersedes"].format(names))
     if status == "countered" and value.get("countered"):
         parts.append(words["offered"].format(terms(value["countered"])))
-    if isinstance(value.get("reason"), str) and value["reason"].strip():
+    if note and isinstance(value.get("reason"), str) and value["reason"].strip():
         parts.append(value["reason"].strip())
     return "".join(parts) if language == "zh" else " ".join(parts)
+
+
+def _states_figure(text, label):
+    """True when `text` gives a number for the resource called `label`."""
+    pattern = re.escape(label)
+    return bool(re.search(pattern + r".{0,12}?\d", text) or re.search(r"\d.{0,6}?" + pattern, text))
 
 
 def _readable_source(source, language):
@@ -337,11 +344,20 @@ class LocalRoleModel:
                 return _decision_text(_record(source), language, note=False) or ""
             return _readable_source(source, language) or ""
 
+        def seen(source):
+            return source.get("observed_at_seq") or 0
+
+        # Materials present from the start; a later one arrived with a world change.
+        start = min((seen(s) for s in ctx["sources"] if s.get("channel") == "material"), default=0)
+
         def rank(pair):
             index, source = pair
             hits = _hits(matched(source), terms)
-            latest = -(source.get("observed_at_seq") or 0) if tier(source) == 0 else 0
-            return (tier(source), -hits, latest, index)
+            if tier(source) == 0:
+                return (0, False, -hits, -seen(source), index)
+            # A relevant newer notice is admitted ahead of initial materials it updates.
+            newer = source.get("channel") == "material" and seen(source) > start and hits > 0
+            return (tier(source), not newer, -hits, 0, index)
 
         # Only rank already-authorized source excerpts. No inference or new advice.
         sources = sorted(enumerate(ctx["sources"]), key=rank)
@@ -349,6 +365,7 @@ class LocalRoleModel:
         kinds = {}
         granting = {}
         matching = {}
+        arrival = {}
         recalled = set()
         for _, source in sources:
             name = source["display_name"]
@@ -361,6 +378,9 @@ class LocalRoleModel:
                 kinds[name] = tier(source)
             if source.get("channel") == "memory":
                 recalled.add(name)
+            if source.get("channel") == "material":
+                seen = source.get("observed_at_seq") or 0
+                arrival[name] = max(arrival.get(name, seen), seen)
             text = _readable_source(source, language)
             if text:
                 groups[name].append(text)
@@ -385,28 +405,65 @@ class LocalRoleModel:
             ]
 
         chosen = {name: pick(name, lambda x: x[0] >= floor) for name in groups if kinds[name]}
-        quoted_text = " ".join(c for rows in chosen.values() for _, _, c in rows).casefold()
+        # A decision leads only when the question shares a term with it.
+        order = []
         for name in groups:
             if kinds[name] == 0:
-                # A decision is a fact that happened: one shared term is enough, and it is
-                # also stated whenever a quoted passage names a resource it put into effect.
-                chosen[name] = pick(
-                    name,
-                    lambda x, name=name: (
-                        x[0] >= 1 or any(label in quoted_text for label in granting[name][x[1]])
+                chosen[name] = pick(name, lambda x: x[0] >= 1)
+                if chosen[name]:
+                    order.append(name)
+        # A material that arrived with a later world change (e.g. a schedule notice)
+        # precedes the initial materials it updates; otherwise term-overlap order stays.
+        cited_docs = [name for name in groups if kinds[name] == 1 and chosen[name]]
+        best_of = {name: max(x[0] for x in chosen[name]) for name in cited_docs}
+        top = max(best_of.values(), default=0)
+
+        def leads(name):
+            # A later notice leads when it is about what was asked: at least half as many
+            # of the question's terms as the best passage, and two unless only one matches.
+            hits = best_of[name]
+            later = arrival.get(name, start) > start
+            return later and hits * 2 >= top and (hits >= 2 or top <= 1)
+
+        documents = sorted(
+            cited_docs,
+            key=lambda name: (not leads(name), -best_of[name], list(groups).index(name)),
+        )
+        for name in documents:
+            text = " ".join(c for _, _, c in chosen[name]).casefold()
+            before, after = [], []
+            for other in groups:
+                if kinds[other] != 0 or other in order:
+                    continue
+                # A passage giving a figure for a resource the decision put into effect is
+                # superseded by it, so the decision comes first; a passage that only names
+                # the resource keeps its place and the decision follows it.
+                figure = pick(
+                    other,
+                    lambda x, other=other, text=text: any(
+                        _states_figure(text, label) for label in granting[other][x[1]]
                     ),
                 )
-        others = []
-        quoted = 0
-        for name in groups:
-            if chosen[name]:
-                excerpt = _LOCAL_TEXT[language]["gap"].join(
-                    c for _, _, c in sorted(chosen[name], key=lambda x: x[1])
+                rows = figure or pick(
+                    other,
+                    lambda x, other=other, text=text: any(
+                        label in text for label in granting[other][x[1]]
+                    ),
                 )
-                lines.append(f"[{name}] {excerpt}")
-                quoted += 1
-            else:
-                others.append(f"[{name}]")
+                if rows:
+                    chosen[other] = rows
+                    (before if figure else after).append(other)
+            order.extend([*before, name, *after])
+        # A recalled earlier question is context: cited only after something else.
+        if order:
+            order.extend(name for name in groups if kinds[name] == 2 and chosen[name])
+        for name in order:
+            excerpt = _LOCAL_TEXT[language]["gap"].join(
+                c for _, _, c in sorted(chosen[name], key=lambda x: x[1])
+            )
+            lines.append(f"[{name}] {excerpt}")
+        others = [f"[{name}]" for name in groups if name not in order]
+        quoted = len(order)
         if not quoted:
             lines.append(_LOCAL_TEXT[language]["no_match"])
         if others:

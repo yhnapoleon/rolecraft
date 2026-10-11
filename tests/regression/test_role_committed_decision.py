@@ -1,9 +1,15 @@
 """Local colleague replies lead with what happened, never with the learner's own words.
 
 N1 and the 124 review P1s: a committed approval supersedes the initial brief for the
-resources it granted, also for natural questions such as "current capacity", and a
-recalled earlier question is context only, never the first cited passage.
+resources it granted, also for natural questions such as "current capacity"; a material
+that arrived with a later world change (the demo moved to day 4) precedes the initial
+brief; a recalled earlier question is context only, never the first or only citation;
+and a decision leads only when the question shares a term with it.
 """
+
+import json
+
+from career_lab.runtime.roles_v2 import LocalRoleModel
 
 from .conftest import PublishedSession
 
@@ -18,6 +24,15 @@ ORIGINAL = {"zh": "原始委托", "en": "original brief"}
 DECISION = {"zh": "[业务决定 · v", "en": "[Business decision · v"}
 BRIEF = {"zh": "[经理委托：", "en": "[Manager brief:"}
 RECALL = {"zh": "[对话记录 · v", "en": "[Conversation · v"}
+NOTICE = {"zh": "[经理日程变更通知 · v2]", "en": "[Manager's calendar change · v2]"}
+DEMO_Q = {"zh": "内部演示安排在第几天？", "en": "Which day is the internal demonstration?"}
+DEMO_DAY = {"zh": "第4天", "en": "day 4"}
+POLICY_Q = {
+    "zh": "政策更新后需要重新测试吗？",
+    "en": "Do we need to retest after the policy update?",
+}
+KEYWORD = {"zh": "试点期限", "en": "pilot deadline"}
+STALE = {"zh": "容量是30人", "en": "capacity for 30 people"}
 
 
 def ask(session: PublishedSession, key: str, question: str) -> list[str]:
@@ -82,11 +97,7 @@ def test_current_capacity_leads_with_the_committed_decision(
     before = ask(session, "before", CURRENT[language])
     assert before[0].startswith(BRIEF[language]) and "30" in before[0], before
     approve_capacity(session, 50)
-    for key, question in [
-        ("current", CURRENT[language]),
-        ("approved", APPROVED_Q[language]),
-        ("cover", FOLLOW_UPS[language][-1 if language == "en" else 0]),
-    ]:
+    for key, question in [("current", CURRENT[language]), ("approved", APPROVED_Q[language])]:
         cited = ask(session, key, question)
         first = cited[0]
         assert first.startswith(DECISION[language]), cited
@@ -95,6 +106,12 @@ def test_current_capacity_leads_with_the_committed_decision(
         assert not any(line.startswith(RECALL[language]) for line in cited[:1]), cited
         brief = [i for i, line in enumerate(cited) if line.startswith(BRIEF[language])]
         assert all(i > 0 for i in brief), cited
+    # No shared term with the decision: it does not lead by itself, but it still comes
+    # before any cited passage that gives the superseded initial figure.
+    cited = ask(session, "cover", FOLLOW_UPS[language][-1 if language == "en" else 0])
+    decision = [i for i, line in enumerate(cited) if line.startswith(DECISION[language])]
+    stale = [i for i, line in enumerate(cited) if STALE[language] in line]
+    assert decision and all(decision[0] < i for i in stale), cited
 
 
 def test_recalled_question_never_leads_a_follow_up(published_session: PublishedSession) -> None:
@@ -109,3 +126,107 @@ def test_recalled_question_never_leads_a_follow_up(published_session: PublishedS
         recall = [i for i, line in enumerate(cited) if line.startswith(RECALL[language])]
         other = [i for i, line in enumerate(cited) if not line.startswith(RECALL[language])]
         assert all(r > o for r in recall for o in other), cited
+
+
+def test_newer_notice_precedes_the_initial_brief(published_session: PublishedSession) -> None:
+    """P1-B: the first request moves the demo from day 5 to day 4 (demo_schedule_changed)."""
+    session = published_session
+    language = session.language
+    # Earlier conversation fills the prompt budget, as in a real session.
+    for index, question in enumerate([CURRENT[language], *FOLLOW_UPS[language]]):
+        ask(session, f"earlier-{index}", question)
+    approve_capacity(session, 50)
+    for key, question in [("current", CURRENT[language]), ("policy", POLICY_Q[language])]:
+        ask(session, key, question)
+    cited = ask(session, "demo", DEMO_Q[language])
+    assert cited[0].startswith(NOTICE[language]) and DEMO_DAY[language] in cited[0], cited
+    brief = [i for i, line in enumerate(cited) if line.startswith(BRIEF[language])]
+    assert all(i > 0 for i in brief), cited
+
+
+def test_decision_leads_only_on_a_shared_term(published_session: PublishedSession) -> None:
+    """P2-4: a passage that merely names the resource does not put the decision first."""
+    session = published_session
+    language = session.language
+    approve_capacity(session, 50)
+    cited = ask(session, "policy", POLICY_Q[language])
+    assert cited and not cited[0].startswith(DECISION[language]), cited
+
+
+def test_keyword_question_leads_with_the_material_containing_it(
+    published_session: PublishedSession,
+) -> None:
+    """P1-A: the material that contains the asked keyword is the first citation."""
+    session = published_session
+    language = session.language
+    cited = ask(session, "keyword", KEYWORD[language])
+    assert KEYWORD[language] in cited[0].casefold(), cited
+
+
+def local_reply(language: str, sources: list[dict], question: str) -> str:
+    context = {
+        "work_language": language,
+        "responsibilities": ["x"],
+        "omissions": {"learner_scope": 0},
+        "sources": sources,
+    }
+    return (
+        LocalRoleModel()
+        .complete(
+            [
+                {"role": "system", "content": "t\nCONTEXT\n" + json.dumps(context)},
+                {"role": "user", "content": question},
+            ],
+            [],
+        )
+        .text
+    )
+
+
+def test_recall_alone_is_listed_not_cited() -> None:
+    """A recalled question that is the only match is listed, so no reply leads with it."""
+    for language, label, question in [
+        ("zh", "对话记录 · v1", "当前试点容量是多少？"),
+        ("en", "Conversation · v1", "What is the current pilot capacity?"),
+    ]:
+        recall = json.dumps({"historical_question": question, "historical_reply": "r"})
+        text = local_reply(
+            language,
+            [
+                {"display_name": "Brief · v1", "text": "unrelated text", "channel": "material"},
+                {"display_name": label, "text": recall, "channel": "memory"},
+            ],
+            question,
+        )
+        assert not [line for line in text.splitlines() if line.startswith("[")], text
+        assert f"[{label}]" in text.splitlines()[-1], text
+
+
+def test_newer_notice_is_admitted_before_initial_materials() -> None:
+    """P1-B: a relevant later notice is never crowded out by earlier, equally matching ones."""
+    for language, notice, question in [
+        ("zh", "内部演示改到第4天。", "内部演示安排在第几天？"),
+        (
+            "en",
+            "The internal demonstration moves to day 4.",
+            "Which day is the internal demonstration?",
+        ),
+    ]:
+        initial = [
+            {
+                "display_name": f"Material {i} · v1",
+                "text": f"{notice.replace('4', '5')} {i}",
+                "channel": "material",
+                "observed_at_seq": 0,
+            }
+            for i in range(5)
+        ]
+        later = {
+            "display_name": "Notice · v2",
+            "text": notice,
+            "channel": "material",
+            "observed_at_seq": 4,
+        }
+        text = local_reply(language, [*initial, later], question)
+        cited = [line for line in text.splitlines() if line.startswith("[")]
+        assert cited[0] == f"[Notice · v2] {notice}", text
