@@ -6,6 +6,8 @@ converted into these trusted facts; scenario owns their actual-source production
 
 from career_lab.contracts.v2.core import EvidenceRefV2
 from career_lab.contracts.v2.evaluation import FeedbackItem, RuleBound
+from career_lab.contracts.v2.world import TestResultV2
+from career_lab.evidence.v2.ports import model_generated
 
 
 def run_rules_v2(item, *, work_language="zh"):
@@ -297,6 +299,12 @@ def run_rules_v2(item, *, work_language="zh"):
                 + ("current versions." if fresh else "at least one stale version."),
                 (*names, "affected_material_versions"),
                 extra=extra,
+            )
+        if model_generated(TestResultV2.model_validate(record)):
+            return pending(
+                "最新相关复测的回答为模型生成，待核验；规则不据此判定复测通过。",
+                "Model-generated answer on the latest relevant retest: awaiting verification; "
+                "rules do not count it as passing.",
             )
         if not has("passing_dynamic_test_ids", list) or not flag("adjustment_appropriate_verified"):
             return pending()

@@ -171,18 +171,21 @@ def record_review_request(
     return replace(plan, writes=writes)
 
 
+PREVIEW_OPERATIONS = (
+    "reviews.create",
+    "work_products.shares.create",
+    "configuration.apply",
+    "tests.create",
+)
+
+
 def permitted_preview_operations(
-    registry: ExtensionRegistry, auth: C.AuthContext
+    registry: ExtensionRegistry, auth: C.AuthContext, names: tuple[str, ...] = PREVIEW_OPERATIONS
 ) -> tuple[str, ...]:
     """Finite installed capabilities only; this is a suggestion, never an authorization grant."""
     return tuple(
         name
-        for name in (
-            "reviews.create",
-            "work_products.shares.create",
-            "configuration.apply",
-            "tests.create",
-        )
+        for name in names
         if registry.availability(name).ready
         and registry.availability(name).capability in auth.capabilities
         and (auth.allowed_actions is None or name in auth.allowed_actions)

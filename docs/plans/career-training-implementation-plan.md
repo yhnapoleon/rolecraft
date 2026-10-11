@@ -6,7 +6,7 @@
 
 **Architecture:** 以场景引擎保存权威状态，三位同事按不同职责、可见情境与权限协作，用户自己的 Agent 通过获准入口参与工作。Judge 依据用户意图、内容用途、当时信息、行动及修订证据选择适用评价依据；原子 rubric 和关系分类保留为可验证的组成部分。训练 gold 与产品模型输入隔离；Eval runner 独立检验环境、Judge 和产品表现。
 
-**Tech Stack:** 已实现主工作台为原生 JavaScript／CSS＋Vite／TypeScript 适配器，React 页保留于 `/connected/`；后端为 FastAPI／Pydantic、SQLite／PostgreSQL 与独立 Python worker，CPU 实验使用 scikit-learn。PyTorch／Transformers、TRL／PEFT 属于未实施的后训练候选栈。
+**Tech Stack:** 已实现主工作台为原生 JavaScript／CSS＋Vite／TypeScript 适配器（v4，唯一用户界面；原 React 页 `/connected/` 已于 2026-10-11 停止发布）；后端为 FastAPI／Pydantic、SQLite／PostgreSQL 与独立 Python worker，CPU 实验使用 scikit-learn。PyTorch／Transformers、TRL／PEFT 属于未实施的后训练候选栈。
 
 **Spec:** 产品原则见[仓库 README](../../README.md#已确认的产品原则)，工程契约见[技术设计](../design/career-training-technical-design.md)，当前界面与运行边界见[前端 README](../../apps/web/README.md)。本计划不自动授权开发、租卡、下载大型数据或向外部发布。
 

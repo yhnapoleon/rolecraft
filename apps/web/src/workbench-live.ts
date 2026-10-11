@@ -13,6 +13,7 @@ import type { ProductCreate } from './contracts-v2';
 import { workspaceActionMessage } from './features/workspace/native-v4/messages';
 import { canonicalPurpose } from './features/workspace/native-v4/form-values';
 import { blankPilot, WorkspaceStore } from './store';
+import { quotedAnswer } from './app/assistant-mode';
 import type {
   Deliverable,
   LocalSession,
@@ -50,6 +51,7 @@ export const fromPilot = (p: Pilot) => ({
   fallback: p.fallback,
   workItems: p.work_items.map((w) => Object.keys(workIds).find((k) => workIds[k] === w) || w),
   launchDay: p.launch_day,
+  ...(p.generator ? { generator: p.generator } : {}),
 });
 export function toPilot(c: any): Pilot {
   if (
@@ -67,6 +69,8 @@ export function toPilot(c: any): Pilot {
     c.workItems.some((w: string) => !workIds[w])
   )
     throw new Error(T('未知知识范围或工作项。', 'Unknown knowledge area or work item.'));
+  if (c.generator !== undefined && !['extractive', 'llm'].includes(c.generator))
+    throw new Error(T('这项设置没有对应的后端接口。', 'This setting has no server equivalent.'));
   return {
     participants: c.participants,
     knowledge_domains: c.domains.map((d: string) => (d === 'faq' ? 'stable_faq' : d)),
@@ -74,7 +78,14 @@ export function toPilot(c: any): Pilot {
     update_strategy: c.update === 'manual' ? 'manual_policy' : c.update,
     fallback: c.fallback,
     work_items: c.workItems.map((w: string) => workIds[w]),
+    ...(c.generator ? { generator: c.generator } : {}),
   };
+}
+
+/** The saved effective configuration, without identifiers that do not describe behaviour. */
+export function effectiveSummary(config: Record<string, unknown>) {
+  const { id: _id, session_id: _session, schema_version: _schema, ...rest } = config;
+  return { ...rest, generator: rest.generator ?? 'extractive' };
 }
 
 export class LiveWorkbench {
@@ -231,6 +242,8 @@ export class LiveWorkbench {
         s.feedbackFailure,
         s.failedTurn,
         s.v2Workspace,
+        s.v2Assistant,
+        s.queuedTestRuns,
       ]),
     );
     const changed = signature !== this.signature;
@@ -259,6 +272,17 @@ export class LiveWorkbench {
       submissionId: this.store.submissionId(s),
     };
     a.nudges = [];
+    // Deployment state only: each answer below is labelled from its own saved mode.
+    a.assistantMode = s.protocol === 2 ? (s.v2Assistant ?? null) : null;
+    a.queuedTests = Object.values(s.queuedTestRuns ?? {}).map((q) => ({
+      requestId: q.requestId,
+      question: q.query,
+      taskId: q.taskId,
+      workId: q.workId,
+      caseId: q.caseId,
+      blockId: q.blockId,
+      createdAt: q.createdAt,
+    }));
     a.tests = s.tests.map((t) => {
       const previous = a.tests.find((p: any) => p.id === t.id) || {};
       const saved = s.testRunMeta?.[t.id];
@@ -267,13 +291,7 @@ export class LiveWorkbench {
         id: t.id,
         question: t.query,
         rawAnswer: t.answer,
-        answer:
-          (s.protocol === 2 && t.mode === 'waiting_model'
-            ? T(
-                '等待模型接入（当前为原文检索结果）\n\n',
-                'Waiting for model connection (source retrieval result)\n\n',
-              )
-            : '') + t.answer,
+        answer: t.answer,
         citations: t.citations.map((c) => ({
           id: c.material_id,
           version: c.version,
@@ -305,6 +323,9 @@ export class LiveWorkbench {
         intent: meta.intent || '',
         refs: meta.refs || [],
         mode: t.mode,
+        assistant: s.protocol === 2 ? (s.v2Assistant ?? null) : null,
+        generation: t.generation ?? null,
+        effectiveConfig: t.effective_config ? effectiveSummary(t.effective_config) : null,
         asOfSeq: t.as_of_seq,
         fallback: t.fallback,
         stale: t.stale,
@@ -948,8 +969,14 @@ export class LiveWorkbench {
       });
     }
     const before = new Set(s.tests.map((t) => t.id));
-    await this.perform(a, () => this.store.test(input.question, origin));
+    let outcome: unknown;
+    await this.perform(a, async () => {
+      outcome = await this.store.test(input.question, origin);
+    });
     const t = this.session(a)!.tests.find((t) => !before.has(t.id));
+    const queued = (outcome as { queued?: string } | undefined)?.queued;
+    // Model generation runs in the worker; the saved answer appears when it is done.
+    if (!t && queued) return { queued, id: null };
     if (!t)
       throw new Error(
         T(
@@ -1206,7 +1233,7 @@ export class LiveWorkbench {
       id: actual.id,
       title: ev.type === 'test' ? '测试：' + actual.question : actual.title,
       version: ev.version,
-      body: ev.type === 'test' ? actual.answer : actual.body,
+      body: ev.type === 'test' ? quotedAnswer(actual) : actual.body,
       type: ev.type,
     };
     return this.base.addEvidence(a, artifactId, safe);

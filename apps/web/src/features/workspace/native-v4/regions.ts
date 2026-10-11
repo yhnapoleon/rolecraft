@@ -63,6 +63,7 @@ function attach(
       const paper = root.querySelector<HTMLElement>('.paper.editor, .paper.investigation-paper');
       const actions = root.querySelector<HTMLElement>('.action-bar') ?? paper;
       insert('actions', actions);
+      insert('outcome', paper);
       insert('sharing', paper);
       insert('versions', paper);
       for (const button of root.querySelectorAll<HTMLElement>(

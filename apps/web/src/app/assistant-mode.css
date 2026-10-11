@@ -1,0 +1,39 @@
+/* Knowledge-assistant answer modes and the generator setting. */
+.answer-mode {
+  margin: 0 0 6px;
+  color: var(--ink-3);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.answer-mode[data-answer-mode="llm"] {
+  color: var(--p-assistant);
+}
+.answer-mode[data-answer-mode="failed"],
+.answer-mode[data-answer-mode="unavailable"] {
+  color: var(--warn);
+}
+.run.is-queued .answer-mode {
+  margin: 8px 0 0;
+  font-weight: 500;
+}
+.generator-field .choice.is-disabled > span {
+  opacity: 0.5;
+}
+.generator-field .choice.is-disabled input {
+  cursor: not-allowed;
+}
+.generator-note {
+  margin-top: 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.generator-note[data-state="stuck"] {
+  color: var(--warn);
+}
+.generator-field:has(input[value="llm"]:checked) .generator-note[data-for="extractive"],
+.generator-field:has(input[value="extractive"]:checked) .generator-note[data-for="llm"] {
+  display: none;
+}

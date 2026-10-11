@@ -12,6 +12,7 @@ import type {
 } from '../contract-types';
 
 import { canonicalPurpose } from './form-values';
+import { previewEntries, type PreviewEntry } from './outcome-preview';
 const object = (x: unknown): x is Record<string, any> =>
   !!x && typeof x === 'object' && !Array.isArray(x);
 const integer = (x: unknown) => Number.isInteger(x) && Number(x) >= 0;
@@ -339,7 +340,8 @@ export class WorkspaceSlotController {
     sid: string,
   ) {
     const items: T[] = [],
-      shares: ProductShare[] = [];
+      shares: ProductShare[] = [],
+      read: Page<T>[] = [];
     let cursor = 0,
       at: VersionPoint | undefined,
       complete: boolean | undefined;
@@ -353,6 +355,7 @@ export class WorkspaceSlotController {
       );
       if (at && !same(at, page.as_of)) throw Error('workspace_changed_during_read');
       at = page.as_of;
+      read.push(page);
       for (const item of page.items) {
         const x = item as any,
           key = (x.product_id ?? x.id) + ':' + (x.version ?? x.revision),
@@ -378,7 +381,7 @@ export class WorkspaceSlotController {
         }
       }
       if (page.next_cursor === null)
-        return { items, shares, sharing_complete: complete, as_of: at };
+        return { items, shares, sharing_complete: complete, as_of: at, pages: read };
       if (page.next_cursor <= cursor) throw Error('invalid_cursor');
       cursor = page.next_cursor;
     }
@@ -435,6 +438,31 @@ export class WorkspaceSlotController {
     if (page.items.some((p) => p.product_id !== id)) throw Error('wrong_product_history');
     if (this.snapshot().session?.sessionId !== sid) throw Error('session_changed');
     return page.items.sort((a, b) => b.version - a.version);
+  }
+  /** Saved outcome previews of this product's versions with their read-time states.
+   * A read only; the server never evaluates again for it. */
+  async previews(id: string): Promise<PreviewEntry[]> {
+    const sid = this.session(),
+      page = await this.pages<WorkspaceProductRead>(
+        'work_products.versions.list',
+        { product_id: id },
+        'product',
+        sid,
+      );
+    if (this.snapshot().session?.sessionId !== sid) throw Error('session_changed');
+    return page.pages.flatMap((read) => previewEntries(read, sid, id));
+  }
+  /** Titles of the materials this reader can open, to name changed sources. */
+  async materialTitles(): Promise<Record<string, string>> {
+    let value: unknown = await this.host.query('materials.list', { limit: 100 });
+    while (object(value) && value.schema_version === 2 && object(value.result))
+      value = value.result;
+    const rows = object(value) && Array.isArray(value.materials) ? value.materials : [];
+    return Object.fromEntries(
+      rows
+        .filter((row) => object(row) && typeof row.id === 'string' && typeof row.title === 'string')
+        .map((row) => [row.id, row.title]),
+    );
   }
   private async storePointer(pointer: RequestPointer) {
     await this.host.keepDraft('workspace', this.receiptKey(pointer.sessionId), pointer);

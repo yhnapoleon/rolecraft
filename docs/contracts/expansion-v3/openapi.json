@@ -4588,6 +4588,17 @@
             "default": null,
             "title": "Outcomes"
           },
+          "preview_conditions": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/_PreviewConditions"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "preview_kind": {
             "anyOf": [
               {
@@ -13528,6 +13539,21 @@
             "default": null,
             "title": "Next Cursor"
           },
+          "preview_states": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/_PreviewState"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Preview States"
+          },
           "previews": {
             "anyOf": [
               {
@@ -14020,7 +14046,9 @@
               "reviews.create",
               "work_products.shares.create",
               "configuration.apply",
-              "tests.create"
+              "tests.create",
+              "actions",
+              "submissions.create"
             ],
             "title": "Operation",
             "type": "string"
@@ -14106,6 +14134,228 @@
           "summary"
         ],
         "title": "_OutcomeItem",
+        "type": "object"
+      },
+      "_PreviewActual": {
+        "additionalProperties": false,
+        "description": "A business action recorded after the preview; never merged into the prediction.",
+        "properties": {
+          "at": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VersionPoint"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "operation": {
+            "enum": [
+              "configuration.apply",
+              "actions",
+              "tests.create",
+              "submissions.create",
+              "work_products.shares.create"
+            ],
+            "title": "Operation",
+            "type": "string"
+          },
+          "ref": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "minLength": 1,
+            "title": "Status",
+            "type": "string"
+          },
+          "values": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/JsonValue"
+            },
+            "default": {},
+            "title": "Values",
+            "type": "object"
+          }
+        },
+        "required": [
+          "operation",
+          "ref",
+          "status"
+        ],
+        "title": "_PreviewActual",
+        "type": "object"
+      },
+      "_PreviewChange": {
+        "additionalProperties": false,
+        "description": "A key condition that differs from the recorded one at a later read.",
+        "properties": {
+          "after": {
+            "$ref": "#/components/schemas/JsonValue",
+            "default": null
+          },
+          "before": {
+            "$ref": "#/components/schemas/JsonValue",
+            "default": null
+          },
+          "condition": {
+            "enum": [
+              "input",
+              "configuration",
+              "resources",
+              "materials"
+            ],
+            "title": "Condition",
+            "type": "string"
+          },
+          "ref": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "condition"
+        ],
+        "title": "_PreviewChange",
+        "type": "object"
+      },
+      "_PreviewConditions": {
+        "additionalProperties": false,
+        "description": "Key business conditions read when a preview was formed; None means not a key condition.",
+        "properties": {
+          "config_version": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Config Version"
+          },
+          "resources": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "minimum": 0,
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Resources"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "source_versions": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "exclusiveMinimum": 0,
+                  "type": "integer"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Versions"
+          }
+        },
+        "title": "_PreviewConditions",
+        "type": "object"
+      },
+      "_PreviewState": {
+        "additionalProperties": false,
+        "description": "Read-time freshness of one immutable preview record; the record itself is unchanged.",
+        "properties": {
+          "actual": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/_PreviewActual"
+            },
+            "title": "Actual",
+            "type": "array"
+          },
+          "changes": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/_PreviewChange"
+            },
+            "title": "Changes",
+            "type": "array"
+          },
+          "checked_at": {
+            "$ref": "#/components/schemas/VersionPoint"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/ObjectRef"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "current",
+              "stale"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "superseded_by": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ObjectRef"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          }
+        },
+        "required": [
+          "feedback",
+          "status",
+          "checked_at"
+        ],
+        "title": "_PreviewState",
         "type": "object"
       }
     },

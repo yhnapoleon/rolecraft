@@ -386,6 +386,10 @@ class WorkspaceProductPage(V2):
     previews: tuple[_evaluation.FeedbackV2, ...] | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
+    # Read-time freshness of each listed preview, in the same order; the previews stay unchanged.
+    preview_states: tuple[_evaluation._PreviewState, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def projection(self):
@@ -399,6 +403,10 @@ class WorkspaceProductPage(V2):
                 or (preview.subject.object_id, preview.subject.version) not in listed
             ):
                 raise ValueError("preview outside product page")
+        if self.preview_states is not None and [
+            (s.feedback.object_id, s.feedback.version) for s in self.preview_states
+        ] != [(p.id, p.version) for p in self.previews or ()]:
+            raise ValueError("preview states must follow the listed previews")
         ids = {p.product_id for p in self.items}
         if any(s.product.object_id not in ids for s in self.shares):
             raise ValueError("share outside product page")
