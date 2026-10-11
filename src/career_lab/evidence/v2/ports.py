@@ -17,6 +17,14 @@ from career_lab.contracts.v2.core import (
 from career_lab.contracts.v2.world import TestResultV2
 
 
+def model_generated(test: TestResultV2) -> bool:
+    """A successful model call wrote this saved answer: advisory, awaiting verification.
+
+    Its text is never a rule-verified source excerpt or a rule-passing result.
+    """
+    return any(attempt.status == "success" for attempt in test.execution.attempts)
+
+
 @dataclass(frozen=True)
 class StructuredDecision:
     """Trusted structured-field declaration bound to this exact work version.
@@ -46,6 +54,9 @@ class SourceRecord:
     # External source ports may authorize an object without authorizing a
     # synthetic quote spanning its whole serialized/document representation.
     quote_scope: Literal["whole_text", "explicit_only"] = "whole_text"
+    # Model-generated answer text is a recorded output awaiting verification, never a
+    # rule-verified source excerpt.
+    origin: Literal["record", "model_generated"] = "record"
 
 
 @dataclass(frozen=True)

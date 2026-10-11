@@ -20,6 +20,7 @@ describe('v2 test results shown in the workbench', () => {
     const point = { business_seq: 9, workspace_revision: 3, storage_revision: 12 };
     const test = (id: string, citations: object[], status = 'answered') => ({
       ref: { kind: 'test', object_id: id },
+      assistant: { mode: 'extractive', provider: null, model_revision: null, config_version: 2 },
       content: {
         query: id,
         answer: id,
@@ -76,6 +77,7 @@ describe('v2 test results shown in the workbench', () => {
     ]);
     expect(session.tests[0].source_versions).toEqual({ faq: 1, policy: 2 });
     expect(session.tests[1].citations).toEqual([{ material_id: 'policy', version: 1 }]);
-    expect(session.tests.every((t) => t.mode === 'waiting_model')).toBe(true);
+    expect(session.tests.every((t) => t.mode === 'extractive')).toBe(true);
+    expect(session.v2Assistant).toBe('waiting_model');
   });
 });

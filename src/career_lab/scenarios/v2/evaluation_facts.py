@@ -18,7 +18,7 @@ from career_lab.contracts.v2 import (
     VersionPoint,
     canonical,
 )
-from career_lab.evidence.v2.ports import RuleSnapshot, SourceRecord, VerifiedFact
+from career_lab.evidence.v2.ports import RuleSnapshot, SourceRecord, VerifiedFact, model_generated
 from .engine import ScenarioSnapshot
 from .module import point, ref_for
 from .policy import effective_config, canonical_domains
@@ -348,7 +348,9 @@ class ScenarioFactAdapter:
                 is_hotel = hotel_question(test.query, self.module.package.locale)
                 if "policy" in material_ids or is_hotel:
                     dynamic.append(test.id)
-                    if not is_hotel:
+                    # A model-generated answer stays pending verification: rules can check its
+                    # recorded versions, never whether its text passes.
+                    if not is_hotel or model_generated(test):
                         pass_known = False
                     else:
                         hotel = next(

@@ -344,6 +344,7 @@ class Assistant:
             permitted=generation_permitted,
             language=getattr(self.package, "locale", "zh"),
             request_id=request_id,
+            stale=status == "answered_with_warning",
         )
         if generated is not None:
             answer, refs, code = generated.answer, generated.citations, generated.error_code
