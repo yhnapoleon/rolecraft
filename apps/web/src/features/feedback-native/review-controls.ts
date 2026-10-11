@@ -3,7 +3,7 @@ import type { SubmitInput } from '../../contracts-v2';
 import type { FeedbackNativeAdapter, ReviewDraft } from './index';
 import type { ObjectRef } from '../workspace/contract-types';
 import { feedbackCopy, type FeedbackLanguage } from './localization';
-import { isPurposeChoice } from './short-summary';
+import { PURPOSE_CHOICES, purposeChoiceOf, purposeName } from './short-summary';
 
 export function isSubmitDecision(value: string): value is SubmitInput['decision'] {
   return ['launch', 'launch_narrow', 'defer_with_conditions', 'no_go'].includes(value);
@@ -66,6 +66,15 @@ export function mountReviewControls(
   products.setAttribute('aria-label', t('评审的作品版本', 'Artifact versions to review'));
   const purpose = el('input', '', 'input');
   purpose.value = draft.purpose;
+  // The same purpose names as the review prompt; free text stays possible.
+  const purposeList = el('datalist');
+  purposeList.id = `review-purposes-${crypto.randomUUID()}`;
+  for (const choice of PURPOSE_CHOICES) {
+    const option = el('option');
+    option.value = feedbackCopy(language, choice);
+    purposeList.append(option);
+  }
+  purpose.setAttribute('list', purposeList.id);
   purpose.placeholder = t(
     '例如：探索笔记、测试计划，也可以留空',
     'For example: exploration notes or a test plan; optional',
@@ -155,7 +164,7 @@ export function mountReviewControls(
           );
         await adapter.review!({
           ...structuredClone(draft),
-          purpose: draft.purpose.trim() || 'undetermined',
+          purpose: purposeChoiceOf(draft.purpose) ?? (draft.purpose.trim() || 'undetermined'),
         });
         if (alive) {
           status.textContent = t(
@@ -178,6 +187,7 @@ export function mountReviewControls(
   form.append(
     products,
     field(t('作品用途（可留空）', 'Artifact purpose (optional)'), purpose),
+    purposeList,
     field(t('想核对的问题（可留空）', 'Review question (optional)'), question),
     field(t('评审涉及的决定（可留空）', 'Review decision (optional)'), decision),
     followups,
@@ -211,6 +221,12 @@ export function mountReviewControls(
           c.addEventListener('change', () => {
             draft.subjects = draft.subjects.filter((r) => key(r) !== key(ref));
             if (c.checked) draft.subjects.push(ref);
+            // Start from the purpose the work already declares; the learner can change it.
+            const declared = purposeChoiceOf(p.purpose);
+            if (c.checked && declared && !draft.purpose.trim()) {
+              draft.purpose = feedbackCopy(language, declared);
+              purpose.value = draft.purpose;
+            }
             void save();
           });
           row.append(c, el('span', `${p.title} · v${p.version}`));
@@ -295,9 +311,7 @@ export function mountReviewControls(
           'p',
           r.purpose === 'undetermined'
             ? t('用途待明确', 'Purpose not specified')
-            : isPurposeChoice(r.purpose)
-              ? feedbackCopy(language, r.purpose)
-              : r.purpose,
+            : purposeName(r.purpose, language),
         ),
       );
       for (const ref of r.subjects) {

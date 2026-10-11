@@ -5,9 +5,10 @@ import {
   type ShortResultStatus,
   type ShortResultView,
 } from '../results-native/short-result';
-import { feedbackCopy, type FeedbackLanguage } from './localization';
-import type { Report, ReviewRecord } from './index';
+import { FEEDBACK_COPY, feedbackCopy, type FeedbackLanguage } from './localization';
+import type { Report, ReviewRecord, SelectedProduct } from './index';
 import type { ObjectRef } from '../workspace/contract-types';
+import { canonicalPurpose } from '../workspace/native-v4/form-values';
 
 type Item = Report['items'][number];
 /** The rubric's own purpose stages, sent as the values the review request accepts. */
@@ -21,6 +22,41 @@ export const PURPOSE_CHOICES = [
 export type PurposeChoice = (typeof PURPOSE_CHOICES)[number];
 export const isPurposeChoice = (value: string): value is PurposeChoice =>
   (PURPOSE_CHOICES as readonly string[]).includes(value);
+/** Stored or typed purposes that the review stages treat as one of the choices. */
+const SAME_STAGE: Readonly<Record<string, PurposeChoice>> = {
+  freeform: 'exploration',
+  free_form: 'exploration',
+  plan: 'test_plan',
+};
+/** The choice a stored product purpose or a typed label (either language) stands for. */
+export function purposeChoiceOf(value: string | undefined): PurposeChoice | undefined {
+  const text = value?.trim();
+  if (!text) return undefined;
+  const code = canonicalPurpose(text);
+  const stage = SAME_STAGE[code] ?? code;
+  if (isPurposeChoice(stage)) return stage;
+  const folded = text.toLowerCase();
+  return PURPOSE_CHOICES.find((choice) =>
+    (['zh', 'en'] as const).some((l) => FEEDBACK_COPY[l][choice].toLowerCase() === folded),
+  );
+}
+/** A stored purpose in the interface language; unrecognised text stays as written. */
+export function purposeName(value: string, language: FeedbackLanguage): string {
+  const choice = purposeChoiceOf(value);
+  return choice ? feedbackCopy(language, choice) : value;
+}
+/** The purpose the reviewed versions already declare, when they all agree. */
+export function declaredPurpose(
+  subjects: readonly ObjectRef[],
+  products: readonly SelectedProduct[],
+): PurposeChoice | undefined {
+  const found = subjects.map((ref) =>
+    purposeChoiceOf(
+      products.find((p) => p.product_id === ref.object_id && p.version === ref.version)?.purpose,
+    ),
+  );
+  return found.length && found.every((p) => p && p === found[0]) ? found[0] : undefined;
+}
 
 /** The criteria rendered one by one in the panel. */
 export const ruleItems = (report: Report): Item[] =>
@@ -49,7 +85,7 @@ export function feedbackCounts(items: readonly Item[]) {
 
 /** Every criterion waits on a purpose the backend did not recognise. */
 export function purposeUnknown(report: Report, review: ReviewRecord | undefined): boolean {
-  if (report.subject.kind !== 'review' || !review || isPurposeChoice(review.purpose)) return false;
+  if (report.subject.kind !== 'review' || !review || purposeChoiceOf(review.purpose)) return false;
   const items = ruleItems(report);
   return items.length > 0 && items.every(undetermined);
 }
@@ -67,8 +103,8 @@ export function laterPurpose(
   const index = reviews.findIndex((r) => r.id === review.id && r.version === review.version);
   const later = reviews
     .slice(index + 1)
-    .find((r) => key(r.subjects) === key(review.subjects) && isPurposeChoice(r.purpose));
-  return later && isPurposeChoice(later.purpose) ? later.purpose : undefined;
+    .find((r) => key(r.subjects) === key(review.subjects) && purposeChoiceOf(r.purpose));
+  return purposeChoiceOf(later?.purpose);
 }
 
 export interface PurposePrompt {
@@ -161,25 +197,25 @@ export function feedbackShortResult(doc: Document, input: FeedbackShortInput): S
       statuses.push({ text: T('notApplicable', counts.notApplicable), tone: 'unsupported' });
   }
   const unknown = purposeUnknown(report, input.review);
+  // Once the same versions were reviewed again for a purpose, the question is answered.
+  const later =
+    unknown && input.review ? laterPurpose(input.review, input.reviews ?? []) : undefined;
   const actions: Node[] = [];
-  if (unknown && input.review) {
-    const later = laterPurpose(input.review, input.reviews ?? []);
-    if (later) {
-      const note = doc.createElement('p');
-      note.className = 'short-result__note';
-      note.textContent = feedbackCopy(language, 'purposeChosen', {
-        purpose: feedbackCopy(language, later),
-      });
-      actions.push(note);
-    } else if (input.prompt) actions.push(promptElement(doc, language, input.prompt));
-  }
+  if (unknown && !later && input.prompt) actions.push(promptElement(doc, language, input.prompt));
   actions.push(input.semantic);
+  const lead = later
+    ? feedbackCopy(language, 'purposeChosen', { purpose: feedbackCopy(language, later) })
+    : unknown
+      ? T('purposeUnknown', counts.total)
+      : counts.total
+        ? undefined
+        : T('noItems');
   return renderShortResult(doc, {
     kind: report.subject.kind === 'review' ? 'review' : 'feedback',
     id: `${report.id}:${report.version}`,
     statusLabel: T('statusLabel'),
     statuses,
-    lead: unknown ? T('purposeUnknown', counts.total) : counts.total ? undefined : T('noItems'),
+    lead,
     derivedLead: true,
     actions,
     more: {
@@ -189,4 +225,11 @@ export function feedbackShortResult(doc: Document, input: FeedbackShortInput): S
       onToggle: input.onToggle,
     },
   });
+}
+
+/** Title line of a review card naming the purpose it was reviewed for, if known. */
+export function reviewedAs(review: ReviewRecord | undefined, language: FeedbackLanguage) {
+  return review && purposeChoiceOf(review.purpose)
+    ? feedbackCopy(language, 'reviewedAs', { purpose: purposeName(review.purpose, language) })
+    : undefined;
 }

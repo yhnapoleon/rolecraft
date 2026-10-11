@@ -49,14 +49,20 @@ const noOverflow = (browser) =>
   browser.ev('document.documentElement.scrollWidth <= document.documentElement.clientWidth');
 
 async function ask(browser, question) {
-  const count = await browser.ev(`document.querySelectorAll('.rc-roles__turn').length`);
+  // Turns asking exactly this question; the newest one is the reply under test.
+  const same = `[...document.querySelectorAll('.rc-roles__turn')].filter((n) => n.querySelector('.rc-roles__question')?.textContent === ${JSON.stringify(question)})`;
+  // Earlier commands (e.g. the approval) finish refreshing before the next question.
+  await waitFor(browser, `${host}.snapshot().busy === false`, 30000);
   await waitFor(browser, `document.querySelector('.composer [type="submit"]')?.disabled === false`);
+  const count = await browser.ev(`${same}.length`);
   await browser.type('#chat-input', question);
   await browser.submit('.composer');
-  await waitFor(browser, `document.querySelectorAll('.rc-roles__reply').length > ${count}`, 60000);
+  await waitFor(browser, `${same}.length > ${count}`, 30000);
+  await waitFor(browser, `!!${same}.at(-1)?.querySelector('.rc-roles__reply')`, 60000);
   await delay(300);
+  await waitFor(browser, `!!${same}.at(-1)?.querySelector('.rc-roles__reply')`, 15000);
   return browser.ev(`(() => {
-    const turn = [...document.querySelectorAll('.rc-roles__turn')].at(-1);
+    const turn = ${same}.at(-1);
     const lead = turn.querySelector('.short-result__lead');
     return {
       id: turn.dataset.turnId,
@@ -109,6 +115,20 @@ for (const language of ['zh', 'en']) {
     assert.ok(fact.full.includes(fact.lead.split('\n')[0]), 'first screen is verbatim');
     await shot('colleague-desktop');
     results.push({ language, check: 'colleague fact first screen', ...fact, full: undefined });
+    const asked = [factQuestion];
+    const notEcho = (reply) =>
+      asked.every((q) => !reply.lead.includes(q)) &&
+      !reply.source.includes(t('对话记录', 'Conversation'));
+    // P1-2: a follow-up shares words with the first question; it still leads with a source.
+    const judgementQuestion = t(
+      '我们应该现在就把试点开放给所有人吗？',
+      'Should we open the pilot to everyone now?',
+    );
+    const judgement = await ask(browser, judgementQuestion);
+    assert.ok(notEcho(judgement), JSON.stringify(judgement));
+    asked.push(judgementQuestion);
+    await shot('colleague-follow-up-desktop');
+    results.push({ language, check: 'follow-up never echoes', ...judgement, full: undefined });
 
     // 2. N1: a committed approval is stated first. Setup uses the page's own v4 host
     // client (same journal as the sheets); the question and reading are normal UI.
@@ -124,23 +144,41 @@ for (const language of ['zh', 'en']) {
       return [applied.status, asked.status, decided.status, unwrap(decided.result).decision?.status];
     })()`);
     assert.deepEqual(setup, ['confirmed', 'confirmed', 'confirmed', 'approved'], String(setup));
-    const approvedQuestion = t('目前已批准的容量是多少？', 'What capacity has been approved?');
-    const approved = await ask(browser, approvedQuestion);
-    assert.ok(approved.lead.includes('50'), approved.lead);
-    assert.ok(approved.lead.includes(t('已批准', 'approved')), approved.lead);
-    assert.ok(approved.source.includes(t('业务决定', 'Business decision')), approved.source);
-    await browser.ev(
-      `[...document.querySelectorAll('.rc-roles__turn')].at(-1).scrollIntoView({block:'center'})`,
+    // Reopen the conversation from the normal route so the page reads the new state.
+    const route = await browser.ev('location.hash');
+    await browser.goto(base + route);
+    const manager = `document.querySelector('[data-action="chat"][data-role="manager"]')`;
+    await waitFor(
+      browser,
+      `!!${manager} || document.querySelectorAll('.rc-roles__reply').length >= 2`,
+      30000,
     );
-    await shot('colleague-approved-desktop');
-    results.push({
-      language,
-      check: 'approved decision first screen',
-      ...approved,
-      full: undefined,
-    });
+    if (await browser.ev(`!!${manager}`))
+      await browser.click('[data-action="chat"][data-role="manager"]');
+    await waitFor(browser, `document.querySelectorAll('.rc-roles__reply').length >= 2`, 30000);
+    // P1-1: the natural question, the explicit one and a cover question all lead with
+    // the committed decision; the initial brief figure is never the first-screen answer.
+    const afterApproval = [
+      ['current-capacity', factQuestion],
+      ['approved', t('目前已批准的容量是多少？', 'What capacity has been approved?')],
+      ['cover', t('试点能覆盖多少人？', 'How many people can the pilot cover?')],
+    ];
+    for (const [name, question] of afterApproval) {
+      const reply = await ask(browser, question);
+      assert.ok(reply.lead.includes('50'), `${name}: ${reply.lead}`);
+      assert.ok(reply.lead.includes(t('已批准', 'approved')), `${name}: ${reply.lead}`);
+      assert.ok(!reply.lead.includes('30'), `${name}: stale brief figure on the first screen`);
+      assert.ok(reply.source.includes(t('业务决定', 'Business decision')), reply.source);
+      assert.ok(notEcho(reply), JSON.stringify(reply));
+      asked.push(question);
+      await browser.ev(
+        `document.querySelector('[data-turn-id="${reply.id}"]')?.scrollIntoView({block:'center'})`,
+      );
+      await shot(`colleague-after-approval-${name}-desktop`);
+      results.push({ language, check: `approved decision: ${name}`, ...reply, full: undefined });
+    }
 
-    // 3. Review with no purpose: one question instead of 14 identical rows.
+    // 3. Review. P2-2: the purpose the work declares is used without asking again.
     await browser.type('#new-title', t('探索笔记', 'Exploration note'));
     await browser.type(
       '#new-body',
@@ -154,25 +192,58 @@ for (const language of ['zh', 'en']) {
     await browser.click('.ol-row[data-type="work"]');
     await waitFor(browser, `!!document.querySelector('#editor-body')`);
     await browser.click('[data-action="request-review"]');
+    const form = '.native-feedback section[aria-label] > details';
+    const box = `${form} input[type="checkbox"]`;
+    const purposeInput = `${form} input[list]`;
     await waitFor(
       browser,
-      `!!document.querySelector('.native-feedback section[aria-label] details[open] input[type="checkbox"]')`,
+      `!!document.querySelector('${form}[open] input[type="checkbox"]')`,
       20000,
     );
-    await browser.click(
-      '.native-feedback section[aria-label] details[open] input[type="checkbox"]',
+    await browser.click(box);
+    assert.equal(
+      await browser.ev(`document.querySelector('${purposeInput}').value`),
+      t('探索笔记', 'Exploration note'),
+      'the review form starts from the declared purpose',
     );
     await clickReady(browser, t('评审选中的版本', 'Review selected versions'));
     await waitFor(browser, `!!document.querySelector('[data-short-result="review"]')`, 60000);
     await delay(400);
+    const cards = `[...document.querySelectorAll('[data-short-result="review"]')]`;
+    const declaredCard = await browser.ev(`(() => {
+      const card = ${cards}[0].closest('article');
+      return { title: card.querySelector(':scope > h2 + p')?.innerText ?? '', prompts: card.querySelectorAll('[data-purpose-prompt]').length };
+    })()`);
+    assert.equal(declaredCard.title, t('按「探索笔记」评审', 'Reviewed as “Exploration note”'));
+    assert.equal(declaredCard.prompts, 0, 'no question when the purpose is declared');
+    await browser.ev(`${cards}[0].closest('article').scrollIntoView({block:'start'})`);
+    await shot('review-declared-purpose-desktop');
+
+    // D6: the learner clears the purpose; one question replaces 14 identical rows,
+    // starting from the declared purpose and still editable.
+    await browser.ev(`document.querySelector('${form}').open = true`);
+    await waitFor(browser, `document.querySelector('${box}')?.checked === true`);
+    await browser.type(purposeInput, '');
+    await clickReady(browser, t('评审选中的版本', 'Review selected versions'));
+    await waitFor(browser, `${cards}.length === 2`, 60000);
+    // The feedback panel settles (no request in flight) before the question is answered.
+    await waitFor(browser, `${host}.snapshot().busy === false`, 30000);
+    await waitFor(
+      browser,
+      `${cards}[1].querySelector('[data-purpose-prompt] button')?.disabled === false`,
+      30000,
+    );
+    await delay(400);
     const review = await browser.ev(`(() => {
-      const block = document.querySelector('[data-short-result="review"]');
+      const block = ${cards}[1];
       const more = block.querySelector(':scope > details[data-short-result-more]');
       return {
         statuses: [...block.querySelectorAll(':scope > .short-result__status li')].map((n) => n.innerText),
         lead: block.querySelector('.short-result__lead')?.innerText ?? '',
         prompts: document.querySelectorAll('[data-purpose-prompt]').length,
         choices: [...block.querySelectorAll('[data-purpose-prompt] label')].map((n) => n.innerText.trim()),
+        preselected: block.querySelector('[data-purpose-prompt] input:checked')?.value ?? null,
+        submitEnabled: !block.querySelector('[data-purpose-prompt] button')?.disabled,
         summary: more.querySelector('summary').innerText,
         open: more.open,
         criteria: more.querySelectorAll('details[data-response-id*=":rule_items:"]').length,
@@ -182,6 +253,8 @@ for (const language of ['zh', 'en']) {
     })()`);
     assert.equal(review.prompts, 1, 'one purpose question');
     assert.equal(review.choices.length, 5);
+    assert.equal(review.preselected, 'exploration', 'declared purpose is preselected');
+    assert.equal(review.submitEnabled, true);
     assert.ok(review.lead.includes('14'), review.lead);
     assert.equal(review.summary, t('展开 14 项', 'Show all 14 items'));
     assert.equal(review.open, false);
@@ -189,62 +262,61 @@ for (const language of ['zh', 'en']) {
     assert.equal(review.visibleRows, 0, 'no repeated rows on the first screen');
     assert.ok(review.waiting, 'model state stays visible');
     assert.ok(!review.statuses.some((s) => /\d+\s*\/\s*\d+/.test(s)), 'no 0/0 ratios');
-    await browser.ev(
-      `document.querySelector('[data-short-result="review"]').scrollIntoView({block:'start'})`,
-    );
+    await browser.ev(`${cards}[1].closest('article').scrollIntoView({block:'start'})`);
     await shot('review-desktop');
     // Keyboard: the disclosure opens and closes by Enter and keeps focus.
-    await browser.ev(
-      `document.querySelector('[data-short-result="review"] > details[data-short-result-more] > summary').focus()`,
-    );
+    const more = `${cards}[1].querySelector(':scope > details[data-short-result-more]')`;
+    await browser.ev(`${more}.querySelector('summary').focus()`);
     await pressEnter(browser);
-    assert.equal(
-      await browser.ev(
-        `document.querySelector('[data-short-result="review"] > details[data-short-result-more]').open`,
-      ),
-      true,
-    );
+    assert.equal(await browser.ev(`${more}.open`), true);
     assert.equal(await browser.ev('document.activeElement.tagName'), 'SUMMARY');
     await shot('review-expanded-desktop');
     await pressEnter(browser);
-    assert.equal(
-      await browser.ev(
-        `document.querySelector('[data-short-result="review"] > details[data-short-result-more]').open`,
-      ),
-      false,
-    );
-    // Answer the question by keyboard-reachable controls; a new review follows.
+    assert.equal(await browser.ev(`${more}.open`), false);
+    // Change the preselected answer; a new review follows (P2-3 labels both cards).
+    await waitFor(browser, `${host}.snapshot().busy === false`, 30000);
     await browser.click('[data-purpose-prompt] input[value="test_plan"]');
     await clickReady(
       browser,
       t('按这个用途重新评审', 'Review again for this purpose'),
       '[data-purpose-prompt] button',
     );
-    await waitFor(
-      browser,
-      `document.querySelectorAll('[data-short-result="review"]').length === 2`,
-      60000,
-    );
+    await waitFor(browser, `${cards}.length === 3`, 90000).catch(async (error) => {
+      const alert = await browser.ev(
+        `[...document.querySelectorAll('.native-feedback [role="alert"]')].map((n) => n.textContent).join(' | ')`,
+      );
+      throw Error(`${error.message}; alerts: ${alert}`);
+    });
     await delay(400);
     const after = await browser.ev(`(() => {
-      const [old, fresh] = document.querySelectorAll('[data-short-result="review"]');
+      const [, old, fresh] = ${cards};
       return {
-        oldNote: old.querySelector('.short-result__note')?.innerText ?? '',
+        oldLead: old.querySelector('.short-result__lead')?.innerText ?? '',
+        oldNotes: old.querySelectorAll('.short-result__note').length,
         prompts: document.querySelectorAll('[data-purpose-prompt]').length,
+        freshTitle: fresh.closest('article').querySelector(':scope > h2 + p')?.innerText ?? '',
         statuses: [...fresh.querySelectorAll(':scope > .short-result__status li')].map((n) => n.innerText),
         summary: fresh.querySelector(':scope > details > summary').innerText,
+        cards: ${cards}.length,
       };
     })()`);
     assert.equal(after.prompts, 0);
-    assert.ok(after.oldNote.includes(t('测试计划', 'Test plan')), after.oldNote);
+    assert.equal(
+      after.oldLead,
+      t(
+        '已按「测试计划」重新评审，新的反馈另列。',
+        'Reviewed again as “Test plan”; the new feedback is listed separately.',
+      ),
+    );
+    assert.equal(after.oldNotes, 0, 'the old question sentence is replaced, not added to');
+    assert.equal(after.freshTitle, t('按「测试计划」评审', 'Reviewed as “Test plan”'));
     assert.ok(
       after.statuses.some((s) => s.startsWith(t('本次不适用', 'Not applicable this time'))),
     );
-    await browser.ev(
-      `document.querySelectorAll('[data-short-result="review"]')[1].scrollIntoView({block:'start'})`,
-    );
+    assert.equal(after.cards, 3, 'history is kept');
+    await browser.ev(`${cards}[1].closest('article').scrollIntoView({block:'start'})`);
     await shot('review-after-purpose-desktop');
-    results.push({ language, check: 'review purpose-first', review, after });
+    results.push({ language, check: 'review purpose-first', declaredCard, review, after });
 
     // 4. 390px, dark: colleague and review in the rail drawer, no horizontal scroll.
     await viewport(browser, 390, 844, true);
@@ -275,10 +347,26 @@ for (const language of ['zh', 'en']) {
     await browser.click('#sheet .native-feedback input[type="checkbox"]');
     await browser.select('#sheet .native-feedback select', 'defer_with_conditions');
     await clickReady(browser, t('提交选中的版本', 'Submit selected versions'), '#sheet button');
-    await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`);
+    await waitFor(
+      browser,
+      `window.PracticeLive.store.active().world.status === 'submitted'`,
+      60000,
+    );
     await browser.ev(`document.querySelector('#sheet')?.close()`);
     await browser.goto(`${base}#/review`);
-    await waitFor(browser, `!!document.querySelector('[data-short-result="feedback"]')`, 60000);
+    // Feedback is a worker job; on a loaded machine it can take minutes. Refresh by the
+    // page's own "Refresh feedback" control, as a learner would, until it appears.
+    for (
+      let waited = 0;
+      !(await browser.ev(`!!document.querySelector('[data-short-result="feedback"]')`));
+      waited += 10
+    ) {
+      assert.ok(waited < 360, 'submission feedback did not appear');
+      await delay(10000);
+      await browser
+        .clickText(t('查看最新反馈', 'Refresh feedback'), 'button')
+        .catch(() => undefined);
+    }
     await delay(500);
     const feedback = await browser.ev(`(() => {
       const block = document.querySelector('[data-short-result="feedback"]');

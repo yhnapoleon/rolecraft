@@ -5,13 +5,19 @@ import type { SubmitInput } from '../../contracts-v2';
  * queue, mutation journal, global navigation or React root is created here. */
 import { mountReviewControls, isSubmitDecision } from './review-controls';
 import { feedbackText, type FeedbackLanguage } from './localization';
-import { feedbackShortResult, ruleItems, type PurposeChoice } from './short-summary';
+import {
+  declaredPurpose,
+  feedbackShortResult,
+  reviewedAs,
+  ruleItems,
+  type PurposeChoice,
+} from './short-summary';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 
 export type SelectedProduct = Pick<
   WorkProductVersion,
   'session_id' | 'product_id' | 'version' | 'title' | 'removed_at' | 'author'
->;
+> & { purpose?: string };
 type Item = {
   applicability?: 'applicable' | 'not_applicable' | 'undetermined' | 'unknown';
   criterion: string;
@@ -506,7 +512,6 @@ export function mountNativeFeedback(
             : T('此前提交的反馈', 'Earlier submission feedback'),
       ),
     );
-    refs(panel, [report.subject]);
     const review =
       report.subject.kind === 'review'
         ? adapter
@@ -515,6 +520,9 @@ export function mountNativeFeedback(
               (r) => r.id === report.subject.object_id && r.version === report.subject.version,
             )
         : undefined;
+    const purposeLine = reviewedAs(review, language);
+    if (purposeLine) panel.append(el('p', purposeLine, 'muted'));
+    refs(panel, [report.subject]);
     if (report.subject.kind === 'review') {
       if (review) {
         panel.append(
@@ -697,7 +705,8 @@ export function mountNativeFeedback(
           review && canReview
             ? {
                 name: `purpose-${id}`,
-                selected: purposeChoices.get(id),
+                selected:
+                  purposeChoices.get(id) ?? declaredPurpose(review.subjects, state.products),
                 disabled: state.busy || !!state.pending,
                 select: (purpose) => purposeChoices.set(id, purpose),
                 submit: (purpose) => void reviewAgain(review, purpose),
