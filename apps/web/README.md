@@ -49,7 +49,7 @@
 - 运行结果与“问题和预期”切换；历史结果、实际来源和版本、观察、引用。执行完成不自动获得通过结论。
 - 与 v4 共用字体、纸面、状态色和动效；结果展开约 180ms，键盘触发不做位移动画，尊重减弱动效；长标题目录和 390px 窄屏无横向溢出。
 
-**实现位置：** `src/app/test-set-view.js`、`test-set.css` 为视图；`ui.js` 为工作流与草稿；`public/workbench-engine.js` 为结构/版本/导入；`types.ts`、`store.ts`、`workbench-live.ts` 为真实运行与恢复。共享引擎的旧 `/demo/` 行为仍跑回归。
+**实现位置：** `src/app/test-set-view.js`、`test-set.css` 为视图；`ui.js` 为工作流与草稿；`public/workbench-engine.js` 为结构/版本/导入；`types.ts`、`store.ts`、`workbench-live.ts` 为真实运行与恢复。共享引擎的本地规则仍由 `npm run test:workbench` 回归。
 
 **验证（2026-10-05）：**
 - `ROLECRAFT_TEST_API=http://127.0.0.1:18502 npm test`：33 项通过，包含 4 项真实 HTTP/worker 测试；另有 51 项作品/状态行为回归通过。
@@ -201,19 +201,19 @@ Vite 开发／预览把 `/api/*` 转发至 `ROLECRAFT_API_TARGET`；未设置时
 
 这些命令是复现说明，不是新环境已通过验证的声明。安装后至少完成下方构建、后端契约、含真实 HTTP／worker 的前端检查及相应浏览器走查，再记录实际结果。
 
-## 三个入口与存档
+## 入口与存档
 
 | 地址 | 当前用途 | 状态来源 |
 |---|---|---|
-| `/` | 工作台 v4，产品主入口 | `rolecraft.live.workspace.v1` 保存会话凭据与请求日志；`rolecraft.open-work.ui.v1` 保存事项、作品和本地时间记录；`rolecraft.locale` 保存界面语言 |
-| `/connected/` | 保留的原 React API 连接页 | 与新主入口使用同一 API 会话存档，可读取相同服务端状态 |
-| `/demo/` | 冻结的离线规则演示，仍加载 `public/workbench.js` 和 `public/workbench.css`，不再随主入口更新 | `practice.open-work.v2`，与连接版隔离，不作为网络失败时的后备结果 |
+| `/` | 工作台 v4，唯一用户界面 | `rolecraft.live.workspace.v1` 保存会话凭据与请求日志；`rolecraft.open-work.ui.v1` 保存事项、作品和本地时间记录；`rolecraft.locale` 保存界面语言 |
 
-旧高仿真演示的浏览器存档保留在 `/demo/`，不会自动转换成服务端记录。存档按域名、端口隔离；不同地址的记录不会自动迁移。没有账户登录、跨设备同步或服务端会话列表。不要分享 `rolecraft.live.workspace.v1`：其中包含 bearer token。任务包和本地笔记导出均不包含会话 token。
+**已停止发布的旧页面（2026-10-11）：** 按“v4 是唯一用户界面”的决定，构建不再发布 `/connected/`（原 React API 连接页，含实验性辅助判断入口）和 `/demo/`（冻结的离线规则演示，加载 `public/workbench.js`）。对应源码已从当前树删除，历史可用 `git log --oneline -- apps/web/connected apps/web/src/App.tsx apps/web/src/main.tsx apps/web/public/demo apps/web/public/workbench.js` 查看。生产构建的 `dist` 不再含这两个目录；`vite preview` 对未知路径回退到 v4 首页，纯静态托管返回 404。
+
+旧演示留在浏览器里的 `practice.open-work.v2` 存档不会被读取，也不会自动转换成服务端记录。存档按域名、端口隔离；不同地址的记录不会自动迁移。没有账户登录、跨设备同步或服务端会话列表。不要分享 `rolecraft.live.workspace.v1`：其中包含 bearer token。任务包和本地笔记导出均不包含会话 token。
 
 ## 接口覆盖
 
-以下涵盖现有后端全部 19 个 HTTP 操作（第一批新增 3 个列表接口），其中 18 个已在本机成功调用。可选的辅助判断只验证了未配置时的 503 分支；主入口不显示这个实验入口，`/connected/` 仍保留。页面里的场景条件来自现有后端，提前上线变体为第 **5** 天；离线原型保留自己的第 3 天设定。
+以下涵盖现有后端全部 19 个 HTTP 操作（第一批新增 3 个列表接口），其中 18 个已在本机成功调用。可选的辅助判断只验证了未配置时的 503 分支；主入口不显示这个实验入口；原 `/connected/` 入口已于 2026-10-11 停止发布，当前没有界面入口。页面里的场景条件来自现有后端，提前上线变体为第 **5** 天。
 
 | 操作 | 新界面入口与适配 | 本轮证据 |
 |---|---|---|
@@ -233,7 +233,7 @@ Vite 开发／预览把 `/api/*` 转发至 `ROLECRAFT_API_TARGET`；未设置时
 | `GET .../feedback/{submission}` | 读取已保存反馈、恢复旧练习 | 与 worker 返回结果一致 |
 | `GET .../timeline` | 反馈页的后端过程记录 | 只读取历史，不重新调用模型；时间、问题、上下文、驳回记录可恢复 |
 | `GET .../evidence/{submission}/{criterion}/{evidence}` | 每条反馈中的证据按钮 | 集成测试遍历所有返回证据，时点不晚于提交 |
-| `POST .../relation-checks` | 辅助证据判断（实验）；仅 `/connected/` 有入口 | 当前未配置冻结实验，503 明确显示且不阻塞其他工作；成功推断未验证 |
+| `POST .../relation-checks` | 辅助证据判断（实验）；当前无界面入口（原 `/connected/` 入口已停止发布） | 原连接页验证：未配置冻结实验时 503 明确显示且不阻塞其他工作；成功推断未验证 |
 
 所有会话接口携带 `Authorization: Bearer`。读取已暂停或已提交会话的材料不会尝试追加业务阅读事件；新操作仍由后端权限与状态约束控制。后端现有 rubric 的不足和待人工核验结果原样呈现，不能把抽取回复或规则反馈称为完整情境化 Judge。
 
@@ -275,9 +275,9 @@ Vite 开发／预览把 `/api/*` 转发至 `ROLECRAFT_API_TARGET`；未设置时
 | `src/store.ts`、`src/api.ts` | API 请求、凭据、幂等日志、job 恢复，以及后端错误的本地化 |
 
 **保留供对照的文件：**
-- `public/workbench-engine.js`：本地事项和作品的编辑规则。主入口复用它，服务端行为一律不模拟；`/demo/` 也用它。
-- `public/workbench.js`、`public/workbench.css`：冻结的 v2 界面，只供 `/demo/` 使用。
-- `src/App.tsx`、`connected/index.html`：原 React 连接页。
+- `public/workbench-engine.js`：本地事项和作品的编辑规则。主入口复用它，服务端行为一律不模拟。
+- `public/workbench.css`：冻结 v2 界面的样式。开发用受控夹具 `src/features/feedback-native/review-check.html` 仍引用它，因此保留；构建会把它复制为静态文件 `/workbench.css`，它不是页面。
+- 原 React 连接页（`connected/index.html`、`src/main.tsx`、`src/App.tsx`、`src/workspace.css`）、冻结演示 `public/demo/` 与其界面脚本 `public/workbench.js` 已于 2026-10-11 删除，见上方“入口与存档”。
 
 工作区原型目录已不再维护；前端改动只在本仓库进行。构建不依赖仓库外文件，Newsreader 字体从 Google Fonts 加载，离线时退回系统字体。
 
