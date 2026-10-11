@@ -10,7 +10,7 @@ export type AssistantDeployment = 'model' | 'waiting_model' | 'unavailable';
 const ZH = {
   assistant_mode_waiting: '等待模型接入（当前为原文检索结果）',
   assistant_mode_extractive: '原文抽取',
-  assistant_mode_extractive_hint: '规则核实：回答是检索到的原文片段，可回到出处核对。',
+  assistant_mode_extractive_hint: '回答是检索到的原文片段，可回到出处核对。',
   assistant_mode_llm: '模型生成 · 回答待核验',
   assistant_mode_llm_hint: '模型根据检索到的片段组织了回答；引用可回跳，回答内容需要你核验。',
   assistant_model_unavailable: '未配置模型',
@@ -19,6 +19,7 @@ const ZH = {
   assistant_generation_failed: '生成失败',
   assistant_generation_failed_hint: '模型调用或结果校验没有通过，问题与配置已保留，没有自动重试。',
   assistant_mode_unknown: '模式信息暂不可用',
+  assistant_quote_generated: '（模型生成 · 待核验）',
   assistant_mode_effective_config: '本次有效配置',
   assistant_mode_effective_config_unavailable: '本次有效配置暂不可用',
   assistant_mode_queued: '已提交，等待模型生成回答；完成后这里会自动更新。',
@@ -40,7 +41,7 @@ const EN: Record<CopyKey, string> = {
   assistant_mode_waiting: 'Awaiting model connection (showing extractive result)',
   assistant_mode_extractive: 'Extractive',
   assistant_mode_extractive_hint:
-    'Rule-verified: the answer is the retrieved source passage; open the source to check it.',
+    'The answer is the retrieved source passage; open the source to check it.',
   assistant_mode_llm: 'Model-generated · Answer awaiting verification',
   assistant_mode_llm_hint:
     'A model wrote this answer from the retrieved passages. Citations open the sources; verify the answer yourself.',
@@ -51,6 +52,7 @@ const EN: Record<CopyKey, string> = {
   assistant_generation_failed_hint:
     'The model call or its validation failed. The question and settings are saved; nothing was retried.',
   assistant_mode_unknown: 'Mode information unavailable',
+  assistant_quote_generated: '(Model-generated · awaiting verification)',
   assistant_mode_effective_config: 'Effective configuration for this run',
   assistant_mode_effective_config_unavailable: 'Effective configuration unavailable',
   assistant_mode_queued:
@@ -112,6 +114,14 @@ export function answerModeLine(run: { mode?: string; assistant?: string | null }
   if (!run.assistant) return '';
   const label = answerModeLabel(run);
   return `<p class="answer-mode" data-answer-mode="${esc(label.mode)}"${label.hint ? ` title="${esc(label.hint)}"` : ''}>${esc(label.text)}</p>`;
+}
+
+/** Answer text quoted into work evidence or a colleague message; generated text keeps its marker. */
+export function quotedAnswer(
+  run: { mode?: string; answer?: string },
+  text = run.answer ?? '',
+): string {
+  return run.mode === 'llm' ? `${assistantText('assistant_quote_generated')} ${text}` : text;
 }
 
 /** The visible generator choice in pilot settings; always submitted with the other settings. */

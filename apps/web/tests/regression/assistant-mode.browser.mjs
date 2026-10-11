@@ -45,6 +45,7 @@ const COPY = {
     awaiting: '等待核验',
     verifiedByRules: '规则核实',
     submit: '提交选中的版本',
+    quoteMarker: '（模型生成 · 待核验）',
   },
   en: {
     waiting: 'Awaiting model connection (showing extractive result)',
@@ -62,6 +63,7 @@ const COPY = {
     awaiting: 'Awaiting verification',
     verifiedByRules: 'Verified by rules',
     submit: 'Submit selected versions',
+    quoteMarker: '(Model-generated · awaiting verification)',
   },
 };
 
@@ -407,6 +409,54 @@ async function submitAfterGeneratedRetest(browser, language, calls, before) {
   })()`);
 }
 
+/** Sources dialog, colleague quote and worksheet for the latest bench answer. */
+async function secondarySurfaces(browser, language, deployment, expected) {
+  const text = COPY[language];
+  const labels = (selector) =>
+    browser.ev(
+      `[...document.querySelectorAll(${JSON.stringify(selector)})].map((n) => n.textContent)`,
+    );
+  await openBench(browser);
+  await browser.click('.runs .run .run-col [data-action="run-source"]');
+  await waitFor(browser, `!!document.querySelector('#sheet[open] .answer-mode')`);
+  assert.deepEqual(await labels('#sheet .answer-mode'), [expected]);
+  await browser.shot(`${OUT}/screenshots/${deployment}-${language}-sources-dialog-desktop.jpg`);
+  await browser.click('#sheet [data-action="close"]');
+  await browser.click('.runs .run [data-action="discuss-run"]');
+  await waitFor(browser, `!!document.querySelector('.chat-quote-text')`);
+  const quote = await browser.ev(`document.querySelector('.chat-quote-text').textContent`);
+  assert.equal(quote.includes(text.quoteMarker), expected === text.llm, quote);
+  await browser.ev(`document.querySelector('.chat-quote')?.scrollIntoView({ block: 'center' })`);
+  await browser.shot(`${OUT}/screenshots/${deployment}-${language}-colleague-quote-desktop.jpg`);
+  await openBench(browser);
+  await browser.click('.runs .run [data-action="investigate-run"]');
+  // An answer not filed under a task asks where the investigation belongs.
+  await waitFor(
+    browser,
+    `!!document.querySelector('.inv-source-answer, .inv-run-pane, #sheet[open] [data-action="native-investigation-task"]')`,
+    20000,
+  );
+  if (
+    await browser.ev(
+      `!!document.querySelector('#sheet[open] [data-action="native-investigation-task"]')`,
+    )
+  )
+    await browser.click('#sheet [data-action="native-investigation-task"]');
+  await waitFor(browser, `!!document.querySelector('.inv-source-answer, .inv-run-pane')`, 20000);
+  await browser.ev(
+    `document.querySelectorAll('.inv-source-answer').forEach((d) => { d.open = true; })`,
+  );
+  const surfaces =
+    await browser.ev(`[...document.querySelectorAll('.inv-source-answer, .inv-run-pane')]
+    .map((n) => [...n.querySelectorAll('.answer-mode')].map((m) => m.textContent))`);
+  assert.ok(surfaces.length >= 1, 'worksheet shows the answer');
+  for (const surface of surfaces) assert.deepEqual(surface, [expected]);
+  await browser.ev(
+    `document.querySelector('.inv-source-answer, .inv-run-pane')?.scrollIntoView({ block: 'center' })`,
+  );
+  await browser.shot(`${OUT}/screenshots/${deployment}-${language}-worksheet-desktop.jpg`);
+}
+
 async function step(deployment, language, name, action) {
   await action();
   results.push({ deployment, language, name, status: 'passed' });
@@ -453,6 +503,9 @@ async function unconfigured(language) {
       assert.ok(row.config.startsWith(text.config) && /v\d+$/.test(row.config), row.config);
       await shot(browser, `unconfigured-${language}-testplan-desktop`, '.test-result');
     });
+    await step('unconfigured', language, 'sources, quote and worksheet keep one label', () =>
+      secondarySurfaces(browser, language, 'unconfigured', text.waiting),
+    );
     assert.deepEqual(
       browser.logs.filter((entry) => entry.level === 'exception'),
       [],
@@ -586,6 +639,33 @@ async function configured(language, calls) {
     );
   } finally {
     await browser.close();
+  }
+  const surfaces = await enter('desktop', language);
+  try {
+    await step(
+      'configured',
+      language,
+      'sources, quote and worksheet keep the generated label',
+      async () => {
+        await openBench(surfaces);
+        await openSettings(surfaces);
+        await surfaces.click('#config-form input[value="llm"]');
+        await saveSettings(surfaces);
+        await ask(surfaces);
+        await waitFor(
+          surfaces,
+          `!!document.querySelector('.runs .run .answer-mode[data-answer-mode="llm"]')`,
+          30000,
+        );
+        await secondarySurfaces(surfaces, language, 'configured', text.llm);
+      },
+    );
+    assert.deepEqual(
+      surfaces.logs.filter((entry) => entry.level === 'exception'),
+      [],
+    );
+  } finally {
+    await surfaces.close();
   }
   const review = await enter('desktop', language);
   try {

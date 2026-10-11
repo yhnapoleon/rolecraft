@@ -5,6 +5,7 @@ import { ApiError, type Transport } from './api';
 import { LiveWorkbench, fromPilot, toPilot } from './workbench-live';
 import { STORAGE_KEY, WorkspaceStore } from './store';
 import type { World } from './types';
+import { ASSISTANT_COPY } from './app/assistant-mode';
 
 const mod = { exports: {} as any };
 runInThisContext(
@@ -131,6 +132,35 @@ describe('HTML workbench authority and mapping', () => {
       live.engine.addEvidence(a, x.id, { id: 'policy', version: 1, type: 'material' }),
     ).toThrow();
   });
+  it.each(['zh', 'en'] as const)(
+    'a cited generated test keeps its mode marker in the saved evidence (%s)',
+    (language) => {
+      setPreference(language);
+      try {
+        const live = new LiveWorkbench(engine, memory());
+        const a = engine.createAttempt(engine.newState(), 'pilot');
+        a.tests = [
+          { id: 'generated', question: 'Q', answer: 'Model text', configVersion: 1, mode: 'llm' },
+          {
+            id: 'extracted',
+            question: 'Q',
+            answer: 'Passage',
+            configVersion: 1,
+            mode: 'extractive',
+          },
+        ];
+        const x = engine.createArtifact(a, { title: 'note' });
+        live.engine.addEvidence(a, x.id, { id: 'generated', version: 1, type: 'test' });
+        live.engine.addEvidence(a, x.id, { id: 'extracted', version: 1, type: 'test' });
+        expect(x.evidence.map((e: { body: string }) => e.body)).toEqual([
+          `${ASSISTANT_COPY[language].assistant_quote_generated} Model text`,
+          'Passage',
+        ]);
+      } finally {
+        setPreference('zh');
+      }
+    },
+  );
   it('collects the latest editor draft even before its blur event commits a new version', () => {
     const live = new LiveWorkbench(engine, memory());
     const a = engine.createAttempt(engine.newState(), 'pilot');

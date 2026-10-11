@@ -4,6 +4,7 @@ import {
   answerModeLabel,
   answerModeLine,
   generatorField,
+  quotedAnswer,
   submittedGenerator,
 } from './assistant-mode';
 import { setPreference } from './i18n';
@@ -59,6 +60,19 @@ describe('assistant answer modes', () => {
       expect(html).toContain('data-answer-mode="extractive"');
       expect(answerModeLine({ mode: 'local' })).toBe('');
     }
+  });
+});
+
+describe('quoted answers', () => {
+  it.each(['zh', 'en'] as const)('keeps the generated marker in quotes in %s', (language) => {
+    setPreference(language);
+    const marker = ASSISTANT_COPY[language].assistant_quote_generated;
+    expect(quotedAnswer({ mode: 'llm', answer: 'Generated text' })).toBe(
+      `${marker} Generated text`,
+    );
+    expect(quotedAnswer({ mode: 'llm' }, 'Shortened')).toBe(`${marker} Shortened`);
+    expect(quotedAnswer({ mode: 'extractive', answer: 'Source passage' })).toBe('Source passage');
+    expect(quotedAnswer({ mode: 'failed', answer: 'Failure text' })).toBe('Failure text');
   });
 });
 

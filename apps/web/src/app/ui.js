@@ -60,6 +60,7 @@ import {
   answerModeLine,
   assistantText,
   generatorField,
+  quotedAnswer,
   submittedGenerator,
 } from './assistant-mode';
 import './test-set.css';
@@ -262,11 +263,14 @@ const setImportDraft = (a, value) => {
 };
 // A quoted test travels with the next message to that colleague; it is not editable text.
 const quoteKey = (a, role) => (a ? a.id : '') + ':' + role;
-const testQuote = (r) =>
-  T(
-    `我测了“${r.question}”，助手答：“${String(r.rawAnswer ?? answerText(r.answer)).slice(0, 300)}”（配置 v${r.configVersion}，政策源 v${r.policyVersion}，索引 v${r.indexVersion}）。`,
-    `I asked “${r.question}”. The assistant answered: “${String(r.rawAnswer ?? answerText(r.answer)).slice(0, 300)}” (config v${r.configVersion}, policy v${r.policyVersion}, index v${r.indexVersion}).`,
+// A generated answer keeps its mode marker wherever it is quoted.
+const testQuote = (r) => {
+  const said = quotedAnswer(r, String(r.rawAnswer ?? answerText(r.answer)).slice(0, 300));
+  return T(
+    `我测了“${r.question}”，助手答：“${said}”（配置 v${r.configVersion}，政策源 v${r.policyVersion}，索引 v${r.indexVersion}）。`,
+    `I asked “${r.question}”. The assistant answered: “${said}” (config v${r.configVersion}, policy v${r.policyVersion}, index v${r.indexVersion}).`,
   );
+};
 
 function md(raw, opts = {}) {
   let lines = esc(raw || '').split('\n');
@@ -4015,7 +4019,7 @@ async function act(el) {
       );
       openSheet(
         T('这次回答用的来源', 'Sources behind this answer'),
-        `<div class="answer">${assistantMark('sm')}<div class="answer-body">${md(run.answer, { dropTitle: true })}</div></div>${run.citations
+        `<div class="answer">${assistantMark('sm')}<div class="answer-body">${answerModeLine(run)}${md(run.answer, { dropTitle: true })}</div></div>${run.citations
           .map((c, i) => {
             const result = sources[i].status === 'fulfilled' ? sources[i].value : null;
             const m = result?.material;
@@ -4063,8 +4067,8 @@ async function act(el) {
       openChat(
         'technical',
         T(
-          `我测了“${r.question}”，助手答“${answerText(r.answer).slice(0, 300)}”（政策源 v${r.policyVersion}，索引 v${r.indexVersion}）。我想确认：`,
-          `I asked “${r.question}” and the assistant said “${answerText(r.answer).slice(0, 300)}” (policy v${r.policyVersion}, index v${r.indexVersion}). I want to check: `,
+          `我测了“${r.question}”，助手答“${quotedAnswer(r, answerText(r.answer).slice(0, 300))}”（政策源 v${r.policyVersion}，索引 v${r.indexVersion}）。我想确认：`,
+          `I asked “${r.question}” and the assistant said “${quotedAnswer(r, answerText(r.answer).slice(0, 300))}” (policy v${r.policyVersion}, index v${r.indexVersion}). I want to check: `,
         ),
       );
       break;

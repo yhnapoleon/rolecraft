@@ -13,6 +13,7 @@ import type { ProductCreate } from './contracts-v2';
 import { workspaceActionMessage } from './features/workspace/native-v4/messages';
 import { canonicalPurpose } from './features/workspace/native-v4/form-values';
 import { blankPilot, WorkspaceStore } from './store';
+import { quotedAnswer } from './app/assistant-mode';
 import type {
   Deliverable,
   LocalSession,
@@ -1232,7 +1233,7 @@ export class LiveWorkbench {
       id: actual.id,
       title: ev.type === 'test' ? '测试：' + actual.question : actual.title,
       version: ev.version,
-      body: ev.type === 'test' ? actual.answer : actual.body,
+      body: ev.type === 'test' ? quotedAnswer(actual) : actual.body,
       type: ev.type,
     };
     return this.base.addEvidence(a, artifactId, safe);
