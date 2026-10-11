@@ -699,4 +699,21 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "V2Response data; public schemas, examples, errors and stored records are unchanged."
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-8b84c0a227a9493b5637adca4b01cf9a77dd8e4ad7fab9f5d70698165e705b34"
+        ),
+        "integration_changes": {
+            "outcome-preview-freshness": "Optional recorded preview conditions on FeedbackV2 "
+            "and read-time preview states on WorkspaceProductPage: stale previews name each "
+            "changed input, configuration, resource or material condition, point to a newer "
+            "preview and list later recorded business actions beside the unchanged prediction. "
+            "Outcome actions may also name approval requests and submissions. Save-time checks "
+            "follow the work purpose and task. Records and pages without previews retain "
+            "their bytes; reads never evaluate again. Recorded material versions are only those "
+            "the learner may open; finite-scope readers get resource values and material ids "
+            "withheld and learn only that those conditions changed. Lifecycle-only versions "
+            "with unchanged content do not make a preview stale."
+        },
+    },
 )

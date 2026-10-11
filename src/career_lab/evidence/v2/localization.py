@@ -448,6 +448,49 @@ EN = {
     "希望核对哪份候选配置？": "Which candidate configuration should be checked?",
     "请补充可访问的资源和配置依据。": "Provide accessible resource and configuration evidence.",
     "未执行业务动作。": "No business action was executed.",
+    "用途未说明，暂不判断业务结果。": (
+        "No purpose is given yet, so no business outcome is assessed."
+    ),
+    "若在测试台明确运行，这些问题将按第 {config} 版配置和当前资料版本回答。": (
+        "If you run these questions on the test bench, they will be answered with "
+        "configuration v{config} and the current material versions."
+    ),
+    "运行前配置与资料版本保持不变。": (
+        "Configuration and material versions stay unchanged until the run."
+    ),
+    "需要你在测试台明确运行；此预览未运行测试。": (
+        "You still need to run them on the test bench. This preview has not run any test."
+    ),
+    "回答是否符合预期要实际运行后才能核实。": (
+        "Whether the answers meet expectations can only be checked after an actual run."
+    ),
+    "若明确提交，交付将固定这份作品第 {version} 版和第 {config} 版配置。": (
+        "If you submit, the submission will pin v{version} of this work and configuration "
+        "v{config}."
+    ),
+    "提交前作品与配置保持不变。": "The work and configuration stay unchanged until you submit.",
+    "需要你明确提交；此预览未提交，也未申请审批。": (
+        "You still need to submit. This preview has not submitted anything or requested approval."
+    ),
+    "经理是否接受、业务是否达成要在提交和评审后才能知道。": (
+        "Whether the manager accepts it and the business goal is met is known only after "
+        "submission and review."
+    ),
+    "这份测试计划要支持哪件事？": "Which task should this test plan support?",
+    "这次方案比较是为哪件事做的？": "Which task is this comparison of options for?",
+    "这项试点决定针对哪件事？": "Which task does this pilot decision address?",
+    "这份结果报告对应哪件事？": "Which task does this result report cover?",
+    "「{task}」要在测试台上运行哪些问题？": (
+        "Which questions should run on the test bench for “{task}”?"
+    ),
+    "「{task}」要核对哪份候选配置？": (
+        "Which candidate configuration should be checked for “{task}”?"
+    ),
+    "「{task}」的决定依据哪些资料或测试结果？": (
+        "Which materials or test results support the decision on “{task}”?"
+    ),
+    "「{task}」的结果引用了哪些测试运行？": "Which test runs does the result for “{task}” cite?",
+    "这件事": "this task",
 }
 
 

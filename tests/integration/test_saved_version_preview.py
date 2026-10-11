@@ -4,9 +4,9 @@ import pytest
 from test_w05_http_support import WorkSession
 from test_w05_http_support import work_session as work_session
 
-CLARIFY_CONFIG = {
-    "zh": "希望核对哪份候选配置？",
-    "en": "Which candidate configuration should be checked?",
+CLARIFY_PURPOSE = {
+    "zh": "希望用这份作品判断什么？",
+    "en": "What would you like to evaluate this work for?",
 }
 
 
@@ -64,8 +64,9 @@ def test_saved_preview_is_read_from_the_work_product(work_session: WorkSession) 
     assert preview["generation_status"] == "waiting_model"
     assert [row["kind"] for row in preview["outcomes"]] == ["fact", "pending_verification"]
     assert preview["outcomes"][0]["basis_refs"][0]["object_id"] == saved["ref"]["object_id"]
-    assert {"purpose", "candidate_config"} <= set(preview["missing_inputs"])
-    assert CLARIFY_CONFIG[session.language] in preview["clarification"]
+    # 063-08: only what this purpose lacks is asked; no configuration question for a bare note.
+    assert preview["missing_inputs"] == ["purpose"]
+    assert preview["clarification"] == [CLARIFY_PURPOSE[session.language]]
     revised = session.post(
         "work-products/" + saved["ref"]["object_id"] + "/versions",
         "work_products.versions.create",

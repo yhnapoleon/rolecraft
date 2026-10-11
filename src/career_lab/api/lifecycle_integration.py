@@ -18,6 +18,7 @@ from career_lab.api.modules import Operation, StoreJobHandler, V2Response
 from career_lab.storage.v2_lifecycle import begin_revision, point, record_submission
 from career_lab.api.reviews_v2 import record_review_request as record_review
 from career_lab.storage.v2_store import JobRequest, Mutation
+from career_lab.workspace.preview_state import scoped, withheld_preview
 
 
 def feedback_job(command, subject, source, *, key):
@@ -108,7 +109,7 @@ def install_lifecycle(registry, *, feedback_handler=None):
         ]
         return V2Response(
             result={
-                "items": [r.content for r in rows],
+                "items": [withheld_preview(r.content) if scoped(auth) else r.content for r in rows],
                 "as_of": point(view.state).model_dump(mode="json"),
             }
         )

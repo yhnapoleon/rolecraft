@@ -49,3 +49,145 @@
   outline: 2px solid var(--ink);
   outline-offset: 3px;
 }
+/* Outcome preview: summary first, details on demand; status uses the v4 state colors. */
+.w03-outcome {
+  margin-block: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  display: grid;
+  gap: 8px;
+}
+.w03-outcome[data-outcome-preview="stale"] {
+  border-color: color-mix(in srgb, var(--warn) 40%, transparent);
+}
+.w03-outcome p,
+.w03-outcome ul {
+  margin: 0;
+}
+.w03-outcome ul {
+  padding-inline-start: 1.2em;
+}
+.w03-outcome-head {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+.w03-outcome-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.w03-outcome-badge {
+  font-size: 0.78rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--good-tint);
+  color: var(--good);
+}
+.w03-outcome-badge.stale {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+.w03-outcome-meta,
+.w03-outcome .muted {
+  color: var(--ink-3);
+  font-size: 0.82rem;
+}
+.w03-outcome-summary {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: baseline;
+}
+.w03-outcome-question,
+.w03-outcome-changes,
+.w03-outcome-actual {
+  display: grid;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  background: var(--paper);
+}
+.w03-outcome-question {
+  border-inline-start: 3px solid var(--p-manager);
+}
+.w03-outcome-changes {
+  border-inline-start: 3px solid var(--warn);
+}
+.w03-outcome-actual {
+  border-inline-start: 3px solid var(--good);
+}
+.w03-outcome-question strong,
+.w03-outcome-changes strong,
+.w03-outcome-actual strong {
+  font-size: 0.82rem;
+  color: var(--ink-2);
+}
+.w03-outcome-kind {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.w03-outcome ul.w03-outcome-items {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  margin-block: 8px;
+}
+.w03-outcome-item {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+}
+.w03-outcome-item .w03-outcome-kind {
+  flex: none;
+}
+.w03-outcome-detail {
+  display: grid;
+  gap: 2px;
+  margin-block: 8px;
+}
+.conditional_prediction > .w03-outcome-kind {
+  color: var(--p-assistant);
+}
+.pending_verification > .w03-outcome-kind {
+  color: var(--warn);
+}
+.unsupported > .w03-outcome-kind {
+  color: var(--ink-3);
+}
+.w03-outcome details > summary {
+  cursor: pointer;
+  font-size: 0.86rem;
+  color: var(--ink-2);
+}
+.w03-outcome-links {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+.w03-outcome-links p {
+  flex-basis: 100%;
+}
+.w03-outcome-earlier-item {
+  margin-block-start: 6px;
+  padding-inline-start: 10px;
+  border-inline-start: 2px solid var(--line-2);
+  display: grid;
+  gap: 6px;
+}
+@media (max-width: 560px) {
+  .w03-outcome {
+    padding: 12px;
+  }
+  .w03-outcome-item {
+    display: grid;
+    gap: 2px;
+  }
+}

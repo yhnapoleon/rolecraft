@@ -9,16 +9,12 @@ import os
 from dataclasses import replace
 
 from career_lab.api.modules import ExtensionRegistry
-from career_lab.api.reviews_v2 import permitted_preview_operations
+from career_lab.api.reviews_v2 import PREVIEW_OPERATIONS, permitted_preview_operations
 from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.evaluation import _OutcomeAction as OutcomeAction
+from career_lab.contracts.v2.evaluation import _PreviewConditions as PreviewConditions
 from career_lab.evidence.v2.localization import message
-from career_lab.evidence.v2.preview import (
-    clarification_questions,
-    configuration_missing,
-    pending_configuration,
-    saved_input_outcome,
-)
+from career_lab.evidence.v2.preview import saved_version_check
 from career_lab.storage.v2_store import (
     FeedbackReadTrace,
     Mutation,
@@ -26,8 +22,20 @@ from career_lab.storage.v2_store import (
     TransactionView,
     references,
 )
+from career_lab.workspace.preview_state import (
+    current_conditions,
+    current_configuration,
+    preview_state,
+    scoped,
+    withheld_preview,
+)
 
 SAVE_OPERATIONS = frozenset({"work_products.create", "work_products.versions.create"})
+SAVE_PREVIEW_OPERATIONS = (*PREVIEW_OPERATIONS, "actions", "submissions.create")
+# Tools that act on the saved work itself; the others start from the current configuration.
+PRODUCT_OPERATIONS = frozenset(
+    {"reviews.create", "work_products.shares.create", "submissions.create"}
+)
 
 
 def after_saved_version(
@@ -67,7 +75,7 @@ def after_saved_version(
         return plan
     language = next(iter(languages))
     assert language is not None
-    operations = permitted_preview_operations(registry, auth)
+    operations = permitted_preview_operations(registry, auth, SAVE_PREVIEW_OPERATIONS)
     writes = []
     traces = []
     feedback_ref = None
@@ -87,8 +95,14 @@ def after_saved_version(
                 dependencies=references(content),
             )
         )
-        for index, _ in enumerate(report.outcomes or ()):
-            traces.append(FeedbackReadTrace(feedback_ref, f"/outcomes/{index}", (write.ref,)))
+        for index, outcome in enumerate(report.outcomes or ()):
+            traces.append(
+                FeedbackReadTrace(
+                    feedback_ref,
+                    f"/outcomes/{index}",
+                    bare_refs(outcome.basis_refs) or (write.ref,),
+                )
+            )
     if feedback_ref is None:
         return plan
     return replace(
@@ -115,8 +129,13 @@ def saved_version_preview(
         storage_revision=view.state.storage_revision + 1,
     )
     proof = C.EvidenceRefV2(**write.ref.model_dump(), observed_at_seq=at.business_seq)
-    missing = configuration_missing(product.purpose, None)
-    questions = clarification_questions(missing, language)
+    config_ref = current_configuration(view)
+    config = (
+        C.EvidenceRefV2(**config_ref.model_dump(), observed_at_seq=at.business_seq)
+        if config_ref is not None
+        else None
+    )
+    check = saved_version_check(product, task_title(view, product), proof, config, language)
     return C.FeedbackV2(
         id=C.digest([command.request_id, write.ref.model_dump(mode="json"), "saved-rule-preview"]),
         session_id=auth.session_id,
@@ -125,27 +144,54 @@ def saved_version_preview(
         as_of=at,
         items=(),
         business_response=message(language, "未执行业务动作。"),
-        next_options=questions,
+        next_options=check["questions"],
         verified_coverage=0,
         model_coverage=0,
         preview_kind="rules",
         preview_language=language,
         input_refs=(write.ref,),
         evaluation_as_of=at,
-        basis_refs=(write.ref,),
+        basis_refs=bare_refs(ref for item in check["outcomes"] for ref in item.basis_refs),
         conditions=(),
-        missing_inputs=missing,
-        clarification=questions,
+        missing_inputs=check["missing"],
+        clarification=check["questions"],
         available_actions=tuple(
-            OutcomeAction(operation=name, objects=(write.ref,))
+            OutcomeAction(
+                operation=name,
+                objects=(write.ref,)
+                if name in PRODUCT_OPERATIONS or config_ref is None
+                else (config_ref,),
+            )
             for name in operations
-            if name in {"reviews.create", "work_products.shares.create"}
+            if name in check["operations"]
         ),
         generation_status="waiting_model",
-        outcomes=(
-            saved_input_outcome(write.ref, proof, 1, language),
-            pending_configuration(missing, language),
-        ),
+        outcomes=check["outcomes"],
+        # Only business purposes depend on configuration, resources and source materials.
+        preview_conditions=current_conditions(view) if check["business"] else PreviewConditions(),
+    )
+
+
+def task_title(view: TransactionView, product: C.WorkProductVersion) -> str | None:
+    if product.task is None:
+        return None
+    titles = [
+        row.content.get("title")
+        for row in view.objects
+        if row.ref.kind == "task" and row.ref.object_id == product.task.object_id
+    ]
+    return next((title for title in reversed(titles) if title), None)
+
+
+def bare_refs(refs) -> tuple[C.ObjectRef, ...]:
+    return tuple(
+        {
+            C.canonical(found): found
+            for found in (
+                C.ObjectRef.model_validate(ref.model_dump(include=set(C.ObjectRef.model_fields)))
+                for ref in refs
+            )
+        }.values()
     )
 
 
@@ -155,7 +201,8 @@ def with_saved_previews(
     """Attach the authorized save-time previews of the listed exact versions to a versions page.
 
     The read view has already projected each feedback record for this caller; hidden records are
-    absent and partially readable ones keep their projection. Without previews the page is
+    absent and partially readable ones keep their projection. Each preview is accompanied by its
+    read-time state (stale conditions, later recorded actions). Without previews the page is
     returned unchanged.
     """
     if auth.actor_id != "learner" or not product_id:
@@ -175,6 +222,13 @@ def with_saved_previews(
     )
     if not rows:
         return page
+    withheld = scoped(auth)
     return C.WorkspaceProductPage.model_validate(
-        {**page, "previews": [row.content for row in rows]}
+        {
+            **page,
+            "previews": [
+                withheld_preview(row.content) if withheld else row.content for row in rows
+            ],
+            "preview_states": [preview_state(view, row, auth) for row in rows],
+        }
     ).model_dump(mode="json")
