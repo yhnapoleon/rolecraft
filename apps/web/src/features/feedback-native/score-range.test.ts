@@ -253,19 +253,22 @@ describe('decision 5: shown bounds stay within the shown denominator and weight'
     [25 / 3, 25 / 6, '4.1–8.3'],
     [25 / 3, 0, '0–8.3'],
     [5, 2.5, '2.5–5'],
-  ])('a rule-bounded item of weight %s never shows more than its weight', (weight, lower, ends) => {
-    const range = {
-      ...MIXED,
-      criteria: [row('R6.consistency', weight, 'bounded', lower, weight)],
-    };
-    expect(criterionWeightText({ score_range: range }, 'R6.consistency', 'zh')).toContain(
-      `规则限定 ${ends} 分`,
-    );
-    const partial = { ...MIXED, criteria: [row('R2.support', 25 / 3, 'bounded', 0, 25 / 6)] };
-    expect(criterionWeightText({ score_range: partial }, 'R2.support', 'en')).toContain(
-      'Rule-bounded: 0–4.2 points',
-    );
-  });
+  ])(
+    'a rule-bounded item of weight %s from %s shows %s, never more than its weight',
+    (weight, lower, ends) => {
+      const range = {
+        ...MIXED,
+        criteria: [row('R6.consistency', weight, 'bounded', lower, weight)],
+      };
+      expect(criterionWeightText({ score_range: range }, 'R6.consistency', 'zh')).toContain(
+        `规则限定 ${ends} 分`,
+      );
+      const partial = { ...MIXED, criteria: [row('R2.support', 25 / 3, 'bounded', 0, 25 / 6)] };
+      expect(criterionWeightText({ score_range: partial }, 'R2.support', 'en')).toContain(
+        'Rule-bounded: 0–4.2 points',
+      );
+    },
+  );
 
   it('over every reachable value: lower never tighter, upper never past the shown cap', () => {
     for (const cap of TWELFTHS.slice(1)) {
