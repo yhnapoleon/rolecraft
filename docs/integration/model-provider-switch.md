@@ -119,6 +119,7 @@ CHROME_BIN=<chrome-headless-shell> OUT=<新目录> node tests/regression/assista
 
 - 发布历史只在 `manifest_history.py` 末尾追加一条记录：changes_since_draft 增加该字段说明，integration_changes 新增 `assistant-generator`。
 - 导出沿用现有的 `without_provenance` 兼容方式；examples 与 errors 字节不变，原 documents 和 review_fixes 保全。
+- 宿主随后按单次记录投影助手模式（`api/vertical_reads.py` 是契约实现输入），发布历史末尾追加 `assistant-mode-projection` 一条，两套导出重新生成：expansion-v3 现为 `expansion-v3-8b84c0a227a9493b5637adca4b01cf9a77dd8e4ad7fab9f5d70698165e705b34`（previous 为 `expansion-v3-90a362db…`），engineer-review-v1 现为 `engineer-review-v1-4423ad399ede720d2ca65d1a8c76d9476609728e38f0dad8183838af946a65ef`。只有 manifest、revision 和 `contracts-v2.ts` 头注释变化，schema、examples、errors 不变。
 - 发布身份用 `scripts/regression/release_identity.py --refresh` 按当前字节重算：受保护清单中重新生成的 12 项更新，无新增，`commit` 不变。历史冻结、场景包和所有旧实例保留。
 - 装配方面，`build_registry` 只用三行构造参数透传已配置的模型，`LocalRoleModel` 映射为 None。
 - main 若在合入前前进，须在历史末尾追加记录、指向 main 当时的 revision，并重新生成导出。
