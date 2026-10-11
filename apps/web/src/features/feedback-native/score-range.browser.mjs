@@ -1,7 +1,8 @@
 /** Decision 5 (2026-10-11) in the normal v4 entry, zh and en: the feedback first screen shows
  * the rule-anchored range (never a single total) on a launch with mixed rule outcomes, each
  * expanded item names its weight share and status, and an old candidate-2 session says its
- * rubric version has no range. Desktop and 390px, light and dark.
+ * rubric version has no range. An in-work review of an exploration note shows its range with
+ * the upper end never above the stated denominator. Desktop and 390px, light and dark.
  * PHASE=old runs on a server whose catalog still installs candidate 2; PHASE=after runs on the
  * installed final rubric with the same database. Writes screenshots and results to OUT. */
 import assert from 'node:assert/strict';
@@ -307,10 +308,102 @@ async function runAfter(language, t) {
   }
 }
 
+/** A new session on the final rubric: save an exploration note and request a review. */
+async function runReview(language, t) {
+  const browser = await launch({ width: 1440, height: 1000, reduced: true });
+  try {
+    await browser.goto(base);
+    await browser.ev(
+      `localStorage.clear(); localStorage.setItem('rolecraft.locale', '${language}')`,
+    );
+    await browser.goto(base);
+    await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
+    await browser.click('[data-action="open-career"]');
+    await browser.click('.case-hero [data-action="take-case"]');
+    await waitFor(browser, `!!document.querySelector('.card-open')`);
+    await browser.click('.card-open');
+    await browser.type('#new-title', t('探索笔记', 'Exploration note'));
+    await browser.type(
+      '#new-body',
+      t(
+        '先看容量与政策更新的影响，再决定试点范围。',
+        'Check capacity and policy impact first, then decide the scope.',
+      ),
+    );
+    await browser.clickText(t('保存为作品', 'Save as work'));
+    await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
+    await browser.click('.ol-row[data-type="work"]');
+    await waitFor(browser, `!!document.querySelector('#editor-body')`);
+    await browser.click('[data-action="request-review"]');
+    const form = '.native-feedback section[aria-label] > details';
+    await waitFor(
+      browser,
+      `!!document.querySelector('${form}[open] input[type="checkbox"]')`,
+      20000,
+    );
+    await browser.click(`${form} input[type="checkbox"]`);
+    await clickReady(browser, t('评审选中的版本', 'Review selected versions'));
+    const card = `document.querySelector('[data-short-result="review"]')`;
+    await waitFor(browser, `!!${card}?.querySelector('[data-score-range]')`, 180000);
+    await delay(400);
+    const shown = JSON.parse(
+      await browser.ev(`JSON.stringify((() => {
+        const c = ${card};
+        return {
+          title: c.closest('article').querySelector(':scope > h2 + p')?.innerText ?? '',
+          version: c.closest('article').querySelector('[data-rubric-version]')?.dataset.rubricVersion,
+          kind: c.querySelector('[data-score-range]').dataset.scoreRange,
+          notes: [...c.querySelectorAll(':scope > .short-result__note')].map((n) => n.textContent),
+          statuses: [...c.querySelectorAll(':scope > .short-result__status li')].map((n) => n.textContent),
+        };
+      })())`),
+    );
+    assert.equal(shown.title, t('按「探索笔记」评审', 'Reviewed as “Exploration note”'));
+    assert.equal(shown.version, 'feedback-rubric-v2-final.1');
+    assert.equal(shown.kind, 'range');
+    assert.deepEqual(shown.notes, [
+      t(
+        '规则已定标部分：0–33.3 分（适用项共 33.3 分，满分 100）',
+        'Rule-anchored part: 0–33.3 of 33.3 (applicable items; full rubric 100)',
+      ),
+      t(
+        '模型建议不计分；待核验项使区间变宽。',
+        'Model advice is not scored; pending items widen the range.',
+      ),
+    ]);
+    // The shown upper end never exceeds the stated denominator.
+    const [, upper, denominator] = shown.notes[0].match(/–([\d.]+)\D+([\d.]+)/) ?? [];
+    assert.ok(Number(upper) <= Number(denominator), shown.notes[0]);
+    await browser.ev(
+      `${card}.closest('article').scrollIntoView({block:'start'}); document.scrollingElement.scrollBy(0, -96)`,
+    );
+    await browser.shot(`${out}/${language}-review-exploration-desktop-light.jpg`);
+    await viewport(browser, 390, 844, true);
+    await browser.click('[data-action="open-rail"]');
+    await waitFor(browser, `!!document.querySelector('.rail-tabs [data-tab="feedback"]')`);
+    await browser.click('.rail-tabs [data-tab="feedback"]');
+    await waitFor(browser, `!!${card}?.querySelector('[data-score-range]')`, 20000);
+    await browser.ev(`${card}.scrollIntoView({block:'start'})`);
+    assert.equal(await noOverflow(browser), true);
+    await browser.shot(`${out}/${language}-review-exploration-390-dark.jpg`);
+    assert.deepEqual(
+      browser.logs.filter((entry) => entry.level === 'exception'),
+      [],
+    );
+    results.push({ language, phase, check: 'exploration-note review range', shown });
+  } catch (error) {
+    await browser.shot(`${out}/${language}-review-failure.jpg`).catch(() => {});
+    throw error;
+  } finally {
+    await browser.close();
+  }
+}
+
 for (const language of ['zh', 'en']) {
   const t = (zh, en) => (language === 'en' ? en : zh);
   try {
     await (phase === 'old' ? runOld : runAfter)(language, t);
+    if (phase === 'after') await runReview(language, t);
     console.log(`PASS ${phase} ${language}`);
   } catch (error) {
     writeFileSync(

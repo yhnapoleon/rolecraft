@@ -17,8 +17,7 @@ export type ScoreRangeKind = 'range' | 'empty' | 'version' | 'unrecorded' | 'wit
 const RANGED_VERSIONS: ReadonlySet<string> = new Set(['feedback-rubric-v2-final.1']);
 const EPSILON = 1e-6;
 
-/** Points with at most one decimal. Range ends round outward so the shown range never
- * looks tighter than the recorded one. */
+/** Points with at most one decimal; `rangeEnds` decides the direction for range ends. */
 export function formatPoints(value: number, rounding: 'down' | 'up' | 'nearest' = 'nearest') {
   const tenths =
     rounding === 'down'
@@ -29,10 +28,17 @@ export function formatPoints(value: number, rounding: 'down' | 'up' | 'nearest' 
   return Number.isInteger(tenths / 10) ? String(tenths / 10) : (tenths / 10).toFixed(1);
 }
 
-const ends = (lower: number, upper: number) =>
-  upper - lower <= EPSILON
-    ? { lower: formatPoints(lower), upper: formatPoints(upper) }
-    : { lower: formatPoints(lower, 'down'), upper: formatPoints(upper, 'up') };
+/** Range ends as shown. The lower end rounds down, so it is never tighter than recorded.
+ * The upper end rounds up but never past the shown cap (the denominator, or an item's
+ * weight), and an upper end equal to the cap is written exactly as the cap is. */
+export function rangeEnds(lower: number, upper: number, cap: number) {
+  const capText = formatPoints(cap);
+  const raised = formatPoints(upper, 'up');
+  return {
+    lower: formatPoints(lower, 'down'),
+    upper: cap - upper <= EPSILON || Number(raised) > Number(capText) ? capText : raised,
+  };
+}
 const fullWeight = (range: _RuleScoreRange) =>
   formatPoints(range.criteria.reduce((sum, row) => sum + row.weight, 0));
 
@@ -49,7 +55,7 @@ export function scoreRangeLine(
     const full = fullWeight(range);
     const denominator = formatPoints(range.denominator);
     const text = feedbackCopy(language, denominator === full ? 'rangeFull' : 'rangePart', {
-      ...ends(range.lower, range.upper),
+      ...rangeEnds(range.lower, range.upper, range.denominator),
       denominator,
       full,
     });
@@ -91,7 +97,10 @@ export function criterionWeightText(
   if (row.status === 'anchored' && row.lower != null)
     return feedbackCopy(language, 'weightAnchored', { ...values, points: formatPoints(row.lower) });
   if (row.status === 'bounded' && row.lower != null && row.upper != null)
-    return feedbackCopy(language, 'weightBounded', { ...values, ...ends(row.lower, row.upper) });
+    return feedbackCopy(language, 'weightBounded', {
+      ...values,
+      ...rangeEnds(row.lower, row.upper, row.weight),
+    });
   if (row.status === 'not_applicable') return feedbackCopy(language, 'weightNotApplicable', values);
   return feedbackCopy(
     language,

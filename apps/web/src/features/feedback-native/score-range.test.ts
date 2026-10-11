@@ -3,7 +3,7 @@ import type { _RuleScoreCriterion, _RuleScoreRange } from '../../contracts-v2';
 import { asFake, fakeDocument } from '../results-native/fake-dom';
 import type { Report } from './index';
 import { FEEDBACK_COPY } from './localization';
-import { criterionWeightText, formatPoints, scoreRangeLine } from './score-range';
+import { criterionWeightText, formatPoints, rangeEnds, scoreRangeLine } from './score-range';
 import { feedbackShortResult } from './short-summary';
 
 type Item = Report['items'][number];
@@ -205,6 +205,90 @@ describe('decision 5: rule-anchored range on the feedback first screen', () => {
   });
 });
 
+// The exact record of an exploration-note review in the normal entry (5 pending, 9 n/a).
+const EXPLORATION_PENDING = [
+  'R1.target',
+  'R2.support',
+  'R2.unknowns',
+  'R2.failure_analysis',
+  'R6.consistency',
+];
+const EXPLORATION: _RuleScoreRange = {
+  ...MIXED,
+  denominator: 33.333333333333336,
+  lower: 0,
+  upper: 33.333333333333336,
+  criteria: MIXED.criteria.map((entry) =>
+    row(
+      entry.criterion,
+      entry.weight,
+      EXPLORATION_PENDING.includes(entry.criterion) ? 'pending' : 'not_applicable',
+    ),
+  ),
+};
+const TWELFTHS = Array.from({ length: 1201 }, (_, k) => k / 12);
+
+describe('decision 5: shown bounds stay within the shown denominator and weight', () => {
+  it.each([
+    ['zh', '规则已定标部分：0–33.3 分（适用项共 33.3 分，满分 100）'],
+    ['en', 'Rule-anchored part: 0–33.3 of 33.3 (applicable items; full rubric 100)'],
+  ] as const)('an exploration-note review shows 0–33.3 of 33.3 (%s)', (language, text) => {
+    const review = report({ subject: ref('review', 'r1'), score_range: EXPLORATION });
+    expect(firstScreen(review, language).notes[0]).toBe(text);
+  });
+
+  it.each([
+    [100 / 3, '0–33.3 分（适用项共 33.3 分'],
+    [250 / 3, '0–83.3 分（适用项共 83.3 分'],
+    [50 / 3, '0–16.7 分（适用项共 16.7 分'],
+    [25 / 6, '0–4.2 分（适用项共 4.2 分'],
+    [10 / 3, '0–3.3 分（适用项共 3.3 分'],
+  ])('an upper end equal to the denominator %s is written as the denominator', (cap, text) => {
+    const range = { ...MIXED, lower: 0, upper: cap, denominator: cap };
+    expect(scoreRangeLine(report({ score_range: range }), 'zh')?.text).toContain(text);
+  });
+
+  it.each([
+    [10 / 3, 5 / 3, '1.6–3.3'],
+    [25 / 3, 25 / 6, '4.1–8.3'],
+    [25 / 3, 0, '0–8.3'],
+    [5, 2.5, '2.5–5'],
+  ])('a rule-bounded item of weight %s never shows more than its weight', (weight, lower, ends) => {
+    const range = {
+      ...MIXED,
+      criteria: [row('R6.consistency', weight, 'bounded', lower, weight)],
+    };
+    expect(criterionWeightText({ score_range: range }, 'R6.consistency', 'zh')).toContain(
+      `规则限定 ${ends} 分`,
+    );
+    const partial = { ...MIXED, criteria: [row('R2.support', 25 / 3, 'bounded', 0, 25 / 6)] };
+    expect(criterionWeightText({ score_range: partial }, 'R2.support', 'en')).toContain(
+      'Rule-bounded: 0–4.2 points',
+    );
+  });
+
+  it('over every reachable value: lower never tighter, upper never past the shown cap', () => {
+    for (const cap of TWELFTHS.slice(1)) {
+      const shownCap = Number(formatPoints(cap));
+      for (let step = 0; step <= 24 && step / 12 <= cap + 1e-9; step++) {
+        const upper = cap - step / 12;
+        for (const lower of [0, upper / 2, upper]) {
+          const shown = rangeEnds(lower, upper, cap);
+          expect(Number(shown.lower)).toBeLessThanOrEqual(lower + 1e-9);
+          expect(Number(shown.upper)).toBeLessThanOrEqual(shownCap);
+          expect(Number(shown.lower)).toBeLessThanOrEqual(Number(shown.upper));
+          // Rounded up unless that would pass the shown cap; equal to the cap reads as the cap.
+          if (step === 0) expect(shown.upper).toBe(formatPoints(cap));
+          else
+            expect(Number(shown.upper) >= upper - 1e-9 || Number(shown.upper) === shownCap).toBe(
+              true,
+            );
+        }
+      }
+    }
+  });
+});
+
 describe('decision 5: per-criterion weight and anchoring', () => {
   it.each([
     [
@@ -212,7 +296,7 @@ describe('decision 5: per-criterion weight and anchoring', () => {
       {
         'R3.capacity': '权重 10 分（满分 100）· 规则已定标：计 10 分',
         'R4.functional_tests': '权重 10 分（满分 100）· 规则已定标：计 0 分',
-        'R6.consistency': '权重 3.3 分（满分 100）· 规则限定 1.6–3.4 分，其余待核验',
+        'R6.consistency': '权重 3.3 分（满分 100）· 规则限定 1.6–3.3 分，其余待核验',
         'R2.support': '权重 8.3 分（满分 100）· 待核验：不计分，区间因此加宽 8.3 分',
         'R6.operations': '权重 3.3 分（满分 100）· 适用性待确认：不计分，区间因此加宽 3.3 分',
         'R5.impact': '权重 7.5 分（满分 100）· 本次不适用：不计入分母',
@@ -223,7 +307,7 @@ describe('decision 5: per-criterion weight and anchoring', () => {
       {
         'R3.capacity': 'Weight 10 of 100 · Rule-anchored: 10 points',
         'R4.functional_tests': 'Weight 10 of 100 · Rule-anchored: 0 points',
-        'R6.consistency': 'Weight 3.3 of 100 · Rule-bounded: 1.6–3.4 points; the rest is pending',
+        'R6.consistency': 'Weight 3.3 of 100 · Rule-bounded: 1.6–3.3 points; the rest is pending',
         'R2.support': 'Weight 8.3 of 100 · Pending: not scored; widens the range by 8.3',
         'R6.operations':
           'Weight 3.3 of 100 · Applicability undetermined: not scored; widens the range by 3.3',
