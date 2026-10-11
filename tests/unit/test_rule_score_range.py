@@ -253,10 +253,13 @@ def test_model_advice_never_narrows_the_range():
 
 
 def test_rule_results_must_match_the_installed_criteria():
-    with pytest.raises(ValueError, match="every canonical rule result"):
-        rule_score_range([pending(c) for c in CRITERIA[:-1]], FINAL, FINAL_SHA)
+    # A scoped review evaluates only some criteria: no range over the whole rubric.
+    assert rule_score_range([pending(c) for c in CRITERIA[:-1]], FINAL, FINAL_SHA) is None
+    assert rule_score_range([anchored("R6.alternatives", "MET")], FINAL, FINAL_SHA) is None
     with pytest.raises(ValueError, match="every canonical rule result"):
         rule_score_range([pending(c) for c in [*CRITERIA, CRITERIA[0]]], FINAL, FINAL_SHA)
+    with pytest.raises(ValueError, match="every canonical rule result"):
+        rule_score_range([pending(c) for c in [*CRITERIA, "R6.comparison"]], FINAL, FINAL_SHA)
 
 
 def test_contract_rejects_single_totals_and_points_on_non_rule_criteria():

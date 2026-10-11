@@ -55,14 +55,21 @@ def rule_score_range(
     definition: Mapping[str, JsonValue],
     rubric_sha256: str,
 ) -> _RuleScoreRange | None:
-    """Aggregate recorded rule results with the installed weights; None without frozen ones."""
+    """Aggregate recorded rule results with the installed weights.
+
+    None when the rubric has no frozen weights (candidate rubrics), or when the record is a
+    scoped review covering only some criteria: a range over the whole rubric would then
+    describe criteria this record never evaluated.
+    """
     weights = frozen_weights(definition)
     if weights is None:
         return None
     rows = list(rule_items)
     results = {item.criterion: item for item in rows}
-    if len(results) != len(rows) or set(results) != set(weights):
+    if len(results) != len(rows) or not set(results) <= set(weights):
         raise ValueError("A score range needs every canonical rule result exactly once")
+    if set(results) != set(weights):
+        return None
     criteria = []
     denominator = lower = upper = Fraction(0)
     for criterion, weight in weights.items():
