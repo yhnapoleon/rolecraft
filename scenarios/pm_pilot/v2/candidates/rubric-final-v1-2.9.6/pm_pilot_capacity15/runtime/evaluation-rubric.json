@@ -1,0 +1,952 @@
+{
+  "criteria": [
+    {
+      "difference_from_original": "Remove no_go failure; only final decision responsibility can establish absence.",
+      "dimension": "R1",
+      "en": {
+        "description": "Whether target users and business goals match the demand evidence.\nMET: Within the purpose of this work, identify the users and business problem and connect them to demand evidence available at the time. In exploration, clearly identify untested users or problems as hypotheses.\nPARTIAL: A verified part of the user or goal definition is present, but a specific gap remains, such as an unclear user boundary or an incomplete connection to demand. Exploration alone is not a partial failure.\nNOT_MET: For a commitment or result carrying final decision responsibility, complete content review confirms a missing target user or business goal, or authoritative evidence contradicts the committed target judgment. A no-go decision alone never triggers this label.\nINSUFFICIENT: The demand sources, completeness of the work or formation time cannot be verified well enough to distinguish an absent target from an unverified one. Failure to extract a template field is not proof of absence.\nNOT_APPLICABLE: An explicit task or review scope establishes that this specialized work carries no target-user or goal-definition responsibility. An unknown purpose or unclear target is not grounds for this label.",
+        "id": "R1.target",
+        "launch_only": false,
+        "mechanism": "v2.target",
+        "purposes": [
+          "exploration",
+          "option",
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "verified_subject_content"
+      ],
+      "id": "R1.target",
+      "product_applicability": {
+        "en": "Check whom the work serves and what problem it addresses. Exploration may continue to refine the goal.",
+        "zh": "核对这份作品要服务谁、解决什么问题。探索阶段允许继续界定目标。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "missing_target_or_goal:NOT_MET",
+        "present:semantic"
+      ],
+      "zh": {
+        "description": "目标用户、业务目标与需求证据是否对应。\nMET: 在当前作品承担的目标判断范围内，明确服务的用户及业务问题，并用当时可取得的需求依据说明二者对应；探索中尚待验证的用户或问题明确标为假设。\nPARTIAL: 已明确用户或业务目标的一部分，且可指出具体缺口，例如用户边界不清、目标与需求的对应只完成一部分；不能仅因仍在探索就判部分达标。\nNOT_MET: 在承诺或结果作品承担最终决策责任时，完整内容核验确认目标用户或业务目标缺失；或确定性反证表明所承诺的目标判断与当时需求相冲突。no_go本身不触发本标签。\nINSUFFICIENT: 无法核准目标判断所需的需求来源、作品完整性或形成时点，因而不能区分目标确实缺失与尚未核验；未抽取出模板字段不证明缺失。\nNOT_APPLICABLE: 有明确任务或评审范围依据证明此专项作品不承担目标与用户范围判断。用途未知或尚未写清目标不能据此标不适用。",
+        "id": "R1.target",
+        "launch_only": false,
+        "mechanism": "v2.target",
+        "purposes": [
+          "exploration",
+          "option",
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "在当前作品承担的目标判断范围内，明确服务的用户及业务问题，并用当时可取得的需求依据说明二者对应；探索中尚待验证的用户或问题明确标为假设。",
+          "PARTIAL": "已明确用户或业务目标的一部分，且可指出具体缺口，例如用户边界不清、目标与需求的对应只完成一部分；不能仅因仍在探索就判部分达标。",
+          "NOT_MET": "在承诺或结果作品承担最终决策责任时，完整内容核验确认目标用户或业务目标缺失；或确定性反证表明所承诺的目标判断与当时需求相冲突。no_go本身不触发本标签。",
+          "INSUFFICIENT": "无法核准目标判断所需的需求来源、作品完整性或形成时点，因而不能区分目标确实缺失与尚未核验；未抽取出模板字段不证明缺失。",
+          "NOT_APPLICABLE": "有明确任务或评审范围依据证明此专项作品不承担目标与用户范围判断。用途未知或尚未写清目标不能据此标不适用。"
+        },
+        "en": {
+          "MET": "Within the purpose of this work, identify the users and business problem and connect them to demand evidence available at the time. In exploration, clearly identify untested users or problems as hypotheses.",
+          "PARTIAL": "A verified part of the user or goal definition is present, but a specific gap remains, such as an unclear user boundary or an incomplete connection to demand. Exploration alone is not a partial failure.",
+          "NOT_MET": "For a commitment or result carrying final decision responsibility, complete content review confirms a missing target user or business goal, or authoritative evidence contradicts the committed target judgment. A no-go decision alone never triggers this label.",
+          "INSUFFICIENT": "The demand sources, completeness of the work or formation time cannot be verified well enough to distinguish an absent target from an unverified one. Failure to extract a template field is not proof of absence.",
+          "NOT_APPLICABLE": "An explicit task or review scope establishes that this specialized work carries no target-user or goal-definition responsibility. An unknown purpose or unclear target is not grounds for this label."
+        }
+      }
+    },
+    {
+      "difference_from_original": "Allow risk/cost/stop criteria; no launch metric requirement on exploration.",
+      "dimension": "R1",
+      "en": {
+        "description": "Whether success metrics have definitions, targets and observable measures.\nMET: Provide decision-appropriate success, risk, cost or stopping measures for the plan, commitment or result. Definitions, measurement basis, target conditions and observation methods are verifiable and suited to the question.\nPARTIAL: Verifiable measures exist but specific definitions, targets or observation details are missing. A deterministic definition or target gap permits only a NOT_MET-to-PARTIAL bound; it does not automatically award PARTIAL.\nNOT_MET: The responsibility applies and complete review confirms no success, risk, cost or stopping measure, or the stated measurement basis is demonstrably incapable of testing the claimed decision condition.\nINSUFFICIENT: The measure evidence, complete content, target meaning or observability cannot be verified. This does not establish that metrics are absent, and planned targets are not achieved results.\nNOT_APPLICABLE: The work is exploration or an option without a planning acceptance duty, or its explicit specialized scope does not require metrics. A no-go or deferral still needs this criterion when stopping or reconsideration conditions are required.",
+        "id": "R1.metrics",
+        "launch_only": false,
+        "mechanism": "v2.metrics",
+        "purposes": [
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "verified_subject_content"
+      ],
+      "id": "R1.metrics",
+      "product_applicability": {
+        "en": "Check success, risk or stopping criteria suited to this decision. Planned metrics are not achieved results.",
+        "zh": "核对与本次决定相称的成功、风险或停止标准；计划中的指标不代表已有结果。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "no_metrics:NOT_MET",
+        "missing_definition_or_target:NOT_MET..PARTIAL",
+        "otherwise:semantic"
+      ],
+      "zh": {
+        "description": "成功指标是否有定义、目标与可观察口径。\nMET: 为本次计划、承诺或结果给出与决策相称的成功、风险、成本或停止指标；定义、统计口径、目标条件和观察方式均可核验且适合所要判断的问题。\nPARTIAL: 已有可核验指标，但部分定义、目标或观察口径明确欠缺；定义或目标的确定性缺口只给出NOT_MET至PARTIAL的规则界，不自动授予PARTIAL。\nNOT_MET: 本项责任适用，完整核验确认没有任何成功、风险、成本或停止指标；或已证实所给口径无法检验宣称的决策条件。\nINSUFFICIENT: 关键指标依据、完整内容、目标含义或可观察性无法核验，不能据此断言没有指标；计划指标不能被当作已实现的结果。\nNOT_APPLICABLE: 用途为探索或备选，且尚未承担计划验收责任；或明确的专项范围不需要指标判断。no_go或暂缓仍需相应停止或复议标准时，本项继续适用。",
+        "id": "R1.metrics",
+        "launch_only": false,
+        "mechanism": "v2.metrics",
+        "purposes": [
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "为本次计划、承诺或结果给出与决策相称的成功、风险、成本或停止指标；定义、统计口径、目标条件和观察方式均可核验且适合所要判断的问题。",
+          "PARTIAL": "已有可核验指标，但部分定义、目标或观察口径明确欠缺；定义或目标的确定性缺口只给出NOT_MET至PARTIAL的规则界，不自动授予PARTIAL。",
+          "NOT_MET": "本项责任适用，完整核验确认没有任何成功、风险、成本或停止指标；或已证实所给口径无法检验宣称的决策条件。",
+          "INSUFFICIENT": "关键指标依据、完整内容、目标含义或可观察性无法核验，不能据此断言没有指标；计划指标不能被当作已实现的结果。",
+          "NOT_APPLICABLE": "用途为探索或备选，且尚未承担计划验收责任；或明确的专项范围不需要指标判断。no_go或暂缓仍需相应停止或复议标准时，本项继续适用。"
+        },
+        "en": {
+          "MET": "Provide decision-appropriate success, risk, cost or stopping measures for the plan, commitment or result. Definitions, measurement basis, target conditions and observation methods are verifiable and suited to the question.",
+          "PARTIAL": "Verifiable measures exist but specific definitions, targets or observation details are missing. A deterministic definition or target gap permits only a NOT_MET-to-PARTIAL bound; it does not automatically award PARTIAL.",
+          "NOT_MET": "The responsibility applies and complete review confirms no success, risk, cost or stopping measure, or the stated measurement basis is demonstrably incapable of testing the claimed decision condition.",
+          "INSUFFICIENT": "The measure evidence, complete content, target meaning or observability cannot be verified. This does not establish that metrics are absent, and planned targets are not achieved results.",
+          "NOT_APPLICABLE": "The work is exploration or an option without a planning acceptance duty, or its explicit specialized scope does not require metrics. A no-go or deferral still needs this criterion when stopping or reconsideration conditions are required."
+        }
+      }
+    },
+    {
+      "difference_from_original": "Reference validity is a separate factual observation, never semantic support.",
+      "dimension": "R2",
+      "en": {
+        "description": "Whether key judgments are supported by evidence available at the time.\nMET: Each key judgment is supported by authorized evidence available at the time. Quotes, versions and timing are valid, and the relationship between evidence and conclusion has been independently checked for semantic support.\nPARTIAL: Some key judgments are fully supported while identifiable others have only partial support. The gap does not erase the verified portion, and citation count is not a measure of support.\nNOT_MET: Verified contemporaneous evidence contradicts a key asserted conclusion, or complete review establishes that cited material does not support the conclusion while it is presented as supporting it.\nINSUFFICIENT: A key source is missing, conflict is unresolved, permission or temporal validity cannot be checked, or the evidence does not permit a support judgment. A valid citation alone does not establish support.\nNOT_APPLICABLE: The explicitly bounded work contains no claim requiring evidential support, such as a procedural record with no factual or causal assertion. Missing citations alone do not make this criterion inapplicable.",
+        "id": "R2.support",
+        "launch_only": false,
+        "mechanism": "v2.support",
+        "purposes": [
+          "exploration",
+          "option",
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "exact_authorized_quotes"
+      ],
+      "id": "R2.support",
+      "product_applicability": {
+        "en": "Check judgments against evidence available at the time. An existing citation does not establish support.",
+        "zh": "核对判断与当时可知证据的关系；引用存在不代表支持成立。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "always:semantic"
+      ],
+      "zh": {
+        "description": "关键判断是否由当时可知的证据支持。\nMET: 关键判断逐项由当时获准且可追溯的证据支持，引用的原句、版本和时间有效，证据与结论的支持关系已完成独立语义核验。\nPARTIAL: 部分关键判断已有充分支持，但可明确定位的其他判断仅得到部分支持，且缺口未改变已核实部分；不能把引用数量当支持程度。\nNOT_MET: 经核准的当时证据明确反驳关键的确定性结论，或完整核验确认所援引内容不能支撑该结论而仍被当作支持。\nINSUFFICIENT: 关键来源缺失、冲突未解、权限或版本时点无法核准，或支持关系尚无足够证据作结论；引用存在本身不等于支持成立。\nNOT_APPLICABLE: 明确的作品范围内没有需要证据支持的判断，例如仅记录操作步骤且无事实或因果主张；不能因没有附引文就认定本项不适用。",
+        "id": "R2.support",
+        "launch_only": false,
+        "mechanism": "v2.support",
+        "purposes": [
+          "exploration",
+          "option",
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "关键判断逐项由当时获准且可追溯的证据支持，引用的原句、版本和时间有效，证据与结论的支持关系已完成独立语义核验。",
+          "PARTIAL": "部分关键判断已有充分支持，但可明确定位的其他判断仅得到部分支持，且缺口未改变已核实部分；不能把引用数量当支持程度。",
+          "NOT_MET": "经核准的当时证据明确反驳关键的确定性结论，或完整核验确认所援引内容不能支撑该结论而仍被当作支持。",
+          "INSUFFICIENT": "关键来源缺失、冲突未解、权限或版本时点无法核准，或支持关系尚无足够证据作结论；引用存在本身不等于支持成立。",
+          "NOT_APPLICABLE": "明确的作品范围内没有需要证据支持的判断，例如仅记录操作步骤且无事实或因果主张；不能因没有附引文就认定本项不适用。"
+        },
+        "en": {
+          "MET": "Each key judgment is supported by authorized evidence available at the time. Quotes, versions and timing are valid, and the relationship between evidence and conclusion has been independently checked for semantic support.",
+          "PARTIAL": "Some key judgments are fully supported while identifiable others have only partial support. The gap does not erase the verified portion, and citation count is not a measure of support.",
+          "NOT_MET": "Verified contemporaneous evidence contradicts a key asserted conclusion, or complete review establishes that cited material does not support the conclusion while it is presented as supporting it.",
+          "INSUFFICIENT": "A key source is missing, conflict is unresolved, permission or temporal validity cannot be checked, or the evidence does not permit a support judgment. A valid citation alone does not establish support.",
+          "NOT_APPLICABLE": "The explicitly bounded work contains no claim requiring evidential support, such as a procedural record with no factual or causal assertion. Missing citations alone do not make this criterion inapplicable."
+        }
+      }
+    },
+    {
+      "difference_from_original": "Proposed experiments or unapproved requests do not themselves establish a breach.",
+      "dimension": "R2",
+      "en": {
+        "description": "Whether facts, assumptions and unconfirmed resources are distinguished.\nMET: Distinguish facts, unverified assumptions, requests, approvals, effective commitments and actual execution. Give proportionate checks for key unknowns and do not present projected benefits or resources as established facts.\nPARTIAL: Major unknowns are identified, but a specific condition, validation step or boundary between fact and assumption is incomplete. No unapproved resource excess has been established.\nNOT_MET: Deterministic records establish actual execution or an effective commitment beyond authorized resources without approval, or a key unverified claim is demonstrably presented as approved, validated or executed.\nINSUFFICIENT: The effective commitment, approval, resources, exact wording or time window cannot be verified sufficiently to distinguish a conditional proposal from an unconditional commitment.\nNOT_APPLICABLE: Task scope and complete content establish that the work contains no uncertain claim, unresolved condition or resource/execution-state judgment. A hypothesis, no-go or deferral does not automatically remove this responsibility.",
+        "id": "R2.unknowns",
+        "launch_only": false,
+        "mechanism": "v2.unknowns",
+        "purposes": [
+          "exploration",
+          "option",
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "effective_obligation",
+        "approved_resources"
+      ],
+      "id": "R2.unknowns",
+      "product_applicability": {
+        "en": "Separate verified facts, assumptions, requests and effective obligations. Exploring an infeasible idea is not itself a breach.",
+        "zh": "区分已核事实、假设、申请和有效责任；提出尚不可行的设想不等于违约。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "verified_current_unapproved_excess:NOT_MET",
+        "otherwise:semantic"
+      ],
+      "zh": {
+        "description": "是否区分事实、假设与待确认资源。\nMET: 把已有事实、未证实假设、申请、批准、有效承诺和执行结果清楚区分；关键未知有相称的补证或验证办法，未把收益或资源设想写成既成事实。\nPARTIAL: 主要未知已被标出，但有可定位的条件、验证办法或事实与假设边界不够完整；没有已经核实的未批准资源超用。\nNOT_MET: 确定性记录确认当前实际执行或有效承诺超出可用资源且无有效批准；或关键未证实结论被确证冒充为已批准、已验证或已执行的事实。\nINSUFFICIENT: 承诺是否生效、批准、资源、原句或其时间窗口不足以核准，不能判断是条件设想还是确定性承诺。\nNOT_APPLICABLE: 经任务范围与完整内容确认，本作品不涉及待验证主张、未决条件或资源／执行状态判断。提出假设、no_go或暂缓都不会自动使本项不适用。",
+        "id": "R2.unknowns",
+        "launch_only": false,
+        "mechanism": "v2.unknowns",
+        "purposes": [
+          "exploration",
+          "option",
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "把已有事实、未证实假设、申请、批准、有效承诺和执行结果清楚区分；关键未知有相称的补证或验证办法，未把收益或资源设想写成既成事实。",
+          "PARTIAL": "主要未知已被标出，但有可定位的条件、验证办法或事实与假设边界不够完整；没有已经核实的未批准资源超用。",
+          "NOT_MET": "确定性记录确认当前实际执行或有效承诺超出可用资源且无有效批准；或关键未证实结论被确证冒充为已批准、已验证或已执行的事实。",
+          "INSUFFICIENT": "承诺是否生效、批准、资源、原句或其时间窗口不足以核准，不能判断是条件设想还是确定性承诺。",
+          "NOT_APPLICABLE": "经任务范围与完整内容确认，本作品不涉及待验证主张、未决条件或资源／执行状态判断。提出假设、no_go或暂缓都不会自动使本项不适用。"
+        },
+        "en": {
+          "MET": "Distinguish facts, unverified assumptions, requests, approvals, effective commitments and actual execution. Give proportionate checks for key unknowns and do not present projected benefits or resources as established facts.",
+          "PARTIAL": "Major unknowns are identified, but a specific condition, validation step or boundary between fact and assumption is incomplete. No unapproved resource excess has been established.",
+          "NOT_MET": "Deterministic records establish actual execution or an effective commitment beyond authorized resources without approval, or a key unverified claim is demonstrably presented as approved, validated or executed.",
+          "INSUFFICIENT": "The effective commitment, approval, resources, exact wording or time window cannot be verified sufficiently to distinguish a conditional proposal from an unconditional commitment.",
+          "NOT_APPLICABLE": "Task scope and complete content establish that the work contains no uncertain claim, unresolved condition or resource/execution-state judgment. A hypothesis, no-go or deferral does not automatically remove this responsibility."
+        }
+      }
+    },
+    {
+      "difference_from_original": "Missing observation/template does not prove case absence.",
+      "dimension": "R2",
+      "en": {
+        "description": "Whether failure cases are cited or reproduced and their failure modes explained.\nMET: Cite a verifiable relevant failure case or reproduce it, then correctly explain its failure mode, causes and limits from the original results, separating observed facts from causal hypotheses.\nPARTIAL: A relevant case is cited or reproduced but its cause, boundary or consequence is incompletely explained. A complete ledger with no case sets an upper bound of PARTIAL; that bound does not prove partial analysis exists.\nNOT_MET: Authoritative evidence refutes the failure explanation, or complete work lacks substantive analysis where this duty explicitly applies. Absence of a dedicated failure form is not sufficient evidence of failure.\nINSUFFICIENT: The case, reproduction, source version or ledger completeness cannot be verified, or causal evidence is inadequate. An unobserved case is not proof that no investigation occurred.\nNOT_APPLICABLE: An explicit exploratory or specialized task carries no failure-analysis duty and makes no commitment requiring such evidence. Exploration is not automatically deficient for omitting failure cases.",
+        "id": "R2.failure_analysis",
+        "launch_only": false,
+        "mechanism": "v2.failure_analysis",
+        "purposes": [
+          "exploration",
+          "option",
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "failure_case_reference",
+        "actual_reproduction",
+        "complete_ledger"
+      ],
+      "id": "R2.failure_analysis",
+      "product_applicability": {
+        "en": "Review relevant failure cases and explanations. An exploratory note is not automatically deficient for omitting failure analysis.",
+        "zh": "核对适用的失败案例和解释；普通探索未覆盖失败分析不自动判缺失。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "complete_no_case:NOT_MET..PARTIAL",
+        "otherwise:semantic"
+      ],
+      "zh": {
+        "description": "是否引用或复现失败案例，并正确解释失败模式。\nMET: 对当前责任相关的失败案例提供可核准引用或实际复现，并依据原始结果正确解释失败模式、成因与适用限制，区分观察事实与原因假设。\nPARTIAL: 已引用或复现相关失败，但原因、边界或后果解释有明确缺口；完整记录确无案例时最多PARTIAL，该规则上界不证明已有部分分析。\nNOT_MET: 有确定反证表明失败被错误解释，或在本项明确适用且内容完整时没有实质失败分析；不能仅因没有专门失败表单就判未达标。\nINSUFFICIENT: 案例、复现记录、来源版本或日志完整性无法核准，或者成因证据不足；未观察到案例不等于确认没有做过。\nNOT_APPLICABLE: 明确的探索或专项任务未承担失败分析责任，且没有作出需要失败证据支撑的承诺；一般探索没有覆盖失败案例不自动扣分。",
+        "id": "R2.failure_analysis",
+        "launch_only": false,
+        "mechanism": "v2.failure_analysis",
+        "purposes": [
+          "exploration",
+          "option",
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "对当前责任相关的失败案例提供可核准引用或实际复现，并依据原始结果正确解释失败模式、成因与适用限制，区分观察事实与原因假设。",
+          "PARTIAL": "已引用或复现相关失败，但原因、边界或后果解释有明确缺口；完整记录确无案例时最多PARTIAL，该规则上界不证明已有部分分析。",
+          "NOT_MET": "有确定反证表明失败被错误解释，或在本项明确适用且内容完整时没有实质失败分析；不能仅因没有专门失败表单就判未达标。",
+          "INSUFFICIENT": "案例、复现记录、来源版本或日志完整性无法核准，或者成因证据不足；未观察到案例不等于确认没有做过。",
+          "NOT_APPLICABLE": "明确的探索或专项任务未承担失败分析责任，且没有作出需要失败证据支撑的承诺；一般探索没有覆盖失败案例不自动扣分。"
+        },
+        "en": {
+          "MET": "Cite a verifiable relevant failure case or reproduce it, then correctly explain its failure mode, causes and limits from the original results, separating observed facts from causal hypotheses.",
+          "PARTIAL": "A relevant case is cited or reproduced but its cause, boundary or consequence is incompletely explained. A complete ledger with no case sets an upper bound of PARTIAL; that bound does not prove partial analysis exists.",
+          "NOT_MET": "Authoritative evidence refutes the failure explanation, or complete work lacks substantive analysis where this duty explicitly applies. Absence of a dedicated failure form is not sufficient evidence of failure.",
+          "INSUFFICIENT": "The case, reproduction, source version or ledger completeness cannot be verified, or causal evidence is inadequate. An unobserved case is not proof that no investigation occurred.",
+          "NOT_APPLICABLE": "An explicit exploratory or specialized task carries no failure-analysis duty and makes no commitment requiring such evidence. Exploration is not automatically deficient for omitting failure cases."
+        }
+      }
+    },
+    {
+      "difference_from_original": "No-go without actual opening does not inherit launch criteria; historical overuse remains.",
+      "dimension": "R3",
+      "en": {
+        "description": "Whether committed launch participants fit the effective capacity.\nMET: For a commitment or result with a launch duty, the exact committed configuration has a positive participant count within capacity authorized at that time. Actual usage is checked separately at its occurrence time.\nPARTIAL: This exact capacity constraint has no intermediate calibrated label: use MET within the limit and NOT_MET for a verified excess or invalid launch count. Comparable text/configuration conflicts belong to R6.consistency.\nNOT_MET: A launch obligation exists and deterministic records establish participants beyond effective capacity, or the declared launch count is invalid. A request or verbal intention is not approval.\nINSUFFICIENT: The participant commitment, effective capacity, approval scope or matching version/time cannot be verified. Do not fill the gap with zero, a guess or later approval.\nNOT_APPLICABLE: The purpose is neither commitment nor result, or a no-go/deferral carries no current launch duty. Previously incurred over-capacity actions remain in historical responsibility records.",
+        "id": "R3.capacity",
+        "launch_only": true,
+        "mechanism": "v2.capacity",
+        "purposes": [
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "fixed_config",
+        "effective_capacity",
+        "actual_action_history"
+      ],
+      "id": "R3.capacity",
+      "product_applicability": {
+        "en": "Check the committed user scope against effective capacity; assess actual overuse at the time it occurred.",
+        "zh": "按明确承诺的用户范围与有效容量核验；实际超限另看发生时的记录。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "within_effective_capacity:MET",
+        "over_or_invalid_launch_count:NOT_MET",
+        "missing:unknown"
+      ],
+      "zh": {
+        "description": "正式开放人数是否符合当时有效容量。\nMET: 在承诺或结果范围内，确切配置中已承诺的开放人数大于零且不超过该时点有效批准的容量；实际用量按其发生时点另核。\nPARTIAL: 精确容量约束不产生中间定标：在限额内用MET，已证实超限或无效开放人数用NOT_MET；文本与配置的可比差异交R6.consistency核验。\nNOT_MET: 已承担开放责任且确定性记录证明人数超过当时有效容量，或明确上线承诺中的人数不构成有效开放配置；申请和口头承诺不能代替批准。\nINSUFFICIENT: 承诺人数、有效容量、批准范围或对应版本／时点无法核准，不能以零、猜测值或后来批准补齐。\nNOT_APPLICABLE: 用途不是承诺或结果；或no_go／暂缓未承担当前开放责任。已经发生的超容量行为仍保留在历史责任中，不被本项当前不适用抹除。",
+        "id": "R3.capacity",
+        "launch_only": true,
+        "mechanism": "v2.capacity",
+        "purposes": [
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "在承诺或结果范围内，确切配置中已承诺的开放人数大于零且不超过该时点有效批准的容量；实际用量按其发生时点另核。",
+          "PARTIAL": "精确容量约束不产生中间定标：在限额内用MET，已证实超限或无效开放人数用NOT_MET；文本与配置的可比差异交R6.consistency核验。",
+          "NOT_MET": "已承担开放责任且确定性记录证明人数超过当时有效容量，或明确上线承诺中的人数不构成有效开放配置；申请和口头承诺不能代替批准。",
+          "INSUFFICIENT": "承诺人数、有效容量、批准范围或对应版本／时点无法核准，不能以零、猜测值或后来批准补齐。",
+          "NOT_APPLICABLE": "用途不是承诺或结果；或no_go／暂缓未承担当前开放责任。已经发生的超容量行为仍保留在历史责任中，不被本项当前不适用抹除。"
+        },
+        "en": {
+          "MET": "For a commitment or result with a launch duty, the exact committed configuration has a positive participant count within capacity authorized at that time. Actual usage is checked separately at its occurrence time.",
+          "PARTIAL": "This exact capacity constraint has no intermediate calibrated label: use MET within the limit and NOT_MET for a verified excess or invalid launch count. Comparable text/configuration conflicts belong to R6.consistency.",
+          "NOT_MET": "A launch obligation exists and deterministic records establish participants beyond effective capacity, or the declared launch count is invalid. A request or verbal intention is not approval.",
+          "INSUFFICIENT": "The participant commitment, effective capacity, approval scope or matching version/time cannot be verified. Do not fill the gap with zero, a guess or later approval.",
+          "NOT_APPLICABLE": "The purpose is neither commitment nor result, or a no-go/deferral carries no current launch duty. Previously incurred over-capacity actions remain in historical responsibility records."
+        }
+      }
+    },
+    {
+      "difference_from_original": "Withdrawn unexecuted commitment is not automatically a violation; actual use remains.",
+      "dimension": "R3",
+      "en": {
+        "description": "Whether committed launch resources and timing have valid support.\nMET: Verifiable developer-days, configuration work items and the committed date for an effective commitment or actual execution fit resources and deadlines authorized at that time, with exact configuration and approval references.\nPARTIAL: This exact resource/deadline constraint has no intermediate calibrated label. A verified breach is NOT_MET; missing key evidence is INSUFFICIENT. Meeting only some necessary constraints is not a pass.\nNOT_MET: Reliable configuration, cost and approval records establish that an effective commitment or actual execution exceeds resources or deadlines. A withdrawn, unexecuted commitment is not automatically a breach.\nINSUFFICIENT: Configuration costs, resource allocation, approval or effective timing cannot be verified. A draft, request, resource catalogue or later approval cannot establish earlier authorization.\nNOT_APPLICABLE: The purpose is neither commitment nor result, or the current no-go/deferral has no execution-resource duty. Prior resource use, excess and false completion claims remain separately verifiable.",
+        "id": "R3.resources",
+        "launch_only": true,
+        "mechanism": "v2.resources",
+        "purposes": [
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "fixed_commitment",
+        "effective_approval",
+        "actual_action_history"
+      ],
+      "id": "R3.resources",
+      "product_applicability": {
+        "en": "Check effective commitments, approved resources and deadlines; plans and requests are not execution.",
+        "zh": "核对当前有效承诺、获批资源和时限；计划和申请不视为已执行。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "resources_and_deadline_satisfied:MET",
+        "verified_violation:NOT_MET",
+        "missing:unknown"
+      ],
+      "zh": {
+        "description": "正式承诺的资源和时限是否有有效依据。\nMET: 当前有效承诺或实际执行所需的可核准开发人日、配置工作项及承诺日期满足该时点的有效资源和期限；引用确切批准与配置。\nPARTIAL: 本项精确资源／期限约束不输出中间定标；任何已证实的必要约束违反用NOT_MET，关键依据不完整用INSUFFICIENT，不能把只满足部分约束算通过。\nNOT_MET: 有可靠配置、成本和批准记录证明有效承诺或实际执行超过可用资源或有效期限；未执行且已有效撤回的承诺不自动定为违约。\nINSUFFICIENT: 配置成本、资源额度、批准或有效时间不能核准；不能把草稿、申请、资源目录或后来批准当作当时已经生效。\nNOT_APPLICABLE: 用途不是承诺或结果，或当前no_go／暂缓不承担执行资源义务。过去实际占用、超用或虚假完成声明继续按历史证据核验。",
+        "id": "R3.resources",
+        "launch_only": true,
+        "mechanism": "v2.resources",
+        "purposes": [
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "当前有效承诺或实际执行所需的可核准开发人日、配置工作项及承诺日期满足该时点的有效资源和期限；引用确切批准与配置。",
+          "PARTIAL": "本项精确资源／期限约束不输出中间定标；任何已证实的必要约束违反用NOT_MET，关键依据不完整用INSUFFICIENT，不能把只满足部分约束算通过。",
+          "NOT_MET": "有可靠配置、成本和批准记录证明有效承诺或实际执行超过可用资源或有效期限；未执行且已有效撤回的承诺不自动定为违约。",
+          "INSUFFICIENT": "配置成本、资源额度、批准或有效时间不能核准；不能把草稿、申请、资源目录或后来批准当作当时已经生效。",
+          "NOT_APPLICABLE": "用途不是承诺或结果，或当前no_go／暂缓不承担执行资源义务。过去实际占用、超用或虚假完成声明继续按历史证据核验。"
+        },
+        "en": {
+          "MET": "Verifiable developer-days, configuration work items and the committed date for an effective commitment or actual execution fit resources and deadlines authorized at that time, with exact configuration and approval references.",
+          "PARTIAL": "This exact resource/deadline constraint has no intermediate calibrated label. A verified breach is NOT_MET; missing key evidence is INSUFFICIENT. Meeting only some necessary constraints is not a pass.",
+          "NOT_MET": "Reliable configuration, cost and approval records establish that an effective commitment or actual execution exceeds resources or deadlines. A withdrawn, unexecuted commitment is not automatically a breach.",
+          "INSUFFICIENT": "Configuration costs, resource allocation, approval or effective timing cannot be verified. A draft, request, resource catalogue or later approval cannot establish earlier authorization.",
+          "NOT_APPLICABLE": "The purpose is neither commitment nor result, or the current no-go/deferral has no execution-resource duty. Prior resource use, excess and false completion claims remain separately verifiable."
+        }
+      }
+    },
+    {
+      "difference_from_original": "Self-declared categories and duplicate FAQ cannot establish coverage.",
+      "dimension": "R4",
+      "en": {
+        "description": "Whether actual tests on the relevant configuration cover verified categories and acceptance criteria.\nMET: Actual runs on the exact current configuration cover at least two independently verified relevant categories, such as normal and out-of-scope requests, with verified observable acceptance criteria.\nPARTIAL: Valid actual tests exist, but verified categories or acceptance criteria cover only part of the requirements, for example one category or explicitly incomplete criteria. Repeated questions in one category do not increase coverage.\nNOT_MET: The commitment or result has a test duty and a complete relevant ledger establishes no actual test on that configuration, with no technical failure explaining the gap.\nINSUFFICIENT: The ledger, configuration binding, categories or acceptance criteria cannot be verified, or technical execution failures prevent using the run as evidence. Self-declared category/expected fields do not establish validity.\nNOT_APPLICABLE: The purpose is neither commitment nor result, or the current stopping/deferral decision has no launch acceptance-test duty. Testing may support a stopping rationale without imposing launch tests.",
+        "id": "R4.functional_tests",
+        "launch_only": true,
+        "mechanism": "v2.functional_tests",
+        "purposes": [
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "actual_test",
+        "verified_category",
+        "verified_acceptance",
+        "complete_ledger"
+      ],
+      "id": "R4.functional_tests",
+      "product_applicability": {
+        "en": "Check actual tests, verified categories and acceptance criteria on the relevant configuration; self-declared categories do not prove coverage.",
+        "zh": "核对相关配置的真实测试、已核实类别及验收条件；自报类别不构成覆盖。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "two_verified_categories_with_acceptance:MET",
+        "verified_partial_coverage:PARTIAL",
+        "complete_no_test:NOT_MET",
+        "unverified:unknown"
+      ],
+      "zh": {
+        "description": "相关配置的实际测试是否覆盖已核验类别与验收标准。\nMET: 当前确切配置的真实运行覆盖至少两类已独立核实的相关需求（如正常问题与范围外请求），并具有已核实、可观察的验收标准。\nPARTIAL: 已有有效实际测试，但已核实的类别或验收标准只覆盖部分要求，例如仅一类，或标准明确不完整；重复同类问题不扩充类别。\nNOT_MET: 该承诺或结果确有测试责任，完整相关日志证明没有当前配置的实际测试，且缺失不是系统故障造成。\nINSUFFICIENT: 日志、配置绑定、测试类别或验收标准尚无法核实，或运行因技术故障无法作为证据；自报category／expected不使测试自动有效。\nNOT_APPLICABLE: 用途不是承诺或结果，或已确认当前停止／暂缓不承担上线验收测试责任；有必要时仍可通过测试支持停止依据，但不强制上线测试。",
+        "id": "R4.functional_tests",
+        "launch_only": true,
+        "mechanism": "v2.functional_tests",
+        "purposes": [
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "当前确切配置的真实运行覆盖至少两类已独立核实的相关需求（如正常问题与范围外请求），并具有已核实、可观察的验收标准。",
+          "PARTIAL": "已有有效实际测试，但已核实的类别或验收标准只覆盖部分要求，例如仅一类，或标准明确不完整；重复同类问题不扩充类别。",
+          "NOT_MET": "该承诺或结果确有测试责任，完整相关日志证明没有当前配置的实际测试，且缺失不是系统故障造成。",
+          "INSUFFICIENT": "日志、配置绑定、测试类别或验收标准尚无法核实，或运行因技术故障无法作为证据；自报category／expected不使测试自动有效。",
+          "NOT_APPLICABLE": "用途不是承诺或结果，或已确认当前停止／暂缓不承担上线验收测试责任；有必要时仍可通过测试支持停止依据，但不强制上线测试。"
+        },
+        "en": {
+          "MET": "Actual runs on the exact current configuration cover at least two independently verified relevant categories, such as normal and out-of-scope requests, with verified observable acceptance criteria.",
+          "PARTIAL": "Valid actual tests exist, but verified categories or acceptance criteria cover only part of the requirements, for example one category or explicitly incomplete criteria. Repeated questions in one category do not increase coverage.",
+          "NOT_MET": "The commitment or result has a test duty and a complete relevant ledger establishes no actual test on that configuration, with no technical failure explaining the gap.",
+          "INSUFFICIENT": "The ledger, configuration binding, categories or acceptance criteria cannot be verified, or technical execution failures prevent using the run as evidence. Self-declared category/expected fields do not establish validity.",
+          "NOT_APPLICABLE": "The purpose is neither commitment nor result, or the current stopping/deferral decision has no launch acceptance-test duty. Testing may support a stopping rationale without imposing launch tests."
+        }
+      }
+    },
+    {
+      "difference_from_original": "Use submission config, affected domain and historical window; no retrospective penalty.",
+      "dimension": "R4",
+      "en": {
+        "description": "Whether testing followed a policy update and the latest relevant dynamic test used current versions.\nMET: An occurred update affects the current commitment or result, and the latest relevant dynamic test after that update on the submitted configuration has trustworthy usage records showing all affected source versions were current at that time.\nPARTIAL: A relevant post-update dynamic test exists, but its latest actual usage records still include at least one stale source version. An earlier success does not validate a newer configuration.\nNOT_MET: The current duty is affected by the update and a complete reliable ledger establishes no relevant post-update dynamic retest on that configuration. Technical failure is not converted into noncompliance.\nINSUFFICIENT: The occurrence or relevance of the update, latest test identity, configuration, used versions or time window cannot be verified. Preserve separate reasons for missing records, conflicts and execution failures.\nNOT_APPLICABLE: The purpose is neither commitment nor result, there is no current launch duty, or complete records establish no relevant update or no effect on this subject. Future updates never retroactively penalize earlier work.",
+        "id": "R4.staleness_test",
+        "launch_only": true,
+        "mechanism": "v2.staleness_test",
+        "purposes": [
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "activated_policy_event",
+        "affected_material_versions",
+        "actual_dynamic_test"
+      ],
+      "id": "R4.staleness_test",
+      "product_applicability": {
+        "en": "Check activated relevant changes and the latest dynamic retest on the current configuration; do not judge earlier work with later facts.",
+        "zh": "核对已激活且相关的变更，以及更新后当前配置的最新动态复测；不倒扣历史作品。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "no_relevant_change:NA",
+        "complete_no_retest:NOT_MET",
+        "latest_current:MET",
+        "latest_stale:PARTIAL",
+        "failed_or_unknown:unknown"
+      ],
+      "zh": {
+        "description": "政策更新后是否复测，最新相关动态测试是否使用有效版本。\nMET: 存在影响当前承诺或结果的已发生更新；更新后、提交确切配置下最新相关动态测试有可信使用记录，使用的受影响材料版本均为当时有效版本。\nPARTIAL: 已经进行更新后的相关动态测试，但最新测试的实际使用记录仍包含至少一个过期材料版本；旧成功不能代替新配置验证。\nNOT_MET: 当前责任受相关更新影响，且完整、可靠的相关测试记录证明更新后没有该配置的动态复测；技术失败不转换为未达标。\nINSUFFICIENT: 更新是否发生或是否相关、最新测试身份、配置、使用版本或时间窗口无法核准；记录缺失、冲突和运行失败分别保留原因。\nNOT_APPLICABLE: 用途不是承诺或结果、当前无上线义务，或完整记录确认没有相关更新／更新不影响本对象。不能用未来更新倒扣旧作品。",
+        "id": "R4.staleness_test",
+        "launch_only": true,
+        "mechanism": "v2.staleness_test",
+        "purposes": [
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "存在影响当前承诺或结果的已发生更新；更新后、提交确切配置下最新相关动态测试有可信使用记录，使用的受影响材料版本均为当时有效版本。",
+          "PARTIAL": "已经进行更新后的相关动态测试，但最新测试的实际使用记录仍包含至少一个过期材料版本；旧成功不能代替新配置验证。",
+          "NOT_MET": "当前责任受相关更新影响，且完整、可靠的相关测试记录证明更新后没有该配置的动态复测；技术失败不转换为未达标。",
+          "INSUFFICIENT": "更新是否发生或是否相关、最新测试身份、配置、使用版本或时间窗口无法核准；记录缺失、冲突和运行失败分别保留原因。",
+          "NOT_APPLICABLE": "用途不是承诺或结果、当前无上线义务，或完整记录确认没有相关更新／更新不影响本对象。不能用未来更新倒扣旧作品。"
+        },
+        "en": {
+          "MET": "An occurred update affects the current commitment or result, and the latest relevant dynamic test after that update on the submitted configuration has trustworthy usage records showing all affected source versions were current at that time.",
+          "PARTIAL": "A relevant post-update dynamic test exists, but its latest actual usage records still include at least one stale source version. An earlier success does not validate a newer configuration.",
+          "NOT_MET": "The current duty is affected by the update and a complete reliable ledger establishes no relevant post-update dynamic retest on that configuration. Technical failure is not converted into noncompliance.",
+          "INSUFFICIENT": "The occurrence or relevance of the update, latest test identity, configuration, used versions or time window cannot be verified. Preserve separate reasons for missing records, conflicts and execution failures.",
+          "NOT_APPLICABLE": "The purpose is neither commitment nor result, there is no current launch duty, or complete records establish no relevant update or no effect on this subject. Future updates never retroactively penalize earlier work."
+        }
+      }
+    },
+    {
+      "difference_from_original": "Display actual change; no simulated semantic conclusion before model connection.",
+      "dimension": "R5",
+      "en": {
+        "description": "Whether the effects of a known change on the current proposal are explained.\nMET: Accurately explain how an occurred relevant change affects users, knowledge scope, configuration or responsibilities, and why that matters to the current decision, using evidence available then.\nPARTIAL: The change and part of its impact are correctly identified, but specific affected users, dependencies, duties or consequences remain incompletely explained. Event occurrence alone is not a complete impact analysis.\nNOT_MET: Contemporaneous trustworthy facts contradict a key impact judgment, or complete work omits explanation of a verified relevant impact where this duty explicitly applies.\nINSUFFICIENT: The change, its relevance or the relationship between the stated impact and evidence cannot be verified. Displaying a real event does not establish a semantic impact conclusion.\nNOT_APPLICABLE: The work has no plan, commitment or result-level impact-analysis duty, or a complete window confirms no relevant change or no effect on this subject. An unknown window does not prove no change occurred.",
+        "id": "R5.impact",
+        "launch_only": false,
+        "mechanism": "v2.impact",
+        "purposes": [
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "activated_policy_event",
+        "verified_relevance",
+        "subject_content"
+      ],
+      "id": "R5.impact",
+      "product_applicability": {
+        "en": "Assess impact when a relevant change exists; without a relevant event this criterion is inapplicable.",
+        "zh": "有相关变更时核对其影响；没有相关事件时本项不适用。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "no_relevant_change:NA",
+        "otherwise:semantic"
+      ],
+      "zh": {
+        "description": "是否说明已知变更对当前方案的影响范围。\nMET: 对当时已发生且与本对象相关的变化，准确说明受影响的用户、知识范围、配置或责任，以及这些变化为何影响当前决定，并有当时依据。\nPARTIAL: 已正确识别变化及一部分影响，但可明确定位的用户范围、依赖、责任或后果解释仍有缺口；事件发生本身不自动形成完整影响分析。\nNOT_MET: 当时可信事实明确反驳关键影响判断，或在本项明确适用且内容完整时仍没有解释已确认的相关影响。\nINSUFFICIENT: 变化是否发生、是否影响当前对象或所述影响与证据的关系不足以核验；仅展示真实事件不等于语义影响结论已确认。\nNOT_APPLICABLE: 作品不承担计划、承诺或结果的影响分析责任，或完整窗口确认没有相关变化／变化不影响本对象。未知窗口不能当作没有变化。",
+        "id": "R5.impact",
+        "launch_only": false,
+        "mechanism": "v2.impact",
+        "purposes": [
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "对当时已发生且与本对象相关的变化，准确说明受影响的用户、知识范围、配置或责任，以及这些变化为何影响当前决定，并有当时依据。",
+          "PARTIAL": "已正确识别变化及一部分影响，但可明确定位的用户范围、依赖、责任或后果解释仍有缺口；事件发生本身不自动形成完整影响分析。",
+          "NOT_MET": "当时可信事实明确反驳关键影响判断，或在本项明确适用且内容完整时仍没有解释已确认的相关影响。",
+          "INSUFFICIENT": "变化是否发生、是否影响当前对象或所述影响与证据的关系不足以核验；仅展示真实事件不等于语义影响结论已确认。",
+          "NOT_APPLICABLE": "作品不承担计划、承诺或结果的影响分析责任，或完整窗口确认没有相关变化／变化不影响本对象。未知窗口不能当作没有变化。"
+        },
+        "en": {
+          "MET": "Accurately explain how an occurred relevant change affects users, knowledge scope, configuration or responsibilities, and why that matters to the current decision, using evidence available then.",
+          "PARTIAL": "The change and part of its impact are correctly identified, but specific affected users, dependencies, duties or consequences remain incompletely explained. Event occurrence alone is not a complete impact analysis.",
+          "NOT_MET": "Contemporaneous trustworthy facts contradict a key impact judgment, or complete work omits explanation of a verified relevant impact where this duty explicitly applies.",
+          "INSUFFICIENT": "The change, its relevance or the relationship between the stated impact and evidence cannot be verified. Displaying a real event does not establish a semantic impact conclusion.",
+          "NOT_APPLICABLE": "The work has no plan, commitment or result-level impact-analysis duty, or a complete window confirms no relevant change or no effect on this subject. An unknown window does not prove no change occurred."
+        }
+      }
+    },
+    {
+      "difference_from_original": "Allow justified narrowing or stopping; plans and completed actions are distinct.",
+      "dimension": "R5",
+      "en": {
+        "description": "Whether an affected proposal was actually adjusted and retested, beyond a stated intention.\nMET: Take an appropriate actual response to a verified change affecting the current duty, and verify its effect with the latest relevant retest on the bound configuration and valid sources. Justified narrowing, pausing or stopping can be a response.\nPARTIAL: An actual response exists, but complete records establish that relevant retesting has not covered or passed all requirements. A proposal falsely described as completed permits at most a NOT_MET-to-PARTIAL bound; the upper bound is not execution success.\nNOT_MET: The duty is affected and the complete action ledger establishes no relevant configuration change, refresh, retest or verifiable alternative response. A verified proposal-only completion claim retains its broader rule bound for further responsibility assessment.\nINSUFFICIENT: The effect, action-ledger completeness, appropriateness of the response or retest/version evidence cannot establish the consequence. An action, proposal or technical failure alone proves neither success nor failure.\nNOT_APPLICABLE: The purpose is neither commitment nor result, there is no relevant current execution duty, or the change is verified not to affect this subject. A later stopping decision does not erase historical actions.",
+        "id": "R5.adjustment",
+        "launch_only": true,
+        "mechanism": "v2.adjustment",
+        "purposes": [
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "activated_policy_event",
+        "actual_adjustment",
+        "actual_retest",
+        "verified_completion_claim"
+      ],
+      "id": "R5.adjustment",
+      "product_applicability": {
+        "en": "Separate actual adjustment and retesting from a proposal; narrowing scope, pausing or stopping may be justified.",
+        "zh": "区分实际调整、复测和文字建议；缩小范围、暂停或停止可以有合理依据。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "unaffected:NA",
+        "complete_no_action:NOT_MET",
+        "appropriate_action_and_pass:MET",
+        "claim_only_proposal:NOT_MET..PARTIAL",
+        "not_yet_verified:unknown"
+      ],
+      "zh": {
+        "description": "受影响后是否实际调整并复测，而非只有计划声明。\nMET: 对已确认影响当前责任的变化采取适当实际处置，并以该配置和有效来源的最新相关复测证明处置有效；有依据的缩范围、暂停或停止可作为处置路径。\nPARTIAL: 已有实际处置，但完整记录确认相关复测尚未覆盖或通过全部要求；只有提议却声称已完成时，规则界至多为NOT_MET至PARTIAL，不把该上界当作执行成功。\nNOT_MET: 责任确实受影响，完整动作记录确认没有相应配置调整、刷新、复测或可核准的替代处置；已核实仅有提议且声称完成的情形保留其较宽规则界，再核具体责任。\nINSUFFICIENT: 影响、动作完整性、实际处置是否适当或复测及版本证据不足，无法核准后果；一次动作、提议或技术失败不证明调整成功或失败。\nNOT_APPLICABLE: 用途不是承诺或结果，当前无相关执行责任，或已核实变化不影响本对象。历史行为与当前建议分别记录，不以新的停止决定抹除过去事实。",
+        "id": "R5.adjustment",
+        "launch_only": true,
+        "mechanism": "v2.adjustment",
+        "purposes": [
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "对已确认影响当前责任的变化采取适当实际处置，并以该配置和有效来源的最新相关复测证明处置有效；有依据的缩范围、暂停或停止可作为处置路径。",
+          "PARTIAL": "已有实际处置，但完整记录确认相关复测尚未覆盖或通过全部要求；只有提议却声称已完成时，规则界至多为NOT_MET至PARTIAL，不把该上界当作执行成功。",
+          "NOT_MET": "责任确实受影响，完整动作记录确认没有相应配置调整、刷新、复测或可核准的替代处置；已核实仅有提议且声称完成的情形保留其较宽规则界，再核具体责任。",
+          "INSUFFICIENT": "影响、动作完整性、实际处置是否适当或复测及版本证据不足，无法核准后果；一次动作、提议或技术失败不证明调整成功或失败。",
+          "NOT_APPLICABLE": "用途不是承诺或结果，当前无相关执行责任，或已核实变化不影响本对象。历史行为与当前建议分别记录，不以新的停止决定抹除过去事实。"
+        },
+        "en": {
+          "MET": "Take an appropriate actual response to a verified change affecting the current duty, and verify its effect with the latest relevant retest on the bound configuration and valid sources. Justified narrowing, pausing or stopping can be a response.",
+          "PARTIAL": "An actual response exists, but complete records establish that relevant retesting has not covered or passed all requirements. A proposal falsely described as completed permits at most a NOT_MET-to-PARTIAL bound; the upper bound is not execution success.",
+          "NOT_MET": "The duty is affected and the complete action ledger establishes no relevant configuration change, refresh, retest or verifiable alternative response. A verified proposal-only completion claim retains its broader rule bound for further responsibility assessment.",
+          "INSUFFICIENT": "The effect, action-ledger completeness, appropriateness of the response or retest/version evidence cannot establish the consequence. An action, proposal or technical failure alone proves neither success nor failure.",
+          "NOT_APPLICABLE": "The purpose is neither commitment nor result, there is no relevant current execution duty, or the change is verified not to affect this subject. A later stopping decision does not erase historical actions."
+        }
+      }
+    },
+    {
+      "difference_from_original": "Different alternatives or historical versions are not intrinsically inconsistent.",
+      "dimension": "R6",
+      "en": {
+        "description": "Whether text, configuration, actual results and the decision are consistent.\nMET: For the same subject, version, time and responsibility scope, text, configuration, actual results and the decision agree. Intentional alternatives and historical changes are identified, and content consistency has been checked.\nPARTIAL: An identifiable same-scope numeric/configuration conflict remains, or an explanation resolves only part of the inconsistency. A verified conflict caps the rule bound at PARTIAL without automatically awarding that label.\nNOT_MET: Trustworthy evidence directly contradicts a key delivery claim against the same-scope configuration or actual result, and the verified conflict materially undermines the declared decision or completion.\nINSUFFICIENT: The compared subject, version, time or wording cannot be established well enough to distinguish a contradiction from an alternative, revision or unverified statement. Structural validity is not semantic consistency.\nNOT_APPLICABLE: The explicit scope contains no claims, configurations or results requiring cross-checking. A single work, absent template or missing attachment does not automatically make this criterion inapplicable.",
+        "id": "R6.consistency",
+        "launch_only": false,
+        "mechanism": "v2.consistency",
+        "purposes": [
+          "exploration",
+          "option",
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "comparable_subject_text",
+        "exact_config",
+        "actual_result"
+      ],
+      "id": "R6.consistency",
+      "product_applicability": {
+        "en": "Compare the same subject, version and responsibility scope; different alternatives or historical versions are not automatically contradictions.",
+        "zh": "只比较同一对象、版本和责任范围；不同备选或历史版本的差异不自动算矛盾。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "verified_same_scope_conflict:NOT_MET..PARTIAL",
+        "otherwise:semantic"
+      ],
+      "zh": {
+        "description": "文本、配置、实际结果与决定是否相互一致。\nMET: 对同一对象、版本、时间和责任范围，文本、配置、实际结果与决定相互一致；有意的备选差异和历史变化明确标注，内容一致性已经核验。\nPARTIAL: 存在可定位的同范围数字或配置冲突，或解释只消除了一部分矛盾；已核定冲突将规则上界限制为PARTIAL，但不自动赋予该标签。\nNOT_MET: 可靠反证表明关键交付主张与同范围配置或真实结果直接冲突，且已确认冲突实质破坏所声明的决定或完成情况。\nINSUFFICIENT: 无法确定比较对象、版本、时点或原文含义，不能区分真实矛盾与有意备选、修订或未核实信息；结构合法不证明语义一致。\nNOT_APPLICABLE: 明确范围内没有需要相互核对的主张、配置或结果。不能因为只有一份作品、没有模板或没有附结果就自动不适用。",
+        "id": "R6.consistency",
+        "launch_only": false,
+        "mechanism": "v2.consistency",
+        "purposes": [
+          "exploration",
+          "option",
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "对同一对象、版本、时间和责任范围，文本、配置、实际结果与决定相互一致；有意的备选差异和历史变化明确标注，内容一致性已经核验。",
+          "PARTIAL": "存在可定位的同范围数字或配置冲突，或解释只消除了一部分矛盾；已核定冲突将规则上界限制为PARTIAL，但不自动赋予该标签。",
+          "NOT_MET": "可靠反证表明关键交付主张与同范围配置或真实结果直接冲突，且已确认冲突实质破坏所声明的决定或完成情况。",
+          "INSUFFICIENT": "无法确定比较对象、版本、时点或原文含义，不能区分真实矛盾与有意备选、修订或未核实信息；结构合法不证明语义一致。",
+          "NOT_APPLICABLE": "明确范围内没有需要相互核对的主张、配置或结果。不能因为只有一份作品、没有模板或没有附结果就自动不适用。"
+        },
+        "en": {
+          "MET": "For the same subject, version, time and responsibility scope, text, configuration, actual results and the decision agree. Intentional alternatives and historical changes are identified, and content consistency has been checked.",
+          "PARTIAL": "An identifiable same-scope numeric/configuration conflict remains, or an explanation resolves only part of the inconsistency. A verified conflict caps the rule bound at PARTIAL without automatically awarding that label.",
+          "NOT_MET": "Trustworthy evidence directly contradicts a key delivery claim against the same-scope configuration or actual result, and the verified conflict materially undermines the declared decision or completion.",
+          "INSUFFICIENT": "The compared subject, version, time or wording cannot be established well enough to distinguish a contradiction from an alternative, revision or unverified statement. Structural validity is not semantic consistency.",
+          "NOT_APPLICABLE": "The explicit scope contains no claims, configurations or results requiring cross-checking. A single work, absent template or missing attachment does not automatically make this criterion inapplicable."
+        }
+      }
+    },
+    {
+      "difference_from_original": "Stop/defer use their own follow-up obligations; any artifact format can express them.",
+      "dimension": "R6",
+      "en": {
+        "description": "Whether owner, observation window, exit conditions and follow-up actions are complete and executable.\nMET: Owners, observation windows, exit conditions and follow-up actions appropriate to the plan, commitment or result are explicit, supported and executable. Assess no-go/deferral against its stopping, handover and reconsideration duties.\nPARTIAL: All four elements exist but specific execution gaps remain, or verified arrangements cover only part of the duty. Presence of all four establishes a PARTIAL-to-MET bound, not an automatic MET.\nNOT_MET: The duty applies and complete review confirms all four elements are absent. When all four are verified present, preserve the PARTIAL-to-MET bound: assess execution gaps within that bound and list them separately, never downgrade to NOT_MET.\nINSUFFICIENT: The completeness, ownership, meaning of conditions or executability cannot be verified. An unextracted field or unavailable semantic model is not evidence that the content is absent.\nNOT_APPLICABLE: The work is exploration or an option without execution-planning duties, or its explicit specialized scope excludes this responsibility. Stopping or deferring does not remove necessary follow-up duties.",
+        "id": "R6.operations",
+        "launch_only": false,
+        "mechanism": "v2.operations",
+        "purposes": [
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "verified_content_or_linked_record"
+      ],
+      "id": "R6.operations",
+      "product_applicability": {
+        "en": "Check owners, observation windows, exit conditions and follow-up actions appropriate to the decision; no fixed form is required.",
+        "zh": "核对与本次决定相称的负责人、观察窗口、退出条件和后续动作；不要求固定表单。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "all_four_present:PARTIAL..MET",
+        "complete_all_missing:NOT_MET",
+        "otherwise:semantic"
+      ],
+      "zh": {
+        "description": "负责人、观察窗口、退出条件和后续动作是否完整可执行。\nMET: 与当前计划、承诺或结果相称的负责人、观察窗口、退出条件和后续动作均明确且可执行，并有相应依据；no_go或暂缓按其停止、移交和复议责任判断。\nPARTIAL: 四项均存在而可执行性仍有具体缺口，或部分安排已经核实但不足以覆盖全部责任；四项齐全只保证PARTIAL至MET的规则界，不自动成为MET。\nNOT_MET: 责任适用且完整核验确认负责人、窗口、退出条件和动作全缺。四项均已核实存在时须保留PARTIAL至MET下界；可执行性缺陷在该界内评价并单列，不得据此降为NOT_MET。\nINSUFFICIENT: 无法核准安排的完整性、责任归属、条件含义或可执行性；未抽取字段或未安装语义模型不能作为内容缺失的证据。\nNOT_APPLICABLE: 用途为不承担执行安排的探索或备选，或明确专项范围无此责任。停止、暂缓本身不免除必要的后续处置。",
+        "id": "R6.operations",
+        "launch_only": false,
+        "mechanism": "v2.operations",
+        "purposes": [
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "与当前计划、承诺或结果相称的负责人、观察窗口、退出条件和后续动作均明确且可执行，并有相应依据；no_go或暂缓按其停止、移交和复议责任判断。",
+          "PARTIAL": "四项均存在而可执行性仍有具体缺口，或部分安排已经核实但不足以覆盖全部责任；四项齐全只保证PARTIAL至MET的规则界，不自动成为MET。",
+          "NOT_MET": "责任适用且完整核验确认负责人、窗口、退出条件和动作全缺。四项均已核实存在时须保留PARTIAL至MET下界；可执行性缺陷在该界内评价并单列，不得据此降为NOT_MET。",
+          "INSUFFICIENT": "无法核准安排的完整性、责任归属、条件含义或可执行性；未抽取字段或未安装语义模型不能作为内容缺失的证据。",
+          "NOT_APPLICABLE": "用途为不承担执行安排的探索或备选，或明确专项范围无此责任。停止、暂缓本身不免除必要的后续处置。"
+        },
+        "en": {
+          "MET": "Owners, observation windows, exit conditions and follow-up actions appropriate to the plan, commitment or result are explicit, supported and executable. Assess no-go/deferral against its stopping, handover and reconsideration duties.",
+          "PARTIAL": "All four elements exist but specific execution gaps remain, or verified arrangements cover only part of the duty. Presence of all four establishes a PARTIAL-to-MET bound, not an automatic MET.",
+          "NOT_MET": "The duty applies and complete review confirms all four elements are absent. When all four are verified present, preserve the PARTIAL-to-MET bound: assess execution gaps within that bound and list them separately, never downgrade to NOT_MET.",
+          "INSUFFICIENT": "The completeness, ownership, meaning of conditions or executability cannot be verified. An unextracted field or unavailable semantic model is not evidence that the content is absent.",
+          "NOT_APPLICABLE": "The work is exploration or an option without execution-planning duties, or its explicit specialized scope excludes this responsibility. Stopping or deferring does not remove necessary follow-up duties."
+        }
+      }
+    },
+    {
+      "difference_from_original": "Free text equals options; hidden route whitelist or unavailable probe cannot lower bounds.",
+      "dimension": "R6",
+      "en": {
+        "description": "Whether viable alternatives are compared and trade-offs explained.\nMET: Genuinely compare at least two materially different alternatives in any work format and justify the choice and trade-offs with authorized evidence. Infeasible options may be rejected on evidence; the selected response needs a defensible feasibility basis. Alternatives may include narrowing, manual handling, deferral or stopping.\nPARTIAL: A real comparison has incomplete trade-off reasoning, or complete review finds only one substantive option. Selecting an option despite accessible valid infeasibility evidence permits at most a PARTIAL upper bound.\nNOT_MET: The duty applies and complete review confirms no meaningful comparison, or reliable evidence establishes that the purported comparison has no substantive alternative or decision basis.\nINSUFFICIENT: Comparison completeness, differences between options, feasibility sources or choice rationale cannot be verified. Hidden route whitelists or probes unavailable to the learner cannot lower the assessment.\nNOT_APPLICABLE: An explicit exploratory or specialized scope does not yet require option selection or comparison. Free text without an options template is neither an absence nor a reason for inapplicability.",
+        "id": "R6.alternatives",
+        "launch_only": false,
+        "mechanism": "v2.alternatives",
+        "purposes": [
+          "option",
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "evidence_types": [
+        "verified_comparison_content",
+        "authorized_feasibility_probe"
+      ],
+      "id": "R6.alternatives",
+      "product_applicability": {
+        "en": "Check actual comparison and trade-offs; free text and an options template are equivalent, and stopping may be an alternative.",
+        "zh": "核对真实的方案比较和取舍；普通文字与方案模板等价，停止也可以是备选。"
+      },
+      "product_basis": "Project definition: 2026-10-09 rubric-v2 final decision; accepted W05 section 4.3",
+      "rule_bounds": [
+        "complete_no_comparison:NOT_MET",
+        "single_option_or_verified_infeasible_choice:NOT_MET..PARTIAL",
+        "otherwise:semantic"
+      ],
+      "zh": {
+        "description": "是否比较可行替代方案，并说明取舍依据。\nMET: 以任意作品形式真实比较至少两种有实质差异的备选处置，并以获准证据说明选择和取舍；允许有依据地淘汰不可行选项。所选处置须有可行依据，缩范围、人工处理、暂缓或停止均可作为备选。\nPARTIAL: 有真实比较但取舍依据不完整，或完整核验仅有一个实质方案；在有可访问且有效的不可行证据时仍选该方案，规则上界最多PARTIAL。\nNOT_MET: 责任适用且完整核验确认没有有效比较内容，或可靠证据证明所谓比较没有实质替代及决策依据。\nINSUFFICIENT: 比较内容完整性、替代方案的差异、可行性来源或选择依据不足以核准；不能用隐藏路径白名单或学员无权知道的探针扣分。\nNOT_APPLICABLE: 明确的探索或专项范围尚不承担方案选择／比较责任。采用普通文字而没有options模板，不构成不适用或缺失。",
+        "id": "R6.alternatives",
+        "launch_only": false,
+        "mechanism": "v2.alternatives",
+        "purposes": [
+          "option",
+          "plan",
+          "commitment",
+          "result"
+        ]
+      },
+      "label_conditions": {
+        "zh": {
+          "MET": "以任意作品形式真实比较至少两种有实质差异的备选处置，并以获准证据说明选择和取舍；允许有依据地淘汰不可行选项。所选处置须有可行依据，缩范围、人工处理、暂缓或停止均可作为备选。",
+          "PARTIAL": "有真实比较但取舍依据不完整，或完整核验仅有一个实质方案；在有可访问且有效的不可行证据时仍选该方案，规则上界最多PARTIAL。",
+          "NOT_MET": "责任适用且完整核验确认没有有效比较内容，或可靠证据证明所谓比较没有实质替代及决策依据。",
+          "INSUFFICIENT": "比较内容完整性、替代方案的差异、可行性来源或选择依据不足以核准；不能用隐藏路径白名单或学员无权知道的探针扣分。",
+          "NOT_APPLICABLE": "明确的探索或专项范围尚不承担方案选择／比较责任。采用普通文字而没有options模板，不构成不适用或缺失。"
+        },
+        "en": {
+          "MET": "Genuinely compare at least two materially different alternatives in any work format and justify the choice and trade-offs with authorized evidence. Infeasible options may be rejected on evidence; the selected response needs a defensible feasibility basis. Alternatives may include narrowing, manual handling, deferral or stopping.",
+          "PARTIAL": "A real comparison has incomplete trade-off reasoning, or complete review finds only one substantive option. Selecting an option despite accessible valid infeasibility evidence permits at most a PARTIAL upper bound.",
+          "NOT_MET": "The duty applies and complete review confirms no meaningful comparison, or reliable evidence establishes that the purported comparison has no substantive alternative or decision basis.",
+          "INSUFFICIENT": "Comparison completeness, differences between options, feasibility sources or choice rationale cannot be verified. Hidden route whitelists or probes unavailable to the learner cannot lower the assessment.",
+          "NOT_APPLICABLE": "An explicit exploratory or specialized scope does not yet require option selection or comparison. Free text without an options template is neither an absence nor a reason for inapplicability."
+        }
+      }
+    }
+  ],
+  "decision_guidance": {
+    "defer_with_conditions": {
+      "en": "You declared a deferral pending conditions. Feedback examines unresolved conditions, evidence to collect and the basis for reconsideration. Deferral does not mean approval or launch; obligations already incurred remain.",
+      "zh": "本次声明暂缓，待条件满足后再决定。反馈核对待确认条件、补证和重新判断的依据；暂缓不代表已经获批或已上线，实际已发生的责任仍保留。"
+    },
+    "launch": {
+      "en": "You declared that the proposal should proceed. Feedback checks commitments against the fixed submission and effective constraints; declaration, business approval and actual execution remain distinct.",
+      "zh": "本次声明按方案推进。反馈依据固定提交与有效约束核验承诺；声明、业务批准和实际执行分别记录。"
+    },
+    "launch_narrow": {
+      "en": "You declared a limited launch. Feedback checks capacity, resources, tests and update impact against the committed users, knowledge scope and fixed configuration. Uncommitted scope is not automatically missing work; the declaration does not prove actual launch or approval.",
+      "zh": "本次声明受限开放。反馈只按明确承诺的用户范围、知识范围和固定配置核对容量、资源、测试及更新影响；没有承诺的范围不自动算交付缺失，声明也不代表实际开放或获批。"
+    },
+    "no_go": {
+      "en": "You declared that this proposal will not proceed. Feedback examines the basis for stopping, alternatives and follow-up; launch tests are not required merely by this decision, and stopping is not automatically judged sound. Actual actions, resource use and completion claims remain subject to verification.",
+      "zh": "本次声明不开展这项方案。反馈核对停止依据、替代方案和后续处置；不要求完成上线测试，也不据此判定停止合理。实际发生的行动、资源占用和完成声明仍逐项核验。"
+    }
+  },
+  "dimension_weights": {
+    "R1": 10,
+    "R2": 25,
+    "R3": 20,
+    "R4": 20,
+    "R5": 15,
+    "R6": 10
+  },
+  "fact_contract": {
+    "acceptance_criteria_verified": "bool; observable acceptance criteria verified for this config",
+    "adjustment_action_count": "nonnegative int; actual affected config changes/refresh/retests after event; plans excluded",
+    "adjustment_appropriate_verified": "bool; actual chosen adjustment satisfies the effective constraint, never inferred from action count",
+    "adjustment_completion_claim_verified": "bool; exact verified text claims adjustment was completed",
+    "adjustment_log_complete": "bool; complete relevant actual action ledger",
+    "adjustment_proposal_verified": "bool; verified proposal text only, never proof of execution",
+    "affected_material_versions": "dict[str, positive int]; current relevant versions at evaluation time",
+    "alternatives_count": "nonnegative int; verified semantic options in any format",
+    "available_dev_days": "nonnegative number; effective approved resource",
+    "business_goal_present": "bool; same subject content validation",
+    "capacity": "nonnegative number; effective authorized capacity",
+    "change_affects_subject": "bool; verified relevance to this exact subject/config",
+    "change_log_complete": "bool; complete authorized policy-change window",
+    "content_review_complete": "bool; all formats reviewed for this exact version and criterion",
+    "current_obligation_verified": "bool; effective obligation for this exact evaluated subject, not an exploratory proposal",
+    "deadline_day": "nonnegative number; effective deadline",
+    "dynamic_classification_complete": "bool; all relevant tests classified for the current config/window",
+    "dynamic_test_ids": "list[str]; W02 verified tests for affected material/questions, not user category labels",
+    "failure_evidence_complete": "bool; complete authorized case/link/reproduction ledger",
+    "failure_evidence_count": "nonnegative int; verified actual failure-case citations/reproductions",
+    "functional_categories_verified": "list[str]; observed, independently verified categories on this config, never declared_category",
+    "functional_classification_complete": "bool; complete independent category classification of relevant actual tests",
+    "metric_definitions_complete": "bool; verified definitions",
+    "metric_targets_complete": "bool; verified targets",
+    "metrics_count": "nonnegative int; verified metrics in content",
+    "numeric_conflict_verified": "bool; exact text/config mismatch, not model extraction",
+    "operations_fields_verified": "list[str]; owner/window/exit/actions verified in any format",
+    "participants": "nonnegative number; fixed committed config, not actual usage",
+    "passing_dynamic_test_ids": "list[str]; actual expectation checks on relevant tests, not declared_expected",
+    "policy_change_seq": "nonnegative int; latest relevant activated event business_seq",
+    "policy_changed": "bool; activated event in this window, not static future material",
+    "requested_launch_day": "nonnegative number; fixed commitment",
+    "required_dev_days": "nonnegative number; fixed committed config",
+    "selected_infeasible_verified": "bool; exact chosen option rejected by valid deterministic feasibility probe",
+    "target_present": "bool; exact structured/human-verified subject content, not missing template fields",
+    "test_ledger_complete": "bool; complete relevant test ledger",
+    "unapproved_resource_excess": "bool; current binding obligation only; history uses ResponsibilityFact"
+  },
+  "mode": "advisory",
+  "revision": "rubric-v2-final-20261009",
+  "rules_revision": "rules-v4-rubric-v2-c2",
+  "status": "final",
+  "unknown_policy": "INSUFFICIENT; no invented zeros, labels or future facts",
+  "approved_on": "2026-10-09",
+  "role": "aipm",
+  "label_order": [
+    "MET",
+    "PARTIAL",
+    "NOT_MET",
+    "INSUFFICIENT",
+    "NOT_APPLICABLE"
+  ],
+  "definition_source": {
+    "revision": "rubric-v2-candidate-2",
+    "sha256": "59d35d53dc480bd08796c59e83bc6368b011d22b2770b4696c74e151ae340040",
+    "product_decision": "项目定义 / 2026-10-09 评价标准 rubric-v2 定稿"
+  },
+  "publication": {
+    "installed": false,
+    "rebind_after": "phase_Q_release",
+    "existing_bundles": "unchanged",
+    "running_sessions": "retain original evaluation binding"
+  },
+  "score_policy": {
+    "single_total_score": false,
+    "mode": "advisory",
+    "display": "rule-bounded intervals only; model advice never narrows them",
+    "scoring_requires": [
+      "independent human calibration",
+      "explicit adoption record"
+    ],
+    "not_applicable": "not a success or failure; empty applicable scope is unscorable"
+  },
+  "coverage_policy": {
+    "denominator": 100,
+    "within_dimension": "equal allocation over the fixed canonical criterion set",
+    "allocation_basis": "Existing dimension mean convention; no renormalization after N/A or missing evidence",
+    "calibrated": "applicable verified_rule with equal lower/upper rule bounds",
+    "not_applicable": "retain weight in denominator; do not count as calibrated",
+    "reference": 45,
+    "reference_is_gate": false
+  },
+  "applicability_policy": {
+    "purpose_first": true,
+    "purposes": [
+      "exploration",
+      "option",
+      "plan",
+      "commitment",
+      "result"
+    ],
+    "unknown": "undetermined, never infer launch or absence",
+    "scope": "Purpose eligibility is combined with verified task responsibility; an explicitly excluded specialized duty may be NOT_APPLICABLE",
+    "history": "Assess incurred actions and claims separately at their actual time; no future-evidence penalty"
+  },
+  "annotation_policy": {
+    "label_conditions": "criterion-specific conditions below; every label must remain inside the supplied verified rule bound, including a PARTIAL lower bound",
+    "technical_failure": "generation status only, not a semantic training label",
+    "model_unavailable": "waiting_model; no invented semantic conclusion",
+    "retries": 0,
+    "format": "free text and templates are equivalent",
+    "unobserved": "not proof of absence"
+  },
+  "legacy_aliases": {
+    "R6.comparison": "R6.alternatives"
+  },
+  "legacy_alias_policy": "Apply aliases to new mappings only; never rename or rewrite existing feedback or training snapshots."
+}

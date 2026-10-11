@@ -32,6 +32,8 @@ export interface V4HostSnapshot {
   storageError: boolean;
   /** Server-confirmed operations supported by this host; incomplete adapters stay false. */
   available: Readonly<Record<string, boolean>>;
+  /** Server-confirmed: this session's package is no longer installed; writes are refused. */
+  readOnly?: boolean;
 }
 
 export interface V4CommandResult<Result = HostResult> {

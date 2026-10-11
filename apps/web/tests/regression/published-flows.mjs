@@ -260,6 +260,23 @@ async function submitDeferral(context) {
   await shot('feedback');
 }
 
+async function showFinalRubricVersion(context) {
+  const { browser, text } = context;
+  // The latest submission feedback names the rubric recorded in its own provenance.
+  const line = JSON.stringify(
+    `.native-feedback [aria-label="${text('分段反馈', 'Feedback sections')}"] > article [data-rubric-version]`,
+  );
+  await waitFor(browser, `!!document.querySelector(${line})`);
+  assert.equal(
+    await browser.ev(`document.querySelector(${line}).dataset.rubricVersion`),
+    'feedback-rubric-v2-final.1',
+  );
+  assert.equal(
+    await browser.ev(`document.querySelector(${line}).textContent`),
+    text('评价标准：rubric-v2 定稿（2026-10-09）', 'Rubric: rubric-v2 final (2026-10-09)'),
+  );
+}
+
 async function reviseAndReadHistory(context) {
   const { browser, text, draft, shot } = context;
   await browser.type(
@@ -378,6 +395,7 @@ async function runLanguage(language) {
       recoverAccess(context),
     );
     await step('submit a deferral and read fixed feedback', () => submitDeferral(context));
+    await step('feedback names the final rubric version', () => showFinalRubricVersion(context));
     await step('revision keeps original feedback and original wording', () =>
       reviseAndReadHistory(context),
     );

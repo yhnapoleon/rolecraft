@@ -33,6 +33,7 @@ GENERATED = frozenset(
         "runtime/evaluation.json",
         "runtime/evaluation-protocol.json",
         "runtime/evaluation-rules.json",
+        "runtime/evaluation-rubric.json",
         RELEASE_PATH,
     }
 )
@@ -97,15 +98,19 @@ def evaluation_signature(root: Path, bundle: EvaluationBundle) -> str:
 
 
 def require_evaluation(
-    root: Path, bundle: EvaluationBundle, version: str = EVALUATION_VERSION, *, language: str
+    root: Path, bundle: EvaluationBundle, version: str | None = None, *, language: str
 ) -> str:
-    registry = json.loads((ROOT / "configs/evaluation/versions.json").read_text())
-    entry = registry["versions"].get(version)
+    """Accept only registered evaluation semantics for this language.
+
+    A named version must list the signature. Without one, the signature must be
+    registered under some version; each version registers its own signatures.
+    """
+    versions = json.loads((ROOT / "configs/evaluation/versions.json").read_text())["versions"]
     signature = evaluation_signature(root, bundle)
-    if (
-        version != EVALUATION_VERSION
-        or entry is None
-        or signature not in entry["protocol_signatures"].get(language, [])
+    names = [version] if version is not None else list(versions)
+    if not any(
+        name in versions and signature in versions[name]["protocol_signatures"].get(language, [])
+        for name in names
     ):
         raise ProtocolError("evaluation_version_unsupported", status=409)
     return signature
@@ -167,7 +172,9 @@ def describe(package: "ScenarioPackage", revision: str) -> ReleaseDescription:
         original_release_identity=package.content_hash,
         review=original_review(package, identity),
         evaluation_version=EVALUATION_VERSION,
-        evaluation_signature=require_evaluation(package.root, evaluation, language=package.locale),
+        evaluation_signature=require_evaluation(
+            package.root, evaluation, EVALUATION_VERSION, language=package.locale
+        ),
         prompt_version=PROMPT_VERSION,
     )
 

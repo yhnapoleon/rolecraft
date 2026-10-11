@@ -76,6 +76,10 @@ import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
 import { installV4References } from '../v4-references';
 import { criterionLabels } from '../features/feedback-native/index';
+import {
+  isSealedPracticeError,
+  practiceUnavailableText,
+} from '../features/feedback-native/read-only-notice';
 
 const L = window.PracticeLive;
 const E = L.engine;
@@ -187,6 +191,9 @@ const esc = (v) =>
   );
 const current = () => E.getAttempt(state);
 const sessionOf = (a) => (a ? L.session(a) : null);
+// Server-confirmed sealed binding (an old package after a switch); the host context knows first.
+const sealedSession = (a) =>
+  sessionOf(a)?.v2ReadOnly === true || L.v4Host(a)?.snapshot()?.readOnly === true;
 const snap = () => L.store.getSnapshot();
 const task = () => {
   const a = current();
@@ -2414,8 +2421,13 @@ function practiceSection(a) {
     return `<h2 class="group-title">${icon('branch', 'i-sm')}${T('补练（可选）', 'Optional practice')}</h2><p class="meta">${T('正在查看这轮反馈有没有可选的补练…', 'Checking whether this feedback suggests an optional practice…')}</p>`;
   }
   const head = `<h2 class="group-title">${icon('branch', 'i-sm')}${T('补练（可选）', 'Optional practice')}</h2>`;
-  if (v.error)
-    return `${head}<p class="warn-line">${icon('warn', 'i-sm')}${esc(v.error)}</p>${btn(T('重新查看', 'Check again'), 'practice-reload', 'small quiet')}`;
+  // A sealed session will never get new feedback or practice: say so instead of "check again".
+  const sealed = v.sealed === true || sealedSession(a);
+  if (v.error || (sealed && v.state === 'feedback_pending')) {
+    // Never show the failure code; a read-only session cannot start practice, so no retry.
+    const readOnly = sealed;
+    return `${head}<p class="warn-line" data-practice-unavailable="${readOnly ? 'read-only' : 'retry'}">${icon('warn', 'i-sm')}${esc(practiceUnavailableText(readOnly, locale()))}</p>${readOnly ? '' : btn(T('重新查看', 'Check again'), 'practice-reload', 'small quiet')}`;
+  }
   if (v.state === 'no_submission')
     return `${head}<p class="meta">${T('交付并生成反馈后，这里会列出可选的补练。', 'After you submit and the feedback is ready, optional practice appears here.')}</p>`;
   if (v.state === 'feedback_pending')
@@ -2526,9 +2538,10 @@ async function loadPractice(a, force = false) {
   try {
     ui.practice[a.id] = await L.practice(a);
   } catch (e) {
+    // Wording is chosen at render time; the code only says whether the session is sealed.
     ui.practice[a.id] = {
-      error:
-        T('补练建议暂时读不到：', 'Optional practice could not be read: ') + (e?.message || ''),
+      error: 'unavailable',
+      sealed: isSealedPracticeError(e?.code) || sealedSession(a),
     };
   } finally {
     practiceReads.delete(a.id);
