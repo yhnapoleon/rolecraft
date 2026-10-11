@@ -69,6 +69,7 @@ import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
 import { installV4References } from '../v4-references';
 import { criterionLabels } from '../features/feedback-native/index';
+import { practiceUnavailableText } from '../features/feedback-native/read-only-notice';
 
 const L = window.PracticeLive;
 const E = L.engine;
@@ -2387,8 +2388,11 @@ function practiceSection(a) {
     return `<h2 class="group-title">${icon('branch', 'i-sm')}${T('补练（可选）', 'Optional practice')}</h2><p class="meta">${T('正在查看这轮反馈有没有可选的补练…', 'Checking whether this feedback suggests an optional practice…')}</p>`;
   }
   const head = `<h2 class="group-title">${icon('branch', 'i-sm')}${T('补练（可选）', 'Optional practice')}</h2>`;
-  if (v.error)
-    return `${head}<p class="warn-line">${icon('warn', 'i-sm')}${esc(v.error)}</p>${btn(T('重新查看', 'Check again'), 'practice-reload', 'small quiet')}`;
+  if (v.error) {
+    // Never show the failure code; a read-only session cannot start practice, so no retry.
+    const readOnly = sessionOf(a)?.v2ReadOnly === true;
+    return `${head}<p class="warn-line" data-practice-unavailable="${readOnly ? 'read-only' : 'retry'}">${icon('warn', 'i-sm')}${esc(practiceUnavailableText(readOnly, locale()))}</p>${readOnly ? '' : btn(T('重新查看', 'Check again'), 'practice-reload', 'small quiet')}`;
+  }
   if (v.state === 'no_submission')
     return `${head}<p class="meta">${T('交付并生成反馈后，这里会列出可选的补练。', 'After you submit and the feedback is ready, optional practice appears here.')}</p>`;
   if (v.state === 'feedback_pending')
@@ -2498,11 +2502,9 @@ async function loadPractice(a, force = false) {
   if (!ui.practice[a.id]) ui.practice[a.id] = { state: 'loading' };
   try {
     ui.practice[a.id] = await L.practice(a);
-  } catch (e) {
-    ui.practice[a.id] = {
-      error:
-        T('补练建议暂时读不到：', 'Optional practice could not be read: ') + (e?.message || ''),
-    };
+  } catch {
+    // The wording is chosen at render time from the session's read-only state.
+    ui.practice[a.id] = { error: 'unavailable' };
   } finally {
     practiceReads.delete(a.id);
     practicePoints.set(a.id, point);

@@ -94,6 +94,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
     workLanguage: first.session?.workLanguage ?? first.uiLanguage,
     uiLanguage: first.uiLanguage,
     semanticStatus: semantic(first),
+    readOnly: first.readOnly === true,
   };
   const text = (zh: string, en: string) => (host.snapshot().uiLanguage === 'en' ? en : zh);
   function valid() {
@@ -137,6 +138,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       workLanguage: s.session.workLanguage,
       uiLanguage: s.uiLanguage,
       semanticStatus: semantic(s),
+      readOnly: s.readOnly === true,
     };
     emit();
     const next = signature(s);

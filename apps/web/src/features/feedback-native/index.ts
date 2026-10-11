@@ -6,6 +6,7 @@ import type { SubmitInput } from '../../contracts-v2';
 import { mountReviewControls, isSubmitDecision } from './review-controls';
 import { feedbackText, type FeedbackLanguage } from './localization';
 import { evaluationVersionLine } from './evaluation-version';
+import { sealReadOnly } from './read-only-notice';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 
 export type SelectedProduct = Pick<
@@ -853,6 +854,7 @@ export function mountNativeFeedback(
       failure.textContent = '';
     }
     lastReadError = state.error;
+    sealReadOnly({ notice, reports, revisions }, state.readOnly === true, language);
   }
   const unsubscribe = adapter.subscribe(render);
   render();

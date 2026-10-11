@@ -193,6 +193,7 @@ export class V4DataHost implements V4HostAdapter {
       currentProduct: this.local.currentProduct,
       busy: this.busy,
       storageError: this.storageError,
+      readOnly: this.context?.read_only === true,
       available: {
         ...this.context?.available,
         'delegations.create': this.context?.available?.['delegations.create'] === true,
