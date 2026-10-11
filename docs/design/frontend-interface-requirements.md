@@ -120,7 +120,7 @@
 | `GET …/timeline` | 动态、过程记录、恢复提交编号 | T2/T4/T8 已返回时间、原问题、context 和 approval_denials；`record_turn` 事件仍对学员不可见，序号可有空洞 |
 | `GET …/evidence/{sub}/{criterion}/{eid}` | 查看评审依据 | 只能按条目取；没有可读摘要，前端按 `kind` 自行排版 |
 | `GET …/tests`、`GET …/artifacts`、`GET …/submissions` | 恢复测试、交付稿与提交 | T3 已完成；无本地事项归属的测试仅进入全部测试，不伪造任务关系 |
-| `POST …/relation-checks` | 新界面暂未使用；旧连接页 `/connected/` 保留入口 | 需要服务器配置冻结实验，本机未配置，返回 503 |
+| `POST …/relation-checks` | 新界面暂未使用；旧连接页 `/connected/` 已于 2026-10-11 停止发布，当前无界面入口 | 需要服务器配置冻结实验，本机未配置，返回 503 |
 
 ### 2.2 世界规则
 

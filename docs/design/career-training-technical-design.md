@@ -208,7 +208,7 @@ flowchart TD
 
 | 层 | 当前实现 | 后续设计边界 |
 |---|---|---|
-| UI | 主工作台为原生 JavaScript／CSS，Vite 与 TypeScript 适配器连接 API；React 页保留在 `/connected/` | 不假定已有完整 React 组件库或通用生成界面 SDK |
+| UI | 主工作台 v4 为原生 JavaScript／CSS，Vite 与 TypeScript 适配器连接 API，是唯一用户界面；原 React 连接页 `/connected/` 与冻结演示 `/demo/` 已于 2026-10-11 停止发布 | 不假定已有完整 React 组件库或通用生成界面 SDK |
 | API | Python、FastAPI、Pydantic；依赖锁定在 `uv.lock`，项目要求 Python ≥3.11，现有验收使用 3.12 | 后续依赖升级需独立验证 |
 | 状态 | SQLAlchemy 事务存储，支持 SQLite 与 PostgreSQL；事件、快照、对象、幂等结果与时间元数据 | 开放事项／作品同步仍需设计；PostgreSQL 历史通过不代表新机器已配置 |
 | 后台任务 | 同库 jobs 表与独立 Python worker，lease、heartbeat、有限重试 | 未引入 Redis 或多机调度 |

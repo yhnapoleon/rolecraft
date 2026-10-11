@@ -16,7 +16,6 @@ export default defineConfig({
     rolldownOptions: {
       input: {
         workbench: fileURLToPath(new URL('./index.html', import.meta.url)),
-        connected: fileURLToPath(new URL('./connected/index.html', import.meta.url)),
       },
     },
   },
