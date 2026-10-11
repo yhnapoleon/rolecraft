@@ -1,0 +1,3893 @@
+{
+  "schema_version": 2,
+  "locale": "en",
+  "source_kind": "actual_deterministic_module_run_on_synthetic_scenario",
+  "story_phase": "before_pm_handoff",
+  "captured_at": "2026-10-07T10:05:01.377294+00:00",
+  "input_bundle_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+  "executor": "system:w02-pre-event-recorder",
+  "http_or_human_trial": false,
+  "expected_answers_included": false,
+  "records": [
+    {
+      "trial_id": "Q01",
+      "label": "Q01",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q01",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q01",
+          "session_id": "pre-event-Q01",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "f3ccaa8742a36e3e1c2cd5f70e3225de669a021c11dd2ea3328980e5333c1843",
+        "session_id": "pre-event-Q01",
+        "version": 1,
+        "query": "Where is the meeting-room booking page?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.379082Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "38a54cf44e7c4ac8339ad4f716c1a2b076424db5a820398f8aea26a1db47cfe3",
+              "material_id": "faq",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q01",
+                "kind": "material",
+                "object_id": "faq",
+                "version": 1,
+                "config_version": null,
+                "span_start": 103,
+                "span_end": 335,
+                "quote": "Meeting-room booking: select an available meeting room in the company calendar and submit the subject, time and participants. Cancel the original booking when rescheduling. The assistant cannot confirm that a room has been reserved.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.75
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q01",
+          "kind": "config",
+          "object_id": "trial-Q01",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q01",
+            "session_id": "pre-event-Q01",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q01",
+            "session_id": "pre-event-Q01",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "Meeting-room booking: select an available meeting room in the company calendar and submit the subject, time and participants. Cancel the original booking when rescheduling. The assistant cannot confirm that a room has been reserved.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q01",
+            "kind": "material",
+            "object_id": "faq",
+            "version": 1,
+            "config_version": null,
+            "span_start": 103,
+            "span_end": 335,
+            "quote": "Meeting-room booking: select an available meeting room in the company calendar and submit the subject, time and participants. Cancel the original booking when rescheduling. The assistant cannot confirm that a room has been reserved.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "stable_faq"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+        "created_at": "2026-10-07T10:05:01.379082+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "38a54cf44e7c4ac8339ad4f716c1a2b076424db5a820398f8aea26a1db47cfe3"
+        ],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "4d25360bb98e39f538e6b063832048551dbca23799a5ba2e9c161f49908f4bdd",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q02",
+      "label": "Q02",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q02",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q02",
+          "session_id": "pre-event-Q02",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "96c2a4971f0f74e05661c077cbe117e808a7ae7bfd786700435688558bbc717e",
+        "session_id": "pre-event-Q02",
+        "version": 1,
+        "query": "I forgot my password. How do I reset it?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.379944Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "ac8ff83d618de7c0b68f665195e64fc2c23cfe1db7314c0109b3f74107a4342d",
+              "material_id": "faq",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q02",
+                "kind": "material",
+                "object_id": "faq",
+                "version": 1,
+                "config_version": null,
+                "span_start": 337,
+                "span_end": 676,
+                "quote": "Password reset: if you forgot your account password or need to change it, use the office system's self-service reset page and complete identity verification. Contact the internal service desk if verification fails. Do not send passwords or verification codes to the assistant. This is a procedure, not a way to obtain an existing password.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 1.0
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q02",
+          "kind": "config",
+          "object_id": "trial-Q02",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q02",
+            "session_id": "pre-event-Q02",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q02",
+            "session_id": "pre-event-Q02",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "Password reset: if you forgot your account password or need to change it, use the office system's self-service reset page and complete identity verification. Contact the internal service desk if verification fails. Do not send passwords or verification codes to the assistant. This is a procedure, not a way to obtain an existing password.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q02",
+            "kind": "material",
+            "object_id": "faq",
+            "version": 1,
+            "config_version": null,
+            "span_start": 337,
+            "span_end": 676,
+            "quote": "Password reset: if you forgot your account password or need to change it, use the office system's self-service reset page and complete identity verification. Contact the internal service desk if verification fails. Do not send passwords or verification codes to the assistant. This is a procedure, not a way to obtain an existing password.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "stable_faq"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+        "created_at": "2026-10-07T10:05:01.379944+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "ac8ff83d618de7c0b68f665195e64fc2c23cfe1db7314c0109b3f74107a4342d"
+        ],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": "password self-service reset identity verification",
+        "authorization_digest": "a30ca5f2351e9ca875490418a9dca4e9077c7707cc165c6620bd95921621952d",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q03",
+      "label": "Q03",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q03",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q03",
+          "session_id": "pre-event-Q03",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "6ee91fb39317c624041f5bf869d7aade30ac2506af2ac393673d68a9a937c175",
+        "session_id": "pre-event-Q03",
+        "version": 1,
+        "query": "My office account activation notice has not arrived. What should I do?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.380864Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "024f421db3deb232eae513d753608dc63daa4bf31d31eda28e1cb4c1d8d4a699",
+              "material_id": "onboarding",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q03",
+                "kind": "material",
+                "object_id": "onboarding",
+                "version": 1,
+                "config_version": null,
+                "span_start": 369,
+                "span_end": 570,
+                "quote": "Office account: after receiving an activation notice, sign in and check the organization and access scope. If no notice arrives or sign-in fails, keep the message and contact the internal service desk.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.6666666666666666
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q03",
+          "kind": "config",
+          "object_id": "trial-Q03",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q03",
+            "session_id": "pre-event-Q03",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q03",
+            "session_id": "pre-event-Q03",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "Office account: after receiving an activation notice, sign in and check the organization and access scope. If no notice arrives or sign-in fails, keep the message and contact the internal service desk.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q03",
+            "kind": "material",
+            "object_id": "onboarding",
+            "version": 1,
+            "config_version": null,
+            "span_start": 369,
+            "span_end": 570,
+            "quote": "Office account: after receiving an activation notice, sign in and check the organization and access scope. If no notice arrives or sign-in fails, keep the message and contact the internal service desk.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "onboarding"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+        "created_at": "2026-10-07T10:05:01.380864+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "024f421db3deb232eae513d753608dc63daa4bf31d31eda28e1cb4c1d8d4a699"
+        ],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "a71deacd610f0f2445c56b901d7c8726fabb61984a44f2f82e88cee0e94a5a83",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q04",
+      "label": "Q04",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q04",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q04",
+          "session_id": "pre-event-Q04",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "3cfc8068258e8772254a21375ecf1d5db6e315ff6d2caa3f9666b01d69dc5017",
+        "session_id": "pre-event-Q04",
+        "version": 1,
+        "query": "My device has broken. What information should I include in a repair request?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.381776Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "5565c99b164a61613328af811c68bcdc4e7daa3d3e628ba564ae5a56b5f3aaed",
+              "material_id": "onboarding",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q04",
+                "kind": "material",
+                "object_id": "onboarding",
+                "version": 1,
+                "config_version": null,
+                "span_start": 691,
+                "span_end": 852,
+                "quote": "Equipment and workstation: check the device ID and accessories on receipt. For a fault, record symptoms, attempted steps and contact times in the repair request.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.5
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q04",
+          "kind": "config",
+          "object_id": "trial-Q04",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q04",
+            "session_id": "pre-event-Q04",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q04",
+            "session_id": "pre-event-Q04",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "Equipment and workstation: check the device ID and accessories on receipt. For a fault, record symptoms, attempted steps and contact times in the repair request.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q04",
+            "kind": "material",
+            "object_id": "onboarding",
+            "version": 1,
+            "config_version": null,
+            "span_start": 691,
+            "span_end": 852,
+            "quote": "Equipment and workstation: check the device ID and accessories on receipt. For a fault, record symptoms, attempted steps and contact times in the repair request.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "onboarding"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+        "created_at": "2026-10-07T10:05:01.381776+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "5565c99b164a61613328af811c68bcdc4e7daa3d3e628ba564ae5a56b5f3aaed"
+        ],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "e23f90de1d990c3dd24ebb08b5b77f88e22f527b5857cddf515099c9e3273273",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q05",
+      "label": "Q05",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q05",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q05",
+          "session_id": "pre-event-Q05",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "755f59b9cd80d9c29e0a1a1726db99ee059647f9840f2fe8828a47e17a71adf6",
+        "session_id": "pre-event-Q05",
+        "version": 1,
+        "query": "How much can I claim per night for a hotel on a domestic business trip?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.382649Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "9b7d4010efdb8fbc9837e90436ecaa8ebb671cb9435afff1b328ad7e20994522",
+              "material_id": "policy",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q05",
+                "kind": "material",
+                "object_id": "policy",
+                "version": 1,
+                "config_version": null,
+                "span_start": 111,
+                "span_end": 314,
+                "quote": "For domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.8571428571428571
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q05",
+          "kind": "config",
+          "object_id": "trial-Q05",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q05",
+            "session_id": "pre-event-Q05",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q05",
+            "session_id": "pre-event-Q05",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "For domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q05",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": 111,
+            "span_end": 314,
+            "quote": "For domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_travel"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+        "created_at": "2026-10-07T10:05:01.382649+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "9b7d4010efdb8fbc9837e90436ecaa8ebb671cb9435afff1b328ad7e20994522"
+        ],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "7fdf041922ec1f344f80d20c3da8bce064c577bf153e53348754de62c548d42c",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q06",
+      "label": "Q06",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q06",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q06",
+          "session_id": "pre-event-Q06",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "8ed092a760dbde6c73195c167e37fe529ef1a25ad4f349e230eee956ef86d448",
+        "session_id": "pre-event-Q06",
+        "version": 1,
+        "query": "What is the taxi reimbursement limit per trip?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.383517Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "7d2d5c6983961a31295cac564930939aa4a9ca8e88aaf76b902f3e48ad48eeaf",
+              "material_id": "policy",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q06",
+                "kind": "material",
+                "object_id": "policy",
+                "version": 1,
+                "config_version": null,
+                "span_start": 316,
+                "span_end": 435,
+                "quote": "The taxi reimbursement limit is CNY 200 per single trip. Over-limit claims and unusual routes require exception review.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 1.0
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q06",
+          "kind": "config",
+          "object_id": "trial-Q06",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q06",
+            "session_id": "pre-event-Q06",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q06",
+            "session_id": "pre-event-Q06",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "The taxi reimbursement limit is CNY 200 per single trip. Over-limit claims and unusual routes require exception review.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q06",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": 316,
+            "span_end": 435,
+            "quote": "The taxi reimbursement limit is CNY 200 per single trip. Over-limit claims and unusual routes require exception review.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_travel"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+        "created_at": "2026-10-07T10:05:01.383517+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "7d2d5c6983961a31295cac564930939aa4a9ca8e88aaf76b902f3e48ad48eeaf"
+        ],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "d7d98facb7d514959e72c8aa62f672e57b8a519a95d51a819955d63750b47ede",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q07",
+      "label": "Q07",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q07",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q07",
+          "session_id": "pre-event-Q07",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "ef5ada194f4af5c69f8b52133301e97bf4cc9467ed4f659275836f783cbff13b",
+        "session_id": "pre-event-Q07",
+        "version": 1,
+        "query": "What is the daily meal reimbursement amount?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.384442Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "4a0449be1f2e6bed28a3ab0c217d9dcda2886fe73d2a09d8b0efb73cace417dd",
+              "material_id": "meal",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q07",
+                "kind": "material",
+                "object_id": "meal",
+                "version": 1,
+                "config_version": null,
+                "span_start": 111,
+                "span_end": 257,
+                "quote": "The meal reimbursement limit is CNY 100 per person per day. Keep valid receipts. Expense Management reviews duplicate claims and individual cases.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.5
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q07",
+          "kind": "config",
+          "object_id": "trial-Q07",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q07",
+            "session_id": "pre-event-Q07",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q07",
+            "session_id": "pre-event-Q07",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "The meal reimbursement limit is CNY 100 per person per day. Keep valid receipts. Expense Management reviews duplicate claims and individual cases.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q07",
+            "kind": "material",
+            "object_id": "meal",
+            "version": 1,
+            "config_version": null,
+            "span_start": 111,
+            "span_end": 257,
+            "quote": "The meal reimbursement limit is CNY 100 per person per day. Keep valid receipts. Expense Management reviews duplicate claims and individual cases.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_meal"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+        "created_at": "2026-10-07T10:05:01.384442+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "4a0449be1f2e6bed28a3ab0c217d9dcda2886fe73d2a09d8b0efb73cace417dd"
+        ],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "d2aebb7cb6519c72ec66119240d051176f29792460e1bb8113bd8b3498d99f2e",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q08",
+      "label": "Q08",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q08",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q08",
+          "session_id": "pre-event-Q08",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "606b6d05f02efc4faff5cb9cf195b0703263f15457c63e7b4edf4b2fb99daf83",
+        "session_id": "pre-event-Q08",
+        "version": 1,
+        "query": "How early must I submit planned leave?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.385317Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "ed0edc6276a510c2bb1a203f6f481a12d7329fe54385c3f98498f906d709b2e2",
+              "material_id": "leave",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q08",
+                "kind": "material",
+                "object_id": "leave",
+                "version": 1,
+                "config_version": null,
+                "span_start": 108,
+                "span_end": 264,
+                "quote": "For planned leave, submit the request at least 3 working days in advance and state handover arrangements. Contact the line manager promptly in an emergency.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.6
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q08",
+          "kind": "config",
+          "object_id": "trial-Q08",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q08",
+            "session_id": "pre-event-Q08",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q08",
+            "session_id": "pre-event-Q08",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "For planned leave, submit the request at least 3 working days in advance and state handover arrangements. Contact the line manager promptly in an emergency.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q08",
+            "kind": "material",
+            "object_id": "leave",
+            "version": 1,
+            "config_version": null,
+            "span_start": 108,
+            "span_end": 264,
+            "quote": "For planned leave, submit the request at least 3 working days in advance and state handover arrangements. Contact the line manager promptly in an emergency.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_leave"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+        "created_at": "2026-10-07T10:05:01.385317+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "ed0edc6276a510c2bb1a203f6f481a12d7329fe54385c3f98498f906d709b2e2"
+        ],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "105ad744ff86d1417af3198eb932c58491b3d2e6466473d0e66e69a664872ad9",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q09",
+      "label": "Q09",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q09",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q09",
+          "session_id": "pre-event-Q09",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "f56fc89ddfc51368bb9985b667dad3bda2540170d298c5439cf6ba550b9642bb",
+        "session_id": "pre-event-Q09",
+        "version": 1,
+        "query": "What is the hotel reimbursement ceiling for domestic travel?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.386258Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q09",
+          "kind": "config",
+          "object_id": "trial-Q09",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q09",
+            "session_id": "pre-event-Q09",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q09",
+            "session_id": "pre-event-Q09",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "fallback",
+        "answer": "This question is outside the currently enabled knowledge scope. Ask an authorized person to review it.",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "outside_scope"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+        "created_at": "2026-10-07T10:05:01.386258+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "3f4a75aa03d3b5df60c6b27d3afb114ee7f37323a968825164a82198b68323b4",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q10",
+      "label": "Q10",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q10",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q10",
+          "session_id": "pre-event-Q10",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "realtime",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "realtime_sync",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 10
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "5d1886feb2dc02ae17ce895f25a85b529ebca049838c2d8f36e8477407eee0f4",
+        "session_id": "pre-event-Q10",
+        "version": 1,
+        "query": "What is the hotel reimbursement ceiling for domestic travel?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.387127Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "9b7d4010efdb8fbc9837e90436ecaa8ebb671cb9435afff1b328ad7e20994522",
+              "material_id": "policy",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q10",
+                "kind": "material",
+                "object_id": "policy",
+                "version": 1,
+                "config_version": null,
+                "span_start": 111,
+                "span_end": 314,
+                "quote": "For domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.6
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q10",
+          "kind": "config",
+          "object_id": "trial-Q10",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q10",
+            "session_id": "pre-event-Q10",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "realtime",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "realtime_sync",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 10
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q10",
+            "session_id": "pre-event-Q10",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": false,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 10
+          },
+          "differences": {
+            "work_items": "requested_work_exceeds_approved_budget",
+            "update_strategy": "realtime_sync_not_provisioned",
+            "scope_filter": "scope_filter_not_provisioned",
+            "launch_day": "requested_launch_exceeds_approved_deadline"
+          }
+        },
+        "status": "answered",
+        "answer": "For domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q10",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": 111,
+            "span_end": 314,
+            "quote": "For domestic business trips, hotel reimbursement claims are capped at CNY 500 per person per night. Obtain written manager approval before travelling if the cost exceeds the limit, and keep the receipts.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_travel"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+        "created_at": "2026-10-07T10:05:01.387127+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "9b7d4010efdb8fbc9837e90436ecaa8ebb671cb9435afff1b328ad7e20994522"
+        ],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "e791a094c15e151232699061d7a53f97378c6e5b638d533f85d3c3ea45277427",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q11",
+      "label": "Q11",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q11",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q11",
+          "session_id": "pre-event-Q11",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "manual_policy",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "509af59ae809ca987a13ded01b9bfd6e30a5873bf1b67bab83a8968527b55a00",
+        "session_id": "pre-event-Q11",
+        "version": 1,
+        "query": "What is the hotel reimbursement ceiling for domestic travel?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.388121Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q11",
+          "kind": "config",
+          "object_id": "trial-Q11",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q11",
+            "session_id": "pre-event-Q11",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "manual_policy",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q11",
+            "session_id": "pre-event-Q11",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "manual_policy",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "fallback",
+        "answer": "This knowledge domain requires human verification; no automatic answer was given.",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "manual_verification_required"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+        "created_at": "2026-10-07T10:05:01.388121+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "167d1c61ee7151e9326d3d2607991e445e29b924865c4e94d17d83b5e6551ace",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q12",
+      "label": "Q12",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q12",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q12",
+          "session_id": "pre-event-Q12",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "none",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "6ba7b2158b000d2c6ac2a2d51a497c1d66b8622684e6bcdbda211818c00d0acb",
+        "session_id": "pre-event-Q12",
+        "version": 1,
+        "query": "What makes up Neptune's atmosphere?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.389142Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q12",
+          "kind": "config",
+          "object_id": "trial-Q12",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q12",
+            "session_id": "pre-event-Q12",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "none",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q12",
+            "session_id": "pre-event-Q12",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "none",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "failed",
+        "answer": "An automatic answer is not sufficiently supported, and human fallback is not provisioned.",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "no_retrieval_hit"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "2418c796fa86a4d713431b98140f28fdf7a4ba4a58852bed428e9ec4efa8cfc3",
+        "created_at": "2026-10-07T10:05:01.389142+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "203948ca0fd38e758154cba59a4cc48900d99ce6b8c9ae277c946e1d2d6065b3",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    }
+  ]
+}

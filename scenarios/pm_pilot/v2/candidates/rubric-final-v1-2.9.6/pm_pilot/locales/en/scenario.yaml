@@ -1,0 +1,135 @@
+approval_limits:
+  capacity: 60
+  deadline_day: 10
+  dev_days: 6
+approval_requirements:
+  fallback: human
+  work_items_by_strategy:
+    daily:
+    - scope_filter
+    - human_fallback
+    manual_policy:
+    - scope_filter
+    - human_fallback
+    realtime:
+    - realtime_sync
+    - human_fallback
+approval_rule_revision: pm-v2-approval-3
+business_events:
+- id: demo_schedule_changed
+  material_updates:
+    demo: 2
+  notice: The manager has moved the internal demonstration to day 4. See the updated
+    demonstration arrangements.
+  'on': first_resource_request
+  visible_to:
+  - learner
+  - supervisor
+  - tech_lead
+- id: business_scope_requested
+  material_updates:
+    scope_note: 2
+  notice: Chen Min has forwarded a request from Sales Support. See the new scope-discussion
+    record.
+  'on': capacity_approved
+  visible_to:
+  - learner
+  - supervisor
+  - business_lead
+credential_request_patterns:
+- (告诉|给我|提供|显示|发我|列出).{0,8}(密码|密钥)(?!(的)?(怎么|如何)?(重置|找回|修改|变更|管理|规则|流程|要求|长度|复杂度))
+- (密码|密钥).{0,6}(是什么|明文|是多少)
+- 把.{0,6}(密码|密钥)(告诉|发给|给|提供|显示)
+domain_aliases:
+  policy: policy_travel
+initial_material_versions:
+  approvals: 1
+  brief: 1
+  business_case: 1
+  coordination: 1
+  demand: 1
+  demo: 1
+  failures: 1
+  faq: 1
+  interviews: 1
+  leave: 1
+  meal: 1
+  onboarding: 1
+  policy: 1
+  restricted: 1
+  scope_note: 1
+  tech_diagnostics: 1
+  tech_private: 1
+  technical: 1
+  trial_details: 1
+  user_groups: 1
+  world_private: 1
+initial_plan_material_updates:
+  policy: 2
+locale: en
+mandatory_prohibited_topics:
+- 个人薪资
+- 医疗诊断
+- 访问密钥
+- 他人绩效
+material_files:
+  approvals:
+    '1': materials/approvals-v1.md
+  brief:
+    '1': materials/brief-v1.md
+  business_case:
+    '1': materials/business_case-v1.md
+  coordination:
+    '1': materials/coordination-v1.md
+  demand:
+    '1': materials/demand-v1.md
+  demo:
+    '1': materials/demo-v1.md
+    '2': materials/demo-v2.md
+  failures:
+    '1': materials/failures-v1.md
+  faq:
+    '1': materials/faq-v1.md
+  interviews:
+    '1': materials/interviews-v1.md
+  leave:
+    '1': materials/leave-v1.md
+  meal:
+    '1': materials/meal-v1.md
+  onboarding:
+    '1': materials/onboarding-v1.md
+  policy:
+    '1': materials/policy-v1.md
+    '2': materials/policy-v2.md
+  restricted:
+    '1': materials/restricted-v1.md
+  scope_note:
+    '1': materials/scope_note-v1.md
+    '2': materials/scope_note-v2.md
+  tech_diagnostics:
+    '1': materials/tech_diagnostics-v1.md
+  tech_private:
+    '1': materials/tech_private-v1.md
+  technical:
+    '1': materials/technical-v1.md
+  trial_details:
+    '1': materials/trial_details-v1.md
+  user_groups:
+    '1': materials/user_groups-v1.md
+  world_private:
+    '1': materials/world_private-v1.md
+mutable_domains:
+- policy_travel
+not_simulated:
+- 真实运营咨询量
+- 投诉率
+- 收入
+- 未执行访谈
+- 人工已经接管
+revision: 2.9.6
+scenario_id: pm_pilot
+source_kind: authored_synthetic_business_with_actual_module_QA
+work_costs:
+  human_fallback: 1
+  realtime_sync: 5
+  scope_filter: 1

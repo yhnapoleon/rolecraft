@@ -1,0 +1,753 @@
+{
+  "schema_version": 1,
+  "locale": "en",
+  "source_language": "en",
+  "original_language": "zh",
+  "translation_basis_commit": "b821b0e67c9e5d20f386f44efb1f4a6be297e7a4",
+  "canonical_scenario_id": "pm_pilot",
+  "canonical_fact_root_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f",
+  "lineage": {
+    "schema_version": 2,
+    "structure_id": "index_scope_resource_dependency",
+    "fact_root_ids": [
+      "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f"
+    ],
+    "run_id": null,
+    "session_id": null,
+    "branch_id": null,
+    "decision_id": null,
+    "candidate_id": null,
+    "source_record_ids": [],
+    "derivation_ids": [
+      "b821b0e67c9e5d20f386f44efb1f4a6be297e7a4"
+    ],
+    "component_id": "pm_pilot_v2_family"
+  },
+  "split": "train",
+  "independent_structure_count": 1,
+  "translation_adds_independent_structures": 0,
+  "calibration_usage": "development work on an already-seen training fact root; not held-out evaluation",
+  "retrieval_default": 0.3,
+  "facts": {
+    "capacity@1": {
+      "id": "capacity",
+      "version": 1,
+      "value": 30,
+      "unit": "人",
+      "material_id": "brief",
+      "paragraph_index": 1,
+      "display_value": 30,
+      "display_unit": "people"
+    },
+    "dev_days@1": {
+      "id": "dev_days",
+      "version": 1,
+      "value": 3,
+      "unit": "人日",
+      "material_id": "brief",
+      "paragraph_index": 1,
+      "display_value": 3,
+      "display_unit": "developer-days"
+    },
+    "deadline_day@1": {
+      "id": "deadline_day",
+      "version": 1,
+      "value": 7,
+      "unit": "天",
+      "material_id": "brief",
+      "paragraph_index": 1,
+      "display_value": 7,
+      "display_unit": "days"
+    },
+    "sample_days@1": {
+      "id": "sample_days",
+      "version": 1,
+      "value": 10,
+      "unit": "工作日",
+      "material_id": "demand",
+      "paragraph_index": 1,
+      "display_value": 10,
+      "display_unit": "working days"
+    },
+    "demand_total@1": {
+      "id": "demand_total",
+      "version": 1,
+      "value": 120,
+      "unit": "次",
+      "material_id": "demand",
+      "paragraph_index": 1,
+      "display_value": 120,
+      "display_unit": "requests"
+    },
+    "unique_requesters@1": {
+      "id": "unique_requesters",
+      "version": 1,
+      "value": 56,
+      "unit": "人",
+      "material_id": "demand",
+      "paragraph_index": 1,
+      "display_value": 56,
+      "display_unit": "people"
+    },
+    "demand_faq@1": {
+      "id": "demand_faq",
+      "version": 1,
+      "value": 72,
+      "unit": "次",
+      "material_id": "demand",
+      "paragraph_index": 2,
+      "display_value": 72,
+      "display_unit": "requests"
+    },
+    "faq_total_minutes@1": {
+      "id": "faq_total_minutes",
+      "version": 1,
+      "value": 288,
+      "unit": "分钟",
+      "material_id": "demand",
+      "paragraph_index": 2,
+      "display_value": 288,
+      "display_unit": "minutes"
+    },
+    "faq_avg_minutes@1": {
+      "id": "faq_avg_minutes",
+      "version": 1,
+      "value": 4,
+      "unit": "分钟",
+      "material_id": "demand",
+      "paragraph_index": 2,
+      "display_value": 4,
+      "display_unit": "minutes"
+    },
+    "faq_repeats@1": {
+      "id": "faq_repeats",
+      "version": 1,
+      "value": 50,
+      "unit": "次",
+      "material_id": "demand",
+      "paragraph_index": 2,
+      "display_value": 50,
+      "display_unit": "requests"
+    },
+    "demand_policy@1": {
+      "id": "demand_policy",
+      "version": 1,
+      "value": 36,
+      "unit": "次",
+      "material_id": "demand",
+      "paragraph_index": 3,
+      "display_value": 36,
+      "display_unit": "requests"
+    },
+    "policy_total_minutes@1": {
+      "id": "policy_total_minutes",
+      "version": 1,
+      "value": 324,
+      "unit": "分钟",
+      "material_id": "demand",
+      "paragraph_index": 3,
+      "display_value": 324,
+      "display_unit": "minutes"
+    },
+    "policy_avg_minutes@1": {
+      "id": "policy_avg_minutes",
+      "version": 1,
+      "value": 9,
+      "unit": "分钟",
+      "material_id": "demand",
+      "paragraph_index": 3,
+      "display_value": 9,
+      "display_unit": "minutes"
+    },
+    "policy_repeats@1": {
+      "id": "policy_repeats",
+      "version": 1,
+      "value": 14,
+      "unit": "次",
+      "material_id": "demand",
+      "paragraph_index": 3,
+      "display_value": 14,
+      "display_unit": "requests"
+    },
+    "demand_sensitive@1": {
+      "id": "demand_sensitive",
+      "version": 1,
+      "value": 12,
+      "unit": "次",
+      "material_id": "demand",
+      "paragraph_index": 4,
+      "display_value": 12,
+      "display_unit": "requests"
+    },
+    "sensitive_total_minutes@1": {
+      "id": "sensitive_total_minutes",
+      "version": 1,
+      "value": 168,
+      "unit": "分钟",
+      "material_id": "demand",
+      "paragraph_index": 4,
+      "display_value": 168,
+      "display_unit": "minutes"
+    },
+    "sensitive_avg_minutes@1": {
+      "id": "sensitive_avg_minutes",
+      "version": 1,
+      "value": 14,
+      "unit": "分钟",
+      "material_id": "demand",
+      "paragraph_index": 4,
+      "display_value": 14,
+      "display_unit": "minutes"
+    },
+    "sensitive_repeats@1": {
+      "id": "sensitive_repeats",
+      "version": 1,
+      "value": 2,
+      "unit": "次",
+      "material_id": "demand",
+      "paragraph_index": 4,
+      "display_value": 2,
+      "display_unit": "requests"
+    },
+    "total_minutes@1": {
+      "id": "total_minutes",
+      "version": 1,
+      "value": 780,
+      "unit": "分钟",
+      "material_id": "demand",
+      "paragraph_index": 5,
+      "display_value": 780,
+      "display_unit": "minutes"
+    },
+    "total_repeats@1": {
+      "id": "total_repeats",
+      "version": 1,
+      "value": 66,
+      "unit": "次",
+      "material_id": "demand",
+      "paragraph_index": 5,
+      "display_value": 66,
+      "display_unit": "requests"
+    },
+    "repeat_percent@1": {
+      "id": "repeat_percent",
+      "version": 1,
+      "value": 55,
+      "unit": "%",
+      "material_id": "demand",
+      "paragraph_index": 5,
+      "display_value": 55,
+      "display_unit": "%"
+    },
+    "saving_claim@1": {
+      "id": "saving_claim",
+      "version": 1,
+      "value": 429,
+      "unit": "分钟/10工作日；BC-01测算主张",
+      "material_id": "business_case",
+      "paragraph_index": 1,
+      "display_value": 429,
+      "display_unit": "minutes/10 working days; BC-01 estimate (claim)"
+    },
+    "new_staff@1": {
+      "id": "new_staff",
+      "version": 1,
+      "value": 20,
+      "unit": "人",
+      "material_id": "user_groups",
+      "paragraph_index": 1,
+      "display_value": 20,
+      "display_unit": "people"
+    },
+    "operations_staff@1": {
+      "id": "operations_staff",
+      "version": 1,
+      "value": 20,
+      "unit": "人",
+      "material_id": "user_groups",
+      "paragraph_index": 1,
+      "display_value": 20,
+      "display_unit": "people"
+    },
+    "admin_staff@1": {
+      "id": "admin_staff",
+      "version": 1,
+      "value": 10,
+      "unit": "人",
+      "material_id": "user_groups",
+      "paragraph_index": 1,
+      "display_value": 10,
+      "display_unit": "people"
+    },
+    "candidate_total@1": {
+      "id": "candidate_total",
+      "version": 1,
+      "value": 50,
+      "unit": "人",
+      "material_id": "user_groups",
+      "paragraph_index": 1,
+      "display_value": 50,
+      "display_unit": "people"
+    },
+    "new_staff_priority@1": {
+      "id": "new_staff_priority",
+      "version": 1,
+      "value": "入口指引",
+      "unit": "A的访谈陈述",
+      "material_id": "interviews",
+      "paragraph_index": 1,
+      "display_value": "finding the right entry point",
+      "display_unit": "A's interview statement"
+    },
+    "operations_concern@1": {
+      "id": "operations_concern",
+      "version": 1,
+      "value": "金额是不是今天有效",
+      "unit": "B的访谈陈述",
+      "material_id": "interviews",
+      "paragraph_index": 3,
+      "display_value": "whether the amount is valid today",
+      "display_unit": "B's interview statement"
+    },
+    "admin_concern@1": {
+      "id": "admin_concern",
+      "version": 1,
+      "value": "增加复核负担",
+      "unit": "C的访谈陈述",
+      "material_id": "interviews",
+      "paragraph_index": 5,
+      "display_value": "more review work",
+      "display_unit": "C's interview statement"
+    },
+    "index_delay_hours@1": {
+      "id": "index_delay_hours",
+      "version": 1,
+      "value": 24,
+      "unit": "小时",
+      "material_id": "technical",
+      "paragraph_index": 1,
+      "display_value": 24,
+      "display_unit": "hours"
+    },
+    "cost_scope_filter@1": {
+      "id": "cost_scope_filter",
+      "version": 1,
+      "value": 1,
+      "unit": "人日",
+      "material_id": "technical",
+      "paragraph_index": 2,
+      "display_value": 1,
+      "display_unit": "developer-days"
+    },
+    "cost_human_fallback@1": {
+      "id": "cost_human_fallback",
+      "version": 1,
+      "value": 1,
+      "unit": "人日",
+      "material_id": "technical",
+      "paragraph_index": 2,
+      "display_value": 1,
+      "display_unit": "developer-days"
+    },
+    "cost_realtime_sync@1": {
+      "id": "cost_realtime_sync",
+      "version": 1,
+      "value": 5,
+      "unit": "人日",
+      "material_id": "technical",
+      "paragraph_index": 2,
+      "display_value": 5,
+      "display_unit": "developer-days"
+    },
+    "capacity_limit@1": {
+      "id": "capacity_limit",
+      "version": 1,
+      "value": 60,
+      "unit": "人",
+      "material_id": "approvals",
+      "paragraph_index": 1,
+      "display_value": 60,
+      "display_unit": "people"
+    },
+    "dev_days_limit@1": {
+      "id": "dev_days_limit",
+      "version": 1,
+      "value": 6,
+      "unit": "人日",
+      "material_id": "approvals",
+      "paragraph_index": 1,
+      "display_value": 6,
+      "display_unit": "developer-days"
+    },
+    "deadline_day_limit@1": {
+      "id": "deadline_day_limit",
+      "version": 1,
+      "value": 10,
+      "unit": "天",
+      "material_id": "approvals",
+      "paragraph_index": 1,
+      "display_value": 10,
+      "display_unit": "days"
+    },
+    "hotel_limit@1": {
+      "id": "hotel_limit",
+      "version": 1,
+      "value": 500,
+      "unit": "元/人/晚",
+      "material_id": "policy",
+      "paragraph_index": 0,
+      "display_value": 500,
+      "display_unit": "CNY/person/night"
+    },
+    "taxi_limit@1": {
+      "id": "taxi_limit",
+      "version": 1,
+      "value": 200,
+      "unit": "元/单程",
+      "material_id": "policy",
+      "paragraph_index": 1,
+      "display_value": 200,
+      "display_unit": "CNY/trip"
+    },
+    "hotel_limit@2": {
+      "id": "hotel_limit",
+      "version": 2,
+      "value": 400,
+      "unit": "元/人/晚",
+      "material_id": "policy",
+      "paragraph_index": 0,
+      "display_value": 400,
+      "display_unit": "CNY/person/night"
+    },
+    "taxi_limit@2": {
+      "id": "taxi_limit",
+      "version": 2,
+      "value": 200,
+      "unit": "元/单程",
+      "material_id": "policy",
+      "paragraph_index": 1,
+      "display_value": 200,
+      "display_unit": "CNY/trip"
+    },
+    "meal_limit@1": {
+      "id": "meal_limit",
+      "version": 1,
+      "value": 100,
+      "unit": "元/人/天",
+      "material_id": "meal",
+      "paragraph_index": 0,
+      "display_value": 100,
+      "display_unit": "CNY/person/day"
+    },
+    "leave_notice_days@1": {
+      "id": "leave_notice_days",
+      "version": 1,
+      "value": 3,
+      "unit": "工作日",
+      "material_id": "leave",
+      "paragraph_index": 0,
+      "display_value": 3,
+      "display_unit": "working days"
+    },
+    "support_observation_minutes@1": {
+      "id": "support_observation_minutes",
+      "version": 1,
+      "value": 45,
+      "unit": "分钟/天；陈敏观察意向",
+      "material_id": "restricted",
+      "paragraph_index": 2,
+      "display_value": 45,
+      "display_unit": "minutes/day; Chen Min's observation offer"
+    },
+    "demo_day@1": {
+      "id": "demo_day",
+      "version": 1,
+      "value": 5,
+      "unit": "天",
+      "material_id": "demo",
+      "paragraph_index": 0,
+      "display_value": 5,
+      "display_unit": "days"
+    },
+    "demo_day@2": {
+      "id": "demo_day",
+      "version": 2,
+      "value": 4,
+      "unit": "天",
+      "material_id": "demo",
+      "paragraph_index": 0,
+      "display_value": 4,
+      "display_unit": "days"
+    },
+    "additional_candidates@2": {
+      "id": "additional_candidates",
+      "version": 2,
+      "value": 10,
+      "unit": "人；追加请求",
+      "material_id": "scope_note",
+      "paragraph_index": 0,
+      "display_value": 10,
+      "display_unit": "people; requested additions"
+    },
+    "retrieval_probe_query@1": {
+      "id": "retrieval_probe_query",
+      "version": 1,
+      "value": "公司培训我已提交报名是不是就能去听课",
+      "unit": "内部复现输入",
+      "material_id": "tech_private",
+      "paragraph_index": 0,
+      "display_value": "I've already signed up for company training. Does that mean I can simply turn up to attend the class?",
+      "display_unit": "internal reproduction input"
+    },
+    "retrieval_threshold_candidate@1": {
+      "id": "retrieval_threshold_candidate",
+      "version": 1,
+      "value": 0.2,
+      "unit": "局部对照参数",
+      "material_id": "tech_private",
+      "paragraph_index": 0,
+      "display_value": 0.2,
+      "display_unit": "local comparison parameter"
+    },
+    "retrieval_debug_code@1": {
+      "id": "retrieval_debug_code",
+      "version": 1,
+      "value": "TR-TRAIN-01",
+      "unit": "内部诊断编号",
+      "material_id": "tech_diagnostics",
+      "paragraph_index": 0,
+      "display_value": "TR-TRAIN-01",
+      "display_unit": "internal diagnostic ID"
+    },
+    "isolation_marker@1": {
+      "id": "isolation_marker",
+      "version": 1,
+      "value": "NEVER_W02_7C9E",
+      "unit": "内部标识",
+      "material_id": "world_private",
+      "paragraph_index": 0,
+      "display_value": "NEVER_W02_7C9E",
+      "display_unit": "internal marker"
+    }
+  },
+  "materials": [
+    {
+      "id": "brief",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:brief@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:brief@1",
+      "path": "materials/brief-v1.md",
+      "sha256": "3e14692b1102820ba3042a5e7711427d593c6581e5a3e8e317b26163e06c7135"
+    },
+    {
+      "id": "demand",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:demand@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:demand@1",
+      "path": "materials/demand-v1.md",
+      "sha256": "bbb3d15d90b07f94a257daa6c514d36c61808ee277a02bac003e9987c58ed648"
+    },
+    {
+      "id": "business_case",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:business_case@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:business_case@1",
+      "path": "materials/business_case-v1.md",
+      "sha256": "613b2571da49dfe78984f025e79b95b330e0c2ea72638cbda73ba3c0283bf4fc"
+    },
+    {
+      "id": "coordination",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:coordination@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:coordination@1",
+      "path": "materials/coordination-v1.md",
+      "sha256": "f32dbdb078cbeb58e49cb4ea5d19661c817bbe80ab3e241124add038ce4a1adc"
+    },
+    {
+      "id": "user_groups",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:user_groups@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:user_groups@1",
+      "path": "materials/user_groups-v1.md",
+      "sha256": "1c993cc112c937417c8a8c3d00aae187553cb957394ebc4c53ab8f418ff0734f"
+    },
+    {
+      "id": "interviews",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:interviews@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:interviews@1",
+      "path": "materials/interviews-v1.md",
+      "sha256": "345705f33270e338444f4a9a92cc8b0f03c77a0d16b6b5c2833bda4eb0b5418d"
+    },
+    {
+      "id": "technical",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:technical@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:technical@1",
+      "path": "materials/technical-v1.md",
+      "sha256": "6507f24d2163ca4472451bc891df91b23447599c7ef776c6c600831d478e3d5c"
+    },
+    {
+      "id": "approvals",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:approvals@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:approvals@1",
+      "path": "materials/approvals-v1.md",
+      "sha256": "010f098ddd621b869447d7baeac60e970f9970421016b5949a9ceb47c34bbd1b"
+    },
+    {
+      "id": "faq",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:faq@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:faq@1",
+      "path": "materials/faq-v1.md",
+      "sha256": "b8fad283036c2ba68a8b20e537d11457908f8a8921b741c9ba0e758a1e24bd88"
+    },
+    {
+      "id": "onboarding",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:onboarding@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:onboarding@1",
+      "path": "materials/onboarding-v1.md",
+      "sha256": "906d5dcecb028f616741bbeba4dd58ad2251257329564b699fbb6356999dc7d8"
+    },
+    {
+      "id": "policy",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:policy@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:policy@1",
+      "path": "materials/policy-v1.md",
+      "sha256": "b29b349fc19da70717ba7405586dd2760ee40ce344477bfe776eed1d7fb4281f"
+    },
+    {
+      "id": "policy",
+      "version": 2,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:policy@2",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:policy@2",
+      "path": "materials/policy-v2.md",
+      "sha256": "d4b820c6700b21de6af5f7170aedb0f2bf76b7d91bccf926efd3f4cb0c9975ad"
+    },
+    {
+      "id": "meal",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:meal@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:meal@1",
+      "path": "materials/meal-v1.md",
+      "sha256": "459abcb2c620d75b0caf62ff0328fa83f67908a8c154a6d998d0351f5966e0e8"
+    },
+    {
+      "id": "leave",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:leave@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:leave@1",
+      "path": "materials/leave-v1.md",
+      "sha256": "d287651b1f47f46ca1f6a39744121b7eb01ea9be93795a04637766d36b563320"
+    },
+    {
+      "id": "restricted",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:restricted@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:restricted@1",
+      "path": "materials/restricted-v1.md",
+      "sha256": "8d416ea62f986b26ca23b1c69c3e2e14949d224c969c584368c6eb4a32685402"
+    },
+    {
+      "id": "demo",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:demo@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:demo@1",
+      "path": "materials/demo-v1.md",
+      "sha256": "a12476b68fe52aedfb1ddef8e3523a2cc1a9b831707d23da9bdf35a2cdb584ec"
+    },
+    {
+      "id": "demo",
+      "version": 2,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:demo@2",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:demo@2",
+      "path": "materials/demo-v2.md",
+      "sha256": "a2640df69d07055524ba50b0bbabfb84322c758de67f5830466ddecb51650660"
+    },
+    {
+      "id": "scope_note",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:scope_note@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:scope_note@1",
+      "path": "materials/scope_note-v1.md",
+      "sha256": "d6eff2910a2e0f39dd773a5e28d257bb56e2c41c12471263b05df8c2d23ea112"
+    },
+    {
+      "id": "scope_note",
+      "version": 2,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:scope_note@2",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:scope_note@2",
+      "path": "materials/scope_note-v2.md",
+      "sha256": "f7af830782ac84614662e312ba6181fbd8917fc8b436abc8ed2fff8aa5dcd5d4"
+    },
+    {
+      "id": "tech_private",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:tech_private@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:tech_private@1",
+      "path": "materials/tech_private-v1.md",
+      "sha256": "88cfa90b7080a450b1975744aa60d9e46dd06ab22c6082c1063d521e4c74051e"
+    },
+    {
+      "id": "tech_diagnostics",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:tech_diagnostics@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:tech_diagnostics@1",
+      "path": "materials/tech_diagnostics-v1.md",
+      "sha256": "b17e99f786664e4105e01fde3e251a65f0715016359cae11900175dcd0ed6b52"
+    },
+    {
+      "id": "world_private",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:world_private@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:world_private@1",
+      "path": "materials/world_private-v1.md",
+      "sha256": "6a5ef0f1e5b42d0bcdcb7faf8dc3a5d880beb48972714f182bb55ae56023d58c"
+    },
+    {
+      "id": "failures",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:failures@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:failures@1",
+      "path": "materials/failures-v1.md",
+      "sha256": "5b68c83b63f64a999b65d7140a2a9df1c821b21b085ca732c0d646e4cd6ea2d8"
+    },
+    {
+      "id": "trial_details",
+      "version": 1,
+      "locale": "en",
+      "canonical_record_id": "pm_pilot:trial_details@1",
+      "translation_group_id": "pm-pilot-facts-774d359cc3327f755d2f2ffd75709289d7bac11223fcd7c5df5b89f6d421bb6f:trial_details@1",
+      "path": "materials/trial_details-v1.md",
+      "sha256": "e4cfe0846cb846fe93ade0d517258d3c0261f848d4b04ffac94ff6758ae48f29"
+    }
+  ],
+  "reference_contract": "Offsets and source hashes belong to this locale bundle. Static fact source seq0 is an authoring placeholder; use authoritative material_activation and runtime projection.",
+  "public_session_language_field": "owned assembly only; shared work_language wiring pending the coordinator input"
+}

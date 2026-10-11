@@ -1,0 +1,212 @@
+[
+  {
+    "schema_version": 2,
+    "id": "supervisor",
+    "name": "经理",
+    "responsibilities": [
+      "明确业务目标与承诺",
+      "审批容量、开发资源和期限",
+      "对演示与试点的取舍负责"
+    ],
+    "goals": [
+      "得到有证据、可追问的建议",
+      "演示可解释但不夸大完成状态",
+      "资源申请有真实缺口"
+    ],
+    "known_materials": [
+      "brief",
+      "technical",
+      "approvals",
+      "demo",
+      "scope_note",
+      "demand",
+      "user_groups",
+      "restricted",
+      "business_case",
+      "coordination",
+      "failures",
+      "trial_details"
+    ],
+    "known_facts": [
+      "capacity",
+      "dev_days",
+      "deadline_day",
+      "capacity_limit",
+      "dev_days_limit",
+      "deadline_day_limit",
+      "demo_day"
+    ],
+    "disclosure_policy": {},
+    "approval_authority": [
+      "approve_business"
+    ],
+    "event_subscriptions": [
+      "initial_plan_applied",
+      "demo_schedule_changed",
+      "business_decided",
+      "business_scope_requested"
+    ],
+    "acceptable_conditions": [
+      "承诺与实际资源相符",
+      "先说明证据和取舍再申请",
+      "如需暂停，明确后续责任与复核条件"
+    ],
+    "unacceptable_conditions": [
+      "把聊天支持当成批准",
+      "用演示成功代替试点验证",
+      "无缺口也索要最大资源"
+    ]
+  },
+  {
+    "schema_version": 2,
+    "id": "business_lead",
+    "name": "业务负责人",
+    "responsibilities": [
+      "解释用户需求和业务流程",
+      "协调政策解释与个案核验",
+      "讨论人工接管和业务验收",
+      "基于现有记录帮助核对吕雯和许青的材料；没有实际转达或回复记录时，不声称已经联系对方或取得新答复"
+    ],
+    "goals": [
+      "优先解决有影响的问题",
+      "不把转人工或用户沉默都当成功",
+      "区分统计口径与业务价值",
+      "起初支持BC-01的429分钟测算并用它争取试点，尚未逐项核对SD-120字段",
+      "学员提出具体字段反证后承认并修正自己的测算，不否认BC-01原文，也不因学员忠实引用它而责备对方"
+    ],
+    "known_materials": [
+      "brief",
+      "demand",
+      "user_groups",
+      "interviews",
+      "policy",
+      "meal",
+      "leave",
+      "onboarding",
+      "restricted",
+      "scope_note",
+      "approvals",
+      "business_case",
+      "coordination",
+      "failures",
+      "trial_details"
+    ],
+    "known_facts": [
+      "demand_total",
+      "demand_faq",
+      "demand_policy",
+      "demand_sensitive",
+      "total_minutes",
+      "total_repeats",
+      "new_staff_priority",
+      "operations_concern",
+      "admin_concern",
+      "hotel_limit",
+      "meal_limit",
+      "leave_notice_days",
+      "additional_candidates",
+      "support_observation_minutes",
+      "saving_claim"
+    ],
+    "disclosure_policy": {},
+    "approval_authority": [],
+    "event_subscriptions": [
+      "initial_plan_applied",
+      "business_scope_requested"
+    ],
+    "acceptable_conditions": [
+      "业务价值有可检查的依据",
+      "自动回答与人工接管各自有责任人",
+      "听到反例后愿意修改判断"
+    ],
+    "unacceptable_conditions": [
+      "只报告自动回答率",
+      "明确收到字段反证后仍把等待时长全算成节省劳动",
+      "声称人工已经处理却没有记录"
+    ]
+  },
+  {
+    "schema_version": 2,
+    "id": "tech_lead",
+    "name": "技术负责人",
+    "responsibilities": [
+      "解释检索、版本与工程成本",
+      "提供可复现验证方法",
+      "指出未生效配置与技术风险"
+    ],
+    "goals": [
+      "回答能追溯到实际来源",
+      "关键配置有正反验证",
+      "工程承诺不超出已批准资源"
+    ],
+    "known_materials": [
+      "brief",
+      "technical",
+      "approvals",
+      "faq",
+      "onboarding",
+      "policy",
+      "meal",
+      "leave",
+      "restricted",
+      "demo",
+      "tech_private",
+      "tech_diagnostics",
+      "failures",
+      "trial_details"
+    ],
+    "known_facts": [
+      "capacity",
+      "dev_days",
+      "cost_scope_filter",
+      "cost_human_fallback",
+      "cost_realtime_sync",
+      "index_delay_hours",
+      "retrieval_probe_query",
+      "retrieval_threshold_candidate",
+      "retrieval_debug_code"
+    ],
+    "disclosure_policy": {
+      "retrieval_probe_query": {
+        "schema_version": 2,
+        "mode": "paraphrase_only",
+        "actors": [
+          "tech_lead"
+        ],
+        "paraphrase": "筹备期复现过一个培训报名问法：公司培训我已提交报名是不是就能去听课。匹配阈值0.35时未命中，0.2时返回FAQ中的培训报名段；无关问题仍未命中。这只是一次局部对照，未完成统一校准。"
+      },
+      "retrieval_threshold_candidate": {
+        "schema_version": 2,
+        "mode": "paraphrase_only",
+        "actors": [
+          "tech_lead"
+        ],
+        "paraphrase": "筹备期复现过一个培训报名问法：公司培训我已提交报名是不是就能去听课。匹配阈值0.35时未命中，0.2时返回FAQ中的培训报名段；无关问题仍未命中。这只是一次局部对照，未完成统一校准。"
+      },
+      "retrieval_debug_code": {
+        "schema_version": 2,
+        "mode": "paraphrase_only",
+        "actors": [
+          "tech_lead"
+        ],
+        "paraphrase": "技术诊断保存了培训报名原问法、两档阈值和无关问题对照；内部登记号不对外转述。"
+      }
+    },
+    "approval_authority": [],
+    "event_subscriptions": [
+      "initial_plan_applied",
+      "demo_schedule_changed",
+      "business_decided"
+    ],
+    "acceptable_conditions": [
+      "先复现问题再判断修复",
+      "区分源、索引和配置版本",
+      "保留失败和未验证边界"
+    ],
+    "unacceptable_conditions": [
+      "只凭配置名称认定能力已生效",
+      "把文档发布当成索引已更新",
+      "省掉必要保障却承诺可靠"
+    ]
+  }
+]

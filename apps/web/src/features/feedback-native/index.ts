@@ -12,6 +12,8 @@ import {
   ruleItems,
   type PurposeChoice,
 } from './short-summary';
+import { evaluationVersionLine } from './evaluation-version';
+import { sealReadOnly } from './read-only-notice';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 
 export type SelectedProduct = Pick<
@@ -523,6 +525,7 @@ export function mountNativeFeedback(
     const purposeLine = reviewedAs(review, language);
     if (purposeLine) panel.append(el('p', purposeLine, 'muted'));
     refs(panel, [report.subject]);
+    panel.append(evaluationVersionLine(doc, report, language));
     if (report.subject.kind === 'review') {
       if (review) {
         panel.append(
@@ -913,6 +916,11 @@ export function mountNativeFeedback(
       failure.textContent = '';
     }
     lastReadError = state.error;
+    sealReadOnly(
+      { notice, reports, revisions, failedNote, retry: retryFeedback },
+      state.readOnly === true,
+      language,
+    );
   }
   const unsubscribe = adapter.subscribe(render);
   render();

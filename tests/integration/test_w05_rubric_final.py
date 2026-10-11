@@ -1,5 +1,6 @@
-"""Final definition and diagnostic coverage; installed evaluator remains unchanged."""
+"""Final definition, its installation for new sessions and diagnostic coverage."""
 
+import hashlib
 import json
 import os
 import subprocess
@@ -166,8 +167,11 @@ def test_no_go_preserves_applicable_duties_and_reports_coverage(
     assert summary["denominator"] == 100 and summary["single_total_score"] is None
     assert summary["weight_definition_revision"] == "rubric-v2-final-20261009"
     assert summary["weight_definition_sha256"]
-    assert summary["definition_installed"] is False
-    assert summary["source_provenance"]["evaluation_version"] == "feedback-rubric-v2-c2.1"
+    # The installed packages now bind the final rubric for new sessions (task 126).
+    assert summary["definition_installed"] is True
+    assert summary["source_provenance"]["evaluation_version"] == "feedback-rubric-v2-final.1"
+    installed = session.app.state.scenario_v2.package.root / "runtime/evaluation.json"
+    assert report.evaluation.sha256 == hashlib.sha256(installed.read_bytes()).hexdigest()
     projected, partial = project_feedback_content(
         report.model_dump(mode="json"), lambda ref: ref["kind"] != "material", limited_scope=True
     )
