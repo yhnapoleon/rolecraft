@@ -223,6 +223,24 @@ describe.each(['zh', 'en'] as const)('first screen from the reply structure (%s)
     );
   });
 
+  it('P2-6: never shows Markdown table rows on the first screen', () => {
+    const head = LOCAL[language].split('\n')[0];
+    const table = '| 试验 | 提问 | 状态 |\n| --- | --- | --- |\n| Q01 | 会议室 | 已作答 |';
+    const onlyTable = presentReply(`${head}\n[Trials · v1] ${table}`, { generationMode: 'local' });
+    expect(onlyTable).toMatchObject({ derived: true, sourceCount: 1 });
+    expect(onlyTable.summary).toBe(
+      language === 'zh'
+        ? '首条引用是表格，引用 1 份资料，见原文。'
+        : 'The first cited passage is a table; sources cited: 1. See the full reply.',
+    );
+    const after = language === 'zh' ? '表格之后的说明。' : 'The note after the table.';
+    const withProse = presentReply(`${head}\n[Trials · v1] ${table}\n${after}`, {
+      generationMode: 'local',
+    });
+    expect(withProse).toMatchObject({ summary: after, source: 'Trials · v1', derived: false });
+    expect(withProse.summary).not.toContain('|');
+  });
+
   it('describes a local reply without any quoted passage from its structure', () => {
     const reply = [
       LOCAL[language].split('\n')[0],

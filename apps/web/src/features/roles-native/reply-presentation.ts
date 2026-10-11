@@ -40,6 +40,7 @@ const zh = {
   noPassageListed: '这次回复没有直接相关的原文摘录，列出了 {n} 份可参考资料。',
   longReply: '完整回复较长，引用 {n} 份资料。',
   longExcerpt: '首条引用的原文较长，引用 {n} 份资料，见原文。',
+  tableExcerpt: '首条引用是表格，引用 {n} 份资料，见原文。',
   longReplyUncited: '完整回复较长。',
 };
 const COPY: CopyTable<keyof typeof zh> = {
@@ -59,6 +60,7 @@ const COPY: CopyTable<keyof typeof zh> = {
       'This reply quotes no directly related passage; sources listed for reference: {n}.',
     longReply: 'The full reply is long; sources cited: {n}.',
     longExcerpt: 'The first cited passage is long; sources cited: {n}. See the full reply.',
+    tableExcerpt: 'The first cited passage is a table; sources cited: {n}. See the full reply.',
     longReplyUncited: 'The full reply is long.',
   },
 };
@@ -108,7 +110,10 @@ function leading(fragment: string): string | undefined {
 /** The reply's first cited passage: one rule-checked excerpt or recorded decision with its
  * source. The backend orders citations (decisions on the asked subject, newer notices,
  * then initial materials; recalled questions last), so only the first is considered. */
-function firstPassage(reply: string): Chosen {
+/** Markdown table rows are kept in the full reply but are not readable as a first line. */
+const TABLE_ROW = /^\s*\|/;
+
+function firstFragment(reply: string) {
   const lines = reply.split('\n');
   const start = lines.findIndex((line) => PASSAGE.test(line));
   const match = start < 0 ? null : PASSAGE.exec(lines[start]);
@@ -118,8 +123,15 @@ function firstPassage(reply: string): Chosen {
     if (line.startsWith('[') || CITES.test(line)) break;
     body.push(line);
   }
-  const shown = leading(body.join('\n').split(GAP)[0]);
-  return shown ? { summary: shown, source: match[1] } : undefined;
+  const rows = body.join('\n').split(GAP)[0].split('\n');
+  const prose = rows.filter((row) => !TABLE_ROW.test(row));
+  return { source: match[1], text: prose.join('\n'), table: prose.length < rows.length };
+}
+
+function firstPassage(reply: string): Chosen {
+  const fragment = firstFragment(reply);
+  const shown = fragment && leading(fragment.text);
+  return fragment && shown ? { summary: shown, source: fragment.source } : undefined;
 }
 
 /** A model reply leads with one observation or question and its conditions. */
@@ -145,11 +157,11 @@ export function presentReply(reply: string, context: ReplyPresentationContext): 
   const local = context.generationMode === 'local';
   // A derived line says only what the structure shows: "no excerpt" only when no
   // passage is cited at all, otherwise that the cited text is too long to lead with.
-  const cited = whole.split('\n').some((line) => PASSAGE.test(line));
+  const fragment = firstFragment(whole);
   const summary =
     chosen?.summary ??
-    (local && cited
-      ? text('longExcerpt', { n: sourceCount })
+    (local && fragment
+      ? text(fragment.table ? 'tableExcerpt' : 'longExcerpt', { n: sourceCount })
       : local
         ? sourceCount
           ? text('noPassageListed', { n: sourceCount })

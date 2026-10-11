@@ -81,10 +81,14 @@ _LOCAL_TEXT = {
         "granted": "生效资源：{}。",
         "offered": "还价条件：{}。",
         "item_sep": "、",
-        "amount": "{} {}",
         "supersedes": "{}以本决定为准；初始资料中的数字是原始委托。",
         # Same names as the approval rules; scenario-owned policy code stays untouched.
         "resources": {"capacity": "容量", "dev_days": "开发人日", "deadline_day": "正式试点期限"},
+        "amounts": {
+            "capacity": "容量 {} 人",
+            "dev_days": "开发人日 {}",
+            "deadline_day": "正式试点期限 第{}天",
+        },
     },
     "en": {
         "no_match": "No passage directly related to this question was found in the local sources.",
@@ -101,7 +105,6 @@ _LOCAL_TEXT = {
         "granted": "Effective resources: {}.",
         "offered": "Counteroffer terms: {}.",
         "item_sep": ", ",
-        "amount": "{} {}",
         "supersedes": (
             "This decision supersedes the initial materials for {}; "
             "their figures are the original brief."
@@ -110,6 +113,11 @@ _LOCAL_TEXT = {
             "capacity": "Capacity",
             "dev_days": "Developer-days",
             "deadline_day": "Pilot deadline day",
+        },
+        "amounts": {
+            "capacity": "Capacity {} people",
+            "dev_days": "Developer-days {}",
+            "deadline_day": "Pilot deadline day {}",
         },
     },
 }
@@ -260,7 +268,7 @@ def _decision_text(value, language, *, note=True):
 
     def terms(values):
         return words["item_sep"].join(
-            words["amount"].format(labels.get(key, key), amount)
+            words["amounts"].get(key, labels.get(key, key) + " {}").format(amount)
             for key, amount in sorted(values.items())
         )
 
@@ -275,12 +283,6 @@ def _decision_text(value, language, *, note=True):
     if note and isinstance(value.get("reason"), str) and value["reason"].strip():
         parts.append(value["reason"].strip())
     return "".join(parts) if language == "zh" else " ".join(parts)
-
-
-def _states_figure(text, label):
-    """True when `text` gives a number for the resource called `label`."""
-    pattern = re.escape(label)
-    return bool(re.search(pattern + r".{0,12}?\d", text) or re.search(r"\d.{0,6}?" + pattern, text))
 
 
 def _readable_source(source, language):
@@ -366,9 +368,11 @@ class LocalRoleModel:
         granting = {}
         matching = {}
         arrival = {}
+        origin = {}
         recalled = set()
-        for _, source in sources:
+        for index, source in sources:
             name = source["display_name"]
+            origin[name] = min(origin.get(name, index), index)
             if name not in groups:
                 # At most four documents; decisions and the recalled conversation are few
                 # and keep continuity, so they never take a document's place.
@@ -418,33 +422,42 @@ class LocalRoleModel:
         best_of = {name: max(x[0] for x in chosen[name]) for name in cited_docs}
         top = max(best_of.values(), default=0)
 
+        def text_of(name):
+            return " ".join(c for _, _, c in chosen[name])
+
+        def later(name):
+            return arrival.get(name, start) > start
+
+        # The best initial passages; an update without a figure does not displace one that
+        # gives the figure asked about (e.g. the deadline day stays ahead of "still follows").
+        figures = any(
+            re.search(r"\d", text_of(name))
+            for name in cited_docs
+            if best_of[name] == top and not later(name)
+        )
+
         def leads(name):
-            # A later notice leads when it is about what was asked: at least half as many
-            # of the question's terms as the best passage, and two unless only one matches.
+            # A later notice leads when it is about what was asked: at least two of the
+            # question's terms and half as many as the best passage, and a figure if the
+            # initial passage it would displace gives one.
             hits = best_of[name]
-            later = arrival.get(name, start) > start
-            return later and hits * 2 >= top and (hits >= 2 or top <= 1)
+            figure = bool(re.search(r"\d", text_of(name))) or not figures
+            return later(name) and hits >= 2 and hits * 2 >= top and figure
 
         documents = sorted(
             cited_docs,
-            key=lambda name: (not leads(name), -best_of[name], list(groups).index(name)),
+            # On a tie, an update that does not lead follows the initial materials.
+            key=lambda name: (not leads(name), -best_of[name], later(name), origin[name]),
         )
         for name in documents:
             text = " ".join(c for _, _, c in chosen[name]).casefold()
-            before, after = [], []
+            order.append(name)
+            # A decision on a resource this passage names follows it; it leads only when the
+            # question shares a term with what was decided (status, resource, amount, unit).
             for other in groups:
                 if kinds[other] != 0 or other in order:
                     continue
-                # A passage giving a figure for a resource the decision put into effect is
-                # superseded by it, so the decision comes first; a passage that only names
-                # the resource keeps its place and the decision follows it.
-                figure = pick(
-                    other,
-                    lambda x, other=other, text=text: any(
-                        _states_figure(text, label) for label in granting[other][x[1]]
-                    ),
-                )
-                rows = figure or pick(
+                rows = pick(
                     other,
                     lambda x, other=other, text=text: any(
                         label in text for label in granting[other][x[1]]
@@ -452,8 +465,7 @@ class LocalRoleModel:
                 )
                 if rows:
                     chosen[other] = rows
-                    (before if figure else after).append(other)
-            order.extend([*before, name, *after])
+                    order.append(other)
         # A recalled earlier question is context: cited only after something else.
         if order:
             order.extend(name for name in groups if kinds[name] == 2 and chosen[name])

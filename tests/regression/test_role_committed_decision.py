@@ -230,3 +230,25 @@ def test_newer_notice_is_admitted_before_initial_materials() -> None:
         text = local_reply(language, [*initial, later], question)
         cited = [line for line in text.splitlines() if line.startswith("[")]
         assert cited[0] == f"[Notice · v2] {notice}", text
+
+
+SCOPE_Q = {"zh": "试点范围应该怎么定？", "en": "How should we set the pilot scope?"}
+INVITE_Q = {"zh": "可以邀请更多人参加试点吗？", "en": "Can we invite more people to the pilot?"}
+DEADLINE_Q = {"zh": "正式试点期限是第几天？", "en": "Which day is the pilot deadline?"}
+DEADLINE = {"zh": "第7天", "en": "day 7"}
+
+
+def test_notice_needs_two_terms_and_keeps_given_figures_first(
+    published_session: PublishedSession,
+) -> None:
+    """P2-5: the attendee notice shares one generic word with scope or invitation
+    questions and must not lead; for the deadline the brief's figure stays first."""
+    session = published_session
+    language = session.language
+    approve_capacity(session, 50)
+    for key, question in [("scope", SCOPE_Q[language]), ("invite", INVITE_Q[language])]:
+        cited = ask(session, key, question)
+        assert not cited or not cited[0].startswith(NOTICE[language]), cited
+    for key, question in [("deadline", DEADLINE_Q[language]), ("keyword", KEYWORD[language])]:
+        cited = ask(session, key, question)
+        assert DEADLINE[language] in cited[0], cited

@@ -59,6 +59,7 @@ async function ask(browser, question) {
   await browser.submit('.composer');
   // On a loaded machine the shared SQLite store can stall a read; the composer then keeps
   // the unsent text, as it would for a learner, who sends it again.
+  let resends = 0;
   for (let attempt = 0; ; attempt++) {
     try {
       await waitFor(browser, `${same}.length > ${count}`, 30000);
@@ -70,12 +71,13 @@ async function ask(browser, question) {
       if (attempt > 1 || !unsent) throw error;
       await waitFor(browser, `${host}.snapshot().busy === false`, 60000);
       await browser.submit('.composer');
+      resends++;
     }
   }
   await waitFor(browser, `!!${same}.at(-1)?.querySelector('.rc-roles__reply')`, 60000);
   await delay(300);
   await waitFor(browser, `!!${same}.at(-1)?.querySelector('.rc-roles__reply')`, 15000);
-  return browser.ev(`(() => {
+  const shown = await browser.ev(`(() => {
     const turn = ${same}.at(-1);
     const lead = turn.querySelector('.short-result__lead');
     return {
@@ -89,6 +91,8 @@ async function ask(browser, question) {
       full: turn.querySelector('.rc-roles__reply').textContent,
     };
   })()`);
+  // Resends are recorded so a run that needed them can be looked at again.
+  return { ...shown, resends };
 }
 /** A new practice from the normal entry, in a clean browser store. */
 async function enterFresh(browser, language) {
@@ -237,10 +241,18 @@ for (const language of ['zh', 'en']) {
       `document.querySelector('[data-turn-id="${demo.id}"]')?.scrollIntoView({block:'center'})`,
     );
     await shot('colleague-after-approval-demo-day-desktop');
+    // P2-6: a cited Markdown table is never the first screen.
+    const scope = await ask(
+      browser,
+      t('试点范围应该怎么定？', 'How should we set the pilot scope?'),
+    );
+    assert.ok(!scope.lead.trimStart().startsWith('|') && !scope.lead.includes('---'), scope.lead);
+    await shot('colleague-after-approval-scope-desktop');
     for (const [name, reply] of [
       ['cover', cover],
       ['policy', policy],
       ['demo day', demo],
+      ['scope', scope],
     ])
       results.push({ language, check: `after approval: ${name}`, ...reply, full: undefined });
 
@@ -509,4 +521,5 @@ for (const language of ['zh', 'en']) {
   }
 }
 writeFileSync(`${out}/results.json`, JSON.stringify(results, null, 2));
-console.log(`short results: ${results.length} checks passed`);
+const resends = results.reduce((sum, r) => sum + (r.resends ?? 0), 0);
+console.log(`short results: ${results.length} checks passed; chat resends: ${resends}`);
