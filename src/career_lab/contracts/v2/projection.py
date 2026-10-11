@@ -299,6 +299,9 @@ def project_feedback_content(content, source_readable, *, limited_scope=False):
         data["next_options"] = ["可补充当前可访问的依据，或由具备权限的人核对。"]
     if not text_allowed("/independent_understanding"):
         data["independent_understanding"] = "unobserved"
+    if data.get("rule_items") != original.get("rule_items"):
+        # The stored range follows rule results this reader can no longer check; withhold it.
+        data.pop("score_range", None)
     if any(data.get(name) != original.get(name) for name in ("items", "rule_items")):
         applicable = [item for item in data["items"] if item["applicability"] == "applicable"]
         denominator = len(applicable)

@@ -9,8 +9,10 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
+from career_lab.api.feedback_provenance import attach_score_range
 from career_lab.contracts import v2 as C
 from career_lab.evidence.v2.preview import prepare_preview_feedback
+from career_lab.rubrics.v4.score_range import installed_rubric
 from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.v2_store import references
 from career_lab.storage.v2_tables import v2_snapshots
@@ -236,13 +238,14 @@ def create_feedback_handler(
         registered_model=engine_factory.identity if engine_factory is not None else None,
     )
     policies = tuple(CriterionPolicy(**p) for p in protocol["policies"])
+    rubric, rubric_sha256 = installed_rubric(module.package.root, bundle)
 
     def traced(plan, reader, engine):
         from dataclasses import replace
 
         from career_lab.storage.v2_store import FeedbackReadTrace
 
-        plan = attach_provenance(plan, provenance)
+        plan = attach_score_range(attach_provenance(plan, provenance), rubric, rubric_sha256)
         traces = []
         for write in plan.writes:
             at = C.FeedbackV2.model_validate(write.content).as_of
