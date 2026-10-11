@@ -1,0 +1,1230 @@
+{
+  "diagnostic_id": "TR-TRAIN-01",
+  "locale": "en",
+  "input_bundle_hash": "54efc63a9c3645b4847a38ab39cf6da089d448c20865ee943be91c96db5d123f",
+  "source_kind": "actual_module_trials_on_synthetic_scenario",
+  "records": [
+    {
+      "trial_id": "TR-TRAIN-01-a",
+      "label": "TR-TRAIN-01-a",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-TR-TRAIN-01-a",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 15,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-TR-TRAIN-01-a",
+          "session_id": "pre-event-TR-TRAIN-01-a",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "23729c329c2524caa2bfa39e524e9749b139d77abceaac8c35666a79bcd83298",
+        "session_id": "pre-event-TR-TRAIN-01-a",
+        "version": 1,
+        "query": "I've already signed up for company training. Does that mean I can simply turn up to attend the class?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.705324Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-TR-TRAIN-01-a",
+          "kind": "config",
+          "object_id": "trial-TR-TRAIN-01-a",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-TR-TRAIN-01-a",
+            "session_id": "pre-event-TR-TRAIN-01-a",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-TR-TRAIN-01-a",
+            "session_id": "pre-event-TR-TRAIN-01-a",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {
+            "participants": "requested_participants_exceed_approved_capacity"
+          }
+        },
+        "status": "fallback",
+        "answer": "No sufficiently supported passage was retrieved. Please ask a person to check.",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "no_retrieval_hit"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "54efc63a9c3645b4847a38ab39cf6da089d448c20865ee943be91c96db5d123f",
+        "created_at": "2026-10-07T10:05:01.705324+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "6c9880a1d8556619544c24b5350251eae37721f41adbdb1764ecc8b3b7068eaf",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "TR-TRAIN-01-current",
+      "label": "TR-TRAIN-01-current",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-TR-TRAIN-01-current",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 15,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-TR-TRAIN-01-current",
+          "session_id": "pre-event-TR-TRAIN-01-current",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.3,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "8a8ebced060601f6dd7a7bd9ed81729c287095efeea64f8858933aa0d82f6007",
+        "session_id": "pre-event-TR-TRAIN-01-current",
+        "version": 1,
+        "query": "I've already signed up for company training. Does that mean I can simply turn up to attend the class?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.706437Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-TR-TRAIN-01-current",
+          "kind": "config",
+          "object_id": "trial-TR-TRAIN-01-current",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-TR-TRAIN-01-current",
+            "session_id": "pre-event-TR-TRAIN-01-current",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-TR-TRAIN-01-current",
+            "session_id": "pre-event-TR-TRAIN-01-current",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.3,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {
+            "participants": "requested_participants_exceed_approved_capacity"
+          }
+        },
+        "status": "fallback",
+        "answer": "No sufficiently supported passage was retrieved. Please ask a person to check.",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "no_retrieval_hit"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "54efc63a9c3645b4847a38ab39cf6da089d448c20865ee943be91c96db5d123f",
+        "created_at": "2026-10-07T10:05:01.706437+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.3,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "6f9a43b4dd966a8f8257bd75369a56699fef5446c1c988fe678fdaaba7accc5c",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "TR-TRAIN-01-b",
+      "label": "TR-TRAIN-01-b",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-TR-TRAIN-01-b",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 15,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-TR-TRAIN-01-b",
+          "session_id": "pre-event-TR-TRAIN-01-b",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.2,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "6635f48747e3ea98c60ce50e932f1501556057bd7e1cf671ece3dafb09c1c815",
+        "session_id": "pre-event-TR-TRAIN-01-b",
+        "version": 1,
+        "query": "I've already signed up for company training. Does that mean I can simply turn up to attend the class?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.707353Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "83beb9443e27ff85537e0ac65896c710ec90e579ca2179f1976e4889950fca34",
+              "material_id": "faq",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-TR-TRAIN-01-b",
+                "kind": "material",
+                "object_id": "faq",
+                "version": 1,
+                "config_version": null,
+                "span_start": 678,
+                "span_end": 899,
+                "quote": "Device repair: give the internal service desk the device ID, fault symptoms, steps already tried and a time when you can be contacted. Keep the ticket number. Repair instructions do not mean the repair has been completed.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.2222222222222222
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-TR-TRAIN-01-b",
+          "kind": "config",
+          "object_id": "trial-TR-TRAIN-01-b",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-TR-TRAIN-01-b",
+            "session_id": "pre-event-TR-TRAIN-01-b",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.2,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-TR-TRAIN-01-b",
+            "session_id": "pre-event-TR-TRAIN-01-b",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.2,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {
+            "participants": "requested_participants_exceed_approved_capacity"
+          }
+        },
+        "status": "answered",
+        "answer": "Device repair: give the internal service desk the device ID, fault symptoms, steps already tried and a time when you can be contacted. Keep the ticket number. Repair instructions do not mean the repair has been completed.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-TR-TRAIN-01-b",
+            "kind": "material",
+            "object_id": "faq",
+            "version": 1,
+            "config_version": null,
+            "span_start": 678,
+            "span_end": 899,
+            "quote": "Device repair: give the internal service desk the device ID, fault symptoms, steps already tried and a time when you can be contacted. Keep the ticket number. Repair instructions do not mean the repair has been completed.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "stable_faq"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "54efc63a9c3645b4847a38ab39cf6da089d448c20865ee943be91c96db5d123f",
+        "created_at": "2026-10-07T10:05:01.707353+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "83beb9443e27ff85537e0ac65896c710ec90e579ca2179f1976e4889950fca34"
+        ],
+        "tuning": {
+          "min_score": 0.2,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "24e08c7f586b1ff46561bc4165c235cf418ce1e7ad04ab9992a38ddbe65ddd8a",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "TR-TRAIN-01-control",
+      "label": "TR-TRAIN-01-control",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-TR-TRAIN-01-control",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 15,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-TR-TRAIN-01-control",
+          "session_id": "pre-event-TR-TRAIN-01-control",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.2,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "4873c0c7a711b3061b759883220c8c66708caa6dd34b9b50c9468d2835bb9c91",
+        "session_id": "pre-event-TR-TRAIN-01-control",
+        "version": 1,
+        "query": "What makes up Neptune's atmosphere?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-07T10:05:01.708225Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-TR-TRAIN-01-control",
+          "kind": "config",
+          "object_id": "trial-TR-TRAIN-01-control",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-TR-TRAIN-01-control",
+            "session_id": "pre-event-TR-TRAIN-01-control",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.2,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-TR-TRAIN-01-control",
+            "session_id": "pre-event-TR-TRAIN-01-control",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.2,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {
+            "participants": "requested_participants_exceed_approved_capacity"
+          }
+        },
+        "status": "fallback",
+        "answer": "No sufficiently supported passage was retrieved. Please ask a person to check.",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "no_retrieval_hit"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "54efc63a9c3645b4847a38ab39cf6da089d448c20865ee943be91c96db5d123f",
+        "created_at": "2026-10-07T10:05:01.708225+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.2,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "d8b3b5e475fba52ad19819f53699feb7a2646c40f4685f07dc03b6dd9e7aa1f8",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    }
+  ],
+  "calibrated_threshold": false
+}

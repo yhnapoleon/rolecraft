@@ -19,6 +19,23 @@
       "legacy_rules_sha256": [
         "5671f98dcd587c0f4f6eea4d1b429eef575d3d123137bf5319e307719127852f"
       ]
+    },
+    "feedback-rubric-v2-final.1": {
+      "protocol_signatures": {
+        "zh": [
+          "edd15f2d8352ec5c224fc38387649649d773799cdc484e662604d3655f037b87"
+        ],
+        "en": [
+          "9bf82b02508721e4f9cae34c3052f95a84c70e86bb3cb6b7187af426b5cc3d89"
+        ]
+      },
+      "prompt_version": "grounded-feedback-bilingual-v1",
+      "comparison_baseline_sha256": "800d1c602bf84cdf0adb482cdcbefdb25bfe604daf1c6485cfacddf1af7a8464",
+      "engine_baseline_sha256": "7b9d79e92355e98f1160f35219ac104bdc90bd05a32edfeb484adf68da21f891",
+      "rubric": {
+        "revision": "rubric-v2-final-20261009",
+        "sha256": "aa0de4302ca42368a262dc516fd3d8dab83286dd10dff7350c35b0c3772321cd"
+      }
     }
   }
 }

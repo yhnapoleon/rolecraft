@@ -1,24 +1,24 @@
 {
   "schema_version": 1,
-  "revision": "semantic-rules-v1",
+  "revision": "rubric-final-v1",
   "main": {
     "zh": {
-      "root": "scenarios/pm_pilot/v2/candidates/semantic-rules-v1-2.9.6/pm_pilot",
-      "scenario_hash": "bd1ef5c631a58029c8644b763a586def167cd3add1af4a458ed85a88a973191a",
+      "root": "scenarios/pm_pilot/v2/candidates/rubric-final-v1-2.9.6/pm_pilot",
+      "scenario_hash": "6b4cbd6aa534b0c16101b464e53bdb53ad15e396755f91e47a7ec88b58ed2057",
       "evaluation": {
         "schema_version": 2,
         "path": "runtime/evaluation.json",
-        "sha256": "f3d784e8ed9fdda097f91e35321a6a43346f883a98b0d6082c59054536480aeb",
+        "sha256": "946574476f8141efc23d76afb4ce423739f41b123153d65d361831a4690d511d",
         "media_type": "application/json"
       }
     },
     "en": {
-      "root": "scenarios/pm_pilot/v2/candidates/semantic-rules-v1-2.9.6/pm_pilot/locales/en",
-      "scenario_hash": "42ad28a0285f453828c056e0864afd612b526b5c01ac337dec79b91d9ce95dee",
+      "root": "scenarios/pm_pilot/v2/candidates/rubric-final-v1-2.9.6/pm_pilot/locales/en",
+      "scenario_hash": "420afb709e140b148ab280f0211041a4e7b2f51834ef4bbce3621575962e5586",
       "evaluation": {
         "schema_version": 2,
         "path": "runtime/evaluation.json",
-        "sha256": "7a5b80d1ba284329a3e92de28fed2d3272270d05b42c683c73070531c62b7c80",
+        "sha256": "d6f9d728187618d993161f1f515e8947f7269ba594c90fe88ed5c94031b9f65c",
         "media_type": "application/json"
       }
     }
@@ -35,7 +35,8 @@
     "rubric-v2-c2/pm_pilot (2.9.2)",
     "rubric-v2-c2-2.9.3/pm_pilot",
     "rubric-v2-c2-2.9.4 (all six language packages)",
-    "rubric-v2-a577-2.9.5 (all six language packages)"
+    "rubric-v2-a577-2.9.5 (all six language packages)",
+    "semantic-rules-v1-2.9.6 (all six language packages)"
   ],
   "catalog": "tests/regression/published-catalog.json",
   "previous_catalog": "tests/regression/published-catalog-legacy.json"

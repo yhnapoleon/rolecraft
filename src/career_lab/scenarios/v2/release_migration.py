@@ -13,11 +13,22 @@ from career_lab.contracts.v2 import (
     canonical,
 )
 from career_lab.contracts.v2.provenance import CodeIdentity
-from career_lab.rubrics.v4.rubric_v2 import load_installed_policies, rules_document
+from career_lab.rubrics.evaluation_identity import FINAL_EVALUATION_VERSION
+from career_lab.rubrics.v4.final_rubric import (
+    FINAL_RUBRIC_REVISION,
+    final_definition_bytes,
+    final_policies,
+)
+from career_lab.rubrics.v4.rubric_v2 import (
+    final_rules_document,
+    load_installed_policies,
+    rules_document,
+)
 from career_lab.runtime.provenance import execution_identity
 
 from .loader import ScenarioPackage, load_package
 from .release import (
+    EVALUATION_VERSION,
     GENERATED,
     RELEASE_PATH,
     ROOT,
@@ -28,6 +39,12 @@ from .release import (
     require_evaluation,
     sha,
 )
+
+RUBRIC_PATH = "runtime/evaluation-rubric.json"
+RULES_PATH = "runtime/evaluation-rules.json"
+PROTOCOL_PATH = "runtime/evaluation-protocol.json"
+# Explicit target evaluations a formal rebind may install. None keeps the source evaluation.
+EVALUATION_TARGETS = {FINAL_RUBRIC_REVISION: FINAL_EVALUATION_VERSION}
 
 
 def _copy_members(package: ScenarioPackage, destination: Path) -> None:
@@ -68,35 +85,72 @@ def _write_evaluation(destination: Path, language: str) -> str:
         destination, FileRef(path=path, sha256=sha(raw)), work_language=language
     )
     previous = EvaluationBundle.model_validate_json(raw)
-    rules_path = "runtime/evaluation-rules.json"
+    rules_path = RULES_PATH
     rules_raw = (canonical(rules_document()) + "\n").encode()
     (destination / rules_path).write_bytes(rules_raw)
     evaluation = previous.model_copy(
         update={"rules": FileRef(path=rules_path, sha256=sha(rules_raw))}
     )
     (destination / path).write_text(evaluation.model_dump_json(indent=2) + "\n")
-    return require_evaluation(destination, evaluation, language=language)
+    return require_evaluation(destination, evaluation, EVALUATION_VERSION, language=language)
 
 
-def _write_manifest(package: ScenarioPackage, destination: Path) -> None:
+def _write_final_evaluation(destination: Path, language: str) -> EvaluationBundle:
+    """Bind the approved final rubric through generated files only; content stays as copied."""
+    path = "runtime/evaluation.json"
+    raw = (destination / path).read_bytes()
+    # The source must hold a valid installed evaluation before it is replaced.
+    load_installed_policies(
+        destination, FileRef(path=path, sha256=sha(raw)), work_language=language
+    )
+    previous = EvaluationBundle.model_validate_json(raw)
+    if previous.protocol.path != PROTOCOL_PATH or previous.mode != "advisory":
+        raise ProtocolError("rubric_final_installation_mismatch", status=409)
+    rubric_raw = final_definition_bytes()
+    (destination / RUBRIC_PATH).write_bytes(rubric_raw)
+    rules_raw = (canonical(final_rules_document()) + "\n").encode()
+    (destination / RULES_PATH).write_bytes(rules_raw)
+    protocol = json.loads((destination / PROTOCOL_PATH).read_bytes())
+    protocol["policies"] = [policy.to_dict() for policy in final_policies(work_language=language)]
+    (destination / PROTOCOL_PATH).write_text(
+        json.dumps(protocol, ensure_ascii=False, indent=2) + "\n"
+    )
+    evaluation = previous.model_copy(
+        update={
+            "revision": FINAL_RUBRIC_REVISION,
+            "rubric": FileRef(path=RUBRIC_PATH, sha256=sha(rubric_raw)),
+            "rules": FileRef(path=RULES_PATH, sha256=sha(rules_raw)),
+            "protocol": FileRef(
+                path=PROTOCOL_PATH, sha256=sha((destination / PROTOCOL_PATH).read_bytes())
+            ),
+        }
+    )
+    (destination / path).write_text(evaluation.model_dump_json(indent=2) + "\n")
+    ref = FileRef(path=path, sha256=sha((destination / path).read_bytes()))
+    if load_installed_policies(destination, ref, work_language=language) != final_policies(
+        work_language=language
+    ):
+        raise ProtocolError("rubric_final_installation_mismatch", status=409)
+    return evaluation
+
+
+def _write_manifest(
+    package: ScenarioPackage, destination: Path, extra: tuple[str, ...] = ()
+) -> None:
+    appended = (RELEASE_PATH, RULES_PATH, *extra)
     files = tuple(
         ref.model_copy(update={"sha256": sha((destination / ref.path).read_bytes())})
         for ref in package.bundle.files
-        if ref.path not in {RELEASE_PATH, "runtime/evaluation-rules.json"}
+        if ref.path not in appended
     )
     files += tuple(
-        FileRef(path=path, sha256=sha((destination / path).read_bytes()))
-        for path in (RELEASE_PATH, "runtime/evaluation-rules.json")
+        FileRef(path=path, sha256=sha((destination / path).read_bytes())) for path in appended
     )
     # Scenario revision belongs to authored scenario.yaml and stays byte-for-byte unchanged.
     bundle = package.bundle.model_copy(
         update={
             "files": files,
-            "private_files": tuple(
-                dict.fromkeys(
-                    (*package.bundle.private_files, RELEASE_PATH, "runtime/evaluation-rules.json")
-                )
-            ),
+            "private_files": tuple(dict.fromkeys((*package.bundle.private_files, *appended))),
         }
     )
     (destination / "manifest.json").write_text(bundle.model_dump_json(indent=2) + "\n")
@@ -125,6 +179,7 @@ def _receipt(
     candidate: ScenarioPackage,
     release: ReleaseDescription,
     changed: list[str],
+    added: tuple[str, ...] = (),
 ) -> dict[str, object]:
     return {
         "source_scenario_hash": package.content_hash,
@@ -135,7 +190,7 @@ def _receipt(
         "evaluation_version": release.evaluation_version,
         "allowed_generated_files": sorted(GENERATED),
         "changed_generated_files": sorted(
-            set(changed) | {RELEASE_PATH, "manifest.json", "runtime/evaluation-rules.json"}
+            set(changed) | {RELEASE_PATH, "manifest.json", RULES_PATH} | set(added)
         ),
         "content_files": content_files(candidate),
         "authored_content_unchanged": True,
@@ -154,7 +209,10 @@ def migrate(
     contract_revision: str,
     scenario_revision: str,
     runtime_revision: str,
+    evaluation: str | None = None,
 ) -> dict[str, object]:
+    if evaluation is not None and evaluation not in EVALUATION_TARGETS:
+        raise ProtocolError("evaluation_version_unsupported", status=409)
     source, destination = Path(source).resolve(), Path(destination).resolve()
     if destination.exists() or destination.is_relative_to(source):
         raise ProtocolError("rebind_destination_not_fresh", status=409)
@@ -172,13 +230,26 @@ def migrate(
     before = {ref.path: sha((source / ref.path).read_bytes()) for ref in package.bundle.files}
     original_manifest = (source / "manifest.json").read_bytes()
     _copy_members(package, destination)
-    signature = _write_evaluation(destination, package.locale)
-    release = release.model_copy(update={"evaluation_signature": signature})
+    added: tuple[str, ...] = ()
+    if evaluation is None and release.evaluation_version == FINAL_EVALUATION_VERSION:
+        # Without a target, an installed final rubric is kept: regenerated byte-identically.
+        evaluation = FINAL_RUBRIC_REVISION
+    if evaluation is None:
+        signature = _write_evaluation(destination, package.locale)
+        release = release.model_copy(update={"evaluation_signature": signature})
+    else:
+        version = EVALUATION_TARGETS[evaluation]
+        bundle = _write_final_evaluation(destination, package.locale)
+        signature = require_evaluation(destination, bundle, version, language=package.locale)
+        release = release.model_copy(
+            update={"evaluation_version": version, "evaluation_signature": signature}
+        )
+        added = tuple(path for path in (RUBRIC_PATH,) if path not in before)
     _write_runtime(destination, previous, release, runtime_revision, code)
-    _write_manifest(package, destination)
+    _write_manifest(package, destination, added)
     candidate = load_package(destination)
     changed = _verify_copy(package, candidate, before, original_manifest)
     from .module import ScenarioModule
 
     ScenarioModule(destination)
-    return _receipt(package, candidate, release, changed)
+    return _receipt(package, candidate, release, changed, added)

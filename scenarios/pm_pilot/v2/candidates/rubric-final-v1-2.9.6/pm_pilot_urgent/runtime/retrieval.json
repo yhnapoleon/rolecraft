@@ -1,0 +1,5 @@
+{
+  "mode": "meaningful_token_overlap",
+  "default_min_score": 0.35,
+  "calibration": "not_yet_established"
+}

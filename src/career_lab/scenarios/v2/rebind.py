@@ -92,7 +92,11 @@ def rebind(
     runtime_revision: str,
     tooling_baseline: str | None = None,
     protocol: str | None = None,
+    evaluation: str | None = None,
 ) -> dict[str, object]:
+    if evaluation is not None and protocol is None:
+        # Evaluation replacement is defined only for released packages.
+        raise ProtocolError("release_protocol_unsupported", status=409)
     if protocol is not None:
         from .release import PROTOCOL
         from .release_migration import migrate
@@ -105,6 +109,7 @@ def rebind(
             contract_revision=contract_revision,
             scenario_revision=scenario_revision,
             runtime_revision=runtime_revision,
+            evaluation=evaluation,
         )
     repo = Path(__file__).resolve().parents[4]
     source = Path(source).resolve()
@@ -339,6 +344,11 @@ def main(argv=None):
         help="Full Git commit for an explicitly authorized rebind-tool-only migration",
     )
     parser.add_argument("--protocol", choices=["scenario-release-v1"])
+    parser.add_argument(
+        "--evaluation",
+        choices=["rubric-v2-final-20261009"],
+        help="Explicitly install this approved rubric for new sessions (requires --protocol)",
+    )
     args = parser.parse_args(argv)
     try:
         result = rebind(
@@ -349,6 +359,7 @@ def main(argv=None):
             runtime_revision=args.runtime_revision,
             tooling_baseline=args.tooling_baseline,
             protocol=args.protocol,
+            evaluation=args.evaluation,
         )
         evidence = Path(args.output).parent / (Path(args.output).name + "-verification")
         evidence.mkdir()
