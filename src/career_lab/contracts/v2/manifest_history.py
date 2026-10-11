@@ -697,7 +697,10 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "preview and list later recorded business actions beside the unchanged prediction. "
             "Outcome actions may also name approval requests and submissions. Save-time checks "
             "follow the work purpose and task. Records and pages without previews retain "
-            "their bytes; reads never evaluate again."
+            "their bytes; reads never evaluate again. Recorded material versions are only those "
+            "the learner may open; finite-scope readers get resource values and material ids "
+            "withheld and learn only that those conditions changed. Lifecycle-only versions "
+            "with unchanged content do not make a preview stale."
         },
     },
 )
