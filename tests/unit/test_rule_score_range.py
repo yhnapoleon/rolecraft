@@ -290,8 +290,11 @@ def test_diagnostic_bounds_share_the_rule_interval():
 
 def test_feedback_without_a_range_keeps_its_bytes():
     example = ROOT / "docs/contracts/expansion-v3/examples/FeedbackV2.json"
-    raw = json.loads(example.read_text())
-    report = FeedbackV2.model_validate(raw)
+    original = example.read_bytes()
+    report = FeedbackV2.model_validate_json(original)
     assert report.score_range is None
-    assert "score_range" not in report.model_dump(mode="json")
-    assert json.loads(report.model_dump_json()) == raw
+    assert b"score_range" not in report.model_dump_json().encode()
+    # Written back exactly as the exporter writes examples, the bytes are identical.
+    data = report.model_dump(mode="json")
+    rewritten = json.dumps(data, ensure_ascii=False, sort_keys=True, indent=2) + "\n"
+    assert rewritten.encode("utf-8") == original
