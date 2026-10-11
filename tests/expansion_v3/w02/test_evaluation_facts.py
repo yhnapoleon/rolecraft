@@ -7,10 +7,16 @@ It does not manufacture rule facts, perform model calls or pretend to test worke
 from copy import deepcopy
 from dataclasses import replace, asdict
 from pathlib import Path
+from secrets import token_hex
+from types import SimpleNamespace
 import json
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 from career_lab.api.app import create_app
+from career_lab.api.vertical_runtime import configured_models
+from career_lab.jobs.worker import Worker
+from career_lab.rubrics.v4.rules_v2 import run_rules_v2
 from career_lab.api.modules import ExtensionRegistry, Operation
 from career_lab.contracts.v2 import (
     ObjectRef,
@@ -20,7 +26,7 @@ from career_lab.contracts.v2 import (
     SubmissionV2,
     SubmitInput,
 )
-from career_lab.scenarios.v2.module import ScenarioModule, point
+from career_lab.scenarios.v2.module import ScenarioModule, point, ref_for
 from career_lab.scenarios.v2.evaluation_facts import ScenarioFactAdapter, ScenarioEvidenceWindow
 from career_lab.workspace.extension import install_workspace_operations
 from career_lab.storage.v2_lifecycle import record_submission
@@ -389,3 +395,121 @@ def test_current_authorization_and_exact_submission_identity_are_required(histor
         )
     with pytest.raises(ProtocolError):
         h.adapter.submission_rule_provider(h.auth, sub.model_copy(update={"decision": "no_go"}))
+
+
+GENERATED = {
+    "zh": "（模型）住宿上限以政策为准。",
+    "en": "(Model) Check the hotel limit in the policy.",
+}
+
+
+@pytest.fixture(params=["zh", "en"])
+def generated_history(request, tmp_path, monkeypatch):
+    """A configured module; its provider double cites the first retrieved candidate."""
+
+    def provider(url, **kwargs):
+        candidates = json.loads(kwargs["json"]["messages"][1]["content"])["candidates"]
+        content = {"answer": GENERATED[request.param], "citation_ids": [candidates[0]["id"]]}
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": json.dumps(content)}}]}
+        )
+
+    key = tmp_path / "provider.key"
+    key.write_text("sk-" + token_hex(24))
+    monkeypatch.setenv("CAREER_LAB_KEY_FILE", str(key))
+    monkeypatch.setenv("CAREER_LAB_BASE_URL", "http://127.0.0.1:1")
+    monkeypatch.setenv("CAREER_LAB_MODEL", "facts-provider-double")
+    monkeypatch.setattr(httpx, "post", provider)
+    model, _ = configured_models("openai")
+    module = ScenarioModule(installed_root("pm_pilot"), work_language=request.param, model=model)
+    registry = module.install(ExtensionRegistry())
+    install_workspace_operations(
+        registry, roles=tuple(r.id for r in module.package.bundle.role_specs)
+    )
+    app = create_app(
+        "sqlite:///" + str(tmp_path / "generated.db"), model=model, extensions=registry
+    )
+    with TestClient(app) as client:
+        created = client.post("/sessions", json={"schema_version": 2, "scenario": "pm_pilot_v2"})
+        assert created.status_code == 200
+        yield app, History(app, client, module, created.json())
+    app.state.store.close()
+
+
+def run_generated(app, h):
+    """Queue the test, let the shared worker answer it and capture that transaction."""
+    state = h.store.view(h.auth).state
+    queued = h.post(
+        "tests", "tests.create", {"query": question(h), "config_version": state.config_version}
+    )
+    assert queued["result"]["status"] == "queued"
+    assert Worker(app.state.jobs, app.state.handlers).run_once()
+    request = h.client.get(f"/sessions/{h.sid}/requests/cmd-{h.seq}", headers=h.headers).json()
+    effect = request["jobs"][0]["effect"]
+    h.capture(effect)
+    return effect["result"]["test"]
+
+
+def adjustment(h, at, product):
+    """Current rule evaluation of R5.adjustment over the adapter's actual facts."""
+    window = h.adapter.window(h.auth, at)
+    snap = h.adapter._snapshot(
+        h.auth, at, (product,), ref_for("config", window.snapshot.config), True
+    )
+    context = {
+        "facts": facts(snap),
+        "fact_refs": {
+            f.name: [
+                h.adapter.source_reader(h.auth, r, at).ref.model_dump(mode="json")
+                for r in f.sources
+            ]
+            for f in snap.facts
+        },
+        "logs_complete": snap.logs_complete,
+        "test_sources_complete": True,
+        "config_version": snap.config_version,
+        "tests": [
+            {"record": t.model_dump(mode="json"), "ref": r.model_dump(mode="json")}
+            for t, r in zip(snap.tests, snap.test_refs, strict=True)
+        ],
+        "technical_failures": list(snap.technical_failures),
+        "decision": "launch",
+        "mechanism": "v2.adjustment",
+    }
+    item = SimpleNamespace(
+        rule_context=context, purpose="commitment", as_of=at, criterion="R5.adjustment"
+    )
+    return facts(snap), run_rules_v2(item, work_language=h.module.work_language)
+
+
+def test_model_generated_retest_stays_pending_while_extractive_retest_passes(generated_history):
+    app, h = generated_history
+    language = h.module.work_language
+    h.run(question(h))
+    h.apply(freshness_guard="warn")
+    h.post("actions", "refresh_index", {"tool": "refresh_index"})
+    h.apply(generator="llm")
+    generated = run_generated(app, h)
+    hotel = next(f for f in h.module.package.facts if f.id == "hotel_limit" and f.version == 2)
+    # The model cited exactly the right current policy fragment; that still proves nothing
+    # about its own text.
+    assert generated["status"] == "answered" and generated["answer"] == GENERATED[language]
+    assert generated["execution"]["attempts"][0]["status"] == "success"
+    assert generated["citations"][0]["object_id"] == "policy"
+    assert generated["citations"][0]["version"] == 2
+    assert hotel.source.quote in generated["citations"][0]["quote"]
+    product = h.product("Commit after the retest.")
+    f, item = adjustment(h, h.capture(), product)
+    assert f["dynamic_test_ids"] == [generated["id"]]
+    assert "passing_dynamic_test_ids" not in f
+    assert "adjustment_appropriate_verified" not in f
+    assert (item.label, item.source, item.citations) == ("INSUFFICIENT", "pending", ())
+    assert ("模型生成" if language == "zh" else "Model-generated") in item.explanation
+    # The same question answered extractively keeps the existing rule.
+    h.apply(generator="extractive")
+    extractive = h.run(question(h))
+    assert extractive["execution"]["attempts"] == []
+    f, item = adjustment(h, h.capture(), product)
+    assert f["passing_dynamic_test_ids"] == [extractive["id"]]
+    assert f["adjustment_appropriate_verified"] is True
+    assert (item.label, item.source) == ("MET", "verified_rule")

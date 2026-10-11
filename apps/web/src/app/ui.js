@@ -56,6 +56,13 @@ import { workspaceActionMessage } from '../features/workspace/native-v4/messages
 import { pendingTurnRole, serverText } from '../store';
 import { eventLine, isFeedEvent } from './events.js';
 import { testSetView, testSetPreview, caseState, testRunView } from './test-set-view.js';
+import {
+  answerModeLine,
+  assistantText,
+  generatorField,
+  quotedAnswer,
+  submittedGenerator,
+} from './assistant-mode';
 import './test-set.css';
 import {
   investigationView,
@@ -263,11 +270,14 @@ const setImportDraft = (a, value) => {
 };
 // A quoted test travels with the next message to that colleague; it is not editable text.
 const quoteKey = (a, role) => (a ? a.id : '') + ':' + role;
-const testQuote = (r) =>
-  T(
-    `我测了“${r.question}”，助手答：“${String(r.rawAnswer ?? answerText(r.answer)).slice(0, 300)}”（配置 v${r.configVersion}，政策源 v${r.policyVersion}，索引 v${r.indexVersion}）。`,
-    `I asked “${r.question}”. The assistant answered: “${String(r.rawAnswer ?? answerText(r.answer)).slice(0, 300)}” (config v${r.configVersion}, policy v${r.policyVersion}, index v${r.indexVersion}).`,
+// A generated answer keeps its mode marker wherever it is quoted.
+const testQuote = (r) => {
+  const said = quotedAnswer(r, String(r.rawAnswer ?? answerText(r.answer)).slice(0, 300));
+  return T(
+    `我测了“${r.question}”，助手答：“${said}”（配置 v${r.configVersion}，政策源 v${r.policyVersion}，索引 v${r.indexVersion}）。`,
+    `I asked “${r.question}”. The assistant answered: “${said}” (config v${r.configVersion}, policy v${r.policyVersion}, index v${r.indexVersion}).`,
   );
+};
 
 function md(raw, opts = {}) {
   let lines = esc(raw || '').split('\n');
@@ -1617,7 +1627,7 @@ async function runInvestigationBlock(blockId) {
   delete ui.investigationErrors[blockId];
   refreshWS(['stage']);
   try {
-    await L.test(a, {
+    const rerun = await L.test(a, {
       question: baseline.question,
       expectation: baseline.expectation || '',
       taskId: work.taskId,
@@ -1635,7 +1645,9 @@ async function runInvestigationBlock(blockId) {
         ),
       );
     announce(
-      T('重测结果已返回，原始记录仍保留。', 'The rerun is back. The original record is kept.'),
+      rerun?.queued
+        ? assistantText('assistant_mode_queued')
+        : T('重测结果已返回，原始记录仍保留。', 'The rerun is back. The original record is kept.'),
     );
   } catch (err) {
     ui.investigationErrors[blockId] = errText(err);
@@ -1736,8 +1748,10 @@ async function runTestCase(id) {
       caseRevision: c.revision,
     });
     ui.lastRun = r.id;
-    ui.testHistory[id] = r.id;
-    ui.testModes[id] = 'result';
+    if (!r.queued) {
+      ui.testHistory[id] = r.id;
+      ui.testModes[id] = 'result';
+    }
     startWorking(a, task());
     if (!persist())
       throw new Error(
@@ -1747,7 +1761,9 @@ async function runTestCase(id) {
         ),
       );
     announce(
-      T('这条问题已有回答，请检查结果。', 'This question has an answer. Review the result.'),
+      r.queued
+        ? assistantText('assistant_mode_queued')
+        : T('这条问题已有回答，请检查结果。', 'This question has an answer. Review the result.'),
     );
   } catch (err) {
     ui.testErrors[id] = errText(err);
@@ -1833,14 +1849,25 @@ function bench(a, t) {
       </form>
     </section>
     ${t ? `<div class="runs-head"><div class="segmented" role="group"><span class="thumb"></span><button type="button" aria-pressed="${!ui.benchAll}" data-action="bench-scope" data-all="0">${T('这件事的测试', 'This task')}</button><button type="button" aria-pressed="${!!ui.benchAll}" data-action="bench-scope" data-all="1">${T('全部测试', 'All tests')}</button></div></div>` : ''}
-    <div class="runs">${
+    <div class="runs">${queuedRuns(a, t)}${
       runs.length
         ? groupRuns({ tests: runs })
             .map((g) => runGroup(a, g))
             .join('')
-        : `<p class="empty-line">${T('还没有测试。和预期不符的回答，往往最有用。', 'No tests yet. Surprising answers are the useful ones.')}</p>`
+        : (a.queuedTests || []).length
+          ? ''
+          : `<p class="empty-line">${T('还没有测试。和预期不符的回答，往往最有用。', 'No tests yet. Surprising answers are the useful ones.')}</p>`
     }</div>
   </div>`;
+}
+function queuedRuns(a, t) {
+  return (a.queuedTests || [])
+    .filter((q) => !t || ui.benchAll || q.taskId === t.id)
+    .map(
+      (q) =>
+        `<article class="run is-queued" data-queued-request="${esc(q.requestId)}"><header class="run-q"><span class="run-asker">${T('你问', 'You asked')}</span><h3${zhAttr(q.question)}>${esc(q.question)}</h3></header><p class="answer-mode" data-answer-mode="queued" role="status">${esc(assistantText('assistant_mode_queued'))}</p></article>`,
+    )
+    .join('');
 }
 function groupRuns(a) {
   const map = new Map();
@@ -1869,7 +1896,7 @@ function runGroup(a, runs) {
           x,
           i,
         ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${i === 0 ? T('最新', 'Latest') : T('上一次', 'Previous')}</p>` : ''}
-      <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
+      <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${answerModeLine(x)}${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
       <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T('政策源 v' + x.policyVersion + ' · 索引 v' + x.indexVersion, 'Policy v' + x.policyVersion + ' · index v' + x.indexVersion)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div></div>`,
       )
       .join('')}</div>
@@ -2792,6 +2819,7 @@ function sheetConfig() {
     <fieldset class="field"><legend>${T('政策怎么保持最新', 'Keeping policy current')}</legend><div class="choices wrap">${['daily', 'realtime', 'manual'].map((k) => `<label class="choice"><input type="radio" name="update" value="${k}" ${c.update === k ? 'checked' : ''}><span>${UPDATE(k)}</span></label>`).join('')}</div></fieldset>
     <fieldset class="field"><legend>${T('答不了或不确定时', 'When it cannot answer')}</legend><div class="choices">${['human', 'none'].map((k) => `<label class="choice"><input type="radio" name="fallback" value="${k}" ${c.fallback === k ? 'checked' : ''}><span>${FALLBACK(k)}</span></label>`).join('')}</div></fieldset>
     <fieldset class="field"><legend>${T('要安排的开发', 'Engineering work')}</legend><div class="choices wrap">${['scope', 'fallback', 'realtime'].map((k) => `<label class="choice"><input type="checkbox" name="workItems" value="${k}" ${c.workItems.includes(k) ? 'checked' : ''}><span>${WORK_ITEM(k)}<small>${T(WORK_COST[k] + ' 人日', WORK_COST[k] + ' pd')}</small></span></label>`).join('')}</div></fieldset>
+    ${a.assistantMode ? generatorField(c.generator || 'extractive', a.assistantMode) : ''}
     ${configChecks(a, c)}
   </form>`,
     `${btn(icon('hand', 'i-sm') + T('申请资源', 'Request resources'), 'resources', 'quiet')}<span class="spacer"></span><button type="submit" form="config-form" class="btn primary">${T('保存设置', 'Save settings')}</button>`,
@@ -3479,7 +3507,11 @@ async function runQuestion(question, expectation) {
     ui.lastRun = run.id;
     startWorking(a, t);
     persist();
-    announce(T('知识助手回答：', 'The assistant answered: ') + run.answer);
+    announce(
+      run.queued
+        ? assistantText('assistant_mode_queued')
+        : T('知识助手回答：', 'The assistant answered: ') + run.answer,
+    );
   } catch (err) {
     notify(errText(err));
   } finally {
@@ -4000,7 +4032,7 @@ async function act(el) {
       );
       openSheet(
         T('这次回答用的来源', 'Sources behind this answer'),
-        `<div class="answer">${assistantMark('sm')}<div class="answer-body">${md(run.answer, { dropTitle: true })}</div></div>${run.citations
+        `<div class="answer">${assistantMark('sm')}<div class="answer-body">${answerModeLine(run)}${md(run.answer, { dropTitle: true })}</div></div>${run.citations
           .map((c, i) => {
             const result = sources[i].status === 'fulfilled' ? sources[i].value : null;
             const m = result?.material;
@@ -4048,8 +4080,8 @@ async function act(el) {
       openChat(
         'technical',
         T(
-          `我测了“${r.question}”，助手答“${answerText(r.answer).slice(0, 300)}”（政策源 v${r.policyVersion}，索引 v${r.indexVersion}）。我想确认：`,
-          `I asked “${r.question}” and the assistant said “${answerText(r.answer).slice(0, 300)}” (policy v${r.policyVersion}, index v${r.indexVersion}). I want to check: `,
+          `我测了“${r.question}”，助手答“${quotedAnswer(r, answerText(r.answer).slice(0, 300))}”（政策源 v${r.policyVersion}，索引 v${r.indexVersion}）。我想确认：`,
+          `I asked “${r.question}” and the assistant said “${quotedAnswer(r, answerText(r.answer).slice(0, 300))}” (policy v${r.policyVersion}, index v${r.indexVersion}). I want to check: `,
         ),
       );
       break;
@@ -5389,6 +5421,9 @@ document.addEventListener('submit', async (e) => {
           fallback: String(f.get('fallback')),
           workItems: f.getAll('workItems'),
           launchDay: Number(f.get('launchDay')),
+          ...(a.assistantMode
+            ? { generator: submittedGenerator(f, a.config.generator || 'extractive') }
+            : {}),
         });
         closeSheet();
         {

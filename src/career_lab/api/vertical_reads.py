@@ -1,6 +1,8 @@
 """Authorized native workbench reads and explicit reply-display receipts."""
 
 from career_lab.api.modules import Operation, V2Response
+from career_lab.assistant.v2.generation import configured
+from career_lab.assistant.v2.jobs import saved_modes
 from career_lab.contracts.v2 import ObjectRead, ResourcePage, PublicEvent, ProtocolError, canonical
 from career_lab.storage.v2_store import TransactionResult
 from career_lab.storage.v2_tables import v2_transactions, v2_request_meta
@@ -202,9 +204,14 @@ def install_native_reads(
             (r for r in view.objects if r.ref.kind in kinds),
             key=lambda r: (r.created_storage_revision, r.ref.object_id),
         )
+        modes = saved_modes(view.objects)
         data = {
             "role_mode": role_mode,
-            "objects": [{"ref": r.ref.model_dump(mode="json"), "content": r.content} for r in rows],
+            "objects": [
+                {"ref": r.ref.model_dump(mode="json"), "content": r.content}
+                | ({"assistant": modes[r.ref.object_id]} if r.ref.kind == "test" else {})
+                for r in rows
+            ],
             "as_of": point(view.state).model_dump(mode="json"),
         }
         # The scoped observation adapter owns partial Agent state. An unrestricted
@@ -290,7 +297,8 @@ def install_native_reads(
                     if role_mode == "local_reference"
                     else "unavailable",
                     "feedback": feedback_mode,
-                    "assistant": "waiting_model",
+                    # The deployment's state; an archived reader never generates or relabels.
+                    "assistant": "model" if configured(module.assistant.model) else "waiting_model",
                 },
                 "timeline": timeline(view, page, auth).result,
                 "materials": registry.operations["materials.list"]

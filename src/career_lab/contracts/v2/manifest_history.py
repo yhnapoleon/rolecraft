@@ -686,4 +686,17 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "mapped to None."
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-90a362db7068f8b9707406a9633cf25f3da6c8be38df18c24da3edadf069326b"
+        ),
+        "integration_changes": {
+            "assistant-mode-projection": "The v4 host reads (api/vertical_reads.py, timeline and "
+            "workbench.read) attach to each test object the assistant mode saved with that answer "
+            "(extractive, llm, unavailable or failed), its provider, model revision and "
+            "configuration version, and report semantic.assistant from the live deployment's "
+            "model (model or waiting_model) instead of a constant. Host results stay free-form "
+            "V2Response data; public schemas, examples, errors and stored records are unchanged."
+        },
+    },
 )

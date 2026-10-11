@@ -2,7 +2,7 @@
 
 import json
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal
 
 from career_lab.contracts.v2.core import (
@@ -91,8 +91,12 @@ def answer_for_config(
     permitted: bool,
     language: str,
     request_id: str,
+    stale: bool = False,
 ) -> GeneratedAnswer | None:
-    """Outcome of the configured generator; None keeps the extractive answer unchanged."""
+    """Outcome of the configured generator; None keeps the extractive answer unchanged.
+
+    A stale-source answer keeps the same localized warning sentence before generated text.
+    """
     if generator != "llm":
         return None
     if not configured(model):
@@ -101,7 +105,12 @@ def answer_for_config(
         raise ProtocolError("assistant_worker_required", status=409)
     if not chunks:
         return None
-    return generate(model, query, chunks, language=language, request_id=request_id)
+    generated = generate(model, query, chunks, language=language, request_id=request_id)
+    if stale and generated.mode == "llm":
+        return replace(
+            generated, answer=localized_text(language, "stale_warning") + generated.answer
+        )
+    return generated
 
 
 def execution_mode(generator: str, generated: GeneratedAnswer | None) -> dict[str, JsonValue]:

@@ -5,10 +5,18 @@ import type { SemanticStatus, V4SessionBinding } from './v4-host';
 type Empty = Record<string, never>;
 export type PageInput = { cursor?: number; limit?: number; since_seq?: number; as_of_seq?: number };
 export type Page<T> = { items: T[]; as_of: C.VersionPoint; next_cursor?: number | null };
+export type AssistantAnswerMode = {
+  mode: 'extractive' | 'llm' | 'unavailable' | 'failed';
+  provider: string | null;
+  model_revision: string | null;
+  config_version: number;
+};
 export type PublicObject = {
   schema_version?: 2;
   ref: C.ObjectRef;
   content: Record<string, C.JsonValue>;
+  /** Present on test objects: the mode saved with that answer. */
+  assistant?: AssistantAnswerMode;
 };
 export type Timeline = {
   as_of: C.VersionPoint;

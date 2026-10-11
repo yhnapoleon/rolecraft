@@ -7,6 +7,8 @@ export interface Pilot {
   update_strategy: 'daily' | 'realtime' | 'manual_policy';
   fallback: 'human' | 'none';
   work_items: string[];
+  /** v2 only: how the knowledge assistant answers; omitted means the server keeps its value. */
+  generator?: 'extractive' | 'llm';
 }
 export interface World {
   session_id: string;
@@ -70,7 +72,10 @@ export interface TestRun {
   query: string;
   answer: string;
   fallback: boolean;
+  /** v2: the mode saved with this answer (extractive, llm, unavailable or failed). */
   mode: string;
+  generation?: { provider: string | null; model_revision: string | null } | null;
+  effective_config?: Record<string, unknown> | null;
   citations: { material_id: string; version: number }[];
   source_versions: Record<string, number>;
   indexed_versions: Record<string, number>;
@@ -182,6 +187,10 @@ export interface LocalSession {
   v2Workspace?: { tasks: any[]; products: any[] };
   v2Domains?: string[];
   v2MaterialTitles?: Record<string, string>;
+  /** Deployment assistant state from the server; never relabels saved answers. */
+  v2Assistant?: 'model' | 'waiting_model' | 'unavailable';
+  /** Browser-owned origins of tests whose answer is still being generated, by request ID. */
+  queuedTestRuns?: Record<string, LocalTestRun>;
   v2Binding?: Extract<import('./v4-host').V4SessionBinding, { protocol: 2 }>;
 
   id: string;

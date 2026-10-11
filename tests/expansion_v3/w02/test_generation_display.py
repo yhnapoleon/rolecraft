@@ -16,8 +16,8 @@ try {
   const { testRunView } = await server.ssrLoadModule('/src/app/test-set-view.js');
   const { setPreference } = await server.ssrLoadModule('/src/app/i18n.ts');
   const modes = {
-    extractive: ['原文抽取', 'Source extraction'], llm: ['模型生成', 'Model generation'],
-    unavailable: ['未配置模型', 'Model not configured'], failed: ['失败', 'Failed'],
+    extractive: ['原文抽取', 'Extractive'], llm: ['模型生成', 'Model-generated'],
+    unavailable: ['未配置模型', 'Model not configured'], failed: ['失败', 'Generation failed'],
   };
   for (const [i, language] of ['zh', 'en'].entries()) {
     setPreference(language);

@@ -59,7 +59,7 @@ export class WorkspaceStore {
       kind: Operation['kind'],
       body: Record<string, unknown>,
       localRun?: LocalTestRun,
-    ): Promise<void>;
+    ): Promise<{ queued: string } | undefined>;
     poll(session: LocalSession): Promise<void>;
   };
   installV2(bridge: NonNullable<WorkspaceStore['v2']>) {
