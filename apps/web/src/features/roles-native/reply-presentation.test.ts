@@ -186,6 +186,32 @@ describe.each(['zh', 'en'] as const)('first screen from the reply structure (%s)
     expect(shown.source).toBe(language === 'zh' ? '业务决定 · v1' : 'Business decision · v1');
   });
 
+  it("P1-2 never leads with the learner's own earlier question", () => {
+    const earlier =
+      language === 'zh' ? '当前试点容量是多少？' : 'What is the current pilot capacity?';
+    const recall =
+      language === 'zh'
+        ? `[对话记录 · v1] 此前你问：“${earlier}”`
+        : `[Conversation · v1] Earlier you asked: "${earlier}"`;
+    const fact =
+      language === 'zh'
+        ? '[经理委托：内部知识助手试点 · v1] 我在第5天安排了内部演示。'
+        : '[Manager brief · v1] I have booked an internal demonstration for day 5.';
+    const reply = `${LOCAL[language].split('\n')[0]}\n${recall}\n${fact}`;
+    const shown = presentReply(reply, {
+      generationMode: 'local',
+      learnerQuestions: [earlier, language === 'zh' ? '现在开放吗？' : 'Open now?'],
+    });
+    expect(shown.summary).toBe(fact.replace(/^\[[^\]]+\] /, ''));
+    expect(shown.source).not.toContain(language === 'zh' ? '对话记录' : 'Conversation');
+    const onlyRecall = presentReply(`${LOCAL[language].split('\n')[0]}\n${recall}`, {
+      generationMode: 'local',
+      learnerQuestions: [earlier],
+    });
+    expect(onlyRecall.derived).toBe(true);
+    expect(onlyRecall.summary).not.toContain(earlier);
+  });
+
   it('describes a local reply without any quoted passage from its structure', () => {
     const reply = [
       LOCAL[language].split('\n')[0],

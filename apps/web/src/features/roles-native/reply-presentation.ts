@@ -8,6 +8,8 @@ export interface ReplyPresentationContext {
   generationMode?: GenerationMode;
   receivedVersionsOnly?: boolean;
   omissionCount?: number;
+  /** Questions the learner asked in this session; never shown back as the answer. */
+  learnerQuestions?: readonly string[];
 }
 
 export interface ReplyPresentation {
@@ -103,8 +105,18 @@ function leading(fragment: string): string | undefined {
   return shown && shown.length <= SENTENCE_CHARS ? shown : undefined;
 }
 
-/** First cited passage: one rule-checked excerpt or recorded decision with its source. */
-function firstPassage(reply: string): Chosen {
+const ECHO_CHARS = 40;
+/** True when a text repeats one of the learner's own earlier questions. */
+function echoes(text: string, questions: readonly string[]): boolean {
+  return questions.some((question) => {
+    const probe = question.split(/\s+/).filter(Boolean).join(' ').slice(0, ECHO_CHARS);
+    return probe.length >= 4 && text.includes(probe);
+  });
+}
+
+/** First cited passage: one rule-checked excerpt or recorded decision with its source.
+ * A recalled earlier question is the learner's own words and is skipped. */
+function firstPassage(reply: string, questions: readonly string[]): Chosen {
   const lines = reply.split('\n');
   for (let i = 0; i < lines.length; i++) {
     const match = PASSAGE.exec(lines[i]);
@@ -114,16 +126,20 @@ function firstPassage(reply: string): Chosen {
       if (line.startsWith('[') || CITES.test(line)) break;
       body.push(line);
     }
-    const shown = leading(body.join('\n').split(GAP)[0]);
+    const fragment = body.join('\n').split(GAP)[0];
+    if (echoes(fragment, questions)) continue;
+    const shown = leading(fragment);
     if (shown) return { summary: shown, source: match[1] };
   }
   return undefined;
 }
 
 /** A model reply leads with one observation or question and its conditions. */
-function firstParagraph(reply: string): Chosen {
+function firstParagraph(reply: string, questions: readonly string[]): Chosen {
   const first = reply.split('\n')[0].trim();
-  return first && first.length <= PARAGRAPH_CHARS ? { summary: first } : undefined;
+  return first && first.length <= PARAGRAPH_CHARS && !echoes(first, questions)
+    ? { summary: first }
+    : undefined;
 }
 
 const singleLine = (reply: string): Chosen =>
@@ -137,8 +153,9 @@ export function presentReply(reply: string, context: ReplyPresentationContext): 
     context.generationMode === 'local'
       ? [firstPassage, singleLine]
       : [firstParagraph, firstPassage];
+  const questions = context.learnerQuestions ?? [];
   let chosen: Chosen;
-  for (const pick of order) chosen ??= pick(whole);
+  for (const pick of order) chosen ??= pick(whole, questions);
   const derived = !chosen;
   const local = context.generationMode === 'local';
   const summary =

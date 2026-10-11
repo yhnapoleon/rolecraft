@@ -344,6 +344,7 @@ export function mount(
       doc.activeElement?.tagName === 'SUMMARY' && list.contains(doc.activeElement)
         ? doc.activeElement.closest<HTMLElement>('[data-turn-id]')?.dataset.turnId
         : undefined;
+    const learnerQuestions = (view?.turns ?? []).map((turn) => turn.question);
     const fragments = turns.map((turn) => {
       const item = el('li', 'rc-roles__turn');
       item.dataset.turnId = turn.id;
@@ -359,6 +360,7 @@ export function mount(
           generationMode: turn.generationMode,
           receivedVersionsOnly: turn.receivedVersionsOnly,
           omissionCount: turn.omissionCount,
+          learnerQuestions,
         });
         item.append(replyLabel);
         const reply = el('p', 'rc-roles__reply');
@@ -367,9 +369,10 @@ export function mount(
           `${ref.title.trim() || T('材料', 'Material')} · v${ref.version}`;
         const materials = turn.materials ?? [];
         // The first screen names the source of its own excerpt; others stay in the details.
+        // A summary written by this view is not from any one source, so it shows none.
         const lead = presentation.source
           ? materials.find((ref) => `${ref.title} · v${ref.version}` === presentation.source)
-          : materials[0];
+          : undefined;
         const refs = el('div', 'rc-roles__materials');
         refs.setAttribute('aria-label', T('引用材料', 'Referenced materials'));
         const link = (ref: MaterialReference) => {

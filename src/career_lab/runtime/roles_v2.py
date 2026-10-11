@@ -82,6 +82,7 @@ _LOCAL_TEXT = {
         "offered": "还价条件：{}。",
         "item_sep": "、",
         "amount": "{} {}",
+        "supersedes": "{}以本决定为准；初始资料中的数字是原始委托。",
         # Same names as the approval rules; scenario-owned policy code stays untouched.
         "resources": {"capacity": "容量", "dev_days": "开发人日", "deadline_day": "正式试点期限"},
     },
@@ -101,6 +102,10 @@ _LOCAL_TEXT = {
         "offered": "Counteroffer terms: {}.",
         "item_sep": ", ",
         "amount": "{} {}",
+        "supersedes": (
+            "This decision supersedes the initial materials for {}; "
+            "their figures are the original brief."
+        ),
         "resources": {
             "capacity": "Capacity",
             "dev_days": "Developer-days",
@@ -232,8 +237,20 @@ def _committed_decision(value):
     return isinstance(value, dict) and value.get("record_kind") == "committed_business_decision"
 
 
-def _decision_text(value, language):
-    """A recorded business decision as a plain statement; only granted terms are in effect."""
+def _granted(value):
+    """Resources a committed decision actually put into effect."""
+    if value.get("status") not in ("approved", "accepted"):
+        return {}
+    granted = value.get("granted")
+    return granted if isinstance(granted, dict) else {}
+
+
+def _decision_text(value, language, *, note=True):
+    """A recorded business decision as a plain statement; only granted terms are in effect.
+
+    The record itself states that initial resource materials do not override it, so
+    the statement says which figures it supersedes (`note`). Matching leaves it out.
+    """
     words = _LOCAL_TEXT[language]
     labels = words["resources"]
     status = value.get("status")
@@ -247,8 +264,11 @@ def _decision_text(value, language):
         )
 
     parts = [words["decision"].format(words[status])]
-    if status in ("approved", "accepted") and value.get("granted"):
+    if _granted(value):
         parts.append(words["granted"].format(terms(value["granted"])))
+        if note:
+            names = words["item_sep"].join(labels.get(key, key) for key in sorted(value["granted"]))
+            parts.append(words["supersedes"].format(names))
     if status == "countered" and value.get("countered"):
         parts.append(words["offered"].format(terms(value["countered"])))
     if isinstance(value.get("reason"), str) and value["reason"].strip():
@@ -303,32 +323,52 @@ class LocalRoleModel:
             role_text(language, "responsibilities") + separator.join(ctx["responsibilities"]),
         ]
         terms = _query_terms(messages[-1]["content"].casefold())
+        labels = _LOCAL_TEXT[language]["resources"]
+
+        def tier(source):
+            # 0: committed business decision; 1: documents and shared work;
+            # 2: recalled conversation, which only gives context and never leads.
+            if _committed_decision(_record(source)):
+                return 0
+            return 2 if source.get("channel") == "memory" else 1
+
+        def matched(source):
+            if tier(source) == 0:
+                return _decision_text(_record(source), language, note=False) or ""
+            return _readable_source(source, language) or ""
 
         def rank(pair):
-            # A committed decision on the asked subject precedes the initial materials it
-            # supersedes; everything else keeps term-overlap order. No inference.
-            if _committed_decision(_record(pair[1])):
-                hits = _hits(_readable_source(pair[1], language) or "", terms)
-                return (hits == 0, -hits, pair[0])
-            return (True, -_hits(pair[1]["text"], terms), pair[0])
+            index, source = pair
+            hits = _hits(matched(source), terms)
+            latest = -(source.get("observed_at_seq") or 0) if tier(source) == 0 else 0
+            return (tier(source), -hits, latest, index)
 
         # Only rank already-authorized source excerpts. No inference or new advice.
         sources = sorted(enumerate(ctx["sources"]), key=rank)
         groups = {}
+        kinds = {}
+        granting = {}
+        matching = {}
         recalled = set()
         for _, source in sources:
             name = source["display_name"]
             if name not in groups:
-                if len(groups) == 4:
+                # At most four documents; decisions and the recalled conversation are few
+                # and keep continuity, so they never take a document's place.
+                if tier(source) == 1 and sum(k == 1 for k in kinds.values()) == 4:
                     continue
-                groups[name] = []
+                groups[name], granting[name], matching[name] = [], [], []
+                kinds[name] = tier(source)
             if source.get("channel") == "memory":
                 recalled.add(name)
             text = _readable_source(source, language)
             if text:
                 groups[name].append(text)
+                matching[name].append(matched(source))
+                value = _record(source) if kinds[name] == 0 else {}
+                granting[name].append({labels.get(k, k).casefold() for k in _granted(value)})
         scored = {
-            name: [(_hits(c, terms), i, c) for i, c in enumerate(parts)]
+            name: [(_hits(matching[name][i], terms), i, c) for i, c in enumerate(parts)]
             for name, parts in groups.items()
         }
         # An earlier question naturally repeats the new one; it must not set the bar for documents.
@@ -338,15 +378,30 @@ class LocalRoleModel:
         ) or max((h for parts in scored.values() for h, _, _ in parts), default=0)
         # A passage must share a fair part of the best match; one loose shared word is not relevance.
         floor = max(1, -(-best * 2 // 5))
-        others = []
-        quoted = 0
-        for name, parts in scored.items():
-            chosen = sorted((x for x in parts if x[0] >= floor), key=lambda x: (-x[0], x[1]))[
+
+        def pick(name, keep):
+            return sorted((x for x in scored[name] if keep(x)), key=lambda x: (-x[0], x[1]))[
                 :_MAX_SEGMENTS
             ]
-            if chosen:
+
+        chosen = {name: pick(name, lambda x: x[0] >= floor) for name in groups if kinds[name]}
+        quoted_text = " ".join(c for rows in chosen.values() for _, _, c in rows).casefold()
+        for name in groups:
+            if kinds[name] == 0:
+                # A decision is a fact that happened: one shared term is enough, and it is
+                # also stated whenever a quoted passage names a resource it put into effect.
+                chosen[name] = pick(
+                    name,
+                    lambda x, name=name: (
+                        x[0] >= 1 or any(label in quoted_text for label in granting[name][x[1]])
+                    ),
+                )
+        others = []
+        quoted = 0
+        for name in groups:
+            if chosen[name]:
                 excerpt = _LOCAL_TEXT[language]["gap"].join(
-                    c for _, _, c in sorted(chosen, key=lambda x: x[1])
+                    c for _, _, c in sorted(chosen[name], key=lambda x: x[1])
                 )
                 lines.append(f"[{name}] {excerpt}")
                 quoted += 1
