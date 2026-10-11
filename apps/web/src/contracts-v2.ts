@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 a9dbf116a3d527ec02eb38f66a8d826726cffed37a0704c68ab81cb493a91a2f. Do not edit.
+// Generated from frozen manifest SHA256 14439473c9e226d82f513beab2e7da5c301df3efd6498255a3693f62059135ff. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;

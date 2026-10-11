@@ -729,8 +729,8 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "undetermined criteria span their full weight and carry no points; not-applicable "
             "criteria leave the denominator, which is reported without rescaling. There is no "
             "single total. Candidate rubrics without frozen weights record no range, so those "
-            "records keep their bytes; partial read projections whose rule results changed "
-            "withhold the range."
+            "records keep their bytes; scoped reviews that evaluate only some criteria record "
+            "no range; partial read projections whose rule results changed withhold the range."
         },
     },
 )

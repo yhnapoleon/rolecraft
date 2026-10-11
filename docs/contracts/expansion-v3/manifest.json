@@ -350,7 +350,7 @@
     "recursive-public-reply-validation": "Fixed RoleReply DTO validates the entire JSON tree independently of permissive registrations; nested private metadata is rejected on write and historical public reads.",
     "registered-model-advice": "Optional advisory-only relation results and registration identity; complete input traces gate each new advice segment. Missing fields retain historical wire bytes.",
     "role-event-references": "Actual event provenance is scope/audience/window validated and remapped in the event namespace; no parallel event store.",
-    "rule-score-range": "Optional FeedbackV2.score_range (_RuleScoreRange with _RuleScoreCriterion rows): the weighted range of the rule-anchored rubric part (2026-10-11 decision 5), recorded once when feedback is written under an installed rubric whose weights are frozen (rubric-v2-final-20261009, read from the package's verified rubric file). Verified rule bounds tighten it; pending, model-advice and undetermined criteria span their full weight and carry no points; not-applicable criteria leave the denominator, which is reported without rescaling. There is no single total. Candidate rubrics without frozen weights record no range, so those records keep their bytes; partial read projections whose rule results changed withhold the range.",
+    "rule-score-range": "Optional FeedbackV2.score_range (_RuleScoreRange with _RuleScoreCriterion rows): the weighted range of the rule-anchored rubric part (2026-10-11 decision 5), recorded once when feedback is written under an installed rubric whose weights are frozen (rubric-v2-final-20261009, read from the package's verified rubric file). Verified rule bounds tighten it; pending, model-advice and undetermined criteria span their full weight and carry no points; not-applicable criteria leave the denominator, which is reported without rescaling. There is no single total. Candidate rubrics without frozen weights record no range, so those records keep their bytes; scoped reviews that evaluate only some criteria record no range; partial read projections whose rule results changed withhold the range.",
     "submitted-evidence-status": "New response evidence is explicitly user_submitted_unverified (or none_submitted); legacy absence stays unknown. Linking never claims quote or semantic verification."
   },
   "openapi": {
@@ -3238,7 +3238,7 @@
     "src/career_lab/contracts/v2/extensions.py": "cd47aa1195d1d934e67a815e9e30494aba146d6c7e64266b6be613818523b7cd",
     "src/career_lab/contracts/v2/files.py": "3b3f8e9ac47acacfcdd3052f7b0d94698ff8622c0ca34299b47a544bad048577",
     "src/career_lab/contracts/v2/legacy.py": "47a9fb0d4414326b2e05ba863ce29a905f9734b1eb881a85b41af769df5fbbd5",
-    "src/career_lab/contracts/v2/manifest_history.py": "58ed1acd3f87392bddc7bfc8d3f77d5afc07186a35d94d80227fd446b0f11936",
+    "src/career_lab/contracts/v2/manifest_history.py": "d88c8faf5bc2ac85f64399eeca9e4d309762e76d941c707598dcb18fcb83c2b4",
     "src/career_lab/contracts/v2/projection.py": "8bff00bfc82a24cf770edb02ae54bb1a50424cd95650e10aa4bb8e7e067d96e6",
     "src/career_lab/contracts/v2/provenance.py": "bc20e5d2dd3226ac093ba6a2214a7a56a9db654a18cc0492e69d276734ce11ba",
     "src/career_lab/contracts/v2/provider.py": "97b6f25a7ba7e93a84b77af980b00d6d371d770239cc59f6bc09ceb0ebf4994d",
