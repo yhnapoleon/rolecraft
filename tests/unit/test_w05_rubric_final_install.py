@@ -18,6 +18,7 @@ from career_lab.rubrics.v4.rubric_v2 import (
     CRITERIA,
     final_rules_document,
     install_candidate,
+    installed_final_policies,
     load_installed_policies,
     policies,
 )
@@ -51,6 +52,7 @@ def test_final_policies_carry_final_conditions_and_candidate_rule_flags(language
             earlier.purposes,
             earlier.launch_only,
         )
+    assert installed_final_policies(work_language=language) == final
 
 
 def test_final_definition_bytes_are_the_approved_file() -> None:

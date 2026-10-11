@@ -10,6 +10,13 @@ import hashlib
 import json
 from career_lab.contracts import v2 as C
 from career_lab.evidence.v2.ports import CriterionPolicy
+from career_lab.rubrics.evaluation_identity import (
+    FINAL_EVALUATION_VERSION,
+    rules_identity,
+    validate_rules,
+)
+
+from .final_rubric import FINAL_RUBRIC_REVISION, final_definition_bytes, final_policies
 
 RUBRIC_REVISION = "rubric-v2-candidate-2"
 RULES_REVISION = "rules-v4-rubric-v2-c2"
@@ -321,18 +328,26 @@ def rubric_document():
 
 
 def rules_document() -> dict[str, object]:
-    from career_lab.rubrics.evaluation_identity import rules_identity
-
     return rules_identity(RULES_REVISION, RUBRIC_REVISION)
 
 
 def final_rules_document() -> dict[str, object]:
     """Same rules revision; the evaluation and rubric identities are the final ones."""
-    from career_lab.rubrics.evaluation_identity import FINAL_EVALUATION_VERSION, rules_identity
-
-    from .final_rubric import FINAL_RUBRIC_REVISION
-
     return rules_identity(RULES_REVISION, FINAL_RUBRIC_REVISION, FINAL_EVALUATION_VERSION)
+
+
+def installed_final_policies(*, work_language: str = "zh") -> tuple[CriterionPolicy, ...]:
+    """Final conditions as descriptions; every other field must equal candidate-2.
+
+    Rule applicability (rules.run_rules) still reads the candidate flags.
+    """
+    final = final_policies(work_language=work_language)
+    if [(p.id, p.mechanism, p.purposes, p.launch_only) for p in final] != [
+        (p.id, p.mechanism, p.purposes, p.launch_only)
+        for p in policies(work_language=work_language)
+    ]:
+        raise C.ProtocolError("rubric_final_installation_mismatch", status=409)
+    return final
 
 
 def install_candidate(destination):
@@ -366,16 +381,12 @@ def load_installed_policies(
     bundle = C.EvaluationBundle.model_validate_json(read_file(Path(root), evaluation))
     if bundle.mode != "advisory":
         raise C.ProtocolError("rubric_candidate_requires_advisory")
-    from career_lab.rubrics.evaluation_identity import FINAL_EVALUATION_VERSION, validate_rules
-
-    from .final_rubric import final_definition_bytes, final_policies
-
     rubric = read_file(Path(root), bundle.rubric)
     if rubric == final_definition_bytes():
         validate_rules(
             read_file(Path(root), bundle.rules), final_rules_document(), FINAL_EVALUATION_VERSION
         )
-        return final_policies(work_language=work_language)
+        return installed_final_policies(work_language=work_language)
     if json.loads(rubric) != rubric_document():
         raise C.ProtocolError("rubric_candidate_version_mismatch")
     validate_rules(read_file(Path(root), bundle.rules), rules_document())

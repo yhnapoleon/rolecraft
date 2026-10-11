@@ -854,7 +854,11 @@ export function mountNativeFeedback(
       failure.textContent = '';
     }
     lastReadError = state.error;
-    sealReadOnly({ notice, reports, revisions }, state.readOnly === true, language);
+    sealReadOnly(
+      { notice, reports, revisions, failedNote, retry: retryFeedback },
+      state.readOnly === true,
+      language,
+    );
   }
   const unsubscribe = adapter.subscribe(render);
   render();

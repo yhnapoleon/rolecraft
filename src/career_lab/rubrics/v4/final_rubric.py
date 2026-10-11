@@ -58,15 +58,13 @@ def final_definition_bytes() -> bytes:
 def final_policies(*, work_language: str = "zh") -> tuple[CriterionPolicy, ...]:
     """Fourteen policies carrying the final five-label conditions as their description.
 
-    Rule applicability still reads the candidate flags (rules.run_rules), so every
-    non-description field must stay identical to rubric-v2-candidate-2.
+    Installation checks them against the candidate rule flags in
+    rubric_v2.installed_final_policies, which imports this module.
     """
-    from .rubric_v2 import policies as candidate_policies
-
     if work_language not in {"zh", "en"}:
         raise ValueError("fixed language required")
     definition = load_final_definition("aipm")
-    result = tuple(
+    return tuple(
         CriterionPolicy(
             row[work_language]["id"],
             row[work_language]["description"],
@@ -76,12 +74,6 @@ def final_policies(*, work_language: str = "zh") -> tuple[CriterionPolicy, ...]:
         )
         for row in definition["criteria"]
     )
-    candidate = candidate_policies(work_language=work_language)
-    if [(p.id, p.mechanism, p.purposes, p.launch_only) for p in result] != [
-        (p.id, p.mechanism, p.purposes, p.launch_only) for p in candidate
-    ]:
-        raise ValueError("Final policies diverge from the installed rule applicability")
-    return result
 
 
 def criterion_weights(definition: dict[str, JsonValue]) -> dict[str, "Fraction"]:

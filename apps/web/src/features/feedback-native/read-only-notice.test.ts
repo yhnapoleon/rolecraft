@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { practiceUnavailableText, readOnlyNoticeText, sealReadOnly } from './read-only-notice';
+import {
+  isSealedPracticeError,
+  practiceUnavailableText,
+  readOnlyNoticeText,
+  sealReadOnly,
+} from './read-only-notice';
 
 type FakeControl = { disabled: boolean; title: string };
 
@@ -54,6 +59,19 @@ describe('read-only session wording', () => {
   });
 });
 
+describe('practice read failures', () => {
+  it('recognizes a sealed session from the server code without showing it', () => {
+    for (const code of [
+      'practice_language_unavailable',
+      'practice_language_mismatch',
+      'scenario_read_only',
+    ])
+      expect(isSealedPracticeError(code)).toBe(true);
+    for (const code of ['feedback_not_ready', 'network', undefined, 409])
+      expect(isSealedPracticeError(code)).toBe(false);
+  });
+});
+
 describe('sealing the feedback controls', () => {
   it('replaces the status line and disables challenge and revision controls with the reason', () => {
     const f = fixture();
@@ -69,6 +87,33 @@ describe('sealing the feedback controls', () => {
     // Re-rendering does not stack reasons.
     expect(f.response.appended.map((n) => n.textContent)).toEqual([reason]);
     expect(f.revisions.appended.map((n) => n.dataset.readOnlyReason)).toEqual(['true']);
+  });
+
+  it('replaces the re-request invitation and disables its button on a sealed session', () => {
+    const f = fixture();
+    const failedNote = {
+      textContent: '这次反馈没有完成。原提交仍保留，没有自动重试；你可以主动重新请求。',
+      dataset: {} as Record<string, string>,
+    };
+    const retry = { disabled: false, title: '' };
+    const nodes = {
+      notice: f.notice,
+      reports: f.reports,
+      revisions: f.revisions,
+      failedNote,
+      retry,
+    };
+    sealReadOnly(nodes as never, true, 'zh');
+    sealReadOnly(nodes as never, true, 'zh');
+    const failed = '这次反馈没有完成，原提交仍保留；会话已封存，不能重新请求。';
+    expect(failedNote.textContent).toBe(failed);
+    expect(failedNote.textContent).not.toContain('主动重新请求');
+    expect(retry).toEqual({ disabled: true, title: failed });
+    // An active session keeps the original invitation.
+    sealReadOnly(nodes as never, false, 'zh');
+    expect(failedNote.textContent).toBe(
+      '这次反馈没有完成。原提交仍保留，没有自动重试；你可以主动重新请求。',
+    );
   });
 
   it('leaves an active session untouched', () => {
