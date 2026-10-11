@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 2a9777a2cb93d061dea7154fc71dfabcf748c9338f587e02003e9566950bac12. Do not edit.
+// Generated from frozen manifest SHA256 a9dbf116a3d527ec02eb38f66a8d826726cffed37a0704c68ab81cb493a91a2f. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -336,6 +336,7 @@ export type FeedbackV2 = {
   clarification?: string[] | null;
   generation_status?: 'rules_verified' | 'waiting_model' | 'advisory' | 'failed' | 'unknown' | null;
   preview_conditions?: _PreviewConditions | null;
+  score_range?: _RuleScoreRange | null;
 };
 export type FileRef = { media_type?: string; path: string; schema_version?: 2; sha256: string };
 export type HistoricalResponsibilitiesSnapshot = {
@@ -1050,4 +1051,21 @@ export type _PreviewState = {
   schema_version?: 2;
   status: 'current' | 'stale';
   superseded_by?: ObjectRef | null;
+};
+export type _RuleScoreCriterion = {
+  schema_version?: 2;
+  criterion: string;
+  weight: number;
+  status: 'anchored' | 'bounded' | 'pending' | 'undetermined' | 'not_applicable';
+  lower?: number | null;
+  upper?: number | null;
+};
+export type _RuleScoreRange = {
+  schema_version?: 2;
+  rubric_revision: string;
+  rubric_sha256: string;
+  denominator: number;
+  lower?: number | null;
+  upper?: number | null;
+  criteria: _RuleScoreCriterion[];
 };
