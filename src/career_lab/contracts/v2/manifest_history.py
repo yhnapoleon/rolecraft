@@ -691,6 +691,19 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "expansion-v3-90a362db7068f8b9707406a9633cf25f3da6c8be38df18c24da3edadf069326b"
         ),
         "integration_changes": {
+            "assistant-mode-projection": "The v4 host reads (api/vertical_reads.py, timeline and "
+            "workbench.read) attach to each test object the assistant mode saved with that answer "
+            "(extractive, llm, unavailable or failed), its provider, model revision and "
+            "configuration version, and report semantic.assistant from the live deployment's "
+            "model (model or waiting_model) instead of a constant. Host results stay free-form "
+            "V2Response data; public schemas, examples, errors and stored records are unchanged."
+        },
+    },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-8b84c0a227a9493b5637adca4b01cf9a77dd8e4ad7fab9f5d70698165e705b34"
+        ),
+        "integration_changes": {
             "outcome-preview-freshness": "Optional recorded preview conditions on FeedbackV2 "
             "and read-time preview states on WorkspaceProductPage: stale previews name each "
             "changed input, configuration, resource or material condition, point to a newer "

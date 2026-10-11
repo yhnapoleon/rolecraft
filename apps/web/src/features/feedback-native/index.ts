@@ -5,6 +5,8 @@ import type { SubmitInput } from '../../contracts-v2';
  * queue, mutation journal, global navigation or React root is created here. */
 import { mountReviewControls, isSubmitDecision } from './review-controls';
 import { feedbackText, type FeedbackLanguage } from './localization';
+import { evaluationVersionLine } from './evaluation-version';
+import { sealReadOnly } from './read-only-notice';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 
 export type SelectedProduct = Pick<
@@ -503,6 +505,7 @@ export function mountNativeFeedback(
       ),
     );
     refs(panel, [report.subject]);
+    panel.append(evaluationVersionLine(doc, report, language));
     if (report.subject.kind === 'review') {
       const review = adapter
         .snapshot()
@@ -851,6 +854,11 @@ export function mountNativeFeedback(
       failure.textContent = '';
     }
     lastReadError = state.error;
+    sealReadOnly(
+      { notice, reports, revisions, failedNote, retry: retryFeedback },
+      state.readOnly === true,
+      language,
+    );
   }
   const unsubscribe = adapter.subscribe(render);
   render();

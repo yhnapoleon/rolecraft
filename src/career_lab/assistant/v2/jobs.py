@@ -1,5 +1,6 @@
 """Assistant jobs use the shared durable queue, worker fence and Mutation commit."""
 
+from collections.abc import Iterable
 from typing import TYPE_CHECKING
 
 from career_lab.api.modules import ExtensionRegistry, JobEnvelope, StoreJobHandler
@@ -11,6 +12,7 @@ from career_lab.contracts.v2 import (
     JsonValue,
     ObjectRef,
     ProtocolError,
+    StoredObject,
     TestRequestV2,
     TestResultV2,
     digest,
@@ -120,6 +122,42 @@ def listed_generations(view: TransactionView, test_ids: set[str]) -> list[dict[s
         if record.ref.kind == "assistant_execution"
         and record.content["test"]["object_id"] in visible
     ]
+
+
+def saved_modes(objects: Iterable[StoredObject]) -> dict[str, dict[str, JsonValue]]:
+    """Each saved test's own assistant mode, from its generation record when one is visible."""
+    records = {
+        row.content["test"]["object_id"]: row.content
+        for row in objects
+        if row.ref.kind == "assistant_execution"
+    }
+    return {
+        row.ref.object_id: saved_mode(row.content, records.get(row.ref.object_id))
+        for row in objects
+        if row.ref.kind == "test"
+    }
+
+
+def saved_mode(
+    test: dict[str, JsonValue], record: dict[str, JsonValue] | None
+) -> dict[str, JsonValue]:
+    # A rule guard under an llm configuration made no call and kept the extractive answer.
+    attempts = test["execution"].get("attempts") or []
+    if record is not None and (record["mode"] != "failed" or attempts):
+        mode = record["mode"]
+    elif attempts:
+        mode = "llm" if attempts[0]["status"] == "success" else "failed"
+    elif test.get("error_code") == "assistant_model_unavailable":
+        mode = "unavailable"
+    else:
+        mode = "extractive"
+    source = record if record is not None else (attempts[0] if attempts else {})
+    return {
+        "mode": mode,
+        "provider": None if mode == "extractive" else source.get("provider"),
+        "model_revision": None if mode == "extractive" else source.get("model_revision"),
+        "config_version": test["config_ref"]["config_version"],
+    }
 
 
 def generation_identity(module: "ScenarioModule", command: Command, config_ref: ObjectRef) -> str:
