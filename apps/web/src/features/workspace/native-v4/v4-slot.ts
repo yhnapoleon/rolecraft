@@ -17,7 +17,7 @@ import {
   taskPriority,
 } from './form-values';
 import { bindWorkspaceForm } from './form-slot';
-import { outcomeView, renderOutcome, type PreviewEntry } from './outcome-preview';
+import { changedMaterials, outcomeView, renderOutcome, type PreviewEntry } from './outcome-preview';
 import { recipientShares, rememberRequest } from '../../roles-native/v4-data';
 
 /** Bind only nodes assigned by the v4 host. See v4-slot.md for exact node keys.
@@ -208,6 +208,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
   const outcomeBox = el('div');
   add('outcome', outcomeBox);
   let outcomeEntries: PreviewEntry[] = [],
+    outcomeTitles: Record<string, string> = {},
     outcomeFor = '',
     outcomeLoading = '',
     outcomeShown = '';
@@ -219,27 +220,40 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       const key = `${identity}${p.version}:${JSON.stringify(controller.state.asOf)}`;
       if (key !== outcomeFor && key !== outcomeLoading) {
         outcomeLoading = key;
-        void controller.previews(p.product_id).then(
-          (entries) => {
-            if (destroyed || outcomeLoading !== key) return;
-            outcomeEntries = entries;
-            outcomeFor = key;
-            outcomeLoading = '';
-            render();
-          },
-          () => {
-            // Keep what was shown; a later workspace change reads again.
-            if (outcomeLoading === key) outcomeLoading = '';
-            if (!outcomeFor.startsWith(identity)) outcomeEntries = [];
-            outcomeFor = key;
-          },
-        );
+        void controller
+          .previews(p.product_id)
+          .then(async (entries) => ({
+            entries,
+            titles: changedMaterials(entries)
+              ? await controller.materialTitles().catch(() => ({}))
+              : {},
+          }))
+          .then(
+            ({ entries, titles }) => {
+              if (destroyed || outcomeLoading !== key) return;
+              outcomeEntries = entries;
+              outcomeTitles = titles;
+              outcomeFor = key;
+              outcomeLoading = '';
+              render();
+            },
+            () => {
+              // Keep what was shown; a later workspace change reads again.
+              if (outcomeLoading === key) outcomeLoading = '';
+              if (!outcomeFor.startsWith(identity)) outcomeEntries = [];
+              outcomeFor = key;
+            },
+          );
       }
     }
     const view =
       p && outcomeFor.startsWith(identity)
-        ? outcomeView(outcomeEntries, { version: p.version, hasDraft }, language, (operation) =>
-            controller.can(operation),
+        ? outcomeView(
+            outcomeEntries,
+            { version: p.version, hasDraft },
+            language,
+            (operation) => controller.can(operation),
+            outcomeTitles,
           )
         : null;
     const signature = JSON.stringify([view, language]);

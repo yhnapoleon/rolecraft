@@ -169,8 +169,14 @@ async function runLanguage(language) {
       assert.ok(
         state.changes.includes(text('试点配置第 0 版 → 第 1 版', 'Pilot configuration v0 → v1')),
       );
+      assert.ok(
+        state.changes.some((line) => line.includes(text('有新版本 v', 'has a new version: v'))),
+        'The changed material is named',
+      );
       assert.ok(state.actual.some((line) => line.includes(text('已应用第 1 版', 'v1 applied'))));
-      assert.ok(state.actual.some((line) => line.includes(text('已运行测试 1 次', 'Test runs: 1'))));
+      assert.ok(
+        state.actual.some((line) => line.includes(text('已运行测试 1 次', 'Test runs: 1'))),
+      );
       // The prediction text is the one saved before; it is not rewritten.
       assert.deepEqual(state.lines, states.saved.lines);
       await capture(browser, language, 'preview-stale');

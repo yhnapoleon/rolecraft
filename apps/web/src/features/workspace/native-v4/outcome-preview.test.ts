@@ -123,11 +123,7 @@ describe('outcome preview model', () => {
     expect(view?.main.meta).toEqual(['规则核实', '语义判断：等待模型接入']);
     expect(view?.main.statusLabel).toBe('当前预览');
     expect(view?.main.questions).toEqual(['「确认需求」的决定依据哪些资料或测试结果？']);
-    expect(view?.main.outcomes.map((o) => o.label)).toEqual([
-      '事实（规则核实）',
-      '条件预测',
-      '待核验',
-    ]);
+    expect(view?.main.outcomes.map((o) => o.label)).toEqual(['事实', '条件预测', '待核验']);
     expect(view?.main.outcomes[2].waitsFor).toBe('提交并经过评审');
     expect(view?.main.basis).toBe('依据：已保存的第 1 版 · 第 0 版试点配置');
     expect(view?.earlier).toEqual([]);
@@ -138,14 +134,14 @@ describe('outcome preview model', () => {
       [
         'zh',
         '旧预览，条件已变',
-        ['试点配置第 0 版 → 第 1 版', '1 份资料有了新版本', '资源变化：容量 30 → 60'],
+        ['试点配置第 0 版 → 第 1 版', '「演示日程」有新版本 v2', '资源变化：容量 30 → 60'],
       ],
       [
         'en',
         'Earlier preview, conditions changed',
         [
           'Pilot configuration v0 → v1',
-          'Newer material versions: 1',
+          '“Demo schedule” has a new version: v2',
           'Resources changed: capacity 30 → 60',
         ],
       ],
@@ -155,6 +151,7 @@ describe('outcome preview model', () => {
         { version: 1, hasDraft: false },
         language,
         all,
+        { demo: language === 'en' ? 'Demo schedule' : '演示日程' },
       );
       expect(view?.main.status).toBe('stale');
       expect(view?.main.statusLabel).toBe(label);
@@ -314,5 +311,35 @@ describe('outcome preview model', () => {
     ]);
     expect(host.command).not.toHaveBeenCalled();
     expect(host.retry).not.toHaveBeenCalled();
+  });
+
+  it('OUT-14: withheld conditions read only as changed; P2-2 carried preview is noted', () => {
+    const withheld = state(1, {
+      status: 'stale',
+      changes: [{ condition: 'resources' }, { condition: 'materials' }],
+    });
+    for (const [language, lines] of [
+      ['zh', ['资源有变化', '资料有变化']],
+      ['en', ['Resources changed', 'Materials changed']],
+    ] as const)
+      expect(
+        outcomeView(entries([preview(1), withheld]), { version: 1, hasDraft: false }, language, all)
+          ?.main.changes,
+      ).toEqual(lines);
+    const carried = outcomeView(
+      entries([preview(1), state(1)]),
+      { version: 2, hasDraft: false },
+      'zh',
+      all,
+    );
+    expect(carried?.main.statusLabel).toBe('当前预览');
+    expect(carried?.main.carried).toBe('第 2 版内容与此相同，这条预览仍适用。');
+    const exact = outcomeView(
+      entries([preview(1), state(1)]),
+      { version: 1, hasDraft: false },
+      'en',
+      all,
+    );
+    expect(exact?.main.carried).toBeNull();
   });
 });

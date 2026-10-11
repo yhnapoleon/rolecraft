@@ -88,6 +88,7 @@ export type PreviewView = {
   response: string;
   questions: string[];
   draftNote: string | null;
+  carried: string | null;
   changes: string[];
   newer: string | null;
   refreshHint: string | null;
@@ -108,6 +109,7 @@ export function outcomeView(
   saved: { version: number; hasDraft: boolean },
   language: OutcomeLanguage,
   available: (operation: string) => boolean,
+  titles: Readonly<Record<string, string>> = {},
 ): OutcomeView | null {
   if (!entries.length) return null;
   const ordered = [...entries].sort(
@@ -123,9 +125,14 @@ export function outcomeView(
       language,
       primary ? saved.hasDraft : false,
       primary ? available : () => false,
+      titles,
     );
+  const shown = view(main, true);
+  // A later lifecycle-only version (adoption, removal, restore) keeps this preview current.
+  if (main.preview.subject.version < saved.version && shown.status === 'current')
+    shown.carried = outcomeText(language, 'sameContent', { v: saved.version });
   return {
-    main: view(main, true),
+    main: shown,
     earlier: earlier.map((entry) => ({
       label: outcomeText(language, 'earlierEntry', { v: entry.preview.subject.version }),
       view: view(entry, false),
@@ -139,6 +146,7 @@ export function previewView(
   language: OutcomeLanguage,
   hasDraft: boolean,
   available: (operation: string) => boolean,
+  titles: Readonly<Record<string, string>> = {},
 ): PreviewView {
   const { preview, state } = entry;
   const t = (key: OutcomeKey, values?: Record<string, string | number>) =>
@@ -182,7 +190,8 @@ export function previewView(
     response: preview.business_response,
     questions: [...(preview.clarification ?? [])],
     draftNote: hasDraft ? t('draftNote', { v: version }) : null,
-    changes: (state?.changes ?? []).map((change) => changeLine(change, language)),
+    carried: null,
+    changes: (state?.changes ?? []).map((change) => changeLine(change, language, titles)),
     newer: state?.superseded_by ? t('newer') : null,
     refreshHint: stale && !state?.superseded_by ? t('refreshHint') : null,
     actual: (state?.actual ?? []).map((actual) => actualLine(actual, language)),
@@ -213,8 +222,12 @@ const dict = (value: JsonValue | undefined): Record<string, JsonValue> =>
 const shown = (value: JsonValue) =>
   Array.isArray(value) ? value.join('、') : value === null ? '' : String(value);
 
-export function changeLine(change: PreviewChange, language: OutcomeLanguage): string {
-  const t = (key: OutcomeKey, values: Record<string, string | number>) =>
+export function changeLine(
+  change: PreviewChange,
+  language: OutcomeLanguage,
+  titles: Readonly<Record<string, string>> = {},
+): string {
+  const t = (key: OutcomeKey, values: Record<string, string | number> = {}) =>
     outcomeText(language, key, values);
   if (change.condition === 'input')
     return t('changeInput', {
@@ -226,8 +239,14 @@ export function changeLine(change: PreviewChange, language: OutcomeLanguage): st
       before: integer(change.before) ?? '?',
       after: integer(change.after) ?? '?',
     });
+  const separator = language === 'en' ? ', ' : '；';
   const before = dict(change.before),
     after = dict(change.after);
+  // A finite-scope reader learns only that the condition changed.
+  if (change.before == null && change.after == null)
+    return t(
+      change.condition === 'resources' ? 'changeResourcesWithheld' : 'changeMaterialsWithheld',
+    );
   if (change.condition === 'resources')
     return t('changeResources', {
       items: Object.keys(after)
@@ -235,9 +254,20 @@ export function changeLine(change: PreviewChange, language: OutcomeLanguage): st
           (key) =>
             `${outcomeTerm(language, 'resource', key)} ${shown(before[key] ?? null)} → ${shown(after[key] ?? null)}`,
         )
-        .join(language === 'en' ? ', ' : '；'),
+        .join(separator),
     });
-  return t('changeMaterials', { n: Object.keys(after).length });
+  return Object.entries(after)
+    .map(([id, version]) => t('changeMaterial', { title: titles[id] ?? id, v: shown(version) }))
+    .join(separator);
+}
+
+/** Material changes name materials; their titles come from the reader's own material list. */
+export function changedMaterials(entries: readonly PreviewEntry[]): boolean {
+  return entries.some((entry) =>
+    (entry.state?.changes ?? []).some(
+      (change) => change.condition === 'materials' && change.after != null,
+    ),
+  );
 }
 
 export function actualLine(actual: PreviewActual, language: OutcomeLanguage): string {
@@ -343,6 +373,7 @@ function previewNodes(el: Make, view: PreviewView, primary: boolean): HTMLElemen
     items.append(item);
   }
   nodes.push(items);
+  if (view.carried) nodes.push(el('p', view.carried, 'w03-outcome-note'));
   if (view.draftNote) nodes.push(el('p', view.draftNote, 'w03-outcome-note'));
   if (view.questions.length)
     nodes.push(box('question', view.labels.question, ...view.questions.map((q) => el('p', q))));

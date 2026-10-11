@@ -452,6 +452,18 @@ export class WorkspaceSlotController {
     if (this.snapshot().session?.sessionId !== sid) throw Error('session_changed');
     return page.pages.flatMap((read) => previewEntries(read, sid, id));
   }
+  /** Titles of the materials this reader can open, to name changed sources. */
+  async materialTitles(): Promise<Record<string, string>> {
+    let value: unknown = await this.host.query('materials.list', { limit: 100 });
+    while (object(value) && value.schema_version === 2 && object(value.result))
+      value = value.result;
+    const rows = object(value) && Array.isArray(value.materials) ? value.materials : [];
+    return Object.fromEntries(
+      rows
+        .filter((row) => object(row) && typeof row.id === 'string' && typeof row.title === 'string')
+        .map((row) => [row.id, row.title]),
+    );
+  }
   private async storePointer(pointer: RequestPointer) {
     await this.host.keepDraft('workspace', this.receiptKey(pointer.sessionId), pointer);
     if (this.snapshot().session?.sessionId === pointer.sessionId) {
