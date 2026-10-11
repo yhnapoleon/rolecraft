@@ -73,6 +73,22 @@ _LOCAL_TEXT = {
         "list_sep": "、",
         "gap": " …… ",
         "quote": "“{}”",
+        "decision": "已保存的业务决定：{}。",
+        "approved": "已批准",
+        "accepted": "已接受还价",
+        "rejected": "未批准，资源不变",
+        "countered": "提出还价，接受前资源不变",
+        "granted": "生效资源：{}。",
+        "offered": "还价条件：{}。",
+        "item_sep": "、",
+        "supersedes": "{}以本决定为准；初始资料中的数字是原始委托。",
+        # Same names as the approval rules; scenario-owned policy code stays untouched.
+        "resources": {"capacity": "容量", "dev_days": "开发人日", "deadline_day": "正式试点期限"},
+        "amounts": {
+            "capacity": "容量 {} 人",
+            "dev_days": "开发人日 {}",
+            "deadline_day": "正式试点期限 第{}天",
+        },
     },
     "en": {
         "no_match": "No passage directly related to this question was found in the local sources.",
@@ -81,6 +97,28 @@ _LOCAL_TEXT = {
         "list_sep": ", ",
         "gap": " … ",
         "quote": '"{}"',
+        "decision": "Committed business decision: {}.",
+        "approved": "approved",
+        "accepted": "counteroffer accepted",
+        "rejected": "not approved; resources unchanged",
+        "countered": "counteroffer made; resources unchanged until accepted",
+        "granted": "Effective resources: {}.",
+        "offered": "Counteroffer terms: {}.",
+        "item_sep": ", ",
+        "supersedes": (
+            "This decision supersedes the initial materials for {}; "
+            "their figures are the original brief."
+        ),
+        "resources": {
+            "capacity": "Capacity",
+            "dev_days": "Developer-days",
+            "deadline_day": "Pilot deadline day",
+        },
+        "amounts": {
+            "capacity": "Capacity {} people",
+            "dev_days": "Developer-days {}",
+            "deadline_day": "Pilot deadline day {}",
+        },
     },
 }
 # Function words carry no topic; they only make unrelated tables look relevant.
@@ -192,18 +230,69 @@ def _hits(text, terms):
     return sum(term in folded for term in terms)
 
 
+def _record(source):
+    """The structured record behind a source, or None for plain text."""
+    candidate = source["text"].strip()
+    if candidate[:1] not in ("{", "["):
+        return None
+    try:
+        return json.loads(candidate)
+    except (ValueError, TypeError):
+        return None
+
+
+def _committed_decision(value):
+    return isinstance(value, dict) and value.get("record_kind") == "committed_business_decision"
+
+
+def _granted(value):
+    """Resources a committed decision actually put into effect."""
+    if value.get("status") not in ("approved", "accepted"):
+        return {}
+    granted = value.get("granted")
+    return granted if isinstance(granted, dict) else {}
+
+
+def _decision_text(value, language, *, note=True):
+    """A recorded business decision as a plain statement; only granted terms are in effect.
+
+    The record itself states that initial resource materials do not override it, so
+    the statement says which figures it supersedes (`note`). Matching uses only what was
+    decided (`note=False`): the note and the rule's reason text are not its subject.
+    """
+    words = _LOCAL_TEXT[language]
+    labels = words["resources"]
+    status = value.get("status")
+    if status not in ("approved", "accepted", "rejected", "countered"):
+        return None
+
+    def terms(values):
+        return words["item_sep"].join(
+            words["amounts"].get(key, labels.get(key, key) + " {}").format(amount)
+            for key, amount in sorted(values.items())
+        )
+
+    parts = [words["decision"].format(words[status])]
+    if _granted(value):
+        parts.append(words["granted"].format(terms(value["granted"])))
+        if note:
+            names = words["item_sep"].join(labels.get(key, key) for key in sorted(value["granted"]))
+            parts.append(words["supersedes"].format(names))
+    if status == "countered" and value.get("countered"):
+        parts.append(words["offered"].format(terms(value["countered"])))
+    if note and isinstance(value.get("reason"), str) and value["reason"].strip():
+        parts.append(value["reason"].strip())
+    return "".join(parts) if language == "zh" else " ".join(parts)
+
+
 def _readable_source(source, language):
     """Readable text for one authorized source; structured records never appear as raw JSON."""
-    import json
-
     text = source["text"]
-    candidate = text.strip()
-    if candidate[:1] in ("{", "["):
-        try:
-            value = json.loads(candidate)
-        except (ValueError, TypeError):
-            value = None
+    if text.strip()[:1] in ("{", "["):
+        value = _record(source)
         if value is not None:
+            if _committed_decision(value):
+                return _decision_text(value, language)
             if (
                 isinstance(value, dict)
                 and isinstance(value.get("content"), str)
@@ -225,10 +314,11 @@ class LocalRoleModel:
     """Offline example only; continuity must be in context, never this model's echo.
 
     It only quotes passages from already-authorized sources that share terms with
-    the question. It gives no judgement, advice or status of its own.
+    the question, and states committed business decisions the role knows. It gives
+    no judgement, advice or status of its own.
     """
 
-    revision = "colleague-local-reference-v6"
+    revision = "colleague-local-reference-v7"
     retries = 0
 
     def complete(self, messages, tools):
@@ -242,25 +332,67 @@ class LocalRoleModel:
             role_text(language, "responsibilities") + separator.join(ctx["responsibilities"]),
         ]
         terms = _query_terms(messages[-1]["content"].casefold())
+        labels = _LOCAL_TEXT[language]["resources"]
+
+        def tier(source):
+            # 0: committed business decision; 1: documents and shared work;
+            # 2: recalled conversation, which only gives context and never leads.
+            if _committed_decision(_record(source)):
+                return 0
+            return 2 if source.get("channel") == "memory" else 1
+
+        def matched(source):
+            if tier(source) == 0:
+                return _decision_text(_record(source), language, note=False) or ""
+            return _readable_source(source, language) or ""
+
+        def seen(source):
+            return source.get("observed_at_seq") or 0
+
+        # Materials present from the start; a later one arrived with a world change.
+        start = min((seen(s) for s in ctx["sources"] if s.get("channel") == "material"), default=0)
+
+        def rank(pair):
+            index, source = pair
+            hits = _hits(matched(source), terms)
+            if tier(source) == 0:
+                return (0, False, -hits, -seen(source), index)
+            # A relevant newer notice is admitted ahead of initial materials it updates.
+            newer = source.get("channel") == "material" and seen(source) > start and hits > 0
+            return (tier(source), not newer, -hits, 0, index)
+
         # Only rank already-authorized source excerpts. No inference or new advice.
-        sources = sorted(
-            enumerate(ctx["sources"]), key=lambda pair: (-_hits(pair[1]["text"], terms), pair[0])
-        )
+        sources = sorted(enumerate(ctx["sources"]), key=rank)
         groups = {}
+        kinds = {}
+        granting = {}
+        matching = {}
+        arrival = {}
+        origin = {}
         recalled = set()
-        for _, source in sources:
+        for index, source in sources:
             name = source["display_name"]
+            origin[name] = min(origin.get(name, index), index)
             if name not in groups:
-                if len(groups) == 4:
+                # At most four documents; decisions and the recalled conversation are few
+                # and keep continuity, so they never take a document's place.
+                if tier(source) == 1 and sum(k == 1 for k in kinds.values()) == 4:
                     continue
-                groups[name] = []
+                groups[name], granting[name], matching[name] = [], [], []
+                kinds[name] = tier(source)
             if source.get("channel") == "memory":
                 recalled.add(name)
+            if source.get("channel") == "material":
+                seen = source.get("observed_at_seq") or 0
+                arrival[name] = max(arrival.get(name, seen), seen)
             text = _readable_source(source, language)
             if text:
                 groups[name].append(text)
+                matching[name].append(matched(source))
+                value = _record(source) if kinds[name] == 0 else {}
+                granting[name].append({labels.get(k, k).casefold() for k in _granted(value)})
         scored = {
-            name: [(_hits(c, terms), i, c) for i, c in enumerate(parts)]
+            name: [(_hits(matching[name][i], terms), i, c) for i, c in enumerate(parts)]
             for name, parts in groups.items()
         }
         # An earlier question naturally repeats the new one; it must not set the bar for documents.
@@ -270,20 +402,80 @@ class LocalRoleModel:
         ) or max((h for parts in scored.values() for h, _, _ in parts), default=0)
         # A passage must share a fair part of the best match; one loose shared word is not relevance.
         floor = max(1, -(-best * 2 // 5))
-        others = []
-        quoted = 0
-        for name, parts in scored.items():
-            chosen = sorted((x for x in parts if x[0] >= floor), key=lambda x: (-x[0], x[1]))[
+
+        def pick(name, keep):
+            return sorted((x for x in scored[name] if keep(x)), key=lambda x: (-x[0], x[1]))[
                 :_MAX_SEGMENTS
             ]
-            if chosen:
-                excerpt = _LOCAL_TEXT[language]["gap"].join(
-                    c for _, _, c in sorted(chosen, key=lambda x: x[1])
+
+        chosen = {name: pick(name, lambda x: x[0] >= floor) for name in groups if kinds[name]}
+        # A decision leads only when the question shares a term with it.
+        order = []
+        for name in groups:
+            if kinds[name] == 0:
+                chosen[name] = pick(name, lambda x: x[0] >= 1)
+                if chosen[name]:
+                    order.append(name)
+        # A material that arrived with a later world change (e.g. a schedule notice)
+        # precedes the initial materials it updates; otherwise term-overlap order stays.
+        cited_docs = [name for name in groups if kinds[name] == 1 and chosen[name]]
+        best_of = {name: max(x[0] for x in chosen[name]) for name in cited_docs}
+        top = max(best_of.values(), default=0)
+
+        def text_of(name):
+            return " ".join(c for _, _, c in chosen[name])
+
+        def later(name):
+            return arrival.get(name, start) > start
+
+        # The best initial passages; an update without a figure does not displace one that
+        # gives the figure asked about (e.g. the deadline day stays ahead of "still follows").
+        figures = any(
+            re.search(r"\d", text_of(name))
+            for name in cited_docs
+            if best_of[name] == top and not later(name)
+        )
+
+        def leads(name):
+            # A later notice leads when it is about what was asked: at least two of the
+            # question's terms and half as many as the best passage, and a figure if the
+            # initial passage it would displace gives one.
+            hits = best_of[name]
+            figure = bool(re.search(r"\d", text_of(name))) or not figures
+            return later(name) and hits >= 2 and hits * 2 >= top and figure
+
+        documents = sorted(
+            cited_docs,
+            # On a tie, an update that does not lead follows the initial materials.
+            key=lambda name: (not leads(name), -best_of[name], later(name), origin[name]),
+        )
+        for name in documents:
+            text = " ".join(c for _, _, c in chosen[name]).casefold()
+            order.append(name)
+            # A decision on a resource this passage names follows it; it leads only when the
+            # question shares a term with what was decided (status, resource, amount, unit).
+            for other in groups:
+                if kinds[other] != 0 or other in order:
+                    continue
+                rows = pick(
+                    other,
+                    lambda x, other=other, text=text: any(
+                        label in text for label in granting[other][x[1]]
+                    ),
                 )
-                lines.append(f"[{name}] {excerpt}")
-                quoted += 1
-            else:
-                others.append(f"[{name}]")
+                if rows:
+                    chosen[other] = rows
+                    order.append(other)
+        # A recalled earlier question is context: cited only after something else.
+        if order:
+            order.extend(name for name in groups if kinds[name] == 2 and chosen[name])
+        for name in order:
+            excerpt = _LOCAL_TEXT[language]["gap"].join(
+                c for _, _, c in sorted(chosen[name], key=lambda x: x[1])
+            )
+            lines.append(f"[{name}] {excerpt}")
+        others = [f"[{name}]" for name in groups if name not in order]
+        quoted = len(order)
         if not quoted:
             lines.append(_LOCAL_TEXT[language]["no_match"])
         if others:

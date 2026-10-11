@@ -1,0 +1,132 @@
+/* 063-03 short result frame. Status is always written out; shapes only support it. */
+.short-result {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.short-result__status {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-2, #4b505b);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.short-result__status li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.short-result__status li[data-tone]::before {
+  content: "";
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1.5px solid var(--ink-3, #7b818d);
+}
+.short-result__status li[data-tone="verified"]::before {
+  background: var(--good, #16794a);
+  border-color: var(--good, #16794a);
+}
+.short-result__status li[data-tone="unsupported"]::before {
+  height: 0;
+  border-width: 1.5px 0 0;
+  border-radius: 0;
+}
+.short-result__status li[data-tone="failed"]::before {
+  border-radius: 1px;
+  border-color: var(--ink-2, #4b505b);
+}
+.short-result__lead {
+  margin: 0;
+  max-width: 72ch;
+  line-height: 1.55;
+  color: var(--ink, #15171c);
+  white-space: pre-wrap;
+}
+.short-result__lead[data-derived] {
+  color: var(--ink-2, #4b505b);
+}
+.short-result__note {
+  margin: 0;
+  color: var(--ink-3, #7b818d);
+  font-size: 12.5px;
+}
+.short-result__more > summary {
+  cursor: pointer;
+  color: var(--ink-2, #4b505b);
+  padding-block: 6px;
+  min-height: 24px;
+}
+.short-result__more > summary:focus-visible {
+  outline: 2px solid var(--focus, var(--ink, #15171c));
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+.short-result__meta {
+  color: var(--ink-3, #7b818d);
+  margin-inline-start: 8px;
+  font-size: 12px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .short-result__more[open] > :not(summary) {
+    animation: short-result-reveal 160ms ease-out;
+  }
+}
+@keyframes short-result-reveal {
+  from {
+    opacity: 0;
+  }
+}
+/* A short question inside a result, e.g. which purpose a review should use. */
+.short-result__prompt {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+  margin: 4px 0;
+  padding: 0;
+  border: 0;
+}
+.short-result__prompt legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--ink, #15171c);
+}
+.short-result__choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 8px;
+}
+.short-result__choices label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 2px 12px 2px 9px;
+  border-radius: 999px;
+  background: var(--fill, rgba(20, 24, 32, 0.05));
+  cursor: pointer;
+}
+.short-result__choices input {
+  margin: 0;
+  accent-color: var(--ink, #15171c);
+}
+.short-result__choices label:focus-within {
+  outline: 2px solid var(--focus, var(--ink, #15171c));
+  outline-offset: 2px;
+}
+.short-result__prompt > .btn {
+  justify-self: start;
+}
+/* Section headings of supported components stay quieter than the result itself. */
+.short-result h3.row-title {
+  font-size: 14px;
+  color: var(--ink-2, #4b505b);
+}

@@ -311,3 +311,8 @@
 .rc-roles__details[open] > .rc-roles__reply {
   padding-top: 8px;
 }
+/* A cited source that is not a readable material is a label, not a link. */
+.rc-roles__source {
+  text-decoration: none;
+  color: var(--ink-3, #7b818d);
+}

@@ -58,6 +58,7 @@ _ROLE_TEXT = {
         "received_versions_only": "仅按已收到的版本引用作品；新版本需明确分享后才能讨论。",
         "conversation": "对话记录",
         "material": "材料",
+        "business_decision": "业务决定",
         "history_meaning": "过去对话原文，保留其时点；意见不自动成为公司事实",
         "counteroffer": "当前申请超出可批档位；这些较低条件已通过同一场景规则。接受成功前资源不变。",
         "counteroffer_accepted": "已接受还价；资源仅随本决定的原子提交生效。",
@@ -97,6 +98,7 @@ _ROLE_TEXT = {
         ),
         "conversation": "Conversation",
         "material": "Material",
+        "business_decision": "Business decision",
         "history_meaning": "Original conversation at its recorded time; opinions do not automatically become company facts.",
         "counteroffer": "The request exceeds the approvable limits. These lower terms passed the same scenario rules. Resources remain unchanged until acceptance is committed.",
         "counteroffer_accepted": "The counteroffer has been accepted. Resources take effect only when this decision is committed atomically.",
@@ -708,9 +710,12 @@ class ContextSnapshot:
         sources = self.generation_sources(auth)
         ordered = [s for s in sources if s.channel in {"attachment", "received_share"}]
         ordered += list(reversed([s for s in sources if s.channel == "memory"]))
-        ordered += [
-            s for s in sources if s.channel not in {"attachment", "received_share", "memory"}
-        ]
+        rest = [s for s in sources if s.channel not in {"attachment", "received_share", "memory"}]
+        # A material that arrived with a later world change (e.g. a schedule notice) is
+        # kept ahead of the initial materials it updates when the budget runs out.
+        start = min((s.ref.observed_at_seq for s in rest), default=0)
+        ordered += [s for s in rest if s.ref.observed_at_seq > start]
+        ordered += [s for s in rest if s.ref.observed_at_seq <= start]
         selected = []
         omitted = []
         used = 0
@@ -735,6 +740,8 @@ class ContextSnapshot:
                 ),
                 role_text(self.work_language, "material"),
             )
+        elif source.ref.kind == "business_decision":
+            title = role_text(self.work_language, "business_decision")
         elif source.channel in {"received_share", "attachment"}:
             title = role_text(self.work_language, "shared_work")
         else:

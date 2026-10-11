@@ -1,9 +1,11 @@
 import {
   currentModeNotice,
   presentReply,
+  replyDisclosure,
   type GenerationMode,
   type RoleMode,
 } from './reply-presentation';
+import { renderShortResult } from '../results-native/short-result';
 /** Native v4 colleague slot. The injected client owns API calls, journals and jobs. */
 import { T, onLocaleChange } from '../../app/i18n';
 import './roles.css';
@@ -359,73 +361,89 @@ export function mount(
           omissionCount: turn.omissionCount,
         });
         item.append(replyLabel);
-        if (presentation.status) {
-          const replyStatus = el('p', 'rc-roles__reply-status');
-          replyStatus.textContent = presentation.status;
-          item.append(replyStatus);
-        }
-        const preview = el('p', 'rc-roles__preview');
-        preview.textContent = presentation.summary;
-        item.append(preview);
-        if (presentation.versionNote) {
-          const versionNote = el('p', 'rc-roles__limitation');
-          versionNote.textContent = presentation.versionNote;
-          item.append(versionNote);
-        }
-        if (presentation.omissionNote) {
-          const limitation = el('p', 'rc-roles__limitation');
-          limitation.textContent = presentation.omissionNote;
-          item.append(limitation);
-        }
-        if (turn.stale) {
-          const stale = el('p', 'rc-roles__limitation');
-          stale.textContent = T(
-            '引用包含旧版本；原回复按当时记录保留。',
-            'Citations include an older version; the original reply is retained.',
-          );
-          item.append(stale);
-        }
-        const details = el('details', 'rc-roles__details');
-        details.open = expandedReplies.has(turn.id);
-        const summary = el('summary');
-        summary.textContent = T('完整原话与条件', 'Full reply and conditions');
         const reply = el('p', 'rc-roles__reply');
         reply.textContent = turn.reply;
-        details.append(summary, reply);
-        details.addEventListener('toggle', () => {
-          if (details.open) expandedReplies.add(turn.id);
-          else expandedReplies.delete(turn.id);
+        const label = (ref: MaterialReference) =>
+          `${ref.title.trim() || T('材料', 'Material')} · v${ref.version}`;
+        const materials = turn.materials ?? [];
+        // The first screen names the source of its own excerpt; others stay in the details.
+        // A summary written by this view is not from any one source, so it shows none.
+        const lead = presentation.source
+          ? materials.find((ref) => `${ref.title} · v${ref.version}` === presentation.source)
+          : undefined;
+        const refs = el('div', 'rc-roles__materials');
+        refs.setAttribute('aria-label', T('引用材料', 'Referenced materials'));
+        const link = (ref: MaterialReference) => {
+          const node = adapter.openMaterial
+            ? button('rc-roles__material')
+            : el('span', 'rc-roles__material');
+          node.textContent = label(ref);
+          if (adapter.openMaterial)
+            node.addEventListener('click', () => {
+              Promise.resolve()
+                .then(() => adapter.openMaterial!(ref))
+                .catch(() => {
+                  if (!destroyed) {
+                    feedback = 'action';
+                    render();
+                  }
+                });
+            });
+          return node;
+        };
+        if (lead) refs.append(link(lead));
+        else if (presentation.source) {
+          const tag = el('span', 'rc-roles__material rc-roles__source');
+          tag.textContent = presentation.source;
+          refs.append(tag);
+        }
+        const notes = [
+          presentation.versionNote,
+          presentation.omissionNote,
+          turn.stale
+            ? T(
+                '引用包含旧版本；原回复按当时记录保留。',
+                'Citations include an older version; the original reply is retained.',
+              )
+            : undefined,
+        ].filter((note): note is string => !!note);
+        const short = renderShortResult(doc, {
+          kind: 'reply',
+          id: turn.id,
+          statuses: presentation.status
+            ? [
+                {
+                  text: presentation.status,
+                  tone: turn.generationMode === 'local' ? 'waiting' : undefined,
+                },
+              ]
+            : [],
+          lead: presentation.summary,
+          derivedLead: presentation.derived,
+          notes,
+          actions: refs.childElementCount ? [refs] : [],
+          more: {
+            ...replyDisclosure(presentation),
+            body: [reply, ...materials.filter((ref) => ref !== lead).map(link)],
+            open: expandedReplies.has(turn.id),
+            onToggle: (open) => {
+              if (open) expandedReplies.add(turn.id);
+              else expandedReplies.delete(turn.id);
+            },
+          },
+          classes: {
+            status: 'rc-roles__reply-status',
+            lead: 'rc-roles__preview',
+            note: 'rc-roles__limitation',
+            more: 'rc-roles__details',
+          },
         });
-        item.append(details);
+        item.append(short.element);
         if (displayObserver && turn.canRecordDisplay !== false && !turn.displayRecorded) {
-          const visibleText = presentation.summary === turn.reply.trim() ? preview : reply;
+          // A reply counts as displayed only when its complete text is painted.
+          const visibleText = presentation.partial || !short.lead ? reply : short.lead;
           visibleReplies.set(visibleText, { turnId: turn.id, visible: false });
           displayObserver.observe(visibleText);
-        }
-        if (turn.materials?.length) {
-          const refs = el('div', 'rc-roles__materials');
-          refs.setAttribute('aria-label', T('引用材料', 'Referenced materials'));
-          for (const [index, ref] of turn.materials.entries()) {
-            const text = (ref.title.trim() || T('材料', 'Material')) + ' · v' + ref.version;
-            const link = adapter.openMaterial
-              ? button('rc-roles__material')
-              : el('span', 'rc-roles__material');
-            link.textContent = text;
-            if (adapter.openMaterial)
-              link.addEventListener('click', () => {
-                Promise.resolve()
-                  .then(() => adapter.openMaterial!(ref))
-                  .catch(() => {
-                    if (!destroyed) {
-                      feedback = 'action';
-                      render();
-                    }
-                  });
-              });
-            if (index === 0) refs.append(link);
-            else details.append(link);
-          }
-          item.append(refs);
         }
       } else {
         const status = el('p', 'rc-roles__turn-status');

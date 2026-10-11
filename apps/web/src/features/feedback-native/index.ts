@@ -5,6 +5,13 @@ import type { SubmitInput } from '../../contracts-v2';
  * queue, mutation journal, global navigation or React root is created here. */
 import { mountReviewControls, isSubmitDecision } from './review-controls';
 import { feedbackText, type FeedbackLanguage } from './localization';
+import {
+  declaredPurpose,
+  feedbackShortResult,
+  reviewedAs,
+  ruleItems,
+  type PurposeChoice,
+} from './short-summary';
 import { evaluationVersionLine } from './evaluation-version';
 import { sealReadOnly } from './read-only-notice';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
@@ -12,9 +19,9 @@ import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/
 export type SelectedProduct = Pick<
   WorkProductVersion,
   'session_id' | 'product_id' | 'version' | 'title' | 'removed_at' | 'author'
->;
+> & { purpose?: string };
 type Item = {
-  applicability?: 'applicable' | 'not_applicable' | 'unknown';
+  applicability?: 'applicable' | 'not_applicable' | 'undetermined' | 'unknown';
   criterion: string;
   explanation: string;
   source: string;
@@ -200,6 +207,9 @@ export function mountNativeFeedback(
   const selected = new Map<string, ObjectRef>();
   const selectedTitles = new Map<string, string>();
   const draftResponses = new Map<string, { text: string; evidence: EvidenceRefV2[] }>();
+  // Presentation only: disclosure and purpose choice survive re-renders, not reloads.
+  const openResults = new Set<string>();
+  const purposeChoices = new Map<string, PurposeChoice>();
   let savedDrafts: Promise<void> = Promise.resolve();
   let draftError: unknown;
   const persist = (key: string, draft: { text: string; evidence: EvidenceRefV2[] }) => {
@@ -504,14 +514,19 @@ export function mountNativeFeedback(
             : T('此前提交的反馈', 'Earlier submission feedback'),
       ),
     );
+    const review =
+      report.subject.kind === 'review'
+        ? adapter
+            .snapshot()
+            .reviews?.find(
+              (r) => r.id === report.subject.object_id && r.version === report.subject.version,
+            )
+        : undefined;
+    const purposeLine = reviewedAs(review, language);
+    if (purposeLine) panel.append(el('p', purposeLine, 'muted'));
     refs(panel, [report.subject]);
     panel.append(evaluationVersionLine(doc, report, language));
     if (report.subject.kind === 'review') {
-      const review = adapter
-        .snapshot()
-        .reviews?.find(
-          (r) => r.id === report.subject.object_id && r.version === report.subject.version,
-        );
       if (review) {
         panel.append(
           el(
@@ -527,6 +542,8 @@ export function mountNativeFeedback(
         refs(panel, review.subjects);
       }
     }
+    // Detail stays as it was; it is folded behind the short result below.
+    const body: Node[] = [];
     const facts = el('section');
     facts.append(el('h3', T('你做过的工作与依据', 'Your recorded work and evidence')));
     if (!report.verified_facts?.length)
@@ -568,7 +585,7 @@ export function mountNativeFeedback(
         snapshot.references.flatMap((x) => (x.verified_ref ? [x.verified_ref] : [])),
       );
     }
-    panel.append(facts);
+    body.push(facts);
     const history = el('section');
     history.append(el('h3', T('历史行动与承诺', 'Past actions and commitments')));
     for (const snapshot of report.historical_responsibilities ?? [])
@@ -587,15 +604,14 @@ export function mountNativeFeedback(
           'muted',
         ),
       );
-    panel.append(history);
+    body.push(history);
     const criteria = criterionLabels(language);
     const notApplicable = el('details');
     notApplicable.append(
       el('summary', T('查看本次未适用的验收项', 'View criteria not applicable to this submission')),
     );
     let inactive = 0;
-    for (const item of report.rule_items ??
-      report.items.filter((i) => i.source === 'verified_rule')) {
+    for (const item of ruleItems(report)) {
       const section = el('section');
       section.append(
         el('h3', criteria[item.criterion] ?? T('具体反馈项', 'Feedback criterion')),
@@ -637,9 +653,9 @@ export function mountNativeFeedback(
       if (item.label === 'NOT_APPLICABLE') {
         notApplicable.append(section);
         inactive++;
-      } else panel.append(section);
+      } else body.push(section);
     }
-    if (inactive) panel.append(notApplicable);
+    if (inactive) body.push(notApplicable);
     const coverage = el(
       'p',
       feedbackCoverageText(
@@ -650,7 +666,7 @@ export function mountNativeFeedback(
       'muted',
     );
     coverage.dataset.feedbackCoverage = report.id;
-    panel.append(coverage);
+    body.push(coverage);
     const semantic = el('section');
     semantic.append(el('h3', T('理由与证据的支持关系', 'Support between reasoning and evidence')));
     const { advice } = feedbackSemanticPresentation(report, adapter.snapshot());
@@ -671,11 +687,57 @@ export function mountNativeFeedback(
       refs(semantic, item.citations);
       semantic.append(responseForm(report, item.criterion, 'model_advice'));
     }
-    panel.append(semantic);
-    panel.append(el('p', report.business_response));
-    for (const text of report.next_options) panel.append(el('p', text, 'muted'));
-    panel.append(responseForm(report));
+    for (const text of report.next_options) body.push(el('p', text, 'muted'));
+    const id = `${report.id}:${report.version}`;
+    const state = adapter.snapshot();
+    const canReview = !!adapter.review && adapter.canReview !== false && state.status === 'active';
+    panel.append(
+      feedbackShortResult(doc, {
+        report,
+        language,
+        review,
+        reviews: state.reviews,
+        semantic,
+        body,
+        open: openResults.has(id),
+        onToggle: (open) => {
+          if (open) openResults.add(id);
+          else openResults.delete(id);
+        },
+        prompt:
+          review && canReview
+            ? {
+                name: `purpose-${id}`,
+                selected:
+                  purposeChoices.get(id) ?? declaredPurpose(review.subjects, state.products),
+                disabled: state.busy || !!state.pending,
+                select: (purpose) => purposeChoices.set(id, purpose),
+                submit: (purpose) => void reviewAgain(review, purpose),
+              }
+            : undefined,
+      }).element,
+      el('p', report.business_response),
+      responseForm(report),
+    );
     return panel;
+  }
+  /** Same versions and question, now with the purpose the learner chose. */
+  async function reviewAgain(review: ReviewRecord, purpose: PurposeChoice) {
+    const request = adapter.review;
+    if (!request) return;
+    // Leave the panel first so the next render can list the new review.
+    notice.tabIndex = -1;
+    notice.focus({ preventScroll: true });
+    await act(() =>
+      request({
+        subjects: structuredClone(review.subjects),
+        purpose,
+        question: review.question,
+        decision: review.decision && isSubmitDecision(review.decision) ? review.decision : null,
+        scope: [],
+        followup_of: [],
+      }),
+    );
   }
   function renderSelected() {
     selectedSummary.replaceChildren(

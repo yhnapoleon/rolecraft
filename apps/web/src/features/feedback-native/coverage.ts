@@ -1,5 +1,5 @@
 import type { Report } from './index';
-import { feedbackText, type FeedbackLanguage } from './localization';
+import { feedbackCopy, feedbackText, type FeedbackLanguage } from './localization';
 
 /** Coverage of currently readable, applicable criteria; never a score. */
 export function feedbackCoverageText(
@@ -13,6 +13,8 @@ export function feedbackCoverageText(
       item.label !== 'NOT_APPLICABLE' &&
       (item.applicability === undefined || item.applicability === 'applicable'),
   );
+  // A 0/0 ratio says nothing; say plainly that no criterion applies yet.
+  if (!items.length) return feedbackCopy(language, 'coverageEmpty');
   let verified = 0;
   let model = 0;
   for (const item of items) {
