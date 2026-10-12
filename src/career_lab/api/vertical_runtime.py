@@ -19,8 +19,8 @@ from career_lab.api.vertical_reads import (
 )
 from career_lab.api.private_roles import install_private_role_runtime
 from career_lab.runtime.context_v2 import ScenarioKnowledge
+from career_lab.runtime.model_slots import ModelSlots, configured_slots
 from career_lab.runtime.roles_v2 import LocalRoleModel
-from career_lab.runtime.model_adapter import LocalModel, OpenAICompatibleModel
 from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.workspace.extension import install_workspace_operations
 
@@ -30,29 +30,17 @@ ROLE_RUNTIME_READY = True
 
 
 def configured_models(provider="local"):
-    if provider == "local":
-        return LocalModel(), LocalRoleModel()
-    defaults = {
-        "deepseek": ("ds.txt", "https://api.deepseek.com", "deepseek-chat"),
-        "openai": ("openai.txt", "https://api.openai.com/v1", "gpt-4.1-mini"),
-    }
-    key_file, url, name = defaults[provider]
-    model = OpenAICompatibleModel.from_key_file(
-        Path(os.getenv("CAREER_LAB_KEY_FILE", key_file)),
-        base_url=os.getenv("CAREER_LAB_BASE_URL", url),
-        model=os.getenv("CAREER_LAB_MODEL", name),
-        retries=0,
-    )
-    model.provider = provider
-    return model, model
+    """Historical pair (v1 application model, colleague model); slots: ``configured_slots``."""
+    slots = configured_slots(provider)
+    return slots.legacy, slots.roles
 
 
 def build_registry(
-    scenario_root, role_model, *, feedback_handler=None, store_provider=None, scenario_archive=None
+    scenario_root, models, *, feedback_handler=None, store_provider=None, scenario_archive=None
 ):
-    module = ScenarioModule(
-        scenario_root, model=None if isinstance(role_model, LocalRoleModel) else role_model
-    )
+    """``models`` is a ``ModelSlots``, or one model every slot shares (historical callers)."""
+    slots = models if isinstance(models, ModelSlots) else ModelSlots.shared(models)
+    module = ScenarioModule(scenario_root, model=slots.assistant)
     registry = module.install(ExtensionRegistry(), name=module.package.bundle.id + "_v2")
     from career_lab.api.scenario_history import ScenarioReadCatalog
     from career_lab.api.negotiation_runtime import install_negotiation
@@ -70,12 +58,10 @@ def build_registry(
     if feedback_handler is None:
         from career_lab.api.evaluation_runtime import create_feedback_handler
 
-        feedback_handler = create_feedback_handler(
-            module, model=None if isinstance(role_model, LocalRoleModel) else role_model
-        )
+        feedback_handler = create_feedback_handler(module, slots=slots)
         from career_lab.api.registered_models import install_registered_models
 
-        feedback_handler = install_registered_models(module, feedback_handler, role_model)
+        feedback_handler = install_registered_models(module, feedback_handler, slots)
     from career_lab.api.v4_config import install_settings
 
     install_settings(registry, module)
@@ -87,16 +73,16 @@ def build_registry(
     install_private_role_runtime(
         registry,
         ScenarioKnowledge.from_package(module.package),
-        role_model,
+        slots.roles,
         enable_generation=ROLE_RUNTIME_READY,
     )
     install_native_reads(
         registry,
         module,
-        role_mode=("local_reference" if isinstance(role_model, LocalRoleModel) else "model")
+        role_mode=("local_reference" if isinstance(slots.roles, LocalRoleModel) else "model")
         if ROLE_RUNTIME_READY
         else "unavailable",
-        feedback_mode="waiting_model" if isinstance(role_model, LocalRoleModel) else "model",
+        feedback_mode="waiting_model" if slots.judge is None else "model",
         store_provider=store_provider,
         scenario_resolver=catalog.resolve,
     )
@@ -125,7 +111,7 @@ def default_installed_scenario():
 def create_runtime_app(
     database_url=None, *, provider="local", scenario_root=None, feedback_handler=None
 ):
-    legacy_model, role_model = configured_models(provider)
+    slots = configured_slots(provider)
     root = Path(
         scenario_root or os.getenv("CAREER_LAB_SCENARIO_V2") or default_installed_scenario()
     )
@@ -139,11 +125,11 @@ def create_runtime_app(
         from career_lab.api.multilingual_runtime import build_catalog
 
         registry, module = build_catalog(
-            build_registry, os.environ["CAREER_LAB_SCENARIO_CATALOG"], role_model, **options
+            build_registry, os.environ["CAREER_LAB_SCENARIO_CATALOG"], slots, **options
         )
     else:
-        registry, module = build_registry(root, role_model, **options)
-    app = create_app(database_url, model=legacy_model, extensions=registry)
+        registry, module = build_registry(root, slots, **options)
+    app = create_app(database_url, model=slots.legacy, extensions=registry)
     from career_lab.jobs.worker import NonRetryingHandler
 
     for name in ("turn", "feedback"):
@@ -158,4 +144,5 @@ def create_runtime_app(
     )
     app.state.scenario_v2 = module
     app.state.model_provider = provider
+    app.state.model_slots = slots
     return app
