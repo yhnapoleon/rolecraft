@@ -16,12 +16,14 @@ from career_lab.contracts.v2.core import digest
 from career_lab.models.v3 import registry_cli
 from career_lab.models.v3.core import INPUT
 from career_lab.models.v3.linear import pair_text, text
+from career_lab.contracts.v2.core import FileRef
 from tests.support.linear_return import (
     DELETE,
     LABELS,
     MECHANISM_DATASET,
     VOCABULARY,
     constructed_model,
+    feedback_report,
     golden_rows,
     json_bytes,
     reference_module,
@@ -569,3 +571,33 @@ def test_lin_04_export_script_refuses_objects_the_loader_cannot_rebuild(
             training_notes_file="notes.md",
         )
     assert not (tmp_path / "return").exists()
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_lin_01_normal_feedback_names_the_linear_model_and_its_training_data(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    language: str,
+) -> None:
+    root = tmp_path / "return"
+    ref = write_linear_return(root, label_tiers=["G0", "G2v"])
+    code, out = register(capsys, tmp_path / "registry", root, ref)
+    assert code == 0, out
+    registration = FileRef.model_validate(out["registration"])
+    report = feedback_report(tmp_path, monkeypatch, language, tmp_path / "registry", registration)
+    (advice,) = report["model_advice"]
+    assert advice["criterion"] == "R2.support"
+    assert advice["status"] == "synthetic_mechanism_only"
+    assert advice["affects_score"] is False
+    identity = advice["registration"]
+    assert identity["id"] == registration.path.split("/")[0]
+    assert identity["kind"] == "linear" and identity["scope"] == "synthetic_fixture"
+    assert identity["dataset"] == {
+        "dataset_id": MECHANISM_DATASET,
+        "dataset_manifest_sha256": "d" * 64,
+        "label_tiers": ["G0", "G2v"],
+    }
+    assert identity["quality_validated"] is False
+    assert report["provenance"]["registered_model"] == identity
+    assert all(item["source"] != "model_advice" for item in report["items"])

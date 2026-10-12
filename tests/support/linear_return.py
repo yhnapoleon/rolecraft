@@ -16,8 +16,13 @@ from types import ModuleType
 from typing import Any
 
 import numpy as np
+import pytest
+from fastapi.testclient import TestClient
 
+from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.contracts.v2.core import FileRef, canonical
+from scripts.regression.published import write_catalog
+from tests.regression.conftest import PublishedSession
 
 ROOT = Path(__file__).resolve().parents[2]
 RETURN_V3 = ROOT / "docs/data/return-v3"
@@ -169,3 +174,50 @@ def write_linear_return(
     raw = json_bytes(outer)
     (root / "checkpoint-manifest.json").write_bytes(raw)
     return FileRef(path="checkpoint-manifest.json", sha256=sha(raw))
+
+
+def feedback_report(
+    root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    language: str,
+    registry: Path,
+    registration: FileRef,
+) -> dict[str, Any]:
+    """One normal review through HTTP and the worker with a server-configured registration."""
+    monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRY", str(registry))
+    monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRATION", registration.model_dump_json())
+    monkeypatch.setenv("CAREER_LAB_MODEL_JOURNAL", str(root / "journal"))
+    monkeypatch.setenv("CAREER_LAB_SCENARIO_CATALOG", str(write_catalog(root / "catalog.json")))
+    monkeypatch.setenv("CAREER_LAB_SCENARIO_ARCHIVE", str(root / "archive"))
+    app = create_runtime_app("sqlite:///" + str(root / "session.db"), provider="local")
+    try:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            made = client.post(
+                "/sessions",
+                json={"schema_version": 2, "scenario": "pm_pilot_v2", "work_language": language},
+            ).json()
+            session = PublishedSession(
+                app,
+                client,
+                made["session_id"],
+                {"Authorization": "Bearer " + made["token"]},
+                language,
+            )
+            transaction = session.send(
+                "reviews",
+                "review-model",
+                "reviews.create",
+                {
+                    "subjects": [session.work()],
+                    "scope": [],
+                    "purpose": "commitment",
+                    "decision": "defer_with_conditions",
+                },
+            )
+            session.run_job()
+            response = session.get("feedback/" + transaction["result"]["review"]["object_id"])
+            assert response.status_code == 200, response.text
+            return response.json()["result"]["result"]["items"][0]
+    finally:
+        app.state.store.close()
+        app.state.v2_store.db.engine.dispose()
