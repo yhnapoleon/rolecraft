@@ -4,6 +4,7 @@ Registration never imports torch: it reads the installed encoder runtime version
 package metadata. The static returns here are deliberately not loadable neural models.
 """
 
+import builtins
 import hashlib
 import importlib.metadata
 import json
@@ -22,9 +23,10 @@ from fastapi.testclient import TestClient
 
 from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest
-from career_lab.models.v3 import registry_cli
+from career_lab.models.v3 import encoder_registry, registry_cli
 from career_lab.models.v3.bundle import json_bytes, sha
 from career_lab.models.v3.core import LABELS
+from career_lab.models.v3.encoder_artifact import model_revision_v3, validate_return_identity
 from career_lab.models.v3.huggingface import aggregate_pairs
 from career_lab.models.v3.registry import (
     describe_registration,
@@ -365,8 +367,6 @@ def test_model_01_encoder_registration_is_portable_without_dependencies(tmp_path
 def test_encoder_load_reports_missing_optional_dependencies(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import builtins
-
     root = tmp_path / "producer"
     ref = encoder_return(root)
     registry = tmp_path / "registry"
@@ -663,8 +663,6 @@ def test_rt_04_feedback_recorded_before_stays_readable_and_v1_adds_no_advice(
 
 def deny_encoder_imports(monkeypatch: pytest.MonkeyPatch) -> None:
     """torch and transformers cannot be imported, whatever metadata says."""
-    import builtins
-
     real = builtins.__import__
 
     def without_encoder(name: str, *args: Any, **kwargs: Any) -> Any:
@@ -723,6 +721,11 @@ def test_enc_07_normal_feedback_names_kind_dataset_and_weights_stage(
 )
 def test_enc_02_pair_aggregate_follows_the_specification_examples(example: dict) -> None:
     threshold = example["evidence_threshold"]
+    if "refused" in example:
+        with pytest.raises(ProtocolError) as error:
+            aggregate_pairs(np.array(example["pair_probabilities"]), threshold)
+        assert error.value.code == example["refused"]
+        return
     probabilities, scores = aggregate_pairs(np.array(example["pair_probabilities"]), threshold)
     assert probabilities == pytest.approx(example["probabilities"], abs=1e-12)
     assert scores == pytest.approx(example["evidence_scores"], abs=1e-12)
@@ -770,6 +773,9 @@ def wider(shape_of: str) -> dict[str, np.ndarray]:
         {"encoder_config": {"model_type": "bert", "hidden_size": HIDDEN, "auto_map": {"x": "y"}}},
         {"encoder_config": {"model_type": "bert"}},
         {"legacy": True, "variant": "pair_aggregate", "heads": static_heads("pair_aggregate")},
+        {"variant": "pair", "pair_label_order": ["SUPPORTS", "CONTRADICTS", "UNRELATED"]},
+        {"variant": "pack", "pair_label_order": ["SUPPORTS", "CONTRADICTS", "UNRELATED"]},
+        {"heads": {name: array.astype(np.float16) for name, array in static_heads("pair").items()}},
     ],
     ids=[
         "unknown-variant",
@@ -784,6 +790,9 @@ def wider(shape_of: str) -> dict[str, np.ndarray]:
         "remote-code",
         "no-hidden-size",
         "legacy-aggregate",
+        "pair-label-order-on-pair",
+        "pair-label-order-on-pack",
+        "float16-heads",
     ],
 )
 def test_enc_06_unsupported_architectures_are_refused_at_registration(
@@ -792,18 +801,26 @@ def test_enc_06_unsupported_architectures_are_refused_at_registration(
     assert refused(tmp_path, **change) == "encoder_architecture_unsupported"
 
 
+def test_enc_03_dual_head_variants_keep_thresholds_below_one_half(tmp_path: Path) -> None:
+    """Only pair_aggregate needs 0.5 or more: its support must beat unrelated."""
+    for variant in ("pack", "pair"):
+        root = tmp_path / variant
+        ref = encoder_return(root, variant=variant, evidence_threshold=0.3)
+        register_bundle(tmp_path / "registry", root, ref, scope="synthetic_fixture")
+
+
 @pytest.mark.parametrize("variant", ["pack", "pair", "pair_aggregate"])
 def test_enc_06_each_supported_variant_registers_with_its_settings(
     tmp_path: Path, variant: str
 ) -> None:
     root = tmp_path / "producer"
-    ref = encoder_return(root, variant=variant, evidence_threshold=0.35, max_tokens=200)
+    ref = encoder_return(root, variant=variant, evidence_threshold=0.65, max_tokens=200)
     registry = tmp_path / "registry"
     registration = register_bundle(registry, root, ref, scope="synthetic_fixture")
     entry = json.loads((registry / registration.path).read_bytes())
     assert (entry["variant"], entry["evidence_threshold"], entry["max_tokens"]) == (
         variant,
-        0.35,
+        0.65,
         200,
     )
 
@@ -812,6 +829,14 @@ def test_enc_06_each_supported_variant_registers_with_its_settings(
     ("change", "code"),
     [
         ({"evidence_threshold": 0}, "checkpoint_inference_settings_invalid"),
+        (
+            {"variant": "pair_aggregate", "evidence_threshold": 0.3},
+            "checkpoint_inference_settings_invalid",
+        ),
+        (
+            {"variant": "pair_aggregate", "evidence_threshold": 0.49},
+            "checkpoint_inference_settings_invalid",
+        ),
         ({"evidence_threshold": 1}, "checkpoint_inference_settings_invalid"),
         ({"evidence_threshold": 1.5}, "checkpoint_inference_settings_invalid"),
         ({"evidence_threshold": "0.5"}, "checkpoint_inference_settings_invalid"),
@@ -820,6 +845,7 @@ def test_enc_06_each_supported_variant_registers_with_its_settings(
         ({"max_tokens": 3}, "checkpoint_inference_settings_invalid"),
         ({"max_tokens": 257}, "tokenizer_capacity_exceeded"),
         ({"checkpoint_schema_version": 4}, "checkpoint_schema_version_unsupported"),
+        ({"task_type": "criterion"}, "model_return_task_or_labels_invalid"),
         ({"legacy": True, "evidence_threshold": 0.3}, "checkpoint_schema_version_required"),
         (
             {
@@ -832,6 +858,23 @@ def test_enc_06_each_supported_variant_registers_with_its_settings(
             {"model_revision": "hf-finetuned:" + "a" * 40 + ":" + "c" * 64},
             "checkpoint_training_identity_mismatch",
         ),
+    ],
+    ids=[
+        "threshold-zero",
+        "aggregate-threshold-0.3",
+        "aggregate-threshold-0.49",
+        "threshold-one",
+        "threshold-above-one",
+        "threshold-string",
+        "threshold-boolean",
+        "threshold-missing",
+        "token-limit-below-four",
+        "token-limit-over-tokenizer",
+        "schema-version-4",
+        "criterion-task",
+        "legacy-with-v3-field",
+        "pair-label-order-reordered",
+        "legacy-revision-on-v3",
     ],
 )
 def test_enc_03_inference_settings_are_checked_at_registration(
@@ -856,8 +899,6 @@ def test_enc_03_threshold_and_token_limit_are_part_of_the_model_revision(tmp_pat
 
 
 def test_enc_03_model_revision_matches_the_specification_example() -> None:
-    from career_lab.models.v3.encoder_artifact import model_revision_v3
-
     fields = {
         "after_weights": "c" * 64,
         "evidence_threshold": 0.5,
@@ -995,8 +1036,6 @@ LINEAR_MANIFEST = {"artifact_kind": "linear", "artifact_protocol": "rolecraft-li
 
 def test_seam_01_shared_return_identity_accepts_other_artifact_kinds(tmp_path: Path) -> None:
     """The shared fixture v2 outer-manifest policy says nothing about artifact kinds."""
-    from career_lab.models.v3.encoder_artifact import validate_return_identity
-
     root = tmp_path / "producer"
     encoder_return(root)
     manifest = json.loads((root / "checkpoint-manifest.json").read_bytes())
@@ -1007,9 +1046,6 @@ def test_seam_01_shared_return_identity_accepts_other_artifact_kinds(tmp_path: P
 def test_seam_02_the_encoder_protocol_does_not_claim_linear_or_fusion_returns(
     tmp_path: Path,
 ) -> None:
-    from career_lab.models.v3 import encoder_registry
-    from career_lab.models.v3.registry import inference_runtime
-
     root = tmp_path / "producer"
     encoder_return(root)
     manifest = json.loads((root / "checkpoint-manifest.json").read_bytes())
@@ -1039,3 +1075,85 @@ def test_seam_02_the_encoder_protocol_does_not_claim_linear_or_fusion_returns(
     registration = register_bundle(tmp_path / "registry", root, ref, scope="synthetic_fixture")
     entry = json.loads((tmp_path / "registry" / registration.path).read_bytes())
     assert encoder_registry.REGISTRATION.handles(entry)
+
+
+UNTRAINED_DECLARATION = {
+    "weights_stage": "pretrained_untrained_heads",
+    "completed": False,
+    "training_partitions": [],
+    "selection_partition": None,
+}
+
+
+@pytest.mark.parametrize(
+    ("declared", "code"),
+    [
+        (UNTRAINED_DECLARATION, "model_return_weights_stage_invalid"),
+        ({"weights_stage": "pretrained_untrained_heads"}, "model_return_weights_stage_invalid"),
+        (
+            {k: v for k, v in UNTRAINED_DECLARATION.items() if k != "weights_stage"},
+            "model_return_incomplete",
+        ),
+    ],
+    ids=["full-declaration", "stage-only", "declaration-without-stage"],
+)
+def test_seam_03_untrained_declarations_never_pass_the_shared_check(
+    tmp_path: Path, declared: dict[str, Any], code: str
+) -> None:
+    """Other return kinds reuse the shared check; an untrained or incomplete return is
+    never theirs to accept. Only the encoder path admits it, and only as synthetic."""
+    root = tmp_path / "producer"
+    encoder_return(root)
+    manifest = json.loads((root / "checkpoint-manifest.json").read_bytes())
+    linear = manifest | LINEAR_MANIFEST | {"dataset_id": "partner-relations-2026-10"}
+    with pytest.raises(ProtocolError) as error:
+        validate_return_identity(linear | declared)
+    assert error.value.code == code
+    with pytest.raises(ProtocolError):
+        register_bundle(
+            tmp_path / "registry",
+            root,
+            write_manifest(root, linear | declared),
+            scope="external_candidate",
+        )
+    assert not list((tmp_path / "registry").glob("encoder-*"))
+
+
+def relisted(root: Path, extra: dict[str, bytes]) -> FileRef:
+    """Add files to a static return and list them in its outer manifest."""
+    manifest = json.loads((root / "checkpoint-manifest.json").read_bytes())
+    for name, raw in extra.items():
+        (root / name).write_bytes(raw)
+        manifest["checkpoint_files"][name] = sha(raw)
+    return write_manifest(root, manifest)
+
+
+def test_enc_06_every_returned_file_is_listed_and_of_an_allowed_type(tmp_path: Path) -> None:
+    registry = tmp_path / "registry"
+    listed = tmp_path / "listed"
+    encoder_return(listed)
+    ref = relisted(
+        listed,
+        {"predictions.dev.jsonl": b'{"record_id": "r"}\n', "training-notes.md": b"notes\n"},
+    )
+    entry = json.loads(
+        (
+            registry / register_bundle(registry, listed, ref, scope="synthetic_fixture").path
+        ).read_bytes()
+    )
+    assert {"predictions.dev.jsonl", "training-notes.md"} <= set(entry["files"])
+    unlisted = tmp_path / "unlisted"
+    ref = encoder_return(unlisted)
+    (unlisted / "notes.txt").write_bytes(b"not in checkpoint_files")
+    with pytest.raises(ProtocolError) as error:
+        register_bundle(registry, unlisted, ref, scope="synthetic_fixture")
+    assert error.value.code == "checkpoint_member_set_mismatch"
+    for name in ("predict.py", "heads.pt", "weights.bin"):
+        code_dir = tmp_path / name.replace(".", "-")
+        encoder_return(code_dir)
+        with pytest.raises(ProtocolError) as error:
+            register_bundle(
+                registry, code_dir, relisted(code_dir, {name: b"x"}), scope="synthetic_fixture"
+            )
+        assert error.value.code == "checkpoint_file_type_not_allowed"
+    assert len(list(registry.glob("encoder-*/registration.json"))) == 1

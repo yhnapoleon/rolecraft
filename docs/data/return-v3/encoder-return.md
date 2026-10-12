@@ -23,11 +23,11 @@
   predictions.dev.jsonl        dev 逐条预测（外层清单 predictions_file）
 ```
 
-文件后缀只允许 `.json .safetensors .model .txt .md`；不允许符号链接、`pytorch_model.bin`、自定义 Python 代码。`encoder/` 下的实际文件集合必须与 `local-files.json` 完全一致。
+目录里每个文件（清单本身除外）都必须列在 `checkpoint_files`，多一个、少一个都拒绝。后缀：`encoder/` 下只允许 `.json .safetensors .model .txt .md`，其余位置只允许 `.json .npz .jsonl .md .txt`；不允许符号链接、`pytorch_model.bin`、`.pt`、自定义 Python 代码。`encoder/` 下的实际文件集合必须与 `local-files.json` 完全一致。
 
 ## 2. 外层清单 `checkpoint-manifest.json`
 
-字段与 fixture v2 模板相同（`return_protocol=rolecraft-label-evidence-v2`、`task_type=relation`、固定 `label_order`、`dataset_id`、`dataset_manifest_sha256`、`checkpoint_files`、`load_and_predict_command`、`training_notes_file`、`predictions_file` 等）。`checkpoint_files` 列出目录内除清单本身以外的每个文件及其 SHA-256。
+字段与 fixture v2 模板相同（`return_protocol=rolecraft-label-evidence-v2`、`task_type=relation`、固定 `label_order`、`dataset_id`、`dataset_manifest_sha256`、`checkpoint_files`、`load_and_predict_command`、`training_notes_file`、`predictions_file` 等）。`checkpoint_files` 列出目录内除清单本身以外的每个文件及其 SHA-256，且只能列这些文件（§1）。
 
 v3 新增的可选字段：
 
@@ -61,7 +61,7 @@ v3 新增的可选字段：
 | `variant` | `pack`、`pair`、`pair_aggregate`（§5） |
 | `pooling` | `mean`（按 attention mask 求平均） |
 | `max_tokens` | 整数，≥4，且不超过分词器 `model_max_length` 与 `max_position_embeddings`（XLM-R base 为 512） |
-| `evidence_threshold` | 数值，0 < τ < 1 |
+| `evidence_threshold` | 数值，0 < τ < 1；`pair_aggregate` 须 0.5 ≤ τ < 1 |
 | `seed` | 整数，加载前 `torch.manual_seed(seed)` |
 | `pair_label_order` | 只在 `pair_aggregate`：`["SUPPORTS", "CONTRADICTS", "UNRELATED"]` |
 | `model_revision` | §8 公式；必须与外层清单和每行预测一致 |
@@ -81,7 +81,7 @@ numpy `.npz`，`allow_pickle=False` 可读，浮点数组。`d` 为 `encoder/con
 | `pack`、`pair` | `relation.weight [3, d]`、`relation.bias [3]`、`selector.weight [1, 2d]`、`selector.bias [1]` |
 | `pair_aggregate` | `pair.weight [3, d]`、`pair.bias [3]` |
 
-数组名集合必须恰好如上，形状逐个相符；多一个、少一个或形状不对都返回 `encoder_architecture_unsupported`。参考脚本按名字排序、固定时间戳与属性、不压缩地写出，同一组数组逐字节相同。
+数组名集合必须恰好如上，形状逐个相符，类型为 float32；多一个、少一个、形状或类型不对都返回 `encoder_architecture_unsupported`。`pair_label_order` 只在 `pair_aggregate` 出现，`pack`、`pair` 带上即拒。参考脚本按名字排序、固定时间戳与属性、不压缩地写出，同一组数组逐字节相同。
 
 ## 5. 编码器输入与三种结构
 
@@ -104,12 +104,13 @@ body_i = candidate_i.text + "\n" + "observed {ref.observed_at_seq}; valid from {
 
 **pair_aggregate 聚合规则（v1）**，τ＝`evidence_threshold`：
 
+0. τ 必须 ≥ 0.5（更低的阈值登记时拒绝 `checkpoint_inference_settings_invalid`）。记支持强度 σ_i＝s_i（若 s_i > u_i）否则 0：支持不胜过无关的一对不算支持。
 1. 任一 c_i ≥ τ → `CONTRADICTED`，证据＝所有 c_i ≥ τ 的候选，置信 m＝max c_i，逐候选分数取 c_i。
-2. 否则任一 s_i ≥ τ → `SUPPORTED`，证据＝所有 s_i ≥ τ 的候选，m＝max s_i，分数取 s_i。
-3. 否则 → `INSUFFICIENT`，证据为空，m＝1 − max(max s_i, max c_i)，分数取 max(s_i, c_i)。
+2. 否则任一 σ_i ≥ τ（即 s_i ≥ τ 且 s_i > u_i）→ `SUPPORTED`，证据＝所有 σ_i ≥ τ 的候选，m＝max σ_i，分数取 σ_i。
+3. 否则 → `INSUFFICIENT`，证据为空，m＝1 − max(max s_i, max c_i)，分数取 max(σ_i, c_i)。
 4. 关系概率：判定类 (1+m)/2，其余两类各 (1−m)/4（和为 1，判定类严格最大）。
 
-无关永远不会升为支持；矛盾优先于支持。[样例](encoder-pair-aggregate.examples.json)覆盖矛盾优先、支持与无关并存、全部无关、低于阈值、多处矛盾、低阈值和多处支持；产品与参考脚本都逐条按样例测试。负责方的 dev 预测必须用同一规则（参考脚本 `aggregate_pairs`）。
+无关永远不会升为支持：支持须过阈值且胜过无关，阈值不低于 0.5；矛盾优先于支持（矛盾与无关持平时仍记矛盾，宁可提醒）。[样例](encoder-pair-aggregate.examples.json)覆盖矛盾优先、支持与无关并存、全部无关、低于阈值、多处矛盾、支持与无关持平、最可能无关的一对、多处支持、矛盾与无关持平、较高阈值，以及两个被拒的低阈值；产品与参考脚本都逐条按样例测试。负责方的 dev 预测必须用同一规则（参考脚本 `aggregate_pairs`）。
 
 ## 6. `encoder/local-files.json`
 
@@ -156,6 +157,7 @@ canonical_json = json.dumps(value, ensure_ascii=False, sort_keys=True, separator
 
 ## 11. 登记、依赖锁与协议
 
+- 登记只做不需要 torch 的检查（文件、hash、清单、设置、头的名字形状类型、架构声明）；`after_weights` 要到加载时重算。**登记成功不等于能加载**：交付前请在锁定版本下用 `AutoModel.from_pretrained` 加头自行加载一次并核对 `after_weights`。
 - 登记命令：`python -m career_lab.models.v3.registry_cli register --registry <目录> --bundle-root <回传目录> --bundle-path checkpoint-manifest.json --bundle-hash <清单 SHA-256> --scope external_candidate|synthetic_fixture`。登记复制所钉文件、不执行清单里的任何命令或代码。
 - 注册协议 `advisory-encoder-registration-v2`：注册项记录 torch、transformers、tokenizers、safetensors 的已安装版本（读包元数据，不导入 torch）。登记环境缺任一包 → `encoder_runtime_unavailable`；加载或描述时版本不同 → `registered_inference_runtime_changed`；加载时缺包 → `pretrained_encoder_dependencies_unavailable`。
 - 注册项公开身份：`id`、`model_revision`、`scope`、`kind=huggingface_encoder`、`dataset`、`weights_stage`，以及 `quality_validated=false`；另记 `variant`、`evidence_threshold`、`max_tokens`。
@@ -176,20 +178,46 @@ python export_hf_return.py seal --root RETURN --dataset-manifest dataset-manifes
 
 ## 13. 拒绝码
 
+登记（`register`）时：
+
 | 码 | 含义 |
 |---|---|
+| `encoder_runtime_unavailable` | 登记环境缺 torch、transformers、tokenizers、safetensors 中任一包（§11） |
+| `file_missing`、`file_outside_root`、`file_hash_mismatch` | 文件不存在、越出回传目录、SHA-256 与清单不符 |
 | `model_return_protocol_invalid` | `return_protocol` 不是 `rolecraft-label-evidence-v2`，或 `artifact_kind`／`artifact_protocol` 写的不是编码器（线性、融合回传走各自的登记） |
-| `encoder_architecture_unsupported` | variant／pooling 不在支持集；头数组名、形状或类型不符；config 无 `hidden_size`、要求远程代码；旧布局用了 `pair_aggregate` |
-| `checkpoint_inference_settings_invalid` | 阈值不在 (0,1)、上限 <4、seed 非整数 |
-| `tokenizer_capacity_exceeded` | `max_tokens` 超过分词器或位置上限 |
-| `checkpoint_schema_version_required`／`_unsupported` | 无版本号却有 v3 字段／版本号不是 3 |
-| `model_return_task_or_labels_invalid` | 任务不是 relation、标签顺序或 `pair_label_order` 不符 |
+| `model_return_task_or_labels_invalid` | 外层清单或 `checkpoint.json` 的任务不是 relation；标签顺序或 `pair_label_order` 不符 |
+| `model_return_weights_stage_invalid` | 外层清单 `weights_stage` 不是 §10 的两个值之一 |
+| `untrained_heads_require_synthetic_scope`、`untrained_heads_declaration_invalid` | 未训练头登记成 external；未训练头的声明不如实（§2） |
+| `model_return_incomplete`、`model_return_selection_contaminated` | 沿 fixture v2：模板、未完成或未实现证据选择；训练不只用 train、选择不只用 dev 或用了 test |
+| `model_return_identity_incomplete` | 模型版本、框架、数据集、命令、训练说明、预测文件名等身份字段为空 |
+| `model_return_dataset_identity_invalid` | `dataset_manifest_sha256` 不是 64 位 hex，或 `label_tiers` 不是 G0／G1／G2／G2v 的子集 |
+| `fixture_cannot_be_registered_as_external` | 数据集是 fixture，却要登记成 external |
+| `checkpoint_files_required`、`checkpoint_path_not_canonical`、`checkpoint_manifest_self_reference` | `checkpoint_files` 为空、路径不规范、列了清单本身 |
+| `checkpoint_member_set_mismatch` | 目录实际文件、`checkpoint_files`、`checkpoint.json` 的 `files` 三者不一致 |
+| `checkpoint_file_type_not_allowed` | 文件后缀不在 §1 的白名单 |
+| `checkpoint_files_incomplete`、`checkpoint_metadata_invalid` | 缺 `checkpoint.json`、`heads.npz` 或 `encoder/local-files.json`；JSON 不是对象 |
+| `checkpoint_manifest_disagreement` | 外层清单、`checkpoint.json`、`local-files.json` 对同一文件给出不同 hash |
+| `checkpoint_schema_version_required`／`checkpoint_schema_version_unsupported` | 无版本号却有 v3 字段／版本号不是 3 |
+| `encoder_architecture_unsupported` | variant／pooling 不在支持集；`pack`、`pair` 带了 `pair_label_order`；头数组名、形状或类型（非 float32）不符；config 无 `hidden_size`、无 `model_type` 或要求远程代码；旧布局用了 `pair_aggregate` |
+| `checkpoint_inference_settings_invalid` | 阈值不在 (0,1)（`pair_aggregate` 低于 0.5）、上限 <4、seed 非整数 |
+| `local_checkpoint_revision_or_stage_invalid` | `local-files.json` 的协议、revision 或阶段与 checkpoint／清单不一致 |
 | `checkpoint_training_identity_mismatch` | 训练报告与阶段不符，或 `model_revision` 不符合 §8 |
-| `local_checkpoint_revision_or_stage_invalid` | `local-files.json` 的 revision 或阶段与 checkpoint／清单不一致 |
-| `untrained_heads_declaration_invalid`／`untrained_heads_require_synthetic_scope` | 未训练头声明不如实／登记成 external |
-| `model_return_incomplete`、`model_return_selection_contaminated` | 沿 fixture v2：未完成或 test 参与选择 |
+| `checkpoint_model_identity_mismatch` | `checkpoint.json` 与外层清单的 `model_revision` 不同 |
+| `checkpoint_tokenizer_missing` | `encoder/` 下没有分词器文件 |
+| `local_checkpoint_files_incomplete`、`local_checkpoint_member_set_mismatch` | `encoder/` 缺 `config.json` 或 safetensors；实际文件与 `local-files.json` 不一致 |
+| `checkpoint_symlink_not_allowed` | 回传里有符号链接 |
+| `tokenizer_capacity_exceeded` | `max_tokens` 超过分词器或位置上限 |
 | `checkpoint_heads_invalid` | `heads.npz` 读不出或含非有限值 |
-| `encoder_runtime_unavailable`、`registered_inference_runtime_changed`、`encoder_registration_retired` | 见 §11 |
+
+加载与预测时：
+
+| 码 | 含义 |
+|---|---|
+| `checkpoint_parameter_identity_mismatch` | 重算的 `after_weights` 与训练报告不同（例如头不是 float32 原值、encoder 缺参数） |
+| `pretrained_encoder_dependencies_unavailable` | 服务环境缺 encoder 依赖 |
+| `registered_inference_runtime_changed` | 依赖版本或推理源码与登记时不同（§11） |
+| `encoder_registration_retired` | v1 注册，不再产生新建议（§11） |
+| `encoder_input_truncated`（逐条弃权） | 编码长度超过 `max_tokens`（§9） |
 
 ## 14. 本版不支持
 

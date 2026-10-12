@@ -204,6 +204,22 @@ def test_enc_01_export_refuses_inputs_that_do_not_match_the_delivered_model(
         assert result.returncode == 2, (case, result.stdout + result.stderr)
         assert result.stderr.startswith("export_hf_return: ")
         assert not (tmp_path / case / "checkpoint.json").exists()
+    low = run_export(
+        "export",
+        "--encoder-dir",
+        str(source),
+        "--weights-stage",
+        "pretrained_untrained_heads",
+        "--variant",
+        "pair_aggregate",
+        "--evidence-threshold",
+        "0.3",
+        *arguments[2:],
+        "--out",
+        str(tmp_path / "low-threshold"),
+    )
+    assert low.returncode == 2 and "at least 0.5" in low.stderr
+    assert not (tmp_path / "low-threshold").exists()
 
 
 def test_enc_01_reference_inputs_are_the_strings_the_product_encodes() -> None:
@@ -218,6 +234,10 @@ def test_enc_01_reference_inputs_are_the_strings_the_product_encodes() -> None:
 def test_enc_02_reference_aggregation_follows_the_specification_examples() -> None:
     module = reference_module()
     for example in json.loads(AGGREGATE_EXAMPLES.read_text())["examples"]:
+        if "refused" in example:
+            with pytest.raises(ValueError):
+                module.aggregate_pairs(example["pair_probabilities"], example["evidence_threshold"])
+            continue
         probabilities, scores = module.aggregate_pairs(
             example["pair_probabilities"], example["evidence_threshold"]
         )
@@ -227,7 +247,7 @@ def test_enc_02_reference_aggregation_follows_the_specification_examples() -> No
 
 def test_enc_02_pair_aggregate_predictions_apply_the_rule_to_each_pair(tmp_path: Path) -> None:
     root = tmp_path / "return"
-    ref = tiny_encoder_return(root, variant="pair_aggregate", evidence_threshold=0.4)
+    ref = tiny_encoder_return(root, variant="pair_aggregate", evidence_threshold=0.6)
     registry = tmp_path / "registry"
     model, _ = load_registration(
         registry, register_bundle(registry, root, ref, scope="synthetic_fixture")
@@ -235,8 +255,8 @@ def test_enc_02_pair_aggregate_predictions_apply_the_rule_to_each_pair(tmp_path:
     for item in dev_items():
         pairs = model.pair_judgements(item)
         assert pairs.shape == (len(item.evidence.candidate_evidence), 3)
-        probabilities, scores = aggregate_pairs(pairs, 0.4)
-        assert model.predict(item) == prediction(item, model.revision, probabilities, scores, 0.4)
+        probabilities, scores = aggregate_pairs(pairs, 0.6)
+        assert model.predict(item) == prediction(item, model.revision, probabilities, scores, 0.6)
 
 
 def test_enc_03_the_declared_threshold_selects_the_evidence(tmp_path: Path) -> None:
@@ -402,7 +422,7 @@ def test_enc_05_untrained_heads_predict_only_once_declared_and_export_identicall
     registry = tmp_path / "registry"
     with pytest.raises(ProtocolError) as error:
         register_bundle(registry, tmp_path / "exported", manifest, scope="external_candidate")
-    assert error.value.code == "fixture_cannot_be_registered_as_external"
+    assert error.value.code == "untrained_heads_require_synthetic_scope"
     registration = register_bundle(
         registry, tmp_path / "exported", manifest, scope="synthetic_fixture"
     )

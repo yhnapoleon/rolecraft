@@ -28,10 +28,14 @@ ARTIFACT_KIND = "huggingface_encoder"
 ARTIFACT_PROTOCOL = "rolecraft-encoder-return-v3"
 LABEL_TIERS = ("G0", "G1", "G2", "G2v")
 WEIGHTS_STAGES = ("supervised_finetuned", "pretrained_untrained_heads")
+TRAINED, UNTRAINED = WEIGHTS_STAGES
 VARIANTS = ("pack", "pair", "pair_aggregate")
 LEGACY_VARIANTS = ("pack", "pair")
 # pair_aggregate judges each (claim, candidate) pair in this fixed order.
 PAIR_LABELS = ("SUPPORTS", "CONTRADICTS", "UNRELATED")
+# pair_aggregate thresholds below one half would let a pair count as support or
+# contradiction while another of its own judgements is likelier.
+MIN_PAIR_THRESHOLD = 0.5
 # The fixture v2 era layout fixed the evidence threshold at 0.5.
 LEGACY_EVIDENCE_THRESHOLD = 0.5
 V3_ONLY_FIELDS = ("pooling", "evidence_threshold", "pair_label_order")
@@ -46,6 +50,8 @@ REVISION_FIELDS = (
     "variant",
     "weights_stage",
 )
+# Return-directory files outside encoder/ (encoder/ has its own list in verify_encoder_files).
+ROOT_SUFFIXES = frozenset({".json", ".npz", ".jsonl", ".md", ".txt"})
 # Tokenizers without a real limit report a huge sentinel instead of a length.
 _UNBOUNDED_TOKENIZER = 10**9
 
@@ -159,47 +165,16 @@ class EncoderArtifact:
     settings: EncoderSettings
 
 
-def validate_return_identity(manifest: dict[str, Any]) -> None:
-    """Outer manifest policy (fixture v2 template) shared by every return kind.
-
-    It checks only the template's common fields, by the declared weights stage: a return
-    with pretrained weights and untrained heads must say so (not completed, no training
-    partitions, no selection). Artifact kinds are each protocol's own concern.
-    """
+def _check_task(manifest: dict[str, Any]) -> None:
     if manifest.get("return_protocol") != RETURN_PROTOCOL:
         raise ProtocolError("model_return_protocol_invalid")
     if manifest.get("task_type") != "relation" or manifest.get("label_order") != list(
         LABELS["relation"]
     ):
         raise ProtocolError("model_return_task_or_labels_invalid")
-    stage = manifest.get("weights_stage", WEIGHTS_STAGES[0])
-    if stage not in WEIGHTS_STAGES:
-        raise ProtocolError("model_return_weights_stage_invalid")
-    if stage == "pretrained_untrained_heads":
-        if (
-            manifest.get("template") is not False
-            or manifest.get("completed") is not False
-            or manifest.get("evidence_selection_implemented") is not True
-            or manifest.get("evidence_selection_required") is not True
-            or manifest.get("training_partitions") != []
-            or manifest.get("selection_partition") is not None
-            or manifest.get("test_used_for_selection") is not False
-        ):
-            raise ProtocolError("untrained_heads_declaration_invalid")
-    else:
-        if (
-            manifest.get("template") is not False
-            or manifest.get("completed") is not True
-            or manifest.get("evidence_selection_implemented") is not True
-            or manifest.get("evidence_selection_required") is not True
-        ):
-            raise ProtocolError("model_return_incomplete")
-        if (
-            manifest.get("training_partitions") != ["train"]
-            or manifest.get("selection_partition") != "dev"
-            or manifest.get("test_used_for_selection") is not False
-        ):
-            raise ProtocolError("model_return_selection_contaminated")
+
+
+def _check_identity(manifest: dict[str, Any]) -> None:
     for field in (
         "model_revision",
         "framework",
@@ -213,6 +188,56 @@ def validate_return_identity(manifest: dict[str, Any]) -> None:
             raise ProtocolError("model_return_identity_incomplete")
     if not re.fullmatch(r"[0-9a-f]{64}", str(manifest.get("dataset_manifest_sha256", ""))):
         raise ProtocolError("model_return_dataset_identity_invalid")
+
+
+def validate_return_identity(manifest: dict[str, Any]) -> None:
+    """Outer manifest policy (fixture v2 template) shared by every return kind.
+
+    A completed, trained delivery only: template off, completion and evidence selection
+    declared, train-only fitting and dev-only selection, identity fields present. Any
+    other ``weights_stage`` is refused here; artifact kinds are each protocol's concern.
+    """
+    _check_task(manifest)
+    if manifest.get("weights_stage", TRAINED) != TRAINED:
+        raise ProtocolError("model_return_weights_stage_invalid")
+    if (
+        manifest.get("template") is not False
+        or manifest.get("completed") is not True
+        or manifest.get("evidence_selection_implemented") is not True
+        or manifest.get("evidence_selection_required") is not True
+    ):
+        raise ProtocolError("model_return_incomplete")
+    if (
+        manifest.get("training_partitions") != ["train"]
+        or manifest.get("selection_partition") != "dev"
+        or manifest.get("test_used_for_selection") is not False
+    ):
+        raise ProtocolError("model_return_selection_contaminated")
+    _check_identity(manifest)
+
+
+def validate_encoder_return_identity(manifest: dict[str, Any], *, scope: str) -> str:
+    """Encoder returns: the shared policy, or for a synthetic registration the honest
+    declaration of pretrained weights with untrained heads. Returns the weights stage."""
+    stage = manifest.get("weights_stage", TRAINED)
+    if stage != UNTRAINED:
+        validate_return_identity(manifest)
+        return TRAINED
+    _check_task(manifest)
+    if scope != "synthetic_fixture":
+        raise ProtocolError("untrained_heads_require_synthetic_scope", status=403)
+    if (
+        manifest.get("template") is not False
+        or manifest.get("completed") is not False
+        or manifest.get("evidence_selection_implemented") is not True
+        or manifest.get("evidence_selection_required") is not True
+        or manifest.get("training_partitions") != []
+        or manifest.get("selection_partition") is not None
+        or manifest.get("test_used_for_selection") is not False
+    ):
+        raise ProtocolError("untrained_heads_declaration_invalid")
+    _check_identity(manifest)
+    return UNTRAINED
 
 
 def is_encoder_return(manifest: object) -> bool:
@@ -256,6 +281,8 @@ def checkpoint_settings(config: dict[str, Any]) -> EncoderSettings:
     elif schema == 3:
         if config.get("variant") not in VARIANTS or config.get("pooling") != "mean":
             raise ProtocolError("encoder_architecture_unsupported")
+        if config["variant"] != "pair_aggregate" and "pair_label_order" in config:
+            raise ProtocolError("encoder_architecture_unsupported")
         if config["variant"] == "pair_aggregate" and config.get("pair_label_order") != list(
             PAIR_LABELS
         ):
@@ -266,6 +293,7 @@ def checkpoint_settings(config: dict[str, Any]) -> EncoderSettings:
             or not isinstance(threshold, int | float)
             or not math.isfinite(threshold)
             or not 0 < threshold < 1
+            or (config["variant"] == "pair_aggregate" and threshold < MIN_PAIR_THRESHOLD)
         ):
             raise ProtocolError("checkpoint_inference_settings_invalid")
     else:
@@ -286,7 +314,7 @@ def validate_training_identity(
         raise ProtocolError("checkpoint_training_identity_mismatch")
     after = report.get("after_weights")
     source = config.get("source_revision")
-    if weights_stage == "pretrained_untrained_heads":
+    if weights_stage == UNTRAINED:
         trained_as_declared = report.get("training_kind") == "none" and "fit_split" not in report
     else:
         trained_as_declared = report.get("fit_split") == "train" and (
@@ -354,7 +382,7 @@ def check_heads(raw: bytes, settings: EncoderSettings, hidden: int) -> None:
         raise ProtocolError("checkpoint_heads_invalid") from error
     expected = head_shapes(settings.variant, hidden)
     if set(arrays) != set(expected) or any(
-        arrays[name].shape != shape or arrays[name].dtype.kind != "f"
+        arrays[name].shape != shape or arrays[name].dtype != np.float32
         for name, shape in expected.items()
     ):
         raise ProtocolError("encoder_architecture_unsupported")
@@ -365,18 +393,28 @@ def check_heads(raw: bytes, settings: EncoderSettings, hidden: int) -> None:
 def inspect_encoder(root: Path, manifest_ref: FileRef, *, scope: str) -> EncoderArtifact:
     root = root.resolve()
     manifest = json.loads(read_file(root, manifest_ref))
-    validate_return_identity(manifest)
     if not is_encoder_return(manifest):
         raise ProtocolError("model_return_protocol_invalid")
+    stage = validate_encoder_return_identity(manifest, scope=scope)
     if "fixture" in manifest["dataset_id"].lower() and scope != "synthetic_fixture":
         raise ProtocolError("fixture_cannot_be_registered_as_external")
-    stage = manifest.get("weights_stage", WEIGHTS_STAGES[0])
-    if stage == "pretrained_untrained_heads" and scope != "synthetic_fixture":
-        raise ProtocolError("untrained_heads_require_synthetic_scope", status=403)
     files = file_map(manifest.get("checkpoint_files"))
     if manifest_ref.path in files:
         raise ProtocolError("checkpoint_manifest_self_reference")
+    present = {
+        path.relative_to(root).as_posix()
+        for path in root.rglob("*")
+        if path.is_file() and path.relative_to(root).as_posix() != manifest_ref.path
+    }
+    if present != set(files):
+        raise ProtocolError("checkpoint_member_set_mismatch")
+    if any(
+        not name.startswith("encoder/") and Path(name).suffix not in ROOT_SUFFIXES for name in files
+    ):
+        raise ProtocolError("checkpoint_file_type_not_allowed")
     config = read_json(root, "checkpoint.json", files)
+    if config.get("task_type") != "relation":
+        raise ProtocolError("model_return_task_or_labels_invalid")
     members = file_map(config.get("files"))
     if "heads.npz" not in members or "encoder/local-files.json" not in members:
         raise ProtocolError("checkpoint_files_incomplete")
@@ -388,16 +426,13 @@ def inspect_encoder(root: Path, manifest_ref: FileRef, *, scope: str) -> Encoder
     if (
         local.get("protocol") != "w08-hf-local-files-v1"
         or local.get("weights_stage") != stage
-        or (settings.schema == 2 and stage != WEIGHTS_STAGES[0])
+        or (settings.schema == 2 and stage != TRAINED)
         or not re.fullmatch(r"[0-9a-f]{40}", str(config.get("source_revision", "")))
         or config["source_revision"] != local.get("source_revision")
     ):
         raise ProtocolError("local_checkpoint_revision_or_stage_invalid")
     validate_training_identity(config, settings, stage)
-    if (
-        config.get("task_type") != "relation"
-        or config.get("model_revision") != manifest["model_revision"]
-    ):
+    if config.get("model_revision") != manifest["model_revision"]:
         raise ProtocolError("checkpoint_model_identity_mismatch")
     if not any(
         "tokenizer" in name or name in {"vocab.txt", "sentencepiece.bpe.model"}

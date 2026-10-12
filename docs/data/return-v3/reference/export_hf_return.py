@@ -135,18 +135,22 @@ def aggregate_pairs(pair_probabilities, threshold):
     """pair_aggregate v1, as the specification states it (section 5).
 
     pair_probabilities: one (SUPPORTS, CONTRADICTS, UNRELATED) softmax row per candidate,
-    in candidate order. Returns relation probabilities (SUPPORTED, CONTRADICTED,
-    INSUFFICIENT) and per-candidate evidence scores; evidence = scores >= threshold.
+    in candidate order; threshold at least 0.5. Returns relation probabilities
+    (SUPPORTED, CONTRADICTED, INSUFFICIENT) and per-candidate evidence scores;
+    evidence = scores >= threshold.
     """
+    if not 0.5 <= threshold < 1:
+        raise ValueError("pair_aggregate needs 0.5 <= evidence_threshold < 1")
     pairs = np.asarray(pair_probabilities, dtype=float)
-    supports, contradicts = pairs[:, 0], pairs[:, 1]
+    supports, contradicts, unrelated = pairs[:, 0], pairs[:, 1], pairs[:, 2]
+    support = np.where(supports > unrelated, supports, 0.0)
     if (contradicts >= threshold).any():
         decided, confidence, scores = 1, contradicts.max(), contradicts
-    elif (supports >= threshold).any():
-        decided, confidence, scores = 0, supports.max(), supports
+    elif (support >= threshold).any():
+        decided, confidence, scores = 0, support.max(), support
     else:
         strongest = max(supports.max(), contradicts.max())
-        decided, confidence, scores = 2, 1 - strongest, np.maximum(supports, contradicts)
+        decided, confidence, scores = 2, 1 - strongest, np.maximum(support, contradicts)
     probabilities = np.full(3, (1 - confidence) / 4)
     probabilities[decided] = (1 + confidence) / 2
     return probabilities, scores
@@ -214,6 +218,8 @@ def check_settings(args) -> None:
         raise ExportError("--source-revision must be the 40-hex revision of the base encoder")
     if not (math.isfinite(args.evidence_threshold) and 0 < args.evidence_threshold < 1):
         raise ExportError("--evidence-threshold must lie strictly between 0 and 1")
+    if args.variant == "pair_aggregate" and args.evidence_threshold < 0.5:
+        raise ExportError("pair_aggregate needs --evidence-threshold of at least 0.5")
     if args.max_tokens < 4:
         raise ExportError("--max-tokens must be at least 4")
     untrained = args.weights_stage == "pretrained_untrained_heads"
