@@ -261,7 +261,8 @@ def _dataset(manifest: dict[str, Any]) -> dict[str, Any]:
     return {
         "dataset_id": manifest["dataset_id"],
         "dataset_manifest_sha256": manifest["dataset_manifest_sha256"],
-        "label_tiers": list(manifest.get("label_tiers", [])),
+        # Canonical tier order, as encoder registrations publish it.
+        "label_tiers": sorted(manifest.get("label_tiers", []), key=LABEL_TIERS.index),
     }
 
 

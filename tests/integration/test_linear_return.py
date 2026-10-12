@@ -595,7 +595,7 @@ def test_lin_01_normal_feedback_names_the_linear_model_and_its_training_data(
     language: str,
 ) -> None:
     root = tmp_path / "return"
-    ref = write_linear_return(root, label_tiers=["G0", "G2v"])
+    ref = write_linear_return(root, label_tiers=["G2v", "G0"])
     code, out = register(capsys, tmp_path / "registry", root, ref)
     assert code == 0, out
     registration = FileRef.model_validate(out["registration"])
