@@ -36,6 +36,20 @@ async function shotOf(browser, path) {
   writeFileSync(path, Buffer.from(r.data, 'base64'));
 }
 
+/** The summary's accessible name as Chrome computes it (lines must stay separate words). */
+async function nameOf(browser) {
+  const { root } = await browser.send('DOM.getDocument', { depth: 0 });
+  const { nodeId } = await browser.send('DOM.querySelector', {
+    nodeId: root.nodeId,
+    selector: '[data-model-advice] summary',
+  });
+  const { nodes } = await browser.send('Accessibility.getPartialAXTree', {
+    nodeId,
+    fetchRelatives: false,
+  });
+  return nodes[0]?.name?.value ?? null;
+}
+
 const server = await createServer({ server: { port, strictPort: true }, logLevel: 'error' });
 await server.listen();
 const results = [];
@@ -69,7 +83,15 @@ try {
           assert.equal(overflow, false, `${language} ${state} ${view.name} scrolls horizontally`);
           const path = `${out}/${language}-${state}-${view.name}.jpg`;
           await shotOf(browser, path);
-          results.push({ language, state, view: view.name, folded, opened, path });
+          results.push({
+            language,
+            state,
+            view: view.name,
+            folded,
+            opened,
+            path,
+            name: await nameOf(browser),
+          });
         }
         if (view.name === 'desktop-light') {
           // Keyboard: Tab to the summary, Enter opens, Tab reaches the first evidence button.
@@ -96,9 +118,16 @@ try {
             `document.activeElement.matches('[data-model-reference]') && document.activeElement.textContent`,
           );
           assert.ok(focused, 'Tab from the opened summary reaches the first evidence button');
+          const name = await nameOf(browser);
+          assert.match(
+            name,
+            language === 'en'
+              ? /^Synthetic mechanism demo Synthetic or untrained weights/
+              : /^合成机制演示 合成或未训练权重/,
+          );
           const path = `${out}/${language}-keyboard-${view.name}.jpg`;
           await shotOf(browser, path);
-          results.push({ language, state: 'keyboard', view: view.name, focused, path });
+          results.push({ language, state: 'keyboard', view: view.name, focused, name, path });
         }
         assert.deepEqual(
           browser.logs.filter((entry) => entry.level === 'exception'),

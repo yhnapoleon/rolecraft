@@ -536,3 +536,83 @@ it.each(['zh', 'en'])(
     });
   },
 );
+
+it.each(['zh', 'en'])(
+  'UI-01: %s names the model, its type, training data, weights stage and fusion members',
+  async (language) => {
+    await withFeedback(language, async (browser) => {
+      const { fusion, encoder } = recorded.identities;
+      const lines = () => browser.text('[data-model-identity] p');
+      const quarter = {
+        ...fusion,
+        fusion: { ...fusion.fusion, alpha: 0.25, fusion_gain_observed: false },
+        components: [
+          { ...fusion.components[0], alpha: 0.75 },
+          { ...fusion.components[1], alpha: 0.25 },
+        ],
+      };
+      await showReport(browser, language, [
+        { ...scenarios.synthetic(language), registration: quarter },
+      ]);
+      expect(await lines()).toEqual(
+        language === 'en'
+          ? [
+              `Model: ${fusion.id}`,
+              'Type: Probability fusion',
+              `Revision: ${fusion.model_revision}`,
+              'Training data: rolecraft-linear-mechanism-synthetic · G0 program-verified labels · dataset manifest dddddddddddd…',
+              `Left member: ${fusion.components[0].id} (Linear model) · weight 0.75`,
+              `Right member: ${fusion.components[1].id} (Linear model) · weight 0.25`,
+              'Fusion alpha 0.25 · evidence threshold 0.5',
+              'No fusion gain observed on dev',
+            ]
+          : [
+              `模型：${fusion.id}`,
+              '类型：概率融合',
+              `版本：${fusion.model_revision}`,
+              '训练数据：rolecraft-linear-mechanism-synthetic · G0 程序核验标签 · 数据清单 dddddddddddd…',
+              `左分量：${fusion.components[0].id}（线性模型）· 权重 0.75`,
+              `右分量：${fusion.components[1].id}（线性模型）· 权重 0.25`,
+              '融合 alpha 0.25 · 证据阈值 0.5',
+              'dev 上未观察到融合收益',
+            ],
+      );
+      const pretrained = {
+        ...encoder,
+        weights_stage: 'pretrained_untrained_heads',
+        dataset: { ...encoder.dataset, label_tiers: ['G2v'] },
+      };
+      await showReport(browser, language, [
+        { ...scenarios.synthetic(language), registration: pretrained },
+      ]);
+      expect(await lines()).toEqual(
+        language === 'en'
+          ? [
+              `Model: ${encoder.id}`,
+              'Type: Encoder',
+              `Revision: ${encoder.model_revision}`,
+              'Training data: rolecraft-fixture-20261007-v2 · G2v model-reviewed labels · dataset manifest 5c8f0d5be05e…',
+              'Weights: pretrained weights · classification heads untrained',
+            ]
+          : [
+              `模型：${encoder.id}`,
+              '类型：编码器',
+              `版本：${encoder.model_revision}`,
+              '训练数据：rolecraft-fixture-20261007-v2 · G2v 模型复核标签 · 数据清单 5c8f0d5be05e…',
+              '权重阶段：预训练权重 · 分类头未训练',
+            ],
+      );
+      const block = await browser.ev(`document.querySelector('[data-model-advice]').textContent`);
+      expect(block).not.toMatch(/人工标签|human label/i);
+      await showReport(browser, language, [scenarios.external(language)]);
+      expect((await lines()).at(-1)).toBe(
+        T(
+          language,
+          '外部候选；模型质量尚未验证。',
+          'External candidate; model quality has not been validated.',
+        ),
+      );
+      expect(await browser.ev('window.fixture.calls')).toEqual([]);
+    });
+  },
+);

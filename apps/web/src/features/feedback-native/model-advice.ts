@@ -645,7 +645,10 @@ export function updateRegisteredAdvice(
       const counts = entry.aggregation?.counts;
       if (counts?.skipped_short) notes.push(C('unitsShort', { n: counts.skipped_short }));
       if (counts?.over_budget) notes.push(C('unitsOverBudget', { n: counts.over_budget }));
-      section.append(list, marked('p', notes.join(' '), 'data-model-units-note'));
+      const note = element('div', '');
+      note.setAttribute('data-model-units-note', '');
+      note.append(...notes.map((text) => element('p', text)));
+      section.append(list, note);
     } else {
       if (result) section.append(element('p', C('relation', { label: C(`label${result}`) })));
       for (const [index, source] of entry.citations.entries())
@@ -720,7 +723,7 @@ export const MODEL_ADVICE_STYLE =
   '.native-feedback [data-model-advice]>summary{cursor:pointer}' +
   '.native-feedback [data-model-advice-title]{font-weight:600}' +
   '.native-feedback [data-model-advice-notice],.native-feedback [data-model-advice-conclusion],.native-feedback [data-model-advice-counts]{display:block;margin-top:2px;padding-inline-start:1.1em;color:var(--ink-2);font-size:13.5px;line-height:1.5}' +
-  '.native-feedback [data-model-advice-conclusion]{color:var(--ink);font-weight:600}' +
+  '.native-feedback [data-model-advice-conclusion]{color:var(--ink)}' +
   '.native-feedback [data-model-units]{list-style:decimal;margin:10px 0;padding-inline-start:1.6em}' +
   '.native-feedback [data-model-unit]{margin-block:12px}' +
   '.native-feedback [data-model-unit]::marker{color:var(--ink-3)}' +
@@ -730,4 +733,4 @@ export const MODEL_ADVICE_STYLE =
   '.native-feedback [data-model-advice] .btn.small{min-height:28px;margin:0}' +
   '.native-feedback [data-model-units-note],.native-feedback [data-model-identity]{color:var(--ink-3);font-size:12.5px;line-height:1.5}' +
   '.native-feedback [data-model-identity]{margin-top:10px}' +
-  '.native-feedback [data-model-identity] p{margin:0;line-height:1.5}';
+  '.native-feedback [data-model-identity] p,.native-feedback [data-model-units-note] p{margin:0;line-height:1.5}';
