@@ -13,7 +13,7 @@ from typing import Any
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_file
 from career_lab.contracts.v2.research import ModelBundle
 
-from . import encoder_registry, linear_return
+from . import encoder_registry, fusion_registration, linear_return
 from .bundle import load_bundle, sha
 from .registration import RegistrationProtocol, RegistrationSummary, publish_registration
 
@@ -219,12 +219,39 @@ BUNDLE_REGISTRATION = RegistrationProtocol(
     describe=_describe_bundle_registration,
     load=_load_bundle_registration,
 )
+# A fusion resolves its components through this registry's own dispatch.
+FUSION_COMPONENTS = fusion_registration.ComponentRegistry(
+    describe=describe_registration,
+    load=load_registration,
+    runtime=inference_runtime,
+)
 # Dispatch order is irrelevant: each protocol recognises only its own entries.
 REGISTRATION_PROTOCOLS: tuple[RegistrationProtocol, ...] = (
     BUNDLE_REGISTRATION,
     encoder_registry.REGISTRATION,
     linear_return.REGISTRATION,
+    fusion_registration.protocol(FUSION_COMPONENTS),
 )
+
+
+def register_fusion(
+    registry_root: Path | str,
+    left_ref: FileRef | dict[str, Any],
+    right_ref: FileRef | dict[str, Any],
+    selection_file: Path | str,
+    *,
+    scope: str,
+) -> FileRef:
+    """Register a fusion of two registrations already in ``registry_root`` (see
+    ``fusion_registration``); weights stay in the components, referenced by id and sha."""
+    return fusion_registration.register(
+        Path(registry_root),
+        FileRef.model_validate(left_ref),
+        FileRef.model_validate(right_ref),
+        Path(selection_file),
+        scope=scope,
+        components=FUSION_COMPONENTS,
+    )
 
 
 def public_registration(entry):

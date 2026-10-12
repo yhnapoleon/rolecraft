@@ -10,7 +10,7 @@ from career_lab.contracts.v2.provenance import RegisteredModelIdentity
 from . import return_cli
 from .advisory import RegisteredAdvisory
 from .core import INPUT
-from .registry import describe_registration, register_bundle
+from .registry import describe_registration, register_bundle, register_fusion
 
 
 def main(argv=None):
@@ -22,6 +22,15 @@ def main(argv=None):
     register.add_argument("--bundle-hash", required=True)
     register.add_argument("--bundle-path", default="model-bundle.json")
     register.add_argument(
+        "--scope", choices=["synthetic_fixture", "external_candidate"], required=True
+    )
+    fusion = commands.add_parser("register-fusion")
+    fusion.add_argument("--registry", type=Path, required=True)
+    for side in ("left", "right"):
+        fusion.add_argument(f"--{side}-path", required=True)
+        fusion.add_argument(f"--{side}-hash", required=True)
+    fusion.add_argument("--selection", type=Path, required=True)
+    fusion.add_argument(
         "--scope", choices=["synthetic_fixture", "external_candidate"], required=True
     )
     for name in ("predict", "recover", "review", "describe"):
@@ -50,13 +59,22 @@ def main(argv=None):
     try:
         if args.command == "verify-return":
             return return_cli.run(args)
-        if args.command == "register":
-            ref = register_bundle(
-                args.registry,
-                args.bundle_root,
-                FileRef(path=args.bundle_path, sha256=args.bundle_hash),
-                scope=args.scope,
-            )
+        if args.command in ("register", "register-fusion"):
+            if args.command == "register":
+                ref = register_bundle(
+                    args.registry,
+                    args.bundle_root,
+                    FileRef(path=args.bundle_path, sha256=args.bundle_hash),
+                    scope=args.scope,
+                )
+            else:
+                ref = register_fusion(
+                    args.registry,
+                    FileRef(path=args.left_path, sha256=args.left_hash),
+                    FileRef(path=args.right_path, sha256=args.right_hash),
+                    args.selection,
+                    scope=args.scope,
+                )
             result = {
                 "registration": ref.model_dump(mode="json"),
                 "mode": "advisory",

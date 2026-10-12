@@ -221,3 +221,62 @@ def feedback_report(
     finally:
         app.state.store.close()
         app.state.v2_store.db.engine.dispose()
+
+
+ALPHA_GRID = [0.0, 0.25, 0.5, 0.75, 1.0]
+THRESHOLD_GRID = [0.25, 0.5, 0.75]
+
+
+def selection_record(
+    left: dict[str, Any],
+    right: dict[str, Any],
+    *,
+    alpha: float = 0.5,
+    threshold: float = 0.5,
+    gain: bool = True,
+    **changes: Any,
+) -> dict[str, Any]:
+    """A ``rolecraft-fusion-selection-v1`` record naming two described registrations.
+
+    Metric values are placeholders; registration checks structure, 147 recomputes them.
+    """
+    dataset = left["dataset"]
+    record: dict[str, Any] = {
+        "protocol": "rolecraft-fusion-selection-v1",
+        "task_type": "relation",
+        "dataset_id": dataset["dataset_id"],
+        "dataset_manifest_sha256": dataset["dataset_manifest_sha256"],
+        "selection_split": "dev",
+        "test_used_for_selection": False,
+        "components": {
+            "left": {"model_revision": left["model_revision"], "artifact_kind": left["kind"]},
+            "right": {"model_revision": right["model_revision"], "artifact_kind": right["kind"]},
+        },
+        "alpha_grid": ALPHA_GRID,
+        "evidence_threshold_grid": THRESHOLD_GRID,
+        "selected": {"alpha": alpha, "evidence_threshold": threshold},
+        "points": [
+            {
+                "alpha": a,
+                "evidence_threshold": t,
+                "metrics": {
+                    "count": 6,
+                    "macro_f1": 0.5,
+                    "mean_evidence_f1": 0.4,
+                    "joint_correctness": 0.3,
+                    "evidence_denominator": 5,
+                    "joint_denominator": 5,
+                },
+            }
+            for a in ALPHA_GRID
+            for t in THRESHOLD_GRID
+        ],
+        "fusion_gain_observed": gain,
+        "dev_input_hashes": [sha(str(i).encode()) for i in range(6)],
+    }
+    for key, value in changes.items():
+        if value is DELETE:
+            record.pop(key, None)
+        else:
+            record[key] = value
+    return record
