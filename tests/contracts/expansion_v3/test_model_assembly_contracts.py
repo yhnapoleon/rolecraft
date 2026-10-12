@@ -179,7 +179,7 @@ def test_dto_01_unset_identity_advice_and_provenance_fields_keep_legacy_bytes() 
         "registered_model": LEGACY_IDENTITY,
     }
     provenance = FeedbackProvenance.model_validate(
-        old | {"registered_models": None, "support_model": None}
+        old | {"registered_models": None, "support_model": None, "base_url": None}
     )
     assert provenance.model_dump(mode="json") == old
     report = legacy_feedback()
@@ -237,9 +237,16 @@ def test_dto_01_new_identity_fields_round_trip_when_recorded() -> None:
             "registered_model": LEGACY_IDENTITY,
             "registered_models": [LEGACY_IDENTITY, criterion_identity()],
             "support_model": {"provider": "openai_compatible", "model": "qa-loopback-support"},
+            "base_url": "http://127.0.0.1:8000/v1",
         }
     )
-    assert both.model_dump(mode="json")["support_model"]["model"] == "qa-loopback-support"
+    assert both.model_dump(mode="json")["support_model"] == {
+        "provider": "openai_compatible",
+        "model": "qa-loopback-support",
+    }
+    assert both.model_dump(mode="json")["base_url"] == "http://127.0.0.1:8000/v1"
+    hosted = both.support_model.model_copy(update={"base_url": "https://api.deepseek.com"})
+    assert hosted.model_dump(mode="json")["base_url"] == "https://api.deepseek.com"
     assert len(both.registered_models) == 2
 
 
