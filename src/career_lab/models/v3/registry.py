@@ -24,11 +24,15 @@ SCOPES = {"synthetic_fixture", "external_candidate"}
 PROTOCOL = "w08-advisory-registration-v1"
 
 
+# Source that decides a registered model's predictions: model code plus the input and file
+# contracts it validates against. Other product changes leave registrations valid.
+INFERENCE_CLOSURE = ("models/v3/**/*.py", "contracts/v2/core.py", "contracts/v2/data.py")
+
+
 def inference_runtime():
     root = Path(__file__).resolve().parents[2]
-    files = {
-        p.relative_to(root).as_posix(): sha(p.read_bytes()) for p in sorted(root.rglob("*.py"))
-    }
+    paths = sorted({path for pattern in INFERENCE_CLOSURE for path in root.glob(pattern)})
+    files = {path.relative_to(root).as_posix(): sha(path.read_bytes()) for path in paths}
     return {
         "source_digest": digest(files),
         "dependencies": {name: version(name) for name in ("numpy", "scikit-learn", "pydantic")},

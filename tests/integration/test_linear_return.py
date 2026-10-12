@@ -5,6 +5,10 @@ weights fitted on in-repo synthetic examples. No model quality claim.
 """
 
 import json
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -601,3 +605,92 @@ def test_lin_01_normal_feedback_names_the_linear_model_and_its_training_data(
     assert identity["quality_validated"] is False
     assert report["provenance"]["registered_model"] == identity
     assert all(item["source"] != "model_advice" for item in report["items"])
+
+
+def copied_source(tmp_path: Path) -> tuple[Path, dict[str, str]]:
+    """A private copy of the installed product source, imported ahead of the checkout."""
+    source = Path(registry_cli.__file__).resolve().parents[3] / "career_lab"
+    target = tmp_path / "src/career_lab"
+    shutil.copytree(source, target, ignore=shutil.ignore_patterns("__pycache__"))
+    env = {**os.environ, "PYTHONPATH": str(tmp_path / "src"), "PYTHONDONTWRITEBYTECODE": "1"}
+    return target, env
+
+
+def run_cli(env: dict[str, str], *argv: object) -> tuple[int, dict]:
+    result = subprocess.run(
+        [sys.executable, "-m", "career_lab.models.v3.registry_cli", *map(str, argv)],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=120,
+        check=False,
+    )
+    return result.returncode, json.loads(result.stdout.strip().splitlines()[-1])
+
+
+def test_rt_01_only_inference_closure_changes_invalidate_a_registration(tmp_path: Path) -> None:
+    source, env = copied_source(tmp_path)
+    imported = subprocess.run(
+        [sys.executable, "-c", "import career_lab; print(career_lab.__file__)"],
+        env=env,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    assert Path(imported).resolve().is_relative_to(source.resolve())
+    root, registry = tmp_path / "return", tmp_path / "registry"
+    ref = write_linear_return(root)
+    code, out = run_cli(
+        env,
+        "register",
+        "--registry",
+        registry,
+        "--bundle-root",
+        root,
+        "--bundle-path",
+        ref.path,
+        "--bundle-hash",
+        ref.sha256,
+        "--scope",
+        "synthetic_fixture",
+    )
+    assert code == 0, out
+    item = tmp_path / "item.json"
+    item.write_text(json.dumps(sample("synthetic-en-capacity")))
+
+    def predict(request: str) -> tuple[int, dict]:
+        return run_cli(
+            env,
+            "predict",
+            "--registry",
+            registry,
+            "--registration-path",
+            out["registration"]["path"],
+            "--registration-hash",
+            out["registration"]["sha256"],
+            "--journal",
+            tmp_path / "journal",
+            "--request-id",
+            request,
+            "--input",
+            item,
+            "--language",
+            "en",
+            "--allow-synthetic",
+        )
+
+    assert predict("before")[1]["status"] == "completed"
+    for unrelated in ("api/app.py", "rubrics/v4/feedback.py", "contracts/v2/evaluation.py"):
+        with (source / unrelated).open("a") as stream:
+            stream.write("\n# RT-01: product change outside the inference closure\n")
+    code, result = predict("after-unrelated")
+    assert (code, result.get("status")) == (0, "completed"), result
+    for closure in ("models/v3/linear.py", "contracts/v2/data.py"):
+        with (source / closure).open("a") as stream:
+            stream.write("\n# RT-01: inference closure change\n")
+        code, result = predict("after-" + closure)
+        assert (code, result["error"]) == (2, "registered_inference_runtime_changed"), closure
+        (source / closure).write_bytes(
+            (source / closure).read_bytes().replace(b"\n# RT-01: inference closure change\n", b"")
+        )
+    assert predict("restored")[1]["status"] == "completed"
