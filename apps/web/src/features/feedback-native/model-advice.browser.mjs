@@ -616,3 +616,31 @@ it.each(['zh', 'en'])(
     });
   },
 );
+
+it.each(['zh', 'en'])(
+  'UI-02: %s puts the sentence counts first and the work-level conclusion after, quieter',
+  async (language) => {
+    await withFeedback(language, async (browser) => {
+      await showReport(browser, language, [scenarios.synthetic(language)]);
+      expect(
+        await browser.ev(
+          `[...document.querySelector('[data-model-advice] summary').children].map((n) =>
+            n.getAttributeNames().find((name) => name.startsWith('data-model-advice-')))`,
+        ),
+      ).toEqual([
+        'data-model-advice-title',
+        'data-model-advice-notice',
+        'data-model-advice-counts',
+        'data-model-advice-conclusion',
+      ]);
+      const colors = await browser.ev(`(() => {
+        const rgb = (s) => getComputedStyle(document.querySelector(s)).color.match(/\\d+/g).slice(0, 3).map(Number);
+        return { title: rgb('[data-model-advice-title]'), counts: rgb('[data-model-advice-counts]'), conclusion: rgb('[data-model-advice-conclusion]') };
+      })()`);
+      const sum = (c) => c[0] + c[1] + c[2];
+      // Light theme: the counts read as strongly as the title; the conclusion is lighter.
+      expect(colors.counts).toEqual(colors.title);
+      expect(sum(colors.conclusion)).toBeGreaterThan(sum(colors.counts));
+    });
+  },
+);

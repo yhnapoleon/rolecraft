@@ -873,3 +873,88 @@ it('UI-01: reads the encoder kind, training data and weights stage', async () =>
   });
   expect(report.model_advice?.[0].registration?.weights_stage).toBe('supervised_finetuned');
 });
+
+const invalidRead = {
+  criterion: 'R2.support',
+  status: 'unavailable',
+  registration: null,
+  label: null,
+  evidence_ids: [],
+  citations: [],
+  error_code: 'model_prediction_invalid',
+  mode: 'advisory',
+  affects_score: false,
+};
+/** Every recorded sentence judged SUPPORTED with the first sentence's evidence. */
+function allSupported(language: 'zh' | 'en', overBudget = 0) {
+  const advice = external(language);
+  const [first] = advice.units;
+  return {
+    ...advice,
+    label: 'SUPPORTED',
+    evidence_ids: first.evidence_ids,
+    citations: first.citations,
+    units: advice.units.map((entry) => ({
+      ...entry,
+      status: 'completed',
+      label: 'SUPPORTED',
+      evidence_ids: first.evidence_ids,
+      citations: first.citations,
+      reason_code: null,
+    })),
+    aggregation: {
+      ...advice.aggregation,
+      counts: {
+        ...advice.aggregation.counts,
+        supported: advice.units.length,
+        contradicted: 0,
+        insufficient: 0,
+        over_budget: overBudget,
+      },
+    },
+  };
+}
+it.each(['zh', 'en'] as const)(
+  'UI-01: %s rejects a work-level conclusion its sentences do not give (148 conservative rule)',
+  async (language) => {
+    const { f, report } = await readThroughHost([
+      { ...external(language), label: 'SUPPORTED' },
+      { ...external(language), label: 'INSUFFICIENT' },
+      { ...inSession(recorded.advice[language]), label: 'SUPPORTED' },
+      allSupported(language),
+      { ...allSupported(language, 2) },
+      { ...allSupported(language, 2), label: 'INSUFFICIENT' },
+      external(language),
+    ]);
+    const read = report.model_advice ?? [];
+    // A contradicted sentence decides the work; over-budget sentences keep it insufficient.
+    expect(read.slice(0, 3)).toEqual([invalidRead, invalidRead, invalidRead]);
+    expect(read[3]).toMatchObject({ status: 'completed', label: 'SUPPORTED' });
+    expect(read[4]).toEqual(invalidRead);
+    expect(read[5]).toMatchObject({ status: 'completed', label: 'INSUFFICIENT' });
+    expect(read[6]).toMatchObject({ status: 'completed', label: 'CONTRADICTED' });
+    expect(f.calls).toEqual([]);
+  },
+);
+it.each(['zh', 'en'] as const)(
+  'UI-01: %s checks member weights when the fusion record is absent',
+  async (language) => {
+    const { fusion: _mix, ...members } = { ...fusionIdentity, scope: 'external_candidate' };
+    const weighted = (left: number, right: number) => ({
+      ...external(language),
+      registration: {
+        ...members,
+        components: [
+          { ...fusionIdentity.components[0], alpha: left },
+          { ...fusionIdentity.components[1], alpha: right },
+        ],
+      },
+    });
+    const { report } = await readThroughHost([weighted(0.9, 0.9), weighted(0.25, 0.75)]);
+    expect(report.model_advice?.[0]).toEqual(invalidRead);
+    expect(report.model_advice?.[1].registration?.components?.map((m) => m.alpha)).toEqual([
+      0.25, 0.75,
+    ]);
+    expect(report.model_advice?.[1].registration?.fusion).toBeUndefined();
+  },
+);

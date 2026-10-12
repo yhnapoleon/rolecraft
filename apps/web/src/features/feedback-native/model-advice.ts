@@ -108,16 +108,17 @@ function fusion(value: unknown): ModelFusion {
     fusion_gain_observed: value.fusion_gain_observed,
   };
 }
+/** A fusion member's weight: left 1 − alpha, right alpha (145 fusion registration). */
+const memberWeight = (role: 'left' | 'right', alpha: number) =>
+  role === 'left' ? 1 - alpha : alpha;
+const same = (a: number, b: number) => Math.abs(a - b) <= 1e-9;
 function components(value: unknown, mix: ModelFusion | undefined): ModelComponent[] {
   if (!Array.isArray(value) || value.length !== 2) return fail();
-  return value.map((member: unknown, index) => {
+  const members = value.map((member: unknown, index): ModelComponent => {
     const role = index === 0 ? 'left' : 'right';
     if (!row(member) || member.role !== role) return fail();
     const alpha = optional(member.alpha) ? null : fraction(member.alpha);
-    // Each member's weight: left 1 − alpha, right alpha (145 fusion registration).
-    const expected = mix && (role === 'left' ? 1 - mix.alpha : mix.alpha);
-    if (alpha !== null && expected !== undefined && Math.abs(alpha - expected) > 1e-9)
-      return fail();
+    if (alpha !== null && mix && !same(alpha, memberWeight(role, mix.alpha))) return fail();
     return {
       role,
       id: text(member.id),
@@ -126,6 +127,11 @@ function components(value: unknown, mix: ModelFusion | undefined): ModelComponen
       alpha,
     };
   });
+  // Without the fusion record the two weights must still be one alpha's two shares.
+  const [left, right] = members;
+  if (left.alpha !== null && right.alpha !== null && !same(left.alpha + right.alpha, 1))
+    return fail();
+  return members;
 }
 function registration(value: unknown): ModelRegistration | null {
   if (value === null) return null;
@@ -250,6 +256,18 @@ function unit(value: unknown, sessionId: string): AdviceUnit {
   };
 }
 const COUNTED = ['supported', 'contradicted', 'insufficient', 'abstained', 'failed'] as const;
+/** 148 `units.aggregate`: any judged CONTRADICTED sentence decides; SUPPORTED only when every
+ * planned sentence was judged SUPPORTED and none was over budget; otherwise INSUFFICIENT. */
+function workRelation(units: AdviceUnit[], counts: AdviceCounts): Relation | null {
+  const judged = units.filter((entry) => entry.status === 'completed');
+  if (!judged.length) return null;
+  if (judged.some((entry) => entry.label === 'CONTRADICTED')) return 'CONTRADICTED';
+  return judged.length === units.length &&
+    judged.every((entry) => entry.label === 'SUPPORTED') &&
+    counts.over_budget === 0
+    ? 'SUPPORTED'
+    : 'INSUFFICIENT';
+}
 function aggregation(value: unknown, units: AdviceUnit[]) {
   if (!row(value) || !row(value.counts)) return fail();
   const raw = value.counts;
@@ -307,6 +325,9 @@ function readAdviceItem(item: unknown, sessionId: string): RegisteredAdvice {
       : fail();
   if (units && new Set(units.map((entry) => entry.index)).size !== units.length) return fail();
   const summary = units ? aggregation(item.aggregation, units) : undefined;
+  // The work-level relation must be the one its sentences give (148's conservative rule).
+  if (units && summary && label !== null && label !== workRelation(units, summary.counts))
+    return fail();
   const labelled = label !== null || ids.length > 0 || units?.some((entry) => entry.label !== null);
   if (state === 'completed') {
     if (identity?.scope !== 'external_candidate' || label === null || error !== null) return fail();
@@ -520,9 +541,7 @@ function identityLines(identity: ModelRegistration, language: FeedbackLanguage):
     lines.push(C('stage', { stage: named(STAGES, identity.weights_stage, language) }));
   for (const member of identity.components ?? []) {
     const weight =
-      member.alpha ??
-      (identity.fusion &&
-        (member.role === 'left' ? 1 - identity.fusion.alpha : identity.fusion.alpha));
+      member.alpha ?? (identity.fusion && memberWeight(member.role, identity.fusion.alpha));
     lines.push(
       C(member.role === 'left' ? 'componentLeft' : 'componentRight', {
         id: member.id,
@@ -585,12 +604,13 @@ export function updateRegisteredAdvice(
   ];
   if (advice?.some((entry) => entry.registration?.scope === 'synthetic_fixture'))
     headline.push(marked('span', C('syntheticNotice'), 'data-model-advice-notice'));
+  // 2026-10-12 decision 5: sentences first; the work-level conclusion follows, quieter.
   const lead = advice?.find((entry) => entry.units);
+  const counted = lead && adviceCountsText(lead, language);
+  if (counted) headline.push(marked('span', counted, 'data-model-advice-counts'));
   const conclusion = lead && shownResult(lead);
   if (conclusion)
     headline.push(marked('span', C(`conclusion${conclusion}`), 'data-model-advice-conclusion'));
-  const counted = lead && adviceCountsText(lead, language);
-  if (counted) headline.push(marked('span', counted, 'data-model-advice-counts'));
   summary.replaceChildren(...headline);
   const reference = (source: ObjectRef, key: string) => {
     const kind = REFERENCE_KINDS[source.kind];
@@ -726,8 +746,9 @@ export function evaluationModelLine(
 export const MODEL_ADVICE_STYLE =
   '.native-feedback [data-model-advice]>summary{cursor:pointer}' +
   '.native-feedback [data-model-advice-title]{font-weight:600}' +
-  '.native-feedback [data-model-advice-notice],.native-feedback [data-model-advice-conclusion],.native-feedback [data-model-advice-counts]{display:block;margin-top:2px;padding-inline-start:1.1em;color:var(--ink-2);font-size:13.5px;line-height:1.5}' +
-  '.native-feedback [data-model-advice-conclusion]{color:var(--ink)}' +
+  '.native-feedback [data-model-advice-notice],.native-feedback [data-model-advice-conclusion],.native-feedback [data-model-advice-counts]{display:block;margin-top:2px;padding-inline-start:1.1em;font-size:13.5px;line-height:1.5}' +
+  '.native-feedback [data-model-advice-notice]{color:var(--ink-2,#4b505b)}' +
+  '.native-feedback [data-model-advice-conclusion]{color:var(--ink-3,#7b818d)}' +
   '.native-feedback [data-model-units]{list-style:decimal;margin:10px 0;padding-inline-start:1.6em}' +
   '.native-feedback [data-model-unit]{margin-block:12px}' +
   '.native-feedback [data-model-unit]::marker{color:var(--ink-3)}' +
