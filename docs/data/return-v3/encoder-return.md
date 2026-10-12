@@ -178,6 +178,7 @@ python export_hf_return.py seal --root RETURN --dataset-manifest dataset-manifes
 
 | 码 | 含义 |
 |---|---|
+| `model_return_protocol_invalid` | `return_protocol` 不是 `rolecraft-label-evidence-v2`，或 `artifact_kind`／`artifact_protocol` 写的不是编码器（线性、融合回传走各自的登记） |
 | `encoder_architecture_unsupported` | variant／pooling 不在支持集；头数组名、形状或类型不符；config 无 `hidden_size`、要求远程代码；旧布局用了 `pair_aggregate` |
 | `checkpoint_inference_settings_invalid` | 阈值不在 (0,1)、上限 <4、seed 非整数 |
 | `tokenizer_capacity_exceeded` | `max_tokens` 超过分词器或位置上限 |
