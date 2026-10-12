@@ -315,7 +315,10 @@ def open_held_out_test(
         raise C.ProtocolError("fixture_cannot_authorize_confirmatory", status=403)
     declaration = check_declaration(checkpoint_manifest, manifest, dataset_hash)
 
-    campaign = TestCampaign.model_validate_json(C.read_file(freeze_root, campaign_ref))
+    try:
+        campaign = TestCampaign.model_validate_json(C.read_file(freeze_root, campaign_ref))
+    except ValidationError as error:
+        raise C.ProtocolError("held_out_campaign_invalid", status=403) from error
     candidates = [item for item in campaign.candidates if item.runtime == registration]
     if len(candidates) != 1:
         raise C.ProtocolError("held_out_campaign_candidate_mismatch", status=403)

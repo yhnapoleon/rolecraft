@@ -1062,3 +1062,110 @@ def test_ret_03_untrained_heads_may_declare_no_training_only_when_synthetic(
     with pytest.raises(C.ProtocolError) as error:
         inspect_return_checkpoint(path, dataset, "untrained-heads", predictions)
     assert error.value.code == "model_return_selection_contaminated"
+
+
+def test_tol_01_a_label_or_status_change_inside_the_tolerance_is_still_a_mismatch(
+    return_case, capsys, tmp_path
+) -> None:
+    root, _, path = return_case
+    # Near-uniform scores with a 1e-7 margin: moving 2e-7 of mass flips the argmax while every
+    # probability stays well inside the 1e-6 linear tolerance.
+    model_root, ref = linear_bundle(
+        tmp_path / "near-tie",
+        [[0.0] * 6, [0.0] * 6, [0.0] * 6],
+        [0.0, 1e-7, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 6.0, 0.0],
+    )
+    registry = tmp_path / "registry"
+    ref = register(registry, model_root, ref)
+    exact = model_predictions(registry, ref, root / "data/dev.inputs.jsonl")
+    assert {row["label"] for row in exact} == {"CONTRADICTED"}
+    flipped = json.loads(json.dumps(exact))
+    flipped[0]["probabilities"][1] -= 2e-7
+    flipped[0]["probabilities"][0] += 2e-7
+    flipped[0]["label"] = "SUPPORTED"
+    flipped[1].update(
+        status="abstained",
+        probabilities=None,
+        label=None,
+        evidence_ids=[],
+        evidence_bindings=[],
+        reason="producer abstained",
+    )
+    write_rows(path, flipped)
+    code, result = invoke(return_case, capsys, *registration_args(registry, ref))
+    assert code == 2
+    assert result["reload"]["max_probability_deviation"] < 1e-6
+    assert result["reload"]["mismatches"] == [
+        {"record_id": flipped[0]["record_id"], "fields": ["label"]},
+        {
+            "record_id": flipped[1]["record_id"],
+            "fields": ["status", "label", "evidence_ids", "probabilities"],
+        },
+    ]
+
+
+@pytest.mark.parametrize(
+    ("alpha", "change", "reasons"),
+    [
+        (0.5, {}, ["fusion_selection_registration_mismatch"]),
+        (0.25, {"fusion_gain_observed": False}, ["fusion_gain_observed_mismatch"]),
+        (0.25, {"alpha_grid": [0, 0.5, 1]}, ["fusion_selection_grid_invalid"]),
+    ],
+    ids=["registered-alpha", "gain-claim", "grid"],
+)
+def test_fsel_01_registration_gain_and_grid_disagreements_are_named(
+    return_case, capsys, tmp_path, alpha, change, reasons
+) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, alpha, 0.5, **change)
+    code, result = invoke(
+        return_case, capsys, *registration_args(registry, ref), "--fusion-selection", str(selection)
+    )
+    assert code == 2
+    assert result["fusion_selection"]["reasons"] == reasons
+
+
+def test_fsel_01_component_identity_must_be_the_registered_one(
+    return_case, capsys, tmp_path
+) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, 0.25, 0.5)
+    record = json.loads(selection.read_text())
+    record["components"]["left"]["model_revision"] = "another-left-model"
+    selection.write_text(json.dumps(record))
+    code, result = invoke(
+        return_case, capsys, *registration_args(registry, ref), "--fusion-selection", str(selection)
+    )
+    assert code == 2
+    assert result["fusion_selection"]["reasons"] == ["fusion_selection_component_mismatch"]
+
+
+@pytest.mark.parametrize(
+    ("edit", "partition", "code"),
+    [
+        (
+            lambda record: record.update(protocol="other"),
+            "dev",
+            "fusion_selection_protocol_invalid",
+        ),
+        (lambda record: record.update(extra=True), "dev", "fusion_selection_protocol_invalid"),
+        (lambda record: None, "test", "fusion_selection_dev_only"),
+    ],
+    ids=["protocol", "unknown-key", "test-partition"],
+)
+def test_fsel_01_a_malformed_record_or_test_partition_is_refused(
+    return_case, capsys, tmp_path, edit, partition, code
+) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, 0.25, 0.5)
+    record = json.loads(selection.read_text())
+    edit(record)
+    selection.write_text(json.dumps(record))
+    status, result = invoke(
+        return_case,
+        capsys,
+        *registration_args(registry, ref),
+        "--fusion-selection",
+        str(selection),
+        "--partition",
+        partition,
+    )
+    assert status == 2 and result["error"] == code

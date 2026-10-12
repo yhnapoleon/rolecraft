@@ -23,7 +23,8 @@ from career_lab.datasets.v3.common import json_bytes, sha
 from career_lab.datasets.v3.export import ExportUnit, FrozenSnapshot, SourceObject, export_snapshot
 from career_lab.datasets.v3.labeling import AnnotationBatch
 from career_lab.experiments.v3.training.freeze import freeze_selection
-from career_lab.models.v3.held_out import prepare_test_freeze, review_policy_bytes
+from career_lab.models.v3.held_out import HeldOutOpening, prepare_test_freeze, review_policy_bytes
+from career_lab.models.v3.return_data import load_return_dataset
 from tests.integration.test_model_return_verification import (
     LEFT_WEIGHTS,
     linear_bundle,
@@ -524,6 +525,8 @@ def test_data_06_v3_train_and_dev_align_per_split_and_trace_both_passes_by_langu
             split = split_of[row["record_id"]]
             assert row["split"] == split and row["language"] == language
             assert row["label_tier"] == "G2v" and row["status"] == "accept"
+            # The controlled doubles agree, so no third pass and no adjudication record.
+            assert row["adjudication_ref"] is None and len(row["passes"]) == 2
             inputs = {r["record_id"]: r for r in jsonl(package.root / f"data/{split}.inputs.jsonl")}
             assert row["input_hash"] == inputs[row["record_id"]]["input_hash"]
             assert [p["prompt_revision"] for p in row["passes"]] == [
@@ -1536,3 +1539,80 @@ def test_held_01_a_dev_file_that_is_a_link_is_refused_before_it_is_read(
     assert not opened_paths(log) & held_out_files(package)
     if target == "copy":
         assert source.resolve() not in opened_paths(log)
+
+
+@pytest.mark.parametrize("body", [b"{not json", b'{"schema_version": 2, "id": "x"}'])
+def test_held_02_a_damaged_campaign_file_is_refused_with_its_own_code(
+    tmp_path: Path, body: bytes
+) -> None:
+    opening = prepared_opening(tmp_path)
+    opening.campaign.write_bytes(body)
+    report = refused(opening, tmp_path, *opening.args())
+    assert report["error"] == "held_out_campaign_invalid" and report["status"] == 403
+
+
+def test_held_02_operator_and_declaration_problems_are_named(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path)
+    report = refused(opening, tmp_path, *opening.args(**{"--operator": "not an identifier!"}))
+    assert report["error"] == "held_out_operator_invalid"
+    body = json.loads(opening.checkpoint.read_bytes())
+    del body["test_used_for_selection"]
+    opening.checkpoint.write_bytes(json_bytes(body))
+    report = refused(opening, tmp_path, *opening.args())
+    assert report["error"] == "held_out_selection_declaration_required"
+
+
+def test_held_02_approval_options_belong_to_the_test_partition_only(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path)
+    args = opening.args(**{"--partition": "dev"})
+    predictions = gold_predictions(opening.package, "dev", tmp_path / "dev.jsonl")
+    log = tmp_path / "dev-with-approval.log"
+    code, report = verify(opening.package, predictions, *args, audit_log=log)
+    assert code == 2 and report["error"] == "held_out_arguments_require_test_partition"
+    assert not opening.record.exists()
+    assert not opened_paths(log) & held_out_files(opening.package)
+
+
+def test_held_04_the_test_reader_requires_the_recorded_opening(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path)
+    with pytest.raises(C.ProtocolError) as error:
+        load_return_dataset(opening.package.root, opening.package.checksum, "test")
+    assert error.value.code == "held_out_test_not_opened"
+    code, report = verify(opening.package, opening.predictions, *opening.args())
+    assert code == 0, report
+    raw = opening.record.read_bytes()
+    recorded = HeldOutOpening(opening.record, json.loads(raw), raw)
+    examples = load_return_dataset(
+        opening.package.root, opening.package.checksum, "test", opening=recorded
+    ).examples
+    assert {row.split for row in examples} == {"test"}
+    opening.record.write_bytes(raw.replace(b"coordinator-147", b"coordinator-148"))
+    with pytest.raises(C.ProtocolError) as error:
+        load_return_dataset(
+            opening.package.root, opening.package.checksum, "test", opening=recorded
+        )
+    assert error.value.code == "held_out_test_not_opened"
+
+
+@pytest.mark.parametrize(
+    ("fault", "code"),
+    [
+        ("unknown_split", "dataset_split_unknown"),
+        ("sealed_no_test", "dataset_test_sealed_without_test"),
+    ],
+)
+def test_held_01_split_names_and_the_sealed_flag_are_checked(
+    tmp_path: Path, fault: str, code: str
+) -> None:
+    package = build_package(tmp_path, TRAIN_DEV)
+    manifest_path = package.root / "dataset-manifest.json"
+    manifest = json.loads(manifest_path.read_bytes())
+    if fault == "unknown_split":
+        manifest["splits"]["holdout"] = manifest["splits"]["dev"]
+    else:
+        manifest["test_sealed"] = True
+    manifest_path.write_bytes(json_bytes(manifest))
+    package = V3Package(package.root, sha(manifest_path.read_bytes()))
+    predictions = gold_predictions(package, "dev", tmp_path / "predictions.jsonl")
+    status, report = verify(package, predictions)
+    assert status == 2 and report["error"] == code
