@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 a7136a29c7f2ee1440d58e4275d162a2816af889c6fc6ddd2570da2f2829a51d. Do not edit.
+// Generated from frozen manifest SHA256 bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -243,6 +243,7 @@ export type FeedbackProvenance = {
   registered_model?: RegisteredModelIdentity | null;
   registered_models?: RegisteredModelIdentity[] | null;
   support_model?: SupportModelIdentity | null;
+  base_url?: string | null;
 };
 export type FeedbackReadBoundary = {
   schema_version?: 2;
@@ -811,7 +812,7 @@ export type SubmitInput = {
   products: ObjectRef[];
   schema_version?: 2;
 };
-export type SupportModelIdentity = { provider: string; model: string };
+export type SupportModelIdentity = { provider: string; model: string; base_url?: string | null };
 export type TaskBatch = { creates?: TaskCreate[]; schema_version?: 2; updates?: TaskPatch[] };
 export type TaskCreate = {
   goal?: string;
