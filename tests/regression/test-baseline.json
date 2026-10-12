@@ -2610,7 +2610,22 @@
     "tests.integration.test_relation_units_export::test_exp_07_work_sentences_are_exported_with_the_inference_unit_hashes[zh]": "passed",
     "tests.integration.test_relation_units_export::test_exp_07_work_sentences_are_exported_with_the_inference_unit_hashes[en]": "passed",
     "tests.integration.test_linear_return::test_lin_02_oversize_model_file_is_refused": "passed",
-    "tests.integration.test_model_return_verification::test_fsel_01_a_record_other_than_the_registered_copy_is_named": "passed"
+    "tests.integration.test_model_return_verification::test_fsel_01_a_record_other_than_the_registered_copy_is_named": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_01_published_directory_passes_the_isolated_self_check": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_02_a_one_byte_change_to_any_listed_file_fails": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_03_an_unlisted_file_fails_including_hidden_ones[.DS_Store]": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_03_an_unlisted_file_fails_including_hidden_ones[reference/.DS_Store]": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_03_an_unlisted_file_fails_including_hidden_ones[reference/__pycache__/x.pyc]": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_04_a_missing_listed_file_fails": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_05_unparsable_json_fails_even_when_the_list_matches": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_06_unsafe_or_malformed_list_entries_fail[0000000000000000000000000000000000000000000000000000000000000000  ../outside.md]": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_06_unsafe_or_malformed_list_entries_fail[0000000000000000000000000000000000000000000000000000000000000000  /etc/hosts]": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_06_unsafe_or_malformed_list_entries_fail[0000000000000000000000000000000000000000000000000000000000000000  SHA256SUMS]": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_06_unsafe_or_malformed_list_entries_fail[0000000000000000000000000000000000000000000000000000000000000000 *README.md]": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_06_unsafe_or_malformed_list_entries_fail[XYZ  README.md]": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_07_a_symlink_anywhere_fails": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_08_the_checker_imports_only_the_standard_library": "passed",
+    "tests.unit.test_return_v3_package::test_pkg_09_readme_links_point_to_listed_files": "passed"
   },
   "frontend": {
     "src/gateway-transport.test.ts::native workbench Gateway transport keeps PATCH command identity and the full public transaction, without adding defaults or retrying": "passed",
