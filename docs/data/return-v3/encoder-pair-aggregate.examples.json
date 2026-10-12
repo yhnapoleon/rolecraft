@@ -1,0 +1,380 @@
+{
+  "rule": "pair_aggregate v1 (docs/data/return-v3/encoder-return.md, section 5)",
+  "threshold": "pair_aggregate requires 0.5 <= evidence_threshold < 1",
+  "pair_label_order": [
+    "SUPPORTS",
+    "CONTRADICTS",
+    "UNRELATED"
+  ],
+  "relation_label_order": [
+    "SUPPORTED",
+    "CONTRADICTED",
+    "INSUFFICIENT"
+  ],
+  "examples": [
+    {
+      "name": "a contradiction over the threshold wins over a stronger support",
+      "evidence_threshold": 0.5,
+      "candidates": [
+        "e1",
+        "e2"
+      ],
+      "pair_probabilities": [
+        [
+          0.9,
+          0.05,
+          0.05
+        ],
+        [
+          0.2,
+          0.6,
+          0.2
+        ]
+      ],
+      "label": "CONTRADICTED",
+      "probabilities": [
+        0.1,
+        0.8,
+        0.1
+      ],
+      "evidence_ids": [
+        "e2"
+      ],
+      "evidence_scores": [
+        0.05,
+        0.6
+      ]
+    },
+    {
+      "name": "a support is cited, the unrelated candidate is not",
+      "evidence_threshold": 0.5,
+      "candidates": [
+        "e1",
+        "e2"
+      ],
+      "pair_probabilities": [
+        [
+          0.7,
+          0.1,
+          0.2
+        ],
+        [
+          0.05,
+          0.05,
+          0.9
+        ]
+      ],
+      "label": "SUPPORTED",
+      "probabilities": [
+        0.85,
+        0.075,
+        0.075
+      ],
+      "evidence_ids": [
+        "e1"
+      ],
+      "evidence_scores": [
+        0.7,
+        0.0
+      ]
+    },
+    {
+      "name": "unrelated candidates never become support",
+      "evidence_threshold": 0.5,
+      "candidates": [
+        "e1",
+        "e2"
+      ],
+      "pair_probabilities": [
+        [
+          0.1,
+          0.05,
+          0.85
+        ],
+        [
+          0.2,
+          0.1,
+          0.7
+        ]
+      ],
+      "label": "INSUFFICIENT",
+      "probabilities": [
+        0.05,
+        0.05,
+        0.9
+      ],
+      "evidence_ids": [],
+      "evidence_scores": [
+        0.05,
+        0.1
+      ]
+    },
+    {
+      "name": "a support below the threshold stays insufficient",
+      "evidence_threshold": 0.5,
+      "candidates": [
+        "e1"
+      ],
+      "pair_probabilities": [
+        [
+          0.45,
+          0.0,
+          0.55
+        ]
+      ],
+      "label": "INSUFFICIENT",
+      "probabilities": [
+        0.1125,
+        0.1125,
+        0.775
+      ],
+      "evidence_ids": [],
+      "evidence_scores": [
+        0.0
+      ]
+    },
+    {
+      "name": "every contradiction over the threshold is cited, supports are not",
+      "evidence_threshold": 0.5,
+      "candidates": [
+        "e1",
+        "e2",
+        "e3"
+      ],
+      "pair_probabilities": [
+        [
+          0.1,
+          0.6,
+          0.3
+        ],
+        [
+          0.3,
+          0.5,
+          0.2
+        ],
+        [
+          0.6,
+          0.3,
+          0.1
+        ]
+      ],
+      "label": "CONTRADICTED",
+      "probabilities": [
+        0.1,
+        0.8,
+        0.1
+      ],
+      "evidence_ids": [
+        "e1",
+        "e2"
+      ],
+      "evidence_scores": [
+        0.6,
+        0.5,
+        0.3
+      ]
+    },
+    {
+      "name": "a support tied with unrelated is not support",
+      "evidence_threshold": 0.5,
+      "candidates": [
+        "e1"
+      ],
+      "pair_probabilities": [
+        [
+          0.5,
+          0.0,
+          0.5
+        ]
+      ],
+      "label": "INSUFFICIENT",
+      "probabilities": [
+        0.125,
+        0.125,
+        0.75
+      ],
+      "evidence_ids": [],
+      "evidence_scores": [
+        0.0
+      ]
+    },
+    {
+      "name": "a pair most likely unrelated is not support",
+      "evidence_threshold": 0.5,
+      "candidates": [
+        "e1"
+      ],
+      "pair_probabilities": [
+        [
+          0.31,
+          0.0,
+          0.69
+        ]
+      ],
+      "label": "INSUFFICIENT",
+      "probabilities": [
+        0.0775,
+        0.0775,
+        0.845
+      ],
+      "evidence_ids": [],
+      "evidence_scores": [
+        0.0
+      ]
+    },
+    {
+      "name": "several supports are all cited",
+      "evidence_threshold": 0.5,
+      "candidates": [
+        "e1",
+        "e2",
+        "e3"
+      ],
+      "pair_probabilities": [
+        [
+          0.8,
+          0.1,
+          0.1
+        ],
+        [
+          0.6,
+          0.2,
+          0.2
+        ],
+        [
+          0.3,
+          0.2,
+          0.5
+        ]
+      ],
+      "label": "SUPPORTED",
+      "probabilities": [
+        0.9,
+        0.05,
+        0.05
+      ],
+      "evidence_ids": [
+        "e1",
+        "e2"
+      ],
+      "evidence_scores": [
+        0.8,
+        0.6,
+        0.0
+      ]
+    },
+    {
+      "name": "a contradiction tied with unrelated is still flagged",
+      "evidence_threshold": 0.5,
+      "candidates": [
+        "e1"
+      ],
+      "pair_probabilities": [
+        [
+          0.0,
+          0.5,
+          0.5
+        ]
+      ],
+      "label": "CONTRADICTED",
+      "probabilities": [
+        0.125,
+        0.75,
+        0.125
+      ],
+      "evidence_ids": [
+        "e1"
+      ],
+      "evidence_scores": [
+        0.5
+      ]
+    },
+    {
+      "name": "a certainly unrelated single candidate",
+      "evidence_threshold": 0.5,
+      "candidates": [
+        "e1"
+      ],
+      "pair_probabilities": [
+        [
+          0.0,
+          0.0,
+          1.0
+        ]
+      ],
+      "label": "INSUFFICIENT",
+      "probabilities": [
+        0.0,
+        0.0,
+        1.0
+      ],
+      "evidence_ids": [],
+      "evidence_scores": [
+        0.0
+      ]
+    },
+    {
+      "name": "a higher threshold",
+      "evidence_threshold": 0.7,
+      "candidates": [
+        "e1",
+        "e2"
+      ],
+      "pair_probabilities": [
+        [
+          0.65,
+          0.05,
+          0.3
+        ],
+        [
+          0.2,
+          0.75,
+          0.05
+        ]
+      ],
+      "label": "CONTRADICTED",
+      "probabilities": [
+        0.0625,
+        0.875,
+        0.0625
+      ],
+      "evidence_ids": [
+        "e2"
+      ],
+      "evidence_scores": [
+        0.05,
+        0.75
+      ]
+    },
+    {
+      "name": "a threshold below one half is refused (a 0.31 support would pass it while unrelated is likelier)",
+      "evidence_threshold": 0.3,
+      "candidates": [
+        "e1"
+      ],
+      "pair_probabilities": [
+        [
+          0.31,
+          0.0,
+          0.69
+        ]
+      ],
+      "refused": "checkpoint_inference_settings_invalid"
+    },
+    {
+      "name": "a threshold just below one half is refused",
+      "evidence_threshold": 0.49,
+      "candidates": [
+        "e1"
+      ],
+      "pair_probabilities": [
+        [
+          0.6,
+          0.1,
+          0.3
+        ]
+      ],
+      "refused": "checkpoint_inference_settings_invalid"
+    }
+  ]
+}
