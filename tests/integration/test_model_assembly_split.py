@@ -72,12 +72,22 @@ def test_split_01_registered_advice_keeps_pre_move_bytes(
     source = AdviceSource.from_registration(registry, registration, tmp_path / "journal")
     supports = [package for package in packages if package.criterion == "R2.support"]
     produced = [source.relation_advice(p, envelope, language) for p in supports]
-    assert [normalized(advice) for advice in produced] == CASES[language]["advice"][name]
+    # 148 judges R2.support sentence by sentence and lets synthetic registrations show
+    # labels (143 §3.5, §5.1 item 2), so the semantic fields change by design. What the
+    # move fixed stays byte-identical: request, job, whole-work input hash (the read-trace
+    # key), registration identity, criterion and advisory flags.
+    kept = ("criterion", "request_id", "job_id", "input_hash", "registration")
+    kept += ("mode", "affects_score")
+    assert [{key: json.loads(normalized(advice))[key] for key in kept} for advice in produced] == [
+        {key: json.loads(oracle)[key] for key in kept} for oracle in CASES[language]["advice"][name]
+    ]
     # Criterion inference is not part of the move; it stays absent until it is implemented.
     assert all(source.criterion_advice(p, envelope, language) is None for p in packages)
     again = [source.relation_advice(p, envelope, language) for p in supports]
     assert again == produced
-    assert len(list((tmp_path / "journal").glob("*/outcome.json"))) == len(supports)
+    sentences = sum(len(advice.units or ()) for advice in produced)
+    assert sentences >= len(supports)
+    assert len(list((tmp_path / "journal").glob("*/outcome.json"))) == sentences
 
 
 # REG-01 ------------------------------------------------------------------------------
