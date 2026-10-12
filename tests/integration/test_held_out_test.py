@@ -590,3 +590,114 @@ def test_data_06_v3_misalignment_is_reported_per_record_or_per_package(
         assert reason in result["reasons"]
     others = [row for row in report["records"] if row["record_id"] != record_id]
     assert {row["status"] for row in others} == {"accept"}
+
+
+def unreadable_test_payloads(package: V3Package) -> str:
+    """Replace every sealed test payload except metadata with non-JSON bytes; reseal.
+
+    A reviewer that parsed any of them would fail; the declared counts stay the producer's.
+    """
+    root = package.root
+    declared = counts(
+        jsonl(root / "data/test.labels.jsonl"), jsonl(root / "audit/test/metadata.jsonl")
+    )
+    names = split_files("test")
+    for kind in ("inputs", "labels", "annotations"):
+        path = root / names[kind]
+        lines = path.read_text().splitlines()
+        path.write_text("".join(f"sealed {kind} line {i} {{not json\n" for i in range(len(lines))))
+    for path in (root / "audit/test/labels/passes").iterdir():
+        path.write_text("sealed call record {not json")
+    return seal(root, declared={"test": declared})
+
+
+def test_seal_01_sealed_test_is_checked_by_hash_count_and_structure_without_parsing_labels(
+    tmp_path: Path,
+) -> None:
+    package = build_package(tmp_path)
+    checksum = unreadable_test_payloads(package)
+    code, report = validate(package.root, tmp_path / "review")
+    assert code == 0, report
+    assert checksum == sha((package.root / "dataset-manifest.json").read_bytes())
+    assert {row["record_id"].split("-")[0] for row in report["records"]} == {"train", "dev"}
+    assert {row["status"] for row in report["records"]} == {"accept"}
+    sealed = report["sealed_test"]
+    assert sealed["split"] == "test" and sealed["records"] == 2
+    assert sealed["labels_parsed"] is False and sealed["inputs_parsed"] is False
+    assert sealed["verified"] == [
+        "file_hashes",
+        "line_counts",
+        "metadata_split",
+        "language_counts",
+        "record_and_input_isolation",
+        "component_and_structure_isolation",
+    ]
+    assert sealed["declared_only"] == ["labels", "label_tiers", "evidence_evaluable", "label_only"]
+    manifest = json.loads((package.root / "dataset-manifest.json").read_bytes())
+    assert sealed["files"] == {
+        name: entry["sha256"] for name, entry in manifest["splits"]["test"]["files"].items()
+    }
+    assert all(row["split"] != "test" for rows in report["annotation_trace"].values() for row in rows)
+
+
+@pytest.mark.parametrize(
+    ("fault", "code"),
+    [
+        ("line_count", "handoff_sealed_count_mismatch"),
+        ("component", "handoff_component_cross_split"),
+        ("structure", "handoff_structure_cross_split"),
+        ("record_id", "handoff_record_cross_split"),
+        ("language", "handoff_count_mismatch"),
+        ("source_split", "handoff_source_outside_split"),
+        ("bytes", "file_hash_mismatch"),
+    ],
+)
+def test_seal_01_sealed_test_isolation_faults_are_rejected(
+    tmp_path: Path, fault: str, code: str
+) -> None:
+    package = build_package(tmp_path)
+    unreadable_test_payloads(package)
+    root = package.root
+    metadata_path = root / "audit/test/metadata.jsonl"
+    metadata = jsonl(metadata_path)
+    dev = jsonl(root / "audit/dev/metadata.jsonl")
+    if fault == "line_count":
+        path = root / "data/test.labels.jsonl"
+        path.write_text("".join(path.read_text().splitlines(keepends=True)[:1]))
+    elif fault == "component":
+        metadata[0]["connected_component_id"] = dev[0]["connected_component_id"]
+    elif fault == "structure":
+        metadata[0]["lineage"]["structure_id"] = dev[0]["lineage"]["structure_id"]
+    elif fault == "record_id":
+        metadata[0]["record_id"] = dev[0]["record_id"]
+    elif fault == "language":
+        metadata[0]["language"] = "en" if metadata[0]["language"] == "zh" else "zh"
+    elif fault == "source_split":
+        metadata[0]["packaged_sources"][0]["path"] = dev[0]["packaged_sources"][0]["path"]
+    write_jsonl(metadata_path, metadata)
+    if fault != "bytes":
+        manifest = json.loads((root / "dataset-manifest.json").read_bytes())
+        declared = {
+            k: v for k, v in manifest["splits"]["test"].items() if k != "files"
+        }
+        seal(root, declared={"test": declared})
+    else:
+        path = root / "data/test.labels.jsonl"
+        path.write_bytes(path.read_bytes().replace(b"line 0", b"line 9"))
+    status, report = validate(root, tmp_path / "review")
+    assert status == 2
+    assert report["error"] == code
+
+
+def test_seal_01_record_level_test_review_needs_the_approved_opening(tmp_path: Path) -> None:
+    package = build_package(tmp_path)
+    unreadable_test_payloads(package)
+    manifest = tmp_path / "return" / "checkpoint-manifest.json"
+    manifest.parent.mkdir()
+    manifest.write_text("{}")
+    status, report = validate(
+        package.root, tmp_path / "review", "--split", "test", "--checkpoint-manifest", manifest
+    )
+    assert status == 2
+    assert report["error"] == "held_out_test_sealed"
+    assert not (tmp_path / "review").exists()

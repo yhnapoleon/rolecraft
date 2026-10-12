@@ -268,6 +268,62 @@ def verify_split_counts(
             raise ProtocolError("handoff_count_mismatch")
 
 
+def sealed_test_summary(package: HandoffPackage, reviewed: RowIndex) -> dict[str, JsonValue]:
+    """Sealed test: bytes, line counts and structural isolation; labels are never parsed.
+
+    Only test metadata is decoded, for split, language and isolation against train/dev.
+    """
+    names = split_file_names("test")
+    declared = package.manifest.splits["test"]
+    lines = {kind: package.line_count(name) for kind, name in names.items()}
+    if (
+        any(lines[kind] != declared.records for kind in ("inputs", "labels", "metadata"))
+        or lines["annotations"] > declared.records
+    ):
+        raise ProtocolError("handoff_sealed_count_mismatch")
+    described = {
+        rid: Metadata.model_validate(row)
+        for rid, row in index_rows(package.rows(names["metadata"])).items()
+    }
+    if any(meta.split != "test" for meta in described.values()):
+        raise ProtocolError("handoff_split_mismatch")
+    language = {k: v for k, v in declared.language.items() if v != 0}
+    if dict(Counter(meta.language for meta in described.values())) != language:
+        raise ProtocolError("handoff_count_mismatch")
+    if described.keys() & reviewed.keys() or {m.input_hash for m in described.values()} & {
+        row["input_hash"] for row in reviewed.values()
+    }:
+        raise ProtocolError("handoff_record_cross_split")
+    if {m.connected_component_id for m in described.values()} & {
+        row["connected_component_id"] for row in reviewed.values()
+    }:
+        raise ProtocolError("handoff_component_cross_split")
+    if {m.lineage.structure_id for m in described.values()} & {
+        row["lineage"]["structure_id"] for row in reviewed.values()
+    }:
+        raise ProtocolError("handoff_structure_cross_split")
+    if any(
+        split_owner(ref.path) != "test" for meta in described.values() for ref in meta.packaged_sources
+    ):
+        raise ProtocolError("handoff_source_outside_split")
+    return {
+        "split": "test",
+        "records": declared.records,
+        "files": {name: identity.sha256 for name, identity in (declared.files or {}).items()},
+        "labels_parsed": False,
+        "inputs_parsed": False,
+        "verified": [
+            "file_hashes",
+            "line_counts",
+            "metadata_split",
+            "language_counts",
+            "record_and_input_isolation",
+            "component_and_structure_isolation",
+        ],
+        "declared_only": ["labels", "label_tiers", "evidence_evaluable", "label_only"],
+    }
+
+
 def annotation_trace(
     package: HandoffPackage,
     reviews: list[RecordReview],
@@ -398,6 +454,11 @@ def validate_handoff(
     inputs, labels, metadata, annotations = (
         sealed_package_rows(package) if sealed else package_rows(package)
     )
+    sealed_test = (
+        sealed_test_summary(package, metadata)
+        if sealed and package.manifest.test_sealed
+        else None
+    )
     reviews, records = [], []
     for rid, row in inputs.items():
         review, record = review_record(
@@ -434,7 +495,7 @@ def validate_handoff(
     }
     if sealed:
         report["layout"] = package.manifest.layout
-        report["sealed_test"] = None
+        report["sealed_test"] = sealed_test
         report["annotation_trace"] = annotation_trace(package, reviews, metadata, annotations)
     if checkpoint is not None:
         if output.resolve().is_relative_to(
