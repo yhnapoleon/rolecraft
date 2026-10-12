@@ -1,16 +1,19 @@
 """One explicit invocation per request ID; recovery only reads durable outcomes."""
 
-from pathlib import Path
 import json
 import os
+import sys
 import time
+from contextvars import ContextVar
+from dataclasses import dataclass
+from pathlib import Path
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest
+
 from .bundle import json_bytes, sha
-from .core import abstention, checked_input, Prediction
+from .core import Prediction, abstention, checked_input
 from .registry import load_registration, public_registration
 from .temporal import legal_evidence_ids
-
 
 # Reason recorded when a sentence is longer than the registered encoder accepts.
 UNIT_EXCEEDS_ENCODER_LIMIT = "unit_exceeds_encoder_limit"
@@ -27,25 +30,80 @@ def _measured(model, item):
         return None
 
 
-def _fingerprint(registration):
-    """Registration file hash plus stat identity of each file beside it; None if unreadable."""
+# Files a full verification opened, collected for the current thread of control only.
+_OPENED: ContextVar[set[str] | None] = ContextVar("registration_files_opened", default=None)
+# Files up to this size are hashed again on every light check; larger ones are compared
+# by size, mtime, ctime and inode, with the hash recorded when they were verified.
+_REHASH_LIMIT = 1 << 20
+
+
+def _note_open(event, args):
+    """Audit hook: while a verification is collecting, remember each file path it opens."""
+    if event != "open" or (opened := _OPENED.get()) is None:
+        return
     try:
-        files = []
-        for path in sorted(registration.parent.rglob("*")):
-            if path.is_file():
-                stat = path.stat()
-                files.append(
-                    (
-                        path.relative_to(registration.parent).as_posix(),
-                        stat.st_size,
-                        stat.st_mtime_ns,
-                        stat.st_ctime_ns,
-                        stat.st_ino,
-                    )
+        if isinstance(args[0], (str, bytes, os.PathLike)):
+            opened.add(os.path.abspath(os.fsdecode(args[0])))
+    except Exception:  # an audit hook must never break the operation it observes
+        return
+
+
+sys.addaudithook(_note_open)
+
+
+@dataclass(frozen=True)
+class _Stamp:
+    """One verified file: where it is, its stat identity and the hash it had."""
+
+    path: Path
+    size: int
+    mtime_ns: int
+    ctime_ns: int
+    inode: int
+    sha256: str
+
+
+@dataclass(frozen=True)
+class _Verified:
+    files: tuple[_Stamp, ...]
+    model: object
+    entry: dict
+
+
+def _stamps(registry_root, opened):
+    """Stamps for the regular files under the registry that a verification opened."""
+    root = Path(registry_root).resolve()
+    stamps = []
+    for name in sorted(opened):
+        path = Path(name).resolve()
+        if path.is_relative_to(root) and path.is_file():
+            stat = path.stat()
+            stamps.append(
+                _Stamp(
+                    path,
+                    stat.st_size,
+                    stat.st_mtime_ns,
+                    stat.st_ctime_ns,
+                    stat.st_ino,
+                    sha(path.read_bytes()),
                 )
-        return sha(registration.read_bytes()), tuple(files)
+            )
+    return tuple(stamps)
+
+
+def _unchanged(stamp):
+    try:
+        stat = stamp.path.stat()
+        if (stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns, stat.st_ino) != (
+            stamp.size,
+            stamp.mtime_ns,
+            stamp.ctime_ns,
+            stamp.inode,
+        ):
+            return False
+        return stamp.size > _REHASH_LIMIT or sha(stamp.path.read_bytes()) == stamp.sha256
     except OSError:
-        return None
+        return False
 
 
 def _atomic(path, value):
@@ -69,23 +127,36 @@ class RegisteredAdvisory:
         self.ref = FileRef.model_validate(registration_ref)
         self.journal_root = Path(journal_root)
         self.allow_synthetic = allow_synthetic
-        # (files fingerprint, model, entry) of the last fully verified load.
+        # The last fully verified load and the files it read.
         self._verified = None
 
     def _load(self):
-        """The registered model, fully verified unless its files are unchanged since.
+        """The registered model, fully verified again unless the files it read are unchanged.
 
-        The light check covers the registration file's SHA-256 and the size, mtime_ns,
-        ctime_ns and inode of every file in the registration directory; any difference,
-        added or removed file means a full ``load_registration`` again.
+        A full ``load_registration`` records every file under the registry it opens, which
+        for a fusion includes its component registrations and their weights. Later calls
+        check exactly those files: size, mtime_ns, ctime_ns and inode, and the SHA-256 of
+        files up to 1 MiB. Any difference, or a file gone, means full verification again,
+        so drift reaches new feedback as ``model_files_changed``. A load during which one
+        of those files changed is not cached.
         """
-        fingerprint = _fingerprint(self.registry_root / self.ref.path)
-        if fingerprint is not None and self._verified and self._verified[0] == fingerprint:
-            return self._verified[1], self._verified[2]
+        cached = self._verified
+        if cached is not None and all(_unchanged(stamp) for stamp in cached.files):
+            return cached.model, cached.entry
         self._verified = None
-        model, entry = load_registration(self.registry_root, self.ref)
-        if fingerprint is not None:
-            self._verified = (fingerprint, model, entry)
+        started = time.time_ns()
+        opened = set()
+        token = _OPENED.set(opened)
+        try:
+            model, entry = load_registration(self.registry_root, self.ref)
+        finally:
+            _OPENED.reset(token)
+        try:
+            files = _stamps(self.registry_root, opened)
+        except OSError:
+            files = ()
+        if files and all(stamp.ctime_ns <= started for stamp in files):
+            self._verified = _Verified(files, model, entry)
         return model, entry
 
     def _path(self, request_id):
