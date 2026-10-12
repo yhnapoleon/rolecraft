@@ -9,7 +9,8 @@ from pathlib import Path
 
 import numpy as np
 import pytest
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from sklearn.linear_model import LogisticRegression, SGDClassifier
 
 from career_lab.contracts.v2.core import digest
 from career_lab.models.v3 import registry_cli
@@ -22,10 +23,13 @@ from tests.support.linear_return import (
     VOCABULARY,
     constructed_model,
     golden_rows,
+    json_bytes,
     reference_module,
+    sha,
     text_sha,
     write_linear_return,
 )
+from tests.unit.test_w08_models import examples
 
 # The twelve model inputs of the frozen fixture-20261007-v2 package (train then dev).
 FIXTURE_V2_INPUT_HASHES = {
@@ -372,3 +376,196 @@ def test_lin_06_external_candidate_needs_non_fixture_data(
     )
     assert identity["scope"] == "external_candidate"
     assert identity["quality_validated"] is False
+
+
+def fitted_mechanism(evidence: str) -> dict:
+    """Fit sklearn objects on in-repo synthetic fixture examples (mechanism sample only)."""
+    reference = reference_module("linear_text_v1")
+    rows = examples("train", 2)
+    inputs = [row.item.model_dump(mode="json") for row in rows]
+    vectorizer = TfidfVectorizer(analyzer="char_wb", ngram_range=(1, 3), sublinear_tf=True)
+    features = vectorizer.fit_transform([reference.relation_text(item) for item in inputs])
+    classifier = LogisticRegression(max_iter=500, random_state=5002).fit(
+        features, [row.annotation.final.label for row in rows]
+    )
+    pairs, gold = [], []
+    for row, item in zip(rows, inputs, strict=True):
+        for candidate in item["evidence"]["candidate_evidence"]:
+            pairs.append(reference.pair_text(item, candidate))
+            gold.append(int(candidate["id"] in row.annotation.final.evidence_ids))
+    evidence_vectorizer = None
+    if evidence == "independent_word_no_idf":
+        evidence_vectorizer = TfidfVectorizer(analyzer="word", ngram_range=(1, 2), use_idf=False)
+        pair_features = evidence_vectorizer.fit_transform(pairs)
+    else:
+        pair_features = vectorizer.transform(pairs)
+    evidence_classifier = LogisticRegression(max_iter=500, random_state=5002).fit(
+        pair_features, gold
+    )
+    return {
+        "vectorizer": vectorizer,
+        "classifier": classifier,
+        "evidence_classifier": evidence_classifier,
+        "evidence_vectorizer": evidence_vectorizer,
+    }
+
+
+def dev_inputs(path: Path) -> list[dict]:
+    """Synthetic dev records, the fixture v2 inputs and the bilingual golden samples."""
+    records = [
+        {
+            "record_id": row.record_id,
+            "input_hash": digest(row.item),
+            "model_input": row.item.model_dump(mode="json"),
+        }
+        for row in examples("dev", 2)
+    ] + [
+        {
+            "record_id": row["sample"],
+            "input_hash": row["input_hash"],
+            "model_input": row["model_input"],
+        }
+        for row in golden_rows()
+    ]
+    path.write_text("".join(json.dumps(r, ensure_ascii=False) + "\n" for r in records))
+    return records
+
+
+def mechanism_dataset(path: Path) -> str:
+    raw = json_bytes(
+        {
+            "dataset_id": MECHANISM_DATASET,
+            "schema_version": 1,
+            "status": "FIXTURE_ONLY_NOT_FINAL_TRAINING_DATA",
+            "task_type": "relation",
+            "label_order": LABELS,
+            "splits": {"train": {"records": 6, "label_tiers": {"G0": 6}}},
+        }
+    )
+    path.write_bytes(raw)
+    return sha(raw)
+
+
+@pytest.mark.parametrize("evidence", ["shared_char_wb", "independent_word_no_idf"])
+def test_lin_04_export_script_round_trips_through_registration_and_prediction(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], evidence: str
+) -> None:
+    exporter = reference_module("export_sklearn_linear")
+    records = dev_inputs(tmp_path / "dev.inputs.jsonl")
+    dataset_sha = mechanism_dataset(tmp_path / "dataset-manifest.json")
+    target = tmp_path / "return"
+    result = exporter.export_linear_return(
+        target,
+        **fitted_mechanism(evidence),
+        evidence_threshold=0.5,
+        dataset_manifest=tmp_path / "dataset-manifest.json",
+        dev_inputs=tmp_path / "dev.inputs.jsonl",
+        training_notes_file="notes.md",
+        training={"seed": 5002, "scope": "mechanism sample fitted on synthetic fixture"},
+    )
+    manifest = json.loads((target / "checkpoint-manifest.json").read_bytes())
+    assert manifest["artifact_kind"] == "linear"
+    assert manifest["dataset_manifest_sha256"] == dataset_sha
+    assert manifest["label_tiers"] == ["G0"]
+    assert manifest["model_revision"] == result["model_revision"]
+    exported = {
+        row["record_id"]: row
+        for row in map(json.loads, (target / "predictions.dev.jsonl").read_text().splitlines())
+    }
+    assert set(exported) == {r["record_id"] for r in records}
+    assert {row["status"] for row in exported.values()} == {"ok", "abstained"}
+    ref = {"path": "checkpoint-manifest.json", "sha256": result["manifest_sha256"]}
+    code, out = cli(
+        capsys,
+        "register",
+        "--registry",
+        tmp_path / "registry",
+        "--bundle-root",
+        target,
+        "--bundle-path",
+        ref["path"],
+        "--bundle-hash",
+        ref["sha256"],
+        "--scope",
+        "synthetic_fixture",
+    )
+    assert code == 0, out
+    registration = out["registration"]
+    worst = 0.0
+    for index, record in enumerate(records):
+        item = tmp_path / f"item-{index}.json"
+        item.write_text(json.dumps(record["model_input"], ensure_ascii=False))
+        code, outcome = cli(
+            capsys,
+            "predict",
+            "--registry",
+            tmp_path / "registry",
+            "--registration-path",
+            registration["path"],
+            "--registration-hash",
+            registration["sha256"],
+            "--journal",
+            tmp_path / "journal",
+            "--request-id",
+            f"lin-04-{index}",
+            "--input",
+            item,
+            "--language",
+            "en",
+            "--allow-synthetic",
+        )
+        assert code == 0, outcome
+        product, producer = outcome["prediction"], exported[record["record_id"]]
+        assert product["model_revision"] == producer["model_revision"] == result["model_revision"]
+        assert product["input_hash"] == producer["input_hash"]
+        assert product["status"] == producer["status"], record["record_id"]
+        assert product["label"] == producer["label"], record["record_id"]
+        assert set(product["evidence_ids"]) == set(producer["evidence_ids"]), record["record_id"]
+        if producer["status"] == "ok":
+            difference = np.abs(np.subtract(product["probabilities"], producer["probabilities"]))
+            worst = max(worst, float(difference.max()))
+        else:
+            assert product["reason_code"] == producer["reason"]
+    assert worst <= 1e-6
+
+
+def one_vs_rest(objects: dict) -> dict:
+    rows = examples("train", 2)
+    reference = reference_module("linear_text_v1")
+    texts = [reference.relation_text(row.item.model_dump(mode="json")) for row in rows]
+    sgd = SGDClassifier(loss="log_loss", random_state=5002).fit(
+        objects["vectorizer"].transform(texts), [row.annotation.final.label for row in rows]
+    )
+    return objects | {"classifier": sgd}
+
+
+LIN_04_REFUSALS = {
+    "one_vs_rest_probabilities": (one_vs_rest, "multinomial softmax"),
+    "callable_analyzer": (
+        lambda o: o | {"vectorizer": TfidfVectorizer(analyzer=str.split).fit(["a b"])},
+        "built-in",
+    ),
+    "accent_stripping": (
+        lambda o: o | {"vectorizer": TfidfVectorizer(strip_accents="unicode").fit(["alpha beta"])},
+        "strip_accents",
+    ),
+}
+
+
+@pytest.mark.parametrize("case", sorted(LIN_04_REFUSALS))
+def test_lin_04_export_script_refuses_objects_the_loader_cannot_rebuild(
+    tmp_path: Path, case: str
+) -> None:
+    exporter = reference_module("export_sklearn_linear")
+    dev_inputs(tmp_path / "dev.inputs.jsonl")
+    mechanism_dataset(tmp_path / "dataset-manifest.json")
+    change, message = LIN_04_REFUSALS[case]
+    with pytest.raises(exporter.ExportError, match=message):
+        exporter.export_linear_return(
+            tmp_path / "return",
+            **change(fitted_mechanism("shared_char_wb")),
+            dataset_manifest=tmp_path / "dataset-manifest.json",
+            dev_inputs=tmp_path / "dev.inputs.jsonl",
+            training_notes_file="notes.md",
+        )
+    assert not (tmp_path / "return").exists()

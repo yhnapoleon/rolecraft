@@ -33,6 +33,8 @@ DELETE = object()
 @functools.cache
 def reference_module(name: str) -> ModuleType:
     """Load a published reference script the way a producer runs it: by file, beside its peers."""
+    if name != "linear_text_v1":
+        reference_module("linear_text_v1")  # the exporter imports its sibling by name
     spec = importlib.util.spec_from_file_location(name, REFERENCE / (name + ".py"))
     if spec is None or spec.loader is None:
         raise FileNotFoundError(REFERENCE / (name + ".py"))
