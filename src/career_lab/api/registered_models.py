@@ -31,8 +31,7 @@ from career_lab.models.v3.consumer import (
 )
 from career_lab.rubrics.v4.feedback import FeedbackEngine
 from career_lab.rubrics.v4.rubric_v2 import CRITERIA
-from career_lab.runtime.model_adapter import ModelAdapter
-from career_lab.runtime.roles_v2 import LocalRoleModel
+from career_lab.runtime.model_slots import ModelSlots
 from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.storage.v2_store import Mutation, TransactionView, V2Store
 
@@ -168,7 +167,7 @@ def configured_registrations() -> dict[str, C.FileRef | Exception] | None:
 def install_registered_models(
     module: ScenarioModule,
     fallback: FeedbackHandler | None,
-    model: ModelAdapter | LocalRoleModel,
+    slots: ModelSlots,
 ) -> FeedbackHandler | None:
     configured = configured_registrations()
     if configured is None:
@@ -184,6 +183,6 @@ def install_registered_models(
         sources[task] = AdviceSource.from_registration(root, ref, journal, task_type=task)
     return create_feedback_handler(
         module,
-        model=None if isinstance(model, LocalRoleModel) else model,
+        slots=slots,
         engine_factory=RegisteredModelFactory(sources.get("relation"), sources.get("criterion")),
     )

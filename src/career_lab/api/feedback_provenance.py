@@ -5,7 +5,7 @@ Historical readers never infer either; records written without them keep their b
 
 import json
 from dataclasses import replace
-from typing import Protocol
+from typing import Literal, Protocol
 
 from career_lab.contracts.v2 import (
     EvaluationBundle,
@@ -14,7 +14,11 @@ from career_lab.contracts.v2 import (
     ProtocolError,
     read_file,
 )
-from career_lab.contracts.v2.provenance import FeedbackProvenance, RegisteredModelIdentity
+from career_lab.contracts.v2.provenance import (
+    FeedbackProvenance,
+    RegisteredModelIdentity,
+    SupportModelIdentity,
+)
 from career_lab.rubrics.v4.score_range import rule_score_range
 from career_lab.runtime.provenance import execution_identity
 from career_lab.scenarios.v2.module import ScenarioModule
@@ -33,9 +37,12 @@ def feedback_provenance(
     *,
     registered_model: RegisteredModelIdentity | None = None,
     registered_models: tuple[RegisteredModelIdentity, ...] | None = None,
+    support: ModelIdentity | None | Literal["same"] = "same",
 ) -> FeedbackProvenance:
-    if model is not None and getattr(model, "retries", 0) != 0:
-        raise ValueError("Feedback providers must disable automatic retries")
+    """``model`` is the Judge; ``support`` is recorded only when it differs from the Judge."""
+    for adapter in (model, None if support == "same" else support):
+        if adapter is not None and getattr(adapter, "retries", 0) != 0:
+            raise ValueError("Feedback providers must disable automatic retries")
     rules = json.loads(read_file(module.package.root, bundle.rules))
     return FeedbackProvenance(
         code=execution_identity(),
@@ -49,9 +56,29 @@ def feedback_provenance(
         ),
         rules_version=rules.get("revision", "not_recorded"),
         prompt_version=PROMPT_VERSION,
-        provider="not_configured" if model is None else getattr(model, "provider", "not_recorded"),
+        provider=_provider(model),
         model="not_configured" if model is None else model.revision,
+        support_model=_support_identity(model, support),
     )
+
+
+def _provider(model: ModelIdentity | None) -> str:
+    return "not_configured" if model is None else getattr(model, "provider", "not_recorded")
+
+
+def _support_identity(
+    judge: ModelIdentity | None, support: ModelIdentity | None | Literal["same"]
+) -> SupportModelIdentity | None:
+    """Unrecorded while support follows the Judge, or while no Judge runs at all."""
+    if judge is None or support == "same" or support is judge:
+        return None
+    current = SupportModelIdentity(
+        provider=_provider(support),
+        model="not_configured" if support is None else support.revision,
+    )
+    if (current.provider, current.model) == (_provider(judge), judge.revision):
+        return None
+    return current
 
 
 def attach_provenance(plan: Mutation, provenance: FeedbackProvenance) -> Mutation:
