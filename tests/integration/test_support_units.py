@@ -14,22 +14,31 @@ from pathlib import Path
 import numpy as np
 import pytest
 from fastapi.testclient import TestClient
+from sklearn.feature_extraction.text import TfidfVectorizer
 
 from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.contracts.v2.core import EvidenceRefV2, FileRef, SourceIdentity, digest
 from career_lab.contracts.v2.evaluation import EvidencePackageV2
-from career_lab.contracts.v2.provenance import RegisteredModelIdentity
 from career_lab.jobs.worker import Worker, WorkerClaim
 from career_lab.models.v3.bundle import json_bytes, save_bundle, sha
 from career_lab.models.v3.core import LABELS
 from career_lab.models.v3.encoder import AttentionEncoder
-from career_lab.models.v3.fusion_bundle import save_fusion_bundle
 from career_lab.models.v3.linear import LinearCandidate
 from career_lab.models.v3.projection import relation_input, sentence_input
-from career_lab.models.v3.registry import describe_registration, register_bundle
-from career_lab.models.v3.units import split_sentences, support_units
+from career_lab.models.v3.registry import describe_registration, register_bundle, register_fusion
+from career_lab.models.v3.units import (
+    SupportUnit,
+    UnitPlan,
+    UnitResult,
+    aggregate,
+    split_sentences,
+    support_units,
+    unit_hash,
+)
 from scripts.regression.published import write_catalog
+from tests.integration.test_fusion_registration import second_weights
 from tests.regression.conftest import PublishedSession
+from tests.support.linear_return import selection_record, write_linear_return
 from tests.unit.test_w08_models import examples as fixture_examples
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -177,7 +186,20 @@ def registered_service(
         root / "model", fixture=scope == "synthetic_fixture"
     )
     registration = register_bundle(root / "registry", bundle_root, bundle_ref, scope=scope)
-    monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRY", str(root / "registry"))
+    with served(root, monkeypatch, language, root / "registry", registration) as session:
+        yield session, registration
+
+
+@contextmanager
+def served(
+    root: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    language: str,
+    registry: Path,
+    registration: FileRef,
+) -> Iterator[PublishedSession]:
+    """A normal runtime app serving ``registration`` from ``registry``, one new session."""
+    monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRY", str(registry))
     monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRATION", registration.model_dump_json())
     monkeypatch.setenv("CAREER_LAB_MODEL_JOURNAL", str(root / "journal"))
     monkeypatch.setenv("CAREER_LAB_SCENARIO_CATALOG", str(write_catalog(root / "catalog.json")))
@@ -191,15 +213,12 @@ def registered_service(
             )
             assert made.status_code == 200, made.text
             body = made.json()
-            yield (
-                PublishedSession(
-                    app,
-                    client,
-                    body["session_id"],
-                    {"Authorization": "Bearer " + body["token"]},
-                    language,
-                ),
-                registration,
+            yield PublishedSession(
+                app,
+                client,
+                body["session_id"],
+                {"Authorization": "Bearer " + body["token"]},
+                language,
             )
     finally:
         app.state.store.close()
@@ -822,40 +841,242 @@ def test_cache_02_changed_registered_files_are_verified_again_and_reported(
         assert restored["status"] == cached["status"] == "synthetic_mechanism_only"
 
 
-def fusion_bundle(root: Path, *, fixture: bool = True) -> tuple[Path, FileRef]:
-    """Two constructed marker linear components fused at alpha 0.5 (W01 NumPy fusion)."""
-    left_root, left_ref = marker_bundle(root / "left", fixture=fixture)
-    right_root, right_ref = marker_bundle(root / "right", fixture=fixture, scale=0.5)
-    ref = save_fusion_bundle(
-        root / "bundle",
-        left_root=left_root,
-        left_ref=left_ref,
-        right_root=right_root,
-        right_ref=right_ref,
-        alpha=0.5,
-        threshold=0.5,
-    )
-    return root / "bundle", ref
+def linear_fusion(root: Path) -> tuple[Path, FileRef, tuple[dict, dict]]:
+    """145's fusion of two registered constructed linear returns (alpha 0.5), all synthetic.
+
+    The fusion references its components by registration path and hash; their weights
+    stay in the component registration directories.
+    """
+    registry = root / "registry"
+    refs = []
+    for name, arrays in (("left", None), ("right", second_weights())):
+        source = root / "returns" / name
+        manifest = write_linear_return(source, arrays=arrays, label_tiers=["G2v"])
+        refs.append(register_bundle(registry, source, manifest, scope="synthetic_fixture"))
+    identities = tuple(describe_registration(registry, ref).identity() for ref in refs)
+    selection = root / "fusion-selection.json"
+    selection.write_text(json.dumps(selection_record(*identities, alpha=0.5)))
+    fusion = register_fusion(registry, *refs, selection, scope="synthetic_fixture")
+    return registry, fusion, identities
 
 
 @pytest.mark.parametrize("language", ["zh", "en"])
 def test_comp_01_fusion_advice_carries_the_registered_fusion_identity(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
 ) -> None:
-    with registered_service(tmp_path, monkeypatch, language, bundle=fusion_bundle) as (
-        session,
-        registration,
-    ):
+    registry, fusion, (left, right) = linear_fusion(tmp_path)
+    with served(tmp_path, monkeypatch, language, registry, fusion) as session:
         report, advice = review(session, save_work(session, THREE_PARAGRAPHS[language]))
-    described = describe_registration(tmp_path / "registry", registration).identity()
-    assert advice["registration"] == report["provenance"]["registered_model"]
-    assert plain(advice["registration"]) == plain(
-        RegisteredModelIdentity.model_validate(described).model_dump(mode="json")
-    )
-    assert [unit["label"] for unit in advice["units"]] == THREE_PARAGRAPH_LABELS
-    assert advice["label"] == "CONTRADICTED"
-    recorded = [
+    identity = advice["registration"]
+    assert identity["id"] == fusion.path.split("/")[0] and identity["kind"] == "probability_fusion"
+    assert [
+        (c["role"], c["id"], c["kind"], c["model_revision"], c["alpha"])
+        for c in identity["components"]
+    ] == [
+        ("left", left["id"], "linear", left["model_revision"], 0.5),
+        ("right", right["id"], "linear", right["model_revision"], 0.5),
+    ]
+    assert identity["fusion"]["alpha"] == 0.5
+    assert identity["dataset"]["label_tiers"] == ["G2v"]
+    assert report["provenance"]["registered_model"] == identity
+    assert advice["status"] == "synthetic_mechanism_only" and len(advice["units"]) == 6
+    recorded = {
         json.loads(path.read_text())["registration"]["id"]
         for path in (tmp_path / "journal").glob("*/outcome.json")
+    }
+    assert recorded == {identity["id"]}
+
+
+def same_size_flip(path: Path) -> None:
+    """Change one byte, keep the size, put the modification time back."""
+    raw = bytearray(path.read_bytes())
+    raw[-1] ^= 1
+    stat = path.stat()
+    path.write_bytes(bytes(raw))
+    os.utime(path, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+@pytest.mark.parametrize(
+    "drift", ["component_weights_same_size", "component_registration", "fusion_selection"]
+)
+def test_cache_03_fusion_component_drift_is_found_after_the_cache_is_warm(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str, drift: str
+) -> None:
+    registry, fusion, (left, _) = linear_fusion(tmp_path)
+    left_dir = registry / left["id"]
+    with served(tmp_path, monkeypatch, language, registry, fusion) as session:
+        _, warm = review(session, save_work(session, THREE_PARAGRAPHS[language], "w1"), "r1")
+        assert warm["status"] == "synthetic_mechanism_only"
+        if drift == "component_weights_same_size":
+            same_size_flip(left_dir / "artifact/linear/arrays.npz")
+        elif drift == "component_registration":
+            entry = left_dir / "registration.json"
+            entry.write_bytes(entry.read_bytes().replace(b'"labels"', b'"labelz"'))
+        else:
+            (registry / fusion.path.split("/")[0] / "artifact/fusion-selection.json").write_text(
+                "{}"
+            )
+        _, drifted = review(session, save_work(session, THREE_PARAGRAPHS[language], "w2"), "r2")
+    assert drifted["status"] == "failed" and drifted["error_code"] == "model_files_changed"
+    assert {unit["reason_code"] for unit in drifted["units"]} == {"model_files_changed"}
+
+
+def judged(index: int, status: str, label: str | None = None, *evidence: str) -> UnitResult:
+    subject = EvidenceRefV2(
+        session_id="s",
+        kind="product",
+        object_id="work",
+        version=1,
+        observed_at_seq=0,
+        span_start=index * 10,
+        span_end=index * 10 + 5,
+        quote=f"s{index}",
+    )
+    unit = SupportUnit(index, subject, unit_hash(subject))
+    return UnitResult(unit, status, label, evidence, "reason" if status != "completed" else None)
+
+
+def test_unit_05_work_evidence_unites_supported_and_contradicted_sentences_in_candidate_order() -> (
+    None
+):
+    results = [
+        judged(0, "completed", "SUPPORTED", "c3"),
+        judged(1, "completed", "INSUFFICIENT", "c4"),
+        judged(2, "completed", "CONTRADICTED", "c1"),
+        judged(3, "completed", "SUPPORTED", "c3", "c2"),
     ]
-    assert recorded == [advice["registration"]["id"]] * 6
+    plan = UnitPlan(tuple(row.unit for row in results))
+    conclusion = aggregate(results, plan, ("c1", "c2", "c3", "c4"))
+    assert conclusion.label == "CONTRADICTED"
+    # The contradicted sentence's evidence is kept; the insufficient sentence's is not.
+    assert conclusion.evidence_ids == ("c1", "c2", "c3")
+    assert conclusion.counts == {
+        "supported": 2,
+        "contradicted": 1,
+        "insufficient": 1,
+        "abstained": 0,
+        "failed": 0,
+        "skipped_short": 0,
+        "over_budget": 0,
+    }
+
+
+# A sentence carrying FAULT meets a controlled failure inside the model runtime.
+FAULT = "⌛"
+PARTLY = {
+    "zh": (
+        f"第一段写明保留人工兜底{SUPPORT}。\n\n"
+        f"第二段等待名额确认{FAULT}。\n\n"
+        f"第三段写明先核实负责人{SUPPORT}。"
+    ),
+    "en": (
+        f"Paragraph one keeps human fallback{SUPPORT}.\n\n"
+        f"Paragraph two waits for the seat count{FAULT}.\n\n"
+        f"Paragraph three verifies the owner first{SUPPORT}."
+    ),
+}
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+@pytest.mark.parametrize(
+    ("scope", "status", "error_code"),
+    [
+        ("synthetic_fixture", "synthetic_mechanism_only", "synthetic_mechanism_only"),
+        ("external_candidate", "completed", None),
+    ],
+)
+def test_unit_06_partly_failed_work_is_insufficient_with_true_counts(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    language: str,
+    scope: str,
+    status: str,
+    error_code: str | None,
+) -> None:
+    real_transform = TfidfVectorizer.transform
+
+    def timing_out(vectorizer, documents):
+        if any(FAULT in document for document in documents):
+            raise TimeoutError("Controlled model runtime timeout")
+        return real_transform(vectorizer, documents)
+
+    monkeypatch.setattr(TfidfVectorizer, "transform", timing_out)
+    with registered_service(tmp_path, monkeypatch, language, scope=scope) as (session, _):
+        _, advice = review(session, save_work(session, PARTLY[language]))
+    assert [(u["status"], u["label"], u["reason_code"]) for u in advice["units"]] == [
+        ("completed", "SUPPORTED", None),
+        ("failed", None, "model_timeout"),
+        ("completed", "SUPPORTED", None),
+    ]
+    # Every judged sentence was supported, but one failed: the work is not supported.
+    assert advice["status"] == status and advice["error_code"] == error_code
+    assert advice["label"] == "INSUFFICIENT"
+    assert counts(advice) == {
+        "supported": 2,
+        "contradicted": 0,
+        "insufficient": 0,
+        "abstained": 0,
+        "failed": 1,
+        "skipped_short": 0,
+        "over_budget": 0,
+    }
+    assert len(list((tmp_path / "journal").glob("*/outcome.json"))) == 3
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_unit_06_interrupted_sentence_stays_unconfirmed_and_is_never_retried(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    judged_claims: list[str] = []
+    real_predict = LinearCandidate.predict
+    interrupt = [True]
+
+    def predict(model, item):
+        if interrupt[0] and FAULT in item.evidence.claim:
+            raise SystemExit("Controlled process loss during inference")
+        judged_claims.append(item.evidence.claim)
+        return real_predict(model, item)
+
+    monkeypatch.setattr(LinearCandidate, "predict", predict)
+    with registered_service(tmp_path, monkeypatch, language) as (session, _):
+        work = save_work(session, PARTLY[language])
+        transaction = session.send(
+            "reviews",
+            "interrupted-review",
+            "reviews.create",
+            {
+                "subjects": [work],
+                "scope": [],
+                "purpose": "commitment",
+                "decision": "defer_with_conditions",
+            },
+        )
+        job = session.app.state.jobs.claim_job("controlled-worker")
+        claim = WorkerClaim.from_job(job)
+        with pytest.raises(SystemExit, match="during inference"):
+            session.app.state.handlers[job["kind"]](job["payload"], claim)
+        assert len(judged_claims) == 1
+        interrupt[0] = False
+        reopened = create_runtime_app("sqlite:///" + str(tmp_path / "session.db"), provider="local")
+        try:
+            result = reopened.state.handlers[job["kind"]](job["payload"], claim)
+            session.app.state.jobs.complete(job["id"], job["lease_token"], result)
+        finally:
+            reopened.state.store.close()
+            reopened.state.v2_store.db.engine.dispose()
+        report = session.get("feedback/" + transaction["result"]["review"]["object_id"]).json()[
+            "result"
+        ]["result"]["items"][0]
+    (advice,) = [row for row in report["model_advice"] if row["criterion"] == "R2.support"]
+    # The interrupted sentence is reported as unconfirmed and was not inferred again.
+    assert len(judged_claims) == 2 and all(FAULT not in claim for claim in judged_claims)
+    assert [(u["status"], u["label"], u["reason_code"]) for u in advice["units"]] == [
+        ("completed", "SUPPORTED", None),
+        ("failed", None, "model_result_unconfirmed"),
+        ("completed", "SUPPORTED", None),
+    ]
+    assert advice["status"] == "synthetic_mechanism_only" and advice["label"] == "INSUFFICIENT"
+    assert counts(advice)["failed"] == 1 and counts(advice)["supported"] == 2
+    entries = sorted(path.name for path in (tmp_path / "journal").glob("*/*"))
+    assert entries.count("request.json") == 3 and entries.count("outcome.json") == 2
