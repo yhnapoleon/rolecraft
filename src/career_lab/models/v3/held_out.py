@@ -31,7 +31,14 @@ from career_lab.experiments.v3.training.freeze import (
 from .bundle import json_bytes, sha
 from .core import LABELS
 from .registry import describe_registration
-from .return_data import FIXTURE_STATUS, SealedManifest, strict_json
+from .return_data import (
+    FIXTURE_STATUS,
+    SealedManifest,
+    json_lines,
+    split_file_names,
+    strict_json,
+    unique_records,
+)
 from .return_predictions import TOLERANCE
 
 PROTOCOL = "rolecraft-held-out-test-opening-v1"
@@ -212,7 +219,9 @@ def opening_record_path(freeze_root: Path, dataset_hash: str) -> Path:
 def check_declaration(path: Path, manifest: SealedManifest, dataset_hash: str) -> bytes:
     raw = Path(path).read_bytes()
     declared = strict_json(raw)
-    if not isinstance(declared, dict) or any(key not in declared for key in SELECTION_DECLARATION):
+    if not isinstance(declared, dict):
+        raise C.ProtocolError("held_out_selection_declaration_required", status=403)
+    if any(key not in declared for key in SELECTION_DECLARATION):
         raise C.ProtocolError("held_out_selection_declaration_required", status=403)
     if any(declared[key] != value for key, value in SELECTION_DECLARATION.items()):
         raise C.ProtocolError("model_return_selection_contaminated", status=403)
@@ -224,6 +233,35 @@ def check_declaration(path: Path, manifest: SealedManifest, dataset_hash: str) -
     return raw
 
 
+def check_returned_rows(
+    returned: dict[str, dict[str, Any]],
+    declared_revision: Any,
+    registered_revision: str,
+    dataset_root: Path,
+    manifest: SealedManifest,
+) -> None:
+    """What can be found wrong before the opening: the rows' model and record identities.
+
+    Reads only the sealed test metadata (record_id, input_hash, split), never test labels.
+    """
+    revisions = {row.get("model_revision") for row in returned.values()}
+    if len(revisions) != 1:
+        raise C.ProtocolError("return_prediction_revision_mismatch")
+    revision = next(iter(revisions))
+    if revision != declared_revision:
+        raise C.ProtocolError("return_checkpoint_identity_mismatch")
+    if revision != registered_revision:
+        raise C.ProtocolError("held_out_prediction_registration_mismatch")
+    name = split_file_names("test")["metadata"]
+    ref = C.FileRef(path=name, sha256=manifest.splits["test"].files[name].sha256)
+    metadata = unique_records(json_lines(C.read_file(Path(dataset_root), ref)))
+    if any(row.get("split") != "test" for row in metadata.values()):
+        raise C.ProtocolError("held_out_test_metadata_split_mismatch")
+    expected = {(rid, row.get("input_hash")) for rid, row in metadata.items()}
+    if {(rid, row.get("input_hash")) for rid, row in returned.items()} != expected:
+        raise C.ProtocolError("return_prediction_record_set_mismatch")
+
+
 def open_held_out_test(
     request: HeldOutRequest,
     *,
@@ -232,11 +270,13 @@ def open_held_out_test(
     registry_root: Path | None,
     registration: C.FileRef | None,
     checkpoint_manifest: Path | None,
+    returned: dict[str, dict[str, Any]],
 ) -> HeldOutOpening:
-    """Check the approval, then record the opening by exclusive creation.
+    """Check the approval and the returned rows, then record the opening exclusively.
 
-    Every check runs before the record exists and none reads a test file. Once created,
-    the record stays even if the review fails afterwards; it is never retried.
+    Every check runs before the record exists; only the last one reads the sealed test
+    metadata, and none reads test labels. Once created, the record stays even if the review
+    fails afterwards; it is never retried.
     """
     supplied = {
         "--freeze": request.freeze,
@@ -266,6 +306,9 @@ def open_held_out_test(
     record_path = opening_record_path(freeze_root, dataset_hash)
     if record_path.exists() or record_path.is_symlink():
         raise C.ProtocolError("held_out_test_already_opened", status=403)
+    # The record must live in the freeze folder itself, never behind a link to elsewhere.
+    if any(folder.is_symlink() for folder in (freeze_root / RECORD_FOLDER, record_path.parent)):
+        raise C.ProtocolError("held_out_record_location_invalid", status=403)
     manifest = read_sealed(Path(dataset_root), dataset_hash)
     if manifest.status == FIXTURE_STATUS:
         raise C.ProtocolError("fixture_cannot_authorize_confirmatory", status=403)
@@ -291,6 +334,13 @@ def open_held_out_test(
     if C.read_file(freeze_root, candidate.evaluation) != policy:
         raise C.ProtocolError("held_out_review_policy_mismatch", status=403)
     summary = describe_registration(registry_root, registration)
+    check_returned_rows(
+        returned,
+        strict_json(declaration).get("model_revision"),
+        summary.model_revision,
+        Path(dataset_root),
+        manifest,
+    )
 
     record = {
         "protocol": PROTOCOL,
@@ -316,10 +366,6 @@ def open_held_out_test(
         "opened_at": datetime.now(UTC).isoformat(),
     }
     raw = json_bytes(record)
-    # The record must live in the freeze folder itself, never behind a link to elsewhere.
-    for folder in (freeze_root / RECORD_FOLDER, record_path.parent):
-        if folder.is_symlink():
-            raise C.ProtocolError("held_out_record_location_invalid", status=403)
     record_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         descriptor = os.open(record_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)

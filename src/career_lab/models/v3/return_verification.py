@@ -13,7 +13,7 @@ from career_lab.experiments.v3.training.selection import SelectionPolicy
 from .bundle import sha
 from .encoder_artifact import file_map, validate_return_identity, verify_file
 from .ensemble import select_alpha
-from .held_out import HeldOutRequest, open_held_out_test
+from .held_out import HeldOutOpening, HeldOutRequest, open_held_out_test
 from .registry import describe_registration, load_registration
 from .return_data import ReturnDataset, json_lines, load_return_dataset, strict_json, unique_records
 from .return_predictions import (
@@ -315,8 +315,6 @@ def verify_return(
     returned = unique_records(json_lines(predictions_path.read_bytes()))
     opening = None
     if partition == "test":
-        if len({row.get("model_revision") for row in returned.values()}) > 1:
-            raise C.ProtocolError("return_prediction_revision_mismatch")
         registration = (
             C.FileRef(path=registration_path, sha256=registration_hash)
             if registration_path is not None and registration_hash is not None
@@ -329,9 +327,45 @@ def verify_return(
             registry_root=registry_root,
             registration=registration,
             checkpoint_manifest=checkpoint_manifest,
+            returned=returned,
         )
     elif held_out is not None:
         raise C.ProtocolError("held_out_arguments_require_test_partition")
+    try:
+        return review_partition(
+            dataset_root,
+            dataset_hash,
+            predictions_path,
+            returned,
+            partition=partition,
+            checkpoint_manifest=checkpoint_manifest,
+            registry_root=registry_root,
+            registration_path=registration_path,
+            registration_hash=registration_hash,
+            opening=opening,
+            fusion_selection=fusion_selection,
+        )
+    except (ValueError, KeyError, TypeError, OSError) as error:
+        if opening is not None:
+            # The opening is spent; say which one, whatever went wrong after it.
+            error.opened = opening.record
+        raise
+
+
+def review_partition(
+    dataset_root: Path,
+    dataset_hash: str,
+    predictions_path: Path,
+    returned: dict[str, dict[str, Any]],
+    *,
+    partition: str,
+    checkpoint_manifest: Path | None,
+    registry_root: Path | None,
+    registration_path: str | None,
+    registration_hash: str | None,
+    opening: HeldOutOpening | None,
+    fusion_selection: Path | None,
+) -> dict[str, Any]:
     dataset = load_return_dataset(dataset_root, dataset_hash, partition, opening=opening)
     if set(returned) != {row.record_id for row in dataset.examples}:
         raise C.ProtocolError("return_prediction_record_set_mismatch")

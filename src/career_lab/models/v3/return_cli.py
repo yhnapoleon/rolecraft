@@ -61,19 +61,18 @@ def run(args: argparse.Namespace) -> int:
             held_out=held_out,
             fusion_selection=args.fusion_selection,
         )
-    except ProtocolError as error:
-        print(
-            json.dumps(
-                {
-                    "error": error.code,
-                    "status": error.status,
-                    "record_id": getattr(error, "record_id", None),
-                    "quality_validated": False,
-                    "message": str(error),
-                },
-                ensure_ascii=False,
-            )
-        )
+    except (ValueError, KeyError, TypeError, OSError) as error:
+        protocol = isinstance(error, ProtocolError)
+        failure = {
+            "error": error.code if protocol else type(error).__name__,
+            "status": error.status if protocol else None,
+            "record_id": getattr(error, "record_id", None),
+            "quality_validated": False,
+            "message": str(error) if protocol else "invalid input or unavailable local artifact",
+        }
+        if getattr(error, "opened", None) is not None:
+            failure["opened"] = error.opened
+        print(json.dumps(failure, ensure_ascii=False))
         return 2
     print(json.dumps(result, ensure_ascii=False, allow_nan=False))
     return 2 if result["status"] == "rejected" else 0

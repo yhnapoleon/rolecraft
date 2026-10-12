@@ -811,14 +811,28 @@ def approve(
     return path
 
 
-def prepared_opening(tmp_path: Path, *, status: str = SYNTHETIC_STATUS, **campaign) -> Opening:
+def prepared_opening(
+    tmp_path: Path,
+    *,
+    status: str = SYNTHETIC_STATUS,
+    producer=None,
+    revision: str | None = None,
+    **campaign,
+) -> Opening:
+    """``producer`` edits the package before it is sealed and frozen; ``revision`` is the
+    model revision the responsible party declares (and stamps on its test rows)."""
     package = build_package(tmp_path)
-    if status != SYNTHETIC_STATUS:
+    if producer is not None:
+        producer(package.root)
+    if status != SYNTHETIC_STATUS or producer is not None:
         package = V3Package(package.root, seal(package.root, status=status))
     registry, registration = linear_registration(tmp_path / "model")
     predictions = tmp_path / "return" / "predictions.test.jsonl"
     predictions.parent.mkdir(parents=True, exist_ok=True)
     rows = model_predictions(registry, registration, package.root / "data/test.inputs.jsonl")
+    if revision is not None:
+        for row in rows:
+            row["model_revision"] = revision
     write_jsonl(predictions, rows)
     checkpoint = checkpoint_manifest(
         tmp_path / "return" / "checkpoint-manifest.json", package, rows[0]["model_revision"]
@@ -888,12 +902,11 @@ def test_held_04_first_approved_opening_is_recorded_before_test_is_read(tmp_path
     assert record["registration"]["id"] == report["reload"]["registration"]["id"]
     assert record["operator"] == "coordinator-147"
     assert len(record["verifier_source_digest"]) == 64 and record["opened_at"]
-    # The record exists before any test file is read: the first test open follows it.
-    order = [line for line in log.read_text().splitlines()]
-    first_test = min(
-        order.index(str(path)) for path in held_out_files(opening.package) if str(path) in order
-    )
-    assert str(opening.record.resolve()) in order[:first_test]
+    # Only test metadata may be read before the record; every other test file comes after it.
+    order = log.read_text().splitlines()
+    payloads = {str(path) for path in held_out_payloads(opening.package)}
+    first_payload = min(index for index, line in enumerate(order) if line in payloads)
+    assert str(opening.record.resolve()) in order[:first_payload]
 
 
 def test_held_05_second_opening_is_refused_before_any_test_byte_is_read(tmp_path: Path) -> None:
@@ -1402,3 +1415,83 @@ def test_held_05_the_record_folder_cannot_be_a_link_to_somewhere_else(tmp_path: 
     report = refused(opening, tmp_path, *opening.args())
     assert report["error"] == "held_out_record_location_invalid"
     assert not any(elsewhere.iterdir())
+
+
+def held_out_payloads(package: V3Package) -> set[Path]:
+    """Test inputs, labels, annotations and call records: everything except test metadata."""
+    metadata = (package.root / "audit/test/metadata.jsonl").resolve()
+    return held_out_files(package) - {metadata}
+
+
+def unopened(opening: Opening, tmp_path: Path, *, metadata_read: bool) -> dict:
+    """A refusal that is found before the record: no record, no test payload read."""
+    log = tmp_path / "before-record.log"
+    code, report = verify(opening.package, opening.predictions, *opening.args(), audit_log=log)
+    assert code == 2, report
+    assert not opening.record.exists()
+    opened = opened_paths(log)
+    assert not opened & held_out_payloads(opening.package)
+    metadata = (opening.package.root / "audit/test/metadata.jsonl").resolve()
+    assert (metadata in opened) is metadata_read
+    return report
+
+
+def test_held_08_a_revision_unlike_the_declaration_is_refused_before_the_record(
+    tmp_path: Path,
+) -> None:
+    opening = prepared_opening(tmp_path)
+    rows = jsonl(opening.predictions)
+    for row in rows:
+        row["model_revision"] = "not-the-declared-model"
+    write_jsonl(opening.predictions, rows)
+    report = unopened(opening, tmp_path, metadata_read=False)
+    assert report["error"] == "return_checkpoint_identity_mismatch"
+    assert "opened" not in report
+
+
+def test_held_08_a_revision_unlike_the_registration_is_refused_before_the_record(
+    tmp_path: Path,
+) -> None:
+    opening = prepared_opening(tmp_path, revision="declared-but-not-registered")
+    report = unopened(opening, tmp_path, metadata_read=False)
+    assert report["error"] == "held_out_prediction_registration_mismatch"
+
+
+def test_held_08_rows_that_are_not_the_test_records_are_refused_before_the_record(
+    tmp_path: Path,
+) -> None:
+    opening = prepared_opening(tmp_path)
+    revision = jsonl(opening.predictions)[0]["model_revision"]
+    rows = jsonl(gold_predictions(opening.package, "dev", tmp_path / "dev-rows.jsonl"))
+    for row in rows:
+        row["model_revision"] = revision
+    write_jsonl(opening.predictions, rows)
+    report = unopened(opening, tmp_path, metadata_read=True)
+    assert report["error"] == "return_prediction_record_set_mismatch"
+
+
+def test_held_08_test_metadata_must_mark_the_test_split(tmp_path: Path) -> None:
+    def mislabel(root: Path) -> None:
+        rows = jsonl(root / "audit/test/metadata.jsonl")
+        rows[0]["split"] = "dev"
+        write_jsonl(root / "audit/test/metadata.jsonl", rows)
+
+    opening = prepared_opening(tmp_path, producer=mislabel)
+    report = unopened(opening, tmp_path, metadata_read=True)
+    assert report["error"] == "held_out_test_metadata_split_mismatch"
+
+
+def test_held_08_an_error_after_the_record_reports_the_opening(tmp_path: Path) -> None:
+    def contradict(root: Path) -> None:
+        rows = jsonl(root / "data/test.labels.jsonl")
+        flipped = "CONTRADICTED" if rows[0]["label"] == "SUPPORTED" else "SUPPORTED"
+        rows[0].update(label=flipped, label_index=RELATION.index(flipped))
+        write_jsonl(root / "data/test.labels.jsonl", rows)
+
+    opening = prepared_opening(tmp_path, producer=contradict)
+    code, report = verify(opening.package, opening.predictions, *opening.args())
+    assert code == 2
+    assert report["error"] == "return_label_projection_mismatch"
+    assert report["opened"] == json.loads(opening.record.read_bytes())
+    code, again = verify(opening.package, opening.predictions, *opening.args())
+    assert code == 2 and again["error"] == "held_out_test_already_opened"
