@@ -4,6 +4,7 @@ Registration never imports torch: it reads the installed encoder runtime version
 package metadata. The static returns here are deliberately not loadable neural models.
 """
 
+import builtins
 import hashlib
 import importlib.metadata
 import json
@@ -22,9 +23,10 @@ from fastapi.testclient import TestClient
 
 from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest
-from career_lab.models.v3 import registry_cli
+from career_lab.models.v3 import encoder_registry, registry_cli
 from career_lab.models.v3.bundle import json_bytes, sha
 from career_lab.models.v3.core import LABELS
+from career_lab.models.v3.encoder_artifact import model_revision_v3, validate_return_identity
 from career_lab.models.v3.huggingface import aggregate_pairs
 from career_lab.models.v3.registry import (
     describe_registration,
@@ -365,8 +367,6 @@ def test_model_01_encoder_registration_is_portable_without_dependencies(tmp_path
 def test_encoder_load_reports_missing_optional_dependencies(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import builtins
-
     root = tmp_path / "producer"
     ref = encoder_return(root)
     registry = tmp_path / "registry"
@@ -663,8 +663,6 @@ def test_rt_04_feedback_recorded_before_stays_readable_and_v1_adds_no_advice(
 
 def deny_encoder_imports(monkeypatch: pytest.MonkeyPatch) -> None:
     """torch and transformers cannot be imported, whatever metadata says."""
-    import builtins
-
     real = builtins.__import__
 
     def without_encoder(name: str, *args: Any, **kwargs: Any) -> Any:
@@ -856,8 +854,6 @@ def test_enc_03_threshold_and_token_limit_are_part_of_the_model_revision(tmp_pat
 
 
 def test_enc_03_model_revision_matches_the_specification_example() -> None:
-    from career_lab.models.v3.encoder_artifact import model_revision_v3
-
     fields = {
         "after_weights": "c" * 64,
         "evidence_threshold": 0.5,
@@ -995,8 +991,6 @@ LINEAR_MANIFEST = {"artifact_kind": "linear", "artifact_protocol": "rolecraft-li
 
 def test_seam_01_shared_return_identity_accepts_other_artifact_kinds(tmp_path: Path) -> None:
     """The shared fixture v2 outer-manifest policy says nothing about artifact kinds."""
-    from career_lab.models.v3.encoder_artifact import validate_return_identity
-
     root = tmp_path / "producer"
     encoder_return(root)
     manifest = json.loads((root / "checkpoint-manifest.json").read_bytes())
@@ -1007,9 +1001,6 @@ def test_seam_01_shared_return_identity_accepts_other_artifact_kinds(tmp_path: P
 def test_seam_02_the_encoder_protocol_does_not_claim_linear_or_fusion_returns(
     tmp_path: Path,
 ) -> None:
-    from career_lab.models.v3 import encoder_registry
-    from career_lab.models.v3.registry import inference_runtime
-
     root = tmp_path / "producer"
     encoder_return(root)
     manifest = json.loads((root / "checkpoint-manifest.json").read_bytes())
