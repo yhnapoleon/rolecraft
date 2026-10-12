@@ -59,11 +59,27 @@ e = (1 − alpha) · e_left + alpha · e_right
 | `points` | alpha 网格 × 阈值网格的每个点恰好一条；`metrics` 六个键：比例项 `macro_f1`、`mean_evidence_f1`、`joint_correctness` 为 [0,1] 或 `null`，计数项 `count`、`evidence_denominator`、`joint_denominator` 为非负整数（label-only 记录不进证据与联合分母） |
 | `selected` | 网格中的一个点 |
 | `fusion_gain_observed` | 布尔；选中端点（alpha 为 0 或 1）时必须为 `false`，即「无融合收益」照实写 |
-| `dev_input_hashes` | 参与选择的 dev 记录外层 `input_hash`，非空、互不相同 |
+| `dev_input_hashes` | 参与选择的 dev 记录外层 `input_hash`，非空、互不相同；复核要求它与数据包 dev 分区的记录集合完全相同（dev 全量参与选择） |
 
 指标名与我方指标实现（`summarize`）一致，便于逐点复算比对。
 
-## 3. 融合预测的 `model_revision`
+## 3. 怎样选点（`joint-first-dev-v1`）
+
+负责方在 dev 上按下面的规则选点，记录的 `selected` 与 `fusion_gain_observed` 必须与它一致。我方复核用产品自己的融合与选点实现（`ensemble.select_alpha`，策略 `joint-first-dev-v1`）在已登记分量上重算整个网格，再与记录逐点、逐项比较。
+
+1. **候选资格**：只有 `joint_denominator > 0` 且 `joint_correctness > 0` 的点有资格入选。证据联合正确率为 0 或无法计算的点再高的 macro-F1 也不入选。
+2. **排序**（逐项比较，前一项相同才看下一项，大者优先）：
+   1. `joint_correctness`；
+   2. 覆盖率：合法成功输出（格式有效且 `status=ok`）占全部 dev 记录的比例（`summarize` 的 `coverage`，不写进记录，复核时重算）；
+   3. `macro_f1`；
+   4. 成本更低者优先：端点 alpha（0 或 1）只运行一个分量，成本 1；其余 alpha 运行两个分量，成本 2；
+   5. 网格顺序靠前者优先：alpha 按 0、0.25、0.5、0.75、1 的顺序；同一 alpha 下阈值按与 0.5 的距离由近到远、距离相同时数值小者在前（如网格 0.25／0.5／0.75 的顺序是 0.5、0.25、0.75）。
+3. **全部为 0 时没有可确认的选择**：没有任何点满足第 1 条时，该次选择不能确认，复核判 rejected；不要退而按 macro-F1 选点交回。
+4. **有无融合收益**：`fusion_gain_observed=true` 当且仅当选中点的 alpha 不在端点，且它的 `joint_correctness` 严格大于全部端点（alpha 为 0 或 1、任一阈值）中的最大 `joint_correctness`；其余情况一律写 `false`。选中端点时登记就要求 `false`。
+
+登记只核第 2 节的结构与第 4 条中的端点规则；选中点是否符合第 1–3 条、逐点指标是否与重算相同、收益声明是否成立，由回传复核（`verify-return --fusion-selection`，由回传复核 v3（147）提供，本分支尚未包含）判定。
+
+## 4. 融合预测的 `model_revision`
 
 负责方的融合 dev 预测行用同一公式：
 
@@ -75,7 +91,7 @@ canonical = json.dumps(identity, ensure_ascii=False, sort_keys=True, separators=
 model_revision = "fusion-return:" + hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 ```
 
-## 4. 我方怎样登记
+## 5. 我方怎样登记
 
 先分别登记两个分量（见[线性回传](linear-return.md)与编码器回传规格），再：
 
@@ -91,7 +107,7 @@ uv run --locked python -m career_lab.models.v3.registry_cli describe \
 
 注册项协议 `advisory-fusion-registration-v1`：按分量注册文件的路径与 SHA-256 引用分量，不复制权重；注册目录只多存一份选择记录副本。公开身份：`kind=probability_fusion`、`dataset`（标签等级取两分量的并集）、`components`（左右各一：注册 id、类型、`model_revision`、该分量在融合概率中的权重 `alpha`——左为 1−alpha，右为 alpha）、`fusion`（`alpha`、`evidence_threshold`、`fusion_gain_observed`）。每次加载都重新核对两个分量的注册与文件，任一分量漂移、被删或运行环境变化，融合即加载失败，新反馈的模型建议显示「模型文件或推理环境已变化，需重新核验注册。」；旧反馈不变。
 
-## 5. 拒绝与错误码
+## 6. 拒绝与错误码
 
 | 情形 | 错误码 |
 |---|---|
