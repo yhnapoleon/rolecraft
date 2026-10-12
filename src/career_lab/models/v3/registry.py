@@ -1,7 +1,8 @@
 """Local, immutable advisory registrations for already-produced relation model bundles.
 
 This module never fits a model, downloads weights, or promotes scoring/quality.
-Only files referenced by a validated ModelBundle or local encoder return are copied.
+Only files referenced by a validated ModelBundle, local encoder return or linear return
+are copied.
 """
 
 import json
@@ -12,7 +13,7 @@ from typing import Any
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_file
 from career_lab.contracts.v2.research import ModelBundle
 
-from . import encoder_registry
+from . import encoder_registry, linear_return
 from .bundle import load_bundle, sha
 from .registration import RegistrationProtocol, RegistrationSummary, publish_registration
 
@@ -90,6 +91,14 @@ def register_bundle(
     bundle_ref = FileRef.model_validate(bundle_ref)
     manifest = json.loads(read_file(Path(bundle_root), bundle_ref))
     if isinstance(manifest, dict) and "return_protocol" in manifest:
+        if linear_return.is_linear_return(manifest):
+            return linear_return.register_linear(
+                Path(registry_root),
+                Path(bundle_root),
+                bundle_ref,
+                scope=scope,
+                runtime=inference_runtime(),
+            )
         return encoder_registry.register_encoder(
             Path(registry_root),
             Path(bundle_root),
@@ -210,6 +219,7 @@ BUNDLE_REGISTRATION = RegistrationProtocol(
 REGISTRATION_PROTOCOLS: tuple[RegistrationProtocol, ...] = (
     BUNDLE_REGISTRATION,
     encoder_registry.REGISTRATION,
+    linear_return.REGISTRATION,
 )
 
 

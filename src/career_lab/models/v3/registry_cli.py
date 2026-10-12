@@ -5,11 +5,12 @@ import json
 from pathlib import Path
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError
+from career_lab.contracts.v2.provenance import RegisteredModelIdentity
 
 from . import return_cli
 from .advisory import RegisteredAdvisory
 from .core import INPUT
-from .registry import register_bundle
+from .registry import describe_registration, register_bundle
 
 
 def main(argv=None):
@@ -23,7 +24,7 @@ def main(argv=None):
     register.add_argument(
         "--scope", choices=["synthetic_fixture", "external_candidate"], required=True
     )
-    for name in ("predict", "recover", "review"):
+    for name in ("predict", "recover", "review", "describe"):
         command = commands.add_parser(name)
         command.add_argument("--registry", type=Path, required=True)
         command.add_argument("--registration-path", required=True)
@@ -62,6 +63,13 @@ def main(argv=None):
                 "quality_validated": False,
                 "training_performed": False,
             }
+        elif args.command == "describe":
+            summary = describe_registration(
+                args.registry, FileRef(path=args.registration_path, sha256=args.registration_hash)
+            )
+            result = RegisteredModelIdentity.model_validate(summary.identity()).model_dump(
+                mode="json"
+            )
         else:
             ref = FileRef(path=args.registration_path, sha256=args.registration_hash)
             if args.command in ("predict", "recover"):
