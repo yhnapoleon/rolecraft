@@ -1,4 +1,8 @@
-"""Typed receiver for the label/evidence v2 return protocol."""
+"""Typed receiver for label/evidence return rows: v2 and the v3 relation row.
+
+A v3 row (``return_schema_version=3``) carries the same relation fields as v2; criterion
+rows are not received in this release.
+"""
 
 import math
 from typing import Literal
@@ -16,9 +20,12 @@ class EvidenceBinding(BaseModel):
     candidate_sha256: C.Hash
 
 
+RETURN_SCHEMA_VERSIONS = (2, 3)
+
+
 class ReturnedPrediction(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
-    return_schema_version: Literal[2]
+    return_schema_version: Literal[2, 3]
     record_id: str = Field(min_length=1)
     input_hash: C.Hash
     model_revision: str = Field(min_length=1)
@@ -33,8 +40,8 @@ class ReturnedPrediction(BaseModel):
     @field_validator("return_schema_version", mode="before")
     @classmethod
     def schema_version_is_integer(cls, value: object) -> int:
-        if type(value) is not int or value != 2:
-            raise ValueError("integer return schema version 2 required")
+        if type(value) is not int or value not in RETURN_SCHEMA_VERSIONS:
+            raise ValueError("integer return schema version 2 or 3 required")
         return value
 
     @model_validator(mode="after")
@@ -91,3 +98,15 @@ class ReturnedPrediction(BaseModel):
             reason_code=f"producer_{self.status}" if self.status != "ok" else None,
         )
         return prediction.validate(row.item)
+
+
+def parse_returned(row: dict) -> ReturnedPrediction:
+    """One returned row, with an explicit code for an unsupported version or task."""
+    if "return_schema_version" not in row:
+        raise C.ProtocolError("return_schema_version_required")
+    version = row["return_schema_version"]
+    if type(version) is not int or version not in RETURN_SCHEMA_VERSIONS:
+        raise C.ProtocolError("return_schema_version_unsupported")
+    if row.get("task_type") != "relation":
+        raise C.ProtocolError("return_task_type_unsupported")
+    return ReturnedPrediction.model_validate(row)

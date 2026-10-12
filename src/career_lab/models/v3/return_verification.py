@@ -11,7 +11,39 @@ from career_lab.experiments.v3.training.review import review_registered
 
 from .encoder_artifact import file_map, validate_return_identity, verify_file
 from .return_data import ReturnDataset, json_lines, load_return_dataset, strict_json, unique_records
-from .return_predictions import ReturnedPrediction
+from .return_predictions import ReturnedPrediction, parse_returned
+
+
+# Absolute per-probability tolerance (143 §5.2): producers may run other hardware or library
+# builds, so probabilities need not be bit-identical; labels and evidence sets must be.
+ENCODER_KINDS = {"huggingface_encoder", "numpy_attention"}
+TOLERANCE = {"linear": 1e-6, "encoder": 1e-4}
+
+
+def comparison_tolerance(kinds) -> dict[str, Any]:
+    """Unknown kinds use the strict tier: a false rejection is safer than a false match."""
+    basis = "encoder" if set(kinds) & ENCODER_KINDS else "linear"
+    return {"absolute": TOLERANCE[basis], "basis": basis, "model_kinds": sorted(kinds)}
+
+
+def compare_prediction(actual: dict[str, Any], expected: ReturnedPrediction, tolerance: float):
+    """Fields that differ, and the largest absolute probability difference seen."""
+    fields = [
+        key
+        for key in ("input_hash", "model_revision", "task_type", "status", "label")
+        if actual[key] != getattr(expected, key)
+    ]
+    if set(actual["evidence_ids"]) != set(expected.evidence_ids):
+        fields.append("evidence_ids")
+    left, right = actual["probabilities"], expected.probabilities
+    deviation = 0.0
+    if (left is None) != (right is None) or (left is not None and len(left) != len(right)):
+        fields.append("probabilities")
+    elif left is not None:
+        deviation = max(abs(a - b) for a, b in zip(left, right, strict=True))
+        if deviation > tolerance:
+            fields.append("probabilities")
+    return fields, deviation
 
 
 def reload_return(
@@ -20,6 +52,8 @@ def reload_return(
     registry_root: Path | None,
     registration_path: str | None,
     registration_hash: str | None,
+    *,
+    held_out_opening: Any = None,
 ) -> dict[str, Any]:
     if registry_root is None and registration_path is None and registration_hash is None:
         return {"status": "blocked_missing_registration"}
@@ -29,31 +63,27 @@ def reload_return(
         registry_root,
         C.FileRef(path=registration_path, sha256=registration_hash),
         dataset.examples,
+        held_out_opening=held_out_opening,
     )
-    mismatches = []
+    tolerance = comparison_tolerance(review["model_kinds"])
+    mismatches, largest = [], 0.0
     for entry in review["predictions"]:
-        actual = entry["prediction"]
-        expected = returned[entry["record_id"]]
-        same = all(
-            actual[key] == getattr(expected, key)
-            for key in (
-                "input_hash",
-                "model_revision",
-                "task_type",
-                "status",
-                "label",
-                "probabilities",
-            )
-        ) and set(actual["evidence_ids"]) == set(expected.evidence_ids)
-        if not same:
-            mismatches.append(entry["record_id"])
+        fields, deviation = compare_prediction(
+            entry["prediction"], returned[entry["record_id"]], tolerance["absolute"]
+        )
+        largest = max(largest, deviation)
+        if fields:
+            mismatches.append({"record_id": entry["record_id"], "fields": fields})
     return {
         "status": "producer_mismatch" if mismatches else "matched",
         "reload_predictions_identical": review["reload_predictions_identical"],
         "reload_skipped_failed_record_ids": review["reload_skipped_failed_record_ids"],
-        "mismatched_record_ids": mismatches,
+        "mismatched_record_ids": [row["record_id"] for row in mismatches],
+        "mismatches": mismatches,
+        "max_probability_deviation": largest,
+        "tolerance": tolerance,
         "registration": review["registration"],
-        "comparison": "exact_probabilities_labels_and_evidence_sets",
+        "comparison": "probabilities_within_absolute_tolerance_labels_and_evidence_sets_exact",
     }
 
 
@@ -142,7 +172,7 @@ def verify_return(
     predictions: dict[str, ReturnedPrediction] = {}
     for row in dataset.examples:
         try:
-            value = ReturnedPrediction.model_validate(returned[row.record_id])
+            value = parse_returned(returned[row.record_id])
             revisions.add(value.model_revision)
             prediction = value.checked_prediction(row)
             predictions[row.record_id] = value
@@ -158,9 +188,11 @@ def verify_return(
     languages = {}
     for language in ("zh", "en"):
         subset = [row for row in grades if row["language"] == language]
+        metrics = summarize(subset, "relation")
         languages[language] = {
             "status": "recomputed" if subset else "blocked_missing_language",
-            "metrics": summarize(subset, "relation"),
+            "metrics": metrics,
+            "counts": {key: metrics[key] for key in ("format_failures", "abstentions", "coverage")},
         }
     revision = next(iter(revisions), None)
     if format_errors:
@@ -182,6 +214,10 @@ def verify_return(
     return {
         "protocol": "rolecraft-label-evidence-v2",
         "status": "rejected" if rejected else "partial",
+        "task_type": "relation",
+        # The product passes the given candidate evidence; retrieval is not part of this review.
+        "evaluation_setting": "given_evidence_only",
+        "retrieval_setting": "not_evaluated",
         "dataset_id": dataset.dataset_id,
         "dataset_manifest_sha256": dataset.manifest_hash,
         "model_revision": revision,
@@ -199,4 +235,5 @@ def verify_return(
         "mode": "advisory",
         "affects_score": False,
         "held_out_test_opened": False,
+        "tolerance": reload.get("tolerance"),
     }

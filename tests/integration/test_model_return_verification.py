@@ -6,9 +6,15 @@ import subprocess
 import sys
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from career_lab.contracts import v2 as C
+from career_lab.models.v3.bundle import json_bytes, save_bundle, sha
+from career_lab.models.v3.encoder import AttentionEncoder
+from career_lab.models.v3.linear import LinearCandidate
+from career_lab.models.v3.registry import load_registration, register_bundle
+from tests.unit.test_w08_models import examples
 
 
 def test_verify_return_cli_help_names_input_boundaries() -> None:
@@ -304,8 +310,6 @@ def test_ret_06_mechanical_reload_matches_without_claiming_real_training(
     monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "unit"))
     from test_w08_registration import registered
 
-    from career_lab.models.v3.registry import load_registration
-
     model_root = tmp_path / "model"
     model_root.mkdir()
     _, _, ref = registered(model_root)
@@ -484,3 +488,318 @@ def test_ret_03_rejects_shared_held_out_audit_before_reading_labels(
         "return_shared_annotation_partition_forbidden",
     }
     assert (root / "audit/original-annotations.jsonl").resolve() not in opened
+
+
+def rewrite_predictions(path: Path, change) -> list[dict]:
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    change(rows)
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    return rows
+
+
+def test_pred_01_v3_relation_rows_parse_like_v2_rows_in_one_file(return_case, capsys) -> None:
+    _, _, path = return_case
+    code, baseline = invoke(return_case, capsys)
+    assert code == 0
+
+    def mixed(rows: list[dict]) -> None:
+        for row in rows[::2]:
+            row["return_schema_version"] = 3
+
+    rows = rewrite_predictions(path, mixed)
+    assert {row["return_schema_version"] for row in rows} == {2, 3}
+    code, result = invoke(return_case, capsys)
+    assert code == 0, result
+    assert result["format_errors"] == []
+    assert result["graded_records"] == baseline["graded_records"]
+    assert result["languages"] == baseline["languages"]
+    assert result["task_type"] == "relation"
+
+
+@pytest.mark.parametrize(
+    ("change", "code"),
+    [
+        (lambda row: row.update(return_schema_version=3, task_type="criterion"),
+         "return_task_type_unsupported"),
+        (lambda row: row.update(return_schema_version=3, task_type="judge"),
+         "return_task_type_unsupported"),
+        (lambda row: row.pop("return_schema_version"), "return_schema_version_required"),
+        (lambda row: row.update(return_schema_version=4), "return_schema_version_unsupported"),
+        (lambda row: row.update(return_schema_version=3.0), "return_schema_version_unsupported"),
+    ],
+    ids=["criterion", "unknown-task", "missing-version", "version-4", "float-version"],
+)
+def test_pred_01_unknown_task_or_missing_version_is_rejected_per_record(
+    return_case, capsys, change, code
+) -> None:
+    _, _, path = return_case
+    rows = rewrite_predictions(path, lambda rows: change(rows[0]))
+    status, result = invoke(return_case, capsys)
+    assert status == 2
+    assert result["status"] == "rejected"
+    assert result["format_errors"] == [{"record_id": rows[0]["record_id"], "error_code": code}]
+    assert result["languages"]["en"]["metrics"]["format_failures"] == 1
+
+
+# Fixed-weight registrations: constructed, never fitted; scope is always synthetic_fixture.
+LINEAR_VOCABULARY = {"v": 0, "e": 1, "r": 2, "2": 3, "1": 4, "n": 5}
+
+
+def linear_bundle(root: Path, coef, intercept, evidence_coef) -> tuple[Path, C.FileRef]:
+    config = {
+        "preprocessing_revision": "historical-time-v1",
+        "kind": "linear",
+        "task_type": "relation",
+        "seed": 5002,
+        "max_features": len(LINEAR_VOCABULARY),
+        "vocabulary": LINEAR_VOCABULARY,
+        "evidence_threshold": 0.5,
+        "labels": ["SUPPORTED", "CONTRADICTED", "INSUFFICIENT"],
+        "training_report": {"scope": "synthetic_fixed_weights", "fit_performed": False},
+    }
+    arrays = {
+        "coef": np.array(coef, dtype=float),
+        "intercept": np.array(intercept, dtype=float),
+        "evidence_coef": np.array(evidence_coef, dtype=float),
+        "evidence_intercept": np.array([-0.2]),
+        "idf": np.ones(len(LINEAR_VOCABULARY)),
+    }
+    model = LinearCandidate.restore(config, arrays)
+    data = root / "source"
+    data.mkdir(parents=True, exist_ok=True)
+    release = json_bytes({"fixture": True, "scope": "synthetic_fixed_weights_no_training"})
+    split = json_bytes({"fixture": True, "scope": "synthetic_no_held_out_data"})
+    (data / "release.json").write_bytes(release)
+    (data / "split.json").write_bytes(split)
+    ref = save_bundle(
+        model,
+        root / "bundle",
+        source_root=data,
+        training_release=C.FileRef(path="release.json", sha256=sha(release)),
+        split_manifest=C.FileRef(path="split.json", sha256=sha(split)),
+        source=C.SourceIdentity(base_commit="a" * 40, source_digest=C.digest("synthetic-no-fit")),
+    )
+    return root / "bundle", ref
+
+
+LEFT_WEIGHTS = (
+    [[1.2, 0.0, 0.4, 0.0, 0.0, 0.3], [0.0, 0.9, 0.0, 0.2, 0.6, 0.0], [0.1] * 6],
+    [0.1, 0.0, 0.3],
+    [0.8, 0.0, 0.9, 0.4, 0.0, 0.2],
+)
+RIGHT_WEIGHTS = (
+    [[0.2, 0.7, 0.0, 0.5, 0.0, 0.0], [0.6, 0.0, 0.8, 0.0, 0.1, 0.4], [0.3] * 6],
+    [0.0, 0.2, 0.1],
+    [0.1, 0.7, 0.0, 0.9, 0.3, 0.0],
+)
+
+
+def register(registry: Path, root: Path, ref: C.FileRef) -> C.FileRef:
+    return register_bundle(registry, root, ref, scope="synthetic_fixture")
+
+
+def linear_registration(tmp_path: Path) -> tuple[Path, C.FileRef]:
+    root, ref = linear_bundle(tmp_path / "linear", *LEFT_WEIGHTS)
+    return tmp_path / "registry", register(tmp_path / "registry", root, ref)
+
+
+def attention_registration(tmp_path: Path) -> tuple[Path, C.FileRef]:
+    model = AttentionEncoder(variant="pack", dimension=4)
+    model.initialize(examples("train", 1))
+    model.revision = "synthetic-seeded-attention-no-fit"
+    model.training_report = {"scope": "synthetic_seeded_weights", "fit_performed": False}
+    data = tmp_path / "attention-source"
+    data.mkdir(parents=True)
+    release = json_bytes({"fixture": True, "scope": "synthetic_seeded_weights_no_training"})
+    (data / "release.json").write_bytes(release)
+    ref = save_bundle(
+        model,
+        tmp_path / "attention",
+        source_root=data,
+        training_release=C.FileRef(path="release.json", sha256=sha(release)),
+        split_manifest=C.FileRef(path="release.json", sha256=sha(release)),
+        source=C.SourceIdentity(base_commit="a" * 40, source_digest=C.digest("synthetic-no-fit")),
+    )
+    return tmp_path / "registry", register(tmp_path / "registry", tmp_path / "attention", ref)
+
+
+def model_predictions(registry: Path, ref: C.FileRef, inputs_path: Path) -> list[dict]:
+    from career_lab.models.v3.registry import load_registration
+
+    model, _ = load_registration(registry, ref)
+    output = []
+    for row in [json.loads(line) for line in inputs_path.read_text().splitlines()]:
+        item = C.RelationInput.model_validate(row["model_input"])
+        prediction = model.predict(item)
+        output.append(
+            {
+                "return_schema_version": 3,
+                "record_id": row["record_id"],
+                "input_hash": row["input_hash"],
+                "model_revision": prediction.model_revision,
+                "task_type": "relation",
+                "status": prediction.status,
+                "probabilities": list(prediction.probabilities)
+                if prediction.probabilities is not None
+                else None,
+                "label": prediction.label,
+                "evidence_ids": list(prediction.evidence_ids),
+                "evidence_bindings": [
+                    {"candidate_id": c.id, "candidate_sha256": C.digest(c)}
+                    for c in item.evidence.candidate_evidence
+                    if c.id in prediction.evidence_ids
+                ],
+                "reason": prediction.reason_code or "synthetic reload",
+            }
+        )
+    return output
+
+
+def write_rows(path: Path, rows: list[dict]) -> None:
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+
+
+def shift(row: dict, delta: float) -> None:
+    """Move probability mass between the two least likely labels; the argmax stays."""
+    order = sorted(range(3), key=lambda i: row["probabilities"][i])
+    row["probabilities"][order[0]] += delta
+    row["probabilities"][order[1]] -= delta
+
+
+def registration_args(registry: Path, ref: C.FileRef) -> tuple[str, ...]:
+    return (
+        "--registry",
+        str(registry),
+        "--registration-path",
+        ref.path,
+        "--registration-hash",
+        ref.sha256,
+    )
+
+
+@pytest.mark.parametrize(
+    ("build", "absolute", "basis", "inside", "outside"),
+    [
+        (linear_registration, 1e-6, "linear", 4e-7, 4e-6),
+        (attention_registration, 1e-4, "encoder", 4e-5, 4e-4),
+    ],
+    ids=["linear", "encoder"],
+)
+def test_tol_01_probabilities_within_tolerance_match_and_beyond_are_rejected(
+    return_case, capsys, tmp_path, build, absolute, basis, inside, outside
+) -> None:
+    root, _, path = return_case
+    registry, ref = build(tmp_path / "model")
+    exact = model_predictions(registry, ref, root / "data/dev.inputs.jsonl")
+    assert all(row["status"] == "ok" for row in exact)
+    near = json.loads(json.dumps(exact))
+    shift(near[0], inside)
+    write_rows(path, near)
+    code, result = invoke(return_case, capsys, *registration_args(registry, ref))
+    assert code == 0, result
+    assert result["reload"]["status"] == "matched"
+    assert result["tolerance"] == result["reload"]["tolerance"]
+    assert result["tolerance"]["absolute"] == absolute
+    assert result["tolerance"]["basis"] == basis
+    assert result["reload"]["max_probability_deviation"] == pytest.approx(inside, rel=0.05)
+    assert result["reload"]["mismatched_record_ids"] == []
+
+    far = json.loads(json.dumps(exact))
+    shift(far[1], outside)
+    write_rows(path, far)
+    code, result = invoke(return_case, capsys, *registration_args(registry, ref))
+    assert code == 2
+    assert result["status"] == "rejected"
+    assert result["reload"]["status"] == "producer_mismatch"
+    assert result["reload"]["mismatched_record_ids"] == [far[1]["record_id"]]
+    assert result["reload"]["mismatches"] == [
+        {"record_id": far[1]["record_id"], "fields": ["probabilities"]}
+    ]
+    assert result["reload"]["max_probability_deviation"] == pytest.approx(outside, rel=0.05)
+
+
+def test_tol_01_evidence_sets_must_match_exactly_even_within_tolerance(
+    return_case, capsys, tmp_path
+) -> None:
+    root, _, path = return_case
+    registry, ref = linear_registration(tmp_path / "model")
+    rows = model_predictions(registry, ref, root / "data/dev.inputs.jsonl")
+    inputs = [json.loads(line) for line in (root / "data/dev.inputs.jsonl").read_text().splitlines()]
+    target = next(
+        index
+        for index, row in enumerate(rows)
+        if row["label"] in {"SUPPORTED", "CONTRADICTED"} or row["evidence_ids"]
+    )
+    candidates = inputs[target]["model_input"]["evidence"]["candidate_evidence"]
+    chosen = [c for c in candidates if c["id"] not in rows[target]["evidence_ids"]][:1] or [
+        candidates[0]
+    ]
+    if chosen[0]["id"] in rows[target]["evidence_ids"]:
+        chosen = [c for c in candidates if c["id"] != chosen[0]["id"]][:1]
+    rows[target]["evidence_ids"] = [chosen[0]["id"]]
+    rows[target]["evidence_bindings"] = [
+        {"candidate_id": chosen[0]["id"], "candidate_sha256": C.digest(chosen[0])}
+    ]
+    write_rows(path, rows)
+    code, result = invoke(return_case, capsys, *registration_args(registry, ref))
+    assert code == 2
+    assert result["reload"]["status"] == "producer_mismatch"
+    assert result["reload"]["mismatches"] == [
+        {"record_id": rows[target]["record_id"], "fields": ["evidence_ids"]}
+    ]
+    assert result["reload"]["max_probability_deviation"] == 0
+
+
+def test_crv_03_format_abstention_and_coverage_counts_are_reported_per_language(
+    return_case, capsys
+) -> None:
+    root, _, path = return_case
+    metadata = root / "audit/metadata.jsonl"
+    rows = [json.loads(line) for line in metadata.read_text().splitlines()]
+    rows[2]["language"] = "zh"
+    write_rows(metadata, rows)
+    manifest_path = root / "dataset-manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["splits"]["dev"]["language"] = {"en": 2, "zh": 1}
+    manifest_path.write_text(json.dumps(manifest))
+    checksum = reseal_dataset(root)
+
+    def outcomes(predictions: list[dict]) -> None:
+        predictions[0].update(
+            status="abstained",
+            probabilities=None,
+            label=None,
+            evidence_ids=[],
+            evidence_bindings=[],
+            reason="synthetic abstention",
+        )
+        predictions[2]["probabilities"] = [0.5, 0.5, 0.5]
+
+    rewrite_predictions(path, outcomes)
+    code, result = invoke((root, checksum, path), capsys)
+    assert code == 2 and result["status"] == "rejected"
+    assert result["evaluation_setting"] == "given_evidence_only"
+    assert result["retrieval_setting"] == "not_evaluated"
+    assert result["languages"]["en"]["counts"] == {
+        "format_failures": 0,
+        "abstentions": 1,
+        "coverage": 0.5,
+    }
+    assert result["languages"]["zh"]["counts"] == {
+        "format_failures": 1,
+        "abstentions": 0,
+        "coverage": 0.0,
+    }
+    assert result["languages"]["zh"]["status"] == "recomputed"
+
+
+def test_crv_03_missing_language_stays_blocked_with_empty_counts(return_case, capsys) -> None:
+    code, result = invoke(return_case, capsys)
+    assert code == 0
+    assert result["languages"]["zh"]["status"] == "blocked_missing_language"
+    assert result["languages"]["zh"]["counts"] == {
+        "format_failures": 0,
+        "abstentions": 0,
+        "coverage": None,
+    }
+    assert result["evaluation_setting"] == "given_evidence_only"
