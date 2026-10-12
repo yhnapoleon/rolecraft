@@ -326,3 +326,49 @@ def test_lin_02_malformed_linear_returns_are_refused_before_registration(
     assert (code, out["error"]) == (2, expected)
     assert out["quality_validated"] is False
     assert not list(registry.glob("linear-*"))
+
+
+FIXTURE_V2_MANIFEST = "5c8f0d5be05e3b39c1599e7fd3a92e46e413dc571248c59f827818f5ee231858"
+
+
+@pytest.mark.parametrize(
+    "dataset",
+    [
+        {"dataset_id": "rolecraft-fixture-20261007-v2", "dataset_sha": FIXTURE_V2_MANIFEST},
+        {"dataset_id": "renamed-handoff", "dataset_sha": FIXTURE_V2_MANIFEST},
+        {"dataset_id": "Team-FIXTURE-relations", "dataset_sha": "e" * 64},
+    ],
+    ids=["fixture_v2", "fixture_v2_renamed", "fixture_named"],
+)
+def test_lin_06_fixture_data_cannot_be_registered_as_external(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], dataset: dict
+) -> None:
+    root, registry = tmp_path / "return", tmp_path / "registry"
+    ref = write_linear_return(root, **dataset)
+    code, out = register(capsys, registry, root, ref, scope="external_candidate")
+    assert (code, out["error"]) == (2, "fixture_cannot_be_registered_as_external")
+    assert not list(registry.glob("linear-*"))
+    code, out = register(capsys, registry, root, ref, scope="synthetic_fixture")
+    assert code == 0, out
+
+
+def test_lin_06_external_candidate_needs_non_fixture_data(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    root, registry = tmp_path / "return", tmp_path / "registry"
+    ref = write_linear_return(root, dataset_id="team-relations-2026", dataset_sha="e" * 64)
+    code, out = register(capsys, registry, root, ref, scope="external_candidate")
+    assert code == 0, out
+    registration = out["registration"]
+    code, identity = cli(
+        capsys,
+        "describe",
+        "--registry",
+        registry,
+        "--registration-path",
+        registration["path"],
+        "--registration-hash",
+        registration["sha256"],
+    )
+    assert identity["scope"] == "external_candidate"
+    assert identity["quality_validated"] is False

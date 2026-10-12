@@ -32,6 +32,8 @@ MODEL_FILE = "linear/model.json"
 ARRAYS_FILE = "linear/arrays.npz"
 SCOPES = {"synthetic_fixture", "external_candidate"}
 LABEL_TIERS = ("G0", "G1", "G2", "G2v")
+# Known fixture handoff manifests; their data can only back synthetic registrations.
+FIXTURE_DATASET_MANIFESTS = {"5c8f0d5be05e3b39c1599e7fd3a92e46e413dc571248c59f827818f5ee231858"}
 SIZE_LIMIT = 64 * 1024 * 1024
 DEFAULT_TOKEN_PATTERN = r"(?u)\b\w\w+\b"
 VECTORIZER_KEYS = {
@@ -258,6 +260,13 @@ def _dataset(manifest: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _fixture(manifest: dict[str, Any]) -> bool:
+    return (
+        "fixture" in manifest["dataset_id"].lower()
+        or manifest["dataset_manifest_sha256"] in FIXTURE_DATASET_MANIFESTS
+    )
+
+
 def _entry(
     manifest: dict[str, Any], ref: FileRef, files: dict[str, str], scope: str, runtime: dict
 ) -> dict[str, Any]:
@@ -292,6 +301,8 @@ def register_linear(
     if scope not in SCOPES:
         raise ProtocolError("registration_scope_required")
     _, manifest, files = _inspect(Path(return_root), ref)
+    if _fixture(manifest) and scope != "synthetic_fixture":
+        raise ProtocolError("fixture_cannot_be_registered_as_external")
     entry = _entry(manifest, ref, files, scope, runtime)
 
     def write_artifact(target: Path) -> None:
