@@ -5,6 +5,8 @@ annotation doubles and fixed-weight registrations. Nothing proves training or qu
 """
 
 import json
+import os
+import shutil
 import subprocess
 import sys
 from collections import Counter
@@ -319,7 +321,13 @@ def build_package(tmp_path: Path, records=RECORDS) -> V3Package:
     return V3Package(root, seal(root))
 
 
-def run_module(module: str, *args: object, audit_log: Path | None = None):
+def run_module(
+    module: str,
+    *args: object,
+    audit_log: Path | None = None,
+    cwd: Path = ROOT,
+    env: dict[str, str] | None = None,
+):
     """Run a production CLI in a fresh interpreter; optionally record every file opened."""
     if audit_log is None:
         command = [sys.executable, "-m", module, *map(str, args)]
@@ -335,7 +343,7 @@ def run_module(module: str, *args: object, audit_log: Path | None = None):
             f"runpy.run_module({module!r}, run_name='__main__', alter_sys=True)\n"
         )
         command = [sys.executable, "-c", hook, *map(str, args)]
-    return subprocess.run(command, capture_output=True, text=True, check=False, cwd=ROOT)
+    return subprocess.run(command, capture_output=True, text=True, check=False, cwd=cwd, env=env)
 
 
 def opened_paths(audit_log: Path) -> set[Path]:
@@ -733,7 +741,6 @@ class Opening:
     predictions: Path
     freeze: Path
     campaign: Path
-    ledger: Path
 
     def args(self, **overrides: object) -> list[str]:
         values: dict[str, object] = {
@@ -746,7 +753,6 @@ class Opening:
             "--freeze-hash": sha(self.freeze.read_bytes()),
             "--campaign": self.campaign,
             "--campaign-hash": sha(self.campaign.read_bytes()),
-            "--ledger": self.ledger,
             "--operator": "coordinator-147",
         }
         values.update(overrides)
@@ -756,7 +762,8 @@ class Opening:
 
     @property
     def record(self) -> Path:
-        return self.ledger / self.package.checksum / "test.json"
+        """Pinned by the freeze: <freeze folder>/held-out/<dataset manifest sha>/test.json."""
+        return self.freeze.parent / "held-out" / self.package.checksum / "test.json"
 
 
 def checkpoint_manifest(path: Path, package: V3Package, model_revision: str, **changes) -> Path:
@@ -842,7 +849,6 @@ def prepared_opening(tmp_path: Path, *, status: str = SYNTHETIC_STATUS, **campai
         predictions,
         prepared.root / prepared.freeze.path,
         campaign_path,
-        tmp_path / "ledger",
     )
 
 
@@ -873,6 +879,9 @@ def test_held_04_first_approved_opening_is_recorded_before_test_is_read(tmp_path
     }
     assert record["candidate_id"] == "synthetic-candidate-147"
     assert record["freeze"]["sha256"] == sha(opening.freeze.read_bytes())
+    assert record["freeze_sha256"] == sha(opening.freeze.read_bytes())
+    assert record["campaign_sha256"] == sha(opening.campaign.read_bytes())
+    assert opening.record.parent.parent == opening.freeze.parent / "held-out"
     assert record["freeze"]["id"] == json.loads(opening.freeze.read_bytes())["id"]
     assert record["registration"]["path"] == opening.registration.path
     assert record["registration"]["sha256"] == opening.registration.sha256
@@ -971,7 +980,6 @@ def refused(opening: Opening, tmp_path: Path, *args: str) -> dict:
         "--freeze-hash",
         "--campaign",
         "--campaign-hash",
-        "--ledger",
         "--operator",
         "--checkpoint-manifest",
         "--registration-hash",
@@ -1097,7 +1105,7 @@ def test_held_03_the_frozen_selection_declaration_is_the_one_supplied(
     assert report["error"] == code and report["status"] == 403
 
 
-def test_held_03_a_campaign_outside_the_freeze_root_is_refused(tmp_path: Path) -> None:
+def test_held_07_freeze_and_campaign_in_different_roots_are_refused(tmp_path: Path) -> None:
     opening = prepared_opening(tmp_path)
     moved = tmp_path / "elsewhere" / "campaign.json"
     moved.parent.mkdir()
@@ -1328,3 +1336,69 @@ def test_data_06_other_returns_still_name_their_artifact_roles(tmp_path: Path) -
         package.root, tmp_path / "review", "--checkpoint-manifest", manifest, "--split", "dev"
     )
     assert status == 2 and report["error"] == "handoff_model_artifact_roles_required"
+
+
+def test_held_05_the_same_approval_cannot_reopen_from_any_directory_or_environment(
+    tmp_path: Path,
+) -> None:
+    opening = prepared_opening(tmp_path)
+    code, first = verify(opening.package, opening.predictions, *opening.args())
+    assert code == 0, first
+    recorded = opening.record.read_bytes()
+    base = [
+        "verify-return",
+        "--dataset-root",
+        opening.package.root,
+        "--dataset-hash",
+        opening.package.checksum,
+        "--predictions",
+        opening.predictions,
+    ]
+    # The old free ledger location is no longer an option at all.
+    response = run_module(
+        REGISTRY_CLI, *base, *opening.args(), "--ledger", tmp_path / "another-ledger"
+    )
+    assert response.returncode == 2 and "unrecognized arguments" in response.stderr
+    assert not (tmp_path / "another-ledger").exists()
+    # Another working directory and environment do not move the record.
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    env = dict(
+        os.environ,
+        HOME=str(elsewhere),
+        TMPDIR=str(elsewhere),
+        CAREER_LAB_HELD_OUT_LEDGER=str(elsewhere / "ledger"),
+        CAREER_LAB_LEDGER=str(elsewhere / "ledger"),
+    )
+    attempts = {"elsewhere": opening.args()}
+    # The whole freeze folder copied away carries its record with it.
+    copied = tmp_path / "copied-freeze"
+    shutil.copytree(opening.freeze.parent, copied)
+    attempts["copied"] = opening.args(
+        **{"--freeze": copied / "freeze.json", "--campaign": copied / "campaign.json"}
+    )
+    # A symbolic link to the freeze folder resolves to the same folder.
+    link = tmp_path / "linked-freeze"
+    link.symlink_to(opening.freeze.parent, target_is_directory=True)
+    attempts["linked"] = opening.args(
+        **{"--freeze": link / "freeze.json", "--campaign": link / "campaign.json"}
+    )
+    for name, args in attempts.items():
+        log = tmp_path / f"reopen-{name}.log"
+        response = run_module(REGISTRY_CLI, *base, *args, audit_log=log, cwd=elsewhere, env=env)
+        report = json.loads(response.stdout)
+        assert response.returncode == 2, (name, report)
+        assert report["error"] == "held_out_test_already_opened", (name, report)
+        assert not opened_paths(log) & held_out_files(opening.package), name
+    assert opening.record.read_bytes() == recorded
+    assert not (elsewhere / "ledger").exists()
+
+
+def test_held_05_the_record_folder_cannot_be_a_link_to_somewhere_else(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path)
+    elsewhere = tmp_path / "elsewhere-ledger"
+    elsewhere.mkdir()
+    (opening.freeze.parent / "held-out").symlink_to(elsewhere, target_is_directory=True)
+    report = refused(opening, tmp_path, *opening.args())
+    assert report["error"] == "held_out_record_location_invalid"
+    assert not any(elsewhere.iterdir())

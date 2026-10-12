@@ -3,9 +3,11 @@
 The approval is the TestCampaign file the coordinator writes, with ``opened_at``, after the
 user confirms one opening in conversation. This module checks that approval against an
 existing freeze (``expansion-v3-w08-freeze-v1``, unchanged), records the opening by
-exclusive creation, and only then lets the test split be read. A second opening of the same
-dataset is refused before any test byte is read; nothing here can be bypassed or confirmed
-from the command line.
+exclusive creation inside the freeze folder itself (``held-out/<dataset>/test.json``, next to
+the campaign; committed to git with them), and only then lets the test split be read. The
+record's place follows from the freeze alone: no option or environment variable moves it, so
+one approval opens the test at most once. A second opening is refused before any test byte
+is read; nothing here can be bypassed or confirmed from the command line.
 """
 
 import os
@@ -177,7 +179,6 @@ class HeldOutRequest:
     freeze_hash: str | None = None
     campaign: Path | None = None
     campaign_hash: str | None = None
-    ledger: Path | None = None
     operator: str | None = None
 
 
@@ -198,10 +199,14 @@ class HeldOutOpening:
             raise C.ProtocolError("held_out_test_not_opened", status=403)
 
 
-def opening_record_path(ledger: Path, dataset_hash: str) -> Path:
+RECORD_FOLDER = "held-out"
+
+
+def opening_record_path(freeze_root: Path, dataset_hash: str) -> Path:
+    """Where the one opening of this dataset under this freeze is recorded."""
     if not HASH.fullmatch(dataset_hash):
         raise C.ProtocolError("held_out_dataset_identity_invalid")
-    return Path(ledger) / dataset_hash / "test.json"
+    return Path(freeze_root) / RECORD_FOLDER / dataset_hash / "test.json"
 
 
 def check_declaration(path: Path, manifest: SealedManifest, dataset_hash: str) -> bytes:
@@ -238,7 +243,6 @@ def open_held_out_test(
         "--freeze-hash": request.freeze_hash,
         "--campaign": request.campaign,
         "--campaign-hash": request.campaign_hash,
-        "--ledger": request.ledger,
         "--operator": request.operator,
         "--registry": registry_root,
         "--registration-path/--registration-hash": registration,
@@ -251,7 +255,15 @@ def open_held_out_test(
         )
     if not OPERATOR.fullmatch(request.operator):
         raise C.ProtocolError("held_out_operator_invalid")
-    record_path = opening_record_path(request.ledger, dataset_hash)
+    freeze_path = Path(request.freeze).resolve()
+    freeze_root = freeze_path.parent
+    freeze_ref = C.FileRef(path=freeze_path.name, sha256=request.freeze_hash)
+    try:
+        campaign_path = Path(request.campaign).resolve().relative_to(freeze_root)
+    except ValueError:
+        raise C.ProtocolError("held_out_campaign_outside_freeze_root", status=403) from None
+    campaign_ref = C.FileRef(path=campaign_path.as_posix(), sha256=request.campaign_hash)
+    record_path = opening_record_path(freeze_root, dataset_hash)
     if record_path.exists() or record_path.is_symlink():
         raise C.ProtocolError("held_out_test_already_opened", status=403)
     manifest = read_sealed(Path(dataset_root), dataset_hash)
@@ -259,13 +271,6 @@ def open_held_out_test(
         raise C.ProtocolError("fixture_cannot_authorize_confirmatory", status=403)
     declaration = check_declaration(checkpoint_manifest, manifest, dataset_hash)
 
-    freeze_root = Path(request.freeze).resolve().parent
-    freeze_ref = C.FileRef(path=Path(request.freeze).name, sha256=request.freeze_hash)
-    try:
-        campaign_path = Path(request.campaign).resolve().relative_to(freeze_root)
-    except ValueError:
-        raise C.ProtocolError("held_out_campaign_outside_freeze_root", status=403) from None
-    campaign_ref = C.FileRef(path=campaign_path.as_posix(), sha256=request.campaign_hash)
     campaign = TestCampaign.model_validate_json(C.read_file(freeze_root, campaign_ref))
     candidates = [item for item in campaign.candidates if item.runtime == registration]
     if len(candidates) != 1:
@@ -292,12 +297,14 @@ def open_held_out_test(
         "dataset_id": manifest.dataset_id,
         "dataset_manifest_sha256": dataset_hash,
         "campaign": {"id": campaign.id, "path": campaign_ref.path, "sha256": campaign_ref.sha256},
+        "campaign_sha256": campaign_ref.sha256,
         "candidate_id": authorized["candidate_id"],
         "freeze": {
             "id": authorized["freeze_id"],
             "path": freeze_ref.path,
             "sha256": freeze_ref.sha256,
         },
+        "freeze_sha256": freeze_ref.sha256,
         "registration": {
             "id": summary.id,
             "path": registration.path,
@@ -309,6 +316,10 @@ def open_held_out_test(
         "opened_at": datetime.now(UTC).isoformat(),
     }
     raw = json_bytes(record)
+    # The record must live in the freeze folder itself, never behind a link to elsewhere.
+    for folder in (freeze_root / RECORD_FOLDER, record_path.parent):
+        if folder.is_symlink():
+            raise C.ProtocolError("held_out_record_location_invalid", status=403)
     record_path.parent.mkdir(parents=True, exist_ok=True)
     try:
         descriptor = os.open(record_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o644)
