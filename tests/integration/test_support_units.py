@@ -20,6 +20,7 @@ from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.contracts.v2.core import EvidenceRefV2, FileRef, SourceIdentity, digest
 from career_lab.contracts.v2.evaluation import EvidencePackageV2
 from career_lab.jobs.worker import Worker, WorkerClaim
+from career_lab.models.v3 import consumer
 from career_lab.models.v3.bundle import json_bytes, save_bundle, sha
 from career_lab.models.v3.core import LABELS
 from career_lab.models.v3.encoder import AttentionEncoder
@@ -1080,3 +1081,87 @@ def test_unit_06_interrupted_sentence_stays_unconfirmed_and_is_never_retried(
     assert counts(advice)["failed"] == 1 and counts(advice)["supported"] == 2
     entries = sorted(path.name for path in (tmp_path / "journal").glob("*/*"))
     assert entries.count("request.json") == 3 and entries.count("outcome.json") == 2
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+@pytest.mark.parametrize("read", [False, True], ids=["unread", "read"])
+@pytest.mark.parametrize("cited", [False, True], ids=["uncited-materials", "cited-materials"])
+def test_dep_01_read_materials_then_submit_keeps_rule_feedback_and_advice(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str, read: bool, cited: bool
+) -> None:
+    """Scenario materials the model read but did not cite never fail the feedback job."""
+    mark = SUPPORT if cited else ""
+    content = {
+        "zh": f"负责人和范围核实前暂缓{mark}。保留人工兜底。",
+        "en": f"Defer until the owner and scope are verified{mark}. Keep human fallback.",
+    }[language]
+    with registered_service(tmp_path, monkeypatch, language) as (session, _):
+        for material in ("brief", "technical") if read else ():
+            session.send(
+                "actions",
+                "read-" + material,
+                "read_material",
+                {
+                    "tool": "read_material",
+                    "material": {
+                        "session_id": session.session_id,
+                        "kind": "material",
+                        "object_id": material,
+                        "version": 1,
+                    },
+                },
+            )
+        work = save_work(session, content)
+        timeline = session.get("timeline").json()
+        while isinstance(timeline.get("result"), dict):
+            timeline = timeline["result"]
+        config = timeline["workspace"]["config"]
+        submitted = session.send(
+            "submissions",
+            "submit",
+            "submissions.create",
+            {
+                "decision": "defer_with_conditions",
+                "products": [work],
+                "config": {
+                    "session_id": session.session_id,
+                    "kind": "config",
+                    "object_id": config["id"],
+                    "version": config["version"],
+                    "config_version": config["config_version"],
+                },
+            },
+        )
+        session.run_job()
+        jobs = session.get("requests/submit").json()["jobs"]
+        response = session.get("feedback/" + submitted["result"]["submission"]["object_id"])
+    assert [job["status"] for job in jobs] == ["completed"], jobs
+    report = response.json()["result"]["result"]["items"][0]
+    assert len(report["rule_items"]) == len(report["items"]) == 14
+    (advice,) = [row for row in report["model_advice"] if row["criterion"] == "R2.support"]
+    assert advice["status"] == "synthetic_mechanism_only" and len(advice["units"]) == 2
+    candidates = {"brief", "technical"}
+    trace = next(t for t in report["read_boundaries"] if t["path"].startswith("/model_advice/"))
+    traced = {ref["object_id"] for ref in trace["dependencies"]}
+    cites = {ref["object_id"] for ref in advice["citations"]}
+    # Cited materials are traced through their declared external references.
+    assert cites <= traced and (candidates <= cites) == cited
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_dep_01_unexpected_advice_failure_still_writes_rule_feedback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    """A controlled programming fault inside sentence planning only fails the advice."""
+
+    def broken(package):
+        raise RuntimeError("Controlled fault while planning sentences")
+
+    monkeypatch.setattr(consumer, "support_units", broken)
+    with registered_service(tmp_path, monkeypatch, language) as (session, _):
+        report, advice = review(session, save_work(session, THREE_PARAGRAPHS[language]))
+        jobs = session.get("requests/review").json()["jobs"]
+    assert [job["status"] for job in jobs] == ["completed"]
+    assert advice["status"] == "failed" and advice["error_code"] == "model_prediction_invalid"
+    assert advice["registration"]["scope"] == "synthetic_fixture" and advice["label"] is None
+    assert len(report["rule_items"]) == len(report["items"]) == 14

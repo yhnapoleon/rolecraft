@@ -16,6 +16,7 @@ from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.jobs.worker import Worker
 from scripts.regression.published import ROOT, write_catalog
 from tests.regression.conftest import PublishedSession
+from tests.unit.test_w08_encoder_registration import encoder_return, v1_registration
 
 
 @contextmanager
@@ -479,3 +480,25 @@ def test_model_06_recorded_programming_failure_is_not_reported_as_load_failure(
     assert recorded["failure_kind"] == "programming"
     assert advice["registration"]["id"] == recorded["registration"]["id"]
     assert len(report["rule_items"]) == 14
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_model_06_retired_encoder_registration_is_an_invalid_reference_without_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    bundle = tmp_path / "encoder"
+    bundle.mkdir()
+    retired = v1_registration(
+        tmp_path / "registry", bundle, encoder_return(bundle), "synthetic_fixture"
+    )
+    monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRY", str(tmp_path / "registry"))
+    monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRATION", retired.model_dump_json())
+    monkeypatch.setenv("CAREER_LAB_MODEL_JOURNAL", str(tmp_path / "journal"))
+    monkeypatch.setenv("CAREER_LAB_SCENARIO_CATALOG", str(write_catalog(tmp_path / "catalog.json")))
+    monkeypatch.setenv("CAREER_LAB_SCENARIO_ARCHIVE", str(tmp_path / "archive"))
+    with runtime_session(tmp_path / "service", language) as current:
+        _, report = review(current)
+    advice = report["model_advice"][0]
+    assert advice["status"] == "failed" and advice["error_code"] == "model_reference_invalid"
+    assert advice["registration"] is None and advice["label"] is None
+    assert len(report["rule_items"]) == 14 and report["mode"] == "advisory"
