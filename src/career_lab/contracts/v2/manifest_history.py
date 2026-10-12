@@ -733,4 +733,24 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "no range; partial read projections whose rule results changed withhold the range."
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-14439473c9e226d82f513beab2e7da5c301df3efd6498255a3693f62059135ff"
+        ),
+        "integration_changes": {
+            "model-assembly": "Optional registered-model identity fields: kind; task_type "
+            "(relation is omitted); criteria and rubric_version (id and sha256), required for "
+            "criterion registrations and absent otherwise; dataset (id, manifest sha256, label "
+            "tiers); fusion components and parameters; weights_stage. FeedbackProvenance gains "
+            "registered_models, recorded only when a criterion registration is configured, and "
+            "support_model, recorded only when the support verifier is configured apart from the "
+            "Judge. RegisteredModelAdvice gains criterion advice (any identifier on the wire, the "
+            "five-label domain, rule reconciliation), relation sentence units whose aggregation "
+            "counts follow the units, and explicit error codes for rule conflicts, unestablished "
+            "applicability, criteria a model does not cover, rubric version mismatches and fully "
+            "abstained work. Synthetic registrations may show labels and evidence as "
+            "mechanism-only advice. Unset fields are omitted, so existing records, examples and "
+            "wire bytes are unchanged; limited readers never receive sentence results."
+        },
+    },
 )

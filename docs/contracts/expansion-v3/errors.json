@@ -108,6 +108,8 @@
     "legacy_endpoint_forbidden",
     "legacy_kind_unsupported",
     "legacy_type_unavailable",
+    "model_registration_config_ambiguous",
+    "model_registration_config_invalid",
     "model_registration_identity_mismatch",
     "module_object_invalid",
     "module_response_contract_missing",

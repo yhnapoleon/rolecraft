@@ -1575,6 +1575,17 @@
           "title": "Affects Score",
           "type": "boolean"
         },
+        "aggregation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/_AdviceAggregation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "citations": {
           "default": [],
           "items": {
@@ -1584,8 +1595,8 @@
           "type": "array"
         },
         "criterion": {
-          "const": "R2.support",
           "default": "R2.support",
+          "minLength": 1,
           "title": "Criterion",
           "type": "string"
         },
@@ -1604,7 +1615,12 @@
                 "model_result_unconfirmed",
                 "model_prediction_invalid",
                 "claim_not_available",
-                "synthetic_mechanism_only"
+                "synthetic_mechanism_only",
+                "verified_rule_conflict",
+                "applicability_not_established",
+                "criterion_not_supported_by_model",
+                "criterion_rubric_version_mismatch",
+                "all_units_abstained"
               ],
               "type": "string"
             },
@@ -1647,7 +1663,11 @@
               "enum": [
                 "SUPPORTED",
                 "CONTRADICTED",
-                "INSUFFICIENT"
+                "INSUFFICIENT",
+                "MET",
+                "PARTIAL",
+                "NOT_MET",
+                "NOT_APPLICABLE"
               ],
               "type": "string"
             },
@@ -1663,6 +1683,17 @@
           "default": "advisory",
           "title": "Mode",
           "type": "string"
+        },
+        "reconciliation": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/_AdviceReconciliation"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "registration": {
           "anyOf": [
@@ -1694,6 +1725,30 @@
           ],
           "title": "Status",
           "type": "string"
+        },
+        "task_type": {
+          "default": "relation",
+          "enum": [
+            "relation",
+            "criterion"
+          ],
+          "title": "Task Type",
+          "type": "string"
+        },
+        "units": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/_AdviceUnit"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Units"
         }
       },
       "required": [
@@ -1706,13 +1761,190 @@
       "title": "RegisteredModelAdvice",
       "type": "object"
     },
-    "RegisteredModelIdentity": {
+    "RegisteredModelComponent": {
       "additionalProperties": false,
+      "description": "One already registered member of a fusion, referenced by identity, never copied.",
       "properties": {
+        "alpha": {
+          "anyOf": [
+            {
+              "maximum": 1,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alpha"
+        },
         "id": {
           "minLength": 1,
           "title": "Id",
           "type": "string"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "model_revision": {
+          "minLength": 1,
+          "title": "Model Revision",
+          "type": "string"
+        },
+        "role": {
+          "enum": [
+            "left",
+            "right"
+          ],
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role",
+        "id",
+        "kind",
+        "model_revision"
+      ],
+      "title": "RegisteredModelComponent",
+      "type": "object"
+    },
+    "RegisteredModelDataset": {
+      "additionalProperties": false,
+      "description": "The training data release a registration names; tiers say how labels were made.",
+      "properties": {
+        "dataset_id": {
+          "minLength": 1,
+          "title": "Dataset Id",
+          "type": "string"
+        },
+        "dataset_manifest_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Dataset Manifest Sha256",
+          "type": "string"
+        },
+        "label_tiers": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Label Tiers",
+          "type": "array"
+        }
+      },
+      "required": [
+        "dataset_id",
+        "dataset_manifest_sha256"
+      ],
+      "title": "RegisteredModelDataset",
+      "type": "object"
+    },
+    "RegisteredModelFusion": {
+      "additionalProperties": false,
+      "properties": {
+        "alpha": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Alpha",
+          "type": "number"
+        },
+        "evidence_threshold": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Evidence Threshold",
+          "type": "number"
+        },
+        "fusion_gain_observed": {
+          "title": "Fusion Gain Observed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "alpha",
+        "evidence_threshold",
+        "fusion_gain_observed"
+      ],
+      "title": "RegisteredModelFusion",
+      "type": "object"
+    },
+    "RegisteredModelIdentity": {
+      "additionalProperties": false,
+      "description": "Public registration identity. Unset optional fields keep the historical wire bytes.",
+      "properties": {
+        "components": {
+          "anyOf": [
+            {
+              "items": {
+                "$ref": "#/$defs/RegisteredModelComponent"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Components"
+        },
+        "criteria": {
+          "anyOf": [
+            {
+              "items": {
+                "minLength": 1,
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Criteria"
+        },
+        "dataset": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RegisteredModelDataset"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "fusion": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RegisteredModelFusion"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Kind"
         },
         "model_revision": {
           "minLength": 1,
@@ -1725,6 +1957,17 @@
           "title": "Quality Validated",
           "type": "boolean"
         },
+        "rubric_version": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RubricVersion"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "scope": {
           "enum": [
             "synthetic_fixture",
@@ -1732,6 +1975,28 @@
           ],
           "title": "Scope",
           "type": "string"
+        },
+        "task_type": {
+          "default": "relation",
+          "enum": [
+            "relation",
+            "criterion"
+          ],
+          "title": "Task Type",
+          "type": "string"
+        },
+        "weights_stage": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Weights Stage"
         }
       },
       "required": [
@@ -1740,6 +2005,28 @@
         "scope"
       ],
       "title": "RegisteredModelIdentity",
+      "type": "object"
+    },
+    "RubricVersion": {
+      "additionalProperties": false,
+      "description": "The rubric release a criterion model was labelled and trained against.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "sha256"
+      ],
+      "title": "RubricVersion",
       "type": "object"
     },
     "RuleBound": {
@@ -2366,6 +2653,201 @@
         "created_at"
       ],
       "title": "WorkspaceProductRead",
+      "type": "object"
+    },
+    "_AdviceAggregation": {
+      "additionalProperties": false,
+      "properties": {
+        "counts": {
+          "$ref": "#/$defs/_AdviceUnitCounts"
+        },
+        "policy": {
+          "minLength": 1,
+          "title": "Policy",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "policy",
+        "counts"
+      ],
+      "title": "_AdviceAggregation",
+      "type": "object"
+    },
+    "_AdviceReconciliation": {
+      "additionalProperties": false,
+      "description": "How a criterion result relates to the verified rule bound and applicability.",
+      "properties": {
+        "applicability_established": {
+          "title": "Applicability Established",
+          "type": "boolean"
+        },
+        "rule_conflict": {
+          "title": "Rule Conflict",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "rule_conflict",
+        "applicability_established"
+      ],
+      "title": "_AdviceReconciliation",
+      "type": "object"
+    },
+    "_AdviceUnit": {
+      "additionalProperties": false,
+      "description": "One sentence of the learner's work: where it is, its own result and evidence.",
+      "properties": {
+        "citations": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/EvidenceRefV2"
+          },
+          "title": "Citations",
+          "type": "array"
+        },
+        "evidence_ids": {
+          "default": [],
+          "items": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": "Evidence Ids",
+          "type": "array"
+        },
+        "index": {
+          "minimum": 0,
+          "title": "Index",
+          "type": "integer"
+        },
+        "label": {
+          "anyOf": [
+            {
+              "enum": [
+                "SUPPORTED",
+                "CONTRADICTED",
+                "INSUFFICIENT"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Label"
+        },
+        "reason_code": {
+          "anyOf": [
+            {
+              "minLength": 1,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason Code"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "completed",
+            "abstained",
+            "failed"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "subject": {
+          "$ref": "#/$defs/EvidenceRefV2"
+        },
+        "unit_hash": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Unit Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "index",
+        "subject",
+        "unit_hash",
+        "status"
+      ],
+      "title": "_AdviceUnit",
+      "type": "object"
+    },
+    "_AdviceUnitCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "abstained": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Abstained",
+          "type": "integer"
+        },
+        "contradicted": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Contradicted",
+          "type": "integer"
+        },
+        "failed": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Failed",
+          "type": "integer"
+        },
+        "insufficient": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Insufficient",
+          "type": "integer"
+        },
+        "over_budget": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Over Budget",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "skipped_short": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Skipped Short",
+          "type": "integer"
+        },
+        "supported": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Supported",
+          "type": "integer"
+        }
+      },
+      "title": "_AdviceUnitCounts",
       "type": "object"
     },
     "_OutcomeAction": {
