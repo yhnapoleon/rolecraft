@@ -1030,3 +1030,45 @@ def test_seam_02_the_encoder_protocol_does_not_claim_linear_or_fusion_returns(
     registration = register_bundle(tmp_path / "registry", root, ref, scope="synthetic_fixture")
     entry = json.loads((tmp_path / "registry" / registration.path).read_bytes())
     assert encoder_registry.REGISTRATION.handles(entry)
+
+
+UNTRAINED_DECLARATION = {
+    "weights_stage": "pretrained_untrained_heads",
+    "completed": False,
+    "training_partitions": [],
+    "selection_partition": None,
+}
+
+
+@pytest.mark.parametrize(
+    ("declared", "code"),
+    [
+        (UNTRAINED_DECLARATION, "model_return_weights_stage_invalid"),
+        ({"weights_stage": "pretrained_untrained_heads"}, "model_return_weights_stage_invalid"),
+        (
+            {k: v for k, v in UNTRAINED_DECLARATION.items() if k != "weights_stage"},
+            "model_return_incomplete",
+        ),
+    ],
+    ids=["full-declaration", "stage-only", "declaration-without-stage"],
+)
+def test_seam_03_untrained_declarations_never_pass_the_shared_check(
+    tmp_path: Path, declared: dict[str, Any], code: str
+) -> None:
+    """Other return kinds reuse the shared check; an untrained or incomplete return is
+    never theirs to accept. Only the encoder path admits it, and only as synthetic."""
+    root = tmp_path / "producer"
+    encoder_return(root)
+    manifest = json.loads((root / "checkpoint-manifest.json").read_bytes())
+    linear = manifest | LINEAR_MANIFEST | {"dataset_id": "partner-relations-2026-10"}
+    with pytest.raises(ProtocolError) as error:
+        validate_return_identity(linear | declared)
+    assert error.value.code == code
+    with pytest.raises(ProtocolError):
+        register_bundle(
+            tmp_path / "registry",
+            root,
+            write_manifest(root, linear | declared),
+            scope="external_candidate",
+        )
+    assert not list((tmp_path / "registry").glob("encoder-*"))
