@@ -2,6 +2,7 @@ import { fixtureHost, type HostFixture } from '../../host-test-support';
 import { describe, it, expect } from 'vitest';
 import { createV4FeedbackAdapter, W05_V4_OPERATIONS as op } from './v4-slot';
 import type { V4HostSnapshot, V4CommandResult, V4SlotId } from '../../v4-host';
+import recorded from './model-advice.fixtures.json';
 
 const ref = (kind: string, id: string, version = 1) => ({
   session_id: 's',
@@ -616,5 +617,344 @@ it.each(invalidCases)(
     } finally {
       ctl.destroy();
     }
+  },
+);
+
+/** Recorded HTTP advice (148 normal serve+worker), moved into this fixture's session. */
+function inSession<T>(value: T, sessionId = 's'): T {
+  return JSON.parse(
+    JSON.stringify(value).replaceAll('"session_id":"fixture"', `"session_id":"${sessionId}"`),
+  );
+}
+async function readThroughHost(advice: unknown[]) {
+  const f = fixture();
+  Object.assign(f.report, { model_advice: advice });
+  const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+  try {
+    await ctl.refresh();
+    return { f, report: ctl.adapter.snapshot().reports[0] };
+  } finally {
+    ctl.destroy();
+  }
+}
+
+describe('149 sentence advice through the feedback host', () => {
+  const quotes = {
+    zh: '试点先只开放给已完成人工复核的团队，审批要求有据可查。',
+    en: 'Open the pilot only to teams with completed human review, as corroborated by the approval rules.',
+  };
+  it.each(['zh', 'en'] as const)(
+    'UI-01: %s synthetic sentence advice keeps its labels, sentences and counts',
+    async (language) => {
+      const { f, report } = await readThroughHost([inSession(recorded.advice[language])]);
+      const advice = report.model_advice?.[0];
+      expect(advice).toMatchObject({
+        status: 'synthetic_mechanism_only',
+        label: 'CONTRADICTED',
+        registration: { scope: 'synthetic_fixture', quality_validated: false },
+        affects_score: false,
+      });
+      expect(advice?.evidence_ids).toHaveLength(4);
+      expect(advice?.units?.map((unit) => unit.label)).toEqual([
+        'SUPPORTED',
+        'INSUFFICIENT',
+        'CONTRADICTED',
+        'INSUFFICIENT',
+        'INSUFFICIENT',
+        'INSUFFICIENT',
+      ]);
+      expect(advice?.units?.[0]).toMatchObject({
+        index: 0,
+        status: 'completed',
+        quote: quotes[language],
+      });
+      expect(advice?.units?.[0].citations.map((ref) => ref.object_id)).toEqual([
+        'pilot',
+        'policy',
+        'brief',
+        'technical',
+      ]);
+      expect(advice?.aggregation).toEqual({
+        policy: 'r2-support-units-v1',
+        counts: {
+          supported: 1,
+          contradicted: 1,
+          insufficient: 4,
+          abstained: 0,
+          failed: 0,
+          skipped_short: 0,
+          over_budget: 0,
+        },
+      });
+      expect(JSON.stringify(report.model_advice)).not.toMatch(
+        /request_id|job_id|input_hash|unit_hash/,
+      );
+      expect(f.calls).toEqual([]);
+      expect(f.recovery).toEqual([]);
+    },
+  );
+});
+
+/** The recorded sentences as an external candidate's completed advice (145 linear identity). */
+const external = (language: 'zh' | 'en') => {
+  const advice = inSession(recorded.advice[language]);
+  return {
+    ...advice,
+    status: 'completed',
+    error_code: null,
+    registration: { ...recorded.identities.linear, scope: 'external_candidate' },
+  };
+};
+type Raw = ReturnType<typeof external>;
+const withUnit = (advice: Raw, index: number, change: Record<string, unknown>) => ({
+  ...advice,
+  units: advice.units.map((entry, i) => (i === index ? { ...entry, ...change } : entry)),
+});
+const counts = (advice: Raw, change: Record<string, number>) => ({
+  ...advice,
+  aggregation: { ...advice.aggregation, counts: { ...advice.aggregation.counts, ...change } },
+});
+const fusionIdentity = recorded.identities.fusion;
+const invalidSentenceCases: [string, (advice: Raw) => unknown][] = [
+  [
+    'a stale sentence label on failed advice',
+    (advice) => ({
+      ...advice,
+      status: 'failed',
+      error_code: 'model_timeout',
+      label: null,
+      evidence_ids: [],
+      citations: [],
+    }),
+  ],
+  ['counts that disagree with the sentences', (advice) => counts(advice, { supported: 2 })],
+  ['sentences without their aggregation', (advice) => ({ ...advice, aggregation: null })],
+  [
+    // Counts stay consistent: a second copy of an insufficient sentence replaces another one.
+    'a duplicated sentence',
+    (advice) => ({
+      ...advice,
+      units: advice.units.map((entry, i) => (i === 1 ? advice.units[3] : entry)),
+    }),
+  ],
+  ['an aggregation without its sentences', (advice) => ({ ...advice, units: undefined })],
+
+  [
+    'a sentence cited from another session',
+    (advice) =>
+      withUnit(advice, 0, {
+        citations: advice.units[0].citations.map((ref) => ({ ...ref, session_id: 'other' })),
+      }),
+  ],
+  [
+    'a label on an abstained sentence',
+    (advice) =>
+      counts(withUnit(advice, 1, { status: 'abstained' }), { abstained: 1, insufficient: 4 }),
+  ],
+  [
+    'a sentence without its text',
+    (advice) => withUnit(advice, 0, { subject: { ...advice.units[0].subject, quote: null } }),
+  ],
+  [
+    'mechanism labels on an external registration',
+    (advice) => ({
+      ...advice,
+      status: 'synthetic_mechanism_only',
+      error_code: 'synthetic_mechanism_only',
+    }),
+  ],
+  [
+    'swapped fusion components',
+    (advice) => ({
+      ...advice,
+      registration: {
+        ...fusionIdentity,
+        scope: 'external_candidate',
+        components: [...fusionIdentity.components].reverse(),
+      },
+    }),
+  ],
+  [
+    'a component weight that is not its share of alpha',
+    (advice) => ({
+      ...advice,
+      registration: {
+        ...fusionIdentity,
+        scope: 'external_candidate',
+        fusion: { ...fusionIdentity.fusion, alpha: 0.25 },
+      },
+    }),
+  ],
+  [
+    'an alpha outside [0, 1]',
+    (advice) => ({
+      ...advice,
+      registration: {
+        ...fusionIdentity,
+        scope: 'external_candidate',
+        fusion: { ...fusionIdentity.fusion, alpha: 1.5 },
+        components: undefined,
+      },
+    }),
+  ],
+  [
+    'non-text label tiers',
+    (advice) => ({
+      ...advice,
+      registration: {
+        ...advice.registration,
+        dataset: { ...advice.registration.dataset, label_tiers: [2] },
+      },
+    }),
+  ],
+  [
+    'a criterion task on the registration',
+    (advice) => ({ ...advice, registration: { ...advice.registration, task_type: 'criterion' } }),
+  ],
+  [
+    'criteria on a relation registration',
+    (advice) => ({ ...advice, registration: { ...advice.registration, criteria: ['R1.target'] } }),
+  ],
+  ['criterion advice', (advice) => ({ ...advice, task_type: 'criterion' })],
+];
+it.each(invalidSentenceCases)(
+  'UI-01: rejects %s within one suggestion and keeps the rest',
+  async (_name, broken) => {
+    const { f, report } = await readThroughHost([broken(external('zh')), external('en')]);
+    expect(report.model_advice?.[0]).toEqual({
+      criterion: 'R2.support',
+      status: 'unavailable',
+      registration: null,
+      label: null,
+      evidence_ids: [],
+      citations: [],
+      error_code: 'model_prediction_invalid',
+      mode: 'advisory',
+      affects_score: false,
+    });
+    expect(report.model_advice?.[1]).toMatchObject({ status: 'completed', label: 'CONTRADICTED' });
+    expect(report.model_advice?.[1].units).toHaveLength(6);
+    expect(report.business_response).toBe('原反馈不翻译');
+    expect(f.calls).toEqual([]);
+  },
+);
+it('UI-01: reads the fusion members, their weights and the observed fusion gain', async () => {
+  const quarter = {
+    ...fusionIdentity,
+    scope: 'external_candidate',
+    fusion: { ...fusionIdentity.fusion, alpha: 0.25, fusion_gain_observed: false },
+    components: [
+      { ...fusionIdentity.components[0], alpha: 0.75 },
+      { ...fusionIdentity.components[1], alpha: 0.25 },
+    ],
+  };
+  const { report } = await readThroughHost([{ ...external('en'), registration: quarter }]);
+  expect(report.model_advice?.[0].registration).toEqual({
+    id: fusionIdentity.id,
+    model_revision: fusionIdentity.model_revision,
+    scope: 'external_candidate',
+    quality_validated: false,
+    kind: 'probability_fusion',
+    dataset: fusionIdentity.dataset,
+    fusion: { alpha: 0.25, evidence_threshold: 0.5, fusion_gain_observed: false },
+    components: [
+      { ...fusionIdentity.components[0], alpha: 0.75 },
+      { ...fusionIdentity.components[1], alpha: 0.25 },
+    ],
+  });
+});
+it('UI-01: reads the encoder kind, training data and weights stage', async () => {
+  const { report } = await readThroughHost([
+    { ...inSession(recorded.advice.zh), registration: recorded.identities.encoder },
+  ]);
+  expect(report.model_advice?.[0].registration).toEqual({
+    ...recorded.identities.encoder,
+    dataset: { ...recorded.identities.encoder.dataset, label_tiers: [] },
+  });
+  expect(report.model_advice?.[0].registration?.weights_stage).toBe('supervised_finetuned');
+});
+
+const invalidRead = {
+  criterion: 'R2.support',
+  status: 'unavailable',
+  registration: null,
+  label: null,
+  evidence_ids: [],
+  citations: [],
+  error_code: 'model_prediction_invalid',
+  mode: 'advisory',
+  affects_score: false,
+};
+/** Every recorded sentence judged SUPPORTED with the first sentence's evidence. */
+function allSupported(language: 'zh' | 'en', overBudget = 0) {
+  const advice = external(language);
+  const [first] = advice.units;
+  return {
+    ...advice,
+    label: 'SUPPORTED',
+    evidence_ids: first.evidence_ids,
+    citations: first.citations,
+    units: advice.units.map((entry) => ({
+      ...entry,
+      status: 'completed',
+      label: 'SUPPORTED',
+      evidence_ids: first.evidence_ids,
+      citations: first.citations,
+      reason_code: null,
+    })),
+    aggregation: {
+      ...advice.aggregation,
+      counts: {
+        ...advice.aggregation.counts,
+        supported: advice.units.length,
+        contradicted: 0,
+        insufficient: 0,
+        over_budget: overBudget,
+      },
+    },
+  };
+}
+it.each(['zh', 'en'] as const)(
+  'UI-01: %s rejects a work-level conclusion its sentences do not give (148 conservative rule)',
+  async (language) => {
+    const { f, report } = await readThroughHost([
+      { ...external(language), label: 'SUPPORTED' },
+      { ...external(language), label: 'INSUFFICIENT' },
+      { ...inSession(recorded.advice[language]), label: 'SUPPORTED' },
+      allSupported(language),
+      { ...allSupported(language, 2) },
+      { ...allSupported(language, 2), label: 'INSUFFICIENT' },
+      external(language),
+    ]);
+    const read = report.model_advice ?? [];
+    // A contradicted sentence decides the work; over-budget sentences keep it insufficient.
+    expect(read.slice(0, 3)).toEqual([invalidRead, invalidRead, invalidRead]);
+    expect(read[3]).toMatchObject({ status: 'completed', label: 'SUPPORTED' });
+    expect(read[4]).toEqual(invalidRead);
+    expect(read[5]).toMatchObject({ status: 'completed', label: 'INSUFFICIENT' });
+    expect(read[6]).toMatchObject({ status: 'completed', label: 'CONTRADICTED' });
+    expect(f.calls).toEqual([]);
+  },
+);
+it.each(['zh', 'en'] as const)(
+  'UI-01: %s checks member weights when the fusion record is absent',
+  async (language) => {
+    const { fusion: _mix, ...members } = { ...fusionIdentity, scope: 'external_candidate' };
+    const weighted = (left: number, right: number) => ({
+      ...external(language),
+      registration: {
+        ...members,
+        components: [
+          { ...fusionIdentity.components[0], alpha: left },
+          { ...fusionIdentity.components[1], alpha: right },
+        ],
+      },
+    });
+    const { report } = await readThroughHost([weighted(0.9, 0.9), weighted(0.25, 0.75)]);
+    expect(report.model_advice?.[0]).toEqual(invalidRead);
+    expect(report.model_advice?.[1].registration?.components?.map((m) => m.alpha)).toEqual([
+      0.25, 0.75,
+    ]);
+    expect(report.model_advice?.[1].registration?.fusion).toBeUndefined();
   },
 );

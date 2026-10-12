@@ -10,6 +10,7 @@
       ><div id="fixture"></div></main
     ><script type="module">
     import { mountNativeFeedback } from './index.ts';
+    import { readRegisteredAdvice } from './model-advice.ts';
     const language = new URL(location.href).searchParams.get('lang') || 'zh';
     const ref = (kind, id, version = 1) => ({
       session_id: 'fixture',
@@ -85,7 +86,12 @@
       },
       respond: async () => {},
       beginRevision: async () => {},
-      refresh: async () => {},
+      refresh: async () => {
+        calls.push({ operation: 'refresh' });
+      },
+      retry: async () => {
+        calls.push({ operation: 'retry' });
+      },
       openReference: (ref) => calls.push({ operation: 'openReference', ref }),
       readDraft: (key) => JSON.parse(localStorage.getItem(draftKey + key) || 'null') || undefined,
       keepDraft: async (key, value) => localStorage.setItem(draftKey + key, JSON.stringify(value)),
@@ -102,6 +108,8 @@
         });
       },
       update: () => listeners.forEach((fn) => fn()),
+      // The same reader the v4 host uses, so fixtures enter as recorded HTTP JSON.
+      read: (raw) => readRegisteredAdvice(raw, 'fixture'),
     };
     window.fixture.remount();
     </script></body
