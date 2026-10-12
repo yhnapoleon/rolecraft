@@ -750,7 +750,12 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "applicability, criteria a model does not cover, rubric version mismatches and fully "
             "abstained work. Synthetic registrations may show labels and evidence as "
             "mechanism-only advice. Unset fields are omitted, so existing records, examples and "
-            "wire bytes are unchanged; limited readers never receive sentence results."
+            "wire bytes are unchanged; limited readers never receive sentence results. The "
+            "runtime reads four model slots (ROLES, JUDGE, SUPPORT, ASSISTANT) from "
+            "CAREER_LAB_<SLOT>_* at startup, SUPPORT falling back to JUDGE and every slot to "
+            "the shared provider variables; with no slot variable set, requests and provenance "
+            "are unchanged. CAREER_LAB_MODEL_REGISTRATIONS names relation and criterion "
+            "registrations; setting it beside CAREER_LAB_MODEL_REGISTRATION refuses to start."
         },
     },
 )

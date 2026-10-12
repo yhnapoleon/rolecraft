@@ -40,10 +40,6 @@ DEFAULT_TIMEOUT = 45.0
 DEFAULT_INPUT_BYTES = 64000
 
 
-def _refuse(code: str) -> ProtocolError:
-    return ProtocolError(code, status=503)
-
-
 @dataclass(frozen=True)
 class SlotConfig:
     """One slot's resolved, non-secret configuration."""
@@ -113,9 +109,9 @@ def _number(raw: str | None, default, kind, lower, upper):
     try:
         value = kind(raw)
     except ValueError:
-        raise _refuse("model_slot_value_invalid") from None
+        raise ProtocolError("model_slot_value_invalid", status=503) from None
     if not lower <= value <= upper:
-        raise _refuse("model_slot_value_invalid")
+        raise ProtocolError("model_slot_value_invalid", status=503)
     return value
 
 
@@ -130,7 +126,7 @@ def slot_config(slot: str, provider: str, environ: Mapping[str, str]) -> SlotCon
 
     chosen = value("PROVIDER") or provider
     if chosen not in PROVIDERS:
-        raise _refuse("model_slot_provider_invalid")
+        raise ProtocolError("model_slot_provider_invalid", status=503)
     max_tokens = _number(value("MAX_TOKENS"), DEFAULT_MAX_TOKENS, int, 1, 32768)
     timeout = _number(value("TIMEOUT"), DEFAULT_TIMEOUT, float, 0.001, 120.0)
     input_bytes = (
@@ -147,16 +143,16 @@ def slot_config(slot: str, provider: str, environ: Mapping[str, str]) -> SlotCon
     model = value("MODEL", "MODEL") or default_model
     key_file = value("KEY_FILE", "KEY_FILE") or default_key
     if not base_url or not model:
-        raise _refuse("model_slot_configuration_incomplete")
+        raise ProtocolError("model_slot_configuration_incomplete", status=503)
     try:
         parts = urlsplit(base_url)
         host = parts.hostname
     except ValueError:
-        raise _refuse("model_slot_value_invalid") from None
+        raise ProtocolError("model_slot_value_invalid", status=503) from None
     if parts.scheme not in ("http", "https") or not host:
-        raise _refuse("model_slot_value_invalid")
+        raise ProtocolError("model_slot_value_invalid", status=503)
     if key_file is None and (chosen != "openai_compatible" or host not in LOOPBACK_HOSTS):
-        raise _refuse("model_slot_key_required")
+        raise ProtocolError("model_slot_key_required", status=503)
     return SlotConfig(slot, chosen, base_url, model, key_file, max_tokens, timeout, input_bytes)
 
 
