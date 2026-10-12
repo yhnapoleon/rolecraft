@@ -124,7 +124,7 @@ uv run --locked python -m career_lab.models.v3.registry_cli describe \
   --registry <注册目录> --registration-path <返回的相对路径> --registration-hash <返回的 SHA-256>
 ```
 
-`describe` 输出公开身份（`kind=linear`、`dataset`：数据集名、数据 hash、标签等级）。注册项协议为 `advisory-linear-registration-v1`，按内容命名、不可覆盖，固定 `mode=advisory`、`affects_score=false`、`quality_validated=false`；推理闭包源码（`src/career_lab/models/**`、`contracts/v2/{core,data}.py`）或 numpy、scikit-learn、pydantic 版本变化时旧注册拒绝加载（`registered_inference_runtime_changed`），须重新登记；闭包含模型目录下全部代码（含注册与复核工具），所以本波各线改动 `models/**` 合入后都要重新登记。回传复核（`verify-return`）用我方加载器重载并与 `predictions.dev.jsonl` 比较，标签、状态与证据集合完全一致；线性模型概率按逐项绝对差 ≤ 1e-6 的容差比对**由回传复核 v3（147）提供，本分支尚未包含**，在此之前重载比较为逐位相等。负责方的加载命令只作参考。
+`describe` 输出公开身份（`kind=linear`、`dataset`：数据集名、数据 hash、标签等级）。注册项协议为 `advisory-linear-registration-v1`，按内容命名、不可覆盖，固定 `mode=advisory`、`affects_score=false`、`quality_validated=false`；推理闭包源码（`src/career_lab/models/**`、`contracts/v2/{core,data}.py`）或 numpy、scikit-learn、pydantic 版本变化时旧注册拒绝加载（`registered_inference_runtime_changed`），须重新登记；闭包含模型目录下全部代码（含注册与复核工具），所以我方 `models/**` 有任何改动合入后都要重新登记。回传复核（`verify-return`）用我方加载器重载并与 `predictions.dev.jsonl` 比较，`input_hash`、`model_revision`、标签、状态与证据集合完全一致，线性模型概率逐项绝对差不超过 1e-6（报告与容差细则见[预测行 v3 与回传复核](predictions-v3.md)第 3 节）。负责方的加载命令只作参考。
 
 ## 10. 拒绝与错误码
 

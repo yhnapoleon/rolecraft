@@ -2,7 +2,7 @@
 
 融合模型由我方登记：负责方交回两个分量（线性回传、编码器回传任意组合，各自按其格式回传）和一份在 dev 上做出的选择记录，我方用两个已登记的分量加这份记录构建融合注册，不需要负责方另交融合权重。负责方自己的融合 dev 逐条预测可以照常回传，供复核比对。
 
-**范围**：只收关系任务。融合不能嵌套（分量不能是融合），我方旧的 W01 ModelBundle 之间的融合仍走原 `save_fusion_bundle` 路径。登记只核身份与结构，不重算指标；dev 网格复算由回传复核（`verify-return --fusion-selection`）负责；**该参数由回传复核 v3（147）提供，本分支尚未包含**。
+**范围**：只收关系任务。融合不能嵌套（分量不能是融合），我方旧的 W01 ModelBundle 之间的融合仍走原 `save_fusion_bundle` 路径。登记只核身份与结构，不重算指标；dev 网格复算由回传复核（`verify-return --fusion-selection`，见[预测行 v3 与回传复核](predictions-v3.md)第 4 节）负责。
 
 ## 1. 融合怎样计算
 
@@ -77,7 +77,7 @@ e = (1 − alpha) · e_left + alpha · e_right
 3. **全部为 0 时没有可确认的选择**：没有任何点满足第 1 条时，该次选择不能确认，复核判 rejected；不要退而按 macro-F1 选点交回。
 4. **有无融合收益**：`fusion_gain_observed=true` 当且仅当选中点的 alpha 不在端点，且它的 `joint_correctness` 严格大于全部端点（alpha 为 0 或 1、任一阈值）中的最大 `joint_correctness`；其余情况一律写 `false`。选中端点时登记就要求 `false`。
 
-登记只核第 2 节的结构与第 4 条中的端点规则；选中点是否符合第 1–3 条、逐点指标是否与重算相同、收益声明是否成立，由回传复核（`verify-return --fusion-selection`，由回传复核 v3（147）提供，本分支尚未包含）判定。
+登记只核第 2 节的结构与第 4 条中的端点规则；选中点是否符合第 1–3 条、逐点指标是否与重算相同、收益声明是否成立，由回传复核（`verify-return --fusion-selection`）判定。
 
 ## 4. 融合预测的 `model_revision`
 
