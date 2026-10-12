@@ -18,13 +18,15 @@ from fastapi.testclient import TestClient
 from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.contracts.v2.core import EvidenceRefV2, FileRef, SourceIdentity, digest
 from career_lab.contracts.v2.evaluation import EvidencePackageV2
+from career_lab.contracts.v2.provenance import RegisteredModelIdentity
 from career_lab.jobs.worker import Worker, WorkerClaim
 from career_lab.models.v3.bundle import json_bytes, save_bundle, sha
 from career_lab.models.v3.core import LABELS
 from career_lab.models.v3.encoder import AttentionEncoder
+from career_lab.models.v3.fusion_bundle import save_fusion_bundle
 from career_lab.models.v3.linear import LinearCandidate
 from career_lab.models.v3.projection import relation_input, sentence_input
-from career_lab.models.v3.registry import register_bundle
+from career_lab.models.v3.registry import describe_registration, register_bundle
 from career_lab.models.v3.units import split_sentences, support_units
 from scripts.regression.published import write_catalog
 from tests.regression.conftest import PublishedSession
@@ -124,7 +126,7 @@ def test_unit_01_spans_are_offsets_in_the_original_text() -> None:
 # HTTP helpers ------------------------------------------------------------------------
 
 
-def marker_bundle(root: Path, *, fixture: bool = True) -> tuple[Path, FileRef]:
+def marker_bundle(root: Path, *, fixture: bool = True, scale: float = 1.0) -> tuple[Path, FileRef]:
     config = {
         "preprocessing_revision": "historical-time-v1",
         "kind": "linear",
@@ -137,7 +139,7 @@ def marker_bundle(root: Path, *, fixture: bool = True) -> tuple[Path, FileRef]:
         "training_report": {"scope": "synthetic_fixed_weights", "fit_performed": False},
     }
     arrays = {
-        "coef": np.array([[4.0, 0.0], [0.0, 4.0], [0.0, 0.0]]),
+        "coef": scale * np.array([[4.0, 0.0], [0.0, 4.0], [0.0, 0.0]]),
         "intercept": np.array([0.0, 0.0, 1.0]),
         "evidence_coef": np.array([3.0, 3.0]),
         "evidence_intercept": np.array([-1.0]),
@@ -818,3 +820,42 @@ def test_cache_02_changed_registered_files_are_verified_again_and_reported(
         _, restored = review(session, save_work(session, content, "w3"), "restored")
         assert [u["label"] for u in restored["units"]] == [u["label"] for u in cached["units"]]
         assert restored["status"] == cached["status"] == "synthetic_mechanism_only"
+
+
+def fusion_bundle(root: Path, *, fixture: bool = True) -> tuple[Path, FileRef]:
+    """Two constructed marker linear components fused at alpha 0.5 (W01 NumPy fusion)."""
+    left_root, left_ref = marker_bundle(root / "left", fixture=fixture)
+    right_root, right_ref = marker_bundle(root / "right", fixture=fixture, scale=0.5)
+    ref = save_fusion_bundle(
+        root / "bundle",
+        left_root=left_root,
+        left_ref=left_ref,
+        right_root=right_root,
+        right_ref=right_ref,
+        alpha=0.5,
+        threshold=0.5,
+    )
+    return root / "bundle", ref
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_comp_01_fusion_advice_carries_the_registered_fusion_identity(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    with registered_service(tmp_path, monkeypatch, language, bundle=fusion_bundle) as (
+        session,
+        registration,
+    ):
+        report, advice = review(session, save_work(session, THREE_PARAGRAPHS[language]))
+    described = describe_registration(tmp_path / "registry", registration).identity()
+    assert advice["registration"] == report["provenance"]["registered_model"]
+    assert plain(advice["registration"]) == plain(
+        RegisteredModelIdentity.model_validate(described).model_dump(mode="json")
+    )
+    assert [unit["label"] for unit in advice["units"]] == THREE_PARAGRAPH_LABELS
+    assert advice["label"] == "CONTRADICTED"
+    recorded = [
+        json.loads(path.read_text())["registration"]["id"]
+        for path in (tmp_path / "journal").glob("*/outcome.json")
+    ]
+    assert recorded == [advice["registration"]["id"]] * 6
