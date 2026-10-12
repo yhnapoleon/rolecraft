@@ -16,11 +16,10 @@ import pytest
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.linear_model import LogisticRegression, SGDClassifier
 
-from career_lab.contracts.v2.core import digest
+from career_lab.contracts.v2.core import FileRef, digest
 from career_lab.models.v3 import registry_cli
 from career_lab.models.v3.core import INPUT
 from career_lab.models.v3.linear import pair_text, text
-from career_lab.contracts.v2.core import FileRef
 from tests.support.linear_return import (
     DELETE,
     LABELS,
