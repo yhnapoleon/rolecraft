@@ -50,6 +50,8 @@ REVISION_FIELDS = (
     "variant",
     "weights_stage",
 )
+# Return-directory files outside encoder/ (encoder/ has its own list in verify_encoder_files).
+ROOT_SUFFIXES = frozenset({".json", ".npz", ".jsonl", ".md", ".txt"})
 # Tokenizers without a real limit report a huge sentinel instead of a length.
 _UNBOUNDED_TOKENIZER = 10**9
 
@@ -279,6 +281,8 @@ def checkpoint_settings(config: dict[str, Any]) -> EncoderSettings:
     elif schema == 3:
         if config.get("variant") not in VARIANTS or config.get("pooling") != "mean":
             raise ProtocolError("encoder_architecture_unsupported")
+        if config["variant"] != "pair_aggregate" and "pair_label_order" in config:
+            raise ProtocolError("encoder_architecture_unsupported")
         if config["variant"] == "pair_aggregate" and config.get("pair_label_order") != list(
             PAIR_LABELS
         ):
@@ -378,7 +382,7 @@ def check_heads(raw: bytes, settings: EncoderSettings, hidden: int) -> None:
         raise ProtocolError("checkpoint_heads_invalid") from error
     expected = head_shapes(settings.variant, hidden)
     if set(arrays) != set(expected) or any(
-        arrays[name].shape != shape or arrays[name].dtype.kind != "f"
+        arrays[name].shape != shape or arrays[name].dtype != np.float32
         for name, shape in expected.items()
     ):
         raise ProtocolError("encoder_architecture_unsupported")
@@ -397,7 +401,20 @@ def inspect_encoder(root: Path, manifest_ref: FileRef, *, scope: str) -> Encoder
     files = file_map(manifest.get("checkpoint_files"))
     if manifest_ref.path in files:
         raise ProtocolError("checkpoint_manifest_self_reference")
+    present = {
+        path.relative_to(root).as_posix()
+        for path in root.rglob("*")
+        if path.is_file() and path.relative_to(root).as_posix() != manifest_ref.path
+    }
+    if present != set(files):
+        raise ProtocolError("checkpoint_member_set_mismatch")
+    if any(
+        not name.startswith("encoder/") and Path(name).suffix not in ROOT_SUFFIXES for name in files
+    ):
+        raise ProtocolError("checkpoint_file_type_not_allowed")
     config = read_json(root, "checkpoint.json", files)
+    if config.get("task_type") != "relation":
+        raise ProtocolError("model_return_task_or_labels_invalid")
     members = file_map(config.get("files"))
     if "heads.npz" not in members or "encoder/local-files.json" not in members:
         raise ProtocolError("checkpoint_files_incomplete")
@@ -415,10 +432,7 @@ def inspect_encoder(root: Path, manifest_ref: FileRef, *, scope: str) -> Encoder
     ):
         raise ProtocolError("local_checkpoint_revision_or_stage_invalid")
     validate_training_identity(config, settings, stage)
-    if (
-        config.get("task_type") != "relation"
-        or config.get("model_revision") != manifest["model_revision"]
-    ):
+    if config.get("model_revision") != manifest["model_revision"]:
         raise ProtocolError("checkpoint_model_identity_mismatch")
     if not any(
         "tokenizer" in name or name in {"vocab.txt", "sentencepiece.bpe.model"}

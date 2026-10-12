@@ -773,6 +773,9 @@ def wider(shape_of: str) -> dict[str, np.ndarray]:
         {"encoder_config": {"model_type": "bert", "hidden_size": HIDDEN, "auto_map": {"x": "y"}}},
         {"encoder_config": {"model_type": "bert"}},
         {"legacy": True, "variant": "pair_aggregate", "heads": static_heads("pair_aggregate")},
+        {"variant": "pair", "pair_label_order": ["SUPPORTS", "CONTRADICTS", "UNRELATED"]},
+        {"variant": "pack", "pair_label_order": ["SUPPORTS", "CONTRADICTS", "UNRELATED"]},
+        {"heads": {name: array.astype(np.float16) for name, array in static_heads("pair").items()}},
     ],
     ids=[
         "unknown-variant",
@@ -787,6 +790,9 @@ def wider(shape_of: str) -> dict[str, np.ndarray]:
         "remote-code",
         "no-hidden-size",
         "legacy-aggregate",
+        "pair-label-order-on-pair",
+        "pair-label-order-on-pack",
+        "float16-heads",
     ],
 )
 def test_enc_06_unsupported_architectures_are_refused_at_registration(
@@ -839,6 +845,7 @@ def test_enc_06_each_supported_variant_registers_with_its_settings(
         ({"max_tokens": 3}, "checkpoint_inference_settings_invalid"),
         ({"max_tokens": 257}, "tokenizer_capacity_exceeded"),
         ({"checkpoint_schema_version": 4}, "checkpoint_schema_version_unsupported"),
+        ({"task_type": "criterion"}, "model_return_task_or_labels_invalid"),
         ({"legacy": True, "evidence_threshold": 0.3}, "checkpoint_schema_version_required"),
         (
             {
@@ -1093,3 +1100,43 @@ def test_seam_03_untrained_declarations_never_pass_the_shared_check(
             scope="external_candidate",
         )
     assert not list((tmp_path / "registry").glob("encoder-*"))
+
+
+def relisted(root: Path, extra: dict[str, bytes]) -> FileRef:
+    """Add files to a static return and list them in its outer manifest."""
+    manifest = json.loads((root / "checkpoint-manifest.json").read_bytes())
+    for name, raw in extra.items():
+        (root / name).write_bytes(raw)
+        manifest["checkpoint_files"][name] = sha(raw)
+    return write_manifest(root, manifest)
+
+
+def test_enc_06_every_returned_file_is_listed_and_of_an_allowed_type(tmp_path: Path) -> None:
+    registry = tmp_path / "registry"
+    listed = tmp_path / "listed"
+    encoder_return(listed)
+    ref = relisted(
+        listed,
+        {"predictions.dev.jsonl": b'{"record_id": "r"}\n', "training-notes.md": b"notes\n"},
+    )
+    entry = json.loads(
+        (
+            registry / register_bundle(registry, listed, ref, scope="synthetic_fixture").path
+        ).read_bytes()
+    )
+    assert {"predictions.dev.jsonl", "training-notes.md"} <= set(entry["files"])
+    unlisted = tmp_path / "unlisted"
+    ref = encoder_return(unlisted)
+    (unlisted / "notes.txt").write_bytes(b"not in checkpoint_files")
+    with pytest.raises(ProtocolError) as error:
+        register_bundle(registry, unlisted, ref, scope="synthetic_fixture")
+    assert error.value.code == "checkpoint_member_set_mismatch"
+    for name in ("predict.py", "heads.pt", "weights.bin"):
+        code_dir = tmp_path / name.replace(".", "-")
+        encoder_return(code_dir)
+        with pytest.raises(ProtocolError) as error:
+            register_bundle(
+                registry, code_dir, relisted(code_dir, {name: b"x"}), scope="synthetic_fixture"
+            )
+        assert error.value.code == "checkpoint_file_type_not_allowed"
+    assert len(list(registry.glob("encoder-*/registration.json"))) == 1
