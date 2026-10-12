@@ -21,7 +21,6 @@ from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_fi
 from .bundle import sha
 from .core import LABELS
 from .ensemble import FusionCandidate
-from .linear_return import LABEL_TIERS
 from .registration import RegistrationProtocol, RegistrationSummary, publish_registration
 
 PROTOCOL = "advisory-fusion-registration-v1"
@@ -91,41 +90,16 @@ def model_revision(left: str, right: str, alpha: float, threshold: float) -> str
     )
 
 
-def _dataset(root: Path, entry: dict[str, Any], summary: RegistrationSummary) -> dict[str, Any]:
-    if summary.dataset is not None:
-        return dict(summary.dataset)
-    # Encoder registrations made before registrations published their data identity
-    # (advisory-encoder-registration-v1): read the registered, hash-checked return manifest.
-    try:
-        bundle = FileRef.model_validate(entry["bundle"])
-        manifest = json.loads(read_file(root / entry["id"] / "artifact", bundle))
-        tiers = manifest.get("label_tiers", [])
-        if (
-            not isinstance(tiers, list)
-            or any(tier not in LABEL_TIERS for tier in tiers)
-            or len(set(tiers)) != len(tiers)
-        ):
-            raise TypeError("label tiers")
-        return {
-            "dataset_id": manifest["dataset_id"],
-            "dataset_manifest_sha256": manifest["dataset_manifest_sha256"],
-            "label_tiers": list(tiers),
-        }
-    except (KeyError, TypeError, ValueError) as error:
-        if isinstance(error, ProtocolError) and error.code.startswith("file_"):
-            raise
-        raise ProtocolError("fusion_component_dataset_unknown") from error
-
-
 def _component(root: Path, role: str, ref: FileRef, components: ComponentRegistry) -> _Component:
-    entry = json.loads(read_file(root, ref))
+    """A verified component; its registration publishes its kind and data identity."""
     summary = components.describe(root, ref)
-    kind = summary.kind or (entry.get("kind") if isinstance(entry, dict) else None)
-    if kind not in COMPONENT_KINDS:
+    if summary.kind not in COMPONENT_KINDS:
         raise ProtocolError("fusion_component_kind_unsupported")
     if summary.task_type != "relation" or summary.labels != LABELS["relation"]:
         raise ProtocolError("fusion_component_task_mismatch")
-    return _Component(role, ref, summary, kind, _dataset(root, entry, summary))
+    if summary.dataset is None:
+        raise ProtocolError("fusion_component_dataset_unknown")
+    return _Component(role, ref, summary, summary.kind, dict(summary.dataset))
 
 
 def _components(

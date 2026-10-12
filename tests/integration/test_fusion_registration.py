@@ -157,8 +157,16 @@ def test_fus_01_linear_and_encoder_returns_form_a_heterogeneous_fusion(
     encoder_ref = encoder_return(registry.root.parent / "encoder")
     right = registry.register(registry.root.parent / "encoder", encoder_ref)
     left_identity, right_identity = described(registry, left), described(registry, right)
-    right_kind = dict(right_identity, kind="huggingface_encoder", dataset=left_identity["dataset"])
-    code, out = registry.fuse(left, right, selection_record(left_identity, right_kind, alpha=0.25))
+    # The encoder registration publishes its own kind and data identity (146, protocol v2).
+    assert right_identity["kind"] == "huggingface_encoder"
+    assert right_identity["dataset"] == {
+        "dataset_id": "rolecraft-fixture-20261007-v2",
+        "dataset_manifest_sha256": "f" * 64,
+        "label_tiers": [],
+    }
+    code, out = registry.fuse(
+        left, right, selection_record(left_identity, right_identity, alpha=0.25)
+    )
     assert code == 0, out
     fusion = out["registration"]
     assert fusion["path"].startswith("fusion-")
