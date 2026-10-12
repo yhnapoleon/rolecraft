@@ -204,14 +204,14 @@ class AdviceSource:
         plan = support_units(package)
         results: list[UnitResult] = []
         recorded: RegisteredModelIdentity | None = None
-        blocked: str | None = None
+        load_error: str | None = None
         for unit in plan.units:
-            result, identity, blocked = self._judge(
+            result, identity, load_error = self._judge(
                 unit,
                 sentence_input(item, unit.subject, unit.text),
                 unit_request_id(work_request, unit),
                 language,
-                blocked,
+                load_error,
             )
             results.append(result)
             recorded = recorded or identity
@@ -252,25 +252,30 @@ class AdviceSource:
         item: RelationInput,
         request_id: str,
         language: str,
-        blocked: str | None,
+        load_error: str | None,
     ) -> tuple[UnitResult, RegisteredModelIdentity | None, str | None]:
-        """One sentence's result, the identity its journal records, and the blocking error.
+        """One sentence's result, the identity its journal records, and any load error.
 
-        Once loading has failed, later sentences only read back what was journaled.
+        Once loading has failed (``load_error``), later sentences only read back what was
+        journaled and otherwise report that same error.
         """
         assert self.adapter is not None
         try:
-            if blocked is None:
+            if load_error is None:
                 outcome = predict_or_recover(
                     self.adapter, item, request_id, language, enforce_input_limit=True
                 )
             else:
                 outcome = self.adapter.recover(request_id)
         except Exception as error:
-            code = blocked or safe_model_error(error)
+            code = load_error or safe_model_error(error)
             return UnitResult(unit, "failed", reason_code=code), None, code
         if outcome["status"] == "unconfirmed":
-            return UnitResult(unit, "failed", reason_code="model_result_unconfirmed"), None, blocked
+            return (
+                UnitResult(unit, "failed", reason_code="model_result_unconfirmed"),
+                None,
+                load_error,
+            )
         invalid = UnitResult(unit, "failed", reason_code="model_prediction_invalid")
         try:
             public = to_public_prediction(outcome, item, mechanism=True)
@@ -284,7 +289,7 @@ class AdviceSource:
             ):
                 raise ProtocolError("advisory_model_revision_mismatch")
         except (ValueError, KeyError, TypeError):
-            return invalid, None, blocked
+            return invalid, None, load_error
         if outcome["status"] == "failed":
             code = (
                 "model_timeout"
@@ -293,17 +298,17 @@ class AdviceSource:
                 if outcome.get("failure_kind") == "infrastructure"
                 else "model_prediction_invalid"
             )
-            return UnitResult(unit, "failed", reason_code=code), recorded, blocked
+            return UnitResult(unit, "failed", reason_code=code), recorded, load_error
         prediction = outcome.get("prediction")
         if not isinstance(prediction, dict):
-            return invalid, recorded, blocked
+            return invalid, recorded, load_error
         if prediction.get("status") != "ok":
             reason = prediction.get("reason_code") or "evidence_unavailable"
-            return UnitResult(unit, "abstained", reason_code=reason), recorded, blocked
+            return UnitResult(unit, "abstained", reason_code=reason), recorded, load_error
         if public.status != "success" or public.probabilities is None:
-            return invalid, recorded, blocked
+            return invalid, recorded, load_error
         label = public.labels[max(range(len(public.labels)), key=lambda i: public.probabilities[i])]
-        return UnitResult(unit, "completed", label, public.evidence_ids), recorded, blocked
+        return UnitResult(unit, "completed", label, public.evidence_ids), recorded, load_error
 
 
 def unit_request_id(work_request_id: str, unit: SupportUnit) -> str:

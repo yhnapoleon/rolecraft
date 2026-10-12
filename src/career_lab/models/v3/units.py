@@ -1,8 +1,8 @@
 """R2.support sentence units (policy ``r2-support-units-v1``): rule splitting, not claim extraction.
 
 The learner's work is cut by fixed punctuation and layout rules into sentences that a
-relation model judges one at a time. Product inference and the authorized relation-units
-export use these same functions, so a sentence has one ``unit_hash`` everywhere.
+relation model judges one at a time. Product inference uses these functions; the authorized
+relation-units export is to reuse them unchanged, so a sentence has one ``unit_hash``.
 """
 
 import re
