@@ -215,6 +215,9 @@ def verify_return(
         "protocol": "rolecraft-label-evidence-v2",
         "status": "rejected" if rejected else "partial",
         "task_type": "relation",
+        "layout": dataset.layout,
+        "split": dataset.split,
+        "opened": None,
         # The product passes the given candidate evidence; retrieval is not part of this review.
         "evaluation_setting": "given_evidence_only",
         "retrieval_setting": "not_evaluated",
@@ -230,7 +233,7 @@ def verify_return(
             "status": "mechanism_only" if mechanism else "not_verified",
             "performed_by_verifier": False,
         },
-        "scope": "synthetic_fixture" if dataset.fixture else "external_candidate",
+        "scope": "synthetic_fixture" if dataset.synthetic or mechanism else "external_candidate",
         "quality_validated": False,
         "mode": "advisory",
         "affects_score": False,

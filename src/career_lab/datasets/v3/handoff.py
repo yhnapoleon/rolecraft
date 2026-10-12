@@ -23,7 +23,13 @@ from .handoff_annotations import (
     verify_handoff_annotation,
 )
 from .handoff_model import validate_model_return
-from .handoff_package import HandoffPackage, check_card, load_package
+from .handoff_package import (
+    HandoffPackage,
+    check_card,
+    load_package,
+    split_file_names,
+    split_owner,
+)
 from .handoff_records import LABEL_ORDERS, InputRow, LabelRow, Metadata, RowIndex
 from .origin import verify_source_bodies
 from .quality import QualityError, audit_records
@@ -84,6 +90,10 @@ def source_reasons(
         or len({r.path for r in packaged}) != len(packaged)
     ):
         raise ProtocolError("handoff_source_mapping_invalid")
+    if package.manifest.sealed_layout and any(
+        split_owner(mapped.path) != metadata.split for mapped in packaged
+    ):
+        raise ProtocolError("handoff_source_outside_split")
     bodies = []
     for original, mapped in zip(originals, packaged, strict=True):
         body = package.read(mapped.path)
@@ -140,10 +150,12 @@ def review_record(
             versions = [label.annotation_version, package.manifest.annotation_version]
             if any(version and version != annotation.annotation_version for version in versions):
                 raise ProtocolError("annotation_version_mismatch")
+            # v3: a record's call records live with its own split, never another one's.
+            audit = f"audit/{metadata.split}/" if package.manifest.sealed_layout else "audit/"
             artifacts = {
-                name.removeprefix("audit/"): data
+                name.removeprefix(audit): data
                 for name, data in package.files.items()
-                if name.startswith("audit/labels/passes/")
+                if name.startswith(audit + "labels/passes/")
             }
             verified = verify_handoff_annotation(record, annotation, artifacts, label.label_tier)
         except (ValueError, KeyError, TypeError) as error:
@@ -191,6 +203,120 @@ def package_rows(package: HandoffPackage) -> tuple[RowIndex, RowIndex, RowIndex,
         raise ProtocolError("handoff_annotation_set_mismatch")
     verify_counts(package, inputs, labels, metadata)
     return inputs, labels, metadata, annotations
+
+
+def sealed_package_rows(package: HandoffPackage) -> tuple[RowIndex, RowIndex, RowIndex, RowIndex]:
+    """v3: each reviewable split's own four files, aligned by record_id and split.
+
+    A sealed test split is not reviewed here; see ``sealed_test_summary``.
+    """
+    inputs, labels, metadata, annotations = {}, {}, {}, {}
+    for split in package.manifest.splits:
+        if split == "test" and package.manifest.test_sealed:
+            continue
+        names = split_file_names(split)
+        incoming = index_rows(package.rows(names["inputs"]))
+        targets = index_rows(package.rows(names["labels"]))
+        described = index_rows(package.rows(names["metadata"]))
+        declared = index_rows(package.rows(names["annotations"]))
+        if (
+            incoming.keys() != targets.keys()
+            or incoming.keys() != described.keys()
+            or declared.keys() - incoming.keys()
+            or inputs.keys() & incoming.keys()
+        ):
+            raise ProtocolError("handoff_record_set_mismatch")
+        if any(row.get("split") != split for row in described.values()):
+            raise ProtocolError("handoff_split_mismatch")
+        inputs.update(incoming)
+        labels.update(targets)
+        metadata.update(described)
+        annotations.update(declared)
+    if not inputs:
+        raise ProtocolError("handoff_record_set_mismatch")
+    verify_split_counts(package, inputs, labels, metadata)
+    return inputs, labels, metadata, annotations
+
+
+def verify_split_counts(
+    package: HandoffPackage, inputs: RowIndex, labels: RowIndex, metadata: RowIndex
+) -> None:
+    """Per-split counts (v3 requires label tiers) and connected components in one split."""
+    component_splits: dict[str, str] = {}
+    for meta in metadata.values():
+        previous = component_splits.setdefault(meta["connected_component_id"], meta["split"])
+        if previous != meta["split"]:
+            raise ProtocolError("handoff_component_cross_split")
+    for split, count in package.manifest.splits.items():
+        if split == "test" and package.manifest.test_sealed:
+            continue
+        if count.label_tiers is None:
+            raise ProtocolError("handoff_label_tiers_required")
+        ids = [rid for rid in inputs if metadata[rid]["split"] == split]
+        actual = {
+            "records": len(ids),
+            "labels": dict(Counter(labels[rid]["label"] for rid in ids)),
+            "language": dict(Counter(metadata[rid]["language"] for rid in ids)),
+            "evidence_evaluable": sum(labels[rid].get("evidence_evaluable") is True for rid in ids),
+            "label_only": sum(labels[rid].get("evidence_evaluable") is False for rid in ids),
+            "label_tiers": dict(Counter(labels[rid]["label_tier"] for rid in ids)),
+        }
+        expected = count.model_dump(exclude_none=True, exclude={"files"})
+        for key in ("labels", "language", "label_tiers"):
+            expected[key] = {k: v for k, v in expected[key].items() if v != 0}
+        if actual != expected:
+            raise ProtocolError("handoff_count_mismatch")
+
+
+def annotation_trace(
+    package: HandoffPackage,
+    reviews: list[RecordReview],
+    metadata: RowIndex,
+    annotations: RowIndex,
+) -> dict[str, list[dict[str, JsonValue]]]:
+    """Each record's annotation calls, traceable to its input hash, by language (v3 only)."""
+    trace: dict[str, list[dict[str, JsonValue]]] = {"zh": [], "en": []}
+    for review in sorted(reviews, key=lambda item: item.record_id):
+        meta = metadata[review.record_id]
+        entry: dict[str, JsonValue] = {
+            "record_id": review.record_id,
+            "input_hash": review.input_hash,
+            "split": meta["split"],
+            "language": meta["language"],
+            "status": review.status,
+            "label_tier": None,
+            "adjudication_ref": None,
+            "passes": [],
+        }
+        try:
+            annotation = AnnotationV2.model_validate(annotations[review.record_id])
+        except (KeyError, ValueError):
+            annotation = None
+        if annotation is not None:
+            entry["label_tier"] = annotation.label_tier
+            if annotation.adjudication_ref is not None:
+                entry["adjudication_ref"] = annotation.adjudication_ref.model_dump(mode="json")
+            for item in annotation.passes:
+                path = f"audit/{meta['split']}/labels/passes/{item.id}.json"
+                entry["passes"].append(
+                    {
+                        "id": item.id,
+                        "status": item.status,
+                        "input_hash": item.input_hash,
+                        "invocation_id": item.invocation_id,
+                        "model_revision": item.model_revision,
+                        "prompt_revision": item.prompt_revision,
+                        "evidence_order": list(item.evidence_order),
+                        "raw_output_sha256": sha(item.raw_output.encode())
+                        if item.raw_output is not None
+                        else None,
+                        "artifact": {"path": path, "sha256": sha(package.files[path])}
+                        if path in package.files
+                        else None,
+                    }
+                )
+        trace.setdefault(meta["language"], []).append(entry)
+    return trace
 
 
 def verify_counts(
@@ -265,7 +391,13 @@ def validate_handoff(
         raise ProtocolError("handoff_output_overlaps_package")
     package = load_package(root)
     card_check = check_card(package)
-    inputs, labels, metadata, annotations = package_rows(package)
+    sealed = package.manifest.sealed_layout
+    if sealed and split == "test" and package.manifest.test_sealed and checkpoint is not None:
+        # Record-level test review only exists behind the approved one-time opening.
+        raise ProtocolError("held_out_test_sealed", status=403)
+    inputs, labels, metadata, annotations = (
+        sealed_package_rows(package) if sealed else package_rows(package)
+    )
     reviews, records = [], []
     for rid, row in inputs.items():
         review, record = review_record(
@@ -300,6 +432,10 @@ def validate_handoff(
         "call_authenticity_verified": False,
         "blockers": ["responsible_party_data_and_model_review_required"],
     }
+    if sealed:
+        report["layout"] = package.manifest.layout
+        report["sealed_test"] = None
+        report["annotation_trace"] = annotation_trace(package, reviews, metadata, annotations)
     if checkpoint is not None:
         if output.resolve().is_relative_to(
             checkpoint.parent.resolve()
