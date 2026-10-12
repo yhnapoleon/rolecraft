@@ -33,6 +33,9 @@ VARIANTS = ("pack", "pair", "pair_aggregate")
 LEGACY_VARIANTS = ("pack", "pair")
 # pair_aggregate judges each (claim, candidate) pair in this fixed order.
 PAIR_LABELS = ("SUPPORTS", "CONTRADICTS", "UNRELATED")
+# pair_aggregate thresholds below one half would let a pair count as support or
+# contradiction while another of its own judgements is likelier.
+MIN_PAIR_THRESHOLD = 0.5
 # The fixture v2 era layout fixed the evidence threshold at 0.5.
 LEGACY_EVIDENCE_THRESHOLD = 0.5
 V3_ONLY_FIELDS = ("pooling", "evidence_threshold", "pair_label_order")
@@ -286,6 +289,7 @@ def checkpoint_settings(config: dict[str, Any]) -> EncoderSettings:
             or not isinstance(threshold, int | float)
             or not math.isfinite(threshold)
             or not 0 < threshold < 1
+            or (config["variant"] == "pair_aggregate" and threshold < MIN_PAIR_THRESHOLD)
         ):
             raise ProtocolError("checkpoint_inference_settings_invalid")
     else:

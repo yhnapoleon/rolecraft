@@ -61,7 +61,7 @@ v3 新增的可选字段：
 | `variant` | `pack`、`pair`、`pair_aggregate`（§5） |
 | `pooling` | `mean`（按 attention mask 求平均） |
 | `max_tokens` | 整数，≥4，且不超过分词器 `model_max_length` 与 `max_position_embeddings`（XLM-R base 为 512） |
-| `evidence_threshold` | 数值，0 < τ < 1 |
+| `evidence_threshold` | 数值，0 < τ < 1；`pair_aggregate` 须 0.5 ≤ τ < 1 |
 | `seed` | 整数，加载前 `torch.manual_seed(seed)` |
 | `pair_label_order` | 只在 `pair_aggregate`：`["SUPPORTS", "CONTRADICTS", "UNRELATED"]` |
 | `model_revision` | §8 公式；必须与外层清单和每行预测一致 |
@@ -104,12 +104,13 @@ body_i = candidate_i.text + "\n" + "observed {ref.observed_at_seq}; valid from {
 
 **pair_aggregate 聚合规则（v1）**，τ＝`evidence_threshold`：
 
+0. τ 必须 ≥ 0.5（更低的阈值登记时拒绝 `checkpoint_inference_settings_invalid`）。记支持强度 σ_i＝s_i（若 s_i > u_i）否则 0：支持不胜过无关的一对不算支持。
 1. 任一 c_i ≥ τ → `CONTRADICTED`，证据＝所有 c_i ≥ τ 的候选，置信 m＝max c_i，逐候选分数取 c_i。
-2. 否则任一 s_i ≥ τ → `SUPPORTED`，证据＝所有 s_i ≥ τ 的候选，m＝max s_i，分数取 s_i。
-3. 否则 → `INSUFFICIENT`，证据为空，m＝1 − max(max s_i, max c_i)，分数取 max(s_i, c_i)。
+2. 否则任一 σ_i ≥ τ（即 s_i ≥ τ 且 s_i > u_i）→ `SUPPORTED`，证据＝所有 σ_i ≥ τ 的候选，m＝max σ_i，分数取 σ_i。
+3. 否则 → `INSUFFICIENT`，证据为空，m＝1 − max(max s_i, max c_i)，分数取 max(σ_i, c_i)。
 4. 关系概率：判定类 (1+m)/2，其余两类各 (1−m)/4（和为 1，判定类严格最大）。
 
-无关永远不会升为支持；矛盾优先于支持。[样例](encoder-pair-aggregate.examples.json)覆盖矛盾优先、支持与无关并存、全部无关、低于阈值、多处矛盾、低阈值和多处支持；产品与参考脚本都逐条按样例测试。负责方的 dev 预测必须用同一规则（参考脚本 `aggregate_pairs`）。
+无关永远不会升为支持：支持须过阈值且胜过无关，阈值不低于 0.5；矛盾优先于支持（矛盾与无关持平时仍记矛盾，宁可提醒）。[样例](encoder-pair-aggregate.examples.json)覆盖矛盾优先、支持与无关并存、全部无关、低于阈值、多处矛盾、支持与无关持平、最可能无关的一对、多处支持、矛盾与无关持平、较高阈值，以及两个被拒的低阈值；产品与参考脚本都逐条按样例测试。负责方的 dev 预测必须用同一规则（参考脚本 `aggregate_pairs`）。
 
 ## 6. `encoder/local-files.json`
 

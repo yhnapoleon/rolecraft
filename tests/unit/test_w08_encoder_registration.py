@@ -721,6 +721,11 @@ def test_enc_07_normal_feedback_names_kind_dataset_and_weights_stage(
 )
 def test_enc_02_pair_aggregate_follows_the_specification_examples(example: dict) -> None:
     threshold = example["evidence_threshold"]
+    if "refused" in example:
+        with pytest.raises(ProtocolError) as error:
+            aggregate_pairs(np.array(example["pair_probabilities"]), threshold)
+        assert error.value.code == example["refused"]
+        return
     probabilities, scores = aggregate_pairs(np.array(example["pair_probabilities"]), threshold)
     assert probabilities == pytest.approx(example["probabilities"], abs=1e-12)
     assert scores == pytest.approx(example["evidence_scores"], abs=1e-12)
@@ -790,18 +795,26 @@ def test_enc_06_unsupported_architectures_are_refused_at_registration(
     assert refused(tmp_path, **change) == "encoder_architecture_unsupported"
 
 
+def test_enc_03_dual_head_variants_keep_thresholds_below_one_half(tmp_path: Path) -> None:
+    """Only pair_aggregate needs 0.5 or more: its support must beat unrelated."""
+    for variant in ("pack", "pair"):
+        root = tmp_path / variant
+        ref = encoder_return(root, variant=variant, evidence_threshold=0.3)
+        register_bundle(tmp_path / "registry", root, ref, scope="synthetic_fixture")
+
+
 @pytest.mark.parametrize("variant", ["pack", "pair", "pair_aggregate"])
 def test_enc_06_each_supported_variant_registers_with_its_settings(
     tmp_path: Path, variant: str
 ) -> None:
     root = tmp_path / "producer"
-    ref = encoder_return(root, variant=variant, evidence_threshold=0.35, max_tokens=200)
+    ref = encoder_return(root, variant=variant, evidence_threshold=0.65, max_tokens=200)
     registry = tmp_path / "registry"
     registration = register_bundle(registry, root, ref, scope="synthetic_fixture")
     entry = json.loads((registry / registration.path).read_bytes())
     assert (entry["variant"], entry["evidence_threshold"], entry["max_tokens"]) == (
         variant,
-        0.35,
+        0.65,
         200,
     )
 
@@ -810,6 +823,14 @@ def test_enc_06_each_supported_variant_registers_with_its_settings(
     ("change", "code"),
     [
         ({"evidence_threshold": 0}, "checkpoint_inference_settings_invalid"),
+        (
+            {"variant": "pair_aggregate", "evidence_threshold": 0.3},
+            "checkpoint_inference_settings_invalid",
+        ),
+        (
+            {"variant": "pair_aggregate", "evidence_threshold": 0.49},
+            "checkpoint_inference_settings_invalid",
+        ),
         ({"evidence_threshold": 1}, "checkpoint_inference_settings_invalid"),
         ({"evidence_threshold": 1.5}, "checkpoint_inference_settings_invalid"),
         ({"evidence_threshold": "0.5"}, "checkpoint_inference_settings_invalid"),
