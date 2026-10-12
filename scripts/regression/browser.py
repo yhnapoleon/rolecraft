@@ -50,7 +50,7 @@ def stop(process: subprocess.Popen[str]) -> None:
 
 @contextmanager
 def services(
-    output: Path, env: dict[str, str], api_port: int, web_port: int, database: str, tag: str = ""
+    output: Path, env: dict[str, str], api_port: int, web_port: int, database: str
 ) -> Iterator[None]:
     """API, worker and vite preview on one database; always stopped on exit."""
     api = f"http://127.0.0.1:{api_port}"
@@ -90,7 +90,7 @@ def services(
     processes = []
     try:
         for name, command, cwd, ready in commands:
-            with (output / (tag + name + ".log")).open("w") as log:
+            with (output / (name + ".log")).open("w") as log:
                 process = subprocess.Popen(command, cwd=cwd, env=env, stdout=log, stderr=log)
             processes.append(process)
             if ready:

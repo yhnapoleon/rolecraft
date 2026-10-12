@@ -58,7 +58,6 @@ const COPY = {
     conclusion: '作品整体：存在矛盾',
     failed: '模型建议失败',
     drift: '模型文件或推理环境已变化，需重新核验注册。',
-    notConnected: '评价模型：未接入',
     judge: '评价模型：openai_compatible · qa-loopback-judge',
     llm: '模型生成 · 回答待核验',
     question: '住宿报销上限是多少？',
@@ -76,7 +75,6 @@ const COPY = {
     conclusion: 'Whole work: contradiction found',
     failed: 'Model advice failed',
     drift: 'Model files or the inference environment changed; verify the registration again.',
-    notConnected: 'Evaluation model: not connected',
     judge: 'Evaluation model: openai_compatible · qa-loopback-judge',
     llm: 'Model-generated · Answer awaiting verification',
     question: 'What is the hotel reimbursement limit?',
@@ -302,6 +300,8 @@ async function mainPath(browser, language) {
   });
   await step(language, 'FLOW-02 reload reads stored feedback without a new model run', async () => {
     const before = journalEntries();
+    // A wrong journal path would read as 0 and make this check pass vacuously.
+    assert.ok(before > 0, `no journaled model request found in ${PHASE.journal}`);
     const counts = await text(browser, '[data-model-advice-counts]');
     await browser.goto(`${BASE}#/review`);
     await browser.ev('location.reload()');

@@ -10,6 +10,25 @@
 - 新 SQLite 库先启动 API，初始化完成后再启动 worker。验收用新数据库与新端口；并行的几条工作线各用自己的端口。
 - 默认 `--provider local` 不调用外部模型、不需要 key。真实 provider 与费用须另获授权。
 
+## 没有负责方产物时怎样演示模型建议
+
+仓库里没有负责方回传，fixture v2 也不在仓库里。要在正常入口看到「理由与证据的支持关系」下的「合成机制演示」，先用 model-flows 的构造器登记一份合成线性回传（关键词构造的权重，从未训练，scope 为 `synthetic_fixture`），把三个环境变量写进一个文件：
+
+```sh
+OUT=runs/local/demo-model   # 新目录，不能已存在
+OUT=$OUT uv run --locked python -c '
+import os, shlex
+from pathlib import Path
+from scripts.regression.model_flows import build
+out = Path(os.environ["OUT"]).resolve()
+phase = build("linear", out)
+for key, value in phase.environment(out / "journal").items():
+    print("export " + key + "=" + shlex.quote(value))
+' > $OUT.env
+```
+
+然后在 API 与 worker 两个终端都先 `. runs/local/demo-model.env`，再按 [README · 启动工作台](../README.md#启动工作台) 起服务；worker 启动时 stderr 打印四个槽。新建练习、写一份含「有据可查」或「豁免」的作品并提交，反馈页就有逐句建议、证据按钮与「合成机制演示」。把 `"linear"` 换成 `"fusion"` 得到线性×线性融合（alpha 0.75）。这只演示接收与显示的机制，标签不是模型判断。
+
 ## 检查与门禁
 
 | 层 | 什么时候 | 命令 |
@@ -18,7 +37,7 @@
 | 定向＋逐 ID | 每次交付 | 改动相关的测试文件或 `::ID`；再用 `pytest --collect-only -q` 收集全部测试 ID，与基点提交收集的结果比较，缺失须为 0 |
 | 持锁完整门禁 | 合并候选 | 见下 |
 
-**check-fast**：依次跑 `python -m scripts.regression.lint`（前端 biome 新增项、相对基点改动的 Python 文件做 ruff check 与 format check）与 `pytest tests/unit tests/contracts`。去掉调用方的 `CAREER_LAB_*` 与 `PYTHONPATH`，pytest basetemp 用私有临时目录，不与同一 checkout 里的其他运行共用；不需要浏览器与锁。每步打印结果与耗时，任何一步失败退出码为 1。2026-10-12 本机（Apple Silicon，负载约 3.5）实测：lint 23 秒、测试 58 秒（1554 项通过），合计 82 秒；负载约 10 时合计约 97 秒。
+**check-fast**：依次跑 `python -m scripts.regression.lint`（前端 biome 新增项、相对基点改动的 Python 文件做 ruff check 与 format check）与 `pytest tests/unit tests/contracts`。去掉调用方的 `CAREER_LAB_*` 与 `PYTHONPATH`，pytest basetemp 用私有临时目录，不与同一 checkout 里的其他运行共用；不需要浏览器与锁。每步打印结果与耗时，任何一步失败退出码为 1。2026-10-12 本机（Apple Silicon，负载约 3.5）实测：lint 23 秒、测试 58 秒（1554 项通过），合计约 1.5–2 分钟（82 秒；负载约 10 时约 97 秒）。完整门禁里的 `test_rule_identity` 依赖 PATH 上的 `ruff`，所以完整门禁用 `uv run --locked …` 或先激活 `.venv`。
 
 **完整门禁**（输出目录必须不存在；同一台机器同一时间只跑一套）：
 
@@ -30,7 +49,7 @@ CHROME_BIN=<chrome-headless-shell> uv run --locked python -m scripts.regression.
 
 - `run` 依次跑 lint、后端全部测试（junit）、前端 Vitest、72 项状态回归、构建、逐 ID 比较（含发布字节保护），`--browser` 再跑 MCP 双语与中英 published-flows（固定用缺省端口 19660／19662）。单独调用 `scripts.regression.browser` 时可用 `--web-port`／`--api-port` 换端口。
 - model-flows 默认三段：`linear`、`fusion`、`slots`（回环 JUDGE 与 ASSISTANT 槽）。可选段需 encoder 环境：`UV_PROJECT_ENVIRONMENT=<encoder 环境> uv run --locked --extra encoder python -m scripts.regression.browser --suite model-flows --phases encoder hetero --output <新目录>`；`xlmr` 段另需 `ROLECRAFT_XLMR_DIR` 指向本机下载的 XLM-R base（权重放仓库与云盘之外，登记只能是合成机制）。
-- 可选 encoder 检查：`HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 <encoder 环境>/bin/python -m pytest -q tests/optional_encoder/check_encoder_v3.py tests/optional_encoder/check_local_encoder.py tests/optional_encoder/check_fusion_registration.py`；XLM-R 冒烟为 `<encoder 环境>/bin/python -m scripts.smoke.xlmr_base --model-dir <目录> --revision <40 位> --out <新目录>`。这些只证明加载与机制，不是质量证据。
+- 可选 encoder 检查：`HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 <encoder 环境>/bin/python -m pytest -q tests/optional_encoder/check_encoder_v3.py tests/optional_encoder/check_local_encoder.py tests/optional_encoder/check_fusion_registration.py tests/optional_encoder/check_xlmr_smoke.py`（最后一个需要 `ROLECRAFT_XLMR_DIR` 指向下载的 XLM-R 目录，共 23 项）；XLM-R 冒烟为 `<encoder 环境>/bin/python -m scripts.smoke.xlmr_base --model-dir <目录> --revision <40 位> --out <新目录>`。这些只证明加载与机制，不是质量证据。
 - **锁**：门禁对 CPU 负载与端口敏感。本机约定先对机器上登记的同一个锁文件取 `fcntl.flock` 独占锁再跑（macOS 没有 `flock` 命令），例如 `python3 -c 'import fcntl, subprocess, sys; f = open(sys.argv[1], "a"); fcntl.flock(f, fcntl.LOCK_EX); sys.exit(subprocess.call(sys.argv[2:]))' "$GATE_LOCK" sh -c '<上面三行>'`。排队时不另起第二套。
 - **基线**：`tests/regression/test-baseline.json` 是逐 ID 基线，只追加、不删改；新测试 ID 在全部合入后由收口线一次追加，并在提交说明里列来源与数量。平台差异只写进 `test-baseline-overrides.json`，每条带原因。
 - CI 在 PR 与 push main 时跑核心门禁（不含浏览器），不拦合并；合并证据以本机完整门禁为准，合入树须与门禁跑过的树相同。
@@ -90,6 +109,8 @@ $PY -m scripts.regression.release_identity --check            # 0 problems
 ## 模型回传 v3 包
 
 `docs/data/return-v3/` 是发给技术负责方的补充包，入口 [README](data/return-v3/README.md)：线性回传、编码器回传、融合选择记录、按 split 封存的数据包、v3 预测行、一次性 test 打开，以及参考导出脚本、金标向量与只用标准库的自检脚本。冻结交接包 fixture v2 一字节不变。登记、复核与导出命令见 [W07](data/expansion-v3-w07.md)、[W08](data/expansion-v3-w08.md)。每次打开封存 test 须项目负责人在对话里确认一次，CLI 不接受绕过参数。
+
+发送步骤：按 `SHA256SUMS` 列出的文件逐个复制到发送目录（不要整目录复制：本仓库测试或参考脚本运行可能在 `reference/__pycache__` 留缓存，负责方自检会报清单外文件），复制后在发送目录跑一次 `python3 -I check_package.py .`，再另附 `SHA256SUMS` 自身的 sha256。融合选点规则已内置「证据必选」：融合预测在证据可评的记录上出现无证据的支持或矛盾成功行的网格点没有资格，复算与回传格式检查用同一判定（`models/v3/core.py::evidence_missing`）。
 
 ## 后续清单（本波不做，触发后再派）
 

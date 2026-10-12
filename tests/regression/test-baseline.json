@@ -2625,7 +2625,10 @@
     "tests.unit.test_return_v3_package::test_pkg_06_unsafe_or_malformed_list_entries_fail[XYZ  README.md]": "passed",
     "tests.unit.test_return_v3_package::test_pkg_07_a_symlink_anywhere_fails": "passed",
     "tests.unit.test_return_v3_package::test_pkg_08_the_checker_imports_only_the_standard_library": "passed",
-    "tests.unit.test_return_v3_package::test_pkg_09_readme_links_point_to_listed_files": "passed"
+    "tests.unit.test_return_v3_package::test_pkg_09_readme_links_point_to_listed_files": "passed",
+    "tests.integration.test_model_return_verification::test_fsel_01_grid_eligibility_and_the_return_format_check_agree": "passed",
+    "tests.integration.test_model_return_verification::test_fsel_01_points_whose_rows_lack_required_evidence_are_not_eligible": "passed",
+    "tests.integration.test_relation_units_export::test_exp_07_relation_units_needs_a_live_export": "passed"
   },
   "frontend": {
     "src/gateway-transport.test.ts::native workbench Gateway transport keeps PATCH command identity and the full public transaction, without adding defaults or retrying": "passed",
