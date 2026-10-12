@@ -87,6 +87,9 @@ class ExportUnit:
     language: str = "zh"
     label_tier: str = "G2"
     evaluation_time_known: bool = False
+    # Evaluator-side facts about where the record came from (never a model feature);
+    # copied as-is into the record's source-map entry.
+    source_note: dict[str, str | int] | None = None
 
     def __post_init__(self):
         if type(self.evaluation_time_known) is not bool:
@@ -434,6 +437,7 @@ def export_snapshot(snapshot: FrozenSnapshot, units, *, annotation_version="w07-
             records.append(record)
             annotations.append(pending)
             source_maps[rid] = {
+                **(unit.source_note or {}),
                 "objects": refs,
                 "candidate_ids": candidate_map,
                 "observation_bindings": observation_bindings,

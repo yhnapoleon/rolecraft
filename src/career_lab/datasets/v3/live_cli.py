@@ -104,5 +104,6 @@ def export_live(args: argparse.Namespace) -> dict[str, object]:
             args.key_file.read_bytes(),
             identity,
             point,
+            relation_units=args.relation_units,
         )
         return save_capture(args.output, capture)

@@ -35,6 +35,11 @@ def register_commands(commands):
     source.add_argument("--live", action="store_true")
     export.add_argument("--units", type=Path)
     export.add_argument("--authorization", type=Path)
+    export.add_argument(
+        "--relation-units",
+        action="store_true",
+        help="Also export one relation record per sentence of submitted work (r2-support-units-v1)",
+    )
     connection_arguments(export)
     register_authorization(commands).set_defaults(w07_handler=dispatch)
     export.add_argument("--output", type=Path, required=True)
