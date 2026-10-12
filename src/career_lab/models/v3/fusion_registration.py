@@ -21,6 +21,7 @@ from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_fi
 from .bundle import sha
 from .core import LABELS
 from .ensemble import FusionCandidate
+from .linear_return import LABEL_TIERS
 from .registration import RegistrationProtocol, RegistrationSummary, publish_registration
 
 PROTOCOL = "advisory-fusion-registration-v1"
@@ -98,10 +99,13 @@ def _dataset(root: Path, entry: dict[str, Any], summary: RegistrationSummary) ->
     try:
         bundle = FileRef.model_validate(entry["bundle"])
         manifest = json.loads(read_file(root / entry["id"] / "artifact", bundle))
+        tiers = manifest.get("label_tiers", [])
+        if not isinstance(tiers, list) or any(tier not in LABEL_TIERS for tier in tiers):
+            raise TypeError("label tiers")
         return {
             "dataset_id": manifest["dataset_id"],
             "dataset_manifest_sha256": manifest["dataset_manifest_sha256"],
-            "label_tiers": list(manifest.get("label_tiers", [])),
+            "label_tiers": list(tiers),
         }
     except (KeyError, TypeError, ValueError) as error:
         if isinstance(error, ProtocolError) and error.code.startswith("file_"):
