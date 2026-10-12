@@ -1,0 +1,2369 @@
+{
+  "_source": {
+    "advice": "148 normal serve+worker HTTP feedback, proof-f4115f4 (session id rewritten to 'fixture')",
+    "reports": "the same feedback records without model_advice (rules, facts, range, provenance)",
+    "linear": "145 proof linear-results.json registration (public identity)",
+    "fusion": "145 proof fusion-results.json registration (public identity)",
+    "encoder": "146 screens/pair-aggregate registration.json (public identity fields)"
+  },
+  "advice": {
+    "zh": {
+      "affects_score": false,
+      "aggregation": {
+        "counts": {
+          "abstained": 0,
+          "contradicted": 1,
+          "failed": 0,
+          "insufficient": 4,
+          "over_budget": 0,
+          "schema_version": 2,
+          "skipped_short": 0,
+          "supported": 1
+        },
+        "policy": "r2-support-units-v1",
+        "schema_version": 2
+      },
+      "citations": [
+        {
+          "config_version": 0,
+          "kind": "config",
+          "object_id": "pilot",
+          "observed_at_seq": 0,
+          "quote": null,
+          "schema_version": 2,
+          "session_id": "fixture",
+          "span_end": null,
+          "span_start": null,
+          "valid_from_seq": 0,
+          "valid_until_seq": null,
+          "version": 1
+        },
+        {
+          "config_version": null,
+          "kind": "material",
+          "object_id": "policy",
+          "observed_at_seq": 0,
+          "quote": null,
+          "schema_version": 2,
+          "session_id": "fixture",
+          "span_end": null,
+          "span_start": null,
+          "valid_from_seq": 0,
+          "valid_until_seq": null,
+          "version": 1
+        },
+        {
+          "config_version": null,
+          "kind": "material",
+          "object_id": "brief",
+          "observed_at_seq": 0,
+          "quote": null,
+          "schema_version": 2,
+          "session_id": "fixture",
+          "span_end": null,
+          "span_start": null,
+          "valid_from_seq": 0,
+          "valid_until_seq": null,
+          "version": 1
+        },
+        {
+          "config_version": null,
+          "kind": "material",
+          "object_id": "technical",
+          "observed_at_seq": 0,
+          "quote": null,
+          "schema_version": 2,
+          "session_id": "fixture",
+          "span_end": null,
+          "span_start": null,
+          "valid_from_seq": 0,
+          "valid_until_seq": null,
+          "version": 1
+        }
+      ],
+      "criterion": "R2.support",
+      "error_code": "synthetic_mechanism_only",
+      "evidence_ids": [
+        "e-79ae23c0cb7921cb878754b778f59a74ba7c0653435e5ec945c4acd06480de2d",
+        "e-0508a2fe40a6db9706e3690ce79e6598989f34fd10f2fd830b421776a9693f8d",
+        "e-45597b53d014590a851ad2ceb88e51cac7fda835b55a0a25f4f8f53d671821ec",
+        "e-7eb9fb03b80f6017a4dba09e6ecb671321b3981d6a9fbe854227ad2bb886f0ed"
+      ],
+      "input_hash": "ac165eb8f20f9e20b0a21c2d33971cab69a201d9712f22b8b1700dce707c8dbf",
+      "job_id": "0e7825e0f7d443b4985382e70e7b4389",
+      "label": "CONTRADICTED",
+      "mode": "advisory",
+      "registration": {
+        "id": "w08-0eebcbc8d8737cb60200077dcc0a05ef",
+        "model_revision": "linear:68c819247a6d4112ca667930e5c0bb2ab3ff5910c14a9546aea6ad549da36a40",
+        "quality_validated": false,
+        "scope": "synthetic_fixture"
+      },
+      "request_id": "181843da-a122-410b-bd43-6f6731ea289b",
+      "schema_version": 2,
+      "status": "synthetic_mechanism_only",
+      "units": [
+        {
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "brief",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "technical",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "evidence_ids": [
+            "e-79ae23c0cb7921cb878754b778f59a74ba7c0653435e5ec945c4acd06480de2d",
+            "e-0508a2fe40a6db9706e3690ce79e6598989f34fd10f2fd830b421776a9693f8d",
+            "e-45597b53d014590a851ad2ceb88e51cac7fda835b55a0a25f4f8f53d671821ec",
+            "e-7eb9fb03b80f6017a4dba09e6ecb671321b3981d6a9fbe854227ad2bb886f0ed"
+          ],
+          "index": 0,
+          "label": "SUPPORTED",
+          "reason_code": null,
+          "schema_version": 2,
+          "status": "completed",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "b97caf97c0a532159b73bac3e274cfb2487a70944ad06a1648d4e0be2fb9d3ca",
+            "observed_at_seq": 0,
+            "quote": "试点先只开放给已完成人工复核的团队，审批要求有据可查。",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "span_end": 27,
+            "span_start": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null,
+            "version": 1
+          },
+          "unit_hash": "5186d2c0c1bcb91e0bd21033c9dfce3d271b6987ea8731b2d2708469861a6dbb"
+        },
+        {
+          "citations": [],
+          "evidence_ids": [],
+          "index": 1,
+          "label": "INSUFFICIENT",
+          "reason_code": null,
+          "schema_version": 2,
+          "status": "completed",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "b97caf97c0a532159b73bac3e274cfb2487a70944ad06a1648d4e0be2fb9d3ca",
+            "observed_at_seq": 0,
+            "quote": "若名额超过上限，需要先申请扩容。",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "span_end": 43,
+            "span_start": 27,
+            "valid_from_seq": 0,
+            "valid_until_seq": null,
+            "version": 1
+          },
+          "unit_hash": "0f6ea345ea4b23bb4ea79b226571d4e8b536b34b993c8404bc90704cef960d30"
+        },
+        {
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "brief",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "technical",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "evidence_ids": [
+            "e-79ae23c0cb7921cb878754b778f59a74ba7c0653435e5ec945c4acd06480de2d",
+            "e-0508a2fe40a6db9706e3690ce79e6598989f34fd10f2fd830b421776a9693f8d",
+            "e-45597b53d014590a851ad2ceb88e51cac7fda835b55a0a25f4f8f53d671821ec",
+            "e-7eb9fb03b80f6017a4dba09e6ecb671321b3981d6a9fbe854227ad2bb886f0ed"
+          ],
+          "index": 2,
+          "label": "CONTRADICTED",
+          "reason_code": null,
+          "schema_version": 2,
+          "status": "completed",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "b97caf97c0a532159b73bac3e274cfb2487a70944ad06a1648d4e0be2fb9d3ca",
+            "observed_at_seq": 0,
+            "quote": "住宿超过每晚500元可豁免事先批准。",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "span_end": 63,
+            "span_start": 45,
+            "valid_from_seq": 0,
+            "valid_until_seq": null,
+            "version": 1
+          },
+          "unit_hash": "77659b912f0dfcf23a2478d716eb80aacf8b46c4beae09d63208ce452e51d155"
+        },
+        {
+          "citations": [],
+          "evidence_ids": [],
+          "index": 3,
+          "label": "INSUFFICIENT",
+          "reason_code": null,
+          "schema_version": 2,
+          "status": "completed",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "b97caf97c0a532159b73bac3e274cfb2487a70944ad06a1648d4e0be2fb9d3ca",
+            "observed_at_seq": 0,
+            "quote": "出租车单程上限为200元。",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "span_end": 76,
+            "span_start": 63,
+            "valid_from_seq": 0,
+            "valid_until_seq": null,
+            "version": 1
+          },
+          "unit_hash": "73c00b774f6da910672caf582702847f0ba5afceb33804e90101dcc53f57eb30"
+        },
+        {
+          "citations": [],
+          "evidence_ids": [],
+          "index": 4,
+          "label": "INSUFFICIENT",
+          "reason_code": null,
+          "schema_version": 2,
+          "status": "completed",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "b97caf97c0a532159b73bac3e274cfb2487a70944ad06a1648d4e0be2fb9d3ca",
+            "observed_at_seq": 0,
+            "quote": "保留人工兜底",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "span_end": 86,
+            "span_start": 80,
+            "valid_from_seq": 0,
+            "valid_until_seq": null,
+            "version": 1
+          },
+          "unit_hash": "eb11a688c00c97dca373370c5d181f6913cd4a2d8187d980799a0acb65bbce7b"
+        },
+        {
+          "citations": [],
+          "evidence_ids": [],
+          "index": 5,
+          "label": "INSUFFICIENT",
+          "reason_code": null,
+          "schema_version": 2,
+          "status": "completed",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "b97caf97c0a532159b73bac3e274cfb2487a70944ad06a1648d4e0be2fb9d3ca",
+            "observed_at_seq": 0,
+            "quote": "记录未知条件",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "span_end": 95,
+            "span_start": 89,
+            "valid_from_seq": 0,
+            "valid_until_seq": null,
+            "version": 1
+          },
+          "unit_hash": "7371a5827ac8004b6432d9fd9082a96f5fb10d3f3f1a46ddfa71defdcef0f3cc"
+        }
+      ]
+    },
+    "en": {
+      "affects_score": false,
+      "aggregation": {
+        "counts": {
+          "abstained": 0,
+          "contradicted": 1,
+          "failed": 0,
+          "insufficient": 4,
+          "over_budget": 0,
+          "schema_version": 2,
+          "skipped_short": 0,
+          "supported": 1
+        },
+        "policy": "r2-support-units-v1",
+        "schema_version": 2
+      },
+      "citations": [
+        {
+          "config_version": 0,
+          "kind": "config",
+          "object_id": "pilot",
+          "observed_at_seq": 0,
+          "quote": null,
+          "schema_version": 2,
+          "session_id": "fixture",
+          "span_end": null,
+          "span_start": null,
+          "valid_from_seq": 0,
+          "valid_until_seq": null,
+          "version": 1
+        },
+        {
+          "config_version": null,
+          "kind": "material",
+          "object_id": "policy",
+          "observed_at_seq": 0,
+          "quote": null,
+          "schema_version": 2,
+          "session_id": "fixture",
+          "span_end": null,
+          "span_start": null,
+          "valid_from_seq": 0,
+          "valid_until_seq": null,
+          "version": 1
+        },
+        {
+          "config_version": null,
+          "kind": "material",
+          "object_id": "brief",
+          "observed_at_seq": 0,
+          "quote": null,
+          "schema_version": 2,
+          "session_id": "fixture",
+          "span_end": null,
+          "span_start": null,
+          "valid_from_seq": 0,
+          "valid_until_seq": null,
+          "version": 1
+        },
+        {
+          "config_version": null,
+          "kind": "material",
+          "object_id": "technical",
+          "observed_at_seq": 0,
+          "quote": null,
+          "schema_version": 2,
+          "session_id": "fixture",
+          "span_end": null,
+          "span_start": null,
+          "valid_from_seq": 0,
+          "valid_until_seq": null,
+          "version": 1
+        }
+      ],
+      "criterion": "R2.support",
+      "error_code": "synthetic_mechanism_only",
+      "evidence_ids": [
+        "e-2bc2fc87116d5c64e829084ea902c9840c1af624ce1f0166535716a11aa497e5",
+        "e-2210c8700663a8f361c4d51b188cbf23f4eb58ec51c06249367fced44f5cd920",
+        "e-430b4517b4e3b563d087c439c36f63b17364b83c774205f6b06bcbcee00af13f",
+        "e-9b74c301b698b0e9333e85dbb838201bb9d4a6603f6b381a719454a7b6f7fd14"
+      ],
+      "input_hash": "ced29ecc80da28f8ab8ec481c19e7639222f41456a177c915f0aaf3985a71590",
+      "job_id": "4c4eaba6724b4715b0c91e3b838ec6a4",
+      "label": "CONTRADICTED",
+      "mode": "advisory",
+      "registration": {
+        "id": "w08-0eebcbc8d8737cb60200077dcc0a05ef",
+        "model_revision": "linear:68c819247a6d4112ca667930e5c0bb2ab3ff5910c14a9546aea6ad549da36a40",
+        "quality_validated": false,
+        "scope": "synthetic_fixture"
+      },
+      "request_id": "129bbd60-c23e-4710-924d-aeb8f7f5063b",
+      "schema_version": 2,
+      "status": "synthetic_mechanism_only",
+      "units": [
+        {
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "brief",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "technical",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "evidence_ids": [
+            "e-2bc2fc87116d5c64e829084ea902c9840c1af624ce1f0166535716a11aa497e5",
+            "e-2210c8700663a8f361c4d51b188cbf23f4eb58ec51c06249367fced44f5cd920",
+            "e-430b4517b4e3b563d087c439c36f63b17364b83c774205f6b06bcbcee00af13f",
+            "e-9b74c301b698b0e9333e85dbb838201bb9d4a6603f6b381a719454a7b6f7fd14"
+          ],
+          "index": 0,
+          "label": "SUPPORTED",
+          "reason_code": null,
+          "schema_version": 2,
+          "status": "completed",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "ed3e8a10aa26dbd4b7fda5e4babbf941a32adef14c3605fe1b9d0eb875f521a1",
+            "observed_at_seq": 0,
+            "quote": "Open the pilot only to teams with completed human review, as corroborated by the approval rules.",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "span_end": 96,
+            "span_start": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null,
+            "version": 1
+          },
+          "unit_hash": "46068153c37e4bba922a4b311c794e6364a700c700cc118733fba259cfe6dee5"
+        },
+        {
+          "citations": [],
+          "evidence_ids": [],
+          "index": 1,
+          "label": "INSUFFICIENT",
+          "reason_code": null,
+          "schema_version": 2,
+          "status": "completed",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "ed3e8a10aa26dbd4b7fda5e4babbf941a32adef14c3605fe1b9d0eb875f521a1",
+            "observed_at_seq": 0,
+            "quote": "If seats exceed the limit, request capacity first.",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "span_end": 147,
+            "span_start": 97,
+            "valid_from_seq": 0,
+            "valid_until_seq": null,
+            "version": 1
+          },
+          "unit_hash": "25b5385f0a2ca3f145dacbc275de14a480f5198d7965175effc468f062b9d041"
+        },
+        {
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "brief",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "technical",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "evidence_ids": [
+            "e-2bc2fc87116d5c64e829084ea902c9840c1af624ce1f0166535716a11aa497e5",
+            "e-2210c8700663a8f361c4d51b188cbf23f4eb58ec51c06249367fced44f5cd920",
+            "e-430b4517b4e3b563d087c439c36f63b17364b83c774205f6b06bcbcee00af13f",
+            "e-9b74c301b698b0e9333e85dbb838201bb9d4a6603f6b381a719454a7b6f7fd14"
+          ],
+          "index": 2,
+          "label": "CONTRADICTED",
+          "reason_code": null,
+          "schema_version": 2,
+          "status": "completed",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "ed3e8a10aa26dbd4b7fda5e4babbf941a32adef14c3605fe1b9d0eb875f521a1",
+            "observed_at_seq": 0,
+            "quote": "Hotels above CNY 500 per night are exempt from prior approval.",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "span_end": 211,
+            "span_start": 149,
+            "valid_from_seq": 0,
+            "valid_until_seq": null,
+            "version": 1
+          },
+          "unit_hash": "745c58a9d789730cd7ec2a2c92e2fa3abf29c1da0685ee8399feb71100c787ee"
+        },
+        {
+          "citations": [],
+          "evidence_ids": [],
+          "index": 3,
+          "label": "INSUFFICIENT",
+          "reason_code": null,
+          "schema_version": 2,
+          "status": "completed",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "ed3e8a10aa26dbd4b7fda5e4babbf941a32adef14c3605fe1b9d0eb875f521a1",
+            "observed_at_seq": 0,
+            "quote": "Taxi rides are capped at CNY 200.",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "span_end": 245,
+            "span_start": 212,
+            "valid_from_seq": 0,
+            "valid_until_seq": null,
+            "version": 1
+          },
+          "unit_hash": "e8bdc8c78114469cb5d058166adf669fe359544074014692d1bf129233a7fa91"
+        },
+        {
+          "citations": [],
+          "evidence_ids": [],
+          "index": 4,
+          "label": "INSUFFICIENT",
+          "reason_code": null,
+          "schema_version": 2,
+          "status": "completed",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "ed3e8a10aa26dbd4b7fda5e4babbf941a32adef14c3605fe1b9d0eb875f521a1",
+            "observed_at_seq": 0,
+            "quote": "Keep human fallback",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "span_end": 268,
+            "span_start": 249,
+            "valid_from_seq": 0,
+            "valid_until_seq": null,
+            "version": 1
+          },
+          "unit_hash": "e5b72a506cd0c6293eed7936e170ceaccd4844dc3688aa0c687e7eef5d7ce0bf"
+        },
+        {
+          "citations": [],
+          "evidence_ids": [],
+          "index": 5,
+          "label": "INSUFFICIENT",
+          "reason_code": null,
+          "schema_version": 2,
+          "status": "completed",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "ed3e8a10aa26dbd4b7fda5e4babbf941a32adef14c3605fe1b9d0eb875f521a1",
+            "observed_at_seq": 0,
+            "quote": "Record unknown conditions",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "span_end": 296,
+            "span_start": 271,
+            "valid_from_seq": 0,
+            "valid_until_seq": null,
+            "version": 1
+          },
+          "unit_hash": "4ea47190aa3af2b935c5fc97fa588e4c7f726fa03352a2bf19578aa834933240"
+        }
+      ]
+    }
+  },
+  "provenance": {
+    "zh": {
+      "evaluation_version": "feedback-rubric-v2-final.1",
+      "provider": "not_configured",
+      "model": "not_configured",
+      "retries": 0
+    },
+    "en": {
+      "evaluation_version": "feedback-rubric-v2-final.1",
+      "provider": "not_configured",
+      "model": "not_configured",
+      "retries": 0
+    }
+  },
+  "reports": {
+    "zh": {
+      "id": "3da5b1e7cb4d2827d177e9c3bc1ba5181c48e4df9a0d530bab35caab99f65f27",
+      "version": 1,
+      "subject": {
+        "config_version": null,
+        "kind": "submission",
+        "object_id": "87fd48eed2404cae954a5efd44024698",
+        "schema_version": 2,
+        "session_id": "fixture",
+        "version": 1
+      },
+      "items": [
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R1.target",
+          "explanation": "评价模型当前不可用；已保留规则结果与作品。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R1.metrics",
+          "explanation": "评价模型当前不可用；已保留规则结果与作品。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R2.support",
+          "explanation": "评价模型当前不可用；已保留规则结果与作品。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R2.unknowns",
+          "explanation": "评价模型当前不可用；已保留规则结果与作品。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R2.failure_analysis",
+          "explanation": "评价模型当前不可用；已保留规则结果与作品。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [],
+          "criterion": "R3.capacity",
+          "explanation": "已声明暂缓，不要求把未满足条件的方案视为已经上线；实际已发生责任仍核验。",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [],
+          "criterion": "R3.resources",
+          "explanation": "已声明暂缓，不要求把未满足条件的方案视为已经上线；实际已发生责任仍核验。",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [],
+          "criterion": "R4.functional_tests",
+          "explanation": "已声明暂缓，不要求把未满足条件的方案视为已经上线；实际已发生责任仍核验。",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "criterion": "R4.staleness_test",
+          "explanation": "已声明暂缓，不要求把未满足条件的方案视为已经上线；实际已发生责任仍核验。\n政策变更记录：完整窗口内无变更。",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "criterion": "R5.impact",
+          "explanation": "有相关变更时核对其影响；没有相关事件时本项不适用。",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "criterion": "R5.adjustment",
+          "explanation": "已声明暂缓，不要求把未满足条件的方案视为已经上线；实际已发生责任仍核验。\n政策变更记录：完整窗口内无变更。",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R6.consistency",
+          "explanation": "评价模型当前不可用；已保留规则结果与作品。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R6.operations",
+          "explanation": "评价模型当前不可用；已保留规则结果与作品。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R6.alternatives",
+          "explanation": "评价模型当前不可用；已保留规则结果与作品。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        }
+      ],
+      "rule_items": [
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R1.target",
+          "explanation": "核对这份作品要服务谁、解决什么问题。探索阶段允许继续界定目标。\n证据或语义尚未核实；保留未知，不按作品形式或未见记录判错。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R1.metrics",
+          "explanation": "核对与本次决定相称的成功、风险或停止标准；计划中的指标不代表已有结果。\n证据或语义尚未核实；保留未知，不按作品形式或未见记录判错。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R2.support",
+          "explanation": "核对判断与当时可知证据的关系；引用存在不代表支持成立。\n证据或语义尚未核实；保留未知，不按作品形式或未见记录判错。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R2.unknowns",
+          "explanation": "区分已核事实、假设、申请和有效责任；提出尚不可行的设想不等于违约。\n证据或语义尚未核实；保留未知，不按作品形式或未见记录判错。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R2.failure_analysis",
+          "explanation": "核对适用的失败案例和解释；普通探索未覆盖失败分析不自动判缺失。\n证据或语义尚未核实；保留未知，不按作品形式或未见记录判错。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [],
+          "criterion": "R3.capacity",
+          "explanation": "已声明暂缓，不要求把未满足条件的方案视为已经上线；实际已发生责任仍核验。",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [],
+          "criterion": "R3.resources",
+          "explanation": "已声明暂缓，不要求把未满足条件的方案视为已经上线；实际已发生责任仍核验。",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [],
+          "criterion": "R4.functional_tests",
+          "explanation": "已声明暂缓，不要求把未满足条件的方案视为已经上线；实际已发生责任仍核验。",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "criterion": "R4.staleness_test",
+          "explanation": "已声明暂缓，不要求把未满足条件的方案视为已经上线；实际已发生责任仍核验。\n政策变更记录：完整窗口内无变更。",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "criterion": "R5.impact",
+          "explanation": "有相关变更时核对其影响；没有相关事件时本项不适用。",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "criterion": "R5.adjustment",
+          "explanation": "已声明暂缓，不要求把未满足条件的方案视为已经上线；实际已发生责任仍核验。\n政策变更记录：完整窗口内无变更。",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R6.consistency",
+          "explanation": "只比较同一对象、版本和责任范围；不同备选或历史版本的差异不自动算矛盾。\n证据或语义尚未核实；保留未知，不按作品形式或未见记录判错。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R6.operations",
+          "explanation": "核对与本次决定相称的负责人、观察窗口、退出条件和后续动作；不要求固定表单。\n证据或语义尚未核实；保留未知，不按作品形式或未见记录判错。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R6.alternatives",
+          "explanation": "核对真实的方案比较和取舍；普通文字与方案模板等价，停止也可以是备选。\n证据或语义尚未核实；保留未知，不按作品形式或未见记录判错。",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        }
+      ],
+      "verified_facts": [
+        {
+          "activity_records": [],
+          "activity_totals": {
+            "learner_displayed": {
+              "count": null,
+              "schema_version": 2,
+              "status": "unknown",
+              "verified_records": 0
+            },
+            "material_read": {
+              "count": null,
+              "schema_version": 2,
+              "status": "unknown",
+              "verified_records": 0
+            },
+            "question_sent": {
+              "count": null,
+              "schema_version": 2,
+              "status": "unknown",
+              "verified_records": 0
+            },
+            "reply_received": {
+              "count": null,
+              "schema_version": 2,
+              "status": "unknown",
+              "verified_records": 0
+            },
+            "test_run": {
+              "count": null,
+              "schema_version": 2,
+              "status": "unknown",
+              "verified_records": 0
+            }
+          },
+          "activity_window": {
+            "captured_at": {
+              "business_seq": 1,
+              "schema_version": 2,
+              "storage_revision": 3,
+              "workspace_revision": 3
+            },
+            "covered_from": {
+              "business_seq": 0,
+              "schema_version": 2,
+              "storage_revision": 0,
+              "workspace_revision": 0
+            },
+            "covered_through": {
+              "business_seq": 1,
+              "schema_version": 2,
+              "storage_revision": 3,
+              "workspace_revision": 3
+            },
+            "schema_version": 2
+          },
+          "actor_id": "learner",
+          "adopter": null,
+          "as_of": {
+            "business_seq": 0,
+            "schema_version": 2,
+            "storage_revision": 2,
+            "workspace_revision": 2
+          },
+          "author": {
+            "delegation_id": null,
+            "id": "human:9dc3297d00ec4cf8b547b115a11368d3",
+            "kind": "human",
+            "schema_version": 2
+          },
+          "captured_at": {
+            "business_seq": 1,
+            "schema_version": 2,
+            "storage_revision": 3,
+            "workspace_revision": 3
+          },
+          "conclusion_quality": "not_scored",
+          "declared_citation_count": 0,
+          "declared_source_count": 0,
+          "executor": {
+            "delegation_id": null,
+            "id": "human:9dc3297d00ec4cf8b547b115a11368d3",
+            "kind": "human",
+            "schema_version": 2
+          },
+          "independent_understanding": "unobserved",
+          "references": [],
+          "requested_at": {
+            "business_seq": 0,
+            "schema_version": 2,
+            "storage_revision": 2,
+            "workspace_revision": 2
+          },
+          "schema_version": 2,
+          "source_snapshot_hash": "364778291d87c3a2cf59e57e2de29a7fce21a2e0dab95c35d78b8b57fa4f5d90",
+          "status": "partial",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "b97caf97c0a532159b73bac3e274cfb2487a70944ad06a1648d4e0be2fb9d3ca",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "version": 1
+          },
+          "summary": [
+            "当前可查记录尚未展示调查、测试或求助过程，记录不完整，不能据此认定你没有做过。",
+            "作品暂未关联已核对的原始依据，可以补上具体来源。",
+            "这些记录说明做过什么、引用来自哪里；停止或暂缓是否理由充分，需要另外核验理由与证据的关系。",
+            "作品明确关联0个来源、0处去重引用；原文/版本已核对0个，其中在作品参照点有效0个、已失效0个。失效来源保留历史用途；引用真实不等于支持结论。",
+            "材料读取日志完整性未知；已核实0条，不能据此断言没有发生。",
+            "测试运行日志完整性未知；已核实0条，不能据此断言没有发生。",
+            "向同事提问日志完整性未知；已核实0条，不能据此断言没有发生。",
+            "实际收到回复日志完整性未知；已核实0条，不能据此断言没有发生。",
+            "向学员展示日志完整性未知；已核实0条，不能据此断言没有发生。",
+            "提问、收到回复、向学员展示和理解分别记录；当前无法判断独立理解。",
+            "政策变更记录：完整窗口内无变更。"
+          ],
+          "verified_source_count": 0
+        }
+      ],
+      "historical_responsibilities": [
+        {
+          "as_of": {
+            "business_seq": 0,
+            "schema_version": 2,
+            "storage_revision": 2,
+            "workspace_revision": 2
+          },
+          "captured_at": {
+            "business_seq": 1,
+            "schema_version": 2,
+            "storage_revision": 3,
+            "workspace_revision": 3
+          },
+          "completeness": "unknown",
+          "coverage": null,
+          "entries": [],
+          "requested_at": {
+            "business_seq": 0,
+            "schema_version": 2,
+            "storage_revision": 2,
+            "workspace_revision": 2
+          },
+          "schema_version": 2,
+          "source_snapshot_hash": "364778291d87c3a2cf59e57e2de29a7fce21a2e0dab95c35d78b8b57fa4f5d90",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "b97caf97c0a532159b73bac3e274cfb2487a70944ad06a1648d4e0be2fb9d3ca",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "version": 1
+          }
+        }
+      ],
+      "business_response": "当前没有可核验的业务决定记录。",
+      "next_options": [
+        "本次声明暂缓，待条件满足后再决定。反馈核对待确认条件、补证和重新判断的依据；暂缓不代表已经获批或已上线，实际已发生的责任仍保留。",
+        "你的决定声明已记录；审批与执行不会由声明自动确认，仍按各自可核验记录展示。",
+        "待核验项尚未形成结论；已核验事实可继续查看，需要时可补证或另发评审。",
+        "可以提出不同看法；反馈不代表业务批准，也不推断未观察到的独立掌握。"
+      ],
+      "score_range": {
+        "criteria": [
+          {
+            "criterion": "R1.target",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 5.0
+          },
+          {
+            "criterion": "R1.metrics",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 5.0
+          },
+          {
+            "criterion": "R2.support",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 8.333333333333334
+          },
+          {
+            "criterion": "R2.unknowns",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 8.333333333333334
+          },
+          {
+            "criterion": "R2.failure_analysis",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 8.333333333333334
+          },
+          {
+            "criterion": "R3.capacity",
+            "lower": null,
+            "schema_version": 2,
+            "status": "not_applicable",
+            "upper": null,
+            "weight": 10.0
+          },
+          {
+            "criterion": "R3.resources",
+            "lower": null,
+            "schema_version": 2,
+            "status": "not_applicable",
+            "upper": null,
+            "weight": 10.0
+          },
+          {
+            "criterion": "R4.functional_tests",
+            "lower": null,
+            "schema_version": 2,
+            "status": "not_applicable",
+            "upper": null,
+            "weight": 10.0
+          },
+          {
+            "criterion": "R4.staleness_test",
+            "lower": null,
+            "schema_version": 2,
+            "status": "not_applicable",
+            "upper": null,
+            "weight": 10.0
+          },
+          {
+            "criterion": "R5.impact",
+            "lower": null,
+            "schema_version": 2,
+            "status": "not_applicable",
+            "upper": null,
+            "weight": 7.5
+          },
+          {
+            "criterion": "R5.adjustment",
+            "lower": null,
+            "schema_version": 2,
+            "status": "not_applicable",
+            "upper": null,
+            "weight": 7.5
+          },
+          {
+            "criterion": "R6.consistency",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 3.3333333333333335
+          },
+          {
+            "criterion": "R6.operations",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 3.3333333333333335
+          },
+          {
+            "criterion": "R6.alternatives",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 3.3333333333333335
+          }
+        ],
+        "denominator": 45.0,
+        "lower": 0.0,
+        "rubric_revision": "rubric-v2-final-20261009",
+        "rubric_sha256": "aa0de4302ca42368a262dc516fd3d8dab83286dd10dff7350c35b0c3772321cd",
+        "schema_version": 2,
+        "upper": 45.0
+      },
+      "provenance": {
+        "code": {
+          "commit": "f4115f4e9d1e4dbce378446f30f43c456a3cbfb4",
+          "snapshot": "7172a92bcdb99512013c88543f9c2299060e6a22a617835fe1afc03462b98adc",
+          "status": "clean"
+        },
+        "evaluation_version": "feedback-rubric-v2-final.1",
+        "model": "not_configured",
+        "prompt_version": "grounded-feedback-bilingual-v1",
+        "provider": "not_configured",
+        "registered_model": {
+          "id": "w08-0eebcbc8d8737cb60200077dcc0a05ef",
+          "model_revision": "linear:68c819247a6d4112ca667930e5c0bb2ab3ff5910c14a9546aea6ad549da36a40",
+          "quality_validated": false,
+          "scope": "synthetic_fixture"
+        },
+        "retries": 0,
+        "rules_version": "rules-v4-rubric-v2-c2"
+      }
+    },
+    "en": {
+      "id": "32691f3d000939f7085da32e9602eb59e39f66d97fa770ad8d548994e96e2d81",
+      "version": 1,
+      "subject": {
+        "config_version": null,
+        "kind": "submission",
+        "object_id": "1650a470a0c74180b85a5e84b78bfcc4",
+        "schema_version": 2,
+        "session_id": "fixture",
+        "version": 1
+      },
+      "items": [
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R1.target",
+          "explanation": "The evaluation model is unavailable. Rule results and the work are retained.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R1.metrics",
+          "explanation": "The evaluation model is unavailable. Rule results and the work are retained.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R2.support",
+          "explanation": "The evaluation model is unavailable. Rule results and the work are retained.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R2.unknowns",
+          "explanation": "The evaluation model is unavailable. Rule results and the work are retained.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R2.failure_analysis",
+          "explanation": "The evaluation model is unavailable. Rule results and the work are retained.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [],
+          "criterion": "R3.capacity",
+          "explanation": "Deferral does not require treating a proposal with unmet conditions as already launched; obligations already incurred are still checked.",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [],
+          "criterion": "R3.resources",
+          "explanation": "Deferral does not require treating a proposal with unmet conditions as already launched; obligations already incurred are still checked.",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [],
+          "criterion": "R4.functional_tests",
+          "explanation": "Deferral does not require treating a proposal with unmet conditions as already launched; obligations already incurred are still checked.",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "criterion": "R4.staleness_test",
+          "explanation": "Deferral does not require treating a proposal with unmet conditions as already launched; obligations already incurred are still checked.\nPolicy change recorded: none in the complete window.",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "criterion": "R5.impact",
+          "explanation": "Assess impact when a relevant change exists; without a relevant event this criterion is inapplicable.",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "criterion": "R5.adjustment",
+          "explanation": "Deferral does not require treating a proposal with unmet conditions as already launched; obligations already incurred are still checked.\nPolicy change recorded: none in the complete window.",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R6.consistency",
+          "explanation": "The evaluation model is unavailable. Rule results and the work are retained.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R6.operations",
+          "explanation": "The evaluation model is unavailable. Rule results and the work are retained.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R6.alternatives",
+          "explanation": "The evaluation model is unavailable. Rule results and the work are retained.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        }
+      ],
+      "rule_items": [
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R1.target",
+          "explanation": "Check whom the work serves and what problem it addresses. Exploration may continue to refine the goal.\nEvidence or semantics remain unverified; neither format nor absent observations imply failure.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R1.metrics",
+          "explanation": "Check success, risk or stopping criteria suited to this decision. Planned metrics are not achieved results.\nEvidence or semantics remain unverified; neither format nor absent observations imply failure.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R2.support",
+          "explanation": "Check judgments against evidence available at the time. An existing citation does not establish support.\nEvidence or semantics remain unverified; neither format nor absent observations imply failure.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R2.unknowns",
+          "explanation": "Separate verified facts, assumptions, requests and effective obligations. Exploring an infeasible idea is not itself a breach.\nEvidence or semantics remain unverified; neither format nor absent observations imply failure.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R2.failure_analysis",
+          "explanation": "Review relevant failure cases and explanations. An exploratory note is not automatically deficient for omitting failure analysis.\nEvidence or semantics remain unverified; neither format nor absent observations imply failure.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [],
+          "criterion": "R3.capacity",
+          "explanation": "Deferral does not require treating a proposal with unmet conditions as already launched; obligations already incurred are still checked.",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [],
+          "criterion": "R3.resources",
+          "explanation": "Deferral does not require treating a proposal with unmet conditions as already launched; obligations already incurred are still checked.",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [],
+          "criterion": "R4.functional_tests",
+          "explanation": "Deferral does not require treating a proposal with unmet conditions as already launched; obligations already incurred are still checked.",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "criterion": "R4.staleness_test",
+          "explanation": "Deferral does not require treating a proposal with unmet conditions as already launched; obligations already incurred are still checked.\nPolicy change recorded: none in the complete window.",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "criterion": "R5.impact",
+          "explanation": "Assess impact when a relevant change exists; without a relevant event this criterion is inapplicable.",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "not_applicable",
+          "citations": [
+            {
+              "config_version": 0,
+              "kind": "config",
+              "object_id": "pilot",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            },
+            {
+              "config_version": null,
+              "kind": "material",
+              "object_id": "policy",
+              "observed_at_seq": 0,
+              "quote": null,
+              "schema_version": 2,
+              "session_id": "fixture",
+              "span_end": null,
+              "span_start": null,
+              "valid_from_seq": 0,
+              "valid_until_seq": null,
+              "version": 1
+            }
+          ],
+          "criterion": "R5.adjustment",
+          "explanation": "Deferral does not require treating a proposal with unmet conditions as already launched; obligations already incurred are still checked.\nPolicy change recorded: none in the complete window.",
+          "label": "NOT_APPLICABLE",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "verified_rule"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R6.consistency",
+          "explanation": "Compare the same subject, version and responsibility scope; different alternatives or historical versions are not automatically contradictions.\nEvidence or semantics remain unverified; neither format nor absent observations imply failure.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R6.operations",
+          "explanation": "Check owners, observation windows, exit conditions and follow-up actions appropriate to the decision; no fixed form is required.\nEvidence or semantics remain unverified; neither format nor absent observations imply failure.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        },
+        {
+          "applicability": "applicable",
+          "citations": [],
+          "criterion": "R6.alternatives",
+          "explanation": "Check actual comparison and trade-offs; free text and an options template are equivalent, and stopping may be an alternative.\nEvidence or semantics remain unverified; neither format nor absent observations imply failure.",
+          "label": "INSUFFICIENT",
+          "rule_bound": null,
+          "schema_version": 2,
+          "source": "pending"
+        }
+      ],
+      "verified_facts": [
+        {
+          "activity_records": [],
+          "activity_totals": {
+            "learner_displayed": {
+              "count": null,
+              "schema_version": 2,
+              "status": "unknown",
+              "verified_records": 0
+            },
+            "material_read": {
+              "count": null,
+              "schema_version": 2,
+              "status": "unknown",
+              "verified_records": 0
+            },
+            "question_sent": {
+              "count": null,
+              "schema_version": 2,
+              "status": "unknown",
+              "verified_records": 0
+            },
+            "reply_received": {
+              "count": null,
+              "schema_version": 2,
+              "status": "unknown",
+              "verified_records": 0
+            },
+            "test_run": {
+              "count": null,
+              "schema_version": 2,
+              "status": "unknown",
+              "verified_records": 0
+            }
+          },
+          "activity_window": {
+            "captured_at": {
+              "business_seq": 1,
+              "schema_version": 2,
+              "storage_revision": 3,
+              "workspace_revision": 3
+            },
+            "covered_from": {
+              "business_seq": 0,
+              "schema_version": 2,
+              "storage_revision": 0,
+              "workspace_revision": 0
+            },
+            "covered_through": {
+              "business_seq": 1,
+              "schema_version": 2,
+              "storage_revision": 3,
+              "workspace_revision": 3
+            },
+            "schema_version": 2
+          },
+          "actor_id": "learner",
+          "adopter": null,
+          "as_of": {
+            "business_seq": 0,
+            "schema_version": 2,
+            "storage_revision": 2,
+            "workspace_revision": 2
+          },
+          "author": {
+            "delegation_id": null,
+            "id": "human:0af1840be87f4c36824a56d4b6abce21",
+            "kind": "human",
+            "schema_version": 2
+          },
+          "captured_at": {
+            "business_seq": 1,
+            "schema_version": 2,
+            "storage_revision": 3,
+            "workspace_revision": 3
+          },
+          "conclusion_quality": "not_scored",
+          "declared_citation_count": 0,
+          "declared_source_count": 0,
+          "executor": {
+            "delegation_id": null,
+            "id": "human:0af1840be87f4c36824a56d4b6abce21",
+            "kind": "human",
+            "schema_version": 2
+          },
+          "independent_understanding": "unobserved",
+          "references": [],
+          "requested_at": {
+            "business_seq": 0,
+            "schema_version": 2,
+            "storage_revision": 2,
+            "workspace_revision": 2
+          },
+          "schema_version": 2,
+          "source_snapshot_hash": "129970517edba0be888bb09b860aad85942ec6668be9e3b09bd59e377f5c6932",
+          "status": "partial",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "ed3e8a10aa26dbd4b7fda5e4babbf941a32adef14c3605fe1b9d0eb875f521a1",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "version": 1
+          },
+          "summary": [
+            "The available records do not yet show investigation, testing, or requests for help. They are incomplete and do not establish that these activities never occurred.",
+            "The work does not yet link to verified original evidence; you can add specific sources.",
+            "These records establish observed actions and source provenance. Whether a stop or deferral is well reasoned requires a separate check of the reasoning and its supporting evidence.",
+            "The work explicitly links 0 sources through 0 distinct citations. Text and version were verified for 0 sources: 0 were valid at the work reference point and 0 had expired. Expired sources retain historical use; an authentic citation does not establish support for a conclusion.",
+            "Completeness of the material read log is unknown; 0 records are verified. This does not establish that no activity occurred.",
+            "Completeness of the test run log is unknown; 0 records are verified. This does not establish that no activity occurred.",
+            "Completeness of the question sent to a colleague log is unknown; 0 records are verified. This does not establish that no activity occurred.",
+            "Completeness of the reply actually received log is unknown; 0 records are verified. This does not establish that no activity occurred.",
+            "Completeness of the display to the learner log is unknown; 0 records are verified. This does not establish that no activity occurred.",
+            "Asking, receiving a reply, displaying it to the learner, and understanding are distinct. Independent understanding is unobserved.",
+            "Policy change recorded: none in the complete window."
+          ],
+          "verified_source_count": 0
+        }
+      ],
+      "historical_responsibilities": [
+        {
+          "as_of": {
+            "business_seq": 0,
+            "schema_version": 2,
+            "storage_revision": 2,
+            "workspace_revision": 2
+          },
+          "captured_at": {
+            "business_seq": 1,
+            "schema_version": 2,
+            "storage_revision": 3,
+            "workspace_revision": 3
+          },
+          "completeness": "unknown",
+          "coverage": null,
+          "entries": [],
+          "requested_at": {
+            "business_seq": 0,
+            "schema_version": 2,
+            "storage_revision": 2,
+            "workspace_revision": 2
+          },
+          "schema_version": 2,
+          "source_snapshot_hash": "129970517edba0be888bb09b860aad85942ec6668be9e3b09bd59e377f5c6932",
+          "subject": {
+            "config_version": null,
+            "kind": "product",
+            "object_id": "ed3e8a10aa26dbd4b7fda5e4babbf941a32adef14c3605fe1b9d0eb875f521a1",
+            "schema_version": 2,
+            "session_id": "fixture",
+            "version": 1
+          }
+        }
+      ],
+      "business_response": "No verifiable business decision record is currently available.",
+      "next_options": [
+        "You declared a deferral pending conditions. Feedback examines unresolved conditions, evidence to collect and the basis for reconsideration. Deferral does not mean approval or launch; obligations already incurred remain.",
+        "Your decision statement is recorded. It does not confirm approval or execution; these are shown from their own verifiable records.",
+        "Pending items have no verified conclusion yet. Verified facts remain available; you may add evidence or request another review.",
+        "You may disagree. Feedback is not business approval and does not infer unobserved independent understanding."
+      ],
+      "score_range": {
+        "criteria": [
+          {
+            "criterion": "R1.target",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 5.0
+          },
+          {
+            "criterion": "R1.metrics",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 5.0
+          },
+          {
+            "criterion": "R2.support",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 8.333333333333334
+          },
+          {
+            "criterion": "R2.unknowns",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 8.333333333333334
+          },
+          {
+            "criterion": "R2.failure_analysis",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 8.333333333333334
+          },
+          {
+            "criterion": "R3.capacity",
+            "lower": null,
+            "schema_version": 2,
+            "status": "not_applicable",
+            "upper": null,
+            "weight": 10.0
+          },
+          {
+            "criterion": "R3.resources",
+            "lower": null,
+            "schema_version": 2,
+            "status": "not_applicable",
+            "upper": null,
+            "weight": 10.0
+          },
+          {
+            "criterion": "R4.functional_tests",
+            "lower": null,
+            "schema_version": 2,
+            "status": "not_applicable",
+            "upper": null,
+            "weight": 10.0
+          },
+          {
+            "criterion": "R4.staleness_test",
+            "lower": null,
+            "schema_version": 2,
+            "status": "not_applicable",
+            "upper": null,
+            "weight": 10.0
+          },
+          {
+            "criterion": "R5.impact",
+            "lower": null,
+            "schema_version": 2,
+            "status": "not_applicable",
+            "upper": null,
+            "weight": 7.5
+          },
+          {
+            "criterion": "R5.adjustment",
+            "lower": null,
+            "schema_version": 2,
+            "status": "not_applicable",
+            "upper": null,
+            "weight": 7.5
+          },
+          {
+            "criterion": "R6.consistency",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 3.3333333333333335
+          },
+          {
+            "criterion": "R6.operations",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 3.3333333333333335
+          },
+          {
+            "criterion": "R6.alternatives",
+            "lower": null,
+            "schema_version": 2,
+            "status": "pending",
+            "upper": null,
+            "weight": 3.3333333333333335
+          }
+        ],
+        "denominator": 45.0,
+        "lower": 0.0,
+        "rubric_revision": "rubric-v2-final-20261009",
+        "rubric_sha256": "aa0de4302ca42368a262dc516fd3d8dab83286dd10dff7350c35b0c3772321cd",
+        "schema_version": 2,
+        "upper": 45.0
+      },
+      "provenance": {
+        "code": {
+          "commit": "f4115f4e9d1e4dbce378446f30f43c456a3cbfb4",
+          "snapshot": "7172a92bcdb99512013c88543f9c2299060e6a22a617835fe1afc03462b98adc",
+          "status": "clean"
+        },
+        "evaluation_version": "feedback-rubric-v2-final.1",
+        "model": "not_configured",
+        "prompt_version": "grounded-feedback-bilingual-v1",
+        "provider": "not_configured",
+        "registered_model": {
+          "id": "w08-0eebcbc8d8737cb60200077dcc0a05ef",
+          "model_revision": "linear:68c819247a6d4112ca667930e5c0bb2ab3ff5910c14a9546aea6ad549da36a40",
+          "quality_validated": false,
+          "scope": "synthetic_fixture"
+        },
+        "retries": 0,
+        "rules_version": "rules-v4-rubric-v2-c2"
+      }
+    }
+  },
+  "identities": {
+    "linear": {
+      "dataset": {
+        "dataset_id": "rolecraft-linear-mechanism-synthetic",
+        "dataset_manifest_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "label_tiers": [
+          "G0"
+        ]
+      },
+      "id": "linear-5d4d86a3ab8bcc8be601cfc3a2a716a9",
+      "kind": "linear",
+      "model_revision": "linear-return:6d3b320e6eb2b37ddf262890f188f7668a33b31a8b669c0442e335276a97f98e",
+      "quality_validated": false,
+      "scope": "synthetic_fixture"
+    },
+    "fusion": {
+      "components": [
+        {
+          "alpha": 0.5,
+          "id": "linear-5d4d86a3ab8bcc8be601cfc3a2a716a9",
+          "kind": "linear",
+          "model_revision": "linear-return:6d3b320e6eb2b37ddf262890f188f7668a33b31a8b669c0442e335276a97f98e",
+          "role": "left"
+        },
+        {
+          "alpha": 0.5,
+          "id": "linear-f428626ff72d1a826046029fdc115c72",
+          "kind": "linear",
+          "model_revision": "linear-return:08ebb739e7b79425ca5edc54230f29bfa18fdc738613fbee0c9cb37257b8b70b",
+          "role": "right"
+        }
+      ],
+      "dataset": {
+        "dataset_id": "rolecraft-linear-mechanism-synthetic",
+        "dataset_manifest_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+        "label_tiers": [
+          "G0"
+        ]
+      },
+      "fusion": {
+        "alpha": 0.5,
+        "evidence_threshold": 0.5,
+        "fusion_gain_observed": true
+      },
+      "id": "fusion-edac3b96406524189d4ef42153513425",
+      "kind": "probability_fusion",
+      "model_revision": "fusion-return:258b1a82c5a43825305a1deea5cc3e5aaaa1df07294b85f9f3abfba48195a9b6",
+      "quality_validated": false,
+      "scope": "synthetic_fixture"
+    },
+    "encoder": {
+      "id": "encoder-8dddd9b4f9efc219ea0e5a63ddc22257",
+      "model_revision": "hf-encoder-v3:6a4766011a28ca04b1cdc07993f5cbcd1f2e5e9493b314eee7519a2bb162e98f",
+      "scope": "synthetic_fixture",
+      "quality_validated": false,
+      "kind": "huggingface_encoder",
+      "dataset": {
+        "dataset_id": "rolecraft-fixture-20261007-v2",
+        "dataset_manifest_sha256": "5c8f0d5be05e3b39c1599e7fd3a92e46e413dc571248c59f827818f5ee231858",
+        "label_tiers": []
+      },
+      "weights_stage": "supervised_finetuned"
+    }
+  }
+}

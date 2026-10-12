@@ -1,5 +1,11 @@
 import { feedbackCoverageText } from './coverage';
-import { updateRegisteredAdvice, type RegisteredAdvice, type AdviceFallback } from './model-advice';
+import {
+  MODEL_ADVICE_STYLE,
+  evaluationModelLine,
+  updateRegisteredAdvice,
+  type RegisteredAdvice,
+  type AdviceFallback,
+} from './model-advice';
 import type { SubmitInput, _RuleScoreRange } from '../../contracts-v2';
 /** Native DOM submission/review surface. Inject the shared client; no credentials,
  * queue, mutation journal, global navigation or React root is created here. */
@@ -55,7 +61,13 @@ export type Report = {
   /** Recorded with the feedback from the installed rubric weights; absent for earlier rubrics. */
   score_range?: _RuleScoreRange | null;
   read_projection?: 'partial' | null;
-  provenance?: { evaluation_version?: string } | null;
+  /** Stored with the feedback; provider and model name the Judge slot that produced it. */
+  provenance?: {
+    evaluation_version?: string;
+    provider?: unknown;
+    model?: unknown;
+    support_model?: unknown;
+  } | null;
 };
 export type ReviewRecord = {
   id: string;
@@ -238,7 +250,8 @@ export function mountNativeFeedback(
   root.lang = language;
   const hiddenStyle = doc.createElement('style');
   hiddenStyle.textContent =
-    '.native-feedback [hidden]{display:none!important}.native-feedback{min-width:0;overflow-wrap:anywhere}.native-feedback section,.native-feedback article{min-width:0}.native-feedback>section,.native-feedback article>section{margin-block:20px}.native-feedback .btn{white-space:normal;height:auto;min-height:34px;max-width:100%;margin:3px 5px 3px 0}.native-feedback .field-row{display:flex;align-items:flex-start;gap:8px;margin:8px 0}.native-feedback .field-row input{flex:none;margin-top:5px}.native-feedback blockquote{margin:10px 0;padding:8px 12px;border-inline-start:2px solid var(--line);color:var(--ink-2)}.native-feedback .group-title{margin-block:20px 10px}.native-feedback .row-title{margin-block:14px 8px}.native-feedback p{line-height:1.6}.native-feedback .textarea,.native-feedback .select{max-width:100%}.native-feedback [data-score-range]{color:var(--ink-2,#4b505b);font-size:13.5px;font-weight:600}';
+    '.native-feedback [hidden]{display:none!important}.native-feedback{min-width:0;overflow-wrap:anywhere}.native-feedback section,.native-feedback article{min-width:0}.native-feedback>section,.native-feedback article>section{margin-block:20px}.native-feedback .btn{white-space:normal;height:auto;min-height:34px;max-width:100%;margin:3px 5px 3px 0}.native-feedback .field-row{display:flex;align-items:flex-start;gap:8px;margin:8px 0}.native-feedback .field-row input{flex:none;margin-top:5px}.native-feedback blockquote{margin:10px 0;padding:8px 12px;border-inline-start:2px solid var(--line);color:var(--ink-2)}.native-feedback .group-title{margin-block:20px 10px}.native-feedback .row-title{margin-block:14px 8px}.native-feedback p{line-height:1.6}.native-feedback .textarea,.native-feedback .select{max-width:100%}.native-feedback [data-score-range]{color:var(--ink-2,#4b505b);font-size:13.5px;font-weight:600}' +
+    MODEL_ADVICE_STYLE;
   root.append(hiddenStyle);
   const notice = el('p', '', 'muted');
   notice.setAttribute('role', 'status');
@@ -679,7 +692,10 @@ export function mountNativeFeedback(
     coverage.dataset.feedbackCoverage = report.id;
     body.push(coverage);
     const semantic = el('section');
-    semantic.append(el('h3', T('理由与证据的支持关系', 'Support between reasoning and evidence')));
+    semantic.append(
+      el('h3', T('理由与证据的支持关系', 'Support between reasoning and evidence')),
+      evaluationModelLine(doc, report.provenance, language),
+    );
     const { advice } = feedbackSemanticPresentation(report, adapter.snapshot());
     if (!advice.length || report.model_advice !== undefined) {
       const block = el('div');
