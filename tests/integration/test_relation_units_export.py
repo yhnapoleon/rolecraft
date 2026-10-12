@@ -131,8 +131,13 @@ def test_exp_07_work_sentences_are_exported_with_the_inference_unit_hashes(
         session.close()
     assert response.returncode == 0, response.stdout + response.stderr
     assert plain.returncode == 0, plain.stdout + plain.stderr
-    # Without the option the export is the existing one: only the assistant answer.
+    # Without the option the export is the existing one: only the assistant answer, and
+    # every source-map entry keeps exactly the keys it had before this projection existed.
     assert json.loads(plain.stdout)["families"]["relation"]["records"] == 1
+    plain_map = json.loads((tmp_path / "plain/audit/source-map.json").read_text())
+    assert {frozenset(entry) for entry in plain_map.values()} == {
+        frozenset({"objects", "candidate_ids", "observation_bindings", "snapshot_digest"})
+    }
     summary = json.loads(response.stdout)
     sources = json.loads((output / "audit/source-map.json").read_text())
     rows = {
@@ -176,3 +181,23 @@ def test_exp_07_work_sentences_are_exported_with_the_inference_unit_hashes(
     assert all(label["status"] == "pending" for label in labels)
     audit = command("validate-data", "--export", output)
     assert audit.returncode == 0, audit.stdout + audit.stderr
+
+
+def test_exp_07_relation_units_needs_a_live_export(tmp_path: Path) -> None:
+    """EXP-07: the projection reads live sessions only; with --snapshot it is refused."""
+    snapshot, units = tmp_path / "snapshot.json", tmp_path / "units.json"
+    snapshot.write_text("{}")
+    units.write_text("[]")
+    response = command(
+        "export",
+        "--snapshot",
+        snapshot,
+        "--units",
+        units,
+        "--output",
+        tmp_path / "out",
+        "--relation-units",
+    )
+    assert response.returncode != 0
+    assert json.loads(response.stdout)["error"] == "relation_units_requires_live_export"
+    assert not (tmp_path / "out").exists()

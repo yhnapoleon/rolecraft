@@ -320,7 +320,8 @@ class AuthorizedSnapshotPort:
             test.execution.executor,
             test.execution.executed_at,
             (file,),
-            {"relation_source": "assistant_answer"},
+            # Only with the relation-units projection; the default export stays byte-identical.
+            {"relation_source": "assistant_answer"} if self.relation_units else None,
         )
 
     def _submission(

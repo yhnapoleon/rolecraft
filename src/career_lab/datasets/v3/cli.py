@@ -102,6 +102,8 @@ def dispatch(args):
     if args.command == "export":
         if args.live:
             return export_live(args)
+        if args.relation_units:
+            raise ProtocolError("relation_units_requires_live_export")
         if args.units is None:
             raise ProtocolError("offline_units_required")
         raw = read_json(args.snapshot)

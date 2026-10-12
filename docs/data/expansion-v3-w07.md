@@ -42,7 +42,7 @@ UV_PYTHON=3.12 uv run --locked python -m career_lab.datasets.v3 export --live \
 - 除助手回答的关系记录外，对每份提交作品的 R2.support 证据包按 `r2-support-units-v1` 每句导出一条关系记录：claim 为该句，候选为同一证据包的候选材料（作品自身除外），不带 gold 或 rule_bound，标签行为待标注（`pending`）。切句用 `career_lab.models.v3.units.support_units`，与产品推理是同一函数，规则见 [W08 服务消费与回退边界](expansion-v3-w08.md#服务消费与回退边界)。
 - 导出的句集合与推理相同：过短句与超过句数上限 `MAX_UNITS` 的句子不导出。
 - 来源区分写在评审侧 `audit/source-map.json` 的每条记录里：`relation_source` 为 `work_unit` 或 `assistant_answer`；作品句另有 `unit_policy`、`unit_index`、`unit_hash`，其中 `unit_hash` 与反馈里 `model_advice.units[].unit_hash` 逐条相同。这些字段不是模型特征；模型输入文件 `data/<split>.inputs.jsonl` 的键集合不变。
-- 不加该参数时导出与原来相同，只是 source-map 里助手回答记录多了 `relation_source`。
+- 不加该参数时导出与原来相同：source-map 条目的键集合不变，`relation_source` 只在加参数时写；`--relation-units` 只用于 `--live`，与 `--snapshot` 同用时拒绝（`relation_units_requires_live_export`）。
 
 路径与身份须替换为实际本机值；上述占位符不是现成会话。签发文件只创建一次，不覆盖旧凭证。签名密钥由操作者安全持有；公开授权投影不包含签名或凭据 ID。`issue`、`validate`、`public_identity` 供其他研究入口复用，消费端仍检查当前权限。CLI 默认从起点授权到指定点；模块 `issue` 支持窄窗口。没有明确授权、到期、用途不符、会话或读取凭据不匹配均拒绝。
 
