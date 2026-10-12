@@ -62,11 +62,11 @@ def offline(monkeypatch: pytest.MonkeyPatch) -> None:
     torch.set_num_threads(1)
 
 
-def export(*arguments: str) -> dict[str, Any]:
+def run_export(*arguments: str) -> subprocess.CompletedProcess:
     """The reference export script in its own interpreter, as a producer would run it."""
     environment = os.environ | {"HF_HUB_OFFLINE": "1", "TRANSFORMERS_OFFLINE": "1"}
     environment.pop("PYTHONPATH", None)
-    result = subprocess.run(
+    return subprocess.run(
         [sys.executable, str(EXPORT), *arguments],
         capture_output=True,
         text=True,
@@ -74,6 +74,10 @@ def export(*arguments: str) -> dict[str, Any]:
         env=environment,
         cwd=EXPORT.parent,
     )
+
+
+def export(*arguments: str) -> dict[str, Any]:
+    result = run_export(*arguments)
     assert result.returncode == 0, result.stdout + result.stderr
     return json.loads(result.stdout)
 
@@ -161,6 +165,45 @@ def test_enc_01_export_script_and_save_checkpoint_register_the_same_model(
     assert [loaded.predict(item) for item in dev_items()] == [
         candidate.predict(item) for item in dev_items()
     ]
+
+
+def test_enc_01_export_refuses_inputs_that_do_not_match_the_delivered_model(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source"
+    candidate = tiny_candidate(source, tiny_encoder_source(source), variant="pair")
+    candidate.fit(examples(), epochs=1, learning_rate=0.001)
+    encoder, heads, report = producer_files(candidate, tmp_path / "producer")
+    arguments = ["--variant", "pair", "--source-revision", SOURCE_REVISION]
+    state = torch.load(heads, weights_only=True)
+    torch.save({k: v for k, v in state.items() if k != "selector.bias"}, tmp_path / "short.pt")
+    claimed = json.loads(report.read_text()) | {"after_weights": "0" * 64}
+    (tmp_path / "claimed.json").write_text(json.dumps(claimed))
+    pickled = tmp_path / "pickled"
+    pickled.mkdir()
+    for path in encoder.iterdir():
+        (pickled / path.name).write_bytes(path.read_bytes())
+    (pickled / "pytorch_model.bin").write_bytes(b"pickle")
+    for case, (directory, head, training) in {
+        "missing-head": (encoder, tmp_path / "short.pt", report),
+        "report-disagrees": (encoder, heads, tmp_path / "claimed.json"),
+        "pickled-weights": (pickled, heads, report),
+    }.items():
+        result = run_export(
+            "export",
+            "--encoder-dir",
+            str(directory),
+            "--heads",
+            str(head),
+            "--training-report",
+            str(training),
+            *arguments,
+            "--out",
+            str(tmp_path / case),
+        )
+        assert result.returncode == 2, (case, result.stdout + result.stderr)
+        assert result.stderr.startswith("export_hf_return: ")
+        assert not (tmp_path / case / "checkpoint.json").exists()
 
 
 def test_enc_01_reference_inputs_are_the_strings_the_product_encodes() -> None:

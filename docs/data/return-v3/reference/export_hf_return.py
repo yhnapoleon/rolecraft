@@ -185,20 +185,24 @@ def read_heads(path: Path) -> dict:
     return torch.load(path, map_location="cpu", weights_only=True)
 
 
-def encoder_files(directory: Path) -> list[Path]:
-    """Files to deliver from a save_pretrained directory (safetensors weights only)."""
+def encoder_files(directory: Path, *, delivered: bool) -> list[Path]:
+    """Files of a save_pretrained directory; ``delivered`` ones are copied into the return.
+
+    Delivered encoders must be safetensors-only; a base encoder that is re-saved (untrained
+    heads) may also hold other formats, which are ignored.
+    """
     found = []
     for path in sorted(directory.rglob("*")):
-        if path.is_symlink():
-            raise ExportError(f"symbolic link in the encoder directory: {path}")
-        if not path.is_file() or path.relative_to(directory).as_posix() == "local-files.json":
+        name = path.relative_to(directory).as_posix()
+        if not path.is_file() or name == "local-files.json":
             continue
-        if path.suffix not in ENCODER_SUFFIXES:
+        if path.suffix in ENCODER_SUFFIXES:
+            found.append(path)
+        elif delivered:
             raise ExportError(
-                f"{path.name}: only {sorted(ENCODER_SUFFIXES)} files are accepted; "
+                f"{name}: only {sorted(ENCODER_SUFFIXES)} files are accepted; "
                 "save the encoder with save_pretrained(..., safe_serialization=True)"
             )
-        found.append(path)
     names = {path.relative_to(directory).as_posix() for path in found}
     if "config.json" not in names or not any(name.endswith(".safetensors") for name in names):
         raise ExportError("the encoder directory needs config.json and safetensors weights")
@@ -225,8 +229,8 @@ def export(args) -> dict:
     if out.exists():
         raise ExportError(f"{out} exists; a return is written once")
     source = Path(args.encoder_dir)
-    files = encoder_files(source)
     untrained = args.weights_stage == "pretrained_untrained_heads"
+    files = encoder_files(source, delivered=not untrained)
     options = {"local_files_only": True, "trust_remote_code": False}
     torch.manual_seed(args.seed)
     encoder, loading = AutoModel.from_pretrained(
