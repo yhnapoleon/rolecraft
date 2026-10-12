@@ -1172,3 +1172,36 @@ def test_pred_01_validate_handoff_reads_v2_and_v3_relation_rows_alike(
     assert code == 0, report
     assert report["model_return"]["format_valid"] is True
     assert {row["status"] for row in report["model_return"]["records"]} == {"accept"}
+
+
+@pytest.mark.parametrize("fault", ["missing", "not_json", "duplicate_record", "two_revisions"])
+def test_held_05_an_unreadable_prediction_file_cannot_spend_the_opening(
+    tmp_path: Path, fault: str
+) -> None:
+    opening = prepared_opening(tmp_path)
+    rows = jsonl(opening.predictions)
+    if fault == "missing":
+        opening.predictions.unlink()
+    elif fault == "not_json":
+        opening.predictions.write_text("not json\n")
+    elif fault == "duplicate_record":
+        write_jsonl(opening.predictions, [rows[0], rows[0]])
+    else:
+        rows[1]["model_revision"] = "another-model"
+        write_jsonl(opening.predictions, rows)
+    log = tmp_path / "unreadable.log"
+    response = run_module(
+        REGISTRY_CLI,
+        "verify-return",
+        "--dataset-root",
+        opening.package.root,
+        "--dataset-hash",
+        opening.package.checksum,
+        "--predictions",
+        opening.predictions,
+        *opening.args(),
+        audit_log=log,
+    )
+    assert response.returncode == 2, response.stdout
+    assert not opening.record.exists()
+    assert not opened_paths(log) & held_out_files(opening.package)

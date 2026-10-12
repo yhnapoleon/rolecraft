@@ -311,8 +311,12 @@ def verify_return(
             raise C.ProtocolError("fusion_selection_dev_only", status=403)
         if registry_root is None or registration_path is None or registration_hash is None:
             raise C.ProtocolError("fusion_selection_requires_registration")
+    # Read the producer's file before any opening, so a broken file cannot spend it.
+    returned = unique_records(json_lines(predictions_path.read_bytes()))
     opening = None
     if partition == "test":
+        if len({row.get("model_revision") for row in returned.values()}) > 1:
+            raise C.ProtocolError("return_prediction_revision_mismatch")
         registration = (
             C.FileRef(path=registration_path, sha256=registration_hash)
             if registration_path is not None and registration_hash is not None
@@ -329,7 +333,6 @@ def verify_return(
     elif held_out is not None:
         raise C.ProtocolError("held_out_arguments_require_test_partition")
     dataset = load_return_dataset(dataset_root, dataset_hash, partition, opening=opening)
-    returned = unique_records(json_lines(predictions_path.read_bytes()))
     if set(returned) != {row.record_id for row in dataset.examples}:
         raise C.ProtocolError("return_prediction_record_set_mismatch")
     grades = []

@@ -74,7 +74,7 @@ uv run --locked python -m career_lab.models.v3.registry_cli verify-return \
 
 按顺序核，任一不过即拒绝、不留记录、不读 test 文件：
 
-1. 参数齐全（冻结、campaign、账本、操作者、注册、负责方清单）→ 否则 `held_out_test_authorization_required`（403，报错列出缺项）。
+1. 预测文件可读、每行是对象、record_id 不重复、全文件只有一个 `model_revision`（坏文件不会用掉这次打开）；参数齐全（冻结、campaign、账本、操作者、注册、负责方清单）→ 否则 `held_out_test_authorization_required`（403，报错列出缺项）。
 2. `<ledger>/<数据 manifest SHA-256>/test.json` 不存在 → 否则 `held_out_test_already_opened`（403）。
 3. 数据包为封存布局（`held_out_layout_required`）、非 fixture；负责方清单的选择声明与数据身份（第 1 节）。
 4. campaign 在冻结目录内（`held_out_campaign_outside_freeze_root`），其中恰有一个候选的 `runtime` 等于所给注册引用（`held_out_campaign_candidate_mismatch`）。
