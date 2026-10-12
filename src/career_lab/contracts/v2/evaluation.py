@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
 
@@ -18,6 +18,8 @@ from .core import (
 
 Applicability = Literal["applicable", "not_applicable", "undetermined"]
 CriterionLabel = Literal["MET", "PARTIAL", "NOT_MET", "INSUFFICIENT", "NOT_APPLICABLE"]
+# Weighted score ranges are stored as floats from exact fractions.
+_SCORE_TOLERANCE = 1e-6
 RelationLabel = Literal["SUPPORTED", "CONTRADICTED", "INSUFFICIENT"]
 
 
@@ -495,6 +497,74 @@ class _PreviewState(V2):
         return self
 
 
+class _RuleScoreCriterion(V2):
+    """One criterion's frozen weight and how the rules anchor it.
+
+    Points appear only where a verified rule bound fixes them; pending, undetermined and
+    not-applicable criteria carry a weight but never a per-criterion score.
+    """
+
+    criterion: Identifier
+    weight: Annotated[float, Field(gt=0, le=100)]
+    status: Literal["anchored", "bounded", "pending", "undetermined", "not_applicable"]
+    lower: Annotated[float, Field(ge=0, le=100)] | None = None
+    upper: Annotated[float, Field(ge=0, le=100)] | None = None
+
+    @model_validator(mode="after")
+    def rule_points_only(self) -> "_RuleScoreCriterion":
+        ruled = self.status in {"anchored", "bounded"}
+        if self.lower is None or self.upper is None:
+            if ruled or self.lower is not None or self.upper is not None:
+                raise ValueError("only rule-verified criteria carry points")
+            return self
+        if not ruled:
+            raise ValueError("only rule-verified criteria carry points")
+        if self.lower > self.upper or self.upper > self.weight + _SCORE_TOLERANCE:
+            raise ValueError("rule points must lie within the criterion weight")
+        if (self.status == "anchored") != (self.upper - self.lower <= _SCORE_TOLERANCE):
+            raise ValueError("anchored criteria have one rule outcome; bounded ones a range")
+        return self
+
+
+class _RuleScoreRange(V2):
+    """Advisory weighted range of the rule-anchored rubric part; never a single total.
+
+    Weights come from the rubric file installed with the evaluation that produced the
+    feedback. Verified rule bounds tighten the range; pending, model-advice and undetermined
+    criteria span their full weight; not-applicable criteria leave the denominator, which is
+    reported as it is rather than rescaled. No range exists when nothing applies.
+    """
+
+    rubric_revision: Identifier
+    rubric_sha256: Hash
+    denominator: Annotated[float, Field(ge=0, le=100)]
+    lower: Annotated[float, Field(ge=0, le=100)] | None = None
+    upper: Annotated[float, Field(ge=0, le=100)] | None = None
+    criteria: tuple[_RuleScoreCriterion, ...]
+
+    @model_validator(mode="after")
+    def consistent(self) -> "_RuleScoreRange":
+        names = [row.criterion for row in self.criteria]
+        if not names or len(set(names)) != len(names):
+            raise ValueError("a score range lists every criterion exactly once")
+        if abs(sum(row.weight for row in self.criteria) - 100) > _SCORE_TOLERANCE:
+            raise ValueError("criterion weights must keep the full rubric weight of 100")
+        applicable = [row for row in self.criteria if row.status != "not_applicable"]
+        if abs(sum(row.weight for row in applicable) - self.denominator) > _SCORE_TOLERANCE:
+            raise ValueError("the denominator is the weight of criteria that apply")
+        if not applicable:
+            if self.lower is not None or self.upper is not None:
+                raise ValueError("no criterion applies, so there is no range")
+            return self
+        if self.lower is None or self.upper is None:
+            raise ValueError("an applicable rubric part reports both ends of its range")
+        lower = sum(row.lower or 0 for row in applicable)
+        upper = sum(row.weight if row.upper is None else row.upper for row in applicable)
+        if max(abs(lower - self.lower), abs(upper - self.upper)) > _SCORE_TOLERANCE:
+            raise ValueError("the range must follow its criteria")
+        return self
+
+
 class RegisteredModelAdvice(V2):
     criterion: Literal["R2.support"] = "R2.support"
     request_id: Identifier
@@ -610,6 +680,10 @@ class FeedbackV2(V2):
     preview_conditions: _PreviewConditions | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
+    # 2026-10-11 decision 5: a range of the rule-anchored part, never a single total.
+    score_range: _RuleScoreRange | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def advice_scope(self) -> "FeedbackV2":
@@ -619,6 +693,14 @@ class FeedbackV2(V2):
                 for ref in advice.citations
             ):
                 raise ValueError("advice citation scope or time mismatch")
+        return self
+
+    @model_validator(mode="after")
+    def score_range_scope(self) -> "FeedbackV2":
+        if self.score_range is not None and sorted(
+            row.criterion for row in self.score_range.criteria
+        ) != sorted(item.criterion for item in self.rule_items or ()):
+            raise ValueError("a score range covers exactly the recorded rule results")
         return self
 
     @model_validator(mode="after")

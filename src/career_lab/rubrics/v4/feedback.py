@@ -10,6 +10,7 @@ from career_lab.contracts.v2.evaluation import (
 from career_lab.evidence.v2.localization import message, validate_language
 from .judge import AdvisoryJudge
 from .rules import run_rules
+from .score_range import rule_interval
 from career_lab.evidence.v2.assembler import purpose_of
 
 
@@ -219,16 +220,18 @@ class FeedbackEngine:
 
 
 def score_bounds(items):
-    """Criterion intervals only. No invented rubric weights or overall score."""
-    order = {"NOT_MET": 0.0, "PARTIAL": 0.5, "MET": 1.0}
+    """Unweighted per-criterion intervals; this engine never aggregates or totals.
+
+    The engine does not know the installed rubric, so its diagnostics stay unaggregated
+    (their bytes are part of the evaluation version). The weighted range the learner sees
+    is FeedbackV2.score_range, attached when feedback is written, from the weights of the
+    installed rubric file (score_range.rule_score_range).
+    """
     eligible = [i for i in items if i.applicability == "applicable"]
     intervals = {}
     for item in eligible:
-        if item.source == "verified_rule" and item.rule_bound is not None:
-            low, high = order[item.rule_bound.lower], order[item.rule_bound.upper]
-        else:
-            low, high = 0.0, 1.0
-        intervals[item.criterion] = {"lower": low, "upper": high}
+        low, high = rule_interval(item) or (0, 1)
+        intervals[item.criterion] = {"lower": float(low), "upper": float(high)}
     only = next(iter(intervals.values())) if len(intervals) == 1 else {"lower": None, "upper": None}
     return {
         **only,

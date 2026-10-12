@@ -30,6 +30,20 @@ const zh = {
   test_plan: '测试计划',
   commitment: '试点决定',
   result: '结果报告',
+  // 2026-10-11 decision 5: a range of the rule-anchored part only; never a single total.
+  rangeFull: '规则已定标部分：{lower}–{upper} 分（满分 {full}）',
+  rangePart: '规则已定标部分：{lower}–{upper} 分（适用项共 {denominator} 分，满分 {full}）',
+  rangeNote: '模型建议不计分；待核验项使区间变宽。',
+  rangeEmpty: '规则已定标部分：尚无适用项，不形成区间。',
+  rangeVersion: '分数区间：此评价标准版本不汇总。',
+  rangeUnrecorded: '分数区间：这份反馈生成时未记录。',
+  rangeWithheld: '分数区间：当前权限下部分依据不可核验，暂不显示。',
+  weightAnchored: '权重 {weight} 分（满分 {full}）· 规则已定标：计 {points} 分',
+  weightBounded: '权重 {weight} 分（满分 {full}）· 规则限定 {lower}–{upper} 分，其余待核验',
+  weightPending: '权重 {weight} 分（满分 {full}）· 待核验：不计分，区间因此加宽 {weight} 分',
+  weightUndetermined:
+    '权重 {weight} 分（满分 {full}）· 适用性待确认：不计分，区间因此加宽 {weight} 分',
+  weightNotApplicable: '权重 {weight} 分（满分 {full}）· 本次不适用：不计入分母',
 };
 export type FeedbackCopyKey = keyof typeof zh;
 export const FEEDBACK_COPY: CopyTable<FeedbackCopyKey> = {
@@ -59,6 +73,21 @@ export const FEEDBACK_COPY: CopyTable<FeedbackCopyKey> = {
     test_plan: 'Test plan',
     commitment: 'Pilot decision',
     result: 'Result report',
+    rangeFull: 'Rule-anchored part: {lower}–{upper} of {full}',
+    rangePart:
+      'Rule-anchored part: {lower}–{upper} of {denominator} (applicable items; full rubric {full})',
+    rangeNote: 'Model advice is not scored; pending items widen the range.',
+    rangeEmpty: 'Rule-anchored part: nothing applies yet, so there is no range.',
+    rangeVersion: 'No range for this rubric version.',
+    rangeUnrecorded: 'No range was recorded with this feedback.',
+    rangeWithheld: 'Range withheld: some evidence can’t be checked with your current access.',
+    weightAnchored: 'Weight {weight} of {full} · Rule-anchored: {points} points',
+    weightBounded:
+      'Weight {weight} of {full} · Rule-bounded: {lower}–{upper} points; the rest is pending',
+    weightPending: 'Weight {weight} of {full} · Pending: not scored; widens the range by {weight}',
+    weightUndetermined:
+      'Weight {weight} of {full} · Applicability undetermined: not scored; widens the range by {weight}',
+    weightNotApplicable: 'Weight {weight} of {full} · Not applicable: left out of the denominator',
   },
 };
 export const feedbackCopy = (

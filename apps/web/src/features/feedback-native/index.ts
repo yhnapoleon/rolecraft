@@ -1,6 +1,6 @@
 import { feedbackCoverageText } from './coverage';
 import { updateRegisteredAdvice, type RegisteredAdvice, type AdviceFallback } from './model-advice';
-import type { SubmitInput } from '../../contracts-v2';
+import type { SubmitInput, _RuleScoreRange } from '../../contracts-v2';
 /** Native DOM submission/review surface. Inject the shared client; no credentials,
  * queue, mutation journal, global navigation or React root is created here. */
 import { mountReviewControls, isSubmitDecision } from './review-controls';
@@ -13,6 +13,7 @@ import {
   type PurposeChoice,
 } from './short-summary';
 import { evaluationVersionLine } from './evaluation-version';
+import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 
@@ -51,6 +52,10 @@ export type Report = {
     | null;
   business_response: string;
   next_options: string[];
+  /** Recorded with the feedback from the installed rubric weights; absent for earlier rubrics. */
+  score_range?: _RuleScoreRange | null;
+  read_projection?: 'partial' | null;
+  provenance?: { evaluation_version?: string } | null;
 };
 export type ReviewRecord = {
   id: string;
@@ -233,7 +238,7 @@ export function mountNativeFeedback(
   root.lang = language;
   const hiddenStyle = doc.createElement('style');
   hiddenStyle.textContent =
-    '.native-feedback [hidden]{display:none!important}.native-feedback{min-width:0;overflow-wrap:anywhere}.native-feedback section,.native-feedback article{min-width:0}.native-feedback>section,.native-feedback article>section{margin-block:20px}.native-feedback .btn{white-space:normal;height:auto;min-height:34px;max-width:100%;margin:3px 5px 3px 0}.native-feedback .field-row{display:flex;align-items:flex-start;gap:8px;margin:8px 0}.native-feedback .field-row input{flex:none;margin-top:5px}.native-feedback blockquote{margin:10px 0;padding:8px 12px;border-inline-start:2px solid var(--line);color:var(--ink-2)}.native-feedback .group-title{margin-block:20px 10px}.native-feedback .row-title{margin-block:14px 8px}.native-feedback p{line-height:1.6}.native-feedback .textarea,.native-feedback .select{max-width:100%}';
+    '.native-feedback [hidden]{display:none!important}.native-feedback{min-width:0;overflow-wrap:anywhere}.native-feedback section,.native-feedback article{min-width:0}.native-feedback>section,.native-feedback article>section{margin-block:20px}.native-feedback .btn{white-space:normal;height:auto;min-height:34px;max-width:100%;margin:3px 5px 3px 0}.native-feedback .field-row{display:flex;align-items:flex-start;gap:8px;margin:8px 0}.native-feedback .field-row input{flex:none;margin-top:5px}.native-feedback blockquote{margin:10px 0;padding:8px 12px;border-inline-start:2px solid var(--line);color:var(--ink-2)}.native-feedback .group-title{margin-block:20px 10px}.native-feedback .row-title{margin-block:14px 8px}.native-feedback p{line-height:1.6}.native-feedback .textarea,.native-feedback .select{max-width:100%}.native-feedback [data-score-range]{color:var(--ink-2,#4b505b);font-size:13.5px;font-weight:600}';
   root.append(hiddenStyle);
   const notice = el('p', '', 'muted');
   notice.setAttribute('role', 'status');
@@ -647,6 +652,12 @@ export function mountNativeFeedback(
             'muted',
           ),
         );
+      }
+      const weight = criterionWeightText(report, item.criterion, language);
+      if (weight) {
+        const line = el('p', weight, 'muted');
+        line.dataset.criterionWeight = item.criterion;
+        section.append(line);
       }
       refs(section, item.citations);
       section.append(responseForm(report, item.criterion, 'rule_items'));

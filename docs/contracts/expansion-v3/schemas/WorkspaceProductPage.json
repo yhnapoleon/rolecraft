@@ -856,6 +856,17 @@
           "title": "Schema Version",
           "type": "integer"
         },
+        "score_range": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/_RuleScoreRange"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "session_id": {
           "minLength": 1,
           "title": "Session Id",
@@ -2682,6 +2693,146 @@
         "checked_at"
       ],
       "title": "_PreviewState",
+      "type": "object"
+    },
+    "_RuleScoreCriterion": {
+      "additionalProperties": false,
+      "description": "One criterion's frozen weight and how the rules anchor it.\n\nPoints appear only where a verified rule bound fixes them; pending, undetermined and\nnot-applicable criteria carry a weight but never a per-criterion score.",
+      "properties": {
+        "criterion": {
+          "minLength": 1,
+          "title": "Criterion",
+          "type": "string"
+        },
+        "lower": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lower"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "anchored",
+            "bounded",
+            "pending",
+            "undetermined",
+            "not_applicable"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "upper": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Upper"
+        },
+        "weight": {
+          "exclusiveMinimum": 0,
+          "maximum": 100,
+          "title": "Weight",
+          "type": "number"
+        }
+      },
+      "required": [
+        "criterion",
+        "weight",
+        "status"
+      ],
+      "title": "_RuleScoreCriterion",
+      "type": "object"
+    },
+    "_RuleScoreRange": {
+      "additionalProperties": false,
+      "description": "Advisory weighted range of the rule-anchored rubric part; never a single total.\n\nWeights come from the rubric file installed with the evaluation that produced the\nfeedback. Verified rule bounds tighten the range; pending, model-advice and undetermined\ncriteria span their full weight; not-applicable criteria leave the denominator, which is\nreported as it is rather than rescaled. No range exists when nothing applies.",
+      "properties": {
+        "criteria": {
+          "items": {
+            "$ref": "#/$defs/_RuleScoreCriterion"
+          },
+          "title": "Criteria",
+          "type": "array"
+        },
+        "denominator": {
+          "maximum": 100,
+          "minimum": 0,
+          "title": "Denominator",
+          "type": "number"
+        },
+        "lower": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Lower"
+        },
+        "rubric_revision": {
+          "minLength": 1,
+          "title": "Rubric Revision",
+          "type": "string"
+        },
+        "rubric_sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Rubric Sha256",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "upper": {
+          "anyOf": [
+            {
+              "maximum": 100,
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Upper"
+        }
+      },
+      "required": [
+        "rubric_revision",
+        "rubric_sha256",
+        "denominator",
+        "criteria"
+      ],
+      "title": "_RuleScoreRange",
       "type": "object"
     }
   },

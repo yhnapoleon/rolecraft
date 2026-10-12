@@ -1,11 +1,13 @@
-/** Feedback first screen (063-03): counts, model state and one purpose question.
- * Stored items stay unchanged behind one disclosure; nothing here scores or totals. */
+/** Feedback first screen (063-03): counts, the recorded rule-anchored range, model state and
+ * one purpose question. Stored items stay unchanged behind one disclosure; nothing here scores
+ * or totals; the range is read from the record (decision 5, 2026-10-11). */
 import {
   renderShortResult,
   type ShortResultStatus,
   type ShortResultView,
 } from '../results-native/short-result';
 import { FEEDBACK_COPY, feedbackCopy, type FeedbackLanguage } from './localization';
+import { scoreRangeNotes } from './score-range';
 import type { Report, ReviewRecord, SelectedProduct } from './index';
 import type { ObjectRef } from '../workspace/contract-types';
 import { canonicalPurpose } from '../workspace/native-v4/form-values';
@@ -217,6 +219,7 @@ export function feedbackShortResult(doc: Document, input: FeedbackShortInput): S
     statuses,
     lead,
     derivedLead: true,
+    notes: scoreRangeNotes(doc, report, language),
     actions,
     more: {
       label: counts.total ? T('showItems', counts.total) : T('showRecords'),

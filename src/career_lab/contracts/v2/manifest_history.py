@@ -716,4 +716,21 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "with unchanged content do not make a preview stale."
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-2a9777a2cb93d061dea7154fc71dfabcf748c9338f587e02003e9566950bac12"
+        ),
+        "integration_changes": {
+            "rule-score-range": "Optional FeedbackV2.score_range (_RuleScoreRange with "
+            "_RuleScoreCriterion rows): the weighted range of the rule-anchored rubric part "
+            "(2026-10-11 decision 5), recorded once when feedback is written under an installed "
+            "rubric whose weights are frozen (rubric-v2-final-20261009, read from the package's "
+            "verified rubric file). Verified rule bounds tighten it; pending, model-advice and "
+            "undetermined criteria span their full weight and carry no points; not-applicable "
+            "criteria leave the denominator, which is reported without rescaling. There is no "
+            "single total. Candidate rubrics without frozen weights record no range, so those "
+            "records keep their bytes; scoped reviews that evaluate only some criteria record "
+            "no range; partial read projections whose rule results changed withhold the range."
+        },
+    },
 )
