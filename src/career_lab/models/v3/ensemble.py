@@ -2,7 +2,14 @@
 
 import numpy as np
 from career_lab.contracts.v2.core import ProtocolError
-from .core import UNLIMITED, abstention, checked_input, prediction, probabilities
+from .core import (
+    UNLIMITED,
+    abstention,
+    checked_input,
+    evidence_missing,
+    prediction,
+    probabilities,
+)
 
 
 def blend(left, right, alpha, item, revision="unregistered-fusion", threshold=0.5):
@@ -105,9 +112,9 @@ def select_alpha(dev, left, right, policy=None):
     thresholds = sorted(policy.evidence_thresholds, key=lambda x: (abs(x - 0.5), x))
     for alpha in policy.alpha_grid:
         for threshold in thresholds:
+            blended = [blend(a, b, alpha, r.item, threshold=threshold) for r, a, b in inputs]
             metrics = summarize(
-                [grade(r, blend(a, b, alpha, r.item, threshold=threshold)) for r, a, b in inputs],
-                "relation",
+                [grade(r, p) for (r, _, _), p in zip(inputs, blended, strict=True)], "relation"
             )
             grid.append(
                 {
@@ -116,9 +123,17 @@ def select_alpha(dev, left, right, policy=None):
                     "threshold": threshold,
                     "metrics": metrics,
                     "cost": 1 if alpha in (0.0, 1.0) else 2,
+                    # A point whose own predictions would fail the return format check
+                    # (evidence-less SUPPORTED/CONTRADICTED) is reported but not eligible.
+                    "evidence_complete": not any(
+                        evidence_missing(
+                            p.status, p.label, p.evidence_ids, r.annotation.final.evidence_evaluable
+                        )
+                        for (r, _, _), p in zip(inputs, blended, strict=True)
+                    ),
                 }
             )
-    decision = choose_dev(grid, policy)
+    decision = choose_dev([x for x in grid if x["evidence_complete"]], policy)
     winner = next((x for x in grid if x["id"] == decision["selected"]), None)
     endpoint = max(
         (x["metrics"]["joint_correctness"] or 0 for x in grid if x["alpha"] in (0.0, 1.0)),

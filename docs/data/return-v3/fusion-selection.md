@@ -67,7 +67,7 @@ e = (1 − alpha) · e_left + alpha · e_right
 
 负责方在 dev 上按下面的规则选点，记录的 `selected` 与 `fusion_gain_observed` 必须与它一致。我方复核用产品自己的融合与选点实现（`ensemble.select_alpha`，策略 `joint-first-dev-v1`）在已登记分量上重算整个网格，再与记录逐点、逐项比较。
 
-1. **候选资格**：只有 `joint_denominator > 0` 且 `joint_correctness > 0` 的点有资格入选。证据联合正确率为 0 或无法计算的点再高的 macro-F1 也不入选。
+1. **候选资格**：只有 `joint_denominator > 0` 且 `joint_correctness > 0` 的点有资格入选。证据联合正确率为 0 或无法计算的点再高的 macro-F1 也不入选。另外，某点的融合预测若在证据可评的 dev 记录上出现**没有证据的 SUPPORTED 或 CONTRADICTED 成功行**，该点也没有资格：这种行过不了回传格式检查（`return_evidence_selection_required`），选它就交不出能复核的预测。这条规则已内置在我方复算（`ensemble.select_alpha`）里，与格式检查用同一个判定；你方按同一规则选点即可，不必另行排除。dev 预测本身仍须对支持与矛盾结论带证据。
 2. **排序**（逐项比较，前一项相同才看下一项，大者优先）：
    1. `joint_correctness`；
    2. 覆盖率：合法成功输出（格式有效且 `status=ok`）占全部 dev 记录的比例（`summarize` 的 `coverage`，不写进记录，复核时重算）；

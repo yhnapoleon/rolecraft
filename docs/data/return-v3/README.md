@@ -69,7 +69,7 @@ python -m career_lab.datasets.v3 export --live <连接参数> --key-file … --a
   --output <新目录> --relation-units
 ```
 
-加 `--relation-units` 后，除助手回答的关系记录外，每份提交作品的 R2.support 证据包每句导出一条关系记录：claim 为该句，候选为同一证据包的候选材料（作品自身除外），不带 gold 与 rule_bound，标签需你方标注。模型输入文件 `data/<split>.inputs.jsonl` 的键不变；来源在 `audit/source-map.json` 的每条记录里区分：`relation_source` 为 `work_unit` 或 `assistant_answer`，作品句另有 `unit_policy`、`unit_index`、`unit_hash`，其中 `unit_hash` 与产品反馈里 `model_advice.units[].unit_hash` 逐条相同，可以对回产品里的同一句。导出的句子集合与推理相同：过短的句子和超过每包句数上限的句子不导出。不加该参数时导出与以前相同，只是助手回答记录多了 `relation_source`。
+加 `--relation-units` 后，除助手回答的关系记录外，每份提交作品的 R2.support 证据包每句导出一条关系记录：claim 为该句，候选为同一证据包的候选材料（作品自身除外），不带 gold 与 rule_bound，标签需你方标注。模型输入文件 `data/<split>.inputs.jsonl` 的键不变；来源在 `audit/source-map.json` 的每条记录里区分：`relation_source` 为 `work_unit` 或 `assistant_answer`，作品句另有 `unit_policy`、`unit_index`、`unit_hash`，其中 `unit_hash` 与产品反馈里 `model_advice.units[].unit_hash` 逐条相同，可以对回产品里的同一句。导出的句子集合与推理相同：过短的句子和超过每包句数上限的句子不导出。不加该参数时导出与以前相同（source-map 条目的键集合不变，`relation_source` 只在加参数时写）。
 
 ## 6. 候选材料长度与 512 上限（我方实测，非质量证据）
 

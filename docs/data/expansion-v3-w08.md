@@ -271,7 +271,7 @@ uv run --locked python -c 'import json, sys; print(json.dumps(json.load(sys.stdi
   < "$OUT/register-output.json" > "$OUT/registration-ref.json"
 ```
 
-`OUT`换成融合自己的新目录（例如`runs/local/registration-fusion`）。输出格式与`register`相同。选择记录须按`joint-first-dev-v1`在dev上选点（[融合选择记录 §3](return-v3/fusion-selection.md)），两分量须来自同一数据身份。登记只核选择记录的结构与身份，逐点指标由`verify-return --fusion-selection`复算（见[正式回传复核 CLI](#正式回传复核-cli2026-10-09)）。融合不复制分量权重，注册目录只多存一份选择记录副本；每次加载都重核两个分量的注册与文件，任一分量漂移、被删或推理闭包变化，融合即加载失败。任一分量为合成登记时，融合只能`--scope synthetic_fixture`（否则`fusion_scope_exceeds_components`）。
+`OUT`换成融合自己的新目录（例如`runs/local/registration-fusion`）。输出格式与`register`相同。选择记录须按`joint-first-dev-v1`在dev上选点（[融合选择记录 §3](return-v3/fusion-selection.md)；融合预测在证据可评记录上出现无证据的支持或矛盾成功行的点没有资格，与回传格式检查同一判定），两分量须来自同一数据身份。登记只核选择记录的结构与身份，逐点指标由`verify-return --fusion-selection`复算（见[正式回传复核 CLI](#正式回传复核-cli2026-10-09)）。融合不复制分量权重，注册目录只多存一份选择记录副本；每次加载都重核两个分量的注册与文件，任一分量漂移、被删或推理闭包变化，融合即加载失败。任一分量为合成登记时，融合只能`--scope synthetic_fixture`（否则`fusion_scope_exceeds_components`）。
 
 ## 本地编码器回传注册
 

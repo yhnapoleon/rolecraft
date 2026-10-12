@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from career_lab.contracts import v2 as C
 
-from .core import Example, Prediction
+from .core import Example, Prediction, evidence_missing
 
 
 class EvidenceBinding(BaseModel):
@@ -80,11 +80,8 @@ class ReturnedPrediction(BaseModel):
             candidate = candidates.get(binding.candidate_id)
             if candidate is None or C.digest(candidate) != binding.candidate_sha256:
                 raise C.ProtocolError("return_evidence_binding_mismatch")
-        if (
-            self.status == "ok"
-            and not self.evidence_ids
-            and self.label != "INSUFFICIENT"
-            and row.annotation.final.evidence_evaluable
+        if evidence_missing(
+            self.status, self.label, self.evidence_ids, row.annotation.final.evidence_evaluable
         ):
             raise C.ProtocolError("return_evidence_selection_required")
         prediction = Prediction(
