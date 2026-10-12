@@ -15,6 +15,7 @@ from career_lab.contracts.v2.core import FileRef, ProtocolError, read_file
 from career_lab.models.v3.core import LABELS
 
 RETURN_PROTOCOL = "rolecraft-label-evidence-v2"
+LABEL_TIERS = ("G0", "G1", "G2", "G2v")
 
 
 def checked_path(root: Path, name: str) -> Path:
@@ -90,6 +91,24 @@ class EncoderArtifact:
     model_revision: str
     source_revision: str
     files: dict[str, str]
+    weights_stage: str
+    # The training data release the outer manifest names (dataset_id, sha256, label tiers).
+    dataset: dict[str, Any]
+
+
+def dataset_identity(manifest: dict[str, Any]) -> dict[str, Any]:
+    tiers = manifest.get("label_tiers", [])
+    if (
+        not isinstance(tiers, list)
+        or len(set(tiers)) != len(tiers)
+        or any(tier not in LABEL_TIERS for tier in tiers)
+    ):
+        raise ProtocolError("model_return_dataset_identity_invalid")
+    return {
+        "dataset_id": manifest["dataset_id"],
+        "dataset_manifest_sha256": manifest["dataset_manifest_sha256"],
+        "label_tiers": sorted(tiers, key=LABEL_TIERS.index),
+    }
 
 
 def validate_return_identity(manifest: dict[str, Any]) -> None:
@@ -196,4 +215,6 @@ def inspect_encoder(root: Path, manifest_ref: FileRef, *, scope: str) -> Encoder
         manifest["model_revision"],
         config["source_revision"],
         files | {manifest_ref.path: manifest_ref.sha256},
+        local["weights_stage"],
+        dataset_identity(manifest),
     )

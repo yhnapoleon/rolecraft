@@ -1,0 +1,4 @@
+Metadata-Version: 2.1
+Name: safetensors
+Version: 0.6.2
+Summary: Metadata only: declares the locked encoder runtime for registration tests; no code.
