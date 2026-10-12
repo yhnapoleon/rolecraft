@@ -1,4 +1,7 @@
-"""MODEL-02/03/05/06 through standard HTTP, worker and historical feedback reads."""
+"""MODEL-02/03/05/06 through standard HTTP, worker and historical feedback reads.
+
+R2.support advice is judged sentence by sentence (148): one journal entry per sentence.
+"""
 
 import json
 from collections.abc import Iterator
@@ -13,6 +16,7 @@ from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.jobs.worker import Worker
 from scripts.regression.published import ROOT, write_catalog
 from tests.regression.conftest import PublishedSession
+from tests.unit.test_w08_encoder_registration import encoder_return, v1_registration
 
 
 @contextmanager
@@ -94,8 +98,11 @@ def test_model_02_normal_feedback_discloses_synthetic_identity_without_scoring(
     transaction, report = review(session)
     assert report["model_advice"], report
     advice = report["model_advice"][0]
-    assert advice["status"] == "synthetic_mechanism_only"
-    assert advice["label"] is None and advice["evidence_ids"] == advice["citations"] == []
+    # 2026-10-12 (143 §5.1 item 2): a synthetic registration may show its labels and
+    # evidence, always as a mechanism demonstration and never as a completed judgment.
+    assert advice["status"] == advice["error_code"] == "synthetic_mechanism_only"
+    assert advice["label"] in {"SUPPORTED", "CONTRADICTED", "INSUFFICIENT"}
+    assert all(unit["label"] is not None for unit in advice["units"])
     assert advice["affects_score"] is False
     assert advice["registration"]["scope"] == "synthetic_fixture"
     assert advice["registration"]["quality_validated"] is False
@@ -110,7 +117,8 @@ def test_model_03_read_refresh_and_request_recovery_do_not_repeat_model(register
     session, _, root = registered_session
     transaction, report = review(session)
     journals = list((root / "journal").glob("*/outcome.json"))
-    assert len(journals) == 1
+    # One journaled request per judged sentence of the work.
+    assert len(journals) == len(report["model_advice"][0]["units"]) >= 1
     before = {path: path.read_bytes() for path in journals}
     for _ in range(3):
         response = session.get("feedback/" + transaction["result"]["review"]["object_id"])
@@ -448,7 +456,8 @@ def test_model_03_concurrent_same_request_has_one_job_and_one_model_receipt(
         "result"
     ]["result"]["items"][0]
     assert report["model_advice"][0]["job_id"] == recovered["jobs"][0]["job_id"]
-    assert len(list((root / "journal").glob("*/outcome.json"))) == 1
+    units = report["model_advice"][0]["units"]
+    assert len(list((root / "journal").glob("*/outcome.json"))) == len(units) >= 1
     assert not Worker(session.app.state.jobs, session.app.state.handlers).run_once()
 
 
@@ -471,3 +480,25 @@ def test_model_06_recorded_programming_failure_is_not_reported_as_load_failure(
     assert recorded["failure_kind"] == "programming"
     assert advice["registration"]["id"] == recorded["registration"]["id"]
     assert len(report["rule_items"]) == 14
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_model_06_retired_encoder_registration_is_an_invalid_reference_without_fallback(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    bundle = tmp_path / "encoder"
+    bundle.mkdir()
+    retired = v1_registration(
+        tmp_path / "registry", bundle, encoder_return(bundle), "synthetic_fixture"
+    )
+    monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRY", str(tmp_path / "registry"))
+    monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRATION", retired.model_dump_json())
+    monkeypatch.setenv("CAREER_LAB_MODEL_JOURNAL", str(tmp_path / "journal"))
+    monkeypatch.setenv("CAREER_LAB_SCENARIO_CATALOG", str(write_catalog(tmp_path / "catalog.json")))
+    monkeypatch.setenv("CAREER_LAB_SCENARIO_ARCHIVE", str(tmp_path / "archive"))
+    with runtime_session(tmp_path / "service", language) as current:
+        _, report = review(current)
+    advice = report["model_advice"][0]
+    assert advice["status"] == "failed" and advice["error_code"] == "model_reference_invalid"
+    assert advice["registration"] is None and advice["label"] is None
+    assert len(report["rule_items"]) == 14 and report["mode"] == "advisory"
