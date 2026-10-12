@@ -5,11 +5,12 @@ import json
 from pathlib import Path
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError
+from career_lab.contracts.v2.provenance import RegisteredModelIdentity
 
 from . import return_cli
 from .advisory import RegisteredAdvisory
 from .core import INPUT
-from .registry import register_bundle
+from .registry import describe_registration, register_bundle, register_fusion
 
 
 def main(argv=None):
@@ -23,7 +24,16 @@ def main(argv=None):
     register.add_argument(
         "--scope", choices=["synthetic_fixture", "external_candidate"], required=True
     )
-    for name in ("predict", "recover", "review"):
+    fusion = commands.add_parser("register-fusion")
+    fusion.add_argument("--registry", type=Path, required=True)
+    for side in ("left", "right"):
+        fusion.add_argument(f"--{side}-path", required=True)
+        fusion.add_argument(f"--{side}-hash", required=True)
+    fusion.add_argument("--selection", type=Path, required=True)
+    fusion.add_argument(
+        "--scope", choices=["synthetic_fixture", "external_candidate"], required=True
+    )
+    for name in ("predict", "recover", "review", "describe"):
         command = commands.add_parser(name)
         command.add_argument("--registry", type=Path, required=True)
         command.add_argument("--registration-path", required=True)
@@ -49,19 +59,35 @@ def main(argv=None):
     try:
         if args.command == "verify-return":
             return return_cli.run(args)
-        if args.command == "register":
-            ref = register_bundle(
-                args.registry,
-                args.bundle_root,
-                FileRef(path=args.bundle_path, sha256=args.bundle_hash),
-                scope=args.scope,
-            )
+        if args.command in ("register", "register-fusion"):
+            if args.command == "register":
+                ref = register_bundle(
+                    args.registry,
+                    args.bundle_root,
+                    FileRef(path=args.bundle_path, sha256=args.bundle_hash),
+                    scope=args.scope,
+                )
+            else:
+                ref = register_fusion(
+                    args.registry,
+                    FileRef(path=args.left_path, sha256=args.left_hash),
+                    FileRef(path=args.right_path, sha256=args.right_hash),
+                    args.selection,
+                    scope=args.scope,
+                )
             result = {
                 "registration": ref.model_dump(mode="json"),
                 "mode": "advisory",
                 "quality_validated": False,
                 "training_performed": False,
             }
+        elif args.command == "describe":
+            summary = describe_registration(
+                args.registry, FileRef(path=args.registration_path, sha256=args.registration_hash)
+            )
+            result = RegisteredModelIdentity.model_validate(summary.identity()).model_dump(
+                mode="json"
+            )
         else:
             ref = FileRef(path=args.registration_path, sha256=args.registration_hash)
             if args.command in ("predict", "recover"):

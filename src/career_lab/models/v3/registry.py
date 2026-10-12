@@ -1,7 +1,8 @@
 """Local, immutable advisory registrations for already-produced relation model bundles.
 
 This module never fits a model, downloads weights, or promotes scoring/quality.
-Only files referenced by a validated ModelBundle or local encoder return are copied.
+Only files referenced by a validated ModelBundle, local encoder return or linear return
+are copied.
 """
 
 import json
@@ -12,7 +13,7 @@ from typing import Any
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_file
 from career_lab.contracts.v2.research import ModelBundle
 
-from . import encoder_registry
+from . import encoder_registry, fusion_registration, linear_return
 from .bundle import load_bundle, sha
 from .registration import RegistrationProtocol, RegistrationSummary, publish_registration
 
@@ -23,11 +24,16 @@ SCOPES = {"synthetic_fixture", "external_candidate"}
 PROTOCOL = "w08-advisory-registration-v1"
 
 
+# Source that decides a registered model's predictions: all model code (models/v3 adapters
+# import earlier model modules, e.g. the legacy MLP's text classifier) plus the input and
+# file contracts it validates against. Other product changes leave registrations valid.
+INFERENCE_CLOSURE = ("models/**/*.py", "contracts/v2/core.py", "contracts/v2/data.py")
+
+
 def inference_runtime():
     root = Path(__file__).resolve().parents[2]
-    files = {
-        p.relative_to(root).as_posix(): sha(p.read_bytes()) for p in sorted(root.rglob("*.py"))
-    }
+    paths = sorted({path for pattern in INFERENCE_CLOSURE for path in root.glob(pattern)})
+    files = {path.relative_to(root).as_posix(): sha(path.read_bytes()) for path in paths}
     return {
         "source_digest": digest(files),
         "dependencies": {name: version(name) for name in ("numpy", "scikit-learn", "pydantic")},
@@ -90,6 +96,14 @@ def register_bundle(
     bundle_ref = FileRef.model_validate(bundle_ref)
     manifest = json.loads(read_file(Path(bundle_root), bundle_ref))
     if isinstance(manifest, dict) and "return_protocol" in manifest:
+        if linear_return.is_linear_return(manifest):
+            return linear_return.register_linear(
+                Path(registry_root),
+                Path(bundle_root),
+                bundle_ref,
+                scope=scope,
+                runtime=inference_runtime(),
+            )
         return encoder_registry.register_encoder(
             Path(registry_root),
             Path(bundle_root),
@@ -206,11 +220,39 @@ BUNDLE_REGISTRATION = RegistrationProtocol(
     describe=_describe_bundle_registration,
     load=_load_bundle_registration,
 )
+# A fusion resolves its components through this registry's own dispatch.
+FUSION_COMPONENTS = fusion_registration.ComponentRegistry(
+    describe=describe_registration,
+    load=load_registration,
+    runtime=inference_runtime,
+)
 # Dispatch order is irrelevant: each protocol recognises only its own entries.
 REGISTRATION_PROTOCOLS: tuple[RegistrationProtocol, ...] = (
     BUNDLE_REGISTRATION,
     encoder_registry.REGISTRATION,
+    linear_return.REGISTRATION,
+    fusion_registration.protocol(FUSION_COMPONENTS),
 )
+
+
+def register_fusion(
+    registry_root: Path | str,
+    left_ref: FileRef | dict[str, Any],
+    right_ref: FileRef | dict[str, Any],
+    selection_file: Path | str,
+    *,
+    scope: str,
+) -> FileRef:
+    """Register a fusion of two registrations already in ``registry_root`` (see
+    ``fusion_registration``); weights stay in the components, referenced by id and sha."""
+    return fusion_registration.register(
+        Path(registry_root),
+        FileRef.model_validate(left_ref),
+        FileRef.model_validate(right_ref),
+        Path(selection_file),
+        scope=scope,
+        components=FUSION_COMPONENTS,
+    )
 
 
 def public_registration(entry):

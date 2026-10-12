@@ -1,0 +1,4 @@
+Metadata-Version: 2.1
+Name: tokenizers
+Version: 0.22.2
+Summary: Metadata only: declares the locked encoder runtime for registration tests; no code.
