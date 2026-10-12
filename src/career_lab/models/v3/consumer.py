@@ -63,6 +63,7 @@ def safe_model_error(error: Exception) -> AdviceError:
         "file_outside_root",
         "model_registration_identity_mismatch",
         "model_registration_protocol_invalid",
+        "encoder_registration_retired",
     }:
         return "model_reference_invalid"
     return "model_load_failed"
@@ -94,11 +95,25 @@ def predict_or_recover(
             raise error from None
 
 
+# Resolved by the scenario module, not stored as session records: the store accepts them as
+# dependencies only once declared as external references.
+EXTERNAL_REFERENCE_KINDS = frozenset({"material"})
+
+
 def advice_dependencies(item: RelationInput | CriterionInput) -> tuple[ObjectRef, ...]:
-    """Every object one advice input reads: the work subjects and candidate evidence."""
+    """The session objects one advice input reads: work subjects and candidate evidence.
+
+    Scenario materials are left out. A material the advice cites is traced through its
+    citation, which declares it as an external reference, exactly as for rule items; an
+    uncited material is not a dependency, so the store never rejects the feedback for it.
+    """
     refs = (
         *item.evidence.subjects,
-        *(candidate.ref for candidate in item.evidence.candidate_evidence),
+        *(
+            candidate.ref
+            for candidate in item.evidence.candidate_evidence
+            if candidate.ref.kind not in EXTERNAL_REFERENCE_KINDS
+        ),
     )
     bare = {
         canonical(ref.model_dump(mode="json", include=set(ObjectRef.model_fields))): ref
@@ -172,8 +187,26 @@ class AdviceSource:
 
         Each planned sentence is one journaled request; recovery reads it back without
         inference. The work-level label follows ``units.aggregate``; ``input_hash`` stays
-        the whole-work input digest that read tracing keys on.
+        the whole-work input digest that read tracing keys on. Never raises: any failure
+        becomes failed advice, so feedback and its rule results are always written.
         """
+        try:
+            return self._relation_advice(package, envelope, language)
+        except Exception:
+            return RegisteredModelAdvice.model_validate(
+                {
+                    "request_id": envelope.origin_request_id,
+                    "job_id": envelope.job_id,
+                    "input_hash": digest(relation_input(package)),
+                    "registration": self.identity,
+                    "status": "failed",
+                    "error_code": "model_prediction_invalid",
+                }
+            )
+
+    def _relation_advice(
+        self, package: EvidencePackageV2, envelope: AdviceEnvelope, language: str
+    ) -> RegisteredModelAdvice:
         item = relation_input(package)
         values = {
             "request_id": envelope.origin_request_id,
