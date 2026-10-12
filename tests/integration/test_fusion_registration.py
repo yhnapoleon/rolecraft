@@ -19,7 +19,9 @@ from tests.support.linear_return import (
     LABELS,
     feedback_report,
     golden_rows,
+    json_bytes,
     selection_record,
+    sha,
     write_linear_return,
 )
 from tests.support.model_assembly import fixed_linear_bundle
@@ -392,7 +394,9 @@ def test_fus_04_endpoint_alpha_registers_without_fusion_gain(
     assert fusion["fusion"]["fusion_gain_observed"] is False
     model_input = sample("synthetic-en-capacity")
     code, part = registry.predict(left if side == "left" else right, model_input, "part")
+    assert code == 0, part
     code, fused = registry.predict(out["registration"], model_input, "fused")
+    assert code == 0, fused
     assert fused["prediction"]["probabilities"] == part["prediction"]["probabilities"]
 
 
@@ -461,3 +465,22 @@ def test_fus_05_drifted_component_shows_as_changed_files_in_new_feedback(
     assert advice["status"] in {"failed", "unavailable"}
     assert advice["error_code"] == "model_files_changed"
     assert advice["label"] is None and advice["citations"] == []
+
+
+@pytest.mark.parametrize("field", ["affects_score", "quality_validated"])
+def test_fus_05_tampered_fusion_registration_cannot_promote_scoring_or_quality(
+    registry: Registry, field: str
+) -> None:
+    left = linear(registry, "left")
+    right = linear(registry, "right", arrays=second_weights())
+    identities = described(registry, left), described(registry, right)
+    code, out = registry.fuse(left, right, selection_record(*identities))
+    assert code == 0, out
+    path = registry.root / out["registration"]["path"]
+    raw = json_bytes(json.loads(path.read_bytes()) | {field: True})
+    path.write_bytes(raw)
+    tampered = {"path": out["registration"]["path"], "sha256": sha(raw)}
+    code, result = registry.describe(tampered)
+    assert (code, result.get("error")) == (2, "registration_cannot_promote_scoring_or_quality")
+    code, result = registry.predict(tampered, sample("synthetic-en-capacity"), "tampered")
+    assert (code, result.get("error")) == (2, "registration_cannot_promote_scoring_or_quality")

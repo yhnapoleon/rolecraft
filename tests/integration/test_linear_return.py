@@ -4,6 +4,7 @@ Every registration here is synthetic_fixture mechanism evidence: constructed wei
 weights fitted on in-repo synthetic examples. No model quality claim.
 """
 
+import io
 import json
 import os
 import shutil
@@ -29,6 +30,7 @@ from tests.support.linear_return import (
     feedback_report,
     golden_rows,
     json_bytes,
+    npz_bytes,
     reference_module,
     sha,
     text_sha,
@@ -702,3 +704,62 @@ def test_rt_01_only_inference_closure_changes_invalidate_a_registration(tmp_path
             (source / closure).read_bytes().replace(b"\n# RT-01: inference closure change\n", b"")
         )
     assert predict("restored")[1]["status"] == "completed"
+
+
+def compressed_npz(**arrays: np.ndarray) -> bytes:
+    buffer = io.BytesIO()
+    np.savez_compressed(buffer, **arrays)
+    return buffer.getvalue()
+
+
+@pytest.mark.parametrize("case", ["archive_expands_past_limit", "arrays_file_past_limit"])
+def test_lin_02_oversize_linear_returns_are_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], case: str
+) -> None:
+    oversize = np.zeros(8_500_000)  # 68 MB of float64, above the 64 MiB limit
+    raw = (
+        compressed_npz(coef=oversize)
+        if case == "archive_expands_past_limit"
+        else npz_bytes({"coef": oversize})
+    )
+    assert (len(raw) < 1024 * 1024) == (case == "archive_expands_past_limit")
+    root, registry = tmp_path / "return", tmp_path / "registry"
+    ref = write_linear_return(root, arrays_raw=raw)
+    code, out = register(capsys, registry, root, ref)
+    assert (code, out["error"]) == (2, "linear_return_too_large")
+    assert not list(registry.glob("linear-*"))
+
+
+@pytest.mark.parametrize("field", ["affects_score", "quality_validated"])
+def test_lin_01_tampered_registration_cannot_promote_scoring_or_quality(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], field: str
+) -> None:
+    root, registry = tmp_path / "return", tmp_path / "registry"
+    code, out = register(capsys, registry, root, write_linear_return(root))
+    assert code == 0, out
+    path = registry / out["registration"]["path"]
+    raw = json_bytes(json.loads(path.read_bytes()) | {field: True})
+    path.write_bytes(raw)
+    item = tmp_path / "item.json"
+    item.write_text(json.dumps(sample("synthetic-en-capacity")))
+    tampered = ["--registration-path", out["registration"]["path"], "--registration-hash", sha(raw)]
+    code, described = cli(capsys, "describe", "--registry", registry, *tampered)
+    assert (code, described["error"]) == (2, "registration_cannot_promote_scoring_or_quality")
+    code, predicted = cli(
+        capsys,
+        "predict",
+        "--registry",
+        registry,
+        *tampered,
+        "--journal",
+        tmp_path / "journal",
+        "--request-id",
+        "tampered",
+        "--input",
+        item,
+        "--language",
+        "en",
+        "--allow-synthetic",
+    )
+    assert (code, predicted["error"]) == (2, "registration_cannot_promote_scoring_or_quality")
+    assert not (tmp_path / "journal").exists()
