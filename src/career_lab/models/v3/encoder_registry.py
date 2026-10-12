@@ -1,4 +1,8 @@
-"""Immutable local registrations for the agreed dual-head encoder return format."""
+"""Immutable local registrations of encoder returns (v3 and fixture v2 era layouts).
+
+Each registration pins the installed encoder runtime versions next to the inference
+source identity; see docs/data/return-v3/encoder-return.md section 11.
+"""
 
 import importlib.metadata
 import json
