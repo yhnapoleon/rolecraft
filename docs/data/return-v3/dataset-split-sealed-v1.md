@@ -58,6 +58,8 @@ audit/<split>/sources/…            该 split 的来源快照（如有）
 | `splits.<s>.files` | 必须含上面 4 个固定文件；所有路径只能在 `data/<s>.` 或 `audit/<s>/` 下；同一路径不能出现在两个 split |
 | `files` | 只放共用文件（数据卡等）；不能放任何 `data/` 或 `audit/<split>/` 下的文件 |
 
+另外，不同 split 的 4 个固定文件不能字节相同（同一份内容不能挂两个分区名）。读某个分区时，所读文件路径上不能有符号链接（`dataset_symlink_forbidden`，403）；validate-handoff 拒绝包内任何符号链接。
+
 结构规则在读任何 split 文件之前全部核完，违反时的错误码：`dataset_split_unknown`、`dataset_split_file_not_isolated`（403）、`dataset_split_files_incomplete`、`dataset_split_file_outside_partition`（403）、`dataset_test_split_must_be_sealed`（403）、`dataset_test_sealed_without_test`。
 
 ## 3. 数据卡
@@ -86,5 +88,7 @@ uv run --locked python -m career_lab.datasets.v3 validate-handoff \
 | `layout` | `rolecraft-dataset-split-sealed-v1` |
 | `sealed_test` | `null`（无 test）或 `{split, records, files{路径: sha256}, labels_parsed=false, inputs_parsed=false, verified[…], declared_only[…]}` |
 | `annotation_trace` | `{"zh": […], "en": […]}`：每条 train/dev 记录的 record_id、input_hash、split、语言、审阅状态、标签等级、裁决引用，以及每遍调用的 id、状态、input_hash、invocation_id、model_revision、prompt_revision、证据顺序、原始输出 SHA-256、调用原件路径与 SHA-256 |
+
+数据卡、`label_orders` 与 `label_tiers` 的一致性只由 validate-handoff 核对；verify-return 只核它所读分区的文件绑定、逐条对齐与语言计数。
 
 退出码、恢复与只读边界同 W07 手册；training_ready 恒为 false。

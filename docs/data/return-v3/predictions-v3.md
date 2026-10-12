@@ -28,7 +28,7 @@ v3 行与 fixture v2 行字段相同，只把版本写成 3：
 | `layout`、`split` | 数据包布局与所评分区 |
 | `evaluation_setting`、`retrieval_setting` | `given_evidence_only`、`not_evaluated` |
 | `languages.<zh|en>.counts` | `format_failures`、`abstentions`、`coverage`；该语言没有记录时 `status=blocked_missing_language` |
-| `tolerance` | 重载比对所用容差（见下），无注册时为 `null` |
+| `tolerance` | 重载比对所用容差（见下）；无注册、或因格式错误未做重载时为 `null` |
 | `reload.mismatches`、`reload.max_probability_deviation` | 每条不符记录及其不符字段；全部比对记录中概率的最大绝对差 |
 | `fusion_selection` | 融合选择复算结果，未给记录时为 `null` |
 | `opened`、`held_out_test_opened` | test 打开记录与 `true`；dev 复核为 `null` 与 `false` |
@@ -42,7 +42,9 @@ v3 行与 fixture v2 行字段相同，只把版本写成 3：
 - `input_hash`、`model_revision`、`task_type`、`status`、`label` 完全相同；证据集合完全相同；
 - 概率同为空，或逐项绝对差不超过容差：线性 1e-6，编码器 1e-4。按实际加载的模型种类定：模型或融合任一分量是编码器（`huggingface_encoder`、`numpy_attention`）用 1e-4，其余用 1e-6（未知种类按严格档）。
 
-任一条不符即 `reload.status=producer_mismatch`，报告 `rejected`、退出码 2；在容差内的概率差只记进 `max_probability_deviation`。
+任一条不符即 `reload.status=producer_mismatch`，报告 `rejected`、退出码 2；在容差内的概率差只记进 `max_probability_deviation`。`reload.comparison` 取值为 `probabilities_within_absolute_tolerance_labels_and_evidence_sets_exact`（旧版为逐位相等的 `exact_probabilities_labels_and_evidence_sets`）。
+
+负责方清单的选择声明须为 `training_partitions=["train"]`、`selection_partition="dev"`、`test_used_for_selection=false`。唯一例外：注册为 `synthetic_fixture` 且 `weights_stage=pretrained_untrained_heads`（编码器回传的「预训练权重、头未训练」阶段）时，清单必须恰为 `training_partitions=[]`、`selection_partition=null`、`test_used_for_selection=false`；其他取值、其他注册与不给注册都照旧判 `model_return_selection_contaminated`。
 
 ## 4. 融合选择复算（`--fusion-selection`）
 
