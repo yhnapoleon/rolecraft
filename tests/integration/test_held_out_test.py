@@ -23,7 +23,7 @@ from career_lab.datasets.v3.labeling import AnnotationBatch
 from career_lab.experiments.v3.training.freeze import freeze_selection
 from career_lab.models.v3.held_out import prepare_test_freeze, review_policy_bytes
 from tests.integration.test_model_return_verification import (
-    RIGHT_WEIGHTS,
+    LEFT_WEIGHTS,
     linear_bundle,
     linear_registration,
     model_predictions,
@@ -1018,7 +1018,7 @@ def manual_freeze(
 
 def test_held_03_campaign_candidate_must_be_the_registration_under_test(tmp_path: Path) -> None:
     opening = prepared_opening(tmp_path)
-    root, ref = linear_bundle(tmp_path / "other-model", *RIGHT_WEIGHTS)
+    root, ref = linear_bundle(tmp_path / "other-model", *LEFT_WEIGHTS)
     other = register(opening.registry, root, ref)
     report = refused(
         opening,

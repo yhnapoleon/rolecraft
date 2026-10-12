@@ -12,6 +12,8 @@ import pytest
 from career_lab.contracts import v2 as C
 from career_lab.models.v3.bundle import json_bytes, save_bundle, sha
 from career_lab.models.v3.encoder import AttentionEncoder
+from career_lab.models.v3.ensemble import select_alpha
+from career_lab.models.v3.fusion_bundle import save_fusion_bundle
 from career_lab.models.v3.linear import LinearCandidate
 from career_lab.models.v3.registry import load_registration, register_bundle
 from tests.unit.test_w08_models import examples
@@ -542,7 +544,7 @@ def test_pred_01_unknown_task_or_missing_version_is_rejected_per_record(
 
 
 # Fixed-weight registrations: constructed, never fitted; scope is always synthetic_fixture.
-LINEAR_VOCABULARY = {"v": 0, "e": 1, "r": 2, "2": 3, "1": 4, "n": 5}
+LINEAR_VOCABULARY = {": 2": 0, ": 1": 1, "bud": 2, "unr": 3, "ver": 4, "n": 5}
 
 
 def linear_bundle(root: Path, coef, intercept, evidence_coef) -> tuple[Path, C.FileRef]:
@@ -582,15 +584,16 @@ def linear_bundle(root: Path, coef, intercept, evidence_coef) -> tuple[Path, C.F
     return root / "bundle", ref
 
 
+# Columns follow LINEAR_VOCABULARY: rows are SUPPORTED, CONTRADICTED, INSUFFICIENT.
 LEFT_WEIGHTS = (
-    [[1.2, 0.0, 0.4, 0.0, 0.0, 0.3], [0.0, 0.9, 0.0, 0.2, 0.6, 0.0], [0.1] * 6],
-    [0.1, 0.0, 0.3],
-    [0.8, 0.0, 0.9, 0.4, 0.0, 0.2],
+    [[3.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 3.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 3.0, 0.0, 0.0, 0.0]],
+    [0.0, 0.0, 0.0],
+    [4.0, 4.0, -4.0, -4.0, 0.0, 0.0],
 )
 RIGHT_WEIGHTS = (
-    [[0.2, 0.7, 0.0, 0.5, 0.0, 0.0], [0.6, 0.0, 0.8, 0.0, 0.1, 0.4], [0.3] * 6],
-    [0.0, 0.2, 0.1],
-    [0.1, 0.7, 0.0, 0.9, 0.3, 0.0],
+    [[2.0, 1.0, 0.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]],
+    [0.0, 0.0, 0.5],
+    [2.0, 0.0, -2.0, -3.0, 0.0, 0.0],
 )
 
 
@@ -599,7 +602,7 @@ def register(registry: Path, root: Path, ref: C.FileRef) -> C.FileRef:
 
 
 def linear_registration(tmp_path: Path) -> tuple[Path, C.FileRef]:
-    root, ref = linear_bundle(tmp_path / "linear", *LEFT_WEIGHTS)
+    root, ref = linear_bundle(tmp_path / "linear", *RIGHT_WEIGHTS)
     return tmp_path / "registry", register(tmp_path / "registry", root, ref)
 
 
@@ -803,3 +806,153 @@ def test_crv_03_missing_language_stays_blocked_with_empty_counts(return_case, ca
         "coverage": None,
     }
     assert result["evaluation_setting"] == "given_evidence_only"
+
+
+def fusion_registration(tmp_path: Path, alpha: float, threshold: float) -> tuple[Path, C.FileRef]:
+    """A registered NumPy fusion of the two fixed linear bundles (same release and source)."""
+    left_root, left_ref = linear_bundle(tmp_path / "left", *LEFT_WEIGHTS)
+    right_root, right_ref = linear_bundle(tmp_path / "right", *RIGHT_WEIGHTS)
+    target = tmp_path / f"fusion-{alpha}-{threshold}"
+    ref = save_fusion_bundle(
+        target,
+        left_root=left_root,
+        left_ref=left_ref,
+        right_root=right_root,
+        right_ref=right_ref,
+        alpha=alpha,
+        threshold=threshold,
+    )
+    return tmp_path / "registry", register(tmp_path / "registry", target, ref)
+
+
+def producer_selection(registry: Path, ref: C.FileRef, checksum: str, **changes) -> dict:
+    """The responsible party's dev grid, computed with the published fusion rule."""
+    model, _ = load_registration(registry, ref)
+    rows = examples("dev", 1)
+    result = select_alpha(rows, model.left, model.right)
+    record = {
+        "protocol": "rolecraft-fusion-selection-v1",
+        "task_type": "relation",
+        "dataset_id": "synthetic-return",
+        "dataset_manifest_sha256": checksum,
+        "selection_split": "dev",
+        "test_used_for_selection": False,
+        "components": {
+            "left": {"model_revision": model.left.revision, "artifact_kind": "linear"},
+            "right": {"model_revision": model.right.revision, "artifact_kind": "linear"},
+        },
+        "alpha_grid": [0, 0.25, 0.5, 0.75, 1],
+        "evidence_threshold_grid": [0.25, 0.5, 0.75],
+        "selected": {"alpha": result["alpha"], "evidence_threshold": result["evidence_threshold"]},
+        "points": [
+            {
+                "alpha": point["alpha"],
+                "evidence_threshold": point["threshold"],
+                "metrics": {
+                    key: point["metrics"][key]
+                    for key in (
+                        "count",
+                        "macro_f1",
+                        "mean_evidence_f1",
+                        "joint_correctness",
+                        "evidence_denominator",
+                        "joint_denominator",
+                    )
+                },
+            }
+            for point in result["grid"]
+        ],
+        "fusion_gain_observed": result["fusion_gain_observed"],
+        "dev_input_hashes": result["dev_input_hashes"],
+    }
+    return record | changes
+
+
+def fusion_case(return_case, tmp_path: Path, alpha: float, threshold: float, **changes):
+    root, checksum, path = return_case
+    registry, ref = fusion_registration(tmp_path / "model", alpha, threshold)
+    write_rows(path, model_predictions(registry, ref, root / "data/dev.inputs.jsonl"))
+    selection = tmp_path / "fusion-selection.json"
+    selection.write_text(json.dumps(producer_selection(registry, ref, checksum, **changes)))
+    return registry, ref, selection
+
+
+def test_fsel_01_selection_recomputed_on_registered_components_matches(
+    return_case, capsys, tmp_path
+) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, 0.25, 0.5)
+    record = json.loads(selection.read_text())
+    # Worked example: at alpha 0 the left model calls the INSUFFICIENT record CONTRADICTED;
+    # mixing in a quarter of the right model fixes it, so 0.25 beats both endpoints.
+    assert record["selected"] == {"alpha": 0.25, "evidence_threshold": 0.5}
+    code, result = invoke(
+        return_case, capsys, *registration_args(registry, ref), "--fusion-selection", str(selection)
+    )
+    assert code == 0, result
+    fusion = result["fusion_selection"]
+    assert fusion["status"] == "matched" and fusion["reasons"] == []
+    assert fusion["policy"] == "joint-first-dev-v1"
+    assert fusion["recomputed"]["selected"] == {"alpha": 0.25, "evidence_threshold": 0.5}
+    assert fusion["recomputed"]["fusion_gain_observed"] is True
+    assert fusion["mismatched_points"] == []
+    assert result["reload"]["status"] == "matched"
+
+
+@pytest.mark.parametrize(
+    ("alpha", "change", "reasons"),
+    [
+        (0.0, {"selected": {"alpha": 0, "evidence_threshold": 0.5}, "fusion_gain_observed": False},
+         ["fusion_selection_selected_mismatch"]),
+        (0.0, {"selected": {"alpha": 0, "evidence_threshold": 0.5}, "fusion_gain_observed": True},
+         ["fusion_selection_selected_mismatch", "fusion_gain_claimed_at_endpoint"]),
+        (0.25, {"test_used_for_selection": True}, ["fusion_selection_contaminated"]),
+        (0.25, {"dev_input_hashes": ["0" * 64]}, ["fusion_selection_dev_inputs_mismatch"]),
+        (0.25, {"dataset_manifest_sha256": "0" * 64}, ["fusion_selection_dataset_mismatch"]),
+    ],
+    ids=["other-point", "endpoint-gain", "test-used", "dev-inputs", "dataset"],
+)
+def test_fsel_01_selection_that_disagrees_with_recomputation_is_rejected(
+    return_case, capsys, tmp_path, alpha, change, reasons
+) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, alpha, 0.5, **change)
+    code, result = invoke(
+        return_case, capsys, *registration_args(registry, ref), "--fusion-selection", str(selection)
+    )
+    assert code == 2
+    assert result["status"] == "rejected"
+    assert result["fusion_selection"]["status"] == "rejected"
+    assert result["fusion_selection"]["reasons"] == reasons
+
+
+def test_fsel_01_a_changed_point_metric_is_located(return_case, capsys, tmp_path) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, 0.25, 0.5)
+    record = json.loads(selection.read_text())
+    point = next(
+        p for p in record["points"] if (p["alpha"], p["evidence_threshold"]) == (0.5, 0.75)
+    )
+    point["metrics"]["macro_f1"] = 0.9
+    point["metrics"]["joint_denominator"] += 1
+    selection.write_text(json.dumps(record))
+    code, result = invoke(
+        return_case, capsys, *registration_args(registry, ref), "--fusion-selection", str(selection)
+    )
+    assert code == 2
+    assert result["fusion_selection"]["reasons"] == ["fusion_selection_point_mismatch"]
+    assert result["fusion_selection"]["mismatched_points"] == [
+        {"alpha": 0.5, "evidence_threshold": 0.75, "fields": ["macro_f1", "joint_denominator"]}
+    ]
+
+
+def test_fsel_01_needs_a_registered_fusion(return_case, capsys, tmp_path) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, 0.25, 0.5)
+    code, result = invoke(return_case, capsys, "--fusion-selection", str(selection))
+    assert code == 2 and result["error"] == "fusion_selection_requires_registration"
+    other_registry, other = linear_registration(tmp_path / "single")
+    code, result = invoke(
+        return_case,
+        capsys,
+        *registration_args(other_registry, other),
+        "--fusion-selection",
+        str(selection),
+    )
+    assert code == 2 and result["error"] == "fusion_selection_requires_fusion_registration"

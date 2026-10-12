@@ -3,15 +3,18 @@
 from pathlib import Path
 from typing import Any
 
-from pydantic import ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError
 
 from career_lab.contracts import v2 as C
 from career_lab.experiments.v3.training.metrics import grade, summarize
 from career_lab.experiments.v3.training.review import review_registered
+from career_lab.experiments.v3.training.selection import SelectionPolicy
 
 from .bundle import sha
 from .encoder_artifact import file_map, validate_return_identity, verify_file
+from .ensemble import select_alpha
 from .held_out import HeldOutRequest, open_held_out_test
+from .registry import describe_registration, load_registration
 from .return_data import ReturnDataset, json_lines, load_return_dataset, strict_json, unique_records
 from .return_predictions import (
     ReturnedPrediction,
@@ -123,6 +126,172 @@ def inspect_return_checkpoint(
     }
 
 
+SELECTION_PROTOCOL = "rolecraft-fusion-selection-v1"
+ALPHA_GRID = (0.0, 0.25, 0.5, 0.75, 1.0)
+POINT_FRACTIONS = ("macro_f1", "mean_evidence_f1", "joint_correctness")
+POINT_COUNTS = ("count", "evidence_denominator", "joint_denominator")
+
+
+class FusionSelectionRecord(BaseModel):
+    """``rolecraft-fusion-selection-v1`` (docs/data/return-v3/fusion-selection.md)."""
+
+    model_config = ConfigDict(extra="forbid")
+    protocol: str
+    task_type: str
+    dataset_id: str
+    dataset_manifest_sha256: str
+    selection_split: str
+    test_used_for_selection: bool
+    components: dict[str, dict[str, str]]
+    alpha_grid: list[float]
+    evidence_threshold_grid: list[float]
+    selected: dict[str, float]
+    points: list[dict[str, Any]]
+    fusion_gain_observed: bool
+    dev_input_hashes: list[str]
+
+
+def point_key(alpha: Any, threshold: Any) -> tuple[float, float]:
+    return float(alpha), float(threshold)
+
+
+def differing_metrics(declared: dict[str, Any], recomputed: dict[str, Any]) -> list[str]:
+    fields = []
+    for key in (*POINT_FRACTIONS, *POINT_COUNTS):
+        mine, theirs = recomputed[key], declared.get(key)
+        if key in POINT_COUNTS:
+            same = type(theirs) is int and theirs == mine
+        elif mine is None or theirs is None:
+            same = mine is None and theirs is None
+        else:
+            same = isinstance(theirs, (int, float)) and abs(mine - theirs) <= 1e-9
+        if not same:
+            fields.append(key)
+    return fields
+
+
+def registered_components(registry_root: Path, ref: C.FileRef, model: Any) -> dict[str, Any]:
+    """Each side's revision and kind, as the registration publishes them."""
+    summary = describe_registration(registry_root, ref)
+    if summary.components:
+        return {
+            c["role"]: {"model_revision": c["model_revision"], "artifact_kind": c["kind"]}
+            for c in summary.components
+        }
+    return {
+        side: {
+            "model_revision": getattr(model, side).revision,
+            "artifact_kind": getattr(model, side).kind,
+        }
+        for side in ("left", "right")
+    }
+
+
+def recompute_fusion_selection(
+    dataset: ReturnDataset, registry_root: Path, ref: C.FileRef, selection_path: Path
+) -> dict[str, Any]:
+    """Recompute the producer's dev grid on the registered components and compare.
+
+    Uses the product's own fusion and dev selection rule (``ensemble.select_alpha``,
+    ``joint-first-dev-v1``). Never reads test data and never selects anything new.
+    """
+    raw = selection_path.read_bytes()
+    try:
+        record = FusionSelectionRecord.model_validate(strict_json(raw))
+    except ValidationError as error:
+        raise C.ProtocolError("fusion_selection_protocol_invalid") from error
+    if record.protocol != SELECTION_PROTOCOL or record.task_type != "relation":
+        raise C.ProtocolError("fusion_selection_protocol_invalid")
+    model, entry = load_registration(registry_root, ref)
+    if not (hasattr(model, "left") and hasattr(model, "right")):
+        raise C.ProtocolError("fusion_selection_requires_fusion_registration")
+    reasons = []
+    stored = entry.get("selection")
+    if isinstance(stored, dict) and stored.get("sha256") != sha(raw):
+        reasons.append("fusion_selection_not_registered")
+    if record.selection_split != "dev" or record.test_used_for_selection is not False:
+        reasons.append("fusion_selection_contaminated")
+    if (record.dataset_id, record.dataset_manifest_sha256) != (
+        dataset.dataset_id,
+        dataset.manifest_hash,
+    ):
+        reasons.append("fusion_selection_dataset_mismatch")
+    if sorted(record.dev_input_hashes) != sorted(
+        row.annotation.input_hash for row in dataset.examples
+    ):
+        reasons.append("fusion_selection_dev_inputs_mismatch")
+    if record.components != registered_components(registry_root, ref, model):
+        reasons.append("fusion_selection_component_mismatch")
+    thresholds = tuple(record.evidence_threshold_grid)
+    declared = {point_key(p.get("alpha"), p.get("evidence_threshold")): p for p in record.points}
+    grid = {(a, t) for a in ALPHA_GRID for t in thresholds}
+    if (
+        tuple(record.alpha_grid) != ALPHA_GRID
+        or not thresholds
+        or len(set(thresholds)) != len(thresholds)
+        or any(not 0 <= t <= 1 for t in thresholds)
+        or len(declared) != len(record.points)
+        or set(declared) != grid
+    ):
+        reasons.append("fusion_selection_grid_invalid")
+        return {
+            "status": "rejected",
+            "protocol": SELECTION_PROTOCOL,
+            "reasons": reasons,
+            "mismatched_points": [],
+            "recomputed": None,
+        }
+    policy = SelectionPolicy(evidence_thresholds=thresholds, alpha_grid=ALPHA_GRID)
+    result = select_alpha(dataset.examples, model.left, model.right, policy)
+    recomputed = {point_key(p["alpha"], p["threshold"]): p["metrics"] for p in result["grid"]}
+    mismatched = []
+    for key in sorted(recomputed):
+        fields = differing_metrics(declared[key].get("metrics") or {}, recomputed[key])
+        if fields:
+            mismatched.append({"alpha": key[0], "evidence_threshold": key[1], "fields": fields})
+    if mismatched:
+        reasons.append("fusion_selection_point_mismatch")
+    selected = point_key(record.selected.get("alpha"), record.selected.get("evidence_threshold"))
+    winner = (
+        point_key(result["alpha"], result["evidence_threshold"])
+        if result["alpha"] is not None
+        else None
+    )
+    if selected != winner:
+        reasons.append("fusion_selection_selected_mismatch")
+    endpoint = selected[0] in (0.0, 1.0)
+    best_endpoint = max(
+        (recomputed[k]["joint_correctness"] or 0 for k in recomputed if k[0] in (0.0, 1.0)),
+        default=0,
+    )
+    actual_gain = (
+        selected in recomputed
+        and not endpoint
+        and (recomputed[selected]["joint_correctness"] or 0) > best_endpoint
+    )
+    if record.fusion_gain_observed and endpoint:
+        reasons.append("fusion_gain_claimed_at_endpoint")
+    elif record.fusion_gain_observed != actual_gain:
+        reasons.append("fusion_gain_observed_mismatch")
+    if point_key(model.alpha, model.threshold) != selected:
+        reasons.append("fusion_selection_registration_mismatch")
+    return {
+        "status": "rejected" if reasons else "matched",
+        "protocol": SELECTION_PROTOCOL,
+        "policy": policy.version,
+        "selected": {"alpha": selected[0], "evidence_threshold": selected[1]},
+        "fusion_gain_observed": record.fusion_gain_observed,
+        "recomputed": {
+            "selected": {"alpha": winner[0], "evidence_threshold": winner[1]} if winner else None,
+            "selection_status": result["selection_status"],
+            "fusion_gain_observed": result["fusion_gain_observed"],
+            "points": len(recomputed),
+        },
+        "mismatched_points": mismatched,
+        "reasons": reasons,
+    }
+
+
 def verify_return(
     dataset_root: Path,
     dataset_hash: str,
@@ -134,8 +303,14 @@ def verify_return(
     registration_path: str | None = None,
     registration_hash: str | None = None,
     held_out: HeldOutRequest | None = None,
+    fusion_selection: Path | None = None,
 ) -> dict[str, Any]:
     """Review returned predictions for ``dev``, or for ``test`` behind a recorded opening."""
+    if fusion_selection is not None:
+        if partition != "dev":
+            raise C.ProtocolError("fusion_selection_dev_only", status=403)
+        if registry_root is None or registration_path is None or registration_hash is None:
+            raise C.ProtocolError("fusion_selection_requires_registration")
     opening = None
     if partition == "test":
         registration = (
@@ -201,10 +376,21 @@ def verify_return(
             registration_hash,
             held_out_opening=opening,
         )
+    selection = (
+        recompute_fusion_selection(
+            dataset,
+            registry_root,
+            C.FileRef(path=registration_path, sha256=registration_hash),
+            fusion_selection,
+        )
+        if fusion_selection is not None
+        else None
+    )
     rejected = (
         bool(format_errors)
         or reload["status"] == "producer_mismatch"
         or reload.get("reload_predictions_identical") is False
+        or (selection is not None and selection["status"] == "rejected")
     )
     mechanism = reload.get("registration", {}).get("scope") == "synthetic_fixture"
     return {
@@ -235,4 +421,5 @@ def verify_return(
         "affects_score": False,
         "held_out_test_opened": opening is not None,
         "tolerance": reload.get("tolerance"),
+        "fusion_selection": selection,
     }

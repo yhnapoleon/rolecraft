@@ -27,6 +27,11 @@ def add_parser(commands: argparse._SubParsersAction) -> None:
     verify.add_argument("--registry", type=Path)
     verify.add_argument("--registration-path")
     verify.add_argument("--registration-hash")
+    verify.add_argument(
+        "--fusion-selection",
+        type=Path,
+        help="Producer's rolecraft-fusion-selection-v1 record; recomputed on dev",
+    )
     held_out = verify.add_argument_group(
         "held-out test (--partition test)",
         "The approval is the campaign file; the opening is recorded once under --ledger.",
@@ -54,6 +59,7 @@ def run(args: argparse.Namespace) -> int:
             registration_path=args.registration_path,
             registration_hash=args.registration_hash,
             held_out=held_out,
+            fusion_selection=args.fusion_selection,
         )
     except ProtocolError as error:
         print(
