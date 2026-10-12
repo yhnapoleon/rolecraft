@@ -1,6 +1,6 @@
 """Tiny, loadable encoder returns for optional checks (needs the encoder extra; no download).
 
-A randomly initialised BERT of about 10 KB stands in for a pretrained encoder; the
+A randomly initialised BERT (about 14 KB of weights) stands in for a pretrained encoder; the
 returns are synthetic mechanisms, never model-quality evidence. Lines that need a real
 encoder registration (fusion components, sentence measuring) build one with
 ``tiny_encoder_return``; registering it still needs ``scope="synthetic_fixture"``.
