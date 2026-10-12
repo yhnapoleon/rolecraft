@@ -1,0 +1,4 @@
+Metadata-Version: 2.1
+Name: torch
+Version: 2.8.0
+Summary: Metadata only: declares the locked encoder runtime for registration tests; no code.
