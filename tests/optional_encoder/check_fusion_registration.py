@@ -1,8 +1,9 @@
 """FUS-01 prediction side: a linear return fused with a CPU micro-BERT encoder return.
 
 Explicit optional check (needs ``uv sync --locked --extra encoder``); the filename keeps it
-outside default pytest discovery. The encoder is randomly initialised locally and given one
-optimisation step on synthetic fixture examples; no download, no quality claim.
+outside default pytest discovery. The encoder is 146's tiny v3 return: a locally randomly
+initialised BERT given one optimisation step on synthetic examples; no download, no
+quality claim.
 """
 
 import json
@@ -15,13 +16,12 @@ import torch
 
 from career_lab.contracts.v2.core import FileRef
 from career_lab.models.v3 import registry_cli
-from career_lab.models.v3.bundle import sha
-from career_lab.models.v3.huggingface import HuggingFaceCandidate
 from career_lab.models.v3.registry import load_registration
-from tests.optional_encoder.check_local_encoder import local_encoder
+from tests.optional_encoder.tiny_return import tiny_encoder_return
 from tests.support.linear_return import selection_record, write_linear_return
-from tests.unit.test_w08_encoder_registration import encoder_return, write_manifest
 from tests.unit.test_w08_models import examples
+
+DATASET = {"dataset_id": "rolecraft-synthetic-fusion-check", "dataset_manifest_sha256": "f" * 64}
 
 
 def cli(capsys: pytest.CaptureFixture[str], *argv: object) -> dict:
@@ -41,28 +41,8 @@ def registration_args(registration: dict) -> list[object]:
 
 
 def encoder_registration(tmp_path: Path, capsys, registry: Path) -> dict:
-    source = tmp_path / "random-source"
-    ref = local_encoder(source)
-    candidate = HuggingFaceCandidate(
-        source, revision="a" * 40, variant="pair", max_tokens=256, checkpoint_manifest=ref
-    )
-    candidate.fit(examples(), epochs=1, learning_rate=0.001)
-    candidate.training_report.update(pretrained=False, scope="synthetic_random_fixture")
     checkpoint = tmp_path / "checkpoint"
-    candidate.save_checkpoint(checkpoint)
-    declaration = tmp_path / "declaration"
-    encoder_return(declaration)
-    manifest = json.loads((declaration / "checkpoint-manifest.json").read_bytes())
-    manifest.update(
-        model_revision=candidate.revision,
-        framework_version=torch.__version__,
-        checkpoint_files={
-            p.relative_to(checkpoint).as_posix(): sha(p.read_bytes())
-            for p in checkpoint.rglob("*")
-            if p.is_file()
-        },
-    )
-    returned = write_manifest(checkpoint, manifest)
+    returned = tiny_encoder_return(checkpoint, variant="pair", dataset=DATASET)
     out = cli(
         capsys,
         "register",
@@ -93,7 +73,9 @@ def test_fus_01_linear_and_micro_bert_fusion_loads_and_predicts_on_cpu(
     encoder = encoder_registration(tmp_path, capsys, registry)
     linear_root = tmp_path / "linear"
     linear_ref = write_linear_return(
-        linear_root, dataset_id="rolecraft-fixture-20261007-v2", dataset_sha="f" * 64
+        linear_root,
+        dataset_id=DATASET["dataset_id"],
+        dataset_sha=DATASET["dataset_manifest_sha256"],
     )
     linear = cli(
         capsys,
@@ -111,7 +93,8 @@ def test_fus_01_linear_and_micro_bert_fusion_loads_and_predicts_on_cpu(
     )["registration"]
     left = cli(capsys, "describe", "--registry", registry, *registration_args(linear))
     right = cli(capsys, "describe", "--registry", registry, *registration_args(encoder))
-    right = right | {"kind": "huggingface_encoder", "dataset": left["dataset"]}
+    assert right["kind"] == "huggingface_encoder"
+    assert right["dataset"]["dataset_manifest_sha256"] == left["dataset"]["dataset_manifest_sha256"]
     selection = tmp_path / "fusion-selection.json"
     selection.write_text(json.dumps(selection_record(left, right, alpha=0.25, threshold=0.5)))
     fusion = cli(
