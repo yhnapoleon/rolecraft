@@ -730,6 +730,19 @@ def test_lin_02_oversize_linear_returns_are_refused(
     assert not list(registry.glob("linear-*"))
 
 
+def test_lin_02_oversize_model_file_is_refused(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """145 review N1: ``linear/model.json`` past 64 MiB is refused on its own, arrays small."""
+    root, registry = tmp_path / "return", tmp_path / "registry"
+    ref = write_linear_return(root, model={"notes": "x" * (64 * 1024 * 1024)})
+    assert (root / "linear/model.json").stat().st_size > 64 * 1024 * 1024
+    assert (root / "linear/arrays.npz").stat().st_size < 1024 * 1024
+    code, out = register(capsys, registry, root, ref)
+    assert (code, out["error"]) == (2, "linear_return_too_large")
+    assert not list(registry.glob("linear-*"))
+
+
 @pytest.mark.parametrize("field", ["affects_score", "quality_validated"])
 def test_lin_01_tampered_registration_cannot_promote_scoring_or_quality(
     tmp_path: Path, capsys: pytest.CaptureFixture[str], field: str

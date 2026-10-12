@@ -16,9 +16,16 @@ from career_lab.models.v3.ensemble import select_alpha
 from career_lab.models.v3.fusion_bundle import save_fusion_bundle
 from career_lab.models.v3.linear import LinearCandidate
 from career_lab.models.v3.registration import RegistrationSummary
-from career_lab.models.v3.registry import load_registration, register_bundle
+from career_lab.models.v3.registry import (
+    describe_registration,
+    load_registration,
+    register_bundle,
+    register_fusion,
+)
 from career_lab.models.v3.return_data import load_return_dataset
 from career_lab.models.v3.return_verification import inspect_return_checkpoint
+from tests.integration.test_fusion_registration import second_weights
+from tests.support.linear_return import selection_record, write_linear_return
 from tests.unit.test_w08_encoder_registration import (
     deny_encoder_imports,
     encoder_return,
@@ -1287,3 +1294,46 @@ def test_ret_05_a_trained_encoder_that_cannot_reload_here_is_not_a_partial_revie
     code, result = invoke(return_case, capsys, *registration_args(registry, registration))
     assert code == 2, result
     assert result["error"] == "pretrained_encoder_dependencies_unavailable"
+
+
+def test_fsel_01_a_record_other_than_the_registered_copy_is_named(
+    return_case, capsys, tmp_path
+) -> None:
+    """FSEL-01: verify-return checks the given record against the copy registered with the
+    fusion (145 registration); another record is named ``fusion_selection_not_registered``."""
+    root, checksum, path = return_case
+    registry = tmp_path / "registry"
+    dataset = {"dataset_id": "synthetic-return", "dataset_sha": checksum}
+    left_root, right_root = tmp_path / "left", tmp_path / "right"
+    left = register_bundle(
+        registry, left_root, write_linear_return(left_root, **dataset), scope="synthetic_fixture"
+    )
+    right = register_bundle(
+        registry,
+        right_root,
+        write_linear_return(right_root, arrays=second_weights(), **dataset),
+        scope="synthetic_fixture",
+    )
+    record = selection_record(
+        describe_registration(registry, left).identity(),
+        describe_registration(registry, right).identity(),
+    )
+    registered = tmp_path / "registered-selection.json"
+    registered.write_bytes(json_bytes(record))
+    ref = register_fusion(registry, left, right, registered, scope="synthetic_fixture")
+    write_rows(path, model_predictions(registry, ref, root / "data/dev.inputs.jsonl"))
+    other = tmp_path / "other-selection.json"
+    other.write_text(json.dumps(record, indent=2))
+    reasons = {}
+    for name, selection in (("registered", registered), ("other", other)):
+        code, result = invoke(
+            return_case,
+            capsys,
+            *registration_args(registry, ref),
+            "--fusion-selection",
+            str(selection),
+        )
+        assert code == 2, result  # the placeholder metrics never match the recomputed grid
+        reasons[name] = result["fusion_selection"]["reasons"]
+    assert "fusion_selection_not_registered" not in reasons["registered"]
+    assert reasons["other"] == ["fusion_selection_not_registered", *reasons["registered"]]
