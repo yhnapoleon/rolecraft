@@ -1,7 +1,8 @@
 """Registered-model advice for one feedback job: fixed evidence in, advisory DTO out.
 
-Product inference only. Each advice request is one journaled call; recovery reads the
-recorded outcome and never repeats inference. Advice never changes rule results or scores.
+Product inference only. Each sentence of an advice request is one journaled call; recovery
+reads the recorded outcome and never repeats inference. Advice never changes rule results
+or scores.
 """
 
 from dataclasses import dataclass
@@ -123,8 +124,8 @@ def registered_identity(
 class AdviceSource:
     """One configured registration (or the reason it is unusable) for one task.
 
-    ``relation_advice`` serves R2.support from the learner's whole work;
-    ``criterion_advice`` serves one rubric criterion and returns ``None`` while
+    ``relation_advice`` serves R2.support from the learner's work, one sentence at a
+    time; ``criterion_advice`` serves one rubric criterion and returns ``None`` while
     criterion inference is not installed. For tracing, an advice's ``input_hash``
     equals ``digest(source.projected(package))``.
     """
