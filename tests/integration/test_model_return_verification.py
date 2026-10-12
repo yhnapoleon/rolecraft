@@ -639,8 +639,6 @@ def attention_registration(tmp_path: Path) -> tuple[Path, C.FileRef]:
 
 
 def model_predictions(registry: Path, ref: C.FileRef, inputs_path: Path) -> list[dict]:
-    from career_lab.models.v3.registry import load_registration
-
     model, _ = load_registration(registry, ref)
     output = []
     for row in [json.loads(line) for line in inputs_path.read_text().splitlines()]:
