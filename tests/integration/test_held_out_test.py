@@ -1102,3 +1102,45 @@ def test_held_06_a_fixture_freeze_cannot_approve_even_a_real_package(tmp_path: P
         ),
     )
     assert report["error"] == "fixture_cannot_authorize_confirmatory"
+
+
+def declared_model_return(tmp_path: Path, package: V3Package, version: int) -> Path:
+    """A metadata-only model return over the v3 dev split (no model is loaded)."""
+    out = tmp_path / f"model-return-v{version}"
+    out.mkdir()
+    files = {"weights.bin": b"synthetic bytes", "settings.json": b"{}", "vocab.txt": b"tokens"}
+    for name, raw in files.items():
+        (out / name).write_bytes(raw)
+    (out / "notes.md").write_text("Constructed bytes only; no training occurred.")
+    rows = jsonl(gold_predictions(package, "dev", out / "predictions.jsonl"))
+    for row in rows:
+        row["return_schema_version"] = version
+        row["model_revision"] = "synthetic-return-v1"
+    write_jsonl(out / "predictions.jsonl", rows)
+    manifest = checkpoint_manifest(
+        out / "checkpoint-manifest.json",
+        package,
+        "synthetic-return-v1",
+        checkpoint_files={name: sha(raw) for name, raw in files.items()},
+        predictions_file="predictions.jsonl",
+        artifact_roles={
+            "checkpoint": ["weights.bin"],
+            "config": ["settings.json"],
+            "tokenizer": ["vocab.txt"],
+        },
+    )
+    return manifest
+
+
+@pytest.mark.parametrize("version", [2, 3])
+def test_pred_01_validate_handoff_reads_v2_and_v3_relation_rows_alike(
+    tmp_path: Path, version: int
+) -> None:
+    package = build_package(tmp_path, TRAIN_DEV)
+    manifest = declared_model_return(tmp_path, package, version)
+    code, report = validate(
+        package.root, tmp_path / "review", "--checkpoint-manifest", manifest, "--split", "dev"
+    )
+    assert code == 0, report
+    assert report["model_return"]["format_valid"] is True
+    assert {row["status"] for row in report["model_return"]["records"]} == {"accept"}

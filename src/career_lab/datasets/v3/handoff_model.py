@@ -1,4 +1,5 @@
-"""Fixture-v2 model-return identity checks. Never import or execute delivery code."""
+"""Fixture-v2 model-return identity checks (v2 and v3 relation rows). Never import or execute
+delivery code."""
 
 import math
 from pathlib import Path
@@ -64,8 +65,9 @@ class Prediction(BaseModel):
     @field_validator("return_schema_version")
     @classmethod
     def version_two(cls, value: int) -> int:
-        if value != 2:
-            raise ValueError("return schema version must be 2")
+        # v3 relation rows carry the same fields as v2 (docs/data/return-v3/predictions-v3.md).
+        if value not in (2, 3):
+            raise ValueError("return schema version must be 2 or 3")
         return value
 
 
