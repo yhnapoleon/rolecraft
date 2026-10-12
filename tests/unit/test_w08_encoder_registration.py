@@ -23,9 +23,9 @@ from fastapi.testclient import TestClient
 from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest
 from career_lab.models.v3 import registry_cli
+from career_lab.models.v3.bundle import json_bytes, sha
 from career_lab.models.v3.core import LABELS
 from career_lab.models.v3.huggingface import aggregate_pairs
-from career_lab.models.v3.bundle import json_bytes, sha
 from career_lab.models.v3.registry import (
     describe_registration,
     inference_runtime,
