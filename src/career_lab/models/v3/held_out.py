@@ -11,7 +11,7 @@ from the command line.
 import os
 import re
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -75,15 +75,15 @@ def review_policy_bytes(dataset_id: str, dataset_hash: str) -> bytes:
 def verifier_source_digest() -> str:
     """Digest of every product source file the review ran with."""
     root = Path(__file__).resolve().parents[2]
-    files = {p.relative_to(root).as_posix(): sha(p.read_bytes()) for p in sorted(root.rglob("*.py"))}
+    files = {
+        p.relative_to(root).as_posix(): sha(p.read_bytes()) for p in sorted(root.rglob("*.py"))
+    }
     return C.digest(files)
 
 
 def read_sealed(dataset_root: Path, dataset_hash: str) -> SealedManifest:
     """The dataset manifest only; a test opening needs the sealed v3 layout with a test split."""
-    raw = strict_json(
-        C.read_file(dataset_root, C.FileRef(path=MANIFEST_PATH, sha256=dataset_hash))
-    )
+    raw = strict_json(C.read_file(dataset_root, C.FileRef(path=MANIFEST_PATH, sha256=dataset_hash)))
     try:
         manifest = SealedManifest.model_validate(raw)
     except ValidationError as error:
@@ -293,7 +293,11 @@ def open_held_out_test(
         "dataset_manifest_sha256": dataset_hash,
         "campaign": {"id": campaign.id, "path": campaign_ref.path, "sha256": campaign_ref.sha256},
         "candidate_id": authorized["candidate_id"],
-        "freeze": {"id": authorized["freeze_id"], "path": freeze_ref.path, "sha256": freeze_ref.sha256},
+        "freeze": {
+            "id": authorized["freeze_id"],
+            "path": freeze_ref.path,
+            "sha256": freeze_ref.sha256,
+        },
         "registration": {
             "id": summary.id,
             "path": registration.path,
@@ -302,7 +306,7 @@ def open_held_out_test(
         "review_policy_sha256": sha(policy),
         "verifier_source_digest": verifier_source_digest(),
         "operator": request.operator,
-        "opened_at": datetime.now(timezone.utc).isoformat(),
+        "opened_at": datetime.now(UTC).isoformat(),
     }
     raw = json_bytes(record)
     record_path.parent.mkdir(parents=True, exist_ok=True)

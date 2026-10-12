@@ -521,10 +521,14 @@ def test_pred_01_v3_relation_rows_parse_like_v2_rows_in_one_file(return_case, ca
 @pytest.mark.parametrize(
     ("change", "code"),
     [
-        (lambda row: row.update(return_schema_version=3, task_type="criterion"),
-         "return_task_type_unsupported"),
-        (lambda row: row.update(return_schema_version=3, task_type="judge"),
-         "return_task_type_unsupported"),
+        (
+            lambda row: row.update(return_schema_version=3, task_type="criterion"),
+            "return_task_type_unsupported",
+        ),
+        (
+            lambda row: row.update(return_schema_version=3, task_type="judge"),
+            "return_task_type_unsupported",
+        ),
         (lambda row: row.pop("return_schema_version"), "return_schema_version_required"),
         (lambda row: row.update(return_schema_version=4), "return_schema_version_unsupported"),
         (lambda row: row.update(return_schema_version=3.0), "return_schema_version_unsupported"),
@@ -586,12 +590,20 @@ def linear_bundle(root: Path, coef, intercept, evidence_coef) -> tuple[Path, C.F
 
 # Columns follow LINEAR_VOCABULARY: rows are SUPPORTED, CONTRADICTED, INSUFFICIENT.
 LEFT_WEIGHTS = (
-    [[3.0, 0.0, 0.0, 0.0, 0.0, 0.0], [0.0, 3.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 3.0, 0.0, 0.0, 0.0]],
+    [
+        [3.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 3.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 3.0, 0.0, 0.0, 0.0],
+    ],
     [0.0, 0.0, 0.0],
     [4.0, 4.0, -4.0, -4.0, 0.0, 0.0],
 )
 RIGHT_WEIGHTS = (
-    [[2.0, 1.0, 0.0, 0.0, 0.0, 0.0], [0.0, 1.0, 0.0, 0.0, 0.0, 0.0], [0.0, 0.0, 1.0, 0.0, 0.0, 0.0]],
+    [
+        [2.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+    ],
     [0.0, 0.0, 0.5],
     [2.0, 0.0, -2.0, -3.0, 0.0, 0.0],
 )
@@ -727,7 +739,9 @@ def test_tol_01_evidence_sets_must_match_exactly_even_within_tolerance(
     root, _, path = return_case
     registry, ref = linear_registration(tmp_path / "model")
     rows = model_predictions(registry, ref, root / "data/dev.inputs.jsonl")
-    inputs = [json.loads(line) for line in (root / "data/dev.inputs.jsonl").read_text().splitlines()]
+    inputs = [
+        json.loads(line) for line in (root / "data/dev.inputs.jsonl").read_text().splitlines()
+    ]
     target = next(
         index
         for index, row in enumerate(rows)
@@ -901,10 +915,16 @@ def test_fsel_01_selection_recomputed_on_registered_components_matches(
 @pytest.mark.parametrize(
     ("alpha", "change", "reasons"),
     [
-        (0.0, {"selected": {"alpha": 0, "evidence_threshold": 0.5}, "fusion_gain_observed": False},
-         ["fusion_selection_selected_mismatch"]),
-        (0.0, {"selected": {"alpha": 0, "evidence_threshold": 0.5}, "fusion_gain_observed": True},
-         ["fusion_selection_selected_mismatch", "fusion_gain_claimed_at_endpoint"]),
+        (
+            0.0,
+            {"selected": {"alpha": 0, "evidence_threshold": 0.5}, "fusion_gain_observed": False},
+            ["fusion_selection_selected_mismatch"],
+        ),
+        (
+            0.0,
+            {"selected": {"alpha": 0, "evidence_threshold": 0.5}, "fusion_gain_observed": True},
+            ["fusion_selection_selected_mismatch", "fusion_gain_claimed_at_endpoint"],
+        ),
         (0.25, {"test_used_for_selection": True}, ["fusion_selection_contaminated"]),
         (0.25, {"dev_input_hashes": ["0" * 64]}, ["fusion_selection_dev_inputs_mismatch"]),
         (0.25, {"dataset_manifest_sha256": "0" * 64}, ["fusion_selection_dataset_mismatch"]),

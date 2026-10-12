@@ -303,7 +303,9 @@ def sealed_test_summary(package: HandoffPackage, reviewed: RowIndex) -> dict[str
     }:
         raise ProtocolError("handoff_structure_cross_split")
     if any(
-        split_owner(ref.path) != "test" for meta in described.values() for ref in meta.packaged_sources
+        split_owner(ref.path) != "test"
+        for meta in described.values()
+        for ref in meta.packaged_sources
     ):
         raise ProtocolError("handoff_source_outside_split")
     return {
@@ -455,9 +457,7 @@ def validate_handoff(
         sealed_package_rows(package) if sealed else package_rows(package)
     )
     sealed_test = (
-        sealed_test_summary(package, metadata)
-        if sealed and package.manifest.test_sealed
-        else None
+        sealed_test_summary(package, metadata) if sealed and package.manifest.test_sealed else None
     )
     reviews, records = [], []
     for rid, row in inputs.items():

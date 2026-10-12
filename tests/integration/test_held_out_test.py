@@ -109,7 +109,11 @@ def relation_record(work: Path, root: Path, name: str, split: str, language: str
     point = VersionPoint(business_seq=4, workspace_revision=2, storage_revision=7)
     refs = [
         C.EvidenceRefV2(
-            session_id=session, kind="document", object_id=f"{name}-{i}", version=1, observed_at_seq=1
+            session_id=session,
+            kind="document",
+            object_id=f"{name}-{i}",
+            version=1,
+            observed_at_seq=1,
         )
         for i in (1, 2)
     ]
@@ -335,7 +339,9 @@ def run_module(module: str, *args: object, audit_log: Path | None = None):
 
 
 def opened_paths(audit_log: Path) -> set[Path]:
-    return {Path(line) for line in audit_log.read_text().splitlines()} if audit_log.exists() else set()
+    return (
+        {Path(line) for line in audit_log.read_text().splitlines()} if audit_log.exists() else set()
+    )
 
 
 def held_out_files(package: V3Package) -> set[Path]:
@@ -551,10 +557,14 @@ def test_data_06_v3_misalignment_is_reported_per_record_or_per_package(
         write_jsonl(root / "data/dev.labels.jsonl", labels)
     elif fault == "pass_in_other_split":
         annotation = next(
-            row for row in jsonl(root / "audit/dev/annotations.jsonl") if row["record_id"] == "dev-zh-2"
+            row
+            for row in jsonl(root / "audit/dev/annotations.jsonl")
+            if row["record_id"] == "dev-zh-2"
         )
         moved = annotation["passes"][1]["id"] + ".json"
-        (root / "audit/dev/labels/passes" / moved).rename(root / "audit/train/labels/passes" / moved)
+        (root / "audit/dev/labels/passes" / moved).rename(
+            root / "audit/train/labels/passes" / moved
+        )
     elif fault == "source_in_other_split":
         metadata = jsonl(root / "audit/dev/metadata.jsonl")
         row = next(m for m in metadata if m["record_id"] == "dev-en-5")
@@ -646,7 +656,9 @@ def test_seal_01_sealed_test_is_checked_by_hash_count_and_structure_without_pars
     assert sealed["files"] == {
         name: entry["sha256"] for name, entry in manifest["splits"]["test"]["files"].items()
     }
-    assert all(row["split"] != "test" for rows in report["annotation_trace"].values() for row in rows)
+    assert all(
+        row["split"] != "test" for rows in report["annotation_trace"].values() for row in rows
+    )
 
 
 @pytest.mark.parametrize(
@@ -686,9 +698,7 @@ def test_seal_01_sealed_test_isolation_faults_are_rejected(
     write_jsonl(metadata_path, metadata)
     if fault != "bytes":
         manifest = json.loads((root / "dataset-manifest.json").read_bytes())
-        declared = {
-            k: v for k, v in manifest["splits"]["test"].items() if k != "files"
-        }
+        declared = {k: v for k, v in manifest["splits"]["test"].items() if k != "files"}
         seal(root, declared={"test": declared})
     else:
         path = root / "data/test.labels.jsonl"
@@ -740,7 +750,9 @@ class Opening:
             "--operator": "coordinator-147",
         }
         values.update(overrides)
-        return [str(item) for key, value in values.items() if value is not None for item in (key, value)]
+        return [
+            str(item) for key, value in values.items() if value is not None for item in (key, value)
+        ]
 
     @property
     def record(self) -> Path:
@@ -775,7 +787,9 @@ def checkpoint_manifest(path: Path, package: V3Package, model_revision: str, **c
     return path
 
 
-def approve(freeze_root: Path, candidate: C.CampaignCandidate, package: V3Package, **changes) -> Path:
+def approve(
+    freeze_root: Path, candidate: C.CampaignCandidate, package: V3Package, **changes
+) -> Path:
     """What the coordinator writes after the user confirms this one opening in chat."""
     campaign = C.TestCampaign(
         id="synthetic-campaign-147",
@@ -867,7 +881,9 @@ def test_held_04_first_approved_opening_is_recorded_before_test_is_read(tmp_path
     assert len(record["verifier_source_digest"]) == 64 and record["opened_at"]
     # The record exists before any test file is read: the first test open follows it.
     order = [line for line in log.read_text().splitlines()]
-    first_test = min(order.index(str(path)) for path in held_out_files(opening.package) if str(path) in order)
+    first_test = min(
+        order.index(str(path)) for path in held_out_files(opening.package) if str(path) in order
+    )
     assert str(opening.record.resolve()) in order[:first_test]
 
 
@@ -950,8 +966,16 @@ def refused(opening: Opening, tmp_path: Path, *args: str) -> dict:
 
 @pytest.mark.parametrize(
     "dropped",
-    ["--freeze", "--freeze-hash", "--campaign", "--campaign-hash", "--ledger", "--operator",
-     "--checkpoint-manifest", "--registration-hash"],
+    [
+        "--freeze",
+        "--freeze-hash",
+        "--campaign",
+        "--campaign-hash",
+        "--ledger",
+        "--operator",
+        "--checkpoint-manifest",
+        "--registration-hash",
+    ],
 )
 def test_held_02_test_without_freeze_or_campaign_is_refused(tmp_path: Path, dropped: str) -> None:
     opening = prepared_opening(tmp_path)
@@ -1001,7 +1025,11 @@ def manual_freeze(
         refs.append(C.FileRef(path=name, sha256=sha(data)))
     source = json_candidate(opening).source
     candidate = json_candidate(opening).model_copy(
-        update={"evaluation": C.FileRef(path="review-policy.json", sha256=sha(members["review-policy.json"]))}
+        update={
+            "evaluation": C.FileRef(
+                path="review-policy.json", sha256=sha(members["review-policy.json"])
+            )
+        }
     )
     freeze_selection(
         root,

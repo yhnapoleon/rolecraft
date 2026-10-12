@@ -40,7 +40,9 @@ def add_parser(commands: argparse._SubParsersAction) -> None:
     held_out.add_argument("--freeze-hash")
     held_out.add_argument("--campaign", type=Path, help="Approved TestCampaign in the same root")
     held_out.add_argument("--campaign-hash")
-    held_out.add_argument("--ledger", type=Path, help="Opening records: <ledger>/<dataset>/test.json")
+    held_out.add_argument(
+        "--ledger", type=Path, help="Opening records: <ledger>/<dataset>/test.json"
+    )
     held_out.add_argument("--operator", help="Who runs this opening (recorded)")
 
 

@@ -23,7 +23,6 @@ from career_lab.datasets.v3.handoff_package import (
 
 from .core import LABELS, Example
 
-
 PORTABLE_LAYOUT = "portable-v2"
 FIXTURE_STATUS = "FIXTURE_ONLY_NOT_FINAL_TRAINING_DATA"
 # A constructed mechanism sample: may exercise the held-out opening, is reported as synthetic.
