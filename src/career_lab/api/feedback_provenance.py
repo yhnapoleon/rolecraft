@@ -32,6 +32,7 @@ def feedback_provenance(
     model: ModelIdentity | None,
     *,
     registered_model: RegisteredModelIdentity | None = None,
+    registered_models: tuple[RegisteredModelIdentity, ...] | None = None,
 ) -> FeedbackProvenance:
     if model is not None and getattr(model, "retries", 0) != 0:
         raise ValueError("Feedback providers must disable automatic retries")
@@ -39,6 +40,7 @@ def feedback_provenance(
     return FeedbackProvenance(
         code=execution_identity(),
         registered_model=registered_model,
+        registered_models=registered_models,
         # A released package names its own installed evaluation; legacy packages predate it.
         evaluation_version=(
             module.release.evaluation_version
@@ -75,17 +77,22 @@ def effective_provenance(
     content: dict[str, JsonValue],
     provenance: FeedbackProvenance,
 ) -> FeedbackProvenance:
-    identities = [
-        advice.registration
-        for advice in FeedbackV2.model_validate(content).model_advice or ()
-        if advice.registration is not None
+    advice = FeedbackV2.model_validate(content).model_advice or ()
+    for task in ("relation", "criterion"):
+        identities = {
+            item.registration.model_dump_json()
+            for item in advice
+            if item.registration is not None and item.task_type == task
+        }
+        if len(identities) > 1:
+            raise ProtocolError("feedback_registered_identity_mismatch")
+    relation = [
+        item.registration
+        for item in advice
+        if item.registration is not None and item.task_type == "relation"
     ]
-    if len({identity.model_dump_json() for identity in identities}) > 1:
-        raise ProtocolError("feedback_registered_identity_mismatch")
     return (
-        provenance.model_copy(update={"registered_model": identities[0]})
-        if identities
-        else provenance
+        provenance.model_copy(update={"registered_model": relation[0]}) if relation else provenance
     )
 
 

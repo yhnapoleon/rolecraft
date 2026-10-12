@@ -16,6 +16,29 @@ LABELS = {
 INPUT = TypeAdapter(ModelInput)
 
 
+@dataclass(frozen=True)
+class InputSize:
+    """How much of a model's input budget one item uses; ``None`` means no token budget.
+
+    Models report this without running inference. An item they cannot encode at all
+    raises the same ``ProtocolError`` their prediction would abstain with.
+    """
+
+    tokens: int | None
+    limit: int | None
+
+    @property
+    def exceeds(self) -> bool:
+        return self.tokens is not None and self.limit is not None and self.tokens > self.limit
+
+    @property
+    def headroom(self) -> int | None:
+        return None if self.tokens is None or self.limit is None else self.limit - self.tokens
+
+
+UNLIMITED = InputSize(None, None)
+
+
 def checked_input(item):
     raw = item.model_dump(mode="json") if hasattr(item, "model_dump") else item
     item = INPUT.validate_python(raw)

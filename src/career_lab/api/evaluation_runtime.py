@@ -236,6 +236,7 @@ def create_feedback_handler(
         bundle,
         model,
         registered_model=engine_factory.identity if engine_factory is not None else None,
+        registered_models=engine_factory.identities if engine_factory is not None else None,
     )
     policies = tuple(CriterionPolicy(**p) for p in protocol["policies"])
     rubric, rubric_sha256 = installed_rubric(module.package.root, bundle)

@@ -14,6 +14,7 @@ from career_lab.contracts.v2.core import ProtocolError
 from .temporal import temporal_text
 from .core import (
     LABELS,
+    InputSize,
     checked_input,
     input_problem,
     training_examples,
@@ -105,6 +106,12 @@ class AttentionEncoder:
         self.params["embedding"][0] = 0
 
     def _sequence(self, item, candidates):
+        ids, groups = self._ids(item, candidates)
+        if len(ids) > self.max_tokens:
+            raise ProtocolError("encoder_input_truncated")
+        return np.array(ids, dtype=np.int64), tuple(groups)
+
+    def _ids(self, item, candidates):
         ids = (
             [2]
             + [
@@ -125,9 +132,7 @@ class AttentionEncoder:
             groups.append(tuple(range(len(ids), len(ids) + len(encoded))))
             ids.extend(encoded)
             ids.append(3)
-        if len(ids) > self.max_tokens:
-            raise ProtocolError("encoder_input_truncated")
-        return np.array(ids, dtype=np.int64), tuple(groups)
+        return ids, groups
 
     def encode_inputs(self, item):
         candidates = item.evidence.candidate_evidence
@@ -136,6 +141,15 @@ class AttentionEncoder:
         if self.variant == "pack":
             return [self._sequence(item, candidates)]
         return [self._sequence(item, [c]) for c in candidates]
+
+    def measure(self, item):
+        """The longest sequence prediction would encode, against ``max_tokens``."""
+        item = checked_input(item)
+        candidates = item.evidence.candidate_evidence
+        if not candidates:
+            raise ProtocolError("no_candidate_evidence")
+        groups = [candidates] if self.variant == "pack" else [[c] for c in candidates]
+        return InputSize(max(len(self._ids(item, group)[0]) for group in groups), self.max_tokens)
 
     def _forward(self, ids, groups):
         p = self.params

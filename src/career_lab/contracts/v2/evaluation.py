@@ -565,14 +565,78 @@ class _RuleScoreRange(V2):
         return self
 
 
+# Relation labels, then the criterion labels not already listed; checked per task_type.
+_AdviceLabel = Literal[
+    "SUPPORTED", "CONTRADICTED", "INSUFFICIENT", "MET", "PARTIAL", "NOT_MET", "NOT_APPLICABLE"
+]
+_RELATION_LABELS = frozenset(("SUPPORTED", "CONTRADICTED", "INSUFFICIENT"))
+_CRITERION_LABELS = frozenset(("MET", "PARTIAL", "NOT_MET", "INSUFFICIENT", "NOT_APPLICABLE"))
+
+
+def _selected_evidence(evidence_ids, citations) -> None:
+    if len(set(evidence_ids)) != len(evidence_ids):
+        raise ValueError("duplicate selected evidence")
+    if len(evidence_ids) != len(citations):
+        raise ValueError("selected evidence needs exact citations")
+
+
+class _AdviceUnit(V2):
+    """One sentence of the learner's work: where it is, its own result and evidence."""
+
+    index: NonNegativeInt
+    # The work version, the sentence's span in that version and the sentence text.
+    subject: EvidenceRefV2
+    unit_hash: Hash
+    status: Literal["completed", "abstained", "failed"]
+    label: RelationLabel | None = None
+    evidence_ids: tuple[Identifier, ...] = ()
+    citations: tuple[EvidenceRefV2, ...] = ()
+    reason_code: Identifier | None = None
+
+    @model_validator(mode="after")
+    def consistent(self) -> "_AdviceUnit":
+        _selected_evidence(self.evidence_ids, self.citations)
+        if self.subject.span_start is None:
+            raise ValueError("a sentence unit names its span in the work")
+        if (self.status == "completed") != (self.label is not None):
+            raise ValueError("only a completed sentence carries a label")
+        if self.label is None and self.evidence_ids:
+            raise ValueError("an unlabelled sentence selects no evidence")
+        return self
+
+
+class _AdviceUnitCounts(V2):
+    supported: NonNegativeInt = 0
+    contradicted: NonNegativeInt = 0
+    insufficient: NonNegativeInt = 0
+    abstained: NonNegativeInt = 0
+    failed: NonNegativeInt = 0
+    # Sentences never sent to the model: too short to judge, or beyond the per-work budget.
+    skipped_short: NonNegativeInt = 0
+    over_budget: NonNegativeInt = 0
+
+
+class _AdviceAggregation(V2):
+    policy: Identifier
+    counts: _AdviceUnitCounts
+
+
+class _AdviceReconciliation(V2):
+    """How a criterion result relates to the verified rule bound and applicability."""
+
+    rule_conflict: bool
+    applicability_established: bool
+
+
 class RegisteredModelAdvice(V2):
-    criterion: Literal["R2.support"] = "R2.support"
+    # Any identifier on the wire; the runtime accepts only the canonical rubric criteria.
+    criterion: Identifier = "R2.support"
     request_id: Identifier
     job_id: Identifier
     input_hash: Hash | None
     registration: _provenance.RegisteredModelIdentity | None
     status: Literal["completed", "failed", "unavailable", "synthetic_mechanism_only"]
-    label: RelationLabel | None = None
+    label: _AdviceLabel | None = None
     evidence_ids: tuple[Identifier, ...] = ()
     citations: tuple[EvidenceRefV2, ...] = ()
     error_code: (
@@ -589,18 +653,34 @@ class RegisteredModelAdvice(V2):
             "model_prediction_invalid",
             "claim_not_available",
             "synthetic_mechanism_only",
+            "verified_rule_conflict",
+            "applicability_not_established",
+            "criterion_not_supported_by_model",
+            "criterion_rubric_version_mismatch",
+            "all_units_abstained",
         ]
         | None
     ) = None
     mode: Literal["advisory"] = "advisory"
     affects_score: Literal[False] = False
+    # Relation is the historical task and is not serialized.
+    task_type: Literal["relation", "criterion"] = Field(
+        default="relation", exclude_if=lambda value: value == "relation"
+    )
+    units: tuple[_AdviceUnit, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    aggregation: _AdviceAggregation | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    reconciliation: _AdviceReconciliation | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def consistent(self) -> "RegisteredModelAdvice":
-        if len(set(self.evidence_ids)) != len(self.evidence_ids):
-            raise ValueError("duplicate selected evidence")
-        if len(self.evidence_ids) != len(self.citations):
-            raise ValueError("selected evidence needs exact citations")
+        _selected_evidence(self.evidence_ids, self.citations)
+        synthetic = self.status == "synthetic_mechanism_only"
         if self.status == "completed":
             if (
                 self.registration is None
@@ -610,12 +690,57 @@ class RegisteredModelAdvice(V2):
                 or self.error_code is not None
             ):
                 raise ValueError("completed advice needs a registered external result")
-        elif self.label is not None or self.evidence_ids or self.citations:
-            raise ValueError("unavailable or synthetic advice cannot expose semantic results")
-        if self.status == "synthetic_mechanism_only" and (
+        elif not synthetic and (
+            self.label is not None
+            or self.evidence_ids
+            or self.citations
+            or any(unit.label is not None for unit in self.units or ())
+        ):
+            raise ValueError("unavailable or failed advice cannot expose semantic results")
+        if synthetic and (
             self.registration is None or self.registration.scope != "synthetic_fixture"
         ):
             raise ValueError("mechanism result needs a synthetic registration")
+        domain = _CRITERION_LABELS if self.task_type == "criterion" else _RELATION_LABELS
+        if self.label is not None and self.label not in domain:
+            raise ValueError("advice label outside its task's label domain")
+        if self.registration is not None and self.registration.task_type != self.task_type:
+            raise ValueError("advice task differs from its registration task")
+        if self.task_type == "criterion":
+            if self.units is not None or self.aggregation is not None:
+                raise ValueError("sentence units belong to relation advice")
+        elif self.reconciliation is not None:
+            raise ValueError("rule reconciliation belongs to criterion advice")
+        if (self.units is None) != (self.aggregation is None):
+            raise ValueError("sentence units and their aggregation occur together")
+        if self.units is not None:
+            if len({unit.index for unit in self.units}) != len(self.units):
+                raise ValueError("duplicate sentence unit")
+            observed = {
+                "supported": "SUPPORTED",
+                "contradicted": "CONTRADICTED",
+                "insufficient": "INSUFFICIENT",
+            }
+            counts = self.aggregation.counts
+            if any(
+                getattr(counts, name) != sum(unit.label == label for unit in self.units)
+                for name, label in observed.items()
+            ) or any(
+                getattr(counts, name) != sum(unit.status == name for unit in self.units)
+                for name in ("abstained", "failed")
+            ):
+                raise ValueError("aggregation counts must follow the sentence units")
+        reconciled = self.reconciliation
+        if reconciled is not None and reconciled.rule_conflict and self.label is not None:
+            raise ValueError("a result outside the verified rule bound is not adopted")
+        if self.error_code == "verified_rule_conflict" and not (
+            reconciled is not None and reconciled.rule_conflict
+        ):
+            raise ValueError("a rule conflict is recorded in its reconciliation")
+        if self.error_code == "applicability_not_established" and not (
+            reconciled is not None and not reconciled.applicability_established
+        ):
+            raise ValueError("unestablished applicability is recorded in its reconciliation")
         return self
 
 
@@ -688,9 +813,13 @@ class FeedbackV2(V2):
     @model_validator(mode="after")
     def advice_scope(self) -> "FeedbackV2":
         for advice in self.model_advice or ():
+            refs = [
+                *advice.citations,
+                *(ref for unit in advice.units or () for ref in (unit.subject, *unit.citations)),
+            ]
             if any(
                 ref.session_id != self.session_id or ref.observed_at_seq > self.as_of.business_seq
-                for ref in advice.citations
+                for ref in refs
             ):
                 raise ValueError("advice citation scope or time mismatch")
         return self

@@ -8,7 +8,11 @@ from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_fi
 from career_lab.models.v3.core import LABELS
 from career_lab.models.v3.encoder_artifact import EncoderArtifact, inspect_encoder, verify_file
 from career_lab.models.v3.huggingface import HuggingFaceCandidate
-from career_lab.models.v3.registry import _publish_registration
+from career_lab.models.v3.registration import (
+    RegistrationProtocol,
+    RegistrationSummary,
+    publish_registration,
+)
 
 PROTOCOL = "advisory-encoder-registration-v1"
 
@@ -52,7 +56,7 @@ def register_encoder(
         if _entry(copied, ref, scope, runtime) != entry:
             raise ProtocolError("model_registration_drift")
 
-    return _publish_registration(
+    return publish_registration(
         registry_root,
         entry,
         write_artifact,
@@ -91,3 +95,22 @@ def load_encoder(
     if model.revision != entry["model_revision"] or model.task_type != entry["task_type"]:
         raise ProtocolError("registered_model_identity_mismatch")
     return model, entry
+
+
+def describe(root: Path, ref: FileRef, runtime: dict[str, Any]) -> RegistrationSummary:
+    """Verified summary without optional inference dependencies (no torch import)."""
+    entry = inspect_registration(root, ref, runtime=runtime)
+    return RegistrationSummary(
+        id=entry["id"],
+        scope=entry["scope"],
+        model_revision=entry["model_revision"],
+        task_type=entry["task_type"],
+        labels=tuple(entry["labels"]),
+    )
+
+
+REGISTRATION = RegistrationProtocol(
+    handles=lambda entry: entry.get("protocol") == PROTOCOL,
+    describe=describe,
+    load=lambda root, ref, runtime: load_encoder(root, ref, runtime=runtime),
+)
