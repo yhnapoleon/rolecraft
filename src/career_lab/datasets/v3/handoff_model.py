@@ -1,4 +1,5 @@
-"""Fixture-v2 model-return identity checks. Never import or execute delivery code."""
+"""Fixture-v2 model-return identity checks (v2 and v3 relation rows). Never import or execute
+delivery code."""
 
 import math
 from pathlib import Path
@@ -14,6 +15,17 @@ from .handoff_package import HandoffPackage, decode_json
 from .handoff_records import LABEL_ORDERS, InputRow, LabelRow, Metadata
 
 RELATION_ORDER = LABEL_ORDERS["relation"]
+LABEL_TIERS = {"G0", "G1", "G2", "G2v"}
+ROLES = ("checkpoint", "config", "tokenizer")
+# rolecraft-linear-return-v1 (docs/data/return-v3/linear-return.md): the format fixes its
+# two members, so their roles are known and the producer does not list them.
+LINEAR_KIND = "linear"
+LINEAR_PROTOCOL = "rolecraft-linear-return-v1"
+LINEAR_ROLES = {
+    "checkpoint": ["linear/arrays.npz"],
+    "config": ["linear/model.json"],
+    "tokenizer": ["linear/model.json"],
+}
 
 
 class CheckpointManifest(BaseModel):
@@ -39,6 +51,10 @@ class CheckpointManifest(BaseModel):
     return_protocol: Literal["rolecraft-label-evidence-v2"]
     # Intake supplement: explicit roles; filenames never select a model or adapter.
     artifact_roles: dict[str, list[str]] | None = None
+    # v3 outer-manifest fields (143 §2.5); absent in fixture-v2 returns.
+    artifact_kind: str | None = None
+    artifact_protocol: str | None = None
+    label_tiers: list[str] | None = None
 
 
 class EvidenceBinding(BaseModel):
@@ -64,8 +80,9 @@ class Prediction(BaseModel):
     @field_validator("return_schema_version")
     @classmethod
     def version_two(cls, value: int) -> int:
-        if value != 2:
-            raise ValueError("return schema version must be 2")
+        # v3 relation rows carry the same fields as v2 (docs/data/return-v3/predictions-v3.md).
+        if value not in (2, 3):
+            raise ValueError("return schema version must be 2 or 3")
         return value
 
 
@@ -92,12 +109,30 @@ def _checkpoint_files(path: Path, manifest: CheckpointManifest) -> dict[str, byt
     actual = {item.relative_to(root).as_posix() for item in root.rglob("*") if item.is_file()}
     if actual != files.keys() or not manifest.checkpoint_files:
         raise ProtocolError("handoff_model_file_set_mismatch")
-    roles = manifest.artifact_roles
-    if roles is None or any(not roles.get(role) for role in ("checkpoint", "config", "tokenizer")):
-        raise ProtocolError("handoff_model_artifact_roles_required")
+    roles = artifact_roles(manifest)
     if any(name not in manifest.checkpoint_files for names in roles.values() for name in names):
         raise ProtocolError("handoff_model_artifact_role_unbound")
     return files
+
+
+def artifact_roles(manifest: CheckpointManifest) -> dict[str, list[str]]:
+    """Which declared file is the checkpoint, config and tokenizer.
+
+    A linear return's roles follow from its format; every other return names them.
+    """
+    if manifest.artifact_kind == LINEAR_KIND:
+        if manifest.artifact_protocol != LINEAR_PROTOCOL:
+            raise ProtocolError("handoff_model_artifact_protocol_invalid")
+        members = {name for names in LINEAR_ROLES.values() for name in names}
+        if set(manifest.checkpoint_files) != members:
+            raise ProtocolError("handoff_model_file_set_mismatch")
+        if manifest.artifact_roles is not None and manifest.artifact_roles != LINEAR_ROLES:
+            raise ProtocolError("handoff_model_artifact_roles_conflict")
+        return LINEAR_ROLES
+    roles = manifest.artifact_roles
+    if roles is None or any(not roles.get(role) for role in ROLES):
+        raise ProtocolError("handoff_model_artifact_roles_required")
+    return roles
 
 
 def _check_manifest(manifest: CheckpointManifest, package: HandoffPackage) -> None:
@@ -111,6 +146,9 @@ def _check_manifest(manifest: CheckpointManifest, package: HandoffPackage) -> No
         raise ProtocolError("handoff_model_completion_required")
     if manifest.label_order != RELATION_ORDER:
         raise ProtocolError("handoff_model_label_order_mismatch")
+    tiers = manifest.label_tiers
+    if tiers is not None and (len(set(tiers)) != len(tiers) or set(tiers) - LABEL_TIERS):
+        raise ProtocolError("handoff_model_label_tiers_invalid")
     if (manifest.dataset_id, manifest.dataset_manifest_sha256) != (
         package.manifest.dataset_id,
         package.manifest_hash,
@@ -209,7 +247,12 @@ def validate_model_return(
         results.append(result)
     if seen != expected:
         raise ProtocolError("handoff_prediction_record_set_mismatch")
-    return {
+    described = (
+        {"artifact_kind": manifest.artifact_kind, "artifact_roles": artifact_roles(manifest)}
+        if manifest.artifact_kind is not None
+        else {}
+    )
+    return described | {
         "format_valid": all(row["status"] == "accept" for row in results),
         "model_revision": manifest.model_revision,
         "return_sha256": digest({name: sha(raw) for name, raw in sorted(files.items())}),

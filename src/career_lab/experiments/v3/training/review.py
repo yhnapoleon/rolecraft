@@ -8,14 +8,27 @@ from career_lab.models.v3.bundle import json_bytes
 from .metrics import grade, summarize
 
 
-def review_registered(registry_root, registration_ref, examples, *, producer_predictions=None):
+def model_kinds(model):
+    """Kinds of the model that actually ran, including both fusion components."""
+    kinds = {getattr(model, "kind", None)}
+    for side in ("left", "right"):
+        if hasattr(model, side):
+            kinds |= set(model_kinds(getattr(model, side)))
+    return sorted(kind for kind in kinds if kind)
+
+
+def review_registered(
+    registry_root, registration_ref, examples, *, producer_predictions=None, held_out_opening=None
+):
+    """``held_out_opening`` is the recorded one-time test opening; only then may test rows run."""
     rows = list(examples)
     if not rows:
         raise ProtocolError("review_records_required")
     if len({row.record_id for row in rows}) != len(rows):
         raise ProtocolError("review_duplicate_record")
     # Held-out campaigns remain separately authorized by the existing freeze path.
-    if any(row.split not in {"train", "dev", "regression"} for row in rows):
+    allowed = {"train", "dev", "regression"} | ({"test"} if held_out_opening is not None else set())
+    if any(row.split not in allowed for row in rows):
         raise ProtocolError("review_held_out_campaign_required")
     model, entry = load_registration(registry_root, registration_ref)
     loaded_again, second_entry = load_registration(registry_root, registration_ref)
@@ -108,6 +121,7 @@ def review_registered(registry_root, registration_ref, examples, *, producer_pre
     return {
         "protocol": "w08-return-review-v1",
         "registration": public_registration(entry),
+        "model_kinds": model_kinds(model),
         "input_set_digest": digest(sorted((r.record_id, r.annotation.input_hash) for r in rows)),
         "reload_predictions_identical": not reload_skipped,
         "reload_skipped_failed_record_ids": reload_skipped,
@@ -133,7 +147,7 @@ def review_registered(registry_root, registration_ref, examples, *, producer_pre
         "mode": "advisory",
         "affects_score": False,
         "training_performed": False,
-        "held_out_test_opened": False,
+        "held_out_test_opened": held_out_opening is not None,
         "limits": [
             "Metrics are recomputed observations, not automatic adoption or model-quality acceptance",
             "Synthetic fixtures prove mechanisms only; real bilingual product calls are separate",

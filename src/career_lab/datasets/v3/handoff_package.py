@@ -11,6 +11,67 @@ from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_fi
 
 from .common import sha
 
+# v3 split-sealed layout: every split owns its files under ``splits.<split>.files``.
+SEALED_LAYOUT = "rolecraft-dataset-split-sealed-v1"
+SPLITS = ("train", "dev", "test")
+
+
+def split_file_names(split: str) -> dict[str, str]:
+    """The four files every split of the sealed layout owns."""
+    return {
+        "inputs": f"data/{split}.inputs.jsonl",
+        "labels": f"data/{split}.labels.jsonl",
+        "annotations": f"audit/{split}/annotations.jsonl",
+        "metadata": f"audit/{split}/metadata.jsonl",
+    }
+
+
+def split_owner(name: str) -> str | None:
+    """The split whose prefix a package path is under; ``unknown`` for other data files."""
+    for split in SPLITS:
+        if name.startswith(f"data/{split}.") or name.startswith(f"audit/{split}/"):
+            return split
+    return "unknown" if name.startswith("data/") else None
+
+
+def require_regular(root: Path, name: str) -> None:
+    """Refuse a package path that passes through a symbolic link (``load_package`` refuses
+    links anywhere; readers of one split check the files they open)."""
+    current = Path(root)
+    for part in Path(name).parts:
+        current = current / part
+        if current.is_symlink():
+            raise ProtocolError("dataset_symlink_forbidden", status=403)
+
+
+def check_sealed_structure(splits, shared, test_sealed: bool) -> None:
+    """Structural isolation of the sealed layout; run before any split file is read.
+
+    ``splits`` maps each split to its bound file names; ``shared`` lists top-level files.
+    """
+    if not splits or set(splits) - set(SPLITS):
+        raise ProtocolError("dataset_split_unknown")
+    if any(split_owner(name) is not None for name in shared):
+        raise ProtocolError("dataset_split_file_not_isolated", status=403)
+    for split, names in splits.items():
+        if not set(split_file_names(split).values()) <= set(names):
+            raise ProtocolError("dataset_split_files_incomplete")
+        if any(split_owner(name) != split for name in names):
+            raise ProtocolError("dataset_split_file_outside_partition", status=403)
+    # Two splits whose own files carry the same bytes are one partition under two names.
+    owned = [
+        getattr(names[name], "sha256", None)
+        for split, names in splits.items()
+        for name in split_file_names(split).values()
+        if isinstance(names, dict)
+    ]
+    if len(set(owned)) != len(owned):
+        raise ProtocolError("dataset_split_file_not_isolated", status=403)
+    if "test" in splits and not test_sealed:
+        raise ProtocolError("dataset_test_split_must_be_sealed", status=403)
+    if test_sealed and "test" not in splits:
+        raise ProtocolError("dataset_test_sealed_without_test")
+
 
 class FileIdentity(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
@@ -26,6 +87,8 @@ class SplitCounts(BaseModel):
     evidence_evaluable: int
     label_only: int
     label_tiers: dict[str, int] | None = None
+    # v3 split-sealed layout only: the files this split owns.
+    files: dict[str, FileIdentity] | None = None
 
 
 class HandoffManifest(BaseModel):
@@ -40,6 +103,12 @@ class HandoffManifest(BaseModel):
     task_type: str | None = None
     label_order: list[str] | None = None
     split_manifest: str = "audit/original-release/split-manifest.json"
+    layout: str | None = None
+    test_sealed: bool | None = None
+
+    @property
+    def sealed_layout(self) -> bool:
+        return self.layout is not None
 
 
 @dataclass(frozen=True)
@@ -63,6 +132,10 @@ class HandoffPackage:
             raise ProtocolError("handoff_object_row_required")
         return rows
 
+    def line_count(self, name: str) -> int:
+        """Non-empty lines, without parsing them (sealed files are never decoded)."""
+        return sum(1 for line in self.read(name).splitlines() if line.strip())
+
 
 def load_package(root: Path) -> HandoffPackage:
     if root.is_symlink() or any(path.is_symlink() for path in root.rglob("*")):
@@ -71,8 +144,17 @@ def load_package(root: Path) -> HandoffPackage:
     manifest = HandoffManifest.model_validate(decode_json(raw))
     if manifest.schema_version != 1 or not manifest.splits:
         raise ProtocolError("handoff_manifest_version_invalid")
+    identities = dict(manifest.files)
+    if manifest.sealed_layout:
+        if manifest.layout != SEALED_LAYOUT or not isinstance(manifest.test_sealed, bool):
+            raise ProtocolError("handoff_manifest_version_invalid")
+        owned = {split: count.files or {} for split, count in manifest.splits.items()}
+        check_sealed_structure(owned, manifest.files, manifest.test_sealed)
+        for names in owned.values():
+            identities.update(names)
     files = {"dataset-manifest.json": raw}
-    for name, identity in manifest.files.items():
+    # Sealed test files are read here only to check their bytes against the manifest.
+    for name, identity in identities.items():
         data = read_file(root, FileRef(path=name, sha256=identity.sha256))
         if len(data) != identity.size:
             raise ProtocolError("handoff_file_size_mismatch")
@@ -92,7 +174,12 @@ def load_package(root: Path) -> HandoffPackage:
         raise ProtocolError("handoff_file_set_mismatch")
     package_hash = digest({name: sha(data) for name, data in sorted(files.items())})
     package = HandoffPackage(manifest, sha(raw), package_hash, files)
-    for name in ("audit/metadata.jsonl", "data_card.md", manifest.split_manifest):
+    required = (
+        ("data_card.md",)
+        if manifest.sealed_layout
+        else ("audit/metadata.jsonl", "data_card.md", manifest.split_manifest)
+    )
+    for name in required:
         package.read(name)
     return package
 
@@ -113,7 +200,11 @@ def check_card(package: HandoffPackage) -> str:
         declared = {
             split: SplitCounts.model_validate(count) for split, count in summary["splits"].items()
         }
-        if declared != package.manifest.splits:
+        counted = {
+            split: count.model_copy(update={"files": None})
+            for split, count in package.manifest.splits.items()
+        }
+        if declared != counted:
             raise ProtocolError("handoff_data_card_mismatch")
         return "structured_counts; narrative_requires_review"
     # Legacy v2 card: split, count, each frozen label count, evaluable, label-only.

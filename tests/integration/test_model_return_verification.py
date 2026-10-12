@@ -6,9 +6,25 @@ import subprocess
 import sys
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 from career_lab.contracts import v2 as C
+from career_lab.models.v3.bundle import json_bytes, save_bundle, sha
+from career_lab.models.v3.encoder import AttentionEncoder
+from career_lab.models.v3.ensemble import select_alpha
+from career_lab.models.v3.fusion_bundle import save_fusion_bundle
+from career_lab.models.v3.linear import LinearCandidate
+from career_lab.models.v3.registration import RegistrationSummary
+from career_lab.models.v3.registry import load_registration, register_bundle
+from career_lab.models.v3.return_data import load_return_dataset
+from career_lab.models.v3.return_verification import inspect_return_checkpoint
+from tests.unit.test_w08_encoder_registration import (
+    deny_encoder_imports,
+    encoder_return,
+    write_manifest,
+)
+from tests.unit.test_w08_models import examples
 
 
 def test_verify_return_cli_help_names_input_boundaries() -> None:
@@ -304,8 +320,6 @@ def test_ret_06_mechanical_reload_matches_without_claiming_real_training(
     monkeypatch.syspath_prepend(str(Path(__file__).resolve().parents[1] / "unit"))
     from test_w08_registration import registered
 
-    from career_lab.models.v3.registry import load_registration
-
     model_root = tmp_path / "model"
     model_root.mkdir()
     _, _, ref = registered(model_root)
@@ -484,3 +498,792 @@ def test_ret_03_rejects_shared_held_out_audit_before_reading_labels(
         "return_shared_annotation_partition_forbidden",
     }
     assert (root / "audit/original-annotations.jsonl").resolve() not in opened
+
+
+def rewrite_predictions(path: Path, change) -> list[dict]:
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    change(rows)
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+    return rows
+
+
+def test_pred_01_v3_relation_rows_parse_like_v2_rows_in_one_file(return_case, capsys) -> None:
+    _, _, path = return_case
+    code, baseline = invoke(return_case, capsys)
+    assert code == 0
+
+    def mixed(rows: list[dict]) -> None:
+        for row in rows[::2]:
+            row["return_schema_version"] = 3
+
+    rows = rewrite_predictions(path, mixed)
+    assert {row["return_schema_version"] for row in rows} == {2, 3}
+    code, result = invoke(return_case, capsys)
+    assert code == 0, result
+    assert result["format_errors"] == []
+    assert result["graded_records"] == baseline["graded_records"]
+    assert result["languages"] == baseline["languages"]
+    assert result["task_type"] == "relation"
+
+
+@pytest.mark.parametrize(
+    ("change", "code"),
+    [
+        (
+            lambda row: row.update(return_schema_version=3, task_type="criterion"),
+            "return_task_type_unsupported",
+        ),
+        (
+            lambda row: row.update(return_schema_version=3, task_type="judge"),
+            "return_task_type_unsupported",
+        ),
+        (lambda row: row.pop("return_schema_version"), "return_schema_version_required"),
+        (lambda row: row.update(return_schema_version=4), "return_schema_version_unsupported"),
+        (lambda row: row.update(return_schema_version=3.0), "return_schema_version_unsupported"),
+    ],
+    ids=["criterion", "unknown-task", "missing-version", "version-4", "float-version"],
+)
+def test_pred_01_unknown_task_or_missing_version_is_rejected_per_record(
+    return_case, capsys, change, code
+) -> None:
+    _, _, path = return_case
+    rows = rewrite_predictions(path, lambda rows: change(rows[0]))
+    status, result = invoke(return_case, capsys)
+    assert status == 2
+    assert result["status"] == "rejected"
+    assert result["format_errors"] == [{"record_id": rows[0]["record_id"], "error_code": code}]
+    assert result["languages"]["en"]["metrics"]["format_failures"] == 1
+
+
+# Fixed-weight registrations: constructed, never fitted; scope is always synthetic_fixture.
+LINEAR_VOCABULARY = {": 2": 0, ": 1": 1, "bud": 2, "unr": 3, "ver": 4, "n": 5}
+
+
+def linear_bundle(root: Path, coef, intercept, evidence_coef) -> tuple[Path, C.FileRef]:
+    config = {
+        "preprocessing_revision": "historical-time-v1",
+        "kind": "linear",
+        "task_type": "relation",
+        "seed": 5002,
+        "max_features": len(LINEAR_VOCABULARY),
+        "vocabulary": LINEAR_VOCABULARY,
+        "evidence_threshold": 0.5,
+        "labels": ["SUPPORTED", "CONTRADICTED", "INSUFFICIENT"],
+        "training_report": {"scope": "synthetic_fixed_weights", "fit_performed": False},
+    }
+    arrays = {
+        "coef": np.array(coef, dtype=float),
+        "intercept": np.array(intercept, dtype=float),
+        "evidence_coef": np.array(evidence_coef, dtype=float),
+        "evidence_intercept": np.array([-0.2]),
+        "idf": np.ones(len(LINEAR_VOCABULARY)),
+    }
+    model = LinearCandidate.restore(config, arrays)
+    data = root / "source"
+    data.mkdir(parents=True, exist_ok=True)
+    release = json_bytes({"fixture": True, "scope": "synthetic_fixed_weights_no_training"})
+    split = json_bytes({"fixture": True, "scope": "synthetic_no_held_out_data"})
+    (data / "release.json").write_bytes(release)
+    (data / "split.json").write_bytes(split)
+    ref = save_bundle(
+        model,
+        root / "bundle",
+        source_root=data,
+        training_release=C.FileRef(path="release.json", sha256=sha(release)),
+        split_manifest=C.FileRef(path="split.json", sha256=sha(split)),
+        source=C.SourceIdentity(base_commit="a" * 40, source_digest=C.digest("synthetic-no-fit")),
+    )
+    return root / "bundle", ref
+
+
+# Columns follow LINEAR_VOCABULARY: rows are SUPPORTED, CONTRADICTED, INSUFFICIENT.
+LEFT_WEIGHTS = (
+    [
+        [3.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 3.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 3.0, 0.0, 0.0, 0.0],
+    ],
+    [0.0, 0.0, 0.0],
+    [4.0, 4.0, -4.0, -4.0, 0.0, 0.0],
+)
+RIGHT_WEIGHTS = (
+    [
+        [2.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 1.0, 0.0, 0.0, 0.0, 0.0],
+        [0.0, 0.0, 1.0, 0.0, 0.0, 0.0],
+    ],
+    [0.0, 0.0, 0.5],
+    [2.0, 0.0, -2.0, -3.0, 0.0, 0.0],
+)
+
+
+def register(registry: Path, root: Path, ref: C.FileRef) -> C.FileRef:
+    return register_bundle(registry, root, ref, scope="synthetic_fixture")
+
+
+def linear_registration(tmp_path: Path) -> tuple[Path, C.FileRef]:
+    root, ref = linear_bundle(tmp_path / "linear", *RIGHT_WEIGHTS)
+    return tmp_path / "registry", register(tmp_path / "registry", root, ref)
+
+
+def attention_registration(tmp_path: Path) -> tuple[Path, C.FileRef]:
+    model = AttentionEncoder(variant="pack", dimension=4)
+    model.initialize(examples("train", 1))
+    model.revision = "synthetic-seeded-attention-no-fit"
+    model.training_report = {"scope": "synthetic_seeded_weights", "fit_performed": False}
+    data = tmp_path / "attention-source"
+    data.mkdir(parents=True)
+    release = json_bytes({"fixture": True, "scope": "synthetic_seeded_weights_no_training"})
+    (data / "release.json").write_bytes(release)
+    ref = save_bundle(
+        model,
+        tmp_path / "attention",
+        source_root=data,
+        training_release=C.FileRef(path="release.json", sha256=sha(release)),
+        split_manifest=C.FileRef(path="release.json", sha256=sha(release)),
+        source=C.SourceIdentity(base_commit="a" * 40, source_digest=C.digest("synthetic-no-fit")),
+    )
+    return tmp_path / "registry", register(tmp_path / "registry", tmp_path / "attention", ref)
+
+
+def model_predictions(registry: Path, ref: C.FileRef, inputs_path: Path) -> list[dict]:
+    model, _ = load_registration(registry, ref)
+    output = []
+    for row in [json.loads(line) for line in inputs_path.read_text().splitlines()]:
+        item = C.RelationInput.model_validate(row["model_input"])
+        prediction = model.predict(item)
+        output.append(
+            {
+                "return_schema_version": 3,
+                "record_id": row["record_id"],
+                "input_hash": row["input_hash"],
+                "model_revision": prediction.model_revision,
+                "task_type": "relation",
+                "status": prediction.status,
+                "probabilities": list(prediction.probabilities)
+                if prediction.probabilities is not None
+                else None,
+                "label": prediction.label,
+                "evidence_ids": list(prediction.evidence_ids),
+                "evidence_bindings": [
+                    {"candidate_id": c.id, "candidate_sha256": C.digest(c)}
+                    for c in item.evidence.candidate_evidence
+                    if c.id in prediction.evidence_ids
+                ],
+                "reason": prediction.reason_code or "synthetic reload",
+            }
+        )
+    return output
+
+
+def write_rows(path: Path, rows: list[dict]) -> None:
+    path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+
+
+def shift(row: dict, delta: float) -> None:
+    """Move probability mass between the two least likely labels; the argmax stays."""
+    order = sorted(range(3), key=lambda i: row["probabilities"][i])
+    row["probabilities"][order[0]] += delta
+    row["probabilities"][order[1]] -= delta
+
+
+def registration_args(registry: Path, ref: C.FileRef) -> tuple[str, ...]:
+    return (
+        "--registry",
+        str(registry),
+        "--registration-path",
+        ref.path,
+        "--registration-hash",
+        ref.sha256,
+    )
+
+
+@pytest.mark.parametrize(
+    ("build", "absolute", "basis", "inside", "outside"),
+    [
+        (linear_registration, 1e-6, "linear", 4e-7, 4e-6),
+        (attention_registration, 1e-4, "encoder", 4e-5, 4e-4),
+    ],
+    ids=["linear", "encoder"],
+)
+def test_tol_01_probabilities_within_tolerance_match_and_beyond_are_rejected(
+    return_case, capsys, tmp_path, build, absolute, basis, inside, outside
+) -> None:
+    root, _, path = return_case
+    registry, ref = build(tmp_path / "model")
+    exact = model_predictions(registry, ref, root / "data/dev.inputs.jsonl")
+    assert all(row["status"] == "ok" for row in exact)
+    near = json.loads(json.dumps(exact))
+    shift(near[0], inside)
+    write_rows(path, near)
+    code, result = invoke(return_case, capsys, *registration_args(registry, ref))
+    assert code == 0, result
+    assert result["reload"]["status"] == "matched"
+    assert result["tolerance"] == result["reload"]["tolerance"]
+    assert result["tolerance"]["absolute"] == absolute
+    assert result["tolerance"]["basis"] == basis
+    assert result["reload"]["max_probability_deviation"] == pytest.approx(inside, rel=0.05)
+    assert result["reload"]["mismatched_record_ids"] == []
+
+    far = json.loads(json.dumps(exact))
+    shift(far[1], outside)
+    write_rows(path, far)
+    code, result = invoke(return_case, capsys, *registration_args(registry, ref))
+    assert code == 2
+    assert result["status"] == "rejected"
+    assert result["reload"]["status"] == "producer_mismatch"
+    assert result["reload"]["mismatched_record_ids"] == [far[1]["record_id"]]
+    assert result["reload"]["mismatches"] == [
+        {"record_id": far[1]["record_id"], "fields": ["probabilities"]}
+    ]
+    assert result["reload"]["max_probability_deviation"] == pytest.approx(outside, rel=0.05)
+
+
+def test_tol_01_evidence_sets_must_match_exactly_even_within_tolerance(
+    return_case, capsys, tmp_path
+) -> None:
+    root, _, path = return_case
+    registry, ref = linear_registration(tmp_path / "model")
+    rows = model_predictions(registry, ref, root / "data/dev.inputs.jsonl")
+    inputs = [
+        json.loads(line) for line in (root / "data/dev.inputs.jsonl").read_text().splitlines()
+    ]
+    target = next(
+        index
+        for index, row in enumerate(rows)
+        if row["label"] in {"SUPPORTED", "CONTRADICTED"} or row["evidence_ids"]
+    )
+    candidates = inputs[target]["model_input"]["evidence"]["candidate_evidence"]
+    chosen = [c for c in candidates if c["id"] not in rows[target]["evidence_ids"]][:1] or [
+        candidates[0]
+    ]
+    if chosen[0]["id"] in rows[target]["evidence_ids"]:
+        chosen = [c for c in candidates if c["id"] != chosen[0]["id"]][:1]
+    rows[target]["evidence_ids"] = [chosen[0]["id"]]
+    rows[target]["evidence_bindings"] = [
+        {"candidate_id": chosen[0]["id"], "candidate_sha256": C.digest(chosen[0])}
+    ]
+    write_rows(path, rows)
+    code, result = invoke(return_case, capsys, *registration_args(registry, ref))
+    assert code == 2
+    assert result["reload"]["status"] == "producer_mismatch"
+    assert result["reload"]["mismatches"] == [
+        {"record_id": rows[target]["record_id"], "fields": ["evidence_ids"]}
+    ]
+    assert result["reload"]["max_probability_deviation"] == 0
+
+
+def test_crv_03_format_abstention_and_coverage_counts_are_reported_per_language(
+    return_case, capsys
+) -> None:
+    root, _, path = return_case
+    metadata = root / "audit/metadata.jsonl"
+    rows = [json.loads(line) for line in metadata.read_text().splitlines()]
+    rows[2]["language"] = "zh"
+    write_rows(metadata, rows)
+    manifest_path = root / "dataset-manifest.json"
+    manifest = json.loads(manifest_path.read_text())
+    manifest["splits"]["dev"]["language"] = {"en": 2, "zh": 1}
+    manifest_path.write_text(json.dumps(manifest))
+    checksum = reseal_dataset(root)
+
+    def outcomes(predictions: list[dict]) -> None:
+        predictions[0].update(
+            status="abstained",
+            probabilities=None,
+            label=None,
+            evidence_ids=[],
+            evidence_bindings=[],
+            reason="synthetic abstention",
+        )
+        predictions[2]["probabilities"] = [0.5, 0.5, 0.5]
+
+    rewrite_predictions(path, outcomes)
+    code, result = invoke((root, checksum, path), capsys)
+    assert code == 2 and result["status"] == "rejected"
+    assert result["evaluation_setting"] == "given_evidence_only"
+    assert result["retrieval_setting"] == "not_evaluated"
+    assert result["languages"]["en"]["counts"] == {
+        "format_failures": 0,
+        "abstentions": 1,
+        "coverage": 0.5,
+    }
+    assert result["languages"]["zh"]["counts"] == {
+        "format_failures": 1,
+        "abstentions": 0,
+        "coverage": 0.0,
+    }
+    assert result["languages"]["zh"]["status"] == "recomputed"
+
+
+def test_crv_03_missing_language_stays_blocked_with_empty_counts(return_case, capsys) -> None:
+    code, result = invoke(return_case, capsys)
+    assert code == 0
+    assert result["languages"]["zh"]["status"] == "blocked_missing_language"
+    assert result["languages"]["zh"]["counts"] == {
+        "format_failures": 0,
+        "abstentions": 0,
+        "coverage": None,
+    }
+    assert result["evaluation_setting"] == "given_evidence_only"
+
+
+def fusion_registration(tmp_path: Path, alpha: float, threshold: float) -> tuple[Path, C.FileRef]:
+    """A registered NumPy fusion of the two fixed linear bundles (same release and source)."""
+    left_root, left_ref = linear_bundle(tmp_path / "left", *LEFT_WEIGHTS)
+    right_root, right_ref = linear_bundle(tmp_path / "right", *RIGHT_WEIGHTS)
+    target = tmp_path / f"fusion-{alpha}-{threshold}"
+    ref = save_fusion_bundle(
+        target,
+        left_root=left_root,
+        left_ref=left_ref,
+        right_root=right_root,
+        right_ref=right_ref,
+        alpha=alpha,
+        threshold=threshold,
+    )
+    return tmp_path / "registry", register(tmp_path / "registry", target, ref)
+
+
+def producer_selection(registry: Path, ref: C.FileRef, checksum: str, **changes) -> dict:
+    """The responsible party's dev grid, computed with the published fusion rule."""
+    model, _ = load_registration(registry, ref)
+    rows = examples("dev", 1)
+    result = select_alpha(rows, model.left, model.right)
+    record = {
+        "protocol": "rolecraft-fusion-selection-v1",
+        "task_type": "relation",
+        "dataset_id": "synthetic-return",
+        "dataset_manifest_sha256": checksum,
+        "selection_split": "dev",
+        "test_used_for_selection": False,
+        "components": {
+            "left": {"model_revision": model.left.revision, "artifact_kind": "linear"},
+            "right": {"model_revision": model.right.revision, "artifact_kind": "linear"},
+        },
+        "alpha_grid": [0, 0.25, 0.5, 0.75, 1],
+        "evidence_threshold_grid": [0.25, 0.5, 0.75],
+        "selected": {"alpha": result["alpha"], "evidence_threshold": result["evidence_threshold"]},
+        "points": [
+            {
+                "alpha": point["alpha"],
+                "evidence_threshold": point["threshold"],
+                "metrics": {
+                    key: point["metrics"][key]
+                    for key in (
+                        "count",
+                        "macro_f1",
+                        "mean_evidence_f1",
+                        "joint_correctness",
+                        "evidence_denominator",
+                        "joint_denominator",
+                    )
+                },
+            }
+            for point in result["grid"]
+        ],
+        "fusion_gain_observed": result["fusion_gain_observed"],
+        "dev_input_hashes": result["dev_input_hashes"],
+    }
+    return record | changes
+
+
+def fusion_case(return_case, tmp_path: Path, alpha: float, threshold: float, **changes):
+    root, checksum, path = return_case
+    registry, ref = fusion_registration(tmp_path / "model", alpha, threshold)
+    write_rows(path, model_predictions(registry, ref, root / "data/dev.inputs.jsonl"))
+    selection = tmp_path / "fusion-selection.json"
+    selection.write_text(json.dumps(producer_selection(registry, ref, checksum, **changes)))
+    return registry, ref, selection
+
+
+def test_fsel_01_selection_recomputed_on_registered_components_matches(
+    return_case, capsys, tmp_path
+) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, 0.25, 0.5)
+    record = json.loads(selection.read_text())
+    # Worked example: at alpha 0 the left model calls the INSUFFICIENT record CONTRADICTED;
+    # mixing in a quarter of the right model fixes it, so 0.25 beats both endpoints.
+    assert record["selected"] == {"alpha": 0.25, "evidence_threshold": 0.5}
+    code, result = invoke(
+        return_case, capsys, *registration_args(registry, ref), "--fusion-selection", str(selection)
+    )
+    assert code == 0, result
+    fusion = result["fusion_selection"]
+    assert fusion["status"] == "matched" and fusion["reasons"] == []
+    assert fusion["policy"] == "joint-first-dev-v1"
+    assert fusion["recomputed"]["selected"] == {"alpha": 0.25, "evidence_threshold": 0.5}
+    assert fusion["recomputed"]["fusion_gain_observed"] is True
+    assert fusion["mismatched_points"] == []
+    assert result["reload"]["status"] == "matched"
+
+
+@pytest.mark.parametrize(
+    ("alpha", "change", "reasons"),
+    [
+        (
+            0.0,
+            {"selected": {"alpha": 0, "evidence_threshold": 0.5}, "fusion_gain_observed": False},
+            ["fusion_selection_selected_mismatch"],
+        ),
+        (
+            0.0,
+            {"selected": {"alpha": 0, "evidence_threshold": 0.5}, "fusion_gain_observed": True},
+            ["fusion_selection_selected_mismatch", "fusion_gain_claimed_at_endpoint"],
+        ),
+        (0.25, {"test_used_for_selection": True}, ["fusion_selection_contaminated"]),
+        (0.25, {"dev_input_hashes": ["0" * 64]}, ["fusion_selection_dev_inputs_mismatch"]),
+        (0.25, {"dataset_manifest_sha256": "0" * 64}, ["fusion_selection_dataset_mismatch"]),
+    ],
+    ids=["other-point", "endpoint-gain", "test-used", "dev-inputs", "dataset"],
+)
+def test_fsel_01_selection_that_disagrees_with_recomputation_is_rejected(
+    return_case, capsys, tmp_path, alpha, change, reasons
+) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, alpha, 0.5, **change)
+    code, result = invoke(
+        return_case, capsys, *registration_args(registry, ref), "--fusion-selection", str(selection)
+    )
+    assert code == 2
+    assert result["status"] == "rejected"
+    assert result["fusion_selection"]["status"] == "rejected"
+    assert result["fusion_selection"]["reasons"] == reasons
+
+
+def test_fsel_01_a_changed_point_metric_is_located(return_case, capsys, tmp_path) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, 0.25, 0.5)
+    record = json.loads(selection.read_text())
+    point = next(
+        p for p in record["points"] if (p["alpha"], p["evidence_threshold"]) == (0.5, 0.75)
+    )
+    point["metrics"]["macro_f1"] = 0.9
+    point["metrics"]["joint_denominator"] += 1
+    selection.write_text(json.dumps(record))
+    code, result = invoke(
+        return_case, capsys, *registration_args(registry, ref), "--fusion-selection", str(selection)
+    )
+    assert code == 2
+    assert result["fusion_selection"]["reasons"] == ["fusion_selection_point_mismatch"]
+    assert result["fusion_selection"]["mismatched_points"] == [
+        {"alpha": 0.5, "evidence_threshold": 0.75, "fields": ["macro_f1", "joint_denominator"]}
+    ]
+
+
+def test_fsel_01_needs_a_registered_fusion(return_case, capsys, tmp_path) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, 0.25, 0.5)
+    code, result = invoke(return_case, capsys, "--fusion-selection", str(selection))
+    assert code == 2 and result["error"] == "fusion_selection_requires_registration"
+    other_registry, other = linear_registration(tmp_path / "single")
+    code, result = invoke(
+        return_case,
+        capsys,
+        *registration_args(other_registry, other),
+        "--fusion-selection",
+        str(selection),
+    )
+    assert code == 2 and result["error"] == "fusion_selection_requires_fusion_registration"
+
+
+# The untrained-heads declaration as the 146 export writes it (encoder-return.md §2).
+UNTRAINED_HEADS = {
+    "weights_stage": "pretrained_untrained_heads",
+    "completed": False,
+    "training_partitions": [],
+    "selection_partition": None,
+    "test_used_for_selection": False,
+}
+
+
+@pytest.mark.parametrize(
+    ("scope", "stage", "change", "code"),
+    [
+        ("synthetic_fixture", "pretrained_untrained_heads", {}, None),
+        (
+            "external_candidate",
+            "pretrained_untrained_heads",
+            {},
+            "model_return_selection_contaminated",
+        ),
+        ("synthetic_fixture", "supervised_finetuned", {}, "model_return_selection_contaminated"),
+        ("synthetic_fixture", None, {}, "model_return_selection_contaminated"),
+        (
+            "synthetic_fixture",
+            "pretrained_untrained_heads",
+            {"selection_partition": "dev"},
+            "untrained_heads_declaration_invalid",
+        ),
+        (
+            "synthetic_fixture",
+            "pretrained_untrained_heads",
+            {"training_partitions": ["train"]},
+            "untrained_heads_declaration_invalid",
+        ),
+        (
+            "synthetic_fixture",
+            "pretrained_untrained_heads",
+            {"test_used_for_selection": True},
+            "untrained_heads_declaration_invalid",
+        ),
+        (
+            "synthetic_fixture",
+            "pretrained_untrained_heads",
+            {"completed": True},
+            "untrained_heads_declaration_invalid",
+        ),
+        (
+            "synthetic_fixture",
+            "pretrained_untrained_heads",
+            {"weights_stage": None},
+            "return_checkpoint_identity_mismatch",
+        ),
+    ],
+    ids=[
+        "synthetic-untrained",
+        "external",
+        "finetuned",
+        "no-stage",
+        "dev-selection",
+        "train-partition",
+        "test-used",
+        "claims-complete",
+        "manifest-without-stage",
+    ],
+)
+def test_ret_03_untrained_heads_may_declare_no_training_only_when_synthetic(
+    return_case, tmp_path, scope, stage, change, code
+) -> None:
+    root, checksum, predictions = return_case
+    dataset = load_return_dataset(root, checksum, "dev")
+    manifest = (
+        {
+            "template": False,
+            "return_protocol": "rolecraft-label-evidence-v2",
+            "task_type": "relation",
+            "label_order": ["SUPPORTED", "CONTRADICTED", "INSUFFICIENT"],
+            "dataset_id": "synthetic-return",
+            "dataset_manifest_sha256": checksum,
+            "model_revision": "untrained-heads",
+            "framework": "pytorch",
+            "framework_version": "synthetic",
+            "load_and_predict_command": "metadata only, never executed",
+            "training_notes_file": "notes.md",
+            "predictions_file": "predictions.dev.jsonl",
+            "evidence_selection_implemented": True,
+            "evidence_selection_required": True,
+        }
+        | UNTRAINED_HEADS
+        | change
+    )
+    manifest = {
+        key: value
+        for key, value in manifest.items()
+        if value is not None or key == "selection_partition"
+    }
+    (tmp_path / "weights.bin").write_bytes(b"pretrained weights, heads not trained")
+    manifest["checkpoint_files"] = {"weights.bin": sha((tmp_path / "weights.bin").read_bytes())}
+    path = tmp_path / "checkpoint-manifest.json"
+    path.write_text(json.dumps(manifest))
+    registration = RegistrationSummary(
+        id="encoder-synthetic",
+        scope=scope,
+        model_revision="untrained-heads",
+        task_type="relation",
+        labels=("SUPPORTED", "CONTRADICTED", "INSUFFICIENT"),
+        kind="huggingface_encoder",
+        weights_stage=stage,
+    )
+    if code is None:
+        result = inspect_return_checkpoint(
+            path, dataset, "untrained-heads", predictions, registration=registration
+        )
+        assert result["status"] == "untrained_heads_declared"
+        assert result["candidate_eligible"] is False
+        assert result["weights_stage"] == "pretrained_untrained_heads"
+    else:
+        with pytest.raises(C.ProtocolError) as error:
+            inspect_return_checkpoint(
+                path, dataset, "untrained-heads", predictions, registration=registration
+            )
+        assert error.value.code == code
+    # Without a registration nothing is relaxed.
+    with pytest.raises(C.ProtocolError) as error:
+        inspect_return_checkpoint(path, dataset, "untrained-heads", predictions)
+    assert error.value.code == "model_return_selection_contaminated"
+
+
+def test_ret_03_a_real_untrained_heads_encoder_return_passes_the_dev_check_only_when_synthetic(
+    return_case, capsys, tmp_path, monkeypatch
+) -> None:
+    """146's export shape, registered for real; torch is absent, so reloading is blocked."""
+    root, checksum, path = return_case
+    producer = tmp_path / "encoder-return"
+    ref = encoder_return(
+        producer, weights_stage="pretrained_untrained_heads", dataset_id="synthetic-return"
+    )
+    manifest = json.loads((producer / ref.path).read_bytes())
+    assert manifest["weights_stage"] == "pretrained_untrained_heads"
+    manifest["dataset_manifest_sha256"] = checksum
+    ref = write_manifest(producer, manifest)
+    with pytest.raises(C.ProtocolError) as error:
+        register_bundle(tmp_path / "external", producer, ref, scope="external_candidate")
+    assert error.value.code == "untrained_heads_require_synthetic_scope"
+    registry = tmp_path / "registry"
+    registration = register_bundle(registry, producer, ref, scope="synthetic_fixture")
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    for row in rows:
+        row["model_revision"] = manifest["model_revision"]
+    write_rows(path, rows)
+    deny_encoder_imports(monkeypatch)
+    checkpoint = producer / ref.path
+    code, result = invoke(
+        return_case,
+        capsys,
+        "--checkpoint-manifest",
+        str(checkpoint),
+        *registration_args(registry, registration),
+    )
+    assert code == 0, result
+    assert result["status"] == "partial"
+    assert result["checkpoint"]["status"] == "untrained_heads_declared"
+    assert result["checkpoint"]["candidate_eligible"] is False
+    assert result["reload"]["status"] == "blocked_encoder_runtime_unavailable"
+    assert result["reload"]["registration"]["weights_stage"] == "pretrained_untrained_heads"
+    assert result["training"]["status"] == "mechanism_only"
+    assert result["scope"] == "synthetic_fixture" and result["quality_validated"] is False
+    # The same declaration without its synthetic registration stays contaminated.
+    code, result = invoke(return_case, capsys, "--checkpoint-manifest", str(checkpoint))
+    assert code == 2 and result["error"] == "model_return_selection_contaminated"
+
+
+def test_tol_01_a_label_or_status_change_inside_the_tolerance_is_still_a_mismatch(
+    return_case, capsys, tmp_path
+) -> None:
+    root, _, path = return_case
+    # Near-uniform scores with a 1e-7 margin: moving 2e-7 of mass flips the argmax while every
+    # probability stays well inside the 1e-6 linear tolerance.
+    model_root, ref = linear_bundle(
+        tmp_path / "near-tie",
+        [[0.0] * 6, [0.0] * 6, [0.0] * 6],
+        [0.0, 1e-7, 0.0],
+        [0.0, 0.0, 0.0, 0.0, 6.0, 0.0],
+    )
+    registry = tmp_path / "registry"
+    ref = register(registry, model_root, ref)
+    exact = model_predictions(registry, ref, root / "data/dev.inputs.jsonl")
+    assert {row["label"] for row in exact} == {"CONTRADICTED"}
+    flipped = json.loads(json.dumps(exact))
+    flipped[0]["probabilities"][1] -= 2e-7
+    flipped[0]["probabilities"][0] += 2e-7
+    flipped[0]["label"] = "SUPPORTED"
+    flipped[1].update(
+        status="abstained",
+        probabilities=None,
+        label=None,
+        evidence_ids=[],
+        evidence_bindings=[],
+        reason="producer abstained",
+    )
+    write_rows(path, flipped)
+    code, result = invoke(return_case, capsys, *registration_args(registry, ref))
+    assert code == 2
+    assert result["reload"]["max_probability_deviation"] < 1e-6
+    assert result["reload"]["mismatches"] == [
+        {"record_id": flipped[0]["record_id"], "fields": ["label"]},
+        {
+            "record_id": flipped[1]["record_id"],
+            "fields": ["status", "label", "evidence_ids", "probabilities"],
+        },
+    ]
+
+
+@pytest.mark.parametrize(
+    ("alpha", "change", "reasons"),
+    [
+        (0.5, {}, ["fusion_selection_registration_mismatch"]),
+        (0.25, {"fusion_gain_observed": False}, ["fusion_gain_observed_mismatch"]),
+        (0.25, {"alpha_grid": [0, 0.5, 1]}, ["fusion_selection_grid_invalid"]),
+    ],
+    ids=["registered-alpha", "gain-claim", "grid"],
+)
+def test_fsel_01_registration_gain_and_grid_disagreements_are_named(
+    return_case, capsys, tmp_path, alpha, change, reasons
+) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, alpha, 0.5, **change)
+    code, result = invoke(
+        return_case, capsys, *registration_args(registry, ref), "--fusion-selection", str(selection)
+    )
+    assert code == 2
+    assert result["fusion_selection"]["reasons"] == reasons
+
+
+def test_fsel_01_component_identity_must_be_the_registered_one(
+    return_case, capsys, tmp_path
+) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, 0.25, 0.5)
+    record = json.loads(selection.read_text())
+    record["components"]["left"]["model_revision"] = "another-left-model"
+    selection.write_text(json.dumps(record))
+    code, result = invoke(
+        return_case, capsys, *registration_args(registry, ref), "--fusion-selection", str(selection)
+    )
+    assert code == 2
+    assert result["fusion_selection"]["reasons"] == ["fusion_selection_component_mismatch"]
+
+
+@pytest.mark.parametrize(
+    ("edit", "partition", "code"),
+    [
+        (
+            lambda record: record.update(protocol="other"),
+            "dev",
+            "fusion_selection_protocol_invalid",
+        ),
+        (lambda record: record.update(extra=True), "dev", "fusion_selection_protocol_invalid"),
+        (lambda record: None, "test", "fusion_selection_dev_only"),
+    ],
+    ids=["protocol", "unknown-key", "test-partition"],
+)
+def test_fsel_01_a_malformed_record_or_test_partition_is_refused(
+    return_case, capsys, tmp_path, edit, partition, code
+) -> None:
+    registry, ref, selection = fusion_case(return_case, tmp_path, 0.25, 0.5)
+    record = json.loads(selection.read_text())
+    edit(record)
+    selection.write_text(json.dumps(record))
+    status, result = invoke(
+        return_case,
+        capsys,
+        *registration_args(registry, ref),
+        "--fusion-selection",
+        str(selection),
+        "--partition",
+        partition,
+    )
+    assert status == 2 and result["error"] == code
+
+
+@pytest.mark.parametrize(
+    ("scope", "stage"),
+    [("external_candidate", "supervised_finetuned"), ("synthetic_fixture", "supervised_finetuned")],
+    ids=["external", "synthetic-trained"],
+)
+def test_ret_05_a_trained_encoder_that_cannot_reload_here_is_not_a_partial_review(
+    return_case, capsys, tmp_path, monkeypatch, scope, stage
+) -> None:
+    """Only a synthetic untrained-heads registration may report its reload as blocked."""
+    root, checksum, path = return_case
+    producer = tmp_path / "encoder-return"
+    ref = encoder_return(producer, weights_stage=stage, dataset_id="synthetic-return")
+    manifest = json.loads((producer / ref.path).read_bytes())
+    manifest["dataset_manifest_sha256"] = checksum
+    ref = write_manifest(producer, manifest)
+    registry = tmp_path / "registry"
+    registration = register_bundle(registry, producer, ref, scope=scope)
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    for row in rows:
+        row["model_revision"] = manifest["model_revision"]
+    write_rows(path, rows)
+    deny_encoder_imports(monkeypatch)
+    code, result = invoke(return_case, capsys, *registration_args(registry, registration))
+    assert code == 2, result
+    assert result["error"] == "pretrained_encoder_dependencies_unavailable"
