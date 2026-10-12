@@ -1,5 +1,5 @@
 import type { Report } from './index';
-import { feedbackCopy, feedbackText, type FeedbackLanguage } from './localization';
+import { feedbackCopy, type FeedbackLanguage } from './localization';
 
 /** Coverage of currently readable, applicable criteria; never a score. */
 export function feedbackCoverageText(
@@ -7,7 +7,6 @@ export function feedbackCoverageText(
   legacy: Report['items'],
   language: FeedbackLanguage,
 ): string {
-  const T = (zh: string, en: string) => feedbackText(language, zh, en);
   const items = report.items.filter(
     (item) =>
       item.label !== 'NOT_APPLICABLE' &&
@@ -28,18 +27,11 @@ export function feedbackCoverageText(
       : legacy.includes(item) && item.label !== 'INSUFFICIENT';
     if (hasAdvice) model++;
   }
-  const ratio = (count: number): string => {
-    const percent = items.length ? `${Math.round((count / items.length) * 100)}%` : '—';
-    return `${count}/${items.length}${T(`（${percent}）`, ` (${percent})`)}`;
-  };
-  return (
-    T('规则核实：', 'Verified by rules: ') +
-    ratio(verified) +
-    ' · ' +
-    T('模型建议：', 'Model advice: ') +
-    ratio(model) +
-    ' · ' +
-    T('待核验：', 'Pending verification: ') +
-    ratio(items.length - verified - model)
-  );
+  // 2026-10-12 item 3: the learner sees item counts only; weighted coverage stays in reports.
+  return feedbackCopy(language, 'coverageLine', {
+    verified,
+    total: items.length,
+    model,
+    pending: items.length - verified - model,
+  });
 }

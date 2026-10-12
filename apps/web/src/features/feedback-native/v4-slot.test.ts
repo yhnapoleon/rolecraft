@@ -815,7 +815,6 @@ const invalidSentenceCases: [string, (advice: Raw) => unknown][] = [
     'criteria on a relation registration',
     (advice) => ({ ...advice, registration: { ...advice.registration, criteria: ['R1.target'] } }),
   ],
-  ['criterion advice', (advice) => ({ ...advice, task_type: 'criterion' })],
 ];
 it.each(invalidSentenceCases)(
   'UI-01: rejects %s within one suggestion and keeps the rest',
@@ -838,6 +837,32 @@ it.each(invalidSentenceCases)(
     expect(f.calls).toEqual([]);
   },
 );
+// 149 review P3-4: a contract-valid criterion entry is not relation advice. It is skipped, so it
+// can never turn the relation block into a failure; criterion display is §8 follow-up work.
+describe('criterion entries next to relation advice', () => {
+  const criterionEntry = (language: 'zh' | 'en') => {
+    const { units: _units, aggregation: _aggregation, ...rest } = external(language);
+    return { ...rest, task_type: 'criterion', criterion: 'R3.capacity', label: 'MET' };
+  };
+  it('skips them and keeps the relation advice', async () => {
+    const { f, report } = await readThroughHost([criterionEntry('zh'), external('en')]);
+    expect(report.model_advice).toHaveLength(1);
+    expect(report.model_advice?.[0]).toMatchObject({ status: 'completed', label: 'CONTRADICTED' });
+    expect(report.model_advice?.[0].units).toHaveLength(6);
+    expect(f.calls).toEqual([]);
+  });
+  it('reads a list of criterion entries only as no relation advice', async () => {
+    const { report } = await readThroughHost([criterionEntry('zh')]);
+    expect(report.model_advice).toBeUndefined();
+  });
+  it('still rejects relation advice for another criterion', async () => {
+    const { report } = await readThroughHost([{ ...external('zh'), criterion: 'R3.capacity' }]);
+    expect(report.model_advice?.[0]).toMatchObject({
+      status: 'unavailable',
+      error_code: 'model_prediction_invalid',
+    });
+  });
+});
 it('UI-01: reads the fusion members, their weights and the observed fusion gain', async () => {
   const quarter = {
     ...fusionIdentity,
