@@ -1495,3 +1495,44 @@ def test_held_08_an_error_after_the_record_reports_the_opening(tmp_path: Path) -
     assert report["opened"] == json.loads(opening.record.read_bytes())
     code, again = verify(opening.package, opening.predictions, *opening.args())
     assert code == 2 and again["error"] == "held_out_test_already_opened"
+
+
+@pytest.mark.parametrize(
+    ("target", "code"),
+    [("test", "dataset_split_file_not_isolated"), ("copy", "dataset_symlink_forbidden")],
+)
+def test_held_01_a_dev_file_that_is_a_link_is_refused_before_it_is_read(
+    tmp_path: Path, target: str, code: str
+) -> None:
+    package = build_package(tmp_path)
+    root = package.root
+    dev_labels = root / "data/dev.labels.jsonl"
+    if target == "test":
+        # A forged manifest binds dev labels to the test labels' bytes through a link.
+        source = root / "data/test.labels.jsonl"
+    else:
+        # Same bytes elsewhere in the package: reading through the link would even pass.
+        source = root / "audit/dev/labels-copy.jsonl"
+        source.write_bytes(dev_labels.read_bytes())
+    dev_labels.unlink()
+    dev_labels.symlink_to(source)
+    manifest_path = root / "dataset-manifest.json"
+    manifest = json.loads(manifest_path.read_bytes())
+    manifest["splits"]["dev"]["files"]["data/dev.labels.jsonl"] = {
+        "sha256": sha(source.read_bytes()),
+        "size": len(source.read_bytes()),
+    }
+    manifest_path.write_bytes(json_bytes(manifest))
+    package = V3Package(root, sha(manifest_path.read_bytes()))
+    predictions = tmp_path / "predictions.jsonl"
+    if target == "copy":
+        gold_predictions(package, "dev", predictions)
+    else:
+        predictions.write_text("")
+    log = tmp_path / "linked.log"
+    status, report = verify(package, predictions, audit_log=log)
+    assert status == 2
+    assert report["error"] == code
+    assert not opened_paths(log) & held_out_files(package)
+    if target == "copy":
+        assert source.resolve() not in opened_paths(log)

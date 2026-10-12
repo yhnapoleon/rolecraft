@@ -21,7 +21,7 @@ from pydantic import ValidationError
 
 from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.data import CampaignCandidate, TestCampaign
-from career_lab.datasets.v3.handoff_package import check_sealed_structure
+from career_lab.datasets.v3.handoff_package import check_sealed_structure, require_regular
 from career_lab.experiments.v3.training.freeze import (
     freeze_selection,
     validate_campaign,
@@ -253,6 +253,7 @@ def check_returned_rows(
     if revision != registered_revision:
         raise C.ProtocolError("held_out_prediction_registration_mismatch")
     name = split_file_names("test")["metadata"]
+    require_regular(Path(dataset_root), name)
     ref = C.FileRef(path=name, sha256=manifest.splits["test"].files[name].sha256)
     metadata = unique_records(json_lines(C.read_file(Path(dataset_root), ref)))
     if any(row.get("split") != "test" for row in metadata.values()):

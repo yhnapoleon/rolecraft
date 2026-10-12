@@ -18,6 +18,7 @@ from career_lab.contracts import v2 as C
 from career_lab.datasets.v3.handoff_package import (
     SEALED_LAYOUT,
     check_sealed_structure,
+    require_regular,
     split_file_names,
 )
 
@@ -196,9 +197,12 @@ def load_sealed_dataset(
         raise C.ProtocolError("return_partition_missing")
     split = manifest.splits[partition]
 
+    names = split_file_names(partition)
+    for name in names.values():
+        require_regular(root, name)
+
     def records(kind: str) -> dict[str, dict[str, Any]]:
-        name = split_file_names(partition)[kind]
-        ref = C.FileRef(path=name, sha256=split.files[name].sha256)
+        ref = C.FileRef(path=names[kind], sha256=split.files[names[kind]].sha256)
         return unique_records(json_lines(C.read_file(root, ref)))
 
     inputs, labels = records("inputs"), records("labels")

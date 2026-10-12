@@ -34,6 +34,16 @@ def split_owner(name: str) -> str | None:
     return "unknown" if name.startswith("data/") else None
 
 
+def require_regular(root: Path, name: str) -> None:
+    """Refuse a package path that passes through a symbolic link (``load_package`` refuses
+    links anywhere; readers of one split check the files they open)."""
+    current = Path(root)
+    for part in Path(name).parts:
+        current = current / part
+        if current.is_symlink():
+            raise ProtocolError("dataset_symlink_forbidden", status=403)
+
+
 def check_sealed_structure(splits, shared, test_sealed: bool) -> None:
     """Structural isolation of the sealed layout; run before any split file is read.
 
@@ -48,6 +58,15 @@ def check_sealed_structure(splits, shared, test_sealed: bool) -> None:
             raise ProtocolError("dataset_split_files_incomplete")
         if any(split_owner(name) != split for name in names):
             raise ProtocolError("dataset_split_file_outside_partition", status=403)
+    # Two splits whose own files carry the same bytes are one partition under two names.
+    owned = [
+        getattr(names[name], "sha256", None)
+        for split, names in splits.items()
+        for name in split_file_names(split).values()
+        if isinstance(names, dict)
+    ]
+    if len(set(owned)) != len(owned):
+        raise ProtocolError("dataset_split_file_not_isolated", status=403)
     if "test" in splits and not test_sealed:
         raise ProtocolError("dataset_test_split_must_be_sealed", status=403)
     if test_sealed and "test" not in splits:
