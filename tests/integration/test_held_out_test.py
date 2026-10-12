@@ -1205,3 +1205,126 @@ def test_held_05_an_unreadable_prediction_file_cannot_spend_the_opening(
     assert response.returncode == 2, response.stdout
     assert not opening.record.exists()
     assert not opened_paths(log) & held_out_files(opening.package)
+
+
+# Bytes of the 145 line's linear return sample (rolecraft-linear-return-v1, constructed
+# weights, 145 proof at aeae720); re-bound here to this package's dataset identity.
+LINEAR_145 = ROOT / "tests/integration/fixtures/linear-return-145"
+LINEAR_145_SHA = {
+    "linear/arrays.npz": "713b1cb7aa36e8961a882a2ab20003aafc99d9825628ae8fce7bc3a8e07b6d6b",
+    "linear/model.json": "98b6a7b9589dc158e43b7c02a9e478efb84d9a0e65ae1e999c418754726c9a79",
+}
+
+
+def linear_revision(model_sha: str, arrays_sha: str, dataset_sha: str) -> str:
+    """The published rolecraft-linear-return-v1 revision formula (linear-return.md §6)."""
+    identity = {
+        "arrays_npz_sha256": arrays_sha,
+        "dataset_manifest_sha256": dataset_sha,
+        "model_json_sha256": model_sha,
+    }
+    return "linear-return:" + sha(C.canonical(identity).encode())
+
+
+def linear_return(tmp_path: Path, package: V3Package, **changes) -> Path:
+    """The 145 linear return sample bound to ``package``: outer manifest with the three v3
+    fields and no artifact_roles, plus a dev format sample stamped with its revision."""
+    out = tmp_path / "linear-return"
+    for name, checksum in LINEAR_145_SHA.items():
+        raw = (LINEAR_145 / name).read_bytes()
+        assert sha(raw) == checksum
+        (out / name).parent.mkdir(parents=True, exist_ok=True)
+        (out / name).write_bytes(raw)
+    revision = linear_revision(
+        LINEAR_145_SHA["linear/model.json"], LINEAR_145_SHA["linear/arrays.npz"], package.checksum
+    )
+    (out / "notes.md").write_text("Constructed weights from the 145 sample; no training occurred.")
+    rows = jsonl(gold_predictions(package, "dev", out / "predictions.dev.jsonl"))
+    for row in rows:
+        row["model_revision"] = revision
+    write_jsonl(out / "predictions.dev.jsonl", rows)
+    fields = {
+        "artifact_kind": "linear",
+        "artifact_protocol": "rolecraft-linear-return-v1",
+        "label_tiers": ["G2v"],
+        "framework": "scikit-learn",
+        "framework_version": "synthetic-constructed",
+        "checkpoint_files": dict(LINEAR_145_SHA),
+        "predictions_file": "predictions.dev.jsonl",
+    } | changes
+    return checkpoint_manifest(out / "checkpoint-manifest.json", package, revision, **fields)
+
+
+def test_data_06_v3_dev_accepts_the_145_linear_return_without_artifact_roles(
+    tmp_path: Path,
+) -> None:
+    package = build_package(tmp_path, TRAIN_DEV)
+    manifest = linear_return(tmp_path, package)
+    assert "artifact_roles" not in json.loads(manifest.read_bytes())
+    code, report = validate(
+        package.root, tmp_path / "review", "--checkpoint-manifest", manifest, "--split", "dev"
+    )
+    assert code == 0, report
+    model = report["model_return"]
+    assert model["format_valid"] is True
+    assert {row["status"] for row in model["records"]} == {"accept"}
+    assert model["artifact_kind"] == "linear"
+    assert model["artifact_roles"] == {
+        "checkpoint": ["linear/arrays.npz"],
+        "config": ["linear/model.json"],
+        "tokenizer": ["linear/model.json"],
+    }
+    assert model["model_loaded"] is False and model["training_verified"] is False
+
+
+@pytest.mark.parametrize(
+    ("change", "code"),
+    [
+        (
+            {"artifact_protocol": "rolecraft-linear-return-v0"},
+            "handoff_model_artifact_protocol_invalid",
+        ),
+        ({"label_tiers": ["G9"]}, "handoff_model_label_tiers_invalid"),
+        ({"label_tiers": ["G0", "G0"]}, "handoff_model_label_tiers_invalid"),
+        (
+            {"checkpoint_files": {"linear/model.json": LINEAR_145_SHA["linear/model.json"]}},
+            "handoff_model_file_set_mismatch",
+        ),
+        (
+            {
+                "artifact_roles": {
+                    "checkpoint": ["linear/model.json"],
+                    "config": ["linear/model.json"],
+                    "tokenizer": ["linear/model.json"],
+                }
+            },
+            "handoff_model_artifact_roles_conflict",
+        ),
+        ({"unexpected_field": True}, "ValidationError"),
+    ],
+    ids=["protocol", "unknown-tier", "duplicate-tier", "missing-arrays", "roles", "unknown-key"],
+)
+def test_data_06_v3_linear_return_fields_are_still_checked(
+    tmp_path: Path, change: dict, code: str
+) -> None:
+    package = build_package(tmp_path, TRAIN_DEV)
+    manifest = linear_return(tmp_path, package, **change)
+    if "checkpoint_files" in change:
+        (manifest.parent / "linear/arrays.npz").unlink()
+    status, report = validate(
+        package.root, tmp_path / "review", "--checkpoint-manifest", manifest, "--split", "dev"
+    )
+    assert status == 2
+    assert report["error"] == code
+
+
+def test_data_06_other_returns_still_name_their_artifact_roles(tmp_path: Path) -> None:
+    package = build_package(tmp_path, TRAIN_DEV)
+    manifest = declared_model_return(tmp_path, package, 3)
+    body = json.loads(manifest.read_bytes())
+    del body["artifact_roles"]
+    manifest.write_bytes(json_bytes(body))
+    status, report = validate(
+        package.root, tmp_path / "review", "--checkpoint-manifest", manifest, "--split", "dev"
+    )
+    assert status == 2 and report["error"] == "handoff_model_artifact_roles_required"
