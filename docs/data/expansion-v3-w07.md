@@ -28,6 +28,22 @@ UV_PYTHON=3.12 uv run --locked python -m career_lab.datasets.v3 validate-data \
   --export /path/to/export
 ```
 
+要同时导出作品单句关系记录，在 `export --live` 上加 `--relation-units`。内容与不加参数的导出不同，用新的输出目录；写进已有导出目录会因内容冲突被拒。
+
+```sh
+UV_PYTHON=3.12 uv run --locked python -m career_lab.datasets.v3 export --live \
+  --database-url sqlite:///path/to/session.db --session SESSION_ID \
+  --token-file /path/to/owner-token --scenario-root /path/to/installed/scenario \
+  --point /path/to/point.json --key-file /path/to/research-key \
+  --authorization /path/to/new-authorization.json --output /path/to/new-export \
+  --relation-units
+```
+
+- 除助手回答的关系记录外，对每份提交作品的 R2.support 证据包按 `r2-support-units-v1` 每句导出一条关系记录：claim 为该句，候选为同一证据包的候选材料（作品自身除外），不带 gold 或 rule_bound，标签行为待标注（`pending`）。切句用 `career_lab.models.v3.units.support_units`，与产品推理是同一函数，规则见 [W08 服务消费与回退边界](expansion-v3-w08.md#服务消费与回退边界)。
+- 导出的句集合与推理相同：过短句与超过句数上限 `MAX_UNITS` 的句子不导出。
+- 来源区分写在评审侧 `audit/source-map.json` 的每条记录里：`relation_source` 为 `work_unit` 或 `assistant_answer`；作品句另有 `unit_policy`、`unit_index`、`unit_hash`，其中 `unit_hash` 与反馈里 `model_advice.units[].unit_hash` 逐条相同。这些字段不是模型特征；模型输入文件 `data/<split>.inputs.jsonl` 的键集合不变。
+- 不加该参数时导出与原来相同，只是 source-map 里助手回答记录多了 `relation_source`。
+
 路径与身份须替换为实际本机值；上述占位符不是现成会话。签发文件只创建一次，不覆盖旧凭证。签名密钥由操作者安全持有；公开授权投影不包含签名或凭据 ID。`issue`、`validate`、`public_identity` 供其他研究入口复用，消费端仍检查当前权限。CLI 默认从起点授权到指定点；模块 `issue` 支持窄窗口。没有明确授权、到期、用途不符、会话或读取凭据不匹配均拒绝。
 
 授权仍有效且当前权限允许时，相同源码、授权、会话与历史窗口重复导出，规范内容、ID 和 hash 相同，业务状态及事件数不增加。已存在输出只在全部文件字节一致时恢复；内容冲突或 symlink 拒绝。离线 `export --snapshot` 只接受明确 fixture，不能把 JSON 中自报的 `env_run` 视为真实运行。
@@ -55,7 +71,9 @@ export/
 
 ## 负责方回传
 
-正式数据沿 fixture v2 的目录组织方式：输入与标签分开为 JSONL，另交新的 manifest、逐文件 SHA-256、split、来源谱系和数据卡。文件有变化就必须重算对应 hash；不能用旧交接包的身份指代新数据。
+正式数据沿 fixture v2 的目录组织方式：输入与标签分开为 JSONL，另交新的 manifest、逐文件 SHA-256、split、来源谱系和数据卡。含封存 test 的数据包改用按 split 独立冻结的布局 `rolecraft-dataset-split-sealed-v1`（[规格](return-v3/dataset-split-sealed-v1.md)）。文件有变化就必须重算对应 hash；不能用旧交接包的身份指代新数据。
+
+产品里 R2.support 的推理输入是作品的单句（见 [W08](expansion-v3-w08.md#服务消费与回退边界)）。负责方训练与 dev 的 claim 宜包含作品单句，分布才与产品一致；作品单句关系记录由上面的 `--relation-units` 导出提供，`unit_hash` 与产品推理逐条相同（`career_lab.models.v3.units.support_units`、`unit_hash`）。
 
 核对范围与《模型与数据准备事项》一致：文件 hash、记录对齐、标签顺序、分组隔离、语言、标签等级、可评与 label-only 数量、数据卡一致性及模型输入隔离。关系三类与评价项五类分别处理，不混成单一标签域。
 
@@ -71,7 +89,7 @@ UV_PYTHON=3.12 uv run --locked python -m career_lab.datasets.v3 validate-handoff
   --split dev --output /path/to/new-model-review
 ```
 
-命令只读交回的文件，不导入包内 Python、不运行加载命令、不调用模型、不注册模型、不发布训练数据。`--split` 只选择逐行对齐的分区，不执行评测或授权打开封存 test。模型加载／注册与真实质量由 W08 在后续获准条件下独立验证。
+命令只读交回的文件，不导入包内 Python、不运行加载命令、不调用模型、不注册模型、不发布训练数据。`--split` 只选择逐行对齐的分区，不执行评测或授权打开封存 test。模型加载、注册、dev 复核与封存 test 的一次性打开都在 W08（[正式回传复核 CLI](expansion-v3-w08.md#正式回传复核-cli2026-10-09)）。
 
 ### 数据包与来源映射
 
@@ -83,6 +101,13 @@ UV_PYTHON=3.12 uv run --locked python -m career_lab.datasets.v3 validate-handoff
 
 数据卡的分区计数要与实际输入、标签、语言和可评范围一致。新包可在 `data_card.md` 放一个 JSON 摘要块，`splits` 与 manifest 的同名字段一致；这是本接收工具支持的机器核对方式，不修改已冻结的 v2 交接规格。旧 v2 Markdown 表格可直接读取，自动核对条数、标签分布、可评／label-only；报告明确 `legacy_table_counts`，其语言说明与其他自然语言内容仍需人工复核。所有 hash 校验只证明对应字节，不能证明来源授权或事实真实性。
 
+含封存 test 的包按 `rolecraft-dataset-split-sealed-v1` 交付，同一条 `validate-handoff` 命令自动识别布局（[规格 §4](return-v3/dataset-split-sealed-v1.md)）：
+
+- train、dev 逐条审阅，规则同上；另核四个文件按 record_id 与 input_hash 逐条对齐、metadata 的 `split` 等于所在分区、来源快照与调用原件只在本 split 的 `audit/<s>/` 下、每个 split 的计数（含 `label_tiers`）与数据卡一致。
+- 封存的 test 只核文件 SHA-256 与大小、行数，以及 record_id、input_hash、连通组件与结构身份与 train/dev 不相交；只解析 test metadata，不解析 test 的输入、标签、注释与调用原件，标签分布等计数只作声明记录。
+- 报告另有 `layout`、`sealed_test`（含 `labels_parsed=false`、`inputs_parsed=false`）与 `annotation_trace`（中英分列，每条 train/dev 记录的审阅状态、标签等级与每遍调用身份）。
+- `--split test --checkpoint-manifest …` 在封存包上拒绝（`held_out_test_sealed`，403）：test 的逐条核验只能经 W08 的一次性打开。
+
 ### 双遍与证据集合
 
 每条决策先核任务标签域、适用性、候选所属、参照时点及选中证据是否属于可接受集合。合法多证据联合目标保留。集合去重并移除包含更小合法集合的冗余超集；公共 `semantic_decision_key` 比较归一化后的独立决策。原始回执、旧注解与公共契约字节保持不变。
@@ -91,9 +116,13 @@ UV_PYTHON=3.12 uv run --locked python -m career_lab.datasets.v3 validate-handoff
 
 ### 模型回传
 
-沿 fixture v2 的 checkpoint manifest 与 `return_schema_version=2` 双输出字段。核对完成声明、模型 revision、数据 manifest 身份、冻结标签列序、训练／选择分区、逐条概率（有限、归一化、argmax）、当前记录候选 ID 和完整候选对象 hash。失败／弃权必须保留行、空概率与标签以及原因，不可编造结果。可评的正／反关系成功行不得省略证据选择。
+沿 fixture v2 的 checkpoint manifest 与双输出字段；预测行 `return_schema_version` 为 2 或 3（[预测行 v3](return-v3/predictions-v3.md)，v3 关系行字段同 v2）。核对完成声明、模型 revision、数据 manifest 身份、冻结标签列序、训练／选择分区、逐条概率（有限、归一化、argmax）、当前记录候选 ID 和完整候选对象 hash。失败／弃权必须保留行、空概率与标签以及原因，不可编造结果。可评的正／反关系成功行不得省略证据选择。
 
-`checkpoint_files` 中每个文件都实际核 SHA-256。为避免按文件名猜模型，此接收工具另需 `artifact_roles` 明确列出 `checkpoint`、`config`、`tokenizer` 各自的文件路径，路径须在 `checkpoint_files` 内；缺该映射明确退补。这是机械接收的补充清单，不改变冻结 fixture README，不表示任意文件具备相应模型能力。`training_notes_file`、`predictions_file` 与 manifest 均绑定进回传摘要。回传目录只放声明的文件；checkpoint 文件身份通过不等于可加载、已训练或证据选择正确。
+`checkpoint_files` 中每个文件都实际核 SHA-256。为避免按文件名猜模型，此接收工具另需 `artifact_roles` 明确列出 `checkpoint`、`config`、`tokenizer` 各自的文件路径，路径须在 `checkpoint_files` 内；缺该映射明确退补。这是机械接收的补充清单，不改变冻结 fixture README，不表示任意文件具备相应模型能力。
+
+v3 线性回传（[`rolecraft-linear-return-v1`](return-v3/linear-return.md)）在外层清单另带 `artifact_kind=linear`、`artifact_protocol`、`label_tiers`。它的角色由格式固定（`linear/arrays.npz` 为 checkpoint，`linear/model.json` 为 config 与 tokenizer），不必写 `artifact_roles`；写了就必须与固定映射相同（否则 `handoff_model_artifact_roles_conflict`），`checkpoint_files` 必须恰为这两个文件。`label_tiers` 只能取已定义的标签等级且不重复。
+
+`training_notes_file`、`predictions_file` 与 manifest 均绑定进回传摘要。回传目录只放声明的文件；checkpoint 文件身份通过不等于可加载、已训练或证据选择正确。
 
 ### 结果、退出码与恢复
 
@@ -115,6 +144,7 @@ UV_PYTHON=3.12 uv run --locked python -m career_lab.datasets.v3 label issue \
 - `runs/local/095/runbook-merged/export-evidence.json`：基线 `a432b1b` 上中英真实 HTTP 会话→正式签发／导出／校验。每语 1 条关系、14 条评价项，另外两切面零量有原因。该会话由脚本操作，未证明真人质量。
 - `runs/local/109/runbook/{zh,en}/`：本次中英回传机制样例，`evidence-final.json`／`review-final/report.json` 保存正式 CLI 核验及恢复的命令、报告与 hash。模型文件为明确合成字节，无实际训练。
 - `runs/local/109/runbook/fixture-v2-final/report.json`：直接只读消费未改动的冻结 v2 包，12 条数值 fixture 接受；数据卡只核表格字段，training_ready=false。
+- `tests/integration/test_relation_units_export.py`（EXP-07）：真实 HTTP 运行时＋worker（合成构造权重的线性注册）提交三段作品，经正式 `authorize`／`export --live --relation-units` 子进程导出；6 条作品句记录与反馈 `model_advice.units` 逐条同 `unit_hash`，与 1 条助手回答记录并列，模型输入不含 gold、隐藏探针或作品原文作候选，标签全为 pending。不加参数的导出仍为 1 条关系记录。
 - `runs/local/109/063-13/`：逐 DATA 红绿、定向旧测试逐 ID 比较、独立双轴、候选源码 digest、回执与 PR 草稿。完整门禁由总调度持锁安排，本线未运行。
 
 负责方仍需交正式来源／许可、完整谱系／split、实际标注调用、checkpoint 与训练说明；权威来源、真实模型重载、两语模型质量、独立语义采用及 training-ready 继续 blocked。本命令不自动提升这些状态。

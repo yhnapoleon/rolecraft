@@ -98,6 +98,9 @@ $PY -m scripts.regression.release_identity --check            # 0 problems
 | 五分类 head 的接收与显示 | 负责方书面答复「五分类走独立 head」 | criterion 线性与编码器注册、五类指标与 `rubric_version` 复核、criterion 预测行格式发布；14 项逐项「模型建议（不计分）」与冲突、未覆盖、待核验状态；model-flows 加 criterion 段。契约可选字段已保留，预计不需二次重导出 |
 | Judge SFT 输入格式导出 | 负责方答复「做 SFT」并索取格式 | Judge messages 抽成纯函数（线上 prompt hash 不变），授权导出新增 `judge` 投影（含规则界与声明决定、`PROMPT_VERSION`、不含 gold），W07 手册补命令。模型服务接入已具备：JUDGE 槽配 `openai_compatible` 即可 |
 | GRPO | 负责方决定执行 | 我方无接收工作，adapter 同样以 OpenAI 兼容服务接入；未执行时报告如实写「未执行」 |
+| R2.support 候选长度 | 产品侧决定候选口径 | 现在候选是整篇材料；XLM-R 实测引用整篇材料时每句都超 512 而弃权。若改为引用片段或按段分块，需同时改证据包投影与证据口径，先定口径再派 |
+| `MAX_UNITS` | 部署机 CPU 明显慢于开发机，或一次评审含多个 R2.support 包 | 只改 `models/v3/units.py` 的 `MAX_UNITS`（建议 12），或同包句子合批前向 |
+| 契约小修集合 | 下次契约修订 | 启动时端口非法给错误码（`runtime/model_slots.py`，在契约指纹内）、relation 建议绑定 `R2.support`、是否给界面加「推理依赖版本」字段 |
 
 补做时沿用已保留的测试编号，不替负责方训练、不运行其命令、不新增费用。
 
