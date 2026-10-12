@@ -51,6 +51,8 @@ const KEYWORD_RESULTS = [
 const COPY = {
   zh: {
     title: '合成机制演示',
+    abstained: '模型未判断任何句子',
+    tooLong: '超长未核',
     notice: '合成或未训练权重，不是模型判断，不计分。',
     counts: '逐句：支持 1 · 矛盾 1 · 证据不足 4',
     conclusion: '作品整体：存在矛盾',
@@ -67,6 +69,8 @@ const COPY = {
   },
   en: {
     title: 'Synthetic mechanism demo',
+    abstained: 'The model judged no sentence',
+    tooLong: 'Too long to check',
     notice: 'Synthetic or untrained weights: not a model judgment, not scored.',
     counts: 'By sentence: supported 1 · contradicted 1 · insufficient evidence 4',
     conclusion: 'Whole work: contradiction found',
@@ -212,13 +216,26 @@ async function mainPath(browser, language) {
       title: await text(browser, '[data-model-advice-title]'),
       notice: await text(browser, '[data-model-advice-notice]'),
     };
-    assert.deepEqual(folded, { open: false, title: copy.title, notice: copy.notice });
+    // Encoder phases: a sentence whose input passes the token limit is not cut but left
+    // unjudged; when every sentence is, the block says so instead of showing labels.
+    const unjudged = !keyword && folded.title === copy.abstained;
+    assert.deepEqual(folded, {
+      open: false,
+      title: unjudged ? copy.abstained : copy.title,
+      notice: copy.notice,
+    });
     await browser.ev(
       `${advice}.closest('section').scrollIntoView({block: 'start'}); document.scrollingElement.scrollBy(0, -80)`,
     );
     await shot(browser, `${language}-folded-desktop-light`);
     const view = await readAdvice(browser);
     assert.ok(view.units.length > 0, 'sentences are listed');
+    if (unjudged)
+      assert.ok(
+        view.units.every((u) => u.status === 'abstained' && u.result === copy.tooLong),
+        JSON.stringify(view.units),
+      );
+    results.push({ phase: PHASE.name, language, unjudged });
     assert.ok(!view.body.includes('模型建议（不计分）') && !view.body.includes('Model advice (not scored)'));
     if (keyword) {
       assert.deepEqual(view.units.map(outcome), KEYWORD_RESULTS);
