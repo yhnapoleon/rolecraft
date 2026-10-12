@@ -859,6 +859,23 @@ def test_enc_06_each_supported_variant_registers_with_its_settings(
             "checkpoint_training_identity_mismatch",
         ),
     ],
+    ids=[
+        "threshold-zero",
+        "aggregate-threshold-0.3",
+        "aggregate-threshold-0.49",
+        "threshold-one",
+        "threshold-above-one",
+        "threshold-string",
+        "threshold-boolean",
+        "threshold-missing",
+        "token-limit-below-four",
+        "token-limit-over-tokenizer",
+        "schema-version-4",
+        "criterion-task",
+        "legacy-with-v3-field",
+        "pair-label-order-reordered",
+        "legacy-revision-on-v3",
+    ],
 )
 def test_enc_03_inference_settings_are_checked_at_registration(
     tmp_path: Path, change: dict[str, Any], code: str
