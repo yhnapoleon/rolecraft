@@ -51,9 +51,14 @@ def reload_return(
     except C.ProtocolError as error:
         if error.code != RUNTIME_UNAVAILABLE or held_out_opening is not None:
             raise
+        summary = describe_registration(registry_root, ref)
+        # Only a synthetic untrained-heads mechanism sample may skip its reload; any other
+        # registration must be reloaded, so a missing runtime stays an error (exit 2).
+        if not untrained_heads(summary):
+            raise
         return {
             "status": "blocked_encoder_runtime_unavailable",
-            "registration": describe_registration(registry_root, ref).identity(),
+            "registration": summary.identity(),
             "tolerance": None,
             "mismatched_record_ids": [],
             "comparison": "not_run_optional_encoder_runtime_missing",
@@ -89,8 +94,9 @@ TRAINED_DECLARATION = {
 # (docs/data/return-v3/encoder-return.md); only a synthetic registration may use it, and the
 # encoder protocol's own check decides whether the declaration is exact.
 UNTRAINED_STAGE = "pretrained_untrained_heads"
-# Loading an encoder needs the optional extra; without it a dev review reports the reload
-# as blocked (a test opening checks loading before its record instead).
+# Loading an encoder needs the optional extra. Without it, only a synthetic untrained-heads
+# registration's dev review reports the reload as blocked; every other registration fails
+# (a test opening checks loading before its record).
 RUNTIME_UNAVAILABLE = "pretrained_encoder_dependencies_unavailable"
 
 

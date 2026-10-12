@@ -46,7 +46,7 @@ v3 行与 fixture v2 行字段相同，只把版本写成 3：
 
 负责方清单的选择声明须为 `training_partitions=["train"]`、`selection_partition="dev"`、`test_used_for_selection=false`。唯一例外：注册为 `synthetic_fixture` 且 `weights_stage=pretrained_untrained_heads`（编码器回传的「预训练权重、头未训练」阶段）时，清单必须写 `weights_stage=pretrained_untrained_heads`（否则 `return_checkpoint_identity_mismatch`），并由编码器回传规格的同一检查（`validate_encoder_return_identity`）核对：`completed=false`、`training_partitions=[]`、`selection_partition=null`、`test_used_for_selection=false`，不符为 `untrained_heads_declaration_invalid`；报告 `checkpoint.status=untrained_heads_declared`。其他注册与不给注册时，这样的清单照旧判 `model_return_selection_contaminated`。
 
-注册是编码器而本机没有编码器可选依赖时，dev 复核照常给出格式与指标，`reload.status=blocked_encoder_runtime_unavailable`、`tolerance=null`，不算通过也不算拒绝；test 打开则在留痕前就因此拒绝。
+本机没有编码器可选依赖时：只有注册为 `synthetic_fixture` 的未训练头机制样例，dev 复核照常给出格式与指标，并报 `reload.status=blocked_encoder_runtime_unavailable`、`tolerance=null`；external 或任何已训练的编码器注册照旧报 `pretrained_encoder_dependencies_unavailable`、退出 2；test 打开在留痕前就因此拒绝。**退出 0 不等于重载已核**：看 `reload.status`，只有 `matched` 表示重载逐条一致；`blocked_*` 只对合成的未训练头出现。
 
 ## 4. 融合选择复算（`--fusion-selection`）
 

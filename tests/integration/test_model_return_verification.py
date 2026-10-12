@@ -1260,3 +1260,30 @@ def test_fsel_01_a_malformed_record_or_test_partition_is_refused(
         partition,
     )
     assert status == 2 and result["error"] == code
+
+
+@pytest.mark.parametrize(
+    ("scope", "stage"),
+    [("external_candidate", "supervised_finetuned"), ("synthetic_fixture", "supervised_finetuned")],
+    ids=["external", "synthetic-trained"],
+)
+def test_ret_05_a_trained_encoder_that_cannot_reload_here_is_not_a_partial_review(
+    return_case, capsys, tmp_path, monkeypatch, scope, stage
+) -> None:
+    """Only a synthetic untrained-heads registration may report its reload as blocked."""
+    root, checksum, path = return_case
+    producer = tmp_path / "encoder-return"
+    ref = encoder_return(producer, weights_stage=stage, dataset_id="synthetic-return")
+    manifest = json.loads((producer / ref.path).read_bytes())
+    manifest["dataset_manifest_sha256"] = checksum
+    ref = write_manifest(producer, manifest)
+    registry = tmp_path / "registry"
+    registration = register_bundle(registry, producer, ref, scope=scope)
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    for row in rows:
+        row["model_revision"] = manifest["model_revision"]
+    write_rows(path, rows)
+    deny_encoder_imports(monkeypatch)
+    code, result = invoke(return_case, capsys, *registration_args(registry, registration))
+    assert code == 2, result
+    assert result["error"] == "pretrained_encoder_dependencies_unavailable"
