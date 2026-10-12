@@ -96,6 +96,8 @@ class SupportModelIdentity(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
     provider: str
     model: str
+    # The endpoint actually called (scheme, host, port, path), when one is configured.
+    base_url: str | None = Field(default=None, exclude_if=_unset)
 
 
 class FeedbackProvenance(BaseModel):
@@ -113,3 +115,6 @@ class FeedbackProvenance(BaseModel):
         default=None, exclude_if=_unset
     )
     support_model: SupportModelIdentity | None = Field(default=None, exclude_if=_unset)
+    # The Judge endpoint actually called, recorded when its own slot variables configure it;
+    # the shared configuration records none, as before.
+    base_url: str | None = Field(default=None, exclude_if=_unset)

@@ -5,6 +5,7 @@ review per language; see fixtures/model_assembly/split01-main-d163747.json.
 """
 
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -15,6 +16,7 @@ from fastapi.testclient import TestClient
 from career_lab.api.modules import JobEnvelope
 from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.contracts import v2 as C
+from career_lab.models.v3 import registry
 from career_lab.models.v3.consumer import AdviceSource
 from career_lab.models.v3.projection import criterion_input, relation_input
 from career_lab.models.v3.registry import register_bundle
@@ -189,3 +191,99 @@ def test_reg_01_relation_registration_reaches_feedback_through_either_variable(
     assert set(advice["registration"]) == {"id", "model_revision", "scope", "quality_validated"}
     assert report["provenance"]["registered_model"] == advice["registration"]
     assert "registered_models" not in report["provenance"]
+
+
+# REG-02 ------------------------------------------------------------------------------
+
+
+def feedback_report(tmp_path: Path, language: str) -> dict:
+    tmp_path.mkdir(parents=True, exist_ok=True)
+    app = create_runtime_app("sqlite:///" + str(tmp_path / "session.db"), provider="local")
+    try:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            made = client.post(
+                "/sessions",
+                json={"schema_version": 2, "scenario": "pm_pilot_v2", "work_language": language},
+            ).json()
+            session = PublishedSession(
+                app,
+                client,
+                made["session_id"],
+                {"Authorization": "Bearer " + made["token"]},
+                language,
+            )
+            transaction = session.send(
+                "reviews",
+                "review-model",
+                "reviews.create",
+                {
+                    "subjects": [session.work()],
+                    "scope": [],
+                    "purpose": "commitment",
+                    "decision": "defer_with_conditions",
+                },
+            )
+            session.run_job()
+            return session.get("feedback/" + transaction["result"]["review"]["object_id"]).json()[
+                "result"
+            ]["result"]["items"][0]
+    finally:
+        app.state.store.close()
+        app.state.v2_store.db.engine.dispose()
+
+
+def missing_criterion() -> dict:
+    return {"path": "missing/registration.json", "sha256": "c" * 64}
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_reg_02_a_criterion_registration_alone_is_parsed_and_changes_nothing(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    two_registrations: dict[str, str],
+    language: str,
+) -> None:
+    registry_root = os.environ["CAREER_LAB_MODEL_REGISTRY"]
+    monkeypatch.delenv("CAREER_LAB_MODEL_REGISTRY")
+    unconfigured = feedback_report(tmp_path / "none", language)
+    monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRY", registry_root)
+    monkeypatch.setenv(
+        "CAREER_LAB_MODEL_REGISTRATIONS", json.dumps({"criterion": missing_criterion()})
+    )
+    criterion_only = feedback_report(tmp_path / "criterion", language)
+    assert "model_advice" not in unconfigured and "model_advice" not in criterion_only
+    assert set(criterion_only) == set(unconfigured)
+    assert criterion_only["provenance"] == unconfigured["provenance"]
+    assert not (tmp_path / "journal").exists()
+
+
+def test_reg_02_a_criterion_key_beside_relation_loads_nothing_more(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, two_registrations: dict[str, str]
+) -> None:
+    real = registry.load_bundle
+    loads: list[str] = []
+
+    def counted(*args, **kwargs):
+        loads.append("load")
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(registry, "load_bundle", counted)
+    relation = json.loads(two_registrations["CAREER_LAB_MODEL_REGISTRATIONS"])
+    monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRATIONS", json.dumps(relation))
+    single = feedback_report(tmp_path / "single", "en")
+    single_loads = len(loads)
+    loads.clear()
+    both = relation | {"criterion": relation["relation"]}
+    monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRATIONS", json.dumps(both))
+    paired = feedback_report(tmp_path / "paired", "en")
+    assert single_loads > 0 and len(loads) == single_loads
+    assert "registered_models" not in paired["provenance"]
+    assert [advice["status"] for advice in paired["model_advice"]] == [
+        advice["status"] for advice in single["model_advice"]
+    ]
+    assert paired["provenance"]["registered_model"] == single["provenance"]["registered_model"]
+    for broken in ({"criterion": {"path": "x"}}, {"criterion": "not-a-ref"}):
+        monkeypatch.setenv("CAREER_LAB_MODEL_REGISTRATIONS", json.dumps(relation | broken))
+        with pytest.raises(C.ProtocolError) as refused:
+            create_runtime_app("sqlite:///" + str(tmp_path / "refused.db"), provider="local")
+        assert refused.value.code == "model_registration_config_invalid"

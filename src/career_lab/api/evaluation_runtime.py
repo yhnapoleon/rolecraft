@@ -227,9 +227,12 @@ def create_feedback_handler(
     if slots is not None:
         judge, support = slots.judge, slots.support
         judge_bytes, support_bytes = slots.judge_input_bytes, slots.support_input_bytes
+        judge_url = slots.recorded_base_url("JUDGE")
+        support_url = slots.recorded_base_url("SUPPORT")
     else:
         judge = support = model
         judge_bytes = support_bytes = DEFAULT_INPUT_BYTES
+        judge_url = support_url = None
 
     bundle = C.EvaluationBundle.model_validate_json(
         C.read_file(module.package.root, module.bindings.evaluation)
@@ -251,6 +254,8 @@ def create_feedback_handler(
         registered_model=engine_factory.identity if engine_factory is not None else None,
         registered_models=engine_factory.identities if engine_factory is not None else None,
         support=support,
+        base_url=judge_url,
+        support_base_url=support_url,
     )
     policies = tuple(CriterionPolicy(**p) for p in protocol["policies"])
     rubric, rubric_sha256 = installed_rubric(module.package.root, bundle)
