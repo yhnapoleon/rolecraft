@@ -260,3 +260,12 @@ def _recorded_part(identity: RegisteredModelIdentity) -> RegisteredModelIdentity
     return RegisteredModelIdentity.model_validate(
         {key: getattr(identity, key) for key in _RECORDED_IDENTITY}
     )
+
+
+def criterion_source(registry_root: Path, ref: FileRef, journal_root: Path) -> AdviceSource | None:
+    """The configured criterion registration as an advice source.
+
+    Criterion inference is not installed yet: the reference has been parsed, nothing is
+    loaded or verified, and ``None`` leaves feedback exactly as with no registration.
+    """
+    return None
