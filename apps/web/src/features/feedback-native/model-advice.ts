@@ -262,7 +262,8 @@ function aggregation(value: unknown, units: AdviceUnit[]) {
     skipped_short: count(raw.skipped_short),
     over_budget: count(raw.over_budget),
   };
-  // The counts must follow the sentences they summarize.
+  // The counts must follow the sentences they summarize: labels by label, abstentions and
+  // failures by status (as the feedback contract counts them).
   const observed: AdviceCounts = {
     ...counts,
     supported: 0,
@@ -271,10 +272,13 @@ function aggregation(value: unknown, units: AdviceUnit[]) {
     abstained: 0,
     failed: 0,
   };
-  for (const entry of units)
-    if (entry.label)
-      observed[entry.label.toLowerCase() as 'supported' | 'contradicted' | 'insufficient']++;
-    else observed[entry.status as 'abstained' | 'failed']++;
+  for (const entry of units) {
+    if (entry.label === 'SUPPORTED') observed.supported++;
+    if (entry.label === 'CONTRADICTED') observed.contradicted++;
+    if (entry.label === 'INSUFFICIENT') observed.insufficient++;
+    if (entry.status === 'abstained') observed.abstained++;
+    if (entry.status === 'failed') observed.failed++;
+  }
   if (COUNTED.some((name) => observed[name] !== counts[name])) return fail();
   return { policy: text(value.policy), counts };
 }

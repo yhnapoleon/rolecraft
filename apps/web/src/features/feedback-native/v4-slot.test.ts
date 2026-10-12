@@ -729,7 +729,16 @@ const invalidSentenceCases: [string, (advice: Raw) => unknown][] = [
   ],
   ['counts that disagree with the sentences', (advice) => counts(advice, { supported: 2 })],
   ['sentences without their aggregation', (advice) => ({ ...advice, aggregation: null })],
-  ['a duplicated sentence', (advice) => ({ ...advice, units: [...advice.units, advice.units[0]] })],
+  [
+    // Counts stay consistent: a second copy of an insufficient sentence replaces another one.
+    'a duplicated sentence',
+    (advice) => ({
+      ...advice,
+      units: advice.units.map((entry, i) => (i === 1 ? advice.units[3] : entry)),
+    }),
+  ],
+  ['an aggregation without its sentences', (advice) => ({ ...advice, units: undefined })],
+
   [
     'a sentence cited from another session',
     (advice) =>
@@ -799,12 +808,14 @@ const invalidSentenceCases: [string, (advice: Raw) => unknown][] = [
     }),
   ],
   [
-    'a criterion registration',
-    (advice) => ({
-      ...advice,
-      registration: { ...advice.registration, task_type: 'criterion', criteria: ['R1.target'] },
-    }),
+    'a criterion task on the registration',
+    (advice) => ({ ...advice, registration: { ...advice.registration, task_type: 'criterion' } }),
   ],
+  [
+    'criteria on a relation registration',
+    (advice) => ({ ...advice, registration: { ...advice.registration, criteria: ['R1.target'] } }),
+  ],
+  ['criterion advice', (advice) => ({ ...advice, task_type: 'criterion' })],
 ];
 it.each(invalidSentenceCases)(
   'UI-01: rejects %s within one suggestion and keeps the rest',
