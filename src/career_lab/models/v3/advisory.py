@@ -6,7 +6,7 @@ import os
 import time
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest
-from .bundle import json_bytes
+from .bundle import json_bytes, sha
 from .core import abstention, checked_input, Prediction
 from .registry import load_registration, public_registration
 from .temporal import legal_evidence_ids
@@ -24,6 +24,27 @@ def _measured(model, item):
     try:
         return model.measure(item)
     except ProtocolError:
+        return None
+
+
+def _fingerprint(registration):
+    """Registration file hash plus stat identity of each file beside it; None if unreadable."""
+    try:
+        files = []
+        for path in sorted(registration.parent.rglob("*")):
+            if path.is_file():
+                stat = path.stat()
+                files.append(
+                    (
+                        path.relative_to(registration.parent).as_posix(),
+                        stat.st_size,
+                        stat.st_mtime_ns,
+                        stat.st_ctime_ns,
+                        stat.st_ino,
+                    )
+                )
+        return sha(registration.read_bytes()), tuple(files)
+    except OSError:
         return None
 
 
@@ -48,6 +69,24 @@ class RegisteredAdvisory:
         self.ref = FileRef.model_validate(registration_ref)
         self.journal_root = Path(journal_root)
         self.allow_synthetic = allow_synthetic
+        # (files fingerprint, model, entry) of the last fully verified load.
+        self._verified = None
+
+    def _load(self):
+        """The registered model, fully verified unless its files are unchanged since.
+
+        The light check covers the registration file's SHA-256 and the size, mtime_ns,
+        ctime_ns and inode of every file in the registration directory; any difference,
+        added or removed file means a full ``load_registration`` again.
+        """
+        fingerprint = _fingerprint(self.registry_root / self.ref.path)
+        if fingerprint is not None and self._verified and self._verified[0] == fingerprint:
+            return self._verified[1], self._verified[2]
+        self._verified = None
+        model, entry = load_registration(self.registry_root, self.ref)
+        if fingerprint is not None:
+            self._verified = (fingerprint, model, entry)
+        return model, entry
 
     def _path(self, request_id):
         if not isinstance(request_id, str) or not request_id.strip() or len(request_id) > 200:
@@ -109,7 +148,7 @@ class RegisteredAdvisory:
                 for key in ("input_hash", "registration", "work_language")
             ):
                 raise ProtocolError("retry_original_binding_mismatch")
-        model, entry = load_registration(self.registry_root, self.ref)
+        model, entry = self._load()
         if item.task_type != entry["task_type"]:
             raise ProtocolError("registered_model_task_mismatch")
         if entry["scope"] == "synthetic_fixture" and not self.allow_synthetic:

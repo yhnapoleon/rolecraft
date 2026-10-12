@@ -763,3 +763,58 @@ def review_without_advice(session: PublishedSession, work: dict) -> tuple[dict, 
     report = response.json()["result"]["result"]["items"][0]
     assert not report.get("model_advice")
     return report, None
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_cache_01_later_sentences_and_reviews_reuse_the_verified_model(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    loads = []
+    real_restore = LinearCandidate.restore.__func__
+
+    def counted(cls, config, arrays):
+        loads.append(config["kind"])
+        return real_restore(cls, config, arrays)
+
+    monkeypatch.setattr(LinearCandidate, "restore", classmethod(counted))
+    with registered_service(tmp_path, monkeypatch, language) as (session, _):
+        loads.clear()  # registering and describing the registration at startup verify it
+        _, first = review(session, save_work(session, THREE_PARAGRAPHS[language]), "first")
+        assert len(first["units"]) == 6 and loads == ["linear"]
+        _, second = review(session, save_work(session, THREE_PARAGRAPHS[language], "w2"), "second")
+        assert [u["label"] for u in second["units"]] == THREE_PARAGRAPH_LABELS
+        assert loads == ["linear"], "the second review used the cached verified model"
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_cache_02_changed_registered_files_are_verified_again_and_reported(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    content = THREE_PARAGRAPHS[language]
+    with registered_service(tmp_path, monkeypatch, language) as (session, registration):
+        _, cached = review(session, save_work(session, content), "cached")
+        entry_path = tmp_path / "registry" / registration.path
+        weights = (
+            entry_path.parent
+            / "artifact"
+            / next(
+                name
+                for name in json.loads(entry_path.read_text())["files"]
+                if name.endswith(".npz")
+            )
+        )
+        original = weights.read_bytes()
+        stat = weights.stat()
+        # Same size and, after the write, the original modification time.
+        weights.write_bytes(bytes(byte ^ 0xFF for byte in original))
+        os.utime(weights, ns=(stat.st_atime_ns, stat.st_mtime_ns))
+        assert weights.stat().st_size == stat.st_size
+        assert weights.stat().st_mtime_ns == stat.st_mtime_ns
+        _, drifted = review(session, save_work(session, content, "w2"), "drifted")
+        assert drifted["status"] == "failed" and drifted["error_code"] == "model_files_changed"
+        assert {unit["reason_code"] for unit in drifted["units"]} == {"model_files_changed"}
+        assert all(unit["label"] is None for unit in drifted["units"])
+        weights.write_bytes(original)
+        _, restored = review(session, save_work(session, content, "w3"), "restored")
+        assert [u["label"] for u in restored["units"]] == [u["label"] for u in cached["units"]]
+        assert restored["status"] == cached["status"] == "synthetic_mechanism_only"
