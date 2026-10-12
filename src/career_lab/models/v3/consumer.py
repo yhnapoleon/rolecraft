@@ -72,9 +72,16 @@ def predict_or_recover(
     item: RelationInput | CriterionInput,
     request_id: str,
     language: str,
+    *,
+    enforce_input_limit: bool = False,
 ) -> dict[str, Any]:
     try:
-        return adapter.predict(item, request_id=request_id, work_language=language)
+        return adapter.predict(
+            item,
+            request_id=request_id,
+            work_language=language,
+            enforce_input_limit=enforce_input_limit,
+        )
     except Exception as error:
         if getattr(error, "code", None) == "advisory_request_id_reused":
             raise
@@ -253,7 +260,9 @@ class AdviceSource:
         assert self.adapter is not None
         try:
             if blocked is None:
-                outcome = predict_or_recover(self.adapter, item, request_id, language)
+                outcome = predict_or_recover(
+                    self.adapter, item, request_id, language, enforce_input_limit=True
+                )
             else:
                 outcome = self.adapter.recover(request_id)
         except Exception as error:

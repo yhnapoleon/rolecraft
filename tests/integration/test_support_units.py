@@ -5,6 +5,7 @@ UNIT-01..08, SYN-01, CACHE-01/02 and COMP-01 (143 §3.5). Splitting is a rule
 fixed weights or a fixture fit; nothing is trained and no model quality is claimed.
 """
 
+import json
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -17,11 +18,13 @@ from career_lab.api.vertical_runtime import create_runtime_app
 from career_lab.contracts.v2.core import FileRef, SourceIdentity, digest
 from career_lab.models.v3.bundle import json_bytes, save_bundle, sha
 from career_lab.models.v3.core import LABELS
+from career_lab.models.v3.encoder import AttentionEncoder
 from career_lab.models.v3.linear import LinearCandidate
 from career_lab.models.v3.registry import register_bundle
 from career_lab.models.v3.units import split_sentences
 from scripts.regression.published import write_catalog
 from tests.regression.conftest import PublishedSession
+from tests.unit.test_w08_models import examples as fixture_examples
 
 # Marker characters that appear only in test sentences, never in scenario materials:
 # a sentence with SUPPORT is judged SUPPORTED, with CONTRADICT CONTRADICTED, otherwise
@@ -304,3 +307,84 @@ def test_unit_01_three_paragraph_work_is_judged_sentence_by_sentence(
     for ref in advice["citations"]:
         assert ref["session_id"] == session.session_id and ref["object_id"] != work["object_id"]
     assert advice["affects_score"] is False and advice["mode"] == "advisory"
+
+
+def attention_bundle(root: Path, *, fixture: bool = True) -> tuple[Path, FileRef]:
+    """A NumPy attention encoder fitted on the W08 fixture records, with a 400-token budget."""
+    model = AttentionEncoder(variant="pair", dimension=4, max_tokens=400)
+    model.fit(fixture_examples(), epochs=1)
+    data = root / "source"
+    data.mkdir(parents=True)
+    release = json_bytes({"fixture": True, "scope": "fixture_fit_mechanism_only"})
+    split = json_bytes({"fixture": True, "scope": "synthetic_no_held_out_data"})
+    (data / "release.json").write_bytes(release)
+    (data / "split.json").write_bytes(split)
+    ref = save_bundle(
+        model,
+        root / "bundle",
+        source_root=data,
+        training_release=FileRef(path="release.json", sha256=sha(release)),
+        split_manifest=FileRef(path="split.json", sha256=sha(split)),
+        source=SourceIdentity(base_commit="c" * 40, source_digest=digest("fixture-fit")),
+    )
+    return root / "bundle", ref
+
+
+# Far beyond 400 tokens together with the scenario policy material; short ones fit.
+LONG_SENTENCE = {
+    "zh": "需要先核实负责人、范围与名额" * 45 + "。",
+    "en": "We must first verify the owner, the scope and the seats " * 50 + ".",
+}
+SHORT_SENTENCES = {
+    "zh": "试点先暂缓。保留人工兜底。",
+    "en": "Defer the pilot. Keep human fallback.",
+}
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_unit_03_sentence_over_the_encoder_limit_abstains_without_truncation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    calls = []
+    real_predict = AttentionEncoder.predict
+
+    def counted(model, item):
+        calls.append(item.evidence.claim)
+        return real_predict(model, item)
+
+    monkeypatch.setattr(AttentionEncoder, "predict", counted)
+    content = SHORT_SENTENCES[language] + "\n\n" + LONG_SENTENCE[language]
+    with registered_service(tmp_path, monkeypatch, language, bundle=attention_bundle) as (
+        session,
+        _,
+    ):
+        _, advice = review(session, save_work(session, content))
+    *short, long = advice["units"]
+    assert long["subject"]["quote"] == LONG_SENTENCE[language].strip()
+    assert long["status"] == "abstained" and long["label"] is None
+    assert long["reason_code"] == "unit_exceeds_encoder_limit"
+    assert len(short) == 2 and all(unit["status"] == "completed" for unit in short)
+    # The model never saw the long sentence, cut or whole; the others were judged as written.
+    assert calls == [unit["subject"]["quote"] for unit in short]
+    outcomes = [json.loads(p.read_text()) for p in (tmp_path / "journal").glob("*/outcome.json")]
+    measured = [row for row in outcomes if row["prediction"]["reason_code"] is not None]
+    assert len(measured) == 1 and measured[0]["status"] == "completed"
+    size = measured[0]["input_size"]
+    assert size["limit"] == 400 and size["tokens"] > 400
+    assert advice["aggregation"]["counts"]["abstained"] == 1
+    assert advice["status"] == "synthetic_mechanism_only" and advice["label"] == "INSUFFICIENT"
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_unit_03_work_whose_sentences_all_exceed_the_limit_reports_all_abstained(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    content = LONG_SENTENCE[language] + "\n\n" + LONG_SENTENCE[language]
+    with registered_service(tmp_path, monkeypatch, language, bundle=attention_bundle) as (
+        session,
+        _,
+    ):
+        _, advice = review(session, save_work(session, content))
+    assert [unit["status"] for unit in advice["units"]] == ["abstained", "abstained"]
+    assert advice["status"] == "unavailable" and advice["error_code"] == "all_units_abstained"
+    assert advice["label"] is None and advice["evidence_ids"] == advice["citations"] == []

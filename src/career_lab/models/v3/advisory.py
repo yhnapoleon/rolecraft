@@ -7,9 +7,24 @@ import time
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest
 from .bundle import json_bytes
-from .core import checked_input, Prediction
+from .core import abstention, checked_input, Prediction
 from .registry import load_registration, public_registration
 from .temporal import legal_evidence_ids
+
+
+# Reason recorded when a sentence is longer than the registered encoder accepts.
+UNIT_EXCEEDS_ENCODER_LIMIT = "unit_exceeds_encoder_limit"
+
+
+def _measured(model, item):
+    """The model's input size, or None when it cannot encode the input at all.
+
+    Such inputs go to the model's own prediction, which abstains with its own reason.
+    """
+    try:
+        return model.measure(item)
+    except ProtocolError:
+        return None
 
 
 def _atomic(path, value):
@@ -54,7 +69,13 @@ class RegisteredAdvisory:
             "retry_allowed_only_as_explicit_new_request": True,
         }
 
-    def predict(self, item, *, request_id, work_language, retry_of=None):
+    def predict(self, item, *, request_id, work_language, retry_of=None, enforce_input_limit=False):
+        """Run one journaled prediction, or read back the one already recorded.
+
+        With ``enforce_input_limit`` the loaded model first measures the input; an input
+        over its token budget is recorded as abstained (``unit_exceeds_encoder_limit``)
+        without being cut or predicted.
+        """
         if work_language not in {"zh", "en"}:
             raise ProtocolError("advisory_work_language_required")
         item = checked_input(item)
@@ -118,7 +139,14 @@ class RegisteredAdvisory:
             "retry_of": retry_of,
         }
         try:
-            prediction = model.predict(item)
+            size = _measured(model, item) if enforce_input_limit else None
+            if size is not None:
+                base["input_size"] = {"tokens": size.tokens, "limit": size.limit}
+            prediction = (
+                abstention(item, entry["model_revision"], UNIT_EXCEEDS_ENCODER_LIMIT)
+                if size is not None and size.exceeds
+                else model.predict(item)
+            )
             prediction.validate(item)
             if prediction.model_revision != entry["model_revision"]:
                 raise ProtocolError("advisory_model_revision_mismatch")
