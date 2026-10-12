@@ -6,6 +6,7 @@ fixed weights or a fixture fit; nothing is trained and no model quality is claim
 """
 
 import json
+import os
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -15,16 +16,21 @@ import pytest
 from fastapi.testclient import TestClient
 
 from career_lab.api.vertical_runtime import create_runtime_app
-from career_lab.contracts.v2.core import FileRef, SourceIdentity, digest
+from career_lab.contracts.v2.core import EvidenceRefV2, FileRef, SourceIdentity, digest
+from career_lab.contracts.v2.evaluation import EvidencePackageV2
+from career_lab.jobs.worker import Worker, WorkerClaim
 from career_lab.models.v3.bundle import json_bytes, save_bundle, sha
 from career_lab.models.v3.core import LABELS
 from career_lab.models.v3.encoder import AttentionEncoder
 from career_lab.models.v3.linear import LinearCandidate
+from career_lab.models.v3.projection import relation_input, sentence_input
 from career_lab.models.v3.registry import register_bundle
-from career_lab.models.v3.units import split_sentences
+from career_lab.models.v3.units import split_sentences, support_units
 from scripts.regression.published import write_catalog
 from tests.regression.conftest import PublishedSession
 from tests.unit.test_w08_models import examples as fixture_examples
+
+ROOT = Path(__file__).resolve().parents[2]
 
 # Marker characters that appear only in test sentences, never in scenario materials:
 # a sentence with SUPPORT is judged SUPPORTED, with CONTRADICT CONTRADICTED, otherwise
@@ -388,3 +394,372 @@ def test_unit_03_work_whose_sentences_all_exceed_the_limit_reports_all_abstained
     assert [unit["status"] for unit in advice["units"]] == ["abstained", "abstained"]
     assert advice["status"] == "unavailable" and advice["error_code"] == "all_units_abstained"
     assert advice["label"] is None and advice["evidence_ids"] == advice["citations"] == []
+
+
+def counts(advice: dict) -> dict:
+    return plain(advice["aggregation"]["counts"])
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_unit_02_short_and_over_budget_sentences_are_counted_not_dropped(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    statement = {"zh": "第{}项已经核实{}。", "en": "Item {} is verified{}."}[language]
+    short = {"zh": "好。行。", "en": "OK. Go."}[language]
+    content = short + "\n\n" + " ".join(statement.format(i, SUPPORT) for i in range(1, 27))
+    with registered_service(tmp_path, monkeypatch, language) as (session, _):
+        _, advice = review(session, save_work(session, content))
+    assert len(advice["units"]) == 24
+    assert advice["units"][0]["subject"]["quote"] == statement.format(1, SUPPORT)
+    assert advice["units"][-1]["subject"]["quote"] == statement.format(24, SUPPORT)
+    assert counts(advice) == {
+        "supported": 24,
+        "contradicted": 0,
+        "insufficient": 0,
+        "abstained": 0,
+        "failed": 0,
+        "skipped_short": 2,
+        "over_budget": 2,
+    }
+    # Two sentences were never judged, so the work is not shown as fully supported.
+    assert advice["label"] == "INSUFFICIENT"
+    assert len(list((tmp_path / "journal").glob("*/outcome.json"))) == 24
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_unit_02_work_with_only_short_sentences_says_no_claim_was_judged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    content = {"zh": "好。\n\n- 行\n- 可", "en": "OK.\n\n- Go\n- Yes"}[language]
+    with registered_service(tmp_path, monkeypatch, language) as (session, _):
+        _, advice = review(session, save_work(session, content))
+    assert advice["units"] == [] and counts(advice)["skipped_short"] == 3
+    assert advice["status"] == "unavailable" and advice["error_code"] == "claim_not_available"
+    assert advice["label"] is None
+    assert not (tmp_path / "journal").exists() or not any((tmp_path / "journal").iterdir())
+
+
+@pytest.mark.parametrize(
+    ("scope", "status"),
+    [("synthetic_fixture", "synthetic_mechanism_only"), ("external_candidate", "completed")],
+)
+@pytest.mark.parametrize(
+    ("marks", "expected"),
+    [
+        ((SUPPORT, SUPPORT, SUPPORT), "SUPPORTED"),
+        ((SUPPORT, "", SUPPORT), "INSUFFICIENT"),
+        ((SUPPORT, SUPPORT, ""), "INSUFFICIENT"),
+        (("", "", ""), "INSUFFICIENT"),
+    ],
+)
+def test_unit_04_insufficient_sentences_never_become_a_supported_work(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    scope: str,
+    status: str,
+    marks: tuple[str, ...],
+    expected: str,
+) -> None:
+    content = "\n\n".join(
+        f"Paragraph {i} keeps human fallback{mark}." for i, mark in enumerate(marks, 1)
+    )
+    with registered_service(tmp_path, monkeypatch, "en", scope=scope) as (session, _):
+        _, advice = review(session, save_work(session, content))
+    assert advice["status"] == status and advice["label"] == expected
+    assert [unit["label"] for unit in advice["units"]] == [
+        "SUPPORTED" if mark else "INSUFFICIENT" for mark in marks
+    ]
+    supported = {e for u in advice["units"] if u["label"] == "SUPPORTED" for e in u["evidence_ids"]}
+    assert set(advice["evidence_ids"]) == supported
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+@pytest.mark.parametrize("position", [0, 1, 2])
+def test_unit_05_one_contradicted_sentence_decides_the_work(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str, position: int
+) -> None:
+    sentence = {"zh": "第{}段写明保留人工兜底{}。", "en": "Paragraph {} keeps fallback{}."}[
+        language
+    ]
+    marks = [SUPPORT, SUPPORT, SUPPORT]
+    marks[position] = CONTRADICT
+    content = "\n\n".join(sentence.format(i, mark) for i, mark in enumerate(marks, 1))
+    with registered_service(tmp_path, monkeypatch, language, scope="external_candidate") as (
+        session,
+        _,
+    ):
+        work = save_work(session, content)
+        _, advice = review(session, work)
+    assert advice["status"] == "completed" and advice["label"] == "CONTRADICTED"
+    assert [unit["label"] for unit in advice["units"]][position] == "CONTRADICTED"
+    assert counts(advice)["contradicted"] == 1 and counts(advice)["supported"] == 2
+    # Evidence is the union over the supported and contradicted sentences, each kept.
+    union = {e for unit in advice["units"] for e in unit["evidence_ids"]}
+    assert union and set(advice["evidence_ids"]) == union
+    assert all(
+        ref["session_id"] == session.session_id and ref["object_id"] != work["object_id"]
+        for unit in advice["units"]
+        for ref in unit["citations"]
+    )
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_unit_06_restarted_job_reads_journaled_sentences_back_and_judges_only_the_rest(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    content = THREE_PARAGRAPHS[language]
+    judged: list[str] = []
+    real_predict = LinearCandidate.predict
+
+    def counted(model, item):
+        judged.append(item.evidence.claim)
+        return real_predict(model, item)
+
+    monkeypatch.setattr(LinearCandidate, "predict", counted)
+    with registered_service(tmp_path, monkeypatch, language) as (session, _):
+        work = save_work(session, content)
+        transaction = session.send(
+            "reviews",
+            "recovering-review",
+            "reviews.create",
+            {
+                "subjects": [work],
+                "scope": [],
+                "purpose": "commitment",
+                "decision": "defer_with_conditions",
+            },
+        )
+        job = session.app.state.jobs.claim_job("controlled-worker")
+        claim = WorkerClaim.from_job(job)
+        real_replace = os.replace
+        written: list[str] = []
+
+        def stop_after_two_sentences(source, destination):
+            real_replace(source, destination)
+            if Path(destination).name == "outcome.json":
+                written.append(str(destination))
+                if len(written) == 2:
+                    raise SystemExit("Controlled process loss after two sentences")
+
+        with monkeypatch.context() as fault:
+            fault.setattr(os, "replace", stop_after_two_sentences)
+            with pytest.raises(SystemExit, match="after two sentences"):
+                session.app.state.handlers[job["kind"]](job["payload"], claim)
+        before = {path: Path(path).read_bytes() for path in written}
+        assert len(judged) == 2
+        reopened = create_runtime_app("sqlite:///" + str(tmp_path / "session.db"), provider="local")
+        try:
+            result = reopened.state.handlers[job["kind"]](job["payload"], claim)
+            session.app.state.jobs.complete(job["id"], job["lease_token"], result)
+        finally:
+            reopened.state.store.close()
+            reopened.state.v2_store.db.engine.dispose()
+        assert len(judged) == 6, "only the four sentences without a journal were judged"
+        assert {path: Path(path).read_bytes() for path in written} == before
+        feedback = "feedback/" + transaction["result"]["review"]["object_id"]
+        report = session.get(feedback).json()["result"]["result"]["items"][0]
+        (advice,) = [row for row in report["model_advice"] if row["criterion"] == "R2.support"]
+        assert [unit["label"] for unit in advice["units"]] == THREE_PARAGRAPH_LABELS
+        journal = {
+            str(path): path.read_bytes() for path in (tmp_path / "journal").glob("*/outcome.json")
+        }
+        assert len(journal) == 6
+        for _ in range(3):
+            assert session.get(feedback).json()["result"]["result"]["items"][0] == report
+            assert not Worker(session.app.state.jobs, session.app.state.handlers).run_once()
+        assert len(judged) == 6
+        assert {
+            str(path): path.read_bytes() for path in (tmp_path / "journal").glob("*/outcome.json")
+        } == journal
+
+
+SAME_FACTS = (
+    THREE_PARAGRAPHS,
+    {
+        "zh": (
+            f"预算为 3.5 人日，例如两人各 1.75 天{SUPPORT}。容量上限为 8 个团队；超出需先申请。\n\n"
+            "1. 先核实负责人\n2. 再确认范围\n\n"
+            f"住宿超过每晚500元仍可直接报销{CONTRADICT}！这一点需要复核？"
+        ),
+        "en": (
+            f"The budget is 3.5 person-days, e.g. two people at 1.75 days each{SUPPORT}. "
+            "Capacity is capped at 8 teams; any excess needs a request first.\n\n"
+            "1. Verify the owner first\n2. Then confirm the scope\n\n"
+            f"Hotels above CNY 500 per night can still be reimbursed directly{CONTRADICT}! "
+            "Does this need review?"
+        ),
+    },
+)
+
+
+@pytest.mark.parametrize("pair", range(len(SAME_FACTS)))
+def test_unit_07_chinese_and_english_versions_of_one_fact_cut_and_conclude_alike(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, pair: int
+) -> None:
+    results = {}
+    for language in ("zh", "en"):
+        with monkeypatch.context() as scoped:
+            with registered_service(tmp_path / language, scoped, language) as (session, _):
+                _, results[language] = review(
+                    session, save_work(session, SAME_FACTS[pair][language])
+                )
+    zh, en = results["zh"], results["en"]
+    assert len(zh["units"]) == len(en["units"]) >= 5
+    assert [u["label"] for u in zh["units"]] == [u["label"] for u in en["units"]]
+    assert counts(zh) == counts(en)
+    assert zh["label"] == en["label"] == "CONTRADICTED"
+    assert zh["status"] == en["status"] == "synthetic_mechanism_only"
+
+
+GOLDEN_PACKAGES = json.loads(
+    (
+        ROOT / "tests/contracts/expansion_v3/fixtures/model_assembly/split01-main-d163747.json"
+    ).read_text()
+)
+LEAK_KEYS = {"gold", "probe", "hidden_probe", "annotation", "acceptable_evidence_sets"}
+
+
+def keys(value) -> set[str]:
+    if isinstance(value, dict):
+        return set(value) | {k for v in value.values() for k in keys(v)}
+    if isinstance(value, list):
+        return {k for v in value for k in keys(v)}
+    return set()
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_unit_08_sentence_inputs_carry_no_probe_gold_rule_bound_or_rule_derivations(
+    language: str,
+) -> None:
+    (case,) = [row for row in GOLDEN_PACKAGES["cases"] if row["language"] == language]
+    checked = 0
+    for raw in case["packages"]:
+        if raw["criterion"] != "R2.support":
+            continue
+        # The recorded HTTP package, given a hidden probe with its gold label and a rule bound.
+        body = {k: v for k, v in raw.items() if k != "input_hash"}
+        body["rule_context"] = body["rule_context"] | {
+            "hidden_probe": {"gold": "CONTRADICTED", "acceptable_evidence_sets": [["x"]]}
+        }
+        body["rule_bound"] = {"schema_version": 2, "lower": "PARTIAL", "upper": "MET"}
+        package = EvidencePackageV2.model_validate(body | {"input_hash": digest(body)})
+        whole = relation_input(package)
+        for unit in support_units(package).units:
+            item = sentence_input(whole, unit.subject, unit.text)
+            evidence = item.evidence
+            dumped = item.model_dump(mode="json")
+            assert evidence.claim == unit.text and evidence.subjects == (unit.subject,)
+            assert evidence.rule_bound is None
+            assert set(evidence.rule_context) == {"evidence_time_context"}
+            assert set(evidence.rule_context["evidence_time_context"]) == {
+                "policy",
+                "status",
+                "reference_seq",
+                "validity_known_ids",
+            }
+            # Rule derivations (facts, decision, verified facts, ...) never appear as fields;
+            # reference fields such as config_version legitimately do.
+            derivations = set(raw["rule_context"]) - set(EvidenceRefV2.model_fields)
+            assert derivations and not keys(dumped) & (LEAK_KEYS | derivations)
+            text = json.dumps(dumped, ensure_ascii=False)
+            assert "CONTRADICTED" not in text and raw["rule_context"]["decision"] not in text
+            assert all(c.id.startswith("e-") for c in evidence.candidate_evidence)
+            assert evidence.candidate_evidence == whole.evidence.candidate_evidence
+            checked += 1
+    assert checked >= 2
+
+
+@contextmanager
+def plain_service(root: Path, monkeypatch: pytest.MonkeyPatch, language: str):
+    """The same normal runtime app with no registration configured."""
+    for name in ("REGISTRY", "REGISTRATION", "REGISTRATIONS", "JOURNAL"):
+        monkeypatch.delenv("CAREER_LAB_MODEL_" + name, raising=False)
+    monkeypatch.setenv("CAREER_LAB_SCENARIO_CATALOG", str(write_catalog(root / "catalog.json")))
+    monkeypatch.setenv("CAREER_LAB_SCENARIO_ARCHIVE", str(root / "archive"))
+    app = create_runtime_app("sqlite:///" + str(root / "session.db"), provider="local")
+    try:
+        with TestClient(app, raise_server_exceptions=False) as client:
+            body = client.post(
+                "/sessions",
+                json={"schema_version": 2, "scenario": "pm_pilot_v2", "work_language": language},
+            ).json()
+            yield PublishedSession(
+                app,
+                client,
+                body["session_id"],
+                {"Authorization": "Bearer " + body["token"]},
+                language,
+            )
+    finally:
+        app.state.store.close()
+        app.state.v2_store.db.engine.dispose()
+
+
+def scoring(report: dict) -> dict:
+    return {
+        "rule_items": [
+            (row["criterion"], row["label"], row["source"], row["rule_bound"])
+            for row in report["rule_items"]
+        ],
+        "items": [(row["criterion"], row["label"], row["source"]) for row in report["items"]],
+        "score_range": {
+            key: report["score_range"][key] for key in ("lower", "upper", "denominator")
+        },
+        "coverage": (report["verified_coverage"], report["model_coverage"]),
+    }
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_syn_01_synthetic_labels_are_always_marked_as_mechanism_and_never_score(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    content = THREE_PARAGRAPHS[language]
+    with registered_service(tmp_path / "registered", monkeypatch, language) as (session, _):
+        report, advice = review(session, save_work(session, content))
+    assert advice["status"] == advice["error_code"] == "synthetic_mechanism_only"
+    assert advice["label"] == "CONTRADICTED" and advice["evidence_ids"]
+    assert all(unit["label"] for unit in advice["units"])
+    registration = advice["registration"]
+    assert registration["scope"] == "synthetic_fixture"
+    assert registration["quality_validated"] is False
+    assert report["provenance"]["registered_model"] == registration
+    assert advice["affects_score"] is False and advice["mode"] == "advisory"
+    assert all(row["source"] != "model_advice" for row in report["items"])
+    with plain_service(tmp_path / "plain", monkeypatch, language) as other:
+        baseline, _ = review_without_advice(other, save_work(other, content))
+    assert scoring(report) == scoring(baseline)
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_syn_01_external_labels_are_completed_advice_with_the_same_aggregation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    content = THREE_PARAGRAPHS[language]
+    with registered_service(tmp_path, monkeypatch, language, scope="external_candidate") as (
+        session,
+        _,
+    ):
+        _, advice = review(session, save_work(session, content))
+    assert advice["status"] == "completed" and advice["error_code"] is None
+    assert advice["registration"]["scope"] == "external_candidate"
+    assert [unit["label"] for unit in advice["units"]] == THREE_PARAGRAPH_LABELS
+    assert advice["label"] == "CONTRADICTED"
+
+
+def review_without_advice(session: PublishedSession, work: dict) -> tuple[dict, None]:
+    transaction = session.send(
+        "reviews",
+        "review",
+        "reviews.create",
+        {
+            "subjects": [work],
+            "scope": [],
+            "purpose": "commitment",
+            "decision": "defer_with_conditions",
+        },
+    )
+    session.run_job()
+    response = session.get("feedback/" + transaction["result"]["review"]["object_id"])
+    report = response.json()["result"]["result"]["items"][0]
+    assert not report.get("model_advice")
+    return report, None
