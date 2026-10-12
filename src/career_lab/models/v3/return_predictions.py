@@ -5,7 +5,7 @@ rows are not received in this release.
 """
 
 import math
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -110,3 +110,35 @@ def parse_returned(row: dict) -> ReturnedPrediction:
     if row.get("task_type") != "relation":
         raise C.ProtocolError("return_task_type_unsupported")
     return ReturnedPrediction.model_validate(row)
+
+
+# Absolute per-probability tolerance (143 §5.2): producers may run other hardware or library
+# builds, so probabilities need not be bit-identical; labels and evidence sets must be.
+ENCODER_KINDS = {"huggingface_encoder", "numpy_attention"}
+TOLERANCE = {"linear": 1e-6, "encoder": 1e-4}
+
+
+def comparison_tolerance(kinds) -> dict[str, Any]:
+    """Unknown kinds use the strict tier: a false rejection is safer than a false match."""
+    basis = "encoder" if set(kinds) & ENCODER_KINDS else "linear"
+    return {"absolute": TOLERANCE[basis], "basis": basis, "model_kinds": sorted(kinds)}
+
+
+def compare_prediction(actual: dict[str, Any], expected: ReturnedPrediction, tolerance: float):
+    """Fields that differ, and the largest absolute probability difference seen."""
+    fields = [
+        key
+        for key in ("input_hash", "model_revision", "task_type", "status", "label")
+        if actual[key] != getattr(expected, key)
+    ]
+    if set(actual["evidence_ids"]) != set(expected.evidence_ids):
+        fields.append("evidence_ids")
+    left, right = actual["probabilities"], expected.probabilities
+    deviation = 0.0
+    if (left is None) != (right is None) or (left is not None and len(left) != len(right)):
+        fields.append("probabilities")
+    elif left is not None:
+        deviation = max(abs(a - b) for a, b in zip(left, right, strict=True))
+        if deviation > tolerance:
+            fields.append("probabilities")
+    return fields, deviation

@@ -20,6 +20,15 @@ from career_lab.contracts.v2.data import Lineage, Provenance, RelationInput
 from career_lab.datasets.v3.common import json_bytes, sha
 from career_lab.datasets.v3.export import ExportUnit, FrozenSnapshot, SourceObject, export_snapshot
 from career_lab.datasets.v3.labeling import AnnotationBatch
+from career_lab.experiments.v3.training.freeze import freeze_selection
+from career_lab.models.v3.held_out import prepare_test_freeze, review_policy_bytes
+from tests.integration.test_model_return_verification import (
+    RIGHT_WEIGHTS,
+    linear_bundle,
+    linear_registration,
+    model_predictions,
+    register,
+)
 from tests.unit.test_w07_pipeline import BASE, FakeModel
 from tests.unit.test_w07_pipeline import package as evidence_package
 
@@ -701,3 +710,395 @@ def test_seal_01_record_level_test_review_needs_the_approved_opening(tmp_path: P
     assert status == 2
     assert report["error"] == "held_out_test_sealed"
     assert not (tmp_path / "review").exists()
+
+
+@dataclass(frozen=True)
+class Opening:
+    """Everything one approved test opening needs, as the coordinator would prepare it."""
+
+    package: V3Package
+    registry: Path
+    registration: C.FileRef
+    checkpoint: Path
+    predictions: Path
+    freeze: Path
+    campaign: Path
+    ledger: Path
+
+    def args(self, **overrides: object) -> list[str]:
+        values: dict[str, object] = {
+            "--partition": "test",
+            "--checkpoint-manifest": self.checkpoint,
+            "--registry": self.registry,
+            "--registration-path": self.registration.path,
+            "--registration-hash": self.registration.sha256,
+            "--freeze": self.freeze,
+            "--freeze-hash": sha(self.freeze.read_bytes()),
+            "--campaign": self.campaign,
+            "--campaign-hash": sha(self.campaign.read_bytes()),
+            "--ledger": self.ledger,
+            "--operator": "coordinator-147",
+        }
+        values.update(overrides)
+        return [str(item) for key, value in values.items() if value is not None for item in (key, value)]
+
+    @property
+    def record(self) -> Path:
+        return self.ledger / self.package.checksum / "test.json"
+
+
+def checkpoint_manifest(path: Path, package: V3Package, model_revision: str, **changes) -> Path:
+    """The responsible party's declaration: dev selection, no test use."""
+    manifest = {
+        "template": False,
+        "completed": True,
+        "return_protocol": "rolecraft-label-evidence-v2",
+        "task_type": "relation",
+        "label_order": RELATION,
+        "dataset_id": "rolecraft-synthetic-v3-mechanism",
+        "dataset_manifest_sha256": package.checksum,
+        "model_revision": model_revision,
+        "framework": "synthetic",
+        "framework_version": "1",
+        "evidence_selection_implemented": True,
+        "evidence_selection_required": True,
+        "training_partitions": ["train"],
+        "selection_partition": "dev",
+        "test_used_for_selection": False,
+        "load_and_predict_command": "metadata only, never executed",
+        "training_notes_file": "notes.md",
+        "predictions_file": "predictions.dev.jsonl",
+        "checkpoint_files": {},
+    } | changes
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_bytes(json_bytes(manifest))
+    return path
+
+
+def approve(freeze_root: Path, candidate: C.CampaignCandidate, package: V3Package, **changes) -> Path:
+    """What the coordinator writes after the user confirms this one opening in chat."""
+    campaign = C.TestCampaign(
+        id="synthetic-campaign-147",
+        candidates=(candidate,),
+        split_manifest=C.FileRef(path="dataset-manifest.json", sha256=package.checksum),
+        frozen_at="2026-10-12T08:00:00Z",
+        opened_at="2026-10-12T09:00:00Z",
+        output_audience=("coordinator",),
+    ).model_copy(update=changes)
+    path = freeze_root / "campaign.json"
+    path.write_bytes(json_bytes(campaign))
+    return path
+
+
+def prepared_opening(tmp_path: Path, *, status: str = SYNTHETIC_STATUS, **campaign) -> Opening:
+    package = build_package(tmp_path)
+    if status != SYNTHETIC_STATUS:
+        package = V3Package(package.root, seal(package.root, status=status))
+    registry, registration = linear_registration(tmp_path / "model")
+    predictions = tmp_path / "return" / "predictions.test.jsonl"
+    predictions.parent.mkdir(parents=True, exist_ok=True)
+    rows = model_predictions(registry, registration, package.root / "data/test.inputs.jsonl")
+    write_jsonl(predictions, rows)
+    checkpoint = checkpoint_manifest(
+        tmp_path / "return" / "checkpoint-manifest.json", package, rows[0]["model_revision"]
+    )
+    prepared = prepare_test_freeze(
+        tmp_path / "freeze",
+        dataset_root=package.root,
+        dataset_hash=package.checksum,
+        registry_root=registry,
+        registration=registration,
+        checkpoint_manifest=checkpoint,
+        source=C.SourceIdentity(
+            base_commit="b" * 40,
+            source_digest=C.digest("synthetic producer source"),
+            overlay=C.FileRef(path="source/freeze-record.json", sha256=sha(SOURCE_RECORD)),
+            dependency_locks=(C.FileRef(path="source/requirements.lock", sha256=sha(LOCK)),),
+        ),
+        source_files={"source/freeze-record.json": SOURCE_RECORD, "source/requirements.lock": LOCK},
+        candidate_id="synthetic-candidate-147",
+        budget=C.Budget(model_calls=0, actions=0, wall_seconds=600),
+    )
+    campaign_path = approve(prepared.root, prepared.candidate, package, **campaign)
+    return Opening(
+        package,
+        registry,
+        registration,
+        checkpoint,
+        predictions,
+        prepared.root / prepared.freeze.path,
+        campaign_path,
+        tmp_path / "ledger",
+    )
+
+
+SOURCE_RECORD = json_bytes({"producer": "synthetic", "note": "constructed, no training"})
+LOCK = b"synthetic==1\n"
+
+
+def test_held_04_first_approved_opening_is_recorded_before_test_is_read(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path)
+    log = tmp_path / "opened.log"
+    code, report = verify(opening.package, opening.predictions, *opening.args(), audit_log=log)
+    assert code == 0, report
+    assert report["split"] == "test" and report["held_out_test_opened"] is True
+    assert report["status"] == "partial"
+    assert report["scope"] == "synthetic_fixture" and report["quality_validated"] is False
+    assert report["reload"]["status"] == "matched"
+    for language in ("zh", "en"):
+        assert report["languages"][language]["status"] == "recomputed"
+        assert report["languages"][language]["metrics"]["count"] == 1
+    record = json.loads(opening.record.read_bytes())
+    assert report["opened"] == record
+    assert record["protocol"] == "rolecraft-held-out-test-opening-v1"
+    assert record["dataset_manifest_sha256"] == opening.package.checksum
+    assert record["campaign"] == {
+        "id": "synthetic-campaign-147",
+        "path": "campaign.json",
+        "sha256": sha(opening.campaign.read_bytes()),
+    }
+    assert record["candidate_id"] == "synthetic-candidate-147"
+    assert record["freeze"]["sha256"] == sha(opening.freeze.read_bytes())
+    assert record["freeze"]["id"] == json.loads(opening.freeze.read_bytes())["id"]
+    assert record["registration"]["path"] == opening.registration.path
+    assert record["registration"]["sha256"] == opening.registration.sha256
+    assert record["registration"]["id"] == report["reload"]["registration"]["id"]
+    assert record["operator"] == "coordinator-147"
+    assert len(record["verifier_source_digest"]) == 64 and record["opened_at"]
+    # The record exists before any test file is read: the first test open follows it.
+    order = [line for line in log.read_text().splitlines()]
+    first_test = min(order.index(str(path)) for path in held_out_files(opening.package) if str(path) in order)
+    assert str(opening.record.resolve()) in order[:first_test]
+
+
+def test_held_05_second_opening_is_refused_before_any_test_byte_is_read(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path)
+    code, first = verify(opening.package, opening.predictions, *opening.args())
+    assert code == 0, first
+    recorded = opening.record.read_bytes()
+    log = tmp_path / "second.log"
+    code, second = verify(opening.package, opening.predictions, *opening.args(), audit_log=log)
+    assert code == 2
+    assert second["error"] == "held_out_test_already_opened" and second["status"] == 403
+    assert not opened_paths(log) & held_out_files(opening.package)
+    assert opening.record.read_bytes() == recorded
+    # A different operator or a new campaign file does not reopen the same dataset either.
+    other = approve(opening.campaign.parent, json_candidate(opening), opening.package, id="again")
+    code, third = verify(
+        opening.package,
+        opening.predictions,
+        *opening.args(**{"--operator": "someone-else", "--campaign": other}),
+        audit_log=log,
+    )
+    assert code == 2 and third["error"] == "held_out_test_already_opened"
+    assert not opened_paths(log) & held_out_files(opening.package)
+
+
+def json_candidate(opening: Opening) -> C.CampaignCandidate:
+    campaign = C.TestCampaign.model_validate_json(opening.campaign.read_bytes())
+    return campaign.candidates[0]
+
+
+def test_held_05_a_failed_review_after_opening_keeps_the_record_and_is_not_retried(
+    tmp_path: Path,
+) -> None:
+    opening = prepared_opening(tmp_path)
+    rows = jsonl(opening.predictions)
+    rows[0]["probabilities"] = [0.9, 0.9, 0.9]
+    write_jsonl(opening.predictions, rows)
+    code, report = verify(opening.package, opening.predictions, *opening.args())
+    assert code == 2
+    assert report["status"] == "rejected" and report["held_out_test_opened"] is True
+    assert report["format_errors"][0]["record_id"] == rows[0]["record_id"]
+    assert opening.record.is_file()
+    write_jsonl(opening.predictions, jsonl(opening.predictions))
+    code, again = verify(opening.package, opening.predictions, *opening.args())
+    assert code == 2 and again["error"] == "held_out_test_already_opened"
+
+
+@pytest.mark.parametrize("option", ["--confirm", "--force", "--yes", "--reopen", "--allow-reopen"])
+def test_held_05_the_cli_has_no_confirmation_or_bypass_option(tmp_path: Path, option: str) -> None:
+    opening = prepared_opening(tmp_path)
+    response = run_module(
+        REGISTRY_CLI,
+        "verify-return",
+        "--dataset-root",
+        opening.package.root,
+        "--dataset-hash",
+        opening.package.checksum,
+        "--predictions",
+        opening.predictions,
+        *opening.args(),
+        option,
+    )
+    assert response.returncode == 2
+    assert "unrecognized arguments" in response.stderr
+    assert not opening.record.exists()
+    help_text = run_module(REGISTRY_CLI, "verify-return", "--help").stdout
+    assert all(word not in help_text for word in ("--confirm", "--force", "--yes", "--reopen"))
+
+
+def refused(opening: Opening, tmp_path: Path, *args: str) -> dict:
+    """Run an opening that must be refused: no record, no test file opened."""
+    log = tmp_path / "refused.log"
+    code, report = verify(opening.package, opening.predictions, *args, audit_log=log)
+    assert code == 2, report
+    assert not opening.record.exists()
+    assert not opened_paths(log) & held_out_files(opening.package)
+    return report
+
+
+@pytest.mark.parametrize(
+    "dropped",
+    ["--freeze", "--freeze-hash", "--campaign", "--campaign-hash", "--ledger", "--operator",
+     "--checkpoint-manifest", "--registration-hash"],
+)
+def test_held_02_test_without_freeze_or_campaign_is_refused(tmp_path: Path, dropped: str) -> None:
+    opening = prepared_opening(tmp_path)
+    report = refused(opening, tmp_path, *opening.args(**{dropped: None}))
+    assert report["error"] == "held_out_test_authorization_required"
+    assert report["status"] == 403 and dropped in report["message"]
+
+
+def test_held_02_an_unapproved_campaign_cannot_open_test(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path, opened_at=None)
+    report = refused(opening, tmp_path, *opening.args())
+    assert report["error"] == "campaign_not_authorized" and report["status"] == 403
+
+
+def test_held_02_a_v2_portable_package_has_no_test_to_open(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path)
+    manifest_path = opening.package.root / "dataset-manifest.json"
+    manifest = json.loads(manifest_path.read_bytes())
+    manifest.pop("layout")
+    manifest_path.write_bytes(json_bytes(manifest))
+    package = V3Package(opening.package.root, sha(manifest_path.read_bytes()))
+    log = tmp_path / "v2.log"
+    code, report = verify(package, opening.predictions, *opening.args(), audit_log=log)
+    assert code == 2 and report["error"] == "held_out_layout_required"
+    assert not opened_paths(log) & held_out_files(package)
+
+
+def manual_freeze(
+    opening: Opening, root: Path, *, policy: bytes | None = None, fixture: bool = False
+) -> tuple[Path, Path]:
+    """A freeze built directly with the existing freeze protocol, to vary one pinned fact."""
+    package = opening.package
+    members = {
+        "dataset-manifest.json": (package.root / "dataset-manifest.json").read_bytes(),
+        opening.registration.path: (opening.registry / opening.registration.path).read_bytes(),
+        "review-policy.json": policy
+        if policy is not None
+        else review_policy_bytes("rolecraft-synthetic-v3-mechanism", package.checksum),
+        "checkpoint-manifest.json": opening.checkpoint.read_bytes(),
+        "source/freeze-record.json": SOURCE_RECORD,
+        "source/requirements.lock": LOCK,
+    }
+    refs = []
+    for name, data in members.items():
+        (root / name).parent.mkdir(parents=True, exist_ok=True)
+        (root / name).write_bytes(data)
+        refs.append(C.FileRef(path=name, sha256=sha(data)))
+    source = json_candidate(opening).source
+    candidate = json_candidate(opening).model_copy(
+        update={"evaluation": C.FileRef(path="review-policy.json", sha256=sha(members["review-policy.json"]))}
+    )
+    freeze_selection(
+        root,
+        "freeze.json",
+        files=refs,
+        source=source,
+        selection={"selection_split": "dev"},
+        split_manifest=C.FileRef(path="dataset-manifest.json", sha256=package.checksum),
+        fixture=fixture,
+        candidates=(candidate,),
+    )
+    return root / "freeze.json", approve(root, candidate, package)
+
+
+def test_held_03_campaign_candidate_must_be_the_registration_under_test(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path)
+    root, ref = linear_bundle(tmp_path / "other-model", *RIGHT_WEIGHTS)
+    other = register(opening.registry, root, ref)
+    report = refused(
+        opening,
+        tmp_path,
+        *opening.args(**{"--registration-path": other.path, "--registration-hash": other.sha256}),
+    )
+    assert report["error"] == "held_out_campaign_candidate_mismatch" and report["status"] == 403
+
+
+def test_held_03_candidate_evaluation_must_be_the_review_policy(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path)
+    wrong = review_policy_bytes("another-dataset", "0" * 64)
+    freeze, campaign = manual_freeze(opening, tmp_path / "freeze-wrong-policy", policy=wrong)
+    report = refused(
+        opening,
+        tmp_path,
+        *opening.args(
+            **{
+                "--freeze": freeze,
+                "--freeze-hash": sha(freeze.read_bytes()),
+                "--campaign": campaign,
+                "--campaign-hash": sha(campaign.read_bytes()),
+            }
+        ),
+    )
+    assert report["error"] == "held_out_review_policy_mismatch"
+
+
+@pytest.mark.parametrize(
+    ("change", "code"),
+    [
+        ({"framework_version": "2"}, "held_out_checkpoint_manifest_not_frozen"),
+        ({"test_used_for_selection": True}, "model_return_selection_contaminated"),
+        ({"selection_partition": "test"}, "model_return_selection_contaminated"),
+    ],
+)
+def test_held_03_the_frozen_selection_declaration_is_the_one_supplied(
+    tmp_path: Path, change: dict, code: str
+) -> None:
+    opening = prepared_opening(tmp_path)
+    checkpoint_manifest(
+        opening.checkpoint,
+        opening.package,
+        jsonl(opening.predictions)[0]["model_revision"],
+        **change,
+    )
+    report = refused(opening, tmp_path, *opening.args())
+    assert report["error"] == code and report["status"] == 403
+
+
+def test_held_03_a_campaign_outside_the_freeze_root_is_refused(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path)
+    moved = tmp_path / "elsewhere" / "campaign.json"
+    moved.parent.mkdir()
+    moved.write_bytes(opening.campaign.read_bytes())
+    report = refused(opening, tmp_path, *opening.args(**{"--campaign": moved}))
+    assert report["error"] == "held_out_campaign_outside_freeze_root"
+
+
+def test_held_06_a_fixture_dataset_cannot_authorize_an_opening(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path, status="FIXTURE_ONLY_NOT_FINAL_TRAINING_DATA")
+    frozen = json.loads(opening.freeze.read_bytes())
+    assert frozen["fixture"] is True
+    report = refused(opening, tmp_path, *opening.args())
+    assert report["error"] == "fixture_cannot_authorize_confirmatory" and report["status"] == 403
+
+
+def test_held_06_a_fixture_freeze_cannot_approve_even_a_real_package(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path)
+    freeze, campaign = manual_freeze(opening, tmp_path / "fixture-freeze", fixture=True)
+    report = refused(
+        opening,
+        tmp_path,
+        *opening.args(
+            **{
+                "--freeze": freeze,
+                "--freeze-hash": sha(freeze.read_bytes()),
+                "--campaign": campaign,
+                "--campaign-hash": sha(campaign.read_bytes()),
+            }
+        ),
+    )
+    assert report["error"] == "fixture_cannot_authorize_confirmatory"

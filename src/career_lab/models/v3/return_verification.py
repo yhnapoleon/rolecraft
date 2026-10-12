@@ -9,41 +9,16 @@ from career_lab.contracts import v2 as C
 from career_lab.experiments.v3.training.metrics import grade, summarize
 from career_lab.experiments.v3.training.review import review_registered
 
+from .bundle import sha
 from .encoder_artifact import file_map, validate_return_identity, verify_file
+from .held_out import HeldOutRequest, open_held_out_test
 from .return_data import ReturnDataset, json_lines, load_return_dataset, strict_json, unique_records
-from .return_predictions import ReturnedPrediction, parse_returned
-
-
-# Absolute per-probability tolerance (143 §5.2): producers may run other hardware or library
-# builds, so probabilities need not be bit-identical; labels and evidence sets must be.
-ENCODER_KINDS = {"huggingface_encoder", "numpy_attention"}
-TOLERANCE = {"linear": 1e-6, "encoder": 1e-4}
-
-
-def comparison_tolerance(kinds) -> dict[str, Any]:
-    """Unknown kinds use the strict tier: a false rejection is safer than a false match."""
-    basis = "encoder" if set(kinds) & ENCODER_KINDS else "linear"
-    return {"absolute": TOLERANCE[basis], "basis": basis, "model_kinds": sorted(kinds)}
-
-
-def compare_prediction(actual: dict[str, Any], expected: ReturnedPrediction, tolerance: float):
-    """Fields that differ, and the largest absolute probability difference seen."""
-    fields = [
-        key
-        for key in ("input_hash", "model_revision", "task_type", "status", "label")
-        if actual[key] != getattr(expected, key)
-    ]
-    if set(actual["evidence_ids"]) != set(expected.evidence_ids):
-        fields.append("evidence_ids")
-    left, right = actual["probabilities"], expected.probabilities
-    deviation = 0.0
-    if (left is None) != (right is None) or (left is not None and len(left) != len(right)):
-        fields.append("probabilities")
-    elif left is not None:
-        deviation = max(abs(a - b) for a, b in zip(left, right, strict=True))
-        if deviation > tolerance:
-            fields.append("probabilities")
-    return fields, deviation
+from .return_predictions import (
+    ReturnedPrediction,
+    compare_prediction,
+    comparison_tolerance,
+    parse_returned,
+)
 
 
 def reload_return(
@@ -93,6 +68,8 @@ def inspect_return_checkpoint(
     model_revision: str,
     predictions_path: Path,
 ) -> dict[str, Any]:
+    """Declared files only. ``predictions_file`` names the dev predictions, so a test
+    review does not compare it with the test predictions it was given."""
     if path is None:
         return {
             "status": "not_supplied",
@@ -135,13 +112,8 @@ def inspect_return_checkpoint(
         name = manifest[field]
         if name not in files:
             missing.append(field)
-    if manifest["predictions_file"] in files:
-        import hashlib
-
-        if (
-            hashlib.sha256(predictions_path.read_bytes()).hexdigest()
-            != files[manifest["predictions_file"]]
-        ):
+    if manifest["predictions_file"] in files and dataset.split == "dev":
+        if sha(predictions_path.read_bytes()) != files[manifest["predictions_file"]]:
             raise C.ProtocolError("return_checkpoint_predictions_mismatch")
     return {
         "status": "declared_files_checked",
@@ -161,8 +133,27 @@ def verify_return(
     registry_root: Path | None = None,
     registration_path: str | None = None,
     registration_hash: str | None = None,
+    held_out: HeldOutRequest | None = None,
 ) -> dict[str, Any]:
-    dataset = load_return_dataset(dataset_root, dataset_hash, partition)
+    """Review returned predictions for ``dev``, or for ``test`` behind a recorded opening."""
+    opening = None
+    if partition == "test":
+        registration = (
+            C.FileRef(path=registration_path, sha256=registration_hash)
+            if registration_path is not None and registration_hash is not None
+            else None
+        )
+        opening = open_held_out_test(
+            held_out or HeldOutRequest(),
+            dataset_root=dataset_root,
+            dataset_hash=dataset_hash,
+            registry_root=registry_root,
+            registration=registration,
+            checkpoint_manifest=checkpoint_manifest,
+        )
+    elif held_out is not None:
+        raise C.ProtocolError("held_out_arguments_require_test_partition")
+    dataset = load_return_dataset(dataset_root, dataset_hash, partition, opening=opening)
     returned = unique_records(json_lines(predictions_path.read_bytes()))
     if set(returned) != {row.record_id for row in dataset.examples}:
         raise C.ProtocolError("return_prediction_record_set_mismatch")
@@ -203,7 +194,12 @@ def verify_return(
             checkpoint_manifest, dataset, revision, predictions_path
         )
         reload = reload_return(
-            dataset, predictions, registry_root, registration_path, registration_hash
+            dataset,
+            predictions,
+            registry_root,
+            registration_path,
+            registration_hash,
+            held_out_opening=opening,
         )
     rejected = (
         bool(format_errors)
@@ -217,7 +213,7 @@ def verify_return(
         "task_type": "relation",
         "layout": dataset.layout,
         "split": dataset.split,
-        "opened": None,
+        "opened": opening.record if opening is not None else None,
         # The product passes the given candidate evidence; retrieval is not part of this review.
         "evaluation_setting": "given_evidence_only",
         "retrieval_setting": "not_evaluated",
@@ -237,6 +233,6 @@ def verify_return(
         "quality_validated": False,
         "mode": "advisory",
         "affects_score": False,
-        "held_out_test_opened": False,
+        "held_out_test_opened": opening is not None,
         "tolerance": reload.get("tolerance"),
     }
