@@ -26,6 +26,35 @@ from .core import (
 )
 from .temporal import temporal_text
 
+RELATION = LABELS["relation"]
+
+
+def aggregate_pairs(pair_probabilities, threshold):
+    """pair_aggregate v1: per-pair (SUPPORTS, CONTRADICTS, UNRELATED) to one relation.
+
+    Any contradiction at or over ``threshold`` decides CONTRADICTED and cites every such
+    candidate; otherwise any support decides SUPPORTED and cites those; otherwise
+    INSUFFICIENT with no evidence. Unrelated pairs never count as support. With the
+    decision's confidence m (the strongest deciding pair, or for INSUFFICIENT one minus
+    the strongest support or contradiction), the decided relation gets (1 + m) / 2 and
+    each other relation (1 - m) / 4. Returns those probabilities and per-candidate
+    evidence scores whose ``>= threshold`` set is exactly the cited evidence.
+    """
+    pairs = np.asarray(pair_probabilities, dtype=float)
+    if pairs.ndim != 2 or pairs.shape[1] != 3 or not len(pairs) or not np.isfinite(pairs).all():
+        raise ProtocolError("invalid_pair_probabilities")
+    supports, contradicts = pairs[:, 0], pairs[:, 1]
+    if (contradicts >= threshold).any():
+        decided, confidence, scores = 1, contradicts.max(), contradicts
+    elif (supports >= threshold).any():
+        decided, confidence, scores = 0, supports.max(), supports
+    else:
+        strongest = max(supports.max(), contradicts.max())
+        decided, confidence, scores = 2, 1 - strongest, np.maximum(supports, contradicts)
+    probabilities = np.full(len(RELATION), (1 - confidence) / 4)
+    probabilities[decided] = (1 + confidence) / 2
+    return probabilities, scores
+
 
 def dependencies():
     try:
