@@ -1,0 +1,127 @@
+{
+ "cases": [
+  {
+   "authorized_with_key": true,
+   "body_sha256": [
+    "d38853251ad94f83114edd28c37fb6426af0de073a24c3648c8ac8e6dfa639aa",
+    "161351f9bf106b53b3db7db1be507fb013016187ae3ac6eb27872d93660426ae",
+    "422d7c889baea41e4b0a0a3a3d6f7f489052a1b5f87417137c56a6d1746d7049",
+    "8f2ee3047c10862c8f83bfa3ad8c92d28ea6540deba9937db20002dc715b332e",
+    "8016d34a2d55ef5c38bba8ce30b9f418a5727f0f4cf435c9dec34d361cabbbf1",
+    "5987c898fe67fc08e31f0d752ba473af636cae0c4793095dc780359a5275a79c",
+    "678351d72dbd8238154a11b186d3c121eda527e9aa49eff941a2f97a23800642",
+    "ea9c71f7cabf1fe4c5da32ab24c2c68e69e4d6481772b229fa2dc79b4ec582f1",
+    "ba3e23bafa60c521e96295fd54b33c472b2466432e2bc1407539566b0cd3b86f",
+    "a5ebdea0784365a81c9fa8ebea292ed205f299b490938a339bb13e0c3226159a",
+    "f7277662122801188955771c8c6c8cd18a88365bc4d852e5162b026bddefd5ab",
+    "e7fa0b86085a93f9a3f604703c488821868d4b243df008f177e60fcbd7754c02",
+    "dae6ac5d6237cbf0f4e77fa16f452e8691406b5ef2dbfb2f0d64cb6162ca9146",
+    "7db948307aeb66ffcda4d89201d94fa720dc54d1118d3f30adc76ba495afb966",
+    "e65705fd0d004fb29b3187f39441c06916261acf7ae8d699f40d2565f716b8ba",
+    "4e8f698d5ef249222b19c0c2e063e2fcd7ad7f196f307a5626f0eb333acd4f1e",
+    "5b9accdd4792f4cd357c661e3ca110b82bba7e16dc44817e958268c2ef97b874",
+    "d95445fe5bbe2340d4b13f2cef30d9a137c856e3de18c5877cd74732a7521928",
+    "a32cbec2e1ecac668ffa1552b5a9b507dc9e54eff04685029a76d8a946dbca25",
+    "f95b6cedc15cc7ccec2e288a375f9f212723edf777591ef96440c03ed5bf160e",
+    "825aa636d8a4345c0130f2501dbf1428636972dc77205b378a336635712e0920"
+   ],
+   "kinds": [
+    "role",
+    "role_review",
+    "assistant",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support"
+   ],
+   "language": "zh",
+   "max_tokens": [
+    512
+   ],
+   "models": [
+    "qa-loopback-shared"
+   ],
+   "provenance": "qa-loopback-shared",
+   "statuses": [
+    "completed",
+    "completed"
+   ]
+  },
+  {
+   "authorized_with_key": true,
+   "body_sha256": [
+    "b7f27a55a27a0f0cfe4ea4ef2b9f353d0b8ef9ef73ccc7ce48b74d06712d1833",
+    "68a5cf7e517323f0e044e5f1d0d81fac95ebd2b67492fc4fff64d2ef1e00a249",
+    "e5af544f6f6225e58b71872f48b1873932b8cf4813ba64ad412e83d4dc336863",
+    "f981d411d16bd40bdb13c1d07629e9d8fcac4646f2ac64600972f1738016d8df",
+    "128ac31e1c710536ec1c9e808751134cc62f3b3e8aabe96aed62379c64df8f38",
+    "ec6d6da5f5f953598fc281a4dbc55577d290a80a276ef80b34fd8d7919fa4831",
+    "ca4d5e453c2e29da6dbe0b56a96d081efd78821fcbbaf7e4cc41b2a332e87794",
+    "f7be19c224cc54bdc52cf3a7626e55797bafc1df4c4324da8b4c2dada2039490",
+    "cd729ec08bc3b3465297f62c7263fc79a473bc0a235da8c34cf2d97fd3120d74",
+    "1db30acdc812d4b244dd8e863b6d05a466d4aa269a00c2cb1e8ea2cb2f888022",
+    "9c888875f346ea88c28b9b43742767361502acc0ecfdee0c5c97a764f59eb886",
+    "563d37689c13c0e1d460b21d531d5c894df05d0409048faf005f74871736db70",
+    "d70f8f3e272040fe44abb33f3fcbce790a3348d82d199b2383d3efa011424913",
+    "731479d43faf9c31527eb3fee4f966bd65eb881a2a8f50f2af1dbd87607aa384",
+    "1b186484a586c10ab0e468f7f6fc91d8cc1118d15d2abb2d819ca16b414fe596",
+    "908b084fcb2c161b132d09242bda4afb35fb724c861e3620c172994f221ea1a9",
+    "267e9bb900e8257cad85d60858b51cdcc7312ddd46b0796847a130a4e490c385",
+    "9b50f2125e3c610309d67fad874f9d70c7c24dd3f7e89a04559b695bf9965932",
+    "11c073be0898f7bc5974d3f8040511279b4f502495936b3bbe9b497930a5769a",
+    "b4186caf42f95a3be169cfc0ad45051209eb75abc2eab31cd93a66bdc456368f",
+    "308fa83fa211972791ac2ad55890feccb33659cd144072214c8e7a72310c8fe8"
+   ],
+   "kinds": [
+    "role",
+    "role_review",
+    "assistant",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support",
+    "judge",
+    "support"
+   ],
+   "language": "en",
+   "max_tokens": [
+    512
+   ],
+   "models": [
+    "qa-loopback-shared"
+   ],
+   "provenance": "qa-loopback-shared",
+   "statuses": [
+    "completed",
+    "completed"
+   ]
+  }
+ ],
+ "source": "main d163747, shared CAREER_LAB_KEY_FILE/BASE_URL/MODEL with --provider openai; runs/local/144/probe/slot01_capture.py; bodies normalized by tests/support/model_slots.normalized_body"
+}

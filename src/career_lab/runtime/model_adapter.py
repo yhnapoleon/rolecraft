@@ -7,6 +7,7 @@ import httpx
 from pydantic import Field
 
 from career_lab.contracts.base import Contract
+from career_lab.contracts.v2.core import ProtocolError
 
 
 class ToolCall(Contract):
@@ -57,32 +58,69 @@ class LocalModel:
         )
 
 
+# A standalone historical "sk-" token is used as-is, so every key file read before keeps
+# its key; otherwise the first non-empty, non-comment line is the key.
+_LEGACY_KEY = re.compile(r"(?<![A-Za-z0-9_-])sk-[A-Za-z0-9_-]+")
+
+
+def read_key(path: Path) -> str:
+    """Read one provider key. Errors carry only a code, never file content."""
+    try:
+        raw = Path(path).read_text(encoding="utf-8-sig")
+    except (OSError, UnicodeError):
+        raise ProtocolError("model_slot_key_unreadable", status=503) from None
+    legacy = _LEGACY_KEY.search(raw)
+    if legacy is not None:
+        return legacy.group()
+    for line in raw.splitlines():
+        value = line.strip()
+        if not value or value.startswith("#"):
+            continue
+        if len(value) < 8 or any(character.isspace() for character in value):
+            break
+        return value
+    raise ProtocolError("model_slot_key_invalid", status=503)
+
+
 class OpenAICompatibleModel:
-    def __init__(self, api_key: str, base_url: str, model: str, timeout=45.0, retries=2):
+    """One chat-completions endpoint. ``api_key=None`` sends no Authorization header."""
+
+    def __init__(
+        self,
+        api_key: str | None,
+        base_url: str,
+        model: str,
+        timeout=45.0,
+        retries=2,
+        max_tokens: int = 512,
+    ):
+        if not isinstance(max_tokens, int) or isinstance(max_tokens, bool) or max_tokens < 1:
+            raise ValueError("max_tokens must be a positive integer")
         self._api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.revision = model
         self.timeout, self.retries = timeout, retries
+        self.max_tokens = max_tokens
+
+    def __repr__(self) -> str:
+        return f"OpenAICompatibleModel(model={self.revision!r}, retries={self.retries})"
 
     @classmethod
     def from_key_file(
         cls, path: Path, *, base_url="https://api.deepseek.com", model="deepseek-chat", **kwargs
     ):
-        raw = Path(path).read_text(encoding="utf-8-sig")
-        match = re.search(r"sk-[A-Za-z0-9_-]+", raw)
-        if match is None:
-            raise ValueError("key file contains no recognized API key")
-        return cls(match.group(), base_url, model, **kwargs)
+        return cls(read_key(path), base_url, model, **kwargs)
 
     def complete(self, messages, tools):
-        payload = {"model": self.revision, "messages": messages, "max_tokens": 512}
+        payload = {"model": self.revision, "messages": messages, "max_tokens": self.max_tokens}
         if tools:
             payload["tools"] = tools
+        headers = {} if self._api_key is None else {"Authorization": "Bearer " + self._api_key}
         for attempt in range(self.retries + 1):
             try:
                 response = httpx.post(
                     self.base_url + "/chat/completions",
-                    headers={"Authorization": "Bearer " + self._api_key},
+                    headers=headers,
                     json=payload,
                     timeout=self.timeout,
                 )

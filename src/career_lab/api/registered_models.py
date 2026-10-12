@@ -6,7 +6,8 @@ Configuration (read once at startup):
 - ``CAREER_LAB_MODEL_REGISTRY``: registry root shared by every registration;
 - ``CAREER_LAB_MODEL_REGISTRATIONS``: ``{"relation": FileRef, "criterion": FileRef}``,
   either key optional; the historical ``CAREER_LAB_MODEL_REGISTRATION`` names the relation
-  registration alone. Setting both is ambiguous and refuses to start;
+  registration alone. Setting both is ambiguous and refuses to start. The criterion
+  reference is checked for shape and handed to ``consumer.criterion_source``;
 - ``CAREER_LAB_MODEL_JOURNAL``: advice journal (default ``<registry>/journal``).
 """
 
@@ -25,14 +26,14 @@ from career_lab.models.v3.consumer import (
     AdviceError,
     AdviceSource,
     advice_dependencies,
+    criterion_source,
     predict_or_recover,
     registered_identity,
     safe_model_error,
 )
 from career_lab.rubrics.v4.feedback import FeedbackEngine
 from career_lab.rubrics.v4.rubric_v2 import CRITERIA
-from career_lab.runtime.model_adapter import ModelAdapter
-from career_lab.runtime.roles_v2 import LocalRoleModel
+from career_lab.runtime.model_slots import ModelSlots
 from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.storage.v2_store import Mutation, TransactionView, V2Store
 
@@ -168,22 +169,32 @@ def configured_registrations() -> dict[str, C.FileRef | Exception] | None:
 def install_registered_models(
     module: ScenarioModule,
     fallback: FeedbackHandler | None,
-    model: ModelAdapter | LocalRoleModel,
+    slots: ModelSlots,
 ) -> FeedbackHandler | None:
     configured = configured_registrations()
     if configured is None:
         return fallback
-    root_value = os.environ.get("CAREER_LAB_MODEL_REGISTRY", "")
-    sources: dict[str, AdviceSource] = {}
-    for task, ref in configured.items():
-        if isinstance(ref, Exception):
-            sources[task] = AdviceSource.unusable(ref, task)
-            continue
-        root = Path(root_value)
-        journal = Path(os.environ.get("CAREER_LAB_MODEL_JOURNAL", str(root / "journal")))
-        sources[task] = AdviceSource.from_registration(root, ref, journal, task_type=task)
+    root = Path(os.environ.get("CAREER_LAB_MODEL_REGISTRY", ""))
+    journal = Path(os.environ.get("CAREER_LAB_MODEL_JOURNAL", str(root / "journal")))
+    relation = configured.get("relation")
+    relation_source = (
+        None
+        if relation is None
+        else AdviceSource.unusable(relation)
+        if isinstance(relation, Exception)
+        else AdviceSource.from_registration(root, relation, journal)
+    )
+    criterion = configured.get("criterion")
+    # Parsed only: nothing is loaded or recorded until criterion inference exists.
+    criterion_advice = (
+        None
+        if criterion is None or isinstance(criterion, Exception)
+        else criterion_source(root, criterion, journal)
+    )
+    if relation_source is None and criterion_advice is None:
+        return fallback
     return create_feedback_handler(
         module,
-        model=None if isinstance(model, LocalRoleModel) else model,
-        engine_factory=RegisteredModelFactory(sources.get("relation"), sources.get("criterion")),
+        slots=slots,
+        engine_factory=RegisteredModelFactory(relation_source, criterion_advice),
     )

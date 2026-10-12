@@ -13,6 +13,7 @@ from career_lab.api.feedback_provenance import attach_score_range
 from career_lab.contracts import v2 as C
 from career_lab.evidence.v2.preview import prepare_preview_feedback
 from career_lab.rubrics.v4.score_range import installed_rubric
+from career_lab.runtime.model_slots import DEFAULT_INPUT_BYTES, ModelSlots
 from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.v2_store import references
 from career_lab.storage.v2_tables import v2_snapshots
@@ -214,9 +215,24 @@ class OncePerInputModel:
 
 
 def create_feedback_handler(
-    module, *, model=None, engine_factory: "RegisteredModelFactory | None" = None
+    module,
+    *,
+    model=None,
+    slots: ModelSlots | None = None,
+    engine_factory: "RegisteredModelFactory | None" = None,
 ):
+    """``slots`` gives the Judge and support verifier separately; else ``model`` serves both."""
     from career_lab.evidence.v2.ports import CriterionPolicy
+
+    if slots is not None:
+        judge, support = slots.judge, slots.support
+        judge_bytes, support_bytes = slots.judge_input_bytes, slots.support_input_bytes
+        judge_url = slots.recorded_base_url("JUDGE")
+        support_url = slots.recorded_base_url("SUPPORT")
+    else:
+        judge = support = model
+        judge_bytes = support_bytes = DEFAULT_INPUT_BYTES
+        judge_url = support_url = None
 
     bundle = C.EvaluationBundle.model_validate_json(
         C.read_file(module.package.root, module.bindings.evaluation)
@@ -234,9 +250,12 @@ def create_feedback_handler(
     provenance = feedback_provenance(
         module,
         bundle,
-        model,
+        judge,
         registered_model=engine_factory.identity if engine_factory is not None else None,
         registered_models=engine_factory.identities if engine_factory is not None else None,
+        support=support,
+        base_url=judge_url,
+        support_base_url=support_url,
     )
     policies = tuple(CriterionPolicy(**p) for p in protocol["policies"])
     rubric, rubric_sha256 = installed_rubric(module.package.root, bundle)
@@ -323,10 +342,15 @@ def create_feedback_handler(
         engine = (
             FeedbackEngine(
                 AdvisoryJudge(
-                    OncePerInputModel(model), EvidenceSupportVerifier(OncePerInputModel(model))
+                    OncePerInputModel(judge),
+                    EvidenceSupportVerifier(
+                        OncePerInputModel(support) if support is not None else None,
+                        input_bytes=support_bytes,
+                    ),
+                    input_bytes=judge_bytes,
                 )
             )
-            if model is not None
+            if judge is not None
             else FeedbackEngine()
         )
         if engine_factory is not None:
