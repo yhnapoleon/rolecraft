@@ -11,7 +11,13 @@ from typing import Any
 
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_file
 from career_lab.models.v3.core import LABELS
-from career_lab.models.v3.encoder_artifact import EncoderArtifact, inspect_encoder, verify_file
+from career_lab.models.v3.encoder_artifact import (
+    ARTIFACT_KIND,
+    EncoderArtifact,
+    inspect_encoder,
+    is_encoder_return,
+    verify_file,
+)
 from career_lab.models.v3.huggingface import HuggingFaceCandidate
 from career_lab.models.v3.registration import (
     RegistrationProtocol,
@@ -23,6 +29,8 @@ PROTOCOL = "advisory-encoder-registration-v2"
 # Registrations made before the runtime pin; feedback they produced stays readable as
 # recorded, but they serve no new advice. Re-register the same return instead.
 RETIRED_PROTOCOLS = frozenset({"advisory-encoder-registration-v1"})
+# Whether a return manifest is for this protocol (linear, fusion and other kinds are not).
+handles_return = is_encoder_return
 # Inference libraries whose installed versions an encoder registration pins.
 ENCODER_RUNTIME = ("torch", "transformers", "tokenizers", "safetensors")
 
@@ -58,7 +66,7 @@ def _entry(
 ) -> dict[str, Any]:
     identity = {
         "protocol": PROTOCOL,
-        "kind": "huggingface_encoder",
+        "kind": ARTIFACT_KIND,
         "bundle": ref.model_dump(mode="json"),
         "scope": scope,
         "inference_runtime": runtime,
@@ -166,7 +174,10 @@ def describe(root: Path, ref: FileRef, runtime: dict[str, Any]) -> RegistrationS
 
 
 REGISTRATION = RegistrationProtocol(
-    handles=lambda entry: entry.get("protocol") in RETIRED_PROTOCOLS | {PROTOCOL},
+    handles=lambda entry: (
+        entry.get("protocol") in RETIRED_PROTOCOLS | {PROTOCOL}
+        and entry.get("kind", ARTIFACT_KIND) == ARTIFACT_KIND
+    ),
     describe=describe,
     load=lambda root, ref, runtime: load_encoder(root, ref, runtime=runtime),
 )

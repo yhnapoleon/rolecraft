@@ -988,3 +988,54 @@ def test_enc_05_the_legacy_layout_has_no_untrained_stage(tmp_path: Path) -> None
     assert refused(tmp_path, legacy=True, weights_stage="pretrained_untrained_heads") == (
         "local_checkpoint_revision_or_stage_invalid"
     )
+
+
+LINEAR_MANIFEST = {"artifact_kind": "linear", "artifact_protocol": "rolecraft-linear-return-v1"}
+
+
+def test_seam_01_shared_return_identity_accepts_other_artifact_kinds(tmp_path: Path) -> None:
+    """The shared fixture v2 outer-manifest policy says nothing about artifact kinds."""
+    from career_lab.models.v3.encoder_artifact import validate_return_identity
+
+    root = tmp_path / "producer"
+    encoder_return(root)
+    manifest = json.loads((root / "checkpoint-manifest.json").read_bytes())
+    for kind in (LINEAR_MANIFEST, {"artifact_kind": "fusion"}, {"artifact_kind": None}):
+        validate_return_identity({k: v for k, v in (manifest | kind).items() if v is not None})
+
+
+def test_seam_02_the_encoder_protocol_does_not_claim_linear_or_fusion_returns(
+    tmp_path: Path,
+) -> None:
+    from career_lab.models.v3 import encoder_registry
+    from career_lab.models.v3.registry import inference_runtime
+
+    root = tmp_path / "producer"
+    encoder_return(root)
+    manifest = json.loads((root / "checkpoint-manifest.json").read_bytes())
+    assert encoder_registry.handles_return(manifest)
+    assert encoder_registry.handles_return(
+        {k: v for k, v in manifest.items() if not k.startswith("artifact_")}
+    )
+    for kind in (LINEAR_MANIFEST, {"artifact_kind": "fusion"}):
+        assert not encoder_registry.handles_return(manifest | kind)
+        ref = write_manifest(root, manifest | kind)
+        with pytest.raises(ProtocolError) as error:
+            encoder_registry.register_encoder(
+                tmp_path / "registry",
+                root,
+                ref,
+                scope="synthetic_fixture",
+                runtime=inference_runtime(),
+            )
+        assert error.value.code == "model_return_protocol_invalid"
+    for entry in (
+        {"protocol": "advisory-linear-registration-v1", "kind": "linear"},
+        {"protocol": "advisory-fusion-registration-v1", "kind": "fusion"},
+        {"protocol": encoder_registry.PROTOCOL, "kind": "linear"},
+    ):
+        assert not encoder_registry.REGISTRATION.handles(entry)
+    ref = write_manifest(root, manifest)
+    registration = register_bundle(tmp_path / "registry", root, ref, scope="synthetic_fixture")
+    entry = json.loads((tmp_path / "registry" / registration.path).read_bytes())
+    assert encoder_registry.REGISTRATION.handles(entry)

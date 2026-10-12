@@ -160,10 +160,11 @@ class EncoderArtifact:
 
 
 def validate_return_identity(manifest: dict[str, Any]) -> None:
-    """Outer manifest policy (fixture v2 template), by its declared weights stage.
+    """Outer manifest policy (fixture v2 template) shared by every return kind.
 
-    A return with pretrained weights and untrained heads must say so: not completed,
-    no training partitions and no selection.
+    It checks only the template's common fields, by the declared weights stage: a return
+    with pretrained weights and untrained heads must say so (not completed, no training
+    partitions, no selection). Artifact kinds are each protocol's own concern.
     """
     if manifest.get("return_protocol") != RETURN_PROTOCOL:
         raise ProtocolError("model_return_protocol_invalid")
@@ -212,12 +213,20 @@ def validate_return_identity(manifest: dict[str, Any]) -> None:
             raise ProtocolError("model_return_identity_incomplete")
     if not re.fullmatch(r"[0-9a-f]{64}", str(manifest.get("dataset_manifest_sha256", ""))):
         raise ProtocolError("model_return_dataset_identity_invalid")
-    for field, expected in (
-        ("artifact_kind", ARTIFACT_KIND),
-        ("artifact_protocol", ARTIFACT_PROTOCOL),
-    ):
-        if field in manifest and manifest[field] != expected:
-            raise ProtocolError("model_return_protocol_invalid")
+
+
+def is_encoder_return(manifest: object) -> bool:
+    """A fixture v2 style return manifest that names no other artifact kind.
+
+    Returns without ``artifact_kind`` predate v3 and are encoder returns; linear, fusion
+    and any other kind belong to their own registration protocol.
+    """
+    return (
+        isinstance(manifest, dict)
+        and "return_protocol" in manifest
+        and manifest.get("artifact_kind", ARTIFACT_KIND) == ARTIFACT_KIND
+        and manifest.get("artifact_protocol", ARTIFACT_PROTOCOL) == ARTIFACT_PROTOCOL
+    )
 
 
 def dataset_identity(manifest: dict[str, Any]) -> dict[str, Any]:
@@ -357,6 +366,8 @@ def inspect_encoder(root: Path, manifest_ref: FileRef, *, scope: str) -> Encoder
     root = root.resolve()
     manifest = json.loads(read_file(root, manifest_ref))
     validate_return_identity(manifest)
+    if not is_encoder_return(manifest):
+        raise ProtocolError("model_return_protocol_invalid")
     if "fixture" in manifest["dataset_id"].lower() and scope != "synthetic_fixture":
         raise ProtocolError("fixture_cannot_be_registered_as_external")
     stage = manifest.get("weights_stage", WEIGHTS_STAGES[0])
