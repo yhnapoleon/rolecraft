@@ -176,11 +176,12 @@ def test_model_lease_recovery_requires_an_explicit_user_retry(tmp_path):
 
 def test_old_material_and_display_receipts_remain_available_after_submission(tmp_path, monkeypatch):
     from career_lab.api import vertical_runtime
-    from career_lab.runtime.model_adapter import LocalModel
+    from career_lab.runtime.model_slots import ModelSlots
     from career_lab.runtime.roles_v2 import LocalRoleModel
 
+    # Assembly reads every model slot through configured_slots (144); pin the local pair.
     monkeypatch.setattr(
-        vertical_runtime, "configured_models", lambda provider: (LocalModel(), LocalRoleModel())
+        vertical_runtime, "configured_slots", lambda provider: ModelSlots.shared(LocalRoleModel())
     )
     monkeypatch.setattr(vertical_runtime, "ROLE_RUNTIME_READY", True)
     app, c, sid, h, send = connect(tmp_path)

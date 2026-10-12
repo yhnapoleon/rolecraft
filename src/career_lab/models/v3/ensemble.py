@@ -2,7 +2,7 @@
 
 import numpy as np
 from career_lab.contracts.v2.core import ProtocolError
-from .core import LABELS, probabilities, prediction, abstention, checked_input
+from .core import UNLIMITED, abstention, checked_input, prediction, probabilities
 
 
 def blend(left, right, alpha, item, revision="unregistered-fusion", threshold=0.5):
@@ -63,6 +63,16 @@ class FusionCandidate:
         self.left, self.right, self.alpha, self.threshold = left, right, alpha, threshold
         self.task_type = "relation"
         self.revision = f"fusion:{left.revision}:{right.revision}:{alpha}"
+
+    def measure(self, item):
+        """The stricter of the components prediction actually runs."""
+        if self.alpha == 0:
+            return self.left.measure(item)
+        if self.alpha == 1:
+            return self.right.measure(item)
+        sizes = (self.left.measure(item), self.right.measure(item))
+        limited = [size for size in sizes if size.headroom is not None]
+        return min(limited, key=lambda size: size.headroom) if limited else UNLIMITED
 
     def predict(self, item):
         if self.alpha == 0:

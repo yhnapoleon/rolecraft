@@ -6,6 +6,8 @@ from pydantic import JsonValue
 
 from .core import ProtocolError
 
+PROVENANCE_DEFINITIONS = ("CodeIdentity", "FeedbackProvenance", "SupportModelIdentity")
+
 
 def without_provenance(schema: dict[str, JsonValue]) -> dict[str, JsonValue]:
     result = deepcopy(schema)
@@ -18,8 +20,9 @@ def without_provenance(schema: dict[str, JsonValue]) -> dict[str, JsonValue]:
                 node["properties"].pop("provenance", None)
             for name in ("$defs", "schemas"):
                 if name in node:
-                    node[name].pop("CodeIdentity", None)
-                    node[name].pop("FeedbackProvenance", None)
+                    # Definitions referenced only from the provenance envelope.
+                    for definition in PROVENANCE_DEFINITIONS:
+                        node[name].pop(definition, None)
             for value in node.values():
                 visit(value)
         elif isinstance(node, list):

@@ -5,10 +5,6 @@ Only files referenced by a validated ModelBundle or local encoder return are cop
 """
 
 import json
-import os
-import shutil
-import tempfile
-from collections.abc import Callable
 from importlib.metadata import version
 from pathlib import Path
 from typing import Any
@@ -16,7 +12,12 @@ from typing import Any
 from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_file
 from career_lab.contracts.v2.research import ModelBundle
 
-from .bundle import json_bytes, load_bundle, sha, write_json
+from . import encoder_registry
+from .bundle import load_bundle, sha
+from .registration import RegistrationProtocol, RegistrationSummary, publish_registration
+
+# Kept for existing importers; the lifecycle lives with the other registration primitives.
+_publish_registration = publish_registration
 
 SCOPES = {"synthetic_fixture", "external_candidate"}
 PROTOCOL = "w08-advisory-registration-v1"
@@ -77,41 +78,6 @@ def _collect(root, ref, prefix="", depth=0):
     return files
 
 
-def _publish_registration(
-    registry_root: Path,
-    entry: dict[str, Any],
-    write_artifact: Callable[[Path], None],
-    verify_existing: Callable[[FileRef], dict[str, Any]],
-) -> FileRef:
-    """One lock/stage/publish lifecycle for each supported artifact format."""
-    registry_root = registry_root.resolve()
-    registry_root.mkdir(parents=True, exist_ok=True)
-    identifier = entry["id"]
-    destination = registry_root / identifier
-    lock = registry_root / (identifier + ".lock")
-    try:
-        lock.mkdir()
-    except FileExistsError:
-        raise ProtocolError("model_registration_busy", status=409) from None
-    stage = None
-    try:
-        ref = FileRef(path=identifier + "/registration.json", sha256=sha(json_bytes(entry)))
-        if destination.exists():
-            if verify_existing(ref) != entry:
-                raise ProtocolError("model_registration_drift")
-            return ref
-        stage = Path(tempfile.mkdtemp(prefix=".registration-", dir=registry_root))
-        write_artifact(stage / "artifact")
-        write_json(stage / "registration.json", entry)
-        os.rename(stage, destination)
-        stage = None
-        return ref
-    finally:
-        if stage is not None:
-            shutil.rmtree(stage)
-        lock.rmdir()
-
-
 def register_bundle(
     registry_root: Path | str,
     bundle_root: Path | str,
@@ -124,9 +90,7 @@ def register_bundle(
     bundle_ref = FileRef.model_validate(bundle_ref)
     manifest = json.loads(read_file(Path(bundle_root), bundle_ref))
     if isinstance(manifest, dict) and "return_protocol" in manifest:
-        from .encoder_registry import register_encoder
-
-        return register_encoder(
+        return encoder_registry.register_encoder(
             Path(registry_root),
             Path(bundle_root),
             bundle_ref,
@@ -162,7 +126,7 @@ def register_bundle(
             path.write_bytes(raw)
         load_bundle(target, bundle_ref)
 
-    return _publish_registration(
+    return publish_registration(
         Path(registry_root),
         entry,
         write_artifact,
@@ -174,11 +138,29 @@ def load_registration(registry_root, registration_ref):
     registration_ref = FileRef.model_validate(registration_ref)
     root = Path(registry_root).resolve()
     entry = json.loads(read_file(root, registration_ref))
-    from .encoder_registry import PROTOCOL as encoder_protocol
-    from .encoder_registry import load_encoder
+    return _protocol(entry).load(root, registration_ref, inference_runtime())
 
-    if entry.get("protocol") == encoder_protocol:
-        return load_encoder(root, registration_ref, runtime=inference_runtime())
+
+def describe_registration(registry_root, registration_ref) -> RegistrationSummary:
+    """Verified generic summary of any supported registration; public identity comes from here.
+
+    Verification matches what loading requires, except optional inference dependencies.
+    """
+    registration_ref = FileRef.model_validate(registration_ref)
+    root = Path(registry_root).resolve()
+    entry = json.loads(read_file(root, registration_ref))
+    return _protocol(entry).describe(root, registration_ref, inference_runtime())
+
+
+def _protocol(entry: Any) -> RegistrationProtocol:
+    for protocol in REGISTRATION_PROTOCOLS:
+        if isinstance(entry, dict) and protocol.handles(entry):
+            return protocol
+    raise ProtocolError("model_registration_protocol_invalid")
+
+
+def _load_bundle_registration(root: Path, registration_ref: FileRef, runtime: dict[str, Any]):
+    entry = json.loads(read_file(root, registration_ref))
     if entry.get("protocol") != PROTOCOL or entry.get("scope") not in SCOPES:
         raise ProtocolError("model_registration_protocol_invalid")
     if (
@@ -191,7 +173,7 @@ def load_registration(registry_root, registration_ref):
     expected = "w08-" + digest(identity)[:32]
     if entry.get("id") != expected or registration_ref.path != expected + "/registration.json":
         raise ProtocolError("model_registration_identity_mismatch")
-    if entry["inference_runtime"] != inference_runtime():
+    if entry["inference_runtime"] != runtime:
         raise ProtocolError("registered_inference_runtime_changed")
     artifact = root / expected / "artifact"
     for path, expected_hash in entry["files"].items():
@@ -204,6 +186,31 @@ def load_registration(registry_root, registration_ref):
     ):
         raise ProtocolError("registered_model_identity_mismatch")
     return model, entry
+
+
+def _describe_bundle_registration(
+    root: Path, registration_ref: FileRef, runtime: dict[str, Any]
+) -> RegistrationSummary:
+    _, entry = _load_bundle_registration(root, registration_ref, runtime)
+    return RegistrationSummary(
+        id=entry["id"],
+        scope=entry["scope"],
+        model_revision=entry["model_revision"],
+        task_type=entry["task_type"],
+        labels=tuple(entry["labels"]),
+    )
+
+
+BUNDLE_REGISTRATION = RegistrationProtocol(
+    handles=lambda entry: entry.get("protocol") == PROTOCOL,
+    describe=_describe_bundle_registration,
+    load=_load_bundle_registration,
+)
+# Dispatch order is irrelevant: each protocol recognises only its own entries.
+REGISTRATION_PROTOCOLS: tuple[RegistrationProtocol, ...] = (
+    BUNDLE_REGISTRATION,
+    encoder_registry.REGISTRATION,
+)
 
 
 def public_registration(entry):

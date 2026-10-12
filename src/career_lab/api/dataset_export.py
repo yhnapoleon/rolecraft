@@ -27,6 +27,7 @@ from career_lab.datasets.v3.projection import SOURCE_KINDS, SourceIndexEntry
 from career_lab.evidence.v2.assembler import EvidenceAssemblerV2, base_ref
 from career_lab.evidence.v2.ports import CriterionPolicy, SourceRecord
 from career_lab.evidence.v2.store_reader import StoreEvidenceReader
+from career_lab.models.v3.projection import criterion_input, without_rule_context
 from career_lab.research.authorization import (
     ResearchAuthorization,
     SignedAuthorization,
@@ -217,14 +218,10 @@ class AuthorizedSnapshotPort:
             _, file = self._source(reader, ref, package.as_of)
             files[file.path] = file
         # Rule derivations, evaluator labels and private context never become model features.
-        body = package.model_dump(mode="json", exclude={"input_hash"})
-        body.update(rule_context={}, rule_bound=None)
-        package = C.EvidencePackageV2(**body, input_hash=C.digest(body))
+        package = without_rule_context(package)
         family = package.task_type
         model = (
-            C.RelationInput(evidence=package)
-            if family == "relation"
-            else C.CriterionInput(evidence=package)
+            C.RelationInput(evidence=package) if family == "relation" else criterion_input(package)
         )
         public_facts = tuple(
             sorted(f.id for f in self.module.package.facts if f.disclosure.mode == "public")

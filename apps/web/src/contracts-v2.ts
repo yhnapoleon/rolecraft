@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 14439473c9e226d82f513beab2e7da5c301df3efd6498255a3693f62059135ff. Do not edit.
+// Generated from frozen manifest SHA256 bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -241,6 +241,9 @@ export type FeedbackProvenance = {
   model: string;
   retries?: 0;
   registered_model?: RegisteredModelIdentity | null;
+  registered_models?: RegisteredModelIdentity[] | null;
+  support_model?: SupportModelIdentity | null;
+  base_url?: string | null;
 };
 export type FeedbackReadBoundary = {
   schema_version?: 2;
@@ -628,13 +631,21 @@ export type PublicTransactionResult = {
 };
 export type RegisteredModelAdvice = {
   schema_version?: 2;
-  criterion?: 'R2.support';
+  criterion?: string;
   request_id: string;
   job_id: string;
   input_hash: string | null;
   registration: RegisteredModelIdentity | null;
   status: 'completed' | 'failed' | 'unavailable' | 'synthetic_mechanism_only';
-  label?: 'SUPPORTED' | 'CONTRADICTED' | 'INSUFFICIENT' | null;
+  label?:
+    | 'SUPPORTED'
+    | 'CONTRADICTED'
+    | 'INSUFFICIENT'
+    | 'MET'
+    | 'PARTIAL'
+    | 'NOT_MET'
+    | 'NOT_APPLICABLE'
+    | null;
   evidence_ids?: string[];
   citations?: EvidenceRefV2[];
   error_code?:
@@ -650,15 +661,49 @@ export type RegisteredModelAdvice = {
     | 'model_prediction_invalid'
     | 'claim_not_available'
     | 'synthetic_mechanism_only'
+    | 'verified_rule_conflict'
+    | 'applicability_not_established'
+    | 'criterion_not_supported_by_model'
+    | 'criterion_rubric_version_mismatch'
+    | 'all_units_abstained'
     | null;
   mode?: 'advisory';
   affects_score?: false;
+  task_type?: 'relation' | 'criterion';
+  units?: _AdviceUnit[] | null;
+  aggregation?: _AdviceAggregation | null;
+  reconciliation?: _AdviceReconciliation | null;
+};
+export type RegisteredModelComponent = {
+  role: 'left' | 'right';
+  id: string;
+  kind: string;
+  model_revision: string;
+  alpha?: number | null;
+};
+export type RegisteredModelDataset = {
+  dataset_id: string;
+  dataset_manifest_sha256: string;
+  label_tiers?: string[];
+};
+export type RegisteredModelFusion = {
+  alpha: number;
+  evidence_threshold: number;
+  fusion_gain_observed: boolean;
 };
 export type RegisteredModelIdentity = {
   id: string;
   model_revision: string;
   scope: 'synthetic_fixture' | 'external_candidate';
   quality_validated?: false;
+  kind?: string | null;
+  task_type?: 'relation' | 'criterion';
+  criteria?: string[] | null;
+  dataset?: RegisteredModelDataset | null;
+  components?: RegisteredModelComponent[] | null;
+  fusion?: RegisteredModelFusion | null;
+  weights_stage?: string | null;
+  rubric_version?: RubricVersion | null;
 };
 export type RequestJobResult = {
   effect?: PublicTransactionResult | null;
@@ -723,6 +768,7 @@ export type ReviewRequest = {
   subjects: ObjectRef[];
   version?: number;
 };
+export type RubricVersion = { id: string; sha256: string };
 export type RuleBound = {
   schema_version?: 2;
   lower: 'NOT_MET' | 'PARTIAL' | 'MET';
@@ -766,6 +812,7 @@ export type SubmitInput = {
   products: ObjectRef[];
   schema_version?: 2;
 };
+export type SupportModelIdentity = { provider: string; model: string; base_url?: string | null };
 export type TaskBatch = { creates?: TaskCreate[]; schema_version?: 2; updates?: TaskPatch[] };
 export type TaskCreate = {
   goal?: string;
@@ -995,6 +1042,33 @@ export type WorkspaceTask = {
   status?: 'open' | 'active' | 'paused' | 'blocked' | 'done' | 'removed';
   title: string;
   updated_at: string;
+};
+export type _AdviceAggregation = { schema_version?: 2; policy: string; counts: _AdviceUnitCounts };
+export type _AdviceReconciliation = {
+  schema_version?: 2;
+  rule_conflict: boolean;
+  applicability_established: boolean;
+};
+export type _AdviceUnit = {
+  schema_version?: 2;
+  index: number;
+  subject: EvidenceRefV2;
+  unit_hash: string;
+  status: 'completed' | 'abstained' | 'failed';
+  label?: 'SUPPORTED' | 'CONTRADICTED' | 'INSUFFICIENT' | null;
+  evidence_ids?: string[];
+  citations?: EvidenceRefV2[];
+  reason_code?: string | null;
+};
+export type _AdviceUnitCounts = {
+  schema_version?: 2;
+  supported?: number;
+  contradicted?: number;
+  insufficient?: number;
+  abstained?: number;
+  failed?: number;
+  skipped_short?: number;
+  over_budget?: number;
 };
 export type _OutcomeAction = {
   schema_version?: 2;

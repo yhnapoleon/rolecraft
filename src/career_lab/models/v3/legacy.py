@@ -8,6 +8,7 @@ from career_lab.models.linear import TextClassifier
 from career_lab.contracts.v2.core import ProtocolError
 from .core import (
     LABELS,
+    UNLIMITED,
     training_examples,
     checked_input,
     input_problem,
@@ -68,6 +69,11 @@ class LegacyMLP:
         }
         self.revision = "trained-legacy-character-mlp-pending-bundle"
         return self.training_report
+
+    def measure(self, item):
+        """Character binary n-grams have no token budget."""
+        checked_input(item)
+        return UNLIMITED
 
     def predict(self, item):
         item = checked_input(item)

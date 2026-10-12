@@ -5,7 +5,7 @@ Historical readers never infer either; records written without them keep their b
 
 import json
 from dataclasses import replace
-from typing import Protocol
+from typing import Literal, Protocol
 
 from career_lab.contracts.v2 import (
     EvaluationBundle,
@@ -14,7 +14,11 @@ from career_lab.contracts.v2 import (
     ProtocolError,
     read_file,
 )
-from career_lab.contracts.v2.provenance import FeedbackProvenance, RegisteredModelIdentity
+from career_lab.contracts.v2.provenance import (
+    FeedbackProvenance,
+    RegisteredModelIdentity,
+    SupportModelIdentity,
+)
 from career_lab.rubrics.v4.score_range import rule_score_range
 from career_lab.runtime.provenance import execution_identity
 from career_lab.scenarios.v2.module import ScenarioModule
@@ -32,13 +36,20 @@ def feedback_provenance(
     model: ModelIdentity | None,
     *,
     registered_model: RegisteredModelIdentity | None = None,
+    registered_models: tuple[RegisteredModelIdentity, ...] | None = None,
+    support: ModelIdentity | None | Literal["same"] = "same",
+    base_url: str | None = None,
+    support_base_url: str | None = None,
 ) -> FeedbackProvenance:
-    if model is not None and getattr(model, "retries", 0) != 0:
-        raise ValueError("Feedback providers must disable automatic retries")
+    """``model`` is the Judge; ``support`` is recorded only when it differs from the Judge."""
+    for adapter in (model, None if support == "same" else support):
+        if adapter is not None and getattr(adapter, "retries", 0) != 0:
+            raise ValueError("Feedback providers must disable automatic retries")
     rules = json.loads(read_file(module.package.root, bundle.rules))
     return FeedbackProvenance(
         code=execution_identity(),
         registered_model=registered_model,
+        registered_models=registered_models,
         # A released package names its own installed evaluation; legacy packages predate it.
         evaluation_version=(
             module.release.evaluation_version
@@ -47,9 +58,38 @@ def feedback_provenance(
         ),
         rules_version=rules.get("revision", "not_recorded"),
         prompt_version=PROMPT_VERSION,
-        provider="not_configured" if model is None else getattr(model, "provider", "not_recorded"),
+        provider=_provider(model),
         model="not_configured" if model is None else model.revision,
+        support_model=_support_identity(model, support, base_url, support_base_url),
+        base_url=None if model is None else base_url,
     )
+
+
+def _provider(model: ModelIdentity | None) -> str:
+    return "not_configured" if model is None else getattr(model, "provider", "not_recorded")
+
+
+def _support_identity(
+    judge: ModelIdentity | None,
+    support: ModelIdentity | None | Literal["same"],
+    judge_base_url: str | None,
+    support_base_url: str | None,
+) -> SupportModelIdentity | None:
+    """Unrecorded while support follows the Judge, or while no Judge runs at all."""
+    if judge is None or support == "same" or support is judge:
+        return None
+    current = SupportModelIdentity(
+        provider=_provider(support),
+        model="not_configured" if support is None else support.revision,
+        base_url=None if support is None else support_base_url,
+    )
+    if (current.provider, current.model, current.base_url) == (
+        _provider(judge),
+        judge.revision,
+        judge_base_url,
+    ):
+        return None
+    return current
 
 
 def attach_provenance(plan: Mutation, provenance: FeedbackProvenance) -> Mutation:
@@ -75,17 +115,22 @@ def effective_provenance(
     content: dict[str, JsonValue],
     provenance: FeedbackProvenance,
 ) -> FeedbackProvenance:
-    identities = [
-        advice.registration
-        for advice in FeedbackV2.model_validate(content).model_advice or ()
-        if advice.registration is not None
+    advice = FeedbackV2.model_validate(content).model_advice or ()
+    for task in ("relation", "criterion"):
+        identities = {
+            item.registration.model_dump_json()
+            for item in advice
+            if item.registration is not None and item.task_type == task
+        }
+        if len(identities) > 1:
+            raise ProtocolError("feedback_registered_identity_mismatch")
+    relation = [
+        item.registration
+        for item in advice
+        if item.registration is not None and item.task_type == "relation"
     ]
-    if len({identity.model_dump_json() for identity in identities}) > 1:
-        raise ProtocolError("feedback_registered_identity_mismatch")
     return (
-        provenance.model_copy(update={"registered_model": identities[0]})
-        if identities
-        else provenance
+        provenance.model_copy(update={"registered_model": relation[0]}) if relation else provenance
     )
 
 

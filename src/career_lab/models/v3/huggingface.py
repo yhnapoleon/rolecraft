@@ -16,6 +16,7 @@ from career_lab.contracts.v2.core import FileRef, ProtocolError, digest, read_fi
 
 from .core import (
     LABELS,
+    InputSize,
     abstention,
     checked_input,
     evidence_target,
@@ -103,17 +104,19 @@ class HuggingFaceCandidate:
         self.revision = "local-pretrained-untrained-heads:" + revision
         self.training_report = None
 
-    def _represent(self, item):
+    def _encode(self, item):
+        """Tokenize exactly what prediction encodes; no forward pass."""
         candidates = item.evidence.candidate_evidence
         if not candidates:
             raise ProtocolError("no_candidate_evidence")
         query = item.evidence.purpose + "\n" + item.evidence.claim + "\n" + temporal_text(item)
         bodies = [c.text + "\n" + temporal_text(item, c) for c in candidates]
+        spans = []
+        sequence_ids = offsets = None
         if self.variant == "pack":
             if not self.tokenizer.is_fast:
                 raise ProtocolError("pack_evidence_spans_require_fast_tokenizer")
             text = ""
-            spans = []
             for body in bodies:
                 start = len(text)
                 text += body
@@ -137,6 +140,15 @@ class HuggingFaceCandidate:
                 truncation=False,
                 return_tensors="pt",
             )
+        return encoded, spans, sequence_ids, offsets
+
+    def measure(self, item):
+        """Batch sequence length prediction would encode, against ``max_tokens``."""
+        encoded, *_ = self._encode(checked_input(item))
+        return InputSize(int(encoded["input_ids"].shape[1]), self.max_tokens)
+
+    def _represent(self, item):
+        encoded, spans, sequence_ids, offsets = self._encode(item)
         if encoded["input_ids"].shape[1] > self.max_tokens:
             raise ProtocolError("encoder_input_truncated")
         hidden = self.encoder(**encoded).last_hidden_state

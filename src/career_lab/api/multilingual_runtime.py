@@ -10,7 +10,7 @@ from career_lab.contracts.v2 import canonical, ProtocolError
 def build_catalog(
     factory,
     catalog_path,
-    role_model,
+    models,
     *,
     feedback_handler=None,
     store_provider=None,
@@ -22,7 +22,7 @@ def build_catalog(
     for entry in entries:
         registry, module = factory(
             Path(entry["root"]),
-            role_model,
+            models,
             feedback_handler=feedback_handler,
             store_provider=store_provider,
             scenario_archive=scenario_archive,

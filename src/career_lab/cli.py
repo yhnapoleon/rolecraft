@@ -1,7 +1,9 @@
 import argparse
 import json
+import sys
 from pathlib import Path
 
+from career_lab.contracts.v2.core import ProtocolError
 from career_lab.scenarios.loader import ScenarioLoadError, load_scenario
 
 
@@ -40,7 +42,12 @@ def main(argv: list[str] | None = None) -> int:
     for command in ("serve", "worker"):
         server = commands.add_parser(command)
         server.add_argument("--database-url", default=None)
-        server.add_argument("--provider", choices=["local", "deepseek", "openai"], default="local")
+        server.add_argument(
+            "--provider",
+            choices=["local", "deepseek", "openai", "openai_compatible"],
+            default="local",
+            help="Default for every model slot; CAREER_LAB_<SLOT>_PROVIDER overrides one slot",
+        )
         if command == "serve":
             server.add_argument("--host", default="127.0.0.1")
             server.add_argument("--port", type=int, default=8000)
@@ -78,7 +85,16 @@ def main(argv: list[str] | None = None) -> int:
         from career_lab.api.vertical_runtime import create_runtime_app
         from career_lab.jobs.worker import Worker
 
-        app = create_runtime_app(args.database_url, provider=args.provider)
+        try:
+            app = create_runtime_app(args.database_url, provider=args.provider)
+        except ProtocolError as error:
+            # Configuration refusals name only their code: no paths, values or key material.
+            print("career-lab: startup refused: " + error.code, file=sys.stderr)
+            return 2
+        if args.command == "worker":
+            # The worker makes the model calls. Serve's stderr stays the whitelisted HTTP log.
+            for line in app.state.model_slots.describe():
+                print(line, file=sys.stderr)
         if args.command == "serve":
             import uvicorn
 

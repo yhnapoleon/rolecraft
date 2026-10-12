@@ -9,6 +9,7 @@ from career_lab.contracts.v2.core import ProtocolError
 from .temporal import temporal_text
 from .core import (
     LABELS,
+    UNLIMITED,
     training_examples,
     evidence_target,
     checked_input,
@@ -50,6 +51,10 @@ class ConstantCandidate:
     def __init__(self, task_type="relation"):
         self.task_type = task_type
         self.revision = "constant-" + task_type + "-v1"
+
+    def measure(self, item):
+        checked_input(item)
+        return UNLIMITED
 
     def predict(self, item):
         item = checked_input(item)
@@ -128,6 +133,11 @@ class LinearCandidate:
             "evidence_pairs": len(pairs),
         }
         return self.training_report
+
+    def measure(self, item):
+        """Character n-gram TF-IDF has no token budget."""
+        checked_input(item)
+        return UNLIMITED
 
     def predict(self, item):
         item = checked_input(item)

@@ -313,7 +313,7 @@
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "00d873c293e378a489cf4da9e57e0cf3b3ac420c57469bcc3d2ea75605736903"
+    "sha256": "30372dc1e58ee81796f7d68b998e901fdc70ddbc8d9a20acfb59ee64db394be4"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
@@ -343,6 +343,7 @@
     "authoritative-segment-traces": "A declared trace always constrains text hash and complete dependencies, including cited explanations and history; visible citations do not bypass it. The most-specific complete trace is authoritative for a field.",
     "conditional-outcome-preview": "Optional exact-version preview requests and four exclusive outcome kinds; per-item authorized basis and registered action identifiers. Legacy request and feedback wire bytes retain fixed comparisons. Preview creation never executes business actions. Save-time rule previews are feedback on the exact saved version, listed only on its versions page and never as reviews; pages without previews retain their bytes.",
     "feedback-segment-scope": "Server-only complete input traces bind exact content hashes and dependencies per segment; fully authorized finite-scope readers retain proved text, missing or hidden dependencies degrade only affected parts.",
+    "model-assembly": "Optional registered-model identity fields: kind; task_type (relation is omitted); criteria and rubric_version (id and sha256), required for criterion registrations and absent otherwise; dataset (id, manifest sha256, label tiers); fusion components and parameters; weights_stage. FeedbackProvenance gains registered_models, recorded only when a criterion registration is configured, and support_model, recorded only when the support verifier is configured apart from the Judge. RegisteredModelAdvice gains criterion advice (any identifier on the wire, the five-label domain, rule reconciliation), relation sentence units whose aggregation counts follow the units, and explicit error codes for rule conflicts, unestablished applicability, criteria a model does not cover, rubric version mismatches and fully abstained work. Synthetic registrations may show labels and evidence as mechanism-only advice. Unset fields are omitted, so existing records, examples and wire bytes are unchanged; limited readers never receive sentence results. The runtime reads four model slots (ROLES, JUDGE, SUPPORT, ASSISTANT) from CAREER_LAB_<SLOT>_* at startup. A slot's provider, key file, base URL and model come from one layer only: its own variables when it names a provider, else the whole JUDGE slot (SUPPORT) or the whole shared configuration, so a key never reaches another provider's endpoint. Provenance records the Judge and support endpoints a slot configures (optional base_url); with no slot variable set, requests and provenance are unchanged. CAREER_LAB_MODEL_REGISTRATIONS names relation and criterion registrations (criterion is only parsed so far); setting it beside CAREER_LAB_MODEL_REGISTRATION refuses to start.",
     "native-runtime-slice": "One standard API/worker assembly; native investigation, assistant trials, resource decisions and colleague slots. Explicit failed-job refresh, no automatic model retry including expired leases, exact historical public event/source reads, real material activation in recovered role provenance. W05 r9 production evidence, atomic feedback and native callbacks are assembled with frozen advisory policies; W03 native composition remains pending.",
     "operation-readiness": "Installed and ready are distinct; closed registered operations return stable unavailable before public dispatch. Auth/delegation capabilities remain independent.",
     "original-source-protection": "test_freeze enumerates only BASE existing scenarios; no v2 baseline rewrite and no test exclusion needed.",
@@ -355,10 +356,10 @@
   },
   "openapi": {
     "path": "openapi.json",
-    "sha256": "37724695a7331c061d1578658419ff94ae449441bc2819f364f4602a2d661307"
+    "sha256": "a762b2a5a823fbadb363374f442883f787a519cfe5d0cb291e1c22e084b7534d"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-2a9777a2cb93d061dea7154fc71dfabcf748c9338f587e02003e9566950bac12",
+  "previous_contract_revision": "expansion-v3-14439473c9e226d82f513beab2e7da5c301df3efd6498255a3693f62059135ff",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -1369,7 +1370,7 @@
       "example_sha256": "d801545eb5a4ae55713c934a40ae0feec7c356b7ceb3bb0c11b176d4627e039c",
       "owner": "W01",
       "schema": "schemas/FeedbackV2.json",
-      "schema_sha256": "66f54715c83a36608d088bcd1e6b9ebda4f01a8cc5777492432b5618b802d476",
+      "schema_sha256": "a686d2f55fab03293d595370b50a19b961f21b76a04ff236985f5c38dd9d5449",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -2237,7 +2238,7 @@
       "example_sha256": "30534a704a533b28c8528d3ad3dc3e76b1f3b9674d0daa97eed1696ac1be00c4",
       "owner": "W01",
       "schema": "schemas/RegisteredModelAdvice.json",
-      "schema_sha256": "78bb319e73046c536d362f34d8e297d0d6cddb65ab2c476504b7808fc171430e",
+      "schema_sha256": "e69548f02755f5e2bc400e008c7dc95419f2f99c792ba1690329b67bcf2fd170",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -3137,7 +3138,7 @@
       "example_sha256": "42367e30cc275c43d0a3f4175a12faed1d288dceab7044f916a793ee67745959",
       "owner": "W01",
       "schema": "schemas/WorkspaceProductPage.json",
-      "schema_sha256": "dab096e2c3bece1df4adfb7e2f73dade6f17124ff5ff44bd911e7199ec916a97",
+      "schema_sha256": "6530be398b0479c096ba7f2310d1c0c24c8bd63ba1f8c2b2bb5aa3ccce0ee850",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -3202,22 +3203,22 @@
   },
   "source_files": {
     "src/career_lab/api/app.py": "724dbce95e80071580fad7891630229a9b899da3ac6ce18d556d855c4ba4d3f0",
-    "src/career_lab/api/evaluation_runtime.py": "3d44932a9160b69ef02e4072b8be0417d55eed08b9fa8f5bf4be001e01dd26c6",
+    "src/career_lab/api/evaluation_runtime.py": "98d7ddbb20bb7d23e004bce7d26a5119214320ad601160ef55fca8b79805d0a4",
     "src/career_lab/api/feedback_integration.py": "141556c752437082bc2da2d8186615f2121cf42103942d4e9f6b9f6c58633dbe",
     "src/career_lab/api/lifecycle_integration.py": "753c970349beeb4aac5edc6f58a96c19f249b4ba0fe27e55310784a93b3f64a3",
     "src/career_lab/api/modules.py": "e47c4e2c6051eb156dc06615dbf0caa28279bcbc02d7a8c5a547ecf47c70cd48",
     "src/career_lab/api/private_roles.py": "f3c8d1be8f0b85207087f4bc79687177e7a801ab01fd68b4c82090ca2b39054a",
     "src/career_lab/api/public_materials.py": "2b67e940dbe0eac60897b0d770b03b1f974f015cbcb114ab8b19402917762426",
-    "src/career_lab/api/registered_models.py": "4746212ad50a8a2c6dffa84af4cd6aa8bd188604df8316c586c5eddaa1a2f1de",
+    "src/career_lab/api/registered_models.py": "c8da6ae623d41b2091766802235972c6768968eb49788d6b419ea4b86cb9da69",
     "src/career_lab/api/reviews_v2.py": "5211b2521894cdde35971e64a624f830befc949673eee12bd0498fbe0be9ae32",
     "src/career_lab/api/role_snapshot.py": "5225127e6666c70e644e49629fa74a40411cd124b4e53d738bd5fa5db89511b1",
     "src/career_lab/api/v2_routes.py": "1d829a6949974dfc9e21f429368583b0ef3ebab120b66f1bf7b66ed7941f4483",
     "src/career_lab/api/v4_config.py": "23b5678779c9925c86e545c4b953497672895d32a6636c1e5c9f3196556ad5e4",
     "src/career_lab/api/v4_extensions.py": "a5272607a6a76663cc7f540726f1a42868ea11c7a919df925cd6860e46888607",
     "src/career_lab/api/vertical_reads.py": "c17fcdbb9d9b4821911bd98a04448f140b895df780853e9bb24e007c2384c38a",
-    "src/career_lab/api/vertical_runtime.py": "96a5341970c66b7ff0ef71755ace71654d2af918b4012e634677d6a4c21e6101",
+    "src/career_lab/api/vertical_runtime.py": "58dd164119f6f8dad0a011c8962fe41bdc3356c7ac5152d9de709cf8d68c8468",
     "src/career_lab/api/workspace_integration.py": "580d03db16bf1310e4713965501cf8fe924472d8646d6890fa85d4b30045559b",
-    "src/career_lab/cli.py": "fb94e26661446cf1c886ba7c1fb40347cdc790b5b2845645f3c1069ecd7f3e25",
+    "src/career_lab/cli.py": "8a3b8e83f93bc5bbcb041e58ac398a04b14f332a40820ad4d37f7fdf0dcbd3cd",
     "src/career_lab/contracts/__init__.py": "650246fed3d082cc58505d728f750218b601580ff7a00a03ae8e610bd9d316bc",
     "src/career_lab/contracts/actions.py": "835fbb62979891cbf97d0580e0843c2a8f97b8a8bcc08c8a01afecec36f919ac",
     "src/career_lab/contracts/base.py": "e62af2f4c8d827a994ae7f69d2022d50b5a42581d885348aab070fa407de2a77",
@@ -3225,22 +3226,22 @@
     "src/career_lab/contracts/evaluation.py": "6dc4969cf02222543fa96ddffbd4d9fd19f4813ee1f9b85ea3d193797ac4ea23",
     "src/career_lab/contracts/scenario.py": "b191244dd1356503b153abf3a31921ce7911ec19b66534378b369b35d135e3b0",
     "src/career_lab/contracts/v2/__init__.py": "a785e74095d14713af0d98565017df553f06cab46c515a8805af46a3a1c24a47",
-    "src/career_lab/contracts/v2/compatibility.py": "743d53322a06fdb51cd2614e05d7f962c6cf5afb37dbface8ebacbd8d21db26b",
+    "src/career_lab/contracts/v2/compatibility.py": "12fbc1656d6db083fa069ce5c9f049af1fc3c93a3de291e87a95fa852b6242b2",
     "src/career_lab/contracts/v2/core.py": "ae0c03efe8c5fa85b4aed4c196b9ba0a7301f705bd7082abf35e0893261210a8",
     "src/career_lab/contracts/v2/data.py": "8ff6375682f1a8e5435e3a87eba351b970234ed260d89f07ab80deb85d4aae85",
     "src/career_lab/contracts/v2/discovery.py": "71f250ef0f37028d747e349ec6fe9881e19a09b6e51f21eb8d3a8de448984358",
     "src/career_lab/contracts/v2/engineer.py": "d57e9e8a956c3b377e627f28f45f59afe9a6ed50b497181f1e78226a15d001af",
     "src/career_lab/contracts/v2/engineer_examples.py": "a315164248b834f1bea068f558e2881b95782d0693202e3ceb83f7719ecf997b",
     "src/career_lab/contracts/v2/engineer_export.py": "cb03edb975fb004f2956ec1db93a40b7ed6a1dd473b74b9c9395ca5409e15342",
-    "src/career_lab/contracts/v2/evaluation.py": "362d0f635c5eee63fbadea2f43bb73fc9ac5e654a190884dab5ed5ca2e93f44b",
+    "src/career_lab/contracts/v2/evaluation.py": "bff8ea0e6709d94464d0c0ab8a781fa2c9a77031d03bf4ac7899df8d217b118d",
     "src/career_lab/contracts/v2/examples.py": "0ae0d567f8d8d476b13e52b08f56a109b40fddf5e671fd3a4e5a10a6d88c09f9",
-    "src/career_lab/contracts/v2/export.py": "b3a0c3ebe627fbfaabd9ea8540d3188f0827696542f261c6a73c7ec145fec7c7",
+    "src/career_lab/contracts/v2/export.py": "05a41a9df23b889027398a6a0cc60ca72471f24376b32903a0f6fe4a1f243c32",
     "src/career_lab/contracts/v2/extensions.py": "cd47aa1195d1d934e67a815e9e30494aba146d6c7e64266b6be613818523b7cd",
     "src/career_lab/contracts/v2/files.py": "3b3f8e9ac47acacfcdd3052f7b0d94698ff8622c0ca34299b47a544bad048577",
     "src/career_lab/contracts/v2/legacy.py": "47a9fb0d4414326b2e05ba863ce29a905f9734b1eb881a85b41af769df5fbbd5",
-    "src/career_lab/contracts/v2/manifest_history.py": "d88c8faf5bc2ac85f64399eeca9e4d309762e76d941c707598dcb18fcb83c2b4",
-    "src/career_lab/contracts/v2/projection.py": "8bff00bfc82a24cf770edb02ae54bb1a50424cd95650e10aa4bb8e7e067d96e6",
-    "src/career_lab/contracts/v2/provenance.py": "bc20e5d2dd3226ac093ba6a2214a7a56a9db654a18cc0492e69d276734ce11ba",
+    "src/career_lab/contracts/v2/manifest_history.py": "d5d574ebbe0513a5a69886d71b3c592a4a33a123b095281ac9b7a3f2a892cd9b",
+    "src/career_lab/contracts/v2/projection.py": "de1c239f0faf7ae41c82a13c3ee380020ac288e4eafae41b683e351bb5c31e9e",
+    "src/career_lab/contracts/v2/provenance.py": "d752a89634ca3608aad3ee533c23522c592cd48e7f40a0fed37a56e515301cf1",
     "src/career_lab/contracts/v2/provider.py": "97b6f25a7ba7e93a84b77af980b00d6d371d770239cc59f6bc09ceb0ebf4994d",
     "src/career_lab/contracts/v2/requests.py": "133c37dfe570191bb5ebc4aeee970ba8948fb613983de9a37f896fc507c5c918",
     "src/career_lab/contracts/v2/research.py": "887c95fe6880db270ff1f14e9b7d0a4787b169d756d277c6b308fdac369459d5",
@@ -3250,6 +3251,8 @@
     "src/career_lab/jobs/repository.py": "583c03ea8172027b6fa7c7130a1f2747ed9405415557bebc2d912c0b49d4324f",
     "src/career_lab/jobs/worker.py": "a773253fa493e26705466c8d9e58cd9d6458b8f43db6b5f4a27940465dbad642",
     "src/career_lab/rubrics/registry.py": "2a4b32a9e641e299e7e498832ee8cb5adcd78be295dcbc885abf22e0172a2c04",
+    "src/career_lab/runtime/model_adapter.py": "afc08209084c01e5bf498152e0885fa7be3d2061993cc7c4c90c1b2067c50539",
+    "src/career_lab/runtime/model_slots.py": "2a2346bbe95eb17a902c7c00a0fe89b2347c55a54ebe2bd5603df289c32144ba",
     "src/career_lab/runtime/role_snapshot.py": "a534cc6771418b1178b3b2b85652802790ba95edd4dc6d264d2baf3bef158f28",
     "src/career_lab/storage/object_plans.py": "1fb37cc03155ba11d886772fd90f9e0fb4906294fbae4d5c3991ee840b6b6fbf",
     "src/career_lab/storage/record_invariants.py": "c3ff8e8d74466c90a41b613bef10cda5efd2efe726ee23c249406cf5e8c9fef3",

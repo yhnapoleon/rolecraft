@@ -282,9 +282,12 @@ def project_feedback_content(content, source_readable, *, limited_scope=False):
         if not text_allowed(base + "/source_snapshot_hash"):
             history["source_snapshot_hash"] = None
     for index, advice in enumerate(data.get("model_advice") or ()):
-        if not proof(f"/model_advice/{index}") or any(
-            not source_readable(ref) for ref in advice.get("citations", ())
-        ):
+        sentences = advice.get("units") or ()
+        cited = [
+            *advice.get("citations", ()),
+            *(ref for unit in sentences for ref in (unit["subject"], *unit["citations"])),
+        ]
+        if not proof(f"/model_advice/{index}") or any(not source_readable(ref) for ref in cited):
             advice.update(
                 status="unavailable",
                 label=None,
@@ -293,6 +296,9 @@ def project_feedback_content(content, source_readable, *, limited_scope=False):
                 citations=[],
                 error_code="evidence_unavailable",
             )
+            # Sentence text, per-sentence results and rule reconciliation leave with the label.
+            for name in ("units", "aggregation", "reconciliation"):
+                advice.pop(name, None)
     if not text_allowed("/business_response"):
         data["business_response"] = message
     if not text_allowed("/next_options"):
