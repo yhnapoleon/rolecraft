@@ -38,6 +38,8 @@ def feedback_provenance(
     registered_model: RegisteredModelIdentity | None = None,
     registered_models: tuple[RegisteredModelIdentity, ...] | None = None,
     support: ModelIdentity | None | Literal["same"] = "same",
+    base_url: str | None = None,
+    support_base_url: str | None = None,
 ) -> FeedbackProvenance:
     """``model`` is the Judge; ``support`` is recorded only when it differs from the Judge."""
     for adapter in (model, None if support == "same" else support):
@@ -58,7 +60,8 @@ def feedback_provenance(
         prompt_version=PROMPT_VERSION,
         provider=_provider(model),
         model="not_configured" if model is None else model.revision,
-        support_model=_support_identity(model, support),
+        support_model=_support_identity(model, support, base_url, support_base_url),
+        base_url=None if model is None else base_url,
     )
 
 
@@ -67,7 +70,10 @@ def _provider(model: ModelIdentity | None) -> str:
 
 
 def _support_identity(
-    judge: ModelIdentity | None, support: ModelIdentity | None | Literal["same"]
+    judge: ModelIdentity | None,
+    support: ModelIdentity | None | Literal["same"],
+    judge_base_url: str | None,
+    support_base_url: str | None,
 ) -> SupportModelIdentity | None:
     """Unrecorded while support follows the Judge, or while no Judge runs at all."""
     if judge is None or support == "same" or support is judge:
@@ -75,8 +81,13 @@ def _support_identity(
     current = SupportModelIdentity(
         provider=_provider(support),
         model="not_configured" if support is None else support.revision,
+        base_url=None if support is None else support_base_url,
     )
-    if (current.provider, current.model) == (_provider(judge), judge.revision):
+    if (current.provider, current.model, current.base_url) == (
+        _provider(judge),
+        judge.revision,
+        judge_base_url,
+    ):
         return None
     return current
 

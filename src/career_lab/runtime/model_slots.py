@@ -1,22 +1,33 @@
 """Per-slot model configuration, read once at startup for the server and the worker.
 
 Four slots: ROLES (the three colleagues), JUDGE (semantic Judge), SUPPORT (support
-verification, falls back to JUDGE) and ASSISTANT (knowledge-assistant generation).
-Each slot reads ``CAREER_LAB_<SLOT>_{PROVIDER,KEY_FILE,BASE_URL,MODEL,MAX_TOKENS,TIMEOUT}``;
-JUDGE and SUPPORT also read ``_INPUT_BYTES``. A value missing for SUPPORT is taken from
-JUDGE; one missing for any slot falls back to the shared ``CAREER_LAB_KEY_FILE``,
-``CAREER_LAB_BASE_URL``, ``CAREER_LAB_MODEL`` and ``--provider``, then the provider's
-defaults. With no slot variable set, every model, request and provenance matches the
-single shared configuration. Real adapters never retry; keys are read here only and are
+verification) and ASSISTANT (knowledge-assistant generation).
+
+A slot's identity (provider, key file, base URL, model) always comes from one layer,
+never a mix, so a key is only ever sent to the endpoint it was configured with:
+
+- ``CAREER_LAB_<SLOT>_PROVIDER`` set: the identity comes only from that slot's own
+  ``_KEY_FILE``, ``_BASE_URL`` and ``_MODEL``, else the provider's own defaults
+  (DeepSeek/OpenAI key file name, base URL and model);
+- unset, SUPPORT takes the whole JUDGE slot;
+- unset otherwise, the slot takes the whole shared layer: ``--provider`` with the shared
+  ``CAREER_LAB_KEY_FILE``, ``CAREER_LAB_BASE_URL`` and ``CAREER_LAB_MODEL``.
+
+Identity variables on a slot without its own provider refuse to start. Budgets
+(``_MAX_TOKENS``, ``_TIMEOUT``, JUDGE/SUPPORT ``_INPUT_BYTES``) are per slot; SUPPORT
+without its own provider takes JUDGE's budget for values it does not set. With no slot
+variable set, every model, request and provenance matches the single shared
+configuration. ``openai_compatible`` may omit a key only on a loopback host, and then
+sends no Authorization header. Real adapters never retry; keys are read here only and are
 never logged, persisted or included in errors.
 """
 
 import os
-from collections.abc import Mapping
-from dataclasses import dataclass
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Any
-from urllib.parse import urlsplit
+from typing import Any, Literal
+from urllib.parse import urlsplit, urlunsplit
 
 from career_lab.contracts.v2.core import ProtocolError, digest
 from career_lab.runtime.model_adapter import (
@@ -30,19 +41,33 @@ from career_lab.runtime.roles_v2 import LocalRoleModel
 SLOTS = ("ROLES", "JUDGE", "SUPPORT", "ASSISTANT")
 PROVIDERS = ("local", "deepseek", "openai", "openai_compatible")
 # key file, base URL, model; only the hosted providers have defaults.
-PROVIDER_DEFAULTS = {
+PROVIDER_DEFAULTS: dict[str, tuple[str, str, str]] = {
     "deepseek": ("ds.txt", "https://api.deepseek.com", "deepseek-chat"),
     "openai": ("openai.txt", "https://api.openai.com/v1", "gpt-4.1-mini"),
 }
+IDENTITY_VARIABLES = ("KEY_FILE", "BASE_URL", "MODEL")
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 DEFAULT_MAX_TOKENS = 512
 DEFAULT_TIMEOUT = 45.0
 DEFAULT_INPUT_BYTES = 64000
 
+Source = Literal["slot", "shared"]
+AdapterKey = tuple[str, str | None, str | None, str | None, int, float]
+
+
+def public_url(url: str) -> str:
+    """Scheme, host, port and path only: no user information, query or fragment."""
+    parts = urlsplit(url.rstrip("/"))
+    host = parts.hostname or ""
+    netloc = ("[" + host + "]" if ":" in host else host) + (
+        ":" + str(parts.port) if parts.port else ""
+    )
+    return urlunsplit((parts.scheme, netloc, parts.path, "", ""))
+
 
 @dataclass(frozen=True)
 class SlotConfig:
-    """One slot's resolved, non-secret configuration."""
+    """One slot's resolved, non-secret configuration and the layer its identity came from."""
 
     slot: str
     provider: str
@@ -52,6 +77,17 @@ class SlotConfig:
     max_tokens: int = DEFAULT_MAX_TOKENS
     timeout: float = DEFAULT_TIMEOUT
     input_bytes: int | None = None
+    source: Source = "shared"
+
+    @property
+    def recorded_base_url(self) -> str | None:
+        """Endpoint feedback provenance records: slot-configured identities only.
+
+        The shared layer records none, exactly as before slots existed.
+        """
+        if self.source != "slot" or self.base_url is None:
+            return None
+        return public_url(self.base_url)
 
     def fingerprint(self) -> str:
         """Digest of the non-secret fields; the key file is represented only by presence."""
@@ -99,11 +135,24 @@ class ModelSlots:
             return cls(model, None, None, None, LocalModel())
         return cls(model, model, model, model, model)
 
+    def config(self, slot: str) -> SlotConfig | None:
+        return next((config for config in self.configs if config.slot == slot), None)
+
+    def recorded_base_url(self, slot: str) -> str | None:
+        config = self.config(slot)
+        return None if config is None else config.recorded_base_url
+
     def describe(self) -> tuple[str, ...]:
         return tuple(config.describe() for config in self.configs)
 
 
-def _number(raw: str | None, default, kind, lower, upper):
+def _number(
+    raw: str | None,
+    default: float,
+    kind: Callable[[str], float],
+    lower: float,
+    upper: float,
+) -> Any:
     if raw is None:
         return default
     try:
@@ -115,33 +164,27 @@ def _number(raw: str | None, default, kind, lower, upper):
     return value
 
 
-def slot_config(slot: str, provider: str, environ: Mapping[str, str]) -> SlotConfig:
-    def value(name: str, shared: str | None = None) -> str | None:
-        names = ["CAREER_LAB_" + slot + "_" + name]
-        if slot == "SUPPORT":
-            names.append("CAREER_LAB_JUDGE_" + name)
-        if shared is not None:
-            names.append("CAREER_LAB_" + shared)
-        return next((environ[n] for n in names if environ.get(n)), None)
+def _variable(environ: Mapping[str, str], name: str) -> str | None:
+    return environ.get("CAREER_LAB_" + name) or None
 
-    chosen = value("PROVIDER") or provider
-    if chosen not in PROVIDERS:
+
+def _endpoint(
+    slot: str,
+    provider: str,
+    key_file: str | None,
+    base_url: str | None,
+    model: str | None,
+    source: Source,
+) -> SlotConfig:
+    """Validate one layer's identity; budgets are filled in by the caller."""
+    if provider not in PROVIDERS:
         raise ProtocolError("model_slot_provider_invalid", status=503)
-    max_tokens = _number(value("MAX_TOKENS"), DEFAULT_MAX_TOKENS, int, 1, 32768)
-    timeout = _number(value("TIMEOUT"), DEFAULT_TIMEOUT, float, 0.001, 120.0)
-    input_bytes = (
-        _number(value("INPUT_BYTES"), DEFAULT_INPUT_BYTES, int, 512, 16_000_000)
-        if slot in ("JUDGE", "SUPPORT")
-        else None
-    )
-    if chosen == "local":
-        return SlotConfig(
-            slot, chosen, max_tokens=max_tokens, timeout=timeout, input_bytes=input_bytes
-        )
-    default_key, default_url, default_model = PROVIDER_DEFAULTS.get(chosen, (None, None, None))
-    base_url = value("BASE_URL", "BASE_URL") or default_url
-    model = value("MODEL", "MODEL") or default_model
-    key_file = value("KEY_FILE", "KEY_FILE") or default_key
+    if provider == "local":
+        return SlotConfig(slot, provider, source=source)
+    default_key, default_url, default_model = PROVIDER_DEFAULTS.get(provider, (None, None, None))
+    key_file = key_file or default_key
+    base_url = base_url or default_url
+    model = model or default_model
     if not base_url or not model:
         raise ProtocolError("model_slot_configuration_incomplete", status=503)
     try:
@@ -151,9 +194,69 @@ def slot_config(slot: str, provider: str, environ: Mapping[str, str]) -> SlotCon
         raise ProtocolError("model_slot_value_invalid", status=503) from None
     if parts.scheme not in ("http", "https") or not host:
         raise ProtocolError("model_slot_value_invalid", status=503)
-    if key_file is None and (chosen != "openai_compatible" or host not in LOOPBACK_HOSTS):
+    if key_file is None and (provider != "openai_compatible" or host not in LOOPBACK_HOSTS):
         raise ProtocolError("model_slot_key_required", status=503)
-    return SlotConfig(slot, chosen, base_url, model, key_file, max_tokens, timeout, input_bytes)
+    return SlotConfig(slot, provider, base_url, model, key_file, source=source)
+
+
+def slot_config(
+    slot: str,
+    provider: str,
+    environ: Mapping[str, str],
+    judge: SlotConfig | None = None,
+) -> SlotConfig:
+    """Resolve one slot; SUPPORT needs the already resolved JUDGE slot."""
+    own = _variable(environ, slot + "_PROVIDER")
+    if own is None and any(_variable(environ, slot + "_" + n) for n in IDENTITY_VARIABLES):
+        raise ProtocolError("model_slot_provider_required", status=503)
+    inherits = own is None and slot == "SUPPORT"
+    if inherits:
+        if judge is None:
+            raise ValueError("SUPPORT resolves after JUDGE")
+        identity = replace(judge, slot=slot)
+    elif own is not None:
+        identity = _endpoint(
+            slot,
+            own,
+            _variable(environ, slot + "_KEY_FILE"),
+            _variable(environ, slot + "_BASE_URL"),
+            _variable(environ, slot + "_MODEL"),
+            "slot",
+        )
+    else:
+        identity = _endpoint(
+            slot,
+            provider,
+            _variable(environ, "KEY_FILE"),
+            _variable(environ, "BASE_URL"),
+            _variable(environ, "MODEL"),
+            "shared",
+        )
+    inherited = judge if inherits else None
+    max_tokens = _number(
+        _variable(environ, slot + "_MAX_TOKENS"),
+        inherited.max_tokens if inherited else DEFAULT_MAX_TOKENS,
+        int,
+        1,
+        32768,
+    )
+    timeout = _number(
+        _variable(environ, slot + "_TIMEOUT"),
+        inherited.timeout if inherited else DEFAULT_TIMEOUT,
+        float,
+        0.001,
+        120.0,
+    )
+    input_bytes = None
+    if slot in ("JUDGE", "SUPPORT"):
+        input_bytes = _number(
+            _variable(environ, slot + "_INPUT_BYTES"),
+            inherited.input_bytes if inherited and inherited.input_bytes else DEFAULT_INPUT_BYTES,
+            int,
+            512,
+            16_000_000,
+        )
+    return replace(identity, max_tokens=max_tokens, timeout=timeout, input_bytes=input_bytes)
 
 
 def configured_slots(
@@ -161,13 +264,15 @@ def configured_slots(
 ) -> ModelSlots:
     """Resolve all four slots; identically configured slots share one adapter."""
     environ = os.environ if environ is None else environ
-    configs = tuple(slot_config(slot, provider, environ) for slot in SLOTS)
-    adapters: dict[tuple, OpenAICompatibleModel] = {}
+    resolved: dict[str, SlotConfig] = {}
+    for slot in SLOTS:
+        resolved[slot] = slot_config(slot, provider, environ, resolved.get("JUDGE"))
+    adapters: dict[AdapterKey, OpenAICompatibleModel] = {}
 
     def adapter(config: SlotConfig) -> OpenAICompatibleModel | None:
-        if config.provider == "local":
+        if config.provider == "local" or config.base_url is None or config.model is None:
             return None
-        identity = (
+        key = (
             config.provider,
             config.base_url,
             config.model,
@@ -175,10 +280,10 @@ def configured_slots(
             config.max_tokens,
             config.timeout,
         )
-        if identity not in adapters:
-            key = read_key(Path(config.key_file)) if config.key_file else None
+        if key not in adapters:
+            secret = read_key(Path(config.key_file)) if config.key_file else None
             model = OpenAICompatibleModel(
-                key,
+                secret,
                 config.base_url,
                 config.model,
                 timeout=config.timeout,
@@ -186,17 +291,17 @@ def configured_slots(
                 max_tokens=config.max_tokens,
             )
             model.provider = config.provider
-            adapters[identity] = model
-        return adapters[identity]
+            adapters[key] = model
+        return adapters[key]
 
-    roles, judge, support, assistant = (adapter(config) for config in configs)
+    roles = adapter(resolved["ROLES"])
     return ModelSlots(
         roles=roles if roles is not None else LocalRoleModel(),
-        judge=judge,
-        support=support,
-        assistant=assistant,
+        judge=adapter(resolved["JUDGE"]),
+        support=adapter(resolved["SUPPORT"]),
+        assistant=adapter(resolved["ASSISTANT"]),
         legacy=roles if roles is not None else LocalModel(),
-        judge_input_bytes=configs[1].input_bytes,
-        support_input_bytes=configs[2].input_bytes,
-        configs=configs,
+        judge_input_bytes=resolved["JUDGE"].input_bytes or DEFAULT_INPUT_BYTES,
+        support_input_bytes=resolved["SUPPORT"].input_bytes or DEFAULT_INPUT_BYTES,
+        configs=tuple(resolved[slot] for slot in SLOTS),
     )

@@ -12,6 +12,7 @@ import subprocess
 import sys
 from pathlib import Path
 
+import httpx
 import pytest
 
 from career_lab.api.vertical_runtime import create_runtime_app
@@ -109,6 +110,7 @@ def test_slot_01_unset_slot_variables_keep_shared_configuration_and_main_request
     provenance = review["provenance"]
     assert (provenance["provider"], provenance["model"]) == ("openai", "qa-loopback-shared")
     assert "support_model" not in provenance and provenance["retries"] == 0
+    assert "base_url" not in provenance  # shared configuration records what main records
 
 
 @pytest.mark.parametrize("language", ["zh", "en"])
@@ -126,6 +128,8 @@ def test_slot_02_each_slot_reaches_its_own_provider_in_one_session(
             JUDGE_PROVIDER="openai_compatible",
             JUDGE_BASE_URL=judge.url,
             JUDGE_MODEL="qa-loopback-judge",
+            SUPPORT_PROVIDER="openai_compatible",
+            SUPPORT_BASE_URL=judge.url,
             SUPPORT_MODEL="qa-loopback-support",
             ASSISTANT_PROVIDER="openai_compatible",
             ASSISTANT_BASE_URL=roles.url,
@@ -156,9 +160,11 @@ def test_slot_02_each_slot_reaches_its_own_provider_in_one_session(
         "openai_compatible",
         "qa-loopback-judge",
     )
+    assert provenance["base_url"] == judge.url
     assert provenance["support_model"] == {
         "provider": "openai_compatible",
         "model": "qa-loopback-support",
+        "base_url": judge.url,
     }
     generation = assistant["jobs"][0]["effect"]["result"]["generation"]
     assert (generation["mode"], generation["provider"]) == ("llm", "openai_compatible")
@@ -189,8 +195,9 @@ def test_slot_02_each_slot_reaches_its_own_provider_in_one_session(
         environment | {"CAREER_LAB_JUDGE_MAX_TOKENS": "256"}, clean_env / "cli-changed.db"
     )
     other = [line for line in changed.stderr.splitlines() if line.startswith("career-lab model")]
-    assert other[0] == lines[0] and other[3] == lines[3]
-    assert other[1] != lines[1] and other[2] != lines[2]
+    # SUPPORT has its own provider here, so it takes nothing from JUDGE.
+    assert other[0] == lines[0] and other[2] == lines[2] and other[3] == lines[3]
+    assert other[1] != lines[1]
     for output in (first, again, changed):
         assert key not in output.stderr + output.stdout
         assert roles.url not in output.stderr
@@ -428,3 +435,171 @@ def test_key_03_keys_never_reach_logs_database_provenance_or_errors(
     with pytest.raises(C.ProtocolError) as refused:
         create_runtime_app("sqlite:///" + str(clean_env / "bad.db"), provider="local")
     assert roles_key not in str(refused.value) and roles_key not in repr(refused.value)
+
+
+@pytest.fixture
+def loopback_only(monkeypatch: pytest.MonkeyPatch) -> list[str]:
+    """Refuse any provider request that would leave this machine; record attempted hosts."""
+    real = httpx.post
+    attempted: list[str] = []
+
+    def guarded(url, *args, **kwargs):
+        host = httpx.URL(url).host
+        attempted.append(host)
+        if host not in {"127.0.0.1", "localhost", "::1"}:
+            raise AssertionError("a test provider request left the machine: " + host)
+        return real(url, *args, **kwargs)
+
+    monkeypatch.setattr(httpx, "post", guarded)
+    return attempted
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_key_04_a_shared_key_never_reaches_a_slot_with_its_own_provider(
+    clean_env: Path, monkeypatch: pytest.MonkeyPatch, loopback_only: list[str], language: str
+) -> None:
+    shared = "sk-shared" + secrets.token_hex(16)
+    with loopback(language) as qwen:
+        slots(
+            monkeypatch,
+            KEY_FILE=str(key_file(clean_env, "ds.txt", shared)),
+            JUDGE_PROVIDER="openai_compatible",
+            JUDGE_BASE_URL=qwen.url + "/v1",
+            JUDGE_MODEL="qa-loopback-qwen",
+        )
+        with runtime_session(clean_env / "runtime.db", language, "deepseek") as session:
+            configured = session.app.state.model_slots
+            review = feedback_review(session)
+    assert qwen.calls and {call.authorization for call in qwen.calls} == {None}
+    assert {call.model for call in qwen.calls} == {"qa-loopback-qwen"}
+    assert set(loopback_only) == {"127.0.0.1"}
+    assert configured.roles.base_url == "https://api.deepseek.com"
+    assert configured.judge.base_url == qwen.url + "/v1"
+    provenance = review["provenance"]
+    assert (provenance["provider"], provenance["model"], provenance["base_url"]) == (
+        "openai_compatible",
+        "qa-loopback-qwen",
+        qwen.url + "/v1",
+    )
+    assert "support_model" not in provenance
+    assert shared not in json.dumps(review)
+
+
+@pytest.mark.parametrize(
+    "url", ["https://vllm.example.org/v1", "http://10.0.0.8:8000/v1", "http://qwen.internal/v1"]
+)
+def test_key_04_an_external_openai_compatible_slot_needs_its_own_key(
+    clean_env: Path, monkeypatch: pytest.MonkeyPatch, url: str
+) -> None:
+    slots(
+        monkeypatch,
+        KEY_FILE=str(key_file(clean_env, "ds.txt", "sk-shared" + secrets.token_hex(16))),
+        JUDGE_PROVIDER="openai_compatible",
+        JUDGE_BASE_URL=url,
+        JUDGE_MODEL="qa-remote-qwen",
+    )
+    with pytest.raises(C.ProtocolError) as refused:
+        create_runtime_app("sqlite:///" + str(clean_env / "refused.db"), provider="deepseek")
+    assert refused.value.code == "model_slot_key_required"
+    slots(monkeypatch, JUDGE_KEY_FILE=str(key_file(clean_env, "qwen.key", "qa-qwen-key-0001")))
+    app = create_runtime_app("sqlite:///" + str(clean_env / "keyed.db"), provider="deepseek")
+    try:
+        assert app.state.model_slots.judge.base_url == url
+    finally:
+        app.state.store.close()
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_key_04_a_support_provider_takes_nothing_from_the_judge_slot(
+    clean_env: Path, monkeypatch: pytest.MonkeyPatch, loopback_only: list[str], language: str
+) -> None:
+    support_key = "sk-support" + secrets.token_hex(16)
+    with loopback(language) as qwen:
+        qwen.insufficient = True  # the Judge cites nothing, so the hosted verifier is never called
+        slots(
+            monkeypatch,
+            JUDGE_PROVIDER="openai_compatible",
+            JUDGE_BASE_URL=qwen.url,
+            JUDGE_MODEL="qa-loopback-qwen",
+            SUPPORT_PROVIDER="deepseek",
+            SUPPORT_KEY_FILE=str(key_file(clean_env, "support.key", support_key)),
+        )
+        with runtime_session(clean_env / "runtime.db", language, "local") as session:
+            configured = session.app.state.model_slots
+            review = feedback_review(session)
+    assert (configured.support.provider, configured.support.base_url) == (
+        "deepseek",
+        "https://api.deepseek.com",
+    )
+    assert configured.support.revision == "deepseek-chat"
+    assert set(qwen.kinds()) == {"judge"} and set(loopback_only) == {"127.0.0.1"}
+    assert {call.authorization for call in qwen.calls} == {None}
+    assert review["provenance"]["support_model"] == {
+        "provider": "deepseek",
+        "model": "deepseek-chat",
+        "base_url": "https://api.deepseek.com",
+    }
+    assert review["provenance"]["base_url"] == qwen.url
+    slots(
+        monkeypatch, BASE_URL="http://127.0.0.1:9/v1", MODEL="qa-shared", ROLES_PROVIDER="deepseek"
+    )
+    slots(monkeypatch, ROLES_KEY_FILE=str(clean_env / "support.key"))
+    app = create_runtime_app(
+        "sqlite:///" + str(clean_env / "roles.db"), provider="openai_compatible"
+    )
+    try:
+        roles = app.state.model_slots.roles
+        assert (roles.base_url, roles.revision) == ("https://api.deepseek.com", "deepseek-chat")
+        assistant = app.state.model_slots.assistant
+        assert (assistant.base_url, assistant.revision) == ("http://127.0.0.1:9/v1", "qa-shared")
+    finally:
+        app.state.store.close()
+
+
+@pytest.mark.parametrize("language", ["zh", "en"])
+def test_slot_06_support_inherits_the_whole_judge_slot_and_provenance_matches_requests(
+    clean_env: Path, monkeypatch: pytest.MonkeyPatch, language: str
+) -> None:
+    key = "qa-judge-" + secrets.token_hex(12)
+    with loopback(language) as judge:
+        slots(
+            monkeypatch,
+            KEY_FILE=str(key_file(clean_env, "shared.key", "sk-shared" + secrets.token_hex(16))),
+            JUDGE_PROVIDER="openai_compatible",
+            JUDGE_BASE_URL=judge.url,
+            JUDGE_MODEL="qa-loopback-judge",
+            JUDGE_KEY_FILE=str(key_file(clean_env, "judge.key", key)),
+            JUDGE_MAX_TOKENS="300",
+        )
+        with runtime_session(clean_env / "runtime.db", language, "local") as session:
+            configured = session.app.state.model_slots
+            review = feedback_review(session)
+    assert configured.support is configured.judge
+    assert {"judge", "support"} <= set(judge.kinds())
+    assert {(c.model, c.max_tokens, c.authorization) for c in judge.calls} == {
+        ("qa-loopback-judge", 300, "Bearer " + key)
+    }
+    provenance = review["provenance"]
+    recorded = (provenance["provider"], provenance["model"], provenance["base_url"])
+    assert recorded == ("openai_compatible", "qa-loopback-judge", judge.url)
+    assert "support_model" not in provenance
+
+
+@pytest.mark.parametrize(
+    "values",
+    [
+        {"SUPPORT_MODEL": "qa-support"},
+        {"SUPPORT_BASE_URL": "http://127.0.0.1:9"},
+        {"SUPPORT_KEY_FILE": "support.key"},
+        {"JUDGE_MODEL": "qa-judge"},
+        {"ROLES_BASE_URL": "http://127.0.0.1:9"},
+        {"ASSISTANT_KEY_FILE": "assistant.key"},
+    ],
+)
+def test_slot_06_identity_variables_need_their_own_slot_provider(
+    clean_env: Path, monkeypatch: pytest.MonkeyPatch, values: dict[str, str]
+) -> None:
+    slots(monkeypatch, **values)
+    with pytest.raises(C.ProtocolError) as refused:
+        create_runtime_app("sqlite:///" + str(clean_env / "refused.db"), provider="local")
+    assert refused.value.code == "model_slot_provider_required"

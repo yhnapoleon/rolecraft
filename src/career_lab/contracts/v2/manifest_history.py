@@ -752,10 +752,14 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "mechanism-only advice. Unset fields are omitted, so existing records, examples and "
             "wire bytes are unchanged; limited readers never receive sentence results. The "
             "runtime reads four model slots (ROLES, JUDGE, SUPPORT, ASSISTANT) from "
-            "CAREER_LAB_<SLOT>_* at startup, SUPPORT falling back to JUDGE and every slot to "
-            "the shared provider variables; with no slot variable set, requests and provenance "
-            "are unchanged. CAREER_LAB_MODEL_REGISTRATIONS names relation and criterion "
-            "registrations; setting it beside CAREER_LAB_MODEL_REGISTRATION refuses to start."
+            "CAREER_LAB_<SLOT>_* at startup. A slot's provider, key file, base URL and model "
+            "come from one layer only: its own variables when it names a provider, else the "
+            "whole JUDGE slot (SUPPORT) or the whole shared configuration, so a key never "
+            "reaches another provider's endpoint. Provenance records the Judge and support "
+            "endpoints a slot configures (optional base_url); with no slot variable set, "
+            "requests and provenance are unchanged. CAREER_LAB_MODEL_REGISTRATIONS names "
+            "relation and criterion registrations (criterion is only parsed so far); setting it "
+            "beside CAREER_LAB_MODEL_REGISTRATION refuses to start."
         },
     },
 )

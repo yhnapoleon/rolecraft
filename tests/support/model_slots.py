@@ -65,7 +65,8 @@ def request_kind(payload: dict) -> str:
     return "role"
 
 
-def reply(payload: dict, language: str) -> str:
+def reply(payload: dict, language: str, *, insufficient: bool = False) -> str:
+    """``insufficient`` makes the Judge cite nothing, so no support check is ever sent."""
     kind = request_kind(payload)
     messages = payload["messages"]
     if kind == "assistant":
@@ -98,6 +99,8 @@ def reply(payload: dict, language: str) -> str:
         candidates = [c["id"] for c in data.get("candidate_evidence", [])]
         bound = data.get("rule_bound") or {}
         label = bound.get("upper") or "PARTIAL"
+        if insufficient:
+            candidates = []
         return json.dumps(
             {
                 "criterion": data["criterion"],
@@ -132,6 +135,7 @@ class LoopbackProvider:
     language: str
     calls: list[Call] = field(default_factory=list)
     failure: str | None = None
+    insufficient: bool = False
     server: ThreadingHTTPServer | None = None
 
     @property
@@ -164,7 +168,7 @@ def loopback(language: str) -> Iterator[LoopbackProvider]:
                 body = b'{"error": "scripted failure"}'
                 self.send_response(503)
             else:
-                content = reply(payload, provider.language)
+                content = reply(payload, provider.language, insufficient=provider.insufficient)
                 body = json.dumps(
                     {
                         "choices": [{"message": {"content": content}}],
