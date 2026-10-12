@@ -30,7 +30,7 @@ from career_lab.experiments.v3.training.freeze import (
 
 from .bundle import json_bytes, sha
 from .core import LABELS
-from .registry import describe_registration
+from .registry import describe_registration, load_registration
 from .return_data import (
     FIXTURE_STATUS,
     SealedManifest,
@@ -308,7 +308,10 @@ def open_held_out_test(
     if record_path.exists() or record_path.is_symlink():
         raise C.ProtocolError("held_out_test_already_opened", status=403)
     # The record must live in the freeze folder itself, never behind a link to elsewhere.
-    if any(folder.is_symlink() for folder in (freeze_root / RECORD_FOLDER, record_path.parent)):
+    if any(
+        folder.is_symlink() or (folder.exists() and not folder.is_dir())
+        for folder in (freeze_root / RECORD_FOLDER, record_path.parent)
+    ):
         raise C.ProtocolError("held_out_record_location_invalid", status=403)
     manifest = read_sealed(Path(dataset_root), dataset_hash)
     if manifest.status == FIXTURE_STATUS:
@@ -338,6 +341,8 @@ def open_held_out_test(
     if C.read_file(freeze_root, candidate.evaluation) != policy:
         raise C.ProtocolError("held_out_review_policy_mismatch", status=403)
     summary = describe_registration(registry_root, registration)
+    # The model must load here (files, runtime pins, optional extra) before the opening.
+    load_registration(registry_root, registration)
     check_returned_rows(
         returned,
         strict_json(declaration).get("model_revision"),

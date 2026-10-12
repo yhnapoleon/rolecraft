@@ -11,7 +11,12 @@ from career_lab.experiments.v3.training.review import review_registered
 from career_lab.experiments.v3.training.selection import SelectionPolicy
 
 from .bundle import sha
-from .encoder_artifact import file_map, validate_return_identity, verify_file
+from .encoder_artifact import (
+    file_map,
+    validate_encoder_return_identity,
+    validate_return_identity,
+    verify_file,
+)
 from .ensemble import select_alpha
 from .held_out import HeldOutOpening, HeldOutRequest, open_held_out_test
 from .registration import RegistrationSummary
@@ -38,12 +43,21 @@ def reload_return(
         return {"status": "blocked_missing_registration"}
     if registry_root is None or registration_path is None or registration_hash is None:
         raise C.ProtocolError("return_registration_identity_required")
-    review = review_registered(
-        registry_root,
-        C.FileRef(path=registration_path, sha256=registration_hash),
-        dataset.examples,
-        held_out_opening=held_out_opening,
-    )
+    ref = C.FileRef(path=registration_path, sha256=registration_hash)
+    try:
+        review = review_registered(
+            registry_root, ref, dataset.examples, held_out_opening=held_out_opening
+        )
+    except C.ProtocolError as error:
+        if error.code != RUNTIME_UNAVAILABLE or held_out_opening is not None:
+            raise
+        return {
+            "status": "blocked_encoder_runtime_unavailable",
+            "registration": describe_registration(registry_root, ref).identity(),
+            "tolerance": None,
+            "mismatched_record_ids": [],
+            "comparison": "not_run_optional_encoder_runtime_missing",
+        }
     tolerance = comparison_tolerance(review["model_kinds"])
     mismatches, largest = [], 0.0
     for entry in review["predictions"]:
@@ -72,19 +86,19 @@ TRAINED_DECLARATION = {
     "test_used_for_selection": False,
 }
 # The encoder return's untrained-heads stage declares that nothing was trained or selected
-# (docs/data/return-v3/encoder-return.md); only a synthetic registration may use it.
-UNTRAINED_HEADS_DECLARATION = {
-    "training_partitions": [],
-    "selection_partition": None,
-    "test_used_for_selection": False,
-}
+# (docs/data/return-v3/encoder-return.md); only a synthetic registration may use it, and the
+# encoder protocol's own check decides whether the declaration is exact.
+UNTRAINED_STAGE = "pretrained_untrained_heads"
+# Loading an encoder needs the optional extra; without it a dev review reports the reload
+# as blocked (a test opening checks loading before its record instead).
+RUNTIME_UNAVAILABLE = "pretrained_encoder_dependencies_unavailable"
 
 
 def untrained_heads(registration: RegistrationSummary | None) -> bool:
     return (
         registration is not None
         and registration.scope == "synthetic_fixture"
-        and registration.weights_stage == "pretrained_untrained_heads"
+        and registration.weights_stage == UNTRAINED_STAGE
     )
 
 
@@ -100,7 +114,8 @@ def inspect_return_checkpoint(
     review does not compare it with the test predictions it was given.
 
     The selection declaration must be the trained one, except that a synthetic registration
-    of untrained heads must carry exactly the untrained-heads declaration instead."""
+    of untrained heads must carry exactly the encoder protocol's untrained-heads declaration
+    (``validate_encoder_return_identity``) instead."""
     if path is None:
         return {
             "status": "not_supplied",
@@ -110,22 +125,22 @@ def inspect_return_checkpoint(
     manifest = strict_json(path.read_bytes())
     if not isinstance(manifest, dict):
         raise C.ProtocolError("model_return_protocol_invalid")
-    if untrained_heads(registration):
-        if any(
-            key not in manifest or manifest[key] != value
-            for key, value in UNTRAINED_HEADS_DECLARATION.items()
-        ):
-            raise C.ProtocolError("model_return_selection_contaminated", status=403)
+    untrained = untrained_heads(registration)
+    if untrained:
+        if manifest.get("weights_stage") != UNTRAINED_STAGE:
+            raise C.ProtocolError("return_checkpoint_identity_mismatch")
+        validate_encoder_return_identity(manifest, scope=registration.scope)
     elif any(
         key in manifest and manifest[key] != value for key, value in TRAINED_DECLARATION.items()
     ):
         raise C.ProtocolError("model_return_selection_contaminated", status=403)
-    try:
-        validate_return_identity(manifest)
-    except C.ProtocolError as error:
-        if error.code not in {"model_return_incomplete", "model_return_identity_incomplete"}:
-            raise
-        return {"status": "incomplete", "candidate_eligible": False, "missing": [error.code]}
+    else:
+        try:
+            validate_return_identity(manifest)
+        except C.ProtocolError as error:
+            if error.code not in {"model_return_incomplete", "model_return_identity_incomplete"}:
+                raise
+            return {"status": "incomplete", "candidate_eligible": False, "missing": [error.code]}
     if (
         manifest["dataset_id"] != dataset.dataset_id
         or manifest["dataset_manifest_sha256"] != dataset.manifest_hash
@@ -149,6 +164,14 @@ def inspect_return_checkpoint(
     if manifest["predictions_file"] in files and dataset.split == "dev":
         if sha(predictions_path.read_bytes()) != files[manifest["predictions_file"]]:
             raise C.ProtocolError("return_checkpoint_predictions_mismatch")
+    if untrained:
+        return {
+            "status": "untrained_heads_declared",
+            "candidate_eligible": False,
+            "weights_stage": UNTRAINED_STAGE,
+            "missing": ["supervised_training", *missing[1:]],
+            "producer_commands_executed": False,
+        }
     return {
         "status": "declared_files_checked",
         "candidate_eligible": False,

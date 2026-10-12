@@ -44,7 +44,9 @@ v3 行与 fixture v2 行字段相同，只把版本写成 3：
 
 任一条不符即 `reload.status=producer_mismatch`，报告 `rejected`、退出码 2；在容差内的概率差只记进 `max_probability_deviation`。`reload.comparison` 取值为 `probabilities_within_absolute_tolerance_labels_and_evidence_sets_exact`（旧版为逐位相等的 `exact_probabilities_labels_and_evidence_sets`）。
 
-负责方清单的选择声明须为 `training_partitions=["train"]`、`selection_partition="dev"`、`test_used_for_selection=false`。唯一例外：注册为 `synthetic_fixture` 且 `weights_stage=pretrained_untrained_heads`（编码器回传的「预训练权重、头未训练」阶段）时，清单必须恰为 `training_partitions=[]`、`selection_partition=null`、`test_used_for_selection=false`；其他取值、其他注册与不给注册都照旧判 `model_return_selection_contaminated`。
+负责方清单的选择声明须为 `training_partitions=["train"]`、`selection_partition="dev"`、`test_used_for_selection=false`。唯一例外：注册为 `synthetic_fixture` 且 `weights_stage=pretrained_untrained_heads`（编码器回传的「预训练权重、头未训练」阶段）时，清单必须写 `weights_stage=pretrained_untrained_heads`（否则 `return_checkpoint_identity_mismatch`），并由编码器回传规格的同一检查（`validate_encoder_return_identity`）核对：`completed=false`、`training_partitions=[]`、`selection_partition=null`、`test_used_for_selection=false`，不符为 `untrained_heads_declaration_invalid`；报告 `checkpoint.status=untrained_heads_declared`。其他注册与不给注册时，这样的清单照旧判 `model_return_selection_contaminated`。
+
+注册是编码器而本机没有编码器可选依赖时，dev 复核照常给出格式与指标，`reload.status=blocked_encoder_runtime_unavailable`、`tolerance=null`，不算通过也不算拒绝；test 打开则在留痕前就因此拒绝。
 
 ## 4. 融合选择复算（`--fusion-selection`）
 

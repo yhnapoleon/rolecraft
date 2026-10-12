@@ -23,8 +23,14 @@ from career_lab.datasets.v3.common import json_bytes, sha
 from career_lab.datasets.v3.export import ExportUnit, FrozenSnapshot, SourceObject, export_snapshot
 from career_lab.datasets.v3.labeling import AnnotationBatch
 from career_lab.experiments.v3.training.freeze import freeze_selection
-from career_lab.models.v3.held_out import HeldOutOpening, prepare_test_freeze, review_policy_bytes
+from career_lab.models.v3.held_out import (
+    HeldOutOpening,
+    opening_record_path,
+    prepare_test_freeze,
+    review_policy_bytes,
+)
 from career_lab.models.v3.return_data import load_return_dataset
+from career_lab.models.v3.registry import register_bundle
 from tests.integration.test_model_return_verification import (
     LEFT_WEIGHTS,
     linear_bundle,
@@ -33,6 +39,11 @@ from tests.integration.test_model_return_verification import (
     register,
 )
 from tests.unit.test_w07_pipeline import BASE, FakeModel
+from tests.unit.test_w08_encoder_registration import (
+    DECLARED_RUNTIME,
+    encoder_return,
+    write_manifest,
+)
 from tests.unit.test_w07_pipeline import package as evidence_package
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -1227,6 +1238,13 @@ def test_held_05_an_unreadable_prediction_file_cannot_spend_the_opening(
         audit_log=log,
     )
     assert response.returncode == 2, response.stdout
+    expected = {
+        "missing": "FileNotFoundError",
+        "not_json": "JSONDecodeError",
+        "duplicate_record": "return_record_identity_invalid",
+        "two_revisions": "return_prediction_revision_mismatch",
+    }
+    assert json.loads(response.stdout)["error"] == expected[fault]
     assert not opening.record.exists()
     assert not opened_paths(log) & held_out_files(opening.package)
 
@@ -1616,3 +1634,91 @@ def test_held_01_split_names_and_the_sealed_flag_are_checked(
     predictions = gold_predictions(package, "dev", tmp_path / "predictions.jsonl")
     status, report = verify(package, predictions)
     assert status == 2 and report["error"] == code
+
+
+def test_held_08_a_registration_that_cannot_load_here_is_refused_before_the_record(
+    tmp_path: Path,
+) -> None:
+    """An encoder registration in an environment without the optional extra: the opening
+    must not be spent on a model that cannot be reloaded."""
+    package = build_package(tmp_path)
+    producer = tmp_path / "encoder-return"
+    ref = encoder_return(producer, dataset_id="rolecraft-synthetic-v3-mechanism")
+    manifest = json.loads((producer / ref.path).read_bytes())
+    manifest["dataset_manifest_sha256"] = package.checksum
+    ref = write_manifest(producer, manifest)
+    registry = tmp_path / "registry"
+    registration = register_bundle(registry, producer, ref, scope="synthetic_fixture")
+    predictions = gold_predictions(package, "test", tmp_path / "return" / "predictions.test.jsonl")
+    rows = jsonl(predictions)
+    for row in rows:
+        row["model_revision"] = manifest["model_revision"]
+    write_jsonl(predictions, rows)
+    prepared = prepare_test_freeze(
+        tmp_path / "freeze",
+        dataset_root=package.root,
+        dataset_hash=package.checksum,
+        registry_root=registry,
+        registration=registration,
+        checkpoint_manifest=producer / ref.path,
+        source=C.SourceIdentity(
+            base_commit="b" * 40,
+            source_digest=C.digest("synthetic producer source"),
+            overlay=C.FileRef(path="source/freeze-record.json", sha256=sha(SOURCE_RECORD)),
+            dependency_locks=(C.FileRef(path="source/requirements.lock", sha256=sha(LOCK)),),
+        ),
+        source_files={"source/freeze-record.json": SOURCE_RECORD, "source/requirements.lock": LOCK},
+        candidate_id="synthetic-encoder-candidate",
+        budget=C.Budget(model_calls=0, actions=0, wall_seconds=600),
+    )
+    campaign = approve(prepared.root, prepared.candidate, package)
+    opening = Opening(
+        package,
+        registry,
+        registration,
+        producer / ref.path,
+        predictions,
+        prepared.root / prepared.freeze.path,
+        campaign,
+    )
+    log = tmp_path / "encoder.log"
+    env = dict(os.environ, PYTHONPATH=str(DECLARED_RUNTIME))
+    response = run_module(
+        REGISTRY_CLI,
+        "verify-return",
+        "--dataset-root",
+        package.root,
+        "--dataset-hash",
+        package.checksum,
+        "--predictions",
+        predictions,
+        *opening.args(),
+        audit_log=log,
+        env=env,
+    )
+    report = json.loads(response.stdout)
+    assert response.returncode == 2, report
+    assert report["error"] == "pretrained_encoder_dependencies_unavailable"
+    assert not opening.record.exists()
+    assert not opened_paths(log) & held_out_files(package)
+
+
+def test_held_05_the_record_folder_cannot_be_a_plain_file(tmp_path: Path) -> None:
+    opening = prepared_opening(tmp_path)
+    (opening.freeze.parent / "held-out").write_text("not a folder")
+    report = refused(opening, tmp_path, *opening.args())
+    assert report["error"] == "held_out_record_location_invalid"
+
+
+def test_held_04_the_record_location_needs_a_dataset_hash(tmp_path: Path) -> None:
+    with pytest.raises(C.ProtocolError) as error:
+        opening_record_path(tmp_path, "not-a-manifest-hash")
+    assert error.value.code == "held_out_dataset_identity_invalid"
+
+
+def test_held_01_a_package_without_dev_has_no_dev_to_review(tmp_path: Path) -> None:
+    package = build_package(tmp_path, tuple(row for row in RECORDS if row[0] == "train"))
+    predictions = tmp_path / "predictions.jsonl"
+    predictions.write_text("")
+    status, report = verify(package, predictions)
+    assert status == 2 and report["error"] == "return_partition_missing"

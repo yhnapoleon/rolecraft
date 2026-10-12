@@ -19,6 +19,11 @@ from career_lab.models.v3.registration import RegistrationSummary
 from career_lab.models.v3.registry import load_registration, register_bundle
 from career_lab.models.v3.return_data import load_return_dataset
 from career_lab.models.v3.return_verification import inspect_return_checkpoint
+from tests.unit.test_w08_encoder_registration import (
+    deny_encoder_imports,
+    encoder_return,
+    write_manifest,
+)
 from tests.unit.test_w08_models import examples
 
 
@@ -979,33 +984,57 @@ def test_fsel_01_needs_a_registered_fusion(return_case, capsys, tmp_path) -> Non
     assert code == 2 and result["error"] == "fusion_selection_requires_fusion_registration"
 
 
-UNTRAINED_HEADS = {"training_partitions": [], "selection_partition": None}
+# The untrained-heads declaration as the 146 export writes it (encoder-return.md §2).
+UNTRAINED_HEADS = {
+    "weights_stage": "pretrained_untrained_heads",
+    "completed": False,
+    "training_partitions": [],
+    "selection_partition": None,
+    "test_used_for_selection": False,
+}
 
 
 @pytest.mark.parametrize(
-    ("scope", "stage", "declaration", "allowed"),
+    ("scope", "stage", "change", "code"),
     [
-        ("synthetic_fixture", "pretrained_untrained_heads", UNTRAINED_HEADS, True),
-        ("external_candidate", "pretrained_untrained_heads", UNTRAINED_HEADS, False),
-        ("synthetic_fixture", "supervised_finetuned", UNTRAINED_HEADS, False),
-        ("synthetic_fixture", None, UNTRAINED_HEADS, False),
+        ("synthetic_fixture", "pretrained_untrained_heads", {}, None),
+        (
+            "external_candidate",
+            "pretrained_untrained_heads",
+            {},
+            "model_return_selection_contaminated",
+        ),
+        ("synthetic_fixture", "supervised_finetuned", {}, "model_return_selection_contaminated"),
+        ("synthetic_fixture", None, {}, "model_return_selection_contaminated"),
         (
             "synthetic_fixture",
             "pretrained_untrained_heads",
-            {"training_partitions": [], "selection_partition": "dev"},
-            False,
+            {"selection_partition": "dev"},
+            "untrained_heads_declaration_invalid",
         ),
         (
             "synthetic_fixture",
             "pretrained_untrained_heads",
-            {"training_partitions": ["train"], "selection_partition": None},
-            False,
+            {"training_partitions": ["train"]},
+            "untrained_heads_declaration_invalid",
         ),
         (
             "synthetic_fixture",
             "pretrained_untrained_heads",
-            {**UNTRAINED_HEADS, "test_used_for_selection": True},
-            False,
+            {"test_used_for_selection": True},
+            "untrained_heads_declaration_invalid",
+        ),
+        (
+            "synthetic_fixture",
+            "pretrained_untrained_heads",
+            {"completed": True},
+            "untrained_heads_declaration_invalid",
+        ),
+        (
+            "synthetic_fixture",
+            "pretrained_untrained_heads",
+            {"weights_stage": None},
+            "return_checkpoint_identity_mismatch",
         ),
     ],
     ids=[
@@ -1016,26 +1045,42 @@ UNTRAINED_HEADS = {"training_partitions": [], "selection_partition": None}
         "dev-selection",
         "train-partition",
         "test-used",
+        "claims-complete",
+        "manifest-without-stage",
     ],
 )
 def test_ret_03_untrained_heads_may_declare_no_training_only_when_synthetic(
-    return_case, tmp_path, scope, stage, declaration, allowed
+    return_case, tmp_path, scope, stage, change, code
 ) -> None:
     root, checksum, predictions = return_case
     dataset = load_return_dataset(root, checksum, "dev")
+    manifest = (
+        {
+            "template": False,
+            "return_protocol": "rolecraft-label-evidence-v2",
+            "task_type": "relation",
+            "label_order": ["SUPPORTED", "CONTRADICTED", "INSUFFICIENT"],
+            "dataset_id": "synthetic-return",
+            "dataset_manifest_sha256": checksum,
+            "model_revision": "untrained-heads",
+            "framework": "pytorch",
+            "framework_version": "synthetic",
+            "load_and_predict_command": "metadata only, never executed",
+            "training_notes_file": "notes.md",
+            "predictions_file": "predictions.dev.jsonl",
+            "evidence_selection_implemented": True,
+            "evidence_selection_required": True,
+        }
+        | UNTRAINED_HEADS
+        | change
+    )
     manifest = {
-        "template": False,
-        "completed": False,
-        "return_protocol": "rolecraft-label-evidence-v2",
-        "task_type": "relation",
-        "label_order": ["SUPPORTED", "CONTRADICTED", "INSUFFICIENT"],
-        "dataset_id": "synthetic-return",
-        "dataset_manifest_sha256": checksum,
-        "model_revision": "untrained-heads",
-        "evidence_selection_implemented": True,
-        "evidence_selection_required": True,
-        "test_used_for_selection": False,
-    } | declaration
+        key: value
+        for key, value in manifest.items()
+        if value is not None or key == "selection_partition"
+    }
+    (tmp_path / "weights.bin").write_bytes(b"pretrained weights, heads not trained")
+    manifest["checkpoint_files"] = {"weights.bin": sha((tmp_path / "weights.bin").read_bytes())}
     path = tmp_path / "checkpoint-manifest.json"
     path.write_text(json.dumps(manifest))
     registration = RegistrationSummary(
@@ -1047,21 +1092,67 @@ def test_ret_03_untrained_heads_may_declare_no_training_only_when_synthetic(
         kind="huggingface_encoder",
         weights_stage=stage,
     )
-    if allowed:
+    if code is None:
         result = inspect_return_checkpoint(
             path, dataset, "untrained-heads", predictions, registration=registration
         )
+        assert result["status"] == "untrained_heads_declared"
         assert result["candidate_eligible"] is False
+        assert result["weights_stage"] == "pretrained_untrained_heads"
     else:
         with pytest.raises(C.ProtocolError) as error:
             inspect_return_checkpoint(
                 path, dataset, "untrained-heads", predictions, registration=registration
             )
-        assert error.value.code == "model_return_selection_contaminated"
+        assert error.value.code == code
     # Without a registration nothing is relaxed.
     with pytest.raises(C.ProtocolError) as error:
         inspect_return_checkpoint(path, dataset, "untrained-heads", predictions)
     assert error.value.code == "model_return_selection_contaminated"
+
+
+def test_ret_03_a_real_untrained_heads_encoder_return_passes_the_dev_check_only_when_synthetic(
+    return_case, capsys, tmp_path, monkeypatch
+) -> None:
+    """146's export shape, registered for real; torch is absent, so reloading is blocked."""
+    root, checksum, path = return_case
+    producer = tmp_path / "encoder-return"
+    ref = encoder_return(
+        producer, weights_stage="pretrained_untrained_heads", dataset_id="synthetic-return"
+    )
+    manifest = json.loads((producer / ref.path).read_bytes())
+    assert manifest["weights_stage"] == "pretrained_untrained_heads"
+    manifest["dataset_manifest_sha256"] = checksum
+    ref = write_manifest(producer, manifest)
+    with pytest.raises(C.ProtocolError) as error:
+        register_bundle(tmp_path / "external", producer, ref, scope="external_candidate")
+    assert error.value.code == "untrained_heads_require_synthetic_scope"
+    registry = tmp_path / "registry"
+    registration = register_bundle(registry, producer, ref, scope="synthetic_fixture")
+    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    for row in rows:
+        row["model_revision"] = manifest["model_revision"]
+    write_rows(path, rows)
+    deny_encoder_imports(monkeypatch)
+    checkpoint = producer / ref.path
+    code, result = invoke(
+        return_case,
+        capsys,
+        "--checkpoint-manifest",
+        str(checkpoint),
+        *registration_args(registry, registration),
+    )
+    assert code == 0, result
+    assert result["status"] == "partial"
+    assert result["checkpoint"]["status"] == "untrained_heads_declared"
+    assert result["checkpoint"]["candidate_eligible"] is False
+    assert result["reload"]["status"] == "blocked_encoder_runtime_unavailable"
+    assert result["reload"]["registration"]["weights_stage"] == "pretrained_untrained_heads"
+    assert result["training"]["status"] == "mechanism_only"
+    assert result["scope"] == "synthetic_fixture" and result["quality_validated"] is False
+    # The same declaration without its synthetic registration stays contaminated.
+    code, result = invoke(return_case, capsys, "--checkpoint-manifest", str(checkpoint))
+    assert code == 2 and result["error"] == "model_return_selection_contaminated"
 
 
 def test_tol_01_a_label_or_status_change_inside_the_tolerance_is_still_a_mismatch(
