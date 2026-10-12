@@ -695,7 +695,7 @@ def test_rt_01_only_inference_closure_changes_invalidate_a_registration(tmp_path
             stream.write("\n# RT-01: product change outside the inference closure\n")
     code, result = predict("after-unrelated")
     assert (code, result.get("status")) == (0, "completed"), result
-    for closure in ("models/v3/linear.py", "contracts/v2/data.py"):
+    for closure in ("models/v3/linear.py", "models/linear.py", "contracts/v2/data.py"):
         with (source / closure).open("a") as stream:
             stream.write("\n# RT-01: inference closure change\n")
         code, result = predict("after-" + closure)

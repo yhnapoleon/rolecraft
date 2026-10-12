@@ -2,7 +2,7 @@
 
 融合模型由我方登记：负责方交回两个分量（线性回传、编码器回传任意组合，各自按其格式回传）和一份在 dev 上做出的选择记录，我方用两个已登记的分量加这份记录构建融合注册，不需要负责方另交融合权重。负责方自己的融合 dev 逐条预测可以照常回传，供复核比对。
 
-**范围**：只收关系任务。融合不能嵌套（分量不能是融合），我方旧的 W01 ModelBundle 之间的融合仍走原 `save_fusion_bundle` 路径。登记只核身份与结构，不重算指标；dev 网格复算由回传复核（`verify-return --fusion-selection`）负责。
+**范围**：只收关系任务。融合不能嵌套（分量不能是融合），我方旧的 W01 ModelBundle 之间的融合仍走原 `save_fusion_bundle` 路径。登记只核身份与结构，不重算指标；dev 网格复算由回传复核（`verify-return --fusion-selection`）负责；**该参数由回传复核 v3（147）提供，本分支尚未包含**。
 
 ## 1. 融合怎样计算
 
@@ -110,3 +110,10 @@ uv run --locked python -m career_lab.models.v3.registry_cli describe \
 | 选中点不在网格内 | `fusion_selection_alpha_invalid` |
 | 端点 alpha 却声称有融合收益 | `fusion_selection_gain_claim_invalid` |
 | 分量注册文件被改、被删 | `file_hash_mismatch`、`file_missing` |
+| `--scope` 不是 `synthetic_fixture` 或 `external_candidate` | `registration_scope_required` |
+| 加载时：注册项协议或 scope 不认识 | `model_registration_protocol_invalid` |
+| 加载时：注册项被改成计分或已验证质量 | `registration_cannot_promote_scoring_or_quality` |
+| 加载时：注册 id、路径与内容不符 | `model_registration_identity_mismatch` |
+| 加载时：推理闭包源码或依赖版本已变 | `registered_inference_runtime_changed` |
+| 加载时：分量的 id、类型或 revision 与登记时不同 | `fusion_component_identity_mismatch` |
+| 加载时：按现存分量与选择记录重建的注册项与登记时不同 | `registered_model_identity_mismatch` |

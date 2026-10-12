@@ -100,7 +100,11 @@ def _dataset(root: Path, entry: dict[str, Any], summary: RegistrationSummary) ->
         bundle = FileRef.model_validate(entry["bundle"])
         manifest = json.loads(read_file(root / entry["id"] / "artifact", bundle))
         tiers = manifest.get("label_tiers", [])
-        if not isinstance(tiers, list) or any(tier not in LABEL_TIERS for tier in tiers):
+        if (
+            not isinstance(tiers, list)
+            or any(tier not in LABEL_TIERS for tier in tiers)
+            or len(set(tiers)) != len(tiers)
+        ):
             raise TypeError("label tiers")
         return {
             "dataset_id": manifest["dataset_id"],

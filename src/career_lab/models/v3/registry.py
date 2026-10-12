@@ -24,9 +24,10 @@ SCOPES = {"synthetic_fixture", "external_candidate"}
 PROTOCOL = "w08-advisory-registration-v1"
 
 
-# Source that decides a registered model's predictions: model code plus the input and file
-# contracts it validates against. Other product changes leave registrations valid.
-INFERENCE_CLOSURE = ("models/v3/**/*.py", "contracts/v2/core.py", "contracts/v2/data.py")
+# Source that decides a registered model's predictions: all model code (models/v3 adapters
+# import earlier model modules, e.g. the legacy MLP's text classifier) plus the input and
+# file contracts it validates against. Other product changes leave registrations valid.
+INFERENCE_CLOSURE = ("models/**/*.py", "contracts/v2/core.py", "contracts/v2/data.py")
 
 
 def inference_runtime():

@@ -124,17 +124,23 @@ uv run --locked python -m career_lab.models.v3.registry_cli describe \
   --registry <注册目录> --registration-path <返回的相对路径> --registration-hash <返回的 SHA-256>
 ```
 
-`describe` 输出公开身份（`kind=linear`、`dataset`：数据集名、数据 hash、标签等级）。注册项协议为 `advisory-linear-registration-v1`，按内容命名、不可覆盖，固定 `mode=advisory`、`affects_score=false`、`quality_validated=false`；推理闭包源码（`models/v3/**`、`contracts/v2/{core,data}.py`）或 numpy、scikit-learn、pydantic 版本变化时旧注册拒绝加载，须重新登记。回传复核（`verify-return`）的口径：用我方加载器重载并与 `predictions.dev.jsonl` 比较，线性模型概率逐项绝对差 ≤ 1e-6，标签、状态与证据集合完全一致；负责方的加载命令只作参考。
+`describe` 输出公开身份（`kind=linear`、`dataset`：数据集名、数据 hash、标签等级）。注册项协议为 `advisory-linear-registration-v1`，按内容命名、不可覆盖，固定 `mode=advisory`、`affects_score=false`、`quality_validated=false`；推理闭包源码（`src/career_lab/models/**`、`contracts/v2/{core,data}.py`）或 numpy、scikit-learn、pydantic 版本变化时旧注册拒绝加载（`registered_inference_runtime_changed`），须重新登记；闭包含模型目录下全部代码（含注册与复核工具），所以本波各线改动 `models/**` 合入后都要重新登记。回传复核（`verify-return`）用我方加载器重载并与 `predictions.dev.jsonl` 比较，标签、状态与证据集合完全一致；线性模型概率按逐项绝对差 ≤ 1e-6 的容差比对**由回传复核 v3（147）提供，本分支尚未包含**，在此之前重载比较为逐位相等。负责方的加载命令只作参考。
 
 ## 10. 拒绝与错误码
 
 | 情形 | 错误码 |
 |---|---|
+| 外层清单不是对象，或 `return_protocol` 不是 `rolecraft-label-evidence-v2` | `model_return_protocol_invalid` |
 | 标签顺序错、任务不是 relation | `model_return_task_or_labels_invalid` |
 | 模板未完成、证据选择未声明 | `model_return_incomplete` |
+| 训练分区不是 `["train"]`、选择不在 dev、`test_used_for_selection` 不为 false | `model_return_selection_contaminated` |
+| `model_revision`、`framework`、`dataset_id`、加载命令、训练说明或预测文件名为空 | `model_return_identity_incomplete` |
+| `dataset_manifest_sha256` 不是 64 位十六进制 | `model_return_dataset_identity_invalid` |
 | `artifact_protocol` 不符 | `linear_return_protocol_invalid` |
+| `checkpoint_files` 缺失或为空 | `checkpoint_files_required` |
+| `checkpoint_files` 路径不是规范相对路径 | `checkpoint_path_not_canonical` |
 | `checkpoint_files` 不是恰好两项 | `linear_return_member_set_mismatch` |
-| 文件 hash 不符 | `file_hash_mismatch` |
+| 文件不存在、hash 不符、路径越界 | `file_missing`、`file_hash_mismatch`、`file_outside_root` |
 | `text_template` 不是 `rolecraft-linear-text-v1` | `linear_text_template_unsupported` |
 | 特征器参数或键不受支持（含自定义 analyzer、非缺省 token_pattern） | `linear_vectorizer_unsupported` |
 | 词表为空或索引不连续 | `linear_vocabulary_invalid` |
@@ -149,3 +155,11 @@ uv run --locked python -m career_lab.models.v3.registry_cli describe \
 | `label_tiers` 不合法 | `linear_return_label_tiers_invalid` |
 | 文件超过 64 MiB | `linear_return_too_large` |
 | fixture 数据登记为外部候选 | `fixture_cannot_be_registered_as_external` |
+| `--scope` 不是 `synthetic_fixture` 或 `external_candidate` | `registration_scope_required` |
+| 同一注册正在另一进程发布 | `model_registration_busy` |
+| 已有同名注册但内容不同 | `model_registration_drift` |
+| 加载时：注册项协议或 scope 不认识 | `model_registration_protocol_invalid` |
+| 加载时：注册项被改成计分或已验证质量 | `registration_cannot_promote_scoring_or_quality` |
+| 加载时：注册 id、路径与内容不符 | `model_registration_identity_mismatch` |
+| 加载时：推理闭包源码或依赖版本已变 | `registered_inference_runtime_changed` |
+| 加载时：已登记副本与注册项记录不符 | `registered_model_identity_mismatch` |
