@@ -72,14 +72,20 @@ def test_split_01_registered_advice_keeps_pre_move_bytes(
     source = AdviceSource.from_registration(registry, registration, tmp_path / "journal")
     supports = [package for package in packages if package.criterion == "R2.support"]
     produced = [source.relation_advice(p, envelope, language) for p in supports]
-    # 148 judges R2.support sentence by sentence and lets synthetic registrations show
-    # labels (143 §3.5, §5.1 item 2), so the semantic fields change by design. What the
-    # move fixed stays byte-identical: request, job, whole-work input hash (the read-trace
-    # key), registration identity, criterion and advisory flags.
-    kept = ("criterion", "request_id", "job_id", "input_hash", "registration")
-    kept += ("mode", "affects_score")
-    assert [{key: json.loads(normalized(advice))[key] for key in kept} for advice in produced] == [
-        {key: json.loads(oracle)[key] for key in kept} for oracle in CASES[language]["advice"][name]
+    # 148 judges R2.support sentence by sentence (143 §3.5) and lets synthetic
+    # registrations show their labels (§5.1 item 2). Only those fields may differ from the
+    # pre-move recording: units and aggregation always, label/evidence/citations only for
+    # synthetic registrations. Everything else, status and error code included, keeps its
+    # bytes; the whole-work input hash stays the read-trace key.
+    changed = {"units", "aggregation"}
+    if fixture:
+        changed |= {"label", "evidence_ids", "citations"}
+    assert [
+        {k: v for k, v in json.loads(normalized(advice)).items() if k not in changed}
+        for advice in produced
+    ] == [
+        {k: v for k, v in json.loads(oracle).items() if k not in changed}
+        for oracle in CASES[language]["advice"][name]
     ]
     # Criterion inference is not part of the move; it stays absent until it is implemented.
     assert all(source.criterion_advice(p, envelope, language) is None for p in packages)
