@@ -29,8 +29,8 @@ from career_lab.models.v3.held_out import (
     prepare_test_freeze,
     review_policy_bytes,
 )
-from career_lab.models.v3.return_data import load_return_dataset
 from career_lab.models.v3.registry import register_bundle
+from career_lab.models.v3.return_data import load_return_dataset
 from tests.integration.test_model_return_verification import (
     LEFT_WEIGHTS,
     linear_bundle,
@@ -39,12 +39,12 @@ from tests.integration.test_model_return_verification import (
     register,
 )
 from tests.unit.test_w07_pipeline import BASE, FakeModel
+from tests.unit.test_w07_pipeline import package as evidence_package
 from tests.unit.test_w08_encoder_registration import (
     DECLARED_RUNTIME,
     encoder_return,
     write_manifest,
 )
-from tests.unit.test_w07_pipeline import package as evidence_package
 
 ROOT = Path(__file__).resolve().parents[2]
 LAYOUT = "rolecraft-dataset-split-sealed-v1"
