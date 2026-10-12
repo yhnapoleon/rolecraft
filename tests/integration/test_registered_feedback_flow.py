@@ -1,4 +1,7 @@
-"""MODEL-02/03/05/06 through standard HTTP, worker and historical feedback reads."""
+"""MODEL-02/03/05/06 through standard HTTP, worker and historical feedback reads.
+
+R2.support advice is judged sentence by sentence (148): one journal entry per sentence.
+"""
 
 import json
 from collections.abc import Iterator
@@ -94,8 +97,11 @@ def test_model_02_normal_feedback_discloses_synthetic_identity_without_scoring(
     transaction, report = review(session)
     assert report["model_advice"], report
     advice = report["model_advice"][0]
-    assert advice["status"] == "synthetic_mechanism_only"
-    assert advice["label"] is None and advice["evidence_ids"] == advice["citations"] == []
+    # 2026-10-12 (143 §5.1 item 2): a synthetic registration may show its labels and
+    # evidence, always as a mechanism demonstration and never as a completed judgment.
+    assert advice["status"] == advice["error_code"] == "synthetic_mechanism_only"
+    assert advice["label"] in {"SUPPORTED", "CONTRADICTED", "INSUFFICIENT"}
+    assert all(unit["label"] is not None for unit in advice["units"])
     assert advice["affects_score"] is False
     assert advice["registration"]["scope"] == "synthetic_fixture"
     assert advice["registration"]["quality_validated"] is False
@@ -110,7 +116,8 @@ def test_model_03_read_refresh_and_request_recovery_do_not_repeat_model(register
     session, _, root = registered_session
     transaction, report = review(session)
     journals = list((root / "journal").glob("*/outcome.json"))
-    assert len(journals) == 1
+    # One journaled request per judged sentence of the work.
+    assert len(journals) == len(report["model_advice"][0]["units"]) >= 1
     before = {path: path.read_bytes() for path in journals}
     for _ in range(3):
         response = session.get("feedback/" + transaction["result"]["review"]["object_id"])
@@ -448,7 +455,8 @@ def test_model_03_concurrent_same_request_has_one_job_and_one_model_receipt(
         "result"
     ]["result"]["items"][0]
     assert report["model_advice"][0]["job_id"] == recovered["jobs"][0]["job_id"]
-    assert len(list((root / "journal").glob("*/outcome.json"))) == 1
+    units = report["model_advice"][0]["units"]
+    assert len(list((root / "journal").glob("*/outcome.json"))) == len(units) >= 1
     assert not Worker(session.app.state.jobs, session.app.state.handlers).run_once()
 
 

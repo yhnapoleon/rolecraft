@@ -15,19 +15,12 @@ def relation_input(package: EvidencePackageV2) -> RelationInput:
     substituted for the learner's statement. Whole source text preserves its
     conditions, negation and sequence, without claiming atomic decomposition.
     """
-
-    def key(ref: EvidenceRefV2) -> str:
-        return canonical(ref.model_dump(mode="json", include=set(ObjectRef.model_fields)))
-
-    subjects = {key(ref) for ref in package.subjects}
-    claims = {
-        canonical(candidate.ref): candidate.text
-        for candidate in package.candidate_evidence
-        if canonical(candidate.ref) in {canonical(ref) for ref in package.subjects}
-    }
-    claim = "\n\n".join(claims.get(canonical(ref), "") for ref in package.subjects)
+    subjects = {_object_key(ref) for ref in package.subjects}
+    claim = "\n\n".join(text for _, text in subject_texts(package))
     candidates = tuple(
-        candidate for candidate in package.candidate_evidence if key(candidate.ref) not in subjects
+        candidate
+        for candidate in package.candidate_evidence
+        if _object_key(candidate.ref) not in subjects
     )
     raw = package.model_dump(mode="json", exclude={"input_hash"})
     raw.update(
@@ -48,6 +41,33 @@ def relation_input(package: EvidencePackageV2) -> RelationInput:
     return RelationInput(
         evidence=EvidencePackageV2.model_validate(raw | {"input_hash": digest(raw)})
     )
+
+
+def subject_texts(package: EvidencePackageV2) -> tuple[tuple[EvidenceRefV2, str], ...]:
+    """Each work subject with its exact text (empty when the package carries none)."""
+    claims = {
+        canonical(candidate.ref): candidate.text
+        for candidate in package.candidate_evidence
+        if canonical(candidate.ref) in {canonical(ref) for ref in package.subjects}
+    }
+    return tuple((ref, claims.get(canonical(ref), "")) for ref in package.subjects)
+
+
+def sentence_input(whole: RelationInput, subject: EvidenceRefV2, claim: str) -> RelationInput:
+    """One sentence of the work as a relation input.
+
+    Only the claim (the sentence) and the subject (its span in the work) differ from the
+    whole-work input; candidates, purpose, time point and time-validity context are the same.
+    """
+    raw = whole.evidence.model_dump(mode="json", exclude={"input_hash"})
+    raw.update(claim=claim, subjects=[subject.model_dump(mode="json")])
+    return RelationInput(
+        evidence=EvidencePackageV2.model_validate(raw | {"input_hash": digest(raw)})
+    )
+
+
+def _object_key(ref: EvidenceRefV2) -> str:
+    return canonical(ref.model_dump(mode="json", include=set(ObjectRef.model_fields)))
 
 
 def without_rule_context(package: EvidencePackageV2) -> EvidencePackageV2:

@@ -155,8 +155,12 @@ class RegisteredAdvisory:
         return result
 
 
-def to_public_prediction(outcome, item):
-    """Existing shared protocol DTO projection. Fixture predictions never become product advice."""
+def to_public_prediction(outcome, item, *, mechanism=False):
+    """Existing shared protocol DTO projection. Fixture predictions never become product advice.
+
+    ``mechanism=True`` checks and projects a synthetic registration's prediction exactly
+    like an external one, for display only as a labelled mechanism demonstration.
+    """
     from career_lab.contracts.v2.research import ModelPrediction
 
     item = checked_input(item)
@@ -171,7 +175,7 @@ def to_public_prediction(outcome, item):
         "model_revision": identity["model_revision"],
         "labels": tuple(identity["labels"]),
     }
-    if identity["scope"] == "synthetic_fixture":
+    if identity["scope"] == "synthetic_fixture" and not mechanism:
         return ModelPrediction(
             **base, status="unavailable", error_code="synthetic_model_not_product_ready"
         )

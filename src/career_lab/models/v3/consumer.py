@@ -15,8 +15,9 @@ from career_lab.contracts.v2.provenance import RegisteredModelIdentity
 
 from .advisory import RegisteredAdvisory, to_public_prediction
 from .core import LABELS
-from .projection import criterion_input, relation_input
+from .projection import criterion_input, relation_input, sentence_input
 from .registry import describe_registration
+from .units import POLICY, SupportUnit, UnitResult, aggregate, support_units
 
 AdviceError = Literal[
     "pretrained_encoder_dependencies_unavailable",
@@ -159,6 +160,12 @@ class AdviceSource:
     def relation_advice(
         self, package: EvidencePackageV2, envelope: AdviceEnvelope, language: str
     ) -> RegisteredModelAdvice:
+        """R2.support advice judged sentence by sentence (policy ``r2-support-units-v1``).
+
+        Each planned sentence is one journaled request; recovery reads it back without
+        inference. The work-level label follows ``units.aggregate``; ``input_hash`` stays
+        the whole-work input digest that read tracing keys on.
+        """
         item = relation_input(package)
         values = {
             "request_id": envelope.origin_request_id,
@@ -174,7 +181,7 @@ class AdviceSource:
             return RegisteredModelAdvice.model_validate(
                 values | {"error_code": "claim_not_available"}
             )
-        request_id = "feedback-advice-" + digest(
+        work_request = "feedback-advice-" + digest(
             [
                 item.evidence.subjects[0].session_id if item.evidence.subjects else "",
                 envelope.origin_request_id,
@@ -186,18 +193,77 @@ class AdviceSource:
                 ],
             ]
         )
+        plan = support_units(package)
+        results: list[UnitResult] = []
+        recorded: RegisteredModelIdentity | None = None
+        blocked: str | None = None
+        for unit in plan.units:
+            result, identity, blocked = self._judge(
+                unit,
+                sentence_input(item, unit.subject, unit.text),
+                unit_request_id(work_request, unit),
+                language,
+                blocked,
+            )
+            results.append(result)
+            recorded = recorded or identity
+        # The verified identity may carry more than the journal records; both name one model.
+        values["registration"] = self.identity or recorded
+        candidates = {candidate.id: candidate for candidate in item.evidence.candidate_evidence}
+        conclusion = aggregate(results, plan, tuple(candidates))
+        values |= {
+            "units": tuple(_public_unit(row, candidates) for row in results),
+            "aggregation": {"policy": POLICY, "counts": conclusion.counts},
+        }
+        if conclusion.label is None:
+            failed = [row.reason_code for row in results if row.status == "failed"]
+            if failed:
+                return RegisteredModelAdvice.model_validate(
+                    values | {"status": "failed", "error_code": failed[0]}
+                )
+            return RegisteredModelAdvice.model_validate(
+                values | {"error_code": "all_units_abstained" if results else "claim_not_available"}
+            )
+        synthetic = values["registration"] is not None and (
+            values["registration"].scope == "synthetic_fixture"
+        )
+        return RegisteredModelAdvice.model_validate(
+            values
+            | {
+                "status": "synthetic_mechanism_only" if synthetic else "completed",
+                "error_code": "synthetic_mechanism_only" if synthetic else None,
+                "label": conclusion.label,
+                "evidence_ids": conclusion.evidence_ids,
+                "citations": tuple(candidates[key].ref for key in conclusion.evidence_ids),
+            }
+        )
+
+    def _judge(
+        self,
+        unit: SupportUnit,
+        item: RelationInput,
+        request_id: str,
+        language: str,
+        blocked: str | None,
+    ) -> tuple[UnitResult, RegisteredModelIdentity | None, str | None]:
+        """One sentence's result, the identity its journal records, and the blocking error.
+
+        Once loading has failed, later sentences only read back what was journaled.
+        """
+        assert self.adapter is not None
         try:
-            outcome = predict_or_recover(self.adapter, item, request_id, language)
+            if blocked is None:
+                outcome = predict_or_recover(self.adapter, item, request_id, language)
+            else:
+                outcome = self.adapter.recover(request_id)
         except Exception as error:
-            return RegisteredModelAdvice.model_validate(
-                values | {"status": "failed", "error_code": safe_model_error(error)}
-            )
+            code = blocked or safe_model_error(error)
+            return UnitResult(unit, "failed", reason_code=code), None, code
         if outcome["status"] == "unconfirmed":
-            return RegisteredModelAdvice.model_validate(
-                values | {"error_code": "model_result_unconfirmed"}
-            )
+            return UnitResult(unit, "failed", reason_code="model_result_unconfirmed"), None, blocked
+        invalid = UnitResult(unit, "failed", reason_code="model_prediction_invalid")
         try:
-            public = to_public_prediction(outcome, item)
+            public = to_public_prediction(outcome, item, mechanism=True)
             recorded = RegisteredModelIdentity.model_validate(
                 {key: outcome["registration"][key] for key in _RECORDED_IDENTITY}
             )
@@ -208,48 +274,44 @@ class AdviceSource:
             ):
                 raise ProtocolError("advisory_model_revision_mismatch")
         except (ValueError, KeyError, TypeError):
-            return RegisteredModelAdvice.model_validate(
-                values | {"status": "failed", "error_code": "model_prediction_invalid"}
-            )
-        # The verified identity may carry more than the journal records; both name one model.
-        values["registration"] = self.identity or recorded
+            return invalid, None, blocked
         if outcome["status"] == "failed":
-            error_code = (
+            code = (
                 "model_timeout"
                 if outcome.get("error_code") == "TimeoutError"
                 else "model_infrastructure_failed"
                 if outcome.get("failure_kind") == "infrastructure"
                 else "model_prediction_invalid"
             )
-            return RegisteredModelAdvice.model_validate(
-                values | {"status": "failed", "error_code": error_code}
-            )
+            return UnitResult(unit, "failed", reason_code=code), recorded, blocked
         prediction = outcome.get("prediction")
-        if not isinstance(prediction, dict) or prediction.get("status") != "ok":
-            return RegisteredModelAdvice.model_validate(
-                values | {"error_code": "evidence_unavailable"}
-            )
-        if recorded.scope == "synthetic_fixture":
-            return RegisteredModelAdvice.model_validate(
-                values
-                | {"status": "synthetic_mechanism_only", "error_code": "synthetic_mechanism_only"}
-            )
+        if not isinstance(prediction, dict):
+            return invalid, recorded, blocked
+        if prediction.get("status") != "ok":
+            reason = prediction.get("reason_code") or "evidence_unavailable"
+            return UnitResult(unit, "abstained", reason_code=reason), recorded, blocked
         if public.status != "success" or public.probabilities is None:
-            return RegisteredModelAdvice.model_validate(
-                values | {"error_code": "evidence_unavailable"}
-            )
-        candidates = {candidate.id: candidate for candidate in item.evidence.candidate_evidence}
+            return invalid, recorded, blocked
         label = public.labels[max(range(len(public.labels)), key=lambda i: public.probabilities[i])]
-        return RegisteredModelAdvice.model_validate(
-            values
-            | {
-                "status": "completed",
-                "error_code": None,
-                "label": label,
-                "evidence_ids": public.evidence_ids,
-                "citations": tuple(candidates[key].ref for key in public.evidence_ids),
-            }
-        )
+        return UnitResult(unit, "completed", label, public.evidence_ids), recorded, blocked
+
+
+def unit_request_id(work_request_id: str, unit: SupportUnit) -> str:
+    """Journal identity of one sentence of one work-level advice request."""
+    return "feedback-advice-unit-" + digest([work_request_id, unit.index, unit.unit_hash])
+
+
+def _public_unit(row: UnitResult, candidates: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "index": row.unit.index,
+        "subject": row.unit.subject,
+        "unit_hash": row.unit.unit_hash,
+        "status": row.status,
+        "label": row.label,
+        "evidence_ids": row.evidence_ids,
+        "citations": tuple(candidates[key].ref for key in row.evidence_ids),
+        "reason_code": row.reason_code,
+    }
 
 
 # The journal records the historical public identity fields of the registration.
