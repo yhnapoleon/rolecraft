@@ -124,6 +124,7 @@ def write_linear_return(
     arrays: dict[str, Any] | None = None,
     manifest: dict[str, Any] | None = None,
     label_tiers: list[str] | None = None,
+    arrays_raw: bytes | None = None,
 ) -> FileRef:
     """Write a ``rolecraft-linear-return-v1`` return; ``DELETE`` removes an override key."""
     base_model, base_arrays = constructed_model()
@@ -134,7 +135,7 @@ def write_linear_return(
             else:
                 target[key] = value
     model_raw = json_bytes(base_model)
-    arrays_raw = npz_bytes(base_arrays)
+    arrays_raw = npz_bytes(base_arrays) if arrays_raw is None else arrays_raw
     (root / "linear").mkdir(parents=True)
     (root / "linear/model.json").write_bytes(model_raw)
     (root / "linear/arrays.npz").write_bytes(arrays_raw)

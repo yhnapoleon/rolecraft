@@ -271,6 +271,15 @@ LIN_02_CASES = {
         {"model": {"vectorizer": vectorizer(analyzer="my_package.tokenize:analyzer")}},
         "linear_vectorizer_unsupported",
     ),
+    "structured_analyzer": (
+        {"model": {"vectorizer": vectorizer(analyzer={"callable": "my_package.analyzer"})}},
+        "linear_vectorizer_unsupported",
+    ),
+    "unknown_norm": (
+        {"model": {"vectorizer": vectorizer(norm=["l2"])}},
+        "linear_vectorizer_unsupported",
+    ),
+    "not_an_archive": ({"arrays_raw": b"not a numpy archive"}, "linear_return_arrays_invalid"),
     "callable_tokenizer": (
         {"model": {"vectorizer": vectorizer(tokenizer="my_package.tokenize")}},
         "linear_vectorizer_unsupported",

@@ -65,14 +65,15 @@ def _vectorizer(spec: Any) -> TfidfVectorizer:
         raise ProtocolError("linear_vectorizer_unsupported")
     if spec.get("token_pattern", DEFAULT_TOKEN_PATTERN) != DEFAULT_TOKEN_PATTERN:
         raise ProtocolError("linear_vectorizer_unsupported")
-    ngram = spec["ngram_range"]
+    ngram, norm = spec["ngram_range"], spec["norm"]
     if (
-        spec["analyzer"] not in {"char", "char_wb", "word"}
+        not isinstance(spec["analyzer"], str)
+        or spec["analyzer"] not in {"char", "char_wb", "word"}
         or not isinstance(ngram, list)
         or len(ngram) != 2
         or any(type(n) is not int for n in ngram)
         or not 1 <= ngram[0] <= ngram[1] <= 16
-        or spec["norm"] not in {"l1", "l2", None}
+        or (norm is not None and (not isinstance(norm, str) or norm not in {"l1", "l2"}))
         or any(
             type(spec[name]) is not bool
             for name in ("lowercase", "sublinear_tf", "smooth_idf", "use_idf")
@@ -103,8 +104,12 @@ def _vectorizer(spec: Any) -> TfidfVectorizer:
 def _arrays(raw: bytes) -> dict[str, np.ndarray]:
     try:
         with zipfile.ZipFile(io.BytesIO(raw)) as archive:
-            if sum(i.file_size for i in archive.infolist()) > SIZE_LIMIT:
-                raise ProtocolError("linear_return_too_large")
+            expanded = sum(i.file_size for i in archive.infolist())
+    except (OSError, zipfile.BadZipFile) as error:
+        raise ProtocolError("linear_return_arrays_invalid") from error
+    if expanded > SIZE_LIMIT:
+        raise ProtocolError("linear_return_too_large")
+    try:
         with np.load(io.BytesIO(raw), allow_pickle=False) as archive:
             arrays = {key: archive[key] for key in archive.files}
     except (ValueError, OSError, zipfile.BadZipFile) as error:
