@@ -484,4 +484,5 @@ def test_enc_07_synthetic_encoder_advice_over_http_names_its_identity(
     assert identity["scope"] == "synthetic_fixture" and identity["quality_validated"] is False
     assert advice["affects_score"] is False
     assert report["provenance"]["registered_model"] == identity
-    assert len(list((tmp_path / "journal").glob("*/outcome.json"))) == 1
+    # One journaled request per judged sentence of the work (148).
+    assert len(list((tmp_path / "journal").glob("*/outcome.json"))) == len(advice["units"]) >= 1
