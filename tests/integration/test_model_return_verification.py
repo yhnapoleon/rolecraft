@@ -15,7 +15,10 @@ from career_lab.models.v3.encoder import AttentionEncoder
 from career_lab.models.v3.ensemble import select_alpha
 from career_lab.models.v3.fusion_bundle import save_fusion_bundle
 from career_lab.models.v3.linear import LinearCandidate
+from career_lab.models.v3.registration import RegistrationSummary
 from career_lab.models.v3.registry import load_registration, register_bundle
+from career_lab.models.v3.return_data import load_return_dataset
+from career_lab.models.v3.return_verification import inspect_return_checkpoint
 from tests.unit.test_w08_models import examples
 
 
@@ -974,3 +977,88 @@ def test_fsel_01_needs_a_registered_fusion(return_case, capsys, tmp_path) -> Non
         str(selection),
     )
     assert code == 2 and result["error"] == "fusion_selection_requires_fusion_registration"
+
+
+UNTRAINED_HEADS = {"training_partitions": [], "selection_partition": None}
+
+
+@pytest.mark.parametrize(
+    ("scope", "stage", "declaration", "allowed"),
+    [
+        ("synthetic_fixture", "pretrained_untrained_heads", UNTRAINED_HEADS, True),
+        ("external_candidate", "pretrained_untrained_heads", UNTRAINED_HEADS, False),
+        ("synthetic_fixture", "supervised_finetuned", UNTRAINED_HEADS, False),
+        ("synthetic_fixture", None, UNTRAINED_HEADS, False),
+        (
+            "synthetic_fixture",
+            "pretrained_untrained_heads",
+            {"training_partitions": [], "selection_partition": "dev"},
+            False,
+        ),
+        (
+            "synthetic_fixture",
+            "pretrained_untrained_heads",
+            {"training_partitions": ["train"], "selection_partition": None},
+            False,
+        ),
+        (
+            "synthetic_fixture",
+            "pretrained_untrained_heads",
+            {**UNTRAINED_HEADS, "test_used_for_selection": True},
+            False,
+        ),
+    ],
+    ids=[
+        "synthetic-untrained",
+        "external",
+        "finetuned",
+        "no-stage",
+        "dev-selection",
+        "train-partition",
+        "test-used",
+    ],
+)
+def test_ret_03_untrained_heads_may_declare_no_training_only_when_synthetic(
+    return_case, tmp_path, scope, stage, declaration, allowed
+) -> None:
+    root, checksum, predictions = return_case
+    dataset = load_return_dataset(root, checksum, "dev")
+    manifest = {
+        "template": False,
+        "completed": False,
+        "return_protocol": "rolecraft-label-evidence-v2",
+        "task_type": "relation",
+        "label_order": ["SUPPORTED", "CONTRADICTED", "INSUFFICIENT"],
+        "dataset_id": "synthetic-return",
+        "dataset_manifest_sha256": checksum,
+        "model_revision": "untrained-heads",
+        "evidence_selection_implemented": True,
+        "evidence_selection_required": True,
+        "test_used_for_selection": False,
+    } | declaration
+    path = tmp_path / "checkpoint-manifest.json"
+    path.write_text(json.dumps(manifest))
+    registration = RegistrationSummary(
+        id="encoder-synthetic",
+        scope=scope,
+        model_revision="untrained-heads",
+        task_type="relation",
+        labels=("SUPPORTED", "CONTRADICTED", "INSUFFICIENT"),
+        kind="huggingface_encoder",
+        weights_stage=stage,
+    )
+    if allowed:
+        result = inspect_return_checkpoint(
+            path, dataset, "untrained-heads", predictions, registration=registration
+        )
+        assert result["candidate_eligible"] is False
+    else:
+        with pytest.raises(C.ProtocolError) as error:
+            inspect_return_checkpoint(
+                path, dataset, "untrained-heads", predictions, registration=registration
+            )
+        assert error.value.code == "model_return_selection_contaminated"
+    # Without a registration nothing is relaxed.
+    with pytest.raises(C.ProtocolError) as error:
+        inspect_return_checkpoint(path, dataset, "untrained-heads", predictions)
+    assert error.value.code == "model_return_selection_contaminated"

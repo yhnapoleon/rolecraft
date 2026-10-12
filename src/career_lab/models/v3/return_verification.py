@@ -14,6 +14,7 @@ from .bundle import sha
 from .encoder_artifact import file_map, validate_return_identity, verify_file
 from .ensemble import select_alpha
 from .held_out import HeldOutOpening, HeldOutRequest, open_held_out_test
+from .registration import RegistrationSummary
 from .registry import describe_registration, load_registration
 from .return_data import ReturnDataset, json_lines, load_return_dataset, strict_json, unique_records
 from .return_predictions import (
@@ -65,14 +66,41 @@ def reload_return(
     }
 
 
+TRAINED_DECLARATION = {
+    "training_partitions": ["train"],
+    "selection_partition": "dev",
+    "test_used_for_selection": False,
+}
+# The encoder return's untrained-heads stage declares that nothing was trained or selected
+# (docs/data/return-v3/encoder-return.md); only a synthetic registration may use it.
+UNTRAINED_HEADS_DECLARATION = {
+    "training_partitions": [],
+    "selection_partition": None,
+    "test_used_for_selection": False,
+}
+
+
+def untrained_heads(registration: RegistrationSummary | None) -> bool:
+    return (
+        registration is not None
+        and registration.scope == "synthetic_fixture"
+        and registration.weights_stage == "pretrained_untrained_heads"
+    )
+
+
 def inspect_return_checkpoint(
     path: Path | None,
     dataset: ReturnDataset,
     model_revision: str,
     predictions_path: Path,
+    *,
+    registration: RegistrationSummary | None = None,
 ) -> dict[str, Any]:
     """Declared files only. ``predictions_file`` names the dev predictions, so a test
-    review does not compare it with the test predictions it was given."""
+    review does not compare it with the test predictions it was given.
+
+    The selection declaration must be the trained one, except that a synthetic registration
+    of untrained heads must carry exactly the untrained-heads declaration instead."""
     if path is None:
         return {
             "status": "not_supplied",
@@ -82,12 +110,15 @@ def inspect_return_checkpoint(
     manifest = strict_json(path.read_bytes())
     if not isinstance(manifest, dict):
         raise C.ProtocolError("model_return_protocol_invalid")
-    policy = {
-        "training_partitions": ["train"],
-        "selection_partition": "dev",
-        "test_used_for_selection": False,
-    }
-    if any(key in manifest and manifest[key] != value for key, value in policy.items()):
+    if untrained_heads(registration):
+        if any(
+            key not in manifest or manifest[key] != value
+            for key, value in UNTRAINED_HEADS_DECLARATION.items()
+        ):
+            raise C.ProtocolError("model_return_selection_contaminated", status=403)
+    elif any(
+        key in manifest and manifest[key] != value for key, value in TRAINED_DECLARATION.items()
+    ):
         raise C.ProtocolError("model_return_selection_contaminated", status=403)
     try:
         validate_return_identity(manifest)
@@ -402,8 +433,15 @@ def review_partition(
         checkpoint = {"status": "blocked_invalid_return", "candidate_eligible": False}
         reload = {"status": "blocked_invalid_return"}
     else:
+        summary = (
+            describe_registration(
+                registry_root, C.FileRef(path=registration_path, sha256=registration_hash)
+            )
+            if registry_root is not None and registration_path and registration_hash
+            else None
+        )
         checkpoint = inspect_return_checkpoint(
-            checkpoint_manifest, dataset, revision, predictions_path
+            checkpoint_manifest, dataset, revision, predictions_path, registration=summary
         )
         reload = reload_return(
             dataset,
