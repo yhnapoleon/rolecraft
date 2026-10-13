@@ -317,6 +317,7 @@ HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 uv run --locked --extra encoder python -
   tests/optional_encoder/check_encoder_v3.py \
   tests/optional_encoder/check_local_encoder.py \
   tests/optional_encoder/check_fusion_registration.py \
+  tests/optional_encoder/check_return_v3_plugin.py \
   --basetemp=.pytest_cache/tmp-encoder-check
 unset UV_PROJECT_ENVIRONMENT
 ```
@@ -327,6 +328,7 @@ unset UV_PROJECT_ENVIRONMENT
 
 - `check_local_encoder.py`、`check_encoder_v3.py`：测试自己随机初始化小于200KB的微型BERT，用现有数值fixture做最小优化步骤，再保存、登记、重载和比较预测，同时阻断socket连接；pack、pair、pair_aggregate都实跑。公开预测仍是`synthetic_mechanism_only`／unavailable。
 - `check_fusion_registration.py`：在CPU上登记、加载、预测线性回传×微型v3编码器回传的异构融合，结果与两分量按alpha混合一致。
+- `check_return_v3_plugin.py`（PLUG-02…05）：按负责方的用法在独立进程里跑v3补充包的`export_hf_return.py`：`predict`写的dev行经`verify-return`重载matched（pack、pair、pair_aggregate，容差1e-4）；输入不完整、claim为空、时点或有效期未定、无候选、超过`max_tokens`时与我方加载器同样弃权；`--labels`列出的行恰是格式检查拒绝的行；已封存目录内拒写；`seal`写出的`artifact_roles`过validate-handoff；`XLMRobertaForSequenceClassification`直接保存被拒，按规格§6的配方保存后可导出、登记、加载。
 
 这些只验证实际加载与双输出机制，不是预训练模型、英文质量、真实XLM-R或融合增益的证据。
 
