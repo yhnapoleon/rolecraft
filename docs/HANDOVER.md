@@ -1,14 +1,53 @@
 # 交接说明
 
-写给第一次打开本仓库的 Agent 与开发者：怎样起服务、怎样检查、契约怎样重导出、哪些文件不能手改、模型回传包在哪、后续还有什么。产品能力与配置变量见 [README](../README.md)。
+写给第一次打开本仓库的 Agent 与开发者：怎样起服务、怎样检查、契约怎样重导出、哪些文件不能手改、模型回传包在哪、后续还有什么。项目介绍见 [README](../README.md)；凭据密钥见 [W07 · 研究授权与真实会话导出](data/expansion-v3-w07.md#研究授权与真实会话导出)，模型槽与已登记模型的配置变量见 [W08 · 模型槽配置](data/expansion-v3-w08.md#模型槽配置)与 [W08 · 服务消费与回退边界](data/expansion-v3-w08.md#服务消费与回退边界)。
 
 ## 起服务
 
 - 一个 checkout 一套环境：`uv sync --locked` 建 `.venv`，`apps/web` 里 `npm ci`。需要编码器时另建环境：`UV_PROJECT_ENVIRONMENT=<另一目录> uv sync --locked --extra encoder`，默认 `.venv` 不装 torch。
-- 三个进程：API（`career-lab serve`，缺省端口 18562）、worker（`career-lab worker`）、前端（`npm run preview` 或 `npm run dev`，缺省 18560，`ROLECRAFT_API_TARGET` 指向 API）。完整命令见 [README · 启动工作台](../README.md#启动工作台)。
+- 三个进程：API（`career-lab serve`，缺省端口 18562）、worker（`career-lab worker`）、前端（`npm run preview` 或 `npm run dev`，缺省 18560，`ROLECRAFT_API_TARGET` 指向 API）。完整命令见下面的[启动工作台](#启动工作台)。
 - API 与 worker 共用同一数据库、`CAREER_LAB_SCENARIO_CATALOG`（不设只有中文主场景）、`CAREER_LAB_SCENARIO_ARCHIVE`、凭据密钥（`CAREER_LAB_CREDENTIAL_KEY_ID`、`CAREER_LAB_CREDENTIAL_KEY`）与模型配置。改任何一项两个都重启。
 - 新 SQLite 库先启动 API，初始化完成后再启动 worker。验收用新数据库与新端口；并行的几条工作线各用自己的端口。
 - 默认 `--provider local` 不调用外部模型、不需要 key。真实 provider 与费用须另获授权。
+
+### 启动工作台
+
+`runs/` 由 Git 忽略。终端若设置过指向旧 checkout 的 `PYTHONPATH`，先 `unset PYTHONPATH`。
+
+1. 生成双语场景目录（中英主场景与补练变体；不设它时服务只提供中文主场景），并在本机生成一次凭据密钥：
+
+   ```sh
+   mkdir -p runs/local/dev
+   uv run --locked python -c "import sys; from pathlib import Path; from scripts.regression.published import write_catalog; write_catalog(Path(sys.argv[1]))" runs/local/dev/catalog.json
+   (umask 077; python3 -c 'import secrets; print("export CAREER_LAB_CREDENTIAL_KEY=" + secrets.token_urlsafe(32))' > runs/local/dev/credential.env)
+   ```
+
+2. API 与 worker 各开一个终端，先载入同一组变量：
+
+   ```sh
+   export CAREER_LAB_SCENARIO_CATALOG="$PWD/runs/local/dev/catalog.json"
+   export CAREER_LAB_SCENARIO_ARCHIVE="$PWD/runs/local/dev/archive"
+   export CAREER_LAB_CREDENTIAL_KEY_ID=local-dev-v1
+   . runs/local/dev/credential.env
+   ```
+
+   ```sh
+   # 终端 1：API（等它完成初始化再启动 worker，避免首次建库争用）
+   uv run --locked career-lab serve --host 127.0.0.1 --port 18562 --database-url sqlite:///runs/local/dev/rolecraft.db --provider local
+   # 终端 2：worker
+   uv run --locked career-lab worker --database-url sqlite:///runs/local/dev/rolecraft.db --provider local
+   ```
+
+3. 第三个终端启动前端：
+
+   ```sh
+   cd apps/web
+   npm ci
+   npm run build
+   ROLECRAFT_API_TARGET=http://127.0.0.1:18562 npm run preview -- --port 18560
+   ```
+
+打开 <http://127.0.0.1:18560/>；Swagger 在 <http://127.0.0.1:18562/docs>。开发模式把最后一行换成 `npm run dev -- --port 18560`（同样设置 `ROLECRAFT_API_TARGET`）。worker 启动时在 stderr 打印每个模型槽的 provider、model 和指纹。PostgreSQL 用 `docker compose up -d --wait`（端口 55439，账号仅供本地开发），连接串 `postgresql+psycopg://career_lab:local-development-only@127.0.0.1:55439/career_lab`，经 `--database-url` 或 `CAREER_LAB_DATABASE_URL` 传入。
 
 ## 没有负责方产物时怎样演示模型建议
 
@@ -27,7 +66,7 @@ for key, value in phase.environment(out / "journal").items():
 ' > $OUT.env
 ```
 
-然后在 API 与 worker 两个终端都先 `. runs/local/demo-model.env`，再按 [README · 启动工作台](../README.md#启动工作台) 起服务；worker 启动时 stderr 打印四个槽。新建练习、写一份含「有据可查」或「豁免」的作品并提交，反馈页就有逐句建议、证据按钮与「合成机制演示」。把 `"linear"` 换成 `"fusion"` 得到线性×线性融合（alpha 0.75）。这只演示接收与显示的机制，标签不是模型判断。
+然后在 API 与 worker 两个终端都先 `. runs/local/demo-model.env`，再按上面的[启动工作台](#启动工作台)起服务；worker 启动时 stderr 打印四个槽。新建练习、写一份含「有据可查」或「豁免」的作品并提交，反馈页就有逐句建议、证据按钮与「合成机制演示」。把 `"linear"` 换成 `"fusion"` 得到线性×线性融合（alpha 0.75）。这只演示接收与显示的机制，标签不是模型判断。
 
 ## 检查与门禁
 
