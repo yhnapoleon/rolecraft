@@ -32,7 +32,7 @@ python3 -I check_package.py <本目录>        # 不给目录时检查脚本所�
 | [fusion-selection.md](fusion-selection.md) | 融合选择记录 `rolecraft-fusion-selection-v1` 与 dev 选点规则 `joint-first-dev-v1` | 交融合 |
 | [predictions-v3.md](predictions-v3.md) | 预测行 v3（`return_schema_version=3`）与回传复核 `verify-return`：格式、分语言指标、重载容差、融合选择复算 | 每种回传都读 |
 | [dataset-split-sealed-v1.md](dataset-split-sealed-v1.md) | 按 split 冻结的数据包 `rolecraft-dataset-split-sealed-v1`：每个 split 自带文件并逐文件绑定 hash，读 train/dev 不打开 test；metadata 字段、逐条审阅规则与 `validate-handoff` 的调用、退出码 | 交含 test 的数据包 |
-| [test-opening-v1.md](test-opening-v1.md) | 封存 test 的一次性打开：冻结、用户批准、只打开一次、留痕；你方要交的训练说明 `freeze-record.json` 与我方生成的冻结记录 `freeze.json` 的字段 | 冻结模型、交 test 预测前 |
+| [test-opening-v1.md](test-opening-v1.md) | 封存 test 的一次性打开：冻结、用户批准、每个候选一个冻结目录只打开一次、留痕；你方要交的训练说明 `freeze-record.json` 与我方生成的冻结记录 `freeze.json` 的字段 | 冻结模型、交 test 预测前 |
 | [reference/linear_text_v1.py](reference/linear_text_v1.py)、[linear-text-v1.golden.jsonl](linear-text-v1.golden.jsonl) | 线性特征文本 `rolecraft-linear-text-v1` 的参考实现（标准库）与金标 | 拟合 TF-IDF 前 |
 | [reference/export_sklearn_linear.py](reference/export_sklearn_linear.py) | 把拟合好的 scikit-learn 对象写成线性回传、写训练说明模板，并用你方对象写 dev 预测；冻结后用 `write_predictions` 写 test 预测 | 导出线性回传、写 test 预测 |
 | [reference/export_hf_return.py](reference/export_hf_return.py)、[encoder-pair-aggregate.examples.json](encoder-pair-aggregate.examples.json) | 编码器回传导出（`export`）、按我方加载器同一规则的参考推理（`predict`，dev 与 test 预测都用它）与外层清单封装（`seal`，含 `artifact_roles`）；聚合规则样例 | 导出编码器回传、写预测 |
@@ -126,4 +126,4 @@ fixture v2 包与准备事项 v2 的大部分约定照旧：v2、v3 预测行混
 
 1. **复核方式**：准备事项 v2 写的是按回传命令重新加载、交回推理代码。v3 改为**我方不运行你方的命令或 Python**，用我方加载器按公开格式重载，逐条比对你方预测（标签、状态、证据集合完全一致，概率差线性不超过 1e-6、编码器不超过 1e-4）。因此回传只收白名单里的数据文件：编码器目录不能放 `.py`、`pytorch_model.bin`、`.pt`，线性只收 `linear/model.json` 与无 pickle 的 `linear/arrays.npz`。推理代码可以写进训练说明供追溯，但不会被执行；参考推理（`predict`、`write_predictions`）给出与我方加载器一致的写法。
 2. **线性证据头必填**：v2 允许把只做三分类的 LR 当作基线另报。v3 的线性回传缺证据头即拒绝（`linear_return_evidence_head_required`）。纯分类 LR 仍可以作为离线基线写进你方报告，但不登记、不进产品。
-3. **编码器结构、阈值、依赖版本限定，融合选点规则内置**：v2 README 写的是整包分类头加多标签证据头、或逐条判断后确定性聚合，方法由接手者选择。v3 只收 mean pooling 上的线性头，结构限 `pack`、`pair`、`pair_aggregate` 三种；`pair_aggregate` 的聚合规则固定、阈值不低于 0.5；`max_tokens` 不超过 512，超长如实弃权、不截断；推理依赖锁定 torch 2.8.0、transformers 4.57.1、tokenizers 0.22.2、safetensors 0.6.2；融合必须按 `joint-first-dev-v1` 在 dev 上选点（v2 未规定），证据必选的资格规则内置在我方复算里。
+3. **编码器结构、阈值、依赖版本限定，融合选点规则内置**：v2 README 写的是整包分类头加多标签证据头、或逐条判断后确定性聚合，方法由接手者选择。v3 只收 mean pooling 上的线性头，结构限 `pack`、`pair`、`pair_aggregate` 三种；`pair_aggregate` 的聚合规则固定、阈值不低于 0.5；`max_tokens` 缺省 512，不得超过所用 tokenizer 的上限（XLM-R base 为 512），超长如实弃权、不截断；推理依赖锁定 torch 2.8.0、transformers 4.57.1、tokenizers 0.22.2、safetensors 0.6.2；融合必须按 `joint-first-dev-v1` 在 dev 上选点（v2 未规定），证据必选的资格规则内置在我方复算里。

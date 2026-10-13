@@ -40,7 +40,7 @@ import hashlib
 import io
 import json
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import numpy as np
 import sklearn
@@ -52,6 +52,9 @@ LABELS = ("SUPPORTED", "CONTRADICTED", "INSUFFICIENT")
 LABEL_TIERS = ("G0", "G1", "G2", "G2v")
 TIME_POLICY = "historical-evidence-time-v1"
 TOLERANCE = 1e-9
+# Files the export writes itself; the training notes may not take one of these names.
+MEMBERS = ("checkpoint-manifest.json", "linear/model.json", "linear/arrays.npz")
+DEV_PREDICTIONS = "predictions.dev.jsonl"
 # Transform-affecting TfidfVectorizer parameters the loader cannot express otherwise.
 DEFAULTS = {
     "input": "content",
@@ -269,6 +272,75 @@ def warn_unbacked(unbacked):
         )
 
 
+def notes_path(target, name):
+    """The training notes file inside ``target``, refused before anything is written."""
+    path = PurePosixPath(name) if isinstance(name, str) else None
+    if (
+        path is None
+        or not name
+        or path.is_absolute()
+        or any(part in ("", ".", "..") for part in name.split("/"))
+        or name in (*MEMBERS, DEV_PREDICTIONS)
+        or path.parts[0] == "linear"
+    ):
+        raise ExportError(
+            f"training_notes_path_invalid: {name!r} must be a new relative file inside the "
+            f"return, not one of {[*MEMBERS, DEV_PREDICTIONS]} or under linear/"
+        )
+    return Path(target) / path
+
+
+def check_exported(return_dir, vectorizer, classifier, evidence_classifier, evidence_vectorizer):
+    """The class order, after every array and both vectorizers equal the exported return.
+
+    Raises ``linear_objects_not_exported: <field> ...`` naming the first difference, before
+    a single row is written: rows from other objects would only fail at our reload, after a
+    one-time test opening was spent.
+    """
+    model = json.loads((Path(return_dir) / "linear/model.json").read_bytes())
+    with np.load(Path(return_dir) / "linear/arrays.npz", allow_pickle=False) as archive:
+        arrays = {name: archive[name] for name in archive.files}
+
+    def differ(field, detail):
+        return ExportError(f"linear_objects_not_exported: {field} {detail} ({return_dir})")
+
+    classes = [str(c) for c in getattr(classifier, "classes_", [])]
+    if sorted(classes) != sorted(LABELS):
+        raise differ("classifier", "classes are not the three relation labels")
+    if [int(c) for c in getattr(evidence_classifier, "classes_", [])] != [0, 1]:
+        raise differ("evidence_classifier", "classes are not [0, 1]")
+    order = [classes.index(label) for label in LABELS]
+    spec, idf = vectorizer_spec(vectorizer)
+    if spec != model["vectorizer"]:
+        raise differ("vectorizer", "differs from linear/model.json")
+    expected = {
+        "coef": np.asarray(classifier.coef_, dtype=np.float64)[order],
+        "intercept": np.asarray(classifier.intercept_, dtype=np.float64)[order],
+        "evidence_coef": np.asarray(evidence_classifier.coef_, dtype=np.float64)[0],
+        "evidence_intercept": np.asarray(evidence_classifier.intercept_, dtype=np.float64).reshape(
+            1
+        ),
+    }
+    if idf is not None:
+        expected["idf"] = idf
+    declared = model["evidence_head"]["vectorizer"]
+    if evidence_vectorizer is None:
+        if declared != "shared":
+            raise differ("evidence_vectorizer", "missing: the export has its own evidence head")
+    else:
+        head_spec, evidence_idf = vectorizer_spec(evidence_vectorizer)
+        if declared == "shared" or head_spec != declared:
+            raise differ("evidence_vectorizer", "differs from the exported evidence head")
+        if evidence_idf is not None:
+            expected["evidence_idf"] = evidence_idf
+    for name in ("coef", "intercept", "evidence_coef", "evidence_intercept", "idf", "evidence_idf"):
+        if (name in expected) != (name in arrays) or (
+            name in expected and not np.array_equal(expected[name], arrays[name])
+        ):
+            raise differ(name, "differs from linear/arrays.npz")
+    return order, model
+
+
 def notes_template(manifest, evidence_threshold):
     """The training notes the manifest names, pre-filled with what the export knows."""
     selection = str(manifest["test_used_for_selection"]).lower()
@@ -303,35 +375,20 @@ def write_predictions(
 ):
     """Rows for any partition (the test after the freeze) in the dev rows' format.
 
-    The objects must be the exported ones (their arrays equal ``linear/arrays.npz``); the
-    revision and threshold come from the return. ``output`` must lie outside the return
-    directory: a file added there would not be in its manifest.
+    The objects must be the exported ones: every array equals ``linear/arrays.npz`` and both
+    vectorizers equal ``linear/model.json`` (``check_exported``); the revision and threshold
+    come from the return. ``output`` must lie outside the return directory: a file added
+    there would not be in its manifest. Every check runs before the output is created.
     """
     return_dir, output = Path(return_dir).resolve(), Path(output).resolve()
     if output.is_relative_to(return_dir):
-        raise ExportError("write prediction rows outside the return directory")
+        raise ExportError("prediction_output_inside_return: write prediction rows outside it")
     if output.exists():
-        raise ExportError(f"{output} already exists; rows are never overwritten")
+        raise ExportError(f"prediction_output_exists: {output}; rows are never overwritten")
     manifest = json.loads((return_dir / "checkpoint-manifest.json").read_bytes())
-    model = json.loads((return_dir / "linear/model.json").read_bytes())
-    with np.load(return_dir / "linear/arrays.npz", allow_pickle=False) as archive:
-        arrays = {name: archive[name] for name in archive.files}
-    classes = [str(c) for c in getattr(classifier, "classes_", [])]
-    if sorted(classes) != sorted(LABELS):
-        raise ExportError("classifier classes must be exactly the three relation labels")
-    order = [classes.index(label) for label in LABELS]
-    exported = (
-        np.array_equal(np.asarray(classifier.coef_, dtype=np.float64)[order], arrays["coef"])
-        and np.array_equal(
-            np.asarray(classifier.intercept_, dtype=np.float64)[order], arrays["intercept"]
-        )
-        and np.array_equal(
-            np.asarray(evidence_classifier.coef_, dtype=np.float64)[0], arrays["evidence_coef"]
-        )
-        and vectorizer_spec(vectorizer)[0] == model["vectorizer"]
+    order, model = check_exported(
+        return_dir, vectorizer, classifier, evidence_classifier, evidence_vectorizer
     )
-    if not exported:
-        raise ExportError("these objects are not the ones exported to " + str(return_dir))
     rows, unbacked = prediction_rows(
         _read_jsonl(inputs),
         revision=manifest["model_revision"],
@@ -374,6 +431,7 @@ def export_linear_return(
     ),
 ):
     target = Path(target)
+    notes = notes_path(target, training_notes_file)
     if target.exists():
         raise ExportError(f"{target} already exists; exports are never overwritten")
     if not 0 <= evidence_threshold <= 1:
@@ -482,9 +540,6 @@ def export_linear_return(
     (target / "linear/model.json").write_bytes(model_raw)
     (target / "linear/arrays.npz").write_bytes(arrays_raw)
     (target / "predictions.dev.jsonl").write_bytes(b"".join(json_bytes(row) for row in rows))
-    notes = target / training_notes_file
-    if not notes.resolve().is_relative_to(target.resolve()) or notes.resolve() == target.resolve():
-        raise ExportError("training_notes_file must be a file inside the return directory")
     notes.parent.mkdir(parents=True, exist_ok=True)
     notes.write_text(notes_template(manifest, evidence_threshold), encoding="utf-8")
     (target / "checkpoint-manifest.json").write_bytes(manifest_raw)

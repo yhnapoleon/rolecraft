@@ -131,7 +131,7 @@ uv run --locked python -m career_lab.datasets.v3 validate-handoff \
 ## 6. 结果、退出码与重跑
 
 - 报告 `report.json`（`protocol=data-handoff-review-v1`）按 record_id 给 `accept`（机制核验通过）、`quarantine`（身份、格式或引用不符）或 `pending`（需补证明或独立核验）及稳定原因码，另有 `counts`、`data_card_check` 与第 4 节的本布局字段；`training_ready`、`quality_verified`、`call_authenticity_verified` 恒为 `false`。
-- 退出码：`0` 表示全部记录 `accept` 且模型回传格式通过（只代表本次机械核验范围）；任一记录 `pending`／`quarantine` 或模型回传不通过时为 `2`；包级错误（如文件集合不符）不写报告，只输出 `{"error": <错误码>, "message": …}`，同样以 `2` 退出，不回显私有正文。
+- 退出码：`0` 表示全部记录 `accept` 且模型回传格式通过（只代表本次机械核验范围）。带 `--checkpoint-manifest` 时，validate-handoff 会把正当的弃权或失败预测行（例如编码器超过 `max_tokens` 的 `encoder_input_truncated`）记为 `pending`（`prediction_abstained`、`prediction_failed`），`format_valid=false`、退出 2；这是既有口径，不表示回传有错，联核时由我方逐条确认；任一记录 `pending`／`quarantine` 或模型回传不通过时为 `2`；包级错误（如文件集合不符）不写报告，只输出 `{"error": <错误码>, "message": …}`，同样以 `2` 退出，不回显私有正文。
 - 同一份包对同一输出目录可重跑，报告字节相同；包或版本有变化时拒绝覆盖已有报告（`handoff_review_conflict`），用新的输出目录保存新版本。
 - 核验不重新标注、不发起模型调用；所有 hash 校验只证明对应字节，不证明来源授权或事实真实。
 

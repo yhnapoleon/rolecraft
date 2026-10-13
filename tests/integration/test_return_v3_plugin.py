@@ -6,11 +6,14 @@ writes the training-notes template and test rows in the dev format. Synthetic me
 samples only (constructed or fixture-fitted weights); nothing here is quality evidence.
 """
 
+import copy
 import json
 from pathlib import Path
 from typing import Any
 
 import pytest
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
 
 from career_lab.contracts import v2 as C
 from career_lab.models.v3.bundle import json_bytes, sha
@@ -35,6 +38,7 @@ from tests.support.linear_return import (
     selection_record,
     write_linear_return,
 )
+from tests.unit.test_w08_models import examples
 
 DATASET_ID = "rolecraft-synthetic-v3-mechanism"
 RELATION = ["SUPPORTED", "CONTRADICTED", "INSUFFICIENT"]
@@ -256,13 +260,14 @@ def test_plug_07_linear_test_rows_have_the_dev_format_and_open_the_test(tmp_path
     """The test entry writes rows like the dev rows (partition=test), outside the return."""
     package = build_package(tmp_path)
     exporter, objects, target = linear_export(tmp_path, package)
-    with pytest.raises(exporter.ExportError):
+    with pytest.raises(exporter.ExportError, match="prediction_output_inside_return"):
         exporter.write_predictions(
             target,
             **objects,
             inputs=package.root / "data/test.inputs.jsonl",
             output=target / "predictions.test.jsonl",
         )
+    assert not (target / "predictions.test.jsonl").exists()
     rows_path = tmp_path / "predictions.test.jsonl"
     summary = exporter.write_predictions(
         target, **objects, inputs=package.root / "data/test.inputs.jsonl", output=rows_path
@@ -296,3 +301,113 @@ def test_plug_07_linear_test_rows_have_the_dev_format_and_open_the_test(tmp_path
     assert code == 0, report
     assert report["split"] == "test" and report["reload"]["status"] == "matched"
     assert report["reload"]["max_probability_deviation"] <= 1e-6
+
+
+def independent_head(objects: dict) -> dict:
+    """The shared mechanism with an evidence head on its own word vocabulary, idf included."""
+    reference = reference_module("linear_text_v1")
+    rows = examples("train", 2)
+    pairs, gold = [], []
+    for row in rows:
+        item = row.item.model_dump(mode="json")
+        for candidate in item["evidence"]["candidate_evidence"]:
+            pairs.append(reference.pair_text(item, candidate))
+            gold.append(int(candidate["id"] in row.annotation.final.evidence_ids))
+    vectorizer = TfidfVectorizer(analyzer="word", ngram_range=(1, 2))
+    classifier = LogisticRegression(max_iter=500, random_state=5002)
+    classifier.fit(vectorizer.fit_transform(pairs), gold)
+    return objects | {"evidence_vectorizer": vectorizer, "evidence_classifier": classifier}
+
+
+def shifted(objects: dict, name: str, attribute: str) -> dict:
+    """A copy of the exported objects with one fitted array moved by one."""
+    changed = copy.deepcopy(objects)
+    target = changed[name]
+    setattr(target, attribute, getattr(target, attribute) + 1.0)
+    return changed
+
+
+# (independent evidence head, objects transform, field the refusal names)
+TAMPERED = {
+    "coef": (False, lambda o: shifted(o, "classifier", "coef_"), "coef"),
+    "intercept": (False, lambda o: shifted(o, "classifier", "intercept_"), "intercept"),
+    "evidence-coef": (False, lambda o: shifted(o, "evidence_classifier", "coef_"), "evidence_coef"),
+    "evidence-intercept": (
+        False,
+        lambda o: shifted(o, "evidence_classifier", "intercept_"),
+        "evidence_intercept",
+    ),
+    "idf": (False, lambda o: shifted(o, "vectorizer", "idf_"), "idf"),
+    "evidence-idf": (True, lambda o: shifted(o, "evidence_vectorizer", "idf_"), "evidence_idf"),
+    "head-declared-shared": (
+        False,
+        lambda o: o | {"evidence_vectorizer": copy.deepcopy(o["vectorizer"])},
+        "evidence_vectorizer",
+    ),
+    "head-declared-independent": (
+        True,
+        lambda o: o | {"evidence_vectorizer": None},
+        "evidence_vectorizer",
+    ),
+}
+
+
+@pytest.mark.parametrize("case", sorted(TAMPERED))
+def test_plug_07_test_rows_need_the_exported_objects_and_write_nothing_otherwise(
+    tmp_path: Path, case: str
+) -> None:
+    """162 P2-2: every array and the evidence head's vectorizer are checked before any row is
+    written, so a mismatch cannot spend a one-time test opening."""
+    package = build_package(tmp_path)
+    exporter = reference_module("export_sklearn_linear")
+    independent, transform, field = TAMPERED[case]
+    objects = fitted_mechanism("shared_char_wb")
+    if independent:
+        objects = independent_head(objects)
+    target = tmp_path / "linear-return"
+    exporter.export_linear_return(
+        target,
+        **objects,
+        evidence_threshold=0.0,
+        dataset_manifest=package.root / "dataset-manifest.json",
+        dev_inputs=package.root / "data/dev.inputs.jsonl",
+        training_notes_file="training-notes.md",
+    )
+    output = tmp_path / "predictions.test.jsonl"
+    with pytest.raises(exporter.ExportError, match=f"linear_objects_not_exported: {field} "):
+        exporter.write_predictions(
+            target,
+            **transform(objects),
+            inputs=package.root / "data/test.inputs.jsonl",
+            output=output,
+        )
+    assert not output.exists()
+    # The untouched objects still write the rows.
+    exporter.write_predictions(
+        target, **objects, inputs=package.root / "data/test.inputs.jsonl", output=output
+    )
+    assert len(jsonl(output)) == 2
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["linear/model.json", "checkpoint-manifest.json", "predictions.dev.jsonl", "../notes.md", ""],
+)
+def test_plug_07_a_bad_training_notes_path_is_refused_before_anything_is_written(
+    tmp_path: Path, name: str
+) -> None:
+    """162 P3-3: the notes path is checked first; it can neither overwrite a return member nor
+    leave half a return directory behind."""
+    package = build_package(tmp_path)
+    exporter = reference_module("export_sklearn_linear")
+    target = tmp_path / "linear-return"
+    with pytest.raises(exporter.ExportError, match="training_notes_path_invalid"):
+        exporter.export_linear_return(
+            target,
+            **fitted_mechanism("shared_char_wb"),
+            evidence_threshold=0.0,
+            dataset_manifest=package.root / "dataset-manifest.json",
+            dev_inputs=package.root / "data/dev.inputs.jsonl",
+            training_notes_file=name,
+        )
+    assert not target.exists() and not (tmp_path / "notes.md").exists()

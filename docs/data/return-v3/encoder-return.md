@@ -133,7 +133,7 @@ body_i = candidate_i.text + "\n" + "observed {ref.observed_at_seq}; valid from {
 | 8 | 编码长度超过 `max_tokens`（§9） | `encoder_input_truncated` |
 | 9 | `pack`：某个候选在第二段没有对应 token | `evidence_span_missing_or_truncated` |
 
-这些行写 `status=abstained`。输入跨了多个 session，或任务不是 `relation`，在我方读数据包时就整包拒绝，到不了逐条预测（参考脚本遇到这样的单条输入写 `status=failed`）。
+这些行写 `status=abstained`（`validate-handoff` 联核时把它们记为 `pending`、退出 2，属既有口径，由我方确认，见[数据包规格](dataset-split-sealed-v1.md)第 6 节）。输入跨了多个 session，或任务不是 `relation`，在我方读数据包时就整包拒绝，到不了逐条预测（参考脚本遇到这样的单条输入写 `status=failed`）。
 
 `reason` 写上表的码，便于对照（我方比对状态、标签、证据集合与概率，不比对 `reason` 文字）。另有一条格式规则不是弃权：**证据可评的记录上，`SUPPORTED`／`CONTRADICTED` 的成功行必须选中至少一个证据**，否则该行格式不合格（`return_evidence_selection_required`），整份报告 rejected。`predict --labels data/dev.labels.jsonl` 会在 `evidence_missing` 里列出这样的记录；出现时请在 dev 上调整 `evidence_threshold` 或模型，不要改写预测行。
 
