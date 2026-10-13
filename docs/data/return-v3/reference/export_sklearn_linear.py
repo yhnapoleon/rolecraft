@@ -20,8 +20,8 @@ library and the sibling ``linear_text_v1.py``; no RoleCraft code). Typical use::
 It writes ``linear/model.json``, ``linear/arrays.npz``, ``checkpoint-manifest.json`` and
 ``predictions.dev.jsonl`` (v2 rows, predicted by *your* sklearn objects). RoleCraft
 reloads the return with its own loader and compares labels, statuses and evidence sets
-exactly and probabilities within 1e-6 (the tolerance comparison arrives with the v3
-return verifier; until then the comparison is exact). The script refuses objects the loader
+exactly and probabilities within an absolute difference of 1e-6 (``verify-return``).
+The script refuses objects the loader
 cannot rebuild exactly (custom analyzers/tokenizers/preprocessors, non-default token
 patterns, accent stripping, stop words, binary counts, non-float64 output, one-vs-rest
 or non-logistic probabilities). Fill ``training_notes_file`` and the
@@ -31,6 +31,7 @@ or non-logistic probabilities). Fill ``training_notes_file`` and the
 import hashlib
 import io
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
@@ -265,6 +266,7 @@ def export_linear_return(
     revision = model_revision(sha256(model_raw), sha256(arrays_raw), dataset_sha)
 
     rows = []
+    unbacked = 0
     for record in records:
         model_input = record["model_input"]
         problem = input_problem(model_input)
@@ -316,7 +318,16 @@ def export_linear_return(
         }
         if not selected:
             row["reason"] = "no candidate reached the evidence threshold"
+            if label != "INSUFFICIENT":
+                unbacked += 1
         rows.append(row)
+    if unbacked:
+        # verify-return refuses such rows where the record's evidence is evaluable
+        # (return_evidence_selection_required); fusion selection never picks such a point.
+        print(
+            f"warning: {unbacked} SUPPORTED/CONTRADICTED dev rows have no selected evidence",
+            file=sys.stderr,
+        )
 
     manifest = {
         "template": False,

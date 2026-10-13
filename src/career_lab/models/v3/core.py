@@ -203,6 +203,17 @@ def softmax(values, axis=-1):
     return exp / exp.sum(axis=axis, keepdims=True)
 
 
+def evidence_missing(status, label, evidence_ids, evidence_evaluable) -> bool:
+    """A successful non-INSUFFICIENT result with no selected evidence where evidence is evaluable.
+
+    One rule for the return format check (``return_evidence_selection_required``) and for
+    fusion selection (such grid points are not eligible), so a selected point always passes.
+    """
+    return (
+        status == "ok" and label != "INSUFFICIENT" and not evidence_ids and bool(evidence_evaluable)
+    )
+
+
 @dataclass(frozen=True)
 class Prediction:
     task_type: str

@@ -33,6 +33,11 @@ const zh = {
   // 2026-10-11 decision 5: a range of the rule-anchored part only; never a single total.
   rangeFull: '规则已定标部分：{lower}–{upper} 分（满分 {full}）',
   rangePart: '规则已定标部分：{lower}–{upper} 分（适用项共 {denominator} 分，满分 {full}）',
+  // 2026-10-12 item 2: name the undetermined share of the denominator.
+  rangeUndetermined:
+    '规则已定标部分：{lower}–{upper} 分（适用项共 {denominator} 分，其中 {undetermined} 分适用性待确认，满分 {full}）',
+  // 2026-10-12 item 3: item counts only, never a percentage.
+  coverageLine: '已核实 {verified} 项／共 {total} 项适用 · 模型建议 {model} 项 · 待核验 {pending} 项',
   rangeNote: '模型建议不计分；待核验项使区间变宽。',
   rangeEmpty: '规则已定标部分：尚无适用项，不形成区间。',
   rangeVersion: '分数区间：此评价标准版本不汇总。',
@@ -76,6 +81,10 @@ export const FEEDBACK_COPY: CopyTable<FeedbackCopyKey> = {
     rangeFull: 'Rule-anchored part: {lower}–{upper} of {full}',
     rangePart:
       'Rule-anchored part: {lower}–{upper} of {denominator} (applicable items; full rubric {full})',
+    rangeUndetermined:
+      'Rule-anchored part: {lower}–{upper} of {denominator} (applicable items, including {undetermined} points whose applicability is undetermined; full rubric {full})',
+    coverageLine:
+      'Verified {verified} of {total} applicable items · Model advice {model} · Pending verification {pending}',
     rangeNote: 'Model advice is not scored; pending items widen the range.',
     rangeEmpty: 'Rule-anchored part: nothing applies yet, so there is no range.',
     rangeVersion: 'No range for this rubric version.',

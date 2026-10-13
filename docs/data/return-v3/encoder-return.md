@@ -25,6 +25,8 @@
 
 目录里每个文件（清单本身除外）都必须列在 `checkpoint_files`，多一个、少一个都拒绝。后缀：`encoder/` 下只允许 `.json .safetensors .model .txt .md`，其余位置只允许 `.json .npz .jsonl .md .txt`；不允许符号链接、`pytorch_model.bin`、`.pt`、自定义 Python 代码。`encoder/` 下的实际文件集合必须与 `local-files.json` 完全一致。
 
+交付前删去隐藏文件（如 macOS 的 `.DS_Store`），否则整份回传被拒（`checkpoint_member_set_mismatch` 或 `checkpoint_file_type_not_allowed`）。
+
 ## 2. 外层清单 `checkpoint-manifest.json`
 
 字段与 fixture v2 模板相同（`return_protocol=rolecraft-label-evidence-v2`、`task_type=relation`、固定 `label_order`、`dataset_id`、`dataset_manifest_sha256`、`checkpoint_files`、`load_and_predict_command`、`training_notes_file`、`predictions_file` 等）。`checkpoint_files` 列出目录内除清单本身以外的每个文件及其 SHA-256，且只能列这些文件（§1）。
@@ -217,7 +219,25 @@ python export_hf_return.py seal --root RETURN --dataset-manifest dataset-manifes
 | `pretrained_encoder_dependencies_unavailable` | 服务环境缺 encoder 依赖 |
 | `registered_inference_runtime_changed` | 依赖版本或推理源码与登记时不同（§11） |
 | `encoder_registration_retired` | v1 注册，不再产生新建议（§11） |
-| `encoder_input_truncated`（逐条弃权） | 编码长度超过 `max_tokens`（§9） |
+
+预测期逐条弃权（该条记 `status=abstained`，原因为下列码，不出概率与标签；其余记录照常预测）：
+
+| 码 | 含义 |
+|---|---|
+| `encoder_input_truncated` | 编码长度超过 `max_tokens`（§9） |
+| `evidence_span_missing_or_truncated` | `pack`：某个候选在编码后的第二段里没有对应的 token，取不到候选表示 |
+| `pack_evidence_spans_require_fast_tokenizer` | `pack`：分词器不是 fast tokenizer，无法按字符区间取候选表示（§5）；产品按 `use_fast=True` 加载，回传带 `tokenizer.json` 时得到 fast tokenizer |
+
+运维类／注册目录内部（由我方的注册目录与登记操作触发，负责方的回传不会单独触发，列出供排查）：
+
+| 码 | 含义 |
+|---|---|
+| `registration_scope_required` | 登记时 `--scope` 不是 `synthetic_fixture` 或 `external_candidate` |
+| `model_registration_busy` | 同一注册正在另一进程发布 |
+| `model_registration_drift` | 注册目录里已有同 id 的注册但内容不同，或复制进注册目录的文件与登记时核过的不一致 |
+| `model_registration_protocol_invalid` | 加载时注册项的协议或 scope 不认识 |
+| `model_registration_identity_mismatch` | 加载时注册 id、注册文件路径与注册内容不符 |
+| `registered_model_identity_mismatch` | 加载时已登记副本与注册项记录不符（重核的文件身份，或加载出的 `model_revision`、任务与注册项不同） |
 
 ## 14. 本版不支持
 

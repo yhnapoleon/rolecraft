@@ -147,6 +147,39 @@ describe('decision 5: rule-anchored range on the feedback first screen', () => {
     expect(scoreRangeLine(report({ score_range: pending }), language)?.text).toBe(text);
   });
 
+  // 2026-10-12 item 2: undetermined applicability is named inside the denominator.
+  it.each([
+    ['zh', '规则已定标部分：21.6–65 分（适用项共 75 分，其中 3.3 分适用性待确认，满分 100）'],
+    [
+      'en',
+      'Rule-anchored part: 21.6–65 of 75 (applicable items, including 3.3 points whose applicability is undetermined; full rubric 100)',
+    ],
+  ] as const)('names the undetermined share of the denominator (%s)', (language, text) => {
+    expect(scoreRangeLine(report({ score_range: VARIED }), language)?.text).toBe(text);
+  });
+
+  it.each([
+    ['zh', '规则已定标部分：0–100 分（适用项共 100 分，其中 5 分适用性待确认，满分 100）'],
+    [
+      'en',
+      'Rule-anchored part: 0–100 of 100 (applicable items, including 5 points whose applicability is undetermined; full rubric 100)',
+    ],
+  ] as const)('names it even when every criterion applies (%s)', (language, text) => {
+    const whole: _RuleScoreRange = {
+      ...MIXED,
+      denominator: 100,
+      lower: 0,
+      upper: 100,
+      criteria: MIXED.criteria.map((entry) => ({
+        ...entry,
+        status: entry.criterion === 'R1.target' ? 'undetermined' : 'pending',
+        lower: null,
+        upper: null,
+      })),
+    };
+    expect(scoreRangeLine(report({ score_range: whole }), language)?.text).toBe(text);
+  });
+
   it('rounds range ends outward and never shows a tighter range', () => {
     expect(formatPoints(25 / 3, 'down')).toBe('8.3');
     expect(formatPoints(25 / 3, 'up')).toBe('8.4');
@@ -337,6 +370,7 @@ describe('decision 5: per-criterion weight and anchoring', () => {
 
 it('keeps the range copy in both languages', () => {
   const keys = Object.keys(FEEDBACK_COPY.zh).filter((k) => /^(range|weight)/.test(k));
-  expect(keys).toHaveLength(12);
+  // 13 since 2026-10-12 item 2 added rangeUndetermined (the undetermined share).
+  expect(keys).toHaveLength(13);
   expect(Object.keys(FEEDBACK_COPY.en).sort()).toEqual(Object.keys(FEEDBACK_COPY.zh).sort());
 });

@@ -373,7 +373,12 @@ export function readRegisteredAdvice(
 ): RegisteredAdvice[] | undefined {
   if (value === undefined || value === null) return undefined;
   if (!Array.isArray(value)) return [invalidAdvice()];
-  return value.map((item: unknown) => {
+  // Criterion advice (§8 follow-up) is not relation advice: skip it, never fail the block.
+  const relationEntries = value.filter(
+    (item: unknown) => !(row(item) && item.task_type === 'criterion'),
+  );
+  if (value.length && !relationEntries.length) return undefined;
+  return relationEntries.map((item: unknown) => {
     try {
       return readAdviceItem(item, sessionId);
     } catch {

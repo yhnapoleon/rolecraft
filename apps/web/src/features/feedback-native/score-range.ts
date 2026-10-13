@@ -54,10 +54,16 @@ export function scoreRangeLine(
       return { kind: 'empty', text: feedbackCopy(language, 'rangeEmpty') };
     const full = fullWeight(range);
     const denominator = formatPoints(range.denominator);
-    const text = feedbackCopy(language, denominator === full ? 'rangeFull' : 'rangePart', {
+    const undetermined = range.criteria
+      .filter((row) => row.status === 'undetermined')
+      .reduce((sum, row) => sum + row.weight, 0);
+    const key =
+      undetermined > EPSILON ? 'rangeUndetermined' : denominator === full ? 'rangeFull' : 'rangePart';
+    const text = feedbackCopy(language, key, {
       ...rangeEnds(range.lower, range.upper, range.denominator),
       denominator,
       full,
+      undetermined: formatPoints(undetermined),
     });
     return { kind: 'range', text, note: feedbackCopy(language, 'rangeNote') };
   }

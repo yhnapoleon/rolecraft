@@ -10,15 +10,24 @@ import numpy as np
 import pytest
 
 from career_lab.contracts import v2 as C
+from career_lab.experiments.v3.training.selection import rank_key
 from career_lab.models.v3.bundle import json_bytes, save_bundle, sha
 from career_lab.models.v3.encoder import AttentionEncoder
-from career_lab.models.v3.ensemble import select_alpha
+from career_lab.models.v3.ensemble import blend, select_alpha
 from career_lab.models.v3.fusion_bundle import save_fusion_bundle
 from career_lab.models.v3.linear import LinearCandidate
 from career_lab.models.v3.registration import RegistrationSummary
-from career_lab.models.v3.registry import load_registration, register_bundle
+from career_lab.models.v3.registry import (
+    describe_registration,
+    load_registration,
+    register_bundle,
+    register_fusion,
+)
 from career_lab.models.v3.return_data import load_return_dataset
+from career_lab.models.v3.return_predictions import parse_returned
 from career_lab.models.v3.return_verification import inspect_return_checkpoint
+from tests.integration.test_fusion_registration import second_weights
+from tests.support.linear_return import selection_record, write_linear_return
 from tests.unit.test_w08_encoder_registration import (
     deny_encoder_imports,
     encoder_return,
@@ -1287,3 +1296,124 @@ def test_ret_05_a_trained_encoder_that_cannot_reload_here_is_not_a_partial_revie
     code, result = invoke(return_case, capsys, *registration_args(registry, registration))
     assert code == 2, result
     assert result["error"] == "pretrained_encoder_dependencies_unavailable"
+
+
+def test_fsel_01_a_record_other_than_the_registered_copy_is_named(
+    return_case, capsys, tmp_path
+) -> None:
+    """FSEL-01: verify-return checks the given record against the copy registered with the
+    fusion (145 registration); another record is named ``fusion_selection_not_registered``."""
+    root, checksum, path = return_case
+    registry = tmp_path / "registry"
+    dataset = {"dataset_id": "synthetic-return", "dataset_sha": checksum}
+    left_root, right_root = tmp_path / "left", tmp_path / "right"
+    left = register_bundle(
+        registry, left_root, write_linear_return(left_root, **dataset), scope="synthetic_fixture"
+    )
+    right = register_bundle(
+        registry,
+        right_root,
+        write_linear_return(right_root, arrays=second_weights(), **dataset),
+        scope="synthetic_fixture",
+    )
+    record = selection_record(
+        describe_registration(registry, left).identity(),
+        describe_registration(registry, right).identity(),
+    )
+    registered = tmp_path / "registered-selection.json"
+    registered.write_bytes(json_bytes(record))
+    ref = register_fusion(registry, left, right, registered, scope="synthetic_fixture")
+    write_rows(path, model_predictions(registry, ref, root / "data/dev.inputs.jsonl"))
+    other = tmp_path / "other-selection.json"
+    other.write_text(json.dumps(record, indent=2))
+    reasons = {}
+    for name, selection in (("registered", registered), ("other", other)):
+        code, result = invoke(
+            return_case,
+            capsys,
+            *registration_args(registry, ref),
+            "--fusion-selection",
+            str(selection),
+        )
+        assert code == 2, result  # the placeholder metrics never match the recomputed grid
+        reasons[name] = result["fusion_selection"]["reasons"]
+    assert "fusion_selection_not_registered" not in reasons["registered"]
+    assert reasons["other"] == ["fusion_selection_not_registered", *reasons["registered"]]
+
+
+def doc01_components(return_case, tmp_path: Path):
+    """The DOC-01 pair: the 145 constructed linear return and one with ``second_weights``."""
+    _, checksum, _ = return_case
+    registry = tmp_path / "registry"
+    dataset = {"dataset_id": "synthetic-return", "dataset_sha": checksum}
+    models = []
+    for name, arrays in (("left", None), ("right", second_weights())):
+        root = tmp_path / name
+        ref = register_bundle(
+            registry,
+            root,
+            write_linear_return(root, arrays=arrays, **dataset),
+            scope="synthetic_fixture",
+        )
+        models.append(load_registration(registry, ref)[0])
+    return models
+
+
+def test_fsel_01_grid_eligibility_and_the_return_format_check_agree(return_case, tmp_path) -> None:
+    """FSEL-01: a grid point is eligible exactly when its own dev predictions, returned as v3
+    rows, pass the format check (no evidence-less SUPPORTED/CONTRADICTED row), so a selected
+    point always passes verify-return."""
+    left, right = doc01_components(return_case, tmp_path)
+    rows = examples("dev", 1)
+    result = select_alpha(rows, left, right)
+    for point in result["grid"]:
+        refused = False
+        for row in rows:
+            predicted = blend(
+                left.predict(row.item),
+                right.predict(row.item),
+                point["alpha"],
+                row.item,
+                threshold=point["threshold"],
+            )
+            returned = parse_returned(
+                {
+                    "return_schema_version": 3,
+                    "record_id": row.record_id,
+                    "input_hash": row.annotation.input_hash,
+                    "model_revision": predicted.model_revision,
+                    "task_type": "relation",
+                    "status": predicted.status,
+                    "probabilities": list(predicted.probabilities)
+                    if predicted.probabilities is not None
+                    else None,
+                    "label": predicted.label,
+                    "evidence_ids": list(predicted.evidence_ids),
+                    "evidence_bindings": [
+                        {"candidate_id": c.id, "candidate_sha256": C.digest(c)}
+                        for c in row.item.evidence.candidate_evidence
+                        if c.id in predicted.evidence_ids
+                    ],
+                    "reason": predicted.reason_code or "grid point",
+                }
+            )
+            try:
+                returned.checked_prediction(row)
+            except C.ProtocolError as error:
+                assert error.code == "return_evidence_selection_required"
+                refused = True
+        assert point["evidence_complete"] is not refused, point["id"]
+
+
+def test_fsel_01_points_whose_rows_lack_required_evidence_are_not_eligible(
+    return_case, tmp_path
+) -> None:
+    """FSEL-01 (DOC-01 case): the only points with joint successes leave a CONTRADICTED row
+    without evidence; they are reported but not selected, so there is no confirmable choice."""
+    left, right = doc01_components(return_case, tmp_path)
+    result = select_alpha(examples("dev", 1), left, right)
+    best = max(result["grid"], key=lambda p: rank_key(p["metrics"], cost=p["cost"]))
+    assert (best["alpha"], best["threshold"], best["evidence_complete"]) == (0.5, 0.75, False)
+    assert best["metrics"]["joint_correctness"] > 0
+    assert (result["alpha"], result["evidence_threshold"]) == (None, None)
+    assert result["selection_status"] == "no_candidate_with_legal_joint_success"

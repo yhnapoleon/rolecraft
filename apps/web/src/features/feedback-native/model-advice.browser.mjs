@@ -91,8 +91,8 @@ it.each(['zh', 'en'])(
       );
       expect(coverage).toBe(
         language === 'en'
-          ? 'Verified by rules: 1/3 (33%) · Model advice: 1/3 (33%) · Pending verification: 1/3 (33%)'
-          : '规则核实：1/3（33%） · 模型建议：1/3（33%） · 待核验：1/3（33%）',
+          ? 'Verified 1 of 3 applicable items · Model advice 1 · Pending verification 1'
+          : '已核实 1 项／共 3 项适用 · 模型建议 1 项 · 待核验 1 项',
       );
       expect(await browser.ev('window.fixture.calls')).toEqual([]);
     } finally {
@@ -180,7 +180,7 @@ it.each(['zh', 'en'])(
       ).not.toContain('public-source');
       expect(
         await browser.ev(`document.querySelector('[data-feedback-coverage]').textContent`),
-      ).toContain(language === 'en' ? 'Model advice: 0/1 (0%)' : '模型建议：0/1（0%）');
+      ).toContain(language === 'en' ? 'Model advice 0' : '模型建议 0 项');
       await browser.click('[data-model-reference]');
       expect(await browser.ev('window.fixture.calls')).toEqual([
         { operation: 'openReference', ref: second.citations[0] },

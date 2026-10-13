@@ -27,7 +27,14 @@ from career_lab.datasets.v3.projection import SOURCE_KINDS, SourceIndexEntry
 from career_lab.evidence.v2.assembler import EvidenceAssemblerV2, base_ref
 from career_lab.evidence.v2.ports import CriterionPolicy, SourceRecord
 from career_lab.evidence.v2.store_reader import StoreEvidenceReader
-from career_lab.models.v3.projection import criterion_input, without_rule_context
+from career_lab.models.v3.projection import (
+    criterion_input,
+    relation_input,
+    sentence_input,
+    without_rule_context,
+)
+from career_lab.models.v3.units import POLICY as UNIT_POLICY
+from career_lab.models.v3.units import support_units
 from career_lab.research.authorization import (
     ResearchAuthorization,
     SignedAuthorization,
@@ -59,8 +66,11 @@ class AuthorizedSnapshotPort:
         authorization: SignedAuthorization,
         key: bytes,
         identity: C.SourceIdentity,
+        *,
+        relation_units: bool = False,
     ) -> None:
         self.gateway = gateway
+        self.relation_units = relation_units
         self.module = module
         self.auth = auth
         self.authorization = authorization
@@ -208,6 +218,7 @@ class AuthorizedSnapshotPort:
         executor: C.Executor,
         captured_at: datetime,
         extra: Iterable[C.FileRef] = (),
+        source_note: dict[str, str | int] | None = None,
     ) -> None:
         files = {ref.path: ref for ref in extra}
         for ref in (
@@ -248,6 +259,7 @@ class AuthorizedSnapshotPort:
                 split=self.module.package.bundle.split,
                 language=self.module.work_language,
                 evaluation_time_known=True,
+                source_note=source_note,
             )
         )
 
@@ -302,7 +314,15 @@ class AuthorizedSnapshotPort:
             missing_refs=(),
         )
         package = C.EvidencePackageV2(**body, input_hash=C.digest(body))
-        self._unit(reader, package, test.execution.executor, test.execution.executed_at, (file,))
+        self._unit(
+            reader,
+            package,
+            test.execution.executor,
+            test.execution.executed_at,
+            (file,),
+            # Only with the relation-units projection; the default export stays byte-identical.
+            {"relation_source": "assistant_answer"} if self.relation_units else None,
+        )
 
     def _submission(
         self,
@@ -332,6 +352,33 @@ class AuthorizedSnapshotPort:
                 requested_at=submission.as_of,
             )
             self._unit(reader, package, submission.executor, self.grant.issued_at)
+            if self.relation_units and package.criterion == "R2.support":
+                self._work_units(reader, package, submission.executor)
+
+    def _work_units(
+        self, reader: StoreEvidenceReader, package: C.EvidencePackageV2, executor: C.Executor
+    ) -> None:
+        """One relation record per sentence of the work, as R2.support inference sees it.
+
+        The sentences, their order and ``unit_hash`` come from the product's own splitting
+        (``r2-support-units-v1``); the claim is the sentence and the candidates are the
+        package's candidate materials, the work itself excluded. No gold or rule bound.
+        """
+        assert self.grant is not None
+        whole = relation_input(package)
+        for unit in support_units(package).units:
+            self._unit(
+                reader,
+                sentence_input(whole, unit.subject, unit.text).evidence,
+                executor,
+                self.grant.issued_at,
+                source_note={
+                    "relation_source": "work_unit",
+                    "unit_policy": UNIT_POLICY,
+                    "unit_index": unit.index,
+                    "unit_hash": unit.unit_hash,
+                },
+            )
 
 
 def capture_session(
@@ -342,8 +389,13 @@ def capture_session(
     key: bytes,
     identity: C.SourceIdentity,
     point: C.VersionPoint,
+    *,
+    relation_units: bool = False,
 ) -> LiveCapture:
-    port = AuthorizedSnapshotPort(gateway, module, auth, authorization, key, identity)
+    """Export one authorized session; ``relation_units`` adds the work-sentence projection."""
+    port = AuthorizedSnapshotPort(
+        gateway, module, auth, authorization, key, identity, relation_units=relation_units
+    )
     result = export_from_port(port, auth.session_id, point, lambda _: port.units)
     result = replace(result, quarantined=(*result.quarantined, *port.quarantined))
     assert port.grant is not None
