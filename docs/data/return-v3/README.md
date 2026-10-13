@@ -1,5 +1,7 @@
 # RoleCraft 回传格式 v3 补充包
 
+这个包规定把训练好的模型、预测与含封存 test 的数据包交回 RoleCraft 时的文件格式，附参考导出脚本、金标样例与自检脚本，是你方已有的 fixture v2 交接包的增量补充。先读本页第 2 节的表，按你要交的东西（线性、编码器、融合、含 test 的数据包）找到对应规格；不论交哪种都要读 [predictions-v3.md](predictions-v3.md)。收到后在本目录运行 `python3 -I check_package.py`，输出 `"status": "ok"` 即包完整无多余文件（第 1 节）。
+
 本包写给负责数据、标注与训练的同学，2026-10-12 版。它规定把线性模型、编码器、融合选择和含封存 test 的数据包交回 RoleCraft 时的格式，以及我方收到后怎样登记和复核。冻结交接包 fixture v2 一字节不变（第 9 节），本包只做增量补充。
 
 登记与复核只确认文件、声明的身份和预测能否复现，不证明训练真实发生，也不代表模型质量。产品里的模型输出一律显示为「模型建议（不计分）」；合成或未训练权重的登记只作「合成机制演示」。
@@ -29,8 +31,8 @@ python3 -I check_package.py <本目录>        # 不给目录时检查脚本所�
 | [encoder-return.md](encoder-return.md) | 编码器回传 v3：`checkpoint.json`＋`heads.npz`＋`encoder/`，`pack`／`pair`／`pair_aggregate` 三种结构，`after_weights` 与 `model_revision` 公式，权重阶段与拒绝码 | 交编码器 |
 | [fusion-selection.md](fusion-selection.md) | 融合选择记录 `rolecraft-fusion-selection-v1` 与 dev 选点规则 `joint-first-dev-v1` | 交融合 |
 | [predictions-v3.md](predictions-v3.md) | 预测行 v3（`return_schema_version=3`）与回传复核 `verify-return`：格式、分语言指标、重载容差、融合选择复算 | 每种回传都读 |
-| [dataset-split-sealed-v1.md](dataset-split-sealed-v1.md) | 按 split 冻结的数据包 `rolecraft-dataset-split-sealed-v1`：每个 split 自带文件并逐文件绑定 hash，读 train/dev 不打开 test | 交含 test 的数据包 |
-| [test-opening-v1.md](test-opening-v1.md) | 封存 test 的一次性打开：冻结、用户批准、只打开一次、留痕 | 冻结模型、交 test 预测前 |
+| [dataset-split-sealed-v1.md](dataset-split-sealed-v1.md) | 按 split 冻结的数据包 `rolecraft-dataset-split-sealed-v1`：每个 split 自带文件并逐文件绑定 hash，读 train/dev 不打开 test；metadata 字段、逐条审阅规则与 `validate-handoff` 的调用、退出码 | 交含 test 的数据包 |
+| [test-opening-v1.md](test-opening-v1.md) | 封存 test 的一次性打开：冻结、用户批准、只打开一次、留痕；你方要交的训练说明 `freeze-record.json` 与我方生成的冻结记录 `freeze.json` 的字段 | 冻结模型、交 test 预测前 |
 | [reference/linear_text_v1.py](reference/linear_text_v1.py)、[linear-text-v1.golden.jsonl](linear-text-v1.golden.jsonl) | 线性特征文本 `rolecraft-linear-text-v1` 的参考实现（标准库）与金标 | 拟合 TF-IDF 前 |
 | [reference/export_sklearn_linear.py](reference/export_sklearn_linear.py) | 把拟合好的 scikit-learn 对象写成线性回传，并用你方对象写 dev 预测 | 导出线性回传 |
 | [reference/export_hf_return.py](reference/export_hf_return.py)、[encoder-pair-aggregate.examples.json](encoder-pair-aggregate.examples.json) | 编码器回传导出（`export`）与外层清单封装（`seal`）；聚合规则样例 | 导出编码器回传 |
@@ -89,7 +91,7 @@ python -m career_lab.datasets.v3 export --live <连接参数> --key-file … --a
 对你方的含义：
 
 - `pack` 把全部候选拼成一条序列，候选一多或引用整篇材料就超限；`pair`／`pair_aggregate` 每对只含 claim 与一个候选，建议优先选用。`max_tokens` 最多 512（XLM-R base 的位置上限）。
-- 引用整篇材料时 `pair` 也会超限。我方后续考虑把候选按引用片段或分块传入，尚未决定，定了另行告知。
+- 引用整篇材料时 `pair` 也会超限。推理单元为作品单句，候选材料长度上限与分块方式待双方确认。
 - 每包 24 句的上限暂不变；部署机若明显更慢，由我方调整这一配置。
 
 ## 7. 交付前
@@ -99,11 +101,15 @@ python -m career_lab.datasets.v3 export --live <连接参数> --key-file … --a
 - `dataset_manifest_sha256` 写你方新数据包 `dataset-manifest.json` 的 hash，不要沿用 fixture 的；fixture 数据不能登记成外部候选。
 - test 只在模型冻结后预测一次；预测的 `model_revision` 必须与冻结的清单和登记的模型一致，record_id 与 input_hash 恰为封存 test 的记录，否则在打开前就被拒。
 
-## 8. 本次不发布
+## 8. 本次不发布，等你方决定后再做
 
-- **评价项五分类（criterion）的回传格式**：线性与编码器都只收关系任务，criterion 预测行现在会被拒（`return_task_type_unsupported`）。等你方答复五分类走 Judge 还是独立 head 后再定格式（我方后续清单，143 任务书 §8 第 1 项）；若走独立 head，训练前先与我方对格式，标签以 10-09 定稿 rubric 为准。
-- **Judge 训练格式（SFT 输入导出）**：若做 SFT，请先向我方索取线上 Judge 的输入格式导出再开始训练（同清单第 2 项）。
-- 含检索的评测设置。
+以下三项要等你方的路线选择，本包都不包含；你方答复后，我方再补对应的接收工作。
+
+1. **评价项五分类（criterion）的接收**：线性与编码器回传现在都只收关系任务，criterion 预测行会被拒（`return_task_type_unsupported`）。请答复五分类走 Judge 还是训练独立的 head。若走独立 head，训练前先与我方对齐回传格式，标签以 2026-10-09 定稿的 14 项评价标准为准；我方随后补 criterion 的注册、分语言复核与预测行格式，反馈页逐项显示「模型建议（不计分）」。
+2. **Judge SFT 的训练输入格式**：若做 SFT，请先向我方索取线上 Judge 实际输入格式的导出，拿到后再开始训练，以免训练输入与产品推理不一致。训练好的模型以 OpenAI 兼容接口（如 vLLM）提供服务，我方在 Judge 槽配置地址与模型名即可接入。
+3. **GRPO**：是否执行由你方决定。我方没有额外的接收工作，接入方式与 SFT 相同；若未执行，报告如实写「未执行」。
+
+含检索的评测设置本次也不发布。
 
 ## 9. 与 v2 冻结包的关系
 
