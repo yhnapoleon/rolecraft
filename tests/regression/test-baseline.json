@@ -2632,7 +2632,20 @@
     "tests.unit.test_return_v3_package::test_plug_01_encoder_token_limit_defaults_to_the_xlmr_position_limit": "passed",
     "tests.integration.test_return_v3_plugin::test_plug_06_one_approval_opens_the_test_once_per_candidate_fusion_included": "passed",
     "tests.integration.test_return_v3_plugin::test_plug_07_linear_export_writes_the_training_notes_template": "passed",
-    "tests.integration.test_return_v3_plugin::test_plug_07_linear_test_rows_have_the_dev_format_and_open_the_test": "passed"
+    "tests.integration.test_return_v3_plugin::test_plug_07_linear_test_rows_have_the_dev_format_and_open_the_test": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_test_rows_need_the_exported_objects_and_write_nothing_otherwise[coef]": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_test_rows_need_the_exported_objects_and_write_nothing_otherwise[evidence-coef]": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_test_rows_need_the_exported_objects_and_write_nothing_otherwise[evidence-idf]": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_test_rows_need_the_exported_objects_and_write_nothing_otherwise[evidence-intercept]": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_test_rows_need_the_exported_objects_and_write_nothing_otherwise[head-declared-independent]": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_test_rows_need_the_exported_objects_and_write_nothing_otherwise[head-declared-shared]": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_test_rows_need_the_exported_objects_and_write_nothing_otherwise[idf]": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_test_rows_need_the_exported_objects_and_write_nothing_otherwise[intercept]": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_a_bad_training_notes_path_is_refused_before_anything_is_written[linear/model.json]": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_a_bad_training_notes_path_is_refused_before_anything_is_written[checkpoint-manifest.json]": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_a_bad_training_notes_path_is_refused_before_anything_is_written[predictions.dev.jsonl]": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_a_bad_training_notes_path_is_refused_before_anything_is_written[../notes.md]": "passed",
+    "tests.integration.test_return_v3_plugin::test_plug_07_a_bad_training_notes_path_is_refused_before_anything_is_written[]": "passed"
   },
   "frontend": {
     "src/gateway-transport.test.ts::native workbench Gateway transport keeps PATCH command identity and the full public transaction, without adding defaults or retrying": "passed",
