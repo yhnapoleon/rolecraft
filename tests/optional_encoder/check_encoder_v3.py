@@ -45,6 +45,8 @@ from tests.unit.test_w08_models import examples
 
 EXPORT = REPOSITORY / "docs/data/return-v3/reference/export_hf_return.py"
 VARIANTS = ("pack", "pair", "pair_aggregate")
+# The tiny BERT's tokenizer and position limit; the export default (512) is XLM-R base's.
+TINY_LIMIT = "256"
 FIXTURE = {
     "dataset_id": "rolecraft-fixture-20261007-v2",
     "dataset_manifest_sha256": "5c8f0d5be05e3b39c1599e7fd3a92e46e413dc571248c59f827818f5ee231858",
@@ -137,6 +139,8 @@ def test_enc_01_export_script_and_save_checkpoint_register_the_same_model(
         variant,
         "--source-revision",
         SOURCE_REVISION,
+        "--max-tokens",
+        TINY_LIMIT,
         "--derived-from",
         candidate.checkpoint_identity["manifest_sha256"],
         "--out",
@@ -280,6 +284,8 @@ def test_enc_03_the_declared_threshold_selects_the_evidence(tmp_path: Path) -> N
             "pair",
             "--source-revision",
             SOURCE_REVISION,
+            "--max-tokens",
+            TINY_LIMIT,
             "--evidence-threshold",
             str(threshold),
             "--out",
@@ -400,6 +406,8 @@ def test_enc_05_untrained_heads_predict_only_once_declared_and_export_identicall
         variant,
         "--source-revision",
         SOURCE_REVISION,
+        "--max-tokens",
+        TINY_LIMIT,
         "--derived-from",
         candidate.checkpoint_identity["manifest_sha256"],
         "--out",

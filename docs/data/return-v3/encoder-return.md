@@ -4,8 +4,8 @@
 
 - 适用任务：关系三分类 `SUPPORTED / CONTRADICTED / INSUFFICIENT`，必须同时输出证据选择（原稿 §11.2）。评价项五分类（criterion head）本版不发布，待负责方确定路线后另定格式。
 - 外层格式沿用冻结交接包 fixture v2 的 `checkpoint-manifest.json` 模板与 `predictions.dev.jsonl` 行格式，不改动 v2；本页只新增 v3 的 checkpoint 内部布局与可选字段。
-- 参考实现：[`reference/export_hf_return.py`](reference/export_hf_return.py)（只需 torch、transformers、numpy、safetensors，不依赖本仓库）；聚合规则样例：[`encoder-pair-aggregate.examples.json`](encoder-pair-aggregate.examples.json)。
-- 产品推理环境：CPU，torch 2.8.0、transformers 4.57.1、tokenizers 0.22.2、safetensors 0.6.2。训练环境可以不同，但 checkpoint 必须能在这组版本下用 `AutoModel.from_pretrained(..., local_files_only=True, trust_remote_code=False, use_safetensors=True)` 加载；需要别的版本请训练前告知。
+- 参考实现：[`reference/export_hf_return.py`](reference/export_hf_return.py)（只需 torch、transformers、numpy、safetensors，不依赖本仓库）：`export` 写布局，`predict` 按我方加载器的同一规则写预测行，`seal` 写外层清单；聚合规则样例：[`encoder-pair-aggregate.examples.json`](encoder-pair-aggregate.examples.json)。
+- 产品推理环境：CPU、float32，torch 2.8.0、transformers 4.57.1、tokenizers 0.22.2、safetensors 0.6.2。**训练环境可以不同，`export` 与 `predict` 必须在这组版本下、在 CPU 上运行**（§11.1）；checkpoint 必须能在这组版本下用 `AutoModel.from_pretrained(..., local_files_only=True, trust_remote_code=False, use_safetensors=True)` 加载，需要别的版本请训练前告知。
 
 ## 1. 目录
 
@@ -20,8 +20,10 @@
     model.safetensors          编码器权重（只收 safetensors）
     tokenizer.json 等          分词器文件
   training-notes.md            训练说明（外层清单 training_notes_file）
-  predictions.dev.jsonl        dev 逐条预测（外层清单 predictions_file）
+  predictions.dev.jsonl        dev 逐条预测（外层清单 predictions_file；参考脚本 predict 写出）
 ```
+
+test 预测 `predictions.test.jsonl` 在冻结之后另写，放在回传目录**之外**（`seal` 之后目录里多一个文件，整份回传就对不上清单）。
 
 目录里每个文件（清单本身除外）都必须列在 `checkpoint_files`，多一个、少一个都拒绝。后缀：`encoder/` 下只允许 `.json .safetensors .model .txt .md`，其余位置只允许 `.json .npz .jsonl .md .txt`；不允许符号链接、`pytorch_model.bin`、`.pt`、自定义 Python 代码。`encoder/` 下的实际文件集合必须与 `local-files.json` 完全一致。
 
@@ -39,6 +41,7 @@ v3 新增的可选字段：
 | `artifact_protocol` | `rolecraft-encoder-return-v3` | 写了就必须是这个值 |
 | `label_tiers` | `G0`、`G1`、`G2`、`G2v` 的子集 | 训练标签的等级，进入注册身份，界面显示为训练数据的一部分 |
 | `weights_stage` | `supervised_finetuned`（缺省）或 `pretrained_untrained_heads` | 见 §10 |
+| `artifact_roles` | `{"checkpoint": […], "config": […], "tokenizer": […]}` | 参考脚本 `seal` 写出：checkpoint＝`heads.npz` 与 `encoder/` 下的 safetensors，config＝`checkpoint.json` 与 `encoder/config.json`，tokenizer＝`encoder/` 下的分词器文件（§6 的判定）。登记不读它；我方用 `validate-handoff --checkpoint-manifest` 联核数据包与回传时，三种角色都必须非空且只引用 `checkpoint_files` 里的文件，缺了即 `handoff_model_artifact_roles_required`。手写清单时照此写 |
 
 按阶段的声明规则（不符即拒绝）：
 
@@ -114,13 +117,46 @@ body_i = candidate_i.text + "\n" + "observed {ref.observed_at_seq}; valid from {
 
 无关永远不会升为支持：支持须过阈值且胜过无关，阈值不低于 0.5；矛盾优先于支持（矛盾与无关持平时仍记矛盾，宁可提醒）。[样例](encoder-pair-aggregate.examples.json)覆盖矛盾优先、支持与无关并存、全部无关、低于阈值、多处矛盾、支持与无关持平、最可能无关的一对、多处支持、矛盾与无关持平、较高阈值，以及两个被拒的低阈值；产品与参考脚本都逐条按样例测试。负责方的 dev 预测必须用同一规则（参考脚本 `aggregate_pairs`）。
 
+### 5.1 dev 预测必须复现的弃权条件
+
+我方加载器逐条按下面的顺序判断，命中即不出概率与标签（`probabilities`、`label` 为 `null`，`evidence_ids` 为空，`reason` 写下面的码）。你方预测里某条该弃权却给了结论，或反过来，重载比对就是 `producer_mismatch`，整份退回。参考脚本 `predict` 实现了全部条件，`input_problem(model_input)` 是前 5 条的同一判定（与线性导出脚本里的同名函数相同；线性模型没有 token 上限，只有前 5 条）。
+
+| 顺序 | 条件（只看 `model_input`） | `reason` |
+|---|---|---|
+| 1 | `evidence.completeness` 不是 `complete`（`missing`、`text_overflow`） | `input_missing`、`input_text_overflow` |
+| 2 | `claim` 去掉空白后为空 | `empty_claim` |
+| 3 | `rule_context.evidence_time_context` 缺失，或 `policy` 不是 `historical-evidence-time-v1`，或 `status` 不是 `known` | `temporal_scope_undetermined` |
+| 4 | 该上下文的 `reference_seq` 不等于 `as_of.business_seq` | `temporal_reference_mismatch` |
+| 5 | `validity_known_ids` 不是恰好覆盖全部候选 ID 的不重复字符串列表（有效期未知） | `evidence_validity_undetermined` |
+| 6 | 没有候选 | `no_candidate_evidence` |
+| 7 | `pack` 而分词器不是 fast tokenizer | `pack_evidence_spans_require_fast_tokenizer` |
+| 8 | 编码长度超过 `max_tokens`（§9） | `encoder_input_truncated` |
+| 9 | `pack`：某个候选在第二段没有对应 token | `evidence_span_missing_or_truncated` |
+
+这些行写 `status=abstained`（`validate-handoff` 联核时把它们记为 `pending`、退出 2，属既有口径，由我方确认，见[数据包规格](dataset-split-sealed-v1.md)第 6 节）。输入跨了多个 session，或任务不是 `relation`，在我方读数据包时就整包拒绝，到不了逐条预测（参考脚本遇到这样的单条输入写 `status=failed`）。
+
+`reason` 写上表的码，便于对照（我方比对状态、标签、证据集合与概率，不比对 `reason` 文字）。另有一条格式规则不是弃权：**证据可评的记录上，`SUPPORTED`／`CONTRADICTED` 的成功行必须选中至少一个证据**，否则该行格式不合格（`return_evidence_selection_required`），整份报告 rejected。`predict --labels data/dev.labels.jsonl` 会在 `evidence_missing` 里列出这样的记录；出现时请在 dev 上调整 `evidence_threshold` 或模型，不要改写预测行。
+
 ## 6. `encoder/local-files.json`
 
 ```json
 {"protocol": "w08-hf-local-files-v1", "source_revision": "<40 hex>", "weights_stage": "supervised_finetuned", "files": {"config.json": "<sha256>", "model.safetensors": "<sha256>", "tokenizer.json": "<sha256>"}, "derived_from": "<可选 sha256>"}
 ```
 
-`source_revision` 与 `checkpoint.json` 相同；`weights_stage` 与外层清单声明相同；`files` 列 `encoder/` 下除本文件外的每个文件。`config.json` 必须有正整数 `hidden_size` 与 `model_type`，不得含 `auto_map`（远程代码）；须包含至少一个分词器文件（文件名含 `tokenizer`，或 `vocab.txt`、`sentencepiece.bpe.model`）。微调回传的 encoder 目录须是完整权重（加载时没有缺失参数），参考脚本发现缺失会拒绝导出。
+`source_revision` 与 `checkpoint.json` 相同；`weights_stage` 与外层清单声明相同；`files` 列 `encoder/` 下除本文件外的每个文件。`config.json` 必须有正整数 `hidden_size` 与 `model_type`，不得含 `auto_map`（远程代码）；须包含至少一个分词器文件（文件名含 `tokenizer`，或 `vocab.txt`、`sentencepiece.bpe.model`）。微调回传的 encoder 目录须是完整权重：按上面的选项用 `AutoModel.from_pretrained` 加载时 `missing_keys` 为空，**pooler 也算在内**。参考脚本发现缺失会拒绝导出。pooler 不参与我方的 mean pooling，但它是 `AutoModel` 的参数、进入 `after_weights`；缺了会被随机初始化补上，权重身份就取决于加载时的随机数与库版本，所以导出要求它存在。
+
+**用 `XLMRobertaForSequenceClassification` 训练时**：这个类建模时不带 pooler（`add_pooling_layer=False`），直接 `save_pretrained` 的目录缺 `pooler.dense.weight`、`pooler.dense.bias`，导出会拒绝。它的分类头（`classifier.*`，取首 token 再过两层）也不是 §4 支持的结构，不能交回。可以交回的做法：编码器主体沿用它微调后的权重，头按 §4–5 在 mean pooling 表示上另行训练；保存时把主体放回带 pooler 的底座再存：
+
+```python
+from transformers import AutoModel, AutoTokenizer
+encoder = AutoModel.from_pretrained(BASE_DIR, local_files_only=True)   # 底座，含 pooler
+missing, unexpected = encoder.load_state_dict(classifier.roberta.state_dict(), strict=False)
+assert set(missing) == {"pooler.dense.weight", "pooler.dense.bias"} and not unexpected
+encoder.save_pretrained(ENCODER_DIR, safe_serialization=True)          # export 的 --encoder-dir
+AutoTokenizer.from_pretrained(BASE_DIR, local_files_only=True).save_pretrained(ENCODER_DIR)
+```
+
+这样 pooler 保留底座的预训练值，主体是微调后的值；`export --encoder-dir ENCODER_DIR` 即可通过。直接用 `AutoModel`（`XLMRobertaModel`）加 §4 的头训练，则不需要这一步。
 
 ## 7. `after_weights`
 
@@ -141,12 +177,13 @@ model_revision = "hf-encoder-v3:" + sha256(canonical_json({
 canonical_json = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")
 ```
 
-权重、阈值、上限、结构或阶段任何一项变化都会得到新的 revision。样例：`after_weights="c"*64, evidence_threshold=0.5, max_tokens=256, pooling="mean", source_revision="a"*40, task_type="relation", variant="pair_aggregate", weights_stage="supervised_finetuned"` → `hf-encoder-v3:1b5a82c83e864c135fa05fc149f50ef04e26f26cc24ad2d6bab38e160dfddc4f`。参考脚本 `export` 会打印本次的 revision，dev 预测每行的 `model_revision` 都要写它。
+权重、阈值、上限、结构或阶段任何一项变化都会得到新的 revision。公式样例（只核公式，上限取值见 §9）：`after_weights="c"*64, evidence_threshold=0.5, max_tokens=256, pooling="mean", source_revision="a"*40, task_type="relation", variant="pair_aggregate", weights_stage="supervised_finetuned"` → `hf-encoder-v3:1b5a82c83e864c135fa05fc149f50ef04e26f26cc24ad2d6bab38e160dfddc4f`。参考脚本 `export` 会打印本次的 revision，dev 预测每行的 `model_revision` 都要写它。
 
 ## 9. 阈值与上限怎样生效
 
 - `evidence_threshold`：§5 的证据集合与聚合都用它；产品不再使用固定 0.5（旧布局除外）。
 - `max_tokens`：按实际编码长度（`pair` 类为补齐后的最长一条）比较；超过即该条弃权 `encoder_input_truncated`，**不截断**。产品的 `measure()` 只分词、不前向，给出同一长度，供按句切分时先判断。
+- **XLM-R base 请用 512**（导出脚本缺省值，也是位置上限）。候选过长即弃权，不截断。按我方实测（[README](README.md) 第 6 节），正常入口一句作品配默认候选材料，`pair` 每条 391–474 token；照 256 交回，正常入口的每一句都会弃权，产品里看不到任何模型建议。底座上限小于 512 时，导出会拒绝并写明上限，请显式给 `--max-tokens`。
 
 ## 10. 权重阶段
 
@@ -165,18 +202,32 @@ canonical_json = json.dumps(value, ensure_ascii=False, sort_keys=True, separator
 - 注册项公开身份：`id`、`model_revision`、`scope`、`kind=huggingface_encoder`、`dataset`、`weights_stage`，以及 `quality_validated=false`；另记 `variant`、`evidence_threshold`、`max_tokens`。
 - 旧协议 `advisory-encoder-registration-v1` 的注册不再产生新建议（`encoder_registration_retired`）；用它产生过的反馈照原样可读。同一回传重新登记即得到 v2 注册。
 
+### 11.1 导出与预测的运行环境
+
+`after_weights` 由 `export` 所在环境加载权重后计算，我方加载后重算比对；dev／test 预测的概率我方按 1e-4 的容差重算。因此：
+
+- `export` 与 `predict` 在 torch 2.8.0、transformers 4.57.1、tokenizers 0.22.2、safetensors 0.6.2 下运行（训练可以在别的版本、GPU 上做）。两个命令都输出 `runtime.installed` 与 `runtime.matches_product`，不一致时在 stderr 告警；请在 `matches_product=true` 的环境里写交付文件。
+- 在 CPU 上、float32 推理：脚本把编码器与头放到 CPU、转 float32、`eval()`、`torch.no_grad()`，与我方加载器相同。不要用 GPU、半精度或 `torch.compile` 写交付的预测行。
+- `predict` 加载时重算 `after_weights` 并与训练报告比对，不一致即停（例如版本不同、encoder 缺参数、头不是 float32 原值），不会写出注定对不上的预测。
+
 ## 12. 参考脚本
 
 ```sh
 # 1. 微调回传：encoder 目录（save_pretrained 输出）＋头 state_dict（.pt/.safetensors/.npz）＋训练报告 JSON
 python export_hf_return.py export --encoder-dir ENC --heads heads.pt --training-report report.json \
-  --variant pair --source-revision <底座 40 位 revision> --max-tokens 256 --evidence-threshold 0.5 --out RETURN
-# 2. 用打印出的 model_revision 写 dev 预测（fixture v2 行格式），放入 RETURN/predictions.dev.jsonl，并写 RETURN/training-notes.md
-# 3. 生成外层清单
+  --variant pair --source-revision <底座 40 位 revision> --max-tokens 512 --evidence-threshold 0.5 --out RETURN
+# 2. dev 预测：按我方加载器的规则写 v3 行（弃权、pooling、聚合、阈值都相同），--labels 列出会被格式检查拒绝的行
+python export_hf_return.py predict --root RETURN --inputs data/dev.inputs.jsonl \
+  --labels data/dev.labels.jsonl --out RETURN/predictions.dev.jsonl
+# 3. 写 RETURN/training-notes.md（训练说明），再生成外层清单（含 artifact_roles）
 python export_hf_return.py seal --root RETURN --dataset-manifest dataset-manifest.json --label-tier G2v
+# 4. 冻结之后的 test 预测：同一命令，输出放在回传目录之外
+python export_hf_return.py predict --root RETURN --inputs data/test.inputs.jsonl --out predictions.test.jsonl
 ```
 
-头 state_dict 的键与 §4 数组名相同（如 `relation.weight`）。`--weights-stage pretrained_untrained_heads` 时不给头与报告，头由 `--seed` 初始化、encoder 按加载结果重新保存。脚本拒绝缺参数的 encoder 目录、非 safetensors 权重、键不符的头、与交付权重不一致的报告。
+`predict` 输出一份摘要：`rows`、`statuses`、`abstentions`（按码计数）、`evidence_missing`、`model_revision`、`device=cpu`、`dtype=float32`、`runtime`。已 `seal` 的目录里不写新文件（拒绝），目标文件已存在也不覆盖。自己实现推理也可以，但同一份 dev 输入上的结果要与 `predict` 逐条一致（状态、标签、证据集合相同，概率差不超过 1e-4），否则重载比对会退回。
+
+头 state_dict 的键与 §4 数组名相同（如 `relation.weight`）。`--weights-stage pretrained_untrained_heads` 时不给头与报告，头由 `--seed` 初始化、encoder 按加载结果重新保存。脚本拒绝缺参数（含 pooler）的 encoder 目录、非 safetensors 权重、键不符的头、与交付权重不一致的报告，以及超过底座上限的 `--max-tokens`。
 
 ## 13. 拒绝码
 
@@ -220,7 +271,7 @@ python export_hf_return.py seal --root RETURN --dataset-manifest dataset-manifes
 | `registered_inference_runtime_changed` | 依赖版本或推理源码与登记时不同（§11） |
 | `encoder_registration_retired` | v1 注册，不再产生新建议（§11） |
 
-预测期逐条弃权（该条记 `status=abstained`，原因为下列码，不出概率与标签；其余记录照常预测）：
+预测期逐条弃权（该条记 `status=abstained`，原因为下列码，不出概率与标签；其余记录照常预测）。输入本身导致的弃权（`input_*`、`empty_claim`、`temporal_*`、`evidence_validity_undetermined`、`no_candidate_evidence`）与判断顺序见 §5.1：
 
 | 码 | 含义 |
 |---|---|

@@ -279,7 +279,7 @@ uv run --locked python -c 'import json, sys; print(json.dumps(json.load(sys.stdi
 
 - v3 `checkpoint.json`写明`variant`（pack／pair／pair_aggregate）、`pooling=mean`、`evidence_threshold`（pair_aggregate不低于0.5）、`max_tokens`；fixture v2时代的布局仍收（阈值固定0.5）。
 - 目录里每个文件（清单本身除外）都要列进`checkpoint_files`，后缀只许白名单。交付前删去`.DS_Store`等隐藏文件，否则整份回传被拒（`checkpoint_member_set_mismatch`或`checkpoint_file_type_not_allowed`）。
-- 负责方用`docs/data/return-v3/reference/export_hf_return.py export`写布局、`seal`写外层清单。我方不执行清单里的`load_and_predict_command`或生产者Python代码。
+- 负责方用`docs/data/return-v3/reference/export_hf_return.py export`写布局（`--max-tokens`缺省512）、`predict`按我方加载器同一规则写dev／test预测行（弃权、pooling、聚合与阈值相同；在锁定推理依赖版本、CPU float32下运行）、`seal`写外层清单（含validate-handoff要求的`artifact_roles`）。我方不执行清单里的`load_and_predict_command`或生产者Python代码。
 - 大权重不进NumPy的64MB加载器：登记流式校验并复制清单文件，在独立副本全部校验后发布不可变注册；注册后不依赖生产者目录。
 
 登记命令与[登记一份回传](#登记一份回传)相同，只是要在装有encoder extra的环境运行。登记不导入torch，但要求torch、transformers、tokenizers、safetensors已安装，并把它们的版本写进注册；缺任一包时拒绝（`encoder_runtime_unavailable`，退出2，不建注册目录）。
@@ -317,6 +317,7 @@ HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 uv run --locked --extra encoder python -
   tests/optional_encoder/check_encoder_v3.py \
   tests/optional_encoder/check_local_encoder.py \
   tests/optional_encoder/check_fusion_registration.py \
+  tests/optional_encoder/check_return_v3_plugin.py \
   --basetemp=.pytest_cache/tmp-encoder-check
 unset UV_PROJECT_ENVIRONMENT
 ```
@@ -327,6 +328,7 @@ unset UV_PROJECT_ENVIRONMENT
 
 - `check_local_encoder.py`、`check_encoder_v3.py`：测试自己随机初始化小于200KB的微型BERT，用现有数值fixture做最小优化步骤，再保存、登记、重载和比较预测，同时阻断socket连接；pack、pair、pair_aggregate都实跑。公开预测仍是`synthetic_mechanism_only`／unavailable。
 - `check_fusion_registration.py`：在CPU上登记、加载、预测线性回传×微型v3编码器回传的异构融合，结果与两分量按alpha混合一致。
+- `check_return_v3_plugin.py`（PLUG-02…05）：按负责方的用法在独立进程里跑v3补充包的`export_hf_return.py`：`predict`写的dev行经`verify-return`重载matched（pack、pair、pair_aggregate，容差1e-4）；输入不完整、claim为空、时点或有效期未定、无候选、超过`max_tokens`时与我方加载器同样弃权；`--labels`列出的行恰是格式检查拒绝的行；已封存目录内拒写；`seal`写出的`artifact_roles`过validate-handoff；`XLMRobertaForSequenceClassification`直接保存被拒，按规格§6的配方保存后可导出、登记、加载。
 
 这些只验证实际加载与双输出机制，不是预训练模型、英文质量、真实XLM-R或融合增益的证据。
 
@@ -542,7 +544,7 @@ uv run --locked python -m career_lab.models.v3.registry_cli verify-return \
 
 ### 封存test一次性打开
 
-封存test只在模型冻结之后、经用户批准打开一次，只用来报告一次性的test指标；看过的test只能作回归用，不能再参与任何选择。冻结记录由总调度准备（[test打开 §2](return-v3/test-opening-v1.md)）；批准是同一冻结目录里的`campaign.json`，每次打开前由用户在对话里确认（同上§3）。打开：
+封存test只在模型冻结之后、经用户批准，对每个候选（线性、编码器、融合各一个冻结目录）打开一次，只用来报告一次性的test指标；看过的test只能作回归用，不能再参与任何选择。冻结记录由总调度准备（[test打开 §2](return-v3/test-opening-v1.md)）；批准是同一冻结目录里的`campaign.json`，每次打开前由用户在对话里确认（同上§3）。打开：
 
 ```sh
 uv run --locked python -m career_lab.models.v3.registry_cli verify-return \
@@ -557,12 +559,12 @@ uv run --locked python -m career_lab.models.v3.registry_cli verify-return \
 
 - 缺批准参数时拒绝（`held_out_test_authorization_required`，403，列出缺项），不留记录、不读test。能事先查出的回传错误（revision对清单与注册、record_id与input_hash、metadata的split、注册在本机能否加载）都在留痕前拒绝，这次打开不会用掉。
 - 打开记录以独占创建写在冻结目录`held-out/<数据 manifest sha256>/test.json`，之后才读test的输入与标签；位置只由冻结记录决定，命令行与环境变量都不能改变。报告`held_out_test_opened=true`，`opened`等于这份记录。记录创建后复核失败也保留记录、不重试。
-- 同一批准第二次打开在读任何test内容之前拒绝（`held_out_test_already_opened`，403）；换工作目录、设环境变量、经符号链接访问，或把已打开的冻结目录整个拷到别处（记录随之拷走）都同样拒绝。CLI没有确认、强制、重开或换账本参数。
+- 同一冻结目录第二次打开（同一份或新写的campaign）在读任何test内容之前拒绝（`held_out_test_already_opened`，403）；换工作目录、设环境变量、经符号链接访问，或把已打开的冻结目录整个拷到别处（记录随之拷走）都同样拒绝。CLI没有确认、强制、重开或换账本参数。
 
 操作规则：
 
-1. 冻结目录只存放一处，只在该处打开；
+1. 每个候选只建一个冻结目录，只存放一处，只在该处打开；
 2. 打开后立即把冻结目录（含`campaign.json`与`held-out/…/test.json`）一并提交进git，由总调度在用户确认后提交；
-3. 打开前复制冻结目录、删除或改动打开记录，都属于篡改冻结目录，git历史可以追到。打开之前另存的副本里没有记录，机制本身挡不住它再开一次，这一点由上面三条规则保证。
+3. 打开前复制冻结目录、删除或改动打开记录，都属于篡改冻结目录，git历史可以追到。打开之前另存的副本、或为同一候选新建的冻结目录里没有记录，代码不把campaign绑到某个冻结目录，挡不住它再开一次（实测退出0），这一点由上面三条规则与git历史保证。
 
 实跑fixture v2格式样例：英文6条、证据/联合分母5，中文0；样例由gold构造，其满分只说明格式与指标机制。另用既有固定synthetic权重完成真实注册、两次加载及匹配预测，低分类结果和全引文导致的joint零分保留。把格式样例直接与这组权重比较会如实失败。负责方真实checkpoint、训练执行与双语质量仍待交；不因命令可运行关闭真实实验验收。

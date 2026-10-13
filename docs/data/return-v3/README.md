@@ -1,8 +1,8 @@
 # RoleCraft 回传格式 v3 补充包
 
-这个包规定把训练好的模型、预测与含封存 test 的数据包交回 RoleCraft 时的文件格式，附参考导出脚本、金标样例与自检脚本，是你方已有的 fixture v2 交接包的增量补充。先读本页第 2 节的表，按你要交的东西（线性、编码器、融合、含 test 的数据包）找到对应规格；不论交哪种都要读 [predictions-v3.md](predictions-v3.md)。收到后在本目录运行 `python3 -I check_package.py`，输出 `"status": "ok"` 即包完整无多余文件（第 1 节）。
+这个包规定把训练好的模型、预测与含封存 test 的数据包交回 RoleCraft 时的文件格式，附参考导出脚本、金标样例与自检脚本，是你方已有的 fixture v2 交接包的增量补充。先读本页第 2 节的表，按你要交的东西（线性、编码器、融合、含 test 的数据包）找到对应规格；不论交哪种都要读 [predictions-v3.md](predictions-v3.md)。收到后在本目录运行 `python3 -I check_package.py`，输出 `"status": "ok"` 即包完整无多余文件（第 1 节）。相对 v2，本包有三处收紧，请先读[第 10 节](#10-相对-v2-的三处收紧请确认)并确认。
 
-本包写给负责数据、标注与训练的同学，2026-10-12 版。它规定把线性模型、编码器、融合选择和含封存 test 的数据包交回 RoleCraft 时的格式，以及我方收到后怎样登记和复核。冻结交接包 fixture v2 一字节不变（第 9 节），本包只做增量补充。
+本包写给负责数据、标注与训练的同学，2026-10-13 版。它规定把线性模型、编码器、融合选择和含封存 test 的数据包交回 RoleCraft 时的格式，以及我方收到后怎样登记和复核。冻结交接包 fixture v2 一字节不变（第 9 节）；本包在它之上补充格式，其中复核方式、线性证据头与编码器结构三处比 v2 收紧（第 10 节）。
 
 登记与复核只确认文件、声明的身份和预测能否复现，不证明训练真实发生，也不代表模型质量。产品里的模型输出一律显示为「模型建议（不计分）」；合成或未训练权重的登记只作「合成机制演示」。
 
@@ -32,10 +32,10 @@ python3 -I check_package.py <本目录>        # 不给目录时检查脚本所�
 | [fusion-selection.md](fusion-selection.md) | 融合选择记录 `rolecraft-fusion-selection-v1` 与 dev 选点规则 `joint-first-dev-v1` | 交融合 |
 | [predictions-v3.md](predictions-v3.md) | 预测行 v3（`return_schema_version=3`）与回传复核 `verify-return`：格式、分语言指标、重载容差、融合选择复算 | 每种回传都读 |
 | [dataset-split-sealed-v1.md](dataset-split-sealed-v1.md) | 按 split 冻结的数据包 `rolecraft-dataset-split-sealed-v1`：每个 split 自带文件并逐文件绑定 hash，读 train/dev 不打开 test；metadata 字段、逐条审阅规则与 `validate-handoff` 的调用、退出码 | 交含 test 的数据包 |
-| [test-opening-v1.md](test-opening-v1.md) | 封存 test 的一次性打开：冻结、用户批准、只打开一次、留痕；你方要交的训练说明 `freeze-record.json` 与我方生成的冻结记录 `freeze.json` 的字段 | 冻结模型、交 test 预测前 |
+| [test-opening-v1.md](test-opening-v1.md) | 封存 test 的一次性打开：冻结、用户批准、每个候选一个冻结目录只打开一次、留痕；你方要交的训练说明 `freeze-record.json` 与我方生成的冻结记录 `freeze.json` 的字段 | 冻结模型、交 test 预测前 |
 | [reference/linear_text_v1.py](reference/linear_text_v1.py)、[linear-text-v1.golden.jsonl](linear-text-v1.golden.jsonl) | 线性特征文本 `rolecraft-linear-text-v1` 的参考实现（标准库）与金标 | 拟合 TF-IDF 前 |
-| [reference/export_sklearn_linear.py](reference/export_sklearn_linear.py) | 把拟合好的 scikit-learn 对象写成线性回传，并用你方对象写 dev 预测 | 导出线性回传 |
-| [reference/export_hf_return.py](reference/export_hf_return.py)、[encoder-pair-aggregate.examples.json](encoder-pair-aggregate.examples.json) | 编码器回传导出（`export`）与外层清单封装（`seal`）；聚合规则样例 | 导出编码器回传 |
+| [reference/export_sklearn_linear.py](reference/export_sklearn_linear.py) | 把拟合好的 scikit-learn 对象写成线性回传、写训练说明模板，并用你方对象写 dev 预测；冻结后用 `write_predictions` 写 test 预测 | 导出线性回传、写 test 预测 |
+| [reference/export_hf_return.py](reference/export_hf_return.py)、[encoder-pair-aggregate.examples.json](encoder-pair-aggregate.examples.json) | 编码器回传导出（`export`）、按我方加载器同一规则的参考推理（`predict`，dev 与 test 预测都用它）与外层清单封装（`seal`，含 `artifact_roles`）；聚合规则样例 | 导出编码器回传、写预测 |
 | [check_package.py](check_package.py)、`SHA256SUMS`、本页 | 自检与 hash 清单 | 收到后 |
 
 几处取舍：外层清单与预测行沿 fixture v2 模板，v3 只加字段，v2 行照收；融合只需交两个分量和一份 dev 选择记录，融合注册由我方用已登记的分量构建，不必另交融合权重；编码器超过 token 上限时整条如实弃权，产品不截断。
@@ -50,13 +50,14 @@ python3 -I check_package.py <本目录>        # 不给目录时检查脚本所�
 
 参考脚本的用途是让你方在自己的环境里写出与我方加载器一致的文件与预测；金标与样例就是我方测试用的同一份，产品函数、参考实现与它们逐条一致：
 
-- **线性**：特征文本必须用 `relation_text`、`pair_text` 生成。在本目录运行 `python3 -B reference/linear_text_v1.py linear-text-v1.golden.jsonl`，每行应为 `ok`。导出用 `export_sklearn_linear.export_linear_return(...)`（用法见脚本开头），它拒绝我方加载器不能精确重建的对象。
-- **编码器**：`export_hf_return.py export` 写布局并打印 `model_revision`，dev 预测每行都写它；`seal` 写外层清单。输入文本用 `encoder_inputs`，`pair_aggregate` 的 dev 预测用 `aggregate_pairs`，可用样例文件逐条自测（其中两条低阈值样例应被拒绝）。登记成功不等于能加载：交付前请在第 4 节的版本下自行加载一次并核对 `after_weights`。
+- **线性**：特征文本必须用 `relation_text`、`pair_text` 生成。在本目录运行 `python3 -B reference/linear_text_v1.py linear-text-v1.golden.jsonl`，每行应为 `ok`。导出用 `export_sklearn_linear.export_linear_return(...)`（用法见脚本开头），它拒绝我方加载器不能精确重建的对象，并写出训练说明模板（交付前填写）；冻结后用 `write_predictions(...)` 写 test 预测，格式与 dev 相同。
+- **编码器**：`export_hf_return.py export` 写布局并打印 `model_revision`（`--max-tokens` 缺省 512）；`predict` 按我方加载器的同一规则写 dev 或 test 预测行：弃权条件（输入不完整、claim 为空、时点或有效期未定、无候选、超过 token 上限）、mean pooling、`pair_aggregate` 聚合与证据阈值都相同，加 `--labels` 还会列出会被我方格式检查拒绝的行；`seal` 写外层清单（含 `artifact_roles`）。`predict` 加载时重算 `after_weights`，对不上即停。聚合规则可用样例文件逐条自测（其中两条低阈值样例应被拒绝）。
+- **自查边界**：fixture v2 包里的 `validate_predictions.py` 只收版本 2 的行、只核 fixture 自带的数据，不能用于新数据或 v3 行。新数据上请用上面的参考推理写行；最终以我方 `verify-return` 为准。
 - **融合**：按 `joint-first-dev-v1` 在 dev 上选点；我方用已登记的两个分量重算整张 alpha × 阈值网格，逐点、逐项比对你方记录。
 
 ## 4. 推理环境
 
-产品在 CPU 上推理。编码器依赖 torch 2.8.0、transformers 4.57.1、tokenizers 0.22.2、safetensors 0.6.2；checkpoint 必须能在这组版本下用 `AutoModel.from_pretrained(..., local_files_only=True, trust_remote_code=False, use_safetensors=True)` 加载。训练环境可以不同；需要别的版本请训练前告知。
+产品在 CPU 上、float32 推理。编码器依赖 torch 2.8.0、transformers 4.57.1、tokenizers 0.22.2、safetensors 0.6.2；checkpoint 必须能在这组版本下用 `AutoModel.from_pretrained(..., local_files_only=True, trust_remote_code=False, use_safetensors=True)` 加载。训练环境可以不同（版本、GPU 都可以），**但 `export_hf_return.py export` 与 `predict` 必须在这组版本下、在 CPU 上运行**：`after_weights` 在导出环境里算，预测概率按 1e-4 比对。两个命令都输出 `runtime.matches_product`，不一致时告警。需要别的版本请训练前告知。
 
 参考脚本的依赖：`export_hf_return.py` 需要 Python 3.10+、torch、transformers、numpy、safetensors；`export_sklearn_linear.py` 需要 numpy、scikit-learn；`linear_text_v1.py` 与 `check_package.py` 只用标准库。三个脚本都不依赖 RoleCraft 仓库，也不联网。
 
@@ -99,7 +100,8 @@ python -m career_lab.datasets.v3 export --live <连接参数> --key-file … --a
 - **删去隐藏文件**（如 `.DS_Store`）。编码器回传目录里每个文件都要列进清单、后缀有白名单，多一个文件整份被拒（`checkpoint_member_set_mismatch` 或 `checkpoint_file_type_not_allowed`）；数据包与回传清单经 `validate-handoff` 时同样按文件集合核对（`handoff_file_set_mismatch`、`handoff_model_file_set_mismatch`）。
 - 外层清单显式写选择声明 `training_partitions=["train"]`、`selection_partition="dev"`、`test_used_for_selection=false`（编码器的未训练头阶段除外，见编码器规格第 2 节）。
 - `dataset_manifest_sha256` 写你方新数据包 `dataset-manifest.json` 的 hash，不要沿用 fixture 的；fixture 数据不能登记成外部候选。
-- test 只在模型冻结后预测一次；预测的 `model_revision` 必须与冻结的清单和登记的模型一致，record_id 与 input_hash 恰为封存 test 的记录，否则在打开前就被拒。
+- test 只在模型冻结后预测一次；预测的 `model_revision` 必须与冻结的清单和登记的模型一致，record_id 与 input_hash 恰为封存 test 的记录，否则在打开前就被拒。`predictions.test.jsonl` 放在回传目录之外。每个候选（线性、编码器、融合）各打开一次，全部候选的 test 预测在第一次打开前一次交齐；融合另交一份声明清单（[test 打开](test-opening-v1.md)第 2.3、3.1 节）。
+- 编码器 `max_tokens` 用 512：按第 6 节实测，正常入口一句作品 pair 391–474 token，用 256 会全部弃权。
 
 ## 8. 本次不发布，等你方决定后再做
 
@@ -117,3 +119,11 @@ python -m career_lab.datasets.v3 export --live <连接参数> --key-file … --a
 - v2 预测行照收，同一文件可与 v3 行混用；fixture v2 时代的编码器 checkpoint 仍可登记与加载（只限 `pack`、`pair`，证据阈值固定 0.5）。
 - v2 可移植布局仍只收 train/dev；含封存 test 的数据包改用 split-sealed 布局。
 - fixture 只用来核格式与机制，不是训练数据。
+
+## 10. 相对 v2 的三处收紧（请确认）
+
+fixture v2 包与准备事项 v2 的大部分约定照旧：v2、v3 预测行混收；fixture 数据不能登记成外部候选；不沿用 fixture 的数据 hash；test 在冻结后只打开一次（现在写明为每个候选各一次）。下面三处比 v2 收紧，请确认可以接受；需要别的做法请在训练前告知。
+
+1. **复核方式**：准备事项 v2 写的是按回传命令重新加载、交回推理代码。v3 改为**我方不运行你方的命令或 Python**，用我方加载器按公开格式重载，逐条比对你方预测（标签、状态、证据集合完全一致，概率差线性不超过 1e-6、编码器不超过 1e-4）。因此回传只收白名单里的数据文件：编码器目录不能放 `.py`、`pytorch_model.bin`、`.pt`，线性只收 `linear/model.json` 与无 pickle 的 `linear/arrays.npz`。推理代码可以写进训练说明供追溯，但不会被执行；参考推理（`predict`、`write_predictions`）给出与我方加载器一致的写法。
+2. **线性证据头必填**：v2 允许把只做三分类的 LR 当作基线另报。v3 的线性回传缺证据头即拒绝（`linear_return_evidence_head_required`）。纯分类 LR 仍可以作为离线基线写进你方报告，但不登记、不进产品。
+3. **编码器结构、阈值、依赖版本限定，融合选点规则内置**：v2 README 写的是整包分类头加多标签证据头、或逐条判断后确定性聚合，方法由接手者选择。v3 只收 mean pooling 上的线性头，结构限 `pack`、`pair`、`pair_aggregate` 三种；`pair_aggregate` 的聚合规则固定、阈值不低于 0.5；`max_tokens` 缺省 512，不得超过所用 tokenizer 的上限（XLM-R base 为 512），超长如实弃权、不截断；推理依赖锁定 torch 2.8.0、transformers 4.57.1、tokenizers 0.22.2、safetensors 0.6.2；融合必须按 `joint-first-dev-v1` 在 dev 上选点（v2 未规定），证据必选的资格规则内置在我方复算里。

@@ -17,10 +17,18 @@ library and the sibling ``linear_text_v1.py``; no RoleCraft code). Typical use::
         training_notes_file="training-notes.md",
     )
 
-It writes ``linear/model.json``, ``linear/arrays.npz``, ``checkpoint-manifest.json`` and
-``predictions.dev.jsonl`` (v2 rows, predicted by *your* sklearn objects). RoleCraft
-reloads the return with its own loader and compares labels, statuses and evidence sets
-exactly and probabilities within an absolute difference of 1e-6 (``verify-return``).
+It writes ``linear/model.json``, ``linear/arrays.npz``, ``checkpoint-manifest.json``,
+``predictions.dev.jsonl`` (v2 rows, predicted by *your* sklearn objects) and a
+``training_notes_file`` template to fill in. RoleCraft reloads the return with its own
+loader and compares labels, statuses and evidence sets exactly and probabilities within an
+absolute difference of 1e-6 (``verify-return``). After the freeze, write the test rows with
+the same objects, in the same format, outside the return directory::
+
+    from export_sklearn_linear import write_predictions
+    write_predictions("linear-return", vectorizer=tfidf, classifier=relation_lr,
+                      evidence_classifier=evidence_lr, evidence_vectorizer=None,
+                      inputs="data/test.inputs.jsonl", output="predictions.test.jsonl")
+
 The script refuses objects the loader
 cannot rebuild exactly (custom analyzers/tokenizers/preprocessors, non-default token
 patterns, accent stripping, stop words, binary counts, non-float64 output, one-vs-rest
@@ -32,7 +40,7 @@ import hashlib
 import io
 import json
 import sys
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 
 import numpy as np
 import sklearn
@@ -44,6 +52,9 @@ LABELS = ("SUPPORTED", "CONTRADICTED", "INSUFFICIENT")
 LABEL_TIERS = ("G0", "G1", "G2", "G2v")
 TIME_POLICY = "historical-evidence-time-v1"
 TOLERANCE = 1e-9
+# Files the export writes itself; the training notes may not take one of these names.
+MEMBERS = ("checkpoint-manifest.json", "linear/model.json", "linear/arrays.npz")
+DEV_PREDICTIONS = "predictions.dev.jsonl"
 # Transform-affecting TfidfVectorizer parameters the loader cannot express otherwise.
 DEFAULTS = {
     "input": "content",
@@ -180,6 +191,225 @@ def _read_jsonl(path):
         return [json.loads(line) for line in stream if line.strip()]
 
 
+def prediction_rows(
+    records,
+    *,
+    revision,
+    vectorizer,
+    classifier,
+    order,
+    evidence_classifier,
+    pair_vectorizer,
+    evidence_threshold,
+):
+    """v2 rows for ``*.inputs.jsonl`` records, predicted by the producer's own objects."""
+    rows = []
+    unbacked = 0
+    for record in records:
+        model_input = record["model_input"]
+        problem = input_problem(model_input)
+        base = {
+            "return_schema_version": 2,
+            "record_id": record["record_id"],
+            "input_hash": record["input_hash"],
+            "model_revision": revision,
+            "task_type": "relation",
+        }
+        if problem is not None:
+            rows.append(
+                base
+                | {
+                    "status": "abstained",
+                    "probabilities": None,
+                    "label": None,
+                    "evidence_ids": [],
+                    "evidence_bindings": [],
+                    "reason": problem,
+                }
+            )
+            continue
+        features = vectorizer.transform([relation_text(model_input)])
+        probabilities = [float(p) for p in np.asarray(classifier.predict_proba(features))[0][order]]
+        label = LABELS[int(np.argmax(probabilities))]
+        candidates = model_input["evidence"]["candidate_evidence"]
+        selected = []
+        if candidates:
+            scores = np.asarray(
+                evidence_classifier.predict_proba(
+                    pair_vectorizer.transform([pair_text(model_input, c) for c in candidates])
+                )
+            )[:, 1]
+            selected = [
+                c
+                for c, score in zip(candidates, scores, strict=True)
+                if score >= evidence_threshold
+            ]
+        row = base | {
+            "status": "ok",
+            "probabilities": probabilities,
+            "label": label,
+            "evidence_ids": [c["id"] for c in selected],
+            "evidence_bindings": [
+                {"candidate_id": c["id"], "candidate_sha256": sha256(canonical(c).encode("utf-8"))}
+                for c in selected
+            ],
+        }
+        if not selected:
+            row["reason"] = "no candidate reached the evidence threshold"
+            if label != "INSUFFICIENT":
+                unbacked += 1
+        rows.append(row)
+    return rows, unbacked
+
+
+def warn_unbacked(unbacked):
+    if unbacked:
+        # verify-return refuses such rows where the record's evidence is evaluable
+        # (return_evidence_selection_required); fusion selection never picks such a point.
+        print(
+            f"warning: {unbacked} SUPPORTED/CONTRADICTED rows have no selected evidence",
+            file=sys.stderr,
+        )
+
+
+def notes_path(target, name):
+    """The training notes file inside ``target``, refused before anything is written."""
+    path = PurePosixPath(name) if isinstance(name, str) else None
+    if (
+        path is None
+        or not name
+        or path.is_absolute()
+        or any(part in ("", ".", "..") for part in name.split("/"))
+        or name in (*MEMBERS, DEV_PREDICTIONS)
+        or path.parts[0] == "linear"
+    ):
+        raise ExportError(
+            f"training_notes_path_invalid: {name!r} must be a new relative file inside the "
+            f"return, not one of {[*MEMBERS, DEV_PREDICTIONS]} or under linear/"
+        )
+    return Path(target) / path
+
+
+def check_exported(return_dir, vectorizer, classifier, evidence_classifier, evidence_vectorizer):
+    """The class order, after every array and both vectorizers equal the exported return.
+
+    Raises ``linear_objects_not_exported: <field> ...`` naming the first difference, before
+    a single row is written: rows from other objects would only fail at our reload, after a
+    one-time test opening was spent.
+    """
+    model = json.loads((Path(return_dir) / "linear/model.json").read_bytes())
+    with np.load(Path(return_dir) / "linear/arrays.npz", allow_pickle=False) as archive:
+        arrays = {name: archive[name] for name in archive.files}
+
+    def differ(field, detail):
+        return ExportError(f"linear_objects_not_exported: {field} {detail} ({return_dir})")
+
+    classes = [str(c) for c in getattr(classifier, "classes_", [])]
+    if sorted(classes) != sorted(LABELS):
+        raise differ("classifier", "classes are not the three relation labels")
+    if [int(c) for c in getattr(evidence_classifier, "classes_", [])] != [0, 1]:
+        raise differ("evidence_classifier", "classes are not [0, 1]")
+    order = [classes.index(label) for label in LABELS]
+    spec, idf = vectorizer_spec(vectorizer)
+    if spec != model["vectorizer"]:
+        raise differ("vectorizer", "differs from linear/model.json")
+    expected = {
+        "coef": np.asarray(classifier.coef_, dtype=np.float64)[order],
+        "intercept": np.asarray(classifier.intercept_, dtype=np.float64)[order],
+        "evidence_coef": np.asarray(evidence_classifier.coef_, dtype=np.float64)[0],
+        "evidence_intercept": np.asarray(evidence_classifier.intercept_, dtype=np.float64).reshape(
+            1
+        ),
+    }
+    if idf is not None:
+        expected["idf"] = idf
+    declared = model["evidence_head"]["vectorizer"]
+    if evidence_vectorizer is None:
+        if declared != "shared":
+            raise differ("evidence_vectorizer", "missing: the export has its own evidence head")
+    else:
+        head_spec, evidence_idf = vectorizer_spec(evidence_vectorizer)
+        if declared == "shared" or head_spec != declared:
+            raise differ("evidence_vectorizer", "differs from the exported evidence head")
+        if evidence_idf is not None:
+            expected["evidence_idf"] = evidence_idf
+    for name in ("coef", "intercept", "evidence_coef", "evidence_intercept", "idf", "evidence_idf"):
+        if (name in expected) != (name in arrays) or (
+            name in expected and not np.array_equal(expected[name], arrays[name])
+        ):
+            raise differ(name, "differs from linear/arrays.npz")
+    return order, model
+
+
+def notes_template(manifest, evidence_threshold):
+    """The training notes the manifest names, pre-filled with what the export knows."""
+    selection = str(manifest["test_used_for_selection"]).lower()
+    return f"""# 训练说明（交付前逐项填写）
+
+我方按 SHA-256 绑定本文件，并给复核的人看；不解析其中内容。
+
+- model_revision: {manifest["model_revision"]}
+- dataset_id: {manifest["dataset_id"]}
+- dataset_manifest_sha256: {manifest["dataset_manifest_sha256"]}
+- training_partitions: {json.dumps(manifest["training_partitions"])}（只用 train 拟合）
+- selection_partition: dev；test_used_for_selection: {selection}
+- evidence_threshold: {evidence_threshold}（在 dev 上选定）
+- framework: scikit-learn {manifest["framework_version"]}，numpy {np.__version__}
+- 训练代码 commit（40 位）：<填写>
+- 超参数（C、class_weight、n-gram、随机种子等）：<填写>
+- 训练数据（各 split 条数、标签等级、语言）：<填写>
+- 证据头逐候选 0/1 目标的取法（一条记录有多个可接受证据集合时怎样取）：<填写>
+- 其他需要复核者知道的事：<填写>
+"""
+
+
+def write_predictions(
+    return_dir,
+    *,
+    vectorizer,
+    classifier,
+    evidence_classifier,
+    evidence_vectorizer=None,
+    inputs,
+    output,
+):
+    """Rows for any partition (the test after the freeze) in the dev rows' format.
+
+    The objects must be the exported ones: every array equals ``linear/arrays.npz`` and both
+    vectorizers equal ``linear/model.json`` (``check_exported``); the revision and threshold
+    come from the return. ``output`` must lie outside the return directory: a file added
+    there would not be in its manifest. Every check runs before the output is created.
+    """
+    return_dir, output = Path(return_dir).resolve(), Path(output).resolve()
+    if output.is_relative_to(return_dir):
+        raise ExportError("prediction_output_inside_return: write prediction rows outside it")
+    if output.exists():
+        raise ExportError(f"prediction_output_exists: {output}; rows are never overwritten")
+    manifest = json.loads((return_dir / "checkpoint-manifest.json").read_bytes())
+    order, model = check_exported(
+        return_dir, vectorizer, classifier, evidence_classifier, evidence_vectorizer
+    )
+    rows, unbacked = prediction_rows(
+        _read_jsonl(inputs),
+        revision=manifest["model_revision"],
+        vectorizer=vectorizer,
+        classifier=classifier,
+        order=order,
+        evidence_classifier=evidence_classifier,
+        pair_vectorizer=vectorizer if evidence_vectorizer is None else evidence_vectorizer,
+        evidence_threshold=model["evidence_head"]["threshold"],
+    )
+    warn_unbacked(unbacked)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with output.open("xb") as stream:
+        stream.write(b"".join(json_bytes(row) for row in rows))
+    return {
+        "model_revision": manifest["model_revision"],
+        "predictions": len(rows),
+        "output": str(output),
+    }
+
+
 def export_linear_return(
     target,
     *,
@@ -201,6 +431,7 @@ def export_linear_return(
     ),
 ):
     target = Path(target)
+    notes = notes_path(target, training_notes_file)
     if target.exists():
         raise ExportError(f"{target} already exists; exports are never overwritten")
     if not 0 <= evidence_threshold <= 1:
@@ -265,69 +496,17 @@ def export_linear_return(
     arrays_raw = buffer.getvalue()
     revision = model_revision(sha256(model_raw), sha256(arrays_raw), dataset_sha)
 
-    rows = []
-    unbacked = 0
-    for record in records:
-        model_input = record["model_input"]
-        problem = input_problem(model_input)
-        base = {
-            "return_schema_version": 2,
-            "record_id": record["record_id"],
-            "input_hash": record["input_hash"],
-            "model_revision": revision,
-            "task_type": "relation",
-        }
-        if problem is not None:
-            rows.append(
-                base
-                | {
-                    "status": "abstained",
-                    "probabilities": None,
-                    "label": None,
-                    "evidence_ids": [],
-                    "evidence_bindings": [],
-                    "reason": problem,
-                }
-            )
-            continue
-        features = vectorizer.transform([relation_text(model_input)])
-        probabilities = [float(p) for p in np.asarray(classifier.predict_proba(features))[0][order]]
-        label = LABELS[int(np.argmax(probabilities))]
-        candidates = model_input["evidence"]["candidate_evidence"]
-        selected = []
-        if candidates:
-            scores = np.asarray(
-                evidence_classifier.predict_proba(
-                    pair_vectorizer.transform([pair_text(model_input, c) for c in candidates])
-                )
-            )[:, 1]
-            selected = [
-                c
-                for c, score in zip(candidates, scores, strict=True)
-                if score >= evidence_threshold
-            ]
-        row = base | {
-            "status": "ok",
-            "probabilities": probabilities,
-            "label": label,
-            "evidence_ids": [c["id"] for c in selected],
-            "evidence_bindings": [
-                {"candidate_id": c["id"], "candidate_sha256": sha256(canonical(c).encode("utf-8"))}
-                for c in selected
-            ],
-        }
-        if not selected:
-            row["reason"] = "no candidate reached the evidence threshold"
-            if label != "INSUFFICIENT":
-                unbacked += 1
-        rows.append(row)
-    if unbacked:
-        # verify-return refuses such rows where the record's evidence is evaluable
-        # (return_evidence_selection_required); fusion selection never picks such a point.
-        print(
-            f"warning: {unbacked} SUPPORTED/CONTRADICTED dev rows have no selected evidence",
-            file=sys.stderr,
-        )
+    rows, unbacked = prediction_rows(
+        records,
+        revision=revision,
+        vectorizer=vectorizer,
+        classifier=classifier,
+        order=order,
+        evidence_classifier=evidence_classifier,
+        pair_vectorizer=pair_vectorizer,
+        evidence_threshold=evidence_threshold,
+    )
+    warn_unbacked(unbacked)
 
     manifest = {
         "template": False,
@@ -361,6 +540,8 @@ def export_linear_return(
     (target / "linear/model.json").write_bytes(model_raw)
     (target / "linear/arrays.npz").write_bytes(arrays_raw)
     (target / "predictions.dev.jsonl").write_bytes(b"".join(json_bytes(row) for row in rows))
+    notes.parent.mkdir(parents=True, exist_ok=True)
+    notes.write_text(notes_template(manifest, evidence_threshold), encoding="utf-8")
     (target / "checkpoint-manifest.json").write_bytes(manifest_raw)
     return {
         "model_revision": revision,

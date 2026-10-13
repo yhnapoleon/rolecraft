@@ -125,12 +125,33 @@ uv run --locked python -m career_lab.datasets.v3 validate-handoff \
 2. **标签投影**：`label` 与 `label_index` 符合 manifest 冻结的列序（`handoff_label_order_mismatch`）；关系三类与评价项五类分别处理，不混成一个标签域。
 3. **适用性**：`applicability=not_applicable` 时标签必须为 `NOT_APPLICABLE`（`annotation_applicability_mismatch`）；`INSUFFICIENT` 必须写 `missing_reason`。
 4. **证据集合**：选中证据与可接受集合只能引用本记录的候选 ID（`annotation_invalid_reference`）；可评的正／反关系必须有证据选择（`annotation_evidence_required`），且选择属于某个可接受集合（`final_evidence_not_an_acceptable_target`）。合法的多证据联合目标保留；包含更小合法集合的超集在审阅时去掉，原件字节不改。
-5. **来源映射**：`packaged_sources` 与 `actual_sources` 数量、顺序、SHA-256 与实际字节一致，不按同名文件猜来源（`handoff_source_mapping_invalid`）。非 fixture 来源一律 `pending`，原因 `authoritative_source_reader_required`：包内的授权声明不算独立证明，需我方另行读取权威来源；真实数据中非 G0 的 label-only 记录另列 `label_only_semantic_review_required`。G0 标签会重新经过受限数值验证，开放语义不能自报为 G0。
+5. **来源映射**：`packaged_sources` 与 `actual_sources` 数量、顺序、SHA-256 与实际字节一致，不按同名文件猜来源（`handoff_source_mapping_invalid`）。非 fixture 来源一律 `pending`，原因 `authoritative_source_reader_required`：包内的授权声明不算独立证明，需我方另行读取权威来源（怎样转为 `accept` 见第 7 节）；真实数据中非 G0 的 label-only 记录另列 `label_only_semantic_review_required`。G0 标签会重新经过受限数值验证，开放语义不能自报为 G0。
 6. **双遍调用原件**（`audit/<split>/labels/passes/`）：两遍各有自己的 request／invocation／context 身份、模型 revision 与不同的 prompt revision，证据顺序适当，不能复制一次调用的身份充数；语义仍有分歧需要真实的第三遍。调用失败、空输出、缺原件或绑定错误返回 `pending`，不升级为 G1。这些只能核记录内部一致，调用是否真实发生仍需独立审阅。
 
 ## 6. 结果、退出码与重跑
 
 - 报告 `report.json`（`protocol=data-handoff-review-v1`）按 record_id 给 `accept`（机制核验通过）、`quarantine`（身份、格式或引用不符）或 `pending`（需补证明或独立核验）及稳定原因码，另有 `counts`、`data_card_check` 与第 4 节的本布局字段；`training_ready`、`quality_verified`、`call_authenticity_verified` 恒为 `false`。
-- 退出码：`0` 表示全部记录 `accept` 且模型回传格式通过（只代表本次机械核验范围）；任一记录 `pending`／`quarantine` 或模型回传不通过时为 `2`；包级错误（如文件集合不符）不写报告，只输出 `{"error": <错误码>, "message": …}`，同样以 `2` 退出，不回显私有正文。
+- 退出码：`0` 表示全部记录 `accept` 且模型回传格式通过（只代表本次机械核验范围）。带 `--checkpoint-manifest` 时，validate-handoff 会把正当的弃权或失败预测行（例如编码器超过 `max_tokens` 的 `encoder_input_truncated`）记为 `pending`（`prediction_abstained`、`prediction_failed`），`format_valid=false`、退出 2；这是既有口径，不表示回传有错，联核时由我方逐条确认；任一记录 `pending`／`quarantine` 或模型回传不通过时为 `2`；包级错误（如文件集合不符）不写报告，只输出 `{"error": <错误码>, "message": …}`，同样以 `2` 退出，不回显私有正文。
 - 同一份包对同一输出目录可重跑，报告字节相同；包或版本有变化时拒绝覆盖已有报告（`handoff_review_conflict`），用新的输出目录保存新版本。
 - 核验不重新标注、不发起模型调用；所有 hash 校验只证明对应字节，不证明来源授权或事实真实。
+
+## 7. 真实数据的 `pending` 怎样转为 `accept`
+
+**现状**：
+
+- `bucket` 不是 `fixture` 的每条 train/dev 记录，validate-handoff 都给 `pending`（`authoritative_source_reader_required`）。包里的来源文件与授权声明是包自己带的，不能证明自己；现在的命令还没有接入权威来源读取器，所以真实数据在这一步**全部是 `pending`、退出码 2**，这不表示你方的包有错。非 G0 的 label-only 记录另有 `label_only_semantic_review_required`，同样要独立审阅。
+- 这份报告不是登记、`verify-return` 的 dev 复核和 test 打开的输入，三者都不读它，`pending` 不会在机制上卡住它们。但来源没有核过，复核报告只能说明格式、身份与预测可以复现，说明不了数据从哪里来；报告的 `training_ready` 保持 `false`。
+- **谁提供读取器**：权威来源在哪一方，就由哪一方的系统读取。`env_run`、`human_session` 记录来自我方产品（经授权导出 `datasets.v3 export --live`），权威来源是我方保存的导出，读取器由我方提供；`public_aux`、`business_synth` 等你方自产的来源，请在数据计划里写明原始来源、取法与许可，我方据此商定读取方式。
+- **现在没有现成机制，我方在收到你方的数据计划（来源类别、各类条数、来源从哪里取）后提供读取器与命令。**
+
+**接口草案**（未实现，以我方之后发布的命令为准）：
+
+```sh
+uv run --locked python -m career_lab.datasets.v3 validate-handoff \
+  --package <数据包> --output <新目录> \
+  --source-authority <我方保存的授权导出目录，或双方商定的来源登记文件>
+```
+
+- 读取器按 `record_id`＋`input_hash` 在权威来源里找到这条记录，给出它的来源绑定（沿用我方已有的 `w07-source-origin-v1`：record_id、来源类别、session、谱系 hash、源码 digest、每个来源文件的 path 与 SHA-256）。
+- 与包里 metadata 的 `bucket`、`lineage`、`provenance.source.source_digest`、`provenance.actual_sources` 逐项相同：去掉 `authoritative_source_reader_required`，其余规则都通过即 `accept`；不同：`quarantine`（`authoritative_source_binding_mismatch`）；权威来源里找不到：仍是 `pending`。
+- 你方现在就能做的准备：`provenance.actual_sources` 写原始来源的相对路径与 SHA-256（不改写、不重新序列化原文件），`packaged_sources` 一一映射到包内副本；我方导出的记录保持导出时的 `record_id`、`input_hash`、`lineage`、`provenance` 不变。
