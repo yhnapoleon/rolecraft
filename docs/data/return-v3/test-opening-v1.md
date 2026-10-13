@@ -1,6 +1,6 @@
 # 封存 test 的一次性打开 `rolecraft-held-out-test-opening-v1`
 
-封存 test 只在模型冻结之后、经用户批准打开一次，用来报告一次性的 test 指标；看过的 test 只能作回归用，不能再参与任何选择。打开由 `verify-return --partition test` 完成：先核冻结记录与批准，再核能事先查出的回传错误，然后以独占创建在**冻结目录里**写下打开记录，之后才读 test 的输入与标签。打开记录的位置只由冻结记录决定，命令行与环境变量都不能改变；同一批准的第二次打开在读任何 test 内容之前被拒绝。CLI 没有确认、强制、重开、换账本或绕过参数；批准只存在于 campaign 文件。冻结目录只能存放一处、只在该处打开，打开后立即连同记录提交进 git（见第 4 节「留痕与提交」）。
+封存 test 只在模型冻结之后、经用户批准，**对每个候选打开一次**（线性、编码器、融合各算一个候选，见第 3.1 节），用来报告一次性的 test 指标；看过的 test 只能作回归用，不能再参与任何选择。打开由 `verify-return --partition test` 完成：先核冻结记录与批准，再核能事先查出的回传错误，然后以独占创建在**冻结目录里**写下打开记录，之后才读 test 的输入与标签。打开记录的位置只由冻结记录决定，命令行与环境变量都不能改变；同一批准的第二次打开在读任何 test 内容之前被拒绝。CLI 没有确认、强制、重开、换账本或绕过参数；批准只存在于 campaign 文件。冻结目录只能存放一处、只在该处打开，打开后立即连同记录提交进 git（见第 4 节「留痕与提交」）。
 
 学员界面不显示 test；结果只出现在复核报告与打开记录里。
 
@@ -9,11 +9,12 @@
 - 数据包为[按 split 冻结的布局](dataset-split-sealed-v1.md)，含 test 且 `test_sealed=true`；状态为 `FIXTURE_ONLY_NOT_FINAL_TRAINING_DATA` 的包不能打开（`fixture_cannot_authorize_confirmatory`）。
 - 被测模型已登记（线性回传、编码器回传或融合），并已用 dev 完成复核。
 - 负责方清单（`checkpoint-manifest.json`）显式写 `training_partitions=["train"]`、`selection_partition="dev"`、`test_used_for_selection=false`，数据身份与数据包一致；缺任一项 `held_out_selection_declaration_required`，取值不符 `model_return_selection_contaminated`。
-- 负责方在冻结后对 test 逐条预测一次，交回 `predictions.test.jsonl`（[预测行](predictions-v3.md)）。
+- 负责方在冻结后对 test 逐条预测一次，交回 `predictions.test.jsonl`（[预测行](predictions-v3.md)，与 dev 行同一格式，v2、v3 行都收）。编码器用参考脚本 `export_hf_return.py predict --inputs data/test.inputs.jsonl`，线性用 `export_sklearn_linear.write_predictions(..., inputs="data/test.inputs.jsonl", ...)`，融合按[融合公式](fusion-selection.md)由两个分量的预测算出。**文件放在回传目录之外**：已封存的回传目录里多一个文件，清单就对不上。
+- 有几个候选就交几份 test 预测，并且**一次交齐**（第 3.1 节）。
 
 ## 2. 冻结（准备，不是批准）
 
-冻结由我方生成，负责方不写、也不改冻结目录里的任何文件。到这一步负责方只需交两样：冻结后的 test 预测 `predictions.test.jsonl`（第 1 节），以及训练说明（第 2.1 节：源码记录 `freeze-record.json`、依赖锁定文件、训练代码 commit 与源码 digest）。
+冻结由我方生成，负责方不写、也不改冻结目录里的任何文件。到这一步负责方只需交两样：冻结后的 test 预测 `predictions.test.jsonl`（第 1 节），以及训练说明（第 2.1 节：源码记录 `freeze-record.json`、依赖锁定文件、训练代码 commit 与源码 digest）；融合候选另交第 2.3 节的声明清单。
 
 我方在单独目录准备冻结记录。`prepare_test_freeze` 把数据 manifest、注册项、复核策略、负责方清单与负责方的训练说明拷进新目录，再调用既有冻结协议 `expansion-v3-w08-freeze-v1`（协议不改），写出 `freeze.json`（第 2.2 节）：
 
@@ -73,7 +74,7 @@ PYTHON
  "frozen_at": "<你方冻结模型的 UTC 时间>"}
 ```
 
-训练命令、随机种子、硬件等可以另加键。外层清单 `checkpoint-manifest.json` 用 dev 复核时交的那一份（数据身份须是这个封存数据包），冻结时钉住，之后不能再换（`held_out_checkpoint_manifest_not_frozen`）。
+训练命令、随机种子、硬件等可以另加键。外层清单 `checkpoint-manifest.json` 用 dev 复核时交的那一份（数据身份须是这个封存数据包），冻结时钉住，之后不能再换（`held_out_checkpoint_manifest_not_frozen`）。融合没有自己的权重回传，它的清单见第 2.3 节。
 
 ### 2.2 冻结记录 `freeze.json`（我方生成）
 
@@ -110,6 +111,26 @@ PYTHON
  "frozen_at": "<UTC 时间>", "id": "<其余字段的 SHA-256>"}
 ```
 
+### 2.3 融合候选的清单
+
+打开 test 时，`--checkpoint-manifest` 的 `model_revision` 必须等于被测注册与每行预测的 revision（第 4 节第 9 步），选择声明也必须是你方显式写的。融合的 revision 是融合注册的 `fusion-return:…`（[融合选择记录](fusion-selection.md)第 4 节），两个分量的清单都对不上，所以融合另交一份**融合声明清单**：沿外层清单模板，不带权重，放在单独的目录里，旁边放它列出的文件。
+
+```json
+{"template": false, "completed": true, "return_protocol": "rolecraft-label-evidence-v2",
+ "artifact_kind": "probability_fusion",
+ "model_revision": "<fusion-return:…，与融合注册、每行融合预测相同>",
+ "framework": "rolecraft-probability-fusion", "framework_version": "1",
+ "task_type": "relation", "label_order": ["SUPPORTED", "CONTRADICTED", "INSUFFICIENT"],
+ "dataset_id": "<与两个分量相同>", "dataset_manifest_sha256": "<封存数据包 manifest 的 SHA-256>",
+ "training_partitions": ["train"], "selection_partition": "dev", "test_used_for_selection": false,
+ "evidence_selection_implemented": true, "evidence_selection_required": true,
+ "checkpoint_files": {"fusion-selection.json": "<SHA-256>", "training-notes.md": "<SHA-256>"},
+ "load_and_predict_command": "not executed: RoleCraft builds the fusion from its registry",
+ "training_notes_file": "training-notes.md", "predictions_file": "predictions.dev.jsonl"}
+```
+
+`fusion-selection.json` 就是登记融合时交的那份选择记录；`training-notes.md` 写融合在 dev 上怎样选点。这份清单只用于融合的冻结与 test 打开，不登记、不经 validate-handoff；冻结时同样被钉住。
+
 ## 3. 批准（每次打开前由用户确认）
 
 用户在对话里确认这一次打开后，我方在**同一冻结目录**写 `campaign.json`（`TestCampaign`，契约不改）并单独提交进 git；冻结文件与 campaign 不在同一根目录即拒绝（`held_out_campaign_outside_freeze_root`）：
@@ -121,6 +142,12 @@ PYTHON
 ```
 
 `opened_at` 为空即未批准（`campaign_not_authorized`）。
+
+### 3.1 一次批准、几个候选
+
+- **代码语义**：`prepare_test_freeze` 一次只冻结一个候选（一个注册），冻结目录里的打开记录 `held-out/<数据 manifest SHA-256>/test.json` 每个冻结目录只能写一次。所以同一份封存 test 对每个候选各打开一次：线性、编码器、融合各有自己的冻结目录、各开一次；同一候选不能再开，也没有「整份数据集只开一次、三个候选共用」的打开。
+- **一次批准**：campaign 可以列多个候选。用户在对话里确认一次后，我方写一份列出全部候选的 `campaign.json`，把**同一份字节**放进每个候选的冻结目录，再逐个打开；每次打开只认 campaign 里与所测注册相同的那个候选。
+- **负责方要做的**：在第一次打开之前，把要报 test 的全部候选（例如线性、编码器、融合三份）都冻结并**一次交齐**各自的 `predictions.test.jsonl`、训练说明与清单（融合用第 2.3 节的清单）。先看到某个候选的 test 结果再交下一个，后交的那个就可能受了 test 的影响，所以要在第一次打开前交齐。打开之后，任何候选的新版本都不再参与这次 test 报告（看过的 test 只作回归用）。
 
 ## 4. 打开
 

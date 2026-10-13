@@ -12,8 +12,10 @@
   linear/model.json          特征器、分类器与证据头的声明
   linear/arrays.npz          权重数组（NumPy，无 pickle）
   predictions.dev.jsonl      dev 逐条预测（fixture v2 行格式；不登记，供复核）
-  <训练说明文件>             见外层清单 training_notes_file
+  <训练说明文件>             见外层清单 training_notes_file；导出脚本写出待填写的模板
 ```
+
+test 预测在冻结之后另写，放在回传目录之外（第 8 节）。
 
 `checkpoint_files` 恰为 `linear/model.json` 与 `linear/arrays.npz` 两项及其 SHA-256；多一项、少一项都拒绝。登记时这三个文件（含外层清单）复制进注册表，之后不依赖回传目录。
 
@@ -112,6 +114,10 @@ model_revision = "linear-return:" + hashlib.sha256(canonical.encode("utf-8")).he
 ## 8. 导出脚本
 
 [`reference/export_sklearn_linear.py`](reference/export_sklearn_linear.py)（numpy、scikit-learn、标准库与同目录 `linear_text_v1.py`；不依赖本仓库）把拟合好的 `TfidfVectorizer`、多项 `LogisticRegression`（关系）与二分类 `LogisticRegression`（证据）写成本页格式，并用**负责方自己的对象**对 dev 输入逐条预测写出 `predictions.dev.jsonl`。用法见脚本开头。它拒绝加载器不能精确重建的对象：自定义 analyzer／tokenizer／preprocessor、非缺省 token_pattern、accent 处理、停用词、二值计数、非 float64 输出、类别不是三类关系标签、证据分类器不是 {0,1}、以及概率与 softmax／sigmoid(线性分数) 不符（例如 one-vs-rest）。目标目录已存在时不覆盖。`training_partitions`、`test_used_for_selection` 与训练说明须如实填写。
+
+- **训练说明模板**：导出同时在 `training_notes_file` 写一份模板，已填好 `model_revision`、数据身份、选择声明、证据阈值与框架版本，其余项（训练代码 commit、超参数、各 split 条数、证据头目标取法等）标 `<填写>`，交付前逐项填写。我方按字节绑定它、给复核的人看，不解析内容。
+- **test 预测入口**：冻结后用同一组对象调用 `write_predictions(回传目录, vectorizer=…, classifier=…, evidence_classifier=…, evidence_vectorizer=…, inputs="data/test.inputs.jsonl", output="predictions.test.jsonl")`。行格式与 dev 相同，`model_revision` 与阈值从回传目录读；对象与导出的数组不一致、输出放在回传目录里或输出文件已存在都拒绝。用法见脚本开头。
+- **证据头的逐候选 0/1 目标**：格式不规定你方怎样取。我方自己的训练实现取法供参考：证据可评的记录取元素最少的可接受集合（同样多时按排序后的候选 ID 比较取前者），集合内的候选记 1、其余记 0；`evidence_evaluable=false`（label-only）的记录不进证据头训练。评测时选中集合与任一可接受集合比，取最好的一个。
 
 ## 9. 我方怎样登记与复核
 

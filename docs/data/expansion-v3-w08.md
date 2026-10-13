@@ -279,7 +279,7 @@ uv run --locked python -c 'import json, sys; print(json.dumps(json.load(sys.stdi
 
 - v3 `checkpoint.json`写明`variant`（pack／pair／pair_aggregate）、`pooling=mean`、`evidence_threshold`（pair_aggregate不低于0.5）、`max_tokens`；fixture v2时代的布局仍收（阈值固定0.5）。
 - 目录里每个文件（清单本身除外）都要列进`checkpoint_files`，后缀只许白名单。交付前删去`.DS_Store`等隐藏文件，否则整份回传被拒（`checkpoint_member_set_mismatch`或`checkpoint_file_type_not_allowed`）。
-- 负责方用`docs/data/return-v3/reference/export_hf_return.py export`写布局、`seal`写外层清单。我方不执行清单里的`load_and_predict_command`或生产者Python代码。
+- 负责方用`docs/data/return-v3/reference/export_hf_return.py export`写布局（`--max-tokens`缺省512）、`predict`按我方加载器同一规则写dev／test预测行（弃权、pooling、聚合与阈值相同；在锁定推理依赖版本、CPU float32下运行）、`seal`写外层清单（含validate-handoff要求的`artifact_roles`）。我方不执行清单里的`load_and_predict_command`或生产者Python代码。
 - 大权重不进NumPy的64MB加载器：登记流式校验并复制清单文件，在独立副本全部校验后发布不可变注册；注册后不依赖生产者目录。
 
 登记命令与[登记一份回传](#登记一份回传)相同，只是要在装有encoder extra的环境运行。登记不导入torch，但要求torch、transformers、tokenizers、safetensors已安装，并把它们的版本写进注册；缺任一包时拒绝（`encoder_runtime_unavailable`，退出2，不建注册目录）。

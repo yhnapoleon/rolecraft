@@ -14,7 +14,8 @@ v3 行与 fixture v2 行字段相同，只把版本写成 3：
  "reason": null}
 ```
 
-- 同一文件可以混用 v2 与 v3 行，解析结果相同；全文件只能有一个 `model_revision`。
+- 同一文件可以混用 v2 与 v3 行，解析结果相同；全文件只能有一个 `model_revision`。线性导出脚本（`export_linear_return`、`write_predictions`）写 v2 行，编码器参考推理（`export_hf_return.py predict`）写 v3 行，两种都收。
+- fixture v2 包里的 `validate_predictions.py` 只收版本 2 的行，而且只对 fixture 自带的数据目录核验，不能用来自查 v3 行或你方的新数据。新数据上的自查：编码器用 `predict --labels` 写行（同时列出会被格式检查拒绝的行），线性用导出脚本写行；最终以我方 `verify-return` 的格式检查与重载比对为准。
 - 每行逐条报格式错误，错误行仍计入所属语言的分类分母：缺 `return_schema_version` → `return_schema_version_required`；版本不是整数 2 或 3 → `return_schema_version_unsupported`；`task_type` 不是 `relation`（含 `criterion`，本版不收）→ `return_task_type_unsupported`；其余规则同 fixture v2（概率 3 维有限、和为 1 的误差不超过 1e-6、标签为最大概率项、证据绑定当前记录候选的完整对象 hash、可评的支持／矛盾成功行不能空证据、失败或弃权不带概率与标签）。
 - `validate-handoff --checkpoint-manifest` 的回传核对同样接受 v2 与 v3 行；外层清单可带 v3 字段 `artifact_kind`、`artifact_protocol`、`label_tiers`（不认识的键仍拒绝）。`artifact_kind=linear` 时角色由格式固定：checkpoint＝`linear/arrays.npz`，config 与 tokenizer＝`linear/model.json`，`checkpoint_files` 必须恰为这两项、`artifact_protocol` 必须为 `rolecraft-linear-return-v1`，负责方不必写 `artifact_roles`（写了就必须与固定映射相同，否则 `handoff_model_artifact_roles_conflict`）；其他回传仍须用 `artifact_roles` 列出三种角色。`label_tiers` 只能是 `G0`、`G1`、`G2`、`G2v` 的不重复子集（`handoff_model_label_tiers_invalid`）。
 

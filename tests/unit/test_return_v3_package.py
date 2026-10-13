@@ -176,3 +176,39 @@ def test_pkg_09_readme_links_point_to_listed_files():
     targets = {t.split("#", 1)[0] for t in re.findall(r"\]\(([^)\s]+)\)", text)}
     local = {t for t in targets if t and "://" not in t}
     assert local and local <= set(listed()), local - set(listed())
+
+
+def option_default(script, command, option):
+    """The argparse default of ``option`` in ``script``'s ``command``, read without importing
+    it (the encoder reference script imports torch)."""
+    tree = ast.parse(script.read_text(encoding="utf-8"))
+    parsers = {}
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Assign)
+            and isinstance(node.value, ast.Call)
+            and getattr(node.value.func, "attr", None) == "add_parser"
+        ):
+            parsers[node.targets[0].id] = node.value.args[0].value
+    for node in ast.walk(tree):
+        if (
+            isinstance(node, ast.Call)
+            and getattr(node.func, "attr", None) == "add_argument"
+            and parsers.get(getattr(node.func.value, "id", None)) == command
+            and node.args
+            and node.args[0].value == option
+        ):
+            defaults = [k.value for k in node.keywords if k.arg == "default"]
+            return ast.literal_eval(defaults[0]) if defaults else None
+    raise AssertionError(f"{command} {option} not found")
+
+
+def test_plug_01_encoder_token_limit_defaults_to_the_xlmr_position_limit():
+    """160 C3: the normal entry encodes 391-474 tokens per sentence (pair, 150 smoke), so a
+    256 default or sample would abstain on every sentence; 512 is XLM-R base's limit."""
+    script = PACKAGE / "reference/export_hf_return.py"
+    assert option_default(script, "export", "--max-tokens") == 512
+    spec = (PACKAGE / "encoder-return.md").read_text(encoding="utf-8")
+    samples = re.findall(r"--max-tokens (\d+)", spec)
+    assert samples and set(samples) == {"512"}, samples
+    assert "391–474" in spec and "不截断" in spec

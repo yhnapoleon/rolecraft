@@ -95,7 +95,7 @@ UV_PYTHON=3.12 uv run --locked python -m career_lab.datasets.v3 validate-handoff
 
 `dataset-manifest.json` 沿 fixture v2：`schema_version=1`、数据身份、状态、分区计数、逐文件 SHA-256 和大小。单任务沿 `task_type`／`label_order`；多任务可用 `label_orders` 显式映射。输入和标签每个记录恰好一行；重复、缺行、多行、错 hash、错列序、同事实／结构跨 split 都拒绝。
 
-`audit/metadata.jsonl` 中的 `provenance.actual_sources` 保留原始相对路径；`packaged_sources` 按相同顺序映射到包内路径。数量、hash 和实际字节必须一致，不按同名文件猜来源。`audit/original-annotations.jsonl` 保存注解原件；模型标注原始请求／回执在 `audit/labels/passes/`。缺证明的记录返回 pending。G0 重新经过受限数值验证器，不能把开放语义自报为 G0。非 fixture 来源仍须独立权威读取；此 CLI 不把包内授权声明当作独立证明，返回 `authoritative_source_reader_required`。真实非 G0 的 label-only 还列 `label_only_semantic_review_required`。
+`audit/metadata.jsonl` 中的 `provenance.actual_sources` 保留原始相对路径；`packaged_sources` 按相同顺序映射到包内路径。数量、hash 和实际字节必须一致，不按同名文件猜来源。`audit/original-annotations.jsonl` 保存注解原件；模型标注原始请求／回执在 `audit/labels/passes/`。缺证明的记录返回 pending。G0 重新经过受限数值验证器，不能把开放语义自报为 G0。非 fixture 来源仍须独立权威读取；此 CLI 不把包内授权声明当作独立证明，返回 `authoritative_source_reader_required`。真实非 G0 的 label-only 还列 `label_only_semantic_review_required`。CLI 目前没有权威来源读取器的接入口，所以真实数据的 train/dev 记录在这一步全部 pending（退出 2）；登记、`verify-return` 与 test 打开不读这份报告，不被它在机制上卡住。转为 accept 的路径（`env_run`／`human_session` 由我方按授权导出提供读取器，负责方自产来源按数据计划商定；`--source-authority` 接口草案、逐项比对规则与未命中时的状态）写在 [v3 补充包 dataset-split-sealed-v1 第 7 节](return-v3/dataset-split-sealed-v1.md#7-真实数据的-pending-怎样转为-accept)；读取器在收到负责方数据计划后实现。
 
 完整目录只能含 manifest 列出的文件，以及 `SHA256SUMS` 完整枚举并校验的补充文件（冻结 v2 的 README、数据卡等沿此清单读取）。拒绝未列文件、软链接、路径逃逸和输出目录与输入包重叠。分区文件默认 `audit/original-release/split-manifest.json`，也可在 manifest 的 `split_manifest` 显式指定 record_id→split 映射。公共 SplitManifest 另核组件与结构身份。
 
