@@ -3,6 +3,7 @@
 import json
 import subprocess
 import sys
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import pytest
@@ -14,6 +15,7 @@ from career_lab.contracts.v2.core import ProtocolError
 from career_lab.contracts.v2.research import RunManifest
 from career_lab.delegations import http_transport
 from career_lab.delegations.credentials import Credentials
+from career_lab.reference_agent import runner
 from career_lab.reference_agent.runner import run_checklist
 from career_lab.registry.v3.store import BundleRegistry
 
@@ -132,36 +134,41 @@ def test_RUN_01_formal_cli_executes_fixed_current_manifest(tmp_path: Path, langu
 def test_RUN_budget_expires_during_state_read_without_dispatch(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import time
-
-    from runner_fixture import live_run
-
-    from career_lab.reference_agent.runner import run_checklist
-
+    # The runner's clock moves only when the state read returns, so the outcome does not
+    # depend on how fast this machine serves that read (a real 20 ms budget raced it).
     original = http_transport.request_json
-    posts = []
+    start = datetime.now(UTC)
+    spent = [timedelta(0)]
+    reads: list[str] = []
+    posts: list[str] = []
 
-    def delayed_state(
+    class RunnerClock(datetime):
+        @classmethod
+        def now(cls, tz: object = None) -> datetime:
+            return start + spent[0]
+
+    def state_read_spends_budget(
         credentials: Credentials, method: str, suffix: str, *args: object, **kwargs: object
     ) -> dict[str, JsonValue]:
         response = original(credentials, method, suffix, *args, **kwargs)
         if method == "GET" and "/requests/" not in suffix:
-            time.sleep(0.05)
+            reads.append(suffix)
+            spent[0] = timedelta(seconds=budget + 1)
         if method == "POST":
             posts.append(suffix)
         return response
 
     with live_run(tmp_path, "tests.create") as run:
-        manifest_path = run.arguments["manifest_path"]
-        manifest = json.loads(manifest_path.read_text())
-        manifest["budget"]["wall_seconds"] = 0.02
-        manifest_path.write_text(json.dumps(manifest))
-        monkeypatch.setattr(http_transport, "request_json", delayed_state)
+        budget = json.loads(run.arguments["manifest_path"].read_text())["budget"]["wall_seconds"]
+        monkeypatch.setattr(runner, "datetime", RunnerClock)
+        monkeypatch.setattr(http_transport, "request_json", state_read_spends_budget)
         result = run_checklist(**run.arguments)
         assert result["status"] == "failed"
         assert result["error_code"] == "run_budget_exhausted"
         assert result["dispatch_count"] == 0
         assert posts == []
+        # The budget ran out during the one state read, not before it was made.
+        assert len(reads) == 1
 
 
 def test_RUN_04_manifest_cannot_forge_executor_before_http_effects(tmp_path: Path) -> None:
