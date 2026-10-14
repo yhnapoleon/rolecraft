@@ -51,7 +51,7 @@
 
 ## 学员的 Agent 怎样连接（MCP）
 
-学员在 Agent 面板创建授权后，连接卡给出端点和 Claude Code、Codex 各一条命令，不需要安装本项目的 Python 包。令牌只在这一页的内存里，复制或下载时才取出；点“完成”、离开页面、到期或撤销后清除。
+学员在 Agent 面板创建授权后，连接卡给出端点和 Claude Code、Codex 各一条命令，不需要安装本项目的 Python 包。令牌只在这一页的内存里，复制或下载时才取出；点“完成”、离开练习（含切换到别的练习、关闭或刷新页面）、到期或撤销后清除，在别处撤销的，下次读取授权记录时清除。
 
 - **端点**：`POST <前端>/api/sessions/<session_id>/mcp`（经前端代理，连接卡用这个），或直连 `<API>/sessions/<session_id>/mcp`。实现在 `src/career_lab/mcp/streamable_http.py`，由 `mount_delegations` 挂载，不进公开 OpenAPI 契约。
 - **协议**：MCP 2026-07-28（每个请求带 `_meta` 版本，HTTP 头 `MCP-Protocol-Version`、`Mcp-Method` 与 `tools/call` 的 `Mcp-Name` 须与请求体一致）和 2025-11-25（先 `initialize`，之后每个请求带 `MCP-Protocol-Version: 2025-11-25`）。只回 JSON，不发会话号、不开 SSE；GET、DELETE 回 405。

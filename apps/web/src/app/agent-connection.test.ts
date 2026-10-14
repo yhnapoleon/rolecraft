@@ -3,11 +3,14 @@ import {
   claudeCodeCommand,
   codexCommand,
   connectionText,
+  createConnectionKeeper,
   mcpEndpoint,
   renderAgentConnection,
 } from './agent-connection';
 
 const TOKEN = 'a'.repeat(64);
+const HINT =
+  '令牌会写进你的 Agent 配置和命令历史，最长 60 分钟失效，可随时撤销；点“完成”或离开练习后，这里不再提供。';
 const ENDPOINT = 'http://127.0.0.1:20020/api/sessions/s1/mcp';
 
 describe('agent connection commands', () => {
@@ -154,7 +157,7 @@ describe('agent connection card', () => {
     const text = visible(target);
     expect(text).toContain(ENDPOINT);
     expect(text).toContain('Bearer ••••••');
-    expect(text).toContain('令牌会写进你的 Agent 配置和命令历史；最长 60 分钟后失效，可随时撤销。');
+    expect(text).toContain(HINT);
     expect(text).not.toContain(TOKEN);
     expect(calls).toEqual([]);
     for (const name of [
@@ -199,5 +202,45 @@ describe('agent connection card', () => {
     expect(calls.slice(-3)).toEqual(['dismiss', 'notify:连接信息已收起。', 'refresh']);
     await click(action(target, 'copy-token'));
     expect(calls.slice(-3)).toEqual(['secret', expect.stringContaining('notify:'), 'refresh']);
+  });
+});
+
+describe('agent connection offer while the practice is on screen', () => {
+  it('says in one sentence where the token goes and when the card stops offering it', () => {
+    const { host, deps, target } = fixture();
+    renderAgentConnection(target as never, host, deps);
+    // The first screen is the card's own lines; "Other clients" stays folded.
+    const card = only(target.children, 'card');
+    const hints = card.children
+      .filter((n) => n.tagName === 'p' && n.textContent.includes('令牌'))
+      .map((n) => n.textContent);
+    expect(hints).toEqual([HINT]);
+  });
+  it('withdraws the offer when the person leaves the practice or switches to another', () => {
+    const dismissed: string[] = [];
+    const offering = (name: string) => {
+      let open = true;
+      return {
+        issuedDelegation: () => (open ? { label: name, expiresAt: '2099-01-01T00:00:00Z' } : null),
+        dismissConnection: () => {
+          dismissed.push(name);
+          open = false;
+        },
+      };
+    };
+    const keeper = createConnectionKeeper();
+    const first = offering('first');
+    keeper.track(first);
+    keeper.track(first);
+    expect(dismissed).toEqual([]);
+    keeper.track(null);
+    expect(dismissed).toEqual(['first']);
+    const second = offering('second');
+    const third = offering('third');
+    keeper.track(second);
+    keeper.track(third);
+    expect(dismissed).toEqual(['first', 'second']);
+    keeper.track(third);
+    expect(dismissed).toEqual(['first', 'second']);
   });
 });

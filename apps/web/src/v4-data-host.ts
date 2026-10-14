@@ -248,6 +248,7 @@ export class V4DataHost implements V4HostAdapter {
       const labels = this.agentLabels();
       for (const row of result.result.result.items)
         if (row && typeof row.id === 'string' && labels[row.id]) row.agent_label = labels[row.id];
+      this.withdrawUnlessActive(result.result.result.items);
     }
     if (operation === 'session.read') return result.state;
     if (operation === 'objects.read') return result;
@@ -464,6 +465,14 @@ export class V4DataHost implements V4HostAdapter {
     if (!this.issued) return;
     this.issued = null;
     if (notify) this.emit();
+  }
+  /** The server lists every grant of the session: one revoked elsewhere, expired by the server
+   * clock or gone is no longer offered for connection. */
+  private withdrawUnlessActive(items: unknown[]) {
+    const id = this.issued?.delegationId;
+    if (!id) return;
+    const row = items.find((item) => obj(item) && item.id === id);
+    if (!obj(row) || row.revoked !== false || row.effective_status !== 'active') this.forget();
   }
   /** The grant still offered for connection; a late expiry timer never extends it. */
   private offered() {

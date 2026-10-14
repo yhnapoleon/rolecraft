@@ -234,16 +234,8 @@ export function renderAgentConnection(
       'p',
       'meta',
       T(
-        '令牌会写进你的 Agent 配置和命令历史；最长 60 分钟后失效，可随时撤销。',
-        'The token is written to your agent’s config and command history. It expires within 60 minutes, and you can revoke it any time.',
-      ),
-    ),
-    node(
-      'p',
-      'meta',
-      T(
-        '令牌只在这里提供，点“完成”或离开本页后不再显示。不要发给别人或提交到仓库。',
-        'The token is offered only here and disappears when you click Done or leave. Do not share or commit it.',
+        '令牌会写进你的 Agent 配置和命令历史，最长 60 分钟失效，可随时撤销；点“完成”或离开练习后，这里不再提供。',
+        'The token goes into your agent’s config and command history, expires within 60 minutes and can be revoked any time; after Done or leaving the practice, it is no longer offered here.',
       ),
     ),
     more,
@@ -257,4 +249,19 @@ export function renderAgentConnection(
       deps.refresh,
       Math.min(remaining + 100, 2_147_483_647),
     );
+}
+
+/** The card offers the token only while its practice is on screen. */
+export function createConnectionKeeper() {
+  let offering: Pick<ConnectionHost, 'issuedDelegation' | 'dismissConnection'> | null = null;
+  return {
+    /** After each render: the host of the practice on screen, or null outside any practice. */
+    track(host: Pick<ConnectionHost, 'issuedDelegation' | 'dismissConnection'> | null) {
+      const previous = offering;
+      offering = host?.issuedDelegation() ? host : null;
+      // Leaving the practice or switching to another one withdraws the earlier offer for good.
+      // Recorded first: the dismissal re-renders, which may call track() again.
+      if (previous && previous !== host) previous.dismissConnection();
+    },
+  };
 }

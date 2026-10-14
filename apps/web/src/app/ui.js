@@ -74,7 +74,7 @@ import { createDocumentMotion } from './document-motion.js';
 import './document-motion.css';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
-import { renderAgentConnection } from './agent-connection';
+import { createConnectionKeeper, renderAgentConnection } from './agent-connection';
 import './agent-connection.css';
 import { installV4References } from '../v4-references';
 import { criterionLabels } from '../features/feedback-native/index';
@@ -2063,8 +2063,12 @@ function fbItem(a, i, full = false) {
   </div></li>`;
 }
 const issuedViews = new WeakMap();
+const connectionKeeper = createConnectionKeeper();
 function refreshAgentIssued() {
   const a = current();
+  // The token is offered only while its practice is on screen; leaving or switching withdraws it.
+  const onPractice = a && L.nativeWorkspace(a) && (WS.includes(ui.route) || ui.route === 'review');
+  connectionKeeper.track(onPractice ? L.v4Host(a) : null);
   const target = document.querySelector('[data-agent-issued]');
   if (!a || !target) return;
   const identity = JSON.stringify([a.id, locale(), L.v4Host(a)?.issuedDelegation()]);

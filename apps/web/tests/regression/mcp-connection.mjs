@@ -100,10 +100,7 @@ async function ensureChecked(browser, label) {
     await browser.click(selector);
 }
 
-export async function connectAgentOverMcp(context) {
-  const { browser, text, shot } = context;
-  const agentName = text('MCP 连接卡', 'MCP connection card');
-  const title = text('MCP 回传：试点检查清单', 'MCP return: pilot checklist');
+async function openAgentPanel(browser) {
   await browser.click('.rail-tabs [data-tab="agent"]');
   await waitFor(
     browser,
@@ -112,12 +109,10 @@ export async function connectAgentOverMcp(context) {
       return !!input && !input.disabled;
     })()`,
   );
-  // The scope chooser names what it lists.
-  assert.ok(
-    (await browser.text('.agent-v4-grant button')).includes(
-      text('选择资料范围', 'Choose documents'),
-    ),
-  );
+}
+
+/** Creates access with returned work across the workspace; resolves when its card is shown. */
+async function createAccess(browser, text, agentName) {
   await browser.type('[name="agentName"]', agentName);
   await ensureChecked(browser, text('允许操作与回传作品', 'Allow actions and returned work'));
   await ensureChecked(
@@ -129,6 +124,52 @@ export async function connectAgentOverMcp(context) {
     browser,
     `document.querySelector('[data-connection-card]')?.innerText.includes(${JSON.stringify(agentName)})`,
   );
+  return browser.ev(`(() => {
+    const live = window.PracticeLive;
+    return live.v4Host(live.engine.getAttempt(live.state)).issuedDelegation().delegationId;
+  })()`);
+}
+
+/** What the page would still hand out for copying. */
+const offeredSecret = (browser) =>
+  browser.ev(`(() => {
+    const live = window.PracticeLive;
+    return live.v4Host(live.engine.getAttempt(live.state)).connectionSecret();
+  })()`);
+
+/** Another tab revoking the grant: the same API, not this page's host. */
+const revokeOutsideThisPage = (browser, delegationId) =>
+  browser.ev(`(async () => {
+    const session = window.PracticeLive.store.active();
+    const headers = { Authorization: 'Bearer ' + session.token };
+    const state = (await (await fetch('/api/sessions/' + session.id, { headers })).json()).state;
+    const response = await fetch('/api/sessions/' + session.id + '/delegations/' + ${JSON.stringify(delegationId)}, {
+      method: 'DELETE',
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        schema_version: 2,
+        request_id: crypto.randomUUID(),
+        operation: 'delegations.revoke',
+        payload: { delegation_id: ${JSON.stringify(delegationId)} },
+        expected_version: state.business_seq,
+        expected_workspace_revision: state.workspace_revision,
+      }),
+    });
+    return response.status;
+  })()`);
+
+export async function connectAgentOverMcp(context) {
+  const { browser, text, shot } = context;
+  const agentName = text('MCP 连接卡', 'MCP connection card');
+  const title = text('MCP 回传：试点检查清单', 'MCP return: pilot checklist');
+  await openAgentPanel(browser);
+  // The scope chooser names what it lists.
+  assert.ok(
+    (await browser.text('.agent-v4-grant button')).includes(
+      text('选择资料范围', 'Choose documents'),
+    ),
+  );
+  await createAccess(browser, text, agentName);
   const region = await browser.ev(`document.querySelector('[data-v4-region="agent"]').innerText`);
   assert.ok(
     region.includes(
@@ -141,8 +182,8 @@ export async function connectAgentOverMcp(context) {
   assert.ok(
     region.includes(
       text(
-        '令牌会写进你的 Agent 配置和命令历史；最长 60 分钟后失效，可随时撤销。',
-        'The token is written to your agent’s config and command history. It expires within 60 minutes, and you can revoke it any time.',
+        '令牌会写进你的 Agent 配置和命令历史，最长 60 分钟失效，可随时撤销；点“完成”或离开练习后，这里不再提供。',
+        'The token goes into your agent’s config and command history, expires within 60 minutes and can be revoked any time; after Done or leaving the practice, it is no longer offered here.',
       ),
     ),
   );
@@ -192,6 +233,26 @@ export async function connectAgentOverMcp(context) {
   await shot('mcp-returned');
   await browser.click('[data-connection-action="done"]');
   await waitFor(browser, `!document.querySelector('[data-connection-card]')`);
+  // Leaving the practice withdraws a card that was still open: back again, nothing to copy.
+  await createAccess(browser, text, text('MCP 离开检查', 'MCP leave check'));
+  await browser.click('button[data-action="menu"][data-menu="more"]');
+  await browser.click('[data-action="to-entry"]');
+  await waitFor(browser, `!!document.querySelector('.case-hero [data-action="resume-attempt"]')`);
+  await browser.click('.case-hero [data-action="resume-attempt"]');
+  await waitFor(browser, `!!document.querySelector('.rail-tabs [data-tab="agent"]')`);
+  await openAgentPanel(browser);
+  assert.equal(await browser.ev(`!!document.querySelector('[data-connection-card]')`), false);
+  assert.equal(await offeredSecret(browser), null);
+  // Revoked in another tab: refreshing the records withdraws the card and its token.
+  const elsewhere = await createAccess(
+    browser,
+    text,
+    text('MCP 他处撤销', 'MCP revoked elsewhere'),
+  );
+  assert.equal(await revokeOutsideThisPage(browser, elsewhere), 200);
+  await clickReady(browser, text('刷新授权与记录', 'Refresh access and records'));
+  await waitFor(browser, `!document.querySelector('[data-connection-card]')`);
+  assert.equal(await offeredSecret(browser), null);
   await browser.ev(`(() => {
     const row = [...document.querySelectorAll('.agent-v4-access-row')]
       .find((line) => line.innerText.includes(${JSON.stringify(agentName)}));

@@ -224,7 +224,7 @@ describe('v4 single host persistence and recovery', () => {
     expect(fetcher).not.toHaveBeenCalled();
   });
   /** A host whose control plane issues grant d1 with the token 'agent-secret'. */
-  async function issuingHost() {
+  async function issuingHost(listed: () => unknown[] = () => []) {
     const setupResult = setup();
     const { host, fetcher } = setupResult;
     const context = {
@@ -235,6 +235,11 @@ describe('v4 single host persistence and recovery', () => {
       semantic: { roles: 'model', feedback: 'model', assistant: 'model' },
     };
     fetcher.mockImplementation(async (url, init) => {
+      if (!init?.body && String(url).includes('/delegations?'))
+        return reply({
+          schema_version: 2,
+          result: { schema_version: 2, result: { items: listed(), next_cursor: null } },
+        });
       if (!init?.body)
         return String(url).endsWith('/workbench')
           ? reply({ schema_version: 2, result: { result: context } })
@@ -254,6 +259,18 @@ describe('v4 single host persistence and recovery', () => {
     await host.query('workbench.read');
     return setupResult;
   }
+  const grant = (status: 'active' | 'expired' | 'revoked') => ({
+    id: 'd1',
+    session_id: 's',
+    executor: { id: 'external:d1', kind: 'external_agent', delegation_id: 'd1' },
+    capabilities: ['read', 'act'],
+    allowed_actions: null,
+    allowed_objects: null,
+    create_under_tasks: [],
+    expires_at: new Date(Date.now() + 1800000).toISOString(),
+    revoked: status === 'revoked',
+    effective_status: status,
+  });
   const config = { api_url: 'http://127.0.0.1:1/api', session_id: 's', token: 'agent-secret' };
   // One offering: the card hands the secret out while it is open; once the person finishes it is
   // gone for good. The secret never reaches results, storage or the snapshot.
@@ -296,6 +313,27 @@ describe('v4 single host persistence and recovery', () => {
     await host.command('delegations.revoke', { delegation_id: 'd1' });
     expect(host.issuedDelegation()).toBeNull();
     expect([...map.values()].join('')).not.toContain('agent-secret');
+  });
+  it('stops offering a grant the server lists as revoked, expired or missing', async () => {
+    for (const elsewhere of [[grant('revoked')], [grant('expired')], []]) {
+      let listed: unknown[] = [grant('active')];
+      const { host } = await issuingHost(() => listed);
+      await host.command('delegations.create', {
+        agent_label: 'Helper',
+        expires_at: new Date(Date.now() + 1800000).toISOString(),
+      });
+      await host.query('delegations.list', { cursor: 0, limit: 50 });
+      expect(host.connectionSecret()?.token).toBe('agent-secret');
+      // Revoked in another tab, expired by the server clock, or gone: the card stops offering it.
+      listed = elsewhere;
+      const states: ReturnType<typeof host.issuedDelegation>[] = [];
+      const unsubscribe = host.subscribe(() => states.push(host.issuedDelegation()));
+      await host.query('delegations.list', { cursor: 0, limit: 50 });
+      unsubscribe();
+      expect(host.connectionSecret()).toBeNull();
+      expect(host.issuedDelegation()).toBeNull();
+      expect(states).toContain(null);
+    }
   });
   it('offers the secret for every copy until the person finishes, the grant expires or it is revoked', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
