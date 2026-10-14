@@ -233,3 +233,42 @@ it('offers no ceiling re-application once the allocation in effect already reach
   });
   expect(decisionCardModel(atCeiling, request(), titles).ceiling).toBeNull();
 });
+
+it('keeps the recorded reason when no line on the card explains a rejection', () => {
+  const reason = '引用尚未出现、不存在或不在当前权限内；请核对确切版本后重提。';
+  const invalidEvidence = {
+    ...decision('rejected', {
+      terms: [{ resource: 'dev_days', current: 3, requested: 6, limit: 6, needed: 6, issues: [] }],
+      clauses: [shortfall],
+    }),
+    reason_code: 'request_evidence_invalid',
+    reason,
+  };
+  expect(decisionCardModel(invalidEvidence, request(), titles).lines).toEqual([
+    { ok: true, text: '开发人日：3 → 6（方案需要 6 · 上限 6）' },
+    { ok: false, text: reason },
+  ]);
+  const unsupported = {
+    ...decision('rejected', { terms: [], clauses: [] }),
+    reason_code: 'unsupported_resource_request',
+    reason: '当前仅受理容量、开发人日与正式试点期限的申请。',
+  };
+  expect(decisionCardModel(unsupported, request(), titles).lines).toEqual([
+    { ok: false, text: '当前仅受理容量、开发人日与正式试点期限的申请。' },
+  ]);
+  // A rejection its lines already explain does not repeat the general sentence.
+  const explained = decision('rejected', {
+    terms: [
+      {
+        resource: 'dev_days',
+        current: 3,
+        requested: 7,
+        limit: 6,
+        needed: 6,
+        issues: ['over_limit'],
+      },
+    ],
+    clauses: [ceiling],
+  });
+  expect(decisionCardModel(explained, request(), titles).lines).toHaveLength(1);
+});

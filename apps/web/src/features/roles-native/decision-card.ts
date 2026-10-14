@@ -158,6 +158,10 @@ export function decisionCardModel(
       ok: false,
       text: T('答不了时要转人工确认', 'Unanswerable questions must go to a person'),
     });
+  // Every rejection keeps a readable reason: when no line above explains it (an unreadable
+  // citation, a missing reason, a resource outside the rules), the recorded sentence does.
+  if (decision.status === 'rejected' && !lines.some((line) => !line.ok) && decision.reason)
+    lines.push({ ok: false, text: decision.reason });
   const clauses = (assessment?.clauses ?? []).flatMap((ref) =>
     ref.quote
       ? [
