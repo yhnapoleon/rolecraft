@@ -1432,9 +1432,21 @@ describe('batch 1 server authority and legacy recovery', () => {
 });
 
 import { pendingTurnRole, serverText } from './store';
-import { request } from './api';
+import { request, retryableRead } from './api';
 import { setPreference } from './app/i18n';
 describe('batch 1 error transport and translations', () => {
+  it('a request whose response never arrives is a read worth repeating', async () => {
+    const fetcher = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new TypeError('Failed to fetch'));
+    try {
+      const error = await request('/sessions/s/practice?submission_id=x').catch((e) => e);
+      expect(error).toBeInstanceOf(ApiError);
+      expect(retryableRead(error)).toBe(true);
+    } finally {
+      fetcher.mockRestore();
+    }
+  });
   it('preserves code and structured details through the production request function', async () => {
     const details = { missing: { human_fallback: true } };
     const fetcher = vi

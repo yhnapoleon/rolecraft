@@ -44,6 +44,8 @@ export const request: Transport = async (path, body, session) => {
         '连接中断或请求超时。写入结果可能已保存，请用“重试原请求”核对，避免重复操作。',
         'The connection dropped or timed out. The write may have been saved; retry the same request to check instead of repeating it.',
       ),
+      0,
+      'response_unconfirmed',
     );
   }
   let data: any;
