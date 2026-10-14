@@ -6,7 +6,8 @@
  *   CHROME_BIN=... uv run --locked python -m scripts.regression.browser --suite qa-polish \
  *     --web-port <port> --api-port <port> --output <new dir>
  *
- * QA_CHECKS=F03,F04 limits the run to the named checks.
+ * QA_CHECKS=F03,F04 limits the run to the named checks. QA_MOTION=default runs with the
+ * system's default motion instead of reduced motion.
  */
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -18,6 +19,7 @@ const output = process.env.OUT;
 assert.ok(base && output, 'BASE and OUT are required');
 mkdirSync(`${output}/screenshots`, { recursive: true });
 const only = new Set((process.env.QA_CHECKS || '').split(',').filter(Boolean));
+const reduced = process.env.QA_MOTION !== 'default';
 const results = [];
 
 async function openEntry(context) {
@@ -295,10 +297,9 @@ async function agentLabels(context) {
   await shot('F29-agent');
 }
 
-/** F28: each document in the task package carries its text once. */
+/** F28: each document in the task package carries its text once (the brief always goes). */
 async function packageDocuments(context) {
   const { browser } = context;
-  await readBrief(context);
   await openAgent(context, 0);
   await browser.click('[data-action="package"]');
   await waitFor(browser, `!!document.querySelector('#package-text')`);
@@ -617,7 +618,7 @@ const CHECKS = [
 ];
 
 async function runLanguage(language) {
-  const browser = await launch({ width: 1440, height: 1100, reduced: true });
+  const browser = await launch({ width: 1440, height: 1100, reduced });
   const text = (zh, en) => (language === 'en' ? en : zh);
   const shot = (name) => browser.shot(`${output}/screenshots/${language}-${name}.jpg`);
   const context = {
@@ -694,7 +695,7 @@ const layout = `(() => {
 
 /** F27: at 390 px the board title is not under the team avatars and long labels fit. */
 async function narrowLayout(language) {
-  const browser = await launch({ width: 390, height: 844, mobile: true, reduced: true });
+  const browser = await launch({ width: 390, height: 844, mobile: true, reduced });
   const text = (zh, en) => (language === 'en' ? en : zh);
   const shot = (name) => browser.shot(`${output}/screenshots/${language}-${name}.jpg`);
   const context = { browser, language, text, shot };
