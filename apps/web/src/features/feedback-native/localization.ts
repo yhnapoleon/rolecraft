@@ -37,7 +37,8 @@ const zh = {
   rangeUndetermined:
     '规则已定标部分：{lower}–{upper} 分（适用项共 {denominator} 分，其中 {undetermined} 分适用性待确认，满分 {full}）',
   // 2026-10-12 item 3: item counts only, never a percentage.
-  coverageLine: '已核实 {verified} 项／共 {total} 项适用 · 模型建议 {model} 项 · 待核验 {pending} 项',
+  coverageLine:
+    '已核实 {verified} 项／共 {total} 项适用 · 模型建议 {model} 项 · 待核验 {pending} 项',
   rangeNote: '模型建议不计分；待核验项使区间变宽。',
   rangeEmpty: '规则已定标部分：尚无适用项，不形成区间。',
   rangeVersion: '分数区间：此评价标准版本不汇总。',
@@ -49,6 +50,11 @@ const zh = {
   weightUndetermined:
     '权重 {weight} 分（满分 {full}）· 适用性待确认：不计分，区间因此加宽 {weight} 分',
   weightNotApplicable: '权重 {weight} 分（满分 {full}）· 本次不适用：不计入分母',
+  // {delivery} is the delivery's catalog name, e.g. 第 2 次交付.
+  deliverySnapshot: '查看{delivery}的快照',
+  deliverySnapshotUnnumbered: '查看交付快照',
+  deliverySnapshotHeading: '已保存的提交快照 · {delivery}',
+  deliverySnapshotHeadingUnnumbered: '已保存的提交快照',
 };
 export type FeedbackCopyKey = keyof typeof zh;
 export const FEEDBACK_COPY: CopyTable<FeedbackCopyKey> = {
@@ -97,6 +103,10 @@ export const FEEDBACK_COPY: CopyTable<FeedbackCopyKey> = {
     weightUndetermined:
       'Weight {weight} of {full} · Applicability undetermined: not scored; widens the range by {weight}',
     weightNotApplicable: 'Weight {weight} of {full} · Not applicable: left out of the denominator',
+    deliverySnapshot: 'View the snapshot of {delivery}',
+    deliverySnapshotUnnumbered: 'View the delivery snapshot',
+    deliverySnapshotHeading: 'Saved submission snapshot · {delivery}',
+    deliverySnapshotHeadingUnnumbered: 'Saved submission snapshot',
   },
 };
 export const feedbackCopy = (

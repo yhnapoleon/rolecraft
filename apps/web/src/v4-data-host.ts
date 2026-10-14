@@ -84,6 +84,14 @@ const unconfirmed = () =>
   );
 const copy = <T>(value: T): T => structuredClone(value);
 
+/** A grant issued on this page, with its secret: memory only, never journaled or stored. */
+type IssuedGrant = {
+  delegationId: string;
+  token: string;
+  label: string;
+  issuedAt: string;
+  expiresAt: string;
+};
 /** The sole v2 command/draft journal used by every native v4 slot.
  * Construction, refresh and recovery are read-only on the server. */
 export class V4DataHost implements V4HostAdapter {
@@ -99,10 +107,11 @@ export class V4DataHost implements V4HostAdapter {
     string,
     { slot: V4SlotId; key: string; value: unknown }
   >();
-  // The secret of the delegation issued on this page lives only in memory, for a one-time
-  // connection-config download. It never enters the request journal, drafts or storage.
-  private issued: { delegationId: string; token: string; label: string; issuedAt: string } | null =
-    null;
+  // The secret of the delegation issued on this page lives only in memory. The connection card
+  // may hand it out for each copy or download the person asks for until they finish, the page
+  // goes away, the grant expires or it is revoked. It never enters the journal, drafts or storage.
+  private issued: IssuedGrant | null = null;
+  private issuedExpiry: ReturnType<typeof setTimeout> | undefined;
   constructor(private readonly ports: V4HostPorts) {
     this.key = 'rolecraft.v4.session.' + ports.binding.sessionId;
     this.raw = createGatewayTransport(() => {
@@ -243,6 +252,7 @@ export class V4DataHost implements V4HostAdapter {
       const labels = this.agentLabels();
       for (const row of result.result.result.items)
         if (row && typeof row.id === 'string' && labels[row.id]) row.agent_label = labels[row.id];
+      this.withdrawUnlessActive(result.result.result.items);
     }
     if (operation === 'session.read') return result.state;
     if (operation === 'objects.read') return result;
@@ -433,16 +443,17 @@ export class V4DataHost implements V4HostAdapter {
         const token = result.token;
         delete result.token;
         if (typeof token === 'string' && typeof result.delegation?.id === 'string') {
-          this.issued = {
+          this.offer({
             delegationId: result.delegation.id,
             token,
             label: String(entry.input.agent_label ?? ''),
             issuedAt: new Date().toISOString(),
-          };
+            expiresAt: String(result.delegation.expires_at ?? entry.input.expires_at ?? ''),
+          });
           this.rememberAgentLabel(result.delegation.id, String(entry.input.agent_label ?? ''));
         }
       } else if (this.issued?.delegationId === entry.input.delegation_id) {
-        this.issued = null;
+        this.forget(false);
       }
       entry.outcome = { requestId, status: 'confirmed', result };
       this.save();
@@ -475,25 +486,58 @@ export class V4DataHost implements V4HostAdapter {
       /* A label is a convenience; the grant itself is already confirmed by the server. */
     }
   }
+  private offer(issued: IssuedGrant) {
+    this.forget(false);
+    const remaining = Date.parse(issued.expiresAt) - Date.now();
+    // A grant without a readable future expiry is never offered for connection.
+    if (!(remaining > 0)) return;
+    this.issued = issued;
+    this.issuedExpiry = setTimeout(() => this.forget(), Math.min(remaining, 2_147_483_647));
+  }
+  private forget(notify = true) {
+    if (this.issuedExpiry !== undefined) clearTimeout(this.issuedExpiry);
+    this.issuedExpiry = undefined;
+    if (!this.issued) return;
+    this.issued = null;
+    if (notify) this.emit();
+  }
+  /** The server lists every grant of the session: one revoked elsewhere, expired by the server
+   * clock or gone is no longer offered for connection. */
+  private withdrawUnlessActive(items: unknown[]) {
+    const id = this.issued?.delegationId;
+    if (!id) return;
+    const row = items.find((item) => obj(item) && item.id === id);
+    if (!obj(row) || row.revoked !== false || row.effective_status !== 'active') this.forget();
+  }
+  /** The grant still offered for connection; a late expiry timer never extends it. */
+  private offered() {
+    return this.issued && Date.now() < Date.parse(this.issued.expiresAt) ? this.issued : null;
+  }
+  /** Token-free description of the grant the connection card offers. */
   issuedDelegation() {
-    return this.issued
+    const issued = this.offered();
+    return issued
       ? {
-          delegationId: this.issued.delegationId,
-          label: this.issued.label,
-          issuedAt: this.issued.issuedAt,
+          delegationId: issued.delegationId,
+          label: issued.label,
+          issuedAt: issued.issuedAt,
+          expiresAt: issued.expiresAt,
         }
       : null;
   }
-  takeConnectionConfig(apiUrl: string) {
-    if (!this.issued) return null;
-    const config = {
-      api_url: apiUrl,
-      session_id: this.ports.binding.sessionId,
-      token: this.issued.token,
-    };
-    this.issued = null;
-    this.emit();
-    return config;
+  /** The token for one copy the person asked for. Callers never keep it. */
+  connectionSecret() {
+    const issued = this.offered();
+    return issued ? { sessionId: this.ports.binding.sessionId, token: issued.token } : null;
+  }
+  /** Private config for the local stdio adapter, built for one download the person asked for. */
+  connectionConfig(apiUrl: string) {
+    const secret = this.connectionSecret();
+    return secret ? { api_url: apiUrl, session_id: secret.sessionId, token: secret.token } : null;
+  }
+  /** The person is done: the token leaves memory and is never offered again. */
+  dismissConnection() {
+    this.forget();
   }
   private async send(
     operation: string,

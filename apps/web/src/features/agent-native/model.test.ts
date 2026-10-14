@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
   activities,
+  agentLogLines,
   connections,
   grantInput,
   restoreDraft,
   returnedWorks,
   semanticLabel,
+  timelineLookups,
 } from './model';
 const r = { session_id: 's1', kind: 'material', object_id: 'm1', version: 2 } as const;
 const grant = {
@@ -115,6 +117,100 @@ describe('Agent slot public projection and domain inputs', () => {
     expect(draft.name).toBe('中文 name');
     expect(JSON.stringify(draft)).not.toContain('not-copied');
     expect(draft).not.toHaveProperty('command');
+  });
+  it('lists only what an external agent did, not the learner’s own work records', () => {
+    const event = (id: string, kind: string, type: string, extra: object = {}) => ({
+      id,
+      session_id: 's1',
+      type,
+      executor: { kind, id: `${kind}:x` },
+      refs: [],
+      data: {},
+      ...extra,
+    });
+    const listed = activities(
+      {
+        events: [
+          event('e1', 'human', 'material_read', { data: { material_id: 'm1', version: 2 } }),
+          event('e2', 'external_agent', 'material_read', {
+            data: { material_id: 'm1', version: 2 },
+          }),
+          event('e3', 'human', 'config_applied'),
+          event('e4', 'system', 'demo_schedule_changed'),
+          event('e5', 'external_agent', 'test_assistant', {
+            refs: [{ session_id: 's1', kind: 'test', object_id: 't1', version: 1 }],
+          }),
+        ],
+      },
+      's1',
+    );
+    expect(listed.map((row) => row.id)).toEqual(['e2', 'e5']);
+  });
+  it('says each Agent record in one sentence, newest first, with access grants', () => {
+    const timeline = {
+      result: {
+        events: [
+          {
+            id: 'e2',
+            session_id: 's1',
+            type: 'material_read',
+            executor: { kind: 'external_agent', id: 'agent' },
+            data: { material_id: 'm1', version: 2 },
+          },
+          {
+            id: 'e5',
+            session_id: 's1',
+            type: 'test_assistant',
+            executor: { kind: 'external_agent', id: 'agent' },
+            refs: [{ session_id: 's1', kind: 'test', object_id: 't1', version: 1 }],
+            data: {},
+          },
+        ],
+        objects: [
+          {
+            ref: { session_id: 's1', kind: 'test', object_id: 't1', version: 1 },
+            content: { query: '住宿报销上限是多少？' },
+          },
+        ],
+        workspace: { material_titles: { 'm1:1': '差旅住宿与交通政策', 'm1:2': '差旅住宿标准' } },
+      },
+    };
+    const grants = connections(
+      {
+        items: [
+          { ...grant, effective_status: 'active', capabilities: ['read', 'act'] },
+          {
+            ...grant,
+            id: 'd2',
+            executor: { ...grant.executor, delegation_id: 'd2' },
+            revoked: true,
+          },
+        ],
+      },
+      's1',
+    );
+    const lines = agentLogLines(
+      activities(timeline, 's1'),
+      grants,
+      timelineLookups(timeline),
+      'zh',
+    );
+    expect(lines.map((line) => line.text)).toEqual([
+      '签发了授权：读取与操作',
+      '撤销了授权：读取',
+      '我的 Agent：测试：住宿报销上限是多少？',
+      '我的 Agent：读了《差旅住宿标准》v2',
+    ]);
+    expect(lines[2].open).toEqual({ session_id: 's1', kind: 'test', object_id: 't1', version: 1 });
+    expect(lines[3].open).toEqual({
+      session_id: 's1',
+      kind: 'material',
+      object_id: 'm1',
+      version: 2,
+    });
+    expect(
+      agentLogLines([], grants, timelineLookups(timeline), 'en').map((line) => line.text),
+    ).toEqual(['Granted access: read and act', 'Revoked access: read']);
   });
   it('shows model/rule attribution only from explicit statuses and in both languages', () => {
     expect(semanticLabel('zh', 'placeholder')).toBe('等待模型接入');

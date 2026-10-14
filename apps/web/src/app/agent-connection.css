@@ -1,0 +1,58 @@
+/* Agent connection card: endpoint and setup commands for the access issued on this page. */
+.agent-connection {
+  gap: 8px;
+}
+.agent-connection-title {
+  font-size: 13px;
+}
+.agent-connection-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+.agent-connection-key {
+  color: var(--ink-3);
+  font-size: 11.5px;
+}
+.agent-connection-row {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+  min-width: 0;
+}
+.agent-connection-code {
+  min-width: 0;
+  margin: 0;
+  padding: 6px 8px;
+  border-radius: var(--r-xs);
+  background: var(--surface);
+  font: 11.5px / 1.5 var(--mono);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.agent-connection-row .agent-connection-code {
+  flex: 1;
+}
+.agent-connection-more summary {
+  cursor: pointer;
+  color: var(--ink-2);
+}
+.agent-connection-more[open] {
+  display: grid;
+  gap: 6px;
+}
+.agent-connection .row-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.agent-connection-fallback {
+  display: grid;
+  gap: 4px;
+}
+.agent-connection-fallback[hidden] {
+  display: none;
+}
+.agent-connection-manual {
+  font: 11.5px / 1.5 var(--mono);
+}
