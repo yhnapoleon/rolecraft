@@ -36,24 +36,43 @@ describe('named workspace ownership', () => {
   });
 });
 
-it('ignores a copy inside an inert, hidden layer rather than failing on a second owner', () => {
-  const live = { isConnected: true, closest: () => null } as unknown as HTMLElement;
-  const copy = { isConnected: true, closest: () => null } as unknown as HTMLElement;
-  const flight = { contains: (node: unknown) => node === copy };
+/** The roots a workspace region mounts on a page that answers these selectors truthfully. */
+function mountedRoots(page: Record<string, unknown[]>): string[] {
   const document = {
-    querySelectorAll: (selector: string) => {
-      if (selector === '[data-v4-region="workspace"]') return [live, copy];
-      return selector === '[inert][aria-hidden="true"]' ? [flight] : [];
-    },
+    querySelectorAll: (selector: string) => page[selector] ?? [],
   } as unknown as Document;
   const render = vi.fn((_name: string, _root: HTMLElement, _host: V4HostAdapter) => ({
     update() {},
     destroy() {},
   }));
-  const regions = new NamedRegions(['workspace'], render);
-  regions.sync(document, host());
-  expect(render).toHaveBeenCalledOnce();
-  expect(render.mock.calls[0][1]).toBe(live);
+  new NamedRegions(['workspace'], render).sync(document, host());
+  return render.mock.calls.map(([, root]) => root.id);
+}
+const region = (id: string) => ({ id, isConnected: true, closest: () => null });
+const container = (...inside: unknown[]) => ({
+  contains: (node: unknown) => inside.includes(node),
+});
+
+it('ignores a copy inside the document flight layer rather than failing on a second owner', () => {
+  const live = region('live'),
+    copy = region('copy'),
+    flight = container(copy);
+  const page = {
+    '[data-v4-region="workspace"]': [live, copy],
+    '.document-flight': [flight],
+    '[inert][aria-hidden="true"]': [flight],
+  };
+  expect(mountedRoots(page)).toEqual(['live']);
+});
+
+it('still mounts a live region inside an ordinary inert, hidden container', () => {
+  const live = region('live'),
+    backdrop = container(live);
+  const page = {
+    '[data-v4-region="workspace"]': [live],
+    '[inert][aria-hidden="true"]': [backdrop],
+  };
+  expect(mountedRoots(page)).toEqual(['live']);
 });
 
 it('leaves document and test-bench routes free of workspace editor controls', () => {
