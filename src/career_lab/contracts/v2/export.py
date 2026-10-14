@@ -268,6 +268,9 @@ for consumer in ("W06", "W14"):
         "ContinueCodeIssueInput",
         "ContinueCodeIssued",
         "ContinueCodeIssueResponse",
+        "ContinueCodeExchangeInput",
+        "ContinueCodeExchangeResult",
+        "ContinueCodeExchangeResponse",
     ]
 
 
@@ -575,6 +578,7 @@ def export(root: Path, output: Path) -> dict[str, int | str]:
                 "404": "not found or unauthorized object",
                 "409": "version/hash/identity conflict",
                 "422": "invalid request/business precondition",
+                "429": "too many tries; retry after the given seconds",
                 "503": "uninstalled/unavailable module or invalid server result",
             },
         },

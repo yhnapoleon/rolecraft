@@ -287,3 +287,12 @@ OperationAvailability明确installed/ready/capability/unavailable_code，注册�
 重绑后的作者包保留新 `authored_manifest`，prepare另以原审核manifest的真实hash与每份非runtime原件、完整成员集合和元数据比对，生成 `reviewed_authored_manifest`。仅内容审核结论沿确证谱系继承；运行绑定、模型质量及整包验收不继承。旧审核文件原字节保留。
 
 标准无参数API/worker入口读取`installed/current.json`的中文当前安装，并核对其manifest真实hash；显式`scenario_root`、`CAREER_LAB_SCENARIO_V2`或多语言prepare目录继续按既有优先级使用。作者根保持可复现未安装评价口径，不作为默认有反馈的成品运行包。启动不重写包或修改绑定。
+
+
+### 继续码找回练习
+
+公开导出新增 `GET /sessions/{session_id}/continue-code`、`POST /sessions/{session_id}/continue-code` 与 `POST /continue-codes/exchange`，由正常运行入口随 v4 扩展挂载，不是 Gateway 动作，外部 Agent 与 MCP 工具够不到。前两者使用会话 Bearer 身份，只允许本会话 human learner 且具 delegate 能力；外部 Agent 授权、参考 Agent、研究与系统上下文返回 403 `human_required`。读取只返回 `ContinueCodeStatus`（是否存在、代数、生成时间），从不返回码或校验值。生成按 `ContinueCodeIssueInput.expected_generation`（看到的代数，0 表示尚无）创建或替换本练习唯一有效的码，代数不符返回 409 `continue_code_changed`。码为 20 位 Crockford Base32（100 位熵）分 5 组，只在 `ContinueCodeIssueResponse` 出现一次，响应带 `Cache-Control: no-store`。
+
+独立新增 `v4_continue_codes`（会话、HMAC 校验值、密钥 ID、代数、生成该码的凭据、时间）与 `v4_continue_code_attempts`（来源地址的 HMAC、窗口起点、次数），不改旧表。校验值用部署凭据密钥计算，库内与日志不出现明文；更换密钥后旧码全部失效，缺密钥时生成与交换都返回 503 `credential_derivation_unavailable`。
+
+交换不带 Bearer，每个来源 15 分钟内最多 10 次（成功也计），超出返回 429 `continue_code_rate_limited` 与 `details.retry_after_seconds`。输入先规范化（全角、大小写、空格与各类连字符不计；O 读作 0，I、L 读作 1），不成码返回 422 `continue_code_malformed`；查不到或已被替换统一返回 404 `continue_code_invalid`。会话情境先按运行中的注册识别，再按本部署归档的场景包识别；识别不出返回 409 `continue_code_scenario_unavailable`，此前不签发凭据。成功时以派生用途 `continue-code`（`signed_credential`，所有者为生成该码的凭据，请求含代数与 `request_id`）签发新的 `session_owner` 凭据，同码同 `request_id` 重试返回同一令牌；响应 `ContinueCodeExchangeResponse` 含 `PracticeSession` 与注册名，带 `Cache-Control: no-store`。已有令牌、在途任务与 Agent 授权不受交换或换码影响；补练会话被继续码打开后，重放原补练选择按派生用途识别原始本人凭据。SQLite 有集成回归；PostgreSQL 并发未验证。

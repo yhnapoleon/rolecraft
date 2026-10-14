@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 1355b9733bbd58e89eed7263fd012dd892f7b7e2cb5da3c8db90d616633d2641. Do not edit.
+// Generated from frozen manifest SHA256 202d7994aa5a3426ff5a7cddf27eb09021a1b7c3cf2a2de8f89c7db41fd66bfc. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -122,6 +122,21 @@ export type Command = {
   request_id: string;
   schema_version: 2;
 };
+export type ContinueCodeExchangeInput = { code: string; request_id: string };
+export type ContinueCodeExchangeResponse = {
+  result: ContinueCodeExchangeResult;
+  schema_version?: 2;
+};
+export type ContinueCodeExchangeResult = { scenario: string; session: PracticeSession };
+export type ContinueCodeIssueInput = { expected_generation: number };
+export type ContinueCodeIssueResponse = { result: ContinueCodeIssued; schema_version?: 2 };
+export type ContinueCodeIssued = { code: string; created_at: string; generation: number };
+export type ContinueCodeStatus = {
+  created_at?: string | null;
+  exists: boolean;
+  generation?: number | null;
+};
+export type ContinueCodeStatusResponse = { result: ContinueCodeStatus; schema_version?: 2 };
 export type DelegationGrant = {
   actor_id: string;
   allowed_actions?: string[] | null;
@@ -524,6 +539,13 @@ export type Option = {
 };
 export type OptionsPayload = { options?: Option[]; schema_version?: 2; type?: 'options' };
 export type PlanPayload = { schema_version?: 2; sections: Record<string, string>; type?: 'plan' };
+export type PracticeSession = {
+  binding: Record<string, JsonValue>;
+  schema_version?: 2;
+  session_id: string;
+  state: PublicState;
+  token: string;
+};
 export type ProductAdopt = {
   expected_head: number;
   product_id: string;

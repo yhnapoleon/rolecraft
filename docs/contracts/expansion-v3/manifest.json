@@ -166,7 +166,10 @@
       "ContinueCodeStatusResponse",
       "ContinueCodeIssueInput",
       "ContinueCodeIssued",
-      "ContinueCodeIssueResponse"
+      "ContinueCodeIssueResponse",
+      "ContinueCodeExchangeInput",
+      "ContinueCodeExchangeResult",
+      "ContinueCodeExchangeResponse"
     ],
     "W07": [
       "DatasetRecordV2",
@@ -298,7 +301,10 @@
       "ContinueCodeStatusResponse",
       "ContinueCodeIssueInput",
       "ContinueCodeIssued",
-      "ContinueCodeIssueResponse"
+      "ContinueCodeIssueResponse",
+      "ContinueCodeExchangeInput",
+      "ContinueCodeExchangeResult",
+      "ContinueCodeExchangeResponse"
     ],
     "W15": [
       "AnnotationV2",
@@ -318,12 +324,12 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "759f10925dcd68908c027f86eaff10d8424fe38dac011a09fe02eb6b5a97c2cd"
+      "sha256": "f90efef33a856744af5a8f704e92da37dc7442c86cad328ab31b08bb27250d30"
     }
   },
   "errors": {
     "path": "errors.json",
-    "sha256": "4d2b909d99511acd035e40f4e280031fb16e8f1b1ca1f2251af25a51957c462e"
+    "sha256": "a13871485d4cfc3bfcf7022e2c120ba2ee82482a4d2e954d82617f5cab4ffc1d"
   },
   "input_contract_revision": "draft-core-wiring-r6-20261007",
   "integration_changes": {
@@ -358,7 +364,7 @@
     "operation-readiness": "Installed and ready are distinct; closed registered operations return stable unavailable before public dispatch. Auth/delegation capabilities remain independent.",
     "original-source-protection": "test_freeze enumerates only BASE existing scenarios; no v2 baseline rewrite and no test exclusion needed.",
     "outcome-preview-freshness": "Optional recorded preview conditions on FeedbackV2 and read-time preview states on WorkspaceProductPage: stale previews name each changed input, configuration, resource or material condition, point to a newer preview and list later recorded business actions beside the unchanged prediction. Outcome actions may also name approval requests and submissions. Save-time checks follow the work purpose and task. Records and pages without previews retain their bytes; reads never evaluate again. Recorded material versions are only those the learner may open; finite-scope readers get resource values and material ids withheld and learn only that those conditions changed. Lifecycle-only versions with unchanged content do not make a preview stale.",
-    "practice-continue-codes": "GET and POST /sessions/{session_id}/continue-code (ContinueCodeStatusResponse; ContinueCodeIssueInput -> ContinueCodeIssueResponse): the practice's own person, with delegate capability, creates or replaces its one continue code, 20 Crockford Base32 symbols (100 bits) in five groups of four, shown only in that response with Cache-Control: no-store. The server keeps a verifier keyed with the deployment credential key, never the code, in a separate v4_continue_codes table; frozen v2 tables are unchanged. A replacement names the generation it replaces (continue_code_changed otherwise) and stops the old code at once. Agents, other sessions and missing keys are refused.",
+    "practice-continue-codes": "GET and POST /sessions/{session_id}/continue-code (ContinueCodeStatusResponse; ContinueCodeIssueInput -> ContinueCodeIssueResponse): the practice's own person, with delegate capability, creates or replaces its one continue code, 20 Crockford Base32 symbols (100 bits) in five groups of four, shown only in that response with Cache-Control: no-store. The server keeps a verifier keyed with the deployment credential key, never the code, in separate v4_continue_codes and v4_continue_code_attempts tables; frozen v2 tables are unchanged. A replacement names the generation it replaces (continue_code_changed otherwise) and stops the old code at once. POST /continue-codes/exchange (ContinueCodeExchangeInput -> ContinueCodeExchangeResponse) takes a code without a bearer, ten tries per source in fifteen minutes (continue_code_rate_limited, 429, with retry_after_seconds), and issues a new owner credential derived with purpose continue-code: the same code and request_id return the same token. Malformed, unknown or replaced codes and practices this deployment cannot show are refused (continue_code_malformed, continue_code_invalid, continue_code_scenario_unavailable) before any credential is issued. Existing tokens, queued work and agent grants are unchanged; a follow-up practice reopened by code still replays its original choice. errors.json http_policy lists 429.",
     "recursive-public-reply-validation": "Fixed RoleReply DTO validates the entire JSON tree independently of permissive registrations; nested private metadata is rejected on write and historical public reads.",
     "registered-model-advice": "Optional advisory-only relation results and registration identity; complete input traces gate each new advice segment. Missing fields retain historical wire bytes.",
     "role-event-references": "Actual event provenance is scope/audience/window validated and remapped in the event namespace; no parallel event store.",
@@ -367,7 +373,7 @@
   },
   "openapi": {
     "path": "openapi.json",
-    "sha256": "d19f31a504b7cfdab22c190a33a19e54886649fb94b19cf3ea2f184869f2292b"
+    "sha256": "d3c63de97f40f6810bba2a6d1196df4aee742ea9a4c96c682c2f03e6cfa12766"
   },
   "owner": "rolecraft-032-foundation",
   "previous_contract_revision": "expansion-v3-bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23",
@@ -768,6 +774,51 @@
       "owner": "W01",
       "schema": "schemas/Command.json",
       "schema_sha256": "a2a3b857abe89f95e2855418c3f8c20562fce12d5e8f5919b31df7729df69da0",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ContinueCodeExchangeInput": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/ContinueCodeExchangeInput.json",
+      "example_sha256": "8a0f539b2c9b093eaa5604074f5a4f730a59ce7b841a5b87498818c439664d78",
+      "owner": "W01",
+      "schema": "schemas/ContinueCodeExchangeInput.json",
+      "schema_sha256": "1f9686ac7fb432610e133f765e5bd475a15b7d65998f42970d584ec3192b5284",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ContinueCodeExchangeResponse": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/ContinueCodeExchangeResponse.json",
+      "example_sha256": "ac507b39b526e90af238ecce5c72ca4f5630ed9b751636ab6e266178e19e4c76",
+      "owner": "W01",
+      "schema": "schemas/ContinueCodeExchangeResponse.json",
+      "schema_sha256": "abb4b9343d25af31d60ada834eba49c62bdd065c220f798b2f3b954d8a44fe7a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "ContinueCodeExchangeResult": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/ContinueCodeExchangeResult.json",
+      "example_sha256": "520a4aeeaa720fc8933d0d4eed616c684af8dd613e0ed0ab82f2f442101e62d5",
+      "owner": "W01",
+      "schema": "schemas/ContinueCodeExchangeResult.json",
+      "schema_sha256": "5deb486700596f7135261615d40dcaae22825e774e576f99811d698a7c993724",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -3289,7 +3340,7 @@
   },
   "source_files": {
     "src/career_lab/api/app.py": "724dbce95e80071580fad7891630229a9b899da3ac6ce18d556d855c4ba4d3f0",
-    "src/career_lab/api/continue_codes.py": "fe32bf30bd3a88baf275ef565530b5ea3937e611d1e7c93f237681b817908d85",
+    "src/career_lab/api/continue_codes.py": "2ca0a42aeab2d257f57da9f70f8010650f913f7071c8d966b98f852b43d1cd75",
     "src/career_lab/api/evaluation_runtime.py": "98d7ddbb20bb7d23e004bce7d26a5119214320ad601160ef55fca8b79805d0a4",
     "src/career_lab/api/feedback_integration.py": "141556c752437082bc2da2d8186615f2121cf42103942d4e9f6b9f6c58633dbe",
     "src/career_lab/api/lifecycle_integration.py": "753c970349beeb4aac5edc6f58a96c19f249b4ba0fe27e55310784a93b3f64a3",
@@ -3301,9 +3352,9 @@
     "src/career_lab/api/role_snapshot.py": "5225127e6666c70e644e49629fa74a40411cd124b4e53d738bd5fa5db89511b1",
     "src/career_lab/api/v2_routes.py": "1d829a6949974dfc9e21f429368583b0ef3ebab120b66f1bf7b66ed7941f4483",
     "src/career_lab/api/v4_config.py": "23b5678779c9925c86e545c4b953497672895d32a6636c1e5c9f3196556ad5e4",
-    "src/career_lab/api/v4_extensions.py": "4c7dae64a470cbbce819a56c99af2a6de31b6a74a3e918c6871abcc02991c166",
+    "src/career_lab/api/v4_extensions.py": "0e844717fc52357a292e4a8a7115d672c8b23e1ebc822d951217e88f8065bf95",
     "src/career_lab/api/vertical_reads.py": "c17fcdbb9d9b4821911bd98a04448f140b895df780853e9bb24e007c2384c38a",
-    "src/career_lab/api/vertical_runtime.py": "58dd164119f6f8dad0a011c8962fe41bdc3356c7ac5152d9de709cf8d68c8468",
+    "src/career_lab/api/vertical_runtime.py": "bb38426bdaf7c3bf3000ef5d0075b61c327c5cc49d2038c86966122b92d17468",
     "src/career_lab/api/workspace_integration.py": "580d03db16bf1310e4713965501cf8fe924472d8646d6890fa85d4b30045559b",
     "src/career_lab/cli.py": "8a3b8e83f93bc5bbcb041e58ac398a04b14f332a40820ad4d37f7fdf0dcbd3cd",
     "src/career_lab/contracts/__init__.py": "650246fed3d082cc58505d728f750218b601580ff7a00a03ae8e610bd9d316bc",
@@ -3322,11 +3373,11 @@
     "src/career_lab/contracts/v2/engineer_export.py": "cb03edb975fb004f2956ec1db93a40b7ed6a1dd473b74b9c9395ca5409e15342",
     "src/career_lab/contracts/v2/evaluation.py": "bff8ea0e6709d94464d0c0ab8a781fa2c9a77031d03bf4ac7899df8d217b118d",
     "src/career_lab/contracts/v2/examples.py": "37017f679fe580af5b55e435eb78b39e039435d4ea7f182fe8bde2b0b93c34ef",
-    "src/career_lab/contracts/v2/export.py": "ec29bb262c7e541a5b28a561dcfdaef957a3f8a670c2d38e50ee85d7dc448942",
-    "src/career_lab/contracts/v2/extensions.py": "13746f1aed8bbd0c53a4b96aaf6b567606f3d053f2a7c846940bd7e3a5de6cf5",
+    "src/career_lab/contracts/v2/export.py": "c6ec9ed0dee4edef5719fda0f2cbc246b0599d991b8d13ee19a8c22025109d91",
+    "src/career_lab/contracts/v2/extensions.py": "200c0da96f570a01479c7b21361c2f0fec7ef73c1b35a38fd6d945229399f223",
     "src/career_lab/contracts/v2/files.py": "3b3f8e9ac47acacfcdd3052f7b0d94698ff8622c0ca34299b47a544bad048577",
     "src/career_lab/contracts/v2/legacy.py": "47a9fb0d4414326b2e05ba863ce29a905f9734b1eb881a85b41af769df5fbbd5",
-    "src/career_lab/contracts/v2/manifest_history.py": "9876c395490add3de8153a09ab3d396d775a3130c875180dac1841839ae89a21",
+    "src/career_lab/contracts/v2/manifest_history.py": "d1659664e22378ab55f14d5b6a3d06bf953c04d9e56d917ae77fa1cd4b8481c6",
     "src/career_lab/contracts/v2/projection.py": "de1c239f0faf7ae41c82a13c3ee380020ac288e4eafae41b683e351bb5c31e9e",
     "src/career_lab/contracts/v2/provenance.py": "d752a89634ca3608aad3ee533c23522c592cd48e7f40a0fed37a56e515301cf1",
     "src/career_lab/contracts/v2/provider.py": "97b6f25a7ba7e93a84b77af980b00d6d371d770239cc59f6bc09ceb0ebf4994d",

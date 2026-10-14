@@ -132,3 +132,21 @@ class ContinueCodeIssued(BaseModel):
 
 class ContinueCodeIssueResponse(V2):
     result: ContinueCodeIssued
+
+
+class ContinueCodeExchangeInput(BaseModel):
+    """A continue code as typed: case, spaces and dashes are free; O reads as 0, I and L as 1."""
+
+    model_config = ConfigDict(extra="forbid")
+    code: str = Field(min_length=1, max_length=64)
+    request_id: str = Field(min_length=1, max_length=120, strict=True)
+
+
+class ContinueCodeExchangeResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session: PracticeSession  # A new owner credential for this browser; other access is unchanged.
+    scenario: str
+
+
+class ContinueCodeExchangeResponse(V2):
+    result: ContinueCodeExchangeResult

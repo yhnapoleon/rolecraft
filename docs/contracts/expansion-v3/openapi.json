@@ -1715,6 +1715,67 @@
         "title": "Command",
         "type": "object"
       },
+      "ContinueCodeExchangeInput": {
+        "additionalProperties": false,
+        "description": "A continue code as typed: case, spaces and dashes are free; O reads as 0, I and L as 1.",
+        "properties": {
+          "code": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Code",
+            "type": "string"
+          },
+          "request_id": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Request Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "request_id"
+        ],
+        "title": "ContinueCodeExchangeInput",
+        "type": "object"
+      },
+      "ContinueCodeExchangeResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/ContinueCodeExchangeResult"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "ContinueCodeExchangeResponse",
+        "type": "object"
+      },
+      "ContinueCodeExchangeResult": {
+        "additionalProperties": false,
+        "properties": {
+          "scenario": {
+            "title": "Scenario",
+            "type": "string"
+          },
+          "session": {
+            "$ref": "#/components/schemas/PracticeSession"
+          }
+        },
+        "required": [
+          "session",
+          "scenario"
+        ],
+        "title": "ContinueCodeExchangeResult",
+        "type": "object"
+      },
       "ContinueCodeIssueInput": {
         "additionalProperties": false,
         "description": "Create or replace the code. ``expected_generation`` is the one the person saw; 0 = none.",
@@ -15127,6 +15188,44 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/continue-codes/exchange": {
+      "post": {
+        "operationId": "exchange_continue_code_continue_codes_exchange_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContinueCodeExchangeInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContinueCodeExchangeResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Exchange Continue Code"
+      }
+    },
     "/health": {
       "get": {
         "operationId": "health_health_get",

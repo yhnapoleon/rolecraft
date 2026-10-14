@@ -35,18 +35,30 @@ def configured_models(provider="local"):
     return slots.legacy, slots.roles
 
 
+def registration_name(package):
+    """The name a scenario package is registered under, running or archived."""
+    return package.bundle.id + "_v2"
+
+
 def build_registry(
     scenario_root, models, *, feedback_handler=None, store_provider=None, scenario_archive=None
 ):
     """``models`` is a ``ModelSlots``, or one model every slot shares (historical callers)."""
     slots = models if isinstance(models, ModelSlots) else ModelSlots.shared(models)
     module = ScenarioModule(scenario_root, model=slots.assistant)
-    registry = module.install(ExtensionRegistry(), name=module.package.bundle.id + "_v2")
+    registry = module.install(ExtensionRegistry(), name=registration_name(module.package))
     from career_lab.api.scenario_history import ScenarioReadCatalog
     from career_lab.api.negotiation_runtime import install_negotiation
 
     catalog = ScenarioReadCatalog(module, scenario_archive)
     registry.active_bindings = (module.bindings,)
+
+    def historical_identity(bindings):
+        """Registered name and work language of a package this deployment has archived."""
+        reader = catalog.resolve(bindings)
+        return registration_name(reader.package), reader.work_language
+
+    registry.historical_identity = historical_identity
     install_negotiation(registry, module)
     registry.reference_resolvers["material"] = public_material_resolver(module, catalog.resolve)
     from dataclasses import replace
