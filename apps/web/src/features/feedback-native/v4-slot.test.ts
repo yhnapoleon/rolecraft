@@ -218,6 +218,29 @@ describe('W05 v4 host adapter', () => {
     expect(f.recovery).toEqual(['feedback-job', 'feedback-job']);
     ctl.destroy();
   });
+  it('a saved submission whose follow-up read is dropped is not a failed write', async () => {
+    const f = fixture();
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    f.setResult({
+      requestId: 'feedback-job',
+      status: 'pending',
+      result: { submission: ref('submission', 'sub'), feedback_status: 'queued' },
+    });
+    let dropped = 1;
+    f.setRead(async (operation, input) => {
+      if (operation === 'workbench.read' && dropped > 0) {
+        dropped--;
+        throw new ApiError('The result is unconfirmed.', 0, 'response_unconfirmed');
+      }
+      return f.served(operation, input);
+    });
+    await ctl.adapter.submit({ decision: 'no_go', products: [ref('product', 'p', 2)] });
+    expect(ctl.adapter.snapshot()).toMatchObject({ awaitingFeedback: true, error: undefined });
+    expect(ctl.adapter.snapshot().reports).toHaveLength(1);
+    expect(f.calls).toHaveLength(1);
+    ctl.destroy();
+  });
   it('does not treat colleague model mode as feedback readiness', async () => {
     const f = fixture();
     const ctl = createV4FeedbackAdapter(fixtureHost(f.host));

@@ -480,8 +480,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       pending = result;
       state = { ...state, pending: false, awaitingFeedback: true };
       emit();
-      await host.query('workbench.read');
-      await refresh();
+      await readEffect();
       return;
     }
     if (result.status !== 'confirmed') {
@@ -503,7 +502,16 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       );
     }
     pending = null;
-    await host.query('workbench.read');
+    await readEffect();
+  }
+  /** The command is saved; a dropped follow-up read is left to the next poll and the panel's own
+   * reads, so it is never reported as a failed write. */
+  async function readEffect() {
+    try {
+      await host.query('workbench.read');
+    } catch (error) {
+      if (!retryableRead(error)) throw error;
+    }
     await refresh();
   }
   async function command<K extends V4Command>(operation: K, input: CommandInput<K>) {
