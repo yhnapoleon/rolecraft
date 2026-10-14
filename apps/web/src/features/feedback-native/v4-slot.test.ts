@@ -57,6 +57,7 @@ function fixture() {
     next_options: [],
   };
   const cfg = { ...ref('config', 'cfg', 3), config_version: 2 };
+  const timelineRows: unknown[] = [{ ref: cfg, content: {} }];
   let read: (operation: string, input?: Readonly<Record<string, unknown>>) => Promise<unknown> =
     async (operation) => {
       if (operation === 'workbench.read')
@@ -77,7 +78,7 @@ function fixture() {
       if (operation === op.timeline)
         return {
           role_mode: 'model',
-          objects: [{ ref: cfg, content: {} }],
+          objects: timelineRows,
           workspace: { config: { id: 'cfg', version: 3, config_version: 2 } },
         };
       throw Error('unexpected operation');
@@ -125,6 +126,7 @@ function fixture() {
     product,
     report,
     cfg,
+    timelineRows,
     setRead: (value: typeof read) => {
       read = value;
     },
@@ -303,6 +305,33 @@ describe('W05 v4 host adapter', () => {
     const pick = { kinds: EVIDENCE_KINDS, selected: [cited] };
     expect(await ctl.adapter.chooseEvidence?.(pick)).toEqual([cited]);
     expect(picks).toEqual([pick]);
+  });
+  it('keeps the recorded decisions from the timeline it already reads', async () => {
+    const f = fixture();
+    f.timelineRows.push(
+      { ref: ref('business_request', 'r1'), content: { requested: { dev_days: 6 } } },
+      {
+        ref: ref('business_decision', 'd1'),
+        content: {
+          request: ref('business_request', 'r1'),
+          status: 'approved',
+          granted: { dev_days: 6 },
+          countered: {},
+          as_of: { business_seq: 2, workspace_revision: 1, storage_revision: 2 },
+        },
+      },
+    );
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    expect(ctl.adapter.snapshot().decisions).toEqual([
+      {
+        request: 'r1',
+        status: 'approved',
+        requested: { dev_days: 6 },
+        result: { dev_days: 6 },
+        at: 2,
+      },
+    ]);
   });
   it('changing UI language preserves fixed work language and stored feedback', async () => {
     const f = fixture();
