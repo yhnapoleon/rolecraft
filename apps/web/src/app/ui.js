@@ -5775,8 +5775,9 @@ const workFolders = installWorkFolders(document, {
 });
 installV4References(() => L.v4Host(current()));
 L.attach(state, onLive);
-L.refresh(current()).then(() => {
-  ui.synced = true;
+// Like a poll: a read dropped while the page loads only marks the connection lost.
+L.load(current()).then((loaded) => {
+  if (loaded) ui.synced = true;
 });
 setInterval(async () => {
   if (document.hidden) return;

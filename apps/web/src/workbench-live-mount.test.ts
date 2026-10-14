@@ -1,5 +1,6 @@
 import { setImmediate as settle } from 'node:timers/promises';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ApiError } from './api';
 import type { LocalSession } from './types';
 import type { V4DataHost } from './v4-data-host';
 import { regionHost } from './v4-region-test-support';
@@ -9,7 +10,7 @@ import { engine, memory } from './workbench-live-test-support';
 const failure = 'Duplicate v4 region: workspace';
 
 /** A page whose workspace region can be owned twice; every render mounts the regions again. */
-function page() {
+function page(options: { owners?: number; host?: object } = {}) {
   const live = new LiveWorkbench(engine, memory());
   const session = {
     id: 's',
@@ -19,13 +20,15 @@ function page() {
   } as unknown as LocalSession;
   vi.spyOn(live, 'session').mockReturnValue(session);
   vi.spyOn(live, 'v4Host').mockReturnValue(
-    Object.assign(regionHost(), {
-      reflectSelection: vi.fn(async () => {}),
-    }) as unknown as V4DataHost,
+    Object.assign(
+      regionHost(),
+      { reflectSelection: vi.fn(async () => {}) },
+      options.host,
+    ) as unknown as V4DataHost,
   );
   const root = { isConnected: true, closest: () => null, querySelector: () => null };
   const dom = {
-    roots: [root, root],
+    roots: Array(options.owners ?? 2).fill(root),
     querySelectorAll: (selector: string) =>
       selector === '[data-v4-region="workspace"]' ? dom.roots : [],
   };
@@ -65,6 +68,23 @@ describe('v4 region mounting', () => {
     await settle();
     // The recovered mount withdraws its own report, so the recurrence is shown again.
     expect(f.errors).toEqual([failure, '', failure]);
+  });
+
+  it('a read dropped while mounting shows the connection as lost, not an error', async () => {
+    const unavailable = { ...regionHost().snapshot(), state: 'unavailable' as const };
+    const f = page({
+      owners: 1,
+      host: {
+        snapshot: () => unavailable,
+        query: vi.fn(async () => {
+          throw new ApiError('The result is unconfirmed.', 0, 'response_unconfirmed');
+        }),
+      },
+    });
+    f.live.store.report({ connected: true });
+    await settle();
+    expect(f.errors.filter(Boolean)).toEqual([]);
+    expect(f.live.store.getSnapshot()).toMatchObject({ connected: false, error: '' });
   });
 
   it('leaves an error reported elsewhere when a mount recovers', async () => {

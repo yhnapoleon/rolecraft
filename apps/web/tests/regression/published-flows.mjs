@@ -383,6 +383,30 @@ async function addTaskAfterRevision(context) {
   await shot('task-after-revision');
 }
 
+/** F20 (review 175 P2-1): the first workbench reads of a reloading page are dropped. The page
+ * shows no error, has no uncaught exception, and the next poll loads the board. */
+async function reloadWithDroppedReads(context) {
+  const { browser } = context;
+  await browser.goto(`${base}#/work`);
+  await waitFor(browser, `!!document.querySelector('.card-open')`);
+  await browser.ev(`sessionStorage.setItem('regressionFailOnLoad', '2500')`);
+  await browser.send('Page.reload', {});
+  await waitFor(browser, 'performance.now() > 2500 && window.regressionFailedWorkbenchReads >= 2');
+  await waitFor(
+    browser,
+    `window.PracticeLive.store.getSnapshot().connected === true
+      && !!document.querySelector('.card-open')`,
+  );
+  assert.deepEqual(
+    await browser.ev(`({
+      error: window.PracticeLive.store.getSnapshot().error,
+      toasts: window.regressionToasts,
+    })`),
+    { error: '', toasts: [] },
+    'Reads dropped while the page loads are not shown as an error',
+  );
+}
+
 async function runLanguage(language) {
   const browser = await launch({ width: 1440, height: 1100, reduced: true });
   const en = language === 'en';
@@ -445,10 +469,20 @@ async function runLanguage(language) {
     window.regressionDropNext = false;
     window.regressionFailWorkbenchReads = 0;
     window.regressionFailedWorkbenchReads = 0;
+    // Milliseconds set before a reload: the loading page's workbench reads drop until then.
+    const failUntil = Number(sessionStorage.getItem('regressionFailOnLoad') || 0);
+    sessionStorage.removeItem('regressionFailOnLoad');
+    window.regressionToasts = [];
+    document.addEventListener('DOMContentLoaded', () => {
+      const toast = document.getElementById('toast');
+      new MutationObserver(() => {
+        if (toast.textContent.trim()) window.regressionToasts.push(toast.textContent.trim());
+      }).observe(toast, { childList: true, subtree: true, characterData: true });
+    });
     window.fetch = async (...args) => {
       const read = !args[1]?.method || args[1].method === 'GET';
-      if (window.regressionFailWorkbenchReads > 0 && read
-        && String(args[0]).split('?')[0].endsWith('/workbench')) {
+      const dropping = window.regressionFailWorkbenchReads > 0 || performance.now() < failUntil;
+      if (dropping && read && String(args[0]).split('?')[0].endsWith('/workbench')) {
         window.regressionFailWorkbenchReads--;
         window.regressionFailedWorkbenchReads++;
         throw new TypeError('Controlled dropped read');
@@ -493,6 +527,9 @@ async function runLanguage(language) {
     );
     await step('new task dialog survives a dropped poll and adds a task after revision', () =>
       addTaskAfterRevision(context),
+    );
+    await step('a page reload with dropped reads shows no error and loads on the next poll', () =>
+      reloadWithDroppedReads(context),
     );
     assert.deepEqual(
       browser.logs.filter((item) => item.level === 'exception'),
