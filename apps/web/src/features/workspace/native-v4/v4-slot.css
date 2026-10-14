@@ -115,6 +115,9 @@
 .w03-outcome-question {
   border-inline-start: 3px solid var(--p-manager);
 }
+.w03-outcome-question .btn {
+  justify-self: start;
+}
 .w03-outcome-changes {
   border-inline-start: 3px solid var(--warn);
 }

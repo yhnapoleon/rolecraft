@@ -19,6 +19,7 @@ import {
   type PurposeChoice,
 } from './short-summary';
 import { evaluationVersionLine } from './evaluation-version';
+import { itemDetail, renderRuleLines, ruleLines } from './rule-lines';
 import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
@@ -622,6 +623,7 @@ export function mountNativeFeedback(
       );
     body.push(history);
     const criteria = criterionLabels(language);
+    const lines = ruleLines(ruleItems(report), criteria, language);
     const notApplicable = el('details');
     notApplicable.append(
       el('summary', T('查看本次未适用的验收项', 'View criteria not applicable to this submission')),
@@ -638,7 +640,7 @@ export function mountNativeFeedback(
             : T('等待核验', 'Awaiting verification'),
           'muted',
         ),
-        el('p', item.explanation),
+        el('p', itemDetail(item, lines.premises), 'rule-detail'),
       );
       if (item.rule_bound) {
         const labels: Record<string, string> = {
@@ -723,6 +725,7 @@ export function mountNativeFeedback(
         review,
         reviews: state.reviews,
         semantic,
+        lines: renderRuleLines(doc, lines, language),
         body,
         open: openResults.has(id),
         onToggle: (open) => {

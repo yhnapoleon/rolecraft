@@ -244,6 +244,15 @@ describe('short submission feedback', () => {
     });
   });
 
+  it('shows one line per rule-checked item before the model advice', () => {
+    const lines = fakeDocument().createElement('div');
+    lines.textContent = 'rule lines';
+    const { root, semantic } = render({ report: report(mixed, ref('submission', 's1')), lines });
+    const at = (node: Node) => root.children.indexOf(asFake(node as HTMLElement));
+    expect(at(lines)).toBeGreaterThan(-1);
+    expect(at(lines)).toBeLessThan(at(semantic));
+  });
+
   it.each([
     ['zh', '尚无适用项', '尚无适用项。', '查看记录与依据'],
     ['en', 'No applicable items yet', 'No applicable items yet.', 'Show records and evidence'],

@@ -1,0 +1,41 @@
+/* Feedback first screen: one line per rule-checked criterion. */
+.rule-lines {
+  display: grid;
+  gap: 6px;
+  margin-block: 8px;
+}
+.rule-lines__items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 6px;
+}
+.rule-lines__item {
+  display: grid;
+  grid-template-columns: 1.2em minmax(0, 1fr);
+  gap: 6px;
+  align-items: baseline;
+  line-height: 1.5;
+}
+.rule-lines__text {
+  overflow-wrap: anywhere;
+}
+.rule-lines__text b {
+  font-weight: 600;
+}
+.rule-lines__mark {
+  text-align: center;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.rule-lines__item[data-mark="met"] .rule-lines__mark {
+  color: var(--good);
+}
+.rule-lines__note {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.rule-detail {
+  white-space: pre-line;
+}
