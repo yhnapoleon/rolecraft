@@ -18,6 +18,7 @@ from career_lab.contracts.v2 import (
     VersionPoint,
     canonical,
 )
+from career_lab.evidence.v2.citation import object_citation
 from career_lab.evidence.v2.ports import RuleSnapshot, SourceRecord, VerifiedFact, model_generated
 from .engine import ScenarioSnapshot
 from .module import point, ref_for
@@ -155,12 +156,10 @@ class ScenarioFactAdapter:
                 raise ProtocolError("evidence_time_mismatch")
             return SourceRecord(actual, canonical(event), born)
         row = self.object(auth, ref, as_of)
-        born = next(
-            (p for p in window.points if p.storage_revision == row.created_storage_revision), None
-        )
-        if born is None:
+        cited = object_citation(row, window.points)
+        if cited is None:
             raise ProtocolError("source_time_unknown")
-        actual = EvidenceRefV2(**row.ref.model_dump(), observed_at_seq=born.business_seq)
+        actual, born = cited
         return SourceRecord(actual, canonical(row.content), born)
 
     def rule_provider(self, auth, exact_product, as_of):
