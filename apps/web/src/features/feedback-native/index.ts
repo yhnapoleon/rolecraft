@@ -21,7 +21,9 @@ import {
 import { evaluationVersionLine } from './evaluation-version';
 import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
+import { criterionLabels } from './criteria';
 import { exactRefKey } from './exact-ref';
+import { mountPresubmitCard, PRESUBMIT_STYLE } from './presubmit';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 
 export type SelectedProduct = Pick<
@@ -123,6 +125,8 @@ export interface FeedbackNativeState {
 }
 /** The exact versions and decision a person chooses to submit. */
 export type SubmitChoice = { decision: SubmitInput['decision']; products: ObjectRef[] };
+/** What the submission panel shows as chosen, including no decision yet. */
+export type RememberedChoice = { decision: string; products: ObjectRef[] };
 export interface FeedbackNativeAdapter {
   snapshot(): FeedbackNativeState;
   subscribe(callback: () => void): () => void;
@@ -133,6 +137,9 @@ export interface FeedbackNativeAdapter {
   /** Read-only: a saved submission checked again at its own point. */
   submissionRuleCheck?(submission: ObjectRef): Promise<SubmissionRuleCheck>;
   canPreview?: boolean;
+  /** Presentation only: the panel's last choice, kept in this page's memory, never stored. */
+  rememberChoice?(choice: RememberedChoice | null): void;
+  rememberedChoice?(): RememberedChoice | undefined;
   respond(input: {
     feedback_id: string;
     feedback_version: number;
@@ -185,32 +192,7 @@ function adviceFallback(report: Report | undefined, state: FeedbackNativeState):
   return semantic.waitingForModel ? 'waiting' : 'pending';
 }
 
-/** Display names of rubric criteria; shared by the feedback panel and the optional-practice basis. */
-export function criterionLabels(
-  language: FeedbackLanguage = document.documentElement.lang?.startsWith('en') ? 'en' : 'zh',
-): Record<string, string> {
-  const T = (zh: string, en: string) => feedbackText(language, zh, en);
-  return {
-    'R1.target': T('目标用户与业务目标', 'Target users and business goals'),
-    'R1.metrics': T('指标与验收口径', 'Metrics and acceptance criteria'),
-    'R2.support': T('判断的证据支持', 'Evidence supporting judgments'),
-    'R2.unknowns': T('事实与待确认事项', 'Facts and unresolved questions'),
-    'R2.failure_analysis': T('失败案例与原因分析', 'Failure cases and analysis'),
-    'R4.staleness_test': T('政策更新后的复测', 'Retesting after policy changes'),
-    'R5.impact': T('变更影响', 'Impact of changes'),
-    'R5.adjustment': T('实际调整与复测', 'Actual adjustments and retesting'),
-    'R6.consistency': T('作品与配置一致性', 'Consistency of artifacts and configuration'),
-    'R6.operations': T('后续运行安排', 'Operational follow-up'),
-    'R6.alternatives': T('替代方案与取舍', 'Alternatives and trade-offs'),
-    'R3.capacity': T('人数与容量', 'Participants and capacity'),
-    'R3.resources': T('资源与时间', 'Resources and timing'),
-    'R4.functional_tests': T('实际测试', 'Actual tests'),
-    'R6.comparison': T('方案比较', 'Option comparison'),
-    'decision.rationale': T('决定依据', 'Basis for the decision'),
-    'decision.follow_up': T('后续安排', 'Follow-up'),
-    'result.claims': T('已完成事项的声明', 'Completion claims'),
-  };
-}
+export { criterionLabels };
 export type FeedbackMountOptions = { surface?: 'all' | 'submission' | 'feedback' };
 
 export function mountNativeFeedback(
@@ -260,7 +242,8 @@ export function mountNativeFeedback(
   const hiddenStyle = doc.createElement('style');
   hiddenStyle.textContent =
     '.native-feedback [hidden]{display:none!important}.native-feedback{min-width:0;overflow-wrap:anywhere}.native-feedback section,.native-feedback article{min-width:0}.native-feedback>section,.native-feedback article>section{margin-block:20px}.native-feedback .btn{white-space:normal;height:auto;min-height:34px;max-width:100%;margin:3px 5px 3px 0}.native-feedback .field-row{display:flex;align-items:flex-start;gap:8px;margin:8px 0}.native-feedback .field-row input{flex:none;margin-top:5px}.native-feedback blockquote{margin:10px 0;padding:8px 12px;border-inline-start:2px solid var(--line);color:var(--ink-2)}.native-feedback .group-title{margin-block:20px 10px}.native-feedback .row-title{margin-block:14px 8px}.native-feedback p{line-height:1.6}.native-feedback .textarea,.native-feedback .select{max-width:100%}.native-feedback [data-score-range]{color:var(--ink-2,#4b505b);font-size:13.5px;font-weight:600}' +
-    MODEL_ADVICE_STYLE;
+    MODEL_ADVICE_STYLE +
+    PRESUBMIT_STYLE;
   root.append(hiddenStyle);
   const notice = el('p', '', 'muted');
   notice.setAttribute('role', 'status');
@@ -344,9 +327,44 @@ export function mountNativeFeedback(
       if (!selected.size)
         throw Error(T('请选择这次要交付的作品版本。', 'Select the artifact versions to submit.'));
       await adapter.submit({ decision: choice.value, products: [...selected.values()] });
+      adapter.rememberChoice?.(null);
     },
     true,
   );
+  // Pre-submission preview (2026-10-14): read-only, right above the submit button.
+  const load =
+    options.surface !== 'feedback' ? adapter.previewSubmission?.bind(adapter) : undefined;
+  const preview = load ? mountPresubmitCard(doc, language, load) : undefined;
+  let restoring = preview ? adapter.rememberedChoice?.() : undefined;
+  /** Put back the choice made before the panel was last closed, once its versions are listed. */
+  function restoreChoice(state: FeedbackNativeState) {
+    if (!restoring || !state.products.length) return;
+    for (const ref of restoring.products) {
+      const product = state.products.find(
+        (p) => p.product_id === ref.object_id && p.version === ref.version && !p.removed_at,
+      );
+      if (!product) continue;
+      selected.set(key(ref), ref);
+      selectedTitles.set(key(ref), product.title || T('未命名作品', 'Untitled artifact'));
+    }
+    if (isSubmitDecision(restoring.decision) && !choice.value) choice.value = restoring.decision;
+    restoring = undefined;
+  }
+  /** Preview the current choice; remember it for this page while the panel is open. */
+  function syncPreview() {
+    if (!preview) return;
+    const state = adapter.snapshot();
+    const open = state.status === 'active' && adapter.canPreview !== false;
+    preview.element.hidden = !open;
+    if (!restoring)
+      adapter.rememberChoice?.({ decision: choice.value, products: [...selected.values()] });
+    preview.update(
+      open && isSubmitDecision(choice.value) && selected.size
+        ? { decision: choice.value, products: [...selected.values()], point: state.point }
+        : null,
+    );
+  }
+  choice.addEventListener('change', syncPreview);
   const retryFeedback = button(T('重新请求反馈', 'Request feedback again'), () =>
     adapter.retry?.(),
   );
@@ -373,6 +391,7 @@ export function mountNativeFeedback(
     selection,
     selectedSummary,
     choice,
+    ...(preview ? [preview.element] : []),
     submit,
     recover,
     receipt,
@@ -821,6 +840,7 @@ export function mountNativeFeedback(
               '可以继续工作，选择准备交付的版本。',
               'Continue your work and select versions for submission.',
             );
+    restoreChoice(state);
     selection.replaceChildren(
       ...state.products.map((product) => {
         const ref: ObjectRef = {
@@ -841,6 +861,7 @@ export function mountNativeFeedback(
             selectedTitles.set(id, product.title || T('未命名作品', 'Untitled artifact'));
           } else selected.delete(id);
           renderSelected();
+          syncPreview();
         });
         row.append(
           checkbox,
@@ -957,6 +978,7 @@ export function mountNativeFeedback(
       state.readOnly === true,
       language,
     );
+    syncPreview();
   }
   const unsubscribe = adapter.subscribe(render);
   render();
@@ -966,6 +988,7 @@ export function mountNativeFeedback(
       destroyed = true;
       unsubscribe();
       reviewControls?.destroy();
+      preview?.destroy();
       root.remove();
     },
   };

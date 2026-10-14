@@ -204,6 +204,31 @@ describe('W05 v4 host adapter', () => {
     ]);
     ctl.destroy();
   });
+  it('remembers the panel choice in this page only, per practice', () => {
+    const f = fixture();
+    const first = createV4FeedbackAdapter(fixtureHost(f.host));
+    const picked = { decision: 'launch', products: [ref('product', 'p', 2)] };
+    expect(first.adapter.rememberedChoice?.()).toBeUndefined();
+    first.adapter.rememberChoice?.(picked);
+    first.destroy();
+    const reopened = createV4FeedbackAdapter(fixtureHost(f.host));
+    expect(reopened.adapter.rememberedChoice?.()).toEqual(picked);
+    const other = fixture();
+    other.setSnapshot({
+      session: {
+        protocol: 2,
+        sessionId: 'other',
+        workLanguage: 'zh',
+        scenarioHash: 'f'.repeat(64),
+      },
+    });
+    expect(createV4FeedbackAdapter(fixtureHost(other.host)).adapter.rememberedChoice?.()).toBe(
+      undefined,
+    );
+    reopened.adapter.rememberChoice?.(null);
+    expect(reopened.adapter.rememberedChoice?.()).toBeUndefined();
+    reopened.destroy();
+  });
   it('offers no check where the host does not', async () => {
     const f = fixture();
     f.setSnapshot({

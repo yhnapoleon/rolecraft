@@ -15,6 +15,7 @@ import {
   mountNativeFeedback,
   type FeedbackNativeAdapter,
   type FeedbackNativeState,
+  type RememberedChoice,
   type Report,
   type ReviewRecord,
   type SubmitChoice,
@@ -105,6 +106,9 @@ function answers(
   if (basis === 'draft' && !sameRef(value.config, asked.config)) return false;
   return asked.submission === undefined || sameRef(value.submission, asked.submission);
 }
+
+/** The submission panel's last choice per practice, for this page only; never stored. */
+const rememberedChoices = new Map<string, RememberedChoice>();
 
 export function createV4FeedbackAdapter(host: V4HostAdapter) {
   const first = host.snapshot();
@@ -650,6 +654,15 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       valid();
       for (const ref of refs) reference(ref, sid!);
       return [...refs];
+    },
+    rememberChoice: (picked) => {
+      if (!sid) return;
+      if (picked) rememberedChoices.set(sid, structuredClone(picked));
+      else rememberedChoices.delete(sid);
+    },
+    rememberedChoice: () => {
+      const picked = sid ? rememberedChoices.get(sid) : undefined;
+      return picked && structuredClone(picked);
     },
     readDraft: (key) => {
       valid();
