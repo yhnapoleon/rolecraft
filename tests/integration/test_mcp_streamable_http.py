@@ -3,6 +3,7 @@
 import importlib.util
 import json
 import logging
+import threading
 import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -13,7 +14,7 @@ from fastapi.testclient import TestClient
 from career_lab.contracts import v2 as C
 from career_lab.delegations.http_client import HttpAgentClient, RemoteFailure
 from career_lab.mcp.protocol import CAPABILITIES, LEGACY, MODERN, VERSION
-from career_lab.mcp.streamable_http import mount_mcp_http
+from career_lab.mcp.streamable_http import HttpLimits, mount_mcp_http
 
 ROOT = Path(__file__).parents[2]
 spec = importlib.util.spec_from_file_location(
@@ -386,3 +387,46 @@ def test_mcp_http_logs_safe_codes_and_never_the_token(env, mcp, caplog, monkeypa
         "mcp_method_not_found",
         "mcp_internal_error",
     } <= codes
+
+
+def test_mcp_http_limits_the_rate_of_each_authorization(env):
+    mount_mcp_http(env["app"], limits=HttpLimits(burst=2, per_second=0.5))
+    agent = TestClient(env["app"], base_url="http://127.0.0.1")
+    first, _ = fixture.grant(env, ("read",))
+    second, _ = fixture.grant(env, ("read",))
+    sid = env["sid"]
+    assert [modern(agent, sid, first["token"], "ping").status_code for _ in range(2)] == [200, 200]
+    limited = modern(agent, sid, first["token"], "ping")
+    assert limited.status_code == 429 and int(limited.headers["retry-after"]) >= 1
+    assert limited.json()["error"]["code"] == 1004
+    assert modern(agent, sid, second["token"], "ping").status_code == 200
+    agent.close()
+
+
+def test_mcp_http_bounds_requests_in_progress(env, monkeypatch):
+    mount_mcp_http(env["app"], limits=HttpLimits(in_flight=1))
+    created, _ = fixture.grant(env, ("read",))
+    entered, release = threading.Event(), threading.Event()
+    tools = HttpAgentClient.tools
+
+    def held(self):
+        entered.set()
+        release.wait(5)
+        return tools(self)
+
+    monkeypatch.setattr(HttpAgentClient, "tools", held)
+    results = {}
+    with TestClient(env["app"], base_url="http://127.0.0.1") as agent:
+
+        def first():
+            results["first"] = modern(agent, env["sid"], created["token"], "tools/list")
+
+        worker = threading.Thread(target=first)
+        worker.start()
+        assert entered.wait(5)
+        second = modern(agent, env["sid"], created["token"], "tools/list")
+        release.set()
+        worker.join(5)
+    assert second.status_code == 429 and second.headers["retry-after"] == "1"
+    assert second.json()["error"]["code"] == 1002
+    assert results["first"].status_code == 200

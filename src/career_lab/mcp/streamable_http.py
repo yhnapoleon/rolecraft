@@ -8,7 +8,10 @@ Responses never echo request headers; the request log carries a safe code only.
 
 import base64
 import json
+import math
 import re
+import threading
+import time
 from dataclasses import dataclass
 from functools import partial
 
@@ -37,10 +40,12 @@ NAMED_METHODS = {"tools/call": "name", "prompts/get": "name", "resources/read": 
 BASE64_SENTINEL = re.compile(r"=\?base64\?([A-Za-z0-9+/]*={0,2})\?=")
 JSON_RANGES = frozenset({"application/json", "application/*", "*/*"})
 
-# JSON-RPC error codes. 1001 is shared with stdio; 1003 and 1005 are application codes
+# JSON-RPC error codes. 1001 and 1002 are shared with stdio; 1003-1005 are application codes
 # outside the JSON-RPC and MCP reserved ranges.
 SERVICE_UNAVAILABLE = 1001
+TOO_MANY_IN_FLIGHT = 1002
 AUTHORIZATION_FAILED = 1003
+RATE_LIMITED = 1004
 BROWSER_REFUSED = 1005
 PARSE_ERROR = -32700
 INVALID_REQUEST = -32600
@@ -54,13 +59,66 @@ UNSUPPORTED_VERSION = -32022
 
 @dataclass(frozen=True)
 class HttpLimits:
-    """Endpoint limits in one place; deployment changes them here."""
+    """Endpoint limits in one place; deployment changes them here.
 
-    concurrent: int = 4
-    max_body: int = 1_048_576
+    Counters live in the API process, so with several processes each enforces its own.
+    """
+
+    in_flight: int = 16  # requests admitted at once, waiting or running (as stdio)
+    concurrent: int = 4  # requests running at once (as stdio's worker threads)
+    burst: int = 30  # requests one authorization may send back to back
+    per_second: float = 10.0  # sustained requests per second for one authorization
+    max_body: int = 1_048_576  # bytes per request body (as stdio's line limit)
 
 
 DEFAULT_LIMITS = HttpLimits()
+
+
+class TokenBuckets:
+    """Per-authorization request rate."""
+
+    def __init__(self, burst, per_second, clock=time.monotonic):
+        self.burst, self.per_second, self.clock = burst, per_second, clock
+        self.buckets = {}
+        self.lock = threading.Lock()
+
+    def take(self, key):
+        """0.0 when admitted; otherwise the seconds until one request would be admitted."""
+        with self.lock:
+            now = self.clock()
+            tokens, last = self.buckets.get(key, (float(self.burst), now))
+            tokens = min(float(self.burst), tokens + (now - last) * self.per_second)
+            if tokens >= 1:
+                self.buckets[key] = (tokens - 1, now)
+                self.forget_full(now)
+                return 0.0
+            self.buckets[key] = (tokens, now)
+            return (1 - tokens) / self.per_second
+
+    def forget_full(self, now):
+        # Authorizations expire within an hour; idle full buckets carry no state worth keeping.
+        if len(self.buckets) > 1024:
+            self.buckets = {
+                key: (tokens, last)
+                for key, (tokens, last) in self.buckets.items()
+                if tokens + (now - last) * self.per_second < self.burst
+            }
+
+
+class Admission:
+    """Requests admitted at once. Used from the event loop only, so it needs no lock."""
+
+    def __init__(self, limit):
+        self.limit, self.active = limit, 0
+
+    def enter(self):
+        if self.active >= self.limit:
+            return False
+        self.active += 1
+        return True
+
+    def leave(self):
+        self.active -= 1
 
 
 @dataclass(frozen=True)
@@ -266,6 +324,11 @@ def protocol_failure(failure, era, identifier):
     return Reply(200, body, code="mcp_rpc_error")
 
 
+def too_many(code, message, wait):
+    retry = {"Retry-After": str(max(1, math.ceil(wait)))}
+    return Reply(429, rpc_error(code, message), retry, code="mcp_rate_limited")
+
+
 class StreamableHttpEndpoint:
     def __init__(self, app, limits):
         self.store = app.state.v2_store
@@ -273,18 +336,27 @@ class StreamableHttpEndpoint:
         self.transport = httpx.ASGITransport(app=app, raise_app_exceptions=False)
         # MCP work runs on its own threads, so it never waits on the routes it calls.
         self.limiter = anyio.CapacityLimiter(limits.concurrent)
+        self.admission = Admission(limits.in_flight)
+        self.buckets = TokenBuckets(limits.burst, limits.per_second)
 
     async def handle(self, session_id: str, request: Request) -> Response:
         refused = screen(request)
         if refused is not None:
             return respond(request, refused)
-        token = bearer_token(request.headers.get("authorization"))
-        raw = await read_capped(request, self.limits.max_body)
-        if raw is None:
-            return respond(request, Reply(413, code="mcp_payload_too_large"))
-        reply = await anyio.to_thread.run_sync(
-            partial(self.serve, session_id, token, raw, request.headers), limiter=self.limiter
-        )
+        if not self.admission.enter():
+            return respond(
+                request, too_many(TOO_MANY_IN_FLIGHT, "Too many requests in progress", 1)
+            )
+        try:
+            token = bearer_token(request.headers.get("authorization"))
+            raw = await read_capped(request, self.limits.max_body)
+            if raw is None:
+                return respond(request, Reply(413, code="mcp_payload_too_large"))
+            reply = await anyio.to_thread.run_sync(
+                partial(self.serve, session_id, token, raw, request.headers), limiter=self.limiter
+            )
+        finally:
+            self.admission.leave()
         return respond(request, reply)
 
     def serve(self, session_id, token, raw, headers):
@@ -308,6 +380,9 @@ class StreamableHttpEndpoint:
         # Only a delegated Agent may connect; the learner's own session token never does.
         if auth.executor.kind != "external_agent" or auth.executor.delegation_id is None:
             return unauthorized("delegation_required")
+        wait = self.buckets.take(auth.credential_id)
+        if wait:
+            return too_many(RATE_LIMITED, "Rate limit exceeded for this authorization", wait)
         try:
             message = parse(raw)
             era = classify(message, headers)
