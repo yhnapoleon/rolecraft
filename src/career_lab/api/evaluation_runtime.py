@@ -470,8 +470,12 @@ def rule_check_facts(packages, runs):
 
 
 def create_rule_checks(module):
-    """None when the package installs no evaluation, as for the feedback handler."""
-    installed = installed_evaluation(module)
+    """None when the package installs no usable evaluation: the check is an optional read and
+    never stops a runtime from starting; submitting reports the evaluation state itself."""
+    try:
+        installed = installed_evaluation(module)
+    except C.ProtocolError:
+        return None
     return None if installed is None else SubmissionRuleChecks(module, installed[1])
 
 

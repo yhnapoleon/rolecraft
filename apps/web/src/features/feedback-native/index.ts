@@ -356,7 +356,7 @@ export function mountNativeFeedback(
     const state = adapter.snapshot();
     const open = state.status === 'active' && adapter.canPreview !== false;
     preview.element.hidden = !open;
-    if (!restoring)
+    if (open && !restoring)
       adapter.rememberChoice?.({ decision: choice.value, products: [...selected.values()] });
     preview.update(
       open && isSubmitDecision(choice.value) && selected.size

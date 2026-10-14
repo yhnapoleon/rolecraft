@@ -13,7 +13,8 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, inspect, select, table
 
-from career_lab.api import vertical_runtime
+from career_lab.api import evaluation_runtime, vertical_runtime
+from career_lab.contracts.v2 import ProtocolError
 from career_lab.runtime.model_adapter import LocalModel
 from career_lab.runtime.model_slots import ModelSlots
 from career_lab.runtime.roles_v2 import LocalRoleModel
@@ -343,3 +344,33 @@ def test_no_check_where_this_service_runs_no_evaluation_for_the_package(
     registry.active_bindings = ()
     response = check(session, payload)
     assert (response.status_code, response.json()["code"]) == (409, "scenario_read_only")
+
+
+def test_an_unusable_evaluation_package_starts_without_a_check(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def unusable(module: object) -> None:
+        raise ProtocolError("evaluation_runtime_unavailable", status=503)
+
+    monkeypatch.setenv("CAREER_LAB_SCENARIO_CATALOG", str(write_catalog(tmp_path / "catalog.json")))
+    monkeypatch.setenv("CAREER_LAB_SCENARIO_ARCHIVE", str(tmp_path / "archive"))
+    monkeypatch.setattr(evaluation_runtime, "installed_evaluation", unusable)
+    app = vertical_runtime.create_runtime_app(
+        "sqlite:///" + str(tmp_path / "s.db"), feedback_handler=lambda *args: None
+    )
+    try:
+        with TestClient(app) as client:
+            created = client.post(
+                "/sessions",
+                json={"schema_version": 2, "scenario": "pm_pilot_v2", "work_language": "zh"},
+            ).json()
+            headers = {"Authorization": "Bearer " + created["token"]}
+            session = PublishedSession(app, client, created["session_id"], headers, "zh")
+            response = check(session, as_the_submit_control_sends(session, "launch"))
+            assert (response.status_code, response.json()["code"]) == (
+                503,
+                "evaluation_runtime_unavailable",
+            )
+    finally:
+        app.state.store.close()
+        app.state.v2_store.db.engine.dispose()

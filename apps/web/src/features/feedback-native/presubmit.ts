@@ -373,8 +373,11 @@ export function mountPresubmitCard(
   root.setAttribute('aria-labelledby', title.id);
   const body = doc.createElement('div');
   body.className = 'presubmit__result';
-  body.setAttribute('aria-live', 'polite');
-  root.append(title, body);
+  // Announce only the outcome line, not the whole list, on each recompute.
+  const status = doc.createElement('p');
+  status.className = 'sr-only';
+  status.setAttribute('role', 'status');
+  root.append(title, status, body);
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', cls = '') => {
     const node = doc.createElement(tag);
     node.textContent = text;
@@ -449,17 +452,12 @@ export function mountPresubmitCard(
   function show(state: PresubmitState) {
     root.setAttribute('aria-busy', String(state.kind === 'loading'));
     if (state.kind === 'loading' && state.check) return;
-    const nodes =
-      state.kind === 'ready'
-        ? draw(presubmitView(state.check, language))
-        : [
-            el(
-              'p',
-              t(state.kind === 'idle' ? 'choose' : state.kind === 'loading' ? 'loading' : 'failed'),
-              'presubmit__muted',
-            ),
-          ];
-    body.replaceChildren(...nodes);
+    const view = state.kind === 'ready' ? presubmitView(state.check, language) : null;
+    const note = t(
+      state.kind === 'idle' ? 'choose' : state.kind === 'loading' ? 'loading' : 'failed',
+    );
+    body.replaceChildren(...(view ? draw(view) : [el('p', note, 'presubmit__muted')]));
+    status.textContent = view ? (view.count?.text ?? view.empty ?? '') : note;
     const details = body.querySelector('details');
     if (details) details.open = open;
   }
