@@ -1,7 +1,12 @@
 """Continue codes at the shipped HTTP boundary: reopening a practice from another browser."""
 
 import logging
+import os
 import re
+import socket
+import subprocess
+import sys
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime, timedelta
@@ -471,3 +476,63 @@ def test_a_followup_practice_reopened_by_code_still_replays_its_original_choice(
     assert replayed.status_code == 200, replayed.text
     assert replayed.json()["result"]["session"]["session_id"] == practice["session_id"]
     assert replayed.json()["result"]["session"]["token"] == practice["token"]
+
+
+def test_forwarded_headers_do_not_change_who_is_counted(tmp_path: Path) -> None:
+    """The shipped server counts the connecting peer, whatever X-Forwarded-For says."""
+    env = {
+        **os.environ,
+        "CAREER_LAB_SCENARIO_CATALOG": str(write_catalog(tmp_path / "catalog.json")),
+        "CAREER_LAB_SCENARIO_ARCHIVE": str(tmp_path / "archive"),
+        "PYTHONDONTWRITEBYTECODE": "1",
+    }
+    with socket.socket() as probe:
+        probe.bind(("127.0.0.1", 0))
+        port = probe.getsockname()[1]
+    database = "sqlite:///" + str(tmp_path / "serve.db")
+    server = subprocess.Popen(
+        [sys.executable, "-m", "career_lab.cli", "serve", "--database-url", database]
+        + ["--port", str(port)],
+        env=env,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    try:
+        with httpx.Client(base_url=f"http://127.0.0.1:{port}", trust_env=False) as http:
+            deadline = time.monotonic() + 60
+            while True:
+                try:
+                    if http.get("/health").status_code == 200:
+                        break
+                except httpx.TransportError:
+                    pass
+                assert time.monotonic() < deadline, "the server did not start"
+                time.sleep(0.2)
+            created = http.post(
+                "/sessions",
+                json={"schema_version": 2, "scenario": "pm_pilot_v2", "work_language": "zh"},
+            ).json()
+            code = http.post(
+                f"/sessions/{created['session_id']}/continue-code",
+                headers={"Authorization": "Bearer " + created["token"]},
+                json={"expected_generation": 0},
+            ).json()["result"]["code"]
+            for attempt in range(10):
+                wrong = http.post(
+                    "/continue-codes/exchange",
+                    json={"code": "0000-0000-0000-0000-000" + str(attempt), "request_id": "a"},
+                    headers={"X-Forwarded-For": f"198.51.100.{attempt}"},
+                )
+                assert wrong.status_code == 404, wrong.text
+
+            spoofed = http.post(
+                "/continue-codes/exchange",
+                json={"code": code, "request_id": "b"},
+                headers={"X-Forwarded-For": "203.0.113.7"},
+            )
+
+            assert spoofed.status_code == 429, spoofed.text
+            assert spoofed.json()["code"] == "continue_code_rate_limited"
+    finally:
+        server.terminate()
+        server.wait(timeout=30)

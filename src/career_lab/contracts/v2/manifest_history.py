@@ -784,7 +784,8 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "(continue_code_malformed, continue_code_invalid, continue_code_scenario_unavailable) "
             "before any credential is issued. Existing tokens, queued work and agent grants are "
             "unchanged; a follow-up practice reopened by code still replays its original choice. "
-            "errors.json http_policy lists 429."
+            "errors.json http_policy lists 429. career-lab serve no longer trusts forwarded "
+            "headers, so the counted source is the connecting peer."
         },
     },
 )
