@@ -55,8 +55,8 @@ function capture(el, isPaper) {
     element: el,
   };
 }
-// The copy only looks like the surface. Without ids or v4 mount markers, nothing that
-// queries the document mistakes it for the live surface, or for a second region owner.
+// The copy keeps no ids and no v4 mount markers (data-v4-*), so it never becomes a second
+// owner of a v4 region.
 export function cleanClone(node) {
   const clone = node.cloneNode(true);
   [clone, ...clone.querySelectorAll('*')].forEach((el) => {
