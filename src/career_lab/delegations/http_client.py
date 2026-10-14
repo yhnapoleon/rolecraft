@@ -14,16 +14,28 @@ from .http_transport import safe_id as safe_id
 
 
 class HttpAgentClient:
-    def __init__(self, config_path, *, timeout=15.0):
+    def __init__(self, config_path=None, *, credentials=None, transport=None, timeout=15.0):
+        """Credentials come from a private config file (stdio) or memory (the API's own MCP
+        endpoint, which also injects an in-process transport). Exactly one source is allowed.
+        """
         if not 0 < timeout <= 30:
             raise ValueError("invalid timeout")
+        if (config_path is None) == (credentials is None):
+            raise ValueError("exactly one credential source required")
         self.config_path = config_path
+        self.credentials = credentials
+        self.transport = transport
         self.timeout = timeout
+
+    def _credentials(self):
+        if self.credentials is not None:
+            return self.credentials
+        return load_credentials(self.config_path)
 
     @property
     def session_id(self):
         """The one session this delegated client is authorized for."""
-        return load_credentials(self.config_path).session_id
+        return self._credentials().session_id
 
     def _request(
         self, credentials, method, suffix, body=None, query=None, deadline=None, *, operation=None
@@ -35,14 +47,20 @@ class HttpAgentClient:
         )
 
         value = http_transport.request_json(
-            credentials, method, suffix, body=body, query=query, timeout=timeout
+            credentials,
+            method,
+            suffix,
+            body=body,
+            query=query,
+            timeout=timeout,
+            transport=self.transport,
         )
         from .public_output import project_public_output
 
         return redact(project_public_output(value, operation=operation), credentials.token)
 
     def observation(self, session_id, query=None, *, credentials=None, deadline=None):
-        credentials = credentials or load_credentials(self.config_path)
+        credentials = credentials or self._credentials()
         if session_id != credentials.session_id:
             raise RemoteFailure("session_route_mismatch", 404)
         value = self._request(
@@ -57,13 +75,13 @@ class HttpAgentClient:
         return observation
 
     def tools(self):
-        credentials = load_credentials(self.config_path)
-        return self.observation(credentials.session_id).tools
+        credentials = self._credentials()
+        return self.observation(credentials.session_id, credentials=credentials).tools
 
     def call(self, name, arguments, *, deadline=None):
         if not isinstance(arguments, dict):
             raise RemoteFailure("tool_arguments_invalid", 422)
-        credentials = load_credentials(self.config_path)
+        credentials = self._credentials()
         if arguments.get("session_id") != credentials.session_id:
             raise RemoteFailure("session_route_mismatch", 404)
         observation = self.observation(
