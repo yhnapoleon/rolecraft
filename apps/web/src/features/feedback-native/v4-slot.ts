@@ -1,3 +1,4 @@
+import { retryableRead } from '../../api';
 import { readRegisteredAdvice } from './model-advice';
 import type { V4Query, QueryInput, V4Command, CommandInput } from '../../v4-host-operations';
 /** W05 native v4 slot: no transport, credentials, Command envelope or journal. */
@@ -64,6 +65,9 @@ export const W05_V4_OPERATIONS = Object.freeze({
   revise: 'revision_cycles',
 });
 
+/** A dropped read is asked again after these delays (ms) before it is shown as a failure. */
+const READ_AGAIN_MS = [1500, 3000, 6000];
+
 export function createV4FeedbackAdapter(host: V4HostAdapter) {
   const first = host.snapshot();
   const sid = first.session?.protocol === 2 ? first.session.sessionId : null;
@@ -74,6 +78,8 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
   let refreshAgain = false;
   let loadDone: Promise<void> = Promise.resolve();
   let finishLoad: (() => void) | undefined;
+  let readsAgain = 0;
+  let readAgainTimer: ReturnType<typeof setTimeout> | undefined;
   const pointer = host.draft<{ requestId: string; status: V4CommandResult['status'] }>(
     'feedback',
     'last-request',
@@ -111,6 +117,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
   function sync(s: Readonly<V4HostSnapshot>) {
     if (s.session?.protocol !== 2 || s.session.sessionId !== sid) {
       epoch++;
+      stopReadingAgain();
       state = {
         ...state,
         products: [],
@@ -173,6 +180,45 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
         'There are too many records; narrow the scope before retrying.',
       ),
     );
+  }
+  function stopReadingAgain() {
+    clearTimeout(readAgainTimer);
+    readAgainTimer = undefined;
+  }
+  /** A dropped read keeps what is shown and reads again shortly. A refusal or an invalid record
+   * removes the server records; it and a dropped read that keeps failing are shown as errors. */
+  function readFailed(error: unknown) {
+    const retryable = retryableRead(error);
+    if (retryable && readsAgain < READ_AGAIN_MS.length) {
+      stopReadingAgain();
+      readAgainTimer = setTimeout(() => {
+        readAgainTimer = undefined;
+        if (!closed && host.snapshot().session?.sessionId === sid) void refresh();
+      }, READ_AGAIN_MS[readsAgain++]);
+      return;
+    }
+    if (!retryable) {
+      config = undefined;
+      loadedPoint = null;
+      state = {
+        ...state,
+        products: [],
+        reports: [],
+        responses: [],
+        reviews: [],
+        submissions: [],
+        reviewHistoryAvailable: false,
+        submission: null,
+      };
+    }
+    state = {
+      ...state,
+      error: text(
+        '反馈记录暂时无法确认，请刷新或恢复原请求；草稿仍保留。',
+        'Feedback records are unconfirmed. Refresh or recover the original request; drafts are retained.',
+      ),
+    };
+    host.announce(state.error!, 'error');
   }
   async function refresh() {
     if (closed || !sid) return;
@@ -403,27 +449,11 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
           : null,
         error: undefined,
       };
+      readsAgain = 0;
+      stopReadingAgain();
       // Never derive feedback readiness from timeline.role_mode.
     } catch (error) {
-      if (started === epoch && !closed) {
-        config = undefined;
-        loadedPoint = null;
-        state = {
-          ...state,
-          products: [],
-          reports: [],
-          responses: [],
-          reviews: [],
-          submissions: [],
-          reviewHistoryAvailable: false,
-          submission: null,
-          error: text(
-            '反馈记录暂时无法确认，请刷新或恢复原请求；草稿仍保留。',
-            'Feedback records are unconfirmed. Refresh or recover the original request; drafts are retained.',
-          ),
-        };
-        host.announce(state.error!, 'error');
-      }
+      if (started === epoch && !closed) readFailed(error);
     } finally {
       loading = false;
       finishLoad?.();
@@ -606,6 +636,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
     destroy: () => {
       closed = true;
       epoch++;
+      stopReadingAgain();
       unsubscribe();
       listeners.clear();
     },
