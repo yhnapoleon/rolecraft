@@ -1,0 +1,8 @@
+{
+ "examples": {
+  "SubmissionRuleCheck": "d08a85e9ba181742670d931a8c8e56865a670a87636188acd3c6f8af886fec28",
+  "SubmissionRuleCheckRequest": "d69178602e831761f63031351b2afd5cca85fd8b630fc6bb073e5ac74612f0af",
+  "SubmissionRuleCheckResponse": "c922555ce3bf95cdb7232c3ffac059e304cd6308177deecdf99997499170992c"
+ },
+ "source": "Public models added after main d163747 by the submission-rule-check change, at the example bytes that change first exported"
+}
