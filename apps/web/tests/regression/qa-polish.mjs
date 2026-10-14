@@ -664,5 +664,67 @@ async function runLanguage(language) {
   }
 }
 
+/** Overlap and overflow at phone width, measured from the laid-out boxes. */
+const layout = `(() => {
+  const box = (node) => node && node.getBoundingClientRect();
+  const title = box(document.querySelector('.ws-toolbar .title-btn'));
+  const team = box(document.querySelector('.ws-toolbar .team-btn'));
+  const chips = [...document.querySelectorAll('.pb-state li, .console-state li')]
+    .filter((li) => li.offsetParent !== null)
+    .map((li) => ({
+      text: li.textContent,
+      clipped: li.scrollHeight > li.clientHeight + 1 || li.scrollWidth > li.clientWidth + 1,
+      outside: box(li).right > box(li.parentElement).right + 1,
+    }));
+  return {
+    titleOverlap: title && team ? Math.max(0, title.right - team.left) : 0,
+    chips,
+    pageScroll: document.documentElement.scrollWidth > window.innerWidth,
+  };
+})()`;
+
+/** F27: at 390 px the board title is not under the team avatars and long labels fit. */
+async function narrowLayout(language) {
+  const browser = await launch({ width: 390, height: 844, mobile: true, reduced: true });
+  const text = (zh, en) => (language === 'en' ? en : zh);
+  const shot = (name) => browser.shot(`${output}/screenshots/${language}-${name}.jpg`);
+  const context = { browser, language, text, shot };
+  try {
+    await openEntry(context);
+    await ensurePractice(context);
+    const board = await browser.ev(layout);
+    assert.equal(board.titleOverlap, 0, JSON.stringify(board));
+    assert.ok(board.chips.length >= 3, JSON.stringify(board));
+    assert.deepEqual(
+      board.chips.filter((chip) => chip.clipped || chip.outside),
+      [],
+      JSON.stringify(board),
+    );
+    assert.equal(board.pageScroll, false);
+    await shot('F27-board-390');
+    await browser.click('.product-bar [data-action="open-bench"]');
+    await waitFor(browser, `!!document.querySelector('.console-state li')`);
+    const bench = await browser.ev(layout);
+    assert.deepEqual(
+      bench.chips.filter((chip) => chip.clipped || chip.outside),
+      [],
+      JSON.stringify(bench),
+    );
+    assert.equal(bench.pageScroll, false);
+    await shot('F27-bench-390');
+    results.push({ language, id: 'F27', name: '390 px title and labels', status: 'passed' });
+    console.log(`PASS ${language}: F27 390 px title and labels`);
+  } catch (error) {
+    results.push({ language, id: 'F27', status: 'failed', error: String(error) });
+    console.log(`FAIL ${language}: F27 390 px title and labels\n${error}`);
+    await shot('F27-failure');
+  } finally {
+    await browser.close();
+    writeFileSync(`${output}/result.json`, `${JSON.stringify(results, null, 2)}\n`);
+  }
+}
+
 for (const language of ['zh', 'en']) await runLanguage(language);
+for (const language of ['zh', 'en'])
+  if (!only.size || only.has('F27')) await narrowLayout(language);
 process.exitCode = results.some((result) => result.status === 'failed') ? 1 : 0;
