@@ -192,6 +192,8 @@ export interface LocalSession {
   /** Browser-owned origins of tests whose answer is still being generated, by request ID. */
   queuedTestRuns?: Record<string, LocalTestRun>;
   v2Binding?: Extract<import('./v4-host').V4SessionBinding, { protocol: 2 }>;
+  /** When this browser opened the practice with its continue code; it was started elsewhere. */
+  recovered?: string;
 
   id: string;
   token: string;

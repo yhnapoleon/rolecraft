@@ -1,5 +1,5 @@
 import { createGatewayTransport } from './gateway-transport';
-import { request, sessionPath, type Transport } from './api';
+import { ApiError, request, sessionPath, type Transport } from './api';
 import { T, locale } from './app/i18n';
 import { V4LiveData } from './v4-live-data';
 import { V4Mounts } from './v4-mounts';
@@ -12,7 +12,8 @@ import {
 import type { ProductCreate } from './contracts-v2';
 import { workspaceActionMessage } from './features/workspace/native-v4/messages';
 import { canonicalPurpose } from './features/workspace/native-v4/form-values';
-import { blankPilot, WorkspaceStore } from './store';
+import { blankPilot, v2Scenario, WorkspaceStore } from './store';
+import { exchangeContinueCode } from './features/practice-recovery/client';
 import { quotedAnswer } from './app/assistant-mode';
 import type {
   Deliverable,
@@ -774,6 +775,25 @@ export class LiveWorkbench {
       },
     );
     return { result, attempt };
+  }
+  /**
+   * A practice from another browser, opened with its continue code. The server issues this browser
+   * its own access and nothing in the practice changes; the attempt is read from the server.
+   */
+  async recover(code: string, requestId: string) {
+    if (this.store.getSnapshot().storageError)
+      throw new ApiError('Browser storage is unavailable', 0, 'storage_unavailable');
+    const opened = await exchangeContinueCode(this.transport, code, requestId);
+    const scenario = Object.values(scenarios).find((s) => v2Scenario(s) === opened.scenario);
+    if (!scenario)
+      throw new ApiError('Situation unavailable here', 409, 'continue_code_scenario_unavailable');
+    const session = this.store.adopt(opened.session, scenario) && this.store.active();
+    if (!session) throw new Error(this.store.getSnapshot().error);
+    const a = this.ensureAttempt(session);
+    this.state.activeId = session.id;
+    await this.store.sync(session.id);
+    this.project(a, this.session(a) ?? session);
+    return a;
   }
   select(a: Attempt) {
     if (!this.session(a))
