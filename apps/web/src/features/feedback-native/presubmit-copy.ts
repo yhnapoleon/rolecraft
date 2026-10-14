@@ -41,7 +41,7 @@ const zh = {
   retestStale: '配置 v{c} 最近一次复测仍用旧版资料',
   retestCurrent: '配置 v{c} 复测用的是最新政策 v{p}',
   retestCurrentAny: '配置 v{c} 复测用的是最新资料',
-  noAdjustment: '政策更新后还没有调整设置、刷新索引或复测',
+  noAdjustment: '政策更新后还没有相关的设置调整、索引刷新或复测',
   noAdjustmentElsewhere:
     '政策更新后，配置 v{c} 还没有相关调整或复测（你在配置 v{o} 下复测过 {k} 次）',
   noAdjustmentElsewhereOne:
@@ -103,7 +103,7 @@ export const PRESUBMIT_COPY: CopyTable<PresubmitKey> = {
     retestStale: 'The latest retest on config v{c} still used an old version',
     retestCurrent: 'The retest on config v{c} used the current policy v{p}',
     retestCurrentAny: 'The retest on config v{c} used current versions',
-    noAdjustment: 'No settings change, index refresh or retest since the policy update',
+    noAdjustment: 'No relevant settings change, index refresh or retest since the policy update',
     noAdjustmentElsewhere:
       'No relevant adjustment or retest on config v{c} since the policy update ({k} retests on config v{o})',
     noAdjustmentElsewhereOne:

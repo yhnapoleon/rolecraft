@@ -176,11 +176,19 @@ describe('pre-submission preview view', () => {
     expect(lines(english)[0][1]).toBe(
       'No relevant adjustment or retest on config v2 since the policy update (1 retest on config v1)',
     );
-    const none = presubmitView(
-      check([item('R5.adjustment', 'NOT_MET')], { ...facts, test_runs: [] }),
-      'zh',
-    );
-    expect(lines(none)).toEqual([[false, '政策更新后还没有调整设置、刷新索引或复测', '调整设置']]);
+    // Only the rule's seven settings count as an adjustment: a change of participants alone
+    // is not one, so the line says "relevant" (review 180 P2-1).
+    const none = check([item('R5.adjustment', 'NOT_MET')], { ...facts, test_runs: [] });
+    expect(lines(presubmitView(none, 'zh'))).toEqual([
+      [false, '政策更新后还没有相关的设置调整、索引刷新或复测', '调整设置'],
+    ]);
+    expect(lines(presubmitView(none, 'en'))).toEqual([
+      [
+        false,
+        'No relevant settings change, index refresh or retest since the policy update',
+        'Adjust settings',
+      ],
+    ]);
   });
   it('replaces the bar with one line when the decision leaves nothing for rules to check', () => {
     const deferred = check([
