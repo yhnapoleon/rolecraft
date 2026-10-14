@@ -73,7 +73,9 @@ export function renderShortResult(doc: Document, input: ShortResultInput): Short
   }
   let lead: HTMLElement | undefined;
   if (input.lead !== undefined && input.lead !== '') {
-    lead = node('p', joined('short-result__lead', input.classes?.lead));
+    // Given nodes may be headings or lists, which a paragraph cannot hold.
+    const tag = typeof input.lead === 'string' ? 'p' : 'div';
+    lead = node(tag, joined('short-result__lead', input.classes?.lead));
     if (typeof input.lead === 'string') lead.textContent = input.lead;
     else lead.append(input.lead);
     if (input.derivedLead) lead.dataset.derived = '';

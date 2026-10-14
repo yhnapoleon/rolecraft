@@ -2,6 +2,7 @@
 import type { V4HostAdapter } from './v4-host';
 import type { EvidenceRefV2, ObjectRef } from './contracts-v2';
 import { T } from './app/i18n';
+import { markdownNodes } from './app/markdown';
 
 const names = () => ({
   material: T('材料', 'Material'),
@@ -78,9 +79,10 @@ export function installV4References(getHost: () => V4HostAdapter | null) {
       if ('quote' in ref && ref.quote) target.append(node('blockquote', ref.quote, 'prose'));
       const texts = textOf(record.content ?? {});
       for (const text of texts) {
-        const p = node('p', text, 'prose');
-        p.style.whiteSpace = 'pre-wrap';
-        target.append(p);
+        // Works and documents are written in Markdown: show headings and lists as such.
+        const body = node('div', '', 'prose');
+        body.append(...markdownNodes(document, text));
+        target.append(body);
       }
       if (!texts.length)
         target.append(

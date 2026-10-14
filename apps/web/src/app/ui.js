@@ -72,6 +72,7 @@ import {
 import './investigation.css';
 import { createDocumentMotion } from './document-motion.js';
 import './document-motion.css';
+import { markdownHtml } from './markdown';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
 import { installV4References } from '../v4-references';
@@ -280,39 +281,9 @@ const testQuote = (r) => {
 };
 
 function md(raw, opts = {}) {
-  let lines = esc(raw || '').split('\n');
-  if (opts.dropTitle && /^#\s/.test(lines[0] || '')) lines = lines.slice(1);
-  let out = '';
-  let list = null;
-  const inline = (s) =>
-    s.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  const close = () => {
-    if (list) {
-      out += `</${list}>`;
-      list = null;
-    }
-  };
-  for (const line of lines) {
-    const ul = line.match(/^\s*[-*]\s+(.*)$/);
-    const ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
-    if (ul || ol) {
-      const kind = ul ? 'ul' : 'ol';
-      if (list !== kind) {
-        close();
-        out += `<${kind}>`;
-        list = kind;
-      }
-      out += '<li>' + inline((ul || ol)[1]) + '</li>';
-      continue;
-    }
-    close();
-    if (/^#{1,2}\s/.test(line)) out += '<h3>' + inline(line.replace(/^#{1,2}\s/, '')) + '</h3>';
-    else if (/^#{3,6}\s/.test(line))
-      out += '<h4>' + inline(line.replace(/^#{3,6}\s/, '')) + '</h4>';
-    else if (line.trim()) out += '<p>' + inline(line) + '</p>';
-  }
-  close();
-  return out || `<p class="muted">${T('还没有正文。', 'Nothing written yet.')}</p>`;
+  return (
+    markdownHtml(raw, opts) || `<p class="muted">${T('还没有正文。', 'Nothing written yet.')}</p>`
+  );
 }
 
 // Word-level comparison for document versions. Chinese is compared by character.
