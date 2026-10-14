@@ -7,7 +7,8 @@ export type MarkdownInline =
   | { kind: 'code'; text: string }
   | { kind: 'strong'; children: MarkdownInline[] };
 export type MarkdownLine = { tag: 'h3' | 'h4' | 'p'; inline: MarkdownInline[] };
-export type MarkdownList = { tag: 'ul' | 'ol'; items: MarkdownInline[][] };
+/** `start` is the number an ordered list was written with, when it is not 1. */
+export type MarkdownList = { tag: 'ul' | 'ol'; items: MarkdownInline[][]; start?: number };
 export type MarkdownBlock = MarkdownLine | MarkdownList;
 const isList = (block: MarkdownBlock): block is MarkdownList => 'items' in block;
 export interface MarkdownOptions {
@@ -18,7 +19,7 @@ export interface MarkdownOptions {
 const STRONG = /\*\*([^*]+)\*\*/g;
 const CODE = /`([^`]+)`/g;
 const BULLET = /^\s*[-*]\s+(.*)$/;
-const NUMBERED = /^\s*\d+[.)]\s+(.*)$/;
+const NUMBERED = /^\s*(\d+)[.)]\s+(.*)$/;
 const HEADING = /^#{1,2}\s/;
 const SUBHEADING = /^#{3,6}\s/;
 
@@ -63,14 +64,17 @@ export function parseMarkdown(raw: unknown, options: MarkdownOptions = {}): Mark
   // Any other line, blank lines included, ends the list in progress.
   let list: MarkdownList | undefined;
   for (const line of lines) {
-    const item = BULLET.exec(line) ?? NUMBERED.exec(line);
-    if (item) {
-      const tag = BULLET.test(line) ? 'ul' : 'ol';
+    const bullet = BULLET.exec(line);
+    const numbered = bullet ? null : NUMBERED.exec(line);
+    if (bullet || numbered) {
+      const tag = bullet ? 'ul' : 'ol';
       if (!list || list.tag !== tag) {
-        list = { tag, items: [] };
+        // A list that starts again (after a blank line or a bullet) keeps its own number.
+        const start = numbered ? Number.parseInt(numbered[1], 10) : 1;
+        list = start === 1 ? { tag, items: [] } : { tag, items: [], start };
         blocks.push(list);
       }
-      list.items.push(inline(item[1]));
+      list.items.push(inline(bullet ? bullet[1] : (numbered?.[2] ?? '')));
       continue;
     }
     list = undefined;
@@ -116,7 +120,7 @@ export function markdownHtml(raw: unknown, options: MarkdownOptions = {}): strin
   return parseMarkdown(raw, options)
     .map((block) =>
       isList(block)
-        ? `<${block.tag}>${block.items.map((item) => `<li>${inlineHtml(item)}</li>`).join('')}</${block.tag}>`
+        ? `<${block.tag}${block.start !== undefined ? ` start="${block.start}"` : ''}>${block.items.map((item) => `<li>${inlineHtml(item)}</li>`).join('')}</${block.tag}>`
         : `<${block.tag}>${inlineHtml(block.inline)}</${block.tag}>`,
     )
     .join('');
@@ -143,6 +147,7 @@ export function markdownNodes(
 ): HTMLElement[] {
   return parseMarkdown(raw, options).map((block) => {
     const node = doc.createElement(block.tag);
+    if (isList(block) && block.start !== undefined) node.setAttribute('start', String(block.start));
     if (isList(block))
       for (const item of block.items) {
         const li = doc.createElement('li');

@@ -90,6 +90,20 @@ describe('Markdown in work previews and colleague replies', () => {
     for (const [raw, options, html] of cases) expect(markdownHtml(raw, options)).toBe(html);
   });
 
+  it('keeps the numbers an ordered list was written with', () => {
+    // The number each ordered list shows first: its start, 1 when none is given.
+    const starts = (raw: string) =>
+      render(raw)
+        .filter((node) => node.tagName === 'ol')
+        .map((ol) => ol.getAttribute('start') ?? '1');
+    // Items split by blank lines or by a nested bullet each keep their own number.
+    expect(starts('1. A\n\n2. B\n\n3. C')).toEqual(['1', '2', '3']);
+    expect(starts('1. A\n   - 细节\n2. B')).toEqual(['1', '2']);
+    expect(starts('3. 仅第三条')).toEqual(['3']);
+    expect(markdownHtml('1. A\n\n2. B')).toBe('<ol><li>A</li></ol><ol start="2"><li>B</li></ol>');
+    expect(markdownHtml('3. 仅第三条')).toBe('<ol start="3"><li>仅第三条</li></ol>');
+  });
+
   it('keeps asterisks inside code literal', () => {
     expect(markdownHtml('`**x**`')).toBe('<p><code>**x**</code></p>');
     expect(markdownHtml('**x** 和 `**y**`')).toBe(
