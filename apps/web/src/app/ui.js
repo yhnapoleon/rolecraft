@@ -786,7 +786,7 @@ const factRow = (w, cls = '') =>
     )
     .join('')}</ul>`;
 function priPick(id, p, title, change = 'priority') {
-  return `<label class="pri-pick" title="${esc(PRI(p))}">${priMark(p)}<select aria-label="${esc(T('「' + title + '」的优先级：' + PRI(p), 'Priority for “' + title + '”: ' + PRI(p)))}" data-change="${change}" data-id="${esc(id)}">${['first', 'next', 'later'].map((k) => `<option value="${k}" ${k === p ? 'selected' : ''}>${PRI(k)}</option>`).join('')}</select></label>`;
+  return `<label class="pri-pick" title="${esc(PRI(p))}">${priMark(p)}<select aria-label="${esc(T(`「${title}」的优先级：${PRI(p)}`, `Priority for “${title}”: ${PRI(p)}`))}" data-change="${change}" data-id="${esc(id)}" data-title="${esc(title)}">${['first', 'next', 'later'].map((k) => `<option value="${k}" ${k === p ? 'selected' : ''}>${PRI(k)}</option>`).join('')}</select></label>`;
 }
 
 /* ---------- 1. jobs ---------- */
@@ -975,7 +975,7 @@ function intakeResult(r) {
   if (r.status === 'empty')
     return `<p class="intake-result muted">${T('先写一句你想练的业务。', 'Write a sentence about the business first.')}</p>`;
   if (r.status === 'none')
-    return `<div class="intake-result" tabindex="-1"><p class="intake-head">${T('这个情境现在还练不了', 'This one cannot be practised yet')}</p><p class="muted">${T('目前审核过的只有“内部知识助手上线决定”。', 'The only reviewed situation is a launch decision for an internal knowledge assistant.')}</p></div>`;
+    return `<div class="intake-result" tabindex="-1"><p class="intake-head">${T('这个情境现在还练不了', 'This one cannot be practised yet')}</p><p class="muted">${T('目前审核过的只有“内部知识助手上线决定”。', 'The only reviewed situation is a launch decision for an internal knowledge assistant.')}</p><div class="row-actions">${btn(T('改练内部知识助手上线决定', 'Practise the knowledge assistant launch instead'), 'take-case', '', 'data-case="pilot"')}</div></div>`;
   const cols = `<div class="intake-cols"><ul class="ticks">${intakeLines(r.fits)
     .map((x) => `<li>${icon('check', 'i-sm')}${esc(x)}</li>`)
     .join('')}</ul>${
@@ -5239,12 +5239,13 @@ document.addEventListener('change', (e) => {
     }
     if (el.dataset.change === 'triage') {
       const pick = el.closest('.pri-pick');
-      pick.outerHTML = priPick(
-        el.dataset.id,
-        el.value,
-        el.closest('.seed')?.textContent.trim() || '',
-        'triage',
-      );
+      const focused = document.activeElement === el;
+      // The task's own name; the seed's text would also read out every option.
+      pick.outerHTML = priPick(el.dataset.id, el.value, el.dataset.title || '', 'triage');
+      if (focused)
+        document
+          .querySelector(`select[data-change="triage"][data-id="${CSS.escape(el.dataset.id)}"]`)
+          ?.focus();
       return;
     }
     if (el.dataset.change === 'priority') {
