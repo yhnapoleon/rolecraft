@@ -140,6 +140,19 @@ describe('background polling of a v2 practice', () => {
     expect(Object.keys(practice.store.active()?.queuedTestRuns ?? {})).toEqual(['r-1']);
     expect(practice.store.getSnapshot().error).toBe('');
   });
+  it('an idle poll that reads unchanged data does not notify the workbench', async () => {
+    const practice = polledPractice();
+    await practice.store.poll();
+    const changed = vi.fn();
+    practice.store.subscribe(changed);
+    await practice.store.poll();
+    await practice.store.poll();
+    expect(changed).not.toHaveBeenCalled();
+    practice.advance();
+    await practice.store.poll();
+    expect(changed).toHaveBeenCalled();
+    expect(practice.store.active()?.world.version).toBe(10);
+  });
 });
 
 describe('v2 test results shown in the workbench', () => {

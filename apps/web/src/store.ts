@@ -65,8 +65,10 @@ export class WorkspaceStore {
   installV2(bridge: NonNullable<WorkspaceStore['v2']>) {
     this.v2 = bridge;
   }
+  /** Idle polls report the same values again; only a change notifies the workbench. */
   report(patch: Partial<Pick<Snapshot, 'busy' | 'error' | 'notice' | 'connected'>>) {
-    this.emit(patch);
+    const keys = Object.keys(patch) as (keyof typeof patch)[];
+    if (keys.some((key) => !Object.is(patch[key], this.state[key]))) this.emit(patch);
   }
   constructor(
     private storage: Pick<Storage, 'getItem' | 'setItem'>,
@@ -134,6 +136,11 @@ export class WorkspaceStore {
     return this.state.workspace.sessions.find((s) => s.id === this.state.workspace.active);
   }
   update(id: string, patch: Partial<LocalSession>) {
+    const saved = this.state.workspace.sessions.find((s) => s.id === id);
+    // A refresh that reads the same records is not a change; nothing to save or redraw.
+    // An empty patch is an explicit save request and still writes.
+    const unchanged = Object.keys(patch).length > 0 && saved && sameValues(saved, patch);
+    if (unchanged && !this.state.storageError) return true;
     this.state = {
       ...this.state,
       workspace: {
@@ -686,6 +693,12 @@ export class WorkspaceStore {
       this.polling = false;
     }
   }
+}
+/** Sessions are saved as JSON, so equal JSON is the same saved session. */
+function sameValues(session: LocalSession, patch: Partial<LocalSession>) {
+  return (Object.keys(patch) as (keyof LocalSession)[]).every(
+    (key) => JSON.stringify(session[key]) === JSON.stringify(patch[key]),
+  );
 }
 function validTestResult(value: any, operation: Operation): value is TestRun {
   return (
