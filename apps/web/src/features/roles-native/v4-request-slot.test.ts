@@ -466,3 +466,28 @@ it('keeps the recorded reason for a decision saved before the card existed', asy
     '请求超过当前可审批上限，或试图降低既有资源；请对照审批规则调整条款。',
   );
 });
+
+it('drops the ceiling re-application from an old rejection once resources reach it', async () => {
+  const f = await fixture({
+    kind: 'request_resources',
+    resources: { ...resources, dev_days: 6 },
+    titles: { 'approvals:1': '经理发布：资源审批规则' },
+    objects: decided({
+      terms: [
+        {
+          resource: 'dev_days',
+          current: 3,
+          requested: 7,
+          limit: 6,
+          needed: 6,
+          issues: ['over_limit'],
+        },
+      ],
+      clauses: [],
+    }),
+  });
+  f.start();
+  await settle();
+  expect(texts(f)).toContain('开发人日：申请 7，超出上限 6；方案需要 6（缺口 3）');
+  expect(texts(f)).not.toContain('按上限改申请');
+});

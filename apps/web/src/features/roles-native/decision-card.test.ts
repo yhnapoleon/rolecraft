@@ -197,3 +197,39 @@ it('names a missing hand-off and the safeguards a daily index plan lacks', () =>
     { ok: false, text: '答不了时要转人工确认' },
   ]);
 });
+
+it('offers no ceiling re-application once the allocation in effect already reaches it', () => {
+  const overCeiling = decision('rejected', {
+    terms: [
+      {
+        resource: 'dev_days',
+        current: 3,
+        requested: 7,
+        limit: 6,
+        needed: 6,
+        issues: ['over_limit'],
+      },
+    ],
+    clauses: [ceiling],
+  });
+  // Six developer-days were approved after this rejection.
+  expect(decisionCardModel(overCeiling, request(), titles, { dev_days: 6 }).ceiling).toBeNull();
+  expect(decisionCardModel(overCeiling, request(), titles, { dev_days: 3 }).ceiling).toEqual({
+    dev_days: 6,
+  });
+  // The allocation already stood at the ceiling when the request was decided.
+  const atCeiling = decision('rejected', {
+    terms: [
+      {
+        resource: 'dev_days',
+        current: 6,
+        requested: 7,
+        limit: 6,
+        needed: 7,
+        issues: ['over_limit'],
+      },
+    ],
+    clauses: [ceiling],
+  });
+  expect(decisionCardModel(atCeiling, request(), titles).ceiling).toBeNull();
+});

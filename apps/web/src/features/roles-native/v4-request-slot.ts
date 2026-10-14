@@ -407,6 +407,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
                 decision.content as BusinessDecision,
                 req as BusinessRequest,
                 titles,
+                totals,
               ),
               { open: (r) => void host.openReference(r).catch(fail), refill },
             )

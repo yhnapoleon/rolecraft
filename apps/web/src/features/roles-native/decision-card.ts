@@ -5,6 +5,7 @@
  */
 import { T } from '../../app/i18n';
 import { strategyLabel, workItemLabel } from '../../app/pilot-config';
+import type { Totals } from './request-terms';
 import type {
   BusinessDecision,
   BusinessRequest,
@@ -110,26 +111,33 @@ function termLine(t: _ApprovalTermCheck): CardLine {
   };
 }
 
-/** Over-ceiling terms capped; terms with no shortfall, no increase or a reduction dropped. */
-function ceilingTerms(decision: BusinessDecision): Record<string, number> | null {
-  const terms = decision.assessment?.terms ?? [];
-  const issues = (t: _ApprovalTermCheck) => t.issues ?? [];
-  if (decision.status !== 'rejected' || !terms.some((t) => issues(t).includes('over_limit')))
-    return null;
+/**
+ * Over-ceiling terms capped; terms with no shortfall, no increase or a reduction dropped;
+ * terms the allocation in effect already reaches dropped too. Only offered while a capped
+ * term is still left to ask for.
+ */
+function ceilingTerms(decision: BusinessDecision, current: Totals): Record<string, number> | null {
+  if (decision.status !== 'rejected') return null;
   const result: Record<string, number> = {};
-  for (const t of terms) {
-    const found = issues(t);
+  let capped = false;
+  for (const t of decision.assessment?.terms ?? []) {
+    const found = t.issues ?? [];
     if (found.some((i) => i === 'no_shortfall' || i === 'no_increase' || i === 'below_current'))
       continue;
-    result[t.resource] = found.includes('over_limit') ? t.limit : t.requested;
+    const over = found.includes('over_limit');
+    const value = over ? t.limit : t.requested;
+    if (value <= (current[t.resource] ?? t.current)) continue;
+    result[t.resource] = value;
+    capped ||= over;
   }
-  return Object.keys(result).length ? result : null;
+  return capped ? result : null;
 }
 
 export function decisionCardModel(
   decision: BusinessDecision,
   request: BusinessRequest,
   titles: Readonly<Record<string, string>>,
+  current: Totals = {},
 ): DecisionCardModel {
   const assessment = decision.assessment;
   const lines = (assessment?.terms ?? []).map(termLine);
@@ -164,7 +172,7 @@ export function decisionCardModel(
         ]
       : [],
   );
-  return { clauses, lines, ceiling: ceilingTerms(decision) };
+  return { clauses, lines, ceiling: ceilingTerms(decision, current) };
 }
 
 export interface CardActions {
