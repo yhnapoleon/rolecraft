@@ -1,31 +1,16 @@
-import { readFileSync } from 'node:fs';
 import { setImmediate as settle } from 'node:timers/promises';
-import { runInThisContext } from 'node:vm';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { LocalSession } from './types';
 import type { V4DataHost } from './v4-data-host';
 import { regionHost } from './v4-region-test-support';
 import { LiveWorkbench } from './workbench-live';
-
-const mod = { exports: {} as ConstructorParameters<typeof LiveWorkbench>[0] };
-runInThisContext(
-  '(function(module){' +
-    readFileSync(new URL('../public/workbench-engine.js', import.meta.url), 'utf8') +
-    '\n})',
-)(mod);
-const engine = mod.exports;
+import { engine, memory } from './workbench-live-test-support';
 
 const failure = 'Duplicate v4 region: workspace';
 
 /** A page whose workspace region can be owned twice; every render mounts the regions again. */
 function page() {
-  const values = new Map<string, string>();
-  const live = new LiveWorkbench(engine, {
-    getItem: (key) => values.get(key) ?? null,
-    setItem: (key, value) => {
-      values.set(key, value);
-    },
-  });
+  const live = new LiveWorkbench(engine, memory());
   const session = {
     id: 's',
     protocol: 2,

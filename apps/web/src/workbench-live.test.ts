@@ -1,28 +1,11 @@
-import { readFileSync } from 'node:fs';
-import { runInThisContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError, type Transport } from './api';
 import { LiveWorkbench, fromPilot, toPilot } from './workbench-live';
+import { engine, memory } from './workbench-live-test-support';
 import { STORAGE_KEY, WorkspaceStore } from './store';
 import type { World } from './types';
 import { ASSISTANT_COPY } from './app/assistant-mode';
 
-const mod = { exports: {} as any };
-runInThisContext(
-  '(function(module){' +
-    readFileSync(new URL('../public/workbench-engine.js', import.meta.url), 'utf8') +
-    '\n})',
-)(mod);
-export const engine = mod.exports;
-export function memory() {
-  const values = new Map<string, string>();
-  return {
-    getItem: (k: string) => values.get(k) ?? null,
-    setItem: (k: string, v: string) => {
-      values.set(k, v);
-    },
-  };
-}
 const config = {
   participants: 20,
   domains: ['faq', 'policy'],
