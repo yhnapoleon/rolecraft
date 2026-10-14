@@ -77,7 +77,7 @@ for key, value in phase.environment(out / "journal").items():
 - **换码只作废码**：已经打开过的浏览器和它们排队中的任务照常（任务按排队时的凭据执行，收回会让它们失败且无法重试）。"让其他设备退出"本波未做，对外部署前需补。
 - **存储**：`v4_continue_codes` 与 `v4_continue_code_attempts` 两张独立表，不改 v2 冻结表。路由、DTO 与错误码见契约 `module-interfaces.md`「继续码找回练习」。
 - **找不回的**：只存在原浏览器里的未保存草稿、待确认请求记录、测试的事项归属与预期和诊断笔记、Agent 授权显示名、补练来源说明。界面在找回后用一句话提示。
-- **测试**：`tests/regression/test_continue_codes.py`、`tests/unit/test_continue_codes.py`、`apps/web/src/features/practice-recovery/*.test.ts`。中英、默认与减少动效的浏览器步骤已单独跑过，尚未并入门禁 suite。
+- **测试**：`tests/regression/test_continue_codes.py`、`tests/unit/test_continue_codes.py`、`apps/web/src/features/practice-recovery/*.test.ts`；浏览器门禁在 published-flows 之后多跑一轮 `apps/web/tests/regression/practice-recovery.mjs`（中文减少动效、英文默认动效，每轮用 4 次找回）。
 
 ## 检查与门禁
 

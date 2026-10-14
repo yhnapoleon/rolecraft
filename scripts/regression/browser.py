@@ -205,12 +205,17 @@ def main() -> None:
         (output / "mcp.json").write_text(json.dumps(results, indent=2) + "\n")
         if results:
             print("MCP: bilingual read/return/replay/revoke passed", flush=True)
-        subprocess.run(
-            ["node", "tests/regression/" + args.suite + ".mjs"],
-            cwd=ROOT / "apps/web",
-            env=env,
-            check=True,
-        )
+        rounds = [args.suite]
+        if args.suite == "published-flows":
+            # Continue codes need browser profiles of their own, so they run as one more round.
+            rounds.append("practice-recovery")
+        for name in rounds:
+            subprocess.run(
+                ["node", "tests/regression/" + name + ".mjs"],
+                cwd=ROOT / "apps/web",
+                env=env,
+                check=True,
+            )
 
 
 if __name__ == "__main__":
