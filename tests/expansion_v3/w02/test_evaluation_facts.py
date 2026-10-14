@@ -384,6 +384,77 @@ def test_frozen_w05_change_rules_consume_actual_adapter_facts(history, tmp_path)
     )
 
 
+def unsaved_submission(h, products, decision):
+    """The submission these inputs would make now; it is never saved."""
+    view = h.scenario_view()
+    return SubmissionV2(
+        id="unsaved",
+        session_id=h.sid,
+        cycle=view.current_cycle.ref,
+        decision=decision,
+        products=tuple(products),
+        config=view.private_scenario_state.current_config,
+        as_of=h.capture(),
+        scenario=view.bindings.scenario,
+        evaluation=view.bindings.evaluation,
+        executor=h.auth.executor,
+    )
+
+
+def retest_then_reconfigure(h):
+    """164 F17: retested after the policy update on v1, then changed the settings to v2."""
+    h.run(question(h))
+    h.apply(freshness_guard="warn")
+    h.run(question(h))
+    h.apply(fallback="none")
+
+
+def runs(h):
+    return [(r.config_version, r.runs, r.retests) for r in h.adapter.test_runs(h.auth, h.capture())]
+
+
+def test_test_runs_are_counted_per_configuration_with_retests_after_the_policy_update(history):
+    h = history
+    retest_then_reconfigure(h)
+    # v0 ran before the update; v1 ran after it; v2 has not been tested.
+    assert runs(h) == [(0, 1, 0), (1, 1, 1)]
+    # A technical failure is not an actual run.
+    h.apply(fallback="none", domains=["stable_faq"])
+    failed = h.run(question(h))
+    assert failed["status"] == "failed"
+    assert runs(h) == [(0, 1, 0), (1, 1, 1)]
+
+
+def test_test_runs_stay_unknown_without_a_complete_ledger(history):
+    h = history
+    retest_then_reconfigure(h)
+    original = h.adapter.window_reader
+    h.adapter.window_reader = lambda auth, at: replace(original(auth, at), tests_complete=False)
+    assert runs(h) == []
+
+
+@pytest.mark.parametrize("decision", ["launch_narrow", "defer_with_conditions"])
+def test_an_unsaved_submission_gets_the_rule_facts_it_will_have_once_saved(history, decision):
+    h = history
+    retest_then_reconfigure(h)
+    work = h.product("Open to the limited group; keep a human fallback.")
+    draft = unsaved_submission(h, (work,), decision)
+    unsaved = h.adapter.draft_submission_rule_provider(h.auth, draft)
+    saved = h.submit((work,), decision)
+    assert saved.as_of == draft.as_of
+    assert unsaved == h.adapter.submission_rule_provider(h.auth, saved)
+
+
+def test_an_unsaved_submission_names_only_saved_versions(history):
+    h = history
+    work = h.product("A freely written plan.")
+    missing = work.model_copy(update={"version": work.version + 1})
+    with pytest.raises(ProtocolError):
+        h.adapter.draft_submission_rule_provider(
+            h.auth, unsaved_submission(h, (missing,), "launch")
+        )
+
+
 def test_current_authorization_and_exact_submission_identity_are_required(history):
     h = history
     work = h.product("A freely written plan.")
