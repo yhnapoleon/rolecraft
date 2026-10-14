@@ -3902,6 +3902,10 @@ async function act(el) {
     }
     case 'test-cite': {
       commit();
+      if (L.nativeWorkspace(a)) {
+        void citeNativeWork(a, { session_id: a.id, kind: 'test', object_id: id, version: 1 });
+        break;
+      }
       const x = artifact(),
         run = a.tests.find((r) => r.id === id);
       if (
