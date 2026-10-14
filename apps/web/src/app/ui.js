@@ -2036,7 +2036,7 @@ function fbItem(a, i, full = false) {
   </div></li>`;
 }
 const issuedViews = new WeakMap();
-const connectionKeeper = createConnectionKeeper();
+const connectionKeeper = createConnectionKeeper(() => refreshAgentIssued());
 function refreshAgentIssued() {
   const a = current();
   // The token is offered only while its practice is on screen; leaving or switching withdraws it.

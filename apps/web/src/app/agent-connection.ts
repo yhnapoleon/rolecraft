@@ -251,14 +251,33 @@ export function renderAgentConnection(
     );
 }
 
+type OfferingHost = Pick<ConnectionHost, 'issuedDelegation' | 'dismissConnection'> & {
+  subscribe(listener: () => void): () => void;
+};
+
 /** The card offers the token only while its practice is on screen. */
-export function createConnectionKeeper() {
-  let offering: Pick<ConnectionHost, 'issuedDelegation' | 'dismissConnection'> | null = null;
+export function createConnectionKeeper(onWithdrawn: () => void) {
+  let offering: OfferingHost | null = null;
+  let watched: OfferingHost | null = null;
+  let unwatch = () => {};
   return {
     /** After each render: the host of the practice on screen, or null outside any practice. */
-    track(host: Pick<ConnectionHost, 'issuedDelegation' | 'dismissConnection'> | null) {
+    track(host: OfferingHost | null) {
       const previous = offering;
       offering = host?.issuedDelegation() ? host : null;
+      if (host !== watched) {
+        unwatch();
+        watched = host;
+        // The host can stop offering without any page render (revoked elsewhere and read from
+        // the grant list, or expired), and idle polls no longer notify the page: re-render once.
+        unwatch = host
+          ? host.subscribe(() => {
+              if (offering !== host || host.issuedDelegation()) return;
+              offering = null;
+              onWithdrawn();
+            })
+          : () => {};
+      }
       // Leaving the practice or switching to another one withdraws the earlier offer for good.
       // Recorded first: the dismissal re-renders, which may call track() again.
       if (previous && previous !== host) previous.dismissConnection();

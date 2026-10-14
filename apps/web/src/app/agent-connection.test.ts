@@ -226,9 +226,10 @@ describe('agent connection offer while the practice is on screen', () => {
           dismissed.push(name);
           open = false;
         },
+        subscribe: () => () => {},
       };
     };
-    const keeper = createConnectionKeeper();
+    const keeper = createConnectionKeeper(() => {});
     const first = offering('first');
     keeper.track(first);
     keeper.track(first);
@@ -242,5 +243,38 @@ describe('agent connection offer while the practice is on screen', () => {
     expect(dismissed).toEqual(['first', 'second']);
     keeper.track(third);
     expect(dismissed).toEqual(['first', 'second']);
+  });
+  it('re-renders once when the practice on screen stops offering its token by itself', () => {
+    let listeners: (() => void)[] = [];
+    const notify = () => {
+      for (const listener of listeners) listener();
+    };
+    let open = true;
+    const host = {
+      issuedDelegation: () => (open ? { label: 'h', expiresAt: '2099-01-01T00:00:00Z' } : null),
+      dismissConnection: () => {
+        open = false;
+      },
+      subscribe: (listener: () => void) => {
+        listeners = [...listeners, listener];
+        return () => {
+          listeners = listeners.filter((item) => item !== listener);
+        };
+      },
+    };
+    const renders: string[] = [];
+    const keeper = createConnectionKeeper(() => renders.push('render'));
+    keeper.track(host);
+    notify();
+    expect(renders).toEqual([]);
+    // Revoked in another tab and read from the grant list, or expired: no page render follows.
+    open = false;
+    notify();
+    expect(renders).toEqual(['render']);
+    notify();
+    expect(renders).toEqual(['render']);
+    // Leaving the practice stops listening to its host.
+    keeper.track(null);
+    expect(listeners).toEqual([]);
   });
 });
