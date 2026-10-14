@@ -272,7 +272,13 @@ const recovery = createPracticeRecovery({
   onSheetClose: (done) => sheet.addEventListener('close', () => done(sheet), { once: true }),
   notify,
   render,
-  enter: (a) => enterWork(() => freshAttemptUi(a)),
+  // A practice this browser already had keeps its reading state and selection; it is switched to.
+  enter: (a, held) =>
+    enterWork(() => {
+      if (!held) return freshAttemptUi(a);
+      resetAttemptUi();
+      persist();
+    }),
   showEntry: (focus) => {
     go('pm');
     document.getElementById(focus)?.focus();

@@ -21,7 +21,7 @@ function host(overrides: Partial<Fakes> = {}) {
   const shown: string[] = [];
   let id = 0;
   const live: Fakes = {
-    recover: vi.fn<Live['recover']>(async () => attempt),
+    recover: vi.fn<Live['recover']>(async () => ({ attempt, held: false })),
     continueCode: vi.fn<Live['continueCode']>(async () => ({ exists: false })),
     replaceContinueCode: vi.fn<Live['replaceContinueCode']>(
       async (_attempt, expected): Promise<ContinueCodeIssued> => ({
@@ -47,8 +47,8 @@ function host(overrides: Partial<Fakes> = {}) {
       notes.push(message);
     },
     render: () => {},
-    enter: async (opened) => {
-      entered.push(opened);
+    enter: async (opened, held) => {
+      entered.push([opened, held]);
     },
     showEntry: (focus) => {
       shown.push(focus);
@@ -69,10 +69,22 @@ describe('opening a practice from the job page with its code', () => {
     await recovery.submit('7k3q m9xr pd2w thc6 njaf');
 
     expect(h.live.recover).toHaveBeenCalledWith(CODE, 'request-1');
-    expect(h.entered).toEqual([attempt]);
+    expect(h.entered).toEqual([[attempt, false]]);
     expect(h.notes).toEqual(['已找回。只在原浏览器里的草稿、测试归属和笔记不会跟过来。']);
     expect(recovery.entry()).not.toContain('value="7k3q');
     expect(recovery.entry()).not.toMatch(/<details[^>]* open/);
+  });
+
+  it('only switches to a practice this browser already holds, and says so', async () => {
+    const h = host({
+      recover: vi.fn<Live['recover']>(async () => ({ attempt, held: true })),
+    });
+    const recovery = createPracticeRecovery(h.value);
+
+    await recovery.submit(SHOWN);
+
+    expect(h.entered).toEqual([[attempt, true]]);
+    expect(h.notes).toEqual(['这是你在本机的练习，已切换过去。']);
   });
 
   it('refuses text that cannot be a code without asking the server', async () => {
@@ -89,7 +101,10 @@ describe('opening a practice from the job page with its code', () => {
   it('retries an unconfirmed result as the same request, and a new code as a new one', async () => {
     const lost = new ApiError('timeout', 0);
     const h = host({
-      recover: vi.fn<Live['recover']>().mockRejectedValueOnce(lost).mockResolvedValue(attempt),
+      recover: vi
+        .fn<Live['recover']>()
+        .mockRejectedValueOnce(lost)
+        .mockResolvedValue({ attempt, held: false }),
     });
     const recovery = createPracticeRecovery(h.value);
 

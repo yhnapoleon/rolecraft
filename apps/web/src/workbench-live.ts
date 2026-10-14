@@ -783,6 +783,7 @@ export class LiveWorkbench {
   /**
    * A practice from another browser, opened with its continue code. The server issues this browser
    * its own access and nothing in the practice changes; the attempt is read from the server.
+   * `held` says this browser already had the practice, which is then only switched to.
    */
   async recover(code: string, requestId: string) {
     if (this.store.getSnapshot().storageError)
@@ -791,6 +792,9 @@ export class LiveWorkbench {
     const scenario = Object.values(scenarios).find((s) => v2Scenario(s) === opened.scenario);
     if (!scenario)
       throw new ApiError('Situation unavailable here', 409, 'continue_code_scenario_unavailable');
+    const held = this.store
+      .getSnapshot()
+      .workspace.sessions.some((s) => s.id === opened.session.session_id);
     const session = this.store.adopt(opened.session, scenario) && this.store.active();
     if (!session) throw new ApiError(this.store.getSnapshot().error, 0, 'storage_unavailable');
     const a = this.ensureAttempt(session);
@@ -802,7 +806,7 @@ export class LiveWorkbench {
       throw new ApiError('Opened, not read yet', 0, 'recovered_unreadable');
     }
     this.project(a, this.session(a) ?? session);
-    return a;
+    return { attempt: a, held };
   }
   /** Whether this practice has a continue code; the code itself is never readable again. */
   continueCode(a: Attempt) {

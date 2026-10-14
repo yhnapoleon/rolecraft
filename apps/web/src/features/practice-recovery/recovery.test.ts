@@ -164,7 +164,7 @@ describe('a practice opened on this browser with its continue code', () => {
     vi.stubGlobal('fetch', server());
     const { live, storage, calls } = workbench();
 
-    const attempt = await live.recover(CODE, 'r1');
+    const { attempt, held } = await live.recover(CODE, 'r1');
 
     expect(calls).toEqual([
       ['/continue-codes/exchange', { code: CODE, request_id: 'r1' }, undefined],
@@ -181,6 +181,7 @@ describe('a practice opened on this browser with its continue code', () => {
       v2NativeWorkspace: true,
     });
     expect(snapshot.workspace.sessions[0].recovered).toEqual(expect.any(String));
+    expect(held).toBe(false);
     expect(attempt.id).toBe('s1');
     expect(attempt.scenarioId).toBe('urgent');
     expect(attempt.tasks.map((t: { title: string }) => t.title)).toEqual(['Scope']);
@@ -198,13 +199,17 @@ describe('a practice opened on this browser with its continue code', () => {
   it('gives a copy this browser already holds the new access, without a second entry', async () => {
     vi.stubGlobal('fetch', server());
     const { live, answer } = workbench();
-    await live.recover(CODE, 'r1');
+    const first = await live.recover(CODE, 'r1');
+    first.attempt.selectedTaskId = 'task-1';
     answer(opened('another-token'));
 
-    await live.recover(CODE, 'r2');
+    const again = await live.recover(CODE, 'r2');
 
     const sessions = live.store.getSnapshot().workspace.sessions;
     expect(sessions.map((s) => [s.id, s.token])).toEqual([['s1', 'another-token']]);
+    expect(again.held).toBe(true);
+    expect(again.attempt).toBe(first.attempt);
+    expect(again.attempt.selectedTaskId).toBe('task-1');
   });
 
   it('adds nothing for a situation this browser cannot show', async () => {

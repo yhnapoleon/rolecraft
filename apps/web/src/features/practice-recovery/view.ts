@@ -16,7 +16,7 @@ type Dialog = { querySelector(selector: string): { remove(): void } | null };
 
 export interface RecoveryHost {
   live: {
-    recover(code: string, requestId: string): Promise<RecoveryAttempt>;
+    recover(code: string, requestId: string): Promise<{ attempt: RecoveryAttempt; held: boolean }>;
     continueCode(attempt: RecoveryAttempt): Promise<ContinueCodeStatus>;
     replaceContinueCode(attempt: RecoveryAttempt, expected: number): Promise<ContinueCodeIssued>;
   };
@@ -27,8 +27,8 @@ export interface RecoveryHost {
   onSheetClose(done: (dialog: Dialog) => void): void;
   notify(message: string): void;
   render(): void;
-  /** Takes the person to the opened practice's board. */
-  enter(attempt: RecoveryAttempt): Promise<void>;
+  /** Takes the person to the practice's board; one this browser already `held` keeps its state. */
+  enter(attempt: RecoveryAttempt, held: boolean): Promise<void>;
   /** Shows the job page with the field of this id focused. */
   showEntry(focus: string): void;
   requestId?: () => string;
@@ -206,14 +206,19 @@ export function createPracticeRecovery(host: RecoveryHost) {
       Object.assign(entry, { busy: true, error: '' });
       host.render();
       try {
-        const attempt = await host.live.recover(code, entry.requestId);
+        const { attempt, held } = await host.live.recover(code, entry.requestId);
         Object.assign(entry, { open: false, text: '', code: '', requestId: '', busy: false });
-        await host.enter(attempt);
+        await host.enter(attempt, held);
         host.notify(
-          T(
-            '已找回。只在原浏览器里的草稿、测试归属和笔记不会跟过来。',
-            'Restored. Drafts, test filing and notes kept only in the other browser stay there.',
-          ),
+          held
+            ? T(
+                '这是你在本机的练习，已切换过去。',
+                'This practice is already on this browser; switched to it.',
+              )
+            : T(
+                '已找回。只在原浏览器里的草稿、测试归属和笔记不会跟过来。',
+                'Restored. Drafts, test filing and notes kept only in the other browser stay there.',
+              ),
         );
       } catch (error) {
         Object.assign(entry, { busy: false, open: true, error: entryFailure(error) });
