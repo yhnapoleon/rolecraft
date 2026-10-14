@@ -1,6 +1,6 @@
 /** Pilot settings in the learner's words. Labels come from the shared vocabulary. */
 import type { EffectiveConfig } from '../contracts-v2';
-import { T } from './i18n';
+import { locale, T } from './i18n';
 import { UPDATE, WORK_COST, WORK_ITEM } from './vocab.js';
 
 // Server identifiers to the vocabulary's settings keys (the inverse of the API mapping).
@@ -121,10 +121,14 @@ export function configUse(
         ]
       : []),
   ];
+  // English clauses after the first continue the sentence in lower case.
+  const clauses = reasons.map((reason, i) =>
+    i && locale() === 'en' ? reason.charAt(0).toLowerCase() + reason.slice(1) : reason,
+  );
   return {
     text: T(
-      `测试实际用：${used.join('、')} · ${reasons.join('；')}`,
-      `Tests actually use: ${used.join(', ')} · ${reasons.join('; ')}`,
+      `测试实际用：${used.join('、')} · ${clauses.join('；')}`,
+      `Tests actually use: ${used.join(', ')} · ${clauses.join('; ')}`,
     ),
     unfunded: waiting.length > 0,
   };

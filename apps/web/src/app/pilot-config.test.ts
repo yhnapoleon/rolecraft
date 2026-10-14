@@ -163,6 +163,26 @@ describe('saved settings beside what tests actually use', () => {
     });
   });
 
+  it('joins several English reasons as one sentence', () => {
+    setPreference('en');
+    expect(
+      configUse(
+        used(
+          { work_items: ['human_fallback', 'realtime_sync'] },
+          { update_strategy: 'daily', scope_filter: false, work_items: ['human_fallback'] },
+          {
+            update_strategy: 'realtime_sync_not_provisioned',
+            scope_filter: 'scope_filter_not_provisioned',
+            work_items: 'requested_work_exceeds_approved_budget',
+          },
+        ),
+        3,
+      )?.text,
+    ).toBe(
+      "Tests actually use: Daily index, no scope filter · Real-time sync isn't funded yet (3 developer-days approved); scope filter isn't in the plan",
+    );
+  });
+
   it('ignores feasibility notes and name normalisation that do not change answers', () => {
     expect(
       configUse(
