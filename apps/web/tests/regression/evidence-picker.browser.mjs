@@ -26,9 +26,9 @@ const checked = (browser, section) =>
 const mainQuestion = `[...document.querySelectorAll('[data-outcome-question]')]
   .some((node) => !node.closest('details'))`;
 
-async function run(language, reduced, width) {
+async function run(language, reduced, width, flow) {
   const browser = await launch({ width, height: 1000, reduced, mobile: width < 600 });
-  const tag = `${language}-${reduced ? 'reduced' : 'motion'}${width < 600 ? '-390' : ''}`;
+  const tag = `${language}-${reduced ? 'reduced' : 'motion'}${width < 600 ? '-390' : ''}${flow === 'main' ? '' : `-${flow}`}`;
   const text = (zh, en) => (language === 'en' ? en : zh);
   const shot = async (name) => {
     await delay(reduced ? 300 : 900);
@@ -62,6 +62,67 @@ async function run(language, reduced, width) {
         `location.hash === '#/work' && !!document.querySelector('.card-open')`,
       );
     });
+    if (flow === 'investigation') {
+      await step('the investigation worksheet cites its run through the picker', async () => {
+        await browser.click('.product-bar [data-action="open-bench"]');
+        await browser.type(
+          '#lab-q',
+          text('住宿报销上限是多少？', 'What is the hotel reimbursement limit?'),
+        );
+        await browser.submit('[data-form="run-test"]');
+        await waitFor(browser, `!!document.querySelector('.run [data-action="investigate-run"]')`);
+        await browser.click('.run [data-action="investigate-run"]');
+        // The run was made on the board, so the person places the investigation under a task.
+        await waitFor(
+          browser,
+          `!!document.querySelector('[data-action="native-investigation-task"]')`,
+        );
+        await browser.click('[data-action="native-investigation-task"]');
+        const cite = `document.querySelector('[data-action="investigation-cite"]')`;
+        await waitFor(browser, `!!${cite} && !${cite}.disabled`, 20000);
+        await browser.ev(`${cite}.scrollIntoView({ block: 'center' })`);
+        await shot('investigation');
+        // Earlier notices may still be in the toast; only what citing says counts.
+        await browser.ev(`document.querySelector('#toast').textContent = ''`);
+        await browser.click('[data-action="investigation-cite"]');
+        const toast = `document.querySelector('#toast')?.textContent ?? ''`;
+        await waitFor(browser, `${pickerOpen} || (${toast}).length > 0`);
+        assert.equal(await browser.ev(toast), '', 'citing opens the picker without an error');
+        assert.deepEqual(await checked(browser, 1), [true], 'the run is already chosen');
+        await shot('investigation-picker');
+        await browser.clickText(text('使用选中的依据', 'Use selected evidence'), 'dialog button');
+        await waitFor(browser, `!document.querySelector('dialog.evidence-picker')`);
+        await waitFor(
+          browser,
+          `(${toast}).includes(${JSON.stringify(
+            text('依据已加入草稿，保存这版后生效。', 'Evidence added to your draft.'),
+          )})`,
+        );
+        await shot('investigation-cited');
+        // Saving the version keeps the cited run with the investigation.
+        await clickReady(browser, text('保存这版', 'Save this version'));
+        await waitFor(
+          browser,
+          `(() => {
+            const live = window.PracticeLive;
+            const practice = live.state.attempts.find((a) => a.id === live.state.activeId);
+            const work = document.querySelector('[data-action="obj"][data-type="work"]')?.dataset.id;
+            return !!practice && !!work &&
+              live.nativeEvidence(practice, work).some((ref) => ref.kind === 'test') &&
+              !document.querySelector('#ws-stage').innerText.includes(${JSON.stringify(
+                text('草稿已保留', 'Draft retained'),
+              )});
+          })()`,
+          20000,
+        );
+        await shot('investigation-saved');
+      });
+      assert.deepEqual(
+        browser.logs.filter((item) => item.level === 'exception'),
+        [],
+      );
+      return;
+    }
     await step('run a test and read its source', async () => {
       await browser.click('.product-bar [data-action="open-bench"]');
       await browser.type(
@@ -299,6 +360,7 @@ async function run(language, reduced, width) {
   }
 }
 
-for (const language of (process.env.LANGS ?? 'zh,en').split(','))
-  for (const motion of (process.env.MOTION ?? 'reduced,motion').split(','))
-    await run(language, motion === 'reduced', Number(process.env.WIDTH ?? 1440));
+for (const flow of (process.env.FLOWS ?? 'main,investigation').split(','))
+  for (const language of (process.env.LANGS ?? 'zh,en').split(','))
+    for (const motion of (process.env.MOTION ?? 'reduced,motion').split(','))
+      await run(language, motion === 'reduced', Number(process.env.WIDTH ?? 1440), flow);

@@ -76,6 +76,7 @@ import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
 import { installV4References } from '../v4-references';
 import { practiceCardLine, practiceCards, practiceSharedLine } from './practice-cards';
+import { nativeCiteAction } from './native-cite';
 import { criterionLabels } from '../features/feedback-native/index';
 import {
   isSealedPracticeError,
@@ -3270,46 +3271,28 @@ function ensureArtifact() {
   ui.obj = { task: t.id, type: 'work', id: x.id };
   return x;
 }
-// Server work keeps cited evidence in its draft until the person saves a version.
-function nativeCiteTarget(a) {
-  const x = artifact();
-  if (x) return x;
-  const t = task();
-  return (t && taskWorks(a, t.id).at(-1)) || null;
-}
-async function citeNativeWork(a, focus) {
-  const x = nativeCiteTarget(a);
-  if (!x) {
-    notify(
-      T(
-        '先在这件事里写一份作品，再引用依据。',
-        'Write a piece of work for this task first, then cite evidence.',
-      ),
-    );
-    return;
-  }
-  try {
-    if (!(await L.citeNative(a, x.id, focus))) return;
-    notify(
-      T(
-        '依据已加入草稿，保存这版后生效。',
-        'Evidence added to your draft. Save this version to keep it.',
-      ),
-    );
+// Evidence actions on server work open the shared picker on the work's draft (native-cite.ts).
+const nativeCiteHost = {
+  native: (a) => L.nativeWorkspace(a),
+  open: () => artifact(),
+  newest: (a) => {
+    const t = task();
+    return (t && taskWorks(a, t.id).at(-1)) || null;
+  },
+  cite: (a, x, focus) => L.citeNative(a, x.id, focus),
+  view: (a, x, key) => L.openNativeEvidence(a, x.id, key),
+  materialVersion: (a, id) => E.getMaterials(a).find((m) => m.id === id)?.version,
+  show: (x) => {
     if (ui.route === 'task' && ui.obj?.type === 'work' && ui.artifactId === x.id)
       refreshWS(['stage']);
     else if (x.taskId) {
       ui.artifactId = x.id;
       openTask(x.taskId, { type: 'work', id: x.id });
     } else refreshWS(['stage']);
-  } catch (err) {
-    notify(errText(err));
-  }
-}
-function openNativeEvidence(a, key) {
-  const x = artifact();
-  if (x) L.openNativeEvidence(a, x.id, key).catch((err) => notify(errText(err)));
-}
+  },
+  notify: (text) => notify(text),
+  errorText: errText,
+};
 function nativeEvidenceRow(a, x, label, cls = '') {
   const chips = L.nativeEvidenceChips(a, x.id);
   if (!chips.length) return '';
@@ -3630,6 +3613,7 @@ async function act(el) {
     if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']);
     else render();
   }
+  if (await nativeCiteAction(nativeCiteHost, a, action, el.dataset)) return;
   switch (action) {
     case 'investigate-run':
       await openInvestigation(id);
@@ -3902,10 +3886,6 @@ async function act(el) {
     }
     case 'test-cite': {
       commit();
-      if (L.nativeWorkspace(a)) {
-        void citeNativeWork(a, { session_id: a.id, kind: 'test', object_id: id, version: 1 });
-        break;
-      }
       const x = artifact(),
         run = a.tests.find((r) => r.id === id);
       if (
@@ -4071,14 +4051,9 @@ async function act(el) {
       )?.focus();
       break;
     case 'cite-pick':
-      if (L.nativeWorkspace(a)) void citeNativeWork(a);
-      else sheetCitePicker();
+      sheetCitePicker();
       break;
     case 'view-evidence': {
-      if (L.nativeWorkspace(a)) {
-        openNativeEvidence(a, el.dataset.key);
-        break;
-      }
       const x = artifact();
       const ev =
         x && x.evidence.find((e) => e.id === id && String(e.version ?? '') === el.dataset.version);
@@ -4664,24 +4639,11 @@ async function act(el) {
       break;
     case 'cite-material': {
       const m = E.getMaterials(a).find((x) => x.id === id);
-      if (m && L.nativeWorkspace(a)) {
-        void citeNativeWork(a, {
-          session_id: a.id,
-          kind: 'material',
-          object_id: m.id,
-          version: m.version,
-        });
-        break;
-      }
       if (m) cite({ id: m.id, title: m.title, version: m.version, body: m.body, type: 'material' });
       refreshWS(['stage']);
       break;
     }
     case 'cite-run': {
-      if (L.nativeWorkspace(a)) {
-        void citeNativeWork(a, { session_id: a.id, kind: 'test', object_id: id, version: 1 });
-        break;
-      }
       const r = a.tests.find((x) => x.id === id);
       if (r)
         cite({
