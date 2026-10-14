@@ -762,4 +762,19 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "beside CAREER_LAB_MODEL_REGISTRATION refuses to start."
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23"
+        ),
+        "integration_changes": {
+            "object-evidence-ref": "objects.read of a test run or a work version (kind test or "
+            "product) adds an optional evidence_ref: the exact EvidenceRefV2 of that version, "
+            "observed at the business_seq of the stored snapshot that created it, valid from 0, "
+            "with no span or quote. It is the reference the evaluator's source reader verifies "
+            "for cited objects, so work, resource requests and feedback supplements cite tests "
+            "and work with it. It is absent when the creation snapshot is not found; materials "
+            "keep citing passages and other kinds are unchanged. Request models, routes and "
+            "operations are unchanged."
+        },
+    },
 )

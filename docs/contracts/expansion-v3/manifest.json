@@ -300,7 +300,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "a1115dfc12f6c9482a542249b9395b0d091a042ada9e49ef188d337e5c93a971"
+      "sha256": "952f8e048eb497ae7d7be72dbe08131803c98ce59a1f66b85c885590b0fd4e9b"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -345,6 +345,7 @@
     "feedback-segment-scope": "Server-only complete input traces bind exact content hashes and dependencies per segment; fully authorized finite-scope readers retain proved text, missing or hidden dependencies degrade only affected parts.",
     "model-assembly": "Optional registered-model identity fields: kind; task_type (relation is omitted); criteria and rubric_version (id and sha256), required for criterion registrations and absent otherwise; dataset (id, manifest sha256, label tiers); fusion components and parameters; weights_stage. FeedbackProvenance gains registered_models, recorded only when a criterion registration is configured, and support_model, recorded only when the support verifier is configured apart from the Judge. RegisteredModelAdvice gains criterion advice (any identifier on the wire, the five-label domain, rule reconciliation), relation sentence units whose aggregation counts follow the units, and explicit error codes for rule conflicts, unestablished applicability, criteria a model does not cover, rubric version mismatches and fully abstained work. Synthetic registrations may show labels and evidence as mechanism-only advice. Unset fields are omitted, so existing records, examples and wire bytes are unchanged; limited readers never receive sentence results. The runtime reads four model slots (ROLES, JUDGE, SUPPORT, ASSISTANT) from CAREER_LAB_<SLOT>_* at startup. A slot's provider, key file, base URL and model come from one layer only: its own variables when it names a provider, else the whole JUDGE slot (SUPPORT) or the whole shared configuration, so a key never reaches another provider's endpoint. Provenance records the Judge and support endpoints a slot configures (optional base_url); with no slot variable set, requests and provenance are unchanged. CAREER_LAB_MODEL_REGISTRATIONS names relation and criterion registrations (criterion is only parsed so far); setting it beside CAREER_LAB_MODEL_REGISTRATION refuses to start.",
     "native-runtime-slice": "One standard API/worker assembly; native investigation, assistant trials, resource decisions and colleague slots. Explicit failed-job refresh, no automatic model retry including expired leases, exact historical public event/source reads, real material activation in recovered role provenance. W05 r9 production evidence, atomic feedback and native callbacks are assembled with frozen advisory policies; W03 native composition remains pending.",
+    "object-evidence-ref": "objects.read of a test run or a work version (kind test or product) adds an optional evidence_ref: the exact EvidenceRefV2 of that version, observed at the business_seq of the stored snapshot that created it, valid from 0, with no span or quote. It is the reference the evaluator's source reader verifies for cited objects, so work, resource requests and feedback supplements cite tests and work with it. It is absent when the creation snapshot is not found; materials keep citing passages and other kinds are unchanged. Request models, routes and operations are unchanged.",
     "operation-readiness": "Installed and ready are distinct; closed registered operations return stable unavailable before public dispatch. Auth/delegation capabilities remain independent.",
     "original-source-protection": "test_freeze enumerates only BASE existing scenarios; no v2 baseline rewrite and no test exclusion needed.",
     "outcome-preview-freshness": "Optional recorded preview conditions on FeedbackV2 and read-time preview states on WorkspaceProductPage: stale previews name each changed input, configuration, resource or material condition, point to a newer preview and list later recorded business actions beside the unchanged prediction. Outcome actions may also name approval requests and submissions. Save-time checks follow the work purpose and task. Records and pages without previews retain their bytes; reads never evaluate again. Recorded material versions are only those the learner may open; finite-scope readers get resource values and material ids withheld and learn only that those conditions changed. Lifecycle-only versions with unchanged content do not make a preview stale.",
@@ -359,7 +360,7 @@
     "sha256": "a762b2a5a823fbadb363374f442883f787a519cfe5d0cb291e1c22e084b7534d"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-14439473c9e226d82f513beab2e7da5c301df3efd6498255a3693f62059135ff",
+  "previous_contract_revision": "expansion-v3-bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -3215,7 +3216,7 @@
     "src/career_lab/api/v2_routes.py": "1d829a6949974dfc9e21f429368583b0ef3ebab120b66f1bf7b66ed7941f4483",
     "src/career_lab/api/v4_config.py": "23b5678779c9925c86e545c4b953497672895d32a6636c1e5c9f3196556ad5e4",
     "src/career_lab/api/v4_extensions.py": "a5272607a6a76663cc7f540726f1a42868ea11c7a919df925cd6860e46888607",
-    "src/career_lab/api/vertical_reads.py": "c17fcdbb9d9b4821911bd98a04448f140b895df780853e9bb24e007c2384c38a",
+    "src/career_lab/api/vertical_reads.py": "9a4c9b88a8568f3309ea0e742ab2917ab85071e10734e87406c7dd0acf9a9719",
     "src/career_lab/api/vertical_runtime.py": "58dd164119f6f8dad0a011c8962fe41bdc3356c7ac5152d9de709cf8d68c8468",
     "src/career_lab/api/workspace_integration.py": "580d03db16bf1310e4713965501cf8fe924472d8646d6890fa85d4b30045559b",
     "src/career_lab/cli.py": "8a3b8e83f93bc5bbcb041e58ac398a04b14f332a40820ad4d37f7fdf0dcbd3cd",
@@ -3239,7 +3240,7 @@
     "src/career_lab/contracts/v2/extensions.py": "cd47aa1195d1d934e67a815e9e30494aba146d6c7e64266b6be613818523b7cd",
     "src/career_lab/contracts/v2/files.py": "3b3f8e9ac47acacfcdd3052f7b0d94698ff8622c0ca34299b47a544bad048577",
     "src/career_lab/contracts/v2/legacy.py": "47a9fb0d4414326b2e05ba863ce29a905f9734b1eb881a85b41af769df5fbbd5",
-    "src/career_lab/contracts/v2/manifest_history.py": "d5d574ebbe0513a5a69886d71b3c592a4a33a123b095281ac9b7a3f2a892cd9b",
+    "src/career_lab/contracts/v2/manifest_history.py": "f1b0707b744a9e70585ce952202bbb0e92dd7324e60c28f32cce3586d19c7d11",
     "src/career_lab/contracts/v2/projection.py": "de1c239f0faf7ae41c82a13c3ee380020ac288e4eafae41b683e351bb5c31e9e",
     "src/career_lab/contracts/v2/provenance.py": "d752a89634ca3608aad3ee533c23522c592cd48e7f40a0fed37a56e515301cf1",
     "src/career_lab/contracts/v2/provider.py": "97b6f25a7ba7e93a84b77af980b00d6d371d770239cc59f6bc09ceb0ebf4994d",

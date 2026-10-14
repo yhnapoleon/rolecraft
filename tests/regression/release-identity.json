@@ -1,7 +1,7 @@
 {
   "commit": "73e14e93c8fed05cb4b6e8caad10d17cacf7489d",
   "protected": {
-    "docs/contracts/expansion-v3/compatibility.md": "a1115dfc12f6c9482a542249b9395b0d091a042ada9e49ef188d337e5c93a971",
+    "docs/contracts/expansion-v3/compatibility.md": "952f8e048eb497ae7d7be72dbe08131803c98ce59a1f66b85c885590b0fd4e9b",
     "docs/contracts/expansion-v3/consumer-request-resolution.json": "fe388a221162a6b213225b8579db4b43368d97412d3e18dd8cd3a16f2ba31d54",
     "docs/contracts/expansion-v3/drafts/draft-20261006-2020/contracts-source.tar": "4139a97114288719ec0c8785be8c02bd19455dd5ef593ac6035fc15d9423d6a8",
     "docs/contracts/expansion-v3/drafts/draft-20261006-2020/examples/AssistantConfig-c0.json": "cc562b86fd1dabfb0d27e38b53140ec1616778ee1c912d9cbf4ebd47ccecca60",
@@ -341,10 +341,10 @@
     "docs/contracts/expansion-v3/examples/WorldStateV2.json": "f9391aff92f13887329589d07d2d2a4b7559211a2b85ef30d340459c0732f946",
     "docs/contracts/expansion-v3/examples/files/payload.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
     "docs/contracts/expansion-v3/examples/labels/example.json": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
-    "docs/contracts/expansion-v3/manifest.json": "bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23",
+    "docs/contracts/expansion-v3/manifest.json": "ebbcae8b204043924fe769fbb01908fef14d468dc2b5197af51247ed833e84a7",
     "docs/contracts/expansion-v3/module-interfaces.md": "759f10925dcd68908c027f86eaff10d8424fe38dac011a09fe02eb6b5a97c2cd",
     "docs/contracts/expansion-v3/openapi.json": "a762b2a5a823fbadb363374f442883f787a519cfe5d0cb291e1c22e084b7534d",
-    "docs/contracts/expansion-v3/revision.txt": "ef9cb48202eaa4048f0acb0f41b48e381cc7d6bd4979df273645480cd8f54ee8",
+    "docs/contracts/expansion-v3/revision.txt": "c0f4c4d8b2f37055d764560ffe00a28de9ad11bf702c49b971c33f91bf41d482",
     "docs/contracts/expansion-v3/schemas/ActionBoundary.json": "45ef459fcea03064b0f381be9134f9cdd0b52b97c68592b4240039802fd700a9",
     "docs/contracts/expansion-v3/schemas/ActionInput.json": "df3efea19039badbdf012495efd8df2603bf65564dc8e8ee4ee6f079d6702c2e",
     "docs/contracts/expansion-v3/schemas/ActionProposal.json": "3e74bc717b8aaee7852e142daf736a65b12d327a21a3f386715737a15bb65575",
