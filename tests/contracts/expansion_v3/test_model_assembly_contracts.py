@@ -132,14 +132,25 @@ def feedback_with(*items: dict[str, C.JsonValue]) -> C.FeedbackV2:
 # DTO-01 ------------------------------------------------------------------------------
 
 
+# Public models added by later approved contract revisions (manifest history key in comment).
+ADDED_AFTER_D163747 = (
+    # submission-rule-check
+    "SubmissionRuleCheck",
+    "SubmissionRuleCheckRequest",
+    "SubmissionRuleCheckResponse",
+)
+
+
 def test_dto_01_every_public_example_keeps_its_pre_change_bytes() -> None:
     golden = json.loads((FIXTURES / "examples-main-d163747.json").read_text())["examples"]
     models = public_models()
-    assert sorted(models) == sorted(golden)
+    assert sorted(models) == sorted([*golden, *ADDED_AFTER_D163747])
     changed = [
         name
-        for name, model in models.items()
-        if hashlib.sha256(exported(integration_example(model).model_dump(mode="json"))).hexdigest()
+        for name in golden
+        if hashlib.sha256(
+            exported(integration_example(models[name]).model_dump(mode="json"))
+        ).hexdigest()
         != golden[name]
     ]
     assert changed == []

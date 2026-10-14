@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23. Do not edit.
+// Generated from frozen manifest SHA256 87ae02222ba6110c1ea7ad85d20db97bb6c667d38b793e73db229f2246e360df. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -789,6 +789,29 @@ export type ShareUpdate = {
   schema_version?: 2;
   share_id: string;
 };
+export type SubmissionRuleCheck = {
+  as_of: VersionPoint;
+  basis: 'draft' | 'saved';
+  config?: ObjectRef | null;
+  decision: 'launch' | 'launch_narrow' | 'defer_with_conditions' | 'no_go';
+  evaluation: FileRef;
+  facts?: _RuleCheckFacts;
+  mode?: 'rules_only';
+  products: ObjectRef[];
+  rule_items: FeedbackItem[];
+  schema_version?: 2;
+  session_id: string;
+  submission?: ObjectRef | null;
+  work_language: 'zh' | 'en';
+};
+export type SubmissionRuleCheckRequest = {
+  expected_version: number;
+  expected_workspace_revision: number;
+  operation: 'submissions.rule_check';
+  payload: SubmitInput;
+  request_id: string;
+  schema_version: 2;
+};
 export type SubmissionV2 = {
   as_of: VersionPoint;
   config?: ObjectRef | null;
@@ -1070,6 +1093,12 @@ export type _AdviceUnitCounts = {
   skipped_short?: number;
   over_budget?: number;
 };
+export type _ConfigTestRuns = {
+  config_version: number;
+  retests: number;
+  runs: number;
+  schema_version?: 2;
+};
 export type _OutcomeAction = {
   schema_version?: 2;
   operation:
@@ -1125,6 +1154,20 @@ export type _PreviewState = {
   schema_version?: 2;
   status: 'current' | 'stale';
   superseded_by?: ObjectRef | null;
+};
+export type _RuleCheckFacts = {
+  adjustment_actions?: number | null;
+  available_dev_days?: number | null;
+  capacity?: number | null;
+  config_version?: number | null;
+  deadline_day?: number | null;
+  participants?: number | null;
+  policy_version?: number | null;
+  requested_launch_day?: number | null;
+  required_dev_days?: number | null;
+  schema_version?: 2;
+  test_runs?: _ConfigTestRuns[];
+  unapproved_resource_excess?: boolean | null;
 };
 export type _RuleScoreCriterion = {
   schema_version?: 2;

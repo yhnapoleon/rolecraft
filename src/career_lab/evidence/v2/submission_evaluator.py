@@ -8,8 +8,9 @@ from career_lab.contracts import v2 as C
 from career_lab.rubrics.v4.feedback import FeedbackEngine
 from .assembler import EvidenceAssemblerV2
 from .factual import factual_feedback
-from .formal_feedback import attach_sections
+from .formal_feedback import attach_sections, sections
 from .localization import validate_language
+from .ports import RuleSnapshot
 
 
 class SubmissionEvaluator:
@@ -20,12 +21,7 @@ class SubmissionEvaluator:
         self.model_bytes = model_bytes
 
     def evaluate(self, auth, submission):
-        if (
-            not isinstance(submission, C.SubmissionV2)
-            or submission.session_id != auth.session_id
-            or submission.evaluation != self.reader.evaluation
-        ):
-            raise C.ProtocolError("submission_binding_mismatch")
+        self._require_binding(auth, submission)
         if all(p.mechanism.startswith("v2.") for p in self.reader.policies()):
             return self._rubric_v2(auth, submission)
         at = submission.as_of
@@ -119,17 +115,36 @@ class SubmissionEvaluator:
             "work_language": self.work_language,
         }
 
-    def _rubric_v2(self, auth, submission):
-        from .formal_feedback import sections
-        from .ports import RuleSnapshot
-
-        at = submission.as_of
-        subject = C.ObjectRef(
-            session_id=auth.session_id,
-            kind="submission",
-            object_id=submission.id,
-            version=submission.version,
+    def rule_items(self, auth, submission):
+        """The rule items the formal feedback records for this submission, with no Judge, no
+        model and no write. ``submission`` need not be saved. Returns the items and the
+        evidence packages they were read from."""
+        self._require_binding(auth, submission)
+        if not all(p.mechanism.startswith("v2.") for p in self.reader.policies()):
+            raise C.ProtocolError("evaluation_runtime_unavailable", status=503)
+        if not submission.products:
+            return (), ()
+        subject, packages = self._rubric_v2_packages(auth, submission)
+        _, diagnostics = FeedbackEngine().evaluate(
+            auth.session_id,
+            subject,
+            self.reader.evaluation,
+            submission.as_of,
+            packages,
+            work_language=self.work_language,
         )
+        items = tuple(C.FeedbackItem.model_validate(item) for item in diagnostics["rule_items"])
+        return items, packages
+
+    def _require_binding(self, auth, submission):
+        if (
+            not isinstance(submission, C.SubmissionV2)
+            or submission.session_id != auth.session_id
+            or submission.evaluation != self.reader.evaluation
+        ):
+            raise C.ProtocolError("submission_binding_mismatch")
+
+    def _rubric_v2(self, auth, submission):
         if not submission.products:
             return {
                 "submission": submission,
@@ -137,44 +152,8 @@ class SubmissionEvaluator:
                 "reports": (),
                 "work_language": self.work_language,
             }
-        snapshot_method = getattr(self.reader, "submission_snapshot", None)
-        if snapshot_method is not None:
-            snapshot = snapshot_method(auth, submission)
-        elif len(submission.products) == 1:
-            snapshot = self.reader.snapshot(auth, submission.products[0], at)
-        else:
-            snapshot = RuleSnapshot(
-                at, config_version=submission.config.config_version if submission.config else None
-            )
-        if (
-            submission.config is not None
-            and snapshot.config_version is not None
-            and snapshot.config_version != submission.config.config_version
-        ):
-            raise C.ProtocolError("submission_config_mismatch")
-        refs = list(submission.evidence_refs)
-        for ref in submission.products:
-            refs.extend(self.reader.read(auth, ref, at).declared_refs)
-        refs = tuple({C.canonical(ref): ref for ref in refs}.values())
-        assembler = EvidenceAssemblerV2(
-            self.reader, self.model_bytes, work_language=self.work_language
-        )
-        packages = tuple(
-            assembler.assemble(
-                auth=auth,
-                subject_id=submission.id,
-                subjects=submission.products,
-                evidence_refs=refs,
-                purpose="commitment",
-                decision=submission.decision,
-                as_of=at,
-                policy=policy,
-                snapshot=snapshot,
-                anchor_mode="submission",
-                requested_at=at,
-            )
-            for policy in self.reader.policies()
-        )
+        at = submission.as_of
+        subject, packages = self._rubric_v2_packages(auth, submission)
         report, diagnostics = self.engine.evaluate(
             auth.session_id,
             subject,
@@ -229,6 +208,55 @@ class SubmissionEvaluator:
             "reports": (report,),
             "work_language": self.work_language,
         }
+
+    def _rubric_v2_packages(self, auth, submission):
+        """All submitted works are one evaluation scope; one package per frozen criterion."""
+        at = submission.as_of
+        subject = C.ObjectRef(
+            session_id=auth.session_id,
+            kind="submission",
+            object_id=submission.id,
+            version=submission.version,
+        )
+        snapshot_method = getattr(self.reader, "submission_snapshot", None)
+        if snapshot_method is not None:
+            snapshot = snapshot_method(auth, submission)
+        elif len(submission.products) == 1:
+            snapshot = self.reader.snapshot(auth, submission.products[0], at)
+        else:
+            snapshot = RuleSnapshot(
+                at, config_version=submission.config.config_version if submission.config else None
+            )
+        if (
+            submission.config is not None
+            and snapshot.config_version is not None
+            and snapshot.config_version != submission.config.config_version
+        ):
+            raise C.ProtocolError("submission_config_mismatch")
+        refs = list(submission.evidence_refs)
+        for ref in submission.products:
+            refs.extend(self.reader.read(auth, ref, at).declared_refs)
+        refs = tuple({C.canonical(ref): ref for ref in refs}.values())
+        assembler = EvidenceAssemblerV2(
+            self.reader, self.model_bytes, work_language=self.work_language
+        )
+        packages = tuple(
+            assembler.assemble(
+                auth=auth,
+                subject_id=submission.id,
+                subjects=submission.products,
+                evidence_refs=refs,
+                purpose="commitment",
+                decision=submission.decision,
+                as_of=at,
+                policy=policy,
+                snapshot=snapshot,
+                anchor_mode="submission",
+                requested_at=at,
+            )
+            for policy in self.reader.policies()
+        )
+        return subject, packages
 
 
 def submission_feedback_plan(view, command, auth, prepared):

@@ -36,6 +36,9 @@ HOST_MODELS = WORKSPACE_MODELS + [
     "ApprovalInput",
     "AssistantConfig",
     "BeginRevisionInput",
+    # Before FeedbackV2, whose live schema keeps the shared feedback types in field order.
+    "SubmissionRuleCheckRequest",
+    "SubmissionRuleCheck",
     "FeedbackInput",
     "FeedbackResponseCreate",
     "FeedbackResponseRecord",
