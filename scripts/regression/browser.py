@@ -13,7 +13,7 @@ from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
-from scripts.regression.mcp import exercise
+from scripts.regression.mcp import exercise, exercise_http
 from scripts.regression.model_flows import (
     DEFAULT_PHASES,
     OPTIONAL_PHASES,
@@ -199,12 +199,14 @@ def main() -> None:
     with services(output, env, args.api_port, args.web_port, database):
         results = (
             [exercise(api, language) for language in ("zh", "en")]
+            # Streamable HTTP through the web origin's /api proxy, as the connection card shows.
+            + [exercise_http(api, web + "/api", language) for language in ("zh", "en")]
             if args.suite == "published-flows"
             else []
         )
         (output / "mcp.json").write_text(json.dumps(results, indent=2) + "\n")
         if results:
-            print("MCP: bilingual read/return/replay/revoke passed", flush=True)
+            print("MCP: bilingual stdio and HTTP read/return/replay/revoke passed", flush=True)
         subprocess.run(
             ["node", "tests/regression/" + args.suite + ".mjs"],
             cwd=ROOT / "apps/web",
