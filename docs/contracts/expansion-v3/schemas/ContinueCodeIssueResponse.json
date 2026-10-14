@@ -1,0 +1,48 @@
+{
+  "$defs": {
+    "ContinueCodeIssued": {
+      "additionalProperties": false,
+      "properties": {
+        "code": {
+          "pattern": "^[0-9A-HJKMNP-TV-Z]{4}(?:-[0-9A-HJKMNP-TV-Z]{4}){4}$",
+          "title": "Code",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "generation": {
+          "exclusiveMinimum": 0,
+          "title": "Generation",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "code",
+        "generation",
+        "created_at"
+      ],
+      "title": "ContinueCodeIssued",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "result": {
+      "$ref": "#/$defs/ContinueCodeIssued"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "result"
+  ],
+  "title": "ContinueCodeIssueResponse",
+  "type": "object"
+}

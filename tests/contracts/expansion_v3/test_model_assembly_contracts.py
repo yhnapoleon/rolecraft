@@ -134,13 +134,17 @@ def feedback_with(*items: dict[str, C.JsonValue]) -> C.FeedbackV2:
 
 def test_dto_01_every_public_example_keeps_its_pre_change_bytes() -> None:
     golden = json.loads((FIXTURES / "examples-main-d163747.json").read_text())["examples"]
+    # Models published after d163747 are listed with the bytes their own change first exported.
+    added = json.loads((FIXTURES / "examples-added-after-d163747.json").read_text())["examples"]
+    assert not set(golden) & set(added)
+    expected = golden | added
     models = public_models()
-    assert sorted(models) == sorted(golden)
+    assert sorted(models) == sorted(expected)
     changed = [
         name
         for name, model in models.items()
         if hashlib.sha256(exported(integration_example(model).model_dump(mode="json"))).hexdigest()
-        != golden[name]
+        != expected[name]
     ]
     assert changed == []
 

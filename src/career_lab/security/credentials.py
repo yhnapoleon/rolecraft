@@ -29,14 +29,8 @@ def deployment_key() -> DeploymentKey:
     return DeploymentKey(key_id, secret)
 
 
-def derive_credential(
-    provider: Callable[[], DeploymentKey],
-    purpose: str,
-    owner: AuthContext,
-    owner_digest: str,
-    target: AuthContext,
-    request: object,
-) -> tuple[str, str]:
+def checked_key(provider: Callable[[], DeploymentKey]) -> DeploymentKey:
+    """The deployment key, or a refusal that never describes the configured value."""
     try:
         key = provider()
         if (
@@ -47,6 +41,18 @@ def derive_credential(
             raise ValueError("invalid deployment key")
     except Exception:
         raise ProtocolError("credential_derivation_unavailable", status=503) from None
+    return key
+
+
+def derive_credential(
+    provider: Callable[[], DeploymentKey],
+    purpose: str,
+    owner: AuthContext,
+    owner_digest: str,
+    target: AuthContext,
+    request: object,
+) -> tuple[str, str]:
+    key = checked_key(provider)
     body = canonical(
         {
             "version": 1,

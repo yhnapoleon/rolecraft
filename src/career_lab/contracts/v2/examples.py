@@ -146,6 +146,8 @@ def sample_model(model, context=""):
         data["package_hash"] = core.digest([x.model_dump(mode="json") for x in data["items"]])
     if n == "JobRequest":
         data["name"] = "v2.example"
+    if n == "ContinueCodeIssued":
+        data["code"] = "0000-0000-0000-0000-0000"  # Synthetic: shape only, never issued.
     if n in {"ObjectWrite", "StoredObject"}:
         task = sample_model(WorkspaceTask)
         data["ref"] = ObjectRef(

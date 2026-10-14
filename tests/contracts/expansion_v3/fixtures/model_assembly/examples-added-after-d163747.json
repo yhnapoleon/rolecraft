@@ -1,0 +1,10 @@
+{
+ "examples": {
+  "ContinueCodeIssueInput": "44dfc0ef49e0cab8d76bcbf9c9ee220bdc3f43675540ef04af66a14f1cbefba4",
+  "ContinueCodeIssueResponse": "07906e275f77bec0beb9efd8da9c2683b686e055fe91f1ad007a8e68ccbde536",
+  "ContinueCodeIssued": "95d1ca83b748c8303bd944d077702835a43893653c8c3559dddd3c7c01a53d6f",
+  "ContinueCodeStatus": "2bca0a8c698a7509ca95a9dcaa1fedb2086cbd816c2bd96ac4647af414d80e7b",
+  "ContinueCodeStatusResponse": "ea6d8ee387fde0e7768cb336b92b686181a8b8ad06133eb44c6a31bb6ca528e3"
+ },
+ "source": "Public models added after main d163747, at the example bytes their own change first exported: practice continue codes"
+}

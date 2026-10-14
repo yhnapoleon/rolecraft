@@ -1,0 +1,41 @@
+{
+  "additionalProperties": false,
+  "description": "Whether the practice has a continue code; the code itself is never readable again.",
+  "properties": {
+    "created_at": {
+      "anyOf": [
+        {
+          "format": "date-time",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Created At"
+    },
+    "exists": {
+      "title": "Exists",
+      "type": "boolean"
+    },
+    "generation": {
+      "anyOf": [
+        {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Generation"
+    }
+  },
+  "required": [
+    "exists"
+  ],
+  "title": "ContinueCodeStatus",
+  "type": "object"
+}

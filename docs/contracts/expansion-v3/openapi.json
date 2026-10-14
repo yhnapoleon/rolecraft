@@ -1715,6 +1715,128 @@
         "title": "Command",
         "type": "object"
       },
+      "ContinueCodeIssueInput": {
+        "additionalProperties": false,
+        "description": "Create or replace the code. ``expected_generation`` is the one the person saw; 0 = none.",
+        "properties": {
+          "expected_generation": {
+            "minimum": 0,
+            "title": "Expected Generation",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "expected_generation"
+        ],
+        "title": "ContinueCodeIssueInput",
+        "type": "object"
+      },
+      "ContinueCodeIssueResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/ContinueCodeIssued"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "ContinueCodeIssueResponse",
+        "type": "object"
+      },
+      "ContinueCodeIssued": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "pattern": "^[0-9A-HJKMNP-TV-Z]{4}(?:-[0-9A-HJKMNP-TV-Z]{4}){4}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "generation": {
+            "exclusiveMinimum": 0,
+            "title": "Generation",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "code",
+          "generation",
+          "created_at"
+        ],
+        "title": "ContinueCodeIssued",
+        "type": "object"
+      },
+      "ContinueCodeStatus": {
+        "additionalProperties": false,
+        "description": "Whether the practice has a continue code; the code itself is never readable again.",
+        "properties": {
+          "created_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Created At"
+          },
+          "exists": {
+            "title": "Exists",
+            "type": "boolean"
+          },
+          "generation": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Generation"
+          }
+        },
+        "required": [
+          "exists"
+        ],
+        "title": "ContinueCodeStatus",
+        "type": "object"
+      },
+      "ContinueCodeStatusResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/ContinueCodeStatus"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "ContinueCodeStatusResponse",
+        "type": "object"
+      },
       "CreateSession": {
         "additionalProperties": false,
         "properties": {
@@ -15369,6 +15491,102 @@
           }
         ],
         "summary": "Configuration Apply"
+      }
+    },
+    "/sessions/{session_id}/continue-code": {
+      "get": {
+        "operationId": "read_continue_code_sessions__session_id__continue_code_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContinueCodeStatusResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Read Continue Code"
+      },
+      "post": {
+        "operationId": "create_continue_code_sessions__session_id__continue_code_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContinueCodeIssueInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContinueCodeIssueResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Create Continue Code"
       }
     },
     "/sessions/{session_id}/delegations": {

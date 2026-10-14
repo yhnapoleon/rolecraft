@@ -26,13 +26,14 @@ from collections.abc import Mapping
 from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends, FastAPI
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import Column, Integer, MetaData, String, Table, insert, select, update
 from sqlalchemy.engine import Connection
 
+from career_lab.api.continue_codes import mount_continue_codes
 from career_lab.contracts import v2 as C
 from career_lab.rubrics.v4.practice import ReviewedPractice, selection_plan, suggestions
 from career_lab.storage.v2_tables import v2_credentials
@@ -70,6 +71,8 @@ practice_intents = Table(
 )
 
 _VARIANTS = Path(__file__).resolve().parents[3] / "scenarios/pm_pilot/v2/variants"
+# Stateless; module level so dependency annotations resolve from module globals.
+BEARER = HTTPBearer(auto_error=False)
 
 
 ShownPractice = C.ShownPractice
@@ -360,7 +363,19 @@ def mount_v4_extensions(app: FastAPI) -> None:
     gateway = app.state.gateway
     catalog = PracticeCatalog(gateway.registry)
     _META.create_all(store.db.engine)
-    bearer = HTTPBearer(auto_error=False)
+    bearer = BEARER
+
+    def person(
+        session_id: str,
+        credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(BEARER)],
+    ) -> C.AuthContext:
+        """The practice's own person, with the owner's right to hand out access."""
+        auth = _context(store, session_id, credentials)
+        _human(auth)
+        store.authorize(auth, "delegate")
+        return auth
+
+    mount_continue_codes(app, person=person)
 
     @app.get("/sessions/{session_id}/delegations", response_model=C.DelegationListResponse)
     def delegations(

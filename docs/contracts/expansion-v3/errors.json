@@ -19,6 +19,7 @@
     "config_session_mismatch",
     "config_write_required",
     "context_stale",
+    "continue_code_changed",
     "credential_derivation_unavailable",
     "credential_expired",
     "credential_revoked_or_invalid",

@@ -762,4 +762,20 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "beside CAREER_LAB_MODEL_REGISTRATION refuses to start."
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23"
+        ),
+        "integration_changes": {
+            "practice-continue-codes": "GET and POST /sessions/{session_id}/continue-code "
+            "(ContinueCodeStatusResponse; ContinueCodeIssueInput -> ContinueCodeIssueResponse): "
+            "the practice's own person, with delegate capability, creates or replaces its one "
+            "continue code, 20 Crockford Base32 symbols (100 bits) in five groups of four, shown "
+            "only in that response with Cache-Control: no-store. The server keeps a verifier "
+            "keyed with the deployment credential key, never the code, in a separate "
+            "v4_continue_codes table; frozen v2 tables are unchanged. A replacement names the "
+            "generation it replaces (continue_code_changed otherwise) and stops the old code at "
+            "once. Agents, other sessions and missing keys are refused."
+        },
+    },
 )

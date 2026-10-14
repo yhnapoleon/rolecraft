@@ -1,10 +1,14 @@
-"""Human-only delegation listing and optional practice wire contracts."""
+"""Human-only delegation listing, optional practice and continue-code wire contracts."""
 
 from datetime import datetime
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
+from career_lab.contracts.base import NonNegativeInt, PositiveInt
 from .core import Executor, ObjectRef, V2, JsonValue
 from .world import PublicState
+
+# Twenty Crockford Base32 symbols (100 bits) in five groups of four.
+CONTINUE_CODE_PATTERN = r"^[0-9A-HJKMNP-TV-Z]{4}(?:-[0-9A-HJKMNP-TV-Z]{4}){4}$"
 
 
 class ShownPractice(BaseModel):
@@ -97,3 +101,34 @@ class PracticeChoiceResult(BaseModel):
 
 class PracticeChoiceResponse(V2):
     result: PracticeChoiceResult
+
+
+class ContinueCodeStatus(BaseModel):
+    """Whether the practice has a continue code; the code itself is never readable again."""
+
+    model_config = ConfigDict(extra="forbid")
+    exists: bool
+    generation: PositiveInt | None = None
+    created_at: datetime | None = None
+
+
+class ContinueCodeStatusResponse(V2):
+    result: ContinueCodeStatus
+
+
+class ContinueCodeIssueInput(BaseModel):
+    """Create or replace the code. ``expected_generation`` is the one the person saw; 0 = none."""
+
+    model_config = ConfigDict(extra="forbid")
+    expected_generation: NonNegativeInt
+
+
+class ContinueCodeIssued(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    code: str = Field(pattern=CONTINUE_CODE_PATTERN)  # This response only: never listed or logged.
+    generation: PositiveInt
+    created_at: datetime
+
+
+class ContinueCodeIssueResponse(V2):
+    result: ContinueCodeIssued

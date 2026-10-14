@@ -263,6 +263,11 @@ for consumer in ("W06", "W14"):
         "PracticeSession",
         "PracticeChoiceResult",
         "PracticeChoiceResponse",
+        "ContinueCodeStatus",
+        "ContinueCodeStatusResponse",
+        "ContinueCodeIssueInput",
+        "ContinueCodeIssued",
+        "ContinueCodeIssueResponse",
     ]
 
 
@@ -436,6 +441,7 @@ def _implementation_files(root: Path) -> list[Path]:
         for p in [
             "src/career_lab/api/app.py",
             "src/career_lab/api/v4_extensions.py",
+            "src/career_lab/api/continue_codes.py",
             "src/career_lab/cli.py",
             "src/career_lab/api/vertical_runtime.py",
             "src/career_lab/api/vertical_reads.py",
