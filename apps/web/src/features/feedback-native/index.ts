@@ -408,6 +408,8 @@ export function mountNativeFeedback(
       const link = button(name.text, () => adapter.openReference(ref));
       link.setAttribute('aria-label', name.label);
       link.dataset.referenceKind = ref.kind;
+      // Lets the reader return focus here even after the panel rebuilds this button.
+      link.dataset.referenceKey = key(ref);
       row.append(link);
       if ('quote' in ref && ref.quote) {
         if (language === 'en' && /[\u4e00-\u9fff]/u.test(ref.quote))

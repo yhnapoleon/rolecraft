@@ -37,6 +37,20 @@ function dialog(title: string) {
   return { element, heading, body, foot };
 }
 type ReaderView = { body: HTMLElement; heading: HTMLElement; modal: HTMLDialogElement | null };
+// Evidence buttons carry a stable key, so the same button can be found again after a rebuild.
+const KEYS = ['data-reference-key', 'data-model-reference-key'];
+/** Finds the element that opened the reader, or the one that replaced it after a re-render. */
+function locate(opener: HTMLElement | null): () => HTMLElement | null {
+  const attribute = KEYS.find((name) => opener?.hasAttribute(name));
+  if (!opener || !attribute) return () => (opener?.isConnected ? opener : null);
+  const value = opener.getAttribute(attribute);
+  const same = () =>
+    [...document.querySelectorAll<HTMLElement>(`[${attribute}]`)].filter(
+      (node) => node.getAttribute(attribute) === value,
+    );
+  const index = same().indexOf(opener);
+  return () => (opener.isConnected ? opener : (same()[index] ?? null));
+}
 /** Without a reading column the original opens in a sheet. */
 function sheetReader(title: string): ReaderView {
   const sheet = dialog(title);
@@ -44,7 +58,11 @@ function sheetReader(title: string): ReaderView {
 }
 /** The reader beside the feedback: placed first in the side column so it is in view, with a
  * close control that returns focus to the evidence that opened it. */
-function sideReader(side: HTMLElement, title: string, opener: HTMLElement | null): ReaderView {
+function sideReader(
+  side: HTMLElement,
+  title: string,
+  opener: () => HTMLElement | null,
+): ReaderView {
   const hint = side.querySelector<HTMLElement>('[data-reference-hint]');
   side.querySelector('[data-reference-reader]')?.remove();
   const reader = node('article', '', 'reference-reader');
@@ -56,7 +74,12 @@ function sideReader(side: HTMLElement, title: string, opener: HTMLElement | null
   close.onclick = () => {
     reader.remove();
     if (hint) hint.hidden = false;
-    if (opener?.isConnected) opener.focus();
+    const back = opener();
+    if (!back) return;
+    // A rebuilt panel folds its detail again; unfold the way back to the evidence.
+    for (let node = back.parentElement; node; node = node.parentElement)
+      if (node instanceof HTMLDetailsElement) node.open = true;
+    back.focus();
   };
   head.append(heading, close);
   reader.append(head);
@@ -114,7 +137,9 @@ export function installV4References(getHost: () => V4HostAdapter | null) {
     if (!host || host.snapshot().session?.protocol !== 2) return;
     detail.handled = true;
     // Focus returns here when the reader beside the feedback is closed.
-    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const opener = locate(
+      document.activeElement instanceof HTMLElement ? document.activeElement : null,
+    );
     try {
       const ref = detail.ref as ObjectRef | EvidenceRefV2;
       if (ref.session_id !== host.snapshot().session?.sessionId)

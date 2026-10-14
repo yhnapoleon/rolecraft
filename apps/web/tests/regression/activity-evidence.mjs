@@ -89,8 +89,17 @@ export async function openEvidence(context) {
       'the original text is shown',
     );
     await shot(`evidence-${name}`);
+    // Refreshing the feedback rebuilds its sections while the reader is open: the evidence
+    // button is replaced and its section folds again. Closing still returns focus to it.
+    await browser.ev(`document.querySelector(${selector}).dataset.beforeRefresh = 'true'`);
+    await browser.clickText(text('查看最新反馈', 'Refresh feedback'), '.native-feedback button');
+    await waitFor(
+      browser,
+      `!document.querySelector(${selector}).dataset.beforeRefresh &&
+        !!document.querySelector('[data-reference-reader]')`,
+    );
     await browser.clickText(text('关闭', 'Close'), '[data-v4-reference-side] button');
-    await waitFor(browser, `document.activeElement?.dataset.referenceKind === 'material'`);
+    await waitFor(browser, `document.activeElement === document.querySelector(${selector})`);
   }
   await viewport(browser, original.width, original.height);
 }
