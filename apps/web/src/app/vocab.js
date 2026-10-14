@@ -1,6 +1,7 @@
 // Product vocabulary in both languages. Server-owned text (materials, colleague
 // replies, feedback reasons) is not translated here; it is shown as the backend sends it.
 import { T, locale } from './i18n';
+import { documentName } from '../reference-catalog';
 
 export const PRI = (p) =>
   ({ first: T('先做', 'Do first'), next: T('随后', 'Up next'), later: T('暂放', 'Later') })[p] || p;
@@ -181,19 +182,8 @@ export const WORK_ITEM = (k) =>
   })[k] || k;
 export const WORK_COST = { scope: 1, fallback: 1, realtime: 5 };
 
-const MATERIAL_EN = {
-  brief: 'Pilot brief',
-  technical: 'Technical constraints',
-  business: 'Business scope and acceptance',
-  faq: 'Office FAQ',
-  policy: 'Travel policy',
-  approval_process: 'Change requests',
-  tech_private: 'Tech lead notes',
-};
-export const materialTitle = (m) =>
-  locale() === 'en'
-    ? MATERIAL_EN[m.id] || m.title
-    : String(m.title || m.id).replace(/(初始版|更新版)$/, '');
+// One name per document in both languages: its formal title (reference-catalog documentName).
+export const materialTitle = (m) => documentName(m.title) ?? m.id;
 
 export const CRITERIA = {
   'R1.target': ['目标与用户范围', 'Goal and users'],

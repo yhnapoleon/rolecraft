@@ -1,4 +1,5 @@
 import { waitFor, clickReady } from './browser-support.mjs';
+import { askHowToPrioritise, openEvidence, readActivity } from './activity-evidence.mjs';
 /** Normal v4 UI over real HTTP/worker and the unmodified published catalog. */
 import assert from 'node:assert/strict';
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -94,6 +95,44 @@ async function restoreColleagueDrafts(context) {
   }
 }
 
+/** F02: an idle practice keeps its toolbar. A press held across a poll still opens the
+ * language menu, which stays open through idle polls and through a background notice. */
+async function toolbarHoldsStill(context) {
+  const { browser, text } = context;
+  let previous = '';
+  for (let sample = 0; ; sample++) {
+    const current = await browser.ev(`JSON.stringify([
+      window.PracticeLive.store.getSnapshot().busy, window.PracticeLive.store.active()])`);
+    if (current === previous) break;
+    assert.ok(sample < 30, 'The practice settles');
+    previous = current;
+    await delay(1000);
+  }
+  const point = await browser.ev(`(() => {
+    const box = document.querySelector('#ws-toolbar [data-menu="lang"]').getBoundingClientRect();
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  })()`);
+  const press = { ...point, button: 'left', clickCount: 1 };
+  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
+  await browser.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...press });
+  await delay(1800);
+  await browser.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...press });
+  const open = `!!document.querySelector('#ws-toolbar .menu [data-action="set-lang"]')`;
+  await waitFor(browser, open, 3000);
+  await browser.ev(`window.regressionToolbar = document.getElementById('ws-toolbar')`);
+  await delay(4500);
+  const kept = `document.getElementById('ws-toolbar') === window.regressionToolbar && ${open}`;
+  assert.equal(await browser.ev(kept), true, 'Idle polls keep the toolbar and its open menu');
+  await browser.ev(
+    `window.PracticeLive.store.report({ notice: ${JSON.stringify(text('后台提示', 'Background notice'))} })`,
+  );
+  await delay(300);
+  assert.equal(await browser.ev(kept), true, 'A notice that leaves the toolbar unchanged keeps it');
+  await browser.ev(`window.PracticeLive.store.report({ notice: '' })`);
+  await browser.click('#ws-toolbar [data-menu="lang"]');
+  await waitFor(browser, `!document.querySelector('#ws-toolbar .menu')`);
+}
+
 async function inspectResourceRegion(context) {
   const { browser, shot } = context;
   await browser.click('.product-bar [data-action="resources"]');
@@ -113,15 +152,12 @@ async function inspectResourceRegion(context) {
 }
 
 async function readAndTest(context) {
-  const { browser, text, shot } = context;
+  const { browser, question, shot } = context;
   await browser.click('.doc-card[data-id="brief"]');
   await waitFor(browser, `location.hash.startsWith('#/doc/')`);
   await browser.click('[data-action="to-board"]');
   await browser.click('.product-bar [data-action="open-bench"]');
-  await browser.type(
-    '#lab-q',
-    text('住宿报销上限是多少？', 'What is the hotel reimbursement limit?'),
-  );
+  await browser.type('#lab-q', question);
   await browser.submit('[data-form="run-test"]');
   await waitFor(browser, `document.querySelectorAll('.run').length > 0`);
   await shot('test');
@@ -303,6 +339,100 @@ async function reviseAndReadHistory(context) {
   );
 }
 
+/** F24: once a work version has been open in the editor, the new-task dialog keeps its
+ * fields through a dropped poll and still adds the task after a revision. */
+async function addTaskAfterRevision(context) {
+  const { browser, text, shot } = context;
+  await browser.goto(`${base}#/work`);
+  await waitFor(browser, `!!document.querySelector('.card-open')`);
+  await browser.click('.card-open');
+  await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
+  await browser.click('.ol-row[data-type="work"]');
+  await waitFor(browser, `!!document.querySelector('#editor-body')`);
+  await browser.click('[data-action="to-board"]');
+  await waitFor(browser, `!!document.querySelector('[data-action="new-task"]')`);
+  const before = await browser.ev('window.PracticeLive.store.active().v2Workspace.tasks.length');
+  await browser.click('[data-action="new-task"]');
+  await waitFor(browser, `!!document.querySelector('#task-form [name="title"]')`);
+  await browser.ev('window.regressionFailWorkbenchReads = 1');
+  await waitFor(
+    browser,
+    `window.regressionFailedWorkbenchReads === 1
+      && window.PracticeLive.store.getSnapshot().connected === true`,
+  );
+  assert.deepEqual(
+    await browser.ev(`({
+      title: !!document.querySelector('#task-form [name="title"]'),
+      note: !!document.querySelector('#task-form [name="note"]'),
+      priorities: document.querySelectorAll('#task-form [name="priority"]').length,
+    })`),
+    { title: true, note: true, priorities: 3 },
+    'The new-task dialog keeps its fields after the board re-renders',
+  );
+  const title = text('修订后新增：核对索引滞后', 'Added after revision: check index lag');
+  await browser.type('#task-form [name="title"]', title);
+  await clickReady(browser, text('加入', 'Add'), '#sheet button');
+  await waitFor(
+    browser,
+    `window.PracticeLive.store.active().v2Workspace.tasks.length === ${before + 1}
+      && [...document.querySelectorAll('.card .card-title')]
+        .some((node) => node.textContent === ${JSON.stringify(title)})`,
+  );
+  await shot('task-after-revision');
+}
+
+/** F20 (review 175 P2-2): the new task moved the practice point, so the review page reads its
+ * practice again while those reads drop. The shown choices stay, and the column reads again by
+ * itself once the reads return. */
+async function practiceKeepsChoices(context) {
+  const { browser } = context;
+  const choices = `document.querySelectorAll('[data-action="practice-choose"]').length`;
+  await browser.ev('window.regressionFailPracticeUntil = performance.now() + 2500');
+  await browser.goto(`${base}#/review`);
+  await waitFor(browser, 'window.regressionFailedPracticeReads >= 1');
+  for (let sample = 0; sample < 6; sample++) {
+    assert.deepEqual(
+      await browser.ev(`({
+        choices: ${choices},
+        unavailable: !!document.querySelector('[data-practice-unavailable]'),
+      })`),
+      { choices: 2, unavailable: false },
+      'Dropped practice reads keep the shown choices',
+    );
+    await delay(500);
+  }
+  await waitFor(
+    browser,
+    `performance.now() > window.regressionFailPracticeUntil
+      && window.regressionPracticeReads > window.regressionFailedPracticeReads`,
+  );
+  assert.equal(await browser.ev(choices), 2);
+}
+
+/** F20 (review 175 P2-1): the first workbench reads of a reloading page are dropped. The page
+ * shows no error, has no uncaught exception, and the next poll loads the board. */
+async function reloadWithDroppedReads(context) {
+  const { browser } = context;
+  await browser.goto(`${base}#/work`);
+  await waitFor(browser, `!!document.querySelector('.card-open')`);
+  await browser.ev(`sessionStorage.setItem('regressionFailOnLoad', '2500')`);
+  await browser.send('Page.reload', {});
+  await waitFor(browser, 'performance.now() > 2500 && window.regressionFailedWorkbenchReads >= 2');
+  await waitFor(
+    browser,
+    `window.PracticeLive.store.getSnapshot().connected === true
+      && !!document.querySelector('.card-open')`,
+  );
+  assert.deepEqual(
+    await browser.ev(`({
+      error: window.PracticeLive.store.getSnapshot().error,
+      toasts: window.regressionToasts,
+    })`),
+    { error: '', toasts: [] },
+    'Reads dropped while the page loads are not shown as an error',
+  );
+}
+
 async function runLanguage(language) {
   const browser = await launch({ width: 1440, height: 1100, reduced: true });
   const en = language === 'en';
@@ -357,13 +487,43 @@ async function runLanguage(language) {
     '负责人和范围核实前暂缓，保留人工兜底。',
     'Defer until the owner and scope are verified. Keep human fallback.',
   );
-  const context = { browser, language, text, title, draft, shot, taskRoute: '' };
+  const question = text('住宿报销上限是多少？', 'What is the hotel reimbursement limit?');
+  const context = { browser, language, text, title, draft, question, shot, taskRoute: '' };
   await browser.send('Page.addScriptToEvaluateOnNewDocument', {
     source: `(() => {
     const original = window.fetch;
     window.regressionResponseLost = false;
     window.regressionDropNext = false;
+    window.regressionFailWorkbenchReads = 0;
+    window.regressionFailedWorkbenchReads = 0;
+    // Milliseconds set before a reload: the loading page's workbench reads drop until then.
+    const failUntil = Number(sessionStorage.getItem('regressionFailOnLoad') || 0);
+    sessionStorage.removeItem('regressionFailOnLoad');
+    window.regressionToasts = [];
+    window.regressionFailPracticeUntil = 0;
+    window.regressionPracticeReads = 0;
+    window.regressionFailedPracticeReads = 0;
+    document.addEventListener('DOMContentLoaded', () => {
+      const toast = document.getElementById('toast');
+      new MutationObserver(() => {
+        if (toast.textContent.trim()) window.regressionToasts.push(toast.textContent.trim());
+      }).observe(toast, { childList: true, subtree: true, characterData: true });
+    });
     window.fetch = async (...args) => {
+      const read = !args[1]?.method || args[1].method === 'GET';
+      if (read && String(args[0]).split('?')[0].endsWith('/practice')) {
+        window.regressionPracticeReads++;
+        if (performance.now() < window.regressionFailPracticeUntil) {
+          window.regressionFailedPracticeReads++;
+          throw new TypeError('Controlled dropped read');
+        }
+      }
+      const dropping = window.regressionFailWorkbenchReads > 0 || performance.now() < failUntil;
+      if (dropping && read && String(args[0]).split('?')[0].endsWith('/workbench')) {
+        window.regressionFailWorkbenchReads--;
+        window.regressionFailedWorkbenchReads++;
+        throw new TypeError('Controlled dropped read');
+      }
       const response = await original(...args);
       if (window.regressionDropNext && String(args[0]).endsWith('/delegations') && args[1]?.method === 'POST') {
         window.regressionDropNext = false;
@@ -382,11 +542,17 @@ async function runLanguage(language) {
     );
     await browser.goto(base);
     await step('normal entry and fixed work language', () => enterWorkspace(context));
+    await step('asking how to prioritise opens that colleague with the tasks', () =>
+      askHowToPrioritise(context),
+    );
     await step('colleague drafts restore once and retain deliberate clearing', () =>
       restoreColleagueDrafts(context),
     );
     await step('resource dialog keeps its assigned form and controls', () =>
       inspectResourceRegion(context),
+    );
+    await step('idle toolbar keeps a held press and an open menu in place', () =>
+      toolbarHoldsStill(context),
     );
     await step('source reading and actual assistant test', () => readAndTest(context));
     await step('unsaved draft survives route change and reload', () => restoreDraft(context));
@@ -395,9 +561,23 @@ async function runLanguage(language) {
       recoverAccess(context),
     );
     await step('submit a deferral and read fixed feedback', () => submitDeferral(context));
+    await step('evidence names its object and opens in view', () => openEvidence(context));
     await step('feedback names the final rubric version', () => showFinalRubricVersion(context));
     await step('revision keeps original feedback and original wording', () =>
       reviseAndReadHistory(context),
+    );
+    await step('activity and Agent log read as sentences', async () => {
+      await browser.click('[data-action="to-board"]');
+      await readActivity(context);
+    });
+    await step('new task dialog survives a dropped poll and adds a task after revision', () =>
+      addTaskAfterRevision(context),
+    );
+    await step('dropped practice reads keep the choices and read again by themselves', () =>
+      practiceKeepsChoices(context),
+    );
+    await step('a page reload with dropped reads shows no error and loads on the next poll', () =>
+      reloadWithDroppedReads(context),
     );
     assert.deepEqual(
       browser.logs.filter((item) => item.level === 'exception'),

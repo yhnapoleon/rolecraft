@@ -3225,6 +3225,42 @@ button.crumb:hover {
   gap: 20px;
   position: sticky;
   top: calc(var(--toolbar-h) + 12px);
+  /* Never taller than the window: the column scrolls on its own, so practice choices and
+     keyboard focus stay reachable beside an open reader. The padding keeps card shadows. */
+  max-height: calc(100vh - var(--toolbar-h) - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: -6px;
+  padding: 6px;
+}
+/* The evidence reader opens first in the side column, so it is in view beside the feedback. */
+.reference-side {
+  scroll-margin-top: calc(var(--toolbar-h) + 12px);
+}
+.reference-reader {
+  display: grid;
+  gap: 10px;
+  /* Leaves the practice choices below it on screen; a long original scrolls inside. */
+  max-height: 40vh;
+  overflow: auto;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+  scroll-margin-top: calc(var(--toolbar-h) + 12px);
+}
+.reference-reader-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+.reference-reader-head h2 {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.reference-reader .prose {
+  margin: 0;
 }
 .deliverable {
   padding: 24px 26px 26px;
@@ -3941,6 +3977,10 @@ textarea.doc-input[name="rationale"] {
   }
   .review-side {
     position: static;
+    max-height: none;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
   }
   .deliver {
     grid-template-columns: 1fr;
@@ -4558,39 +4598,6 @@ textarea.doc-input[name="rationale"] {
 .card:hover .card-more,
 .card:focus-within .card-more {
   opacity: 1;
-}
-.advice {
-  display: grid;
-  gap: 10px;
-  padding: 16px 18px;
-  border-radius: 16px;
-  background: var(--paper);
-  box-shadow: var(--shadow-card);
-  animation: arrive var(--mid) var(--spring);
-}
-.advice-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-.advice-why {
-  font: 400 15px / 1.6 var(--serif);
-}
-.advice-list {
-  display: grid;
-  gap: 6px;
-}
-.advice-list li {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13.5px;
-}
-.adv-pri {
-  width: 4.5em;
-  color: var(--ink-3);
-  font-size: 12.5px;
 }
 .rule-tag {
   display: inline-flex;

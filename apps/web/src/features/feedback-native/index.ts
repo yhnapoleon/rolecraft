@@ -23,6 +23,7 @@ import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
 import { deliveryName, deliveryNumber, versionTitles } from './delivery';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
+import { readCatalog, referenceLabel, type ReferenceCatalog } from '../../reference-catalog';
 
 export type SelectedProduct = Pick<
   WorkProductVersion,
@@ -107,6 +108,8 @@ export interface FeedbackNativeState {
     kind: 'objection' | 'supplement';
     text: string;
   }[];
+  /** Names for cited objects (documents, test runs, work, deliveries), from the timeline read. */
+  references?: ReferenceCatalog;
   /** Feedback slot status only. Never copy a colleague/role mode here. */
   semanticStatus?: FeedbackSemanticStatus;
   /** Legacy adapter field; intentionally ignored by semantic rendering. */
@@ -203,6 +206,30 @@ export function criterionLabels(
     'decision.follow_up': T('后续安排', 'Follow-up'),
     'result.claims': T('已完成事项的声明', 'Completion claims'),
   };
+}
+/** The status line: until the latest submission has feedback, it is being generated (the job is
+ * queued or running); a failed job says not ready, and its own note offers a new request. */
+export function feedbackNotice(state: FeedbackNativeState, language: FeedbackLanguage): string {
+  const T = (zh: string, en: string) => feedbackText(language, zh, en);
+  if (state.busy) return T('正在等待服务端确认…', 'Waiting for server confirmation…');
+  if (state.pending)
+    return T(
+      '上一请求结果尚未确认，请先恢复。',
+      'The previous request is unresolved. Recover its result first.',
+    );
+  if (state.status !== 'submitted')
+    return T(
+      '可以继续工作，选择准备交付的版本。',
+      'Continue your work and select versions for submission.',
+    );
+  if (state.reports.some((r) => r.subject.object_id === state.submission?.ref.object_id))
+    return T(
+      '本次提交已保存，可以看反馈、提出异议或开始修订。',
+      'Submission saved. Review feedback, raise a challenge or start revising.',
+    );
+  return state.failedFeedback
+    ? T('本次提交已保存，反馈尚未就绪。', 'Submission saved. Feedback is not ready yet.')
+    : T('本次提交已保存，反馈正在生成…', 'Submission saved. Feedback is being generated…');
 }
 export type FeedbackMountOptions = { surface?: 'all' | 'submission' | 'feedback' };
 
@@ -413,23 +440,18 @@ export function mountNativeFeedback(
       : undefined;
   if (reviewControls) root.insertBefore(reviewControls.element, reports);
   host.replaceChildren(root);
+  // The object's own name and version; the full name, with the action, for screen readers.
+  const nameOf = (ref: ObjectRef | EvidenceRefV2) =>
+    referenceLabel(ref, adapter.snapshot().references ?? readCatalog(null), language);
   function refs(parent: HTMLElement, values: (ObjectRef | EvidenceRefV2)[]) {
-    const names: Record<string, string> = {
-      product: T('作品', 'Artifact'),
-      material: T('材料', 'Material'),
-      test: T('测试', 'Test'),
-      role_reply: T('同事回复', 'Colleague reply'),
-      role_turn: T('问题', 'Question'),
-      submission: T('提交记录', 'Submission'),
-      review: T('评审记录', 'Review'),
-      event: T('历史记录', 'History'),
-    };
     const row = el('div');
     for (const ref of values) {
-      const link = button(
-        `${names[ref.kind] ?? T('依据', 'Evidence')} · ${versionLabel(ref.version)}`,
-        () => adapter.openReference(ref),
-      );
+      const name = nameOf(ref);
+      const link = button(name.text, () => adapter.openReference(ref));
+      link.setAttribute('aria-label', name.label);
+      link.dataset.referenceKind = ref.kind;
+      // Lets the reader return focus here even after the panel rebuilds this button.
+      link.dataset.referenceKey = key(ref);
       row.append(link);
       if ('quote' in ref && ref.quote) {
         if (language === 'en' && /[\u4e00-\u9fff]/u.test(ref.quote))
@@ -754,6 +776,7 @@ export function mountNativeFeedback(
         language,
         (ref) => adapter.openReference(ref),
         adviceFallback(report, adapter.snapshot()),
+        nameOf,
       );
     }
     for (const item of advice) {
@@ -841,24 +864,7 @@ export function mountNativeFeedback(
     failedNote.hidden = !state.failedFeedback;
     retryFeedback.hidden = !state.failedFeedback || !adapter.retry;
     retryFeedback.disabled = state.busy || adapter.canRetry === false;
-    notice.textContent = state.busy
-      ? T('正在等待服务端确认…', 'Waiting for server confirmation…')
-      : state.pending
-        ? T(
-            '上一请求结果尚未确认，请先恢复。',
-            'The previous request is unresolved. Recover its result first.',
-          )
-        : state.status === 'submitted'
-          ? state.reports.some((r) => r.subject.object_id === state.submission?.ref.object_id)
-            ? T(
-                '本次提交已保存，可以看反馈、提出异议或开始修订。',
-                'Submission saved. Review feedback, raise a challenge or start revising.',
-              )
-            : T('本次提交已保存，反馈尚未就绪。', 'Submission saved. Feedback is not ready yet.')
-          : T(
-              '可以继续工作，选择准备交付的版本。',
-              'Continue your work and select versions for submission.',
-            );
+    notice.textContent = feedbackNotice(state, language);
     selection.replaceChildren(
       ...state.products.map((product) => {
         const ref: ObjectRef = {
@@ -961,6 +967,7 @@ export function mountNativeFeedback(
         language,
         (ref) => adapter.openReference(ref),
         adviceFallback(report, state),
+        nameOf,
       );
     }
     for (const node of reports.querySelectorAll<HTMLElement>('[data-feedback-coverage]')) {

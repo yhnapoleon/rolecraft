@@ -1,5 +1,5 @@
 import { createGatewayTransport } from './gateway-transport';
-import { request, sessionPath, type Transport } from './api';
+import { request, retryableRead, sessionPath, type Transport } from './api';
 import { T, locale } from './app/i18n';
 import { V4LiveData } from './v4-live-data';
 import { V4Mounts } from './v4-mounts';
@@ -96,6 +96,7 @@ export class LiveWorkbench {
   private state: any;
   private readonly v4: V4LiveData;
   private readonly mounts = new V4Mounts();
+  private mountFailure = '';
   private notify = (_changed: boolean) => {};
   private signature = '';
   private materialCache = new Map<string, Material>();
@@ -269,6 +270,8 @@ export class LiveWorkbench {
       version: w.version,
       configured: !!w.configs.pilot,
       materials: s.materials.map((m) => ({ ...m, body: m.content })),
+      // Exact-version titles, so an event names the version it was about.
+      materialTitles: s.v2MaterialTitles ?? {},
       pendingRequests: w.pending_requests,
       submissionId: this.store.submissionId(s),
     };
@@ -296,10 +299,11 @@ export class LiveWorkbench {
         citations: t.citations.map((c) => ({
           id: c.material_id,
           version: c.version,
+          // One name per document: its current title, whichever version the test cited.
           title:
-            (s.protocol === 2
-              ? s.v2MaterialTitles?.[c.material_id + ':' + c.version]
-              : s.materials.find((m) => m.id === c.material_id)?.title) || c.material_id,
+            s.materials.find((m) => m.id === c.material_id)?.title ||
+            s.v2MaterialTitles?.[`${c.material_id}:${c.version}`] ||
+            c.material_id,
         })),
         expectation: s.testNotes[t.id]?.expected ?? saved?.expectation ?? '',
         diagnosis: s.testNotes[t.id]?.diagnosis || '',
@@ -367,6 +371,8 @@ export class LiveWorkbench {
         text: '后端 · ' + e.event_type + ' · #' + e.seq,
         createdAt: e.created_at || '',
         detail: { ...e.payload, materialId: e.payload.material_id },
+        refs: e.refs ?? [],
+        agent: e.executor_kind === 'external_agent',
         seq: e.seq,
       });
     a.approvalDenials = s.timeline.approval_denials || [];
@@ -626,7 +632,26 @@ export class LiveWorkbench {
   mountV4(a: Attempt | null, selection: { taskId: string | null; productId: string | null }) {
     void this.mounts
       .sync(document, a ? this.session(a) : undefined, a ? this.v4Host(a) : null, selection)
-      .catch((error) => this.store.report({ error: error.message }));
+      .then(
+        () => {
+          // A recovered mount withdraws its own report, so a recurrence is shown again.
+          // An error reported elsewhere since then stays.
+          const own = this.mountFailure;
+          this.mountFailure = '';
+          if (own && this.store.getSnapshot().error === own) this.store.report({ error: '' });
+        },
+        (error) => {
+          // A read dropped while mounting (e.g. while the page loads) is read again by the next poll.
+          if (retryableRead(error)) {
+            this.store.report({ connected: false });
+            return;
+          }
+          // A report renders the page and every render mounts again: report a repeat once.
+          if (error.message === this.mountFailure) return;
+          this.mountFailure = error.message;
+          this.store.report({ error: error.message });
+        },
+      );
   }
   configDomains(a: Attempt) {
     const s = this.session(a);
@@ -1166,6 +1191,15 @@ export class LiveWorkbench {
   async refresh(a?: Attempt) {
     await this.store.health();
     if (a) await this.store.sync(a.id);
+  }
+  /** Page load reads the current practice the way a poll does: a dropped read only marks the
+   * connection lost and the next poll reads again. Never rejects; resolves to whether it was read. */
+  async load(a?: Attempt) {
+    await this.store.health();
+    const s = a ? this.session(a) : undefined;
+    if (s?.protocol === 2) await this.store.poll(s.id);
+    else if (s) await this.store.sync(s.id);
+    return this.store.getSnapshot().connected;
   }
   draftFromWorks(a: Attempt) {
     const list = this.base.currentArtifacts(a);

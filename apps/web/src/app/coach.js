@@ -367,52 +367,6 @@ export function observations(a, E, scopeTaskId = null) {
   return scopeTaskId ? out.filter((i) => !i.taskId || i.taskId === scopeTaskId) : out;
 }
 
-/** Each colleague ranks the starting tasks from their own concerns. Never applied automatically. */
-export function advice(a, role) {
-  const plan = {
-    manager: {
-      order: ['decision', 'needs', 'policy'],
-      why: T(
-        '我最关心你最后能承诺什么。先把决定的骨架写出来，缺什么再去补。',
-        'I care most about what you can promise. Sketch the decision first, then fill the gaps.',
-      ),
-    },
-    business: {
-      order: ['needs', 'policy', 'decision'],
-      why: T(
-        '先弄清首批员工真正要问什么，不然测再多也可能测错方向。',
-        'Find out what first users actually ask, or you may test the wrong thing.',
-      ),
-    },
-    technical: {
-      order: ['policy', 'needs', 'decision'],
-      why: T(
-        '政策会变，索引会滞后，这是最可能出事的地方。先测政策问答，再谈范围。',
-        'Policy changes and the index lags; that is where it breaks. Test policy answers first, then scope.',
-      ),
-    },
-  }[role];
-  const pr = ['first', 'next', 'later'];
-  const items = plan.order
-    .map((seed, i) => {
-      const t = a.tasks.find((x) => x.seed === seed);
-      return t ? { taskId: t.id, priority: pr[i] } : null;
-    })
-    .filter(Boolean);
-  const extra = a.tasks.filter((t) => !items.some((i) => i.taskId === t.id)).length;
-  return {
-    roleId: role,
-    items,
-    why: items.length
-      ? plan.why +
-        (extra
-          ? T(' 你后来加的事，我没法替你排。', ' I cannot rank the tasks you added later.')
-          : '')
-      : T('我只能就最初的那几件事给建议。', 'I can only advise on the original tasks.'),
-    name: NAME[role],
-  };
-}
-
 /** Quick record checks for one piece of work: numbers and versions only. */
 export function checks(a, E, work) {
   const out = [];

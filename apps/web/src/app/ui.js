@@ -82,6 +82,7 @@ import {
   isSealedPracticeError,
   practiceUnavailableText,
 } from '../features/feedback-native/read-only-notice';
+import { afterPracticeRead } from '../features/feedback-native/practice-read';
 
 const L = window.PracticeLive;
 const E = L.engine;
@@ -143,7 +144,6 @@ const ui = {
   railOpen: false,
   menu: null,
   scopeAll: false,
-  advice: null,
   benchAll: false,
   reviewFor: null,
   notesCache: [],
@@ -372,7 +372,8 @@ function updateSave() {
     el.classList.toggle('error', !!storageIssue);
   });
   const x = artifact();
-  document.querySelectorAll('[data-revision]').forEach((el) => {
+  // Only the editor's version label; a form's data-revision is its exact revision token.
+  document.querySelectorAll('[data-revision-label]').forEach((el) => {
     if (x) el.textContent = 'v' + x.revision;
   });
 }
@@ -551,7 +552,6 @@ function go(route, opts = {}) {
     if (sheet.open) closeSheet(true);
     ui.menu = null;
     ui.railOpen = false;
-    ui.advice = null;
     ui.route = route;
     ui.routeId = id;
     history.pushState(null, '', hashOf(route, id));
@@ -573,7 +573,6 @@ window.addEventListener('popstate', () => {
   dropUndo();
   if (sheet.open) closeSheet(true);
   ui.menu = null;
-  ui.advice = null;
   const from = ui.route,
     fromId = ui.routeId,
     p = parseRoute();
@@ -1106,7 +1105,6 @@ function boardView(a) {
       <header class="sec-head"><h2 id="tasks-h">${T('事项', 'Tasks')}</h2><span class="sec-hint">${T('拖动卡片调整优先级', 'Drag cards to reprioritise')}</span><span class="spacer"></span>
         <div class="menu-wrap">${btn(icon('bubble', 'i-sm') + T('问问怎么排', 'Ask how to prioritise'), 'menu', 'small quiet', `data-menu="rank" aria-haspopup="menu" aria-expanded="${ui.menu === 'rank'}"`)}${ui.menu === 'rank' ? rankMenu() : ''}</div>
         ${btn(icon('plus', 'i-sm') + T('新事项', 'New task'), 'new-task', 'small')}</header>
-      ${ui.advice ? advicePanel(a) : ''}
       <p id="move-help" class="sr-only">${T('按住 Option 或 Alt：左右方向键换列（改优先级），上下方向键调整顺序。', 'Hold Option or Alt: left and right move between columns (priority), up and down change the order.')}</p>
       <div class="kanban">${['first', 'next', 'later'].map((p) => column(a, p)).join('')}</div>
     </section>
@@ -1137,23 +1135,26 @@ function productBar(a) {
   </section>`;
 }
 function rankMenu() {
-  return `<div class="menu" role="menu"><p class="menu-cap">${T('想听谁的看法', 'Whose view?')}</p>${ROLES.map((r) => `<button type="button" role="menuitem" data-action="show-advice" data-role="${r}">${avatar(r, 'xs')}<span class="grow">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span></button>`).join('')}</div>`;
+  return `<div class="menu" role="menu"><p class="menu-cap">${T('想听谁的看法', 'Whose view?')}</p>${ROLES.map((r) => `<button type="button" role="menuitem" data-action="ask-priority" data-role="${r}">${avatar(r, 'xs')}<span class="grow">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span></button>`).join('')}</div>`;
 }
-function advicePanel(a) {
-  const adv = Coach.advice(a, ui.advice);
-  const r = ui.advice;
-  return `<div class="advice who-${r}">
-    <div class="advice-head">${avatar(r, 'sm')}<b>${PEOPLE[r].name}</b>${PEOPLE[r].titled ? '' : `<span class="muted">${ROLE_TITLE(r)}</span>`}<span class="rule-tag" title="${esc(T('按场景规则生成，不是同事实时回复', 'Generated from scenario rules, not a live reply'))}">${T('规则示意', 'Rule-based')}</span><span class="spacer"></span>
-      <div class="segmented" role="group" aria-label="${esc(T('谁的看法', 'Whose view'))}"><span class="thumb"></span>${ROLES.map((x) => `<button type="button" aria-pressed="${x === r}" data-action="show-advice" data-role="${x}">${PEOPLE[x].name}</button>`).join('')}</div>${btn(icon('x'), 'close-advice', 'icon quiet small', `aria-label="${esc(T('关闭', 'Close'))}"`)}</div>
-    <p class="advice-why">${esc(adv.why)}</p>
-    <ol class="advice-list">${adv.items
-      .map((i) => {
-        const t = a.tasks.find((x) => x.id === i.taskId);
-        return `<li>${priMark(i.priority)}<span class="adv-pri">${PRI(i.priority)}</span><span class="grow">${esc(taskTitle(t))}</span></li>`;
-      })
-      .join('')}</ol>
-    <div class="row-actions">${adv.items.length ? btn(T('按此排列', 'Arrange like this'), 'apply-advice', 'small primary') : ''}${btn(T('直接问' + PEOPLE[r].name, 'Ask ' + PEOPLE[r].ref + ' directly'), 'ask-rank', 'small quiet', `data-role="${r}"`)}</div>
-  </div>`;
+// "Ask how to prioritise": the open tasks in board order and the question, for a colleague to
+// answer in their own conversation.
+function priorityQuestion(a) {
+  const order = ['first', 'next', 'later'];
+  const list = a.tasks
+    .filter((t) => t.status !== 'done')
+    .sort((x, y) => order.indexOf(x.priority) - order.indexOf(y.priority))
+    .map((t) => taskTitle(t))
+    .join(T('；', '; '));
+  return list
+    ? T(
+        '这是我手头的事项：' + list + '。你觉得我该先弄清哪件，为什么？',
+        'Here is what I have on my plate: ' + list + '. What would you tackle first, and why?',
+      )
+    : T(
+        '我手头的事项都处理完了。你觉得接下来该先弄清什么，为什么？',
+        'Everything on my plate is done. What should I find out next, and why?',
+      );
 }
 function column(a, p) {
   const list = a.tasks.filter((t) => t.priority === p);
@@ -1409,7 +1410,7 @@ function workView(a, t, x) {
         <input id="editor-title" class="editor-title" data-edit="title" maxlength="160" value="${esc(view.title)}" ${editable ? '' : 'readonly'}>
         <div class="editor-meta">
           <label class="purpose" title="${esc(INTENT_HINT(intent))}"><span class="sr-only">${T('用途', 'Purpose')}</span>${purposeGlyph(intent)}<select data-edit="purpose" ${editable ? '' : 'disabled'}>${E.PURPOSES.map((p) => `<option value="${p}" ${p === view.purpose ? 'selected' : ''}>${esc(purposeLabel(p))}</option>`).join('')}</select>${icon('down', 'i-xs')}</label>
-          <span data-revision>v${x.revision}</span>
+          <span data-revision-label>v${x.revision}</span>
           <span>${x.source === 'user' ? T('你写的', 'By you') : x.requestId ? T('来自你的 Agent', 'From your agent') : T('导入的作品', 'Imported work')}</span>
           <span class="save" data-save title="${esc(T('作品保存在本机；交付时可合并进交付稿', 'Work stays on this device; fold it into your deliverable when you submit'))}"></span>
         </div>
@@ -2081,7 +2082,7 @@ function railAgent(a, t) {
       </form>
     </section>
     <section class="agent-log" data-agent-activity><h3 class="mini-title">${T('它做了什么', 'What it did')}</h3>
-      ${log.length ? `<ol class="log">${log.map((e) => `<li class="log-item">${e.icon}<div class="grow"><p>${esc(e.text)}</p>${e.sub ? `<p class="meta">${esc(e.sub)}</p>` : ''}</div>${e.at ? `<time>${when(e.at)}</time>` : ''}</li>`).join('')}</ol>` : `<p class="feed-empty">${T('交出任务包、带回作品、采用和关联测试都会记在这里。', 'Hand-overs, returns, adoptions and linked tests are recorded here.')}</p>`}
+      ${log.length ? `<ol class="log">${log.map((e) => `<li class="log-item">${e.icon}<div class="grow"><p>${esc(e.text)}</p>${e.sub ? `<p class="meta">${esc(e.sub)}</p>` : ''}</div>${e.at ? `<time>${when(e.at)}</time>` : ''}</li>`).join('')}</ol>` : `<p class="feed-empty">${T('交出任务包、带回作品、采用、关联测试和授权都会记在这里。', 'Hand-overs, returns, adoptions, linked tests and access grants are recorded here.')}</p>`}
       ${
         native
           ? ''
@@ -2145,25 +2146,15 @@ function activity(a, taskId) {
   a.events.forEach((e, i) => {
     if (e.server) {
       if (['save_artifact', 'pause', 'resume'].includes(e.type)) return;
-      let tid = null;
-      let open = null;
-      if (e.type === 'test_assistant') {
-        const r = a.tests.find((x) => x.id === (e.detail || {}).object_id);
-        tid = r && r.taskId;
-        open = r ? { action: 'open-run', id: r.id } : null;
-      }
-      if (e.type === 'material_read')
-        open = { action: 'open-doc', id: (e.detail || {}).materialId };
-      const world = ['policy_updated', 'approve_request', 'approval_denied'].includes(e.type);
-      if (taskId && !world && tid !== taskId) return;
       const l = eventLine(a, e);
+      if (taskId && !l.world && l.taskId !== taskId) return;
       out.push({
         at: e.createdAt || times[e.seq] || '',
         order: i,
         icon: l.icon || 'info',
-        tone: l.tone || (world ? 'world' : ''),
+        tone: l.tone || (l.world ? 'world' : ''),
         text: l.text,
-        open,
+        open: l.open || null,
       });
       return;
     }
@@ -2260,7 +2251,7 @@ function activity(a, taskId) {
 }
 function railActivity(a, t) {
   const list = activity(a, t && !ui.scopeAll ? t.id : null).slice(0, 40);
-  return `<div class="rail-pad">${list.length ? `<ol class="activity">${list.map((e) => `<li class="act-item ${e.tone || ''}">${e.open ? `<button type="button" class="act-open" data-action="${e.open.action}" ${e.open.id ? `data-id="${esc(e.open.id)}"` : ''} ${e.open.role ? `data-role="${e.open.role}"` : ''} ${e.open.tab ? `data-tab="${e.open.tab}"` : ''}>` : '<div class="act-open">'}${icon(e.icon, 'i-sm')}<span class="grow"${zhAttr(e.text)}>${esc(e.text)}</span>${e.at ? `<time>${when(e.at)}</time>` : ''}${e.open ? '</button>' : '</div>'}</li>`).join('')}</ol>` : `<p class="feed-empty">${T('发生的事会按时间记在这里。', 'What happens is recorded here, in order.')}</p>`}</div>`;
+  return `<div class="rail-pad">${list.length ? `<ol class="activity">${list.map((e) => `<li class="act-item ${e.tone || ''}">${e.open ? `<button type="button" class="act-open" data-action="${e.open.action}" ${e.open.id ? `data-id="${esc(e.open.id)}"` : ''} ${e.open.role ? `data-role="${e.open.role}"` : ''} ${e.open.tab ? `data-tab="${e.open.tab}"` : ''} ${e.open.compare ? 'data-compare="1"' : ''}>` : '<div class="act-open">'}${icon(e.icon, 'i-sm')}<span class="grow"${zhAttr(e.text)}>${esc(e.text)}</span>${e.at ? `<time>${when(e.at)}</time>` : ''}${e.open ? '</button>' : '</div>'}</li>`).join('')}</ol>` : `<p class="feed-empty">${T('发生的事会按时间记在这里。', 'What happens is recorded here, in order.')}</p>`}</div>`;
 }
 
 /* ---------- 4. review ---------- */
@@ -2272,14 +2263,14 @@ function renderReview() {
       <div class="review-grid">
         <div class="review-main" data-v4-feedback data-v4-region="feedback"></div>
         <aside class="review-side">
+          <div class="reference-side" data-v4-reference-side><p class="meta" data-reference-hint>${T(
+            '打开依据，核对当时的原文与版本。',
+            'Open a reference to inspect its original text and version.',
+          )}</p></div>
           ${practiceOriginNote(current())}
           <section class="review-practice" data-v4-practice aria-live="polite">
             ${practiceSection(current())}
           </section>
-          <div data-v4-reference-side><p class="meta">${T(
-            '打开依据，核对当时的原文与版本。',
-            'Open a reference to inspect its original text and version.',
-          )}</p></div>
         </aside>
       </div>
     </main>`;
@@ -2501,24 +2492,28 @@ function practiceOriginNote(a) {
 }
 const practiceReads = new Set();
 const practicePoints = new Map();
+const practiceDrops = new Map();
 async function loadPractice(a, force = false) {
   if (!a || practiceReads.has(a.id) || (!force && ui.practice[a.id])) return;
   practiceReads.add(a.id);
   const before = JSON.stringify(ui.practice[a.id]);
   const point = JSON.stringify(L.v4Host(a)?.snapshot().asOf);
   if (!ui.practice[a.id]) ui.practice[a.id] = { state: 'loading' };
+  let read;
   try {
-    ui.practice[a.id] = await L.practice(a);
-  } catch (e) {
-    // Wording is chosen at render time; the code only says whether the session is sealed.
-    ui.practice[a.id] = {
-      error: 'unavailable',
-      sealed: isSealedPracticeError(e?.code) || sealedSession(a),
-    };
-  } finally {
-    practiceReads.delete(a.id);
-    practicePoints.set(a.id, point);
+    read = { view: await L.practice(a) };
+  } catch (error) {
+    read = { error };
   }
+  // The code only says whether the session is sealed; wording is chosen at render time.
+  const sealed = 'error' in read && (isSealedPracticeError(read.error?.code) || sealedSession(a));
+  const next = afterPracticeRead(ui.practice[a.id], read, practiceDrops.get(a.id) ?? 0, sealed);
+  ui.practice[a.id] = next.view;
+  practiceDrops.set(a.id, next.dropsInARow);
+  practiceReads.delete(a.id);
+  // A dropped read is asked again on the next poll tick; otherwise wait for a new point.
+  if (next.readAgain) practicePoints.delete(a.id);
+  else practicePoints.set(a.id, point);
   if (current()?.id === a.id && before !== JSON.stringify(ui.practice[a.id])) {
     const box = document.querySelector('[data-v4-practice]');
     if (box) box.innerHTML = practiceSection(a);
@@ -3156,6 +3151,8 @@ function markRead() {
 }
 
 /* ---------- workspace refresh ---------- */
+// The toolbar holds open menus and pressed buttons: replace it only when its markup changes.
+let toolbarShown = { node: null, html: '' };
 function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
   const a = current();
   if (!a || !WS.includes(ui.route)) {
@@ -3179,7 +3176,11 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
   const y = stage ? stage.scrollTop : 0;
   if (parts.includes('toolbar')) {
     const tb = document.getElementById('ws-toolbar');
-    if (tb) tb.outerHTML = wsToolbar(a);
+    const html = wsToolbar(a);
+    if (tb && (tb !== toolbarShown.node || html !== toolbarShown.html)) {
+      tb.outerHTML = html;
+      toolbarShown = { node: document.getElementById('ws-toolbar'), html };
+    }
   }
   if (parts.includes('stage')) {
     document.getElementById('ws-stage').outerHTML =
@@ -3428,7 +3429,6 @@ function resetAttemptUi() {
     chatRole: null,
     railOpen: false,
     menu: null,
-    advice: null,
     scopeAll: false,
     benchAll: false,
     reviewFor: null,
@@ -3565,7 +3565,7 @@ async function act(el) {
   const a = current();
   const id = el.dataset.id;
   const action = el.dataset.action;
-  if (action !== 'menu' && action !== 'set-lang' && action !== 'show-advice' && ui.menu) {
+  if (action !== 'menu' && action !== 'set-lang' && ui.menu) {
     ui.menu = null;
     if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']);
     else render();
@@ -4292,6 +4292,8 @@ async function act(el) {
                 server: true,
                 type: e.event_type,
                 detail: { ...e.payload, materialId: e.payload.material_id },
+                refs: e.refs,
+                agent: e.executor_kind === 'external_agent',
                 seq: e.seq,
                 actor: e.actor_id,
               });
@@ -4450,49 +4452,9 @@ async function act(el) {
       );
       break;
     }
-    case 'show-advice':
-      ui.menu = null;
-      ui.advice = el.dataset.role;
-      refreshWS(['stage']);
+    case 'ask-priority':
+      openChat(el.dataset.role, priorityQuestion(a));
       break;
-    case 'close-advice':
-      ui.advice = null;
-      refreshWS(['stage']);
-      break;
-    case 'apply-advice': {
-      const adv = Coach.advice(a, ui.advice);
-      if (!adv.items.length) break;
-      let before;
-      flip(() => {
-        before = E.applySuggestion(a, { roleId: adv.roleId, items: adv.items });
-        ui.advice = null;
-        persist();
-        refreshWS(['stage']);
-      });
-      notify(T('已按 ' + adv.name + ' 的看法排列', 'Arranged the way ' + adv.name + ' sees it'), {
-        undo: () => {
-          flip(() => {
-            E.restoreOrder(a, before);
-            persist();
-            refreshWS(['stage']);
-          });
-        },
-      });
-      break;
-    }
-    case 'ask-rank': {
-      ui.menu = null;
-      ui.advice = null;
-      const list = a.tasks.map((t) => taskTitle(t)).join(T('；', '; '));
-      openChat(
-        el.dataset.role,
-        T(
-          '这是我手头的事项：' + list + '。你觉得我该先弄清哪件，为什么？',
-          'Here is what I have on my plate: ' + list + '. What would you tackle first, and why?',
-        ),
-      );
-      break;
-    }
     case 'situation-task': {
       if (ui.busy || !canWrite(a)) break;
       const version = a.world.policyVersion;
@@ -5524,11 +5486,6 @@ document.addEventListener('keydown', (e) => {
       refreshWS(['toolbar']);
       return;
     }
-    if (ui.advice) {
-      ui.advice = null;
-      refreshWS(['stage']);
-      return;
-    }
     if (ui.route === 'doc') {
       e.preventDefault();
       go('work');
@@ -5760,8 +5717,9 @@ const workFolders = installWorkFolders(document, {
 });
 installV4References(() => L.v4Host(current()));
 L.attach(state, onLive);
-L.refresh(current()).then(() => {
-  ui.synced = true;
+// Like a poll: a read dropped while the page loads only marks the connection lost.
+L.load(current()).then((loaded) => {
+  if (loaded) ui.synced = true;
 });
 setInterval(async () => {
   if (document.hidden) return;
