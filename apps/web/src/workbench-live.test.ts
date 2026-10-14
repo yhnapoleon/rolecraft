@@ -6,6 +6,7 @@ import { LiveWorkbench, fromPilot, toPilot } from './workbench-live';
 import { STORAGE_KEY, WorkspaceStore } from './store';
 import type { World } from './types';
 import { ASSISTANT_COPY } from './app/assistant-mode';
+import { eventLine } from './app/events.js';
 
 const mod = { exports: {} as any };
 runInThisContext(
@@ -1223,6 +1224,34 @@ describe('batch 1 server authority and legacy recovery', () => {
     expect(a.events.find((e: any) => e.server).createdAt).toBe(timestamp);
     live.store.update('s', { questions: { trace: 'outdated local question' } });
     expect(a.conversations.technical[0].text).toBe('原提问');
+  });
+  it('says what an agent did in the activity, from the event reference', async () => {
+    const { live } = fixture();
+    const a = await live.start('pilot');
+    const test = { session_id: 's', kind: 'test', object_id: 'test', version: 1 };
+    live.store.update('s', {
+      tests: [testRecord()],
+      timeline: {
+        mode: 'saved',
+        turns: [],
+        events: [
+          {
+            seq: 2,
+            event_type: 'test_assistant',
+            actor_id: 'agent:d1',
+            executor_kind: 'external_agent',
+            refs: [test],
+            payload: {},
+          },
+        ],
+      },
+    });
+    const event = a.events.find((e: { server?: boolean; seq?: number }) => e.server && e.seq === 2);
+    expect(event.refs).toEqual([test]);
+    expect(eventLine(a, event)).toMatchObject({
+      text: '我的 Agent：测试：政策？',
+      open: { action: 'open-run', id: 'test' },
+    });
   });
   it('keeps legacy local questions, task links and observed times when fields are missing or null', async () => {
     const { live, data } = fixture();

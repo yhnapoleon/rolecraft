@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { createV4FeedbackAdapter, W05_V4_OPERATIONS as op } from './v4-slot';
 import type { V4HostSnapshot, V4CommandResult, V4SlotId } from '../../v4-host';
 import recorded from './model-advice.fixtures.json';
+import { referenceLabel } from '../../reference-catalog';
 
 const ref = (kind: string, id: string, version = 1) => ({
   session_id: 's',
@@ -213,6 +214,36 @@ describe('W05 v4 host adapter', () => {
     await ctl.adapter.recover!();
     expect(ctl.adapter.snapshot().awaitingFeedback).toBe(false);
     expect(f.recovery).toEqual(['feedback-job', 'feedback-job']);
+    ctl.destroy();
+  });
+  it('names cited documents, test runs and work from the same timeline read', async () => {
+    const f = fixture();
+    f.setRead(async (operation) => {
+      if (operation === op.products)
+        return { result: { result: { items: [f.product], next_cursor: null } } };
+      if (operation === op.submissions) return { result: { items: [], next_cursor: null } };
+      if (operation === op.timeline)
+        return {
+          objects: [
+            { ref: ref('test', 't1'), content: { query: '住宿报销上限是多少？' } },
+            { ref: f.cfg, content: {} },
+          ],
+          workspace: {
+            config: { id: 'cfg', version: 3, config_version: 2 },
+            material_titles: { 'policy:2': '费用管理通知：差旅住宿标准' },
+          },
+        };
+      return { items: [], next_cursor: null };
+    });
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    const references = ctl.adapter.snapshot().references;
+    if (!references) throw Error('The adapter did not name cited objects');
+    const name = (value: Parameters<typeof referenceLabel>[0]) =>
+      referenceLabel(value, references, 'zh').text;
+    expect(name(ref('material', 'policy', 2))).toBe('费用管理通知：差旅住宿标准 · v2');
+    expect(name(ref('test', 't1'))).toBe('测试：住宿报销上限是多少？ · 第 1 次');
+    expect(name(ref('product', 'p', 2))).toBe('作品《用户原文》· v2');
     ctl.destroy();
   });
   it('does not treat colleague model mode as feedback readiness', async () => {

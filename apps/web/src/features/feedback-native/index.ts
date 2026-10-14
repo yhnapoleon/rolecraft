@@ -22,6 +22,7 @@ import { evaluationVersionLine } from './evaluation-version';
 import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
+import { readCatalog, referenceLabel, type ReferenceCatalog } from '../../reference-catalog';
 
 export type SelectedProduct = Pick<
   WorkProductVersion,
@@ -106,6 +107,8 @@ export interface FeedbackNativeState {
     kind: 'objection' | 'supplement';
     text: string;
   }[];
+  /** Names for cited objects (documents, test runs, work, deliveries), from the timeline read. */
+  references?: ReferenceCatalog;
   /** Feedback slot status only. Never copy a colleague/role mode here. */
   semanticStatus?: FeedbackSemanticStatus;
   /** Legacy adapter field; intentionally ignored by semantic rendering. */
@@ -395,23 +398,16 @@ export function mountNativeFeedback(
       : undefined;
   if (reviewControls) root.insertBefore(reviewControls.element, reports);
   host.replaceChildren(root);
+  // The object's own name and version; the full name, with the action, for screen readers.
+  const nameOf = (ref: ObjectRef | EvidenceRefV2) =>
+    referenceLabel(ref, adapter.snapshot().references ?? readCatalog(null), language);
   function refs(parent: HTMLElement, values: (ObjectRef | EvidenceRefV2)[]) {
-    const names: Record<string, string> = {
-      product: T('作品', 'Artifact'),
-      material: T('材料', 'Material'),
-      test: T('测试', 'Test'),
-      role_reply: T('同事回复', 'Colleague reply'),
-      role_turn: T('问题', 'Question'),
-      submission: T('提交记录', 'Submission'),
-      review: T('评审记录', 'Review'),
-      event: T('历史记录', 'History'),
-    };
     const row = el('div');
     for (const ref of values) {
-      const link = button(
-        `${names[ref.kind] ?? T('依据', 'Evidence')} · ${versionLabel(ref.version)}`,
-        () => adapter.openReference(ref),
-      );
+      const name = nameOf(ref);
+      const link = button(name.text, () => adapter.openReference(ref));
+      link.setAttribute('aria-label', name.label);
+      link.dataset.referenceKind = ref.kind;
       row.append(link);
       if ('quote' in ref && ref.quote) {
         if (language === 'en' && /[\u4e00-\u9fff]/u.test(ref.quote))
@@ -707,6 +703,7 @@ export function mountNativeFeedback(
         language,
         (ref) => adapter.openReference(ref),
         adviceFallback(report, adapter.snapshot()),
+        nameOf,
       );
     }
     for (const item of advice) {
@@ -899,6 +896,7 @@ export function mountNativeFeedback(
         language,
         (ref) => adapter.openReference(ref),
         adviceFallback(report, state),
+        nameOf,
       );
     }
     for (const node of reports.querySelectorAll<HTMLElement>('[data-feedback-coverage]')) {

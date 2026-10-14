@@ -60,3 +60,19 @@
 .agent-v4-slot [hidden] {
   display: none !important;
 }
+/* Agent records line up with the host's hand-over and return lines, which carry an icon. */
+.agent-v4-activity .log-item {
+  padding-inline-start: 32px;
+}
+.agent-v4-open {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.agent-v4-open:hover {
+  text-decoration: underline;
+}

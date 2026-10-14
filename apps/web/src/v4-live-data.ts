@@ -204,7 +204,9 @@ export class V4LiveData {
             seq: e.seq,
             event_type: e.type === 'material_read' ? 'read_material' : e.type,
             actor_id: e.executor.id,
-            payload: e.data,
+            executor_kind: e.executor.kind,
+            refs: e.refs ?? [],
+            payload: e.data ?? {},
           })),
         },
       });

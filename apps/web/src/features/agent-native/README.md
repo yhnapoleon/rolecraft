@@ -17,7 +17,7 @@
 | host操作 | slot消费内容/发出的业务意图 |
 |---|---|
 | `query('delegations.list')` | `items`为当前session的公开委托，复用DelegationGrant的id/executor/capabilities/expires_at/revoked。可选`agent_label`供显示，`effective_status=active/expired/revoked`须为当前权威结果；缺该结果显示“状态待核实”，不按本机时钟推断有效。不得带token。此读取尚需公共实现冻结，类型在这里仅约定slot消费投影。 |
-| `query('timeline')` | `events`为授权PublicEvent；只取type、可信executor、refs及公开summary/semantic_status/verification。不显示原始对象或内部payload，不从空窗口推断未操作。 |
+| `query('timeline')` | `events`为授权PublicEvent；只取type、可信executor、refs、公开data里的资料与版本号及summary/semantic_status/verification；资料标题与测试问题取自同一次timeline读取。不显示原始对象、事件代码或内部payload，不从空窗口推断未操作。“它做了什么”只列外部Agent执行的事件与各授权的签发／撤销／到期，每条一句话（`agentLogLines`，文案与动态共用`app/event-copy.ts`）；学员自己的记录留在动态标签。 |
 | `query('work_products.list')` | `items`为授权WorkProductVersion；只展示外部Agent作者/执行者的未移除作品，版本与采用状态取服务器。支持显式读取next_cursor；不推算新版本。 |
 | `command('delegations.create')` | 名称、明确选定的范围、read或read+act、到期时点。默认只读；整个工作区需主动选择。不授予submit，人工检查采用与正式提交分别走原入口。 |
 | `command('delegations.revoke')` | 确切delegation_id；成功后回读当前委托状态，原作品与日志保留。 |

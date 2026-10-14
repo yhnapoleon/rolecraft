@@ -1,4 +1,5 @@
 import { waitFor, clickReady } from './browser-support.mjs';
+import { askHowToPrioritise, openEvidence, readActivity } from './activity-evidence.mjs';
 /** Normal v4 UI over real HTTP/worker and the unmodified published catalog. */
 import assert from 'node:assert/strict';
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -113,15 +114,12 @@ async function inspectResourceRegion(context) {
 }
 
 async function readAndTest(context) {
-  const { browser, text, shot } = context;
+  const { browser, question, shot } = context;
   await browser.click('.doc-card[data-id="brief"]');
   await waitFor(browser, `location.hash.startsWith('#/doc/')`);
   await browser.click('[data-action="to-board"]');
   await browser.click('.product-bar [data-action="open-bench"]');
-  await browser.type(
-    '#lab-q',
-    text('住宿报销上限是多少？', 'What is the hotel reimbursement limit?'),
-  );
+  await browser.type('#lab-q', question);
   await browser.submit('[data-form="run-test"]');
   await waitFor(browser, `document.querySelectorAll('.run').length > 0`);
   await shot('test');
@@ -357,7 +355,8 @@ async function runLanguage(language) {
     '负责人和范围核实前暂缓，保留人工兜底。',
     'Defer until the owner and scope are verified. Keep human fallback.',
   );
-  const context = { browser, language, text, title, draft, shot, taskRoute: '' };
+  const question = text('住宿报销上限是多少？', 'What is the hotel reimbursement limit?');
+  const context = { browser, language, text, title, draft, question, shot, taskRoute: '' };
   await browser.send('Page.addScriptToEvaluateOnNewDocument', {
     source: `(() => {
     const original = window.fetch;
@@ -382,6 +381,9 @@ async function runLanguage(language) {
     );
     await browser.goto(base);
     await step('normal entry and fixed work language', () => enterWorkspace(context));
+    await step('asking how to prioritise opens that colleague with the tasks', () =>
+      askHowToPrioritise(context),
+    );
     await step('colleague drafts restore once and retain deliberate clearing', () =>
       restoreColleagueDrafts(context),
     );
@@ -395,10 +397,15 @@ async function runLanguage(language) {
       recoverAccess(context),
     );
     await step('submit a deferral and read fixed feedback', () => submitDeferral(context));
+    await step('evidence names its object and opens in view', () => openEvidence(context));
     await step('feedback names the final rubric version', () => showFinalRubricVersion(context));
     await step('revision keeps original feedback and original wording', () =>
       reviseAndReadHistory(context),
     );
+    await step('activity and Agent log read as sentences', async () => {
+      await browser.click('[data-action="to-board"]');
+      await readActivity(context);
+    });
     assert.deepEqual(
       browser.logs.filter((item) => item.level === 'exception'),
       [],
