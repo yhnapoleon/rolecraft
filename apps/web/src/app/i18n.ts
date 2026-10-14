@@ -90,6 +90,16 @@ export function when(iso?: string | null) {
   const tag = current === 'en' ? 'en-US' : 'zh-CN';
   const hm = d.toLocaleTimeString(tag, { hour: '2-digit', minute: '2-digit', hour12: false });
   if (d.toDateString() === new Date().toDateString()) return T('今天 ' + hm, 'Today ' + hm);
+  return at(iso);
+}
+
+/** Date and time, as older events are written: 10月14日 15:02 / Oct 14 15:02. */
+export function at(iso?: string | null) {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.valueOf())) return '';
+  const tag = current === 'en' ? 'en-US' : 'zh-CN';
+  const hm = d.toLocaleTimeString(tag, { hour: '2-digit', minute: '2-digit', hour12: false });
   return d.toLocaleDateString(tag, { month: 'short', day: 'numeric' }) + ' ' + hm;
 }
 

@@ -174,18 +174,30 @@ describe('the continue code of an open practice', () => {
     vi.unstubAllGlobals();
   });
 
-  it('says when an existing code was made, and replacing it names that generation', async () => {
+  it('says on which day and time an existing code was made, and replacing it names that generation', async () => {
+    // Made at local 15:02 and read two minutes later: still a date and time, not "2 minutes ago".
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 14, 15, 4));
+    const made = new Date(2026, 9, 14, 15, 2).toISOString();
     const h = host({
       continueCode: vi.fn<Live['continueCode']>(async () => ({
         exists: true,
         generation: 2,
-        created_at: new Date().toISOString(),
+        created_at: made,
       })),
     });
     const recovery = createPracticeRecovery(h.value);
 
     await recovery.open(attempt);
-    expect(h.sheets[0].body).toContain('已有继续码，生成于 刚刚。');
+    expect(h.sheets[0].body).toContain('已有继续码，生成于 10月14日 15:02。');
+    setPreference('en');
+    try {
+      await recovery.open(attempt);
+      expect(h.sheets[1].body).toContain('A code was created on Oct 14 15:02.');
+    } finally {
+      setPreference('zh');
+      vi.useRealTimers();
+    }
     expect(h.sheets[0].body).not.toContain(SHOWN);
     // Enter must not replace a code someone may still rely on: Close takes the focus.
     expect(h.sheets[0].foot).toMatch(/data-action="close"[^>]*autofocus/);

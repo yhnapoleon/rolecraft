@@ -5,7 +5,7 @@
  * letters, digits, spaces and dashes, so nothing needs escaping.
  */
 import { ApiError } from '../../api';
-import { T, when } from '../../app/i18n';
+import { at, T, when } from '../../app/i18n';
 import type { ContinueCodeIssued, ContinueCodeStatus } from '../../contracts-v2';
 import type { LocalSession } from '../../types';
 import { continueCodeDraft, normalizeContinueCode } from './code';
@@ -115,9 +115,9 @@ export function createPracticeRecovery(host: RecoveryHost) {
         host.button(T('复制', 'Copy'), 'continue-code-copy', 'quiet') +
         host.button(T('记下了', 'Done'), 'close', 'primary');
     } else if (view.status.exists) {
-      const made = when(view.status.created_at);
+      const made = at(view.status.created_at);
       lines.push(
-        `<p>${T(`已有继续码，生成于 ${made}。`, `A code was created ${made}.`)}</p>`,
+        `<p>${T(`已有继续码，生成于 ${made}。`, `A code was created on ${made}.`)}</p>`,
         `<p class="meta">${T(
           '找不到了就换一个：旧码立即失效，已经打开过的浏览器不受影响。',
           'Lost it? Replace it: the old code stops working at once; browsers already opened with it keep working.',
