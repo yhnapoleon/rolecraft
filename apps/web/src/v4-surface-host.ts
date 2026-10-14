@@ -13,7 +13,7 @@ export function surfaceHost(host: V4HostAdapter, active: () => boolean): V4HostA
     keepDraft: (slot, key, value) => host.keepDraft(slot, key, value),
     flushDrafts: () => host.flushDrafts(),
     openReference: (reference) => host.openReference(reference),
-    chooseEvidence: () => host.chooseEvidence(),
+    chooseEvidence: (pick) => host.chooseEvidence(pick),
     selectTask: (reference) => {
       if (active()) host.selectTask(reference);
     },

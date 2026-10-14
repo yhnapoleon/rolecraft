@@ -2,6 +2,7 @@
 import type { V4HostAdapter } from './v4-host';
 import type { EvidenceRefV2, ObjectRef } from './contracts-v2';
 import { T } from './app/i18n';
+import { answerEvidenceRequest } from './evidence-picker';
 
 const names = () => ({
   material: T('材料', 'Material'),
@@ -101,63 +102,8 @@ export function installV4References(getHost: () => V4HostAdapter | null) {
       detail.reject(error);
     }
   };
-  const choose = async (event: Event) => {
-    const detail = (event as CustomEvent).detail,
-      host = getHost();
-    if (!host || host.snapshot().session?.protocol !== 2) return;
-    detail.handled = true;
-    try {
-      if (detail.sessionId !== host.snapshot().session?.sessionId) throw Error('Practice changed');
-      // Only actual read receipts are offered; a material catalogue is not proof of reading.
-      const refs = host.draft<EvidenceRefV2[]>('workspace', 'evidence-cache') ?? [];
-      const sheet = dialog(
-        T('选择已读材料的原始依据', 'Choose original evidence from documents you read'),
-      );
-      const chosen = new Set<number>();
-      let finished = false;
-      for (const [index, ref] of refs.entries()) {
-        if (ref.session_id !== detail.sessionId || !ref.quote) continue;
-        const row = node('label', '', 'check');
-        const checkbox = node('input');
-        checkbox.type = 'checkbox';
-        checkbox.onchange = () => {
-          if (checkbox.checked) chosen.add(index);
-          else chosen.delete(index);
-        };
-        row.append(checkbox, node('span', `${ref.quote} · v${ref.version}`));
-        sheet.body.append(row);
-      }
-      if (!sheet.body.children.length)
-        sheet.body.append(
-          node(
-            'p',
-            T(
-              '先打开并阅读一份材料，再选择其中的依据。',
-              'Read a document first, then choose its evidence.',
-            ),
-            'meta',
-          ),
-        );
-      const confirm = node('button', T('使用选中的依据', 'Use selected evidence'), 'btn primary');
-      confirm.type = 'button';
-      confirm.onclick = () => {
-        finished = true;
-        detail.resolve([...chosen].map((i) => refs[i]));
-        sheet.element.close();
-      };
-      sheet.foot.append(confirm);
-      sheet.element.addEventListener(
-        'close',
-        () => {
-          if (!finished) detail.resolve([]);
-        },
-        { once: true },
-      );
-      sheet.element.showModal();
-    } catch (error) {
-      detail.reject(error);
-    }
-  };
+  // Read passages, test runs and work versions are offered by the shared picker.
+  const choose = (event: Event) => answerEvidenceRequest(getHost, event);
   window.addEventListener('v4-open-reference', open);
   window.addEventListener('v4-choose-evidence', choose);
   return () => {

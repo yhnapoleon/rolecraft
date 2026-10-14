@@ -1,0 +1,44 @@
+/* Evidence picker: one checkbox list per source, in the existing sheet. */
+.evidence-picker .sheet-body {
+  gap: 20px;
+}
+.evidence-picker__section {
+  display: grid;
+  gap: 8px;
+}
+.evidence-picker__section h3 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.evidence-picker__group {
+  display: grid;
+  gap: 2px;
+}
+.evidence-picker__group h4 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+.evidence-picker .check {
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.evidence-picker .check input {
+  margin-top: 2px;
+}
+.evidence-picker .check span {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+.evidence-picker .check small {
+  flex-basis: 100%;
+  padding-left: 26px;
+}
+.evidence-picker > .inline-alert {
+  margin: 0 24px 4px;
+}
