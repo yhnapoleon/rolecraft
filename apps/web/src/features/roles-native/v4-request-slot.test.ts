@@ -1,6 +1,7 @@
 import { setImmediate as settle } from 'node:timers/promises';
 import { afterEach, expect, it, vi } from 'vitest';
-import { V4DataHost } from '../../v4-data-host';
+import type { EvidenceRefV2 } from '../../contracts-v2';
+import { V4DataHost, type V4HostPorts } from '../../v4-data-host';
 import type { V4SlotHandle } from '../../v4-host';
 import { rememberRequest } from './v4-data';
 import { mount } from './v4-request-slot';
@@ -49,7 +50,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function fixture() {
+async function fixture(choose: V4HostPorts['chooseEvidence'] = async () => []) {
   vi.stubGlobal('HTMLFormElement', Form);
   vi.stubGlobal('HTMLButtonElement', Element);
   vi.stubGlobal(
@@ -133,7 +134,7 @@ async function fixture() {
     },
     uiLanguage: () => 'zh',
     announce: vi.fn(),
-    chooseEvidence: async () => [],
+    chooseEvidence: choose,
     openReference: async () => {},
     exclusive: <T>(_name: string, action: () => Promise<T>): Promise<T> => {
       const result = queue.then(action);
@@ -165,6 +166,7 @@ async function fixture() {
   });
   return {
     host,
+    form,
     reads,
     submit,
     results,
@@ -310,4 +312,36 @@ it('does not refresh after an explicit recovery finishes on a destroyed slot', a
   await settle();
   expect(f.timelineReads()).toBe(1);
   expect(f.reads).toEqual([f.request.requestId, f.request.requestId]);
+});
+
+it('offers passages, test runs and work with the current choice and summarises it', async () => {
+  const cited = (kind: string, id: string, version: number): EvidenceRefV2 => ({
+    session_id: 's',
+    kind,
+    object_id: id,
+    version,
+    observed_at_seq: 3,
+    valid_from_seq: 0,
+  });
+  const chosen = [cited('test', 't1', 1), cited('product', 'p1', 2)];
+  const picks: unknown[] = [];
+  const f = await fixture(async (pick) => {
+    picks.push(structuredClone(pick));
+    return chosen;
+  });
+  f.start();
+  await settle();
+  const button = f.form.all().find((node) => node.textContent === '选择依据');
+  if (!button) throw Error('Expected the evidence control');
+  const summary = () => f.form.all().find((node) => node.textContent.startsWith('已选依据'));
+  expect(f.form.all().some((node) => node.textContent === '还没有选择依据')).toBe(true);
+  button.dispatchEvent(new Event('click'));
+  await settle();
+  expect(summary()?.textContent).toBe('已选依据：1 次测试 · 1 份作品');
+  button.dispatchEvent(new Event('click'));
+  await settle();
+  expect(picks).toEqual([
+    { kinds: ['material', 'test', 'product'], selected: [] },
+    { kinds: ['material', 'test', 'product'], selected: chosen },
+  ]);
 });

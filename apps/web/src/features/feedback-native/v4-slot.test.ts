@@ -1,6 +1,7 @@
 import { fixtureHost, type HostFixture } from '../../host-test-support';
 import { describe, it, expect } from 'vitest';
 import { createV4FeedbackAdapter, W05_V4_OPERATIONS as op } from './v4-slot';
+import { EVIDENCE_KINDS } from '../../evidence-picker';
 import type { V4HostSnapshot, V4CommandResult, V4SlotId } from '../../v4-host';
 import recorded from './model-advice.fixtures.json';
 
@@ -288,6 +289,20 @@ describe('W05 v4 host adapter', () => {
     expect(f.queries.length).toBe(count);
     ctl.destroy();
     expect(f.listeners.size).toBe(0);
+  });
+  it('asks the shared picker with the challenge evidence already chosen', async () => {
+    const f = fixture();
+    const cited = { ...ref('test', 't1'), observed_at_seq: 4 };
+    const picks: unknown[] = [];
+    f.host.chooseEvidence = async (pick) => {
+      picks.push(pick);
+      return [cited];
+    };
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    const pick = { kinds: EVIDENCE_KINDS, selected: [cited] };
+    expect(await ctl.adapter.chooseEvidence?.(pick)).toEqual([cited]);
+    expect(picks).toEqual([pick]);
   });
   it('changing UI language preserves fixed work language and stored feedback', async () => {
     const f = fixture();

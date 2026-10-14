@@ -3,6 +3,7 @@ import type { CommandInput } from '../../v4-host-operations';
 import type { V4SlotContext, V4SlotHandle, V4HostSnapshot, V4CommandResult } from '../../v4-host';
 import type { EvidenceRefV2 } from '../../contracts-v2';
 import { T, onLocaleChange } from '../../app/i18n';
+import { EVIDENCE_KINDS, evidenceSummary } from '../../evidence-picker';
 import './roles.css';
 import {
   object,
@@ -147,7 +148,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
   function renderControls() {
     legend.textContent = T('申请后的资源总量', 'Requested total resources');
     choose.textContent = T('选择依据', 'Choose evidence');
-    evidenceLabel.textContent = T('已选依据：', 'Selected evidence: ') + evidence.length;
+    evidenceLabel.textContent = evidenceSummary(evidence);
     const capacity = kind() === 'request_capacity';
     for (const key of keys) {
       captions.get(key)!.textContent = labels()[key];
@@ -171,7 +172,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
   formNode.addEventListener('change', onEdit);
   choose.addEventListener('click', () => {
     void host
-      .chooseEvidence()
+      .chooseEvidence({ kinds: EVIDENCE_KINDS, selected: evidence })
       .then(async (refs) => {
         session(host, sid);
         for (const r of refs) ref(r, sid);

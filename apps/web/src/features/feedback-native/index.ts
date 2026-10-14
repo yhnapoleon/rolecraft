@@ -22,6 +22,8 @@ import { evaluationVersionLine } from './evaluation-version';
 import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
+import type { EvidencePick } from '../../v4-host';
+import { EVIDENCE_KINDS, evidenceSummary } from '../../evidence-picker';
 
 export type SelectedProduct = Pick<
   WorkProductVersion,
@@ -143,7 +145,7 @@ export interface FeedbackNativeAdapter {
   retry?(): Promise<unknown>;
   canRetry?: boolean;
   openReference(ref: ObjectRef | EvidenceRefV2): void;
-  chooseEvidence?(): Promise<EvidenceRefV2[]>;
+  chooseEvidence?(pick?: EvidencePick): Promise<EvidenceRefV2[]>;
   readDraft(key: string): { text: string; evidence: EvidenceRefV2[] } | undefined;
   keepDraft(key: string, draft: { text: string; evidence: EvidenceRefV2[] }): Promise<void>;
   canReview?: boolean;
@@ -212,8 +214,6 @@ export function mountNativeFeedback(
   const language = adapter.snapshot().uiLanguage ?? adapter.snapshot().workLanguage ?? 'zh';
   const T = (zh: string, en: string) => feedbackText(language, zh, en);
   const versionLabel = (n: number) => (language === 'en' ? 'v' + n : '第 ' + n + ' 版');
-  const selectedRefs = (n: number) =>
-    language === 'en' ? `${n} original references selected` : `已选 ${n} 处原始引用`;
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', cls = '') => {
     const n = doc.createElement(tag);
     n.textContent = text;
@@ -448,20 +448,18 @@ export function mountNativeFeedback(
       draft!.text = body.value;
       void persist(id, draft!);
     });
-    const evidence = el('p', '', 'muted');
-    evidence.textContent = draft.evidence.length
-      ? selectedRefs(draft.evidence.length)
-      : T('补证引用尚未选择', 'No supporting references selected');
-    const choose = button(
-      T('选择已获准的原始引用', 'Choose authorized original references'),
-      async () => {
-        if (adapter.chooseEvidence) {
-          draft!.evidence = await adapter.chooseEvidence();
-          await persist(id, draft!);
-          evidence.textContent = selectedRefs(draft!.evidence.length);
-        }
-      },
-    );
+    const chosen = draft;
+    const evidence = el('p', evidenceSummary(chosen.evidence), 'muted');
+    const choose = button(T('选择依据', 'Choose evidence'), async () => {
+      if (adapter.chooseEvidence) {
+        chosen.evidence = await adapter.chooseEvidence({
+          kinds: EVIDENCE_KINDS,
+          selected: chosen.evidence,
+        });
+        await persist(id, chosen);
+        evidence.textContent = evidenceSummary(chosen.evidence);
+      }
+    });
     choose.disabled = !adapter.chooseEvidence;
     const send = (kind: 'objection' | 'supplement') => async () => {
       if (!draft!.text.trim())
@@ -489,7 +487,7 @@ export function mountNativeFeedback(
       draft!.evidence = [];
       await persist(id, draft!);
       body.value = '';
-      evidence.textContent = T('补证引用尚未选择', 'No supporting references selected');
+      evidence.textContent = evidenceSummary([]);
     };
     const objection = button(T('记录异议', 'Record a challenge'), send('objection'));
     const supplement = button(T('提交补证', 'Submit additional evidence'), send('supplement'));

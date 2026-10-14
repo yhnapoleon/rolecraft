@@ -45,7 +45,9 @@ export type AskEvidence = (
   confirm: (rows: readonly PickerRow[]) => Promise<EvidenceRefV2[]>,
 ) => Promise<EvidenceRefV2[] | null>;
 
-const KINDS: readonly EvidenceKind[] = ['material', 'test', 'product'];
+/** Everything a person can cite: read passages, actual test runs and saved work versions. */
+export const EVIDENCE_KINDS: readonly EvidenceKind[] = ['material', 'test', 'product'];
+const KINDS = EVIDENCE_KINDS;
 type TestContent = { query?: unknown; status?: unknown; config_ref?: { config_version?: unknown } };
 const offered = (pick: EvidencePick): EvidenceKind[] =>
   KINDS.filter((kind) => (pick.kinds?.length ? pick.kinds : ['material']).includes(kind));
