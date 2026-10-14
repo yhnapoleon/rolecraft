@@ -81,7 +81,8 @@ async function ensureWork(context) {
   await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
 }
 
-/** Opens the delivery panel, selects the first work version and submits a decision. */
+/** Opens the delivery panel, selects the work written in these checks (or the first
+ * version listed) and submits a decision; returns the selected version's label. */
 async function submitOnce(context, decision) {
   const { browser, text } = context;
   await closeOverlays(browser);
@@ -91,13 +92,19 @@ async function submitOnce(context, decision) {
     browser,
     `!!document.querySelector('#sheet .native-feedback input[type="checkbox"]')`,
   );
-  await browser.ev(`(() => {
-    const box = document.querySelector('#sheet .native-feedback input[type="checkbox"]');
+  const chosen = await browser.ev(`(() => {
+    const rows = [...document.querySelectorAll('#sheet .native-feedback label.field-row')]
+      .filter((row) => row.querySelector('input[type="checkbox"]'));
+    const row =
+      rows.find((r) => r.textContent.startsWith(${JSON.stringify(context.workTitle)})) ?? rows[0];
+    const box = row.querySelector('input[type="checkbox"]');
     if (!box.checked) box.click();
+    return row.textContent;
   })()`);
   await browser.select('#sheet .native-feedback select', decision);
   await clickReady(browser, text('提交选中的版本', 'Submit selected versions'), '#sheet button');
   await waitFor(browser, `${status} === 'submitted'`, 20000);
+  return chosen;
 }
 
 async function ensureSubmitted(context) {
@@ -427,7 +434,7 @@ const RECORD_ID = /[0-9a-f]{32}/;
 async function snapshotNames(context) {
   const { browser, text, shot } = context;
   await ensureWork(context);
-  await submitOnce(context, 'defer_with_conditions');
+  const submitted = await submitOnce(context, 'defer_with_conditions');
   const heading = text('已保存的提交快照', 'Saved submission snapshot');
   await waitFor(
     browser,
@@ -438,7 +445,9 @@ async function snapshotNames(context) {
       .find((node) => node.textContent.startsWith(${JSON.stringify(heading)}));
     return h.parentElement.innerText;
   })()`);
-  assert.ok(receipt.includes(context.workTitle), receipt);
+  // The row read "<title> · <version>[ · made by an agent]"; the snapshot names that version.
+  const version = submitted.split(' · ').slice(0, 2).join(' · ');
+  assert.ok(receipt.includes(version), JSON.stringify({ receipt, submitted }));
   assert.doesNotMatch(receipt, RECORD_ID);
   await shot('F13-receipt');
   await openReview(context);
