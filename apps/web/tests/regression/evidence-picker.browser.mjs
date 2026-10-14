@@ -244,32 +244,37 @@ async function run(language, reduced, width) {
       await shot('feedback-items');
     });
     await step('a supplement cites the test run', async () => {
+      // The panel may re-render; every action reads the current general response form.
+      const general = `[...document.querySelectorAll('details[data-response-id]')]
+        .find((node) => node.dataset.responseId.endsWith(':general:'))`;
+      const control = (match) =>
+        `[...(${general}).querySelectorAll('button')].find((b) => ${match})`;
       await browser.ev(`(() => {
-        const forms = [...document.querySelectorAll('details[data-response-id]')];
-        const general = forms.find((node) => node.dataset.responseId.endsWith(':general:'));
-        general.open = true;
-        general.scrollIntoView({ block: 'center' });
-        window.generalResponse = general;
+        const form = ${general};
+        form.open = true;
+        form.scrollIntoView({ block: 'center' });
       })()`);
-      await browser.ev(`[...window.generalResponse.querySelectorAll('button')]
-        .find((b) => b.textContent === ${JSON.stringify(text('选择依据', 'Choose evidence'))}).click()`);
+      await browser.ev(
+        `(${control(`b.textContent === ${JSON.stringify(text('选择依据', 'Choose evidence'))}`)}).click()`,
+      );
       await waitFor(browser, pickerOpen);
       assert.ok(await tick(browser, 1));
       await browser.clickText(text('使用选中的依据', 'Use selected evidence'), 'dialog button');
       await waitFor(
         browser,
-        `window.generalResponse.innerText.includes(${JSON.stringify(
+        `(${general}).innerText.includes(${JSON.stringify(
           text('已选依据：1 次测试', 'Selected evidence: 1 test run'),
         )})`,
       );
       await browser.ev(`(() => {
-        const box = window.generalResponse.querySelector('textarea');
+        const box = (${general}).querySelector('textarea');
         box.value = ${JSON.stringify(text('配置 v2 之后已复测。', 'Retested after configuration v2.'))};
         box.dispatchEvent(new Event('input', { bubbles: true }));
       })()`);
       await shot('supplement');
-      await browser.ev(`[...window.generalResponse.querySelectorAll('button')]
-        .find((b) => b.dataset.responseAction === 'supplement').click()`);
+      const supplement = control(`b.dataset.responseAction === 'supplement'`);
+      await waitFor(browser, `!(${supplement}).disabled`);
+      await browser.ev(`(${supplement}).click()`);
       await waitFor(
         browser,
         `[...document.querySelectorAll('.native-feedback blockquote')].some((node) => node.textContent === ${JSON.stringify(
