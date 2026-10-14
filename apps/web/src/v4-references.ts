@@ -3,6 +3,7 @@ import type { V4HostAdapter } from './v4-host';
 import type { EvidenceRefV2, ObjectRef } from './contracts-v2';
 import { T } from './app/i18n';
 import { answerEvidenceRequest, practiceChanged } from './evidence-picker';
+import { sheetDialog } from './sheet-dialog';
 
 const names = () => ({
   material: T('材料', 'Material'),
@@ -20,23 +21,6 @@ const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', classNam
   n.className = className;
   return n;
 };
-function dialog(title: string) {
-  const element = node('dialog', '', 'sheet wide');
-  const head = node('header', '', 'sheet-head');
-  const heading = node('h2', title);
-  heading.id = 'v4-reference-title';
-  element.setAttribute('aria-labelledby', heading.id);
-  const close = node('button', T('关闭', 'Close'), 'btn small quiet');
-  close.type = 'button';
-  close.onclick = () => element.close();
-  head.append(heading, close);
-  const body = node('div', '', 'sheet-body');
-  const foot = node('footer', '', 'sheet-foot');
-  element.append(head, body, foot);
-  document.body.append(element);
-  element.addEventListener('close', () => element.remove(), { once: true });
-  return { element, body, foot };
-}
 function textOf(content: Record<string, any>): string[] {
   const strings = [
     content.text,
@@ -71,7 +55,7 @@ export function installV4References(getHost: () => V4HostAdapter | null) {
       if (getHost()?.snapshot().session?.sessionId !== ref.session_id) throw practiceChanged();
       const title = (names() as Record<string, string>)[ref.kind] ?? T('依据', 'Evidence');
       const side = document.querySelector<HTMLElement>('[data-v4-reference-side]');
-      const overlay = side ? null : dialog(title);
+      const overlay = side ? null : sheetDialog(title);
       const target = side ?? overlay!.body;
       target.replaceChildren();
       target.append(node('h2', `${record.content.title ?? title} · v${ref.version}`, 'title-s'));

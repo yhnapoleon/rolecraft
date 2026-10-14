@@ -8,6 +8,7 @@ import { purposeName } from './features/feedback-native/short-summary';
 import { outcomeTerm } from './features/workspace/native-v4/outcome-copy';
 import type { EvidenceKind, EvidencePick, V4HostAdapter } from './v4-host';
 import type { PublicObject } from './v4-host-operations';
+import { sheetDialog } from './sheet-dialog';
 import './evidence-picker.css';
 
 export type PickerSources = {
@@ -327,17 +328,12 @@ export function evidenceSheet(doc: Document): AskEvidence {
         node.className = className;
         return node;
       };
-      const id = `evidence-picker-${Math.random().toString(36).slice(2)}`;
-      const dialog = el('dialog', '', 'sheet wide evidence-picker');
-      const head = el('header', '', 'sheet-head');
-      const heading = el('h2', T('选择依据', 'Choose evidence'));
-      heading.id = id;
-      dialog.setAttribute('aria-labelledby', id);
-      const close = el('button', T('关闭', 'Close'), 'btn small quiet');
-      close.type = 'button';
-      close.onclick = () => dialog.close();
-      head.append(heading, close);
-      const body = el('div', '', 'sheet-body');
+      const sheet = sheetDialog(T('选择依据', 'Choose evidence'), {
+        doc,
+        className: 'evidence-picker',
+      });
+      const { element: dialog, body, foot } = sheet;
+      const id = sheet.heading.id;
       const boxes: [HTMLInputElement, PickerRow][] = [];
       sections.forEach((section, index) => {
         const block = el('section', '', 'evidence-picker__section');
@@ -369,7 +365,6 @@ export function evidenceSheet(doc: Document): AskEvidence {
         }
         body.append(block);
       });
-      const foot = el('footer', '', 'sheet-foot');
       const status = el('span', '', 'foot-note');
       status.setAttribute('aria-live', 'polite');
       const error = el('p', '', 'inline-alert');
@@ -403,17 +398,15 @@ export function evidenceSheet(doc: Document): AskEvidence {
         );
       };
       foot.append(status, use);
-      dialog.append(head, body, error, foot);
+      foot.before(error);
       dialog.addEventListener(
         'close',
         () => {
-          dialog.remove();
           if (!done) resolve(null);
         },
         { once: true },
       );
       count();
-      doc.body.append(dialog);
       dialog.showModal();
     });
 }
