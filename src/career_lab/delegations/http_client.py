@@ -20,6 +20,11 @@ class HttpAgentClient:
         self.config_path = config_path
         self.timeout = timeout
 
+    @property
+    def session_id(self):
+        """The one session this delegated client is authorized for."""
+        return load_credentials(self.config_path).session_id
+
     def _request(
         self, credentials, method, suffix, body=None, query=None, deadline=None, *, operation=None
     ):
