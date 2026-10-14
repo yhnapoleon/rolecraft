@@ -1,5 +1,6 @@
 import { fixtureHost, type HostFixture } from '../../host-test-support';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { ApiError } from '../../api';
 import { createV4FeedbackAdapter, W05_V4_OPERATIONS as op } from './v4-slot';
 import type { V4HostSnapshot, V4CommandResult, V4SlotId } from '../../v4-host';
 import recorded from './model-advice.fixtures.json';
@@ -116,8 +117,10 @@ function fixture() {
     selectProduct: () => {},
     announce: () => {},
   };
+  const served = read;
   return {
     host,
+    served,
     calls,
     queries,
     drafts,
@@ -246,6 +249,29 @@ describe('W05 v4 host adapter', () => {
     expect(name(ref('product', 'p', 2))).toBe('作品《用户原文》· v2');
     ctl.destroy();
   });
+  it('a saved submission whose follow-up read is dropped is not a failed write', async () => {
+    const f = fixture();
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    f.setResult({
+      requestId: 'feedback-job',
+      status: 'pending',
+      result: { submission: ref('submission', 'sub'), feedback_status: 'queued' },
+    });
+    let dropped = 1;
+    f.setRead(async (operation, input) => {
+      if (operation === 'workbench.read' && dropped > 0) {
+        dropped--;
+        throw new ApiError('The result is unconfirmed.', 0, 'response_unconfirmed');
+      }
+      return f.served(operation, input);
+    });
+    await ctl.adapter.submit({ decision: 'no_go', products: [ref('product', 'p', 2)] });
+    expect(ctl.adapter.snapshot()).toMatchObject({ awaitingFeedback: true, error: undefined });
+    expect(ctl.adapter.snapshot().reports).toHaveLength(1);
+    expect(f.calls).toHaveLength(1);
+    ctl.destroy();
+  });
   it('does not treat colleague model mode as feedback readiness', async () => {
     const f = fixture();
     const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
@@ -308,6 +334,95 @@ describe('W05 v4 host adapter', () => {
     expect(ctl.adapter.snapshot().error).toBeTruthy();
     expect(f.drafts.get('revision')).toEqual({ text: 'keep', evidence: [] });
     ctl.destroy();
+  });
+  it('a dropped read keeps the shown feedback, does not announce, and reads again by itself', async () => {
+    vi.useFakeTimers();
+    try {
+      const f = fixture();
+      const announced: string[] = [];
+      f.host.announce = (message) => {
+        announced.push(message);
+      };
+      const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+      await ctl.refresh();
+      const shown = ctl.adapter.snapshot();
+      // A second submission's feedback is written while the next read is dropped.
+      const second = {
+        ...ref('submission', 'sub2'),
+        id: 'sub2',
+        products: [ref('product', 'p', 2)],
+      };
+      const later = async (operation: string, input?: Readonly<Record<string, unknown>>) => {
+        if (operation === op.submissions)
+          return {
+            items: [
+              {
+                id: 'sub',
+                session_id: 's',
+                version: 1,
+                products: [ref('product', 'p', 2)],
+                decision: 'no_go',
+              },
+              { ...second, decision: 'no_go' },
+            ],
+            next_cursor: null,
+          };
+        if (operation === op.feedback && input?.submission_id === 'sub2')
+          return { items: [{ ...f.report, id: 'f2', subject: ref('submission', 'sub2') }] };
+        return f.served(operation, input);
+      };
+      let dropped = 1;
+      f.setRead(async (operation, input) => {
+        if (dropped > 0) {
+          dropped--;
+          throw new ApiError('The result is unconfirmed.', 0, 'response_unconfirmed');
+        }
+        return later(operation, input);
+      });
+      await ctl.refresh();
+      expect(ctl.adapter.snapshot()).toMatchObject({
+        reports: shown.reports,
+        products: shown.products,
+        submissions: shown.submissions,
+        error: undefined,
+      });
+      expect(announced).toEqual([]);
+      for (let wait = 0; wait < 40 && ctl.adapter.snapshot().reports.length < 2; wait++)
+        await vi.advanceTimersByTimeAsync(500);
+      expect(ctl.adapter.snapshot().reports.map((r) => r.id)).toEqual(['f', 'f2']);
+      expect(ctl.adapter.snapshot().error).toBeUndefined();
+      ctl.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('a dropped read that keeps failing is shown, and the shown feedback stays', async () => {
+    vi.useFakeTimers();
+    try {
+      const f = fixture();
+      const announced: string[] = [];
+      f.host.announce = (message) => {
+        announced.push(message);
+      };
+      const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+      await ctl.refresh();
+      const shown = ctl.adapter.snapshot().reports;
+      f.setRead(async () => {
+        throw new ApiError('Server error', 503, 'request_failed');
+      });
+      await ctl.refresh();
+      for (let wait = 0; wait < 40 && !ctl.adapter.snapshot().error; wait++)
+        await vi.advanceTimersByTimeAsync(500);
+      expect(ctl.adapter.snapshot().error).toBeTruthy();
+      expect(ctl.adapter.snapshot().reports).toEqual(shown);
+      expect(announced).toHaveLength(1);
+      f.setRead(f.served);
+      await ctl.refresh();
+      expect(ctl.adapter.snapshot().error).toBeUndefined();
+      ctl.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
   });
   it('busy-only host notices do not start another query loop', async () => {
     const f = fixture();

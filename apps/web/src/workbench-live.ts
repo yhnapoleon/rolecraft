@@ -1,5 +1,5 @@
 import { createGatewayTransport } from './gateway-transport';
-import { request, sessionPath, type Transport } from './api';
+import { request, retryableRead, sessionPath, type Transport } from './api';
 import { T, locale } from './app/i18n';
 import { V4LiveData } from './v4-live-data';
 import { V4Mounts } from './v4-mounts';
@@ -95,6 +95,7 @@ export class LiveWorkbench {
   private state: any;
   private readonly v4: V4LiveData;
   private readonly mounts = new V4Mounts();
+  private mountFailure = '';
   private notify = (_changed: boolean) => {};
   private signature = '';
   private materialCache = new Map<string, Material>();
@@ -630,7 +631,26 @@ export class LiveWorkbench {
   mountV4(a: Attempt | null, selection: { taskId: string | null; productId: string | null }) {
     void this.mounts
       .sync(document, a ? this.session(a) : undefined, a ? this.v4Host(a) : null, selection)
-      .catch((error) => this.store.report({ error: error.message }));
+      .then(
+        () => {
+          // A recovered mount withdraws its own report, so a recurrence is shown again.
+          // An error reported elsewhere since then stays.
+          const own = this.mountFailure;
+          this.mountFailure = '';
+          if (own && this.store.getSnapshot().error === own) this.store.report({ error: '' });
+        },
+        (error) => {
+          // A read dropped while mounting (e.g. while the page loads) is read again by the next poll.
+          if (retryableRead(error)) {
+            this.store.report({ connected: false });
+            return;
+          }
+          // A report renders the page and every render mounts again: report a repeat once.
+          if (error.message === this.mountFailure) return;
+          this.mountFailure = error.message;
+          this.store.report({ error: error.message });
+        },
+      );
   }
   configDomains(a: Attempt) {
     const s = this.session(a);
@@ -1170,6 +1190,15 @@ export class LiveWorkbench {
   async refresh(a?: Attempt) {
     await this.store.health();
     if (a) await this.store.sync(a.id);
+  }
+  /** Page load reads the current practice the way a poll does: a dropped read only marks the
+   * connection lost and the next poll reads again. Never rejects; resolves to whether it was read. */
+  async load(a?: Attempt) {
+    await this.store.health();
+    const s = a ? this.session(a) : undefined;
+    if (s?.protocol === 2) await this.store.poll(s.id);
+    else if (s) await this.store.sync(s.id);
+    return this.store.getSnapshot().connected;
   }
   draftFromWorks(a: Attempt) {
     const list = this.base.currentArtifacts(a);

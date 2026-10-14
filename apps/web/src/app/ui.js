@@ -80,6 +80,7 @@ import {
   isSealedPracticeError,
   practiceUnavailableText,
 } from '../features/feedback-native/read-only-notice';
+import { afterPracticeRead } from '../features/feedback-native/practice-read';
 
 const L = window.PracticeLive;
 const E = L.engine;
@@ -399,7 +400,8 @@ function updateSave() {
     el.classList.toggle('error', !!storageIssue);
   });
   const x = artifact();
-  document.querySelectorAll('[data-revision]').forEach((el) => {
+  // Only the editor's version label; a form's data-revision is its exact revision token.
+  document.querySelectorAll('[data-revision-label]').forEach((el) => {
     if (x) el.textContent = 'v' + x.revision;
   });
 }
@@ -1436,7 +1438,7 @@ function workView(a, t, x) {
         <input id="editor-title" class="editor-title" data-edit="title" maxlength="160" value="${esc(view.title)}" ${editable ? '' : 'readonly'}>
         <div class="editor-meta">
           <label class="purpose" title="${esc(INTENT_HINT(intent))}"><span class="sr-only">${T('用途', 'Purpose')}</span>${purposeGlyph(intent)}<select data-edit="purpose" ${editable ? '' : 'disabled'}>${E.PURPOSES.map((p) => `<option value="${p}" ${p === view.purpose ? 'selected' : ''}>${esc(purposeLabel(p))}</option>`).join('')}</select>${icon('down', 'i-xs')}</label>
-          <span data-revision>v${x.revision}</span>
+          <span data-revision-label>v${x.revision}</span>
           <span>${x.source === 'user' ? T('你写的', 'By you') : x.requestId ? T('来自你的 Agent', 'From your agent') : T('导入的作品', 'Imported work')}</span>
           <span class="save" data-save title="${esc(T('作品保存在本机；交付时可合并进交付稿', 'Work stays on this device; fold it into your deliverable when you submit'))}"></span>
         </div>
@@ -2518,24 +2520,28 @@ function practiceOriginNote(a) {
 }
 const practiceReads = new Set();
 const practicePoints = new Map();
+const practiceDrops = new Map();
 async function loadPractice(a, force = false) {
   if (!a || practiceReads.has(a.id) || (!force && ui.practice[a.id])) return;
   practiceReads.add(a.id);
   const before = JSON.stringify(ui.practice[a.id]);
   const point = JSON.stringify(L.v4Host(a)?.snapshot().asOf);
   if (!ui.practice[a.id]) ui.practice[a.id] = { state: 'loading' };
+  let read;
   try {
-    ui.practice[a.id] = await L.practice(a);
-  } catch (e) {
-    // Wording is chosen at render time; the code only says whether the session is sealed.
-    ui.practice[a.id] = {
-      error: 'unavailable',
-      sealed: isSealedPracticeError(e?.code) || sealedSession(a),
-    };
-  } finally {
-    practiceReads.delete(a.id);
-    practicePoints.set(a.id, point);
+    read = { view: await L.practice(a) };
+  } catch (error) {
+    read = { error };
   }
+  // The code only says whether the session is sealed; wording is chosen at render time.
+  const sealed = 'error' in read && (isSealedPracticeError(read.error?.code) || sealedSession(a));
+  const next = afterPracticeRead(ui.practice[a.id], read, practiceDrops.get(a.id) ?? 0, sealed);
+  ui.practice[a.id] = next.view;
+  practiceDrops.set(a.id, next.dropsInARow);
+  practiceReads.delete(a.id);
+  // A dropped read is asked again on the next poll tick; otherwise wait for a new point.
+  if (next.readAgain) practicePoints.delete(a.id);
+  else practicePoints.set(a.id, point);
   if (current()?.id === a.id && before !== JSON.stringify(ui.practice[a.id])) {
     const box = document.querySelector('[data-v4-practice]');
     if (box) box.innerHTML = practiceSection(a);
@@ -3173,6 +3179,8 @@ function markRead() {
 }
 
 /* ---------- workspace refresh ---------- */
+// The toolbar holds open menus and pressed buttons: replace it only when its markup changes.
+let toolbarShown = { node: null, html: '' };
 function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
   const a = current();
   if (!a || !WS.includes(ui.route)) {
@@ -3196,7 +3204,11 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
   const y = stage ? stage.scrollTop : 0;
   if (parts.includes('toolbar')) {
     const tb = document.getElementById('ws-toolbar');
-    if (tb) tb.outerHTML = wsToolbar(a);
+    const html = wsToolbar(a);
+    if (tb && (tb !== toolbarShown.node || html !== toolbarShown.html)) {
+      tb.outerHTML = html;
+      toolbarShown = { node: document.getElementById('ws-toolbar'), html };
+    }
   }
   if (parts.includes('stage')) {
     document.getElementById('ws-stage').outerHTML =
@@ -5713,8 +5725,9 @@ const workFolders = installWorkFolders(document, {
 });
 installV4References(() => L.v4Host(current()));
 L.attach(state, onLive);
-L.refresh(current()).then(() => {
-  ui.synced = true;
+// Like a poll: a read dropped while the page loads only marks the connection lost.
+L.load(current()).then((loaded) => {
+  if (loaded) ui.synced = true;
 });
 setInterval(async () => {
   if (document.hidden) return;
