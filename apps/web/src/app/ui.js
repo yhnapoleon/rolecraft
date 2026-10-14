@@ -400,7 +400,8 @@ function updateSave() {
     el.classList.toggle('error', !!storageIssue);
   });
   const x = artifact();
-  document.querySelectorAll('[data-revision]').forEach((el) => {
+  // Only the editor's version label; a form's data-revision is its exact revision token.
+  document.querySelectorAll('[data-revision-label]').forEach((el) => {
     if (x) el.textContent = 'v' + x.revision;
   });
 }
@@ -1437,7 +1438,7 @@ function workView(a, t, x) {
         <input id="editor-title" class="editor-title" data-edit="title" maxlength="160" value="${esc(view.title)}" ${editable ? '' : 'readonly'}>
         <div class="editor-meta">
           <label class="purpose" title="${esc(INTENT_HINT(intent))}"><span class="sr-only">${T('用途', 'Purpose')}</span>${purposeGlyph(intent)}<select data-edit="purpose" ${editable ? '' : 'disabled'}>${E.PURPOSES.map((p) => `<option value="${p}" ${p === view.purpose ? 'selected' : ''}>${esc(purposeLabel(p))}</option>`).join('')}</select>${icon('down', 'i-xs')}</label>
-          <span data-revision>v${x.revision}</span>
+          <span data-revision-label>v${x.revision}</span>
           <span>${x.source === 'user' ? T('你写的', 'By you') : x.requestId ? T('来自你的 Agent', 'From your agent') : T('导入的作品', 'Imported work')}</span>
           <span class="save" data-save title="${esc(T('作品保存在本机；交付时可合并进交付稿', 'Work stays on this device; fold it into your deliverable when you submit'))}"></span>
         </div>

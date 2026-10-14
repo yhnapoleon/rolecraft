@@ -303,6 +303,48 @@ async function reviseAndReadHistory(context) {
   );
 }
 
+/** F24: once a work version has been open in the editor, the new-task dialog keeps its
+ * fields through a dropped poll and still adds the task after a revision. */
+async function addTaskAfterRevision(context) {
+  const { browser, text, shot } = context;
+  await browser.goto(`${base}#/work`);
+  await waitFor(browser, `!!document.querySelector('.card-open')`);
+  await browser.click('.card-open');
+  await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
+  await browser.click('.ol-row[data-type="work"]');
+  await waitFor(browser, `!!document.querySelector('#editor-body')`);
+  await browser.click('[data-action="to-board"]');
+  await waitFor(browser, `!!document.querySelector('[data-action="new-task"]')`);
+  const before = await browser.ev('window.PracticeLive.store.active().v2Workspace.tasks.length');
+  await browser.click('[data-action="new-task"]');
+  await waitFor(browser, `!!document.querySelector('#task-form [name="title"]')`);
+  await browser.ev('window.regressionFailWorkbenchReads = 1');
+  await waitFor(
+    browser,
+    `window.regressionFailedWorkbenchReads === 1
+      && window.PracticeLive.store.getSnapshot().connected === true`,
+  );
+  assert.deepEqual(
+    await browser.ev(`({
+      title: !!document.querySelector('#task-form [name="title"]'),
+      note: !!document.querySelector('#task-form [name="note"]'),
+      priorities: document.querySelectorAll('#task-form [name="priority"]').length,
+    })`),
+    { title: true, note: true, priorities: 3 },
+    'The new-task dialog keeps its fields after the board re-renders',
+  );
+  const title = text('修订后新增：核对索引滞后', 'Added after revision: check index lag');
+  await browser.type('#task-form [name="title"]', title);
+  await clickReady(browser, text('加入', 'Add'), '#sheet button');
+  await waitFor(
+    browser,
+    `window.PracticeLive.store.active().v2Workspace.tasks.length === ${before + 1}
+      && [...document.querySelectorAll('.card .card-title')]
+        .some((node) => node.textContent === ${JSON.stringify(title)})`,
+  );
+  await shot('task-after-revision');
+}
+
 async function runLanguage(language) {
   const browser = await launch({ width: 1440, height: 1100, reduced: true });
   const en = language === 'en';
@@ -363,7 +405,16 @@ async function runLanguage(language) {
     const original = window.fetch;
     window.regressionResponseLost = false;
     window.regressionDropNext = false;
+    window.regressionFailWorkbenchReads = 0;
+    window.regressionFailedWorkbenchReads = 0;
     window.fetch = async (...args) => {
+      const read = !args[1]?.method || args[1].method === 'GET';
+      if (window.regressionFailWorkbenchReads > 0 && read
+        && String(args[0]).split('?')[0].endsWith('/workbench')) {
+        window.regressionFailWorkbenchReads--;
+        window.regressionFailedWorkbenchReads++;
+        throw new TypeError('Controlled dropped read');
+      }
       const response = await original(...args);
       if (window.regressionDropNext && String(args[0]).endsWith('/delegations') && args[1]?.method === 'POST') {
         window.regressionDropNext = false;
@@ -398,6 +449,9 @@ async function runLanguage(language) {
     await step('feedback names the final rubric version', () => showFinalRubricVersion(context));
     await step('revision keeps original feedback and original wording', () =>
       reviseAndReadHistory(context),
+    );
+    await step('new task dialog survives a dropped poll and adds a task after revision', () =>
+      addTaskAfterRevision(context),
     );
     assert.deepEqual(
       browser.logs.filter((item) => item.level === 'exception'),
