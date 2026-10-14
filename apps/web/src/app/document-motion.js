@@ -55,11 +55,15 @@ function capture(el, isPaper) {
     element: el,
   };
 }
-function cleanClone(node) {
+// The copy only looks like the surface. Without ids or v4 mount markers, nothing that
+// queries the document mistakes it for the live surface, or for a second region owner.
+export function cleanClone(node) {
   const clone = node.cloneNode(true);
   [clone, ...clone.querySelectorAll('*')].forEach((el) => {
     el.removeAttribute('id');
     el.removeAttribute('autofocus');
+    for (const name of el.getAttributeNames())
+      if (name.startsWith('data-v4-')) el.removeAttribute(name);
     el.style.viewTransitionName = 'none';
     el.style.animation = 'none';
     el.style.transition = 'none';

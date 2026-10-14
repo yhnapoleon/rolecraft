@@ -36,6 +36,26 @@ describe('named workspace ownership', () => {
   });
 });
 
+it('ignores a copy inside an inert, hidden layer rather than failing on a second owner', () => {
+  const live = { isConnected: true, closest: () => null } as unknown as HTMLElement;
+  const copy = { isConnected: true, closest: () => null } as unknown as HTMLElement;
+  const flight = { contains: (node: unknown) => node === copy };
+  const document = {
+    querySelectorAll: (selector: string) => {
+      if (selector === '[data-v4-region="workspace"]') return [live, copy];
+      return selector === '[inert][aria-hidden="true"]' ? [flight] : [];
+    },
+  } as unknown as Document;
+  const render = vi.fn((_name: string, _root: HTMLElement, _host: V4HostAdapter) => ({
+    update() {},
+    destroy() {},
+  }));
+  const regions = new NamedRegions(['workspace'], render);
+  regions.sync(document, host());
+  expect(render).toHaveBeenCalledOnce();
+  expect(render.mock.calls[0][1]).toBe(live);
+});
+
 it('leaves document and test-bench routes free of workspace editor controls', () => {
   const root = {
     isConnected: true,

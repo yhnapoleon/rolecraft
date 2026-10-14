@@ -9,6 +9,8 @@ export const DOCUMENT_DURATION: number;
 export const DOCUMENT_EASE: readonly [number, number, number, number];
 export function documentEase(progress: number): number;
 export function mixBox(from: DocumentBox, to: DocumentBox, progress: number): DocumentBox;
+/** An inert, hidden visual copy of a surface for the flight layer. */
+export function cleanClone(node: HTMLElement): HTMLElement;
 export function createDocumentMotion(): {
   transition(fromRoute: string, toRoute: string, id: string, update: () => void): boolean;
   sync(): void;

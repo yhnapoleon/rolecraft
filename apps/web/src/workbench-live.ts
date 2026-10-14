@@ -95,6 +95,7 @@ export class LiveWorkbench {
   private state: any;
   private readonly v4: V4LiveData;
   private readonly mounts = new V4Mounts();
+  private mountFailure = '';
   private notify = (_changed: boolean) => {};
   private signature = '';
   private materialCache = new Map<string, Material>();
@@ -625,7 +626,17 @@ export class LiveWorkbench {
   mountV4(a: Attempt | null, selection: { taskId: string | null; productId: string | null }) {
     void this.mounts
       .sync(document, a ? this.session(a) : undefined, a ? this.v4Host(a) : null, selection)
-      .catch((error) => this.store.report({ error: error.message }));
+      .then(
+        () => {
+          this.mountFailure = '';
+        },
+        (error) => {
+          // A report renders the page and every render mounts again: report a repeat once.
+          if (error.message === this.mountFailure) return;
+          this.mountFailure = error.message;
+          this.store.report({ error: error.message });
+        },
+      );
   }
   configDomains(a: Attempt) {
     const s = this.session(a);

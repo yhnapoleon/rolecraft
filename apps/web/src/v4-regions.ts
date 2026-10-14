@@ -61,8 +61,12 @@ export class NamedRegions<Name extends string> {
 
   private roots(document: Document): Map<Name, HTMLElement> {
     const roots = new Map<Name, HTMLElement>();
+    // Inert, hidden copies (such as a document in flight) only look like the page: no owners.
+    const copies = [...document.querySelectorAll<HTMLElement>('[inert][aria-hidden="true"]')];
     for (const name of this.names) {
-      const matches = document.querySelectorAll<HTMLElement>(`[data-v4-region="${name}"]`);
+      const matches = [
+        ...document.querySelectorAll<HTMLElement>(`[data-v4-region="${name}"]`),
+      ].filter((root) => !copies.some((copy) => copy.contains(root)));
       if (matches.length > 1) throw new Error(`Duplicate v4 region: ${name}`);
       const root = matches[0];
       const dialog = root?.closest<HTMLDialogElement>('dialog');
