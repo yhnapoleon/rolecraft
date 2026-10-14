@@ -3,6 +3,7 @@ import type { FeedbackItem, SubmissionRuleCheck } from '../../contracts-v2';
 import {
   createPresubmitSchedule,
   presubmitView,
+  ruleFact,
   submissionFactLine,
   type PresubmitState,
 } from './presubmit';
@@ -338,5 +339,126 @@ describe('fact line at submission on the feedback page', () => {
     expect(submissionFactLine(at('R4.functional_tests'), saved, changed, 'zh')).toBeNull();
     expect(submissionFactLine(at('R4.functional_tests'), null, recorded, 'zh')).toBeNull();
     expect(submissionFactLine(at('R4.functional_tests'), saved, null, 'zh')).toBeNull();
+  });
+});
+
+describe('fact lines only where the rules decided an item is not met', () => {
+  /** Rule items exactly as the formal feedback recorded them (real runs of the rules). */
+  const recordedAs = (
+    rows: [string, Label, FeedbackItem['source'], FeedbackItem['applicability']][],
+  ) =>
+    rows.map(([criterion, label, source, applicability]) =>
+      item(criterion, label, source, applicability),
+    );
+  const pendingRow = (criterion: string): [string, Label, 'pending', 'applicable'] => [
+    criterion,
+    'INSUFFICIENT',
+    'pending',
+    'applicable',
+  ];
+  const lines = (
+    items: FeedbackItem[],
+    facts: SubmissionRuleCheck['facts'],
+    language: 'zh' | 'en',
+  ) => {
+    const saved = {
+      ...check(items, facts),
+      basis: 'saved' as const,
+      submission: ref('submission', 's1'),
+    };
+    return items
+      .map((entry) => [entry.criterion, submissionFactLine(entry, saved, items, language)])
+      .filter(([, line]) => line !== null);
+  };
+  it('a new practice submitted straight away: only the untested configuration', () => {
+    const items = recordedAs([
+      ...['R1.target', 'R1.metrics', 'R2.support', 'R2.unknowns', 'R2.failure_analysis'].map(
+        pendingRow,
+      ),
+      ['R3.capacity', 'MET', 'verified_rule', 'applicable'],
+      ['R3.resources', 'MET', 'verified_rule', 'applicable'],
+      ['R4.functional_tests', 'NOT_MET', 'verified_rule', 'applicable'],
+      ['R4.staleness_test', 'NOT_APPLICABLE', 'verified_rule', 'not_applicable'],
+      ['R5.impact', 'NOT_APPLICABLE', 'verified_rule', 'not_applicable'],
+      ['R5.adjustment', 'NOT_APPLICABLE', 'verified_rule', 'not_applicable'],
+      ...['R6.consistency', 'R6.operations', 'R6.alternatives'].map(pendingRow),
+    ]);
+    const facts = {
+      participants: 20,
+      capacity: 30,
+      required_dev_days: 2,
+      available_dev_days: 3,
+      requested_launch_day: 7,
+      deadline_day: 7,
+      unapproved_resource_excess: false,
+      config_version: 0,
+      policy_version: null,
+      adjustment_actions: null,
+      test_runs: [],
+    };
+    expect(lines(items, facts, 'zh')).toEqual([
+      ['R4.functional_tests', '交付时：配置 v0 还没测过'],
+    ]);
+    expect(lines(items, facts, 'en')).toEqual([
+      ['R4.functional_tests', 'At submission: Config v0 not tested yet'],
+    ]);
+  });
+  it('after a retest on configuration v1: only the retest that used an old version', () => {
+    const items = recordedAs([
+      ...['R1.target', 'R1.metrics', 'R2.support', 'R2.unknowns', 'R2.failure_analysis'].map(
+        pendingRow,
+      ),
+      ['R3.capacity', 'MET', 'verified_rule', 'applicable'],
+      ['R3.resources', 'MET', 'verified_rule', 'applicable'],
+      pendingRow('R4.functional_tests'),
+      ['R4.staleness_test', 'PARTIAL', 'verified_rule', 'applicable'],
+      pendingRow('R5.impact'),
+      pendingRow('R5.adjustment'),
+      ...['R6.consistency', 'R6.operations', 'R6.alternatives'].map(pendingRow),
+    ]);
+    const facts = {
+      participants: 20,
+      capacity: 30,
+      required_dev_days: 2,
+      available_dev_days: 3,
+      requested_launch_day: 7,
+      deadline_day: 7,
+      unapproved_resource_excess: false,
+      config_version: 1,
+      policy_version: 2,
+      adjustment_actions: 1,
+      test_runs: [{ config_version: 1, runs: 1, retests: 1 }],
+    };
+    expect(lines(items, facts, 'zh')).toEqual([
+      ['R4.staleness_test', '交付时：配置 v1 最近一次复测仍用旧版资料'],
+    ]);
+  });
+  it('words a rule only for the findings it names', () => {
+    // Over capacity, short of dev-days and over the approval, so every fact could be worded.
+    const facts = {
+      ...f17.facts,
+      participants: 40,
+      required_dev_days: 5,
+      unapproved_resource_excess: true,
+    };
+    const worded = [
+      'R2.unknowns',
+      'R3.capacity',
+      'R3.resources',
+      'R4.functional_tests',
+      'R4.staleness_test',
+      'R5.adjustment',
+    ];
+    for (const criterion of worded)
+      for (const label of ['NOT_APPLICABLE', 'INSUFFICIENT'])
+        expect(ruleFact({ criterion, label }, facts, 'zh'), `${criterion} ${label}`).toBeNull();
+    // A partial adjustment needs the number of adjustments to say which part is missing.
+    expect(
+      ruleFact(
+        { criterion: 'R5.adjustment', label: 'PARTIAL' },
+        { ...facts, adjustment_actions: null },
+        'zh',
+      ),
+    ).toBeNull();
   });
 });

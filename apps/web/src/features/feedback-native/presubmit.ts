@@ -9,7 +9,7 @@ import { exactRefKey } from './exact-ref';
 import type { SubmitChoice } from './index';
 import type { FeedbackLanguage } from './localization';
 import { PRESUBMIT_COPY, type PresubmitKey } from './presubmit-copy';
-import { feedbackClass, feedbackCounts } from './short-summary';
+import { type Counted, feedbackClass, feedbackCounts } from './short-summary';
 
 type Facts = _RuleCheckFacts;
 type Tone = 'good' | 'bad' | 'warn' | 'ink';
@@ -62,7 +62,8 @@ function elsewhere(facts: Facts, field: 'runs' | 'retests'): _ConfigTestRuns | u
 const onChecked = (facts: Facts, field: 'runs' | 'retests') =>
   facts.test_runs?.find((row) => row.config_version === facts.config_version)?.[field] ?? 0;
 
-/** One sentence of verified fact for a criterion the rules decided; null where none is worded. */
+/** One sentence of verified fact for a criterion the rules decided. Each criterion words only the
+ * findings its rule names; anything else (not applicable, awaiting a model) gets null. */
 export function ruleFact(item: Judged, facts: Facts, language: FeedbackLanguage): Fact | null {
   const t = (key: PresubmitKey, values?: Values) => say(language, key, values);
   const met = item.label === 'MET';
@@ -77,6 +78,7 @@ export function ruleFact(item: Judged, facts: Facts, language: FeedbackLanguage)
       const cap = facts.capacity;
       if (typeof p !== 'number' || typeof cap !== 'number') return null;
       if (met) return { text: t('capacityWithin', { p, c: cap }), tone: 'good' };
+      if (item.label !== 'NOT_MET') return null;
       const over = { tone: 'bad' as const, tool: 'config' as const, label: 'settings' as const };
       if (p === 0) return { text: t('capacityNone'), ...over };
       return p > cap ? { text: t('capacityOver', { p, c: cap }), ...over } : null;
@@ -89,6 +91,7 @@ export function ruleFact(item: Judged, facts: Facts, language: FeedbackLanguage)
       if (![r, a, l, d].every((value) => typeof value === 'number')) return null;
       const days = { r: r as number, a: a as number, l: l as number, d: d as number };
       if (met) return { text: t('resourcesWithin', days), tone: 'good' };
+      if (item.label !== 'NOT_MET') return null;
       const short = days.r > days.a;
       const parts = [
         ...(short ? [t('resourcesDays', days)] : []),
@@ -116,6 +119,7 @@ export function ruleFact(item: Judged, facts: Facts, language: FeedbackLanguage)
           : t('untested', { c });
         return { text, tone: 'ink', tool: 'open-bench', label: 'runTest' };
       }
+      if (!met && item.label !== 'PARTIAL') return null;
       const k = onChecked(facts, 'runs');
       if (!k) return null;
       const text = t(plural(k, 'tested', 'testedOne'), { c, k });
@@ -132,8 +136,9 @@ export function ruleFact(item: Judged, facts: Facts, language: FeedbackLanguage)
           tone: 'good',
         };
       }
-      if (item.label !== 'NOT_MET')
+      if (item.label === 'PARTIAL')
         return { text: t('retestStale', { c }), tone: 'warn', tool: 'open-bench', label: 'retest' };
+      if (item.label !== 'NOT_MET') return null;
       const other = elsewhere(facts, 'retests');
       const text = other
         ? t(plural(other.retests, 'notRetestedElsewhere', 'notRetestedElsewhereOne'), {
@@ -148,7 +153,7 @@ export function ruleFact(item: Judged, facts: Facts, language: FeedbackLanguage)
       if (typeof c !== 'number') return null;
       if (met) return { text: t('retestPassed', { c }), tone: 'good' };
       const n = facts.adjustment_actions;
-      if (item.label === 'NOT_MET' || n === 0) {
+      if (item.label === 'NOT_MET' || (item.label === 'PARTIAL' && n === 0)) {
         // A retest on an earlier configuration does not count for this one; say so.
         const other = elsewhere(facts, 'retests');
         return other
@@ -164,8 +169,9 @@ export function ruleFact(item: Judged, facts: Facts, language: FeedbackLanguage)
             }
           : { text: t('noAdjustment'), tone: 'warn', tool: 'config', label: 'settings' };
       }
+      if (item.label !== 'PARTIAL' || typeof n !== 'number') return null;
       const text =
-        typeof n === 'number' && onChecked(facts, 'retests') === 0
+        onChecked(facts, 'retests') === 0
           ? t(plural(n, 'adjustedNotRetested', 'adjustedNotRetestedOne'), { n, c })
           : t('retestNotPassed', { c });
       return { text, tone: 'warn', tool: 'open-bench', label: 'retest' };
@@ -248,17 +254,18 @@ const sameRecord = (a: unknown, b: unknown) => {
   return JSON.stringify(a, sorted) === JSON.stringify(b, sorted);
 };
 
-/** On the feedback page: "At submission: ..." for an item the rules did not find met. Shown only
- * when the saved submission, checked again at its own point, gives exactly the recorded rule
- * items; otherwise nothing is added and the recorded feedback stands as it is. */
+/** On the feedback page: "At submission: ..." for an item the rules decided and did not find
+ * met; never for an item that did not apply or still awaits a model. Shown only when the saved
+ * submission, checked again at its own point, gives exactly the recorded rule items; otherwise
+ * nothing is added and the recorded feedback stands as it is. */
 export function submissionFactLine(
-  item: Judged,
+  item: Judged & Counted,
   check: SubmissionRuleCheck | null,
   recorded: readonly unknown[] | null | undefined,
   language: FeedbackLanguage,
 ): string | null {
-  if (!check || !recorded || item.label === 'MET' || !sameRecord(check.rule_items, recorded))
-    return null;
+  if (feedbackClass(item) !== 'verified' || item.label === 'MET') return null;
+  if (!check || !recorded || !sameRecord(check.rule_items, recorded)) return null;
   const fact = ruleFact(item, check.facts ?? {}, language);
   return fact ? say(language, 'atSubmission', { fact: fact.text }) : null;
 }

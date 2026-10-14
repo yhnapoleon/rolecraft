@@ -63,7 +63,8 @@ export function declaredPurpose(
 /** The criteria rendered one by one in the panel. */
 export const ruleItems = (report: Report): Item[] =>
   report.rule_items ?? report.items.filter((item) => item.source === 'verified_rule');
-type Counted = Pick<Item, 'applicability' | 'label' | 'source'>;
+/** What counting a criterion needs: its finding, its source and whether it applied. */
+export type Counted = Pick<Item, 'applicability' | 'label' | 'source'>;
 const inapplicable = (item: Counted) =>
   item.label === 'NOT_APPLICABLE' || item.applicability === 'not_applicable';
 const undetermined = (item: Counted) =>

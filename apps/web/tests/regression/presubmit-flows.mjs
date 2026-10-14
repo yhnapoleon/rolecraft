@@ -1,17 +1,22 @@
-/** Pre-submission preview in the normal v4 entry, zh and en, reduced motion. The card sits right
- * above "Submit selected versions", counts rule-met items without any percentage, phrases one fact
- * per item, follows the decision, opens the tool that fixes an unmet item, names configuration
- * versions after a retest on an earlier one (164 F17), remembers the choice when the panel is
- * reopened, and agrees with the formal feedback once submitted. Desktop, 390px and dark shots.
- * BASE is the web origin, OUT the screenshot and result directory; CHROME_BIN as elsewhere. */
+/** Pre-submission preview in the normal v4 entry, zh and en, reduced motion: a round of the
+ * browser gate, after published-flows on the same services. A new practice submitted straight
+ * away gets an "at submission" line on the feedback page only under the item the rules found
+ * unmet. On a second practice the card sits right above "Submit selected versions", counts
+ * rule-met items without any percentage, phrases one fact per item, follows the decision, opens
+ * the tool that fixes an unmet item, names configuration versions after a retest on an earlier
+ * one (164 F17), remembers the choice when the panel is reopened, and agrees with the formal
+ * feedback once submitted. Desktop, 390px and dark shots.
+ * BASE is the web origin; results and screenshots go to OUT/presubmit-flows; CHROME_BIN as
+ * elsewhere. */
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { clickReady, waitFor } from '../../../tests/regression/browser-support.mjs';
-import { delay, launch } from '../../../tests/walkthrough/cdp.mjs';
+import { delay, launch } from '../walkthrough/cdp.mjs';
+import { clickReady, waitFor } from './browser-support.mjs';
 
 const base = process.env.BASE;
-const out = process.env.OUT;
-assert.ok(base && out, 'BASE and OUT are required');
+assert.ok(base && process.env.OUT, 'BASE and OUT are required');
+// Its own directory: the gate runs this round after published-flows with the same OUT.
+const out = `${process.env.OUT}/presubmit-flows`;
 mkdirSync(out, { recursive: true });
 const languages = (process.env.LANGS ?? 'zh en').split(' ');
 const results = [];
@@ -106,37 +111,110 @@ async function saveSettings(browser, change) {
   await delay(800);
 }
 
+/** A new practice of the published case in this language, with one saved work. */
+async function startPractice(browser, language, t) {
+  await browser.goto(base);
+  await browser.ev(`localStorage.clear(); localStorage.setItem('rolecraft.locale', '${language}')`);
+  await browser.goto(base);
+  await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
+  await browser.click('[data-action="open-career"]');
+  await browser.click('.case-hero [data-action="take-case"]');
+  await waitFor(browser, `location.hash === '#/work' && !!document.querySelector('.card-open')`);
+  assert.equal(
+    await browser.ev(`window.PracticeLive.store.active().v2Binding.workLanguage`),
+    language,
+  );
+  await browser.click('.card-open');
+  await browser.type('#new-title', t('试点决定', 'Pilot decision'));
+  await browser.type(
+    '#new-body',
+    t(
+      '先向首批 20 人受限开放，保留人工兜底。',
+      'Open to the first 20 people with a human fallback.',
+    ),
+  );
+  await browser.clickText(t('保存为作品', 'Save as work'));
+  await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
+}
+
+/** Submit the versions and decision shown in the panel; then wait for the formal feedback and
+ * return its rule items as [criterion, label, source, applicability]. */
+async function submitShown(browser, t) {
+  await clickReady(browser, t('提交选中的版本', 'Submit selected versions'), '#sheet button');
+  await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`, 60000);
+  const formal = await browser.ev(`(async () => {
+    const s = window.PracticeLive.store.active();
+    const headers = { Authorization: 'Bearer ' + s.token };
+    const subs = await (await fetch('/api/sessions/' + s.id + '/submissions', { headers })).json();
+    const sub = subs.result.result.items.at(-1);
+    for (let i = 0; i < 120; i++) {
+      const body = await (await fetch('/api/sessions/' + s.id + '/feedback/' + sub.id, { headers })).json();
+      const report = body.result?.result?.items?.[0];
+      if (report?.rule_items) return report.rule_items.map((r) => [r.criterion, r.label, r.source, r.applicability]);
+      await new Promise((r) => setTimeout(r, 500));
+    }
+    return null;
+  })()`);
+  assert.ok(formal, 'formal feedback arrived');
+  return formal;
+}
+/** Items the rules decided (not pending, not inapplicable), as [criterion, label]. */
+const decidedBy = (formal) =>
+  formal
+    .filter(
+      ([, label, source, applicability]) =>
+        source === 'verified_rule' && label !== 'INSUFFICIENT' && applicability === 'applicable',
+    )
+    .map(([criterion, label]) => [criterion, label]);
+
+/** The "at submission" lines on the feedback page, once at least `count` have arrived. */
+async function submissionFacts(browser, count) {
+  await browser.ev(`document.querySelector('#sheet')?.close()`);
+  await browser.goto(`${base}#/review`);
+  await waitFor(browser, `!!document.querySelector('[data-short-result="feedback"]')`, 60000);
+  await browser.ev(
+    `document.querySelector('[data-short-result="feedback"] > details').open = true`,
+  );
+  await waitFor(browser, `document.querySelectorAll('[data-rule-fact]').length >= ${count}`, 30000);
+  return browser.ev(
+    `[...document.querySelectorAll('[data-rule-fact]')].map((n) => [n.dataset.ruleFact, n.textContent])`,
+  );
+}
+
 async function runLanguage(language) {
   const t = (zh, en) => (language === 'en' ? en : zh);
   const browser = await launch({ width: 1440, height: 1000, reduced: true });
   const shot = (name) => browser.shot(`${out}/${language}-${name}.jpg`);
   try {
-    await browser.goto(base);
+    // 1. A new practice submitted straight away (the most common first submission): the rules
+    // find only the untested configuration unmet, and only that item gets an "at submission"
+    // line; the change rules that do not apply and the items awaiting a model get none.
+    await startPractice(browser, language, t);
+    await openDelivery(browser);
+    await browser.click('#sheet .native-feedback input[type="checkbox"]');
+    await browser.select('#sheet .native-feedback select', 'launch');
+    await settled(browser, `!!c.querySelector('.presubmit__count')`);
+    const direct = decidedBy(await submitShown(browser, t));
+    assert.deepEqual(
+      direct.filter(([, label]) => label !== 'MET').map(([criterion]) => criterion),
+      ['R4.functional_tests'],
+    );
+    const directFacts = await submissionFacts(browser, 1);
+    assert.deepEqual(directFacts, [
+      [
+        'R4.functional_tests',
+        t('交付时：配置 v0 还没测过', 'At submission: Config v0 not tested yet'),
+      ],
+    ]);
     await browser.ev(
-      `localStorage.clear(); localStorage.setItem('rolecraft.locale', '${language}')`,
+      `document.querySelector('[data-rule-fact="R4.functional_tests"]').closest('section').scrollIntoView({block: 'start'})`,
     );
-    await browser.goto(base);
-    await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
-    await browser.click('[data-action="open-career"]');
-    await browser.click('.case-hero [data-action="take-case"]');
-    await waitFor(browser, `location.hash === '#/work' && !!document.querySelector('.card-open')`);
-    assert.equal(
-      await browser.ev(`window.PracticeLive.store.active().v2Binding.workLanguage`),
-      language,
-    );
-    await browser.click('.card-open');
-    await browser.type('#new-title', t('试点决定', 'Pilot decision'));
-    await browser.type(
-      '#new-body',
-      t(
-        '先向首批 20 人受限开放，保留人工兜底。',
-        'Open to the first 20 people with a human fallback.',
-      ),
-    );
-    await browser.clickText(t('保存为作品', 'Save as work'));
-    await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
+    await shot('feedback-direct');
 
-    // 1. Placement and the empty state.
+    // A second practice for the card itself.
+    await startPractice(browser, language, t);
+
+    // 2. Placement and the empty state.
     await openDelivery(browser);
     let seen = await read(browser);
     assert.equal(seen.aboveSubmit, t('提交选中的版本', 'Submit selected versions'));
@@ -145,7 +223,7 @@ async function runLanguage(language) {
       'the card asks for a choice before computing',
     );
 
-    // 2. A fresh launch: two limits met, configuration v0 untested, everything else waits.
+    // 3. A fresh launch: two limits met, configuration v0 untested, everything else waits.
     await browser.click('#sheet .native-feedback input[type="checkbox"]');
     await browser.select('#sheet .native-feedback select', 'launch');
     seen = await settled(browser, `!!c.querySelector('.presubmit__count')`);
@@ -173,7 +251,7 @@ async function runLanguage(language) {
     assert.ok(!seen.text.includes('%'), 'no percentage is shown');
     await shot('card-launch');
 
-    // 3. A deferral leaves nothing for rules to check.
+    // 4. A deferral leaves nothing for rules to check.
     await browser.select('#sheet .native-feedback select', 'defer_with_conditions');
     seen = await settled(browser, `!c.querySelector('.presubmit__count')`);
     assert.equal(seen.lines.length, 0);
@@ -186,7 +264,7 @@ async function runLanguage(language) {
     );
     await shot('card-defer');
 
-    // 4. "Run a test" opens the bench and closes the panel.
+    // 5. "Run a test" opens the bench and closes the panel.
     await browser.select('#sheet .native-feedback select', 'launch');
     await settled(browser, `!!c.querySelector('.presubmit__items button')`);
     await browser.click('#sheet [data-presubmit] .presubmit__items button');
@@ -195,7 +273,7 @@ async function runLanguage(language) {
       `!document.querySelector('#sheet').open && !!document.querySelector('#lab-q')`,
     );
 
-    // 5. 164 F17: test before the policy update, settle the settings (the update arrives),
+    // 6. 164 F17: test before the policy update, settle the settings (the update arrives),
     // retest on v1, then change the fallback to v2.
     await browser.click('[data-action="to-board"]');
     await runTest(browser, t);
@@ -206,7 +284,7 @@ async function runLanguage(language) {
       `document.querySelector('#config-form input[name="fallback"][value="none"]').click()`,
     );
 
-    // 6. Reopening remembers the choice and names the versions.
+    // 7. Reopening remembers the choice and names the versions.
     await openDelivery(browser);
     seen = await settled(browser, `!!c.querySelector('.presubmit__count')`);
     assert.equal(
@@ -261,46 +339,14 @@ async function runLanguage(language) {
     await shot('card-f17-dark');
     await viewport(browser, 1440, 1000, false);
 
-    // 7. Submit the same choice: the formal feedback decides each item as the preview did.
-    await clickReady(browser, t('提交选中的版本', 'Submit selected versions'), '#sheet button');
-    await waitFor(
-      browser,
-      `window.PracticeLive.store.active().world.status === 'submitted'`,
-      60000,
-    );
-    const formal = await browser.ev(`(async () => {
-      const s = window.PracticeLive.store.active();
-      const headers = { Authorization: 'Bearer ' + s.token };
-      const subs = await (await fetch('/api/sessions/' + s.id + '/submissions', { headers })).json();
-      const sub = subs.result.result.items.at(-1);
-      for (let i = 0; i < 120; i++) {
-        const body = await (await fetch('/api/sessions/' + s.id + '/feedback/' + sub.id, { headers })).json();
-        const report = body.result?.result?.items?.[0];
-        if (report?.rule_items) return report.rule_items.map((r) => [r.criterion, r.label, r.source, r.applicability]);
-        await new Promise((r) => setTimeout(r, 500));
-      }
-      return null;
-    })()`);
-    assert.ok(formal, 'formal feedback arrived');
-    const decided = formal.filter(
-      ([, label, source, applicability]) =>
-        source === 'verified_rule' && label !== 'INSUFFICIENT' && applicability === 'applicable',
-    );
+    // 8. Submit the same choice: the formal feedback decides each item as the preview did.
+    const decided = decidedBy(await submitShown(browser, t));
     assert.deepEqual(
       decided.map(([criterion, label]) => [criterion, label === 'MET']),
       lastPreview.lines.map((line) => [line.criterion, line.met]),
     );
-    // 8. The feedback page names the versions behind each unmet item, "at submission".
-    await browser.ev(`document.querySelector('#sheet')?.close()`);
-    await browser.goto(`${base}#/review`);
-    await waitFor(browser, `!!document.querySelector('[data-short-result="feedback"]')`, 60000);
-    await browser.ev(
-      `document.querySelector('[data-short-result="feedback"] > details').open = true`,
-    );
-    await waitFor(browser, `document.querySelectorAll('[data-rule-fact]').length >= 3`, 30000);
-    const facts = await browser.ev(
-      `[...document.querySelectorAll('[data-rule-fact]')].map((n) => [n.dataset.ruleFact, n.textContent])`,
-    );
+    // 9. The feedback page names the versions behind each unmet item, "at submission".
+    const facts = await submissionFacts(browser, 3);
     assert.deepEqual(facts, [
       [
         'R4.functional_tests',
@@ -331,6 +377,8 @@ async function runLanguage(language) {
     results.push({
       language,
       status: 'passed',
+      direct,
+      directFacts,
       preview: lastPreview.lines,
       formal: decided,
       facts,
