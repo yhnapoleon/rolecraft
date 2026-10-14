@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedbackItem, SubmissionRuleCheck } from '../../contracts-v2';
-import { createPresubmitSchedule, presubmitView, type PresubmitState } from './presubmit';
+import {
+  createPresubmitSchedule,
+  presubmitView,
+  submissionFactLine,
+  type PresubmitState,
+} from './presubmit';
 
 type Label = FeedbackItem['label'];
 const item = (
@@ -301,5 +306,37 @@ describe('pre-submission preview schedule', () => {
     failures[0](Error('down'));
     await vi.advanceTimersByTimeAsync(0);
     expect(shown.at(-1)).toEqual({ kind: 'failed' });
+  });
+});
+
+describe('fact line at submission on the feedback page', () => {
+  const saved = { ...f17, basis: 'saved' as const, submission: ref('submission', 'sub') };
+  const recorded = f17.rule_items.map((entry) =>
+    // The recorded feedback comes back from storage with its keys in another order.
+    Object.fromEntries(Object.entries(entry).reverse()),
+  ) as FeedbackItem[];
+  const at = (criterion: string) => {
+    const found = f17.rule_items.find((entry) => entry.criterion === criterion);
+    if (!found) throw Error(`missing ${criterion}`);
+    return found;
+  };
+  it('names the versions behind an unmet item when the check agrees with the record', () => {
+    expect(submissionFactLine(at('R4.functional_tests'), saved, recorded, 'zh')).toBe(
+      '交付时：配置 v2 还没测过（配置 v1 测过 1 次）',
+    );
+    expect(submissionFactLine(at('R4.staleness_test'), saved, recorded, 'en')).toBe(
+      'At submission: No retest on config v2 since the policy update (1 retest on config v1)',
+    );
+  });
+  it('adds nothing for a met item', () => {
+    expect(submissionFactLine(at('R3.capacity'), saved, recorded, 'zh')).toBeNull();
+  });
+  it('adds nothing when the recomputed items differ from the record, or the check failed', () => {
+    const changed = recorded.map((entry) =>
+      entry.criterion === 'R3.resources' ? { ...entry, label: 'NOT_MET' as const } : entry,
+    );
+    expect(submissionFactLine(at('R4.functional_tests'), saved, changed, 'zh')).toBeNull();
+    expect(submissionFactLine(at('R4.functional_tests'), null, recorded, 'zh')).toBeNull();
+    expect(submissionFactLine(at('R4.functional_tests'), saved, null, 'zh')).toBeNull();
   });
 });

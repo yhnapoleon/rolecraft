@@ -2,12 +2,7 @@
  * read from the read-only rule check. Recorded rule texts are shown as saved; this module only
  * phrases the verified facts behind them. presubmitView and createPresubmitSchedule are pure;
  * mountPresubmitCard draws them. Nothing here saves, submits or runs a model. */
-import type {
-  FeedbackItem,
-  SubmissionRuleCheck,
-  _ConfigTestRuns,
-  _RuleCheckFacts,
-} from '../../contracts-v2';
+import type { SubmissionRuleCheck, _ConfigTestRuns, _RuleCheckFacts } from '../../contracts-v2';
 import { copyText } from '../results-native/localization';
 import { criterionLabels } from './criteria';
 import { exactRefKey } from './exact-ref';
@@ -22,6 +17,8 @@ type Tone = 'good' | 'bad' | 'warn' | 'ink';
 type Tool = 'open-bench' | 'config' | 'resources';
 type Fact = { text: string; tone: Tone; tool?: Tool; label?: PresubmitKey };
 type Values = Readonly<Record<string, string | number>>;
+/** A criterion and the rules' finding for it. */
+type Judged = { criterion: string; label: string };
 
 export type PresubmitLine = {
   criterion: string;
@@ -66,11 +63,7 @@ const onChecked = (facts: Facts, field: 'runs' | 'retests') =>
   facts.test_runs?.find((row) => row.config_version === facts.config_version)?.[field] ?? 0;
 
 /** One sentence of verified fact for a criterion the rules decided; null where none is worded. */
-export function ruleFact(
-  item: Pick<FeedbackItem, 'criterion' | 'label'>,
-  facts: Facts,
-  language: FeedbackLanguage,
-): Fact | null {
+export function ruleFact(item: Judged, facts: Facts, language: FeedbackLanguage): Fact | null {
   const t = (key: PresubmitKey, values?: Values) => say(language, key, values);
   const met = item.label === 'MET';
   const c = facts.config_version;
@@ -244,6 +237,30 @@ export function presubmitView(
       chineseSource: t('chineseSource'),
     },
   };
+}
+
+/** Key order never matters: two JSON values are the same record when their content is. */
+const sameRecord = (a: unknown, b: unknown) => {
+  const sorted = (_key: string, value: unknown) =>
+    value && typeof value === 'object' && !Array.isArray(value)
+      ? Object.fromEntries(Object.entries(value).sort(([x], [y]) => (x < y ? -1 : x > y ? 1 : 0)))
+      : value;
+  return JSON.stringify(a, sorted) === JSON.stringify(b, sorted);
+};
+
+/** On the feedback page: "At submission: ..." for an item the rules did not find met. Shown only
+ * when the saved submission, checked again at its own point, gives exactly the recorded rule
+ * items; otherwise nothing is added and the recorded feedback stands as it is. */
+export function submissionFactLine(
+  item: Judged,
+  check: SubmissionRuleCheck | null,
+  recorded: readonly unknown[] | null | undefined,
+  language: FeedbackLanguage,
+): string | null {
+  if (!check || !recorded || item.label === 'MET' || !sameRecord(check.rule_items, recorded))
+    return null;
+  const fact = ruleFact(item, check.facts ?? {}, language);
+  return fact ? say(language, 'atSubmission', { fact: fact.text }) : null;
 }
 
 /** A choice to preview, with the records point it was made at. */

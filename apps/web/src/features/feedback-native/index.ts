@@ -23,7 +23,7 @@ import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
 import { criterionLabels } from './criteria';
 import { exactRefKey } from './exact-ref';
-import { mountPresubmitCard, PRESUBMIT_STYLE } from './presubmit';
+import { mountPresubmitCard, PRESUBMIT_STYLE, submissionFactLine } from './presubmit';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 
 export type SelectedProduct = Pick<
@@ -652,6 +652,7 @@ export function mountNativeFeedback(
       );
     body.push(history);
     const criteria = criterionLabels(language);
+    const atSubmission = savedRuleCheck(report);
     const notApplicable = el('details');
     notApplicable.append(
       el('summary', T('查看本次未适用的验收项', 'View criteria not applicable to this submission')),
@@ -670,6 +671,13 @@ export function mountNativeFeedback(
         ),
         el('p', item.explanation),
       );
+      // 164 F17: the versions behind an unmet item, from the same rules at submission.
+      const fact = submissionFactLine(item, atSubmission, report.rule_items, language);
+      if (fact) {
+        const line = el('p', fact);
+        line.dataset.ruleFact = item.criterion;
+        section.append(line);
+      }
       if (item.rule_bound) {
         const labels: Record<string, string> = {
           NOT_MET: T('未满足', 'Not met'),
@@ -775,6 +783,26 @@ export function mountNativeFeedback(
       responseForm(report),
     );
     return panel;
+  }
+  /** A saved submission checked again at its own point, read once per submission; null until
+   * it arrives, or when it fails. Its arrival redraws the reports. */
+  const savedChecks = new Map<string, SubmissionRuleCheck | null>();
+  function savedRuleCheck(report: Report): SubmissionRuleCheck | null {
+    const check = adapter.submissionRuleCheck?.bind(adapter);
+    if (report.subject.kind !== 'submission' || !check || adapter.canPreview === false) return null;
+    const id = key(report.subject);
+    if (!savedChecks.has(id)) {
+      savedChecks.set(id, null);
+      check(report.subject)
+        .then(
+          (found) => savedChecks.set(id, found),
+          () => savedChecks.set(id, null),
+        )
+        .finally(() => {
+          if (!destroyed) render();
+        });
+    }
+    return savedChecks.get(id) ?? null;
   }
   /** Same versions and question, now with the purpose the learner chose. */
   async function reviewAgain(review: ReviewRecord, purpose: PurposeChoice) {

@@ -290,7 +290,51 @@ async function runLanguage(language) {
       decided.map(([criterion, label]) => [criterion, label === 'MET']),
       lastPreview.lines.map((line) => [line.criterion, line.met]),
     );
-    results.push({ language, status: 'passed', preview: lastPreview.lines, formal: decided });
+    // 8. The feedback page names the versions behind each unmet item, "at submission".
+    await browser.ev(`document.querySelector('#sheet')?.close()`);
+    await browser.goto(`${base}#/review`);
+    await waitFor(browser, `!!document.querySelector('[data-short-result="feedback"]')`, 60000);
+    await browser.ev(
+      `document.querySelector('[data-short-result="feedback"] > details').open = true`,
+    );
+    await waitFor(browser, `document.querySelectorAll('[data-rule-fact]').length >= 3`, 30000);
+    const facts = await browser.ev(
+      `[...document.querySelectorAll('[data-rule-fact]')].map((n) => [n.dataset.ruleFact, n.textContent])`,
+    );
+    assert.deepEqual(facts, [
+      [
+        'R4.functional_tests',
+        t(
+          '交付时：配置 v2 还没测过（配置 v1 测过 1 次）',
+          'At submission: Config v2 not tested yet (config v1: 1 run)',
+        ),
+      ],
+      [
+        'R4.staleness_test',
+        t(
+          '交付时：政策更新后，配置 v2 还没复测（你在配置 v1 下复测过 1 次）',
+          'At submission: No retest on config v2 since the policy update (1 retest on config v1)',
+        ),
+      ],
+      [
+        'R5.adjustment',
+        t(
+          '交付时：政策更新后已有 1 次调整，配置 v2 之后还没复测',
+          'At submission: 1 adjustment since the policy update; config v2 not retested yet',
+        ),
+      ],
+    ]);
+    await browser.ev(
+      `document.querySelector('[data-rule-fact="R4.functional_tests"]').closest('section').scrollIntoView({block: 'start'})`,
+    );
+    await shot('feedback-fact');
+    results.push({
+      language,
+      status: 'passed',
+      preview: lastPreview.lines,
+      formal: decided,
+      facts,
+    });
   } catch (error) {
     await shot('failure').catch(() => undefined);
     results.push({ language, status: 'failed', error: String(error?.stack ?? error) });
