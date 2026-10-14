@@ -157,10 +157,44 @@ describe('saved settings beside what tests actually use', () => {
       ),
       3,
     );
+    // Scope filtering comes with real-time sync, so a real-time plan is never short of a
+    // scope filter on its own.
     expect(unplanned).toEqual({
-      text: '测试实际用：每日索引、不过滤知识范围 · 方案里没安排实时同步、知识范围过滤',
+      text: '测试实际用：每日索引、不过滤知识范围 · 方案里没安排实时同步',
       unfunded: false,
     });
+    // A daily-index plan does need the scope filter itself.
+    expect(
+      configUse(
+        used(
+          { update_strategy: 'daily', work_items: ['human_fallback'] },
+          { scope_filter: false },
+          { scope_filter: 'scope_filter_not_provisioned' },
+        ),
+        3,
+      ),
+    ).toEqual({ text: '测试实际用：不过滤知识范围 · 方案里没安排知识范围过滤', unfunded: false });
+  });
+
+  it('keeps the scope filter of an unfunded real-time plan inside the real-time reason', () => {
+    // The walkthrough's v2: real-time sync and hand-off planned (6 days), 3 approved.
+    const v2 = used(
+      { work_items: ['human_fallback', 'realtime_sync'] },
+      { update_strategy: 'daily', scope_filter: false, work_items: ['human_fallback'] },
+      {
+        update_strategy: 'realtime_sync_not_provisioned',
+        scope_filter: 'scope_filter_not_provisioned',
+        work_items: 'requested_work_exceeds_approved_budget',
+      },
+    );
+    expect(configUse(v2, 3)).toEqual({
+      text: '测试实际用：每日索引、不过滤知识范围 · 实时同步还没批到开发人日（已批准 3 人日）',
+      unfunded: true,
+    });
+    setPreference('en');
+    expect(configUse(v2, 3)?.text).toBe(
+      "Tests actually use: Daily index, no scope filter · Real-time sync isn't funded yet (3 developer-days approved)",
+    );
   });
 
   it('joins several English reasons as one sentence', () => {
@@ -168,18 +202,18 @@ describe('saved settings beside what tests actually use', () => {
     expect(
       configUse(
         used(
-          { work_items: ['human_fallback', 'realtime_sync'] },
-          { update_strategy: 'daily', scope_filter: false, work_items: ['human_fallback'] },
+          { work_items: ['scope_filter', 'realtime_sync'] },
+          { update_strategy: 'daily', fallback: 'none', work_items: ['scope_filter'] },
           {
             update_strategy: 'realtime_sync_not_provisioned',
-            scope_filter: 'scope_filter_not_provisioned',
+            fallback: 'human_fallback_not_provisioned',
             work_items: 'requested_work_exceeds_approved_budget',
           },
         ),
         3,
       )?.text,
     ).toBe(
-      "Tests actually use: Daily index, no scope filter · Real-time sync isn't funded yet (3 developer-days approved); scope filter isn't in the plan",
+      "Tests actually use: Daily index, no hand-off to a person · Real-time sync isn't funded yet (3 developer-days approved); human hand-off isn't in the plan",
     );
   });
 

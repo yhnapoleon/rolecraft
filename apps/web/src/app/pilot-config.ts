@@ -92,7 +92,9 @@ export function configUse(
   }
   if (differences.scope_filter) {
     used.push(T('不过滤知识范围', 'no scope filter'));
-    needs.push('scope_filter');
+    // Real-time sync brings scope filtering with it (policy: scoped = realtime or scope
+    // filter), so a real-time plan's reason is the real-time work alone.
+    if (requested.update_strategy !== 'realtime') needs.push('scope_filter');
   }
   if (!used.length) return null;
   const planned = requested.work_items ?? [];
