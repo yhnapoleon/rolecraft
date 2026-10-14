@@ -1,6 +1,6 @@
 /** Feedback first screen: one line per rule-checked criterion (conclusion and one fact), a
- * premise shared by several criteria stated once, and the waiting and inapplicable criteria
- * summed up on one line each. Stored explanations are never rewritten: a recorded explanation
+ * premise shared by several criteria stated once, and the criteria still waiting named on one
+ * line (the status row above already counts them and the inapplicable ones). Stored explanations are never rewritten: a recorded explanation
  * is "note\nfinding\nobservations", and its own lines are only regrouped for reading. */
 import { feedbackText, type FeedbackLanguage } from './localization';
 import type { Report } from './index';
@@ -21,7 +21,6 @@ export type RuleLinesView = {
   lines: RuleLine[];
   /** Criteria still waiting for verification, by name. */
   waiting: string[];
-  inapplicable: number;
 };
 
 const linesOf = (explanation: string) =>
@@ -63,10 +62,10 @@ export function ruleLines(
   };
   const name = (item: Item) => names[item.criterion] ?? T('具体反馈项', 'Feedback criterion');
   const premises = sharedPremises(items);
-  const view: RuleLinesView = { premises, lines: [], waiting: [], inapplicable: 0 };
+  const view: RuleLinesView = { premises, lines: [], waiting: [] };
   for (const item of items) {
-    if (inapplicable(item)) view.inapplicable++;
-    else if (waiting(item)) view.waiting.push(name(item));
+    if (inapplicable(item)) continue;
+    if (waiting(item)) view.waiting.push(name(item));
     else {
       const bound = item.rule_bound as { lower: string; upper: string };
       const lines = linesOf(item.explanation);
@@ -142,14 +141,6 @@ export function renderRuleLines(
       el(
         'p',
         T('待核验：', 'Awaiting verification: ') + view.waiting.join(T('、', ', ')),
-        'rule-lines__note',
-      ),
-    );
-  if (view.inapplicable)
-    root.append(
-      el(
-        'p',
-        T(`本次不适用 ${view.inapplicable} 项`, `${view.inapplicable} not applicable this time`),
         'rule-lines__note',
       ),
     );

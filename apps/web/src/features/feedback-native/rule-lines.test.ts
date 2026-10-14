@@ -62,7 +62,6 @@ describe('feedback first screen', () => {
       ['partial', '实际调整与复测', '未满足—部分满足', '已有相关配置调整；调整质量仍需核验。'],
     ]);
     expect(view.waiting).toEqual(['替代方案与取舍', '指标与验收口径']);
-    expect(view.inapplicable).toBe(1);
   });
 
   it('keeps the details without the shared premise and leaves other lines as recorded', () => {
@@ -121,7 +120,7 @@ describe('feedback first screen', () => {
 });
 
 describe('rendered first screen', () => {
-  it('states the premise once, one line per checked item, then the waiting and inapplicable', () => {
+  it('states the premise once, one line per checked item, then names the waiting ones', () => {
     const doc = fakeDocument();
     const node = renderRuleLines(
       doc as unknown as Document,
@@ -135,10 +134,10 @@ describe('rendered first screen', () => {
       '✗未满足：政策更新后的复测 · 完整记录内没有政策更新后、当前配置的相关动态复测。',
       '◐未满足—部分满足：实际调整与复测 · 已有相关配置调整；调整质量仍需核验。',
     ]);
+    // The status row above already counts the inapplicable items; they are not repeated here.
     expect(root.byTag('p').map((row) => row.textContent)).toEqual([
       `共同前提：${PREMISE}`,
       '待核验：替代方案与取舍、指标与验收口径',
-      '本次不适用 1 项',
     ]);
   });
 
