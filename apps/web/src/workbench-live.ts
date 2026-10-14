@@ -243,6 +243,7 @@ export class LiveWorkbench {
         s.failedTurn,
         s.v2Workspace,
         s.v2Assistant,
+        s.v2EffectiveConfig,
         s.queuedTestRuns,
       ]),
     );
@@ -262,6 +263,7 @@ export class LiveWorkbench {
     };
     a.config = fromPilot(w.configs.pilot || blankPilot());
     a.configVersion = w.config_version;
+    a.effectiveConfig = s.v2EffectiveConfig ?? null;
     a.configDraft = s.configDraft ? fromPilot(s.configDraft) : null;
     a.backend = {
       status: w.status,

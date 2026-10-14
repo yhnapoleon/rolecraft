@@ -70,7 +70,15 @@ import {
 } from './investigation-view.js';
 import './investigation.css';
 import { createDocumentMotion } from './document-motion.js';
-import { planWorkItems, syncStrategyWork, workCost, workItemChoice } from './pilot-config';
+import {
+  configUse,
+  planWorkItems,
+  savedConfigNotice,
+  syncStrategyWork,
+  workCost,
+  workItemChoice,
+} from './pilot-config';
+import './pilot-config.css';
 import './document-motion.css';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
@@ -1153,14 +1161,21 @@ function situationBanner(a) {
     <div class="we-actions">${btn(T('看哪里变了', 'See what changed'), 'open-doc', 'small primary', 'data-id="policy" data-compare="1"')}${btn(T('记为事项', 'Add as a task'), 'situation-task', 'small')}${btn(T('知道了', 'Got it'), 'ack', 'small quiet', `data-key="policy-v${v}"`)}</div>
   </section>`;
 }
+// What the next test actually uses, beside the saved settings, when the two differ.
+function configUseLine(use, prefix = '') {
+  return use
+    ? `<p class="config-use${use.unfunded ? ' bad' : ''}" data-config-use>${icon(use.unfunded ? 'x' : 'minus', 'i-xs')}<span>${esc(prefix + use.text)}</span></p>`
+    : '';
+}
 function productBar(a) {
   const c = a.config;
   const configured = !!a.backend?.configured;
   const stale = a.world.indexVersion < a.world.policyVersion;
+  const use = configured ? configUse(a.effectiveConfig, a.world.devDays) : null;
   return `<section class="product-bar ${stale ? 'is-stale' : ''}" aria-label="${esc(T('知识助手', 'Knowledge assistant'))}">
     ${assistantMark('md')}
     <div class="grow"><p class="pb-name">${T('知识助手', 'Knowledge assistant')}<span class="pb-role">${T('你要决定能否试点的产品', 'The product you are deciding on')}</span></p>
-      <ul class="pb-state">${configured ? `<li>${T('配置 v', 'Config v')}${a.configVersion}</li><li>${T(c.participants + ' 人', c.participants + ' users')}</li><li>${c.domains.map(DOMAIN).join(' + ') || T('未开放知识', 'No knowledge')}</li><li>${UPDATE(c.update)}</li>` : `<li class="muted">${T('还没有试点设置', 'No pilot settings yet')}</li>`}<li class="${stale ? 'warn' : ''}">${stale ? icon('stale', 'i-xs') : ''}${T('政策 v' + a.world.policyVersion + ' / 索引 v' + a.world.indexVersion, 'Policy v' + a.world.policyVersion + ' / index v' + a.world.indexVersion)}${stale ? T('，索引落后', ', index behind') : ''}</li></ul></div>
+      <ul class="pb-state">${configured ? `<li>${use ? T('已保存 v', 'Saved v') : T('配置 v', 'Config v')}${a.configVersion}</li><li>${T(`${c.participants} 人`, `${c.participants} users`)}</li><li>${c.domains.map(DOMAIN).join(' + ') || T('未开放知识', 'No knowledge')}</li><li>${UPDATE(c.update)}</li>` : `<li class="muted">${T('还没有试点设置', 'No pilot settings yet')}</li>`}<li class="${stale ? 'warn' : ''}">${stale ? icon('stale', 'i-xs') : ''}${T(`政策 v${a.world.policyVersion} / 索引 v${a.world.indexVersion}`, `Policy v${a.world.policyVersion} / index v${a.world.indexVersion}`)}${stale ? T('，索引落后', ', index behind') : ''}</li></ul>${configUseLine(use)}</div>
     ${btn(icon('flask', 'i-sm') + T('测试台', 'Test bench') + (a.tests.length ? `<span class="btn-count">${a.tests.length}</span>` : ''), 'open-bench', 'small')}${btn(icon('gear', 'i-sm') + T('设置', 'Settings'), 'config', configured ? 'small quiet' : 'small primary')}${btn(icon('hand', 'i-sm') + T('申请', 'Requests'), 'resources', 'small quiet')}
   </section>`;
 }
@@ -1833,13 +1848,15 @@ function bench(a, t) {
   const c = a.config;
   const stale = a.world.indexVersion < a.world.policyVersion;
   const configured = !!a.backend?.configured;
+  const use = configured ? configUse(a.effectiveConfig, a.world.devDays) : null;
   const s = sessionOf(a);
   const runs = t && !ui.benchAll ? a.tests.filter((r) => r.taskId === t.id) : a.tests;
   return `<div class="${t ? 'obj-pad' : ''} lab">
     <section class="console ${stale ? 'is-stale' : ''}">
       <header class="console-head">${assistantMark('lg')}<div class="grow">
-        <h2 class="console-name">${T('知识助手', 'Knowledge assistant')}<span class="stamp">${configured ? T('配置 v' + a.configVersion, 'Config v' + a.configVersion) : T('未设置', 'Not set up')}</span></h2>
+        <h2 class="console-name">${T('知识助手', 'Knowledge assistant')}<span class="stamp">${configured ? (use ? T('已保存 v', 'Saved v') : T('配置 v', 'Config v')) + a.configVersion : T('未设置', 'Not set up')}</span></h2>
         ${configured ? `<ul class="console-state"><li>${icon('seats', 'i-sm')}${T(c.participants + ' 人', c.participants + ' users')}</li><li>${icon('layers', 'i-sm')}${c.domains.map(DOMAIN).join(' + ') || T('未开放知识', 'No knowledge')}</li><li>${icon('sync', 'i-sm')}${UPDATE(c.update)}</li><li class="${stale ? 'warn' : ''}">${icon(stale ? 'stale' : 'doc', 'i-sm')}${T('政策源 v' + a.world.policyVersion + '，索引 v' + a.world.indexVersion, 'Policy v' + a.world.policyVersion + ', index v' + a.world.indexVersion)}</li></ul>` : `<p class="console-hint">${T('先定试点范围，助手才能回答。', 'Set the pilot scope before the assistant can answer.')}</p>`}
+        ${configUseLine(use)}
       </div><div class="console-tools">${stale && configured ? btn(icon('refresh', 'i-sm') + T('刷新索引', 'Refresh index'), 'refresh-index', 'small quiet') : ''}${btn(icon('gear', 'i-sm') + T('试点设置', 'Pilot settings'), 'config', configured ? 'small quiet' : 'small primary')}</div></header>
       <form class="console-compose" data-form="run-test">
         <label class="sr-only" for="lab-q">${T('你想问助手什么', 'Your question for the assistant')}</label>
@@ -2804,6 +2821,7 @@ function sheetConfig() {
   openSheet(
     T('试点设置', 'Pilot settings'),
     `<form data-form="config" id="config-form" class="stack">
+    ${a.backend.configured ? configUseLine(configUse(a.effectiveConfig, a.world.devDays), T(`已保存 v${a.configVersion} · `, `Saved v${a.configVersion} · `)) : ''}
     <div class="field-row"><label class="field"><span>${T('试点人数', 'Users in the pilot')}</span><input class="input" type="number" name="participants" min="1" max="10000" value="${c.participants}" required></label>
     <label class="field"><span>${T('计划上线日', 'Planned launch day')}</span><input class="input" name="launchDay" type="number" min="1" value="${c.launchDay || a.world.deadline}" required></label></div>
     <fieldset class="field"><legend>${T('开放的知识', 'Knowledge it covers')}</legend><div class="choices">${L.configDomains(
@@ -5431,12 +5449,7 @@ document.addEventListener('submit', async (e) => {
           ui.configFromTestSet = false;
         }
         refreshWS();
-        notify(
-          T(
-            '试点设置 v' + a.configVersion + ' 已保存，下一次测试会用它。',
-            'Pilot settings v' + a.configVersion + ' saved. The next test uses them.',
-          ),
-        );
+        notify(savedConfigNotice(a.configVersion, configUse(a.effectiveConfig, a.world.devDays)));
         break;
       }
       case 'resources':

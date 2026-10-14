@@ -175,6 +175,7 @@ export class V4LiveData {
         });
       this.store.update(s.id, {
         v2MaterialTitles: w.material_titles,
+        v2EffectiveConfig: w.effective_config,
         v2Assistant: context.semantic.assistant,
         v2ReadOnly: context.read_only === true,
         v2Domains: context.configuration_domains ?? s.v2Domains ?? config.domains,

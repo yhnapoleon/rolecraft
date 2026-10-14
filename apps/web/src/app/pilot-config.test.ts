@@ -1,6 +1,14 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { setPreference } from './i18n';
-import { planWorkItems, syncStrategyWork, workCost, workItemChoice } from './pilot-config';
+import type { EffectiveConfig } from '../contracts-v2';
+import {
+  configUse,
+  planWorkItems,
+  savedConfigNotice,
+  syncStrategyWork,
+  workCost,
+  workItemChoice,
+} from './pilot-config';
 
 afterEach(() => setPreference('zh'));
 
@@ -71,5 +79,100 @@ describe('work the strategy needs', () => {
       false,
       true,
     ]);
+  });
+});
+
+const saved = {
+  id: 'pilot',
+  session_id: 's',
+  version: 2,
+  config_version: 1,
+  domains: ['faq', 'policy'],
+  participants: 20,
+  launch_day: 7,
+  update_strategy: 'realtime',
+  fallback: 'human',
+  scope_filter: true,
+  work_items: ['scope_filter', 'human_fallback', 'realtime_sync'],
+} as EffectiveConfig['requested'];
+const used = (
+  requested: Partial<EffectiveConfig['requested']>,
+  effective: Partial<EffectiveConfig['requested']>,
+  differences: Record<string, string>,
+): EffectiveConfig => ({
+  requested: { ...saved, ...requested },
+  effective: { ...saved, ...requested, ...effective },
+  differences,
+});
+
+describe('saved settings beside what tests actually use', () => {
+  it('says nothing when tests use the saved settings', () => {
+    expect(configUse(used({}, {}, {}), 3)).toBeNull();
+    expect(savedConfigNotice(2, null)).toBe('试点设置 v2 已保存，下一次测试会用它。');
+  });
+
+  it('names the daily index and the unapproved developer-days behind real-time sync', () => {
+    const use = configUse(
+      used(
+        {},
+        { update_strategy: 'daily', work_items: ['scope_filter', 'human_fallback'] },
+        {
+          update_strategy: 'realtime_sync_not_provisioned',
+          work_items: 'requested_work_exceeds_approved_budget',
+        },
+      ),
+      3,
+    );
+    expect(use).toEqual({
+      text: '测试实际用：每日索引 · 实时同步还没批到开发人日（已批准 3 人日）',
+      unfunded: true,
+    });
+    expect(savedConfigNotice(2, use)).toBe(
+      '试点设置 v2 已保存；测试实际用：每日索引 · 实时同步还没批到开发人日（已批准 3 人日）。',
+    );
+    setPreference('en');
+    expect(
+      configUse(
+        used(
+          {},
+          { update_strategy: 'daily', work_items: ['scope_filter', 'human_fallback'] },
+          { update_strategy: 'realtime_sync_not_provisioned' },
+        ),
+        3,
+      )?.text,
+    ).toBe(
+      "Tests actually use: Daily index · Real-time sync isn't funded yet (3 developer-days approved)",
+    );
+  });
+
+  it('tells apart work the plan never scheduled from work waiting for approval', () => {
+    const unplanned = configUse(
+      used(
+        { work_items: ['human_fallback'] },
+        { update_strategy: 'daily', scope_filter: false },
+        {
+          update_strategy: 'realtime_sync_not_provisioned',
+          scope_filter: 'scope_filter_not_provisioned',
+        },
+      ),
+      3,
+    );
+    expect(unplanned).toEqual({
+      text: '测试实际用：每日索引、不过滤知识范围 · 方案里没安排实时同步、知识范围过滤',
+      unfunded: false,
+    });
+  });
+
+  it('ignores feasibility notes and name normalisation that do not change answers', () => {
+    expect(
+      configUse(
+        used(
+          { participants: 40, domains: ['faq', 'policy'] },
+          { domains: ['faq', 'policy_travel'] },
+          { participants: 'requested_participants_exceed_approved_capacity' },
+        ),
+        3,
+      ),
+    ).toBeNull();
   });
 });

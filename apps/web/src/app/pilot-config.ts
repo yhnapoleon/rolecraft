@@ -1,4 +1,5 @@
 /** Pilot settings in the learner's words. Labels come from the shared vocabulary. */
+import type { EffectiveConfig } from '../contracts-v2';
 import { T } from './i18n';
 import { UPDATE, WORK_COST, WORK_ITEM } from './vocab.js';
 
@@ -57,4 +58,87 @@ export function syncStrategyWork(form: HTMLFormElement, update: string) {
     const note = input.parentElement?.querySelector<HTMLElement>('.strategy-note');
     if (note) note.hidden = !locked;
   }
+}
+
+export interface ConfigUse {
+  text: string;
+  /** True when approved developer-days, not the plan itself, hold the work back. */
+  unfunded: boolean;
+}
+
+/**
+ * What the next test actually uses when it differs from the saved settings, and why, in
+ * one sentence; null when tests use the saved settings. Only differences that change an
+ * answer count: feasibility notes (participants, launch day) and name normalisation do not.
+ * The server's resolution decides; this only names it.
+ */
+export function configUse(
+  config: EffectiveConfig | null | undefined,
+  approvedDevDays: number,
+): ConfigUse | null {
+  if (!config) return null;
+  const { requested, effective, differences = {} } = config;
+  const used: string[] = [];
+  const needs: string[] = [];
+  let manual = false;
+  if (differences.update_strategy) {
+    used.push(strategyLabel(effective.update_strategy ?? 'daily'));
+    if (requested.update_strategy === 'realtime') needs.push('realtime_sync');
+    else manual = true;
+  }
+  if (differences.fallback) {
+    used.push(T('答不了时不转人工', 'no hand-off to a person'));
+    needs.push('human_fallback');
+  }
+  if (differences.scope_filter) {
+    used.push(T('不过滤知识范围', 'no scope filter'));
+    needs.push('scope_filter');
+  }
+  if (!used.length) return null;
+  const planned = requested.work_items ?? [];
+  const delivered = effective.work_items ?? [];
+  const waiting = needs.filter((id) => planned.includes(id) && !delivered.includes(id));
+  const missing = needs.filter((id) => !planned.includes(id));
+  const names = (ids: string[]) => ids.map(workItemLabel).join(T('、', ' and '));
+  const reasons = [
+    ...(waiting.length
+      ? [
+          T(
+            `${names(waiting)}还没批到开发人日（已批准 ${approvedDevDays} 人日）`,
+            `${names(waiting)} isn't funded yet (${approvedDevDays} developer-days approved)`,
+          ),
+        ]
+      : []),
+    ...(missing.length
+      ? [T(`方案里没安排${names(missing)}`, `${names(missing)} isn't in the plan`)]
+      : []),
+    ...(manual
+      ? [
+          T(
+            '政策转人工要先排上人工入口和范围过滤',
+            'routing policy to people needs the hand-off and the scope filter in place',
+          ),
+        ]
+      : []),
+  ];
+  return {
+    text: T(
+      `测试实际用：${used.join('、')} · ${reasons.join('；')}`,
+      `Tests actually use: ${used.join(', ')} · ${reasons.join('; ')}`,
+    ),
+    unfunded: waiting.length > 0,
+  };
+}
+
+/** The save notice says what the next test uses, not only that settings were saved. */
+export function savedConfigNotice(version: number, use: ConfigUse | null): string {
+  return use
+    ? T(
+        `试点设置 v${version} 已保存；${use.text}。`,
+        `Pilot settings v${version} saved. ${use.text}.`,
+      )
+    : T(
+        `试点设置 v${version} 已保存，下一次测试会用它。`,
+        `Pilot settings v${version} saved. The next test uses them.`,
+      );
 }
