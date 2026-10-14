@@ -11,8 +11,9 @@ import {
   type ReferenceCatalog,
 } from './reference-catalog';
 
-// Test runs, deliveries and history records are named from the practice timeline.
-const NAMED_FROM_TIMELINE = ['test', 'submission', 'event'];
+// Documents (by their current name), test runs, deliveries and history records are named from
+// the practice timeline, the same catalog the evidence buttons use.
+const NAMED_FROM_TIMELINE = ['material', 'test', 'submission', 'event'];
 const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = '') => {
   const n = document.createElement(tag);
   n.textContent = text;
@@ -99,7 +100,7 @@ function withRecord(
   return {
     ...catalog,
     materialTitles:
-      ref.kind === 'material' && title
+      ref.kind === 'material' && title && !(key in catalog.materialTitles)
         ? { ...catalog.materialTitles, [key]: title }
         : catalog.materialTitles,
     products:

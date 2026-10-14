@@ -38,65 +38,98 @@ function page(value: unknown): Row {
   return {};
 }
 
+/** A document's name everywhere in the workbench (board, activity, evidence, reader): the formal
+ * title of its current version, the same rule in both languages. A document published only in
+ * Chinese keeps its Chinese title; the version number, not the name, tells versions apart. */
+export function documentName(title: unknown): string | undefined {
+  // Earlier scenario packages appended the version stage to the title; the version shows it.
+  const name = typeof title === 'string' ? title.replace(/(初始版|更新版)$/, '').trim() : '';
+  return name || undefined;
+}
+
+/** What one catalog is built from, whether read from the timeline or from the workbench. */
+export type CatalogSource = {
+  /** 'id:version' -> the title of every readable document version. */
+  materialTitles?: Readonly<Record<string, unknown>>;
+  /** Tests in the order they ran. */
+  tests?: readonly { id: string; query: string }[];
+  /** Timeline events: history references, and deliveries in the order they were submitted. */
+  events?: readonly unknown[];
+  products?: readonly ProductTitle[];
+};
+
+export function buildCatalog(source: CatalogSource): ReferenceCatalog {
+  const materialTitles: Record<string, string> = {};
+  for (const [key, title] of Object.entries(source.materialTitles ?? {}))
+    if (typeof title === 'string' && title) materialTitles[key] = title;
+  const tests: Record<string, { query: string; run: number }> = {};
+  const runs = new Map<string, number>();
+  for (const test of source.tests ?? []) {
+    const query = test.query.trim();
+    if (!query || test.id in tests) continue;
+    const run = (runs.get(query) ?? 0) + 1;
+    runs.set(query, run);
+    tests[test.id] = { query, run };
+  }
+  const events: Record<string, ServerEvent> = {};
+  const deliveries: Record<string, number> = {};
+  const ordered = list(source.events)
+    .map(row)
+    .sort((a, b) => Number(a.seq ?? 0) - Number(b.seq ?? 0));
+  for (const event of ordered) {
+    if (typeof event.type !== 'string') continue;
+    const refs = list(event.refs).map(row);
+    if (typeof event.id === 'string')
+      events[event.id] = {
+        type: event.type,
+        data: row(event.data),
+        refs: refs as unknown as ServerEvent['refs'],
+      };
+    // Deliveries are numbered in the order they were submitted.
+    const submission = refs.find((ref) => ref.kind === 'submission')?.object_id;
+    if (event.type === 'submitted' && typeof submission === 'string' && !(submission in deliveries))
+      deliveries[submission] = Object.keys(deliveries).length + 1;
+  }
+  const titles: Record<string, string> = {};
+  for (const product of source.products ?? [])
+    if (product.title) titles[`${product.product_id}:${product.version}`] = product.title;
+  return { materialTitles, tests, deliveries, events, products: titles };
+}
+
 export function readCatalog(
   timeline: unknown,
   products: readonly ProductTitle[] = [],
 ): ReferenceCatalog {
   const source = page(timeline);
-  const materialTitles: Record<string, string> = {};
-  for (const [key, title] of Object.entries(row(row(source.workspace).material_titles)))
-    if (typeof title === 'string' && title) materialTitles[key] = title;
-  const tests: Record<string, { query: string; run: number }> = {};
-  const runs = new Map<string, number>();
-  const deliveries: Record<string, number> = {};
   // The server lists objects in the order they were created.
-  for (const object of list(source.objects)) {
+  const tests = list(source.objects).flatMap((object) => {
     const ref = row(row(object).ref),
-      content = row(row(object).content),
-      id = ref.object_id;
-    if (typeof id !== 'string') continue;
-    if (ref.kind === 'test' && typeof content.query === 'string' && !(id in tests)) {
-      const query = content.query.trim();
-      const run = (runs.get(query) ?? 0) + 1;
-      runs.set(query, run);
-      tests[id] = { query, run };
-    }
-    if (ref.kind === 'submission' && !(id in deliveries))
-      deliveries[id] = Object.keys(deliveries).length + 1;
-  }
-  const events: Record<string, ServerEvent> = {};
-  for (const value of list(source.events)) {
-    const event = row(value);
-    if (typeof event.id === 'string' && typeof event.type === 'string')
-      events[event.id] = {
-        type: event.type,
-        data: row(event.data),
-        refs: list(event.refs).map(row) as unknown as ServerEvent['refs'],
-      };
-  }
-  const titles: Record<string, string> = {};
-  for (const product of products)
-    if (product.title) titles[`${product.product_id}:${product.version}`] = product.title;
-  return { materialTitles, tests, deliveries, events, products: titles };
+      content = row(row(object).content);
+    return ref.kind === 'test' &&
+      typeof ref.object_id === 'string' &&
+      typeof content.query === 'string'
+      ? [{ id: ref.object_id, query: content.query }]
+      : [];
+  });
+  return buildCatalog({
+    materialTitles: row(row(source.workspace).material_titles),
+    tests,
+    events: list(source.events),
+    products,
+  });
 }
 
-/** A document's title at a version, else at its latest readable version. */
-export function catalogMaterialTitle(
-  catalog: ReferenceCatalog,
-  id: string,
-  version?: number,
-): string | undefined {
-  if (version !== undefined && catalog.materialTitles[`${id}:${version}`])
-    return catalog.materialTitles[`${id}:${version}`];
+/** A document's name: the formal title of its current (latest readable) version. */
+export function catalogMaterialTitle(catalog: ReferenceCatalog, id: string): string | undefined {
   const latest = Object.keys(catalog.materialTitles)
     .filter((key) => key.startsWith(`${id}:`))
     .sort((a, b) => Number(b.slice(id.length + 1)) - Number(a.slice(id.length + 1)))[0];
-  return latest ? catalog.materialTitles[latest] : undefined;
+  return latest ? documentName(catalog.materialTitles[latest]) : undefined;
 }
 
 export function catalogLookups(catalog: ReferenceCatalog): EventLookups {
   return {
-    materialTitle: (id, version) => catalogMaterialTitle(catalog, id, version),
+    materialTitle: (id) => catalogMaterialTitle(catalog, id),
     testQuery: (id) => catalog.tests[id]?.query,
     deliveryNumber: (id) => catalog.deliveries[id],
   };
@@ -132,7 +165,7 @@ export function referenceLabel(
     v = ref.version;
   switch (ref.kind) {
     case 'material': {
-      const title = catalogMaterialTitle(catalog, id, v);
+      const title = catalogMaterialTitle(catalog, id);
       return title
         ? named(`${title} · v${v}`, `${clip(title)} · v${v}`)
         : named(say(`资料 · v${v}`, `Document · v${v}`));

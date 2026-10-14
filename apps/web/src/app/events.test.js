@@ -1,6 +1,8 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { eventLine } from './events.js';
 import { setPreference } from './i18n';
+import { materialTitle } from './vocab.js';
+import { readCatalog, referenceLabel } from '../reference-catalog';
 
 afterEach(() => setPreference('zh'));
 
@@ -81,7 +83,8 @@ describe('activity lines for server events', () => {
     setPreference('en');
     const a = attempt();
     expect(line(a, 2).text).toBe('Test: 住宿报销上限是多少？');
-    expect(line(a, 4).text).toBe('Document updated: “Travel policy” v2');
+    // A document published in Chinese keeps its Chinese title in the English interface.
+    expect(line(a, 4).text).toBe('Document updated: “费用管理通知：差旅住宿标准” v2');
     expect(line(a, 5).text).toBe('Asked the manager for: dev days 6');
     expect(line(a, 7).text).toBe('The manager approved: dev days 6');
     expect(line(a, 11).text).toBe('Delivery 1 submitted');
@@ -114,4 +117,66 @@ describe('activity lines for server events', () => {
     expect(line(a, 2).open).toBeUndefined();
     expect(line(a, 1).text).toBe('读了一份资料');
   });
+});
+
+describe('one name per document across the workbench', () => {
+  // A document is named by the formal title of its current version, in both languages:
+  // on the board, in the activity, on evidence and for the event that changed it.
+  const practice = (titles) => ({
+    a: {
+      world: {},
+      backend: {
+        materials: [{ id: 'policy', version: 2, title: titles['policy:2'] }],
+        materialTitles: titles,
+      },
+      tests: [],
+      events: [
+        server(1, 'material_read', { material_id: 'policy', materialId: 'policy', version: 1 }),
+        server(4, 'initial_plan_applied', versions({ policy: 1 }, { policy: 2 })),
+      ],
+    },
+    catalog: readCatalog({
+      objects: [],
+      events: [
+        {
+          id: 'ev-4',
+          seq: 4,
+          type: 'initial_plan_applied',
+          refs: [],
+          data: versions({ policy: 1 }, { policy: 2 }),
+        },
+      ],
+      workspace: { material_titles: titles },
+    }),
+  });
+  const policy = (version) => ({ session_id: 's', kind: 'material', object_id: 'policy', version });
+  const history = { session_id: 's', kind: 'event', object_id: 'ev-4', version: 1 };
+  it.each([
+    [
+      'zh',
+      { 'policy:1': '差旅住宿与交通政策', 'policy:2': '费用管理通知：差旅住宿标准' },
+      '读了《费用管理通知：差旅住宿标准》v1',
+      '费用管理通知：差旅住宿标准',
+    ],
+    [
+      'en',
+      {
+        'policy:1': 'Travel policy: hotels and taxis',
+        'policy:2': 'Expense-management notice: hotel allowance',
+      },
+      'Read “Expense-management notice: hotel allowance” v1',
+      'Expense-management notice: hotel allowance',
+    ],
+  ])(
+    '%s: the board, the activity and the evidence use the same name',
+    (language, titles, read, name) => {
+      setPreference(language);
+      const { a, catalog } = practice(titles);
+      expect(materialTitle(a.backend.materials[0])).toBe(name);
+      expect(eventLine(a, a.events[0]).text).toBe(read);
+      expect(referenceLabel(policy(1), catalog, language).full).toBe(`${name} · v1`);
+      expect(referenceLabel(policy(2), catalog, language).full).toBe(`${name} · v2`);
+      expect(eventLine(a, a.events[1]).text).toBe(referenceLabel(history, catalog, language).full);
+    },
+  );
 });

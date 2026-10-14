@@ -2,8 +2,8 @@
 // renames read_material to material_read and copies the payload into `detail`.
 import { T, locale } from './i18n';
 import { serverText } from '../store';
-import { materialTitle } from './vocab.js';
 import { describeServerEvent } from './event-copy';
+import { buildCatalog, catalogLookups } from '../reference-catalog';
 
 const WORLD = [
   'policy_updated',
@@ -26,26 +26,21 @@ const OPEN = {
   bench: () => ({ action: 'open-bench' }),
   review: () => ({ action: 'to-review' }),
 };
-// Titles, questions and delivery order this attempt can actually read.
+// Names from the same catalog evidence uses: document names, test questions, delivery order.
 function lookups(a) {
   const materials = a.backend?.materials || [];
-  const titles = a.backend?.materialTitles || {};
-  const deliveries = (a.events || [])
-    .filter((x) => x.server && x.type === 'submitted')
-    .sort((x, y) => x.seq - y.seq)
-    .map((x) => (x.refs || []).find((r) => r.kind === 'submission')?.object_id);
-  return {
-    materialTitle: (id, version) => {
-      const exact = version && titles[`${id}:${version}`];
-      const m = exact ? { id, title: exact } : materials.find((x) => x.id === id);
-      return m ? materialTitle(m) : undefined;
-    },
-    testQuery: (id) => (a.tests || []).find((x) => x.id === id)?.question || undefined,
-    deliveryNumber: (id) => {
-      const i = deliveries.indexOf(id);
-      return i < 0 ? undefined : i + 1;
-    },
-  };
+  return catalogLookups(
+    buildCatalog({
+      materialTitles: {
+        ...Object.fromEntries(materials.map((m) => [`${m.id}:${m.version}`, m.title])),
+        ...(a.backend?.materialTitles || {}),
+      },
+      tests: (a.tests || []).map((t) => ({ id: t.id, query: t.question || '' })),
+      events: (a.events || [])
+        .filter((x) => x.server)
+        .map((x) => ({ id: x.id, seq: x.seq, type: x.type, data: x.detail, refs: x.refs })),
+    }),
+  );
 }
 
 export function eventLine(a, e) {

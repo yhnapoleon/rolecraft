@@ -29,6 +29,8 @@ const timeline = {
         refs: [],
         data: { before_versions: { policy: 1 }, after_versions: { policy: 2 } },
       },
+      { id: 'ev-7', seq: 7, type: 'submitted', refs: [ref('submission', 'sub-1')], data: {} },
+      { id: 'ev-9', seq: 9, type: 'submitted', refs: [ref('submission', 'sub-2')], data: {} },
     ],
     workspace: {
       material_titles: {
@@ -48,7 +50,8 @@ describe('evidence names the object and its version', () => {
   it('names documents, test runs, work, settings, deliveries and history in Chinese', () => {
     const text = (value: ReturnType<typeof ref>) => referenceLabel(value, catalog, 'zh').text;
     expect(text(ref('material', 'policy', 2))).toBe('费用管理通知：差旅住宿标准 · v2');
-    expect(text(ref('material', 'policy', 1))).toBe('差旅住宿与交通政策 · v1');
+    // A document keeps its current name; the version says which one is meant.
+    expect(text(ref('material', 'policy', 1))).toBe('费用管理通知：差旅住宿标准 · v1');
     expect(text(ref('test', 't2'))).toBe('测试：住宿报销上限是多少？ · 第 2 次');
     expect(text(ref('test', 't3'))).toBe('测试：请假要提前几天申请？ · 第 1 次');
     expect(text(ref('product', 'p1', 2))).toBe('作品《试点决定草稿》· v2');
