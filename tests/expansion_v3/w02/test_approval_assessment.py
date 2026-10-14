@@ -154,7 +154,9 @@ def test_approval_records_covered_terms_and_when_resources_take_effect(installed
             "issues": [],
         }
     ]
-    shortfall, effect = decision.assessment.clauses
+    # The short ceiling sentence leads; the longer rules it satisfied follow.
+    ceiling, shortfall, effect = decision.assessment.clauses
+    assert ceiling.quote == CEILINGS[language]
     assert ("真实配置缺口" if language == "zh" else "real configuration shortfall") in (
         shortfall.quote
     )

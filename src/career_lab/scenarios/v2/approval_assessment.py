@@ -19,7 +19,8 @@ PRIMARY = {
     "request_not_needed": SHORTFALL,
     "requested_resources_insufficient": SHORTFALL,
     "approval_plan_incomplete": SAFEGUARDS,
-    "within_scenario_limits": SHORTFALL,
+    # An approval leads with the short ceiling sentence; the rules it met follow.
+    "within_scenario_limits": LIMITS,
 }
 ISSUE_CLAUSE = {
     "over_limit": LIMITS,
@@ -113,7 +114,7 @@ def assess_request(package, request, snapshot, code):
     if missing or fallback_required:
         order.append(SAFEGUARDS)
     if code == "within_scenario_limits":
-        order.append(EFFECT)
+        order.extend((SHORTFALL, EFFECT))
     return _ApprovalAssessment(
         terms=terms,
         missing_work_items=missing,
