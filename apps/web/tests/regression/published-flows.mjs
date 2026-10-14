@@ -94,6 +94,44 @@ async function restoreColleagueDrafts(context) {
   }
 }
 
+/** F02: an idle practice keeps its toolbar. A press held across a poll still opens the
+ * language menu, which stays open through idle polls and through a background notice. */
+async function toolbarHoldsStill(context) {
+  const { browser, text } = context;
+  let previous = '';
+  for (let sample = 0; ; sample++) {
+    const current = await browser.ev(`JSON.stringify([
+      window.PracticeLive.store.getSnapshot().busy, window.PracticeLive.store.active()])`);
+    if (current === previous) break;
+    assert.ok(sample < 30, 'The practice settles');
+    previous = current;
+    await delay(1000);
+  }
+  const point = await browser.ev(`(() => {
+    const box = document.querySelector('#ws-toolbar [data-menu="lang"]').getBoundingClientRect();
+    return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+  })()`);
+  const press = { ...point, button: 'left', clickCount: 1 };
+  await browser.send('Input.dispatchMouseEvent', { type: 'mouseMoved', ...point });
+  await browser.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...press });
+  await delay(1800);
+  await browser.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...press });
+  const open = `!!document.querySelector('#ws-toolbar .menu [data-action="set-lang"]')`;
+  await waitFor(browser, open, 3000);
+  await browser.ev(`window.regressionToolbar = document.getElementById('ws-toolbar')`);
+  await delay(4500);
+  const kept = `document.getElementById('ws-toolbar') === window.regressionToolbar && ${open}`;
+  assert.equal(await browser.ev(kept), true, 'Idle polls keep the toolbar and its open menu');
+  await browser.ev(
+    `window.PracticeLive.store.report({ notice: ${JSON.stringify(text('后台提示', 'Background notice'))} })`,
+  );
+  await delay(300);
+  assert.equal(await browser.ev(kept), true, 'A notice that leaves the toolbar unchanged keeps it');
+  await browser.ev(`window.PracticeLive.store.report({ notice: '' })`);
+  await browser.click('#ws-toolbar [data-menu="lang"]');
+  await waitFor(browser, `!document.querySelector('#ws-toolbar .menu')`);
+}
+
 async function inspectResourceRegion(context) {
   const { browser, shot } = context;
   await browser.click('.product-bar [data-action="resources"]');
@@ -438,6 +476,9 @@ async function runLanguage(language) {
     );
     await step('resource dialog keeps its assigned form and controls', () =>
       inspectResourceRegion(context),
+    );
+    await step('idle toolbar keeps a held press and an open menu in place', () =>
+      toolbarHoldsStill(context),
     );
     await step('source reading and actual assistant test', () => readAndTest(context));
     await step('unsaved draft survives route change and reload', () => restoreDraft(context));

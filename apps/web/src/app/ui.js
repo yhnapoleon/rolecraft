@@ -3185,6 +3185,8 @@ function markRead() {
 }
 
 /* ---------- workspace refresh ---------- */
+// The toolbar holds open menus and pressed buttons: replace it only when its markup changes.
+let toolbarShown = { node: null, html: '' };
 function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
   const a = current();
   if (!a || !WS.includes(ui.route)) {
@@ -3208,7 +3210,11 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
   const y = stage ? stage.scrollTop : 0;
   if (parts.includes('toolbar')) {
     const tb = document.getElementById('ws-toolbar');
-    if (tb) tb.outerHTML = wsToolbar(a);
+    const html = wsToolbar(a);
+    if (tb && (tb !== toolbarShown.node || html !== toolbarShown.html)) {
+      tb.outerHTML = html;
+      toolbarShown = { node: document.getElementById('ws-toolbar'), html };
+    }
   }
   if (parts.includes('stage')) {
     document.getElementById('ws-stage').outerHTML =
