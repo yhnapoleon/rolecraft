@@ -223,8 +223,10 @@ describe('v4 single host persistence and recovery', () => {
     ).rejects.toMatchObject({ code: 'delegation_host_not_ready' });
     expect(fetcher).not.toHaveBeenCalled();
   });
-  it('keeps an issued agent secret only in memory and hands the connection config out once', async () => {
-    const { host, fetcher, map } = setup();
+  /** A host whose control plane issues grant d1 with the token 'agent-secret'. */
+  async function issuingHost() {
+    const setupResult = setup();
+    const { host, fetcher } = setupResult;
     const context = {
       as_of: point,
       state,
@@ -250,35 +252,96 @@ describe('v4 single host persistence and recovery', () => {
       });
     });
     await host.query('workbench.read');
+    return setupResult;
+  }
+  const config = { api_url: 'http://127.0.0.1:1/api', session_id: 's', token: 'agent-secret' };
+  // One offering: the card hands the secret out while it is open; once the person finishes it is
+  // gone for good. The secret never reaches results, storage or the snapshot.
+  it('keeps an issued agent secret only in memory and hands the connection config out once', async () => {
+    const { host, map, storage } = await issuingHost();
     expect(host.snapshot().available).toMatchObject({
       'delegations.create': true,
       'delegations.list': true,
     });
+    const expiresAt = new Date(Date.now() + 1800000).toISOString();
     const issued = await host.command('delegations.create', {
       agent_label: 'Helper',
-      expires_at: new Date(Date.now() + 1800000).toISOString(),
+      expires_at: expiresAt,
     });
     expect(issued.status).toBe('confirmed');
     expect(JSON.stringify(issued)).not.toContain('agent-secret');
     expect([...map.values()].join('')).not.toContain('agent-secret');
+    expect(JSON.stringify(storage.setItem.mock.calls)).not.toContain('agent-secret');
     expect(JSON.stringify(host.snapshot())).not.toContain('agent-secret');
-    expect(host.issuedDelegation()).toMatchObject({ delegationId: 'd1', label: 'Helper' });
+    expect(host.issuedDelegation()).toEqual({
+      delegationId: 'd1',
+      label: 'Helper',
+      issuedAt: expect.any(String),
+      expiresAt,
+    });
+    expect(JSON.stringify(host.issuedDelegation())).not.toContain('agent-secret');
+    expect(host.connectionConfig('http://127.0.0.1:1/api')).toEqual(config);
     const issuedStates: ReturnType<typeof host.issuedDelegation>[] = [];
     const unsubscribe = host.subscribe(() => issuedStates.push(host.issuedDelegation()));
-    expect(host.takeConnectionConfig('http://127.0.0.1:1/api')).toEqual({
-      api_url: 'http://127.0.0.1:1/api',
-      session_id: 's',
-      token: 'agent-secret',
-    });
+    host.dismissConnection();
     expect(issuedStates).toEqual([null]);
     unsubscribe();
-    expect(host.takeConnectionConfig('http://127.0.0.1:1/api')).toBeNull();
+    expect(host.issuedDelegation()).toBeNull();
+    expect(host.connectionSecret()).toBeNull();
+    expect(host.connectionConfig('http://127.0.0.1:1/api')).toBeNull();
     await host.command('delegations.create', {
       agent_label: 'Second',
       expires_at: new Date(Date.now() + 1800000).toISOString(),
     });
     await host.command('delegations.revoke', { delegation_id: 'd1' });
     expect(host.issuedDelegation()).toBeNull();
+    expect([...map.values()].join('')).not.toContain('agent-secret');
+  });
+  it('offers the secret for every copy until the person finishes, the grant expires or it is revoked', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const logged = (['log', 'info', 'warn', 'error', 'debug'] as const).map((name) =>
+      vi.spyOn(console, name).mockImplementation(() => {}),
+    );
+    try {
+      const { host, map } = await issuingHost();
+      await host.command('delegations.create', {
+        agent_label: 'Helper',
+        expires_at: new Date(Date.now() + 1800000).toISOString(),
+      });
+      // A blocked clipboard or a second client: each request the person makes gets the token.
+      expect(host.connectionSecret()).toEqual({ sessionId: 's', token: 'agent-secret' });
+      expect(host.connectionSecret()).toEqual({ sessionId: 's', token: 'agent-secret' });
+      expect(host.connectionConfig('http://127.0.0.1:1/api')).toEqual(config);
+      expect(host.connectionConfig('http://127.0.0.1:1/api')).toEqual(config);
+      host.dismissConnection();
+      expect(host.connectionSecret()).toBeNull();
+      // Expiry clears it on its own, and emits so the card goes away.
+      await host.command('delegations.create', {
+        agent_label: 'Second',
+        expires_at: new Date(Date.now() + 60000).toISOString(),
+      });
+      expect(host.connectionSecret()?.token).toBe('agent-secret');
+      const expiredStates: ReturnType<typeof host.issuedDelegation>[] = [];
+      const unsubscribe = host.subscribe(() => expiredStates.push(host.issuedDelegation()));
+      vi.advanceTimersByTime(60001);
+      unsubscribe();
+      expect(expiredStates).toEqual([null]);
+      expect(host.connectionSecret()).toBeNull();
+      // Revoking the grant clears it as well.
+      await host.command('delegations.create', {
+        agent_label: 'Third',
+        expires_at: new Date(Date.now() + 1800000).toISOString(),
+      });
+      expect(host.connectionSecret()?.token).toBe('agent-secret');
+      await host.command('delegations.revoke', { delegation_id: 'd1' });
+      expect(host.connectionSecret()).toBeNull();
+      expect([...map.values()].join('')).not.toContain('agent-secret');
+      for (const spy of logged)
+        expect(JSON.stringify(spy.mock.calls)).not.toContain('agent-secret');
+    } finally {
+      for (const spy of logged) spy.mockRestore();
+      vi.useRealTimers();
+    }
   });
   it('recovers a lost grant after a new page host, persists confirmation, and permits the next business write', async () => {
     const { host, ports, fetcher, map } = setup();

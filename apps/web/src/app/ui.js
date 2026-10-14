@@ -4663,7 +4663,8 @@ async function act(el) {
       openChat(el.dataset.role);
       break;
     case 'download-agent-config': {
-      const cfg = L.v4Host(a)?.takeConnectionConfig(location.origin + '/api');
+      const cfg = L.v4Host(a)?.connectionConfig(`${location.origin}/api`);
+      L.v4Host(a)?.dismissConnection();
       if (!cfg) {
         notify(
           T(
