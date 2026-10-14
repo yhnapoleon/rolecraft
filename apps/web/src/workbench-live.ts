@@ -14,6 +14,7 @@ import { workspaceActionMessage } from './features/workspace/native-v4/messages'
 import { canonicalPurpose } from './features/workspace/native-v4/form-values';
 import { blankPilot, WorkspaceStore } from './store';
 import { quotedAnswer } from './app/assistant-mode';
+import { returnPlacement, unmatchedReturnText } from './app/agent-return';
 import type {
   Deliverable,
   LocalSession,
@@ -1369,8 +1370,9 @@ export class LiveWorkbench {
         s.v2MaterialTitles?.[id + ':' + version] ||
         s.materials.find((m) => m.id === id)?.title ||
         id;
+      // One copy of the text, under the server's field name; nothing reads a second one.
       if (exact && exact.content.trim())
-        materials.push({ id, version, title, content: exact.content, body: exact.content });
+        materials.push({ id, version, title, content: exact.content });
       else
         omittedMaterials.push({
           id,
@@ -1440,14 +1442,11 @@ export class LiveWorkbench {
     const exp = data.requestId
       ? (a.exports || []).find((x: any) => x.requestId === data.requestId)
       : null;
-    if (data.requestId && !exp && data.returnId)
-      throw new Error(
-        T(
-          '找不到对应的任务包；请核对 requestId，或去掉该字段后作为未关联回传导入。',
-          'No matching task package. Check the requestId, or remove it to import as an unlinked return.',
-        ),
-      );
-    if (exp?.taskId && taskId && exp.taskId !== taskId)
+    const tasks = (s.v2Workspace?.tasks || []).filter((t: any) => t.status !== 'removed');
+    // The rule the preview showed: its package's task, or the task the person chose.
+    const placement = returnPlacement(data, a.exports || [], tasks, taskId);
+    if (placement.status === 'unmatched') throw new Error(unmatchedReturnText());
+    if (placement.status === 'package' && taskId && placement.taskId !== taskId)
       throw new Error(
         T(
           '回传所属事项与任务包不一致，请在原事项导入。',
@@ -1472,11 +1471,12 @@ export class LiveWorkbench {
         productId: existing.product_id as string,
         taskId: existing.task?.object_id ?? null,
       };
-    const tasks = (s.v2Workspace?.tasks || []).filter((t: any) => t.status !== 'removed');
-    const task = tasks.find((t: any) => t.id === (taskId || exp?.taskId)) || tasks[0];
+    const task = tasks.find((t) => t.id === placement.taskId);
     if (!task)
       throw new Error(
-        T('请先建立一件事项，再导入回传。', 'Create a task before importing a return.'),
+        tasks.length
+          ? T('请选择放在哪件事项下。', 'Choose the task to file it under.')
+          : T('请先建立一件事项，再导入回传。', 'Create a task before importing a return.'),
       );
     const host = this.v4.host(s);
     let timeline: any = null;

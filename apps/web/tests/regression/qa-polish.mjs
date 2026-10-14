@@ -231,6 +231,195 @@ async function markdownReader(context) {
   await closeOverlays(browser);
 }
 
+/** The pilot settings are saved once, so the assistant can answer test questions. */
+async function ensureConfigured(context) {
+  const { browser } = context;
+  await ensurePractice(context);
+  if (await browser.ev(`${active}.backend.configured`)) return;
+  await toBoard(context);
+  await browser.click('.product-bar [data-action="config"]');
+  await browser.submit('[data-form="config"]');
+  await waitFor(browser, `!document.querySelector('#sheet').open && ${active}.backend.configured`);
+}
+
+/** The Agent tab, on a task's workbench (by board order) or on the board itself. */
+async function openAgent(context, taskIndex) {
+  const { browser } = context;
+  await ensurePractice(context);
+  await closeOverlays(browser);
+  await toBoard(context);
+  if (taskIndex !== undefined) {
+    await browser.click('.card-open', taskIndex);
+    await waitFor(browser, `location.hash.startsWith('#/task/')`);
+  }
+  await browser.click('.rail-tabs [data-tab="agent"]');
+  await waitFor(browser, `!!document.querySelector('#import-content')`);
+}
+
+/** Copy may be blocked in a headless browser; download hands the package over too. */
+async function handOver(context) {
+  const { browser } = context;
+  const before = await browser.ev(`(${active}.exports || []).length`);
+  await browser.click('[data-action="download-package"]');
+  await waitFor(browser, `(${active}.exports || []).length === ${before + 1}`);
+  return browser.ev(`${active}.exports.at(-1).requestId`);
+}
+
+async function previewReturn(context, data) {
+  const { browser } = context;
+  await browser.type('#import-content', JSON.stringify(data));
+  await browser.submit('[data-form="import"]');
+  await waitFor(browser, `document.querySelector('#sheet').open`);
+}
+
+const importButton = `document.querySelector('#sheet [data-action="confirm-import"]')`;
+const productTask = (returnId) =>
+  `window.PracticeLive.store.active().v2Workspace.products.find((p) => p.source_return_id === ${JSON.stringify(returnId)})?.task?.object_id`;
+
+/** F29: the two Agent buttons say what each does. */
+async function agentLabels(context) {
+  const { browser, text, shot } = context;
+  await openAgent(context, 0);
+  const labels = await browser.ev(`[
+    document.querySelector('[data-action="package"]').textContent.trim(),
+    document.querySelector('#import-form [type="submit"]').textContent.trim(),
+  ]`);
+  assert.deepEqual(labels, text(['查看', '预览'], ['View package', 'Preview return']));
+  await shot('F29-agent');
+}
+
+/** F28: each document in the task package carries its text once. */
+async function packageDocuments(context) {
+  const { browser } = context;
+  await readBrief(context);
+  await openAgent(context, 0);
+  await browser.click('[data-action="package"]');
+  await waitFor(browser, `!!document.querySelector('#package-text')`);
+  const pkg = JSON.parse(await browser.ev(`document.querySelector('#package-text').value`));
+  assert.ok(pkg.materials.length >= 1);
+  for (const material of pkg.materials)
+    assert.deepEqual(
+      Object.keys(material).filter((key) => key === 'content' || key === 'body'),
+      ['content'],
+      JSON.stringify(Object.keys(material)),
+    );
+  await closeOverlays(browser);
+}
+
+/** F31: a return naming a package that was never handed over is stopped in the preview. */
+async function returnPrecheck(context) {
+  const { browser, text, shot } = context;
+  await openAgent(context, 0);
+  const writes = await browser.ev('window.qaWrites.length');
+  await previewReturn(context, {
+    schemaVersion: 1,
+    returnId: 'qa-return-unmatched',
+    requestId: 'request-never-handed-over',
+    artifact: { kind: 'text', title: 'Unmatched', purpose: '探索笔记', body: 'Text' },
+  });
+  const sheet = await browser.ev(`document.querySelector('#sheet').innerText`);
+  assert.ok(sheet.includes(text('找不到对应的任务包', 'No matching task package')), sheet);
+  assert.ok(await browser.ev(`!${importButton} || ${importButton}.disabled`));
+  await shot('F31-precheck');
+  await closeOverlays(browser);
+  assert.deepEqual(
+    await browser.ev(
+      `window.qaWrites.slice(${writes}).filter((url) => url.includes('/work-products'))`,
+    ),
+    [],
+  );
+}
+
+/** F25: a return is filed under its package's task, or where the person chooses. */
+async function returnTaskChoice(context) {
+  const { browser, text, shot } = context;
+  await openAgent(context, 1);
+  const packageTask = {
+    id: await browser.ev(`decodeURIComponent(location.hash.slice('#/task/'.length))`),
+    title: await browser.ev(`document.querySelector('.crumb-now').textContent`),
+  };
+  const requestId = await handOver(context);
+  await openAgent(context);
+  await previewReturn(context, {
+    schemaVersion: 1,
+    returnId: 'qa-return-package',
+    requestId,
+    artifact: { kind: 'text', title: 'For the package task', purpose: '探索笔记', body: 'Text' },
+  });
+  const named = text(`「${packageTask.title}」`, `“${packageTask.title}”`);
+  const sheet = await browser.ev(`document.querySelector('#sheet').innerText`);
+  assert.ok(sheet.includes(named), sheet);
+  assert.equal(
+    await browser.ev(`!!document.querySelector('#sheet select[data-change="return-task"]')`),
+    false,
+  );
+  await shot('F25-package-task');
+  await browser.click('#sheet [data-action="confirm-import"]');
+  await waitFor(
+    browser,
+    `${productTask('qa-return-package')} === ${JSON.stringify(packageTask.id)}`,
+  );
+  await openAgent(context);
+  await previewReturn(context, {
+    schemaVersion: 1,
+    returnId: 'qa-return-unlinked',
+    artifact: { kind: 'text', title: 'Unlinked', purpose: '探索笔记', body: 'Text' },
+  });
+  const choice = `document.querySelector('#sheet select[data-change="return-task"]')`;
+  assert.equal(await browser.ev(`${choice}.value`), '');
+  assert.equal(await browser.ev(`${importButton}.disabled`), true);
+  await shot('F25-choose-task');
+  const chosen = await browser.ev(`${choice}.options[${choice}.options.length - 1].value`);
+  await browser.select('#sheet select[data-change="return-task"]', chosen);
+  assert.equal(await browser.ev(`${importButton}.disabled`), false);
+  await browser.click('#sheet [data-action="confirm-import"]');
+  await waitFor(browser, `${productTask('qa-return-unlinked')} === ${JSON.stringify(chosen)}`);
+}
+
+/** F30: running a plan's questions counts as linked tests on its lifecycle strip. */
+async function planLinkedRuns(context) {
+  const { browser, text, shot } = context;
+  await ensureConfigured(context);
+  await openAgent(context, 0);
+  const requestId = await handOver(context);
+  await previewReturn(context, {
+    schemaVersion: 1,
+    returnId: 'qa-return-plan',
+    requestId,
+    artifact: {
+      kind: 'test_set',
+      title: text('上线前检查', 'Pilot readiness checks'),
+      purpose: '测试计划',
+      cases: [
+        {
+          question: text('国内出差住宿每晚报销上限是多少？', 'What is the nightly hotel limit?'),
+          intent: text('核对政策版本', 'Check the policy version'),
+          refs: [],
+        },
+      ],
+    },
+  });
+  await browser.click('#sheet [data-action="confirm-import"]');
+  await waitFor(browser, `!!document.querySelector('.agent-strip [data-action="adopt"]')`);
+  await browser.click('.agent-strip [data-action="adopt"]');
+  await waitFor(browser, `!!document.querySelector('[data-action="test-run"]:not([disabled])')`);
+  const plan = await browser.ev(
+    `window.PracticeLive.store.active().v2Workspace.products.find((p) => p.source_return_id === 'qa-return-plan').product_id`,
+  );
+  await browser.click('[data-action="test-run"]');
+  await waitFor(
+    browser,
+    `${active}.tests.some((t) => t.workId === ${JSON.stringify(plan)})`,
+    20000,
+  );
+  const linked = text('关联测试 1 次', '1 linked test');
+  await waitFor(
+    browser,
+    `[...document.querySelectorAll('.agent-strip li')].some((li) => li.textContent === ${JSON.stringify(linked)} && li.classList.contains('done'))`,
+  );
+  await shot('F30-linked');
+}
+
 /** No record id (32 hex digits) is shown anywhere in this part of the page. */
 const RECORD_ID = /[0-9a-f]{32}/;
 
@@ -407,6 +596,11 @@ const CHECKS = [
   ['F04', 'unmatched intake starts the reviewed situation', intakeFallback],
   ['F10', 'Markdown renders in a colleague reply', markdownReply],
   ['F10', 'Markdown renders in the version reader', markdownReader],
+  ['F29', 'the two Agent buttons say what each does', agentLabels],
+  ['F28', 'package documents carry their text once', packageDocuments],
+  ['F31', 'an unmatched return is stopped in the preview', returnPrecheck],
+  ['F25', 'a return is filed under its package task or a chosen one', returnTaskChoice],
+  ['F30', 'running a plan counts as linked tests', planLinkedRuns],
   ['F13', 'the snapshot names its work and hides record ids', snapshotNames],
   ['F18', 'a supplement is echoed as recorded at once', supplementEcho],
   ['F18', 'a supplement without a reference is stopped before sending', supplementNeedsReference],
