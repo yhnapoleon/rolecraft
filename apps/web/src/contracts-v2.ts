@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23. Do not edit.
+// Generated from frozen manifest SHA256 0717cc770f022e07a41b6a0a7d0032f73fd78b7efdd2681e1db38ae2a5b81149. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -81,6 +81,7 @@ export type BusinessBasis = {
 };
 export type BusinessDecision = {
   as_of: VersionPoint;
+  assessment?: _ApprovalAssessment | null;
   countered?: Record<string, number>;
   decider: string;
   evidence_refs?: EvidenceRefV2[];
@@ -1069,6 +1070,29 @@ export type _AdviceUnitCounts = {
   failed?: number;
   skipped_short?: number;
   over_budget?: number;
+};
+export type _ApprovalAssessment = {
+  clauses?: EvidenceRefV2[];
+  fallback_required?: boolean;
+  missing_work_items?: string[];
+  schema_version?: 2;
+  terms: _ApprovalTermCheck[];
+};
+export type _ApprovalTermCheck = {
+  current: number;
+  issues?: (
+    | 'over_limit'
+    | 'below_current'
+    | 'no_increase'
+    | 'no_shortfall'
+    | 'insufficient'
+    | 'need_over_limit'
+  )[];
+  limit: number;
+  needed: number;
+  requested: number;
+  resource: string;
+  schema_version?: 2;
 };
 export type _OutcomeAction = {
   schema_version?: 2;

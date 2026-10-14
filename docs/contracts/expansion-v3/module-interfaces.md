@@ -287,3 +287,10 @@ OperationAvailability明确installed/ready/capability/unavailable_code，注册�
 重绑后的作者包保留新 `authored_manifest`，prepare另以原审核manifest的真实hash与每份非runtime原件、完整成员集合和元数据比对，生成 `reviewed_authored_manifest`。仅内容审核结论沿确证谱系继承；运行绑定、模型质量及整包验收不继承。旧审核文件原字节保留。
 
 标准无参数API/worker入口读取`installed/current.json`的中文当前安装，并核对其manifest真实hash；显式`scenario_root`、`CAREER_LAB_SCENARIO_V2`或多语言prepare目录继续按既有优先级使用。作者根保持可复现未安装评价口径，不作为默认有反馈的成品运行包。启动不重写包或修改绑定。
+
+
+### 审批决定的判定依据与测试实际使用的配置（2026-10-14）
+
+BusinessDecision新增可选assessment段：每个申请条款的决定时额度、申请总量、已发布上限、所绑定方案的需要量，以及该条款的全部问题（over_limit、below_current、no_increase、no_shortfall、insufficient、need_over_limit），不只第一个失败项；方案策略缺少的工作项与是否缺人工兜底；决定所依据的已发布审批规则原句（本会话规则资料的确切来源版本，带span与quote，决定时观测）。status、reason_code、reason与判定顺序不变；未设时省略，旧决定、examples与线上字节不变。还价决定沿用原申请的assessment，接受决定带被接受条款的assessment。评价读取决定文本时去掉assessment，Judge证据输入字节不变。规则原句按审批规则资料的段落位置对应（适用范围、可审批上限、申请要件、缺口与整单退回、人工兜底与工作项、生效方式）；段落数或上限段事实不符时不记录引文，不引错句子。
+
+timeline与workbench.read的workspace新增effective_config：已保存配置按当前已批准资源解析后的EffectiveConfig，与助手测试调用同一个policy.effective_config；可见范围与workspace相同，限定对象的委托读取仍无workspace。

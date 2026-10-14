@@ -18,7 +18,13 @@ from career_lab.contracts.v2 import (
     VersionPoint,
     canonical,
 )
-from career_lab.evidence.v2.ports import RuleSnapshot, SourceRecord, VerifiedFact, model_generated
+from career_lab.evidence.v2.ports import (
+    RuleSnapshot,
+    SourceRecord,
+    VerifiedFact,
+    model_generated,
+    record_text,
+)
 from .engine import ScenarioSnapshot
 from .module import point, ref_for
 from .policy import effective_config, canonical_domains
@@ -161,7 +167,7 @@ class ScenarioFactAdapter:
         if born is None:
             raise ProtocolError("source_time_unknown")
         actual = EvidenceRefV2(**row.ref.model_dump(), observed_at_seq=born.business_seq)
-        return SourceRecord(actual, canonical(row.content), born)
+        return SourceRecord(actual, record_text(row.ref.kind, row.content), born)
 
     def rule_provider(self, auth, exact_product, as_of):
         row = self.object(auth, exact_product, as_of)

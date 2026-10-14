@@ -3,6 +3,7 @@
 from typing import Literal
 from pydantic import Field, JsonValue, model_validator
 from .core import *
+from .core import V2, EvidenceRefV2, Identifier, NonNegativeInt
 from .provider import ProviderMessage
 
 
@@ -253,6 +254,43 @@ class BusinessRequest(V2):
     executor: Executor
 
 
+class _ApprovalTermCheck(V2):
+    """One requested term beside the allocation, ceiling and need it was judged against."""
+
+    resource: Identifier
+    current: NonNegativeInt
+    requested: NonNegativeInt
+    limit: NonNegativeInt
+    needed: NonNegativeInt
+    issues: tuple[
+        Literal[
+            "over_limit",
+            "below_current",
+            "no_increase",
+            "no_shortfall",
+            "insufficient",
+            "need_over_limit",
+        ],
+        ...,
+    ] = ()
+
+
+class _ApprovalAssessment(V2):
+    """Every fact a decision was judged against, not only the first failed check."""
+
+    terms: tuple[_ApprovalTermCheck, ...]
+    missing_work_items: tuple[Identifier, ...] = ()
+    fallback_required: bool = False
+    # Exact sentences of the published approval rules the decision applies, primary first.
+    clauses: tuple[EvidenceRefV2, ...] = ()
+
+    @model_validator(mode="after")
+    def distinct_terms(self):
+        if len({term.resource for term in self.terms}) != len(self.terms):
+            raise ValueError("duplicate assessed term")
+        return self
+
+
 class BusinessDecision(V2):
     id: Identifier
     session_id: Identifier
@@ -267,11 +305,24 @@ class BusinessDecision(V2):
     reason: str
     evidence_refs: tuple[EvidenceRefV2, ...] = ()
     as_of: VersionPoint
+    # Unset on decisions recorded before the assessment existed; their bytes are unchanged.
+    assessment: _ApprovalAssessment | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def no_unapproved_grants(self):
         if self.status not in {"approved", "accepted"} and self.granted:
             raise ValueError("non-approved decision cannot grant resources")
+        return self
+
+    @model_validator(mode="after")
+    def assessment_scope(self):
+        if self.assessment is not None and any(
+            ref.kind != "material" or ref.session_id != self.session_id
+            for ref in self.assessment.clauses
+        ):
+            raise ValueError("assessment clauses must be this session's rule material")
         return self
 
 

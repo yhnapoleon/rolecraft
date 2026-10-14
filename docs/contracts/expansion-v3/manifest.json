@@ -308,7 +308,7 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "759f10925dcd68908c027f86eaff10d8424fe38dac011a09fe02eb6b5a97c2cd"
+      "sha256": "0cceb191ed70524f81202b0d6c632d5f2c132ea556164cb778deac13ae3bc60c"
     }
   },
   "errors": {
@@ -338,6 +338,7 @@
     "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.",
     "W07-W08-empty-joint-target": "Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.",
     "W07-W08-semantic-consensus": "Only independent-pass consensus uses semantic_decision_key; G2/G2v final remains bound by the full normalized decision_key to the actual selected pass.",
+    "approval-decision-assessment": "Optional BusinessDecision.assessment (_ApprovalAssessment with _ApprovalTermCheck rows) records what a resource decision was judged against: every requested term with its allocation at the time, requested total, published ceiling and the bound plan's need, plus all of its issues (over_limit, below_current, no_increase, no_shortfall, insufficient, need_over_limit), not only the first failed check; strategy work items the plan lacks and a missing human fallback; and the exact published approval-rule sentences the decision applies (this session's rule material at its source version, with span and quote, observed at the decision). Status, reason_code, reason and the decision order are unchanged. Counteroffers keep the original request's assessment and acceptances carry the accepted terms. Unset assessments are omitted, so existing decisions, examples and wire bytes are unchanged; evaluators read decisions without the assessment, so evaluation input bytes are unchanged.",
     "assistant-generator": "Only add optional AssistantConfig.generator (extractive|llm), default extractive. The default is omitted from serialization; all previous examples and instance bytes remain unchanged. Provider wiring uses the configured model, with local role substitutes mapped to None.",
     "assistant-mode-projection": "The v4 host reads (api/vertical_reads.py, timeline and workbench.read) attach to each test object the assistant mode saved with that answer (extractive, llm, unavailable or failed), its provider, model revision and configuration version, and report semantic.assistant from the live deployment's model (model or waiting_model) instead of a constant. Host results stay free-form V2Response data; public schemas, examples, errors and stored records are unchanged.",
     "authoritative-segment-traces": "A declared trace always constrains text hash and complete dependencies, including cited explanations and history; visible citations do not bypass it. The most-specific complete trace is authoritative for a field.",
@@ -352,14 +353,15 @@
     "registered-model-advice": "Optional advisory-only relation results and registration identity; complete input traces gate each new advice segment. Missing fields retain historical wire bytes.",
     "role-event-references": "Actual event provenance is scope/audience/window validated and remapped in the event namespace; no parallel event store.",
     "rule-score-range": "Optional FeedbackV2.score_range (_RuleScoreRange with _RuleScoreCriterion rows): the weighted range of the rule-anchored rubric part (2026-10-11 decision 5), recorded once when feedback is written under an installed rubric whose weights are frozen (rubric-v2-final-20261009, read from the package's verified rubric file). Verified rule bounds tighten it; pending, model-advice and undetermined criteria span their full weight and carry no points; not-applicable criteria leave the denominator, which is reported without rescaling. There is no single total. Candidate rubrics without frozen weights record no range, so those records keep their bytes; scoped reviews that evaluate only some criteria record no range; partial read projections whose rule results changed withhold the range.",
-    "submitted-evidence-status": "New response evidence is explicitly user_submitted_unverified (or none_submitted); legacy absence stays unknown. Linking never claims quote or semantic verification."
+    "submitted-evidence-status": "New response evidence is explicitly user_submitted_unverified (or none_submitted); legacy absence stays unknown. Linking never claims quote or semantic verification.",
+    "workspace-effective-config": "The learner timeline and workbench.read workspace add effective_config: the EffectiveConfig the next assistant test uses, resolved from the saved configuration and the approved resources by the same function as the test itself. Readers limited to named objects still receive no workspace."
   },
   "openapi": {
     "path": "openapi.json",
-    "sha256": "a762b2a5a823fbadb363374f442883f787a519cfe5d0cb291e1c22e084b7534d"
+    "sha256": "b8932639ffae25fc3113f8ed2996db292dc7322b71fb69888ad6420991d9a9f3"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-14439473c9e226d82f513beab2e7da5c301df3efd6498255a3693f62059135ff",
+  "previous_contract_revision": "expansion-v3-bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -681,7 +683,7 @@
       "example_sha256": "2ae4db953d5e87e44a796f21a31e95c9c26a7878baa970e98a08a8f0c1b0fa6f",
       "owner": "W01",
       "schema": "schemas/BusinessDecision.json",
-      "schema_sha256": "86b8f54ed3f6600ec09f3ebd36bce340699cee46b33720e76729dc4b15fcddc2",
+      "schema_sha256": "78351d1bcbc6185e64e3617d8d254e8a56f873985dd22edd8eaff102491a39ae",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -3215,7 +3217,7 @@
     "src/career_lab/api/v2_routes.py": "1d829a6949974dfc9e21f429368583b0ef3ebab120b66f1bf7b66ed7941f4483",
     "src/career_lab/api/v4_config.py": "23b5678779c9925c86e545c4b953497672895d32a6636c1e5c9f3196556ad5e4",
     "src/career_lab/api/v4_extensions.py": "a5272607a6a76663cc7f540726f1a42868ea11c7a919df925cd6860e46888607",
-    "src/career_lab/api/vertical_reads.py": "c17fcdbb9d9b4821911bd98a04448f140b895df780853e9bb24e007c2384c38a",
+    "src/career_lab/api/vertical_reads.py": "d3edce3ffeae6696c5db90eb6f80d57fba126053f426e7ff4022efec694bab90",
     "src/career_lab/api/vertical_runtime.py": "58dd164119f6f8dad0a011c8962fe41bdc3356c7ac5152d9de709cf8d68c8468",
     "src/career_lab/api/workspace_integration.py": "580d03db16bf1310e4713965501cf8fe924472d8646d6890fa85d4b30045559b",
     "src/career_lab/cli.py": "8a3b8e83f93bc5bbcb041e58ac398a04b14f332a40820ad4d37f7fdf0dcbd3cd",
@@ -3239,14 +3241,14 @@
     "src/career_lab/contracts/v2/extensions.py": "cd47aa1195d1d934e67a815e9e30494aba146d6c7e64266b6be613818523b7cd",
     "src/career_lab/contracts/v2/files.py": "3b3f8e9ac47acacfcdd3052f7b0d94698ff8622c0ca34299b47a544bad048577",
     "src/career_lab/contracts/v2/legacy.py": "47a9fb0d4414326b2e05ba863ce29a905f9734b1eb881a85b41af769df5fbbd5",
-    "src/career_lab/contracts/v2/manifest_history.py": "d5d574ebbe0513a5a69886d71b3c592a4a33a123b095281ac9b7a3f2a892cd9b",
+    "src/career_lab/contracts/v2/manifest_history.py": "985d1fa1114059b540cd00b5a75992d2c9595cf87f039f346d8127f888334a2b",
     "src/career_lab/contracts/v2/projection.py": "de1c239f0faf7ae41c82a13c3ee380020ac288e4eafae41b683e351bb5c31e9e",
     "src/career_lab/contracts/v2/provenance.py": "d752a89634ca3608aad3ee533c23522c592cd48e7f40a0fed37a56e515301cf1",
     "src/career_lab/contracts/v2/provider.py": "97b6f25a7ba7e93a84b77af980b00d6d371d770239cc59f6bc09ceb0ebf4994d",
     "src/career_lab/contracts/v2/requests.py": "133c37dfe570191bb5ebc4aeee970ba8948fb613983de9a37f896fc507c5c918",
     "src/career_lab/contracts/v2/research.py": "887c95fe6880db270ff1f14e9b7d0a4787b169d756d277c6b308fdac369459d5",
     "src/career_lab/contracts/v2/workspace.py": "4d92d335e2ce41ef737422591da97ec23d56bde4b04fc576a8fe85de0e00a711",
-    "src/career_lab/contracts/v2/world.py": "4574df08f3548eedcf73dea35647e032c7db2002371cf53f73a4f6e37ea6ab44",
+    "src/career_lab/contracts/v2/world.py": "75adc44fe119b7809c124013a7b766fb220a7344d40b7b46cd045ed4e408e45f",
     "src/career_lab/contracts/versioning.py": "23ef383486be9575e6e4ead243965bcf905122c509f6a257ad8729c077b3e506",
     "src/career_lab/jobs/repository.py": "583c03ea8172027b6fa7c7130a1f2747ed9405415557bebc2d912c0b49d4324f",
     "src/career_lab/jobs/worker.py": "a773253fa493e26705466c8d9e58cd9d6458b8f43db6b5f4a27940465dbad642",
