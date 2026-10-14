@@ -6,10 +6,13 @@ import { V4Mounts } from './v4-mounts';
 import { projectNativeWorkspace } from './v4-workspace-projection';
 import {
   keepProductDraft,
+  productRef,
   readProduct,
   WorkspaceSlotController,
 } from './features/workspace/native-v4/slot-controller';
-import type { ProductCreate } from './contracts-v2';
+import type { EvidenceRefV2, ObjectRef, ProductCreate } from './contracts-v2';
+import { evidenceKey } from './evidence-picker';
+import { chooseWorkEvidence, evidenceChips, type EvidenceChip } from './native-evidence';
 import { workspaceActionMessage } from './features/workspace/native-v4/messages';
 import { canonicalPurpose } from './features/workspace/native-v4/form-values';
 import { blankPilot, WorkspaceStore } from './store';
@@ -591,6 +594,56 @@ export class LiveWorkbench {
     const product = this.nativeProduct(session, id);
     if (session?.world.status !== 'active' || !product) throw new Error('editing_unavailable');
     await keepProductDraft(this.v4.host(session), product, patch);
+  }
+  /** The work's evidence as it will be saved: its draft when one exists. */
+  nativeEvidence(a: Attempt, id: string): EvidenceRefV2[] {
+    return [...(this.nativeProductValue(a, id)?.evidence_refs ?? [])];
+  }
+  nativeEvidenceChips(a: Attempt, id: string): EvidenceChip[] {
+    const s = this.session(a);
+    if (!s) return [];
+    const titles = s.v2MaterialTitles ?? {},
+      products: { product_id?: string; title?: string }[] = s.v2Workspace?.products ?? [];
+    return evidenceChips(this.nativeEvidence(a, id), {
+      material: (material, version) => titles[`${material}:${version}`],
+      test: (test) => {
+        const run = s.tests.find((row) => row.id === test);
+        return run ? { query: run.query, config: run.config_version } : undefined;
+      },
+      product: (product) => products.find((row) => row.product_id === product)?.title,
+    });
+  }
+  /** Ask for this work's evidence and keep it in the work's draft; false when unchanged. */
+  async citeNative(a: Attempt, id: string, focus?: ObjectRef): Promise<boolean> {
+    const session = this.session(a),
+      product = this.nativeProduct(session, id);
+    if (
+      !session ||
+      !product ||
+      product.removed_at ||
+      session.world.status !== 'active' ||
+      !this.nativeProductEditable(a)
+    )
+      throw new Error(
+        T('这份作品现在不能修改依据。', 'The evidence of this work cannot be changed now.'),
+      );
+    const chosen = await chooseWorkEvidence(
+      this.v4.host(session),
+      productRef(product),
+      this.nativeEvidence(a, id),
+      focus,
+    );
+    if (!chosen) return false;
+    await this.keepNativeProductDraft(a, id, { evidence_refs: chosen });
+    return true;
+  }
+  /** Open the exact cited original of one of this work's evidence chips. */
+  openNativeEvidence(a: Attempt, id: string, key: string) {
+    const session = this.session(a),
+      ref = this.nativeEvidence(a, id).find((row) => evidenceKey(row) === key);
+    if (!session || !ref)
+      throw new Error(T('这条依据已不在这份作品里。', 'This evidence is no longer in this work.'));
+    return this.v4.host(session).openReference(ref);
   }
   async restoreNativeProduct(a: Attempt, productId: string): Promise<void> {
     const session = this.session(a);

@@ -1,4 +1,4 @@
-import type { Command, ProductEdit, ProductCreate, WorkspaceProductRead, WorkspaceTask,
+import type { Command, ProductEdit, ProductCreate, WorkspaceProductRead, WorkspaceTask, EvidenceRefV2,
   ProductShare, TaskCreate, TaskPatch, TaskBatch, ShareCreate, ShareUpdate, VersionPoint, WorkspaceImport, ImportResult } from './contract-types';
 import { JournalStore, browserCoordinator, emptyJournal, type Draft, type DraftBase, type Pending,
   type Journal, type LocalStorage, type JournalCoordinator, type RejectedRequest } from './journal';
@@ -303,8 +303,17 @@ export class WorkspaceClient {
     const base=journal.draftBases[productId];
     if(!draft)throw Error('没有待另存的文字。');
     const refs=[...(draft.evidence_refs??[])];
-    if(base)refs.push({session_id:this.sessionId,kind:'product',object_id:productId,version:base.product.version,observed_at_seq:base.asOf.business_seq});
+    // The original is cited with the exact reference the server gives; none is guessed here.
+    const source=base?await this.citation(productId,base.product.version):undefined;
+    if(source)refs.push(source);
     return this.createProduct({...draft,legacy:null,source_return_id:null,evidence_refs:refs});
+  }
+  private async citation(productId:string,version:number):Promise<EvidenceRefV2|undefined> {
+    try {
+      const ref=(await this.transport(this.path(`/objects/product/${encodeURIComponent(productId)}/${version}`)))?.evidence_ref;
+      return ref&&ref.session_id===this.sessionId&&ref.kind==='product'&&ref.object_id===productId&&
+        ref.version===version&&Number.isInteger(ref.observed_at_seq)?ref:undefined;
+    }catch{return undefined;}
   }
   async discardDraft(productId:string,expectedDraftToken:string) {
     await this.flushLocal();

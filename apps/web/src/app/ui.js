@@ -1442,12 +1442,12 @@ function workView(a, t, x) {
           <span class="save" data-save title="${esc(T('作品保存在本机；交付时可合并进交付稿', 'Work stays on this device; fold it into your deliverable when you submit'))}"></span>
         </div>
         ${showEditor ? `<label class="sr-only" for="editor-body">${T('正文', 'Body')}</label><textarea id="editor-body" class="editor-body" data-edit="body" ${editable ? '' : 'readonly'} maxlength="50000" spellcheck="false" placeholder="${esc(T('写判断、问题，或直接起草方案。## 写小标题，- 写列表。', 'Write a judgement, questions or a draft plan. ## for headings, - for lists.'))}">${esc(view.body)}</textarea>` : `<div class="prose">${md(view.body)}</div>`}
-        ${x.evidence.length ? `<div class="evidence-row"><span class="meta">${T('依据', 'Evidence')}</span>${x.evidence.map((ev) => `<button type="button" class="chip" data-action="view-evidence" data-id="${esc(ev.id)}" data-version="${esc(ev.version ?? '')}">${icon(ev.type === 'test' ? 'flask' : 'doc', 'i-xs')}<span>${esc(evTitle(ev))}</span>${ev.version ? `<span class="ver">v${ev.version}</span>` : ''}</button>`).join('')}</div>` : ''}
+        ${L.nativeWorkspace(a) ? nativeEvidenceRow(a, x, T('依据', 'Evidence')) : x.evidence.length ? `<div class="evidence-row"><span class="meta">${T('依据', 'Evidence')}</span>${x.evidence.map((ev) => `<button type="button" class="chip" data-action="view-evidence" data-id="${esc(ev.id)}" data-version="${esc(ev.version ?? '')}">${icon(ev.type === 'test' ? 'flask' : 'doc', 'i-xs')}<span>${esc(evTitle(ev))}</span>${ev.version ? `<span class="ver">v${ev.version}</span>` : ''}</button>`).join('')}</div>` : ''}
       </article>
       ${notes.length ? `<aside class="margin" aria-label="${esc(T('同事的提醒', 'Reminders from colleagues'))}">${notes.map(marginNote).join('')}</aside>` : ''}
     </div>
     <div class="action-bar">
-      ${btn(icon('quote', 'i-sm') + T('引用依据', 'Cite evidence'), 'cite-pick', 'small quiet')}
+      ${btn(icon('quote', 'i-sm') + T('引用依据', 'Cite evidence'), 'cite-pick', 'small quiet', L.nativeWorkspace(a) && !editable ? 'disabled' : '')}
       ${btn(icon('flask', 'i-sm') + T('测一测', 'Test it'), 'obj', 'small quiet', 'data-type="bench"')}
       ${btn(icon('bubble', 'i-sm') + T('问同事', 'Ask a colleague'), 'discuss-artifact', 'small quiet')}
       ${btn(agentMark('xs') + T('交给我的 Agent', 'Hand to my agent'), 'agent', 'small quiet')}
@@ -1477,7 +1477,9 @@ function structuredWorkView(a, t, x) {
     errors: ui.testErrors,
     md,
     strip: (prog ? agentStrip(a, x, prog) : '') + workControls(a, x, editable, true),
-    evidence,
+    evidence: L.nativeWorkspace(a)
+      ? nativeEvidenceRow(a, x, T('这份计划的依据', 'Evidence for this plan'), 'test-set-evidence')
+      : evidence,
   });
 }
 function structuredInvestigationView(a, t, x) {
@@ -3258,6 +3260,52 @@ function ensureArtifact() {
   ui.obj = { task: t.id, type: 'work', id: x.id };
   return x;
 }
+// Server work keeps cited evidence in its draft until the person saves a version.
+function nativeCiteTarget(a) {
+  const x = artifact();
+  if (x) return x;
+  const t = task();
+  return (t && taskWorks(a, t.id).at(-1)) || null;
+}
+async function citeNativeWork(a, focus) {
+  const x = nativeCiteTarget(a);
+  if (!x) {
+    notify(
+      T(
+        '先在这件事里写一份作品，再引用依据。',
+        'Write a piece of work for this task first, then cite evidence.',
+      ),
+    );
+    return;
+  }
+  try {
+    if (!(await L.citeNative(a, x.id, focus))) return;
+    notify(
+      T(
+        '依据已加入草稿，保存这版后生效。',
+        'Evidence added to your draft. Save this version to keep it.',
+      ),
+    );
+    if (ui.route === 'task' && ui.obj?.type === 'work' && ui.artifactId === x.id)
+      refreshWS(['stage']);
+    else if (x.taskId) {
+      ui.artifactId = x.id;
+      openTask(x.taskId, { type: 'work', id: x.id });
+    } else refreshWS(['stage']);
+  } catch (err) {
+    notify(errText(err));
+  }
+}
+function openNativeEvidence(a, key) {
+  const x = artifact();
+  if (x) L.openNativeEvidence(a, x.id, key).catch((err) => notify(errText(err)));
+}
+function nativeEvidenceRow(a, x, label, cls = '') {
+  const chips = L.nativeEvidenceChips(a, x.id);
+  if (!chips.length) return '';
+  const glyph = { material: 'doc', test: 'flask', product: 'note' };
+  return `<div class="evidence-row ${cls}"><span class="meta">${label}</span>${chips.map((c) => `<button type="button" class="chip" data-action="view-evidence" data-key="${esc(c.key)}" aria-label="${esc(c.description)}" title="${esc(c.description)}">${icon(glyph[c.kind] || 'doc', 'i-xs')}<span>${esc(c.label)}</span>${c.version ? `<span class="ver">${esc(c.version)}</span>` : ''}</button>`).join('')}</div>`;
+}
 function cite(ev) {
   const a = current();
   const x = ensureArtifact();
@@ -4009,9 +4057,14 @@ async function act(el) {
       )?.focus();
       break;
     case 'cite-pick':
-      sheetCitePicker();
+      if (L.nativeWorkspace(a)) void citeNativeWork(a);
+      else sheetCitePicker();
       break;
     case 'view-evidence': {
+      if (L.nativeWorkspace(a)) {
+        openNativeEvidence(a, el.dataset.key);
+        break;
+      }
       const x = artifact();
       const ev =
         x && x.evidence.find((e) => e.id === id && String(e.version ?? '') === el.dataset.version);
@@ -4597,11 +4650,24 @@ async function act(el) {
       break;
     case 'cite-material': {
       const m = E.getMaterials(a).find((x) => x.id === id);
+      if (m && L.nativeWorkspace(a)) {
+        void citeNativeWork(a, {
+          session_id: a.id,
+          kind: 'material',
+          object_id: m.id,
+          version: m.version,
+        });
+        break;
+      }
       if (m) cite({ id: m.id, title: m.title, version: m.version, body: m.body, type: 'material' });
       refreshWS(['stage']);
       break;
     }
     case 'cite-run': {
+      if (L.nativeWorkspace(a)) {
+        void citeNativeWork(a, { session_id: a.id, kind: 'test', object_id: id, version: 1 });
+        break;
+      }
       const r = a.tests.find((x) => x.id === id);
       if (r)
         cite({
