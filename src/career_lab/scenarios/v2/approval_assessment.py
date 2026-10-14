@@ -101,9 +101,9 @@ def assess_request(package, request, snapshot, code):
         for key, value in sorted(request.requested.items())
         if key in limits and key in resources
     )
-    required = requirements["work_items_by_strategy"][config.update_strategy]
+    required = requirements["work_items_by_strategy"].get(config.update_strategy, ())
     missing = tuple(item for item in required if item not in config.work_items)
-    fallback_required = config.fallback != requirements["fallback"]
+    fallback_required = config.fallback != requirements.get("fallback", config.fallback)
     issues = [issue for term in terms for issue in term.issues]
     primary = (
         (LIMITS if "over_limit" in issues else SHORTFALL)
