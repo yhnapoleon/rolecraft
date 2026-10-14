@@ -42,7 +42,6 @@ import {
   FALLBACK,
   DOMAIN,
   WORK_ITEM,
-  WORK_COST,
   materialTitle,
   criterionName,
   LABEL,
@@ -71,6 +70,7 @@ import {
 } from './investigation-view.js';
 import './investigation.css';
 import { createDocumentMotion } from './document-motion.js';
+import { planWorkItems, syncStrategyWork, workCost, workItemChoice } from './pilot-config';
 import './document-motion.css';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
@@ -2767,9 +2767,7 @@ function sheetNewArtifact(purpose) {
   );
 }
 function configChecks(a, c) {
-  const cost =
-    (c.workItems || []).reduce((n, k) => n + (WORK_COST[k] || 0), 0) +
-    (c.update === 'realtime' && !(c.workItems || []).includes('realtime') ? 5 : 0);
+  const cost = workCost(c.update, c.workItems || []);
   const rows = [
     [
       T(`试点 ${c.participants || 0} 人`, `${c.participants || 0} users`),
@@ -2818,7 +2816,7 @@ function sheetConfig() {
       .join('')}</div></fieldset>
     <fieldset class="field"><legend>${T('政策怎么保持最新', 'Keeping policy current')}</legend><div class="choices wrap">${['daily', 'realtime', 'manual'].map((k) => `<label class="choice"><input type="radio" name="update" value="${k}" ${c.update === k ? 'checked' : ''}><span>${UPDATE(k)}</span></label>`).join('')}</div></fieldset>
     <fieldset class="field"><legend>${T('答不了或不确定时', 'When it cannot answer')}</legend><div class="choices">${['human', 'none'].map((k) => `<label class="choice"><input type="radio" name="fallback" value="${k}" ${c.fallback === k ? 'checked' : ''}><span>${FALLBACK(k)}</span></label>`).join('')}</div></fieldset>
-    <fieldset class="field"><legend>${T('要安排的开发', 'Engineering work')}</legend><div class="choices wrap">${['scope', 'fallback', 'realtime'].map((k) => `<label class="choice"><input type="checkbox" name="workItems" value="${k}" ${c.workItems.includes(k) ? 'checked' : ''}><span>${WORK_ITEM(k)}<small>${T(WORK_COST[k] + ' 人日', WORK_COST[k] + ' pd')}</small></span></label>`).join('')}</div></fieldset>
+    <fieldset class="field"><legend>${T('要安排的开发', 'Engineering work')}</legend><div class="choices wrap">${['scope', 'fallback', 'realtime'].map((k) => workItemChoice(k, c)).join('')}</div></fieldset>
     ${a.assistantMode ? generatorField(c.generator || 'extractive', a.assistantMode) : ''}
     ${configChecks(a, c)}
   </form>`,
@@ -5293,6 +5291,7 @@ document.addEventListener('change', (e) => {
         );
     }
     if (el.form && el.form.dataset.form === 'config') {
+      if (el.name === 'update') syncStrategyWork(el.form, el.value);
       const f = new FormData(el.form);
       const c = {
         participants: Number(f.get('participants')),
@@ -5419,7 +5418,7 @@ document.addEventListener('submit', async (e) => {
           domains: f.getAll('domains'),
           update: String(f.get('update')),
           fallback: String(f.get('fallback')),
-          workItems: f.getAll('workItems'),
+          workItems: planWorkItems(String(f.get('update')), f.getAll('workItems')),
           launchDay: Number(f.get('launchDay')),
           ...(a.assistantMode
             ? { generator: submittedGenerator(f, a.config.generator || 'extractive') }
