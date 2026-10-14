@@ -446,9 +446,11 @@ async function snapshotNames(context) {
       .find((node) => node.textContent.startsWith(${JSON.stringify(heading)}));
     return h.parentElement.innerText;
   })()`);
-  // The row read "<title> · <version>[ · made by an agent]"; the snapshot names that version.
-  const version = submitted.split(' · ').slice(0, 2).join(' · ');
-  assert.ok(receipt.includes(version), JSON.stringify({ receipt, submitted }));
+  // The row read "<title> · <version>[ · made by an agent]"; the snapshot names that work and
+  // the delivery as every evidence button does.
+  const title = submitted.split(' · ')[0];
+  assert.ok(receipt.includes(title), JSON.stringify({ receipt, submitted }));
+  assert.ok(receipt.includes(text('第 1 次交付', 'Delivery 1')), receipt);
   assert.doesNotMatch(receipt, RECORD_ID);
   await shot('F13-receipt');
   await openReview(context);
@@ -460,10 +462,7 @@ async function snapshotNames(context) {
     return summary.parentElement.innerText;
   })()`);
   assert.doesNotMatch(rows, RECORD_ID);
-  assert.ok(
-    rows.includes(text('查看第 1 次交付的快照', 'View the snapshot of submission 1')),
-    rows,
-  );
+  assert.ok(rows.includes(text('查看第 1 次交付的快照', 'View the snapshot of Delivery 1')), rows);
   await shot('F13-history');
 }
 
@@ -584,7 +583,7 @@ async function deliveryRounds(context) {
   const labels = await browser.ev(
     `[...document.querySelectorAll('.native-feedback ${sections} > article')].map((a) => a.querySelector('button').textContent)`,
   );
-  assert.deepEqual(labels, text(['第 2 次交付', '第 1 次交付'], ['Submission 2', 'Submission 1']));
+  assert.deepEqual(labels, text(['第 2 次交付', '第 1 次交付'], ['Delivery 2', 'Delivery 1']));
   const history = text('查看评审与提交历史', 'Review and submission history');
   await browser.clickText(history, '.native-feedback summary');
   const rows = await browser.ev(`(() => {
@@ -594,11 +593,22 @@ async function deliveryRounds(context) {
   })()`);
   for (const n of [1, 2])
     assert.ok(
-      rows.includes(text(`查看第 ${n} 次交付的快照`, `View the snapshot of submission ${n}`)),
+      rows.includes(text(`查看第 ${n} 次交付的快照`, `View the snapshot of Delivery ${n}`)),
       JSON.stringify(rows),
     );
   assert.ok(!rows.some((row) => RECORD_ID.test(row)), JSON.stringify(rows));
   await shot('F19-rounds');
+  // The delivery opens under its own name, with the decision in words, not its code.
+  const latest = text('第 2 次交付', 'Delivery 2');
+  await browser.clickText(latest, `.native-feedback ${sections} > article button`);
+  const reader = `[...document.querySelectorAll('[data-reference-reader], dialog[open]:not(#sheet)')]`;
+  await waitFor(
+    browser,
+    `${reader}.some((n) => n.querySelector('h2')?.textContent === ${JSON.stringify(latest)})`,
+  );
+  const opened = await browser.ev(`${reader}.map((n) => n.innerText).join('\\n')`);
+  assert.doesNotMatch(opened, /no_go|defer_with_conditions|launch_narrow/);
+  await shot('F19-reader');
 }
 
 const CHECKS = [

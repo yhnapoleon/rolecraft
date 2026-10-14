@@ -612,12 +612,6 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       reference(ref, sid!);
       void host.openReference(ref);
     },
-    versionTitle: async (ref) => {
-      const session = valid().session?.sessionId ?? '';
-      const record = await host.query('objects.read', reference(ref, session));
-      const title = record.content?.title;
-      return typeof title === 'string' ? title : undefined;
-    },
     chooseEvidence: async () => {
       valid();
       const refs = await host.chooseEvidence();

@@ -21,7 +21,7 @@ import {
 import { evaluationVersionLine } from './evaluation-version';
 import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
-import { deliveryName, deliveryNumber, versionTitles } from './delivery';
+import { snapshotHeading } from './delivery';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 import { readCatalog, referenceLabel, type ReferenceCatalog } from '../../reference-catalog';
 
@@ -147,8 +147,6 @@ export interface FeedbackNativeAdapter {
   retry?(): Promise<unknown>;
   canRetry?: boolean;
   openReference(ref: ObjectRef | EvidenceRefV2): void;
-  /** The title saved with an exact work version; read only, for naming it. */
-  versionTitle?(ref: ObjectRef): Promise<string | undefined>;
   chooseEvidence?(): Promise<EvidenceRefV2[]>;
   readDraft(key: string): { text: string; evidence: EvidenceRefV2[] } | undefined;
   keepDraft(key: string, draft: { text: string; evidence: EvidenceRefV2[] }): Promise<void>;
@@ -259,12 +257,6 @@ export function mountNativeFeedback(
   const purposeChoices = new Map<string, PurposeChoice>();
   let savedDrafts: Promise<void> = Promise.resolve();
   let draftError: unknown;
-  // Exact work versions keep their own saved title; an earlier version's is read once.
-  const titles = versionTitles(
-    (ref) => adapter.versionTitle?.(ref) ?? Promise.resolve(undefined),
-    () => render(),
-  );
-  const titleOf = (ref: ObjectRef) => titles.title(adapter.snapshot().products, ref);
   // Confirmed challenges and supplements show at once, until the next read lists them.
   type ResponseKind = 'objection' | 'supplement';
   const recorded: { feedback: string; kind: ResponseKind; text: string }[] = [];
@@ -436,7 +428,7 @@ export function mountNativeFeedback(
   if (options.surface !== 'submission') root.append(refresh, reports, responseHistory, revisions);
   const reviewControls =
     options.surface !== 'submission' && adapter.review
-      ? mountReviewControls(doc, adapter, language, titleOf)
+      ? mountReviewControls(doc, adapter, language)
       : undefined;
   if (reviewControls) root.insertBefore(reviewControls.element, reports);
   host.replaceChildren(root);
@@ -600,18 +592,8 @@ export function mountNativeFeedback(
         : undefined;
     const purposeLine = reviewedAs(review, language);
     if (purposeLine) panel.append(el('p', purposeLine, 'muted'));
-    // Each submission is a new record at version 1: name it by its round instead.
-    const round =
-      report.subject.kind === 'submission'
-        ? deliveryNumber(adapter.snapshot().submissions ?? [], report.subject)
-        : undefined;
-    if (round) {
-      const row = el('div');
-      row.append(
-        button(deliveryName(language, round), () => adapter.openReference(report.subject)),
-      );
-      panel.append(row);
-    } else refs(panel, [report.subject]);
+    // A submission reads "第 N 次交付", like every other reference to it.
+    refs(panel, [report.subject]);
     panel.append(evaluationVersionLine(doc, report, language));
     if (report.subject.kind === 'review') {
       if (review) {
@@ -909,23 +891,10 @@ export function mountNativeFeedback(
       : T('确认上一请求', 'Check the previous request');
     receipt.replaceChildren();
     if (state.submission) {
-      const round = deliveryNumber(state.submissions ?? [], state.submission.ref);
-      receipt.append(
-        el(
-          'h3',
-          T('已保存的提交快照', 'Saved submission snapshot') +
-            (round ? ` · ${deliveryName(language, round)}` : ''),
-        ),
-      );
-      // Each exact version by its own title, as the person chose it.
-      for (const ref of state.submission.products) {
-        const row = el('p');
-        row.append(
-          el('span', `${titleOf(ref) ?? T('作品', 'Artifact')} · ${versionLabel(ref.version)} `),
-          button(T('查看', 'View'), () => adapter.openReference(ref)),
-        );
-        receipt.append(row);
-      }
+      // The delivery and each exact version it saved, by the names evidence buttons use.
+      const catalog = state.references ?? readCatalog(null);
+      receipt.append(el('h3', snapshotHeading(state.submission.ref, catalog, language)));
+      refs(receipt, state.submission.products);
     }
     // Do not rebuild the response editor while it holds focus. Its content is
     // retained in the per-report draft even when the shared client refreshes.

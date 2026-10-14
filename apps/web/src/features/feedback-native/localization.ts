@@ -50,9 +50,11 @@ const zh = {
   weightUndetermined:
     '权重 {weight} 分（满分 {full}）· 适用性待确认：不计分，区间因此加宽 {weight} 分',
   weightNotApplicable: '权重 {weight} 分（满分 {full}）· 本次不适用：不计入分母',
-  delivery: '第 {n} 次交付',
-  deliverySnapshot: '查看第 {n} 次交付的快照',
-  deliverySnapshotUnnumbered: '查看提交快照',
+  // {delivery} is the delivery's catalog name, e.g. 第 2 次交付.
+  deliverySnapshot: '查看{delivery}的快照',
+  deliverySnapshotUnnumbered: '查看交付快照',
+  deliverySnapshotHeading: '已保存的提交快照 · {delivery}',
+  deliverySnapshotHeadingUnnumbered: '已保存的提交快照',
 };
 export type FeedbackCopyKey = keyof typeof zh;
 export const FEEDBACK_COPY: CopyTable<FeedbackCopyKey> = {
@@ -101,9 +103,10 @@ export const FEEDBACK_COPY: CopyTable<FeedbackCopyKey> = {
     weightUndetermined:
       'Weight {weight} of {full} · Applicability undetermined: not scored; widens the range by {weight}',
     weightNotApplicable: 'Weight {weight} of {full} · Not applicable: left out of the denominator',
-    delivery: 'Submission {n}',
-    deliverySnapshot: 'View the snapshot of submission {n}',
-    deliverySnapshotUnnumbered: 'View submission snapshot',
+    deliverySnapshot: 'View the snapshot of {delivery}',
+    deliverySnapshotUnnumbered: 'View the delivery snapshot',
+    deliverySnapshotHeading: 'Saved submission snapshot · {delivery}',
+    deliverySnapshotHeadingUnnumbered: 'Saved submission snapshot',
   },
 };
 export const feedbackCopy = (
