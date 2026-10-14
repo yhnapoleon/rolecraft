@@ -4,6 +4,7 @@ import type { FeedbackNativeAdapter, ReviewDraft } from './index';
 import type { ObjectRef } from '../workspace/contract-types';
 import { feedbackCopy, type FeedbackLanguage } from './localization';
 import { PURPOSE_CHOICES, purposeChoiceOf, purposeName } from './short-summary';
+import { deliveryNumber, snapshotName } from './delivery';
 
 export function isSubmitDecision(value: string): value is SubmitInput['decision'] {
   return ['launch', 'launch_narrow', 'defer_with_conditions', 'no_go'].includes(value);
@@ -13,6 +14,8 @@ export function mountReviewControls(
   doc: Document,
   adapter: FeedbackNativeAdapter,
   language: FeedbackLanguage,
+  /** The saved title of an exact work version, when known. */
+  titleOf: (ref: ObjectRef) => string | undefined = () => undefined,
 ) {
   const t = (zh: string, en: string) => (language === 'en' ? en : zh);
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', cls = '') => {
@@ -239,11 +242,7 @@ export function mountReviewControls(
     )) {
       const row = el(
         'p',
-        t('已选历史版本', 'Selected historical version') +
-          ' · ' +
-          ref.object_id +
-          ' · v' +
-          ref.version,
+        `${t('已选历史版本', 'Selected historical version')} · ${titleOf(ref) ?? t('作品', 'Artifact')} · v${ref.version}`,
       );
       const remove = el('button', t('取消选择', 'Deselect'), 'btn');
       remove.type = 'button';
@@ -346,9 +345,10 @@ export function mountReviewControls(
       submissions.set(key(r.subject), r.subject);
     if (s.submission) submissions.set(key(s.submission.ref), s.submission.ref);
     for (const ref of submissions.values()) {
+      // Named by its round; a record id means nothing to the person.
       const b = el(
         'button',
-        t('查看提交快照', 'View submission snapshot') + ' · ' + ref.object_id,
+        snapshotName(language, deliveryNumber(s.submissions ?? [], ref)),
         'btn',
       );
       b.type = 'button';

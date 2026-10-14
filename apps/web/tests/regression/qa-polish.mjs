@@ -10,8 +10,8 @@
  */
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { launch } from '../walkthrough/cdp.mjs';
-import { waitFor } from './browser-support.mjs';
+import { delay, launch } from '../walkthrough/cdp.mjs';
+import { clickReady, waitFor } from './browser-support.mjs';
 
 const base = process.env.BASE;
 const output = process.env.OUT;
@@ -32,10 +32,13 @@ async function openEntry(context) {
   await waitFor(browser, `!!document.querySelector('.case-hero select[data-change="triage"]')`);
 }
 
+const active = `window.PracticeLive.engine.getAttempt(window.PracticeLive.state)`;
+const status = `window.PracticeLive.store.active()?.world.status`;
+
 /** The checks after the brief page share one practice: start it once if needed. */
 async function ensurePractice(context) {
   const { browser } = context;
-  if (await browser.ev(`!!document.querySelector('.ws-toolbar')`)) return;
+  if (await browser.ev(`!!${active}`)) return;
   await browser.click('.case-hero [data-action="take-case"]');
   await waitFor(browser, `location.hash === '#/work' && !!document.querySelector('.card-open')`);
 }
@@ -50,6 +53,70 @@ async function toBoard(context) {
 
 const closeOverlays = (browser) =>
   browser.ev(`[...document.querySelectorAll('dialog[open]')].forEach((d) => d.close())`);
+
+/** Opening the brief records its passages as read, so they can be cited as evidence. */
+async function readBrief(context) {
+  const { browser } = context;
+  const cached = `(window.PracticeLive.v4Host(${active}).draft('workspace', 'evidence-cache') ?? []).length`;
+  if (await browser.ev(`${cached} > 0`)) return;
+  await toBoard(context);
+  await browser.click('.doc-card[data-id="brief"]');
+  await waitFor(browser, `location.hash.startsWith('#/doc/') && ${cached} > 0`);
+  await toBoard(context);
+}
+
+/** A saved work version to submit, created once when no earlier check made one. */
+async function ensureWork(context) {
+  const { browser, text } = context;
+  await ensurePractice(context);
+  await readBrief(context);
+  if (await browser.ev(`window.PracticeLive.store.active().v2Workspace.products.length > 0`))
+    return;
+  await toBoard(context);
+  await browser.click('.card-open');
+  await waitFor(browser, `!!document.querySelector('#new-body')`);
+  await browser.type('#new-title', context.workTitle);
+  await browser.type('#new-body', text('先给 20 人试点。', 'Pilot with 20 people first.'));
+  await browser.clickText(text('保存为作品', 'Save as work'));
+  await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
+}
+
+/** Opens the delivery panel, selects the first work version and submits a decision. */
+async function submitOnce(context, decision) {
+  const { browser, text } = context;
+  await closeOverlays(browser);
+  await toBoard(context);
+  await browser.click('.ws-toolbar [data-action="submit"]');
+  await waitFor(
+    browser,
+    `!!document.querySelector('#sheet .native-feedback input[type="checkbox"]')`,
+  );
+  await browser.ev(`(() => {
+    const box = document.querySelector('#sheet .native-feedback input[type="checkbox"]');
+    if (!box.checked) box.click();
+  })()`);
+  await browser.select('#sheet .native-feedback select', decision);
+  await clickReady(browser, text('提交选中的版本', 'Submit selected versions'), '#sheet button');
+  await waitFor(browser, `${status} === 'submitted'`, 20000);
+}
+
+async function ensureSubmitted(context) {
+  if ((await context.browser.ev(status)) === 'submitted') return;
+  await ensureWork(context);
+  await submitOnce(context, 'defer_with_conditions');
+}
+
+/** The review page with the feedback of every submission so far. */
+async function openReview(context, reports = 1) {
+  const { browser, text } = context;
+  await closeOverlays(browser);
+  await browser.goto(`${base}#/review`);
+  await waitFor(
+    browser,
+    `document.querySelectorAll('.native-feedback [aria-label="${text('分段反馈', 'Feedback sections')}"] > article').length >= ${reports}`,
+    40000,
+  );
+}
 
 /** Visible text of the reader opened by a reference button: any open dialog but the sheet. */
 const readerText = `[...document.querySelectorAll('dialog[open]:not(#sheet)')].map((d) => d.innerText).join('\\n')`;
@@ -164,11 +231,186 @@ async function markdownReader(context) {
   await closeOverlays(browser);
 }
 
+/** No record id (32 hex digits) is shown anywhere in this part of the page. */
+const RECORD_ID = /[0-9a-f]{32}/;
+
+/** F13: the saved snapshot names its work; the history never shows a record id. */
+async function snapshotNames(context) {
+  const { browser, text, shot } = context;
+  await ensureWork(context);
+  await submitOnce(context, 'defer_with_conditions');
+  const heading = text('已保存的提交快照', 'Saved submission snapshot');
+  await waitFor(
+    browser,
+    `[...document.querySelectorAll('#sheet h3')].some((h) => h.textContent.startsWith(${JSON.stringify(heading)}))`,
+  );
+  const receipt = await browser.ev(`(() => {
+    const h = [...document.querySelectorAll('#sheet h3')]
+      .find((node) => node.textContent.startsWith(${JSON.stringify(heading)}));
+    return h.parentElement.innerText;
+  })()`);
+  assert.ok(receipt.includes(context.workTitle), receipt);
+  assert.doesNotMatch(receipt, RECORD_ID);
+  await shot('F13-receipt');
+  await openReview(context);
+  const history = text('查看评审与提交历史', 'Review and submission history');
+  await browser.clickText(history, '.native-feedback summary');
+  const rows = await browser.ev(`(() => {
+    const summary = [...document.querySelectorAll('.native-feedback summary')]
+      .find((node) => node.textContent === ${JSON.stringify(history)});
+    return summary.parentElement.innerText;
+  })()`);
+  assert.doesNotMatch(rows, RECORD_ID);
+  assert.ok(
+    rows.includes(text('查看第 1 次交付的快照', 'View the snapshot of submission 1')),
+    rows,
+  );
+  await shot('F13-history');
+}
+
+/** The general response form of the latest feedback, opened; returns its selector. */
+async function openResponseForm(context) {
+  const { browser, text } = context;
+  await ensureSubmitted(context);
+  await openReview(context);
+  const sections = `[aria-label="${text('分段反馈', 'Feedback sections')}"]`;
+  const formId = await browser.ev(`(() => {
+    const latest = document.querySelector('.native-feedback ${sections} > article');
+    const form = [...latest.querySelectorAll(':scope > details[data-response-id]')].at(-1);
+    form.open = true;
+    return form.dataset.responseId;
+  })()`);
+  return {
+    id: formId,
+    form: `document.querySelector('details[data-response-id="${formId}"]')`,
+  };
+}
+
+async function typeResponse(browser, form, words) {
+  await browser.ev(`(() => {
+    const box = ${form}.querySelector('textarea');
+    box.focus();
+    box.value = ${JSON.stringify(words)};
+    box.dispatchEvent(new Event('input', { bubbles: true }));
+  })()`);
+}
+
+/** F18: a confirmed supplement shows as recorded the moment its form clears. */
+async function supplementEcho(context) {
+  const { browser, text, shot } = context;
+  const { id, form } = await openResponseForm(context);
+  const words = text(
+    '补充：政策更新后我复测过酒店上限。',
+    'Supplement: I retested the hotel limit after the update.',
+  );
+  await typeResponse(browser, form, words);
+  await browser.clickText(
+    text('选择已获准的原始引用', 'Choose authorized original references'),
+    `details[data-response-id="${id}"] button`,
+  );
+  await waitFor(
+    browser,
+    `!!document.querySelector('dialog[open]:not(#sheet) input[type="checkbox"]')`,
+  );
+  await browser.click('dialog[open]:not(#sheet) input[type="checkbox"]');
+  await browser.clickText(
+    text('使用选中的依据', 'Use selected evidence'),
+    'dialog[open]:not(#sheet) button',
+  );
+  const recorded = text(
+    '补证已记录 · 等待核验',
+    'Additional evidence recorded · Awaiting verification',
+  );
+  await browser.ev(`${form}.querySelector('[data-response-action="supplement"]').click()`);
+  // Read the form and the history in one frame: the echo must arrive with the reset.
+  let seen;
+  for (let n = 0; n < 200; n++) {
+    seen = await browser.ev(`(() => {
+      const box = ${form}?.querySelector('textarea');
+      return {
+        cleared: box?.value === '',
+        form: !!${form}?.innerText.includes(${JSON.stringify(recorded)}),
+        listed: document.querySelector('.native-feedback').innerText.includes(${JSON.stringify(words)}),
+      };
+    })()`);
+    if (seen.cleared) break;
+    await delay(25);
+  }
+  assert.deepEqual(seen, { cleared: true, form: true, listed: true });
+  await delay(2500);
+  const listed = await browser.ev(
+    `document.querySelector('.native-feedback').innerText.split(${JSON.stringify(words)}).length - 1`,
+  );
+  assert.equal(listed, 1, 'the recorded supplement is listed once after the next refresh');
+  await shot('F18-supplement');
+}
+
+/** F18: a supplement without an original reference is stopped before anything is sent. */
+async function supplementNeedsReference(context) {
+  const { browser, text } = context;
+  const { form } = await openResponseForm(context);
+  const words = text('只有文字的补证。', 'A supplement with text only.');
+  await typeResponse(browser, form, words);
+  const sent = await browser.ev('window.qaWrites.length');
+  await browser.ev(`${form}.querySelector('[data-response-action="supplement"]').click()`);
+  const message = text(
+    '补证需要先选择至少一处原始引用。',
+    'Choose at least one original reference before submitting evidence.',
+  );
+  await waitFor(
+    browser,
+    `[...document.querySelectorAll('.native-feedback [role="alert"]')].some((n) => !n.hidden && n.textContent === ${JSON.stringify(message)})`,
+  );
+  assert.equal(await browser.ev(`${form}.querySelector('textarea').value`), words);
+  const requests = await browser.ev(
+    `window.qaWrites.slice(${sent}).filter((url) => url.includes('/responses'))`,
+  );
+  assert.deepEqual(requests, []);
+}
+
+/** F19: feedback and history name each delivery by its round. */
+async function deliveryRounds(context) {
+  const { browser, text, shot } = context;
+  await ensureSubmitted(context);
+  await openReview(context);
+  await browser.type(
+    `textarea[aria-label="${text('这次准备怎样修订', 'What will you revise?')}"]`,
+    text('补一轮测试再交付。', 'Add a round of tests, then submit again.'),
+  );
+  await clickReady(browser, text('开始修订', 'Start a revision'));
+  await waitFor(browser, `${status} === 'active'`, 20000);
+  await submitOnce(context, 'no_go');
+  await openReview(context, 2);
+  const sections = `[aria-label="${text('分段反馈', 'Feedback sections')}"]`;
+  const labels = await browser.ev(
+    `[...document.querySelectorAll('.native-feedback ${sections} > article')].map((a) => a.querySelector('button').textContent)`,
+  );
+  assert.deepEqual(labels, text(['第 2 次交付', '第 1 次交付'], ['Submission 2', 'Submission 1']));
+  const history = text('查看评审与提交历史', 'Review and submission history');
+  await browser.clickText(history, '.native-feedback summary');
+  const rows = await browser.ev(`(() => {
+    const summary = [...document.querySelectorAll('.native-feedback summary')]
+      .find((node) => node.textContent === ${JSON.stringify(history)});
+    return [...summary.parentElement.querySelectorAll('button')].map((b) => b.textContent);
+  })()`);
+  for (const n of [1, 2])
+    assert.ok(
+      rows.includes(text(`查看第 ${n} 次交付的快照`, `View the snapshot of submission ${n}`)),
+      JSON.stringify(rows),
+    );
+  assert.ok(!rows.some((row) => RECORD_ID.test(row)), JSON.stringify(rows));
+  await shot('F19-rounds');
+}
+
 const CHECKS = [
   ['F03', 'priority label keeps the task name', priorityLabel],
   ['F04', 'unmatched intake starts the reviewed situation', intakeFallback],
   ['F10', 'Markdown renders in a colleague reply', markdownReply],
   ['F10', 'Markdown renders in the version reader', markdownReader],
+  ['F13', 'the snapshot names its work and hides record ids', snapshotNames],
+  ['F18', 'a supplement is echoed as recorded at once', supplementEcho],
+  ['F18', 'a supplement without a reference is stopped before sending', supplementNeedsReference],
+  ['F19', 'feedback names each delivery by its round', deliveryRounds],
 ];
 
 async function runLanguage(language) {
@@ -183,6 +425,18 @@ async function runLanguage(language) {
     workTitle: text('试点决定草稿', 'Pilot decision draft'),
     taskRoute: '',
   };
+  // Every write request the page sends, so a check can prove that nothing was sent.
+  await browser.send('Page.addScriptToEvaluateOnNewDocument', {
+    source: `(() => {
+      const send = window.fetch.bind(window);
+      window.qaWrites = [];
+      window.fetch = (input, options) => {
+        if ((options?.method || 'GET') !== 'GET')
+          window.qaWrites.push(typeof input === 'string' ? input : input.url);
+        return send(input, options);
+      };
+    })()`,
+  });
   try {
     await openEntry(context);
     // Every check reports on its own, so one run shows each item's state.
