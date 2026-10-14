@@ -212,17 +212,27 @@ try {
     await closeSheet();
   });
 
+  await step('dropping the scope filter leaves real-time sync as the only reason', async () => {
+    await openSettings();
+    await browser.click('#config-form input[name="workItems"][value="scope"]');
+    assert.ok((await innerText('[data-checks]')).includes(text('开发 6 人日', '6 person-days')));
+    await browser.submit('#config-form');
+    await waitFor(browser, `!document.querySelector('#sheet')?.open`);
+    const v2Line = text(
+      '测试实际用：每日索引、不过滤知识范围 · 实时同步还没批到开发人日（已批准 3 人日）',
+      "Tests actually use: Daily index, no scope filter · Real-time sync isn't funded yet (3 developer-days approved)",
+    );
+    await waitFor(
+      browser,
+      `document.querySelector('.product-bar [data-config-use]')?.innerText.trim() === ${JSON.stringify(v2Line)}`,
+    );
+    await focusShot('.product-bar', 'bar-v2-before-approval');
+  });
+
   if (full) {
     await step(
       'a plan within the ceiling is approved and the card shows the covered term',
       async () => {
-        await openSettings();
-        await browser.click('#config-form input[name="workItems"][value="scope"]');
-        assert.ok(
-          (await innerText('[data-checks]')).includes(text('开发 6 人日', '6 person-days')),
-        );
-        await browser.submit('#config-form');
-        await waitFor(browser, `!document.querySelector('#sheet')?.open`);
         await openRequests();
         assert.equal(
           await browser.ev(`document.querySelector('#res-form [name="dev_days"]').value`),
@@ -240,6 +250,13 @@ try {
           browser,
           `[...document.querySelectorAll('[data-decision-card] li.ok')].some((li) => li.innerText.includes(${JSON.stringify(text('开发人日：3 → 6（方案需要 6 · 上限 6）', 'Developer-days: 3 → 6 (plan needs 6 · ceiling 6)'))}))`,
           20000,
+        );
+        // The earlier rejection no longer offers a ceiling the allocation already reaches.
+        assert.equal(
+          await browser.ev(
+            `[...document.querySelectorAll('[data-decision-card] button')].filter((b) => b.textContent.trim() === ${JSON.stringify(text('按上限改申请', 'Re-apply at the ceiling'))}).length`,
+          ),
+          0,
         );
         await focusShot('[data-decision-card]', 'decision-approved', true);
       },
