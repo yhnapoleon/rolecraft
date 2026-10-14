@@ -23,6 +23,10 @@ class Element extends EventTarget {
     return null;
   }
   remove() {}
+  focus() {}
+  setAttribute(name: string, value: string) {
+    this.dataset[`attr:${name}`] = value;
+  }
   all(): Element[] {
     return [this, ...this.children.flatMap((child) => child.all())];
   }
@@ -49,17 +53,27 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-async function fixture() {
+type Options = {
+  kind?: string;
+  resources?: Record<string, number>;
+  draft?: Record<string, unknown>;
+  objects?: unknown[];
+  titles?: Record<string, string>;
+};
+async function fixture(options: Options = {}) {
+  const { kind = 'request_capacity', resources = { capacity: 30 } } = options;
   vi.stubGlobal('HTMLFormElement', Form);
   vi.stubGlobal('HTMLButtonElement', Element);
   vi.stubGlobal(
     'FormData',
     class {
       get() {
-        return 'request_capacity';
+        return kind;
       }
     },
   );
+  type Sent = { operation: string; payload: { tool?: string; terms?: Record<string, number> } };
+  const sent: Sent[] = [];
   let revision = 1;
   let status = 'completed';
   const point = () => ({
@@ -88,8 +102,9 @@ async function fixture() {
   const fetcher: typeof fetch = async (input, init) => {
     const url = String(input);
     if (init?.body) {
-      const command: { request_id: string; operation: string } = JSON.parse(String(init.body));
+      const command: Sent & { request_id: string } = JSON.parse(String(init.body));
       records.set(command.request_id, command.operation);
+      sent.push(command);
       return reply({ boundary: { request_id: command.request_id }, state: state(), result: {} });
     }
     if (url.includes('/requests/')) {
@@ -116,11 +131,15 @@ async function fixture() {
     if (url.includes('/timeline')) {
       timelineReads++;
       await holdTimeline;
-      return envelope({ objects: [], workspace: { resources: { capacity: 30 } } });
+      return envelope({
+        objects: options.objects ?? [],
+        workspace: { resources, material_titles: options.titles ?? {} },
+      });
     }
     return reply({ state: state() });
   };
   let queue = Promise.resolve();
+  const announce = vi.fn();
   const host = new V4DataHost({
     binding,
     fetcher,
@@ -132,7 +151,7 @@ async function fixture() {
       },
     },
     uiLanguage: () => 'zh',
-    announce: vi.fn(),
+    announce,
     chooseEvidence: async () => [],
     openReference: async () => {},
     exclusive: <T>(_name: string, action: () => Promise<T>): Promise<T> => {
@@ -153,6 +172,7 @@ async function fixture() {
     });
   const request = await createRequest();
   await rememberRequest(host, 'resource-requests', request);
+  if (options.draft) await host.keepDraft('resource-requests', 'form', options.draft);
   const form = new Form();
   const submit = new Element();
   const results = new Element();
@@ -166,6 +186,9 @@ async function fixture() {
   return {
     host,
     reads,
+    sent,
+    form,
+    announce,
     submit,
     results,
     request,
@@ -310,4 +333,55 @@ it('does not refresh after an explicit recovery finishes on a destroyed slot', a
   await settle();
   expect(f.timelineReads()).toBe(1);
   expect(f.reads).toEqual([f.request.requestId, f.request.requestId]);
+});
+
+const resources = { capacity: 30, dev_days: 3, deadline_day: 7 };
+const field = (f: Awaited<ReturnType<typeof fixture>>, key: string) => {
+  const input = f.form.all().find((node) => node.dataset.resource === key);
+  if (!input) throw Error(`Missing resource input ${key}`);
+  return input;
+};
+const lastTerms = (f: Awaited<ReturnType<typeof fixture>>) =>
+  f.sent.filter((c) => c.payload.tool === 'request_business').at(-1)?.payload.terms;
+
+it('prefills current totals and sends only the term the learner changed', async () => {
+  const f = await fixture({ kind: 'request_resources', resources });
+  f.start();
+  await settle();
+  expect([field(f, 'dev_days').value, field(f, 'deadline_day').value]).toEqual(['3', '7']);
+  field(f, 'dev_days').value = '7';
+  f.form.reason.value = '实时同步需要更多开发人日';
+  f.form.dispatchEvent(new Event('submit'));
+  await settle();
+  expect(lastTerms(f)).toEqual({ dev_days: 7 });
+});
+
+it('does not resend a restored draft term that equals the allocation in effect', async () => {
+  const f = await fixture({
+    kind: 'request_resources',
+    resources,
+    draft: {
+      kind: 'request_resources',
+      reason: '实时同步需要更多开发人日',
+      terms: { dev_days: '7', deadline_day: '7' },
+      evidence: [],
+    },
+  });
+  f.start();
+  await settle();
+  f.form.dispatchEvent(new Event('submit'));
+  await settle();
+  expect(lastTerms(f)).toEqual({ dev_days: 7 });
+});
+
+it('sends nothing when no total differs from the allocation in effect', async () => {
+  const f = await fixture({ kind: 'request_resources', resources });
+  f.start();
+  await settle();
+  f.form.reason.value = '再看看';
+  const before = f.sent.length;
+  f.form.dispatchEvent(new Event('submit'));
+  await settle();
+  expect(f.sent.length).toBe(before);
+  expect(f.announce).toHaveBeenLastCalledWith('请至少改一项申请数量。', 'error');
 });
