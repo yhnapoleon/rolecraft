@@ -75,6 +75,7 @@ import './document-motion.css';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
 import { installV4References } from '../v4-references';
+import { practiceCardLine, practiceCards, practiceSharedLine } from './practice-cards';
 import { criterionLabels } from '../features/feedback-native/index';
 import {
   isSealedPracticeError,
@@ -2453,15 +2454,24 @@ function practiceSection(a) {
       return `<li class="practice-link"><span class="grow">${esc(label)}<span class="meta"> · ${esc(when(l.created_at))}</span></span>${target ? btn(T('打开', 'Open'), 'resume-attempt', 'small quiet', `data-id="${esc(target.id)}"`) : l.target_session_id ? `<span class="meta">${T('这台浏览器没有它的入口', 'Not available in this browser')}</span>` : ''}</li>`;
     })
     .join('');
-  const options = (v.options || [])
-    .map(
-      (
-        o,
-      ) => `<article class="practice-option"><h3 class="row-title">${esc(o.title)}</h3><p class="meta">${esc(o.reason)}</p>
-    ${(o.basis || []).length ? `<ul class="practice-basis">${o.basis.map((b) => `<li><b>${esc(criterionLabels(locale())[b.criterion] || b.criterion)}</b>${b.explanation ? T('：', ': ') + esc(b.explanation) : ''}</li>`).join('')}</ul>` : ''}
+  // What all suggestions revisit is said once; each card says only why it is worth practising.
+  const suggested = practiceCards(
+    v.options || [],
+    v.catalog || [],
+    criterionLabels(locale()),
+    practiceChange,
+  );
+  const shared = practiceSharedLine(suggested);
+  const options = suggested.cards.length
+    ? `${suggested.reason ? `<p class="meta">${esc(suggested.reason)}</p>` : ''}${shared ? `<p class="practice-shared">${esc(shared)}</p>` : ''}${suggested.cards
+        .map(
+          (
+            o,
+          ) => `<article class="practice-option"><h3 class="row-title">${esc(o.title)}</h3>${o.reason ? `<p class="meta">${esc(o.reason)}</p>` : ''}<p class="meta">${esc(practiceCardLine(o))}</p>
     ${btn(icon('play', 'i-sm') + T('用这个情境补练', 'Practise with this situation'), 'practice-choose', 'small primary', `data-option="${esc(o.id)}" ${busy}`)}</article>`,
-    )
-    .join('');
+        )
+        .join('')}`
+    : '';
   const pending =
     a.practiceRequest && a.practiceRequest.submissionId === v.submissionId
       ? a.practiceRequest
