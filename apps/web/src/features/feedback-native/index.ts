@@ -20,15 +20,10 @@ import {
 } from './short-summary';
 import { evaluationVersionLine } from './evaluation-version';
 import { itemDetail, renderRuleLines, ruleLines } from './rule-lines';
-import { renderDecisions, type DecisionRecord } from './business-decisions';
+import { renderDecisions } from './business-decisions';
 import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
-import type {
-  ObjectRef,
-  EvidenceRefV2,
-  VersionPoint,
-  WorkProductVersion,
-} from '../workspace/contract-types';
+import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 import type { EvidencePick } from '../../v4-host';
 import { EVIDENCE_KINDS, evidenceSummary } from '../../evidence-picker';
 
@@ -52,8 +47,6 @@ export type Report = {
   id: string;
   version: number;
   subject: ObjectRef;
-  /** The point the feedback was evaluated at. */
-  as_of?: VersionPoint | null;
   items: Item[];
   rule_items?: Item[] | null;
   verified_facts?:
@@ -119,8 +112,6 @@ export interface FeedbackNativeState {
   }[];
   /** Feedback slot status only. Never copy a colleague/role mode here. */
   semanticStatus?: FeedbackSemanticStatus;
-  /** Recorded resource decisions, read with the workspace timeline. */
-  decisions?: DecisionRecord[];
   /** Legacy adapter field; intentionally ignored by semantic rendering. */
   modelMode?: 'placeholder' | 'provider';
   status: 'active' | 'paused' | 'submitted';
@@ -754,7 +745,7 @@ export function mountNativeFeedback(
               }
             : undefined,
       }).element,
-      renderDecisions(doc, report, adapter.snapshot().decisions, language),
+      renderDecisions(doc, report),
       responseForm(report),
     );
     return panel;

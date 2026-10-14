@@ -4,6 +4,7 @@ import type { V4SlotContext, V4SlotHandle, V4HostSnapshot, V4CommandResult } fro
 import type { EvidenceRefV2 } from '../../contracts-v2';
 import { T, onLocaleChange } from '../../app/i18n';
 import { EVIDENCE_KINDS, evidenceSummary } from '../../evidence-picker';
+import { decisionNames, resourceNames, type ResourceKey } from './decision-words';
 import './roles.css';
 import {
   object,
@@ -15,13 +16,8 @@ import {
   type PublicRow,
 } from './v4-data';
 
-const labels = () => ({
-  capacity: T('名额', 'Seats'),
-  dev_days: T('开发人日', 'Developer-days'),
-  deadline_day: T('截止日', 'Deadline day'),
-});
-const keys = ['capacity', 'dev_days', 'deadline_day'] as const;
-type ResourceKey = (typeof keys)[number];
+const labels = resourceNames;
+const keys: readonly ResourceKey[] = ['capacity', 'dev_days', 'deadline_day'];
 type Draft = {
   kind: string;
   reason: string;
@@ -338,16 +334,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
         .sort((a, b) => b.content.request.version - a.content.request.version)[0];
       const label = doc.createElement('p');
       label.className = 'meta';
-      const statusLabel =
-        (
-          {
-            pending: T('待核实', 'Awaiting rules check'),
-            rejected: T('未批准', 'Declined'),
-            countered: T('待接受还价', 'Counteroffer awaiting acceptance'),
-            approved: T('已批准', 'Approved'),
-            accepted: T('已接受', 'Accepted'),
-          } as Record<string, string>
-        )[status] ?? T('状态待确认', 'Status unconfirmed');
+      const statusLabel = decisionNames()[status] ?? T('状态待确认', 'Status unconfirmed');
       label.textContent = statusLabel + (decision ? T('（规则核实）', ' (rule checked)') : '');
       text.append(label);
       if (decision) {

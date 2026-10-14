@@ -39,6 +39,7 @@ async function run(language, reduced, width, flow) {
     results.push({ tag, name, status: 'passed' });
     console.log(`PASS ${tag}: ${name}`);
   };
+  let decidedPanel = '';
   const noSideScroll = async () =>
     assert.equal(
       await browser.ev(
@@ -244,6 +245,9 @@ async function run(language, reduced, width, flow) {
         `document.querySelector('[data-w04-resource-results]')?.textContent.length > 0`,
       );
       await shot('request-decided');
+      decidedPanel = await browser.ev(
+        `document.querySelector('[data-w04-resource-results]').innerText`,
+      );
       await browser.click('#sheet [data-action="close"]');
       await waitFor(browser, `!document.querySelector('#sheet').open`);
     });
@@ -284,11 +288,17 @@ async function run(language, reduced, width, flow) {
         )),
         'practice cards repeat no rule explanation',
       );
+      // The recorded decision is shown as written, in the words of the request panel.
       const decisions = await browser.ev(
-        `[...document.querySelectorAll('.business-decisions li')].map((n) => n.textContent)`,
+        `[...document.querySelectorAll('.business-decisions p')].map((n) => n.textContent)`,
       );
-      assert.equal(decisions.length, 1);
-      assert.ok(!decisions[0].includes(';'));
+      assert.equal(decisions.length, 1, 'one recorded decision, one line');
+      const status = text(
+        ['未批准', '已批准', '还价待接受', '已接受'],
+        ['Declined', 'Approved', 'Counteroffer awaiting acceptance', 'Accepted'],
+      ).find((word) => decisions[0].includes(word));
+      assert.ok(status && decidedPanel.includes(status), 'the panel and the record agree');
+      assert.ok(decisions[0].includes(text('开发人日', 'Developer-days')));
       await noSideScroll();
       await shot('feedback');
       // The expanded items keep their findings without repeating the shared premise.

@@ -1,5 +1,4 @@
 import { readRegisteredAdvice } from './model-advice';
-import { decisionRecords } from './business-decisions';
 import type { V4Query, QueryInput, V4Command, CommandInput } from '../../v4-host-operations';
 /** W05 native v4 slot: no transport, credentials, Command envelope or journal. */
 import type {
@@ -371,7 +370,6 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
         return;
       }
       config = chosen;
-      const decisions = Array.isArray(timeline.objects) ? decisionRecords(timeline.objects) : [];
       const last = saved.at(-1);
       loadedPoint = JSON.stringify(current.asOf);
       state = {
@@ -381,7 +379,6 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
         responses,
         reviews,
         reviewHistoryAvailable,
-        decisions,
         submissions: saved.map((row) => ({
           ref: {
             session_id: sid,

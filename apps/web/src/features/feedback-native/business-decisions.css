@@ -1,16 +1,9 @@
-/* Recorded business decisions: one decision per line. */
+/* Recorded business decisions: each recorded line on its own line. */
 .business-decisions {
   display: grid;
-  gap: 4px;
+  gap: 2px;
   margin-block: 8px;
 }
-.business-decisions h3 {
-  font-size: 14px;
-  font-weight: 600;
-}
-.business-decisions ul {
+.business-decisions p {
   margin: 0;
-  padding-inline-start: 1.2em;
-  display: grid;
-  gap: 2px;
 }
