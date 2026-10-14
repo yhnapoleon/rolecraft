@@ -6,7 +6,7 @@ import {
   type RegisteredAdvice,
   type AdviceFallback,
 } from './model-advice';
-import type { SubmitInput, _RuleScoreRange } from '../../contracts-v2';
+import type { SubmissionRuleCheck, SubmitInput, _RuleScoreRange } from '../../contracts-v2';
 /** Native DOM submission/review surface. Inject the shared client; no credentials,
  * queue, mutation journal, global navigation or React root is created here. */
 import { mountReviewControls, isSubmitDecision } from './review-controls';
@@ -21,6 +21,7 @@ import {
 import { evaluationVersionLine } from './evaluation-version';
 import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
+import { exactRefKey } from './exact-ref';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 
 export type SelectedProduct = Pick<
@@ -115,14 +116,23 @@ export interface FeedbackNativeState {
   pending?: boolean;
   /** Presentation only; request identity and recovery remain in the host journal. */
   awaitingFeedback?: boolean;
+  /** The records point the shown products and submissions were read at. */
+  point?: string;
   failedFeedback?: boolean;
   error?: string;
 }
+/** The exact versions and decision a person chooses to submit. */
+export type SubmitChoice = { decision: SubmitInput['decision']; products: ObjectRef[] };
 export interface FeedbackNativeAdapter {
   snapshot(): FeedbackNativeState;
   subscribe(callback: () => void): () => void;
   review?(input: ReviewDraft): Promise<unknown>;
-  submit(input: { decision: SubmitInput['decision']; products: ObjectRef[] }): Promise<unknown>;
+  submit(input: SubmitChoice): Promise<unknown>;
+  /** Read-only: the rule items submitting this choice now would give. Nothing is saved. */
+  previewSubmission?(input: SubmitChoice): Promise<SubmissionRuleCheck>;
+  /** Read-only: a saved submission checked again at its own point. */
+  submissionRuleCheck?(submission: ObjectRef): Promise<SubmissionRuleCheck>;
+  canPreview?: boolean;
   respond(input: {
     feedback_id: string;
     feedback_version: number;
@@ -243,8 +253,7 @@ export function mountNativeFeedback(
       });
     return savedDrafts;
   };
-  const key = (ref: ObjectRef) =>
-    [ref.session_id, ref.kind, ref.object_id, ref.version, ref.config_version ?? ''].join(':');
+  const key = exactRefKey;
   const root = el('section', '', 'native-feedback');
   root.setAttribute('aria-label', T('交付与反馈', 'Submission and feedback'));
   root.lang = language;

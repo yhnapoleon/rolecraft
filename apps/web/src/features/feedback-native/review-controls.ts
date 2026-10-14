@@ -2,6 +2,7 @@ import type { SubmitInput } from '../../contracts-v2';
 /** Optional, non-terminal review in the existing feedback surface. */
 import type { FeedbackNativeAdapter, ReviewDraft } from './index';
 import type { ObjectRef } from '../workspace/contract-types';
+import { exactRefKey } from './exact-ref';
 import { feedbackCopy, type FeedbackLanguage } from './localization';
 import { PURPOSE_CHOICES, purposeChoiceOf, purposeName } from './short-summary';
 
@@ -21,8 +22,7 @@ export function mountReviewControls(
     n.className = cls;
     return n;
   };
-  const key = (r: ObjectRef) =>
-    [r.session_id, r.kind, r.object_id, r.version, r.config_version ?? ''].join(':');
+  const key = exactRefKey;
   const empty: ReviewDraft = {
     subjects: [],
     purpose: '',

@@ -406,6 +406,93 @@ describe('v4 single host persistence and recovery', () => {
     ).rejects.toMatchObject({ code: 'invalid_read' });
     expect(posts(fetcher)).toHaveLength(1);
   });
+  describe('submission rule check', () => {
+    const work = { session_id: 's', kind: 'product', object_id: 'p', version: 2 };
+    const input = { decision: 'launch' as const, products: [work] };
+    const checked = (basis: 'draft' | 'saved') => ({
+      schema_version: 2,
+      basis,
+      mode: 'rules_only',
+      session_id: 's',
+      as_of: point,
+      decision: 'launch',
+      products: [work],
+      evaluation: { path: 'runtime/evaluation.json', sha256: '0'.repeat(64) },
+      work_language: 'en',
+      rule_items: [],
+      ...(basis === 'saved'
+        ? { submission: { session_id: 's', kind: 'submission', object_id: 'sub', version: 1 } }
+        : {}),
+    });
+    it('checks the command the submit control would send, read-only and unjournaled', async () => {
+      const { host, fetcher, map } = setup();
+      fetcher.mockImplementation(async (url, init) => {
+        if (!init?.body) return reply({ schema_version: 2, state });
+        expect(String(url)).toBe('/api/sessions/s/submission-rule-check');
+        expect(JSON.parse(String(init.body))).toMatchObject({
+          schema_version: 2,
+          operation: 'submissions.rule_check',
+          expected_version: point.business_seq,
+          expected_workspace_revision: point.workspace_revision,
+          payload: input,
+        });
+        return reply({ schema_version: 2, result: checked('draft') });
+      });
+      expect(await host.query('submissions.rule_check', input)).toEqual(checked('draft'));
+      expect(posts(fetcher)).toHaveLength(1);
+      expect(map.size).toBe(0);
+    });
+    it('reads a saved submission again by GET', async () => {
+      const { host, fetcher } = setup();
+      fetcher.mockImplementation(async () =>
+        reply({ schema_version: 2, result: checked('saved') }),
+      );
+      expect(await host.query('submissions.rule_check.read', { submission_id: 'sub' })).toEqual(
+        checked('saved'),
+      );
+      expect(fetcher).toHaveBeenCalledWith(
+        '/api/sessions/s/submission-rule-check?submission_id=sub',
+        expect.objectContaining({ method: 'GET' }),
+      );
+      expect(posts(fetcher)).toHaveLength(0);
+    });
+    it('refuses an answer for another session or basis', async () => {
+      const { host, fetcher } = setup();
+      fetcher.mockImplementation(async (_url, init) =>
+        init?.body
+          ? reply({ schema_version: 2, result: { ...checked('draft'), session_id: 'other' } })
+          : reply({ schema_version: 2, state }),
+      );
+      await expect(host.query('submissions.rule_check', input)).rejects.toMatchObject({
+        code: 'response_unconfirmed',
+      });
+      fetcher.mockImplementation(async () =>
+        reply({ schema_version: 2, result: checked('draft') }),
+      );
+      await expect(
+        host.query('submissions.rule_check.read', { submission_id: 'sub' }),
+      ).rejects.toMatchObject({ code: 'response_unconfirmed' });
+    });
+    it('is offered exactly where submitting is, and never in a read-only practice', async () => {
+      const { host, fetcher } = setup();
+      const context = {
+        as_of: point,
+        state,
+        session: host.snapshot().session,
+        available: { 'submissions.create': true },
+        semantic: { roles: 'model', feedback: 'model', assistant: 'model' },
+        read_only: false,
+      };
+      fetcher.mockResolvedValue(reply({ schema_version: 2, result: { result: context } }));
+      await host.query('workbench.read');
+      expect(host.snapshot().available['submissions.rule_check']).toBe(true);
+      fetcher.mockResolvedValue(
+        reply({ schema_version: 2, result: { result: { ...context, read_only: true } } }),
+      );
+      await host.query('workbench.read');
+      expect(host.snapshot().available['submissions.rule_check']).toBe(false);
+    });
+  });
   it('retains unsaved text in memory after a quota failure and flushes it when storage recovers', async () => {
     const { host, storage, ports } = setup();
     await host.keepDraft('workspace', 'work', 'old');

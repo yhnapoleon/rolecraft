@@ -5,7 +5,13 @@ import {
   type GatewayCredentials,
   type GatewayTransport,
 } from './gateway-transport';
-import type { Command, ObjectRef, EvidenceRefV2, VersionPoint } from './contracts-v2';
+import type {
+  Command,
+  ObjectRef,
+  EvidenceRefV2,
+  SubmissionRuleCheck,
+  VersionPoint,
+} from './contracts-v2';
 import type {
   V4CommandResult,
   V4HostAdapter,
@@ -199,6 +205,9 @@ export class V4DataHost implements V4HostAdapter {
         'delegations.create': this.context?.available?.['delegations.create'] === true,
         'delegations.revoke': this.context?.available?.['delegations.revoke'] === true,
         'delegations.list': this.context?.available?.['delegations.create'] === true,
+        // A read-only check of what submitting would give: offered wherever submitting is.
+        'submissions.rule_check':
+          this.context?.available?.['submissions.create'] === true && !this.context?.read_only,
       },
       semantic: this.context?.semantic ?? {
         roles: 'unavailable',
@@ -211,27 +220,22 @@ export class V4DataHost implements V4HostAdapter {
   async query(operation: string, input: Input = {}): Promise<unknown> {
     if (input.session_id != null && input.session_id !== this.ports.binding.sessionId)
       throw new ApiError('Reference belongs to another session', 404, 'session_binding_mismatch');
+    if (operation === 'submissions.rule_check' || operation === 'submissions.rule_check.read')
+      return this.ruleCheck(operation, input);
     if (operation === 'workspace_imports') {
       if (input.mode !== 'preview')
         throw new ApiError('Only an import preview is a query', 400, 'invalid_read');
-      const state = await this.query('session.read');
-      if (!point(state)) throw unconfirmed();
-      const preview: any = await this.raw(this.path('/workspace-imports'), {
-        schema_version: 2,
-        request_id: crypto.randomUUID(),
-        expected_version: state.business_seq,
-        expected_workspace_revision: state.workspace_revision,
-        operation: 'workspace_imports',
-        payload: copy(input),
-      });
+      const preview = await this.readOnlyCommand('/workspace-imports', 'workspace_imports', input);
+      const result = obj(preview) ? preview.result : undefined;
       if (
-        preview.result?.mode !== 'preview' ||
-        preview.result?.applied !== false ||
-        preview.result?.package_id !== input.package_id ||
-        !point(preview.result?.as_of)
+        !obj(result) ||
+        result.mode !== 'preview' ||
+        result.applied !== false ||
+        result.package_id !== input.package_id ||
+        !point(result.as_of)
       )
         throw unconfirmed();
-      return preview.result;
+      return result;
     }
     const result: any = await this.raw(this.path(readRoute(operation, input)));
     if (operation === 'delegations.list' && Array.isArray(result?.result?.result?.items)) {
@@ -272,6 +276,37 @@ export class V4DataHost implements V4HostAdapter {
     }
     this.ports.didRead?.(operation, copy(value), input);
     return value;
+  }
+  /** A read-only server check in the command envelope of the current point. The server records
+   * nothing for it, so it has no journal entry and no recovery. */
+  private async readOnlyCommand(path: string, operation: string, payload: Input): Promise<unknown> {
+    const state = await this.query('session.read');
+    if (!point(state)) throw unconfirmed();
+    return this.raw(this.path(path), {
+      schema_version: 2,
+      request_id: crypto.randomUUID(),
+      expected_version: state.business_seq,
+      expected_workspace_revision: state.workspace_revision,
+      operation,
+      payload: copy(payload),
+    });
+  }
+  /** Rule items of a submission: of this input now (draft), or of a saved one (saved). */
+  private async ruleCheck(operation: string, input: Input): Promise<SubmissionRuleCheck> {
+    const draft = operation === 'submissions.rule_check';
+    const response = draft
+      ? await this.readOnlyCommand('/submission-rule-check', operation, input)
+      : await this.raw(this.path(readRoute(operation, input)));
+    const result = obj(response) ? response.result : undefined;
+    if (
+      !obj(result) ||
+      result.session_id !== this.ports.binding.sessionId ||
+      result.basis !== (draft ? 'draft' : 'saved') ||
+      !point(result.as_of) ||
+      !Array.isArray(result.rule_items)
+    )
+      throw unconfirmed();
+    return copy(result) as SubmissionRuleCheck;
   }
   command<K extends V4Command>(
     operation: K,

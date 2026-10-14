@@ -124,6 +124,7 @@ function fixture() {
     product,
     report,
     cfg,
+    getRead: () => read,
     setRead: (value: typeof read) => {
       read = value;
     },
@@ -139,6 +140,80 @@ function fixture() {
 }
 
 describe('W05 v4 host adapter', () => {
+  const choice = { decision: 'launch' as const, products: [ref('product', 'p', 2)] };
+  const must = <T>(value: T | undefined): T => {
+    if (value === undefined) throw Error('The adapter lacks this method');
+    return value;
+  };
+  /** A host that answers rule checks by echoing the input it was given. */
+  function checking(f: ReturnType<typeof fixture>, change: Record<string, unknown> = {}) {
+    f.setSnapshot({
+      available: { ...f.host.snapshot().available, 'submissions.rule_check': true },
+    });
+    const original = f.getRead();
+    const asked: unknown[] = [];
+    f.setRead(async (operation, input) => {
+      if (!operation.startsWith('submissions.rule_check')) return original(operation, input);
+      asked.push({ operation, input });
+      const sent = (input ?? {}) as Record<string, unknown>;
+      return {
+        basis: operation === 'submissions.rule_check' ? 'draft' : 'saved',
+        session_id: 's',
+        as_of: f.host.snapshot().asOf,
+        decision: sent.decision ?? 'no_go',
+        products: sent.products ?? [ref('product', 'p', 2)],
+        config: sent.config ?? f.cfg,
+        rule_items: [],
+        ...(operation === 'submissions.rule_check'
+          ? {}
+          : { submission: ref('submission', String(sent.submission_id)) }),
+        ...change,
+      };
+    });
+    return asked;
+  }
+  it('checks before submitting with exactly the input it would submit, and only reads', async () => {
+    const f = fixture();
+    const asked = checking(f);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    expect(ctl.adapter.canPreview).toBe(true);
+    expect((await must(ctl.adapter.previewSubmission)(choice)).basis).toBe('draft');
+    expect(f.calls).toEqual([]);
+    await ctl.adapter.submit(choice);
+    expect(asked).toEqual([{ operation: 'submissions.rule_check', input: f.calls[0].input }]);
+    ctl.destroy();
+  });
+  it('refuses a check that answers for other inputs', async () => {
+    const f = fixture();
+    checking(f, { products: [ref('product', 'p', 1)] });
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    await expect(must(ctl.adapter.previewSubmission)(choice)).rejects.toThrow();
+    ctl.destroy();
+  });
+  it('checks a saved submission again only for that submission', async () => {
+    const f = fixture();
+    const asked = checking(f);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    const saved = await must(ctl.adapter.submissionRuleCheck)(ref('submission', 'sub'));
+    expect(saved.submission).toEqual(ref('submission', 'sub'));
+    expect(asked).toEqual([
+      { operation: 'submissions.rule_check.read', input: { submission_id: 'sub' } },
+    ]);
+    ctl.destroy();
+  });
+  it('offers no check where the host does not', async () => {
+    const f = fixture();
+    f.setSnapshot({
+      available: { ...f.host.snapshot().available, 'submissions.rule_check': false },
+    });
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    expect(ctl.adapter.canPreview).toBe(false);
+    ctl.destroy();
+  });
   it('reads exact records and submits domain input with authoritative config only', async () => {
     const f = fixture();
     const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
