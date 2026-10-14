@@ -628,7 +628,11 @@ export class LiveWorkbench {
       .sync(document, a ? this.session(a) : undefined, a ? this.v4Host(a) : null, selection)
       .then(
         () => {
+          // A recovered mount withdraws its own report, so a recurrence is shown again.
+          // An error reported elsewhere since then stays.
+          const own = this.mountFailure;
           this.mountFailure = '';
+          if (own && this.store.getSnapshot().error === own) this.store.report({ error: '' });
         },
         (error) => {
           // A report renders the page and every render mounts again: report a repeat once.

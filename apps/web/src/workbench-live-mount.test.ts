@@ -39,7 +39,7 @@ function page() {
   live.attach(engine.newState(), () => {
     if (++renders < 20) mount();
   });
-  return { dom, root, errors, mount };
+  return { live, dom, root, errors, mount };
 }
 
 describe('v4 region mounting', () => {
@@ -63,6 +63,17 @@ describe('v4 region mounting', () => {
     f.dom.roots = [f.root, f.root];
     f.mount();
     await settle();
-    expect(f.errors).toEqual([failure, failure]);
+    // The recovered mount withdraws its own report, so the recurrence is shown again.
+    expect(f.errors).toEqual([failure, '', failure]);
+  });
+
+  it('leaves an error reported elsewhere when a mount recovers', async () => {
+    const f = page();
+    await settle();
+    f.live.store.report({ error: 'The test result was not saved.' });
+    f.dom.roots = [f.root];
+    f.mount();
+    await settle();
+    expect(f.live.store.getSnapshot().error).toBe('The test result was not saved.');
   });
 });
