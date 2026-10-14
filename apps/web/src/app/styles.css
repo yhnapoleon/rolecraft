@@ -3221,6 +3221,13 @@ button.crumb:hover {
   gap: 20px;
   position: sticky;
   top: calc(var(--toolbar-h) + 12px);
+  /* Never taller than the window: the column scrolls on its own, so practice choices and
+     keyboard focus stay reachable beside an open reader. The padding keeps card shadows. */
+  max-height: calc(100vh - var(--toolbar-h) - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: -6px;
+  padding: 6px;
 }
 /* The evidence reader opens first in the side column, so it is in view beside the feedback. */
 .reference-side {
@@ -3229,7 +3236,8 @@ button.crumb:hover {
 .reference-reader {
   display: grid;
   gap: 10px;
-  max-height: calc(100vh - var(--toolbar-h) - 48px);
+  /* Leaves the practice choices below it on screen; a long original scrolls inside. */
+  max-height: 40vh;
   overflow: auto;
   padding: 16px 18px;
   border-radius: 14px;
@@ -3965,6 +3973,10 @@ textarea.doc-input[name="rationale"] {
   }
   .review-side {
     position: static;
+    max-height: none;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
   }
   .deliver {
     grid-template-columns: 1fr;

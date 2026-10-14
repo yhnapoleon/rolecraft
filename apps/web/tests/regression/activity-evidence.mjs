@@ -88,6 +88,17 @@ export async function openEvidence(context) {
         40,
       'the original text is shown',
     );
+    // The reader shares the column with the practice choices: on a short desktop window the
+    // first choice stays in view, and a choice reached by keyboard comes into view.
+    const choices = JSON.stringify('[data-v4-practice] [data-action="practice-choose"]');
+    await waitFor(browser, `document.querySelectorAll(${choices}).length > 0`, 30000);
+    if (name === 'desktop')
+      assert.ok(
+        await browser.ev(seen(`document.querySelector(${choices})`)),
+        'a practice choice is in view beside the reader',
+      );
+    await browser.ev(`[...document.querySelectorAll(${choices})].at(-1).focus()`);
+    await waitFor(browser, seen('document.activeElement'), 5000);
     await shot(`evidence-${name}`);
     // Refreshing the feedback rebuilds its sections while the reader is open: the evidence
     // button is replaced and its section folds again. Closing still returns focus to it.
@@ -103,6 +114,16 @@ export async function openEvidence(context) {
   }
   await viewport(browser, original.width, original.height);
 }
+
+/** An expression: the element is in the window and on top at its centre (not under the bar). */
+const seen = (element) => `(() => {
+  const node = ${element};
+  if (!node) return false;
+  const r = node.getBoundingClientRect();
+  if (r.width === 0 || r.top < 0 || r.bottom > window.innerHeight) return false;
+  const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+  return !!top && (top === node || node.contains(top));
+})()`;
 
 async function viewport(browser, width, height) {
   await browser.send('Emulation.setDeviceMetricsOverride', {
