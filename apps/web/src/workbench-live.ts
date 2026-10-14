@@ -13,7 +13,11 @@ import type { ProductCreate } from './contracts-v2';
 import { workspaceActionMessage } from './features/workspace/native-v4/messages';
 import { canonicalPurpose } from './features/workspace/native-v4/form-values';
 import { blankPilot, v2Scenario, WorkspaceStore } from './store';
-import { exchangeContinueCode } from './features/practice-recovery/client';
+import {
+  exchangeContinueCode,
+  readContinueCode,
+  replaceContinueCode,
+} from './features/practice-recovery/client';
 import { quotedAnswer } from './app/assistant-mode';
 import type {
   Deliverable,
@@ -788,12 +792,36 @@ export class LiveWorkbench {
     if (!scenario)
       throw new ApiError('Situation unavailable here', 409, 'continue_code_scenario_unavailable');
     const session = this.store.adopt(opened.session, scenario) && this.store.active();
-    if (!session) throw new Error(this.store.getSnapshot().error);
+    if (!session) throw new ApiError(this.store.getSnapshot().error, 0, 'storage_unavailable');
     const a = this.ensureAttempt(session);
     this.state.activeId = session.id;
-    await this.store.sync(session.id);
+    try {
+      await this.store.sync(session.id);
+    } catch {
+      // Registered and listed; its records are read again when it is opened.
+      throw new ApiError('Opened, not read yet', 0, 'recovered_unreadable');
+    }
     this.project(a, this.session(a) ?? session);
     return a;
+  }
+  /** Whether this practice has a continue code; the code itself is never readable again. */
+  continueCode(a: Attempt) {
+    return readContinueCode(this.transport, this.held(a));
+  }
+  /** Creates or replaces the practice's continue code, returned this once only. */
+  replaceContinueCode(a: Attempt, expectedGeneration: number) {
+    return replaceContinueCode(this.transport, this.held(a), expectedGeneration);
+  }
+  private held(a: Attempt) {
+    const s = this.session(a);
+    if (!s)
+      throw new Error(
+        T(
+          '找不到会话凭据，请保留原浏览器存档。',
+          'Session credentials are missing. Keep the original browser data.',
+        ),
+      );
+    return s;
   }
   select(a: Attempt) {
     if (!this.session(a))
