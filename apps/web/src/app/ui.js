@@ -80,6 +80,7 @@ import {
   isSealedPracticeError,
   practiceUnavailableText,
 } from '../features/feedback-native/read-only-notice';
+import { afterPracticeRead } from '../features/feedback-native/practice-read';
 
 const L = window.PracticeLive;
 const E = L.engine;
@@ -2530,24 +2531,28 @@ function practiceOriginNote(a) {
 }
 const practiceReads = new Set();
 const practicePoints = new Map();
+const practiceDrops = new Map();
 async function loadPractice(a, force = false) {
   if (!a || practiceReads.has(a.id) || (!force && ui.practice[a.id])) return;
   practiceReads.add(a.id);
   const before = JSON.stringify(ui.practice[a.id]);
   const point = JSON.stringify(L.v4Host(a)?.snapshot().asOf);
   if (!ui.practice[a.id]) ui.practice[a.id] = { state: 'loading' };
+  let read;
   try {
-    ui.practice[a.id] = await L.practice(a);
-  } catch (e) {
-    // Wording is chosen at render time; the code only says whether the session is sealed.
-    ui.practice[a.id] = {
-      error: 'unavailable',
-      sealed: isSealedPracticeError(e?.code) || sealedSession(a),
-    };
-  } finally {
-    practiceReads.delete(a.id);
-    practicePoints.set(a.id, point);
+    read = { view: await L.practice(a) };
+  } catch (error) {
+    read = { error };
   }
+  // The code only says whether the session is sealed; wording is chosen at render time.
+  const sealed = 'error' in read && (isSealedPracticeError(read.error?.code) || sealedSession(a));
+  const next = afterPracticeRead(ui.practice[a.id], read, practiceDrops.get(a.id) ?? 0, sealed);
+  ui.practice[a.id] = next.view;
+  practiceDrops.set(a.id, next.dropsInARow);
+  practiceReads.delete(a.id);
+  // A dropped read is asked again on the next poll tick; otherwise wait for a new point.
+  if (next.readAgain) practicePoints.delete(a.id);
+  else practicePoints.set(a.id, point);
   if (current()?.id === a.id && before !== JSON.stringify(ui.practice[a.id])) {
     const box = document.querySelector('[data-v4-practice]');
     if (box) box.innerHTML = practiceSection(a);

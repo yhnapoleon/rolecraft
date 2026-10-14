@@ -383,6 +383,34 @@ async function addTaskAfterRevision(context) {
   await shot('task-after-revision');
 }
 
+/** F20 (review 175 P2-2): the new task moved the practice point, so the review page reads its
+ * practice again while those reads drop. The shown choices stay, and the column reads again by
+ * itself once the reads return. */
+async function practiceKeepsChoices(context) {
+  const { browser } = context;
+  const choices = `document.querySelectorAll('[data-action="practice-choose"]').length`;
+  await browser.ev('window.regressionFailPracticeUntil = performance.now() + 2500');
+  await browser.goto(`${base}#/review`);
+  await waitFor(browser, 'window.regressionFailedPracticeReads >= 1');
+  for (let sample = 0; sample < 6; sample++) {
+    assert.deepEqual(
+      await browser.ev(`({
+        choices: ${choices},
+        unavailable: !!document.querySelector('[data-practice-unavailable]'),
+      })`),
+      { choices: 2, unavailable: false },
+      'Dropped practice reads keep the shown choices',
+    );
+    await delay(500);
+  }
+  await waitFor(
+    browser,
+    `performance.now() > window.regressionFailPracticeUntil
+      && window.regressionPracticeReads > window.regressionFailedPracticeReads`,
+  );
+  assert.equal(await browser.ev(choices), 2);
+}
+
 /** F20 (review 175 P2-1): the first workbench reads of a reloading page are dropped. The page
  * shows no error, has no uncaught exception, and the next poll loads the board. */
 async function reloadWithDroppedReads(context) {
@@ -473,6 +501,9 @@ async function runLanguage(language) {
     const failUntil = Number(sessionStorage.getItem('regressionFailOnLoad') || 0);
     sessionStorage.removeItem('regressionFailOnLoad');
     window.regressionToasts = [];
+    window.regressionFailPracticeUntil = 0;
+    window.regressionPracticeReads = 0;
+    window.regressionFailedPracticeReads = 0;
     document.addEventListener('DOMContentLoaded', () => {
       const toast = document.getElementById('toast');
       new MutationObserver(() => {
@@ -481,6 +512,13 @@ async function runLanguage(language) {
     });
     window.fetch = async (...args) => {
       const read = !args[1]?.method || args[1].method === 'GET';
+      if (read && String(args[0]).split('?')[0].endsWith('/practice')) {
+        window.regressionPracticeReads++;
+        if (performance.now() < window.regressionFailPracticeUntil) {
+          window.regressionFailedPracticeReads++;
+          throw new TypeError('Controlled dropped read');
+        }
+      }
       const dropping = window.regressionFailWorkbenchReads > 0 || performance.now() < failUntil;
       if (dropping && read && String(args[0]).split('?')[0].endsWith('/workbench')) {
         window.regressionFailWorkbenchReads--;
@@ -527,6 +565,9 @@ async function runLanguage(language) {
     );
     await step('new task dialog survives a dropped poll and adds a task after revision', () =>
       addTaskAfterRevision(context),
+    );
+    await step('dropped practice reads keep the choices and read again by themselves', () =>
+      practiceKeepsChoices(context),
     );
     await step('a page reload with dropped reads shows no error and loads on the next poll', () =>
       reloadWithDroppedReads(context),
