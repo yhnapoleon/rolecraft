@@ -385,3 +385,84 @@ it('sends nothing when no total differs from the allocation in effect', async ()
   expect(f.sent.length).toBe(before);
   expect(f.announce).toHaveBeenLastCalledWith('请至少改一项申请数量。', 'error');
 });
+
+const quote = '可审批上限：容量60人，开发资源6人日，期限第10天。';
+const decided = (assessment?: Record<string, unknown>) => [
+  {
+    ref: { session_id: 's', kind: 'business_request', object_id: 'r1', version: 2 },
+    content: {
+      session_id: 's',
+      requested: { dev_days: 7 },
+      reason: '实时同步需要更多开发人日',
+      status: 'rejected',
+      basis: { config: { update_strategy: 'realtime' } },
+    },
+  },
+  {
+    ref: { session_id: 's', kind: 'business_decision', object_id: 'd1', version: 1 },
+    content: {
+      session_id: 's',
+      status: 'rejected',
+      request: { session_id: 's', kind: 'business_request', object_id: 'r1', version: 1 },
+      reason_code: 'request_over_limit',
+      reason: '请求超过当前可审批上限，或试图降低既有资源；请对照审批规则调整条款。',
+      ...(assessment ? { assessment } : {}),
+    },
+  },
+];
+const texts = (f: Awaited<ReturnType<typeof fixture>>) => f.results.all().map((n) => n.textContent);
+
+it('shows the decision card for a rejection and refills at the ceiling without sending', async () => {
+  const f = await fixture({
+    kind: 'request_resources',
+    resources,
+    titles: { 'approvals:1': '经理发布：资源审批规则' },
+    objects: decided({
+      terms: [
+        {
+          resource: 'dev_days',
+          current: 3,
+          requested: 7,
+          limit: 6,
+          needed: 6,
+          issues: ['over_limit'],
+        },
+      ],
+      clauses: [
+        {
+          session_id: 's',
+          kind: 'material',
+          object_id: 'approvals',
+          version: 1,
+          span_start: 89,
+          span_end: 116,
+          quote,
+          observed_at_seq: 3,
+        },
+      ],
+    }),
+  });
+  f.start();
+  await settle();
+  expect(texts(f)).toContain(quote);
+  expect(texts(f)).toContain('开发人日：申请 7，超出上限 6；方案需要 6（缺口 3）');
+  expect(texts(f)).not.toContain(
+    '请求超过当前可审批上限，或试图降低既有资源；请对照审批规则调整条款。',
+  );
+  const before = f.sent.length;
+  const refill = f.results.all().find((n) => n.textContent === '按上限改申请');
+  if (!refill) throw Error('Expected the ceiling re-application control');
+  refill.dispatchEvent(new Event('click'));
+  await settle();
+  expect([field(f, 'dev_days').value, field(f, 'deadline_day').value]).toEqual(['6', '7']);
+  expect(f.sent.length).toBe(before);
+});
+
+it('keeps the recorded reason for a decision saved before the card existed', async () => {
+  const f = await fixture({ kind: 'request_resources', resources, objects: decided() });
+  f.start();
+  await settle();
+  expect(texts(f)).toContain(
+    '请求超过当前可审批上限，或试图降低既有资源；请对照审批规则调整条款。',
+  );
+});

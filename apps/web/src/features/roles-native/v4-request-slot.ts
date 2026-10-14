@@ -1,7 +1,7 @@
 import type { CommandInput } from '../../v4-host-operations';
 /** Resource negotiation inside v4's existing res-form; no independent panel or rule engine. */
 import type { V4SlotContext, V4SlotHandle, V4HostSnapshot, V4CommandResult } from '../../v4-host';
-import type { EvidenceRefV2 } from '../../contracts-v2';
+import type { BusinessDecision, BusinessRequest, EvidenceRefV2 } from '../../contracts-v2';
 import { T, onLocaleChange } from '../../app/i18n';
 import './roles.css';
 import {
@@ -14,6 +14,7 @@ import {
   type PublicRow,
 } from './v4-data';
 import { changedTerms, type Totals } from './request-terms';
+import { decisionCardModel, renderDecisionCard } from './decision-card';
 
 const labels = () => ({
   capacity: T('名额', 'Seats'),
@@ -155,6 +156,32 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       );
   };
   const save = () => host.keepDraft('resource-requests', 'form', current());
+  // "Re-apply at the ceiling" fills the form only; sending stays the learner's own action.
+  function refill(terms: Readonly<Record<string, number>>) {
+    if (disposed) return;
+    const wanted = 'capacity' in terms ? 'request_capacity' : 'request_resources';
+    for (const radio of formNode.querySelectorAll<HTMLInputElement>('[name="kind"]'))
+      radio.checked = radio.value === wanted;
+    let first: HTMLInputElement | undefined;
+    for (const [key, input] of inputs) {
+      const value = terms[key] ?? totals?.[key];
+      if (value === undefined) continue;
+      input.value = String(value);
+      if (key in terms) first ??= input;
+      else prefilled.set(key, input.value);
+    }
+    ++editRevision;
+    renderControls();
+    void save().catch(fail);
+    first?.focus();
+    host.announce(
+      T(
+        '已按上限填好，确认理由后再提交。',
+        'Filled in at the ceiling. Check the reason, then send.',
+      ),
+      'status',
+    );
+  }
   function renderControls() {
     legend.textContent = T('申请后的资源总量', 'Requested total resources');
     hint.textContent = T('没改的条款不会提交', 'Unchanged terms are not sent');
@@ -334,6 +361,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       if (!old || old.ref.version < row.ref.version) requests.set(row.ref.object_id, row);
     }
     const decisions = data.rows.filter((r) => r.ref.kind === 'business_decision');
+    const titles = object(data.data.workspace?.material_titles ?? {});
     for (const row of requests.values()) {
       const req = row.content;
       const item = doc.createElement('div');
@@ -372,7 +400,18 @@ export function mount(context: V4SlotContext): V4SlotHandle {
         const reasonText = doc.createElement('p');
         reasonText.textContent =
           typeof decision.content.reason === 'string' ? decision.content.reason : '';
-        text.append(reasonText);
+        const card = decision.content.assessment
+          ? renderDecisionCard(
+              doc,
+              decisionCardModel(
+                decision.content as BusinessDecision,
+                req as BusinessRequest,
+                titles,
+              ),
+              { open: (r) => void host.openReference(r).catch(fail), refill },
+            )
+          : undefined;
+        text.append(card ?? reasonText);
         if (status === 'countered') {
           const p = doc.createElement('p');
           p.textContent =
