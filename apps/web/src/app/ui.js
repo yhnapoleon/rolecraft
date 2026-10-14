@@ -74,6 +74,8 @@ import { createDocumentMotion } from './document-motion.js';
 import './document-motion.css';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
+import { renderAgentConnection } from './agent-connection';
+import './agent-connection.css';
 import { installV4References } from '../v4-references';
 import { criterionLabels } from '../features/feedback-native/index';
 import {
@@ -2068,13 +2070,12 @@ function refreshAgentIssued() {
   const identity = JSON.stringify([a.id, locale(), L.v4Host(a)?.issuedDelegation()]);
   if (issuedViews.get(target) === identity) return;
   issuedViews.set(target, identity);
-  target.innerHTML = agentIssued(a);
-}
-function agentIssued(a) {
-  const issued = L.nativeWorkspace(a) ? L.v4Host(a)?.issuedDelegation() : null;
-  return issued
-    ? `<div class="agent-config" role="status"><p><b>${T('授权已签发', 'Access granted')}</b>${issued.label ? ' · ' + esc(issued.label) : ''}</p><p class="meta">${T('连接配置只在这一页提供一次。下载后保存到只有你能读的位置，再在你的 MCP 客户端里用：python -m career_lab.mcp --config <配置文件路径>。不要把配置发给别人或提交到仓库。', 'The connection config is offered once, on this page only. Save it where only you can read it, then point your MCP client at it: python -m career_lab.mcp --config <config file path>. Do not share it or commit it.')}</p>${btn(icon('download', 'i-sm') + T('下载连接配置（仅一次）', 'Download connection config (once)'), 'download-agent-config', 'small primary')}</div>`
-    : '';
+  renderAgentConnection(target, L.nativeWorkspace(a) ? L.v4Host(a) : null, {
+    origin: location.origin,
+    notify,
+    download,
+    refresh: refreshAgentIssued,
+  });
 }
 function railAgent(a, t) {
   const sc = ui.exportScope;
@@ -2090,7 +2091,7 @@ function railAgent(a, t) {
         <div class="way on"><span class="way-dot"></span><span class="grow">${T('任务包（复制或下载，手动带回）', 'Task package (copy or download, bring back by hand)')}</span><span class="way-state">${T('可用', 'Available')}</span></div>
         <div class="way ${native ? 'on' : ''}"><span class="way-dot ${native ? '' : 'off'}"></span><span class="grow">${T('MCP 直连', 'Direct MCP connection')}</span><span class="way-state">${native ? T('授权后可用', 'Available after you grant access') : T('这个练习不支持', 'Not available in this practice')}</span></div>
       </div>
-      <div data-agent-issued>${agentIssued(a)}</div>
+      <div data-agent-issued></div>
     </section>
     <section class="agent-step"><h3><span class="step-n">1</span>${T('交出去', 'Hand over')}</h3><p class="agent-test-hint">${T('把任务包交给 Codex 等外部 Agent。需要测试时，它可以带回测试计划，也可以选择并组合证据模块，形成调查视图。', 'Give the package to your external agent, such as Codex. It can return a runnable test plan or compose an investigation from evidence modules.')}</p>
       <div class="checks">
@@ -4662,28 +4663,6 @@ async function act(el) {
     case 'chat':
       openChat(el.dataset.role);
       break;
-    case 'download-agent-config': {
-      const cfg = L.v4Host(a)?.connectionConfig(`${location.origin}/api`);
-      L.v4Host(a)?.dismissConnection();
-      if (!cfg) {
-        notify(
-          T(
-            '连接配置已经下载过或已失效；如需新的配置，请撤销后重新授权。',
-            'The connection config was already downloaded or is no longer available. Revoke and grant access again for a new one.',
-          ),
-        );
-        break;
-      }
-      download(cfg, 'rolecraft-agent-config.json');
-      notify(
-        T(
-          '连接配置已交给浏览器下载；本页不再保留。',
-          'The connection config was handed to the browser; this page no longer keeps it.',
-        ),
-      );
-      refreshWS(['rail']);
-      break;
-    }
     case 'preview-work':
       previewWork(a, id);
       break;

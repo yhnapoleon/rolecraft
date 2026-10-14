@@ -201,7 +201,7 @@ async function record(name, fn) {
 }
 async function prepareGrant() {
   await page.locator('[name=agentName]').fill('我的 Codex');
-  await page.getByRole('button', { name: '选择材料与作品范围', exact: true }).click();
+  await page.getByRole('button', { name: '选择资料范围', exact: true }).click();
 }
 try {
   await record('default read scope, no automatic actions, host controls preserved', async () => {

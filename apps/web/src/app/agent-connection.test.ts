@@ -1,0 +1,203 @@
+import { describe, expect, it } from 'vitest';
+import {
+  claudeCodeCommand,
+  codexCommand,
+  connectionText,
+  mcpEndpoint,
+  renderAgentConnection,
+} from './agent-connection';
+
+const TOKEN = 'a'.repeat(64);
+const ENDPOINT = 'http://127.0.0.1:20020/api/sessions/s1/mcp';
+
+describe('agent connection commands', () => {
+  it('builds the endpoint on the page origin through the API proxy', () => {
+    expect(mcpEndpoint('http://127.0.0.1:20020', 's1')).toBe(ENDPOINT);
+    expect(mcpEndpoint('http://localhost:18560/', 'a/b')).toBe(
+      'http://localhost:18560/api/sessions/a%2Fb/mcp',
+    );
+  });
+  it('gives Claude Code a local-scope HTTP server with the token in its header', () => {
+    expect(claudeCodeCommand(ENDPOINT, TOKEN)).toBe(
+      `claude mcp remove rolecraft -s local >/dev/null 2>&1; claude mcp add -s local --transport http rolecraft '${ENDPOINT}' --header 'Authorization: Bearer ${TOKEN}'`,
+    );
+  });
+  it('starts Codex connected, with the token only in its environment', () => {
+    expect(codexCommand(ENDPOINT, TOKEN)).toBe(
+      `ROLECRAFT_MCP_TOKEN='${TOKEN}' codex -c 'mcp_servers.rolecraft={ url = "${ENDPOINT}", bearer_token_env_var = "ROLECRAFT_MCP_TOKEN" }'`,
+    );
+  });
+  it('quotes values for the shell so a quote cannot end the argument', () => {
+    expect(claudeCodeCommand("http://h/it's", "to'ken")).toContain(
+      `'http://h/it'\\''s' --header 'Authorization: Bearer to'\\''ken'`,
+    );
+  });
+  it('copies exactly what each action names', () => {
+    expect(connectionText('copy-endpoint', ENDPOINT, TOKEN)).toBe(ENDPOINT);
+    expect(connectionText('copy-token', ENDPOINT, TOKEN)).toBe(TOKEN);
+    expect(connectionText('copy-claude', ENDPOINT, TOKEN)).toBe(claudeCodeCommand(ENDPOINT, TOKEN));
+    expect(connectionText('copy-codex', ENDPOINT, TOKEN)).toBe(codexCommand(ENDPOINT, TOKEN));
+  });
+});
+
+/** The few DOM calls the card makes, recorded for inspection. */
+class Node {
+  className = '';
+  textContent = '';
+  hidden = false;
+  type = '';
+  value = '';
+  readOnly = false;
+  rows = 0;
+  selected = false;
+  children: Node[] = [];
+  attributes: Record<string, string> = {};
+  dataset: Record<string, string> = {};
+  listeners: Record<string, (() => unknown)[]> = {};
+  constructor(
+    readonly tagName: string,
+    readonly ownerDocument: { createElement(tag: string): Node },
+  ) {}
+  append(...nodes: (Node | string)[]) {
+    for (const item of nodes) {
+      if (typeof item !== 'string') this.children.push(item);
+      else {
+        const text = new Node('#text', this.ownerDocument);
+        text.textContent = item;
+        this.children.push(text);
+      }
+    }
+  }
+  replaceChildren(...nodes: Node[]) {
+    this.children = [];
+    this.append(...nodes);
+  }
+  setAttribute(name: string, value: string) {
+    this.attributes[name] = value;
+  }
+  addEventListener(type: string, listener: () => unknown) {
+    this.listeners[type] = [...(this.listeners[type] ?? []), listener];
+  }
+  focus() {}
+  select() {
+    this.selected = true;
+  }
+  all(): Node[] {
+    return this.children.flatMap((child) => [child, ...child.all()]);
+  }
+}
+const documentStub = { createElement: (tag: string): Node => new Node(tag, documentStub) };
+const visible = (root: Node) =>
+  JSON.stringify(
+    [root, ...root.all()].map((n) => [n.textContent, n.value, n.attributes, n.dataset]),
+  );
+const only = (nodes: Node[], what: string) => {
+  const [node] = nodes;
+  if (!node) throw new Error(`missing ${what}`);
+  return node;
+};
+const action = (root: Node, name: string) =>
+  only(
+    root.all().filter((n) => n.dataset.connectionAction === name),
+    name,
+  );
+const click = async (node: Node) => {
+  for (const listener of node.listeners.click ?? []) await listener();
+};
+
+function fixture(offered = true) {
+  const calls: string[] = [];
+  const host = {
+    snapshot: () => ({ session: { sessionId: 's1' } }),
+    issuedDelegation: () =>
+      offered ? { label: 'Helper', expiresAt: '2099-01-01T08:30:00.000Z' } : null,
+    connectionSecret: () => {
+      calls.push('secret');
+      return offered ? { sessionId: 's1', token: TOKEN } : null;
+    },
+    connectionConfig: (apiUrl: string) => {
+      calls.push('config');
+      return offered ? { api_url: apiUrl, session_id: 's1', token: TOKEN } : null;
+    },
+    dismissConnection: () => {
+      calls.push('dismiss');
+      offered = false;
+    },
+  };
+  const copied: string[] = [];
+  const deps = {
+    origin: 'http://127.0.0.1:20020',
+    notify: (text: string) => calls.push(`notify:${text}`),
+    download: (data: unknown, name: string) =>
+      calls.push(`download:${name}${JSON.stringify(data)}`),
+    refresh: () => calls.push('refresh'),
+    schedule: () => {},
+    clipboard: {
+      writeText: async (text: string) => {
+        copied.push(text);
+      },
+    },
+  };
+  const target = new Node('div', documentStub);
+  return { host, deps, target, calls, copied };
+}
+
+describe('agent connection card', () => {
+  it('renders nothing once the grant is no longer offered', () => {
+    const { host, deps, target } = fixture(false);
+    renderAgentConnection(target as never, host, deps);
+    expect(target.children).toEqual([]);
+  });
+  it('shows the endpoint and masked commands, never the token', () => {
+    const { host, deps, target, calls } = fixture();
+    renderAgentConnection(target as never, host, deps);
+    const text = visible(target);
+    expect(text).toContain(ENDPOINT);
+    expect(text).toContain('Bearer ••••••');
+    expect(text).toContain('令牌会写进你的 Agent 配置和命令历史；最长 60 分钟后失效，可随时撤销。');
+    expect(text).not.toContain(TOKEN);
+    expect(calls).toEqual([]);
+    for (const name of [
+      'copy-endpoint',
+      'copy-claude',
+      'copy-codex',
+      'copy-token',
+      'download-config',
+      'done',
+    ])
+      expect(action(target, name)).toBeDefined();
+  });
+  it('asks the host for the token only when the person copies', async () => {
+    const { host, deps, target, calls, copied } = fixture();
+    renderAgentConnection(target as never, host, deps);
+    await click(action(target, 'copy-claude'));
+    expect(copied).toEqual([claudeCodeCommand(ENDPOINT, TOKEN)]);
+    expect(calls).toEqual(['secret', 'notify:已复制']);
+    expect(visible(target)).not.toContain(TOKEN);
+  });
+  it('offers the text for manual selection when the clipboard is blocked', async () => {
+    const { host, deps, target } = fixture();
+    deps.clipboard.writeText = async () => {
+      throw new Error('blocked');
+    };
+    renderAgentConnection(target as never, host, deps);
+    await click(action(target, 'copy-codex'));
+    const area = only(
+      target.all().filter((n) => n.tagName === 'textarea'),
+      'textarea',
+    );
+    expect(area.value).toBe(codexCommand(ENDPOINT, TOKEN));
+    expect(area.readOnly && area.selected).toBe(true);
+  });
+  it('downloads the config, then hides everything when the person is done', async () => {
+    const { host, deps, target, calls } = fixture();
+    renderAgentConnection(target as never, host, deps);
+    await click(action(target, 'download-config'));
+    expect(calls[0]).toBe('config');
+    expect(calls[1]).toContain('download:rolecraft-agent-config.json');
+    await click(action(target, 'done'));
+    expect(calls.slice(-3)).toEqual(['dismiss', 'notify:连接信息已收起。', 'refresh']);
+    await click(action(target, 'copy-token'));
+    expect(calls.slice(-3)).toEqual(['secret', expect.stringContaining('notify:'), 'refresh']);
+  });
+});

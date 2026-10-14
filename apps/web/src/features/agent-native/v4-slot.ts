@@ -99,7 +99,7 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
   all.type = 'checkbox';
   all.checked = draft.all;
   allLabel.append(all, allText);
-  const chooseButton = button('选择材料与作品范围', 'Choose sources and work', () => {
+  const chooseButton = button('选择资料范围', 'Choose documents', () => {
     void choose();
   });
   const taskButton = button('加入当前事项', 'Include current task', () => {
@@ -235,8 +235,8 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
       statusText =
         action === 'delegations.create'
           ? [
-              '授权已创建。请使用宿主提供的连接配置入口。',
-              'Access created. Use the host connection setup control.',
+              '授权已创建，按下方连接卡接入你的 Agent。',
+              'Access created. Connect your agent with the card below.',
             ]
           : ['操作已确认，正在读取实际记录。', 'Action confirmed. Reading the actual records.'];
     } else if (
@@ -461,7 +461,7 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
       option.textContent = label(`${option.value} 分钟`, `${option.value} minutes`);
     createButton.textContent = label('创建授权', 'Create access');
     refreshButton.textContent = label('刷新授权与记录', 'Refresh access and records');
-    chooseButton.textContent = label('选择材料与作品范围', 'Choose sources and work');
+    chooseButton.textContent = label('选择资料范围', 'Choose documents');
     taskButton.textContent = label('加入当前事项', 'Include current task');
     separation.textContent = label(
       '默认只读。作品由你检查采用，再从交付入口提交。',
