@@ -11,6 +11,15 @@ export class ApiError extends Error {
     super(message);
   }
 }
+/** A read worth repeating unchanged: the response never arrived or could not be verified, or the
+ * server failed. Refusals (4xx) and local browser failures are definite. */
+export function retryableRead(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.code === 'response_unconfirmed' ||
+      (error.status >= 500 && error.code !== 'storage_lock_unavailable'))
+  );
+}
 export type Transport = (
   path: string,
   body?: unknown,
