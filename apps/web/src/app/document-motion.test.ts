@@ -1,5 +1,56 @@
 import { describe, expect, it } from 'vitest';
-import { DOCUMENT_DURATION, documentEase, mixBox } from './document-motion.js';
+import { cleanClone, DOCUMENT_DURATION, documentEase, mixBox } from './document-motion.js';
+
+/** The Element members a flight copy touches; the unit environment has no DOM. */
+class Surface {
+  readonly style: Record<string, string> = {};
+  inert = false;
+  private readonly attributes: Map<string, string>;
+  constructor(
+    attributes: Record<string, string>,
+    readonly children: Surface[] = [],
+  ) {
+    this.attributes = new Map(Object.entries(attributes));
+  }
+  getAttributeNames() {
+    return [...this.attributes.keys()];
+  }
+  getAttribute(name: string) {
+    return this.attributes.get(name) ?? null;
+  }
+  setAttribute(name: string, value: string) {
+    this.attributes.set(name, value);
+  }
+  removeAttribute(name: string) {
+    this.attributes.delete(name);
+  }
+  querySelectorAll(selector: string): Surface[] {
+    if (selector !== '*') throw new Error(`Unsupported selector: ${selector}`);
+    return this.children.flatMap((child) => [child, ...child.querySelectorAll('*')]);
+  }
+  cloneNode(): Surface {
+    return new Surface(
+      Object.fromEntries(this.attributes),
+      this.children.map((child) => child.cloneNode()),
+    );
+  }
+}
+
+describe('document flight copies', () => {
+  it('copy a surface without its v4 mount markers and leave the live surface owning them', () => {
+    const stage = new Surface({ id: 'ws-stage', 'data-v4-region': 'workspace' }, [
+      new Surface({ 'data-v4-insertion': 'sharing' }),
+      new Surface({ 'data-save': '', 'data-v4-managed': 'true' }),
+    ]);
+    const board = new Surface({ id: 'main', class: 'stage' }, [stage]);
+    const copy = cleanClone(board as unknown as HTMLElement) as unknown as Surface;
+    const markers = [copy, ...copy.querySelectorAll('*')].flatMap((node) =>
+      node.getAttributeNames().filter((name) => name.startsWith('data-v4-')),
+    );
+    expect(markers).toEqual([]);
+    expect(stage.getAttribute('data-v4-region')).toBe('workspace');
+  });
+});
 
 describe('shared document geometry', () => {
   it('uses the reference timing, exact endpoints and monotonic iOS easing', () => {

@@ -89,6 +89,9 @@ async function ask(browser, question) {
       open: turn.querySelector('details.rc-roles__details').open,
       summary: turn.querySelector('details.rc-roles__details > summary').innerText,
       full: turn.querySelector('.rc-roles__reply').textContent,
+      fullLines: [...turn.querySelectorAll('.rc-roles__reply :is(p, h3, h4, li)')].map(
+        (node) => node.textContent,
+      ),
     };
   })()`);
   // Resends are recorded so a run that needed them can be looked at again.
@@ -105,6 +108,13 @@ async function enterFresh(browser, language) {
   await waitFor(browser, `!!document.querySelector('.card-open')`);
   await browser.click('.card-open');
 }
+/** The stored reply as the full view shows it: every non-blank line as its own block, in
+ * order, with Markdown heading and list markers shown as structure instead of text. */
+const shownLines = (reply) =>
+  reply
+    .split('\n')
+    .filter((line) => line.trim())
+    .map((line) => line.replace(/^#{1,6}\s/, '').replace(/^\s*(?:[-*]|\d+[.)])\s+/, ''));
 async function storedReply(browser, question) {
   return browser.ev(`(async () => {
     const data = (${unwrap})(await ${host}.query('timeline'));
@@ -131,10 +141,20 @@ for (const language of ['zh', 'en']) {
     assert.ok(fact.status.includes(t('等待模型接入', 'waiting for model connection')));
     assert.equal(fact.open, false);
     assert.ok(fact.summary.startsWith(t('展开原文', 'Show full reply')));
-    assert.equal(fact.full, await storedReply(browser, factQuestion), 'full reply unchanged');
+    assert.deepEqual(
+      fact.fullLines,
+      shownLines(await storedReply(browser, factQuestion)),
+      'full reply unchanged: every line, in order',
+    );
     assert.ok(fact.full.includes(fact.lead.split('\n')[0]), 'first screen is verbatim');
     await shot('colleague-desktop');
-    results.push({ language, check: 'colleague fact first screen', ...fact, full: undefined });
+    results.push({
+      language,
+      check: 'colleague fact first screen',
+      ...fact,
+      full: undefined,
+      fullLines: undefined,
+    });
     // A recalled earlier question never leads (the learner's own words are not an answer).
     const notEcho = (reply) =>
       !reply.lead.startsWith(t('此前你问', 'Earlier you asked')) &&
@@ -147,7 +167,13 @@ for (const language of ['zh', 'en']) {
     const judgement = await ask(browser, judgementQuestion);
     assert.ok(notEcho(judgement), JSON.stringify(judgement));
     await shot('colleague-follow-up-desktop');
-    results.push({ language, check: 'follow-up never echoes', ...judgement, full: undefined });
+    results.push({
+      language,
+      check: 'follow-up never echoes',
+      ...judgement,
+      full: undefined,
+      fullLines: undefined,
+    });
     // P1-A: a keyword the material itself contains leads with that material, and a later
     // question never changes an earlier reply's first screen.
     const keyword = t('试点期限', 'pilot deadline');
@@ -165,6 +191,7 @@ for (const language of ['zh', 'en']) {
       ...keywordReply,
       earlier,
       full: undefined,
+      fullLines: undefined,
     });
 
     // 2. N1: a committed approval is stated first. Setup uses the page's own v4 host
@@ -213,7 +240,13 @@ for (const language of ['zh', 'en']) {
         `document.querySelector('[data-turn-id="${reply.id}"]')?.scrollIntoView({block:'center'})`,
       );
       await shot(`colleague-after-approval-${name}-desktop`);
-      results.push({ language, check: `approved decision: ${name}`, ...reply, full: undefined });
+      results.push({
+        language,
+        check: `approved decision: ${name}`,
+        ...reply,
+        full: undefined,
+        fullLines: undefined,
+      });
     }
     // A question sharing no term with the decision is not led by it, yet never by the
     // superseded initial figure either; an unrelated question is not led by it at all.
@@ -254,7 +287,13 @@ for (const language of ['zh', 'en']) {
       ['demo day', demo],
       ['scope', scope],
     ])
-      results.push({ language, check: `after approval: ${name}`, ...reply, full: undefined });
+      results.push({
+        language,
+        check: `after approval: ${name}`,
+        ...reply,
+        full: undefined,
+        fullLines: undefined,
+      });
 
     // 3. Review. P2-2: the purpose the work declares is used without asking again.
     await browser.type('#new-title', t('探索笔记', 'Exploration note'));

@@ -2,6 +2,7 @@ import type { V4Command, CommandInput } from '../../v4-host-operations';
 import type { V4CommandResult, V4HostSnapshot, V4SlotContext, V4SlotHandle } from '../../v4-host';
 import {
   activities,
+  agentLogLines,
   connections,
   grantInput,
   listData,
@@ -10,6 +11,7 @@ import {
   returnedWorks,
   semanticLabel,
   t,
+  timelineLookups,
   type Activity,
   type Connection,
   type Draft,
@@ -37,6 +39,7 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
   let rows: Connection[] = [],
     events: Activity[] = [],
     products: ReturnedWork[] = [];
+  let lookups = timelineLookups(null);
   let connectionState: 'unavailable' | 'loading' | 'verified' | 'error' = 'unavailable';
   let activityFailed = false,
     productsFailed = false,
@@ -374,6 +377,7 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
     try {
       if (result[1].status === 'rejected') throw Error();
       events = result[1].value == null ? [] : activities(result[1].value, sessionId);
+      lookups = timelineLookups(result[1].value);
       activityFailed = false;
     } catch {
       events = [];
@@ -516,12 +520,20 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
   let listKey = '';
   function renderLists() {
     if (destroyed) return;
+    // Only Agent records belong in its log: access grants and what the agent itself did. The
+    // learner's own work stays in the activity tab.
+    const lines = agentLogLines(
+      events,
+      connectionState === 'verified' ? rows : [],
+      lookups,
+      snapshot.uiLanguage,
+    );
     // Rebuild rows only when what they show changes: the workbench polls, and a poll must not
     // replace a button the person is pressing or has focused.
     const key = JSON.stringify([
       connectionState,
       rows,
-      events,
+      lines,
       products,
       activityFailed,
       productsFailed,
@@ -576,46 +588,36 @@ export function mountV4AgentSlot(context: V4SlotContext): V4SlotHandle {
         connectionList.append(line);
       }
     eventList.replaceChildren();
-    eventNote.textContent = activityFailed
-      ? label('操作记录暂时无法读取。', 'Action records are temporarily unavailable.')
-      : label('只显示已读取的实际记录。', 'Only actual retrieved records are shown.');
-    const titles: Record<string, [string, string]> = {
-      material_read: ['读取材料', 'Read a source'],
-      test_completed: ['完成测试', 'Completed a test'],
-      permission_denied: ['未获授权', 'Permission denied'],
-      submission_recorded: ['提交作品', 'Submitted work'],
-    };
-    for (const event of events) {
+    eventNote.hidden = !activityFailed;
+    eventNote.textContent = label(
+      'Agent 记录暂时无法读取。',
+      'Agent records are temporarily unavailable.',
+    );
+    for (const line of lines) {
       const row = element('li', 'log-item'),
         content = element('div', 'grow');
-      const who =
-        event.executor === 'human'
-          ? label('你', 'You')
-          : event.executor === 'external_agent'
-            ? label('我的 Agent', 'My Agent')
-            : event.executor === 'reference_agent'
-              ? label('参考 Agent', 'Reference Agent')
-              : label('系统', 'System');
-      content.append(
-        element(
-          'p',
-          '',
-          `${who} · ${label(...(titles[event.type] ?? (['工作记录', 'Work record'] as [string, string])))}`,
-        ),
-      );
-      if (event.summary) content.append(element('p', 'meta', event.summary));
-      const marker = semanticLabel(snapshot.uiLanguage, event.semanticStatus, event.verification);
-      if (marker) content.append(element('p', 'meta', marker));
-      for (const source of event.refs)
-        content.append(
-          button('查看依据', 'View source', () => {
+      const source = line.open;
+      if (source) {
+        const open = element('button', 'agent-v4-open', line.text);
+        open.type = 'button';
+        open.addEventListener(
+          'click',
+          () => {
             void host
               .openReference(source)
               .catch(() =>
-                host.announce(label('当前无法打开依据。', 'Source cannot be opened now.'), 'error'),
+                host.announce(
+                  label('当前无法打开原文。', 'The original cannot be opened now.'),
+                  'error',
+                ),
               );
-          }),
+          },
+          { signal: abort.signal },
         );
+        content.append(open);
+      } else content.append(element('p', '', line.text));
+      if (line.detail) content.append(element('p', 'meta', line.detail));
+      if (line.marker) content.append(element('p', 'meta', line.marker));
       row.append(content);
       eventList.append(row);
     }
