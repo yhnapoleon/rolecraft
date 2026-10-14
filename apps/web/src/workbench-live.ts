@@ -297,10 +297,11 @@ export class LiveWorkbench {
         citations: t.citations.map((c) => ({
           id: c.material_id,
           version: c.version,
+          // One name per document: its current title, whichever version the test cited.
           title:
-            (s.protocol === 2
-              ? s.v2MaterialTitles?.[c.material_id + ':' + c.version]
-              : s.materials.find((m) => m.id === c.material_id)?.title) || c.material_id,
+            s.materials.find((m) => m.id === c.material_id)?.title ||
+            s.v2MaterialTitles?.[`${c.material_id}:${c.version}`] ||
+            c.material_id,
         })),
         expectation: s.testNotes[t.id]?.expected ?? saved?.expectation ?? '',
         diagnosis: s.testNotes[t.id]?.diagnosis || '',

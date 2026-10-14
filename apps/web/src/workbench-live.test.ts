@@ -1253,6 +1253,22 @@ describe('batch 1 server authority and legacy recovery', () => {
       open: { action: 'open-run', id: 'test' },
     });
   });
+  it('names a cited document by its current title, whichever version a test cited', async () => {
+    const { live } = fixture();
+    const a = await live.start('pilot');
+    live.store.update('s', {
+      protocol: 2,
+      materials: [{ id: 'policy', version: 2, title: '费用管理通知：差旅住宿标准', content: '' }],
+      v2MaterialTitles: {
+        'policy:1': '差旅住宿与交通政策',
+        'policy:2': '费用管理通知：差旅住宿标准',
+      },
+      tests: [{ ...testRecord(), citations: [{ material_id: 'policy', version: 1 }] }],
+    });
+    expect(a.tests[0].citations).toEqual([
+      { id: 'policy', version: 1, title: '费用管理通知：差旅住宿标准' },
+    ]);
+  });
   it('keeps legacy local questions, task links and observed times when fields are missing or null', async () => {
     const { live, data } = fixture();
     const a = await live.start('pilot');
