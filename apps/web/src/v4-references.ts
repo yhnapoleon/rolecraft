@@ -2,7 +2,7 @@
 import type { V4HostAdapter } from './v4-host';
 import type { EvidenceRefV2, ObjectRef } from './contracts-v2';
 import { T } from './app/i18n';
-import { answerEvidenceRequest } from './evidence-picker';
+import { answerEvidenceRequest, practiceChanged } from './evidence-picker';
 
 const names = () => ({
   material: T('材料', 'Material'),
@@ -68,8 +68,7 @@ export function installV4References(getHost: () => V4HostAdapter | null) {
         record.ref.session_id !== ref.session_id
       )
         throw Error(T('原始版本无法核对。', 'The original version could not be verified.'));
-      if (getHost()?.snapshot().session?.sessionId !== ref.session_id)
-        throw Error('Practice changed');
+      if (getHost()?.snapshot().session?.sessionId !== ref.session_id) throw practiceChanged();
       const title = (names() as Record<string, string>)[ref.kind] ?? T('依据', 'Evidence');
       const side = document.querySelector<HTMLElement>('[data-v4-reference-side]');
       const overlay = side ? null : dialog(title);

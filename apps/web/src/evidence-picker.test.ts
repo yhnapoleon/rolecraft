@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setPreference } from './app/i18n';
 import type { EvidenceRefV2, ObjectRef, WorkspaceProductRead } from './contracts-v2';
 import {
+  answerEvidenceRequest,
   evidenceSummary,
   pickEvidence,
   pickerSections,
@@ -289,6 +290,47 @@ describe('pickEvidence', () => {
     const h = host({});
     await pickEvidence(h, {}, async () => null);
     expect(vi.mocked(h.query).mock.calls.map(([operation]) => operation)).toEqual(['timeline']);
+  });
+});
+
+describe('a practice that changes while choosing', () => {
+  const changed = {
+    zh: '练习已切换，请核对后继续。',
+    en: 'The practice changed. Check it before continuing.',
+  };
+  it('says so in the interface language when the practice is no longer on the server', async () => {
+    const off = { ...host({}), snapshot: () => ({ ...regionHost().snapshot(), session: null }) };
+    await expect(pickEvidence(off, { kinds: all }, async () => null)).rejects.toThrow(changed.zh);
+    setPreference('en');
+    await expect(pickEvidence(off, { kinds: all }, async () => null)).rejects.toThrow(changed.en);
+  });
+
+  it('adds nothing when another practice is open by the time the person confirms', async () => {
+    let current: V4HostAdapter | null = host({});
+    const outcome = new Promise((resolve, reject) =>
+      answerEvidenceRequest(
+        () => current,
+        new CustomEvent('v4-choose-evidence', {
+          detail: { sessionId: 's', pick: { kinds: all }, resolve, reject },
+        }),
+        async () => {
+          current = {
+            ...host({}),
+            snapshot: () => ({
+              ...regionHost().snapshot(),
+              session: {
+                protocol: 2 as const,
+                sessionId: 'other',
+                workLanguage: 'en' as const,
+                scenarioHash: 'fixed',
+              },
+            }),
+          };
+          return [];
+        },
+      ),
+    );
+    await expect(outcome).rejects.toThrow(changed.zh);
   });
 });
 

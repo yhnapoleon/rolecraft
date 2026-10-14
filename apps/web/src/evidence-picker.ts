@@ -61,6 +61,9 @@ export function evidenceKey(ref: EvidenceRefV2 | ObjectRef): string {
   if (ref.kind === 'config') return JSON.stringify([...base, ref.config_version ?? null]);
   return JSON.stringify(base);
 }
+/** The bound practice changed while the person was choosing or reading; nothing was added. */
+export const practiceChanged = () =>
+  Error(T('练习已切换，请核对后继续。', 'The practice changed. Check it before continuing.'));
 const documentTitle = (title: string, version: number) =>
   T(`《${title}》· 第 ${version} 版`, `“${title}” · v${version}`);
 const versionText = (version: number) => T(`第 ${version} 版`, `v${version}`);
@@ -222,7 +225,7 @@ export async function pickerSources(
   kinds: readonly EvidenceKind[],
 ): Promise<PickerSources> {
   const session = host.snapshot().session;
-  if (session?.protocol !== 2) throw Error('Practice changed');
+  if (session?.protocol !== 2) throw practiceChanged();
   const sessionId = session.sessionId;
   const timeline = await host.query('timeline');
   const products = kinds.includes('product')
@@ -428,9 +431,9 @@ export function answerEvidenceRequest(
   detail.handled = true;
   const sessionId = detail.sessionId;
   void (async () => {
-    if (sessionId !== host.snapshot().session?.sessionId) throw Error('Practice changed');
+    if (sessionId !== host.snapshot().session?.sessionId) throw practiceChanged();
     const chosen = await pickEvidence(host, detail.pick ?? {}, ask);
-    if (getHost()?.snapshot().session?.sessionId !== sessionId) throw Error('Practice changed');
+    if (getHost()?.snapshot().session?.sessionId !== sessionId) throw practiceChanged();
     return chosen;
   })().then(detail.resolve, detail.reject);
 }
