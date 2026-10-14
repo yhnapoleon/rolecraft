@@ -39,3 +39,10 @@ export const unmatchedReturnText = () =>
     '找不到对应的任务包：这份回传的 requestId 没有对应已交出的任务包（只“查看”不算交出）。请核对 requestId，或去掉它后作为未关联回传导入。',
     'No matching task package: this return’s requestId matches no package you handed over (viewing a package does not hand it over). Check the requestId, or remove it to import the return unlinked.',
   );
+
+/** A blocked copy hands nothing over, and viewing does not either: point to Download. */
+export const copyBlockedText = () =>
+  T(
+    '浏览器不允许自动复制，任务包没有复制成功；请改用“下载”交出。',
+    'The browser blocked copying, so the package was not copied. Use Download to hand it over.',
+  );

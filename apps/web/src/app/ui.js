@@ -73,7 +73,7 @@ import './investigation.css';
 import { createDocumentMotion } from './document-motion.js';
 import './document-motion.css';
 import { markdownHtml } from './markdown';
-import { returnPlacement, unmatchedReturnText } from './agent-return';
+import { copyBlockedText, returnPlacement, unmatchedReturnText } from './agent-return';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
 import { installV4References } from '../v4-references';
@@ -4164,12 +4164,7 @@ async function act(el) {
         await navigator.clipboard.writeText(JSON.stringify(pkg, null, 2));
         notify(T('任务包已复制，记为已导出', 'Package copied and marked as handed over'));
       } catch (_) {
-        notify(
-          T(
-            '浏览器不允许自动复制；已记为导出，可在“查看”里手动复制',
-            'The browser blocked copying. It is marked as handed over; copy it from View package.',
-          ),
-        );
+        notify(copyBlockedText());
       }
       refreshWS(['rail']);
       break;

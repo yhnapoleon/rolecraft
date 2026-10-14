@@ -1,5 +1,8 @@
-import { describe, expect, it } from 'vitest';
-import { returnPlacement } from './agent-return';
+import { afterEach, describe, expect, it } from 'vitest';
+import { copyBlockedText, returnPlacement, unmatchedReturnText } from './agent-return';
+import { setPreference } from './i18n';
+
+afterEach(() => setPreference('zh'));
 
 const tasks = [{ id: 'needs' }, { id: 'policy' }, { id: 'decision' }];
 // Copy and download hand a package over; "view" alone records nothing.
@@ -61,5 +64,19 @@ describe('where a returned work is filed', () => {
         null,
       ),
     ).toEqual({ status: 'choose', taskId: null });
+  });
+});
+
+describe('when the browser blocks copying the package', () => {
+  // Viewing a package does not hand it over (the return pre-check says so), so the hint
+  // must send the person to Download, which records the package it gives them.
+  it.each([
+    ['zh', '下载', '查看'],
+    ['en', 'Download', 'View package'],
+  ] as const)('points to the action that hands the package over (%s)', (language, act, view) => {
+    setPreference(language);
+    expect(copyBlockedText()).toContain(act);
+    expect(copyBlockedText()).not.toContain(view);
+    expect(unmatchedReturnText()).toContain(view === '查看' ? '“查看”' : 'viewing a package');
   });
 });
