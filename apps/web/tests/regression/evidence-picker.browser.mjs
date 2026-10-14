@@ -76,6 +76,13 @@ async function run(language, reduced, width) {
       await delay(500);
       await browser.click('#sheet [data-action="close"]');
       await browser.click('[data-action="to-board"]');
+      if (reduced) {
+        // Opening a document card reads it too (the default-motion pass skips this path).
+        await browser.click('.doc-card[data-id="brief"]');
+        await waitFor(browser, `location.hash.startsWith('#/doc/')`);
+        await delay(800);
+        await browser.click('[data-action="to-board"]');
+      }
     });
     await step('a decision without cited evidence is asked for it', async () => {
       await browser.click('.card-open');
@@ -110,6 +117,12 @@ async function run(language, reduced, width) {
       assert.deepEqual(await checked(browser, 2), []);
       await noSideScroll();
       await shot('picker');
+      if (reduced)
+        assert.equal(
+          await browser.ev(`document.querySelectorAll('dialog.evidence-picker h4').length`),
+          2,
+          'passages of both read documents are offered',
+        );
       assert.ok(await tick(browser, 0));
       assert.ok(await tick(browser, 1));
       await browser.clickText(text('使用选中的依据', 'Use selected evidence'), 'dialog button');
