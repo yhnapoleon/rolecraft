@@ -8,10 +8,28 @@ every problem at once instead of the first failed check.
 from career_lab.contracts.v2.world import _ApprovalAssessment, _ApprovalTermCheck
 
 # Paragraphs of the manager's published approval rules, by position. The Chinese and
-# English materials share this layout; any other layout records no clauses rather than
-# citing a sentence that does not say what the decision applied.
+# English materials share this layout; a material with any other paragraph count records
+# no clauses.
 SCOPE, LIMITS, REQUEST_FORM, SHORTFALL, SAFEGUARDS, EFFECT = range(6)
 PARAGRAPHS = 6
+# Before a paragraph is quoted it must still carry what its rule says. The ceilings and
+# safeguards paragraphs are checked against the package's own facts and rule identifiers;
+# the others against phrases of their published wording. These are content checks, never
+# shown to anyone; a paragraph that fails them is not quoted.
+PHRASES = {
+    "zh": {
+        SCOPE: ("以下规则用于",),
+        REQUEST_FORM: ("申请需写请求条款",),
+        SHORTFALL: ("真实配置缺口", "整单退回"),
+        EFFECT: ("决定记录生效后才调整资源额度",),
+    },
+    "en": {
+        SCOPE: ("These rules cover",),
+        REQUEST_FORM: ("A request must state the terms",),
+        SHORTFALL: ("real configuration shortfall", "returned as a whole"),
+        EFFECT: ("only after the decision is recorded",),
+    },
+}
 PRIMARY = {
     "unsupported_resource_request": SCOPE,
     "request_reason_missing": REQUEST_FORM,
@@ -54,6 +72,20 @@ def term_issues(current, requested, limit, needed):
     return tuple(issue for issue, present in found.items() if present)
 
 
+def states_its_rule(package, index, fragment, ceilings):
+    """Whether the paragraph at this position still carries the rule it is quoted for."""
+    if index == LIMITS:
+        return ceilings <= set(fragment.fact_ids)
+    if index == SAFEGUARDS:
+        requirements = package.rules["approval_requirements"]
+        marks = {requirements.get("fallback")} | {
+            item for items in requirements["work_items_by_strategy"].values() for item in items
+        }
+        return all(mark in fragment.text for mark in marks if mark)
+    phrases = PHRASES.get(package.locale, {}).get(index, ())
+    return bool(phrases) and all(phrase in fragment.text for phrase in phrases)
+
+
 def rule_clauses(package, snapshot, session_id, paragraphs):
     """Exact public sentences of the rules material that holds the published ceilings."""
     ceilings = {resource + "_limit" for resource in package.rules["approval_limits"]}
@@ -68,18 +100,15 @@ def rule_clauses(package, snapshot, session_id, paragraphs):
         return ()
     material = package.material(material_id, version)
     fragments = package.project(material_id, version, "learner", seq, session_id)
-    if (
-        len(material.fragments) != PARAGRAPHS
-        or len(fragments) != PARAGRAPHS
-        or not ceilings <= set(material.fragments[LIMITS].fact_ids)
-        or any(f.ref.quote is None for f in fragments)
-    ):
+    if len(material.fragments) != PARAGRAPHS or len(fragments) != PARAGRAPHS:
         return ()
     return tuple(
         fragments[index].ref.model_copy(
             update={"observed_at_seq": seq, "valid_from_seq": activation}
         )
         for index in paragraphs
+        if fragments[index].ref.quote is not None
+        and states_its_rule(package, index, fragments[index], ceilings)
     )
 
 

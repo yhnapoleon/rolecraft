@@ -261,3 +261,42 @@ def test_unrecognised_rules_layout_records_no_clause_rather_than_a_wrong_one(ins
     s = apply(engine, engine.initial("session"), update_strategy="realtime")
     decision = approve(engine, s.snapshot, {"dev_days": 7}).result
     assert decision.assessment.terms and decision.assessment.clauses == ()
+
+
+def swapped(package, first, second):
+    """The rules material with two paragraphs exchanged and everything else unchanged."""
+
+    def reorder(material):
+        fragments = list(material.fragments)
+        fragments[first], fragments[second] = fragments[second], fragments[first]
+        return material.model_copy(update={"fragments": tuple(fragments)})
+
+    return replace(
+        package,
+        materials=tuple(reorder(m) if m.id == "approvals" else m for m in package.materials),
+    )
+
+
+def test_a_paragraph_out_of_place_is_not_quoted_for_its_rule(installed):
+    # Review counterexample: the ceiling paragraph stays, paragraphs 3 and 4 trade places.
+    engine, language = installed
+    engine = ScenarioEngine(swapped(engine.package, 3, 4))
+    start = engine.initial("session")
+    deadline = start.world.resources["deadline_day"]
+    plan = apply(
+        engine,
+        start,
+        update_strategy="realtime",
+        work_items=("human_fallback", "realtime_sync"),
+        launch_day=deadline,
+    ).snapshot
+    not_needed = approve(engine, plan, {"deadline_day": deadline + 1}).result
+    assert not_needed.reason_code == "request_not_needed"
+    assert not_needed.assessment.clauses == ()
+    approved = approve(engine, plan, {"dev_days": 6}, key="funded").result
+    assert approved.status == "approved"
+    ceiling, effect = approved.assessment.clauses
+    assert ceiling.quote == CEILINGS[language]
+    assert ("决定记录生效后才调整资源额度" if language == "zh" else "change only after") in (
+        effect.quote
+    )

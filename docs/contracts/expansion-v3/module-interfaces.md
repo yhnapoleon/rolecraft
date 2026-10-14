@@ -291,6 +291,6 @@ OperationAvailability明确installed/ready/capability/unavailable_code，注册�
 
 ### 审批决定的判定依据与测试实际使用的配置（2026-10-14）
 
-BusinessDecision新增可选assessment段：每个申请条款的决定时额度、申请总量、已发布上限、所绑定方案的需要量，以及该条款的全部问题（over_limit、below_current、no_increase、no_shortfall、insufficient、need_over_limit），不只第一个失败项；方案策略缺少的工作项与是否缺人工兜底；决定所依据的已发布审批规则原句（本会话规则资料的确切来源版本，带span与quote，决定时观测）。status、reason_code、reason与判定顺序不变；未设时省略，旧决定、examples与线上字节不变。还价决定沿用原申请的assessment，接受决定带被接受条款的assessment。评价读取决定文本时去掉assessment，Judge证据输入字节不变。规则原句按审批规则资料的段落位置对应（适用范围、可审批上限、申请要件、缺口与整单退回、人工兜底与工作项、生效方式）；段落数或上限段事实不符时不记录引文，不引错句子。
+BusinessDecision新增可选assessment段：每个申请条款的决定时额度、申请总量、已发布上限、所绑定方案的需要量，以及该条款的全部问题（over_limit、below_current、no_increase、no_shortfall、insufficient、need_over_limit），不只第一个失败项；方案策略缺少的工作项与是否缺人工兜底；决定所依据的已发布审批规则原句（本会话规则资料的确切来源版本，带span与quote，决定时观测）。status、reason_code、reason与判定顺序不变；未设时省略，旧决定、examples与线上字节不变。还价决定沿用原申请的assessment，接受决定带被接受条款的assessment。评价读取决定文本时去掉assessment，Judge证据输入字节不变。规则原句按审批规则资料的段落位置取用（适用范围、可审批上限、申请要件、缺口与整单退回、人工兜底与工作项、生效方式），每段引用前先核对内容标志：上限段须带三项上限事实，人工兜底段须含审批要求里的兜底与工作项标识，其余各段须含该段原文的特征短语（中英各一组）。段落数不是6时不记录引文，某段标志核不上时不引用该段；标志之外的改写不在核对范围内。
 
 timeline与workbench.read的workspace新增effective_config：已保存配置按当前已批准资源解析后的EffectiveConfig，与助手测试调用同一个policy.effective_config；可见范围与workspace相同，限定对象的委托读取仍无workspace。
