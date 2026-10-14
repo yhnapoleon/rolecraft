@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { engine } from '../engine-test-support';
+import { engine } from '../workbench-live-test-support';
 import * as Coach from './coach.js';
 
 /** A test plan the person's agent brought back for the first task, adopted. */

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { engine, memory } from './engine-test-support';
+import { engine, memory } from './workbench-live-test-support';
 import { LiveWorkbench } from './workbench-live';
 
 /** A server-backed practice whose exact material versions come from the session host. */
