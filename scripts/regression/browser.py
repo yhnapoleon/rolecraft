@@ -195,6 +195,19 @@ def main() -> None:
     if args.suite == "model-flows":
         model_flows(args, output, env)
         return
+    if args.suite == "published-flows":
+        # Real-DOM checks of the pre-submission card; their own dev server on any free port.
+        subprocess.run(
+            [
+                str(ROOT / "apps/web/node_modules/.bin/vitest"),
+                "run",
+                "--config",
+                "src/features/feedback-native/presubmit.vitest.config.ts",
+            ],
+            cwd=ROOT / "apps/web",
+            env=env,
+            check=True,
+        )
     database = "sqlite:///" + str(output / "regression.db")
     with services(output, env, args.api_port, args.web_port, database):
         results = (
@@ -205,12 +218,17 @@ def main() -> None:
         (output / "mcp.json").write_text(json.dumps(results, indent=2) + "\n")
         if results:
             print("MCP: bilingual read/return/replay/revoke passed", flush=True)
-        subprocess.run(
-            ["node", "tests/regression/" + args.suite + ".mjs"],
-            cwd=ROOT / "apps/web",
-            env=env,
-            check=True,
+        # The pre-submission card and the feedback page's "at submission" lines, same services.
+        rounds = (
+            [args.suite, "presubmit-flows"] if args.suite == "published-flows" else [args.suite]
         )
+        for name in rounds:
+            subprocess.run(
+                ["node", "tests/regression/" + name + ".mjs"],
+                cwd=ROOT / "apps/web",
+                env=env,
+                check=True,
+            )
 
 
 if __name__ == "__main__":
