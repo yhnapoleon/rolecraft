@@ -480,6 +480,8 @@ def _implementation_files(root: Path) -> list[Path]:
             "record_invariants.py",
         )
     }
+    # The rule that gives objects.read its evidence_ref and the evaluator its check.
+    files.add(root / "src/career_lab/evidence/v2/citation.py")
     return sorted(files)
 
 
