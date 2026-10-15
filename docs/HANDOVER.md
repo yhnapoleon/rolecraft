@@ -212,7 +212,7 @@ $PY -m scripts.regression.release_identity --check            # 0 problems
 | GRPO | 负责方决定执行 | 我方无接收工作，adapter 同样以 OpenAI 兼容服务接入；未执行时报告如实写「未执行」 |
 | R2.support 候选长度 | 产品侧决定候选口径 | 现在候选是整篇材料；XLM-R 实测引用整篇材料时每句都超 512 而弃权。若改为引用片段或按段分块，需同时改证据包投影与证据口径，先定口径再派 |
 | `MAX_UNITS` | 部署机 CPU 明显慢于开发机，或一次评审含多个 R2.support 包 | 只改 `models/v3/units.py` 的 `MAX_UNITS`（建议 12），或同包句子合批前向 |
-| 契约小修集合 | 下次契约修订 | 启动时端口非法给错误码（`runtime/model_slots.py`，在契约指纹内）、relation 建议绑定 `R2.support`、是否给界面加「推理依赖版本」字段 |
+| 契约小修集合 | 下次契约修订 | 启动时端口非法给错误码（`runtime/model_slots.py`，在契约指纹内）、relation 建议绑定 `R2.support`、是否给界面加「推理依赖版本」字段。手写契约文档三处一并改：`compatibility.md` 第 133 行 `GET /objects/material/{id}/{version}` 与第 140 行 `GET /objects/{kind}/{object_id}/{version}` 补上 `/sessions/{session_id}` 前缀（实际路由是 `GET /sessions/{session_id}/objects/{kind}/{object_id}/{version}`）；`module-interfaces.md` 第 292 行标题“交付前规则核对（169）”的内部线号改成日期；`module-interfaces.md` 补 PR #56 的说明：新反馈 `business_response` 的写法与顺序、候选证据顺序与 `input_hash` 的变化、`api/business_record.py` 进源码指纹 |
 
 补做时沿用已保留的测试编号，不替负责方训练、不运行其命令、不新增费用。
 
