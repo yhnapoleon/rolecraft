@@ -295,10 +295,10 @@ async function run(language, reduced, width, flow) {
       );
       assert.deepEqual(
         decisions.slice(0, 1),
-        [text('已记录的业务决定（规则核实）：', 'Recorded business decisions (rule checked): ')],
+        [text('已记录的业务决定（规则核实）：', 'Recorded business decisions (rule checked):')],
         'the heading line',
       );
-      assert.equal(decisions.length, 2, 'one recorded decision, one line');
+      assert.equal(decisions.length, 2, 'the heading line, then the one recorded decision');
       const line = decisions[1];
       assert.ok(
         line.startsWith(text('开发人日：申请 6 · ', 'Developer-days: requested 6 · ')),

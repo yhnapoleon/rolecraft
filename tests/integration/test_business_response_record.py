@@ -21,7 +21,7 @@ FIXTURE = (
 )
 HEADING = {
     "zh": "已记录的业务决定（规则核实）：",
-    "en": "Recorded business decisions (rule checked): ",
+    "en": "Recorded business decisions (rule checked):",
 }
 REASON = {
     "zh": "试点需要更多资源，依据见测试记录。",

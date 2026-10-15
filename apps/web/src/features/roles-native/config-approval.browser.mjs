@@ -448,17 +448,17 @@ try {
       text('开发人日：申请 6 · 未批准', 'Developer-days: requested 6 · declined'),
       declined7,
       text(
-        '截止日：申请第 8 天 · 未批准、开发人日：申请 7 · 未批准',
-        'Deadline day: requested day 8 · declined, Developer-days: requested 7 · declined',
+        '截止日：申请第 8 天、开发人日：申请 7 · 未批准',
+        'Deadline day: requested day 8; Developer-days: requested 7 · declined',
       ),
       text(
         '截止日：申请第 9 天 · 已批准第 9 天、开发人日：申请 6 · 已批准 6',
-        'Deadline day: requested day 9 · approved day 9, Developer-days: requested 6 · approved 6',
+        'Deadline day: requested day 9 · approved day 9; Developer-days: requested 6 · approved 6',
       ),
     ];
     assert.equal(
       lines[0],
-      text('已记录的业务决定（规则核实）：', 'Recorded business decisions (rule checked): '),
+      text('已记录的业务决定（规则核实）：', 'Recorded business decisions (rule checked):'),
     );
     assert.deepEqual(lines.slice(1), decided);
     await shot('feedback');

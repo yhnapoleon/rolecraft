@@ -31,7 +31,7 @@
   },
   "en": {
     "countered": {
-      "business_response": "Recorded business decisions (rule checked): \nSeats: requested 100 · counteroffer 60, awaiting acceptance",
+      "business_response": "Recorded business decisions (rule checked):\nSeats: requested 100 · counteroffer 60, awaiting acceptance",
       "decisions": [
         {
           "requested": {
@@ -42,7 +42,7 @@
       ]
     },
     "decided": {
-      "business_response": "Recorded business decisions (rule checked): \nSeats: requested 100 · accepted 60\nDeveloper-days: requested 6 · declined",
+      "business_response": "Recorded business decisions (rule checked):\nSeats: requested 100 · accepted 60\nDeveloper-days: requested 6 · declined",
       "decisions": [
         {
           "requested": {

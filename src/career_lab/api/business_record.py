@@ -14,15 +14,16 @@ AMOUNTS = {
     "requested": ("申请 {n}", "申请第 {n} 天"),
     "approved": ("已批准 {n}", "已批准第 {n} 天"),
     "accepted": ("已接受 {n}", "已接受第 {n} 天"),
-    "countered": ("还价 {n}，待接受", "还价第 {n} 天，待接受"),
+    "countered": ("还价 {n}", "还价第 {n} 天"),
 }
-# A decision without an amount for the term.
+# A decision said once, after its terms, when it carries no amounts for them.
 STATUSES = {
     "rejected": "未批准",
     "approved": "已批准",
     "accepted": "已接受",
     "countered": "还价待接受",
 }
+NO_TERMS = "一项申请（没有可读的条款）"
 
 
 def latest_decisions(objects):
@@ -49,27 +50,41 @@ def latest_decisions(objects):
 
 
 def decision_line(work_language, requested, status, result):
-    """One request and its latest decision, e.g. "开发人日：申请 6 · 已批准 6"."""
+    """One request and its latest decision, e.g. "开发人日：申请 6 · 已批准 6".
+
+    The decision is the whole request's. Approved, accepted or countered amounts stay with each
+    term ("还价 60", and "，待接受" once at the end); a decision without amounts is said once,
+    after all terms. A request without readable terms still gets its line.
+    """
 
     def amount(kind, key, value):
         count, day = AMOUNTS[kind]
         return message(work_language, day if key == "deadline_day" else count, n=value)
 
-    def outcome(key):
-        if status in AMOUNTS and key in result:
-            return amount(status, key, result[key])
-        return message(work_language, STATUSES.get(status, "待核验"))
-
-    return message(work_language, "、").join(
-        message(
-            work_language,
-            "{name}：{asked} · {outcome}",
-            name=message(work_language, NAMES[key]),
-            asked=amount("requested", key, value),
-            outcome=outcome(key),
+    def term(key, decided):
+        name = message(work_language, NAMES[key])
+        asked = amount("requested", key, requested[key])
+        if not decided:
+            return message(work_language, "{name}：{asked}", name=name, asked=asked)
+        outcome = amount(status, key, result[key])
+        return message(
+            work_language, "{name}：{asked} · {outcome}", name=name, asked=asked, outcome=outcome
         )
-        for key, value in sorted(requested.items())
-        if key in NAMES
+
+    keys = [key for key in sorted(requested) if key in NAMES]
+    decided = bool(keys) and status in AMOUNTS and all(key in result for key in keys)
+    terms = message(work_language, "、").join(term(key, decided) for key in keys)
+    if decided:
+        return (
+            message(work_language, "{terms}，待接受", terms=terms)
+            if status == "countered"
+            else terms
+        )
+    return message(
+        work_language,
+        "{terms} · {status}",
+        terms=terms or message(work_language, NO_TERMS),
+        status=message(work_language, STATUSES.get(status, "待核验")),
     )
 
 
