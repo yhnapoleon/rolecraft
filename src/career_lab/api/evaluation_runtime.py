@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
-from career_lab.api.business_record import recorded_decisions
+from career_lab.api.business_record import latest_decisions, recorded_decisions
 from career_lab.api.feedback_provenance import attach_score_range
 from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.extensions import _ConfigTestRuns, _RuleCheckFacts
@@ -60,21 +60,12 @@ class ScenarioEvidencePort:
         from dataclasses import replace
 
         window = self.window(auth, snapshot.as_of)
-        latest = {}
-        for row in window.objects:
-            if row.ref.kind != "business_decision":
-                continue
-            request = row.content.get("request", {}).get("object_id")
-            if request and (
-                request not in latest
-                or row.created_storage_revision > latest[request].created_storage_revision
-            ):
-                latest[request] = row
+        latest = latest_decisions(window.objects)
         if not latest:
             return snapshot
         decisions = []
         refs = []
-        for request, row in latest.items():
+        for request, row in latest:
             decision = row.content
             status = decision["status"]
             requested = next((r.requested for r in window.snapshot.requests if r.id == request), {})

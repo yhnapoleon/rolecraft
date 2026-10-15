@@ -1,10 +1,69 @@
 """Recorded business decisions in feedback read as one sentence per request (164 F16)."""
 
 import re
+from types import SimpleNamespace
 
 import pytest
 
 from career_lab.api.business_record import decision_line, recorded_decisions
+from career_lab.api.evaluation_runtime import ScenarioEvidencePort
+from career_lab.contracts import v2 as C
+from career_lab.evidence.v2.ports import RuleSnapshot
+
+
+def row(kind, object_id, revision, content=None):
+    return SimpleNamespace(
+        ref=SimpleNamespace(kind=kind, object_id=object_id),
+        content=content or {},
+        created_storage_revision=revision,
+    )
+
+
+def decided(request, revision, status, **terms):
+    return row(
+        "business_decision",
+        "decision-" + request + str(revision),
+        revision,
+        {"request": {"object_id": request}, "status": status, **terms},
+    )
+
+
+def test_requests_are_listed_in_the_order_they_were_made():
+    # Object ids sort the other way round; "zzz" was asked first, then "mmm", then "aaa".
+    objects = (
+        row("business_request", "aaa", 11),
+        decided("aaa", 12, "approved", granted={"dev_days": 6}),
+        row("business_request", "mmm", 7),
+        decided("mmm", 8, "rejected"),
+        row("business_request", "zzz", 3),
+        decided("zzz", 4, "countered", countered={"capacity": 60}),
+        row("business_request", "zzz", 5),
+        decided("zzz", 6, "accepted", granted={"capacity": 60}),
+    )
+    requests = (
+        SimpleNamespace(id="aaa", requested={"dev_days": 6}),
+        SimpleNamespace(id="mmm", requested={"dev_days": 7}),
+        SimpleNamespace(id="zzz", requested={"capacity": 100}),
+    )
+    port = ScenarioEvidencePort.__new__(ScenarioEvidencePort)
+    port.module = SimpleNamespace(work_language="zh")
+    port.window = lambda auth, at: SimpleNamespace(
+        objects=objects, snapshot=SimpleNamespace(requests=requests)
+    )
+    port.source = lambda auth, ref, at: SimpleNamespace(ref=ref)
+    point = C.VersionPoint(business_seq=5, workspace_revision=1, storage_revision=13)
+    result = port.with_business_response(None, RuleSnapshot(as_of=point))
+    assert result.business_response == (
+        "已记录的业务决定（规则核实）：\n"
+        "名额：申请 100 · 已接受 60\n"
+        "开发人日：申请 7 · 未批准\n"
+        "开发人日：申请 6 · 已批准 6"
+    )
+    assert [ref.object_id for ref in result.business_response_refs] == [
+        "decision-zzz6",
+        "decision-mmm8",
+        "decision-aaa12",
+    ]
 
 
 @pytest.mark.parametrize(

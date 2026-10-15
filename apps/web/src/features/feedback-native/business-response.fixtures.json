@@ -42,7 +42,7 @@
       ]
     },
     "decided": {
-      "business_response": "Recorded business decisions (rule checked): \nDeveloper-days: requested 6 · declined\nSeats: requested 100 · accepted 60",
+      "business_response": "Recorded business decisions (rule checked): \nSeats: requested 100 · accepted 60\nDeveloper-days: requested 6 · declined",
       "decisions": [
         {
           "requested": {

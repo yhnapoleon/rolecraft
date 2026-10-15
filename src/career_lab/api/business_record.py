@@ -25,6 +25,29 @@ STATUSES = {
 }
 
 
+def latest_decisions(objects):
+    """Each request's latest decision, in the order the requests were made.
+
+    A request was made at the storage revision of its first recorded version; one whose record
+    is not in the window falls back to its decision's revision. Object ids never decide order.
+    """
+    made, latest = {}, {}
+    for row in objects:
+        revision = row.created_storage_revision
+        if row.ref.kind == "business_request":
+            made[row.ref.object_id] = min(made.get(row.ref.object_id, revision), revision)
+        elif row.ref.kind == "business_decision":
+            request = row.content.get("request", {}).get("object_id")
+            if request and (
+                request not in latest or revision > latest[request].created_storage_revision
+            ):
+                latest[request] = row
+    return sorted(
+        latest.items(),
+        key=lambda item: (made.get(item[0], item[1].created_storage_revision), item[0]),
+    )
+
+
 def decision_line(work_language, requested, status, result):
     """One request and its latest decision, e.g. "开发人日：申请 6 · 已批准 6"."""
 
