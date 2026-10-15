@@ -47,18 +47,21 @@ const run = { session_id: 's1', kind: 'test', object_id: 't1', version: 1 };
 afterEach(() => setPreference('zh'));
 
 describe('evidence actions on server work', () => {
-  it('leaves local practice and other actions to the local paths', async () => {
+  it('leaves local practice and other actions to the local paths at once', () => {
+    // Decided synchronously: other actions keep running inside the click that started them.
     const { host, calls } = fakeHost();
-    expect(await nativeCiteAction(host, local, 'cite-run', { id: 't1' })).toBe(false);
-    expect(await nativeCiteAction(host, server, 'save-work', { id: 'w-open' })).toBe(false);
-    expect(await nativeCiteAction(host, null, 'cite-pick', {})).toBe(false);
+    expect(nativeCiteAction(host, local, 'cite-run', { id: 't1' })).toBeNull();
+    expect(nativeCiteAction(host, server, 'save-work', { id: 'w-open' })).toBeNull();
+    expect(nativeCiteAction(host, null, 'cite-pick', {})).toBeNull();
     expect(calls).toEqual([]);
   });
 
   it('opens the picker on the open work, focused on the test run that was clicked', async () => {
     for (const action of ['cite-run', 'test-cite', 'investigation-cite']) {
       const { host, calls } = fakeHost();
-      expect(await nativeCiteAction(host, server, action, { id: 't1' })).toBe(true);
+      const started = nativeCiteAction(host, server, action, { id: 't1' });
+      expect(started).not.toBeNull();
+      await started;
       expect(calls).toEqual([
         ['cite', 'w-open', run],
         ['notify', added],
@@ -93,7 +96,7 @@ describe('evidence actions on server work', () => {
   it('asks for a piece of work first when the task has none', async () => {
     setPreference('en');
     const { host, calls } = fakeHost({ open: null, newest: null });
-    expect(await nativeCiteAction(host, server, 'investigation-cite', { id: 't1' })).toBe(true);
+    await nativeCiteAction(host, server, 'investigation-cite', { id: 't1' });
     expect(calls).toEqual([
       ['notify', 'Write a piece of work for this task first, then cite evidence.'],
     ]);
@@ -114,7 +117,7 @@ describe('evidence actions on server work', () => {
 
   it('opens the exact original behind an evidence chip of the open work', async () => {
     const { host, calls } = fakeHost();
-    expect(await nativeCiteAction(host, server, 'view-evidence', { key: 'k1' })).toBe(true);
+    await nativeCiteAction(host, server, 'view-evidence', { key: 'k1' });
     expect(calls).toEqual([['view', 'w-open', 'k1']]);
     const gone = fakeHost({
       view: async () => {
@@ -124,9 +127,9 @@ describe('evidence actions on server work', () => {
     await nativeCiteAction(gone.host, server, 'view-evidence', { key: 'k1' });
     expect(gone.calls.at(-1)).toEqual(['notify', 'failed: removed']);
     const closedWork = fakeHost({ open: null });
-    expect(await nativeCiteAction(closedWork.host, server, 'view-evidence', { key: 'k1' })).toBe(
-      true,
-    );
+    expect(
+      nativeCiteAction(closedWork.host, server, 'view-evidence', { key: 'k1' }),
+    ).not.toBeNull();
     expect(closedWork.calls).toEqual([]);
   });
 });

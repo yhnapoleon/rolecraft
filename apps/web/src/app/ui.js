@@ -3634,7 +3634,7 @@ async function act(el) {
     if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']);
     else render();
   }
-  if (await nativeCiteAction(nativeCiteHost, a, action, el.dataset)) return;
+  if (nativeCiteAction(nativeCiteHost, a, action, el.dataset)) return;
   switch (action) {
     case 'investigate-run':
       await openInvestigation(id);

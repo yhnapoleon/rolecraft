@@ -48,41 +48,49 @@ function focusOf(
     : { session_id: sessionId, kind: 'material', object_id: id, version };
 }
 
-/** Handles an evidence action on server work; false leaves it to the local practice. */
-export async function nativeCiteAction<A extends { id: string }, W extends Work>(
+/** Starts an evidence action on server work and returns its completion; null leaves the
+ * action to the local practice. The choice is made at once, so every other action still runs
+ * inside the click that started it. Failures are told to the person, never thrown. */
+export function nativeCiteAction<A extends { id: string }, W extends Work>(
   host: NativeCiteHost<A, W>,
   a: A | null | undefined,
   action: string | undefined,
   data: { id?: string; key?: string },
-): Promise<boolean> {
-  if (!a || !action || !ACTIONS.has(action) || !host.native(a)) return false;
-  try {
-    if (action === 'view-evidence') {
-      const work = host.open();
-      if (work && data.key) await host.view(a, work, data.key);
-      return true;
-    }
-    const work = host.open() ?? host.newest(a);
-    if (!work) {
-      host.notify(
-        T(
-          '先在这件事里写一份作品，再引用依据。',
-          'Write a piece of work for this task first, then cite evidence.',
-        ),
-      );
-      return true;
-    }
-    const focus = focusOf(a.id, action, data.id, (id) => host.materialVersion(a, id));
-    if (!(await host.cite(a, work, focus))) return true;
+): Promise<void> | null {
+  if (!a || !action || !ACTIONS.has(action) || !host.native(a)) return null;
+  return run(host, a, action, data).catch((error: unknown) => {
+    host.notify(host.errorText(error));
+  });
+}
+
+async function run<A extends { id: string }, W extends Work>(
+  host: NativeCiteHost<A, W>,
+  a: A,
+  action: string,
+  data: { id?: string; key?: string },
+): Promise<void> {
+  if (action === 'view-evidence') {
+    const work = host.open();
+    if (work && data.key) await host.view(a, work, data.key);
+    return;
+  }
+  const work = host.open() ?? host.newest(a);
+  if (!work) {
     host.notify(
       T(
-        '依据已加入草稿，保存这版后生效。',
-        'Evidence added to your draft. Save this version to keep it.',
+        '先在这件事里写一份作品，再引用依据。',
+        'Write a piece of work for this task first, then cite evidence.',
       ),
     );
-    host.show(work);
-  } catch (error) {
-    host.notify(host.errorText(error));
+    return;
   }
-  return true;
+  const focus = focusOf(a.id, action, data.id, (id) => host.materialVersion(a, id));
+  if (!(await host.cite(a, work, focus))) return;
+  host.notify(
+    T(
+      '依据已加入草稿，保存这版后生效。',
+      'Evidence added to your draft. Save this version to keep it.',
+    ),
+  );
+  host.show(work);
 }
