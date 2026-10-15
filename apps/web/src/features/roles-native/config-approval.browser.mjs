@@ -389,6 +389,19 @@ try {
       ),
       0,
     );
+    // This approval followed the earlier cards' advice: they keep their lines and offer nothing.
+    assert.deepEqual(await cardButtons(0), [viewSource]);
+    const first = await innerText('[data-decision-card]');
+    assert.ok(
+      !first.includes(replan) &&
+        first.includes(
+          text(
+            '开发人日：申请 7，超出上限 6；方案需要 7，超出上限 6',
+            'Developer-days: requested 7, over the ceiling of 6; the plan needs 7, over the ceiling of 6',
+          ),
+        ),
+      first,
+    );
     await focusShot('[data-decision-card]', 'decision-approved', true);
   });
 

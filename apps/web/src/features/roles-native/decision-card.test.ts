@@ -290,6 +290,38 @@ it('fills a term asked too low with what the plan needs, beside the capped one',
   expect(refilled).toEqual([{ deadline_day: 9, dev_days: 6 }]);
 });
 
+it('quiets the way out of an old card once a later approval followed it', () => {
+  // 185 P3-2: after these rejections the plan came down to 6 and 6 developer-days were
+  // approved. That approval needed a plan within the ceiling and with its safeguards, so the
+  // old cards' advice has been followed: they keep their lines but offer nothing.
+  const overPlan = overCeiling(7, ['over_limit', 'need_over_limit']);
+  const missingHandOff = decision('rejected', {
+    terms: [
+      {
+        resource: 'dev_days',
+        current: 3,
+        requested: 7,
+        limit: 6,
+        needed: 6,
+        issues: ['over_limit'],
+      },
+    ],
+    missing_work_items: ['human_fallback'],
+    clauses: [ceiling, safeguards],
+  });
+  for (const declined of [overPlan, missingHandOff]) {
+    const before = decisionCardModel(declined, request(), titles, { dev_days: 3 });
+    expect(before.replan).not.toEqual([]);
+    const after = decisionCardModel(declined, request(), titles, { dev_days: 6 });
+    expect(after.lines).toEqual(before.lines);
+    expect(after.replan).toEqual([]);
+    expect(after.ceiling).toBeNull();
+    const { button } = drawn(after);
+    expect(button('调整设置')).toBeUndefined();
+    expect(button('按上限改申请')).toBeUndefined();
+  }
+});
+
 it('keeps the capped request when the plan itself fits under the ceiling', () => {
   const declined = decision('rejected', {
     terms: [

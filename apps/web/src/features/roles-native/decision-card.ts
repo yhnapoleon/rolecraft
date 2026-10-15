@@ -33,7 +33,7 @@ export interface DecisionCardModel {
   /** A declined plan that no request can get through as it stands (it needs more than a ceiling,
    * lacks work its strategy requires or the required hand-off): what to change first, one
    * sentence each. The card then offers the settings instead of a capped re-application, which
-   * would only be declined again. Empty otherwise. */
+   * would only be declined again. Empty otherwise, and once a later approval has followed it. */
   replan: string[];
 }
 type Issue = NonNullable<_ApprovalTermCheck['issues']>[number];
@@ -126,17 +126,34 @@ function overCeilingNote(t: _ApprovalTermCheck) {
   return T(`先把方案降到 ${l} 以内再申请`, `Bring the plan down to ${l} or less before requesting`);
 }
 
+/** A declined request no request can follow as the plan stood (164 N1): asking at the ceiling
+ * would only be declined again. */
+function planBlocked(decision: BusinessDecision): boolean {
+  const assessment = decision.assessment;
+  return (
+    decision.status === 'rejected' &&
+    !!assessment &&
+    ((assessment.terms ?? []).some((t) => t.issues?.includes('need_over_limit')) ||
+      !!assessment.missing_work_items?.length ||
+      !!assessment.fallback_required)
+  );
+}
+
 /**
  * What the settings must change before any request can pass, from the recorded assessment of a
  * declined request: a plan over a ceiling, work its strategy requires, the required hand-off.
- * Asking at the ceiling would only be declined again (164 N1).
+ * Advice a later approval has followed is left out: an allocation grown past what this decision
+ * recorded was approved for a plan within the ceiling and with its safeguards (185 P3-2).
  */
-function replanNotes(decision: BusinessDecision): string[] {
+function replanNotes(decision: BusinessDecision, current: Totals): string[] {
   const assessment = decision.assessment;
-  if (decision.status !== 'rejected' || !assessment) return [];
-  const notes = (assessment.terms ?? [])
-    .filter((t) => t.issues?.includes('need_over_limit'))
+  if (!planBlocked(decision) || !assessment) return [];
+  const terms = assessment.terms ?? [];
+  const grown = (t: _ApprovalTermCheck) => (current[t.resource] ?? t.current) > t.current;
+  const notes = terms
+    .filter((t) => t.issues?.includes('need_over_limit') && !grown(t))
     .map(overCeilingNote);
+  if (terms.some(grown)) return notes;
   const missing = (assessment.missing_work_items ?? []).map(workItemLabel);
   if (missing.length)
     notes.push(
@@ -245,12 +262,11 @@ export function decisionCardModel(
         ]
       : [],
   );
-  const replan = replanNotes(decision);
   return {
     clauses,
     lines,
-    ceiling: replan.length ? null : ceilingTerms(decision, current),
-    replan,
+    ceiling: planBlocked(decision) ? null : ceilingTerms(decision, current),
+    replan: replanNotes(decision, current),
   };
 }
 
