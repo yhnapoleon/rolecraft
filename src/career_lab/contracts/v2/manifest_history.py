@@ -871,6 +871,10 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "missing work items or a required hand-off, no request can pass as assessed, so "
             "instead of a request capped at the ceiling the card says what to change and opens "
             "the pilot settings. The assessment and the decision bytes are unchanged.",
+            "business-record-fingerprint": "api/business_record.py, which now holds the order "
+            "and wording of the recorded business decisions that evaluation_runtime.py writes, "
+            "joins the contract's source fingerprints, so changing that text still changes the "
+            "contract revision as it did inside evaluation_runtime.py.",
         },
     },
 )

@@ -41,11 +41,11 @@
     "schemas/EngineerUnresolvedItem.json": "2d7dc303b3941574817100ccf20b97fcc7402d5a4e6e2dd103ac92d421073e82",
     "types.ts": "879a7d4e694eb2016e537467bae3b2bbf91c9c7ecdc1b9663a7a6cdcaefb750f"
   },
-  "legacy_manifest_sha256": "2a4f4e3119fca8fa969dba6391fa9e056166717575ae146ea55c1257bc6218b9",
+  "legacy_manifest_sha256": "511e4ff3fcba33c995c3716411e616e3693a9adbe23b153157dc733e98bc71c6",
   "legacy_namespace": "career_lab.contracts.v2.research",
   "protocol": "engineer-review-v1",
   "python_namespace": "career_lab.contracts.v2.engineer",
-  "revision": "engineer-review-v1-bad46719ac7673432d73f03c70790a5310cb20c69a4b9007b413cb83d8918205",
+  "revision": "engineer-review-v1-460d277ecd6b8f11be84a6adea22d6707ad4c01367471d60b03b3af6ded5b892",
   "source_files": {
     "engineer.py": "d57e9e8a956c3b377e627f28f45f59afe9a6ed50b497181f1e78226a15d001af",
     "engineer_examples.py": "a315164248b834f1bea068f558e2881b95782d0693202e3ceb83f7719ecf997b",

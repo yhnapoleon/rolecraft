@@ -62,6 +62,9 @@ IMPLEMENTATION_INPUTS = (
     "src/career_lab/storage/record_invariants.py",
     # The rule that gives objects.read its evidence_ref and the evaluator its check.
     "src/career_lab/evidence/v2/citation.py",
+    # The recorded business decisions' order and wording, written by evaluation_runtime.py into
+    # rule snapshots, Judge evidence and FeedbackV2.business_response.
+    "src/career_lab/api/business_record.py",
 )
 
 
