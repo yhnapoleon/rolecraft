@@ -1,7 +1,8 @@
 import { afterEach, expect, it } from 'vitest';
 import { setPreference } from '../../app/i18n';
-import type { BusinessDecision, BusinessRequest } from '../../contracts-v2';
-import { decisionCardModel } from './decision-card';
+import type { BusinessDecision, BusinessRequest, _ApprovalTermCheck } from '../../contracts-v2';
+import { asFake, fakeDocument } from '../results-native/fake-dom';
+import { decisionCardModel, renderDecisionCard } from './decision-card';
 import { resourceNames, type ResourceKey } from './decision-words';
 
 afterEach(() => setPreference('zh'));
@@ -79,6 +80,266 @@ it('names the ceiling sentence, the gap and a capped re-application for an over-
     { ok: false, text: '开发人日：申请 7，超出上限 6；方案需要 6（缺口 3）' },
   ]);
   expect(model.ceiling).toEqual({ dev_days: 6 });
+});
+
+it('sends a plan that needs more than the ceiling to its settings, on every rejection', () => {
+  // 164 N1: real-time sync with the default safeguards needs 7 developer-days; the ceiling is 6.
+  const asked7 = decisionCardModel(
+    decision('rejected', {
+      terms: [
+        {
+          resource: 'dev_days',
+          current: 3,
+          requested: 7,
+          limit: 6,
+          needed: 7,
+          issues: ['over_limit', 'need_over_limit'],
+        },
+      ],
+      clauses: [ceiling],
+    }),
+    request(),
+    titles,
+  );
+  expect(asked7.lines).toEqual([
+    { ok: false, text: '开发人日：申请 7，超出上限 6；方案需要 7，超出上限 6' },
+  ]);
+  expect(asked7.ceiling).toBeNull();
+  expect(asked7.replan).toEqual(['先把方案降到 6 人日以内再申请']);
+  // Asking for the ceiling anyway is declined again, and that card points to the settings too.
+  const asked6 = decisionCardModel(
+    decision('rejected', {
+      terms: [
+        {
+          resource: 'dev_days',
+          current: 3,
+          requested: 6,
+          limit: 6,
+          needed: 7,
+          issues: ['insufficient', 'need_over_limit'],
+        },
+      ],
+      clauses: [shortfall, ceiling],
+    }),
+    request(),
+    titles,
+  );
+  expect(asked6.ceiling).toBeNull();
+  expect(asked6.replan).toEqual(['先把方案降到 6 人日以内再申请']);
+});
+
+/** The card as drawn, with what its buttons did. */
+function drawn(model: ReturnType<typeof decisionCardModel>) {
+  const refilled: Readonly<Record<string, number>>[] = [];
+  const card = asFake(
+    renderDecisionCard(fakeDocument(), model, {
+      open: () => undefined,
+      refill: (terms) => refilled.push(terms),
+    }),
+  );
+  const button = (text: string) => card.byTag('button').find((b) => b.textContent === text);
+  return { card, refilled, button };
+}
+const overCeiling = (requested: number, issues: _ApprovalTermCheck['issues']) =>
+  decision('rejected', {
+    terms: [{ resource: 'dev_days', current: 3, requested, limit: 6, needed: 7, issues }],
+    clauses: [ceiling],
+  });
+
+it('draws the way out of an over-ceiling plan: the settings, never a capped request', () => {
+  for (const declined of [
+    overCeiling(7, ['over_limit', 'need_over_limit']),
+    overCeiling(6, ['insufficient', 'need_over_limit']),
+  ]) {
+    const { card, refilled, button } = drawn(decisionCardModel(declined, request(), titles));
+    expect(button('按上限改申请')).toBeUndefined();
+    expect(card.textContent).toContain('先把方案降到 6 人日以内再申请');
+    const settings = button('调整设置');
+    // The workbench's own "config" action opens the pilot settings, as the pre-submission
+    // card's "adjust settings" does; the card adds no entry of its own.
+    expect(settings?.dataset.action).toBe('config');
+    settings?.click();
+    expect(refilled).toEqual([]);
+  }
+});
+
+it('says what to change in the plan for each term over its ceiling, in both languages', () => {
+  const declined = decision('rejected', {
+    terms: [
+      {
+        resource: 'capacity',
+        current: 30,
+        requested: 80,
+        limit: 60,
+        needed: 80,
+        issues: ['over_limit', 'need_over_limit'],
+      },
+      {
+        resource: 'deadline_day',
+        current: 7,
+        requested: 12,
+        limit: 10,
+        needed: 12,
+        issues: ['over_limit', 'need_over_limit'],
+      },
+      {
+        resource: 'dev_days',
+        current: 3,
+        requested: 7,
+        limit: 6,
+        needed: 7,
+        issues: ['over_limit', 'need_over_limit'],
+      },
+    ],
+    clauses: [ceiling],
+  });
+  const replan = () => decisionCardModel(declined, request(), titles).replan;
+  expect(replan()).toEqual([
+    '先把试点人数降到 60 人以内再申请',
+    '先把计划上线日提前到第 10 天以内再申请',
+    '先把方案降到 6 人日以内再申请',
+  ]);
+  setPreference('en');
+  expect(replan()).toEqual([
+    'Bring the pilot down to 60 users or fewer before requesting',
+    'Move the planned launch day to day 10 or earlier before requesting',
+    'Bring the plan down to 6 person-days or less before requesting',
+  ]);
+  expect(
+    drawn(decisionCardModel(declined, request(), titles)).button('Adjust settings'),
+  ).toBeDefined();
+});
+
+it('sends a plan missing a required safeguard to its settings, not to a capped request', () => {
+  // Real-time sync without the human hand-off: 6 developer-days fit the ceiling, but a request
+  // capped at 6 would be declined again for the missing safeguard.
+  const assessment = (extra: Partial<NonNullable<BusinessDecision['assessment']>>) =>
+    decision('rejected', {
+      terms: [
+        {
+          resource: 'dev_days',
+          current: 3,
+          requested: 7,
+          limit: 6,
+          needed: 6,
+          issues: ['over_limit'],
+        },
+      ],
+      clauses: [ceiling, safeguards],
+      ...extra,
+    });
+  const missing = decisionCardModel(
+    assessment({ missing_work_items: ['human_fallback'] }),
+    request(),
+    titles,
+  );
+  expect(missing.ceiling).toBeNull();
+  expect(missing.replan).toEqual(['先在设置里补上人工入口再申请']);
+  const handOff = decisionCardModel(assessment({ fallback_required: true }), request(), titles);
+  expect(handOff.ceiling).toBeNull();
+  expect(handOff.replan).toEqual(['先在设置里把“答不了或不确定时”选成“转人工确认”再申请']);
+  const { button, refilled } = drawn(missing);
+  expect(button('按上限改申请')).toBeUndefined();
+  expect(button('调整设置')?.dataset.action).toBe('config');
+  button('调整设置')?.click();
+  expect(refilled).toEqual([]);
+  setPreference('en');
+  expect(
+    decisionCardModel(
+      assessment({
+        missing_work_items: ['scope_filter', 'human_fallback'],
+        fallback_required: true,
+      }),
+      request('daily'),
+      titles,
+    ).replan,
+  ).toEqual([
+    'Add Scope filter and Human hand-off in the settings before requesting',
+    'In the settings, set “When it cannot answer” to “Hand off to a person” before requesting',
+  ]);
+});
+
+it('fills a term asked too low with what the plan needs, beside the capped one', () => {
+  // 185 P2-1: day 8 and 7 developer-days for a plan launching on day 9 that needs 6. Keeping
+  // day 8 would be declined again for the short deadline; day 9 fits the ceiling of day 10.
+  const declined = decision('rejected', {
+    terms: [
+      {
+        resource: 'deadline_day',
+        current: 7,
+        requested: 8,
+        limit: 10,
+        needed: 9,
+        issues: ['insufficient'],
+      },
+      {
+        resource: 'dev_days',
+        current: 3,
+        requested: 7,
+        limit: 6,
+        needed: 6,
+        issues: ['over_limit'],
+      },
+    ],
+    clauses: [ceiling],
+  });
+  const model = decisionCardModel(declined, request(), titles);
+  expect(model.ceiling).toEqual({ deadline_day: 9, dev_days: 6 });
+  const { refilled, button } = drawn(model);
+  button('按上限改申请')?.click();
+  expect(refilled).toEqual([{ deadline_day: 9, dev_days: 6 }]);
+});
+
+it('quiets the way out of an old card once a later approval followed it', () => {
+  // 185 P3-2: after these rejections the plan came down to 6 and 6 developer-days were
+  // approved. That approval needed a plan within the ceiling and with its safeguards, so the
+  // old cards' advice has been followed: they keep their lines but offer nothing.
+  const overPlan = overCeiling(7, ['over_limit', 'need_over_limit']);
+  const missingHandOff = decision('rejected', {
+    terms: [
+      {
+        resource: 'dev_days',
+        current: 3,
+        requested: 7,
+        limit: 6,
+        needed: 6,
+        issues: ['over_limit'],
+      },
+    ],
+    missing_work_items: ['human_fallback'],
+    clauses: [ceiling, safeguards],
+  });
+  for (const declined of [overPlan, missingHandOff]) {
+    const before = decisionCardModel(declined, request(), titles, { dev_days: 3 });
+    expect(before.replan).not.toEqual([]);
+    const after = decisionCardModel(declined, request(), titles, { dev_days: 6 });
+    expect(after.lines).toEqual(before.lines);
+    expect(after.replan).toEqual([]);
+    expect(after.ceiling).toBeNull();
+    const { button } = drawn(after);
+    expect(button('调整设置')).toBeUndefined();
+    expect(button('按上限改申请')).toBeUndefined();
+  }
+});
+
+it('keeps the capped request when the plan itself fits under the ceiling', () => {
+  const declined = decision('rejected', {
+    terms: [
+      {
+        resource: 'dev_days',
+        current: 3,
+        requested: 7,
+        limit: 6,
+        needed: 6,
+        issues: ['over_limit'],
+      },
+    ],
+    clauses: [ceiling],
+  });
+  const { refilled, button } = drawn(decisionCardModel(declined, request(), titles));
+  expect(button('调整设置')).toBeUndefined();
+  button('按上限改申请')?.click();
+  expect(refilled).toEqual([{ dev_days: 6 }]);
 });
 
 it('lists every problem of the 164 request and offers no ceiling when nothing is short', () => {
@@ -195,7 +456,7 @@ it('names a missing hand-off and the safeguards a daily index plan lacks', () =>
   expect(model.lines).toEqual([
     { ok: true, text: '名额：30 → 60（方案需要 50 · 上限 60）' },
     { ok: false, text: '每日索引策略还要安排：知识范围过滤' },
-    { ok: false, text: '答不了时要转人工确认' },
+    { ok: false, text: '答不了或不确定时要转人工确认' },
   ]);
 });
 

@@ -1,10 +1,12 @@
 /**
  * Normal v4 entry over a real API and worker: saved vs used configuration, the real-time
- * strategy's work item, the request form's terms and the approval decision card.
+ * strategy's work item, the request form's terms, the approval decision card (a plan that no
+ * request can pass, over the ceiling or missing its hand-off, goes to its settings) and the
+ * decisions as the feedback records them after delivery, in the order they were requested.
  *
  * Usage: CHROME_BIN=… node config-approval.browser.mjs <base URL> <evidence dir> <zh|en> [default]
- * The fourth argument runs with default motion and covers settings and requests only
- * (no document cards). Without it the whole path runs with reduced motion.
+ * The fourth argument runs with default motion and covers settings, requests and the delivered
+ * feedback only (no document cards). Without it the whole path runs with reduced motion.
  */
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
@@ -52,12 +54,6 @@ const innerText = (selector) =>
   );
 const savedPilot = () =>
   browser.ev('JSON.parse(JSON.stringify(window.PracticeLive.store.active().world.configs.pilot))');
-const closeSheet = async () => {
-  await browser.ev(
-    `document.querySelector('#sheet')?.open && document.querySelector('#sheet').close()`,
-  );
-  await waitFor(browser, `!document.querySelector('#sheet')?.open`);
-};
 const realtimeBox = `document.querySelector('#config-form input[name="workItems"][value="realtime"]')`;
 const gapLine = text(
   '测试实际用：每日索引 · 实时同步还没批到开发人日（已批准 3 人日）',
@@ -68,6 +64,18 @@ const ceiling = text(
   'Approval ceilings: capacity 60 people, 6 developer-days, and deadline day 10.',
 );
 const question = text('住宿报销上限是多少？', 'What is the hotel reimbursement limit per night?');
+/** Labels of the buttons on a decision card, by position (-1 is the latest). */
+const cardButtons = (index) =>
+  browser.ev(
+    `[...[...document.querySelectorAll('[data-decision-card]')].at(${index}).querySelectorAll('button')].map((b) => b.textContent.trim())`,
+  );
+const viewSource = text('看原文', 'View source');
+const capped = text('按上限改申请', 'Re-apply at the ceiling');
+const adjust = text('调整设置', 'Adjust settings');
+const replan = text(
+  '先把方案降到 6 人日以内再申请',
+  'Bring the plan down to 6 person-days or less before requesting',
+);
 
 async function openSettings() {
   await browser.click('.product-bar [data-action="config"]');
@@ -103,6 +111,37 @@ async function runTest() {
   // Runs of one question share a card; the newest answer is its first column.
   await waitFor(browser, `!!document.querySelector('.run')`);
   return browser.ev(`window.PracticeLive.store.active().tests.at(-1).answer`);
+}
+
+/** Save one work, submit it and open the feedback page. */
+async function deliver() {
+  await browser.click('[data-action="to-board"]').catch(() => undefined);
+  await waitFor(browser, `!!document.querySelector('.card-open')`);
+  await browser.click('.card-open');
+  await waitFor(browser, `!!document.querySelector('#new-title')`);
+  await browser.type('#new-title', text('试点决定', 'Pilot decision'));
+  await browser.type(
+    '#new-body',
+    text(
+      '先向首批 20 人受限开放，保留人工兜底。',
+      'Open to the first 20 people with a human fallback.',
+    ),
+  );
+  await browser.clickText(text('保存为作品', 'Save as work'));
+  await waitFor(browser, `!!document.querySelector('.ol-row[data-type="work"]')`);
+  await browser.click('[data-action="to-board"]').catch(() => undefined);
+  await waitFor(browser, `!!document.querySelector('.ws-toolbar [data-action="submit"]')`);
+  await browser.click('.ws-toolbar [data-action="submit"]');
+  await waitFor(
+    browser,
+    `!!document.querySelector('#sheet .native-feedback input[type="checkbox"]')`,
+  );
+  await browser.click('#sheet .native-feedback input[type="checkbox"]');
+  await browser.select('#sheet .native-feedback select', 'launch_narrow');
+  await clickReady(browser, text('提交选中的版本', 'Submit selected versions'), '#sheet button');
+  await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`, 60000);
+  await browser.ev(`document.querySelector('#sheet')?.close()`);
+  await browser.goto(new URL('#/review', base).href);
 }
 
 try {
@@ -181,11 +220,13 @@ try {
       text('实时同步需要更多开发人日', 'Real-time sync needs more developer-days'),
     );
     const row = await innerText('[data-request-id]');
-    assert.ok(row.includes(text('开发人日: 7', 'Developer-days: 7')), row);
+    assert.ok(row.includes(text('开发人日：申请 7', 'Developer-days: requested 7')), row);
     assert.ok(!row.includes(text('截止日', 'Deadline day')), row);
   });
 
-  await step('the rejection card cites the ceiling and offers the capped request', async () => {
+  // 164 N1: real-time sync with its default safeguards needs 7 developer-days and the ceiling
+  // is 6, so no request can pass; every such card sends the plan to its settings.
+  await step('an over-ceiling plan is sent to its settings, not to a capped request', async () => {
     const card = await innerText('[data-decision-card]');
     assert.ok(card.includes(ceiling), card);
     assert.ok(
@@ -197,23 +238,85 @@ try {
       ),
       card,
     );
-    await shot('decision-rejected');
+    assert.ok(card.includes(replan), card);
+    assert.deepEqual(await cardButtons(0), [viewSource, adjust]);
+    await focusShot('[data-decision-card]', 'decision-rejected');
     await viewport(390, 844, true);
     await delay(300);
     await focusShot('[data-decision-card]', 'decision-rejected-390');
     await viewport(1440, 1100);
-    const rows = await browser.ev(`document.querySelectorAll('[data-request-id]').length`);
-    await clickReady(browser, text('按上限改申请', 'Re-apply at the ceiling'));
-    assert.equal(
-      await browser.ev(`document.querySelector('#res-form [name="dev_days"]').value`),
-      '6',
+    // Asking for the ceiling anyway is declined again; that card points to the settings too.
+    await sendRequest(6, text('先按上限申请', 'At the ceiling for now'));
+    const again = await browser.ev(
+      `[...document.querySelectorAll('[data-decision-card]')].at(-1).innerText.replace(/\\s+/g, ' ').trim()`,
     );
-    assert.equal(await browser.ev(`document.querySelectorAll('[data-request-id]').length`), rows);
-    await closeSheet();
+    assert.ok(
+      again.includes(
+        text(
+          '开发人日：申请 6；方案需要 7，超出上限 6',
+          'Developer-days: requested 6; the plan needs 7, over the ceiling of 6',
+        ),
+      ),
+      again,
+    );
+    assert.ok(again.includes(replan), again);
+    assert.deepEqual(await cardButtons(-1), [viewSource, adjust, viewSource]);
+    await focusShot('[data-decision-card]', 'decision-rejected-again', true);
+    await clickReady(browser, adjust, '[data-decision-card] button');
+    await waitFor(
+      browser,
+      `!!document.querySelector('#config-form') && !document.querySelector('#res-form')`,
+    );
+    // The saved plan is what the settings open with.
+    assert.ok(
+      await browser.ev(
+        `document.querySelector('#config-form input[name="update"][value="realtime"]').checked`,
+      ),
+    );
+    await shot('decision-to-settings');
   });
 
+  // The same trap from a plan that fits: real-time sync without the human hand-off needs 6
+  // developer-days, but a capped request would be declined again for the missing safeguard.
+  await step(
+    'a plan missing its hand-off is sent to its settings, not to a capped request',
+    async () => {
+      // The settings are open from the decision card.
+      await browser.click('#config-form input[name="workItems"][value="fallback"]');
+      assert.ok((await innerText('[data-checks]')).includes(text('开发 6 人日', '6 person-days')));
+      await browser.submit('#config-form');
+      await waitFor(browser, `!document.querySelector('#sheet')?.open`);
+      await openRequests();
+      await sendRequest(
+        7,
+        text('实时同步需要更多开发人日', 'Real-time sync needs more developer-days'),
+      );
+      const card = await browser.ev(
+        `[...document.querySelectorAll('[data-decision-card]')].at(-1).innerText.replace(/\\s+/g, ' ').trim()`,
+      );
+      assert.ok(
+        card.includes(
+          text(
+            '先在设置里补上人工入口再申请',
+            'Add Human hand-off in the settings before requesting',
+          ),
+        ),
+        card,
+      );
+      const buttons = await cardButtons(-1);
+      assert.ok(buttons.includes(adjust) && !buttons.includes(capped), buttons.join(' | '));
+      await focusShot('[data-decision-card]', 'decision-missing-hand-off', true);
+      await clickReady(browser, adjust, '[data-decision-card] button');
+      await waitFor(
+        browser,
+        `!!document.querySelector('#config-form') && !document.querySelector('#res-form')`,
+      );
+    },
+  );
+
   await step('dropping the scope filter leaves real-time sync as the only reason', async () => {
-    await openSettings();
+    // The settings are open from the decision card; the hand-off goes back in.
+    await browser.click('#config-form input[name="workItems"][value="fallback"]');
     await browser.click('#config-form input[name="workItems"][value="scope"]');
     assert.ok((await innerText('[data-checks]')).includes(text('开发 6 人日', '6 person-days')));
     await browser.submit('#config-form');
@@ -229,39 +332,80 @@ try {
     await focusShot('.product-bar', 'bar-v2-before-approval');
   });
 
-  if (full) {
-    await step(
-      'a plan within the ceiling is approved and the card shows the covered term',
-      async () => {
-        await openRequests();
-        assert.equal(
-          await browser.ev(`document.querySelector('#res-form [name="dev_days"]').value`),
-          '6',
-        );
-        await browser.type(
-          '#res-form textarea[name="reason"]',
-          text('按上限申请', 'At the ceiling'),
-        );
-        const before = await browser.ev(`document.querySelectorAll('[data-request-id]').length`);
-        await browser.submit('#res-form');
-        await waitFor(browser, `document.querySelectorAll('[data-request-id]').length > ${before}`);
-        await clickReady(browser, text('核实申请', 'Check request'));
-        await waitFor(
-          browser,
-          `[...document.querySelectorAll('[data-decision-card] li.ok')].some((li) => li.innerText.includes(${JSON.stringify(text('开发人日：3 → 6（方案需要 6 · 上限 6）', 'Developer-days: 3 → 6 (plan needs 6 · ceiling 6)'))}))`,
-          20000,
-        );
-        // The earlier rejection no longer offers a ceiling the allocation already reaches.
-        assert.equal(
-          await browser.ev(
-            `[...document.querySelectorAll('[data-decision-card] button')].filter((b) => b.textContent.trim() === ${JSON.stringify(text('按上限改申请', 'Re-apply at the ceiling'))}).length`,
-          ),
-          0,
-        );
-        await focusShot('[data-decision-card]', 'decision-approved', true);
-      },
+  // 185 P2-1: beside an over-ceiling term, a deadline asked short of the plan. The capped
+  // request fills the deadline with what the plan needs too, so it passes this time.
+  await step('the capped request fills a short term with what the plan needs', async () => {
+    await openSettings();
+    await browser.type('#config-form input[name="launchDay"]', '9');
+    await browser.submit('#config-form');
+    await waitFor(browser, `!document.querySelector('#sheet')?.open`);
+    await openRequests();
+    await browser.type('#res-form [name="deadline_day"]', '8');
+    await sendRequest(
+      7,
+      text('实时同步需要更多开发人日', 'Real-time sync needs more developer-days'),
     );
+    const card = await browser.ev(
+      `[...document.querySelectorAll('[data-decision-card]')].at(-1).innerText.replace(/\\s+/g, ' ').trim()`,
+    );
+    assert.ok(
+      card.includes(
+        text(
+          '截止日：申请第 8 天；计划第 9 天上线，申请不够',
+          'Deadline day: requested day 8; the plan launches on day 9, more than requested',
+        ),
+      ),
+      card,
+    );
+    assert.ok((await cardButtons(-1)).includes(capped), card);
+    await focusShot('[data-decision-card]', 'decision-capped', true);
+    const rows = await browser.ev(`document.querySelectorAll('[data-request-id]').length`);
+    await clickReady(browser, capped);
+    // The form, not the server, now holds the capped request: 6 developer-days and day 9.
+    assert.deepEqual(
+      await browser.ev(
+        `['dev_days', 'deadline_day'].map((k) => document.querySelector('#res-form [name="' + k + '"]').value)`,
+      ),
+      ['6', '9'],
+    );
+    assert.equal(await browser.ev(`document.querySelectorAll('[data-request-id]').length`), rows);
+    await focusShot('#res-form', 'capped-form');
+    await browser.type(
+      '#res-form textarea[name="reason"]',
+      text('按上限和方案需要申请', 'At the ceiling and what the plan needs'),
+    );
+    await browser.submit('#res-form');
+    await waitFor(browser, `document.querySelectorAll('[data-request-id]').length > ${rows}`);
+    await clickReady(browser, text('核实申请', 'Check request'));
+    await waitFor(
+      browser,
+      `[...document.querySelectorAll('[data-decision-card] li.ok')].some((li) => li.innerText.includes(${JSON.stringify(text('开发人日：3 → 6（方案需要 6 · 上限 6）', 'Developer-days: 3 → 6 (plan needs 6 · ceiling 6)'))}))`,
+      20000,
+    );
+    // No card offers a capped request once the allocation reaches it.
+    assert.equal(
+      await browser.ev(
+        `[...document.querySelectorAll('[data-decision-card] button')].filter((b) => b.textContent.trim() === ${JSON.stringify(capped)}).length`,
+      ),
+      0,
+    );
+    // This approval followed the earlier cards' advice: they keep their lines and offer nothing.
+    assert.deepEqual(await cardButtons(0), [viewSource]);
+    const first = await innerText('[data-decision-card]');
+    assert.ok(
+      !first.includes(replan) &&
+        first.includes(
+          text(
+            '开发人日：申请 7，超出上限 6；方案需要 7，超出上限 6',
+            'Developer-days: requested 7, over the ceiling of 6; the plan needs 7, over the ceiling of 6',
+          ),
+        ),
+      first,
+    );
+    await focusShot('[data-decision-card]', 'decision-approved', true);
+  });
 
+  if (full) {
     await step('the rule sentence opens in its source', async () => {
       await clickReady(browser, text('看原文', 'View source'));
       await waitFor(
@@ -280,7 +424,7 @@ try {
       async () => {
         await waitFor(browser, `!document.querySelector('.product-bar [data-config-use]')`);
         assert.ok(
-          (await innerText('.product-bar .pb-state')).startsWith(text('配置 v2', 'Config v2')),
+          (await innerText('.product-bar .pb-state')).startsWith(text('配置 v4', 'Config v4')),
         );
         await shot('bar-funded');
         const answer = await runTest();
@@ -289,6 +433,37 @@ try {
       },
     );
   }
+
+  await step('the feedback states each recorded decision in one sentence', async () => {
+    await deliver();
+    await waitFor(browser, `document.querySelectorAll('.business-decisions p').length > 1`, 120000);
+    const lines = await browser.ev(
+      `[...document.querySelectorAll('.business-decisions p')].map((p) => p.textContent)`,
+    );
+    // Each request once with its latest decision, in the order they were made: 7, 6 and 7
+    // declined, day 8 with 7 declined, then day 9 with 6 approved.
+    const declined7 = text('开发人日：申请 7 · 未批准', 'Developer-days: requested 7 · declined');
+    const decided = [
+      declined7,
+      text('开发人日：申请 6 · 未批准', 'Developer-days: requested 6 · declined'),
+      declined7,
+      text(
+        '截止日：申请第 8 天、开发人日：申请 7 · 未批准',
+        'Deadline day: requested day 8; Developer-days: requested 7 · declined',
+      ),
+      text(
+        '截止日：申请第 9 天 · 已批准第 9 天、开发人日：申请 6 · 已批准 6',
+        'Deadline day: requested day 9 · approved day 9; Developer-days: requested 6 · approved 6',
+      ),
+    ];
+    assert.equal(
+      lines[0],
+      text('已记录的业务决定（规则核实）：', 'Recorded business decisions (rule checked):'),
+    );
+    assert.deepEqual(lines.slice(1), decided);
+    await shot('feedback');
+    await focusShot('.business-decisions', 'feedback-decisions');
+  });
   assert.deepEqual(
     browser.logs.filter((item) => item.level === 'exception'),
     [],

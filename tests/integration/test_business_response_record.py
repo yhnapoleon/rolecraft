@@ -2,8 +2,8 @@
 
 The web fixture holds the records this scenario produces; the feedback panel and the request
 panel are tested against it in `business-decisions.test.ts`. This test keeps the fixture true to
-the backend: one line per request with its latest decision at the feedback point, and nothing
-decided afterwards. Object ids are random, so the order of the lines is not compared.
+the backend: the heading on its own line, then one line per request with its latest decision at
+the feedback point, in the order the requests were made, and nothing decided afterwards.
 """
 
 import json
@@ -21,7 +21,7 @@ FIXTURE = (
 )
 HEADING = {
     "zh": "已记录的业务决定（规则核实）：",
-    "en": "Recorded business decisions (rule checked): ",
+    "en": "Recorded business decisions (rule checked):",
 }
 REASON = {
     "zh": "试点需要更多资源，依据见测试记录。",
@@ -63,9 +63,9 @@ def decided(session: WorkSession) -> list[dict[str, Any]]:
 
 
 def lines(record: str, language: str) -> list[str]:
-    """The decision lines of a record, in sorted order."""
-    assert record.startswith(HEADING[language]), record
-    return sorted(record.removeprefix(HEADING[language]).split("\n"))
+    """The decision lines of a record, in their order."""
+    assert record.startswith(HEADING[language] + "\n"), record
+    return record.removeprefix(HEADING[language] + "\n").split("\n")
 
 
 def submit(session: WorkSession, text: str) -> dict[str, Any]:

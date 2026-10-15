@@ -491,6 +491,31 @@ EN = {
     ),
     "「{task}」的结果引用了哪些测试运行？": "Which test runs does the result for “{task}” cite?",
     "这件事": "this task",
+    # Recorded business decisions in feedback (career_lab.api.business_record).
+    "已记录的业务决定（规则核实）：": "Recorded business decisions (rule checked):",
+    "名额": "Seats",
+    "开发人日": "Developer-days",
+    "截止日": "Deadline day",
+    "{name}：{asked}": "{name}: {asked}",
+    "{name}：{asked} · {outcome}": "{name}: {asked} · {outcome}",
+    # Terms of one request; a semicolon, as a counteroffer's own phrase holds a comma.
+    "、": "; ",
+    "{terms} · {status}": "{terms} · {status}",
+    "{terms}，待接受": "{terms}, awaiting acceptance",
+    "一项申请（没有可读的条款）": "A request (no readable terms)",
+    "申请 {n}": "requested {n}",
+    "已批准 {n}": "approved {n}",
+    "已接受 {n}": "accepted {n}",
+    "还价 {n}": "counteroffer {n}",
+    "申请第 {n} 天": "requested day {n}",
+    "已批准第 {n} 天": "approved day {n}",
+    "已接受第 {n} 天": "accepted day {n}",
+    "还价第 {n} 天": "counteroffer day {n}",
+    "未批准": "declined",
+    "已批准": "approved",
+    "已接受": "accepted",
+    "还价待接受": "counteroffer awaiting acceptance",
+    "待核验": "awaiting verification",
 }
 
 

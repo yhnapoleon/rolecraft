@@ -45,16 +45,23 @@ describe('recorded business decisions', () => {
   });
 
   it('names resources and decisions in the request panel the way the record does', () => {
+    // A record line opens as a decision card line does ("开发人日：申请 6") and states the
+    // decision in the panel's words with the decided amount in place ("还价 60，待接受" for
+    // "还价待接受"); English writes them in lower case mid-sentence.
+    const words = (text: string) => text.toLowerCase().replace(/[\d\s,，]/g, '');
     for (const record of records) {
       setPreference(record.language);
+      const asked = record.language === 'en' ? ': requested' : '：申请';
       const lines = record.business_response.split('\n');
       for (const decision of record.decisions) {
-        const words = [
-          ...Object.keys(decision.requested).map((key) => resourceNames()[key as ResourceKey]),
-          decisionNames()[decision.status],
-        ];
+        const opens = Object.keys(decision.requested).map(
+          (key) => resourceNames()[key as ResourceKey] + asked,
+        );
+        const status = words(decisionNames()[decision.status]);
         expect(
-          lines.filter((line) => words.every((word) => line.includes(word))),
+          lines.filter(
+            (line) => opens.every((open) => line.includes(open)) && words(line).includes(status),
+          ),
           `${record.language} ${decision.status}`,
         ).toHaveLength(1);
       }

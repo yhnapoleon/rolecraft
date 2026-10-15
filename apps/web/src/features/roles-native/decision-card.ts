@@ -1,11 +1,12 @@
 /**
  * One recorded approval decision as a card: the published rule sentence it applied, each
- * requested term's numbers and, for an over-ceiling rejection, a capped re-application.
+ * requested term's numbers and, for an over-ceiling rejection, a capped re-application, or the
+ * pilot settings when no request can pass until the plan changes.
  * Everything shown comes from the decision's recorded assessment; nothing is re-judged here.
  */
 import { T } from '../../app/i18n';
-import { strategyLabel, workItemLabel } from '../../app/pilot-config';
-import { resourceNames } from './decision-words';
+import { fallbackLabel, strategyLabel, workItemLabel } from '../../app/pilot-config';
+import { amountText, resourceNames } from './decision-words';
 import type { Totals } from './request-terms';
 import type {
   BusinessDecision,
@@ -29,6 +30,11 @@ export interface DecisionCardModel {
   lines: CardLine[];
   /** Totals for "re-apply at the ceiling", or null when that would not help. */
   ceiling: Record<string, number> | null;
+  /** A declined plan that no request can get through as it stands (it needs more than a ceiling,
+   * lacks work its strategy requires or the required hand-off): what to change first, one
+   * sentence each. The card then offers the settings instead of a capped re-application, which
+   * would only be declined again. Empty otherwise, and once a later approval has followed it. */
+  replan: string[];
 }
 type Issue = NonNullable<_ApprovalTermCheck['issues']>[number];
 
@@ -41,8 +47,7 @@ const zh = (label: string, resource: string, n: number) =>
   resource === DAY ? `${label}第 ${n} 天` : `${label} ${n}`;
 const en = (label: string, resource: string, n: number) =>
   resource === DAY ? `${label} day ${n}` : `${label} ${n}`;
-const plain = (resource: string, n: number) =>
-  resource === DAY ? T(`第 ${n} 天`, `day ${n}`) : String(n);
+const plain = amountText;
 
 function requestPart(t: _ApprovalTermCheck, has: (i: Issue) => boolean) {
   const r = t.resource;
@@ -90,6 +95,82 @@ function needPart(t: _ApprovalTermCheck, has: (i: Issue) => boolean) {
     : T(`${subject}（缺口 ${gap}）`, `${subject} (shortfall ${gap})`);
 }
 
+// The settings panel's own words: its "when it cannot answer" choice, set to the hand-off.
+const cannotAnswer = () => T('答不了或不确定时', 'When it cannot answer');
+const handOff = () => fallbackLabel('human');
+const and = (items: readonly string[]) =>
+  items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items.at(-1)}` : (items[0] ?? '');
+
+/**
+ * What to change in the settings before asking again; the card's line above already says why.
+ * In the settings panel's words, with units.
+ */
+function overCeilingNote(t: _ApprovalTermCheck) {
+  const l = t.limit;
+  if (t.resource === DAY)
+    return T(
+      `先把计划上线日提前到第 ${l} 天以内再申请`,
+      `Move the planned launch day to day ${l} or earlier before requesting`,
+    );
+  if (t.resource === 'capacity')
+    return T(
+      `先把试点人数降到 ${l} 人以内再申请`,
+      `Bring the pilot down to ${l} users or fewer before requesting`,
+    );
+  if (t.resource === 'dev_days')
+    return T(
+      `先把方案降到 ${l} 人日以内再申请`,
+      `Bring the plan down to ${l} person-days or less before requesting`,
+    );
+  return T(`先把方案降到 ${l} 以内再申请`, `Bring the plan down to ${l} or less before requesting`);
+}
+
+/** A declined request no request can follow as the plan stood (164 N1): asking at the ceiling
+ * would only be declined again. */
+function planBlocked(decision: BusinessDecision): boolean {
+  const assessment = decision.assessment;
+  return (
+    decision.status === 'rejected' &&
+    !!assessment &&
+    ((assessment.terms ?? []).some((t) => t.issues?.includes('need_over_limit')) ||
+      !!assessment.missing_work_items?.length ||
+      !!assessment.fallback_required)
+  );
+}
+
+/**
+ * What the settings must change before any request can pass, from the recorded assessment of a
+ * declined request: a plan over a ceiling, work its strategy requires, the required hand-off.
+ * Advice a later approval has followed is left out: an allocation grown past what this decision
+ * recorded was approved for a plan within the ceiling and with its safeguards (185 P3-2).
+ */
+function replanNotes(decision: BusinessDecision, current: Totals): string[] {
+  const assessment = decision.assessment;
+  if (!planBlocked(decision) || !assessment) return [];
+  const terms = assessment.terms ?? [];
+  const grown = (t: _ApprovalTermCheck) => (current[t.resource] ?? t.current) > t.current;
+  const notes = terms
+    .filter((t) => t.issues?.includes('need_over_limit') && !grown(t))
+    .map(overCeilingNote);
+  if (terms.some(grown)) return notes;
+  const missing = (assessment.missing_work_items ?? []).map(workItemLabel);
+  if (missing.length)
+    notes.push(
+      T(
+        `先在设置里补上${missing.join('、')}再申请`,
+        `Add ${and(missing)} in the settings before requesting`,
+      ),
+    );
+  if (assessment.fallback_required)
+    notes.push(
+      T(
+        `先在设置里把“${cannotAnswer()}”选成“${handOff()}”再申请`,
+        `In the settings, set “${cannotAnswer()}” to “${handOff()}” before requesting`,
+      ),
+    );
+  return notes;
+}
+
 function termLine(t: _ApprovalTermCheck): CardLine {
   const r = t.resource;
   const issues = t.issues ?? [];
@@ -110,9 +191,9 @@ function termLine(t: _ApprovalTermCheck): CardLine {
 }
 
 /**
- * Over-ceiling terms capped; terms with no shortfall, no increase or a reduction dropped;
- * terms the allocation in effect already reaches dropped too. Only offered while a capped
- * term is still left to ask for.
+ * Over-ceiling terms capped and terms asked below the plan's need raised to it; terms with no
+ * shortfall, no increase or a reduction dropped; terms the allocation in effect already reaches
+ * dropped too. Only offered while a capped term is still left to ask for.
  */
 function ceilingTerms(decision: BusinessDecision, current: Totals): Record<string, number> | null {
   if (decision.status !== 'rejected') return null;
@@ -123,7 +204,10 @@ function ceilingTerms(decision: BusinessDecision, current: Totals): Record<strin
     if (found.some((i) => i === 'no_shortfall' || i === 'no_increase' || i === 'below_current'))
       continue;
     const over = found.includes('over_limit');
-    const value = over ? t.limit : t.requested;
+    // A term asked below what the plan needs is filled with that need, which then fits the
+    // ceiling; keeping it would be declined again (185 P2-1).
+    const short = found.includes('insufficient') && !found.includes('need_over_limit');
+    const value = over ? t.limit : short ? t.needed : t.requested;
     if (value <= (current[t.resource] ?? t.current)) continue;
     result[t.resource] = value;
     capped ||= over;
@@ -154,7 +238,10 @@ export function decisionCardModel(
   if (assessment?.fallback_required)
     lines.push({
       ok: false,
-      text: T('答不了时要转人工确认', 'Unanswerable questions must go to a person'),
+      text: T(
+        `${cannotAnswer()}要${handOff()}`,
+        `${cannotAnswer()}, it must ${handOff().toLowerCase()}`,
+      ),
     });
   // Every rejection keeps a readable reason: when no line above explains it (an unreadable
   // citation, a missing reason, a resource outside the rules), the recorded sentence does.
@@ -174,7 +261,12 @@ export function decisionCardModel(
         ]
       : [],
   );
-  return { clauses, lines, ceiling: ceilingTerms(decision, current) };
+  return {
+    clauses,
+    lines,
+    ceiling: planBlocked(decision) ? null : ceilingTerms(decision, current),
+    replan: replanNotes(decision, current),
+  };
 }
 
 export interface CardActions {
@@ -182,13 +274,13 @@ export interface CardActions {
   refill(terms: Readonly<Record<string, number>>): void;
 }
 
-function button(doc: Document, text: string, onClick: () => void, label?: string) {
+function button(doc: Document, text: string, onClick?: () => void, label?: string) {
   const b = doc.createElement('button');
   b.type = 'button';
   b.className = 'btn small quiet';
   b.textContent = text;
   if (label) b.setAttribute('aria-label', label);
-  b.addEventListener('click', onClick);
+  if (onClick) b.addEventListener('click', onClick);
   return b;
 }
 
@@ -205,7 +297,8 @@ function quote(doc: Document, clause: CardClause, actions: CardActions) {
   return [text, open];
 }
 
-/** The card's DOM. Buttons only open the source or fill the request form; nothing is sent. */
+/** The card's DOM. Buttons only open the source, fill the request form or open the pilot
+ * settings; nothing is sent. */
 export function renderDecisionCard(
   doc: Document,
   model: DecisionCardModel,
@@ -247,6 +340,19 @@ export function renderDecisionCard(
     card.append(
       button(doc, T('按上限改申请', 'Re-apply at the ceiling'), () => actions.refill(ceiling)),
     );
+  if (model.replan.length) {
+    for (const note of model.replan) {
+      const text = doc.createElement('p');
+      text.className = 'rc-decision__replan';
+      text.textContent = note;
+      card.append(text);
+    }
+    // The workbench's own "config" action opens the pilot settings, as the pre-submission
+    // card's "adjust settings" does.
+    const settings = button(doc, T('调整设置', 'Adjust settings'));
+    settings.dataset.action = 'config';
+    card.append(settings);
+  }
   if (more.length) {
     const details = doc.createElement('details');
     const summary = doc.createElement('summary');

@@ -850,4 +850,44 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "headers, so the counted source is the connecting peer."
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-5d888645fb7004e70f7813d61bbd154ad9ceb1fafb4faee523b744388a4f951b"
+        ),
+        "integration_changes": {
+            "business-record-sentences": "Newly written feedback states the recorded business "
+            "decisions (FeedbackV2.business_response and the business response in the "
+            "evaluator's rule context) as the unchanged heading on a line of its own, then one "
+            "sentence per request in the order the requests were made (the storage revision of "
+            "each request's first version), each with its latest decision: the request panel's "
+            "resource name and the amount asked; approved, accepted or countered amounts stay "
+            "with each term, a counteroffer's awaiting acceptance and a decision without amounts "
+            "are said once after all terms, and a request without readable terms still has a "
+            "line, so every decision reference has one. Chinese keeps full-width punctuation; "
+            "English separates terms with semicolons and has no trailing space after the "
+            "heading. The rule context, and with it this text, is not part of "
+            "assembler.model_input; the model input changes through its candidate evidence "
+            "instead: the decision references are added to it in the order the requests were "
+            "made (one added earlier keeps its place), so their order there can change, and so "
+            "can which candidates a package over its byte budget keeps and its text_overflow "
+            "completeness. Each evidence package's input_hash changes with this text and that "
+            "order. The set of decision references is unchanged. The field and its type are "
+            "unchanged; stored feedback keeps the text it was written with and nothing is "
+            "re-evaluated.",
+            "approval-card-way-out": "The learner's approval card reads only a decision's "
+            "recorded _ApprovalAssessment. A declined request that records missing work items or "
+            "a required hand-off cannot pass as the plan stands, nor can one that includes a "
+            "term recording need_over_limit; instead of a request capped at the ceiling the card "
+            "says what to change and opens the pilot settings, and drops that advice once a "
+            "later approval has raised an allocation past what the decision recorded. A capped "
+            "request fills a term recorded insufficient without need_over_limit with its need. "
+            "The assessment and the decision bytes are unchanged.",
+            "business-record-fingerprint": "api/business_record.py, which now holds the order "
+            "and composition of the recorded business decisions that evaluation_runtime.py "
+            "writes, joins the contract's source fingerprints, so changing them still changes the "
+            "contract revision as it did inside evaluation_runtime.py. Their words come from "
+            "evidence/v2/localization.py, the shared copy table, which stays outside the "
+            "fingerprints: wording is not contract structure.",
+        },
+    },
 )

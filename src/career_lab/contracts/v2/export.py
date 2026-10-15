@@ -491,6 +491,9 @@ def _implementation_files(root: Path) -> list[Path]:
     }
     # The rule that gives objects.read its evidence_ref and the evaluator its check.
     files.add(root / "src/career_lab/evidence/v2/citation.py")
+    # The recorded business decisions' order and wording, written by evaluation_runtime.py into
+    # rule snapshots, Judge evidence and FeedbackV2.business_response.
+    files.add(root / "src/career_lab/api/business_record.py")
     return sorted(files)
 
 
