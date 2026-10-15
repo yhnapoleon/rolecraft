@@ -1,5 +1,7 @@
 import type { DelegationInput } from '../../contracts-v2';
 import type { V4HostSnapshot } from '../../v4-host';
+import { describeServerEvent, type EventLookups } from '../../app/event-copy';
+import { catalogLookups, readCatalog } from '../../reference-catalog';
 export type Ref = NonNullable<V4HostSnapshot['currentProduct']>;
 export type Language = 'zh' | 'en';
 export type Connection = {
@@ -11,13 +13,17 @@ export type Connection = {
 };
 export type Activity = {
   id: string;
+  sessionId: string;
   type: string;
   executor: string;
   refs: Ref[];
+  data: Record<string, unknown>;
   summary: string;
   semanticStatus?: string;
   verification?: string;
 };
+/** One line of "What it did": a sentence, an optional note and the object it opens. */
+export type AgentLine = { id: string; text: string; detail?: string; marker?: string; open?: Ref };
 export type ReturnedWork = {
   ref: Ref;
   title: string;
@@ -100,8 +106,10 @@ export function connections(value: unknown, sessionId: string): Connection[] {
     };
   });
 }
+/** What an external agent itself did. Every listed event is validated; the learner's own and
+ * system records are left to the activity tab. */
 export function activities(value: unknown, sessionId: string): Activity[] {
-  return listData(value, 'events').rows.map((value) => {
+  const all = listData(value, 'events').rows.map((value) => {
     const row = object(value),
       actor = object(row.executor),
       data = object(row.data ?? {});
@@ -114,14 +122,79 @@ export function activities(value: unknown, sessionId: string): Activity[] {
       throw Error('agent_activity_invalid');
     return {
       id: row.id,
+      sessionId,
       type: row.type,
       executor: String(actor.kind),
       refs: Array.isArray(row.refs) ? row.refs.map((x) => ref(x, sessionId)) : [],
+      data,
       summary: text(data.summary),
       semanticStatus: text(data.semantic_status) || undefined,
       verification: text(data.verification) || undefined,
     };
   });
+  return all.filter((event) => event.executor === 'external_agent');
+}
+/** Names for the documents and tests the timeline read can show. */
+export function timelineLookups(value: unknown): EventLookups {
+  return catalogLookups(readCatalog(value));
+}
+/** One sentence per Agent record: each access grant, then what the agent did, newest first. */
+export function agentLogLines(
+  events: readonly Activity[],
+  grants: readonly Connection[],
+  lookups: EventLookups,
+  language: Language,
+): AgentLine[] {
+  const capability = (cap: string) =>
+    cap === 'read'
+      ? t(language, '读取', 'read')
+      : cap === 'act'
+        ? t(language, '操作', 'act')
+        : t(language, '提交', 'submit');
+  const access = (caps: readonly string[]) => {
+    const names = caps.map(capability);
+    if (language === 'zh') return names.join('与');
+    return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
+  };
+  const lead = {
+    active: ['签发了授权：', 'Granted access: '],
+    revoked: ['撤销了授权：', 'Revoked access: '],
+    expired: ['授权已到期：', 'Access expired: '],
+  } as const;
+  const lines: AgentLine[] = grants.map((grant) => {
+    const words = grant.status === 'unknown' ? undefined : lead[grant.status];
+    return {
+      id: `grant-${grant.id}`,
+      text: words
+        ? t(language, words[0], words[1]) + access(grant.capabilities)
+        : t(language, '授权状态待核实', 'Access state unverified'),
+      ...(grant.label ? { detail: grant.label } : {}),
+    };
+  });
+  for (const event of [...events].reverse()) {
+    const copy = describeServerEvent(event, lookups, language);
+    const subject = copy.subject;
+    const open =
+      subject?.kind === 'material' && subject.version !== undefined
+        ? ({
+            session_id: event.sessionId,
+            kind: 'material',
+            object_id: subject.id,
+            version: subject.version,
+          } as Ref)
+        : subject?.kind === 'test'
+          ? event.refs.find((x) => x.kind === 'test' && x.object_id === subject.id)
+          : event.refs.find((x) => x.kind === 'product');
+    const marker = semanticLabel(language, event.semanticStatus, event.verification);
+    lines.push({
+      id: event.id,
+      text: t(language, '我的 Agent：', 'My agent: ') + copy.text,
+      ...(event.summary ? { detail: event.summary } : {}),
+      ...(marker ? { marker } : {}),
+      ...(open ? { open } : {}),
+    });
+  }
+  return lines;
 }
 export function returnedWorks(value: unknown, sessionId: string): ReturnedWork[] {
   return listData(value, 'items').rows.flatMap((value) => {

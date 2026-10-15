@@ -575,6 +575,8 @@ export function updateRegisteredAdvice(
   language: FeedbackLanguage,
   openReference: (ref: ObjectRef) => void,
   fallback: AdviceFallback,
+  /** The cited object's name and version, with a screen-reader label, when the host knows it. */
+  nameOf?: (ref: ObjectRef) => { text: string; label: string },
 ): void {
   const doc = container.ownerDocument;
   const C = (key: ModelAdviceCopyKey, values?: Record<string, string | number>) =>
@@ -619,10 +621,13 @@ export function updateRegisteredAdvice(
   summary.replaceChildren(...headline);
   const reference = (source: ObjectRef, key: string) => {
     const kind = REFERENCE_KINDS[source.kind];
+    const name = nameOf?.(source);
     const button = element(
       'button',
-      `${kind ? C(kind) : C('refOther')} ${source.object_id} · ${C('refVersion', { n: source.version })}`,
+      name?.text ??
+        `${kind ? C(kind) : C('refOther')} ${source.object_id} · ${C('refVersion', { n: source.version })}`,
     );
+    if (name) button.setAttribute('aria-label', name.label);
     button.type = 'button';
     button.className = 'btn small';
     button.dataset.modelReference = JSON.stringify(source);

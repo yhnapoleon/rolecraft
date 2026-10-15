@@ -10,6 +10,7 @@ import type {
   V4CommandResult,
 } from '../../v4-host';
 import type { ObjectRef } from '../workspace/contract-types';
+import { readCatalog } from '../../reference-catalog';
 import {
   mountNativeFeedback,
   type FeedbackNativeAdapter,
@@ -121,6 +122,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       state = {
         ...state,
         products: [],
+        references: undefined,
         reports: [],
         responses: [],
         reviews: [],
@@ -203,6 +205,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       state = {
         ...state,
         products: [],
+        references: undefined,
         reports: [],
         responses: [],
         reviews: [],
@@ -231,6 +234,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       state = {
         ...state,
         products: [],
+        references: undefined,
         reports: [],
         responses: [],
         reviews: [],
@@ -421,6 +425,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       state = {
         ...state,
         products: selected,
+        references: readCatalog(timeline, selected),
         reports,
         responses,
         reviews,

@@ -1,8 +1,9 @@
 // Server events in plain language. Types come from GET /timeline; the live adapter
 // renames read_material to material_read and copies the payload into `detail`.
-import { T } from './i18n';
+import { T, locale } from './i18n';
 import { serverText } from '../store';
-import { materialTitle } from './vocab.js';
+import { describeServerEvent } from './event-copy';
+import { buildCatalog, catalogLookups } from '../reference-catalog';
 
 const WORLD = [
   'policy_updated',
@@ -15,6 +16,32 @@ const WORLD = [
   'submit_plan',
 ];
 export const isFeedEvent = (e) => WORLD.includes(e.type);
+
+// Where each kind of line leads in the workbench.
+const OPEN = {
+  material: (s) => ({ action: 'open-doc', id: s.id, ...(s.compare ? { compare: true } : {}) }),
+  test: (s) => ({ action: 'open-run', id: s.id }),
+  settings: () => ({ action: 'config' }),
+  resources: () => ({ action: 'resources' }),
+  bench: () => ({ action: 'open-bench' }),
+  review: () => ({ action: 'to-review' }),
+};
+// Names from the same catalog evidence uses: document names, test questions, delivery order.
+function lookups(a) {
+  const materials = a.backend?.materials || [];
+  return catalogLookups(
+    buildCatalog({
+      materialTitles: {
+        ...Object.fromEntries(materials.map((m) => [`${m.id}:${m.version}`, m.title])),
+        ...(a.backend?.materialTitles || {}),
+      },
+      tests: (a.tests || []).map((t) => ({ id: t.id, query: t.question || '' })),
+      events: (a.events || [])
+        .filter((x) => x.server)
+        .map((x) => ({ id: x.id, seq: x.seq, type: x.type, data: x.detail, refs: x.refs })),
+    }),
+  );
+}
 
 export function eventLine(a, e) {
   const d = e.detail || {};
@@ -29,6 +56,7 @@ export function eventLine(a, e) {
         icon: 'bolt',
         tone: 'warn',
         announce: 'policy',
+        world: true,
       };
     }
     case 'approve_request':
@@ -41,6 +69,7 @@ export function eventLine(a, e) {
             icon: 'check',
             tone: 'good',
             announce: 'info',
+            world: true,
           }
         : {
             text: T(
@@ -50,9 +79,10 @@ export function eventLine(a, e) {
             icon: 'check',
             tone: 'good',
             announce: 'info',
+            world: true,
           };
     case 'approval_denied':
-      return { text: serverText('', d.code, d.details), icon: 'hand' };
+      return { text: serverText('', d.code, d.details), icon: 'hand', world: true };
     case 'update_pilot':
       return { text: T('试点设置已保存', 'Pilot settings saved'), icon: 'gear' };
     case 'refresh_index':
@@ -68,23 +98,23 @@ export function eventLine(a, e) {
       return { text: T('交付已固定', 'Deliverable submitted'), icon: 'stamp' };
     case 'save_artifact':
       return { text: T('交付稿已保存', 'Deliverable saved'), icon: 'doc' };
-    case 'test_assistant': {
-      const t = (a.tests || []).find((x) => x.id === d.object_id);
-      return { text: T('测试：', 'Test: ') + (t ? t.question : ''), icon: 'flask' };
-    }
-    case 'material_read':
-    case 'read_material': {
-      const m = ((a.backend && a.backend.materials) || []).find(
-        (x) => x.id === (d.materialId || d.material_id),
-      );
-      const title = m ? materialTitle(m) : d.materialId || d.material_id || '';
-      return { text: T(`读了《${title}》`, `Read “${title}”`), icon: 'doc' };
-    }
-    case 'pause':
-      return { text: T('暂停了练习', 'Paused the practice'), icon: 'pause' };
-    case 'resume':
-      return { text: T('恢复了练习', 'Resumed the practice'), icon: 'play' };
-    default:
-      return { text: e.type, icon: 'info' };
   }
+  // v2 events (and anything unknown) in plain words. v1 test events carry the test ID in the
+  // payload instead of a reference.
+  const refs =
+    e.refs?.length || e.type !== 'test_assistant' || !d.object_id
+      ? e.refs
+      : [{ kind: 'test', object_id: d.object_id }];
+  const copy = describeServerEvent({ type: e.type, data: d, refs }, lookups(a), locale());
+  const subject = copy.subject;
+  const test =
+    subject?.kind === 'test' ? (a.tests || []).find((x) => x.id === subject.id) : undefined;
+  return {
+    text: (e.agent ? T('我的 Agent：', 'My agent: ') : '') + copy.text,
+    icon: copy.icon,
+    tone: copy.tone,
+    world: copy.world,
+    open: subject ? OPEN[subject.kind](subject) : undefined,
+    taskId: test?.taskId,
+  };
 }

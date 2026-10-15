@@ -269,6 +269,8 @@ export class LiveWorkbench {
       version: w.version,
       configured: !!w.configs.pilot,
       materials: s.materials.map((m) => ({ ...m, body: m.content })),
+      // Exact-version titles, so an event names the version it was about.
+      materialTitles: s.v2MaterialTitles ?? {},
       pendingRequests: w.pending_requests,
       submissionId: this.store.submissionId(s),
     };
@@ -296,10 +298,11 @@ export class LiveWorkbench {
         citations: t.citations.map((c) => ({
           id: c.material_id,
           version: c.version,
+          // One name per document: its current title, whichever version the test cited.
           title:
-            (s.protocol === 2
-              ? s.v2MaterialTitles?.[c.material_id + ':' + c.version]
-              : s.materials.find((m) => m.id === c.material_id)?.title) || c.material_id,
+            s.materials.find((m) => m.id === c.material_id)?.title ||
+            s.v2MaterialTitles?.[`${c.material_id}:${c.version}`] ||
+            c.material_id,
         })),
         expectation: s.testNotes[t.id]?.expected ?? saved?.expectation ?? '',
         diagnosis: s.testNotes[t.id]?.diagnosis || '',
@@ -367,6 +370,8 @@ export class LiveWorkbench {
         text: '后端 · ' + e.event_type + ' · #' + e.seq,
         createdAt: e.created_at || '',
         detail: { ...e.payload, materialId: e.payload.material_id },
+        refs: e.refs ?? [],
+        agent: e.executor_kind === 'external_agent',
         seq: e.seq,
       });
     a.approvalDenials = s.timeline.approval_denials || [];
