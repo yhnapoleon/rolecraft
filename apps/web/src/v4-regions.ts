@@ -61,8 +61,12 @@ export class NamedRegions<Name extends string> {
 
   private roots(document: Document): Map<Name, HTMLElement> {
     const roots = new Map<Name, HTMLElement>();
+    // Copies in the document flight layer own nothing (work-folder.js skips them too).
+    const flights = [...document.querySelectorAll<HTMLElement>('.document-flight')];
     for (const name of this.names) {
-      const matches = document.querySelectorAll<HTMLElement>(`[data-v4-region="${name}"]`);
+      const matches = [
+        ...document.querySelectorAll<HTMLElement>(`[data-v4-region="${name}"]`),
+      ].filter((root) => !flights.some((flight) => flight.contains(root)));
       if (matches.length > 1) throw new Error(`Duplicate v4 region: ${name}`);
       const root = matches[0];
       const dialog = root?.closest<HTMLDialogElement>('dialog');
