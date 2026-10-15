@@ -6,6 +6,7 @@ import {
   type RoleMode,
 } from './reply-presentation';
 import { renderShortResult } from '../results-native/short-result';
+import { hasMarkdownStructure, markdownNodes } from '../../app/markdown';
 /** Native v4 colleague slot. The injected client owns API calls, journals and jobs. */
 import { T, onLocaleChange } from '../../app/i18n';
 import './roles.css';
@@ -361,8 +362,13 @@ export function mount(
           omissionCount: turn.omissionCount,
         });
         item.append(replyLabel);
-        const reply = el('p', 'rc-roles__reply');
-        reply.textContent = turn.reply;
+        // A shared work or a model reply may carry Markdown: show its headings and lists.
+        const reply = el('div', 'rc-roles__reply rc-roles__md');
+        reply.append(...markdownNodes(doc, turn.reply));
+        const leadBlocks = hasMarkdownStructure(presentation.summary)
+          ? el('div', 'rc-roles__md')
+          : undefined;
+        leadBlocks?.append(...markdownNodes(doc, presentation.summary));
         const label = (ref: MaterialReference) =>
           `${ref.title.trim() || T('材料', 'Material')} · v${ref.version}`;
         const materials = turn.materials ?? [];
@@ -418,7 +424,7 @@ export function mount(
                 },
               ]
             : [],
-          lead: presentation.summary,
+          lead: leadBlocks ?? presentation.summary,
           derivedLead: presentation.derived,
           notes,
           actions: refs.childElementCount ? [refs] : [],

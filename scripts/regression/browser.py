@@ -13,7 +13,7 @@ from collections.abc import Iterator
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
-from scripts.regression.mcp import exercise
+from scripts.regression.mcp import exercise, exercise_http
 from scripts.regression.model_flows import (
     DEFAULT_PHASES,
     OPTIONAL_PHASES,
@@ -159,7 +159,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
         "--suite",
-        choices=("published-flows", "known-defects", "model-flows"),
+        choices=("published-flows", "known-defects", "model-flows", "qa-polish"),
         default="published-flows",
     )
     parser.add_argument("--api-port", type=int, default=19662)
@@ -195,22 +195,45 @@ def main() -> None:
     if args.suite == "model-flows":
         model_flows(args, output, env)
         return
+    if args.suite == "published-flows":
+        # Real-DOM checks of the pre-submission card; their own dev server on any free port.
+        subprocess.run(
+            [
+                str(ROOT / "apps/web/node_modules/.bin/vitest"),
+                "run",
+                "--config",
+                "src/features/feedback-native/presubmit.vitest.config.ts",
+            ],
+            cwd=ROOT / "apps/web",
+            env=env,
+            check=True,
+        )
     database = "sqlite:///" + str(output / "regression.db")
     with services(output, env, args.api_port, args.web_port, database):
         results = (
             [exercise(api, language) for language in ("zh", "en")]
+            # Streamable HTTP through the web origin's /api proxy, as the connection card shows.
+            + [exercise_http(api, web + "/api", language) for language in ("zh", "en")]
             if args.suite == "published-flows"
             else []
         )
         (output / "mcp.json").write_text(json.dumps(results, indent=2) + "\n")
         if results:
-            print("MCP: bilingual read/return/replay/revoke passed", flush=True)
-        subprocess.run(
-            ["node", "tests/regression/" + args.suite + ".mjs"],
-            cwd=ROOT / "apps/web",
-            env=env,
-            check=True,
+            print("MCP: bilingual stdio and HTTP read/return/replay/revoke passed", flush=True)
+        # Every published flow emulates reduced motion; one more round keeps the default.
+        # The pre-submission card and the feedback page's "at submission" lines, same services.
+        rounds = (
+            [args.suite, "default-motion", "presubmit-flows"]
+            if args.suite == "published-flows"
+            else [args.suite]
         )
+        for name in rounds:
+            subprocess.run(
+                ["node", "tests/regression/" + name + ".mjs"],
+                cwd=ROOT / "apps/web",
+                env=env,
+                check=True,
+            )
 
 
 if __name__ == "__main__":

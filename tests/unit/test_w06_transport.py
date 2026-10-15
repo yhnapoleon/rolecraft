@@ -2,10 +2,12 @@
 
 import argparse, io, json, os, threading, time
 from pathlib import Path
+import httpx
 import pytest
 from career_lab.contracts import v2 as C
-from career_lab.delegations.credentials import load_credentials, redact
+from career_lab.delegations.credentials import Credentials, load_credentials, redact
 from career_lab.delegations.http_client import HttpAgentClient, RemoteFailure, safe_id
+from career_lab.delegations.http_transport import request_json
 from career_lab.delegations.public_output import validate_public_output
 from career_lab.mcp.protocol import Protocol, RpcFailure, MODERN, VERSION, CAPABILITIES
 from career_lab.mcp.stdio import serve
@@ -51,6 +53,34 @@ def test_w06_credentials_require_private_file_and_no_symlink(tmp_path):
     with pytest.raises(OSError):
         load_credentials(link)
     assert SECRET not in json.dumps(redact({"token": SECRET, "body": "quoted " + SECRET}, SECRET))
+
+
+def test_w06_client_needs_exactly_one_credential_source(tmp_path):
+    credentials = Credentials("http://127.0.0.1:8000", "sid", SECRET)
+    with pytest.raises(ValueError):
+        HttpAgentClient()
+    with pytest.raises(ValueError):
+        HttpAgentClient(tmp_path / "config", credentials=credentials)
+    client = HttpAgentClient(credentials=credentials)
+    assert client.session_id == "sid" and SECRET not in repr(client)
+
+
+def test_w06_transport_sends_the_token_only_in_the_authorization_header():
+    seen = []
+
+    def answer(request):
+        seen.append(request)
+        return httpx.Response(200, json={"schema_version": 2, "result": {"ok": True}})
+
+    credentials = Credentials("http://rolecraft-mcp.invalid", "sid", SECRET)
+    value = request_json(
+        credentials, "GET", "/work-items", query={"limit": 5}, transport=httpx.MockTransport(answer)
+    )
+    assert value == {"schema_version": 2, "result": {"ok": True}}
+    (request,) = seen
+    assert request.url.path == "/sessions/sid/work-items" and request.url.params["limit"] == "5"
+    assert request.headers["authorization"] == "Bearer " + SECRET
+    assert SECRET not in str(request.url)
 
 
 @pytest.mark.parametrize("value", ["..", ".", "a/b", "a%2fb", "a\\b", "a\nb"])

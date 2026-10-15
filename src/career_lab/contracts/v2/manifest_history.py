@@ -767,6 +767,29 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "expansion-v3-bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23"
         ),
         "integration_changes": {
+            "submission-rule-check": "Read-only submission rule check for the session's own "
+            "person (delegated agents get 403 human_required). POST /sessions/{session_id}/"
+            "submission-rule-check takes SubmissionRuleCheckRequest, shaped like the submit "
+            "command (operation submissions.rule_check, payload SubmitInput); nothing is recorded, "
+            "request_id has no idempotent result and the expected versions must equal the "
+            "checked point (else version_conflict). GET with ?submission_id= checks a saved "
+            "submission again at its own as_of. SubmissionRuleCheckResponse.result "
+            "(SubmissionRuleCheck: basis draft or saved, mode rules_only, as_of, decision, "
+            "products, config, evaluation, work_language) carries rule_items equal to the formal "
+            "FeedbackV2.rule_items of the same inputs at that point, computed by the feedback "
+            "worker's evaluation without any model, and _RuleCheckFacts: the verified numbers "
+            "behind them (participants, capacity, required and available developer-days, launch "
+            "and deadline day, unapproved excess, configuration and policy version, adjustment "
+            "actions) and actual test runs per configuration version with the retests after the "
+            "current policy update. Gateway operations, MCP tools, tables, FeedbackV2 and "
+            "scenario packages are unchanged."
+        },
+    },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23"
+        ),
+        "integration_changes": {
             "approval-decision-assessment": "Optional BusinessDecision.assessment "
             "(_ApprovalAssessment with _ApprovalTermCheck rows) records what a resource decision "
             "was judged against: every requested term with its allocation at the time, requested "

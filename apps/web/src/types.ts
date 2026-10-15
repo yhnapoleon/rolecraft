@@ -60,6 +60,10 @@ export interface EventRecord {
   actor_id: string;
   payload: Record<string, unknown>;
   created_at?: string | null;
+  /** v2: the objects the event is about (a test, a submission, a revision cycle). */
+  refs?: { session_id: string; kind: string; object_id: string; version: number }[];
+  /** v2: who carried it out (human, external_agent, reference_agent or system). */
+  executor_kind?: string;
 }
 export interface Timeline {
   events: EventRecord[];

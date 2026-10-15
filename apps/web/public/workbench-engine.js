@@ -2502,16 +2502,19 @@
           (e) => e.type === 'artifact_adopted' && e.detail && e.detail.artifactId === artifact.id,
         ) || {}
       ).createdAt;
+    // A test plan's questions run from the plan itself; each run names the plan.
     const linkedRuns =
       artifact.kind === 'investigation'
         ? investigationLinkedRunIds(a, artifact).length
-        : adoptedAt
-          ? artifact.evidence.filter(
-              (ev) =>
-                ev.type === 'test' &&
-                a.tests.some((t) => t.id === ev.id && t.createdAt >= adoptedAt),
-            ).length
-          : 0;
+        : artifact.kind === 'test_set'
+          ? (a.tests || []).filter((test) => test.workId === artifact.id).length
+          : adoptedAt
+            ? artifact.evidence.filter(
+                (ev) =>
+                  ev.type === 'test' &&
+                  a.tests.some((t) => t.id === ev.id && t.createdAt >= adoptedAt),
+              ).length
+            : 0;
     const exported = (a.exports || []).some((x) =>
       artifact.requestId
         ? x.requestId === artifact.requestId

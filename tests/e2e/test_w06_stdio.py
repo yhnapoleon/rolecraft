@@ -183,6 +183,24 @@ def test_w06_stdio_modern_legacy_errors_and_live_revocation(live):
         assert secret not in pipe.close()
 
 
+def test_w06_stdio_call_without_session_id_uses_the_configured_session(live):
+    pipe = Pipe(live["config"])
+    try:
+        listed = pipe.rpc("tools/list")["result"]["tools"]
+        schema = next(t for t in listed if t["name"] == "work_items.list")["inputSchema"]
+        assert "session_id" not in schema.get("required", [])
+        result = pipe.rpc("tools/call", {"name": "work_items.list", "arguments": {}})["result"]
+        assert result["isError"] is False, result
+        mismatch = pipe.rpc(
+            "tools/call", {"name": "work_items.list", "arguments": {"session_id": "other"}}
+        )["result"]
+        assert mismatch["isError"] and mismatch["structuredContent"]["code"] == (
+            "session_route_mismatch"
+        )
+    finally:
+        assert live["delegate"]["token"] not in pipe.close()
+
+
 def test_w06_reference_example_human_agent_human_actual_api(live):
     ref = C.ObjectRef(
         session_id=live["sid"], kind="material", object_id="public-material", version=1

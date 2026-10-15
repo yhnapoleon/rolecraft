@@ -26,7 +26,7 @@ from collections.abc import Mapping
 from contextlib import nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends, FastAPI
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -70,6 +70,8 @@ practice_intents = Table(
 )
 
 _VARIANTS = Path(__file__).resolve().parents[3] / "scenarios/pm_pilot/v2/variants"
+# The session Bearer token, optional at the transport so each route answers 401 itself.
+Credentials = Annotated[HTTPAuthorizationCredentials | None, Depends(HTTPBearer(auto_error=False))]
 
 
 ShownPractice = C.ShownPractice
@@ -91,6 +93,17 @@ def _context(store, session_id, credentials):
 def _human(auth):
     if auth.executor.kind != "human" or auth.actor_id != "learner":
         raise C.ProtocolError("human_required", "only the person can do this", status=403)
+
+
+def _rule_checks(registry, store, auth):
+    """The rule checks of this session's installed package."""
+    bindings = store.query(auth, lambda view: view.bindings)
+    checks = registry.rule_checks.get(C.canonical(bindings))
+    if checks is not None:
+        return checks
+    if bindings in getattr(registry, "active_bindings", ()):
+        raise C.ProtocolError("evaluation_runtime_unavailable", status=503)
+    raise C.ProtocolError("scenario_read_only", status=409)
 
 
 def list_delegations(store, auth):
@@ -399,6 +412,28 @@ def mount_v4_extensions(app: FastAPI) -> None:
                 "links": _links(store, session_id, ref.object_id),
             },
         }
+
+    @app.post(
+        "/sessions/{session_id}/submission-rule-check",
+        response_model=C.SubmissionRuleCheckResponse,
+    )
+    def submission_rule_check(
+        session_id: str, body: C.SubmissionRuleCheckRequest, credentials: Credentials
+    ):
+        auth = _context(store, session_id, credentials)
+        _human(auth)
+        checks = _rule_checks(gateway.registry, store, auth)
+        return {"schema_version": 2, "result": checks.draft(store, auth, body)}
+
+    @app.get(
+        "/sessions/{session_id}/submission-rule-check",
+        response_model=C.SubmissionRuleCheckResponse,
+    )
+    def saved_submission_rule_check(session_id: str, submission_id: str, credentials: Credentials):
+        auth = _context(store, session_id, credentials)
+        _human(auth)
+        checks = _rule_checks(gateway.registry, store, auth)
+        return {"schema_version": 2, "result": checks.saved(store, auth, submission_id)}
 
     @app.post("/sessions/{session_id}/practice/choices", response_model=C.PracticeChoiceResponse)
     async def choose(

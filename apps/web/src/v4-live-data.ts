@@ -4,7 +4,7 @@ import type { V4CommandResult } from './v4-host';
 import { V4DataHost } from './v4-data-host';
 import { locale, T } from './app/i18n';
 import { assistantText } from './app/assistant-mode';
-import { ApiError } from './api';
+import { ApiError, retryableRead } from './api';
 import type { WorkspaceStore } from './store';
 import type { LocalSession, LocalTestRun, Operation, Pilot, Material } from './types';
 import type { V4HostAdapter } from './v4-host';
@@ -92,135 +92,135 @@ export class V4LiveData {
         );
     });
   }
-  async sync(session: LocalSession) {
-    try {
-      const host = this.host(session);
-      await host.ensureFeedbackPointer();
-      const context = await host.query('workbench.read');
-      const s = this.current(session.id),
-        timeline = context.timeline,
-        w = timeline.workspace,
-        config = w.config;
-      const pilot: Pilot = {
-        participants: config.participants,
-        knowledge_domains: config.domains,
-        launch_day: config.launch_day,
-        update_strategy: config.update_strategy,
-        fallback: config.fallback,
-        work_items: config.work_items,
-        generator: config.generator ?? 'extractive',
-      };
-      this.configRefs.set(s.id, {
-        session_id: s.id,
-        kind: 'config',
-        object_id: config.id,
-        version: config.version,
-        config_version: config.config_version,
-      });
-      const rows: any[] = timeline.objects;
-      const materials: Material[] = context.materials.materials.map((m) => {
-        const previous = s.materials.find((p) => p.id === m.id && p.version === m.version);
-        return { id: m.id, version: m.version, title: m.title, content: previous?.content ?? '' };
-      });
-      const turns = rows
-        .filter((r) => r.ref.kind === 'role_turn')
-        .flatMap((r) => {
-          const reply = rows.find(
-            (p) => p.ref.kind === 'role_reply' && p.content.request.object_id === r.ref.object_id,
-          );
-          if (!reply) return [];
-          return [
-            {
-              trace_id: r.ref.object_id,
-              role_id: r.content.input.role_id,
-              question: r.content.input.text,
-              text:
-                (context.semantic.roles === 'waiting_model'
-                  ? T('等待模型接入\n', 'Waiting for model connection\n')
-                  : '') + reply.content.text,
-              status: reply.content.status,
-              model_revision: reply.content.model_revision ?? '',
-              as_of_seq: r.content.as_of.business_seq,
-            },
-          ];
-        });
-      const tests = rows
-        .filter((r) => r.ref.kind === 'test')
-        .map((r) => {
-          const t = r.content;
-          return {
-            id: r.ref.object_id,
-            query: t.query,
-            answer: t.answer,
-            fallback: t.status === 'fallback',
-            stale: (t.citations ?? []).some(
-              (c: any) =>
-                c.kind === 'material' && c.version < t.execution.source_versions[c.object_id],
-            ),
-            // Each answer keeps its own saved mode; the deployment state is reported separately.
-            mode: r.assistant?.mode ?? 'unknown',
-            generation: r.assistant
-              ? { provider: r.assistant.provider, model_revision: r.assistant.model_revision }
-              : null,
-            effective_config: t.config?.effective ?? null,
-            citations: (t.citations ?? []).map((c: any) => ({
-              material_id: c.object_id,
-              version: c.version,
-            })),
-            source_versions: t.execution.source_versions,
-            indexed_versions: t.execution.indexed_versions,
-            config_version: t.config_ref.config_version,
-            as_of_seq: t.as_of.business_seq,
-          };
-        });
-      this.store.update(s.id, {
-        v2MaterialTitles: w.material_titles,
-        v2EffectiveConfig: w.effective_config,
-        v2Assistant: context.semantic.assistant,
-        v2ReadOnly: context.read_only === true,
-        v2Domains: context.configuration_domains ?? s.v2Domains ?? config.domains,
-        world: {
-          session_id: s.id,
-          status:
-            context.read_only && context.state.status !== 'submitted'
-              ? 'paused'
-              : context.state.status,
-          version: context.as_of.business_seq,
-          logical_time: context.as_of.business_seq,
-          resources: w.resources,
-          configs: { pilot },
-          material_versions: w.source_versions,
-          indexed_versions: w.indexed_versions,
-          applied_rules: [],
-          pending_requests: [],
-          action_count: context.as_of.business_seq,
-          config_version: context.state.config_version,
-        },
-        materials,
-        tests,
-        timeline: {
-          mode: context.semantic.roles,
-          turns,
-          events: (timeline.events ?? []).map((e) => ({
-            seq: e.seq,
-            event_type: e.type === 'material_read' ? 'read_material' : e.type,
-            actor_id: e.executor.id,
-            payload: e.data,
-          })),
-        },
-      });
-      await Promise.all([
-        host.query('work_items.list', { limit: 100 }),
-        host.query('work_products.list', { limit: 100 }),
-      ]);
-      this.store.report({ connected: true });
-    } catch (error) {
-      this.store.report({
-        connected: false,
-        error: error instanceof Error ? error.message : 'Refresh failed',
-      });
+  sync(session: LocalSession) {
+    return this.load(session).catch((error) => {
+      this.store.report({ connected: false, error: failureText(error) });
       throw error;
-    }
+    });
+  }
+  private async load(session: LocalSession) {
+    const host = this.host(session);
+    await host.ensureFeedbackPointer();
+    const context = await host.query('workbench.read');
+    const s = this.current(session.id),
+      timeline = context.timeline,
+      w = timeline.workspace,
+      config = w.config;
+    const pilot: Pilot = {
+      participants: config.participants,
+      knowledge_domains: config.domains,
+      launch_day: config.launch_day,
+      update_strategy: config.update_strategy,
+      fallback: config.fallback,
+      work_items: config.work_items,
+      generator: config.generator ?? 'extractive',
+    };
+    this.configRefs.set(s.id, {
+      session_id: s.id,
+      kind: 'config',
+      object_id: config.id,
+      version: config.version,
+      config_version: config.config_version,
+    });
+    const rows: any[] = timeline.objects;
+    const materials: Material[] = context.materials.materials.map((m) => {
+      const previous = s.materials.find((p) => p.id === m.id && p.version === m.version);
+      return { id: m.id, version: m.version, title: m.title, content: previous?.content ?? '' };
+    });
+    const turns = rows
+      .filter((r) => r.ref.kind === 'role_turn')
+      .flatMap((r) => {
+        const reply = rows.find(
+          (p) => p.ref.kind === 'role_reply' && p.content.request.object_id === r.ref.object_id,
+        );
+        if (!reply) return [];
+        return [
+          {
+            trace_id: r.ref.object_id,
+            role_id: r.content.input.role_id,
+            question: r.content.input.text,
+            text:
+              (context.semantic.roles === 'waiting_model'
+                ? T('等待模型接入\n', 'Waiting for model connection\n')
+                : '') + reply.content.text,
+            status: reply.content.status,
+            model_revision: reply.content.model_revision ?? '',
+            as_of_seq: r.content.as_of.business_seq,
+          },
+        ];
+      });
+    const tests = rows
+      .filter((r) => r.ref.kind === 'test')
+      .map((r) => {
+        const t = r.content;
+        return {
+          id: r.ref.object_id,
+          query: t.query,
+          answer: t.answer,
+          fallback: t.status === 'fallback',
+          stale: (t.citations ?? []).some(
+            (c: any) =>
+              c.kind === 'material' && c.version < t.execution.source_versions[c.object_id],
+          ),
+          // Each answer keeps its own saved mode; the deployment state is reported separately.
+          mode: r.assistant?.mode ?? 'unknown',
+          generation: r.assistant
+            ? { provider: r.assistant.provider, model_revision: r.assistant.model_revision }
+            : null,
+          effective_config: t.config?.effective ?? null,
+          citations: (t.citations ?? []).map((c: any) => ({
+            material_id: c.object_id,
+            version: c.version,
+          })),
+          source_versions: t.execution.source_versions,
+          indexed_versions: t.execution.indexed_versions,
+          config_version: t.config_ref.config_version,
+          as_of_seq: t.as_of.business_seq,
+        };
+      });
+    this.store.update(s.id, {
+      v2MaterialTitles: w.material_titles,
+      v2EffectiveConfig: w.effective_config,
+      v2Assistant: context.semantic.assistant,
+      v2ReadOnly: context.read_only === true,
+      v2Domains: context.configuration_domains ?? s.v2Domains ?? config.domains,
+      world: {
+        session_id: s.id,
+        status:
+          context.read_only && context.state.status !== 'submitted'
+            ? 'paused'
+            : context.state.status,
+        version: context.as_of.business_seq,
+        logical_time: context.as_of.business_seq,
+        resources: w.resources,
+        configs: { pilot },
+        material_versions: w.source_versions,
+        indexed_versions: w.indexed_versions,
+        applied_rules: [],
+        pending_requests: [],
+        action_count: context.as_of.business_seq,
+        config_version: context.state.config_version,
+      },
+      materials,
+      tests,
+      timeline: {
+        mode: context.semantic.roles,
+        turns,
+        events: (timeline.events ?? []).map((e) => ({
+          seq: e.seq,
+          event_type: e.type === 'material_read' ? 'read_material' : e.type,
+          actor_id: e.executor.id,
+          executor_kind: e.executor.kind,
+          refs: e.refs ?? [],
+          payload: e.data ?? {},
+        })),
+      },
+    });
+    await Promise.all([
+      host.query('work_items.list', { limit: 100 }),
+      host.query('work_products.list', { limit: 100 }),
+    ]);
+    this.store.report({ connected: true });
   }
   async write(
     session: LocalSession,
@@ -364,7 +364,21 @@ export class V4LiveData {
     const { [requestId]: _settled, ...rest } = this.current(id).queuedTestRuns ?? {};
     this.store.update(id, { queuedTestRuns: rest });
   }
+  /** Background refresh; never rejects. A dropped or unverifiable read waits for the next poll,
+   * and only a definite refusal is shown as an error. */
   async poll(session: LocalSession) {
+    try {
+      await this.recoverPending(session);
+      await this.load(this.current(session.id));
+    } catch (error) {
+      this.store.report(
+        retryableRead(error)
+          ? { connected: false }
+          : { connected: false, error: failureText(error) },
+      );
+    }
+  }
+  private async recoverPending(session: LocalSession) {
     const host = this.host(session);
     // Recovery remains GET-only; a failed model job is never restarted here.
     const queued = Object.keys(this.current(session.id).queuedTestRuns ?? {});
@@ -377,6 +391,11 @@ export class V4LiveData {
         .recover(requestId)
         .then((recovered) => this.settleQueued(session.id, requestId, recovered))
         .catch((error) => {
+          // A dropped read is asked again by the next poll; the run keeps waiting.
+          if (retryableRead(error)) {
+            this.store.report({ connected: false });
+            return;
+          }
           this.store.report({ error: error.message });
           // A queued run whose original request is no longer readable stops waiting.
           if (queued.includes(requestId))
@@ -386,6 +405,6 @@ export class V4LiveData {
               result: null,
             });
         });
-    await this.sync(this.current(session.id));
   }
 }
+const failureText = (error: unknown) => (error instanceof Error ? error.message : 'Refresh failed');
