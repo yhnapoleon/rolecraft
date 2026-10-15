@@ -856,25 +856,35 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
         ),
         "integration_changes": {
             "business-record-sentences": "Newly written feedback states the recorded business "
-            "decisions (FeedbackV2.business_response, also the rule context the evaluator and the "
-            "Judge slot read) as the unchanged heading on a line of its own, then one sentence "
-            "per request in the order the requests were made (the storage revision of each "
-            "request's first version), each with its latest decision: the request panel's "
-            "resource name, the amount asked and the decision with any granted or countered "
-            "amount. Several terms of one request join in one sentence and a deadline reads as a "
-            "day; Chinese keeps full-width punctuation and nothing is joined with semicolons. "
-            "The words come from evidence/v2/localization.py through api/business_record.py. "
-            "The field, its type and its refs are unchanged; stored feedback keeps the text it "
-            "was written with and nothing is re-evaluated.",
+            "decisions (FeedbackV2.business_response and the business response in the "
+            "evaluator's rule context) as the unchanged heading on a line of its own, then one "
+            "sentence per request in the order the requests were made (the storage revision of "
+            "each request's first version), each with its latest decision: the request panel's "
+            "resource name and the amount asked; approved, accepted or countered amounts stay "
+            "with each term, a counteroffer's awaiting acceptance and a decision without amounts "
+            "are said once after all terms, and a request without readable terms still has a "
+            "line, so every decision reference has one. Chinese keeps full-width punctuation; "
+            "English separates terms with semicolons and has no trailing space after the "
+            "heading. Model input is unchanged, since assembler.model_input never sends the rule "
+            "context; what changes is each evidence package's input_hash and the order in which "
+            "decision references enter its candidate evidence, so which of them a package over "
+            "its byte budget leaves out may change. The references are the same as a set. The "
+            "field and its type are unchanged; stored feedback keeps the text it was written "
+            "with and nothing is re-evaluated.",
             "approval-card-way-out": "The learner's approval card reads only a decision's "
-            "recorded _ApprovalAssessment: when a declined request records need_over_limit, "
-            "missing work items or a required hand-off, no request can pass as assessed, so "
-            "instead of a request capped at the ceiling the card says what to change and opens "
-            "the pilot settings. The assessment and the decision bytes are unchanged.",
+            "recorded _ApprovalAssessment. A declined request that records missing work items or "
+            "a required hand-off cannot pass as the plan stands, nor can one that includes a "
+            "term recording need_over_limit; instead of a request capped at the ceiling the card "
+            "says what to change and opens the pilot settings, and drops that advice once a "
+            "later approval has raised an allocation past what the decision recorded. A capped "
+            "request fills a term recorded insufficient without need_over_limit with its need. "
+            "The assessment and the decision bytes are unchanged.",
             "business-record-fingerprint": "api/business_record.py, which now holds the order "
-            "and wording of the recorded business decisions that evaluation_runtime.py writes, "
-            "joins the contract's source fingerprints, so changing that text still changes the "
-            "contract revision as it did inside evaluation_runtime.py.",
+            "and composition of the recorded business decisions that evaluation_runtime.py "
+            "writes, joins the contract's source fingerprints, so changing them still changes the "
+            "contract revision as it did inside evaluation_runtime.py. Their words come from "
+            "evidence/v2/localization.py, the shared copy table, which stays outside the "
+            "fingerprints: wording is not contract structure.",
         },
     },
 )
