@@ -1,6 +1,7 @@
 /**
  * One recorded approval decision as a card: the published rule sentence it applied, each
- * requested term's numbers and, for an over-ceiling rejection, a capped re-application.
+ * requested term's numbers and, for an over-ceiling rejection, a capped re-application, or the
+ * pilot settings when the plan itself needs more than a ceiling.
  * Everything shown comes from the decision's recorded assessment; nothing is re-judged here.
  */
 import { T } from '../../app/i18n';
@@ -29,6 +30,10 @@ export interface DecisionCardModel {
   lines: CardLine[];
   /** Totals for "re-apply at the ceiling", or null when that would not help. */
   ceiling: Record<string, number> | null;
+  /** A declined plan that needs more than a ceiling: what to change first, one sentence per such
+   * term. No request can pass until the plan changes, so the card offers the settings instead of
+   * a capped re-application. Empty otherwise. */
+  replan: string[];
 }
 type Issue = NonNullable<_ApprovalTermCheck['issues']>[number];
 
@@ -88,6 +93,26 @@ function needPart(t: _ApprovalTermCheck, has: (i: Issue) => boolean) {
         `${subject} (${gap} days past the current deadline)`,
       )
     : T(`${subject}（缺口 ${gap}）`, `${subject} (shortfall ${gap})`);
+}
+
+/** The plan's own need is over the ceiling: what to change in the settings before asking again. */
+function replanNote(t: _ApprovalTermCheck) {
+  const n = t.needed;
+  const l = t.limit;
+  if (t.resource === DAY)
+    return T(
+      `计划第 ${n} 天上线，上限第 ${l} 天：先把上线日提前到第 ${l} 天以内再申请`,
+      `The plan launches on day ${n}, past the ceiling of day ${l}: move the launch to day ${l} or earlier before requesting`,
+    );
+  if (t.resource === 'capacity')
+    return T(
+      `试点 ${n} 人，上限 ${l}：先把试点人数降到 ${l} 以内再申请`,
+      `The pilot has ${n} users, over the ceiling of ${l}: bring it down to ${l} or fewer before requesting`,
+    );
+  return T(
+    `方案需要 ${n}，上限 ${l}：先把方案降到 ${l} 以内再申请`,
+    `The plan needs ${n}, over the ceiling of ${l}: bring it down to ${l} or less before requesting`,
+  );
 }
 
 function termLine(t: _ApprovalTermCheck): CardLine {
@@ -174,7 +199,18 @@ export function decisionCardModel(
         ]
       : [],
   );
-  return { clauses, lines, ceiling: ceilingTerms(decision, current) };
+  // A plan that needs more than a ceiling cannot pass at any amount, so asking at the
+  // ceiling would only be declined again (164 N1).
+  const replan =
+    decision.status === 'rejected'
+      ? (assessment?.terms ?? []).filter((t) => t.issues?.includes('need_over_limit'))
+      : [];
+  return {
+    clauses,
+    lines,
+    ceiling: replan.length ? null : ceilingTerms(decision, current),
+    replan: replan.map(replanNote),
+  };
 }
 
 export interface CardActions {
@@ -182,13 +218,13 @@ export interface CardActions {
   refill(terms: Readonly<Record<string, number>>): void;
 }
 
-function button(doc: Document, text: string, onClick: () => void, label?: string) {
+function button(doc: Document, text: string, onClick?: () => void, label?: string) {
   const b = doc.createElement('button');
   b.type = 'button';
   b.className = 'btn small quiet';
   b.textContent = text;
   if (label) b.setAttribute('aria-label', label);
-  b.addEventListener('click', onClick);
+  if (onClick) b.addEventListener('click', onClick);
   return b;
 }
 
@@ -205,7 +241,8 @@ function quote(doc: Document, clause: CardClause, actions: CardActions) {
   return [text, open];
 }
 
-/** The card's DOM. Buttons only open the source or fill the request form; nothing is sent. */
+/** The card's DOM. Buttons only open the source, fill the request form or open the pilot
+ * settings; nothing is sent. */
 export function renderDecisionCard(
   doc: Document,
   model: DecisionCardModel,
@@ -247,6 +284,19 @@ export function renderDecisionCard(
     card.append(
       button(doc, T('按上限改申请', 'Re-apply at the ceiling'), () => actions.refill(ceiling)),
     );
+  if (model.replan.length) {
+    for (const note of model.replan) {
+      const text = doc.createElement('p');
+      text.className = 'rc-decision__replan';
+      text.textContent = note;
+      card.append(text);
+    }
+    // The workbench's own "config" action opens the pilot settings, as the pre-submission
+    // card's "adjust settings" does.
+    const settings = button(doc, T('调整设置', 'Adjust settings'));
+    settings.dataset.action = 'config';
+    card.append(settings);
+  }
   if (more.length) {
     const details = doc.createElement('details');
     const summary = doc.createElement('summary');

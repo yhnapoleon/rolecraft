@@ -381,6 +381,13 @@
 .rc-decision__lines .bad .rc-decision__mark {
   color: var(--bad, #c0392b);
 }
+/* The plan needs more than a ceiling: what to change first, above "adjust settings". */
+.rc-decision__replan {
+  margin: 0 0 4px;
+  color: var(--ink-2, #4b505b);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
 .rc-decision details {
   margin-top: 6px;
   color: var(--ink-2, #4b505b);
