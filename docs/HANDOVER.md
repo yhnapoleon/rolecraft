@@ -85,6 +85,17 @@ for key, value in phase.environment(out / "journal").items():
 
 然后在 API 与 worker 两个终端都先 `. runs/local/demo-model.env`，再按上面的[启动工作台](#启动工作台)起服务；worker 启动时 stderr 打印四个槽。新建练习、写一份含「有据可查」或「豁免」的作品并提交，反馈页就有逐句建议、证据按钮与「合成机制演示」。把 `"linear"` 换成 `"fusion"` 得到线性×线性融合（alpha 0.75）。这只演示接收与显示的机制，标签不是模型判断。
 
+## 找回练习（继续码）
+
+没有账号体系时，换浏览器、换设备或清了缓存的人用继续码回到原练习：在练习右上角「⋯ → 继续码…」生成，在另一台设备的「AI 产品经理」页「用继续码找回练习」输入（首页「有继续码？」直达）。服务端为这台浏览器另签一份本人凭据，作品、测试、对话和反馈从服务端读回。
+
+- **依赖凭据密钥**：校验值用 `CAREER_LAB_CREDENTIAL_KEY` 计算，库里只有校验值。缺密钥时生成与找回都返回 503；更换密钥后所有继续码失效，需在还能打开练习的浏览器里换新码。
+- **安全约定**：码为 20 位 Crockford Base32（100 位熵），只在生成时显示一次，不进地址、日志和浏览器存储。找回每个来源 15 分钟内最多 10 次（成功也计）；来源是直连的对端，`career-lab serve` 不信任 `X-Forwarded-For` 等转发头。经本机 Vite 代理时所有请求共用一个计数，所以本机反复验证要隔 15 分钟或换新库。放到反向代理后对外部署时，须另外配置只信任该代理的转发头，否则所有人共用代理那一个计数。
+- **换码只作废码**：已经打开过的浏览器和它们排队中的任务照常（任务按排队时的凭据执行，收回会让它们失败且无法重试）。"让其他设备退出"本波未做，对外部署前需补。
+- **存储**：`v4_continue_codes` 与 `v4_continue_code_attempts` 两张独立表，不改 v2 冻结表。路由、DTO 与错误码见契约 `module-interfaces.md`「继续码找回练习」。
+- **找不回的**：只存在原浏览器里的未保存草稿、待确认请求记录、测试的事项归属与预期和诊断笔记、Agent 授权显示名、补练来源说明。界面在找回后用一句话提示。
+- **测试**：`tests/regression/test_continue_codes.py`、`tests/unit/test_continue_codes.py`、`apps/web/src/features/practice-recovery/*.test.ts`；浏览器门禁在 published-flows 之后多跑一轮 `apps/web/tests/regression/practice-recovery.mjs`（中文减少动效、英文默认动效，每轮用 4 次找回）。
+
 ## 检查与门禁
 
 | 层 | 什么时候 | 命令 |
@@ -105,7 +116,7 @@ CHROME_BIN=<chrome-headless-shell> uv run --locked python -m scripts.regression.
 
 - `run` 依次跑 lint、后端全部测试（junit）、前端 Vitest、72 项状态回归、构建、逐 ID 比较（含发布字节保护），`--browser` 再跑 MCP 双语（stdio 与 Streamable HTTP）与中英 published-flows（固定用缺省端口 19660／19662）。published-flows 全程模拟「减少动效」，之后同一套服务再跑一轮默认动效的 `default-motion`（中英：打开委托、返回、打开资料、返回、再打开另一份资料，每步限时求值并核对标题），结果在输出目录的 `default-motion.json`。单独调用 `scripts.regression.browser` 时可用 `--web-port`／`--api-port` 换端口。机器设了系统 HTTP 代理时，先设 `NO_PROXY=127.0.0.1,localhost`，否则就绪检查会把回环请求交给代理。
 - model-flows 默认三段：`linear`、`fusion`、`slots`（回环 JUDGE 与 ASSISTANT 槽）。可选段需 encoder 环境：`UV_PROJECT_ENVIRONMENT=<encoder 环境> uv run --locked --extra encoder python -m scripts.regression.browser --suite model-flows --phases encoder hetero --output <新目录>`；`xlmr` 段另需 `ROLECRAFT_XLMR_DIR` 指向本机下载的 XLM-R base（权重放仓库与云盘之外，登记只能是合成机制）。
-- published-flows 套件在启动服务前先跑交付前预演卡的真实 DOM 组件检查（`apps/web/src/features/feedback-native/presubmit.vitest.config.ts`：受控页，自起开发服务，任选空闲端口），在 published-flows 之后用同一套服务再跑一轮 `presubmit-flows`（中英，减少动效：新练习直接交付后，反馈页只在规则已定论的未满足项下出"交付时"行；预演卡的位置、计数、措辞、直达、F17 版本措辞、重开记忆，以及与正式反馈一致），结果与截图在输出目录的 `presubmit-flows/`。
+- published-flows 套件在启动服务前先跑交付前预演卡的真实 DOM 组件检查（`apps/web/src/features/feedback-native/presubmit.vitest.config.ts`：受控页，自起开发服务，任选空闲端口），在 published-flows 之后用同一套服务再跑一轮 `presubmit-flows`（中英，减少动效：新练习直接交付后，反馈页只在规则已定论的未满足项下出"交付时"行；预演卡的位置、计数、措辞、直达、F17 版本措辞、重开记忆，以及与正式反馈一致），结果与截图在输出目录的 `presubmit-flows/`。最后再跑一轮 `practice-recovery`（中文减少动效、英文默认动效，不点资料卡）：⋯ 生成继续码，另一浏览器档案先遇错码提示再找回同一工作板、不把带来的回复当新消息，换码后旧码被拒，原浏览器输入自己的码只切换过去；结果在输出目录的 `practice-recovery.json` 与 `practice-recovery/`。
 - 可选 encoder 检查：`HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 <encoder 环境>/bin/python -m pytest -q tests/optional_encoder/check_encoder_v3.py tests/optional_encoder/check_local_encoder.py tests/optional_encoder/check_fusion_registration.py tests/optional_encoder/check_return_v3_plugin.py tests/optional_encoder/check_xlmr_smoke.py`（最后一个需要 `ROLECRAFT_XLMR_DIR` 指向下载的 XLM-R 目录，共 34 项；`check_return_v3_plugin.py` 的 11 项按负责方的用法跑 v3 补充包的编码器参考脚本：`predict` 行经 `verify-return` 重载一致、弃权与我方加载器相同、`seal` 的 `artifact_roles` 过 validate-handoff、序列分类模型的保存配方）；XLM-R 冒烟为 `<encoder 环境>/bin/python -m scripts.smoke.xlmr_base --model-dir <目录> --revision <40 位> --out <新目录>`。这些只证明加载与机制，不是质量证据。
 - **锁**：门禁对 CPU 负载与端口敏感。本机约定先对机器上登记的同一个锁文件取 `fcntl.flock` 独占锁再跑（macOS 没有 `flock` 命令），例如 `python3 -c 'import fcntl, subprocess, sys; f = open(sys.argv[1], "a"); fcntl.flock(f, fcntl.LOCK_EX); sys.exit(subprocess.call(sys.argv[2:]))' "$GATE_LOCK" sh -c '<上面三行>'`。排队时不另起第二套。
 - **基线**：`tests/regression/test-baseline.json` 是逐 ID 基线，只追加、不删改；新测试 ID 在全部合入后由收口线一次追加，并在提交说明里列来源与数量。平台差异只写进 `test-baseline-overrides.json`，每条带原因。

@@ -824,4 +824,30 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "and other kinds are unchanged. Request models, routes and operations are unchanged."
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-f37be389db62eff0acda5828c09258b11d08f58dc646832e90e49c123a164220"
+        ),
+        "integration_changes": {
+            "practice-continue-codes": "GET and POST /sessions/{session_id}/continue-code "
+            "(ContinueCodeStatusResponse; ContinueCodeIssueInput -> ContinueCodeIssueResponse): "
+            "the practice's own person, with delegate capability, creates or replaces its one "
+            "continue code, 20 Crockford Base32 symbols (100 bits) in five groups of four, shown "
+            "only in that response with Cache-Control: no-store. The server keeps a verifier "
+            "keyed with the deployment credential key, never the code, in separate "
+            "v4_continue_codes and v4_continue_code_attempts tables; frozen v2 tables are "
+            "unchanged. A replacement names the generation it replaces (continue_code_changed "
+            "otherwise) and stops the old code at once. POST /continue-codes/exchange "
+            "(ContinueCodeExchangeInput -> ContinueCodeExchangeResponse) takes a code without a "
+            "bearer, ten tries per source in fifteen minutes (continue_code_rate_limited, 429, "
+            "with retry_after_seconds), and issues a new owner credential derived with purpose "
+            "continue-code: the same code and request_id return the same token. Malformed, "
+            "unknown or replaced codes and practices this deployment cannot show are refused "
+            "(continue_code_malformed, continue_code_invalid, continue_code_scenario_unavailable) "
+            "before any credential is issued. Existing tokens, queued work and agent grants are "
+            "unchanged; a follow-up practice reopened by code still replays its original choice. "
+            "errors.json http_policy lists 429. career-lab serve no longer trusts forwarded "
+            "headers, so the counted source is the connecting peer."
+        },
+    },
 )

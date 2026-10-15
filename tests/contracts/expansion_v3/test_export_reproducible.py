@@ -29,6 +29,7 @@ DOCUMENTS = ("compatibility.md", "module-interfaces.md", "consumer-request-resol
 IMPLEMENTATION_INPUTS = (
     "src/career_lab/api/app.py",
     "src/career_lab/api/v4_extensions.py",
+    "src/career_lab/api/continue_codes.py",
     "src/career_lab/cli.py",
     "src/career_lab/api/vertical_runtime.py",
     "src/career_lab/api/vertical_reads.py",

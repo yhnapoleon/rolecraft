@@ -1,5 +1,5 @@
 import { createGatewayTransport } from './gateway-transport';
-import { request, retryableRead, sessionPath, type Transport } from './api';
+import { ApiError, request, retryableRead, sessionPath, type Transport } from './api';
 import { T, locale } from './app/i18n';
 import { V4LiveData } from './v4-live-data';
 import { V4Mounts } from './v4-mounts';
@@ -15,7 +15,12 @@ import { evidenceKey } from './evidence-picker';
 import { chooseWorkEvidence, evidenceChips, type EvidenceChip } from './native-evidence';
 import { workspaceActionMessage } from './features/workspace/native-v4/messages';
 import { canonicalPurpose } from './features/workspace/native-v4/form-values';
-import { blankPilot, WorkspaceStore } from './store';
+import { blankPilot, v2Scenario, WorkspaceStore } from './store';
+import {
+  exchangeContinueCode,
+  readContinueCode,
+  replaceContinueCode,
+} from './features/practice-recovery/client';
 import { quotedAnswer } from './app/assistant-mode';
 import { returnPlacement, unmatchedReturnText } from './app/agent-return';
 import type {
@@ -855,6 +860,53 @@ export class LiveWorkbench {
       },
     );
     return { result, attempt };
+  }
+  /**
+   * A practice from another browser, opened with its continue code. The server issues this browser
+   * its own access and nothing in the practice changes; the attempt is read from the server.
+   * `held` says this browser already had the practice, which is then only switched to.
+   */
+  async recover(code: string, requestId: string) {
+    if (this.store.getSnapshot().storageError)
+      throw new ApiError('Browser storage is unavailable', 0, 'storage_unavailable');
+    const opened = await exchangeContinueCode(this.transport, code, requestId);
+    const scenario = Object.values(scenarios).find((s) => v2Scenario(s) === opened.scenario);
+    if (!scenario)
+      throw new ApiError('Situation unavailable here', 409, 'continue_code_scenario_unavailable');
+    const held = this.store
+      .getSnapshot()
+      .workspace.sessions.some((s) => s.id === opened.session.session_id);
+    const session = this.store.adopt(opened.session, scenario) && this.store.active();
+    if (!session) throw new ApiError(this.store.getSnapshot().error, 0, 'storage_unavailable');
+    const a = this.ensureAttempt(session);
+    this.state.activeId = session.id;
+    try {
+      await this.store.sync(session.id);
+    } catch {
+      // Registered and listed; its records are read again when it is opened.
+      throw new ApiError('Opened, not read yet', 0, 'recovered_unreadable');
+    }
+    this.project(a, this.session(a) ?? session);
+    return { attempt: a, held };
+  }
+  /** Whether this practice has a continue code; the code itself is never readable again. */
+  continueCode(a: Attempt) {
+    return readContinueCode(this.transport, this.held(a));
+  }
+  /** Creates or replaces the practice's continue code, returned this once only. */
+  replaceContinueCode(a: Attempt, expectedGeneration: number) {
+    return replaceContinueCode(this.transport, this.held(a), expectedGeneration);
+  }
+  private held(a: Attempt) {
+    const s = this.session(a);
+    if (!s)
+      throw new Error(
+        T(
+          '找不到会话凭据，请保留原浏览器存档。',
+          'Session credentials are missing. Keep the original browser data.',
+        ),
+      );
+    return s;
   }
   select(a: Attempt) {
     if (!this.session(a))

@@ -263,6 +263,14 @@ for consumer in ("W06", "W14"):
         "PracticeSession",
         "PracticeChoiceResult",
         "PracticeChoiceResponse",
+        "ContinueCodeStatus",
+        "ContinueCodeStatusResponse",
+        "ContinueCodeIssueInput",
+        "ContinueCodeIssued",
+        "ContinueCodeIssueResponse",
+        "ContinueCodeExchangeInput",
+        "ContinueCodeExchangeResult",
+        "ContinueCodeExchangeResponse",
     ]
 
 for consumer in ("W05", "W14"):
@@ -443,6 +451,7 @@ def _implementation_files(root: Path) -> list[Path]:
         for p in [
             "src/career_lab/api/app.py",
             "src/career_lab/api/v4_extensions.py",
+            "src/career_lab/api/continue_codes.py",
             "src/career_lab/cli.py",
             "src/career_lab/api/vertical_runtime.py",
             "src/career_lab/api/vertical_reads.py",
@@ -578,6 +587,7 @@ def export(root: Path, output: Path) -> dict[str, int | str]:
                 "404": "not found or unauthorized object",
                 "409": "version/hash/identity conflict",
                 "422": "invalid request/business precondition",
+                "429": "too many tries; retry after the given seconds",
                 "503": "uninstalled/unavailable module or invalid server result",
             },
         },

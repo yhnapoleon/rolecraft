@@ -1,0 +1,30 @@
+/* Continue codes: the code shown once in its dialog, and the field on the job page. */
+.continue-code {
+  margin: 6px 0;
+  padding: 14px 12px;
+  border-radius: var(--r-md);
+  background: var(--fill);
+  color: var(--ink);
+  font: 600 19px / 1.3 var(--mono);
+  letter-spacing: 0.04em;
+  text-align: center;
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+.continue-code-input {
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.continue-code-input::placeholder {
+  letter-spacing: 0.04em;
+}
+.continue-link {
+  margin-top: 10px;
+}
+@media (max-width: 480px) {
+  .continue-code {
+    font-size: 16px;
+    letter-spacing: 0.02em;
+  }
+}

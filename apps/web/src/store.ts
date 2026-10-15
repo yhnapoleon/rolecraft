@@ -1,5 +1,6 @@
 import { ApiError, request, sessionPath, type Transport } from './api';
 import { T } from './app/i18n';
+import type { PracticeSession } from './contracts-v2';
 import type {
   Artifact,
   Deliverable,
@@ -179,68 +180,26 @@ export class WorkspaceStore {
             workLanguage
               ? {
                   schema_version: 2,
-                  scenario: scenario === 'pm_pilot' ? 'pm_pilot_v2' : scenario + '_v2',
+                  scenario: v2Scenario(scenario),
                   work_language: workLanguage,
                 }
               : { scenario },
           );
-      if (
-        workLanguage &&
-        (result.schema_version !== 2 ||
-          result.binding?.protocol !== 2 ||
-          result.binding?.sessionId !== result.session_id ||
-          result.binding?.workLanguage !== workLanguage ||
-          typeof result.binding?.scenarioHash !== 'string')
-      )
+      if (workLanguage && !confirmedBinding(result, workLanguage))
         throw new ApiError('Session binding is unconfirmed', 0, 'response_unconfirmed');
       // A retried confirmed creation (same request) may return a session this browser already holds.
       if (this.state.workspace.sessions.some((s) => s.id === result.session_id)) {
         this.select(result.session_id);
         return result.session_id as string;
       }
-      const world = workLanguage
-        ? {
-            session_id: result.session_id,
-            version: result.state.business_seq,
-            logical_time: 0,
-            resources: {},
-            configs: {},
-            material_versions: {},
-            indexed_versions: {},
-            applied_rules: [],
-            pending_requests: [],
-            action_count: 0,
-            config_version: result.state.config_version,
-            status: result.state.status,
-          }
-        : result.state;
-      const session: LocalSession = {
-        id: result.session_id,
-        token: result.token,
+      const session = newSession(
+        result.session_id,
+        result.token,
         scenario,
-        world,
-        ...(workLanguage ? { protocol: 2, v2Binding: result.binding } : {}),
-        created: new Date().toISOString(),
-        materials: [],
-        timeline: { events: [], turns: [], mode: '' },
-        draft: emptyDraft(),
-        tests: [],
-        questions: {},
-        testNotes: {},
-        inputs: {
-          question: '',
-          expected: '',
-          messages: {},
-          capacityReason: '',
-          resourceReason: '',
-        },
-      };
-      this.state.workspace = {
-        schema: 1,
-        active: session.id,
-        sessions: [...this.state.workspace.sessions, session],
-      };
-      this.persist();
+        workLanguage ? v2World(result) : result.state,
+        workLanguage ? { protocol: 2, v2Binding: result.binding } : {},
+      );
+      this.add(session);
       await this.sync(session.id);
       return session.id;
     } catch (e) {
@@ -254,6 +213,42 @@ export class WorkspaceStore {
     } finally {
       this.emit({ busy: false });
     }
+  }
+  /**
+   * A practice another browser started, opened here with its continue code. It joins this browser's
+   * list already native, and its records are then read from the server. A copy this browser already
+   * holds takes the new access instead of a second entry.
+   */
+  adopt(opened: PracticeSession, scenario: Scenario) {
+    const language = opened.binding?.workLanguage;
+    if ((language !== 'zh' && language !== 'en') || !confirmedBinding(opened, language))
+      throw new ApiError('Session binding is unconfirmed', 0, 'response_unconfirmed');
+    if (this.state.workspace.sessions.some((s) => s.id === opened.session_id)) {
+      if (!this.update(opened.session_id, { token: opened.token })) return undefined;
+      this.select(opened.session_id);
+      return opened.session_id;
+    }
+    const session = newSession(opened.session_id, opened.token, scenario, v2World(opened), {
+      protocol: 2,
+      v2Binding: {
+        protocol: 2,
+        sessionId: opened.session_id,
+        workLanguage: language,
+        scenarioHash: String(opened.binding.scenarioHash),
+      },
+      v2NativeWorkspace: true,
+      v2Workspace: { tasks: [], products: [] },
+      recovered: new Date().toISOString(),
+    });
+    return this.add(session) ? session.id : undefined;
+  }
+  private add(session: LocalSession) {
+    this.state.workspace = {
+      schema: 1,
+      active: session.id,
+      sessions: [...this.state.workspace.sessions, session],
+    };
+    return this.persist();
   }
   async sync(id = this.state.workspace.active) {
     const s = this.state.workspace.sessions.find((s) => s.id === id);
@@ -912,6 +907,65 @@ export function serverText(detail: string, code?: string, details?: Record<strin
   if (/unknown scenario/.test(d))
     return T('服务器不认识这个情境。', 'The server does not know this situation.');
   return d;
+}
+
+/** The server's name for a scenario's v2 package. */
+export const v2Scenario = (scenario: Scenario) => `${scenario}_v2`;
+/** A confirmed v2 session names itself, its fixed work language and its scenario package. */
+function confirmedBinding(result: PracticeSession, workLanguage: 'zh' | 'en') {
+  return (
+    result.schema_version === 2 &&
+    result.binding?.protocol === 2 &&
+    result.binding?.sessionId === result.session_id &&
+    result.binding?.workLanguage === workLanguage &&
+    typeof result.binding?.scenarioHash === 'string'
+  );
+}
+/** Until the first read, a v2 session's world is its public state. */
+function v2World(result: PracticeSession): World {
+  return {
+    session_id: result.session_id,
+    version: result.state.business_seq,
+    logical_time: 0,
+    resources: {},
+    configs: {},
+    material_versions: {},
+    indexed_versions: {},
+    applied_rules: [],
+    pending_requests: [],
+    action_count: 0,
+    config_version: result.state.config_version,
+    status: result.state.status,
+  };
+}
+function newSession(
+  id: string,
+  token: string,
+  scenario: Scenario,
+  world: World,
+  extra: Partial<LocalSession>,
+): LocalSession {
+  return {
+    id,
+    token,
+    scenario,
+    world,
+    ...extra,
+    created: new Date().toISOString(),
+    materials: [],
+    timeline: { events: [], turns: [], mode: '' },
+    draft: emptyDraft(),
+    tests: [],
+    questions: {},
+    testNotes: {},
+    inputs: {
+      question: '',
+      expected: '',
+      messages: {},
+      capacityReason: '',
+      resourceReason: '',
+    },
+  };
 }
 
 function validSession(s: any): s is LocalSession {

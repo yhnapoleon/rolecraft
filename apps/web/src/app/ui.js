@@ -89,6 +89,7 @@ import './agent-connection.css';
 import { installV4References } from '../v4-references';
 import { practiceCardLine, practiceCards, practiceSharedLine } from './practice-cards';
 import { nativeCiteAction } from './native-cite';
+import { createPracticeRecovery } from '../features/practice-recovery/view';
 import { criterionLabels } from '../features/feedback-native/index';
 import {
   isSealedPracticeError,
@@ -276,6 +277,27 @@ const unread = (a, role) => {
 };
 const btn = (label, action, cls = '', attrs = '') =>
   `<button type="button" class="btn ${cls}" data-action="${action}" ${attrs}>${label}</button>`;
+// Continue codes: the ⋯ dialog of a practice and the entry on the job page. Codes are never stored.
+const recovery = createPracticeRecovery({
+  live: L,
+  button: btn,
+  icon,
+  openSheet,
+  onSheetClose: (done) => sheet.addEventListener('close', () => done(sheet), { once: true }),
+  notify,
+  render,
+  // A practice this browser already had keeps its reading state and selection; it is switched to.
+  enter: (a, held) =>
+    enterWork(() => {
+      if (!held) return freshAttemptUi(a);
+      resetAttemptUi();
+      persist();
+    }),
+  showEntry: (focus) => {
+    go('pm');
+    document.getElementById(focus)?.focus();
+  },
+});
 const answerText = (s) => String(s || '').replace(/^#{1,6}\s+/, '');
 // Agent paste drafts belong to one practice; switching practice never carries them over.
 const importDraft = (a) => (a && ui.importDrafts[a.id]) || '';
@@ -797,6 +819,7 @@ function renderCareers() {
       <header class="hero">
         <h1 class="display">${T('你想先练哪份工作？', 'Which job do you want to practise?')}</h1>
         <p class="lede">${T('接手一件真实的工作。可以犯错，可以求助，也可以重来。', 'Take on a real piece of work. Get it wrong, ask for help, try again.')}</p>
+        ${recovery.homeLink()}
       </header>
       ${resume}
       <div class="career-grid">
@@ -836,6 +859,7 @@ function renderEntry() {
         <div class="variants">${['urgent', 'capacity'].map((id) => variantCard(id, last(id))).join('')}</div>
       </section>
       <section class="block">${intakeBlock()}</section>
+      ${recovery.entry()}
       ${attempts.length ? practiceList(attempts) : ''}
     </main>`;
 }
@@ -981,7 +1005,7 @@ function practiceList(list) {
           : st === 'paused'
             ? T('已暂停', 'Paused')
             : T('进行中', 'In progress');
-      return `<div class="list-row"><span class="resume-icon">${icon('note', 'i-sm')}</span><div class="grow"><p class="row-title">${esc(CASE(a.scenarioId).title)}${a.practiceOrigin ? `<span class="tag">${T('补练', 'Practice')}</span>` : ''}</p><p class="row-sub">${label}${a.createdAt ? '，' + T('开始于 ', 'started ') + when(a.createdAt) : ''}</p></div>${st === 'submitted' ? btn(T('看评审', 'Review'), 'review-attempt', 'small quiet', `data-id="${a.id}"`) : ''}${btn(T('打开', 'Open'), 'resume-attempt', 'small', `data-id="${a.id}"`)}</div>`;
+      return `<div class="list-row"><span class="resume-icon">${icon('note', 'i-sm')}</span><div class="grow"><p class="row-title">${esc(CASE(a.scenarioId).title)}${a.practiceOrigin ? `<span class="tag">${T('补练', 'Practice')}</span>` : ''}</p><p class="row-sub">${label}${recovery.since(a.createdAt, sessionOf(a))}</p></div>${st === 'submitted' ? btn(T('看评审', 'Review'), 'review-attempt', 'small quiet', `data-id="${a.id}"`) : ''}${btn(T('打开', 'Open'), 'resume-attempt', 'small', `data-id="${a.id}"`)}</div>`;
     })
     .join('')}</div></section>`;
 }
@@ -1051,7 +1075,7 @@ function moreMenu(a) {
   const st = statusOf(a);
   const item = (action, label, ic, attrs = '') =>
     `<button type="button" role="menuitem" data-action="${action}" ${attrs}>${icon(ic, 'i-sm')}<span class="grow">${label}</span></button>`;
-  return `<div class="menu right" role="menu">${st !== 'submitted' && !sessionOf(a)?.v2ReadOnly ? item('live-session', st === 'paused' ? T('恢复练习', 'Resume practice') : T('暂停练习', 'Pause practice'), st === 'paused' ? 'play' : 'pause') : ''}${item('live-timeline', T('后端过程记录', 'Server log'), 'history')}${item('export', T('导出本地笔记', 'Export local notes'), 'download')}${item('about', T('关于这个工作台', 'About this workspace'), 'info')}${item('to-entry', T('离开工作台', 'Leave the workspace'), 'back')}</div>`;
+  return `<div class="menu right" role="menu">${st !== 'submitted' && !sessionOf(a)?.v2ReadOnly ? item('live-session', st === 'paused' ? T('恢复练习', 'Resume practice') : T('暂停练习', 'Pause practice'), st === 'paused' ? 'play' : 'pause') : ''}${sessionOf(a)?.protocol === 2 ? item('continue-code', recovery.menuLabel(), 'sync') : ''}${item('live-timeline', T('后端过程记录', 'Server log'), 'history')}${item('export', T('导出本地笔记', 'Export local notes'), 'download')}${item('about', T('关于这个工作台', 'About this workspace'), 'info')}${item('to-entry', T('离开工作台', 'Leave the workspace'), 'back')}</div>`;
 }
 function briefPopover(a) {
   const c = CASE(a.scenarioId);
@@ -3068,7 +3092,9 @@ function noticeArrivals() {
   a.turnTimes = a.turnTimes || {};
   a.eventTimes = a.eventTimes || {};
   a.readTurns = a.readTurns || {};
-  const first = !ui.synced;
+  // A practice opened with its continue code arrives with history; its first full read is not news.
+  const history = !!s.recovered && !a.historyRead;
+  const first = !ui.synced || history;
   const pend = pendingTurnRole(s) ? s.pending : null;
   if (pend)
     ui.pendingTurn = {
@@ -3162,6 +3188,10 @@ function noticeArrivals() {
   }
   if (!first || s.timeline.events.length || s.materials.length)
     ui.synced = ui.synced || !!s.materials.length;
+  if (history && s.materials.length) {
+    a.historyRead = true;
+    dirtyRecord = true;
+  }
   if (dirtyRecord) persist();
 }
 const railVisible = () => window.matchMedia('(min-width: 1280px)').matches || ui.railOpen;
@@ -3509,10 +3539,15 @@ async function startAttempt(caseId, opts) {
     initialTasks: SEED_KEYS.map((key) => ({ title: seedText(key) })),
   });
   ui.arriving = true;
+  return freshAttemptUi(a);
+}
+// A practice this browser just took up, started here or opened with its continue code.
+function freshAttemptUi(a) {
   a.selectedTaskId = null;
   a.readTurns = {};
   a.turnTimes = {};
   a.eventTimes = {};
+  a.historyRead = false;
   a.turnTask = {};
   resetAttemptUi();
   persist();
@@ -3994,6 +4029,18 @@ async function act(el) {
       break;
     case 'about':
       sheetAbout();
+      break;
+    case 'continue-code':
+      await recovery.open(a);
+      break;
+    case 'continue-code-create':
+      await recovery.create();
+      break;
+    case 'continue-code-copy':
+      await recovery.copy();
+      break;
+    case 'continue-code-home':
+      recovery.reveal();
       break;
     case 'export':
       download(
@@ -5025,6 +5072,7 @@ document.addEventListener(
   (e) => {
     const d = e.target;
     if (d.matches?.('details[data-intake]')) ui.intake.open = d.open;
+    if (d.matches?.('details[data-continue-code]')) recovery.toggle(d.open);
     if (d.isConnected && d.matches?.('.investigation-work details[data-key]')) {
       const a = current(),
         x = artifact();
@@ -5141,6 +5189,7 @@ document.addEventListener('input', (e) => {
   if (el.id === 'editor-body') autoGrow(el);
   if (el.id === 'import-content') setImportDraft(current(), el.value);
   if (el.id === 'intake-text') ui.intake.text = el.value;
+  if (el.id === 'continue-code-input') recovery.input(el.value);
   if (el.dataset.new !== undefined && a && el.dataset.new !== 'purpose') {
     const t = task();
     const title = document.getElementById('new-title');
@@ -5321,6 +5370,9 @@ document.addEventListener('submit', async (e) => {
   const a = current();
   try {
     switch (form.dataset.form) {
+      case 'continue-code':
+        await recovery.submit(String(f.get('code') || ''));
+        break;
       case 'intake': {
         ui.intake.text = String(f.get('text') || '');
         ui.intake.result = matchIntake(ui.intake.text);

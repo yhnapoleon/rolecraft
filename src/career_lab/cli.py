@@ -101,7 +101,15 @@ def main(argv: list[str] | None = None) -> int:
             from career_lab.api.error_boundary import configure_http_logging
 
             configure_http_logging()
-            uvicorn.run(app, host=args.host, port=args.port, access_log=False, log_config=None)
+            # Forwarded headers are not trusted: the client is the connecting peer (rate limits).
+            uvicorn.run(
+                app,
+                host=args.host,
+                port=args.port,
+                access_log=False,
+                log_config=None,
+                proxy_headers=False,
+            )
         else:
             worker = Worker(app.state.jobs, app.state.handlers)
             while True:

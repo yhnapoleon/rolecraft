@@ -300,3 +300,12 @@ OperationAvailability明确installed/ready/capability/unavailable_code，注册�
 BusinessDecision新增可选assessment段：每个申请条款的决定时额度、申请总量、已发布上限、所绑定方案的需要量，以及该条款的全部问题（over_limit、below_current、no_increase、no_shortfall、insufficient、need_over_limit），不只第一个失败项；方案策略缺少的工作项与是否缺人工兜底；决定所依据的已发布审批规则原句（本会话规则资料的确切来源版本，带span与quote，决定时观测）。status、reason_code、reason与判定顺序不变；未设时省略，旧决定、examples与线上字节不变。还价决定沿用原申请的assessment，接受决定带被接受条款的assessment。评价读取决定文本时去掉assessment，Judge证据输入字节不变。规则原句按审批规则资料的段落位置取用（适用范围、可审批上限、申请要件、缺口与整单退回、人工兜底与工作项、生效方式），每段引用前先核对内容标志：上限段须带三项上限事实，人工兜底段须含审批要求里的兜底与工作项标识，其余各段须含该段原文的特征短语（中英各一组）。段落数不是6时不记录引文，某段标志核不上时不引用该段；标志之外的改写不在核对范围内。
 
 timeline与workbench.read的workspace新增effective_config：已保存配置按当前已批准资源解析后的EffectiveConfig，与助手测试调用同一个policy.effective_config；可见范围与workspace相同，限定对象的委托读取仍无workspace。
+
+
+### 继续码找回练习
+
+公开导出新增 `GET /sessions/{session_id}/continue-code`、`POST /sessions/{session_id}/continue-code` 与 `POST /continue-codes/exchange`，由正常运行入口随 v4 扩展挂载，不是 Gateway 动作，外部 Agent 与 MCP 工具够不到。前两者使用会话 Bearer 身份，只允许本会话 human learner 且具 delegate 能力；外部 Agent 授权、参考 Agent、研究与系统上下文返回 403 `human_required`。读取只返回 `ContinueCodeStatus`（是否存在、代数、生成时间），从不返回码或校验值。生成按 `ContinueCodeIssueInput.expected_generation`（看到的代数，0 表示尚无）创建或替换本练习唯一有效的码，代数不符返回 409 `continue_code_changed`。码为 20 位 Crockford Base32（100 位熵）分 5 组，只在 `ContinueCodeIssueResponse` 出现一次，响应带 `Cache-Control: no-store`。
+
+独立新增 `v4_continue_codes`（会话、HMAC 校验值、密钥 ID、代数、生成该码的凭据、时间）与 `v4_continue_code_attempts`（来源地址的 HMAC、窗口起点、次数），不改旧表。校验值用部署凭据密钥计算，库内与日志不出现明文；更换密钥后旧码全部失效，缺密钥时生成与交换都返回 503 `credential_derivation_unavailable`。
+
+交换不带 Bearer，每个来源 15 分钟内最多 10 次（成功也计），超出返回 429 `continue_code_rate_limited` 与 `details.retry_after_seconds`。输入先规范化（全角、大小写、空格与各类连字符不计；O 读作 0，I、L 读作 1），不成码返回 422 `continue_code_malformed`；查不到或已被替换统一返回 404 `continue_code_invalid`。会话情境先按运行中的注册识别，再按本部署归档的场景包识别；识别不出返回 409 `continue_code_scenario_unavailable`，此前不签发凭据。成功时以派生用途 `continue-code`（`signed_credential`，所有者为生成该码的凭据，请求含代数与 `request_id`）签发新的 `session_owner` 凭据，同码同 `request_id` 重试返回同一令牌；响应 `ContinueCodeExchangeResponse` 含 `PracticeSession` 与注册名，带 `Cache-Control: no-store`。已有令牌、在途任务与 Agent 授权不受交换或换码影响；补练会话被继续码打开后，重放原补练选择按派生用途识别原始本人凭据。SQLite 有集成回归；PostgreSQL 并发未验证。

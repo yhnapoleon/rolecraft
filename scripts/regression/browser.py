@@ -222,8 +222,9 @@ def main() -> None:
             print("MCP: bilingual stdio and HTTP read/return/replay/revoke passed", flush=True)
         # Every published flow emulates reduced motion; one more round keeps the default.
         # The pre-submission card and the feedback page's "at submission" lines, same services.
+        # Continue codes need browser profiles of their own, so they run as one more round.
         rounds = (
-            [args.suite, "default-motion", "presubmit-flows"]
+            [args.suite, "default-motion", "presubmit-flows", "practice-recovery"]
             if args.suite == "published-flows"
             else [args.suite]
         )

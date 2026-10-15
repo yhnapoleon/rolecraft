@@ -33,8 +33,10 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy import Column, Integer, MetaData, String, Table, insert, select, update
 from sqlalchemy.engine import Connection
 
+from career_lab.api import continue_codes
 from career_lab.contracts import v2 as C
 from career_lab.rubrics.v4.practice import ReviewedPractice, selection_plan, suggestions
+from career_lab.security.credentials import derivations
 from career_lab.storage.v2_tables import v2_credentials
 
 if TYPE_CHECKING:
@@ -239,14 +241,32 @@ class PracticeCatalog:
             for o in options
         ]
 
-    def language_of(self, bindings):
-        for (_, language), registration in getattr(self.registry, "language_scenarios", {}).items():
+    def registered_as(self, bindings):
+        """(scenario name, work language) of the running registration with these bindings."""
+        for (name, language), registration in getattr(
+            self.registry, "language_scenarios", {}
+        ).items():
             if registration.bindings == bindings:
-                return language
-        for registration in self.registry.scenarios.values():
+                return name, language
+        for name, registration in self.registry.scenarios.items():
             if registration.bindings == bindings:
-                return registration.work_language
+                return name, registration.work_language
         return None
+
+    def identity_of(self, bindings):
+        """Running registration first, then a package this deployment has archived."""
+        found = self.registered_as(bindings)
+        historical = getattr(self.registry, "historical_identity", None)
+        if found is not None or historical is None:
+            return found
+        try:
+            return historical(bindings)
+        except C.ProtocolError:
+            return None
+
+    def language_of(self, bindings):
+        found = self.registered_as(bindings)
+        return found[1] if found else None
 
 
 def _feedback_for(store, auth, submission_id):
@@ -288,8 +308,6 @@ def _require_original_legacy_request(
     option_id: str | None,
     link_id: str,
 ) -> None:
-    from career_lab.security.credentials import derivations
-
     prior = connection.execute(
         select(practice_links).where(
             practice_links.c.source_session_id == source_id,
@@ -374,6 +392,15 @@ def mount_v4_extensions(app: FastAPI) -> None:
     catalog = PracticeCatalog(gateway.registry)
     _META.create_all(store.db.engine)
     bearer = HTTPBearer(auto_error=False)
+
+    def person(session_id: str, credentials: Credentials) -> C.AuthContext:
+        """The practice's own person, with the owner's right to hand out access."""
+        auth = _context(store, session_id, credentials)
+        _human(auth)
+        store.authorize(auth, "delegate")
+        return auth
+
+    continue_codes.mount_continue_codes(app, person=person, identity=catalog.identity_of)
 
     @app.get("/sessions/{session_id}/delegations", response_model=C.DelegationListResponse)
     def delegations(
@@ -636,6 +663,16 @@ def _practice_session(
                 ).scalars()
             ]
             humans = [context for context in contexts if context.executor.kind == "human"]
+            # Owner credentials opened later with the practice's continue code are not the original.
+            reopened = set(
+                connection.execute(
+                    select(derivations.c.credential_id).where(
+                        derivations.c.purpose == continue_codes.PURPOSE,
+                        derivations.c.credential_id.in_([h.credential_id for h in humans]),
+                    )
+                ).scalars()
+            )
+            humans = [context for context in humans if context.credential_id not in reopened]
             if len(humans) != 1:
                 raise C.ProtocolError("credential_derivation_unavailable", status=503)
             target = humans[0]

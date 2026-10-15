@@ -69,6 +69,15 @@ HOST_MODELS = WORKSPACE_MODELS + [
     "ObjectRef",
     "EvidenceRefV2",
     "PublicDisclosureRecord",
+    "PracticeSession",
+    "ContinueCodeStatus",
+    "ContinueCodeStatusResponse",
+    "ContinueCodeIssueInput",
+    "ContinueCodeIssued",
+    "ContinueCodeIssueResponse",
+    "ContinueCodeExchangeInput",
+    "ContinueCodeExchangeResult",
+    "ContinueCodeExchangeResponse",
 ]
 Schema = dict[str, JsonValue]
 

@@ -1,0 +1,13 @@
+{
+ "examples": {
+  "ContinueCodeExchangeInput": "8a0f539b2c9b093eaa5604074f5a4f730a59ce7b841a5b87498818c439664d78",
+  "ContinueCodeExchangeResponse": "ac507b39b526e90af238ecce5c72ca4f5630ed9b751636ab6e266178e19e4c76",
+  "ContinueCodeExchangeResult": "520a4aeeaa720fc8933d0d4eed616c684af8dd613e0ed0ab82f2f442101e62d5",
+  "ContinueCodeIssueInput": "44dfc0ef49e0cab8d76bcbf9c9ee220bdc3f43675540ef04af66a14f1cbefba4",
+  "ContinueCodeIssueResponse": "07906e275f77bec0beb9efd8da9c2683b686e055fe91f1ad007a8e68ccbde536",
+  "ContinueCodeIssued": "95d1ca83b748c8303bd944d077702835a43893653c8c3559dddd3c7c01a53d6f",
+  "ContinueCodeStatus": "2bca0a8c698a7509ca95a9dcaa1fedb2086cbd816c2bd96ac4647af414d80e7b",
+  "ContinueCodeStatusResponse": "ea6d8ee387fde0e7768cb336b92b686181a8b8ad06133eb44c6a31bb6ca528e3"
+ },
+ "source": "Public models added after main d163747 by the practice-continue-codes change, at the example bytes that change first exported"
+}

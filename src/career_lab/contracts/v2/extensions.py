@@ -1,4 +1,5 @@
-"""Human-only wire contracts: delegation listing, optional practice, submission rule check."""
+"""Human-only wire contracts: delegation listing, optional practice, submission rule check
+and continue codes."""
 
 from datetime import datetime
 from typing import Literal
@@ -19,6 +20,9 @@ from .core import (
 from .evaluation import FeedbackItem
 from .requests import SubmitInput
 from .world import PublicState
+
+# Twenty Crockford Base32 symbols (100 bits) in five groups of four.
+CONTINUE_CODE_PATTERN = r"^[0-9A-HJKMNP-TV-Z]{4}(?:-[0-9A-HJKMNP-TV-Z]{4}){4}$"
 
 
 class ShownPractice(BaseModel):
@@ -179,3 +183,52 @@ class SubmissionRuleCheck(V2):
 
 class SubmissionRuleCheckResponse(V2):
     result: SubmissionRuleCheck
+
+
+class ContinueCodeStatus(BaseModel):
+    """Whether the practice has a continue code; the code itself is never readable again."""
+
+    model_config = ConfigDict(extra="forbid")
+    exists: bool
+    generation: PositiveInt | None = None
+    created_at: datetime | None = None
+
+
+class ContinueCodeStatusResponse(V2):
+    result: ContinueCodeStatus
+
+
+class ContinueCodeIssueInput(BaseModel):
+    """Create or replace the code. ``expected_generation`` is the one the person saw; 0 = none."""
+
+    model_config = ConfigDict(extra="forbid")
+    expected_generation: NonNegativeInt
+
+
+class ContinueCodeIssued(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    code: str = Field(pattern=CONTINUE_CODE_PATTERN)  # This response only: never listed or logged.
+    generation: PositiveInt
+    created_at: datetime
+
+
+class ContinueCodeIssueResponse(V2):
+    result: ContinueCodeIssued
+
+
+class ContinueCodeExchangeInput(BaseModel):
+    """A continue code as typed: case, spaces and dashes are free; O reads as 0, I and L as 1."""
+
+    model_config = ConfigDict(extra="forbid")
+    code: str = Field(min_length=1, max_length=64)
+    request_id: str = Field(min_length=1, max_length=120, strict=True)
+
+
+class ContinueCodeExchangeResult(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    session: PracticeSession  # A new owner credential for this browser; other access is unchanged.
+    scenario: str
+
+
+class ContinueCodeExchangeResponse(V2):
+    result: ContinueCodeExchangeResult
