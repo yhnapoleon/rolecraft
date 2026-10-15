@@ -3,6 +3,7 @@
  * line (the status row above already counts them and the inapplicable ones). Stored explanations are never rewritten: a recorded explanation
  * is "note\nfinding\nobservations", and its own lines are only regrouped for reading. */
 import { feedbackText, type FeedbackLanguage } from './localization';
+import { feedbackClass } from './short-summary';
 import type { Report } from './index';
 import './rule-lines.css';
 
@@ -28,14 +29,6 @@ const linesOf = (explanation: string) =>
     .split('\n')
     .map((line) => line.trim())
     .filter(Boolean);
-const inapplicable = (item: Item) =>
-  item.label === 'NOT_APPLICABLE' || item.applicability === 'not_applicable';
-const waiting = (item: Item) =>
-  item.applicability === 'undetermined' ||
-  item.applicability === 'unknown' ||
-  item.source !== 'verified_rule' ||
-  item.label === 'INSUFFICIENT' ||
-  !item.rule_bound;
 
 /** First lines recorded by at least two criteria, in the order they first appear. */
 function sharedPremises(items: readonly Item[]): string[] {
@@ -64,10 +57,16 @@ export function ruleLines(
   const premises = sharedPremises(items);
   const view: RuleLinesView = { premises, lines: [], waiting: [] };
   for (const item of items) {
-    if (inapplicable(item)) continue;
-    if (waiting(item)) view.waiting.push(name(item));
+    // The same classes the status row counts (short-summary.ts).
+    const kind = feedbackClass(item);
+    if (kind === 'notApplicable') continue;
+    if (kind !== 'verified') view.waiting.push(name(item));
     else {
-      const bound = item.rule_bound as { lower: string; upper: string };
+      // Without a recorded bound, the rule's finding is both ends of it.
+      const bound = (item.rule_bound as { lower: string; upper: string } | null | undefined) ?? {
+        lower: item.label,
+        upper: item.label,
+      };
       const lines = linesOf(item.explanation);
       view.lines.push({
         criterion: item.criterion,

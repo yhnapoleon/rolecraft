@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { criterionLabels, type Report } from './index';
 import { asFake, fakeDocument } from '../results-native/fake-dom';
 import { itemDetail, renderRuleLines, ruleLines } from './rule-lines';
+import { feedbackCounts } from './short-summary';
 
 type Item = Report['items'][number];
 const PREMISE = '本项仅核对明确承诺的受限范围及固定配置。';
@@ -107,6 +108,24 @@ describe('feedback first screen', () => {
     );
     expect(view.lines[1].fact).toBe('配置 v2 之后还没测。');
     expect(view.lines[0].fact).toBe('按评价时点核对：固定配置人数20，有效容量30。');
+  });
+
+  it('lists and counts every criterion the way the status row does', () => {
+    // Rule-checked without a recorded bound: still a checked line, marked by its finding.
+    const unbound = item('R2.cost', 'note\n成本核对：已超出预算。', 'NOT_MET', {
+      rule_bound: null,
+    });
+    const items = [...narrow, unbound];
+    const view = ruleLines(items, criterionLabels('zh'), 'zh');
+    const counts = feedbackCounts(items);
+    expect(view.lines).toHaveLength(counts.verified);
+    expect(view.waiting).toHaveLength(counts.pending + counts.undetermined);
+    expect(view.lines.at(-1)).toMatchObject({
+      criterion: 'R2.cost',
+      mark: 'not_met',
+      conclusion: '未满足',
+      fact: '成本核对：已超出预算。',
+    });
   });
 
   it('writes conclusions and names in the interface language', () => {
