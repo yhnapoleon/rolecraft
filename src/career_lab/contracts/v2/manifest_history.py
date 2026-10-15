@@ -785,4 +785,28 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "scenario packages are unchanged."
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-d2f0dd5a386651a1a86a581b3d18bdb98c7320ac05ffa35adef75993ce600c4a"
+        ),
+        "integration_changes": {
+            "approval-decision-assessment": "Optional BusinessDecision.assessment "
+            "(_ApprovalAssessment with _ApprovalTermCheck rows) records what a resource decision "
+            "was judged against: every requested term with its allocation at the time, requested "
+            "total, published ceiling and the bound plan's need, plus all of its issues "
+            "(over_limit, below_current, no_increase, no_shortfall, insufficient, "
+            "need_over_limit), not only the first failed check; strategy work items the plan "
+            "lacks and a missing human fallback; and the exact published approval-rule sentences "
+            "the decision applies (this session's rule material at its source version, with span "
+            "and quote, observed at the decision). Status, reason_code, reason and the decision "
+            "order are unchanged. Counteroffers keep the original request's assessment and "
+            "acceptances carry the accepted terms. Unset assessments are omitted, so existing "
+            "decisions, examples and wire bytes are unchanged; evaluators read decisions "
+            "without the assessment, so evaluation input bytes are unchanged.",
+            "workspace-effective-config": "The learner timeline and workbench.read workspace "
+            "add effective_config: the EffectiveConfig the next assistant test uses, resolved "
+            "from the saved configuration and the approved resources by the same function as "
+            "the test itself. Readers limited to named objects still receive no workspace.",
+        },
+    },
 )

@@ -12,7 +12,14 @@ from career_lab.contracts import v2 as C
 from career_lab.storage.v2_tables import v2_snapshots, v2_events
 from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.role_memory import RoleTurn, RoleReply, RoleDisplay
-from .ports import SourceRecord, ActivityRecord, ActivityLedger, RuleSnapshot, model_generated
+from .ports import (
+    SourceRecord,
+    ActivityRecord,
+    ActivityLedger,
+    RuleSnapshot,
+    model_generated,
+    record_text,
+)
 from .assembler import base_ref, product_text
 from .history import before
 from .localization import message
@@ -134,7 +141,7 @@ class StoreEvidenceReader:
                     "review",
                 }:
                     # Deterministic public typed records, not hidden evaluation data.
-                    text = C.canonical(row.content)
+                    text = record_text(row.ref.kind, row.content)
                     executor = row.creator
                 if text is None:
                     continue

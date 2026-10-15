@@ -234,6 +234,58 @@ describe('v2 test results shown in the workbench', () => {
     expect(session.tests.every((t) => t.mode === 'extractive')).toBe(true);
     expect(session.v2Assistant).toBe('waiting_model');
   });
+
+  it('keeps the configuration the next test uses beside the saved one', async () => {
+    const session = {
+      id: 's',
+      protocol: 2,
+      v2Binding: { protocol: 2, sessionId: 's', workLanguage: 'zh', scenarioHash: 'fixed' },
+      materials: [],
+    } as unknown as LocalSession;
+    const store = {
+      installV2: vi.fn(),
+      getSnapshot: () => ({ workspace: { sessions: [session] } }),
+      update: vi.fn((_id: string, patch: object) => Object.assign(session, patch)),
+      report: vi.fn(),
+    };
+    const data = new V4LiveData(store as never, { getItem: () => null, setItem: () => {} });
+    const config = {
+      id: 'c',
+      session_id: 's',
+      version: 2,
+      config_version: 1,
+      participants: 20,
+      domains: ['faq'],
+      launch_day: 7,
+      update_strategy: 'realtime',
+      fallback: 'human',
+      work_items: ['human_fallback', 'realtime_sync'],
+    };
+    const effective = {
+      requested: config,
+      effective: { ...config, update_strategy: 'daily', work_items: ['human_fallback'] },
+      differences: { update_strategy: 'realtime_sync_not_provisioned' },
+    };
+    const point = { business_seq: 4, workspace_revision: 2, storage_revision: 5 };
+    const context = {
+      as_of: point,
+      state: { status: 'active', config_version: 1 },
+      read_only: false,
+      semantic: { roles: 'waiting_model', assistant: 'waiting_model' },
+      materials: { materials: [] },
+      timeline: {
+        events: [],
+        objects: [],
+        workspace: { resources: { dev_days: 3 }, config, effective_config: effective },
+      },
+    };
+    vi.spyOn(data, 'host').mockReturnValue({
+      ensureFeedbackPointer: async () => {},
+      query: async (op: string) => (op === 'workbench.read' ? context : { items: [] }),
+    } as never);
+    await data.sync(session);
+    expect(session.v2EffectiveConfig).toEqual(effective);
+  });
 });
 
 describe('v2 timeline events kept for the activity tab', () => {

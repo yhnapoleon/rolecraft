@@ -28,6 +28,8 @@ export type Timeline = {
     source_versions: Record<string, number>;
     indexed_versions: Record<string, number>;
     config: Required<C.AssistantConfig>;
+    /** The configuration the next assistant test uses (saved settings within approved resources). */
+    effective_config?: C.EffectiveConfig;
     material_titles: Record<string, string>;
   };
 };

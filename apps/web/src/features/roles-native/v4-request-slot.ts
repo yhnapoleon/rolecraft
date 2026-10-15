@@ -1,7 +1,7 @@
 import type { CommandInput } from '../../v4-host-operations';
 /** Resource negotiation inside v4's existing res-form; no independent panel or rule engine. */
 import type { V4SlotContext, V4SlotHandle, V4HostSnapshot, V4CommandResult } from '../../v4-host';
-import type { EvidenceRefV2 } from '../../contracts-v2';
+import type { BusinessDecision, BusinessRequest, EvidenceRefV2 } from '../../contracts-v2';
 import { T, onLocaleChange } from '../../app/i18n';
 import './roles.css';
 import {
@@ -13,6 +13,8 @@ import {
   rememberRequest,
   type PublicRow,
 } from './v4-data';
+import { changedTerms, type Totals } from './request-terms';
+import { decisionCardModel, renderDecisionCard } from './decision-card';
 
 const labels = () => ({
   capacity: T('名额', 'Seats'),
@@ -48,7 +50,9 @@ export function mount(context: V4SlotContext): V4SlotHandle {
   controls.className = 'field rc-resource-fields';
   controls.dataset.w04ResourceInputs = '';
   const legend = doc.createElement('legend');
-  controls.append(legend);
+  const hint = doc.createElement('p');
+  hint.className = 'meta';
+  controls.append(legend, hint);
   const inputs = new Map<ResourceKey, HTMLInputElement>();
   const captions = new Map<ResourceKey, HTMLElement>();
   const rows = new Map<ResourceKey, HTMLElement>();
@@ -94,16 +98,24 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     unknown = false,
     readTicket = 0;
   let evidence: readonly EvidenceRefV2[] = [];
+  // Inputs show the allocation in effect until the learner changes them.
+  let totals: Totals | undefined;
+  const prefilled = new Map<ResourceKey, string>();
   let editRevision = 0;
   let knownFailure = false;
   let lastInput: string | undefined;
   const readInput = (snapshot: Readonly<V4HostSnapshot>) =>
     JSON.stringify([snapshot, requestRefs(host, 'resource-requests')]);
   const kind = () => String(new FormData(formNode).get('kind') ?? '');
+  const values = () => Object.fromEntries([...inputs].map(([key, input]) => [key, input.value]));
   const current = (): Draft => ({
     kind: kind(),
     reason: reasonNode.value,
-    terms: Object.fromEntries([...inputs].map(([key, input]) => [key, input.value])),
+    terms: Object.fromEntries(
+      [...inputs]
+        .filter(([key, input]) => input.value && input.value !== prefilled.get(key))
+        .map(([key, input]) => [key, input.value]),
+    ),
     evidence,
   });
   const stored = host.draft<Draft>('resource-requests', 'form');
@@ -144,8 +156,35 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       );
   };
   const save = () => host.keepDraft('resource-requests', 'form', current());
+  // "Re-apply at the ceiling" fills the form only; sending stays the learner's own action.
+  function refill(terms: Readonly<Record<string, number>>) {
+    if (disposed) return;
+    const wanted = 'capacity' in terms ? 'request_capacity' : 'request_resources';
+    for (const radio of formNode.querySelectorAll<HTMLInputElement>('[name="kind"]'))
+      radio.checked = radio.value === wanted;
+    let first: HTMLInputElement | undefined;
+    for (const [key, input] of inputs) {
+      const value = terms[key] ?? totals?.[key];
+      if (value === undefined) continue;
+      input.value = String(value);
+      if (key in terms) first ??= input;
+      else prefilled.set(key, input.value);
+    }
+    ++editRevision;
+    renderControls();
+    void save().catch(fail);
+    first?.focus();
+    host.announce(
+      T(
+        '已按上限填好，确认理由后再提交。',
+        'Filled in at the ceiling. Check the reason, then send.',
+      ),
+      'status',
+    );
+  }
   function renderControls() {
     legend.textContent = T('申请后的资源总量', 'Requested total resources');
+    hint.textContent = T('没改的条款不会提交', 'Unchanged terms are not sent');
     choose.textContent = T('选择依据', 'Choose evidence');
     evidenceLabel.textContent = T('已选依据：', 'Selected evidence: ') + evidence.length;
     const capacity = kind() === 'request_capacity';
@@ -284,6 +323,13 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     const fragment = doc.createDocumentFragment();
     const currentResources = data.data.workspace?.resources;
     if (currentResources) {
+      totals = object(currentResources);
+      for (const [key, input] of inputs) {
+        const value = totals[key];
+        if (value === undefined || (input.value && input.value !== prefilled.get(key))) continue;
+        input.value = String(value);
+        prefilled.set(key, input.value);
+      }
       const p = doc.createElement('p');
       p.className = 'meta';
       p.textContent =
@@ -315,6 +361,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       if (!old || old.ref.version < row.ref.version) requests.set(row.ref.object_id, row);
     }
     const decisions = data.rows.filter((r) => r.ref.kind === 'business_decision');
+    const titles = object(data.data.workspace?.material_titles ?? {});
     for (const row of requests.values()) {
       const req = row.content;
       const item = doc.createElement('div');
@@ -353,7 +400,19 @@ export function mount(context: V4SlotContext): V4SlotHandle {
         const reasonText = doc.createElement('p');
         reasonText.textContent =
           typeof decision.content.reason === 'string' ? decision.content.reason : '';
-        text.append(reasonText);
+        const card = decision.content.assessment
+          ? renderDecisionCard(
+              doc,
+              decisionCardModel(
+                decision.content as BusinessDecision,
+                req as BusinessRequest,
+                titles,
+                totals,
+              ),
+              { open: (r) => void host.openReference(r).catch(fail), refill },
+            )
+          : undefined;
+        text.append(card ?? reasonText);
         if (status === 'countered') {
           const p = doc.createElement('p');
           p.textContent =
@@ -394,7 +453,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     if (!writable('request_business')) return;
     const submitted = current();
     const submittedRevision = editRevision;
-    const terms: Record<string, number> = {};
+    let terms: Record<string, number>;
     try {
       const selected =
         kind() === 'request_capacity'
@@ -403,21 +462,17 @@ export function mount(context: V4SlotContext): V4SlotHandle {
             ? ['dev_days', 'deadline_day']
             : [];
       if (!selected.length || !submitted.reason.trim()) throw Error('Missing request');
-      for (const key of selected) {
-        const value = submitted.terms[key as ResourceKey];
-        if (value) {
-          const amount = Number(value);
-          if (!Number.isSafeInteger(amount) || amount <= 0) throw Error('Invalid amount');
-          terms[key] = amount;
-        }
-      }
-      if (!Object.keys(terms).length) throw Error('Missing amount');
+      terms = changedTerms(selected, values(), totals ?? {});
       for (const e of evidence) ref(e, sid);
     } catch {
       host.announce(
         T('请填写明确的申请数量和理由。', 'Enter explicit requested quantities and a reason.'),
         'error',
       );
+      return;
+    }
+    if (!Object.keys(terms).length) {
+      host.announce(T('请至少改一项申请数量。', 'Change at least one requested total.'), 'error');
       return;
     }
     void command('request_business', {

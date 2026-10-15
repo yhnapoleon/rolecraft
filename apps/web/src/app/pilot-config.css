@@ -1,0 +1,22 @@
+/* What the next test actually uses, when it differs from the saved settings. */
+.config-use {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  margin: 6px 0 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.config-use .i {
+  flex: none;
+  margin-top: 2px;
+}
+.config-use.bad .i {
+  color: var(--bad);
+}
+/* Work that comes with the chosen strategy is shown chosen and cannot be unticked. */
+.choice input[name="workItems"]:disabled {
+  cursor: default;
+}

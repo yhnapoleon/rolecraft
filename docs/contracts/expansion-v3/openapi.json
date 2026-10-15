@@ -1317,6 +1317,17 @@
           "as_of": {
             "$ref": "#/components/schemas/VersionPoint"
           },
+          "assessment": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/_ApprovalAssessment"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
           "countered": {
             "additionalProperties": {
               "minimum": 0,
@@ -14705,6 +14716,114 @@
           }
         },
         "title": "_AdviceUnitCounts",
+        "type": "object"
+      },
+      "_ApprovalAssessment": {
+        "additionalProperties": false,
+        "description": "Every fact a decision was judged against, not only the first failed check.",
+        "properties": {
+          "clauses": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/EvidenceRefV2"
+            },
+            "title": "Clauses",
+            "type": "array"
+          },
+          "fallback_required": {
+            "default": false,
+            "title": "Fallback Required",
+            "type": "boolean"
+          },
+          "missing_work_items": {
+            "default": [],
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "title": "Missing Work Items",
+            "type": "array"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "terms": {
+            "items": {
+              "$ref": "#/components/schemas/_ApprovalTermCheck"
+            },
+            "title": "Terms",
+            "type": "array"
+          }
+        },
+        "required": [
+          "terms"
+        ],
+        "title": "_ApprovalAssessment",
+        "type": "object"
+      },
+      "_ApprovalTermCheck": {
+        "additionalProperties": false,
+        "description": "One requested term beside the allocation, ceiling and need it was judged against.",
+        "properties": {
+          "current": {
+            "minimum": 0,
+            "title": "Current",
+            "type": "integer"
+          },
+          "issues": {
+            "default": [],
+            "items": {
+              "enum": [
+                "over_limit",
+                "below_current",
+                "no_increase",
+                "no_shortfall",
+                "insufficient",
+                "need_over_limit"
+              ],
+              "type": "string"
+            },
+            "title": "Issues",
+            "type": "array"
+          },
+          "limit": {
+            "minimum": 0,
+            "title": "Limit",
+            "type": "integer"
+          },
+          "needed": {
+            "minimum": 0,
+            "title": "Needed",
+            "type": "integer"
+          },
+          "requested": {
+            "minimum": 0,
+            "title": "Requested",
+            "type": "integer"
+          },
+          "resource": {
+            "minLength": 1,
+            "title": "Resource",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "resource",
+          "current",
+          "requested",
+          "limit",
+          "needed"
+        ],
+        "title": "_ApprovalTermCheck",
         "type": "object"
       },
       "_ConfigTestRuns": {

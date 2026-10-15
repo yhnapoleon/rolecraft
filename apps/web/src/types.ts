@@ -191,6 +191,8 @@ export interface LocalSession {
   v2Workspace?: { tasks: any[]; products: any[] };
   v2Domains?: string[];
   v2MaterialTitles?: Record<string, string>;
+  /** What the next test uses: the server's resolution of the saved settings. */
+  v2EffectiveConfig?: import('./contracts-v2').EffectiveConfig;
   /** Deployment assistant state from the server; never relabels saved answers. */
   v2Assistant?: 'model' | 'waiting_model' | 'unavailable';
   /** Browser-owned origins of tests whose answer is still being generated, by request ID. */

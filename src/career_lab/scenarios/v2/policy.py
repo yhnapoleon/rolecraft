@@ -4,6 +4,8 @@ from career_lab.contracts.v2.core import ObjectRef, ProtocolError, digest
 from career_lab.contracts.v2.world import BusinessDecision, EffectiveConfig
 import math
 
+from .approval_assessment import assess_request, plan_demand
+
 
 def canonical_domains(package, domains):
     aliases = package.rules.get("domain_aliases", {})
@@ -91,11 +93,12 @@ def evaluate_request(package, request, snapshot, evidence_check):
     if request.status != "pending":
         raise ProtocolError("request_not_pending", status=409)
     requested, resources = request.requested, snapshot.world.resources
-    limits, work_costs = package.rules["approval_limits"], package.rules["work_costs"]
+    limits = package.rules["approval_limits"]
     cfg = request.basis.config
     if request.id in snapshot.request_targets and snapshot.request_targets[request.id] != cfg:
         raise ProtocolError("request_basis_mismatch", status=409)
     validate_config(package, cfg, snapshot.world.session_id)
+    demand = plan_demand(package, cfg)
     code = None
     if not requested or set(requested) - limits.keys():
         code = "unsupported_resource_request"
@@ -106,11 +109,6 @@ def evaluate_request(package, request, snapshot, evidence_check):
     elif any(value > limits[key] or value < resources[key] for key, value in requested.items()):
         code = "request_over_limit"
     else:
-        demand = {
-            "capacity": cfg.participants,
-            "dev_days": sum(work_costs[w] for w in cfg.work_items),
-            "deadline_day": cfg.launch_day,
-        }
         unnecessary = [
             key
             for key, value in requested.items()
@@ -138,11 +136,6 @@ def evaluate_request(package, request, snapshot, evidence_check):
         "approval_plan_incomplete": "本次审批需要人工兜底及相应工作项。请对照《经理发布：资源审批规则》补齐后重提。",
     }.get(code, "申请条款存在真实缺口且在可审批范围内；决定提交成功后资源才生效。")
     if code == "request_not_needed":
-        demand = {
-            "capacity": cfg.participants,
-            "dev_days": sum(work_costs[w] for w in cfg.work_items),
-            "deadline_day": cfg.launch_day,
-        }
         reason += " " + "；".join(
             f"{labels[k]}：现有{resources[k]}，方案需要{demand[k]}，请求{v}"
             for k, v in requested.items()
@@ -151,11 +144,6 @@ def evaluate_request(package, request, snapshot, evidence_check):
     if getattr(package, "locale", "zh") == "en":
         from .policy_en import reason as english_reason
 
-        demand = {
-            "capacity": cfg.participants,
-            "dev_days": sum(work_costs[w] for w in cfg.work_items),
-            "deadline_day": cfg.launch_day,
-        }
         reason = english_reason(code, requested, resources, demand)
     return BusinessDecision(
         id=digest(
@@ -182,4 +170,5 @@ def evaluate_request(package, request, snapshot, evidence_check):
         reason=reason,
         evidence_refs=request.evidence_refs,
         as_of=request.as_of,
+        assessment=assess_request(package, request, snapshot, code or "within_scenario_limits"),
     )
