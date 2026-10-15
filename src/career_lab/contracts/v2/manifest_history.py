@@ -850,4 +850,27 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "headers, so the counted source is the connecting peer."
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-5d888645fb7004e70f7813d61bbd154ad9ceb1fafb4faee523b744388a4f951b"
+        ),
+        "integration_changes": {
+            "business-record-sentences": "Newly written feedback states the recorded business "
+            "decisions (FeedbackV2.business_response, also the rule context the evaluator and the "
+            "Judge slot read) as the unchanged heading on a line of its own, then one sentence "
+            "per request in the order the requests were made (the storage revision of each "
+            "request's first version), each with its latest decision: the request panel's "
+            "resource name, the amount asked and the decision with any granted or countered "
+            "amount. Several terms of one request join in one sentence and a deadline reads as a "
+            "day; Chinese keeps full-width punctuation and nothing is joined with semicolons. "
+            "The words come from evidence/v2/localization.py through api/business_record.py. "
+            "The field, its type and its refs are unchanged; stored feedback keeps the text it "
+            "was written with and nothing is re-evaluated.",
+            "approval-card-way-out": "The learner's approval card reads only a decision's "
+            "recorded _ApprovalAssessment: when a declined request records need_over_limit, "
+            "missing work items or a required hand-off, no request can pass as assessed, so "
+            "instead of a request capped at the ceiling the card says what to change and opens "
+            "the pilot settings. The assessment and the decision bytes are unchanged.",
+        },
+    },
 )
