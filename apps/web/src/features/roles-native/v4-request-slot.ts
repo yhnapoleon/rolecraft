@@ -4,7 +4,13 @@ import type { V4SlotContext, V4SlotHandle, V4HostSnapshot, V4CommandResult } fro
 import type { BusinessDecision, BusinessRequest, EvidenceRefV2 } from '../../contracts-v2';
 import { T, onLocaleChange } from '../../app/i18n';
 import { EVIDENCE_KINDS, evidenceSummary } from '../../evidence-picker';
-import { decisionNames, resourceNames, type ResourceKey } from './decision-words';
+import {
+  decisionNames,
+  requestedTerm,
+  resourceAmount,
+  resourceNames,
+  type ResourceKey,
+} from './decision-words';
 import './roles.css';
 import {
   object,
@@ -219,16 +225,23 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       })
       .catch(fail);
   });
-  const termsText = (value: unknown) => {
-    const terms = object(value);
-    return Object.entries(terms)
-      .map(([key, amount]) => {
+  // Terms in the recorded decisions' words and order (185 P3-10).
+  const terms = (value: unknown): [ResourceKey, number][] =>
+    Object.entries(object(value))
+      .map(([key, amount]): [ResourceKey, number] => {
         if (!keys.includes(key as ResourceKey) || !Number.isInteger(amount) || amount < 0)
           throw Error('Invalid resource result');
-        return labels()[key as ResourceKey] + ': ' + amount;
+        return [key as ResourceKey, amount];
       })
-      .join(T('，', ', '));
-  };
+      .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  const termsText = (value: unknown) =>
+    terms(value)
+      .map(([key, n]) => resourceAmount(key, n))
+      .join(T('、', ', '));
+  const requestedText = (value: unknown) =>
+    terms(value)
+      .map(([key, n]) => requestedTerm(key, n))
+      .join(T('、', '; '));
   async function recover(id: string) {
     const result = await host.recover(id);
     if (disposed) return;
@@ -367,7 +380,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       const text = doc.createElement('div');
       text.className = 'grow';
       const requested = doc.createElement('p');
-      requested.textContent = T('申请：', 'Requested: ') + termsText(req.requested);
+      requested.textContent = requestedText(req.requested);
       const why = doc.createElement('p');
       why.className = 'meta';
       why.textContent = typeof req.reason === 'string' ? req.reason : '';

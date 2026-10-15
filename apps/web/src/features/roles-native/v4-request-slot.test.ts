@@ -1,5 +1,6 @@
 import { setImmediate as settle } from 'node:timers/promises';
 import { afterEach, expect, it, vi } from 'vitest';
+import { setPreference } from '../../app/i18n';
 import type { EvidenceRefV2 } from '../../contracts-v2';
 import { V4DataHost, type V4HostPorts } from '../../v4-data-host';
 import type { V4SlotHandle } from '../../v4-host';
@@ -492,6 +493,30 @@ it('shows the decision card for a rejection and refills at the ceiling without s
   await settle();
   expect([field(f, 'dev_days').value, field(f, 'deadline_day').value]).toEqual(['6', '7']);
   expect(f.sent.length).toBe(before);
+});
+
+it('writes requests and resources in effect as the recorded decisions do', async () => {
+  // 185 P3-10: full-width in Chinese, the record's "开发人日：申请 7", terms in the record's order.
+  const objects = decided().map((row, index) =>
+    index === 0
+      ? { ...row, content: { ...row.content, requested: { dev_days: 7, deadline_day: 8 } } }
+      : row,
+  );
+  const f = await fixture({ kind: 'request_resources', resources, objects });
+  f.start();
+  await settle();
+  expect(texts(f)).toContain('截止日：申请第 8 天、开发人日：申请 7');
+  expect(texts(f)).toContain('最近核实的生效资源（规则核实）：名额 30、截止日第 7 天、开发人日 3');
+  try {
+    setPreference('en');
+    await settle();
+    expect(texts(f)).toContain('Deadline day: requested day 8; Developer-days: requested 7');
+    expect(texts(f)).toContain(
+      'Last checked resources in effect (rule checked): Seats: 30, Deadline day: day 7, Developer-days: 3',
+    );
+  } finally {
+    setPreference('zh');
+  }
 });
 
 it('keeps the recorded reason for a decision saved before the card existed', async () => {

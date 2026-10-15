@@ -6,7 +6,7 @@
  */
 import { T } from '../../app/i18n';
 import { fallbackLabel, strategyLabel, workItemLabel } from '../../app/pilot-config';
-import { resourceNames } from './decision-words';
+import { amountText, resourceNames } from './decision-words';
 import type { Totals } from './request-terms';
 import type {
   BusinessDecision,
@@ -47,8 +47,7 @@ const zh = (label: string, resource: string, n: number) =>
   resource === DAY ? `${label}第 ${n} 天` : `${label} ${n}`;
 const en = (label: string, resource: string, n: number) =>
   resource === DAY ? `${label} day ${n}` : `${label} ${n}`;
-const plain = (resource: string, n: number) =>
-  resource === DAY ? T(`第 ${n} 天`, `day ${n}`) : String(n);
+const plain = amountText;
 
 function requestPart(t: _ApprovalTermCheck, has: (i: Issue) => boolean) {
   const r = t.resource;

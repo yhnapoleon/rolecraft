@@ -220,7 +220,7 @@ try {
       text('实时同步需要更多开发人日', 'Real-time sync needs more developer-days'),
     );
     const row = await innerText('[data-request-id]');
-    assert.ok(row.includes(text('开发人日: 7', 'Developer-days: 7')), row);
+    assert.ok(row.includes(text('开发人日：申请 7', 'Developer-days: requested 7')), row);
     assert.ok(!row.includes(text('截止日', 'Deadline day')), row);
   });
 
