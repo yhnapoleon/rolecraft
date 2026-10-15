@@ -5,6 +5,7 @@
  */
 import { T } from '../../app/i18n';
 import { strategyLabel, workItemLabel } from '../../app/pilot-config';
+import { resourceNames } from './decision-words';
 import type { Totals } from './request-terms';
 import type {
   BusinessDecision,
@@ -32,12 +33,9 @@ export interface DecisionCardModel {
 type Issue = NonNullable<_ApprovalTermCheck['issues']>[number];
 
 const DAY = 'deadline_day';
+// The request panel's names, which are also the recorded decisions' words.
 const name = (resource: string) =>
-  ({
-    capacity: T('名额', 'Seats'),
-    dev_days: T('开发人日', 'Developer-days'),
-    deadline_day: T('截止日', 'Deadline'),
-  })[resource] ?? resource;
+  (resourceNames() as Record<string, string>)[resource] ?? resource;
 /** Amounts after a label: "申请 7" / "申请第 7 天", "requested 7" / "requested day 7". */
 const zh = (label: string, resource: string, n: number) =>
   resource === DAY ? `${label}第 ${n} 天` : `${label} ${n}`;

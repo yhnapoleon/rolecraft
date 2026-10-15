@@ -2,6 +2,7 @@ import { afterEach, expect, it } from 'vitest';
 import { setPreference } from '../../app/i18n';
 import type { BusinessDecision, BusinessRequest } from '../../contracts-v2';
 import { decisionCardModel } from './decision-card';
+import { resourceNames, type ResourceKey } from './decision-words';
 
 afterEach(() => setPreference('zh'));
 
@@ -271,4 +272,28 @@ it('keeps the recorded reason when no line on the card explains a rejection', ()
     clauses: [ceiling],
   });
   expect(decisionCardModel(explained, request(), titles).lines).toHaveLength(1);
+});
+
+it('names each resource as the request panel and the recorded decisions do', () => {
+  const terms = [
+    { resource: 'capacity', current: 30, requested: 45, limit: 60, needed: 40, issues: [] },
+    { resource: 'dev_days', current: 3, requested: 6, limit: 6, needed: 6, issues: [] },
+    { resource: 'deadline_day', current: 7, requested: 9, limit: 10, needed: 9, issues: [] },
+  ];
+  const lines = () =>
+    decisionCardModel(decision('approved', { terms, clauses: [effect] }), request(), titles).lines;
+  expect(lines().map((line) => line.text)).toEqual([
+    '名额：30 → 45（方案需要 40 · 上限 60）',
+    '开发人日：3 → 6（方案需要 6 · 上限 6）',
+    '截止日：第 7 天 → 第 9 天（方案需要第 9 天 · 上限第 10 天）',
+  ]);
+  setPreference('en');
+  expect(lines().map((line) => line.text)).toEqual([
+    'Seats: 30 → 45 (plan needs 40 · ceiling 60)',
+    'Developer-days: 3 → 6 (plan needs 6 · ceiling 6)',
+    'Deadline day: day 7 → day 9 (plan needs day 9 · ceiling day 10)',
+  ]);
+  const names = resourceNames();
+  for (const [index, term] of terms.entries())
+    expect(lines()[index].text.startsWith(`${names[term.resource as ResourceKey]}: `)).toBe(true);
 });
