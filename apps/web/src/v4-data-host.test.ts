@@ -223,8 +223,10 @@ describe('v4 single host persistence and recovery', () => {
     ).rejects.toMatchObject({ code: 'delegation_host_not_ready' });
     expect(fetcher).not.toHaveBeenCalled();
   });
-  it('keeps an issued agent secret only in memory and hands the connection config out once', async () => {
-    const { host, fetcher, map } = setup();
+  /** A host whose control plane issues grant d1 with the token 'agent-secret'. */
+  async function issuingHost(listed: () => unknown[] = () => []) {
+    const setupResult = setup();
+    const { host, fetcher } = setupResult;
     const context = {
       as_of: point,
       state,
@@ -233,6 +235,11 @@ describe('v4 single host persistence and recovery', () => {
       semantic: { roles: 'model', feedback: 'model', assistant: 'model' },
     };
     fetcher.mockImplementation(async (url, init) => {
+      if (!init?.body && String(url).includes('/delegations?'))
+        return reply({
+          schema_version: 2,
+          result: { schema_version: 2, result: { items: listed(), next_cursor: null } },
+        });
       if (!init?.body)
         return String(url).endsWith('/workbench')
           ? reply({ schema_version: 2, result: { result: context } })
@@ -250,35 +257,129 @@ describe('v4 single host persistence and recovery', () => {
       });
     });
     await host.query('workbench.read');
+    return setupResult;
+  }
+  const grant = (status: 'active' | 'expired' | 'revoked') => ({
+    id: 'd1',
+    session_id: 's',
+    executor: { id: 'external:d1', kind: 'external_agent', delegation_id: 'd1' },
+    capabilities: ['read', 'act'],
+    allowed_actions: null,
+    allowed_objects: null,
+    create_under_tasks: [],
+    expires_at: new Date(Date.now() + 1800000).toISOString(),
+    revoked: status === 'revoked',
+    effective_status: status,
+  });
+  const config = { api_url: 'http://127.0.0.1:1/api', session_id: 's', token: 'agent-secret' };
+  // One offering: the card hands the secret out while it is open; once the person finishes it is
+  // gone for good. The secret never reaches results, storage or the snapshot.
+  it('keeps an issued agent secret only in memory and hands the connection config out once', async () => {
+    const { host, map, storage } = await issuingHost();
     expect(host.snapshot().available).toMatchObject({
       'delegations.create': true,
       'delegations.list': true,
     });
+    const expiresAt = new Date(Date.now() + 1800000).toISOString();
     const issued = await host.command('delegations.create', {
       agent_label: 'Helper',
-      expires_at: new Date(Date.now() + 1800000).toISOString(),
+      expires_at: expiresAt,
     });
     expect(issued.status).toBe('confirmed');
     expect(JSON.stringify(issued)).not.toContain('agent-secret');
     expect([...map.values()].join('')).not.toContain('agent-secret');
+    expect(JSON.stringify(storage.setItem.mock.calls)).not.toContain('agent-secret');
     expect(JSON.stringify(host.snapshot())).not.toContain('agent-secret');
-    expect(host.issuedDelegation()).toMatchObject({ delegationId: 'd1', label: 'Helper' });
+    expect(host.issuedDelegation()).toEqual({
+      delegationId: 'd1',
+      label: 'Helper',
+      issuedAt: expect.any(String),
+      expiresAt,
+    });
+    expect(JSON.stringify(host.issuedDelegation())).not.toContain('agent-secret');
+    expect(host.connectionConfig('http://127.0.0.1:1/api')).toEqual(config);
     const issuedStates: ReturnType<typeof host.issuedDelegation>[] = [];
     const unsubscribe = host.subscribe(() => issuedStates.push(host.issuedDelegation()));
-    expect(host.takeConnectionConfig('http://127.0.0.1:1/api')).toEqual({
-      api_url: 'http://127.0.0.1:1/api',
-      session_id: 's',
-      token: 'agent-secret',
-    });
+    host.dismissConnection();
     expect(issuedStates).toEqual([null]);
     unsubscribe();
-    expect(host.takeConnectionConfig('http://127.0.0.1:1/api')).toBeNull();
+    expect(host.issuedDelegation()).toBeNull();
+    expect(host.connectionSecret()).toBeNull();
+    expect(host.connectionConfig('http://127.0.0.1:1/api')).toBeNull();
     await host.command('delegations.create', {
       agent_label: 'Second',
       expires_at: new Date(Date.now() + 1800000).toISOString(),
     });
     await host.command('delegations.revoke', { delegation_id: 'd1' });
     expect(host.issuedDelegation()).toBeNull();
+    expect([...map.values()].join('')).not.toContain('agent-secret');
+  });
+  it('stops offering a grant the server lists as revoked, expired or missing', async () => {
+    for (const elsewhere of [[grant('revoked')], [grant('expired')], []]) {
+      let listed: unknown[] = [grant('active')];
+      const { host } = await issuingHost(() => listed);
+      await host.command('delegations.create', {
+        agent_label: 'Helper',
+        expires_at: new Date(Date.now() + 1800000).toISOString(),
+      });
+      await host.query('delegations.list', { cursor: 0, limit: 50 });
+      expect(host.connectionSecret()?.token).toBe('agent-secret');
+      // Revoked in another tab, expired by the server clock, or gone: the card stops offering it.
+      listed = elsewhere;
+      const states: ReturnType<typeof host.issuedDelegation>[] = [];
+      const unsubscribe = host.subscribe(() => states.push(host.issuedDelegation()));
+      await host.query('delegations.list', { cursor: 0, limit: 50 });
+      unsubscribe();
+      expect(host.connectionSecret()).toBeNull();
+      expect(host.issuedDelegation()).toBeNull();
+      expect(states).toContain(null);
+    }
+  });
+  it('offers the secret for every copy until the person finishes, the grant expires or it is revoked', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout', 'Date'] });
+    const logged = (['log', 'info', 'warn', 'error', 'debug'] as const).map((name) =>
+      vi.spyOn(console, name).mockImplementation(() => {}),
+    );
+    try {
+      const { host, map } = await issuingHost();
+      await host.command('delegations.create', {
+        agent_label: 'Helper',
+        expires_at: new Date(Date.now() + 1800000).toISOString(),
+      });
+      // A blocked clipboard or a second client: each request the person makes gets the token.
+      expect(host.connectionSecret()).toEqual({ sessionId: 's', token: 'agent-secret' });
+      expect(host.connectionSecret()).toEqual({ sessionId: 's', token: 'agent-secret' });
+      expect(host.connectionConfig('http://127.0.0.1:1/api')).toEqual(config);
+      expect(host.connectionConfig('http://127.0.0.1:1/api')).toEqual(config);
+      host.dismissConnection();
+      expect(host.connectionSecret()).toBeNull();
+      // Expiry clears it on its own, and emits so the card goes away.
+      await host.command('delegations.create', {
+        agent_label: 'Second',
+        expires_at: new Date(Date.now() + 60000).toISOString(),
+      });
+      expect(host.connectionSecret()?.token).toBe('agent-secret');
+      const expiredStates: ReturnType<typeof host.issuedDelegation>[] = [];
+      const unsubscribe = host.subscribe(() => expiredStates.push(host.issuedDelegation()));
+      vi.advanceTimersByTime(60001);
+      unsubscribe();
+      expect(expiredStates).toEqual([null]);
+      expect(host.connectionSecret()).toBeNull();
+      // Revoking the grant clears it as well.
+      await host.command('delegations.create', {
+        agent_label: 'Third',
+        expires_at: new Date(Date.now() + 1800000).toISOString(),
+      });
+      expect(host.connectionSecret()?.token).toBe('agent-secret');
+      await host.command('delegations.revoke', { delegation_id: 'd1' });
+      expect(host.connectionSecret()).toBeNull();
+      expect([...map.values()].join('')).not.toContain('agent-secret');
+      for (const spy of logged)
+        expect(JSON.stringify(spy.mock.calls)).not.toContain('agent-secret');
+    } finally {
+      for (const spy of logged) spy.mockRestore();
+      vi.useRealTimers();
+    }
   });
   it('recovers a lost grant after a new page host, persists confirmation, and permits the next business write', async () => {
     const { host, ports, fetcher, map } = setup();
@@ -405,6 +506,93 @@ describe('v4 single host persistence and recovery', () => {
       host.query('workspace_imports', { package_id: 'p', mode: 'apply' }),
     ).rejects.toMatchObject({ code: 'invalid_read' });
     expect(posts(fetcher)).toHaveLength(1);
+  });
+  describe('submission rule check', () => {
+    const work = { session_id: 's', kind: 'product', object_id: 'p', version: 2 };
+    const input = { decision: 'launch' as const, products: [work] };
+    const checked = (basis: 'draft' | 'saved') => ({
+      schema_version: 2,
+      basis,
+      mode: 'rules_only',
+      session_id: 's',
+      as_of: point,
+      decision: 'launch',
+      products: [work],
+      evaluation: { path: 'runtime/evaluation.json', sha256: '0'.repeat(64) },
+      work_language: 'en',
+      rule_items: [],
+      ...(basis === 'saved'
+        ? { submission: { session_id: 's', kind: 'submission', object_id: 'sub', version: 1 } }
+        : {}),
+    });
+    it('checks the command the submit control would send, read-only and unjournaled', async () => {
+      const { host, fetcher, map } = setup();
+      fetcher.mockImplementation(async (url, init) => {
+        if (!init?.body) return reply({ schema_version: 2, state });
+        expect(String(url)).toBe('/api/sessions/s/submission-rule-check');
+        expect(JSON.parse(String(init.body))).toMatchObject({
+          schema_version: 2,
+          operation: 'submissions.rule_check',
+          expected_version: point.business_seq,
+          expected_workspace_revision: point.workspace_revision,
+          payload: input,
+        });
+        return reply({ schema_version: 2, result: checked('draft') });
+      });
+      expect(await host.query('submissions.rule_check', input)).toEqual(checked('draft'));
+      expect(posts(fetcher)).toHaveLength(1);
+      expect(map.size).toBe(0);
+    });
+    it('reads a saved submission again by GET', async () => {
+      const { host, fetcher } = setup();
+      fetcher.mockImplementation(async () =>
+        reply({ schema_version: 2, result: checked('saved') }),
+      );
+      expect(await host.query('submissions.rule_check.read', { submission_id: 'sub' })).toEqual(
+        checked('saved'),
+      );
+      expect(fetcher).toHaveBeenCalledWith(
+        '/api/sessions/s/submission-rule-check?submission_id=sub',
+        expect.objectContaining({ method: 'GET' }),
+      );
+      expect(posts(fetcher)).toHaveLength(0);
+    });
+    it('refuses an answer for another session or basis', async () => {
+      const { host, fetcher } = setup();
+      fetcher.mockImplementation(async (_url, init) =>
+        init?.body
+          ? reply({ schema_version: 2, result: { ...checked('draft'), session_id: 'other' } })
+          : reply({ schema_version: 2, state }),
+      );
+      await expect(host.query('submissions.rule_check', input)).rejects.toMatchObject({
+        code: 'response_unconfirmed',
+      });
+      fetcher.mockImplementation(async () =>
+        reply({ schema_version: 2, result: checked('draft') }),
+      );
+      await expect(
+        host.query('submissions.rule_check.read', { submission_id: 'sub' }),
+      ).rejects.toMatchObject({ code: 'response_unconfirmed' });
+    });
+    it('is offered exactly where submitting is, and never in a read-only practice', async () => {
+      const { host, fetcher } = setup();
+      const context = {
+        as_of: point,
+        state,
+        session: host.snapshot().session,
+        available: { 'submissions.create': true },
+        semantic: { roles: 'model', feedback: 'model', assistant: 'model' },
+        read_only: false,
+      };
+      fetcher.mockResolvedValue(reply({ schema_version: 2, result: { result: context } }));
+      await host.query('workbench.read');
+      expect(host.snapshot().available['submissions.rule_check']).toBe(true);
+      fetcher.mockResolvedValue(
+        reply({ schema_version: 2, result: { result: { ...context, read_only: true } } }),
+      );
+      await host.query('workbench.read');
+      expect(host.snapshot().available['submissions.rule_check']).toBe(false);
+    });
   });
   it('retains unsaved text in memory after a quota failure and flushes it when storage recovers', async () => {
     const { host, storage, ports } = setup();

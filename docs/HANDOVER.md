@@ -1,6 +1,6 @@
 # 交接说明
 
-写给第一次打开本仓库的 Agent 与开发者：怎样起服务、怎样检查、契约怎样重导出、哪些文件不能手改、模型回传包在哪、后续还有什么。项目介绍见 [README](../README.md)；凭据密钥见 [W07 · 研究授权与真实会话导出](data/expansion-v3-w07.md#研究授权与真实会话导出)，模型槽与已登记模型的配置变量见 [W08 · 模型槽配置](data/expansion-v3-w08.md#模型槽配置)与 [W08 · 服务消费与回退边界](data/expansion-v3-w08.md#服务消费与回退边界)。
+写给第一次打开本仓库的 Agent 与开发者：怎样起服务、学员的 Agent 怎样连接、怎样检查、契约怎样重导出、哪些文件不能手改、模型回传包在哪、后续还有什么。项目介绍见 [README](../README.md)；凭据密钥见 [W07 · 研究授权与真实会话导出](data/expansion-v3-w07.md#研究授权与真实会话导出)，模型槽与已登记模型的配置变量见 [W08 · 模型槽配置](data/expansion-v3-w08.md#模型槽配置)与 [W08 · 服务消费与回退边界](data/expansion-v3-w08.md#服务消费与回退边界)。
 
 ## 起服务
 
@@ -49,6 +49,23 @@
 
 打开 <http://127.0.0.1:18560/>；Swagger 在 <http://127.0.0.1:18562/docs>。开发模式把最后一行换成 `npm run dev -- --port 18560`（同样设置 `ROLECRAFT_API_TARGET`）。worker 启动时在 stderr 打印每个模型槽的 provider、model 和指纹。PostgreSQL 用 `docker compose up -d --wait`（端口 55439，账号仅供本地开发），连接串 `postgresql+psycopg://career_lab:local-development-only@127.0.0.1:55439/career_lab`，经 `--database-url` 或 `CAREER_LAB_DATABASE_URL` 传入。
 
+## 学员的 Agent 怎样连接（MCP）
+
+学员在 Agent 面板创建授权后，连接卡给出端点和 Claude Code、Codex 各一条命令，不需要安装本项目的 Python 包。令牌只在这一页的内存里，复制或下载时才取出；点“完成”、离开练习（含切换到别的练习、关闭或刷新页面）、到期或撤销后清除，在别处撤销的，下次读取授权记录时清除。
+
+- **端点**：`POST <前端>/api/sessions/<session_id>/mcp`（经前端代理，连接卡用这个），或直连 `<API>/sessions/<session_id>/mcp`。实现在 `src/career_lab/mcp/streamable_http.py`，由 `mount_delegations` 挂载，不进公开 OpenAPI 契约。
+- **协议**：MCP 2026-07-28（每个请求带 `_meta` 版本，HTTP 头 `MCP-Protocol-Version`、`Mcp-Method` 与 `tools/call` 的 `Mcp-Name` 须与请求体一致）和 2025-11-25（先 `initialize`，之后每个请求带 `MCP-Protocol-Version: 2025-11-25`）。只回 JSON，不发会话号、不开 SSE；GET、DELETE 回 405。
+- **认证**：令牌只走 `Authorization: Bearer`，带查询串的请求回 400。只接受委托给外部 Agent 的令牌，学员自己的会话令牌也回 401。令牌无效、过期、撤销都回 401，`error.data.code` 写明是哪一种。每次工具调用都在进程内走与 stdio 相同的公开路由和权限检查；`session_id` 可以省略，缺省为授权所属会话，给出时必须一致。
+- **只在本机**：带 `Origin` 的请求（浏览器来源，含同源）和 Host 不是 127.0.0.1、localhost、[::1] 的请求一律 403。对外部署前必须改：Host 校验换成真实域名，全程 HTTPS，并重新评估令牌怎样交到 Agent 手里。
+- **限流**：同文件的 `HttpLimits` 集中定义：同时受理 16 个请求、同时执行 4 个、每个授权突发 30 次且每秒 10 次、请求体 1 MiB；超出回 429 和 `Retry-After`。计数在 API 进程内，多进程部署时各进程分别计数。
+- **日志**：沿用请求日志白名单，只记路由模板、状态和安全码（如 `mcp_unauthorized`、`mcp_browser_refused`），不记请求头、请求体和令牌。
+- **连接卡生成的命令**：
+  - Claude Code：`claude mcp remove rolecraft -s local >/dev/null 2>&1; claude mcp add -s local --transport http rolecraft '<端点>' --header 'Authorization: Bearer <令牌>'`（写进当前目录的本地配置，不写仓库里的 `.mcp.json`）。
+  - Codex：`ROLECRAFT_MCP_TOKEN='<令牌>' codex -c 'mcp_servers.rolecraft={ url = "<端点>", bearer_token_env_var = "ROLECRAFT_MCP_TOKEN" }'`（在这个终端启动已连好的 Codex，不写配置文件）。
+  - Codex 桌面版和其他客户端：在 `~/.codex/config.toml` 的 `[mcp_servers.rolecraft]` 写 `url` 与 `http_headers = { Authorization = "Bearer <令牌>" }`；其他支持 Streamable HTTP 的客户端同样填端点和这个请求头。
+  - 本机 Python 方式仍可用：下载的配置文件先 `chmod 600`，再 `python -m career_lab.mcp --config <文件>`。
+- **测试**：`tests/integration/test_mcp_streamable_http.py`（协议两代、认证、跨会话、浏览器来源、头体校验、限流、日志）、`tests/e2e/test_mcp_http_live.py`（真实 `career-lab serve` 进程，中英）、`scripts/regression/mcp.py` 的 `exercise_http`（完整门禁经前端代理跑中英）、`apps/web/tests/regression/mcp-connection.mjs`（连接卡到回传作品、撤销）。这些都用脚本化 HTTP 客户端，不运行真实的 Claude Code 或 Codex。
+
 ## 没有负责方产物时怎样演示模型建议
 
 仓库里没有负责方回传，fixture v2 也不在仓库里。要在正常入口看到「理由与证据的支持关系」下的「合成机制演示」，先用 model-flows 的构造器登记一份合成线性回传（关键词构造的权重，从未训练，scope 为 `synthetic_fixture`），把三个环境变量写进一个文件：
@@ -86,8 +103,9 @@ CHROME_BIN=<chrome-headless-shell> uv run --locked python -m scripts.regression.
 CHROME_BIN=<chrome-headless-shell> uv run --locked python -m scripts.regression.browser --suite model-flows --output "$OUT/model-flows"
 ```
 
-- `run` 依次跑 lint、后端全部测试（junit）、前端 Vitest、72 项状态回归、构建、逐 ID 比较（含发布字节保护），`--browser` 再跑 MCP 双语与中英 published-flows（固定用缺省端口 19660／19662）。单独调用 `scripts.regression.browser` 时可用 `--web-port`／`--api-port` 换端口。
+- `run` 依次跑 lint、后端全部测试（junit）、前端 Vitest、72 项状态回归、构建、逐 ID 比较（含发布字节保护），`--browser` 再跑 MCP 双语（stdio 与 Streamable HTTP）与中英 published-flows（固定用缺省端口 19660／19662）。published-flows 全程模拟「减少动效」，之后同一套服务再跑一轮默认动效的 `default-motion`（中英：打开委托、返回、打开资料、返回、再打开另一份资料，每步限时求值并核对标题），结果在输出目录的 `default-motion.json`。单独调用 `scripts.regression.browser` 时可用 `--web-port`／`--api-port` 换端口。机器设了系统 HTTP 代理时，先设 `NO_PROXY=127.0.0.1,localhost`，否则就绪检查会把回环请求交给代理。
 - model-flows 默认三段：`linear`、`fusion`、`slots`（回环 JUDGE 与 ASSISTANT 槽）。可选段需 encoder 环境：`UV_PROJECT_ENVIRONMENT=<encoder 环境> uv run --locked --extra encoder python -m scripts.regression.browser --suite model-flows --phases encoder hetero --output <新目录>`；`xlmr` 段另需 `ROLECRAFT_XLMR_DIR` 指向本机下载的 XLM-R base（权重放仓库与云盘之外，登记只能是合成机制）。
+- published-flows 套件在启动服务前先跑交付前预演卡的真实 DOM 组件检查（`apps/web/src/features/feedback-native/presubmit.vitest.config.ts`：受控页，自起开发服务，任选空闲端口），在 published-flows 之后用同一套服务再跑一轮 `presubmit-flows`（中英，减少动效：新练习直接交付后，反馈页只在规则已定论的未满足项下出"交付时"行；预演卡的位置、计数、措辞、直达、F17 版本措辞、重开记忆，以及与正式反馈一致），结果与截图在输出目录的 `presubmit-flows/`。
 - 可选 encoder 检查：`HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 <encoder 环境>/bin/python -m pytest -q tests/optional_encoder/check_encoder_v3.py tests/optional_encoder/check_local_encoder.py tests/optional_encoder/check_fusion_registration.py tests/optional_encoder/check_return_v3_plugin.py tests/optional_encoder/check_xlmr_smoke.py`（最后一个需要 `ROLECRAFT_XLMR_DIR` 指向下载的 XLM-R 目录，共 34 项；`check_return_v3_plugin.py` 的 11 项按负责方的用法跑 v3 补充包的编码器参考脚本：`predict` 行经 `verify-return` 重载一致、弃权与我方加载器相同、`seal` 的 `artifact_roles` 过 validate-handoff、序列分类模型的保存配方）；XLM-R 冒烟为 `<encoder 环境>/bin/python -m scripts.smoke.xlmr_base --model-dir <目录> --revision <40 位> --out <新目录>`。这些只证明加载与机制，不是质量证据。
 - **锁**：门禁对 CPU 负载与端口敏感。本机约定先对机器上登记的同一个锁文件取 `fcntl.flock` 独占锁再跑（macOS 没有 `flock` 命令），例如 `python3 -c 'import fcntl, subprocess, sys; f = open(sys.argv[1], "a"); fcntl.flock(f, fcntl.LOCK_EX); sys.exit(subprocess.call(sys.argv[2:]))' "$GATE_LOCK" sh -c '<上面三行>'`。排队时不另起第二套。
 - **基线**：`tests/regression/test-baseline.json` 是逐 ID 基线，只追加、不删改；新测试 ID 在全部合入后由收口线一次追加，并在提交说明里列来源与数量。平台差异只写进 `test-baseline-overrides.json`，每条带原因。

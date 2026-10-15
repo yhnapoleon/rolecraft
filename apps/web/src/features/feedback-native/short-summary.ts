@@ -63,12 +63,24 @@ export function declaredPurpose(
 /** The criteria rendered one by one in the panel. */
 export const ruleItems = (report: Report): Item[] =>
   report.rule_items ?? report.items.filter((item) => item.source === 'verified_rule');
-const inapplicable = (item: Item) =>
+/** What counting a criterion needs: its finding, its source and whether it applied. */
+export type Counted = Pick<Item, 'applicability' | 'label' | 'source'>;
+const inapplicable = (item: Counted) =>
   item.label === 'NOT_APPLICABLE' || item.applicability === 'not_applicable';
-const undetermined = (item: Item) =>
+const undetermined = (item: Counted) =>
   item.applicability === 'undetermined' || item.applicability === 'unknown';
 
-export function feedbackCounts(items: readonly Item[]) {
+/** How the first screen counts one criterion: decided by a rule, still pending, or left out. */
+export function feedbackClass(
+  item: Counted,
+): 'verified' | 'pending' | 'undetermined' | 'notApplicable' {
+  if (inapplicable(item)) return 'notApplicable';
+  if (undetermined(item)) return 'undetermined';
+  if (item.source === 'verified_rule' && item.label !== 'INSUFFICIENT') return 'verified';
+  return 'pending';
+}
+
+export function feedbackCounts(items: readonly Counted[]) {
   const counts = {
     total: items.length,
     verified: 0,
@@ -76,12 +88,7 @@ export function feedbackCounts(items: readonly Item[]) {
     undetermined: 0,
     notApplicable: 0,
   };
-  for (const item of items) {
-    if (inapplicable(item)) counts.notApplicable++;
-    else if (undetermined(item)) counts.undetermined++;
-    else if (item.source === 'verified_rule' && item.label !== 'INSUFFICIENT') counts.verified++;
-    else counts.pending++;
-  }
+  for (const item of items) counts[feedbackClass(item)]++;
   return counts;
 }
 

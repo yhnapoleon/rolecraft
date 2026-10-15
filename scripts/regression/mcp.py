@@ -1,4 +1,4 @@
-"""Exercise the real stdio MCP transport, idempotent return and revocation."""
+"""Exercise the real stdio and Streamable HTTP MCP transports: return, replay, revocation."""
 
 import json
 import os
@@ -6,12 +6,18 @@ import selectors
 import subprocess
 import sys
 import tempfile
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import httpx
 
+from career_lab.mcp.protocol import CAPABILITIES, LEGACY, MODERN, VERSION
 from scripts.regression.published import ROOT
+
+CLIENT_INFO = {
+    "io.modelcontextprotocol/clientInfo": {"name": "rolecraft-regression", "version": "1"}
+}
 
 
 def rpc(
@@ -160,3 +166,174 @@ def exercise(api: str, language: str) -> dict[str, object]:
                     except subprocess.TimeoutExpired:
                         process.kill()
                         process.wait(timeout=5)
+
+
+class McpHttp:
+    """What an agent's own Streamable HTTP client sends: no RoleCraft code on its side."""
+
+    def __init__(self, endpoint: str, token: str) -> None:
+        self.endpoint = endpoint
+        self.sequence = 0
+        self.client = httpx.Client(
+            timeout=15,
+            trust_env=False,
+            headers={
+                "Authorization": "Bearer " + token,
+                "Accept": "application/json, text/event-stream",
+            },
+        )
+
+    def __enter__(self) -> "McpHttp":
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.client.close()
+
+    def post_modern(self, method: str, params: dict[str, object] | None = None) -> httpx.Response:
+        self.sequence += 1
+        headers = {"MCP-Protocol-Version": MODERN, "Mcp-Method": method}
+        if method == "tools/call" and params is not None:
+            headers["Mcp-Name"] = str(params["name"])
+        meta = {VERSION: MODERN, CAPABILITIES: {}, **CLIENT_INFO}
+        body = {
+            "jsonrpc": "2.0",
+            "id": self.sequence,
+            "method": method,
+            "params": {**(params or {}), "_meta": meta},
+        }
+        return self.client.post(self.endpoint, json=body, headers=headers)
+
+    def modern(self, method: str, params: dict[str, object] | None = None) -> dict[str, object]:
+        response = self.post_modern(method, params)
+        response.raise_for_status()
+        value = response.json()
+        assert "error" not in value, value
+        return value["result"]
+
+    def call(self, name: str, arguments: dict[str, object]) -> dict[str, object]:
+        result = self.modern("tools/call", {"name": name, "arguments": arguments})
+        assert result["isError"] is False, result
+        return result["structuredContent"]
+
+    def legacy_handshake(self) -> str:
+        """2025-11-25: initialize, then send the negotiated version on every request."""
+        self.sequence += 1
+        started = self.client.post(
+            self.endpoint,
+            json={
+                "jsonrpc": "2.0",
+                "id": self.sequence,
+                "method": "initialize",
+                "params": {
+                    "protocolVersion": LEGACY,
+                    "capabilities": {},
+                    "clientInfo": {"name": "rolecraft-regression", "version": "1"},
+                },
+            },
+        )
+        started.raise_for_status()
+        negotiated = {"MCP-Protocol-Version": started.json()["result"]["protocolVersion"]}
+        ready = self.client.post(
+            self.endpoint,
+            json={"jsonrpc": "2.0", "method": "notifications/initialized"},
+            headers=negotiated,
+        )
+        assert ready.status_code == 202
+        self.sequence += 1
+        listed = self.client.post(
+            self.endpoint,
+            json={"jsonrpc": "2.0", "id": self.sequence, "method": "tools/list"},
+            headers=negotiated,
+        )
+        listed.raise_for_status()
+        assert listed.json()["result"]["tools"]
+        return negotiated["MCP-Protocol-Version"]
+
+
+def exercise_http(
+    api: str, mcp_base: str, language: str, on_token: Callable[[str], None] | None = None
+) -> dict[str, object]:
+    """Return, replay and revoke over Streamable HTTP; mcp_base may be the web /api proxy.
+
+    on_token lets a caller check logs for the secret; results never carry it.
+    """
+    with httpx.Client(base_url=api, timeout=15, trust_env=False) as owner:
+        response = owner.post(
+            "/sessions",
+            json={"schema_version": 2, "scenario": "pm_pilot_v2", "work_language": language},
+        )
+        response.raise_for_status()
+        created = response.json()
+        prefix = "/sessions/" + created["session_id"]
+        owner.headers["Authorization"] = "Bearer " + created["token"]
+
+        def command(operation: str, payload: dict[str, object], key: str) -> dict[str, object]:
+            state = owner.get(prefix).json()["state"]
+            return {
+                "schema_version": 2,
+                "request_id": key,
+                "operation": operation,
+                "payload": payload,
+                "expected_version": state["business_seq"],
+                "expected_workspace_revision": state["workspace_revision"],
+            }
+
+        issued = owner.post(
+            prefix + "/delegations",
+            json=command(
+                "delegations.create",
+                {
+                    "agent_label": "MCP HTTP regression",
+                    "capabilities": ["read", "act"],
+                    "expires_at": (datetime.now(UTC) + timedelta(minutes=10)).isoformat(),
+                },
+                "grant",
+            ),
+        )
+        issued.raise_for_status()
+        grant = issued.json()["result"]["result"]
+        if on_token is not None:
+            on_token(grant["token"])
+        with McpHttp(mcp_base.rstrip("/") + prefix + "/mcp", grant["token"]) as agent:
+            assert MODERN in agent.modern("server/discover")["supportedVersions"]
+            listed = {tool["name"]: tool for tool in agent.modern("tools/list")["tools"]}
+            schema = listed["work_products.create"]["inputSchema"]
+            assert "session_id" not in schema.get("required", [])
+            seen = agent.call("observation", {})["result"]["as_of"]
+            returned = {
+                "schema_version": 2,
+                "request_id": "return-once-http",
+                "operation": "work_products.create",
+                "payload": {
+                    "kind": "text",
+                    "purpose": "exploration",
+                    "title": "MCP HTTP evidence note",
+                    "content": "Review this version before adoption.",
+                },
+                "expected_version": seen["business_seq"],
+                "expected_workspace_revision": seen["workspace_revision"],
+            }
+            first = agent.call("work_products.create", {"command": returned})
+            repeated = agent.call("work_products.create", {"command": returned})
+            assert first["replayed"] is False and repeated["replayed"] is True
+            assert agent.legacy_handshake() == LEGACY
+            revoked = owner.request(
+                "DELETE",
+                prefix + "/delegations/" + grant["delegation"]["id"],
+                json=command(
+                    "delegations.revoke", {"delegation_id": grant["delegation"]["id"]}, "revoke"
+                ),
+            )
+            revoked.raise_for_status()
+            denied = agent.post_modern("tools/list")
+            assert denied.status_code == 401
+            assert denied.json()["error"]["data"]["code"] == "credential_revoked_or_invalid"
+    return {
+        "language": language,
+        "transport": "streamable_http",
+        "status": "passed",
+        "product": first["result"]["ref"],
+        "replayed": True,
+        "legacy_handshake": True,
+        "revoked_status": 401,
+    }

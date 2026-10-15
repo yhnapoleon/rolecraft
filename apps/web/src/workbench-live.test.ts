@@ -1,28 +1,12 @@
-import { readFileSync } from 'node:fs';
-import { runInThisContext } from 'node:vm';
 import { describe, expect, it, vi } from 'vitest';
 import { ApiError, type Transport } from './api';
 import { LiveWorkbench, fromPilot, toPilot } from './workbench-live';
+import { engine, memory } from './workbench-live-test-support';
 import { STORAGE_KEY, WorkspaceStore } from './store';
 import type { World } from './types';
 import { ASSISTANT_COPY } from './app/assistant-mode';
+import { eventLine } from './app/events.js';
 
-const mod = { exports: {} as any };
-runInThisContext(
-  '(function(module){' +
-    readFileSync(new URL('../public/workbench-engine.js', import.meta.url), 'utf8') +
-    '\n})',
-)(mod);
-export const engine = mod.exports;
-export function memory() {
-  const values = new Map<string, string>();
-  return {
-    getItem: (k: string) => values.get(k) ?? null,
-    setItem: (k: string, v: string) => {
-      values.set(k, v);
-    },
-  };
-}
 const config = {
   participants: 20,
   domains: ['faq', 'policy'],
@@ -1224,6 +1208,50 @@ describe('batch 1 server authority and legacy recovery', () => {
     live.store.update('s', { questions: { trace: 'outdated local question' } });
     expect(a.conversations.technical[0].text).toBe('原提问');
   });
+  it('says what an agent did in the activity, from the event reference', async () => {
+    const { live } = fixture();
+    const a = await live.start('pilot');
+    const test = { session_id: 's', kind: 'test', object_id: 'test', version: 1 };
+    live.store.update('s', {
+      tests: [testRecord()],
+      timeline: {
+        mode: 'saved',
+        turns: [],
+        events: [
+          {
+            seq: 2,
+            event_type: 'test_assistant',
+            actor_id: 'agent:d1',
+            executor_kind: 'external_agent',
+            refs: [test],
+            payload: {},
+          },
+        ],
+      },
+    });
+    const event = a.events.find((e: { server?: boolean; seq?: number }) => e.server && e.seq === 2);
+    expect(event.refs).toEqual([test]);
+    expect(eventLine(a, event)).toMatchObject({
+      text: '我的 Agent：测试：政策？',
+      open: { action: 'open-run', id: 'test' },
+    });
+  });
+  it('names a cited document by its current title, whichever version a test cited', async () => {
+    const { live } = fixture();
+    const a = await live.start('pilot');
+    live.store.update('s', {
+      protocol: 2,
+      materials: [{ id: 'policy', version: 2, title: '费用管理通知：差旅住宿标准', content: '' }],
+      v2MaterialTitles: {
+        'policy:1': '差旅住宿与交通政策',
+        'policy:2': '费用管理通知：差旅住宿标准',
+      },
+      tests: [{ ...testRecord(), citations: [{ material_id: 'policy', version: 1 }] }],
+    });
+    expect(a.tests[0].citations).toEqual([
+      { id: 'policy', version: 1, title: '费用管理通知：差旅住宿标准' },
+    ]);
+  });
   it('keeps legacy local questions, task links and observed times when fields are missing or null', async () => {
     const { live, data } = fixture();
     const a = await live.start('pilot');
@@ -1449,9 +1477,21 @@ describe('batch 1 server authority and legacy recovery', () => {
 });
 
 import { pendingTurnRole, serverText } from './store';
-import { request } from './api';
+import { request, retryableRead } from './api';
 import { setPreference } from './app/i18n';
 describe('batch 1 error transport and translations', () => {
+  it('a request whose response never arrives is a read worth repeating', async () => {
+    const fetcher = vi
+      .spyOn(globalThis, 'fetch')
+      .mockRejectedValue(new TypeError('Failed to fetch'));
+    try {
+      const error = await request('/sessions/s/practice?submission_id=x').catch((e) => e);
+      expect(error).toBeInstanceOf(ApiError);
+      expect(retryableRead(error)).toBe(true);
+    } finally {
+      fetcher.mockRestore();
+    }
+  });
   it('preserves code and structured details through the production request function', async () => {
     const details = { missing: { human_fallback: true } };
     const fetcher = vi

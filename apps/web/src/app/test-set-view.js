@@ -98,7 +98,7 @@ export function testSetView({
       ${strip}
       <header class="test-set-head"><div class="test-set-kicker"><span class="test-eyebrow">${icon('flask', 'i-sm')}${T('测试计划', 'Test plan')}</span><span class="test-count">${T(work.cases.length + ' 个问题', work.cases.length + ' questions')}</span></div>
         <label class="sr-only" for="editor-title">${T('标题', 'Title')}</label><input id="editor-title" class="editor-title" data-edit="title" value="${esc(work.title)}" maxlength="160" ${editable ? '' : 'readonly'}>
-        <div class="editor-meta"><span>${work.source === 'user' ? T('你写的', 'By you') : T('来自你的 Agent', 'From your agent')}</span><span data-revision>v${work.revision}</span><span class="save" data-save></span></div>
+        <div class="editor-meta"><span>${work.source === 'user' ? T('你写的', 'By you') : T('来自你的 Agent', 'From your agent')}</span><span data-revision-label>v${work.revision}</span><span class="save" data-save></span></div>
         <p class="test-set-intro">${T('把想确认的事，变成可以亲手验证的问题。', 'Turn what you want to know into questions you can test.')}</p>
       </header>
       <div class="test-set-status"><div class="test-progress" aria-hidden="true">${work.cases.map((c, i) => `<span class="${states[i].current ? 'recorded' : ''}"></span>`).join('')}</div><span class="test-count-results">${T(done + ' / ' + work.cases.length + ' 问题有结果', done + ' / ' + work.cases.length + ' questions have results')}</span><span class="test-review-note">${T('结果由你核对', 'Results for you to review')}</span></div>

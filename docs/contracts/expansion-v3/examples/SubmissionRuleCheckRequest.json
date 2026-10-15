@@ -1,0 +1,14 @@
+{
+  "expected_version": 1,
+  "expected_workspace_revision": 1,
+  "operation": "submissions.rule_check",
+  "payload": {
+    "config": null,
+    "decision": "launch",
+    "evidence_refs": [],
+    "products": [],
+    "schema_version": 2
+  },
+  "request_id": "example",
+  "schema_version": 2
+}

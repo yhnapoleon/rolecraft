@@ -76,18 +76,31 @@ async function fixture() {
         {
           id: 'e1',
           session_id: 's1',
-          type: 'permission_denied',
+          type: 'material_read',
           executor: { kind: 'external_agent' },
           refs: [],
-          data: { summary: '<img src=x onerror="window.BAD=true">', verification: 'rule_verified' },
+          data: {
+            material_id: 'm1',
+            version: 2,
+            summary: '<img src=x onerror="window.BAD=true">',
+            verification: 'rule_verified',
+          },
         },
         {
           id: 'e2',
           session_id: 's1',
           type: 'model_check',
-          executor: { kind: 'system' },
+          executor: { kind: 'external_agent' },
           refs: [ref],
           data: { semantic_status: 'placeholder' },
+        },
+        {
+          id: 'e3',
+          session_id: 's1',
+          type: 'config_applied',
+          executor: { kind: 'human' },
+          refs: [],
+          data: { config_id: 'pilot', config_version: 4 },
         },
       ],
       drafts: new Map(),
@@ -201,7 +214,7 @@ async function record(name, fn) {
 }
 async function prepareGrant() {
   await page.locator('[name=agentName]').fill('我的 Codex');
-  await page.getByRole('button', { name: '选择材料与作品范围', exact: true }).click();
+  await page.getByRole('button', { name: '选择资料范围', exact: true }).click();
 }
 try {
   await record('default read scope, no automatic actions, host controls preserved', async () => {
@@ -339,9 +352,11 @@ try {
     async () => {
       assert.equal(await page.locator('#activity img').count(), 0);
       assert.equal(await page.evaluate(() => window.BAD), undefined);
-      assert.ok((await page.locator('#activity').innerText()).includes('未获授权'));
+      assert.ok((await page.locator('#activity').innerText()).includes('我的 Agent：读了一份资料'));
       assert.ok((await page.locator('#activity').innerText()).includes('等待模型接入'));
       assert.ok((await page.locator('#activity').innerText()).includes('规则核实'));
+      // The learner's own records stay in the activity tab, not in the Agent log.
+      assert.ok(!(await page.locator('#activity').innerText()).includes('配置 v4'));
       await page.evaluate(() => (h.rejectList = true));
       await page.getByRole('button', { name: '刷新授权与记录', exact: true }).click();
       await page.waitForFunction(() =>

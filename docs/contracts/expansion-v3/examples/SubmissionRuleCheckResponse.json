@@ -1,0 +1,41 @@
+{
+  "result": {
+    "as_of": {
+      "business_seq": 0,
+      "schema_version": 2,
+      "storage_revision": 0,
+      "workspace_revision": 0
+    },
+    "basis": "draft",
+    "config": null,
+    "decision": "launch",
+    "evaluation": {
+      "media_type": "application/json",
+      "path": "files/payload.json",
+      "schema_version": 2,
+      "sha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a"
+    },
+    "facts": {
+      "adjustment_actions": null,
+      "available_dev_days": null,
+      "capacity": null,
+      "config_version": null,
+      "deadline_day": null,
+      "participants": null,
+      "policy_version": null,
+      "requested_launch_day": null,
+      "required_dev_days": null,
+      "schema_version": 2,
+      "test_runs": [],
+      "unapproved_resource_excess": null
+    },
+    "mode": "rules_only",
+    "products": [],
+    "rule_items": [],
+    "schema_version": 2,
+    "session_id": "example",
+    "submission": null,
+    "work_language": "zh"
+  },
+  "schema_version": 2
+}

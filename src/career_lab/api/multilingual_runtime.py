@@ -49,6 +49,7 @@ def build_catalog(
                 raise ProtocolError("duplicate_scenario_language", status=503)
             primary.language_scenarios[choice] = registration
     primary.active_bindings = tuple(m.bindings for _, m in groups)
+    primary.rule_checks = {bound: c for r, _ in groups for bound, c in r.rule_checks.items()}
     # Every request is dispatched through the primary registry, including operations mounted on it
     # after this catalog is built (the Agent control plane, observation and tools). A language or
     # variant registry reports its own operations, and defers to the primary for anything it lacks,

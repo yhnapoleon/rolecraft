@@ -13,8 +13,21 @@ from career_lab.contracts.v2.core import (
     ObjectRef,
     VersionPoint,
     Executor,
+    canonical,
 )
 from career_lab.contracts.v2.world import TestResultV2
+
+
+def record_text(kind: str, content: dict[str, Any]) -> str:
+    """Canonical text of a typed record as evaluators read it.
+
+    A decision's assessment only displays what the decision was judged against; the
+    request, configuration and published rules it summarises are evidence of their own.
+    Leaving it out keeps evaluation inputs byte-identical to decisions recorded without one.
+    """
+    if kind == "business_decision":
+        content = {key: value for key, value in content.items() if key != "assessment"}
+    return canonical(content)
 
 
 def model_generated(test: TestResultV2) -> bool:

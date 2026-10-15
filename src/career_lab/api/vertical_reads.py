@@ -11,6 +11,7 @@ from career_lab.storage.v2_tables import v2_snapshots, v2_transactions, v2_reque
 from sqlalchemy import select
 from career_lab.storage.v2_lifecycle import point
 from career_lab.runtime.roles_v2 import record_reply_display
+from career_lab.scenarios.v2.policy import effective_config
 from career_lab.workspace.preview_state import scoped, withheld_preview
 
 
@@ -226,6 +227,11 @@ def install_native_reads(
                 "source_versions": dict(snapshot.source_versions),
                 "indexed_versions": dict(snapshot.indexed_versions),
                 "config": snapshot.config.model_dump(mode="json"),
+                # The configuration the next assistant test uses: the same resolution
+                # against approved resources as Assistant.run, never a client estimate.
+                "effective_config": effective_config(
+                    current.package, snapshot.config, snapshot.world.resources
+                ).model_dump(mode="json"),
                 "material_titles": {
                     f"{m.id}:{m.version}": m.title
                     for m in current.package.materials

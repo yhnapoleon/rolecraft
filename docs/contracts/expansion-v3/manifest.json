@@ -123,7 +123,10 @@
       "HistoricalResponsibilitiesSnapshot",
       "FeedbackResponseRecord",
       "FeedbackResponseCreate",
-      "JobRefreshRecord"
+      "JobRefreshRecord",
+      "SubmissionRuleCheckRequest",
+      "SubmissionRuleCheck",
+      "SubmissionRuleCheckResponse"
     ],
     "W06": [
       "AuthContext",
@@ -288,7 +291,10 @@
       "PracticePlan",
       "PracticeSession",
       "PracticeChoiceResult",
-      "PracticeChoiceResponse"
+      "PracticeChoiceResponse",
+      "SubmissionRuleCheckRequest",
+      "SubmissionRuleCheck",
+      "SubmissionRuleCheckResponse"
     ],
     "W15": [
       "AnnotationV2",
@@ -300,7 +306,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "952f8e048eb497ae7d7be72dbe08131803c98ce59a1f66b85c885590b0fd4e9b"
+      "sha256": "a1115dfc12f6c9482a542249b9395b0d091a042ada9e49ef188d337e5c93a971"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -308,7 +314,7 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "759f10925dcd68908c027f86eaff10d8424fe38dac011a09fe02eb6b5a97c2cd"
+      "sha256": "c893f2bb1b90315e95f7f3be26db495117223a5dcf4363eac642cdc737113206"
     }
   },
   "errors": {
@@ -338,6 +344,7 @@
     "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.",
     "W07-W08-empty-joint-target": "Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.",
     "W07-W08-semantic-consensus": "Only independent-pass consensus uses semantic_decision_key; G2/G2v final remains bound by the full normalized decision_key to the actual selected pass.",
+    "approval-decision-assessment": "Optional BusinessDecision.assessment (_ApprovalAssessment with _ApprovalTermCheck rows) records what a resource decision was judged against: every requested term with its allocation at the time, requested total, published ceiling and the bound plan's need, plus all of its issues (over_limit, below_current, no_increase, no_shortfall, insufficient, need_over_limit), not only the first failed check; strategy work items the plan lacks and a missing human fallback; and the exact published approval-rule sentences the decision applies (this session's rule material at its source version, with span and quote, observed at the decision). Status, reason_code, reason and the decision order are unchanged. Counteroffers keep the original request's assessment and acceptances carry the accepted terms. Unset assessments are omitted, so existing decisions, examples and wire bytes are unchanged; evaluators read decisions without the assessment, so evaluation input bytes are unchanged.",
     "assistant-generator": "Only add optional AssistantConfig.generator (extractive|llm), default extractive. The default is omitted from serialization; all previous examples and instance bytes remain unchanged. Provider wiring uses the configured model, with local role substitutes mapped to None.",
     "assistant-mode-projection": "The v4 host reads (api/vertical_reads.py, timeline and workbench.read) attach to each test object the assistant mode saved with that answer (extractive, llm, unavailable or failed), its provider, model revision and configuration version, and report semantic.assistant from the live deployment's model (model or waiting_model) instead of a constant. Host results stay free-form V2Response data; public schemas, examples, errors and stored records are unchanged.",
     "authoritative-segment-traces": "A declared trace always constrains text hash and complete dependencies, including cited explanations and history; visible citations do not bypass it. The most-specific complete trace is authoritative for a field.",
@@ -345,7 +352,6 @@
     "feedback-segment-scope": "Server-only complete input traces bind exact content hashes and dependencies per segment; fully authorized finite-scope readers retain proved text, missing or hidden dependencies degrade only affected parts.",
     "model-assembly": "Optional registered-model identity fields: kind; task_type (relation is omitted); criteria and rubric_version (id and sha256), required for criterion registrations and absent otherwise; dataset (id, manifest sha256, label tiers); fusion components and parameters; weights_stage. FeedbackProvenance gains registered_models, recorded only when a criterion registration is configured, and support_model, recorded only when the support verifier is configured apart from the Judge. RegisteredModelAdvice gains criterion advice (any identifier on the wire, the five-label domain, rule reconciliation), relation sentence units whose aggregation counts follow the units, and explicit error codes for rule conflicts, unestablished applicability, criteria a model does not cover, rubric version mismatches and fully abstained work. Synthetic registrations may show labels and evidence as mechanism-only advice. Unset fields are omitted, so existing records, examples and wire bytes are unchanged; limited readers never receive sentence results. The runtime reads four model slots (ROLES, JUDGE, SUPPORT, ASSISTANT) from CAREER_LAB_<SLOT>_* at startup. A slot's provider, key file, base URL and model come from one layer only: its own variables when it names a provider, else the whole JUDGE slot (SUPPORT) or the whole shared configuration, so a key never reaches another provider's endpoint. Provenance records the Judge and support endpoints a slot configures (optional base_url); with no slot variable set, requests and provenance are unchanged. CAREER_LAB_MODEL_REGISTRATIONS names relation and criterion registrations (criterion is only parsed so far); setting it beside CAREER_LAB_MODEL_REGISTRATION refuses to start.",
     "native-runtime-slice": "One standard API/worker assembly; native investigation, assistant trials, resource decisions and colleague slots. Explicit failed-job refresh, no automatic model retry including expired leases, exact historical public event/source reads, real material activation in recovered role provenance. W05 r9 production evidence, atomic feedback and native callbacks are assembled with frozen advisory policies; W03 native composition remains pending.",
-    "object-evidence-ref": "objects.read of a test run or a work version (kind test or product) adds an optional evidence_ref: the exact EvidenceRefV2 of that version, observed at the business_seq of the stored snapshot that created it, valid from 0, with no span or quote. It is the reference the evaluator's source reader verifies for cited objects, so work, resource requests and feedback supplements cite tests and work with it. It is absent when the creation snapshot is not found; materials keep citing passages and other kinds are unchanged. Request models, routes and operations are unchanged.",
     "operation-readiness": "Installed and ready are distinct; closed registered operations return stable unavailable before public dispatch. Auth/delegation capabilities remain independent.",
     "original-source-protection": "test_freeze enumerates only BASE existing scenarios; no v2 baseline rewrite and no test exclusion needed.",
     "outcome-preview-freshness": "Optional recorded preview conditions on FeedbackV2 and read-time preview states on WorkspaceProductPage: stale previews name each changed input, configuration, resource or material condition, point to a newer preview and list later recorded business actions beside the unchanged prediction. Outcome actions may also name approval requests and submissions. Save-time checks follow the work purpose and task. Records and pages without previews retain their bytes; reads never evaluate again. Recorded material versions are only those the learner may open; finite-scope readers get resource values and material ids withheld and learn only that those conditions changed. Lifecycle-only versions with unchanged content do not make a preview stale.",
@@ -353,14 +359,16 @@
     "registered-model-advice": "Optional advisory-only relation results and registration identity; complete input traces gate each new advice segment. Missing fields retain historical wire bytes.",
     "role-event-references": "Actual event provenance is scope/audience/window validated and remapped in the event namespace; no parallel event store.",
     "rule-score-range": "Optional FeedbackV2.score_range (_RuleScoreRange with _RuleScoreCriterion rows): the weighted range of the rule-anchored rubric part (2026-10-11 decision 5), recorded once when feedback is written under an installed rubric whose weights are frozen (rubric-v2-final-20261009, read from the package's verified rubric file). Verified rule bounds tighten it; pending, model-advice and undetermined criteria span their full weight and carry no points; not-applicable criteria leave the denominator, which is reported without rescaling. There is no single total. Candidate rubrics without frozen weights record no range, so those records keep their bytes; scoped reviews that evaluate only some criteria record no range; partial read projections whose rule results changed withhold the range.",
-    "submitted-evidence-status": "New response evidence is explicitly user_submitted_unverified (or none_submitted); legacy absence stays unknown. Linking never claims quote or semantic verification."
+    "submission-rule-check": "Read-only submission rule check for the session's own person (delegated agents get 403 human_required). POST /sessions/{session_id}/submission-rule-check takes SubmissionRuleCheckRequest, shaped like the submit command (operation submissions.rule_check, payload SubmitInput); nothing is recorded, request_id has no idempotent result and the expected versions must equal the checked point (else version_conflict). GET with ?submission_id= checks a saved submission again at its own as_of. SubmissionRuleCheckResponse.result (SubmissionRuleCheck: basis draft or saved, mode rules_only, as_of, decision, products, config, evaluation, work_language) carries rule_items equal to the formal FeedbackV2.rule_items of the same inputs at that point, computed by the feedback worker's evaluation without any model, and _RuleCheckFacts: the verified numbers behind them (participants, capacity, required and available developer-days, launch and deadline day, unapproved excess, configuration and policy version, adjustment actions) and actual test runs per configuration version with the retests after the current policy update. Gateway operations, MCP tools, tables, FeedbackV2 and scenario packages are unchanged.",
+    "submitted-evidence-status": "New response evidence is explicitly user_submitted_unverified (or none_submitted); legacy absence stays unknown. Linking never claims quote or semantic verification.",
+    "workspace-effective-config": "The learner timeline and workbench.read workspace add effective_config: the EffectiveConfig the next assistant test uses, resolved from the saved configuration and the approved resources by the same function as the test itself. Readers limited to named objects still receive no workspace."
   },
   "openapi": {
     "path": "openapi.json",
-    "sha256": "a762b2a5a823fbadb363374f442883f787a519cfe5d0cb291e1c22e084b7534d"
+    "sha256": "4e1a46ff4522869917cb53e0b71cfab35e6312be5b164b054e780fa1dea8ef45"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23",
+  "previous_contract_revision": "expansion-v3-d2f0dd5a386651a1a86a581b3d18bdb98c7320ac05ffa35adef75993ce600c4a",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -682,7 +690,7 @@
       "example_sha256": "2ae4db953d5e87e44a796f21a31e95c9c26a7878baa970e98a08a8f0c1b0fa6f",
       "owner": "W01",
       "schema": "schemas/BusinessDecision.json",
-      "schema_sha256": "86b8f54ed3f6600ec09f3ebd36bce340699cee46b33720e76729dc4b15fcddc2",
+      "schema_sha256": "78351d1bcbc6185e64e3617d8d254e8a56f873985dd22edd8eaff102491a39ae",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -2776,6 +2784,51 @@
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
       ]
     },
+    "SubmissionRuleCheck": {
+      "consumers": [
+        "W05",
+        "W14"
+      ],
+      "example": "examples/SubmissionRuleCheck.json",
+      "example_sha256": "d08a85e9ba181742670d931a8c8e56865a670a87636188acd3c6f8af886fec28",
+      "owner": "W01",
+      "schema": "schemas/SubmissionRuleCheck.json",
+      "schema_sha256": "579f33d2025baecd6af1eff1b92e5505ac6111b3e0a7be7c308c5009bae6841a",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "SubmissionRuleCheckRequest": {
+      "consumers": [
+        "W05",
+        "W14"
+      ],
+      "example": "examples/SubmissionRuleCheckRequest.json",
+      "example_sha256": "d69178602e831761f63031351b2afd5cca85fd8b630fc6bb073e5ac74612f0af",
+      "owner": "W01",
+      "schema": "schemas/SubmissionRuleCheckRequest.json",
+      "schema_sha256": "402f5035383edd25769e3f1d78da7ce5316fd2f5b60316b98126f7b7ef3c158b",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "SubmissionRuleCheckResponse": {
+      "consumers": [
+        "W05",
+        "W14"
+      ],
+      "example": "examples/SubmissionRuleCheckResponse.json",
+      "example_sha256": "c922555ce3bf95cdb7232c3ffac059e304cd6308177deecdf99997499170992c",
+      "owner": "W01",
+      "schema": "schemas/SubmissionRuleCheckResponse.json",
+      "schema_sha256": "505c4157911f2f1bed9bc8bc14a305c6f3e7f01011418f5b5fae36490cb9af3c",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
     "SubmissionV2": {
       "consumers": [
         "W05"
@@ -3204,10 +3257,10 @@
   },
   "source_files": {
     "src/career_lab/api/app.py": "724dbce95e80071580fad7891630229a9b899da3ac6ce18d556d855c4ba4d3f0",
-    "src/career_lab/api/evaluation_runtime.py": "98d7ddbb20bb7d23e004bce7d26a5119214320ad601160ef55fca8b79805d0a4",
+    "src/career_lab/api/evaluation_runtime.py": "40a3916fdd0b2d8be1a31fbe090a934c42da7729d83c1ce5faecee3c540618e0",
     "src/career_lab/api/feedback_integration.py": "141556c752437082bc2da2d8186615f2121cf42103942d4e9f6b9f6c58633dbe",
     "src/career_lab/api/lifecycle_integration.py": "753c970349beeb4aac5edc6f58a96c19f249b4ba0fe27e55310784a93b3f64a3",
-    "src/career_lab/api/modules.py": "e47c4e2c6051eb156dc06615dbf0caa28279bcbc02d7a8c5a547ecf47c70cd48",
+    "src/career_lab/api/modules.py": "6e35fff6867f752ef2e0136b93e1bb0cce8a1475b0116988401b2890cee8c723",
     "src/career_lab/api/private_roles.py": "f3c8d1be8f0b85207087f4bc79687177e7a801ab01fd68b4c82090ca2b39054a",
     "src/career_lab/api/public_materials.py": "2b67e940dbe0eac60897b0d770b03b1f974f015cbcb114ab8b19402917762426",
     "src/career_lab/api/registered_models.py": "c8da6ae623d41b2091766802235972c6768968eb49788d6b419ea4b86cb9da69",
@@ -3215,9 +3268,9 @@
     "src/career_lab/api/role_snapshot.py": "5225127e6666c70e644e49629fa74a40411cd124b4e53d738bd5fa5db89511b1",
     "src/career_lab/api/v2_routes.py": "1d829a6949974dfc9e21f429368583b0ef3ebab120b66f1bf7b66ed7941f4483",
     "src/career_lab/api/v4_config.py": "23b5678779c9925c86e545c4b953497672895d32a6636c1e5c9f3196556ad5e4",
-    "src/career_lab/api/v4_extensions.py": "a5272607a6a76663cc7f540726f1a42868ea11c7a919df925cd6860e46888607",
-    "src/career_lab/api/vertical_reads.py": "9a4c9b88a8568f3309ea0e742ab2917ab85071e10734e87406c7dd0acf9a9719",
-    "src/career_lab/api/vertical_runtime.py": "58dd164119f6f8dad0a011c8962fe41bdc3356c7ac5152d9de709cf8d68c8468",
+    "src/career_lab/api/v4_extensions.py": "22484839245e454cdd920d483850dfe475e362699130129fac8b1cea477cadc6",
+    "src/career_lab/api/vertical_reads.py": "d3edce3ffeae6696c5db90eb6f80d57fba126053f426e7ff4022efec694bab90",
+    "src/career_lab/api/vertical_runtime.py": "9fc2aedfcb2369cae8f67c001c7c164af2a0cae9999bfa045de0ee4bb6bed621",
     "src/career_lab/api/workspace_integration.py": "580d03db16bf1310e4713965501cf8fe924472d8646d6890fa85d4b30045559b",
     "src/career_lab/cli.py": "8a3b8e83f93bc5bbcb041e58ac398a04b14f332a40820ad4d37f7fdf0dcbd3cd",
     "src/career_lab/contracts/__init__.py": "650246fed3d082cc58505d728f750218b601580ff7a00a03ae8e610bd9d316bc",
@@ -3236,18 +3289,18 @@
     "src/career_lab/contracts/v2/engineer_export.py": "cb03edb975fb004f2956ec1db93a40b7ed6a1dd473b74b9c9395ca5409e15342",
     "src/career_lab/contracts/v2/evaluation.py": "bff8ea0e6709d94464d0c0ab8a781fa2c9a77031d03bf4ac7899df8d217b118d",
     "src/career_lab/contracts/v2/examples.py": "0ae0d567f8d8d476b13e52b08f56a109b40fddf5e671fd3a4e5a10a6d88c09f9",
-    "src/career_lab/contracts/v2/export.py": "05a41a9df23b889027398a6a0cc60ca72471f24376b32903a0f6fe4a1f243c32",
-    "src/career_lab/contracts/v2/extensions.py": "cd47aa1195d1d934e67a815e9e30494aba146d6c7e64266b6be613818523b7cd",
+    "src/career_lab/contracts/v2/export.py": "81b78c7372e049b013a1a5c44abdd63be9f9e52347f8f720b34c571e2a7d988e",
+    "src/career_lab/contracts/v2/extensions.py": "51abc14f62cd599c227c294a559d606cfb19ccc8620d1c81cb59ad43ea48c22c",
     "src/career_lab/contracts/v2/files.py": "3b3f8e9ac47acacfcdd3052f7b0d94698ff8622c0ca34299b47a544bad048577",
     "src/career_lab/contracts/v2/legacy.py": "47a9fb0d4414326b2e05ba863ce29a905f9734b1eb881a85b41af769df5fbbd5",
-    "src/career_lab/contracts/v2/manifest_history.py": "f1b0707b744a9e70585ce952202bbb0e92dd7324e60c28f32cce3586d19c7d11",
+    "src/career_lab/contracts/v2/manifest_history.py": "dd8055097e880052d84bf99eb6ad0f45e84cd3a8aae2277ccdcb1f17e25fcce1",
     "src/career_lab/contracts/v2/projection.py": "de1c239f0faf7ae41c82a13c3ee380020ac288e4eafae41b683e351bb5c31e9e",
     "src/career_lab/contracts/v2/provenance.py": "d752a89634ca3608aad3ee533c23522c592cd48e7f40a0fed37a56e515301cf1",
     "src/career_lab/contracts/v2/provider.py": "97b6f25a7ba7e93a84b77af980b00d6d371d770239cc59f6bc09ceb0ebf4994d",
     "src/career_lab/contracts/v2/requests.py": "133c37dfe570191bb5ebc4aeee970ba8948fb613983de9a37f896fc507c5c918",
     "src/career_lab/contracts/v2/research.py": "887c95fe6880db270ff1f14e9b7d0a4787b169d756d277c6b308fdac369459d5",
     "src/career_lab/contracts/v2/workspace.py": "4d92d335e2ce41ef737422591da97ec23d56bde4b04fc576a8fe85de0e00a711",
-    "src/career_lab/contracts/v2/world.py": "4574df08f3548eedcf73dea35647e032c7db2002371cf53f73a4f6e37ea6ab44",
+    "src/career_lab/contracts/v2/world.py": "75adc44fe119b7809c124013a7b766fb220a7344d40b7b46cd045ed4e408e45f",
     "src/career_lab/contracts/versioning.py": "23ef383486be9575e6e4ead243965bcf905122c509f6a257ad8729c077b3e506",
     "src/career_lab/jobs/repository.py": "583c03ea8172027b6fa7c7130a1f2747ed9405415557bebc2d912c0b49d4324f",
     "src/career_lab/jobs/worker.py": "a773253fa493e26705466c8d9e58cd9d6458b8f43db6b5f4a27940465dbad642",

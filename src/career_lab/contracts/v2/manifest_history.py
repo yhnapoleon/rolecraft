@@ -767,14 +767,46 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "expansion-v3-bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23"
         ),
         "integration_changes": {
-            "object-evidence-ref": "objects.read of a test run or a work version (kind test or "
-            "product) adds an optional evidence_ref: the exact EvidenceRefV2 of that version, "
-            "observed at the business_seq of the stored snapshot that created it, valid from 0, "
-            "with no span or quote. It is the reference the evaluator's source reader verifies "
-            "for cited objects, so work, resource requests and feedback supplements cite tests "
-            "and work with it. It is absent when the creation snapshot is not found; materials "
-            "keep citing passages and other kinds are unchanged. Request models, routes and "
-            "operations are unchanged."
+            "submission-rule-check": "Read-only submission rule check for the session's own "
+            "person (delegated agents get 403 human_required). POST /sessions/{session_id}/"
+            "submission-rule-check takes SubmissionRuleCheckRequest, shaped like the submit "
+            "command (operation submissions.rule_check, payload SubmitInput); nothing is recorded, "
+            "request_id has no idempotent result and the expected versions must equal the "
+            "checked point (else version_conflict). GET with ?submission_id= checks a saved "
+            "submission again at its own as_of. SubmissionRuleCheckResponse.result "
+            "(SubmissionRuleCheck: basis draft or saved, mode rules_only, as_of, decision, "
+            "products, config, evaluation, work_language) carries rule_items equal to the formal "
+            "FeedbackV2.rule_items of the same inputs at that point, computed by the feedback "
+            "worker's evaluation without any model, and _RuleCheckFacts: the verified numbers "
+            "behind them (participants, capacity, required and available developer-days, launch "
+            "and deadline day, unapproved excess, configuration and policy version, adjustment "
+            "actions) and actual test runs per configuration version with the retests after the "
+            "current policy update. Gateway operations, MCP tools, tables, FeedbackV2 and "
+            "scenario packages are unchanged."
+        },
+    },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-d2f0dd5a386651a1a86a581b3d18bdb98c7320ac05ffa35adef75993ce600c4a"
+        ),
+        "integration_changes": {
+            "approval-decision-assessment": "Optional BusinessDecision.assessment "
+            "(_ApprovalAssessment with _ApprovalTermCheck rows) records what a resource decision "
+            "was judged against: every requested term with its allocation at the time, requested "
+            "total, published ceiling and the bound plan's need, plus all of its issues "
+            "(over_limit, below_current, no_increase, no_shortfall, insufficient, "
+            "need_over_limit), not only the first failed check; strategy work items the plan "
+            "lacks and a missing human fallback; and the exact published approval-rule sentences "
+            "the decision applies (this session's rule material at its source version, with span "
+            "and quote, observed at the decision). Status, reason_code, reason and the decision "
+            "order are unchanged. Counteroffers keep the original request's assessment and "
+            "acceptances carry the accepted terms. Unset assessments are omitted, so existing "
+            "decisions, examples and wire bytes are unchanged; evaluators read decisions "
+            "without the assessment, so evaluation input bytes are unchanged.",
+            "workspace-effective-config": "The learner timeline and workbench.read workspace "
+            "add effective_config: the EffectiveConfig the next assistant test uses, resolved "
+            "from the saved configuration and the approved resources by the same function as "
+            "the test itself. Readers limited to named objects still receive no workspace.",
         },
     },
 )

@@ -271,13 +271,22 @@ async function mainPath(browser, language) {
       if (!b) return null;
       b.scrollIntoView({ block: 'center' });
       b.click();
-      return b.textContent;
+      return {
+        text: b.textContent,
+        label: b.getAttribute('aria-label') ?? '',
+        id: JSON.parse(b.dataset.modelReference).object_id,
+      };
     })()`);
     if (keyword) assert.ok(clicked, 'a judged sentence has an evidence button');
     if (clicked) {
+      // The button names the cited object and version, not its internal ID.
+      assert.match(clicked.label, /^(打开依据：|Open evidence: )/, clicked.label);
+      assert.ok(!clicked.text.includes(` ${clicked.id} `), clicked.text);
+      // The reader itself, not the hint that waits in the same column.
       await waitFor(
         browser,
-        `(document.querySelector('[data-v4-reference-side]')?.innerText.length ?? 0) > 40`,
+        `(document.querySelector('[data-v4-reference-side] [data-reference-reader]')?.innerText
+          .length ?? 0) > 40`,
         15000,
       );
       await shot(browser, `${language}-evidence-opened-desktop-light`);

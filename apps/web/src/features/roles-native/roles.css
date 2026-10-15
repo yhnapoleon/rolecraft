@@ -149,6 +149,32 @@
   line-height: 1.55;
   max-width: 72ch;
 }
+/* Headings and lists in a reply keep their structure at the reply's own type size. */
+.rc-roles__md > * + * {
+  margin-top: 0.45em;
+}
+.rc-roles__md h3,
+.rc-roles__md h4 {
+  font-size: inherit;
+  font-weight: 600;
+  padding-bottom: 0;
+}
+.rc-roles__md ul,
+.rc-roles__md ol {
+  padding-left: 1.3em;
+}
+.rc-roles__md ul {
+  list-style: disc;
+}
+.rc-roles__md ol {
+  list-style: decimal;
+}
+.rc-roles__md code {
+  font: 12.5px var(--mono, ui-monospace, monospace);
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--fill, #f1f2f4);
+}
 .rc-roles__turn-status,
 .rc-roles__empty {
   color: var(--ink-3, #7b818d);
@@ -315,4 +341,47 @@
 .rc-roles__source {
   text-decoration: none;
   color: var(--ink-3, #7b818d);
+}
+
+/* Approval decision card: the rule sentence, each term and what to change. */
+.rc-decision {
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: var(--paper, #fff);
+  box-shadow: var(--shadow-card, none);
+  min-width: 0;
+}
+.rc-decision__basis {
+  margin: 0;
+  color: var(--ink-3, #7b818d);
+  font-size: 12px;
+}
+.rc-decision__quote {
+  margin: 4px 0;
+  font: 400 14px / 1.55 var(--serif, Georgia, serif);
+  overflow-wrap: anywhere;
+}
+.rc-decision__lines {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0;
+  padding: 0;
+  list-style: none;
+}
+.rc-decision__lines li {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rc-decision__lines .ok .rc-decision__mark {
+  color: var(--good, #16794a);
+}
+.rc-decision__lines .bad .rc-decision__mark {
+  color: var(--bad, #c0392b);
+}
+.rc-decision details {
+  margin-top: 6px;
+  color: var(--ink-2, #4b505b);
 }

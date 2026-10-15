@@ -36,11 +36,12 @@ async def _exchange(
     body: dict[str, JsonValue] | None,
     query: dict[str, JsonValue] | None,
     timeout: float,
+    transport: httpx.AsyncBaseTransport | None,
 ) -> tuple[int, bytes]:
     url = credentials.api_url + "/sessions/" + safe_id(credentials.session_id) + suffix
     async with asyncio.timeout(timeout):
         async with httpx.AsyncClient(
-            timeout=timeout, follow_redirects=False, trust_env=False
+            timeout=timeout, follow_redirects=False, trust_env=False, transport=transport
         ) as client:
             async with client.stream(
                 method,
@@ -65,11 +66,15 @@ def request_json(
     body: dict[str, JsonValue] | None = None,
     query: dict[str, JsonValue] | None = None,
     timeout: float = 10,
+    transport: httpx.AsyncBaseTransport | None = None,
 ) -> dict[str, JsonValue]:
+    """transport: None for the network; the API's own MCP endpoint passes an in-process one."""
     if not 0 < timeout <= 30:
         raise ValueError("invalid timeout")
     try:
-        status, raw = asyncio.run(_exchange(credentials, method, suffix, body, query, timeout))
+        status, raw = asyncio.run(
+            _exchange(credentials, method, suffix, body, query, timeout, transport)
+        )
         value = json.loads(raw)
     except (httpx.HTTPError, TimeoutError, ValueError, RecursionError):
         raise RemoteFailure("response_unconfirmed") from None
