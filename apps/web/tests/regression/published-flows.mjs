@@ -4,6 +4,7 @@ import { askHowToPrioritise, openEvidence, readActivity } from './activity-evide
 import assert from 'node:assert/strict';
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { delay, launch } from '../walkthrough/cdp.mjs';
+import { connectAgentOverMcp } from './mcp-connection.mjs';
 
 const base = process.env.BASE;
 const output = process.env.OUT;
@@ -234,9 +235,11 @@ async function recoverAccess(context) {
   })()`,
   );
   assert.equal(
-    await browser.ev(`document.querySelectorAll('[data-action="download-agent-config"]').length`),
+    await browser.ev(
+      `document.querySelectorAll('[data-connection-action="download-config"]').length`,
+    ),
     1,
-    'Recovered access exposes the one-time config control through the host subscription',
+    'Recovered access shows the connection card through the host subscription',
   );
   await shot('recovered-access');
 }
@@ -579,6 +582,11 @@ async function runLanguage(language) {
     await step('a page reload with dropped reads shows no error and loads on the next poll', () =>
       reloadWithDroppedReads(context),
     );
+    await step('connection card: agent returns work over MCP until revoked', async () => {
+      await browser.goto(base + context.taskRoute);
+      await waitFor(browser, `!!document.querySelector('.rail-tabs [data-tab="agent"]')`);
+      await connectAgentOverMcp(context);
+    });
     assert.deepEqual(
       browser.logs.filter((item) => item.level === 'exception'),
       [],

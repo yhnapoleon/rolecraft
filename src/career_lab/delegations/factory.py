@@ -8,6 +8,7 @@ from career_lab.api.modules import ExtensionRegistry, Operation
 from career_lab.api.workspace_integration import install_workspace_recovery
 from career_lab.api.feedback_integration import install_feedback_recovery
 from career_lab.contracts import v2 as C
+from career_lab.mcp.streamable_http import mount_mcp_http
 from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.storage.v2_lifecycle import begin_revision, record_submission
 from career_lab.workspace.extension import install_workspace_operations
@@ -26,6 +27,8 @@ def mount_delegations(app, *, history_reader=stored_history, synchronous=None):
         source.unavailable_code = "observation_history_unavailable"
     bind = install_delegations(registry, source_provider=source, synchronous=synchronous)
     app.state.w06 = bind(gateway)
+    # The delegated Agent's MCP endpoint (Streamable HTTP) on the same app and routes.
+    mount_mcp_http(app)
     # v4 integration extensions (delegation list, reviewed practice) share this post-install mount,
     # so frozen routes and the shared app factory stay unchanged.
     if not getattr(app.state, "v4_extensions", False):
