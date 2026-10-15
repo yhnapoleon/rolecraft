@@ -3,6 +3,8 @@ import type { CommandInput } from '../../v4-host-operations';
 import type { V4SlotContext, V4SlotHandle, V4HostSnapshot, V4CommandResult } from '../../v4-host';
 import type { BusinessDecision, BusinessRequest, EvidenceRefV2 } from '../../contracts-v2';
 import { T, onLocaleChange } from '../../app/i18n';
+import { EVIDENCE_KINDS, evidenceSummary } from '../../evidence-picker';
+import { decisionNames, resourceNames, type ResourceKey } from './decision-words';
 import './roles.css';
 import {
   object,
@@ -16,13 +18,8 @@ import {
 import { changedTerms, type Totals } from './request-terms';
 import { decisionCardModel, renderDecisionCard } from './decision-card';
 
-const labels = () => ({
-  capacity: T('名额', 'Seats'),
-  dev_days: T('开发人日', 'Developer-days'),
-  deadline_day: T('截止日', 'Deadline day'),
-});
-const keys = ['capacity', 'dev_days', 'deadline_day'] as const;
-type ResourceKey = (typeof keys)[number];
+const labels = resourceNames;
+const keys: readonly ResourceKey[] = ['capacity', 'dev_days', 'deadline_day'];
 type Draft = {
   kind: string;
   reason: string;
@@ -186,7 +183,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     legend.textContent = T('申请后的资源总量', 'Requested total resources');
     hint.textContent = T('没改的条款不会提交', 'Unchanged terms are not sent');
     choose.textContent = T('选择依据', 'Choose evidence');
-    evidenceLabel.textContent = T('已选依据：', 'Selected evidence: ') + evidence.length;
+    evidenceLabel.textContent = evidenceSummary(evidence);
     const capacity = kind() === 'request_capacity';
     for (const key of keys) {
       captions.get(key)!.textContent = labels()[key];
@@ -210,7 +207,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
   formNode.addEventListener('change', onEdit);
   choose.addEventListener('click', () => {
     void host
-      .chooseEvidence()
+      .chooseEvidence({ kinds: EVIDENCE_KINDS, selected: evidence })
       .then(async (refs) => {
         session(host, sid);
         for (const r of refs) ref(r, sid);
@@ -384,16 +381,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
         .sort((a, b) => b.content.request.version - a.content.request.version)[0];
       const label = doc.createElement('p');
       label.className = 'meta';
-      const statusLabel =
-        (
-          {
-            pending: T('待核实', 'Awaiting rules check'),
-            rejected: T('未批准', 'Declined'),
-            countered: T('待接受还价', 'Counteroffer awaiting acceptance'),
-            approved: T('已批准', 'Approved'),
-            accepted: T('已接受', 'Accepted'),
-          } as Record<string, string>
-        )[status] ?? T('状态待确认', 'Status unconfirmed');
+      const statusLabel = decisionNames()[status] ?? T('状态待确认', 'Status unconfirmed');
       label.textContent = statusLabel + (decision ? T('（规则核实）', ' (rule checked)') : '');
       text.append(label);
       if (decision) {

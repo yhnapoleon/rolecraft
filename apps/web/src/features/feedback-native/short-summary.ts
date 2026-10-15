@@ -174,6 +174,8 @@ export interface FeedbackShortInput {
   readonly reviews?: readonly ReviewRecord[];
   /** The existing model-advice section, kept visible and unchanged. */
   readonly semantic: HTMLElement;
+  /** One line per rule-checked criterion, shown before the model advice. */
+  readonly lines?: Node;
   /** Existing facts, history, criteria and coverage nodes, folded unchanged. */
   readonly body: readonly Node[];
   readonly open: boolean;
@@ -210,6 +212,7 @@ export function feedbackShortResult(doc: Document, input: FeedbackShortInput): S
   const later =
     unknown && input.review ? laterPurpose(input.review, input.reviews ?? []) : undefined;
   const actions: Node[] = [];
+  if (input.lines) actions.push(input.lines);
   if (unknown && !later && input.prompt) actions.push(promptElement(doc, language, input.prompt));
   actions.push(input.semantic);
   const lead = later

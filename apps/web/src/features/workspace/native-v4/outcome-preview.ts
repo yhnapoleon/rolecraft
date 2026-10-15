@@ -61,6 +61,8 @@ const LINKS: Record<string, [string, OutcomeKey]> = {
   'submissions.create': ['submit', 'linkSubmit'],
   'reviews.create': ['request-review', 'linkReview'],
 };
+/** Gaps the person closes by citing evidence in this work. */
+const CITE_MISSING = new Set(['decision_evidence', 'result_evidence']);
 const KINDS: Record<OutcomeItem['kind'], OutcomeKey> = {
   fact: 'kindFact',
   conditional_prediction: 'kindPrediction',
@@ -96,6 +98,8 @@ export type PreviewView = {
   outcomes: OutcomeLine[];
   basis: string;
   links: { action: string; label: string }[];
+  /** Opens the evidence picker for this work when the saved version lacks a cited basis. */
+  cite: { action: string; label: string } | null;
 };
 export type OutcomeView = {
   main: PreviewView;
@@ -210,6 +214,11 @@ export function previewView(
         ? ` · ${t('basisConfiguration', { v: config.config_version })}`
         : ''),
     links,
+    cite:
+      (preview.missing_inputs ?? []).some((code) => CITE_MISSING.has(code)) &&
+      available('work_products.versions.create')
+        ? { action: 'cite-pick', label: t('linkCite') }
+        : null,
   };
 }
 
@@ -375,8 +384,20 @@ function previewNodes(el: Make, view: PreviewView, primary: boolean): HTMLElemen
   nodes.push(items);
   if (view.carried) nodes.push(el('p', view.carried, 'w03-outcome-note'));
   if (view.draftNote) nodes.push(el('p', view.draftNote, 'w03-outcome-note'));
-  if (view.questions.length)
-    nodes.push(box('question', view.labels.question, ...view.questions.map((q) => el('p', q))));
+  if (view.questions.length) {
+    const question = box(
+      'question',
+      view.labels.question,
+      ...view.questions.map((q) => el('p', q)),
+    );
+    if (view.cite) {
+      const button = el('button', view.cite.label, 'btn quiet small');
+      button.type = 'button';
+      button.dataset.action = view.cite.action;
+      question.append(button);
+    }
+    nodes.push(question);
+  }
   if (view.changes.length || view.newer) {
     const extra = [view.newer, view.refreshHint].filter((line): line is string => !!line);
     nodes.push(

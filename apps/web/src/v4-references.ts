@@ -4,6 +4,7 @@ import type { EvidenceRefV2, ObjectRef } from './contracts-v2';
 import { T, locale } from './app/i18n';
 import { describeServerEvent, type ServerEvent } from './app/event-copy';
 import { markdownNodes } from './app/markdown';
+import { answerEvidenceRequest, practiceChanged } from './evidence-picker';
 import { outcomeTerm } from './features/workspace/native-v4/outcome-copy';
 import {
   catalogLookups,
@@ -11,6 +12,7 @@ import {
   referenceLabel,
   type ReferenceCatalog,
 } from './reference-catalog';
+import { sheetDialog } from './sheet-dialog';
 
 // Documents (by their current name), test runs, deliveries and history records are named from
 // the practice timeline, the same catalog the evidence buttons use.
@@ -21,23 +23,6 @@ const node = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', classNam
   n.className = className;
   return n;
 };
-function dialog(title: string) {
-  const element = node('dialog', '', 'sheet wide');
-  const head = node('header', '', 'sheet-head');
-  const heading = node('h2', title);
-  heading.id = 'v4-reference-title';
-  element.setAttribute('aria-labelledby', heading.id);
-  const close = node('button', T('关闭', 'Close'), 'btn small quiet');
-  close.type = 'button';
-  close.onclick = () => element.close();
-  head.append(heading, close);
-  const body = node('div', '', 'sheet-body');
-  const foot = node('footer', '', 'sheet-foot');
-  element.append(head, body, foot);
-  document.body.append(element);
-  element.addEventListener('close', () => element.remove(), { once: true });
-  return { element, heading, body, foot };
-}
 type ReaderView = { body: HTMLElement; heading: HTMLElement; modal: HTMLDialogElement | null };
 // Evidence buttons carry a stable key, so the same button can be found again after a rebuild.
 const KEYS = ['data-reference-key', 'data-model-reference-key'];
@@ -55,7 +40,7 @@ function locate(opener: HTMLElement | null): () => HTMLElement | null {
 }
 /** Without a reading column the original opens in a sheet. */
 function sheetReader(title: string): ReaderView {
-  const sheet = dialog(title);
+  const sheet = sheetDialog(title);
   return { body: sheet.body, heading: sheet.heading, modal: sheet.element };
 }
 /** The reader beside the feedback: placed first in the side column so it is in view, with a
@@ -157,8 +142,7 @@ export function installV4References(getHost: () => V4HostAdapter | null) {
         NAMED_FROM_TIMELINE.includes(ref.kind) && host.snapshot().available.timeline
           ? await host.query('timeline').catch(() => null)
           : null;
-      if (getHost()?.snapshot().session?.sessionId !== ref.session_id)
-        throw Error('Practice changed');
+      if (getHost()?.snapshot().session?.sessionId !== ref.session_id) throw practiceChanged();
       const content: Record<string, unknown> = record.content ?? {};
       const catalog = withRecord(readCatalog(timeline), ref, content);
       const title = referenceLabel(ref, catalog, locale()).full;
@@ -220,63 +204,8 @@ export function installV4References(getHost: () => V4HostAdapter | null) {
       detail.reject(error);
     }
   };
-  const choose = async (event: Event) => {
-    const detail = (event as CustomEvent).detail,
-      host = getHost();
-    if (!host || host.snapshot().session?.protocol !== 2) return;
-    detail.handled = true;
-    try {
-      if (detail.sessionId !== host.snapshot().session?.sessionId) throw Error('Practice changed');
-      // Only actual read receipts are offered; a material catalogue is not proof of reading.
-      const refs = host.draft<EvidenceRefV2[]>('workspace', 'evidence-cache') ?? [];
-      const sheet = dialog(
-        T('选择已读材料的原始依据', 'Choose original evidence from documents you read'),
-      );
-      const chosen = new Set<number>();
-      let finished = false;
-      for (const [index, ref] of refs.entries()) {
-        if (ref.session_id !== detail.sessionId || !ref.quote) continue;
-        const row = node('label', '', 'check');
-        const checkbox = node('input');
-        checkbox.type = 'checkbox';
-        checkbox.onchange = () => {
-          if (checkbox.checked) chosen.add(index);
-          else chosen.delete(index);
-        };
-        row.append(checkbox, node('span', `${ref.quote} · v${ref.version}`));
-        sheet.body.append(row);
-      }
-      if (!sheet.body.children.length)
-        sheet.body.append(
-          node(
-            'p',
-            T(
-              '先打开并阅读一份材料，再选择其中的依据。',
-              'Read a document first, then choose its evidence.',
-            ),
-            'meta',
-          ),
-        );
-      const confirm = node('button', T('使用选中的依据', 'Use selected evidence'), 'btn primary');
-      confirm.type = 'button';
-      confirm.onclick = () => {
-        finished = true;
-        detail.resolve([...chosen].map((i) => refs[i]));
-        sheet.element.close();
-      };
-      sheet.foot.append(confirm);
-      sheet.element.addEventListener(
-        'close',
-        () => {
-          if (!finished) detail.resolve([]);
-        },
-        { once: true },
-      );
-      sheet.element.showModal();
-    } catch (error) {
-      detail.reject(error);
-    }
-  };
+  // Read passages, test runs and work versions are offered by the shared picker.
+  const choose = (event: Event) => answerEvidenceRequest(getHost, event);
   window.addEventListener('v4-open-reference', open);
   window.addEventListener('v4-choose-evidence', choose);
   return () => {

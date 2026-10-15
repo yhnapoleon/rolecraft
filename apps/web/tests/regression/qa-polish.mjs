@@ -503,7 +503,7 @@ async function supplementEcho(context) {
   );
   await typeResponse(browser, form, words);
   await browser.clickText(
-    text('选择已获准的原始引用', 'Choose authorized original references'),
+    text('选择依据', 'Choose evidence'),
     `details[data-response-id="${id}"] button`,
   );
   await waitFor(

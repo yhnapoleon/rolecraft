@@ -143,6 +143,35 @@ def test_out_01_nothing_missing_means_no_question(work_session: WorkSession) -> 
     assert plan["missing_inputs"] == [] and plan["clarification"] == []
 
 
+def test_out_01_tests_linked_inside_the_work_count_as_its_evidence(
+    work_session: WorkSession,
+) -> None:
+    session = work_session
+    parent = task(session, TASK[session.language])
+    query = "住宿报销上限是多少？" if session.language == "zh" else "What is the hotel limit?"
+    run = session.post("tests", "tests.create", {"query": query, "config_version": 0})
+    test_ref = {
+        "session_id": session.sid,
+        "kind": "test",
+        "object_id": run["result"]["test"]["id"],
+        "version": 1,
+    }
+    for purpose in ("result", "commitment"):
+        checked = save(
+            session,
+            purpose,
+            parent=parent,
+            kind="investigation",
+            content="",
+            structured_payload={
+                "type": "investigation",
+                "question": query,
+                "blocks": [{"id": "retest", "type": "retest", "test_ref": test_ref}],
+            },
+        )["preview"]
+        assert checked["missing_inputs"] == [] and checked["clarification"] == [], purpose
+
+
 def test_out_03_purpose_predictions_name_conditions_and_link_existing_tools(
     work_session: WorkSession,
 ) -> None:

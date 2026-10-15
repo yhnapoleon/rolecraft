@@ -48,7 +48,7 @@ export class V4LiveData {
           window.dispatchEvent(new CustomEvent('v4-selection', { detail: { kind, ref } }));
         },
         openReference: (ref) => this.dispatch('v4-open-reference', { ref }),
-        chooseEvidence: () => this.dispatch('v4-choose-evidence', { sessionId: s.id }),
+        chooseEvidence: (pick) => this.dispatch('v4-choose-evidence', { sessionId: s.id, pick }),
         announce: (message, kind) =>
           this.store.report(kind === 'error' ? { error: message } : { notice: message }),
       });

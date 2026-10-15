@@ -691,9 +691,9 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       reference(ref, sid!);
       void host.openReference(ref);
     },
-    chooseEvidence: async () => {
+    chooseEvidence: async (pick) => {
       valid();
-      const refs = await host.chooseEvidence();
+      const refs = await host.chooseEvidence(pick);
       valid();
       for (const ref of refs) reference(ref, sid!);
       return [...refs];

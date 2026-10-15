@@ -19,6 +19,8 @@ import {
   type PurposeChoice,
 } from './short-summary';
 import { evaluationVersionLine } from './evaluation-version';
+import { itemDetail, renderRuleLines, ruleLines } from './rule-lines';
+import { renderDecisions } from './business-decisions';
 import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
 import { criterionLabels } from './criteria';
@@ -27,6 +29,8 @@ import { mountPresubmitCard, PRESUBMIT_STYLE, submissionFactLine } from './presu
 import { snapshotHeading } from './delivery';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 import { readCatalog, referenceLabel, type ReferenceCatalog } from '../../reference-catalog';
+import type { EvidencePick } from '../../v4-host';
+import { EVIDENCE_KINDS, evidenceSummary } from '../../evidence-picker';
 
 export type SelectedProduct = Pick<
   WorkProductVersion,
@@ -164,7 +168,7 @@ export interface FeedbackNativeAdapter {
   retry?(): Promise<unknown>;
   canRetry?: boolean;
   openReference(ref: ObjectRef | EvidenceRefV2): void;
-  chooseEvidence?(): Promise<EvidenceRefV2[]>;
+  chooseEvidence?(pick?: EvidencePick): Promise<EvidenceRefV2[]>;
   readDraft(key: string): { text: string; evidence: EvidenceRefV2[] } | undefined;
   keepDraft(key: string, draft: { text: string; evidence: EvidenceRefV2[] }): Promise<void>;
   canReview?: boolean;
@@ -232,8 +236,6 @@ export function mountNativeFeedback(
   const language = adapter.snapshot().uiLanguage ?? adapter.snapshot().workLanguage ?? 'zh';
   const T = (zh: string, en: string) => feedbackText(language, zh, en);
   const versionLabel = (n: number) => (language === 'en' ? 'v' + n : '第 ' + n + ' 版');
-  const selectedRefs = (n: number) =>
-    language === 'en' ? `${n} original references selected` : `已选 ${n} 处原始引用`;
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', cls = '') => {
     const n = doc.createElement(tag);
     n.textContent = text;
@@ -505,20 +507,17 @@ export function mountNativeFeedback(
       draft.text = body.value;
       void persist(id, draft);
     });
-    const evidence = el('p', '', 'muted');
-    evidence.textContent = draft.evidence.length
-      ? selectedRefs(draft.evidence.length)
-      : T('补证引用尚未选择', 'No supporting references selected');
-    const choose = button(
-      T('选择已获准的原始引用', 'Choose authorized original references'),
-      async () => {
-        if (adapter.chooseEvidence) {
-          draft.evidence = await adapter.chooseEvidence();
-          await persist(id, draft);
-          evidence.textContent = selectedRefs(draft.evidence.length);
-        }
-      },
-    );
+    const evidence = el('p', evidenceSummary(draft.evidence), 'muted');
+    const choose = button(T('选择依据', 'Choose evidence'), async () => {
+      if (adapter.chooseEvidence) {
+        draft.evidence = await adapter.chooseEvidence({
+          kinds: EVIDENCE_KINDS,
+          selected: draft.evidence,
+        });
+        await persist(id, draft);
+        evidence.textContent = evidenceSummary(draft.evidence);
+      }
+    });
     choose.disabled = !adapter.chooseEvidence;
     // What this form last recorded, shown beside it the moment the server confirms.
     const status = el('p', '', 'muted');
@@ -566,7 +565,7 @@ export function mountNativeFeedback(
       draft.evidence = [];
       await persist(id, draft);
       body.value = '';
-      evidence.textContent = T('补证引用尚未选择', 'No supporting references selected');
+      evidence.textContent = evidenceSummary([]);
     };
     const objection = button(T('记录异议', 'Record a challenge'), send('objection'));
     const supplement = button(T('提交补证', 'Submit additional evidence'), send('supplement'));
@@ -703,6 +702,7 @@ export function mountNativeFeedback(
       );
     body.push(history);
     const criteria = criterionLabels(language);
+    const lines = ruleLines(ruleItems(report), criteria, language);
     const atSubmission = savedRuleCheck(report);
     const notApplicable = el('details');
     notApplicable.append(
@@ -720,7 +720,7 @@ export function mountNativeFeedback(
             : T('等待核验', 'Awaiting verification'),
           'muted',
         ),
-        el('p', item.explanation),
+        el('p', itemDetail(item, lines.premises), 'rule-detail'),
       );
       // 164 F17: the versions behind an unmet item, from the same rules at submission.
       const fact = submissionFactLine(item, atSubmission, report.rule_items, language);
@@ -813,6 +813,7 @@ export function mountNativeFeedback(
         review,
         reviews: state.reviews,
         semantic,
+        lines: renderRuleLines(doc, lines, language),
         body,
         open: openResults.has(id),
         onToggle: (open) => {
@@ -831,7 +832,7 @@ export function mountNativeFeedback(
               }
             : undefined,
       }).element,
-      el('p', report.business_response),
+      renderDecisions(doc, report),
       responseForm(report),
     );
     return panel;

@@ -17,6 +17,8 @@ export type PublicObject = {
   content: Record<string, C.JsonValue>;
   /** Present on test objects: the mode saved with that answer. */
   assistant?: AssistantAnswerMode;
+  /** objects.read of a test run or work version: the exact citation feedback verifies. */
+  evidence_ref?: C.EvidenceRefV2;
 };
 export type Timeline = {
   as_of: C.VersionPoint;

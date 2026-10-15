@@ -1,0 +1,9 @@
+/* Recorded business decisions: each recorded line on its own line. */
+.business-decisions {
+  display: grid;
+  gap: 2px;
+  margin-block: 8px;
+}
+.business-decisions p {
+  margin: 0;
+}

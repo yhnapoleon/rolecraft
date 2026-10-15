@@ -13,6 +13,7 @@ import type {
   VersionPoint,
 } from './contracts-v2';
 import type {
+  EvidencePick,
   V4CommandResult,
   V4HostAdapter,
   V4HostSnapshot,
@@ -61,7 +62,7 @@ export interface V4HostPorts {
   storage: Pick<Storage, 'getItem' | 'setItem'>;
   uiLanguage(): WorkLanguage;
   openReference(ref: ObjectRef | EvidenceRefV2): Promise<void>;
-  chooseEvidence(): Promise<readonly EvidenceRefV2[]>;
+  chooseEvidence(pick?: EvidencePick): Promise<readonly EvidenceRefV2[]>;
   announce(message: string, kind?: 'status' | 'error'): void;
   fetcher?: typeof fetch;
   didRead?(operation: string, value: any, input: Input): void;
@@ -793,8 +794,8 @@ export class V4DataHost implements V4HostAdapter {
     this.checkRef(ref);
     return this.ports.openReference(copy(ref));
   }
-  chooseEvidence() {
-    return this.ports.chooseEvidence();
+  chooseEvidence(pick?: EvidencePick) {
+    return this.ports.chooseEvidence(pick);
   }
   private checkRef(ref: ObjectRef) {
     if (ref.session_id !== this.ports.binding.sessionId)
