@@ -121,14 +121,27 @@ describe('opening a practice from the job page with its code', () => {
   });
 
   it.each([
-    [new ApiError('x', 404, 'continue_code_invalid'), '这个继续码不对，或已经换过新码。'],
     [
+      'continue_code_invalid',
+      new ApiError('x', 404, 'continue_code_invalid'),
+      '这个继续码不对，或已经换过新码。',
+    ],
+    [
+      'continue_code_rate_limited',
       new ApiError('x', 429, 'continue_code_rate_limited', { retry_after_seconds: 840 }),
       '试得太多了，请 14 分钟后再试。',
     ],
-    [new ApiError('x', 503, 'credential_derivation_unavailable'), '这台服务器现在不能用继续码。'],
-    [new ApiError('x', 409, 'continue_code_scenario_unavailable'), '这个练习的情境在这里打不开。'],
-  ])('says %o as one short sentence', async (error, sentence) => {
+    [
+      'credential_derivation_unavailable',
+      new ApiError('x', 503, 'credential_derivation_unavailable'),
+      '这台服务器现在不能用继续码。',
+    ],
+    [
+      'continue_code_scenario_unavailable',
+      new ApiError('x', 409, 'continue_code_scenario_unavailable'),
+      '这个练习的情境在这里打不开。',
+    ],
+  ])('says %s as one short sentence', async (_code, error, sentence) => {
     const h = host({ recover: vi.fn<Live['recover']>().mockRejectedValue(error) });
     const recovery = createPracticeRecovery(h.value);
 
