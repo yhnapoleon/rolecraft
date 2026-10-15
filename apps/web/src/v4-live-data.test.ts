@@ -1,6 +1,159 @@
 import { describe, expect, it, vi } from 'vitest';
+import { ApiError } from './api';
+import { STORAGE_KEY, WorkspaceStore, emptyDraft } from './store';
 import { V4LiveData } from './v4-live-data';
-import type { LocalSession } from './types';
+import type { LocalSession, LocalTestRun } from './types';
+
+/** A saved v2 practice in a real store; the host stands in for the HTTP gateway. */
+function polledPractice(extra: Partial<LocalSession> = {}) {
+  const session = {
+    id: 's',
+    token: 'test-only-token',
+    scenario: 'pm_pilot',
+    created: '2026-10-14T00:00:00Z',
+    protocol: 2,
+    v2Binding: { protocol: 2, sessionId: 's', workLanguage: 'zh', scenarioHash: 'fixed' },
+    world: {
+      session_id: 's',
+      status: 'active',
+      version: 0,
+      logical_time: 0,
+      resources: {},
+      configs: {},
+      material_versions: {},
+      indexed_versions: {},
+      applied_rules: [],
+      pending_requests: [],
+      action_count: 0,
+      config_version: 1,
+    },
+    materials: [],
+    tests: [],
+    testNotes: {},
+    questions: {},
+    timeline: { events: [], turns: [], mode: '' },
+    draft: emptyDraft(),
+    inputs: { question: '', expected: '', messages: {}, capacityReason: '', resourceReason: '' },
+    ...extra,
+  } as LocalSession;
+  const values = new Map([
+    [STORAGE_KEY, JSON.stringify({ schema: 1, active: 's', sessions: [session] })],
+  ]);
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      values.set(key, value);
+    },
+  };
+  const store = new WorkspaceStore(storage);
+  const data = new V4LiveData(store, storage);
+  let businessSeq = 9;
+  const workbench = () => ({
+    as_of: { business_seq: businessSeq, workspace_revision: 3, storage_revision: 12 },
+    state: { status: 'active', config_version: 2 },
+    read_only: false,
+    semantic: { roles: 'waiting_model', assistant: 'waiting_model' },
+    materials: { materials: [{ id: 'policy', version: 1, title: 'Travel policy' }] },
+    timeline: {
+      events: [],
+      objects: [],
+      workspace: {
+        resources: { capacity: 30, dev_days: 3, deadline_day: 7 },
+        source_versions: { policy: 1 },
+        indexed_versions: { policy: 1 },
+        material_titles: { 'policy:1': 'Travel policy' },
+        config: {
+          id: 'c',
+          version: 1,
+          config_version: 2,
+          participants: 20,
+          domains: ['policy_travel'],
+          launch_day: 7,
+          update_strategy: 'daily',
+          fallback: 'human',
+          work_items: [],
+        },
+      },
+    },
+  });
+  const served = async (operation: string): Promise<unknown> =>
+    operation === 'workbench.read' ? workbench() : { items: [] };
+  let read = served;
+  const host = {
+    ensureFeedbackPointer: async () => {},
+    query: (operation: string) => read(operation),
+    pendingRequests: () => [],
+    recover: vi.fn(),
+  };
+  vi.spyOn(data, 'host').mockReturnValue(host as unknown as ReturnType<V4LiveData['host']>);
+  return {
+    store,
+    host,
+    fail: (error: Error) => {
+      read = async () => {
+        throw error;
+      };
+    },
+    serve: () => {
+      read = served;
+    },
+    advance: () => {
+      businessSeq++;
+    },
+  };
+}
+const dropped = () => new ApiError('The result is unconfirmed.', 0, 'response_unconfirmed');
+
+describe('background polling of a v2 practice', () => {
+  it('a dropped read resolves and shows the connection as lost, without an error message', async () => {
+    const practice = polledPractice();
+    await practice.store.poll();
+    practice.fail(dropped());
+    await expect(practice.store.poll()).resolves.toBeUndefined();
+    expect(practice.store.getSnapshot()).toMatchObject({ connected: false, error: '' });
+    practice.serve();
+    await practice.store.poll();
+    expect(practice.store.getSnapshot()).toMatchObject({ connected: true, error: '' });
+  });
+  it('a refused read is shown as an error and still resolves', async () => {
+    const practice = polledPractice();
+    practice.fail(new ApiError('Session credentials are no longer valid.', 401, 'token_invalid'));
+    await expect(practice.store.poll()).resolves.toBeUndefined();
+    expect(practice.store.getSnapshot()).toMatchObject({
+      connected: false,
+      error: 'Session credentials are no longer valid.',
+    });
+  });
+  it('a queued test keeps waiting when reading its request is dropped', async () => {
+    const queued: LocalTestRun = {
+      taskId: 'task-1',
+      sessionId: 's',
+      requestId: 'r-1',
+      query: 'What is the hotel limit?',
+      expectation: '',
+      config: null,
+      createdAt: '2026-10-14T00:00:00Z',
+    };
+    const practice = polledPractice({ queuedTestRuns: { 'r-1': queued } });
+    practice.host.recover.mockRejectedValueOnce(dropped());
+    await practice.store.poll();
+    expect(Object.keys(practice.store.active()?.queuedTestRuns ?? {})).toEqual(['r-1']);
+    expect(practice.store.getSnapshot().error).toBe('');
+  });
+  it('an idle poll that reads unchanged data does not notify the workbench', async () => {
+    const practice = polledPractice();
+    await practice.store.poll();
+    const changed = vi.fn();
+    practice.store.subscribe(changed);
+    await practice.store.poll();
+    await practice.store.poll();
+    expect(changed).not.toHaveBeenCalled();
+    practice.advance();
+    await practice.store.poll();
+    expect(changed).toHaveBeenCalled();
+    expect(practice.store.active()?.world.version).toBe(10);
+  });
+});
 
 describe('v2 test results shown in the workbench', () => {
   it('flags an old cited policy, but not a stable FAQ, a current real-time citation, or an uncited fallback', async () => {

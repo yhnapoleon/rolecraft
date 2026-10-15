@@ -11,6 +11,15 @@ export class ApiError extends Error {
     super(message);
   }
 }
+/** A read worth repeating unchanged: the response never arrived or could not be verified, or the
+ * server failed. Refusals (4xx) and local browser failures are definite. */
+export function retryableRead(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.code === 'response_unconfirmed' ||
+      (error.status >= 500 && error.code !== 'storage_lock_unavailable'))
+  );
+}
 export type Transport = (
   path: string,
   body?: unknown,
@@ -35,6 +44,8 @@ export const request: Transport = async (path, body, session) => {
         '连接中断或请求超时。写入结果可能已保存，请用“重试原请求”核对，避免重复操作。',
         'The connection dropped or timed out. The write may have been saved; retry the same request to check instead of repeating it.',
       ),
+      0,
+      'response_unconfirmed',
     );
   }
   let data: any;
