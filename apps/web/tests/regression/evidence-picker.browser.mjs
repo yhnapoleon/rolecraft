@@ -288,17 +288,27 @@ async function run(language, reduced, width, flow) {
         )),
         'practice cards repeat no rule explanation',
       );
-      // The recorded decision is shown as written, in the words of the request panel.
+      // The recorded decision is shown as written: the heading line, then one sentence per
+      // request in the words of the request panel (lower case mid-sentence in English).
       const decisions = await browser.ev(
         `[...document.querySelectorAll('.business-decisions p')].map((n) => n.textContent)`,
       );
-      assert.equal(decisions.length, 1, 'one recorded decision, one line');
+      assert.deepEqual(
+        decisions.slice(0, 1),
+        [text('已记录的业务决定（规则核实）：', 'Recorded business decisions (rule checked): ')],
+        'the heading line',
+      );
+      assert.equal(decisions.length, 2, 'one recorded decision, one line');
+      const line = decisions[1];
+      assert.ok(
+        line.startsWith(text('开发人日：申请 6 · ', 'Developer-days: requested 6 · ')),
+        line,
+      );
       const status = text(
         ['未批准', '已批准', '还价待接受', '已接受'],
         ['Declined', 'Approved', 'Counteroffer awaiting acceptance', 'Accepted'],
-      ).find((word) => decisions[0].includes(word));
+      ).find((word) => line.toLowerCase().includes(word.toLowerCase()));
       assert.ok(status && decidedPanel.includes(status), 'the panel and the record agree');
-      assert.ok(decisions[0].includes(text('开发人日', 'Developer-days')));
       await noSideScroll();
       await shot('feedback');
       // The expanded items keep their findings without repeating the shared premise.

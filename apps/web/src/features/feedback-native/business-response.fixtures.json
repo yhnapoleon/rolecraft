@@ -1,7 +1,7 @@
 {
   "zh": {
     "countered": {
-      "business_response": "已记录的业务决定（规则核实）：申请：名额: 100; 还价待接受; 名额: 60",
+      "business_response": "已记录的业务决定（规则核实）：\n名额：申请 100 · 还价 60，待接受",
       "decisions": [
         {
           "requested": {
@@ -12,7 +12,7 @@
       ]
     },
     "decided": {
-      "business_response": "已记录的业务决定（规则核实）：申请：名额: 100; 已接受; 名额: 60\n申请：开发人日: 6; 未批准",
+      "business_response": "已记录的业务决定（规则核实）：\n名额：申请 100 · 已接受 60\n开发人日：申请 6 · 未批准",
       "decisions": [
         {
           "requested": {
@@ -31,7 +31,7 @@
   },
   "en": {
     "countered": {
-      "business_response": "Recorded business decisions (rule checked): Requested Seats: 100; Counteroffer awaiting acceptance; Seats: 60",
+      "business_response": "Recorded business decisions (rule checked): \nSeats: requested 100 · counteroffer 60, awaiting acceptance",
       "decisions": [
         {
           "requested": {
@@ -42,7 +42,7 @@
       ]
     },
     "decided": {
-      "business_response": "Recorded business decisions (rule checked): Requested Developer-days: 6; Declined\nRequested Seats: 100; Accepted; Seats: 60",
+      "business_response": "Recorded business decisions (rule checked): \nDeveloper-days: requested 6 · declined\nSeats: requested 100 · accepted 60",
       "decisions": [
         {
           "requested": {

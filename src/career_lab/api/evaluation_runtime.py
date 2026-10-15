@@ -9,6 +9,7 @@ from typing import TYPE_CHECKING
 
 from sqlalchemy import select
 
+from career_lab.api.business_record import recorded_decisions
 from career_lab.api.feedback_provenance import attach_score_range
 from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.extensions import _ConfigTestRuns, _RuleCheckFacts
@@ -71,25 +72,7 @@ class ScenarioEvidencePort:
                 latest[request] = row
         if not latest:
             return snapshot
-        en = self.module.work_language == "en"
-        labels = {
-            "capacity": "Seats" if en else "名额",
-            "dev_days": "Developer-days" if en else "开发人日",
-            "deadline_day": "Deadline day" if en else "截止日",
-        }
-        statuses = {
-            "approved": "Approved" if en else "已批准",
-            "accepted": "Accepted" if en else "已接受",
-            "rejected": "Declined" if en else "未批准",
-            "countered": "Counteroffer awaiting acceptance" if en else "还价待接受",
-        }
-
-        def terms(values):
-            return ", ".join(
-                labels[key] + ": " + str(value) for key, value in values.items() if key in labels
-            )
-
-        lines = []
+        decisions = []
         refs = []
         for request, row in latest.items():
             decision = row.content
@@ -100,24 +83,11 @@ class ScenarioEvidencePort:
                 if status in {"approved", "accepted"}
                 else decision.get("countered", {})
             )
-            lines.append(
-                (
-                    ("Requested " if en else "申请：")
-                    + terms(requested)
-                    + "; "
-                    + statuses.get(status, "Awaiting verification" if en else "待核验")
-                    + ("; " + terms(result) if result else "")
-                )
-            )
+            decisions.append((requested, status, result or {}))
             refs.append(self.source(auth, row.ref, snapshot.as_of).ref)
         return replace(
             snapshot,
-            business_response=(
-                "Recorded business decisions (rule checked): "
-                if en
-                else "已记录的业务决定（规则核实）："
-            )
-            + "\n".join(lines),
+            business_response=recorded_decisions(self.module.work_language, decisions),
             business_response_refs=tuple(refs),
         )
 
