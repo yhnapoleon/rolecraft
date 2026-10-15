@@ -265,6 +265,13 @@ for consumer in ("W06", "W14"):
         "PracticeChoiceResponse",
     ]
 
+for consumer in ("W05", "W14"):
+    CONSUMERS[consumer] += [
+        "SubmissionRuleCheckRequest",
+        "SubmissionRuleCheck",
+        "SubmissionRuleCheckResponse",
+    ]
+
 
 def integration_example(model):
     from career_lab.contracts.v2 import (

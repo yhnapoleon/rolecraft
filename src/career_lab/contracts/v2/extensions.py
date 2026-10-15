@@ -1,9 +1,23 @@
-"""Human-only delegation listing and optional practice wire contracts."""
+"""Human-only wire contracts: delegation listing, optional practice, submission rule check."""
 
 from datetime import datetime
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field
-from .core import Executor, ObjectRef, V2, JsonValue
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+from .core import (
+    Executor,
+    FileRef,
+    Identifier,
+    JsonValue,
+    NonNegativeInt,
+    ObjectRef,
+    PositiveInt,
+    V2,
+    VersionPoint,
+)
+from .evaluation import FeedbackItem
+from .requests import SubmitInput
 from .world import PublicState
 
 
@@ -97,3 +111,71 @@ class PracticeChoiceResult(BaseModel):
 
 class PracticeChoiceResponse(V2):
     result: PracticeChoiceResult
+
+
+class _ConfigTestRuns(V2):
+    """Actual runs on one configuration version; retests followed the current policy update."""
+
+    config_version: NonNegativeInt
+    runs: NonNegativeInt
+    retests: NonNegativeInt
+
+
+class _RuleCheckFacts(V2):
+    """Verified facts behind the rule items. Null where the rules could not verify one."""
+
+    participants: NonNegativeInt | None = None
+    capacity: NonNegativeInt | None = None
+    required_dev_days: NonNegativeInt | None = None
+    available_dev_days: NonNegativeInt | None = None
+    requested_launch_day: NonNegativeInt | None = None
+    deadline_day: NonNegativeInt | None = None
+    unapproved_resource_excess: bool | None = None
+    config_version: NonNegativeInt | None = None
+    policy_version: PositiveInt | None = None
+    adjustment_actions: NonNegativeInt | None = None
+    # Empty while the test ledger is incomplete.
+    test_runs: tuple[_ConfigTestRuns, ...] = ()
+
+
+class SubmissionRuleCheckRequest(V2):
+    """The submit command a person would send now, checked read-only. Nothing is recorded:
+    request_id carries no idempotent result; the versions must equal the checked point."""
+
+    schema_version: Literal[2]
+    request_id: Identifier
+    expected_version: NonNegativeInt
+    expected_workspace_revision: NonNegativeInt
+    operation: Literal["submissions.rule_check"]
+    payload: SubmitInput
+
+
+class SubmissionRuleCheck(V2):
+    """Rule items a submission gets, before it is made (draft) or again for a saved one.
+
+    rule_items equal the formal FeedbackV2.rule_items of the same inputs at as_of. No model
+    runs and nothing is written; model-judged criteria stay pending here.
+    """
+
+    basis: Literal["draft", "saved"]
+    mode: Literal["rules_only"] = "rules_only"
+    session_id: Identifier
+    as_of: VersionPoint
+    submission: ObjectRef | None = None
+    decision: Literal["launch", "launch_narrow", "defer_with_conditions", "no_go"]
+    products: tuple[ObjectRef, ...]
+    config: ObjectRef | None = None
+    evaluation: FileRef
+    work_language: Literal["zh", "en"]
+    rule_items: tuple[FeedbackItem, ...]
+    facts: _RuleCheckFacts = _RuleCheckFacts()
+
+    @model_validator(mode="after")
+    def saved_names_its_submission(self):
+        if (self.basis == "saved") != (self.submission is not None):
+            raise ValueError("only a saved submission check names its submission")
+        return self
+
+
+class SubmissionRuleCheckResponse(V2):
+    result: SubmissionRuleCheck

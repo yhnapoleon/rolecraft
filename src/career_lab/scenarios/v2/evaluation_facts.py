@@ -69,6 +69,25 @@ def hotel_question(query, locale):
     return q in values
 
 
+def test_materials(test):
+    """Materials the test answer cited or retrieved from."""
+    return {c.object_id for c in test.citations} | {c.material_id for c in test.execution.chunks}
+
+
+def relevant_to_policy(test, locale):
+    """The test checks the policy: it asked the hotel question or used the policy."""
+    return "policy" in test_materials(test) or hotel_question(test.query, locale)
+
+
+@dataclass(frozen=True)
+class ConfigTestRuns:
+    """Actual runs on one configuration version; retests followed the current policy update."""
+
+    config_version: int
+    runs: int
+    retests: int
+
+
 class ScenarioFactAdapter:
     def __init__(self, module, *, authorize, window_reader, record_reader, reference_resolver):
         self.module = module
@@ -193,13 +212,73 @@ class ScenarioFactAdapter:
             raise ProtocolError("submission_input_changed")
         for product in saved_submission.products:
             self.object(auth, product, saved_submission.as_of)
+        return self._submission_snapshot(auth, saved_submission)
+
+    def draft_submission_rule_provider(self, auth, draft):
+        """The rule facts these inputs get once submitted. ``draft`` is never saved."""
+        self.authorize(auth)
+        if draft.session_id != auth.session_id:
+            raise ProtocolError("object_not_found", status=404)
+        for product in draft.products:
+            self.object(auth, product, draft.as_of)
+        return self._submission_snapshot(auth, draft)
+
+    def _submission_snapshot(self, auth, submission):
         return self._snapshot(
             auth,
-            saved_submission.as_of,
-            saved_submission.products,
-            saved_submission.config,
-            saved_submission.decision in {"launch", "launch_narrow"},
+            submission.as_of,
+            submission.products,
+            submission.config,
+            submission.decision in {"launch", "launch_narrow"},
         )
+
+    def test_runs(self, auth, at):
+        """Actual runs per configuration version up to ``at``, with the retests among them
+        that followed the current policy update. Technical failures are not runs. Without a
+        complete test and event ledger the counts stay unknown (empty)."""
+        window = self.window(auth, at)
+        updates = self._policy_updates(window, at)
+        if (
+            not (window.tests_complete and window.events_complete)
+            or window.snapshot.source_versions["policy"] != self._initial_policy()
+            and not updates
+        ):
+            return ()
+        since = max((event.seq for event, _ in updates), default=None)
+        counts = {}
+        for row in window.objects:
+            if row.ref.kind != "test" or row.created_storage_revision > at.storage_revision:
+                continue
+            test = TestResultV2.model_validate(self.object(auth, row.ref, at).content)
+            version = test.config_ref.config_version
+            if test.status == "failed" or version is None or not before(test.as_of, at):
+                continue
+            retest = (
+                since is not None
+                and test.as_of.business_seq >= since
+                and relevant_to_policy(test, self.module.package.locale)
+            )
+            runs, retests = counts.get(version, (0, 0))
+            counts[version] = (runs + 1, retests + retest)
+        return tuple(
+            ConfigTestRuns(version, runs, retests)
+            for version, (runs, retests) in sorted(counts.items())
+        )
+
+    def _initial_policy(self):
+        return self.module.package.rules["initial_material_versions"]["policy"]
+
+    @staticmethod
+    def _policy_updates(window, at):
+        """Recorded activations of the current policy version up to ``at``."""
+        version = window.snapshot.source_versions["policy"]
+        return [
+            (e, p)
+            for e, p in window.events
+            if e.type == "initial_plan_applied"
+            and before(p, at)
+            and e.data.get("after_versions", {}).get("policy") == version
+        ]
 
     def _snapshot(self, auth, at, subjects, config_ref, committed):
         window = self.window(auth, at)
@@ -247,18 +326,8 @@ class ScenarioFactAdapter:
         policy_ref = ObjectRef(
             session_id=auth.session_id, kind="material", object_id="policy", version=policy_version
         )
-        changes = [
-            (e, p)
-            for e, p in window.events
-            if e.type == "initial_plan_applied"
-            and before(p, at)
-            and e.data.get("after_versions", {}).get("policy") == policy_version
-        ]
-        if (
-            window.events_complete
-            and policy_version != self.module.package.rules["initial_material_versions"]["policy"]
-            and not changes
-        ):
+        changes = self._policy_updates(window, at)
+        if window.events_complete and policy_version != self._initial_policy() and not changes:
             raise ProtocolError("policy_event_window_incomplete")
         proof_refs = tuple(ref for ref in (config_source, policy_ref) if ref is not None)
         if window.events_complete:
@@ -342,11 +411,8 @@ class ScenarioFactAdapter:
             for test in tests:
                 if test.as_of.business_seq < change.seq:
                     continue
-                material_ids = {c.object_id for c in test.citations} | {
-                    c.material_id for c in test.execution.chunks
-                }
                 is_hotel = hotel_question(test.query, self.module.package.locale)
-                if "policy" in material_ids or is_hotel:
+                if relevant_to_policy(test, self.module.package.locale):
                     dynamic.append(test.id)
                     # A model-generated answer stays pending verification: rules can check its
                     # recorded versions, never whether its text passes.
@@ -372,7 +438,7 @@ class ScenarioFactAdapter:
                             and test.execution.used_versions.get("policy") == policy_version
                         ):
                             passing.append(test.id)
-                elif not material_ids:
+                elif not test_materials(test):
                     classified = False
             add("dynamic_test_ids", dynamic, config_source, *test_refs)
             add("dynamic_classification_complete", classified, config_source, *test_refs)

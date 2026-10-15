@@ -9,14 +9,18 @@ import type {
   V4SlotHandle,
   V4CommandResult,
 } from '../../v4-host';
+import type { SubmissionRuleCheck } from '../../contracts-v2';
 import type { ObjectRef } from '../workspace/contract-types';
+import { exactRefKey } from './exact-ref';
 import { readCatalog } from '../../reference-catalog';
 import {
   mountNativeFeedback,
   type FeedbackNativeAdapter,
   type FeedbackNativeState,
+  type RememberedChoice,
   type Report,
   type ReviewRecord,
+  type SubmitChoice,
 } from './index';
 
 type Row = Record<string, unknown>;
@@ -64,7 +68,49 @@ export const W05_V4_OPERATIONS = Object.freeze({
   submit: 'submissions.create',
   respond: 'feedback.responses.create',
   revise: 'revision_cycles',
+  ruleCheck: 'submissions.rule_check',
+  savedRuleCheck: 'submissions.rule_check.read',
 });
+const sameRef = (value: unknown, ref: ObjectRef | undefined) =>
+  ref === undefined
+    ? value === null || value === undefined
+    : object(value) && exactRefKey(value as ObjectRef) === exactRefKey(ref);
+/** A rule check answers for exactly the asked session, basis and inputs. */
+function answers(
+  value: unknown,
+  sid: string,
+  basis: 'draft' | 'saved',
+  asked: {
+    decision?: string;
+    products?: readonly ObjectRef[];
+    config?: ObjectRef;
+    submission?: ObjectRef;
+  },
+): value is SubmissionRuleCheck {
+  if (
+    !object(value) ||
+    value.session_id !== sid ||
+    value.basis !== basis ||
+    !Array.isArray(value.rule_items)
+  )
+    return false;
+  if (asked.decision !== undefined && value.decision !== asked.decision) return false;
+  const products = value.products;
+  if (
+    asked.products !== undefined &&
+    !(
+      Array.isArray(products) &&
+      products.length === asked.products.length &&
+      products.every((ref, i) => sameRef(ref, asked.products?.[i]))
+    )
+  )
+    return false;
+  if (basis === 'draft' && !sameRef(value.config, asked.config)) return false;
+  return asked.submission === undefined || sameRef(value.submission, asked.submission);
+}
+
+/** The submission panel's last choice per practice, for this page only; never stored. */
+const rememberedChoices = new Map<string, RememberedChoice>();
 
 /** A dropped read is asked again after these delays (ms) before it is shown as a failure. */
 const READ_AGAIN_MS = [1500, 3000, 6000];
@@ -424,6 +470,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       loadedPoint = JSON.stringify(current.asOf);
       state = {
         ...state,
+        point: loadedPoint,
         products: selected,
         references: readCatalog(timeline, selected),
         reports,
@@ -563,6 +610,19 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
     });
     await finish(result);
   }
+  /** Exactly what the submit control sends: the choice plus the current settings. */
+  const submitInput = (input: SubmitChoice) => ({ ...input, ...(config ? { config } : {}) });
+  /** The bound session, where the host offers rule checks. */
+  function checkable(): string {
+    const s = valid();
+    if (!sid || s.available[W05_V4_OPERATIONS.ruleCheck] !== true) throw Error(unavailable());
+    return sid;
+  }
+  const unavailable = () =>
+    text(
+      '交付前预演暂时算不出来，不影响交付。',
+      'The preview is unavailable right now; you can still submit.',
+    );
   const adapter: FeedbackNativeAdapter = {
     snapshot: () => state,
     subscribe: (fn) => {
@@ -586,7 +646,26 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
     submit: (input) => {
       valid();
       for (const ref of input.products) reference(ref, sid!);
-      return command(W05_V4_OPERATIONS.submit, { ...input, ...(config ? { config } : {}) });
+      return command(W05_V4_OPERATIONS.submit, submitInput(input));
+    },
+    previewSubmission: async (input) => {
+      const id = checkable();
+      for (const ref of input.products) reference(ref, id);
+      const sent = submitInput(input);
+      const checked = await host.query(W05_V4_OPERATIONS.ruleCheck, sent);
+      valid();
+      if (!answers(checked, id, 'draft', sent)) throw Error(unavailable());
+      return checked;
+    },
+    submissionRuleCheck: async (submission) => {
+      const id = checkable();
+      if (reference(submission, id).kind !== 'submission') throw Error('Invalid submission');
+      const checked = await host.query(W05_V4_OPERATIONS.savedRuleCheck, {
+        submission_id: submission.object_id,
+      });
+      valid();
+      if (!answers(checked, id, 'saved', { submission })) throw Error(unavailable());
+      return checked;
     },
     respond: (input) => command(W05_V4_OPERATIONS.respond, input),
     beginRevision: (input) => {
@@ -619,6 +698,15 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       for (const ref of refs) reference(ref, sid!);
       return [...refs];
     },
+    rememberChoice: (picked) => {
+      if (!sid) return;
+      if (picked) rememberedChoices.set(sid, structuredClone(picked));
+      else rememberedChoices.delete(sid);
+    },
+    rememberedChoice: () => {
+      const picked = sid ? rememberedChoices.get(sid) : undefined;
+      return picked && structuredClone(picked);
+    },
     readDraft: (key) => {
       valid();
       return host.draft('feedback', key);
@@ -637,6 +725,9 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
         !!host.snapshot().available[W05_V4_OPERATIONS.review],
     },
     canSubmit: { get: () => !state.error && !!host.snapshot().available[W05_V4_OPERATIONS.submit] },
+    canPreview: {
+      get: () => !state.error && host.snapshot().available[W05_V4_OPERATIONS.ruleCheck] === true,
+    },
     canRespond: {
       get: () => !state.error && !!host.snapshot().available[W05_V4_OPERATIONS.respond],
     },

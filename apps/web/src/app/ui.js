@@ -3559,6 +3559,8 @@ function returnPreviewSheet(a, data) {
 function setObj(obj) {
   const t = task();
   if (!t) return;
+  // Opening an object leaves any open sheet, as changing route does.
+  if (sheet.open) closeSheet(true);
   commit();
   ui.obj = { task: t.id, ...obj };
   if (obj.type === 'work') ui.artifactId = obj.id;

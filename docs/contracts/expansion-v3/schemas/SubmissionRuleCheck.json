@@ -1,0 +1,651 @@
+{
+  "$defs": {
+    "EvidenceRefV2": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "observed_at_seq": {
+          "minimum": 0,
+          "title": "Observed At Seq",
+          "type": "integer"
+        },
+        "quote": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Quote"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "span_end": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span End"
+        },
+        "span_start": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Span Start"
+        },
+        "valid_from_seq": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Valid From Seq",
+          "type": "integer"
+        },
+        "valid_until_seq": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Valid Until Seq"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version",
+        "observed_at_seq"
+      ],
+      "title": "EvidenceRefV2",
+      "type": "object"
+    },
+    "FeedbackItem": {
+      "additionalProperties": false,
+      "properties": {
+        "applicability": {
+          "enum": [
+            "applicable",
+            "not_applicable",
+            "undetermined"
+          ],
+          "title": "Applicability",
+          "type": "string"
+        },
+        "citations": {
+          "items": {
+            "$ref": "#/$defs/EvidenceRefV2"
+          },
+          "title": "Citations",
+          "type": "array"
+        },
+        "criterion": {
+          "minLength": 1,
+          "title": "Criterion",
+          "type": "string"
+        },
+        "explanation": {
+          "title": "Explanation",
+          "type": "string"
+        },
+        "label": {
+          "enum": [
+            "MET",
+            "PARTIAL",
+            "NOT_MET",
+            "INSUFFICIENT",
+            "NOT_APPLICABLE"
+          ],
+          "title": "Label",
+          "type": "string"
+        },
+        "rule_bound": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RuleBound"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "source": {
+          "enum": [
+            "verified_rule",
+            "model_advice",
+            "pending"
+          ],
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "criterion",
+        "label",
+        "applicability",
+        "source",
+        "explanation",
+        "citations"
+      ],
+      "title": "FeedbackItem",
+      "type": "object"
+    },
+    "FileRef": {
+      "additionalProperties": false,
+      "properties": {
+        "media_type": {
+          "default": "application/json",
+          "title": "Media Type",
+          "type": "string"
+        },
+        "path": {
+          "minLength": 1,
+          "title": "Path",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "sha256": {
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "FileRef",
+      "type": "object"
+    },
+    "ObjectRef": {
+      "additionalProperties": false,
+      "properties": {
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "object_id": {
+          "minLength": 1,
+          "title": "Object Id",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "session_id": {
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "version": {
+          "exclusiveMinimum": 0,
+          "title": "Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "session_id",
+        "kind",
+        "object_id",
+        "version"
+      ],
+      "title": "ObjectRef",
+      "type": "object"
+    },
+    "RuleBound": {
+      "additionalProperties": false,
+      "properties": {
+        "lower": {
+          "enum": [
+            "NOT_MET",
+            "PARTIAL",
+            "MET"
+          ],
+          "title": "Lower",
+          "type": "string"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "upper": {
+          "enum": [
+            "NOT_MET",
+            "PARTIAL",
+            "MET"
+          ],
+          "title": "Upper",
+          "type": "string"
+        }
+      },
+      "required": [
+        "lower",
+        "upper"
+      ],
+      "title": "RuleBound",
+      "type": "object"
+    },
+    "VersionPoint": {
+      "additionalProperties": false,
+      "properties": {
+        "business_seq": {
+          "minimum": 0,
+          "title": "Business Seq",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "storage_revision": {
+          "minimum": 0,
+          "title": "Storage Revision",
+          "type": "integer"
+        },
+        "workspace_revision": {
+          "minimum": 0,
+          "title": "Workspace Revision",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "business_seq",
+        "workspace_revision",
+        "storage_revision"
+      ],
+      "title": "VersionPoint",
+      "type": "object"
+    },
+    "_ConfigTestRuns": {
+      "additionalProperties": false,
+      "description": "Actual runs on one configuration version; retests followed the current policy update.",
+      "properties": {
+        "config_version": {
+          "minimum": 0,
+          "title": "Config Version",
+          "type": "integer"
+        },
+        "retests": {
+          "minimum": 0,
+          "title": "Retests",
+          "type": "integer"
+        },
+        "runs": {
+          "minimum": 0,
+          "title": "Runs",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "config_version",
+        "runs",
+        "retests"
+      ],
+      "title": "_ConfigTestRuns",
+      "type": "object"
+    },
+    "_RuleCheckFacts": {
+      "additionalProperties": false,
+      "description": "Verified facts behind the rule items. Null where the rules could not verify one.",
+      "properties": {
+        "adjustment_actions": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Adjustment Actions"
+        },
+        "available_dev_days": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Available Dev Days"
+        },
+        "capacity": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Capacity"
+        },
+        "config_version": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Config Version"
+        },
+        "deadline_day": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Deadline Day"
+        },
+        "participants": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Participants"
+        },
+        "policy_version": {
+          "anyOf": [
+            {
+              "exclusiveMinimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Policy Version"
+        },
+        "requested_launch_day": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Requested Launch Day"
+        },
+        "required_dev_days": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Required Dev Days"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "test_runs": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/_ConfigTestRuns"
+          },
+          "title": "Test Runs",
+          "type": "array"
+        },
+        "unapproved_resource_excess": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Unapproved Resource Excess"
+        }
+      },
+      "title": "_RuleCheckFacts",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "Rule items a submission gets, before it is made (draft) or again for a saved one.\n\nrule_items equal the formal FeedbackV2.rule_items of the same inputs at as_of. No model\nruns and nothing is written; model-judged criteria stay pending here.",
+  "properties": {
+    "as_of": {
+      "$ref": "#/$defs/VersionPoint"
+    },
+    "basis": {
+      "enum": [
+        "draft",
+        "saved"
+      ],
+      "title": "Basis",
+      "type": "string"
+    },
+    "config": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObjectRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "decision": {
+      "enum": [
+        "launch",
+        "launch_narrow",
+        "defer_with_conditions",
+        "no_go"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "evaluation": {
+      "$ref": "#/$defs/FileRef"
+    },
+    "facts": {
+      "$ref": "#/$defs/_RuleCheckFacts",
+      "default": {
+        "adjustment_actions": null,
+        "available_dev_days": null,
+        "capacity": null,
+        "config_version": null,
+        "deadline_day": null,
+        "participants": null,
+        "policy_version": null,
+        "requested_launch_day": null,
+        "required_dev_days": null,
+        "schema_version": 2,
+        "test_runs": [],
+        "unapproved_resource_excess": null
+      }
+    },
+    "mode": {
+      "const": "rules_only",
+      "default": "rules_only",
+      "title": "Mode",
+      "type": "string"
+    },
+    "products": {
+      "items": {
+        "$ref": "#/$defs/ObjectRef"
+      },
+      "title": "Products",
+      "type": "array"
+    },
+    "rule_items": {
+      "items": {
+        "$ref": "#/$defs/FeedbackItem"
+      },
+      "title": "Rule Items",
+      "type": "array"
+    },
+    "schema_version": {
+      "const": 2,
+      "default": 2,
+      "title": "Schema Version",
+      "type": "integer"
+    },
+    "session_id": {
+      "minLength": 1,
+      "title": "Session Id",
+      "type": "string"
+    },
+    "submission": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ObjectRef"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "work_language": {
+      "enum": [
+        "zh",
+        "en"
+      ],
+      "title": "Work Language",
+      "type": "string"
+    }
+  },
+  "required": [
+    "basis",
+    "session_id",
+    "as_of",
+    "decision",
+    "products",
+    "evaluation",
+    "work_language",
+    "rule_items"
+  ],
+  "title": "SubmissionRuleCheck",
+  "type": "object"
+}
