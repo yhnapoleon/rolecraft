@@ -115,8 +115,9 @@ export function notes(a, E) {
   f.works
     .filter((w) => w.source !== 'user' && w.adopted)
     .forEach((w) => {
+      // Plans and investigations link their own runs; other work cites a test as evidence.
       const linked =
-        w.kind === 'investigation'
+        w.kind === 'investigation' || w.kind === 'test_set'
           ? E.agentProgress(a, w)?.linked
           : (w.evidence || []).some((ev) => ev.type === 'test');
       if (!linked)
@@ -296,7 +297,7 @@ export function observations(a, E, scopeTaskId = null) {
       (x) =>
         x.source !== 'user' &&
         x.adopted &&
-        !(x.kind === 'investigation'
+        !(x.kind === 'investigation' || x.kind === 'test_set'
           ? E.agentProgress(a, x)?.linked
           : (x.evidence || []).some((ev) => ev.type === 'test')),
     )

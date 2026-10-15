@@ -21,6 +21,7 @@ import {
 import { evaluationVersionLine } from './evaluation-version';
 import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
+import { snapshotHeading } from './delivery';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 import { readCatalog, referenceLabel, type ReferenceCatalog } from '../../reference-catalog';
 
@@ -256,6 +257,15 @@ export function mountNativeFeedback(
   const purposeChoices = new Map<string, PurposeChoice>();
   let savedDrafts: Promise<void> = Promise.resolve();
   let draftError: unknown;
+  // Confirmed challenges and supplements show at once, until the next read lists them.
+  type ResponseKind = 'objection' | 'supplement';
+  const recorded: { feedback: string; kind: ResponseKind; text: string }[] = [];
+  const recordedForms = new Map<string, ResponseKind>();
+  const recordedText = (kind: ResponseKind) =>
+    (kind === 'objection'
+      ? T('异议已记录', 'Challenge recorded')
+      : T('补证已记录', 'Additional evidence recorded')) +
+    T(' · 等待核验', ' · Awaiting verification');
   const persist = (key: string, draft: { text: string; evidence: EvidenceRefV2[] }) => {
     const value = structuredClone(draft);
     savedDrafts = savedDrafts
@@ -454,11 +464,8 @@ export function mountNativeFeedback(
       | 'model_advice' = 'general',
   ) {
     const id = [report.id, report.version, section, criterion ?? ''].join(':');
-    let draft = draftResponses.get(id);
-    if (!draft) {
-      draft = adapter.readDraft(id) ?? { text: '', evidence: [] };
-      draftResponses.set(id, draft);
-    }
+    const draft = draftResponses.get(id) ?? adapter.readDraft(id) ?? { text: '', evidence: [] };
+    draftResponses.set(id, draft);
     const form = el('details');
     form.dataset.responseId = id;
     form.append(el('summary', T('提出异议或补充依据', 'Challenge or supplement the evidence')));
@@ -467,8 +474,8 @@ export function mountNativeFeedback(
     body.value = draft.text;
     body.setAttribute('aria-label', T('异议或补证内容', 'Challenge or additional evidence'));
     body.addEventListener('input', () => {
-      draft!.text = body.value;
-      void persist(id, draft!);
+      draft.text = body.value;
+      void persist(id, draft);
     });
     const evidence = el('p', '', 'muted');
     evidence.textContent = draft.evidence.length
@@ -478,17 +485,33 @@ export function mountNativeFeedback(
       T('选择已获准的原始引用', 'Choose authorized original references'),
       async () => {
         if (adapter.chooseEvidence) {
-          draft!.evidence = await adapter.chooseEvidence();
-          await persist(id, draft!);
-          evidence.textContent = selectedRefs(draft!.evidence.length);
+          draft.evidence = await adapter.chooseEvidence();
+          await persist(id, draft);
+          evidence.textContent = selectedRefs(draft.evidence.length);
         }
       },
     );
     choose.disabled = !adapter.chooseEvidence;
-    const send = (kind: 'objection' | 'supplement') => async () => {
-      if (!draft!.text.trim())
+    // What this form last recorded, shown beside it the moment the server confirms.
+    const status = el('p', '', 'muted');
+    status.setAttribute('role', 'status');
+    const showRecorded = () => {
+      const kind = recordedForms.get(id);
+      status.textContent = kind ? recordedText(kind) : '';
+      status.hidden = !kind;
+    };
+    showRecorded();
+    const send = (kind: ResponseKind) => async () => {
+      if (!draft.text.trim())
         throw Error(
           T('请写下具体的异议或补充内容。', 'Describe your challenge or additional evidence.'),
+        );
+      if (kind === 'supplement' && !draft.evidence.length)
+        throw Error(
+          T(
+            '补证需要先选择至少一处原始引用。',
+            'Choose at least one original reference before submitting evidence.',
+          ),
         );
       await savedDrafts;
       if (draftError)
@@ -498,18 +521,22 @@ export function mountNativeFeedback(
             'The response draft is not saved. Keep a copy of your text.',
           ),
         );
+      const text = draft.text;
       await adapter.respond({
         feedback_id: report.id,
         feedback_version: report.version,
         kind,
         section,
         criterion,
-        text: draft!.text,
-        evidence: draft!.evidence,
+        text,
+        evidence: draft.evidence,
       });
-      draft!.text = '';
-      draft!.evidence = [];
-      await persist(id, draft!);
+      recorded.push({ feedback: report.id, kind, text });
+      recordedForms.set(id, kind);
+      showRecorded();
+      draft.text = '';
+      draft.evidence = [];
+      await persist(id, draft);
       body.value = '';
       evidence.textContent = T('补证引用尚未选择', 'No supporting references selected');
     };
@@ -525,6 +552,7 @@ export function mountNativeFeedback(
       choose,
       objection,
       supplement,
+      status,
       el(
         'p',
         T(
@@ -564,6 +592,7 @@ export function mountNativeFeedback(
         : undefined;
     const purposeLine = reviewedAs(review, language);
     if (purposeLine) panel.append(el('p', purposeLine, 'muted'));
+    // A submission reads "第 N 次交付", like every other reference to it.
     refs(panel, [report.subject]);
     panel.append(evaluationVersionLine(doc, report, language));
     if (report.subject.kind === 'review') {
@@ -862,7 +891,9 @@ export function mountNativeFeedback(
       : T('确认上一请求', 'Check the previous request');
     receipt.replaceChildren();
     if (state.submission) {
-      receipt.append(el('h3', T('已保存的提交快照', 'Saved submission snapshot')));
+      // The delivery and each exact version it saved, by the names evidence buttons use.
+      const catalog = state.references ?? readCatalog(null);
+      receipt.append(el('h3', snapshotHeading(state.submission.ref, catalog, language)));
       refs(receipt, state.submission.products);
     }
     // Do not rebuild the response editor while it holds focus. Its content is
@@ -920,22 +951,26 @@ export function mountNativeFeedback(
     ))
       action.disabled = state.busy || !!state.pending || adapter.canRespond === false;
     responseHistory.replaceChildren();
-    if (state.responses?.length) {
+    // Confirmed records the last read does not list yet, so nothing waits for a refresh.
+    const unlisted = recorded.filter(
+      (echo) =>
+        !state.responses?.some(
+          (response) =>
+            response.kind === echo.kind &&
+            response.text === echo.text &&
+            response.feedback?.object_id === echo.feedback,
+        ),
+    );
+    const listed = [...(state.responses ?? []), ...unlisted];
+    if (listed.length) {
       responseHistory.append(
         el('h3', T('已记录的异议与补证', 'Recorded challenges and additional evidence')),
       );
-      for (const response of state.responses) {
+      for (const response of listed)
         responseHistory.append(
-          el(
-            'p',
-            (response.kind === 'objection'
-              ? T('异议已记录', 'Challenge recorded')
-              : T('补证已记录', 'Additional evidence recorded')) +
-              T(' · 等待核验', ' · Awaiting verification'),
-          ),
+          el('p', recordedText(response.kind)),
           el('blockquote', response.text),
         );
-      }
     }
     revisions.hidden = state.status !== 'submitted';
     revise.disabled =

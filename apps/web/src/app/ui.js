@@ -72,6 +72,8 @@ import {
 import './investigation.css';
 import { createDocumentMotion } from './document-motion.js';
 import './document-motion.css';
+import { markdownHtml } from './markdown';
+import { copyBlockedText, returnPlacement, unmatchedReturnText } from './agent-return';
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
 import { installV4References } from '../v4-references';
@@ -280,39 +282,9 @@ const testQuote = (r) => {
 };
 
 function md(raw, opts = {}) {
-  let lines = esc(raw || '').split('\n');
-  if (opts.dropTitle && /^#\s/.test(lines[0] || '')) lines = lines.slice(1);
-  let out = '';
-  let list = null;
-  const inline = (s) =>
-    s.replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
-  const close = () => {
-    if (list) {
-      out += `</${list}>`;
-      list = null;
-    }
-  };
-  for (const line of lines) {
-    const ul = line.match(/^\s*[-*]\s+(.*)$/);
-    const ol = line.match(/^\s*\d+[.)]\s+(.*)$/);
-    if (ul || ol) {
-      const kind = ul ? 'ul' : 'ol';
-      if (list !== kind) {
-        close();
-        out += `<${kind}>`;
-        list = kind;
-      }
-      out += '<li>' + inline((ul || ol)[1]) + '</li>';
-      continue;
-    }
-    close();
-    if (/^#{1,2}\s/.test(line)) out += '<h3>' + inline(line.replace(/^#{1,2}\s/, '')) + '</h3>';
-    else if (/^#{3,6}\s/.test(line))
-      out += '<h4>' + inline(line.replace(/^#{3,6}\s/, '')) + '</h4>';
-    else if (line.trim()) out += '<p>' + inline(line) + '</p>';
-  }
-  close();
-  return out || `<p class="muted">${T('还没有正文。', 'Nothing written yet.')}</p>`;
+  return (
+    markdownHtml(raw, opts) || `<p class="muted">${T('还没有正文。', 'Nothing written yet.')}</p>`
+  );
 }
 
 // Word-level comparison for document versions. Chinese is compared by character.
@@ -785,7 +757,7 @@ const factRow = (w, cls = '') =>
     )
     .join('')}</ul>`;
 function priPick(id, p, title, change = 'priority') {
-  return `<label class="pri-pick" title="${esc(PRI(p))}">${priMark(p)}<select aria-label="${esc(T('「' + title + '」的优先级：' + PRI(p), 'Priority for “' + title + '”: ' + PRI(p)))}" data-change="${change}" data-id="${esc(id)}">${['first', 'next', 'later'].map((k) => `<option value="${k}" ${k === p ? 'selected' : ''}>${PRI(k)}</option>`).join('')}</select></label>`;
+  return `<label class="pri-pick" title="${esc(PRI(p))}">${priMark(p)}<select aria-label="${esc(T(`「${title}」的优先级：${PRI(p)}`, `Priority for “${title}”: ${PRI(p)}`))}" data-change="${change}" data-id="${esc(id)}" data-title="${esc(title)}">${['first', 'next', 'later'].map((k) => `<option value="${k}" ${k === p ? 'selected' : ''}>${PRI(k)}</option>`).join('')}</select></label>`;
 }
 
 /* ---------- 1. jobs ---------- */
@@ -974,7 +946,7 @@ function intakeResult(r) {
   if (r.status === 'empty')
     return `<p class="intake-result muted">${T('先写一句你想练的业务。', 'Write a sentence about the business first.')}</p>`;
   if (r.status === 'none')
-    return `<div class="intake-result" tabindex="-1"><p class="intake-head">${T('这个情境现在还练不了', 'This one cannot be practised yet')}</p><p class="muted">${T('目前审核过的只有“内部知识助手上线决定”。', 'The only reviewed situation is a launch decision for an internal knowledge assistant.')}</p></div>`;
+    return `<div class="intake-result" tabindex="-1"><p class="intake-head">${T('这个情境现在还练不了', 'This one cannot be practised yet')}</p><p class="muted">${T('目前审核过的只有“内部知识助手上线决定”。', 'The only reviewed situation is a launch decision for an internal knowledge assistant.')}</p><div class="row-actions">${btn(T('改练内部知识助手上线决定', 'Practise the knowledge assistant launch instead'), 'take-case', '', 'data-case="pilot"')}</div></div>`;
   const cols = `<div class="intake-cols"><ul class="ticks">${intakeLines(r.fits)
     .map((x) => `<li>${icon('check', 'i-sm')}${esc(x)}</li>`)
     .join('')}</ul>${
@@ -2100,13 +2072,13 @@ function railAgent(a, t) {
         <label class="check"><input type="checkbox" data-scope="materials" ${sc.materials ? 'checked' : ''}><span>${T('读过的资料', 'Documents you read')}</span><small>${read.size}</small></label>
         <label class="check"><input type="checkbox" data-scope="tests" ${sc.tests ? 'checked' : ''}><span>${T('测试记录', 'Test runs')}</span><small>${a.tests.length}</small></label>
       </div>
-      <div class="row-actions">${btn(icon('copy', 'i-sm') + T('复制任务包', 'Copy'), 'copy-package', 'small')}${btn(icon('download', 'i-sm') + T('下载', 'Download'), 'download-package', 'small quiet')}${btn(T('查看', 'Preview'), 'package', 'small quiet')}</div>
+      <div class="row-actions">${btn(icon('copy', 'i-sm') + T('复制任务包', 'Copy'), 'copy-package', 'small')}${btn(icon('download', 'i-sm') + T('下载', 'Download'), 'download-package', 'small quiet')}${btn(T('查看', 'View package'), 'package', 'small quiet')}</div>
     </section>
     <section class="agent-step" data-agent-returns><h3><span class="step-n">2</span>${T('带回来', 'Bring back')}</h3>
       <form data-form="import" id="import-form" class="stack">
         <label class="sr-only" for="import-content">${T('粘贴 Agent 的产出', 'Paste your agent’s output')}</label>
         <textarea class="textarea" name="content" id="import-content" rows="3" required ${canWrite(a) ? '' : 'disabled'} placeholder="${esc(T('粘贴 Agent 的文字、测试计划或调查…', 'Paste your agent’s writing, test plan or investigation…'))}">${esc(importDraft(a))}</textarea>${canWrite(a) ? '' : `<p class="meta">${T('这次练习已交付或只读，不能带回新作品；开始修订或新练习后再导入。', 'This practice is submitted or read-only. Start a revision or a new practice to bring work back.')}</p>`}
-        <div class="row-actions"><label class="file-pick">${icon('upload', 'i-sm')}<span>${T('选择文件', 'Choose a file')}</span><input type="file" id="import-file" accept=".md,.txt,.json,text/plain,application/json" ${canWrite(a) ? '' : 'disabled'}></label><span class="spacer"></span><button type="submit" class="btn small primary" ${canWrite(a) ? '' : 'disabled'}>${T('预览', 'Preview')}</button></div>
+        <div class="row-actions"><label class="file-pick">${icon('upload', 'i-sm')}<span>${T('选择文件', 'Choose a file')}</span><input type="file" id="import-file" accept=".md,.txt,.json,text/plain,application/json" ${canWrite(a) ? '' : 'disabled'}></label><span class="spacer"></span><button type="submit" class="btn small primary" ${canWrite(a) ? '' : 'disabled'}>${T('预览', 'Preview return')}</button></div>
       </form>
     </section>
     <section class="agent-log" data-agent-activity><h3 class="mini-title">${T('它做了什么', 'What it did')}</h3>
@@ -3553,6 +3525,32 @@ function normalizeImport(text) {
     return text;
   }
 }
+// What came back, where it will be filed and whether it can come in at all. The chosen
+// task rides on the import button; nothing is saved until the person imports.
+function returnPreviewSheet(a, data) {
+  const t = task();
+  const placement = returnPlacement(data, a.exports || [], a.tasks, t ? t.id : null);
+  const chosen = placement.status === 'unmatched' ? '' : placement.taskId || '';
+  const named = (id) => taskTitle(a.tasks.find((x) => x.id === id));
+  const where =
+    placement.status === 'unmatched'
+      ? `<p class="warn-line" role="alert">${esc(unmatchedReturnText())}</p>`
+      : placement.status === 'package'
+        ? `<p class="meta">${esc(T(`放在「${named(chosen)}」下：任务包是从这件事交出的。`, `Filed under “${named(chosen)}”: the package was handed over from this task.`))}</p>`
+        : `<label class="return-task"><span class="meta">${T('放在哪件事项下', 'File it under')}</span><select class="select" data-change="return-task">${chosen ? '' : `<option value="" selected>${T('选择一件事项', 'Choose a task')}</option>`}${a.tasks.map((x) => `<option value="${esc(x.id)}" ${x.id === chosen ? 'selected' : ''}>${esc(taskTitle(x))}</option>`).join('')}</select></label>`;
+  const preview =
+    data.kind === 'investigation'
+      ? investigationPreview(data)
+      : data.kind === 'test_set'
+        ? testSetPreview(data, E.getMaterials(a))
+        : `<article class="paper"><h3 class="paper-title">${esc(data.title)}</h3><div class="prose">${md(data.body)}</div></article>`;
+  openSheet(
+    T('检查带回的内容', 'Check what came back'),
+    `<p class="meta">${esc(T(`来自你的 Agent，用途「${purposeLabel(data.purpose)}」`, `From your agent, purpose “${purposeLabel(data.purpose)}”`))}</p>${where}${preview}`,
+    `${btn(T('返回', 'Back'), 'close', 'quiet')}<span class="spacer"></span>${placement.status === 'unmatched' ? '' : btn(T('导入为待检查作品', 'Import as “to check”'), 'confirm-import', 'primary', `data-task="${esc(chosen)}" ${chosen ? '' : 'disabled'}`)}`,
+    'wide',
+  );
+}
 function setObj(obj) {
   const t = task();
   if (!t) return;
@@ -4166,12 +4164,7 @@ async function act(el) {
         await navigator.clipboard.writeText(JSON.stringify(pkg, null, 2));
         notify(T('任务包已复制，记为已导出', 'Package copied and marked as handed over'));
       } catch (_) {
-        notify(
-          T(
-            '浏览器不允许自动复制；已记为导出，可在“查看”里手动复制',
-            'The browser blocked copying. It is marked as handed over; copy it from Preview.',
-          ),
-        );
+        notify(copyBlockedText());
       }
       refreshWS(['rail']);
       break;
@@ -4813,12 +4806,10 @@ async function act(el) {
               'This practice is read-only or storage is unavailable. New work cannot be imported.',
             ),
           );
+        // The task chosen in the preview, or the one its package belongs to.
+        const target = el.dataset.task || null;
         if (L.nativeWorkspace(a)) {
-          const saved = await L.importNativeReturn(
-            a,
-            normalizeImport(importDraft(a)),
-            t ? t.id : null,
-          );
+          const saved = await L.importNativeReturn(a, normalizeImport(importDraft(a)), target);
           persist();
           closeSheet(true);
           if (saved.duplicate) {
@@ -4847,7 +4838,7 @@ async function act(el) {
           );
           break;
         }
-        const res = E.importReturn(a, normalizeImport(importDraft(a)), t ? t.id : null);
+        const res = E.importReturn(a, normalizeImport(importDraft(a)), target);
         if (res.duplicate) {
           if (res.removed) {
             closeSheet(true);
@@ -5178,6 +5169,12 @@ document.addEventListener('change', (e) => {
   const el = e.target;
   const a = current();
   try {
+    if (el.dataset.change === 'return-task') {
+      const confirm = sheet.querySelector('[data-action="confirm-import"]');
+      confirm.dataset.task = el.value;
+      confirm.disabled = !el.value;
+      return;
+    }
     if (el.dataset.investigationReview) {
       commit();
       updateSave();
@@ -5201,12 +5198,13 @@ document.addEventListener('change', (e) => {
     }
     if (el.dataset.change === 'triage') {
       const pick = el.closest('.pri-pick');
-      pick.outerHTML = priPick(
-        el.dataset.id,
-        el.value,
-        el.closest('.seed')?.textContent.trim() || '',
-        'triage',
-      );
+      const focused = document.activeElement === el;
+      // The task's own name; the seed's text would also read out every option.
+      pick.outerHTML = priPick(el.dataset.id, el.value, el.dataset.title || '', 'triage');
+      if (focused)
+        document
+          .querySelector(`select[data-change="triage"][data-id="${CSS.escape(el.dataset.id)}"]`)
+          ?.focus();
       return;
     }
     if (el.dataset.change === 'priority') {
@@ -5424,13 +5422,7 @@ document.addEventListener('submit', async (e) => {
               'This practice is read-only or storage is unavailable. New work cannot be imported.',
             ),
           );
-        const t = task();
-        openSheet(
-          T('检查带回的内容', 'Check what came back'),
-          `<p class="meta">${esc(T(`来自你的 Agent，用途「${purposeLabel(data.purpose)}」，放在「${taskTitle(t || a.tasks[0])}」下`, `From your agent, purpose “${purposeLabel(data.purpose)}”, filed under “${taskTitle(t || a.tasks[0])}”`))}</p>${data.kind === 'investigation' ? investigationPreview(data) : data.kind === 'test_set' ? testSetPreview(data, E.getMaterials(a)) : `<article class="paper"><h3 class="paper-title">${esc(data.title)}</h3><div class="prose">${md(data.body)}</div></article>`}`,
-          `${btn(T('返回', 'Back'), 'close', 'quiet')}<span class="spacer"></span>${btn(T('导入为待检查作品', 'Import as “to check”'), 'confirm-import', 'primary')}`,
-          'wide',
-        );
+        returnPreviewSheet(a, data);
         break;
       }
     }

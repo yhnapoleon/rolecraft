@@ -3,6 +3,7 @@ import type { V4HostAdapter } from './v4-host';
 import type { EvidenceRefV2, ObjectRef } from './contracts-v2';
 import { T, locale } from './app/i18n';
 import { describeServerEvent, type ServerEvent } from './app/event-copy';
+import { markdownNodes } from './app/markdown';
 import { outcomeTerm } from './features/workspace/native-v4/outcome-copy';
 import {
   catalogLookups,
@@ -188,9 +189,10 @@ export function installV4References(getHost: () => V4HostAdapter | null) {
       }
       const texts = ref.kind === 'event' ? [] : textOf(content);
       for (const text of texts) {
-        const p = node('p', text, 'prose');
-        p.style.whiteSpace = 'pre-wrap';
-        target.append(p);
+        // Works and documents are written in Markdown: show headings and lists as such.
+        const body = node('div', '', 'prose');
+        body.append(...markdownNodes(document, text));
+        target.append(body);
       }
       if (!texts.length && !recorded)
         target.append(

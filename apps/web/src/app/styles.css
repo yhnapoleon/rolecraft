@@ -2238,12 +2238,16 @@ button.crumb:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 26px;
-  padding: 0 10px 0 8px;
-  border-radius: 999px;
+  min-height: 26px;
+  max-width: 100%;
+  padding: 4px 10px 4px 8px;
+  border-radius: 13px;
   background: var(--fill);
   color: var(--ink-2);
   font-size: 12.5px;
+  line-height: 18px;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .console-state li .i {
   color: var(--ink-3);
@@ -4024,7 +4028,12 @@ textarea.doc-input[name="rationale"] {
     gap: 0;
     padding: 0 6px;
   }
+  /* The title gives way to the team and actions, ending in an ellipsis. */
+  .ws-title {
+    display: flex;
+  }
   .title-btn {
+    min-width: 0;
     max-width: 44vw;
     padding: 0 6px;
   }
@@ -4372,13 +4381,19 @@ textarea.doc-input[name="rationale"] {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  height: 24px;
-  padding: 0 9px;
-  border-radius: 999px;
+  /* A long list of knowledge domains wraps inside its chip instead of spilling out. */
+  min-height: 24px;
+  max-width: 100%;
+  padding: 3px 9px;
+  border-radius: 12px;
   background: var(--fill);
   color: var(--ink-2);
   font-size: 12px;
+  line-height: 18px;
   font-variant-numeric: tabular-nums;
+  /* Break between domains, not inside a Chinese name, unless a name alone is too wide. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
 }
 .pb-state li.warn {
   background: var(--warn-tint);

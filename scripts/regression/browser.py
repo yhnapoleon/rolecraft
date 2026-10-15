@@ -159,7 +159,7 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument(
         "--suite",
-        choices=("published-flows", "known-defects", "model-flows"),
+        choices=("published-flows", "known-defects", "model-flows", "qa-polish"),
         default="published-flows",
     )
     parser.add_argument("--api-port", type=int, default=19662)

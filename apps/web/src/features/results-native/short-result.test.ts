@@ -94,6 +94,17 @@ describe('063-03 short result frame', () => {
     const order = asFake(view.element).children.map((n) => (n as FakeElement).tagName);
     expect(order).toEqual(['p', 'fieldset', 'details']);
   });
+
+  it('holds a structured lead (headings, lists) in a block container, not a paragraph', () => {
+    const doc = fakeDocument();
+    const blocks = doc.createElement('div');
+    blocks.append(doc.createElement('h3'), doc.createElement('ul'));
+    const view = renderShortResult(doc, { kind: 'reply', lead: blocks });
+    const lead = asFake(view.lead);
+    expect(lead.tagName).toBe('div');
+    expect(lead.className).toBe('short-result__lead');
+    expect(lead.children).toEqual([blocks]);
+  });
 });
 
 describe('paired copy tables', () => {

@@ -149,6 +149,32 @@
   line-height: 1.55;
   max-width: 72ch;
 }
+/* Headings and lists in a reply keep their structure at the reply's own type size. */
+.rc-roles__md > * + * {
+  margin-top: 0.45em;
+}
+.rc-roles__md h3,
+.rc-roles__md h4 {
+  font-size: inherit;
+  font-weight: 600;
+  padding-bottom: 0;
+}
+.rc-roles__md ul,
+.rc-roles__md ol {
+  padding-left: 1.3em;
+}
+.rc-roles__md ul {
+  list-style: disc;
+}
+.rc-roles__md ol {
+  list-style: decimal;
+}
+.rc-roles__md code {
+  font: 12.5px var(--mono, ui-monospace, monospace);
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--fill, #f1f2f4);
+}
 .rc-roles__turn-status,
 .rc-roles__empty {
   color: var(--ink-3, #7b818d);
