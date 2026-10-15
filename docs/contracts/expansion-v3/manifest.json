@@ -306,7 +306,7 @@
   "documents": {
     "compatibility.md": {
       "path": "compatibility.md",
-      "sha256": "a1115dfc12f6c9482a542249b9395b0d091a042ada9e49ef188d337e5c93a971"
+      "sha256": "952f8e048eb497ae7d7be72dbe08131803c98ce59a1f66b85c885590b0fd4e9b"
     },
     "consumer-request-resolution.json": {
       "path": "consumer-request-resolution.json",
@@ -352,6 +352,7 @@
     "feedback-segment-scope": "Server-only complete input traces bind exact content hashes and dependencies per segment; fully authorized finite-scope readers retain proved text, missing or hidden dependencies degrade only affected parts.",
     "model-assembly": "Optional registered-model identity fields: kind; task_type (relation is omitted); criteria and rubric_version (id and sha256), required for criterion registrations and absent otherwise; dataset (id, manifest sha256, label tiers); fusion components and parameters; weights_stage. FeedbackProvenance gains registered_models, recorded only when a criterion registration is configured, and support_model, recorded only when the support verifier is configured apart from the Judge. RegisteredModelAdvice gains criterion advice (any identifier on the wire, the five-label domain, rule reconciliation), relation sentence units whose aggregation counts follow the units, and explicit error codes for rule conflicts, unestablished applicability, criteria a model does not cover, rubric version mismatches and fully abstained work. Synthetic registrations may show labels and evidence as mechanism-only advice. Unset fields are omitted, so existing records, examples and wire bytes are unchanged; limited readers never receive sentence results. The runtime reads four model slots (ROLES, JUDGE, SUPPORT, ASSISTANT) from CAREER_LAB_<SLOT>_* at startup. A slot's provider, key file, base URL and model come from one layer only: its own variables when it names a provider, else the whole JUDGE slot (SUPPORT) or the whole shared configuration, so a key never reaches another provider's endpoint. Provenance records the Judge and support endpoints a slot configures (optional base_url); with no slot variable set, requests and provenance are unchanged. CAREER_LAB_MODEL_REGISTRATIONS names relation and criterion registrations (criterion is only parsed so far); setting it beside CAREER_LAB_MODEL_REGISTRATION refuses to start.",
     "native-runtime-slice": "One standard API/worker assembly; native investigation, assistant trials, resource decisions and colleague slots. Explicit failed-job refresh, no automatic model retry including expired leases, exact historical public event/source reads, real material activation in recovered role provenance. W05 r9 production evidence, atomic feedback and native callbacks are assembled with frozen advisory policies; W03 native composition remains pending.",
+    "object-evidence-ref": "objects.read of a test run or a work version (kind test or product) adds an optional evidence_ref: the exact EvidenceRefV2 of that version, observed at the business_seq of the stored snapshot that created it, valid from 0, with no span or quote. It is the reference the evaluator's source reader verifies for cited objects (both use evidence/v2/citation.py, now a contract input), so work, resource requests and feedback supplements cite tests and work with it. It is absent when the creation snapshot is not found; materials keep citing passages and other kinds are unchanged. Request models, routes and operations are unchanged.",
     "operation-readiness": "Installed and ready are distinct; closed registered operations return stable unavailable before public dispatch. Auth/delegation capabilities remain independent.",
     "original-source-protection": "test_freeze enumerates only BASE existing scenarios; no v2 baseline rewrite and no test exclusion needed.",
     "outcome-preview-freshness": "Optional recorded preview conditions on FeedbackV2 and read-time preview states on WorkspaceProductPage: stale previews name each changed input, configuration, resource or material condition, point to a newer preview and list later recorded business actions beside the unchanged prediction. Outcome actions may also name approval requests and submissions. Save-time checks follow the work purpose and task. Records and pages without previews retain their bytes; reads never evaluate again. Recorded material versions are only those the learner may open; finite-scope readers get resource values and material ids withheld and learn only that those conditions changed. Lifecycle-only versions with unchanged content do not make a preview stale.",
@@ -368,7 +369,7 @@
     "sha256": "4e1a46ff4522869917cb53e0b71cfab35e6312be5b164b054e780fa1dea8ef45"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-d2f0dd5a386651a1a86a581b3d18bdb98c7320ac05ffa35adef75993ce600c4a",
+  "previous_contract_revision": "expansion-v3-79c05a8746fab4a04846161d71527de9c1b69b02834ecc8b6080433d4a44d624",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -3269,7 +3270,7 @@
     "src/career_lab/api/v2_routes.py": "1d829a6949974dfc9e21f429368583b0ef3ebab120b66f1bf7b66ed7941f4483",
     "src/career_lab/api/v4_config.py": "23b5678779c9925c86e545c4b953497672895d32a6636c1e5c9f3196556ad5e4",
     "src/career_lab/api/v4_extensions.py": "22484839245e454cdd920d483850dfe475e362699130129fac8b1cea477cadc6",
-    "src/career_lab/api/vertical_reads.py": "d3edce3ffeae6696c5db90eb6f80d57fba126053f426e7ff4022efec694bab90",
+    "src/career_lab/api/vertical_reads.py": "379017ffb26ef5568d61efc24ccf965befebf14355752071bc59a7a33d5c5829",
     "src/career_lab/api/vertical_runtime.py": "9fc2aedfcb2369cae8f67c001c7c164af2a0cae9999bfa045de0ee4bb6bed621",
     "src/career_lab/api/workspace_integration.py": "580d03db16bf1310e4713965501cf8fe924472d8646d6890fa85d4b30045559b",
     "src/career_lab/cli.py": "8a3b8e83f93bc5bbcb041e58ac398a04b14f332a40820ad4d37f7fdf0dcbd3cd",
@@ -3289,11 +3290,11 @@
     "src/career_lab/contracts/v2/engineer_export.py": "cb03edb975fb004f2956ec1db93a40b7ed6a1dd473b74b9c9395ca5409e15342",
     "src/career_lab/contracts/v2/evaluation.py": "bff8ea0e6709d94464d0c0ab8a781fa2c9a77031d03bf4ac7899df8d217b118d",
     "src/career_lab/contracts/v2/examples.py": "0ae0d567f8d8d476b13e52b08f56a109b40fddf5e671fd3a4e5a10a6d88c09f9",
-    "src/career_lab/contracts/v2/export.py": "81b78c7372e049b013a1a5c44abdd63be9f9e52347f8f720b34c571e2a7d988e",
+    "src/career_lab/contracts/v2/export.py": "b4f6ed7bea1112963ff3fdfdef1bcf88442ee5388847d44827524a0e174d5677",
     "src/career_lab/contracts/v2/extensions.py": "51abc14f62cd599c227c294a559d606cfb19ccc8620d1c81cb59ad43ea48c22c",
     "src/career_lab/contracts/v2/files.py": "3b3f8e9ac47acacfcdd3052f7b0d94698ff8622c0ca34299b47a544bad048577",
     "src/career_lab/contracts/v2/legacy.py": "47a9fb0d4414326b2e05ba863ce29a905f9734b1eb881a85b41af769df5fbbd5",
-    "src/career_lab/contracts/v2/manifest_history.py": "dd8055097e880052d84bf99eb6ad0f45e84cd3a8aae2277ccdcb1f17e25fcce1",
+    "src/career_lab/contracts/v2/manifest_history.py": "a96f8c20b425e7919e392f1b394804e09047575e4f25b358ebe35a2de1015e0e",
     "src/career_lab/contracts/v2/projection.py": "de1c239f0faf7ae41c82a13c3ee380020ac288e4eafae41b683e351bb5c31e9e",
     "src/career_lab/contracts/v2/provenance.py": "d752a89634ca3608aad3ee533c23522c592cd48e7f40a0fed37a56e515301cf1",
     "src/career_lab/contracts/v2/provider.py": "97b6f25a7ba7e93a84b77af980b00d6d371d770239cc59f6bc09ceb0ebf4994d",
@@ -3302,6 +3303,7 @@
     "src/career_lab/contracts/v2/workspace.py": "4d92d335e2ce41ef737422591da97ec23d56bde4b04fc576a8fe85de0e00a711",
     "src/career_lab/contracts/v2/world.py": "75adc44fe119b7809c124013a7b766fb220a7344d40b7b46cd045ed4e408e45f",
     "src/career_lab/contracts/versioning.py": "23ef383486be9575e6e4ead243965bcf905122c509f6a257ad8729c077b3e506",
+    "src/career_lab/evidence/v2/citation.py": "6e89772d1d7d588c31edc955ef6c4627ab32626e127f01c13cd3103088daad5e",
     "src/career_lab/jobs/repository.py": "583c03ea8172027b6fa7c7130a1f2747ed9405415557bebc2d912c0b49d4324f",
     "src/career_lab/jobs/worker.py": "a773253fa493e26705466c8d9e58cd9d6458b8f43db6b5f4a27940465dbad642",
     "src/career_lab/rubrics/registry.py": "2a4b32a9e641e299e7e498832ee8cb5adcd78be295dcbc885abf22e0172a2c04",
