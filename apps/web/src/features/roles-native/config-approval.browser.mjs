@@ -73,8 +73,8 @@ const viewSource = text('看原文', 'View source');
 const capped = text('按上限改申请', 'Re-apply at the ceiling');
 const adjust = text('调整设置', 'Adjust settings');
 const replan = text(
-  '方案需要 7，上限 6：先把方案降到 6 以内再申请',
-  'The plan needs 7, over the ceiling of 6: bring it down to 6 or less before requesting',
+  '先把方案降到 6 人日以内再申请',
+  'Bring the plan down to 6 person-days or less before requesting',
 );
 
 async function openSettings() {
@@ -297,8 +297,8 @@ try {
       assert.ok(
         card.includes(
           text(
-            '方案缺少：人工入口——先在设置里补上再申请',
-            'The plan is missing Human hand-off: add it in the settings before requesting',
+            '先在设置里补上人工入口再申请',
+            'Add Human hand-off in the settings before requesting',
           ),
         ),
         card,

@@ -105,7 +105,7 @@ it('sends a plan that needs more than the ceiling to its settings, on every reje
     { ok: false, text: '开发人日：申请 7，超出上限 6；方案需要 7，超出上限 6' },
   ]);
   expect(asked7.ceiling).toBeNull();
-  expect(asked7.replan).toEqual(['方案需要 7，上限 6：先把方案降到 6 以内再申请']);
+  expect(asked7.replan).toEqual(['先把方案降到 6 人日以内再申请']);
   // Asking for the ceiling anyway is declined again, and that card points to the settings too.
   const asked6 = decisionCardModel(
     decision('rejected', {
@@ -125,7 +125,7 @@ it('sends a plan that needs more than the ceiling to its settings, on every reje
     titles,
   );
   expect(asked6.ceiling).toBeNull();
-  expect(asked6.replan).toEqual(['方案需要 7，上限 6：先把方案降到 6 以内再申请']);
+  expect(asked6.replan).toEqual(['先把方案降到 6 人日以内再申请']);
 });
 
 /** The card as drawn, with what its buttons did. */
@@ -153,7 +153,7 @@ it('draws the way out of an over-ceiling plan: the settings, never a capped requ
   ]) {
     const { card, refilled, button } = drawn(decisionCardModel(declined, request(), titles));
     expect(button('按上限改申请')).toBeUndefined();
-    expect(card.textContent).toContain('方案需要 7，上限 6：先把方案降到 6 以内再申请');
+    expect(card.textContent).toContain('先把方案降到 6 人日以内再申请');
     const settings = button('调整设置');
     // The workbench's own "config" action opens the pilot settings, as the pre-submission
     // card's "adjust settings" does; the card adds no entry of its own.
@@ -195,15 +195,15 @@ it('says what to change in the plan for each term over its ceiling, in both lang
   });
   const replan = () => decisionCardModel(declined, request(), titles).replan;
   expect(replan()).toEqual([
-    '试点 80 人，上限 60：先把试点人数降到 60 以内再申请',
-    '计划第 12 天上线，上限第 10 天：先把上线日提前到第 10 天以内再申请',
-    '方案需要 7，上限 6：先把方案降到 6 以内再申请',
+    '先把试点人数降到 60 人以内再申请',
+    '先把计划上线日提前到第 10 天以内再申请',
+    '先把方案降到 6 人日以内再申请',
   ]);
   setPreference('en');
   expect(replan()).toEqual([
-    'The pilot has 80 users, over the ceiling of 60: bring it down to 60 or fewer before requesting',
-    'The plan launches on day 12, past the ceiling of day 10: move the launch to day 10 or earlier before requesting',
-    'The plan needs 7, over the ceiling of 6: bring it down to 6 or less before requesting',
+    'Bring the pilot down to 60 users or fewer before requesting',
+    'Move the planned launch day to day 10 or earlier before requesting',
+    'Bring the plan down to 6 person-days or less before requesting',
   ]);
   expect(
     drawn(decisionCardModel(declined, request(), titles)).button('Adjust settings'),
@@ -234,10 +234,10 @@ it('sends a plan missing a required safeguard to its settings, not to a capped r
     titles,
   );
   expect(missing.ceiling).toBeNull();
-  expect(missing.replan).toEqual(['方案缺少：人工入口——先在设置里补上再申请']);
+  expect(missing.replan).toEqual(['先在设置里补上人工入口再申请']);
   const handOff = decisionCardModel(assessment({ fallback_required: true }), request(), titles);
   expect(handOff.ceiling).toBeNull();
-  expect(handOff.replan).toEqual(['答不了或不确定时要转人工确认——先在设置里选上再申请']);
+  expect(handOff.replan).toEqual(['先在设置里把“答不了或不确定时”选成“转人工确认”再申请']);
   const { button, refilled } = drawn(missing);
   expect(button('按上限改申请')).toBeUndefined();
   expect(button('调整设置')?.dataset.action).toBe('config');
@@ -254,8 +254,8 @@ it('sends a plan missing a required safeguard to its settings, not to a capped r
       titles,
     ).replan,
   ).toEqual([
-    'The plan is missing Scope filter, Human hand-off: add them in the settings before requesting',
-    'Unanswered questions must go to a person: choose “Hand off to a person” in the settings before requesting',
+    'Add Scope filter and Human hand-off in the settings before requesting',
+    'In the settings, set “When it cannot answer” to “Hand off to a person” before requesting',
   ]);
 });
 
@@ -424,7 +424,7 @@ it('names a missing hand-off and the safeguards a daily index plan lacks', () =>
   expect(model.lines).toEqual([
     { ok: true, text: '名额：30 → 60（方案需要 50 · 上限 60）' },
     { ok: false, text: '每日索引策略还要安排：知识范围过滤' },
-    { ok: false, text: '答不了时要转人工确认' },
+    { ok: false, text: '答不了或不确定时要转人工确认' },
   ]);
 });
 

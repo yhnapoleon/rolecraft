@@ -96,24 +96,34 @@ function needPart(t: _ApprovalTermCheck, has: (i: Issue) => boolean) {
     : T(`${subject}（缺口 ${gap}）`, `${subject} (shortfall ${gap})`);
 }
 
-/** The plan's own need is over the ceiling: what to change in the settings before asking again. */
+// The settings panel's own words: its "when it cannot answer" choice, set to the hand-off.
+const cannotAnswer = () => T('答不了或不确定时', 'When it cannot answer');
+const handOff = () => fallbackLabel('human');
+const and = (items: readonly string[]) =>
+  items.length > 1 ? `${items.slice(0, -1).join(', ')} and ${items.at(-1)}` : (items[0] ?? '');
+
+/**
+ * What to change in the settings before asking again; the card's line above already says why.
+ * In the settings panel's words, with units.
+ */
 function overCeilingNote(t: _ApprovalTermCheck) {
-  const n = t.needed;
   const l = t.limit;
   if (t.resource === DAY)
     return T(
-      `计划第 ${n} 天上线，上限第 ${l} 天：先把上线日提前到第 ${l} 天以内再申请`,
-      `The plan launches on day ${n}, past the ceiling of day ${l}: move the launch to day ${l} or earlier before requesting`,
+      `先把计划上线日提前到第 ${l} 天以内再申请`,
+      `Move the planned launch day to day ${l} or earlier before requesting`,
     );
   if (t.resource === 'capacity')
     return T(
-      `试点 ${n} 人，上限 ${l}：先把试点人数降到 ${l} 以内再申请`,
-      `The pilot has ${n} users, over the ceiling of ${l}: bring it down to ${l} or fewer before requesting`,
+      `先把试点人数降到 ${l} 人以内再申请`,
+      `Bring the pilot down to ${l} users or fewer before requesting`,
     );
-  return T(
-    `方案需要 ${n}，上限 ${l}：先把方案降到 ${l} 以内再申请`,
-    `The plan needs ${n}, over the ceiling of ${l}: bring it down to ${l} or less before requesting`,
-  );
+  if (t.resource === 'dev_days')
+    return T(
+      `先把方案降到 ${l} 人日以内再申请`,
+      `Bring the plan down to ${l} person-days or less before requesting`,
+    );
+  return T(`先把方案降到 ${l} 以内再申请`, `Bring the plan down to ${l} or less before requesting`);
 }
 
 /**
@@ -131,15 +141,15 @@ function replanNotes(decision: BusinessDecision): string[] {
   if (missing.length)
     notes.push(
       T(
-        `方案缺少：${missing.join('、')}——先在设置里补上再申请`,
-        `The plan is missing ${missing.join(', ')}: add ${missing.length > 1 ? 'them' : 'it'} in the settings before requesting`,
+        `先在设置里补上${missing.join('、')}再申请`,
+        `Add ${and(missing)} in the settings before requesting`,
       ),
     );
   if (assessment.fallback_required)
     notes.push(
       T(
-        `答不了或不确定时要${fallbackLabel('human')}——先在设置里选上再申请`,
-        `Unanswered questions must go to a person: choose “${fallbackLabel('human')}” in the settings before requesting`,
+        `先在设置里把“${cannotAnswer()}”选成“${handOff()}”再申请`,
+        `In the settings, set “${cannotAnswer()}” to “${handOff()}” before requesting`,
       ),
     );
   return notes;
@@ -212,7 +222,10 @@ export function decisionCardModel(
   if (assessment?.fallback_required)
     lines.push({
       ok: false,
-      text: T('答不了时要转人工确认', 'Unanswerable questions must go to a person'),
+      text: T(
+        `${cannotAnswer()}要${handOff()}`,
+        `${cannotAnswer()}, it must ${handOff().toLowerCase()}`,
+      ),
     });
   // Every rejection keeps a readable reason: when no line above explains it (an unreadable
   // citation, a missing reason, a resource outside the rules), the recorded sentence does.
