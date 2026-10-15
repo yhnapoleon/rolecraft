@@ -17,6 +17,8 @@ export type PublicObject = {
   content: Record<string, C.JsonValue>;
   /** Present on test objects: the mode saved with that answer. */
   assistant?: AssistantAnswerMode;
+  /** objects.read of a test run or work version: the exact citation feedback verifies. */
+  evidence_ref?: C.EvidenceRefV2;
 };
 export type Timeline = {
   as_of: C.VersionPoint;
@@ -28,6 +30,8 @@ export type Timeline = {
     source_versions: Record<string, number>;
     indexed_versions: Record<string, number>;
     config: Required<C.AssistantConfig>;
+    /** The configuration the next assistant test uses (saved settings within approved resources). */
+    effective_config?: C.EffectiveConfig;
     material_titles: Record<string, string>;
   };
 };
@@ -67,6 +71,13 @@ export interface V4Queries {
   timeline: { input: PageInput; output: Timeline };
   'tests.list': { input: PageInput; output: { tests: C.TestResultV2[] } };
   'submissions.list': { input: PageInput; output: Page<C.SubmissionV2> };
+  /** Read-only: the rule items submitting this input now would give. Nothing is saved. */
+  'submissions.rule_check': { input: C.SubmitInput; output: C.SubmissionRuleCheck };
+  /** Read-only: a saved submission checked again at its own point. */
+  'submissions.rule_check.read': {
+    input: { submission_id: string };
+    output: C.SubmissionRuleCheck;
+  };
   'work_items.list': { input: PageInput; output: Page<C.WorkspaceTask> };
   'work_products.list': { input: PageInput; output: C.WorkspaceProductPage };
   'work_products.versions.list': {

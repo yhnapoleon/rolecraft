@@ -210,6 +210,23 @@ describe('outcome preview model', () => {
     expect(closed?.main.links).toEqual([]);
   });
 
+  it('OUT-UI-05: a missing basis offers citing evidence beside the question', () => {
+    const view = (available: (operation: string) => boolean, extra: Partial<FeedbackV2> = {}) =>
+      outcomeView(
+        entries([preview(1, extra), state(1)]),
+        { version: 1, hasDraft: false },
+        'zh',
+        available,
+      )?.main.cite;
+    expect(view(all)).toEqual({ action: 'cite-pick', label: '引用依据' });
+    expect(view(all, { missing_inputs: ['result_evidence'] })).toEqual({
+      action: 'cite-pick',
+      label: '引用依据',
+    });
+    expect(view((operation) => operation !== 'work_products.versions.create')).toBeNull();
+    expect(view(all, { missing_inputs: ['task'] })).toBeNull();
+  });
+
   it('OUT-11: a newer saved version without its own preview keeps the old one, marked old', () => {
     const superseded = state(1, {
       status: 'stale',

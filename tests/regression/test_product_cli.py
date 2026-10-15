@@ -48,7 +48,11 @@ def test_mcp_initialize_reports_installed_package_version() -> None:
         "capabilities": {"tools": {}},
         "serverInfo": {"name": "rolecraft-workspace", "version": version("career-lab")},
         "instructions": (
-            "Only explicitly delegated RoleCraft operations. "
-            "JSON-RPC id is not the business request_id."
+            "RoleCraft workspace tools for one delegated practice session. Only the listed tools "
+            "are authorized; server permissions and business rules still apply. session_id is "
+            "optional and defaults to the session this connection is authorized for; if given, "
+            "it must match. Start with observation. The JSON-RPC id is not the business "
+            "request_id: after an unknown result keep command.request_id unchanged and read "
+            "requests.read; re-execution requires an explicit user decision."
         ),
     }

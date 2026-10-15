@@ -3,12 +3,15 @@
 from career_lab.api.modules import Operation, V2Response
 from career_lab.assistant.v2.generation import configured
 from career_lab.assistant.v2.jobs import saved_modes
-from career_lab.contracts.v2 import ObjectRead, ResourcePage, PublicEvent, ProtocolError, canonical
+from career_lab.contracts.v2 import ObjectRead, ResourcePage, PublicEvent, ProtocolError
+from career_lab.contracts.v2 import WorldStateV2
+from career_lab.evidence.v2.citation import CITED_OBJECT_KINDS, object_citation
 from career_lab.storage.v2_store import TransactionResult
-from career_lab.storage.v2_tables import v2_transactions, v2_request_meta
+from career_lab.storage.v2_tables import v2_snapshots, v2_transactions, v2_request_meta
 from sqlalchemy import select
 from career_lab.storage.v2_lifecycle import point
 from career_lab.runtime.roles_v2 import record_reply_display
+from career_lab.scenarios.v2.policy import effective_config
 from career_lab.workspace.preview_state import scoped, withheld_preview
 
 
@@ -224,6 +227,11 @@ def install_native_reads(
                 "source_versions": dict(snapshot.source_versions),
                 "indexed_versions": dict(snapshot.indexed_versions),
                 "config": snapshot.config.model_dump(mode="json"),
+                # The configuration the next assistant test uses: the same resolution
+                # against approved resources as Assistant.run, never a client estimate.
+                "effective_config": effective_config(
+                    current.package, snapshot.config, snapshot.world.resources
+                ).model_dump(mode="json"),
                 "material_titles": {
                     f"{m.id}:{m.version}": m.title
                     for m in current.package.materials
@@ -367,9 +375,28 @@ def install_native_reads(
             content = view.get(ref).content
             if ref.kind == "feedback" and scoped(auth):
                 content = withheld_preview(content)
-        return V2Response(
-            result={"schema_version": 2, "ref": ref.model_dump(mode="json"), "content": content}
-        )
+        result = {"schema_version": 2, "ref": ref.model_dump(mode="json"), "content": content}
+        cited = creation_citation(view, ref, auth)
+        if cited is not None:
+            result["evidence_ref"] = cited.model_dump(mode="json")
+        return V2Response(result=result)
+
+    def creation_citation(view, ref, auth):
+        """Tests and work are cited at the stored point that saved them, as feedback verifies."""
+        if ref.kind not in CITED_OBJECT_KINDS or store_provider is None:
+            return None
+        row = view.get(ref)
+        with store_provider().db.engine.connect() as conn:
+            raw = conn.execute(
+                select(v2_snapshots.c.state).where(
+                    v2_snapshots.c.session_id == auth.session_id,
+                    v2_snapshots.c.storage_revision == row.created_storage_revision,
+                )
+            ).scalar_one_or_none()
+        if raw is None:
+            return None
+        cited = object_citation(row, (point(WorldStateV2.model_validate_json(raw)),))
+        return None if cited is None else cited[0]
 
     registry.register(
         Operation(

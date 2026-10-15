@@ -60,6 +60,8 @@ IMPLEMENTATION_INPUTS = (
     "src/career_lab/storage/object_plans.py",
     "src/career_lab/storage/reference_graph.py",
     "src/career_lab/storage/record_invariants.py",
+    # The rule that gives objects.read its evidence_ref and the evaluator its check.
+    "src/career_lab/evidence/v2/citation.py",
 )
 
 

@@ -19,6 +19,18 @@ export type V4SessionBinding =
   | { protocol: 2; sessionId: string; workLanguage: WorkLanguage; scenarioHash: string };
 
 export type SemanticStatus = 'waiting_model' | 'model' | 'unavailable';
+/** Read passages, actual test runs and saved work versions. */
+export type EvidenceKind = 'material' | 'test' | 'product';
+export interface EvidencePick {
+  /** Offered kinds; read passages only when omitted. */
+  kinds?: readonly EvidenceKind[];
+  /** Current choice, shown checked; references of kinds not offered are kept as they are. */
+  selected?: readonly EvidenceRefV2[];
+  /** Objects never offered, such as the work being edited. */
+  exclude?: readonly ObjectRef[];
+  /** Shown first: a document's passages, or a test run or work version checked in advance. */
+  focus?: ObjectRef;
+}
 export interface V4HostSnapshot {
   session: V4SessionBinding | null;
   uiLanguage: WorkLanguage;
@@ -62,7 +74,8 @@ export interface V4HostAdapter {
   keepDraft<T>(slot: V4SlotId, key: string, value: T): Promise<void>;
   flushDrafts(): Promise<void>;
   openReference(ref: ObjectRef | EvidenceRefV2): Promise<void>;
-  chooseEvidence(): Promise<readonly EvidenceRefV2[]>;
+  /** The person's explicit choice; closing the picker returns `pick.selected` unchanged. */
+  chooseEvidence(pick?: EvidencePick): Promise<readonly EvidenceRefV2[]>;
   selectTask(ref: ObjectRef): void;
   selectProduct(ref: ObjectRef): void;
   announce(message: string, kind?: 'status' | 'error'): void;

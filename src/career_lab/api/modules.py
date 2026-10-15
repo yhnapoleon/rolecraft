@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Callable, Literal, get_args, get_origin
 from pydantic import BaseModel, ValidationError
 from career_lab.contracts.v2 import *
+from career_lab.contracts.v2 import canonical
 from career_lab.storage.v2_store import V2Store, Mutation, TransactionResult
 
 
@@ -116,6 +117,14 @@ class ExtensionRegistry:
         self.job_handlers = {}
         self.reference_resolvers = {}
         self.contextual_reference_resolvers = set()
+        # Read-only submission rule checks, keyed by the canonical session bindings they serve.
+        self.rule_checks = {}
+
+    def register_rule_check(self, bindings, checks):
+        key = canonical(bindings)
+        if key in self.rule_checks:
+            raise ValueError("rule check already registered")
+        self.rule_checks[key] = checks
 
     def register_object_model(self, kind, model):
         if kind in self.object_models:

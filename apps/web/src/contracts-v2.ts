@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 6026c760fee0394b90d09d94343b1150a208dfdc8a21dd97d6d8220fa81c1caa. Do not edit.
+// Generated from frozen manifest SHA256 f37be389db62eff0acda5828c09258b11d08f58dc646832e90e49c123a164220. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -81,6 +81,7 @@ export type BusinessBasis = {
 };
 export type BusinessDecision = {
   as_of: VersionPoint;
+  assessment?: _ApprovalAssessment | null;
   countered?: Record<string, number>;
   decider: string;
   evidence_refs?: EvidenceRefV2[];
@@ -122,21 +123,6 @@ export type Command = {
   request_id: string;
   schema_version: 2;
 };
-export type ContinueCodeExchangeInput = { code: string; request_id: string };
-export type ContinueCodeExchangeResponse = {
-  result: ContinueCodeExchangeResult;
-  schema_version?: 2;
-};
-export type ContinueCodeExchangeResult = { scenario: string; session: PracticeSession };
-export type ContinueCodeIssueInput = { expected_generation: number };
-export type ContinueCodeIssueResponse = { result: ContinueCodeIssued; schema_version?: 2 };
-export type ContinueCodeIssued = { code: string; created_at: string; generation: number };
-export type ContinueCodeStatus = {
-  created_at?: string | null;
-  exists: boolean;
-  generation?: number | null;
-};
-export type ContinueCodeStatusResponse = { result: ContinueCodeStatus; schema_version?: 2 };
 export type DelegationGrant = {
   actor_id: string;
   allowed_actions?: string[] | null;
@@ -539,13 +525,6 @@ export type Option = {
 };
 export type OptionsPayload = { options?: Option[]; schema_version?: 2; type?: 'options' };
 export type PlanPayload = { schema_version?: 2; sections: Record<string, string>; type?: 'plan' };
-export type PracticeSession = {
-  binding: Record<string, JsonValue>;
-  schema_version?: 2;
-  session_id: string;
-  state: PublicState;
-  token: string;
-};
 export type ProductAdopt = {
   expected_head: number;
   product_id: string;
@@ -810,6 +789,29 @@ export type ShareUpdate = {
   product_id: string;
   schema_version?: 2;
   share_id: string;
+};
+export type SubmissionRuleCheck = {
+  as_of: VersionPoint;
+  basis: 'draft' | 'saved';
+  config?: ObjectRef | null;
+  decision: 'launch' | 'launch_narrow' | 'defer_with_conditions' | 'no_go';
+  evaluation: FileRef;
+  facts?: _RuleCheckFacts;
+  mode?: 'rules_only';
+  products: ObjectRef[];
+  rule_items: FeedbackItem[];
+  schema_version?: 2;
+  session_id: string;
+  submission?: ObjectRef | null;
+  work_language: 'zh' | 'en';
+};
+export type SubmissionRuleCheckRequest = {
+  expected_version: number;
+  expected_workspace_revision: number;
+  operation: 'submissions.rule_check';
+  payload: SubmitInput;
+  request_id: string;
+  schema_version: 2;
 };
 export type SubmissionV2 = {
   as_of: VersionPoint;
@@ -1092,6 +1094,35 @@ export type _AdviceUnitCounts = {
   skipped_short?: number;
   over_budget?: number;
 };
+export type _ApprovalAssessment = {
+  clauses?: EvidenceRefV2[];
+  fallback_required?: boolean;
+  missing_work_items?: string[];
+  schema_version?: 2;
+  terms: _ApprovalTermCheck[];
+};
+export type _ApprovalTermCheck = {
+  current: number;
+  issues?: (
+    | 'over_limit'
+    | 'below_current'
+    | 'no_increase'
+    | 'no_shortfall'
+    | 'insufficient'
+    | 'need_over_limit'
+  )[];
+  limit: number;
+  needed: number;
+  requested: number;
+  resource: string;
+  schema_version?: 2;
+};
+export type _ConfigTestRuns = {
+  config_version: number;
+  retests: number;
+  runs: number;
+  schema_version?: 2;
+};
 export type _OutcomeAction = {
   schema_version?: 2;
   operation:
@@ -1147,6 +1178,20 @@ export type _PreviewState = {
   schema_version?: 2;
   status: 'current' | 'stale';
   superseded_by?: ObjectRef | null;
+};
+export type _RuleCheckFacts = {
+  adjustment_actions?: number | null;
+  available_dev_days?: number | null;
+  capacity?: number | null;
+  config_version?: number | null;
+  deadline_day?: number | null;
+  participants?: number | null;
+  policy_version?: number | null;
+  requested_launch_day?: number | null;
+  required_dev_days?: number | null;
+  schema_version?: 2;
+  test_runs?: _ConfigTestRuns[];
+  unapproved_resource_excess?: boolean | null;
 };
 export type _RuleScoreCriterion = {
   schema_version?: 2;

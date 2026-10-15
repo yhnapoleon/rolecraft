@@ -12,7 +12,14 @@ from career_lab.contracts import v2 as C
 from career_lab.storage.v2_tables import v2_snapshots, v2_events
 from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.role_memory import RoleTurn, RoleReply, RoleDisplay
-from .ports import SourceRecord, ActivityRecord, ActivityLedger, RuleSnapshot, model_generated
+from .ports import (
+    SourceRecord,
+    ActivityRecord,
+    ActivityLedger,
+    RuleSnapshot,
+    model_generated,
+    record_text,
+)
 from .assembler import base_ref, product_text
 from .history import before
 from .localization import message
@@ -134,7 +141,7 @@ class StoreEvidenceReader:
                     "review",
                 }:
                     # Deterministic public typed records, not hidden evaluation data.
-                    text = C.canonical(row.content)
+                    text = record_text(row.ref.kind, row.content)
                     executor = row.creator
                 if text is None:
                     continue
@@ -380,3 +387,29 @@ class StoreEvidenceReader:
             config_version=submission.config.config_version if submission.config else None,
             responsibilities=tuple(histories),
         )
+
+
+class FixedWindowReads:
+    """One read-only check over a fixed point: each criterion resolves the same proofs, so
+    each exact read is done once. Only successful reads are kept; failures are read again.
+    Lives for a single check under a single authorization; never shared or stored."""
+
+    def __init__(self, reader):
+        self.reader = reader
+        self._seen = {}
+
+    @property
+    def evaluation(self):
+        return self.reader.evaluation
+
+    def policies(self):
+        return self.reader.policies()
+
+    def submission_snapshot(self, auth, submission):
+        return self.reader.submission_snapshot(auth, submission)
+
+    def read(self, auth, ref, as_of):
+        key = (C.canonical(auth), C.canonical(ref), C.canonical(as_of))
+        if key not in self._seen:
+            self._seen[key] = self.reader.read(auth, ref, as_of)
+        return self._seen[key]

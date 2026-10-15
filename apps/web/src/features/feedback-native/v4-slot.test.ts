@@ -1,8 +1,11 @@
 import { fixtureHost, type HostFixture } from '../../host-test-support';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
+import { ApiError } from '../../api';
 import { createV4FeedbackAdapter, W05_V4_OPERATIONS as op } from './v4-slot';
+import { EVIDENCE_KINDS } from '../../evidence-picker';
 import type { V4HostSnapshot, V4CommandResult, V4SlotId } from '../../v4-host';
 import recorded from './model-advice.fixtures.json';
+import { referenceLabel } from '../../reference-catalog';
 
 const ref = (kind: string, id: string, version = 1) => ({
   session_id: 's',
@@ -115,8 +118,10 @@ function fixture() {
     selectProduct: () => {},
     announce: () => {},
   };
+  const served = read;
   return {
     host,
+    served,
     calls,
     queries,
     drafts,
@@ -124,6 +129,7 @@ function fixture() {
     product,
     report,
     cfg,
+    getRead: () => read,
     setRead: (value: typeof read) => {
       read = value;
     },
@@ -139,6 +145,105 @@ function fixture() {
 }
 
 describe('W05 v4 host adapter', () => {
+  const choice = { decision: 'launch' as const, products: [ref('product', 'p', 2)] };
+  const must = <T>(value: T | undefined): T => {
+    if (value === undefined) throw Error('The adapter lacks this method');
+    return value;
+  };
+  /** A host that answers rule checks by echoing the input it was given. */
+  function checking(f: ReturnType<typeof fixture>, change: Record<string, unknown> = {}) {
+    f.setSnapshot({
+      available: { ...f.host.snapshot().available, 'submissions.rule_check': true },
+    });
+    const original = f.getRead();
+    const asked: unknown[] = [];
+    f.setRead(async (operation, input) => {
+      if (!operation.startsWith('submissions.rule_check')) return original(operation, input);
+      asked.push({ operation, input });
+      const sent = (input ?? {}) as Record<string, unknown>;
+      return {
+        basis: operation === 'submissions.rule_check' ? 'draft' : 'saved',
+        session_id: 's',
+        as_of: f.host.snapshot().asOf,
+        decision: sent.decision ?? 'no_go',
+        products: sent.products ?? [ref('product', 'p', 2)],
+        config: sent.config ?? f.cfg,
+        rule_items: [],
+        ...(operation === 'submissions.rule_check'
+          ? {}
+          : { submission: ref('submission', String(sent.submission_id)) }),
+        ...change,
+      };
+    });
+    return asked;
+  }
+  it('checks before submitting with exactly the input it would submit, and only reads', async () => {
+    const f = fixture();
+    const asked = checking(f);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    expect(ctl.adapter.canPreview).toBe(true);
+    expect((await must(ctl.adapter.previewSubmission)(choice)).basis).toBe('draft');
+    expect(f.calls).toEqual([]);
+    await ctl.adapter.submit(choice);
+    expect(asked).toEqual([{ operation: 'submissions.rule_check', input: f.calls[0].input }]);
+    ctl.destroy();
+  });
+  it('refuses a check that answers for other inputs', async () => {
+    const f = fixture();
+    checking(f, { products: [ref('product', 'p', 1)] });
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    await expect(must(ctl.adapter.previewSubmission)(choice)).rejects.toThrow();
+    ctl.destroy();
+  });
+  it('checks a saved submission again only for that submission', async () => {
+    const f = fixture();
+    const asked = checking(f);
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    const saved = await must(ctl.adapter.submissionRuleCheck)(ref('submission', 'sub'));
+    expect(saved.submission).toEqual(ref('submission', 'sub'));
+    expect(asked).toEqual([
+      { operation: 'submissions.rule_check.read', input: { submission_id: 'sub' } },
+    ]);
+    ctl.destroy();
+  });
+  it('remembers the panel choice in this page only, per practice', () => {
+    const f = fixture();
+    const first = createV4FeedbackAdapter(fixtureHost(f.host));
+    const picked = { decision: 'launch', products: [ref('product', 'p', 2)] };
+    expect(first.adapter.rememberedChoice?.()).toBeUndefined();
+    first.adapter.rememberChoice?.(picked);
+    first.destroy();
+    const reopened = createV4FeedbackAdapter(fixtureHost(f.host));
+    expect(reopened.adapter.rememberedChoice?.()).toEqual(picked);
+    const other = fixture();
+    other.setSnapshot({
+      session: {
+        protocol: 2,
+        sessionId: 'other',
+        workLanguage: 'zh',
+        scenarioHash: 'f'.repeat(64),
+      },
+    });
+    expect(createV4FeedbackAdapter(fixtureHost(other.host)).adapter.rememberedChoice?.()).toBe(
+      undefined,
+    );
+    reopened.adapter.rememberChoice?.(null);
+    expect(reopened.adapter.rememberedChoice?.()).toBeUndefined();
+    reopened.destroy();
+  });
+  it('offers no check where the host does not', async () => {
+    const f = fixture();
+    f.setSnapshot({
+      available: { ...f.host.snapshot().available, 'submissions.rule_check': false },
+    });
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    expect(ctl.adapter.canPreview).toBe(false);
+    ctl.destroy();
+  });
   it('reads exact records and submits domain input with authoritative config only', async () => {
     const f = fixture();
     const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
@@ -215,6 +320,59 @@ describe('W05 v4 host adapter', () => {
     expect(f.recovery).toEqual(['feedback-job', 'feedback-job']);
     ctl.destroy();
   });
+  it('names cited documents, test runs and work from the same timeline read', async () => {
+    const f = fixture();
+    f.setRead(async (operation) => {
+      if (operation === op.products)
+        return { result: { result: { items: [f.product], next_cursor: null } } };
+      if (operation === op.submissions) return { result: { items: [], next_cursor: null } };
+      if (operation === op.timeline)
+        return {
+          objects: [
+            { ref: ref('test', 't1'), content: { query: '住宿报销上限是多少？' } },
+            { ref: f.cfg, content: {} },
+          ],
+          workspace: {
+            config: { id: 'cfg', version: 3, config_version: 2 },
+            material_titles: { 'policy:2': '费用管理通知：差旅住宿标准' },
+          },
+        };
+      return { items: [], next_cursor: null };
+    });
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    const references = ctl.adapter.snapshot().references;
+    if (!references) throw Error('The adapter did not name cited objects');
+    const name = (value: Parameters<typeof referenceLabel>[0]) =>
+      referenceLabel(value, references, 'zh').text;
+    expect(name(ref('material', 'policy', 2))).toBe('费用管理通知：差旅住宿标准 · v2');
+    expect(name(ref('test', 't1'))).toBe('测试：住宿报销上限是多少？ · 第 1 次');
+    expect(name(ref('product', 'p', 2))).toBe('作品《用户原文》· v2');
+    ctl.destroy();
+  });
+  it('a saved submission whose follow-up read is dropped is not a failed write', async () => {
+    const f = fixture();
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    f.setResult({
+      requestId: 'feedback-job',
+      status: 'pending',
+      result: { submission: ref('submission', 'sub'), feedback_status: 'queued' },
+    });
+    let dropped = 1;
+    f.setRead(async (operation, input) => {
+      if (operation === 'workbench.read' && dropped > 0) {
+        dropped--;
+        throw new ApiError('The result is unconfirmed.', 0, 'response_unconfirmed');
+      }
+      return f.served(operation, input);
+    });
+    await ctl.adapter.submit({ decision: 'no_go', products: [ref('product', 'p', 2)] });
+    expect(ctl.adapter.snapshot()).toMatchObject({ awaitingFeedback: true, error: undefined });
+    expect(ctl.adapter.snapshot().reports).toHaveLength(1);
+    expect(f.calls).toHaveLength(1);
+    ctl.destroy();
+  });
   it('does not treat colleague model mode as feedback readiness', async () => {
     const f = fixture();
     const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
@@ -278,6 +436,95 @@ describe('W05 v4 host adapter', () => {
     expect(f.drafts.get('revision')).toEqual({ text: 'keep', evidence: [] });
     ctl.destroy();
   });
+  it('a dropped read keeps the shown feedback, does not announce, and reads again by itself', async () => {
+    vi.useFakeTimers();
+    try {
+      const f = fixture();
+      const announced: string[] = [];
+      f.host.announce = (message) => {
+        announced.push(message);
+      };
+      const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+      await ctl.refresh();
+      const shown = ctl.adapter.snapshot();
+      // A second submission's feedback is written while the next read is dropped.
+      const second = {
+        ...ref('submission', 'sub2'),
+        id: 'sub2',
+        products: [ref('product', 'p', 2)],
+      };
+      const later = async (operation: string, input?: Readonly<Record<string, unknown>>) => {
+        if (operation === op.submissions)
+          return {
+            items: [
+              {
+                id: 'sub',
+                session_id: 's',
+                version: 1,
+                products: [ref('product', 'p', 2)],
+                decision: 'no_go',
+              },
+              { ...second, decision: 'no_go' },
+            ],
+            next_cursor: null,
+          };
+        if (operation === op.feedback && input?.submission_id === 'sub2')
+          return { items: [{ ...f.report, id: 'f2', subject: ref('submission', 'sub2') }] };
+        return f.served(operation, input);
+      };
+      let dropped = 1;
+      f.setRead(async (operation, input) => {
+        if (dropped > 0) {
+          dropped--;
+          throw new ApiError('The result is unconfirmed.', 0, 'response_unconfirmed');
+        }
+        return later(operation, input);
+      });
+      await ctl.refresh();
+      expect(ctl.adapter.snapshot()).toMatchObject({
+        reports: shown.reports,
+        products: shown.products,
+        submissions: shown.submissions,
+        error: undefined,
+      });
+      expect(announced).toEqual([]);
+      for (let wait = 0; wait < 40 && ctl.adapter.snapshot().reports.length < 2; wait++)
+        await vi.advanceTimersByTimeAsync(500);
+      expect(ctl.adapter.snapshot().reports.map((r) => r.id)).toEqual(['f', 'f2']);
+      expect(ctl.adapter.snapshot().error).toBeUndefined();
+      ctl.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('a dropped read that keeps failing is shown, and the shown feedback stays', async () => {
+    vi.useFakeTimers();
+    try {
+      const f = fixture();
+      const announced: string[] = [];
+      f.host.announce = (message) => {
+        announced.push(message);
+      };
+      const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+      await ctl.refresh();
+      const shown = ctl.adapter.snapshot().reports;
+      f.setRead(async () => {
+        throw new ApiError('Server error', 503, 'request_failed');
+      });
+      await ctl.refresh();
+      for (let wait = 0; wait < 40 && !ctl.adapter.snapshot().error; wait++)
+        await vi.advanceTimersByTimeAsync(500);
+      expect(ctl.adapter.snapshot().error).toBeTruthy();
+      expect(ctl.adapter.snapshot().reports).toEqual(shown);
+      expect(announced).toHaveLength(1);
+      f.setRead(f.served);
+      await ctl.refresh();
+      expect(ctl.adapter.snapshot().error).toBeUndefined();
+      ctl.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it('busy-only host notices do not start another query loop', async () => {
     const f = fixture();
     const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
@@ -288,6 +535,20 @@ describe('W05 v4 host adapter', () => {
     expect(f.queries.length).toBe(count);
     ctl.destroy();
     expect(f.listeners.size).toBe(0);
+  });
+  it('asks the shared picker with the challenge evidence already chosen', async () => {
+    const f = fixture();
+    const cited = { ...ref('test', 't1'), observed_at_seq: 4 };
+    const picks: unknown[] = [];
+    f.host.chooseEvidence = async (pick) => {
+      picks.push(pick);
+      return [cited];
+    };
+    const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+    await ctl.refresh();
+    const pick = { kinds: EVIDENCE_KINDS, selected: [cited] };
+    expect(await ctl.adapter.chooseEvidence?.(pick)).toEqual([cited]);
+    expect(picks).toEqual([pick]);
   });
   it('changing UI language preserves fixed work language and stored feedback', async () => {
     const f = fixture();

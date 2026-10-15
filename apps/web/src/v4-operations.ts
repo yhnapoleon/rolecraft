@@ -27,6 +27,8 @@ const reads: Record<string, string> = {
 export function readRoute(operation: string, input: Input = {}): string {
   let path = reads[operation];
   if (operation === 'session.read') return '';
+  if (operation === 'submissions.rule_check.read')
+    return `/submission-rule-check?submission_id=${id(input, 'submission_id')}`;
   if (operation === 'objects.read')
     path =
       '/objects/' +

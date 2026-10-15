@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <link rel="stylesheet" href="/workbench.css">
+    <link rel="icon" href="data:,">
+    <title>W05 pre-submission card check</title>
+  </head>
+  <body>
+    <main style="max-width: 780px; margin: 24px auto; padding: 16px">
+      <p>Controlled component fixture: no real submission or business session.</p>
+      <div id="fixture"></div>
+    </main>
+    <script type="module">
+    import { mountNativeFeedback } from './index.ts';
+
+    const params = new URL(location.href).searchParams;
+    const language = params.get('lang') || 'zh';
+    const ref = (kind, id, version = 1) => ({
+      session_id: 'fixture',
+      kind,
+      object_id: id,
+      version,
+    });
+    const item = (
+      criterion,
+      label = 'INSUFFICIENT',
+      source = 'pending',
+      applicability = 'applicable',
+    ) => ({
+      criterion,
+      label,
+      source,
+      applicability,
+      explanation: language === 'en' ? 'Recorded rule text' : '记录的规则原文',
+      citations: [],
+      rule_bound:
+        source === 'verified_rule' && label !== 'NOT_APPLICABLE'
+          ? { lower: label, upper: label }
+          : null,
+    });
+    // A new practice: both limits met, configuration v0 untested, change rules not applicable.
+    const ruleItems = [
+      ...['R1.target', 'R1.metrics', 'R2.support', 'R2.unknowns', 'R2.failure_analysis'].map((c) =>
+        item(c),
+      ),
+      item('R3.capacity', 'MET', 'verified_rule'),
+      item('R3.resources', 'MET', 'verified_rule'),
+      item('R4.functional_tests', 'NOT_MET', 'verified_rule'),
+      ...['R4.staleness_test', 'R5.impact', 'R5.adjustment'].map((c) =>
+        item(c, 'NOT_APPLICABLE', 'verified_rule', 'not_applicable'),
+      ),
+      ...['R6.consistency', 'R6.operations', 'R6.alternatives'].map((c) => item(c)),
+    ];
+    const facts = {
+      participants: 20,
+      capacity: 30,
+      required_dev_days: 2,
+      available_dev_days: 3,
+      requested_launch_day: 7,
+      deadline_day: 7,
+      unapproved_resource_excess: false,
+      config_version: 0,
+      policy_version: null,
+      adjustment_actions: null,
+      test_runs: [],
+    };
+    const state = {
+      uiLanguage: language,
+      workLanguage: language,
+      products: [
+        {
+          session_id: 'fixture',
+          product_id: 'note',
+          version: 2,
+          title: language === 'en' ? 'Pilot decision' : '试点决定',
+          author: { kind: 'human', id: 'learner' },
+        },
+      ],
+      reports: [],
+      status: 'active',
+      busy: false,
+    };
+    const listeners = new Set();
+    const calls = [];
+    // The host's in-page memory of the panel's last choice (v4-slot keeps one per practice).
+    let remembered;
+    let mounted;
+    const adapter = {
+      snapshot: () => state,
+      subscribe: (fn) => {
+        listeners.add(fn);
+        return () => listeners.delete(fn);
+      },
+      // Like the host: the practice is submitted by the time the command resolves.
+      submit: async (input) => {
+        calls.push({ operation: 'submit', input: structuredClone(input) });
+        state.status = 'submitted';
+        state.submission = {
+          ref: ref('submission', 'submitted'),
+          products: input.products,
+          decision: input.decision,
+        };
+      },
+      previewSubmission: async (input) => {
+        calls.push({ operation: 'preview', input: structuredClone(input) });
+        if (window.fixture.failPreview) throw Error('preview unavailable');
+        return {
+          basis: 'draft',
+          mode: 'rules_only',
+          session_id: 'fixture',
+          as_of: { business_seq: 3, workspace_revision: 2, storage_revision: 5 },
+          decision: input.decision,
+          products: input.products,
+          config: { ...ref('config', 'cfg'), config_version: 0 },
+          evaluation: { path: 'runtime/evaluation.json', sha256: '0'.repeat(64) },
+          work_language: language,
+          rule_items: ruleItems,
+          facts,
+        };
+      },
+      submissionRuleCheck: async () => {
+        throw Error('not part of this check');
+      },
+      rememberChoice: (choice) => {
+        remembered = choice ? structuredClone(choice) : undefined;
+      },
+      rememberedChoice: () => remembered && structuredClone(remembered),
+      respond: async () => {},
+      beginRevision: async () => {},
+      refresh: async () => {},
+      openReference: () => {},
+      readDraft: () => undefined,
+      keepDraft: async () => {},
+      canRespond: false,
+    };
+    window.fixture = {
+      state,
+      calls,
+      canPreview: true,
+      failPreview: false,
+      update: () => {
+        for (const fn of listeners) fn();
+      },
+      /** Open the panel again, as the delivery sheet or the review page would mount it. */
+      remount: (surface = 'submission') => {
+        mounted?.destroy();
+        mounted = mountNativeFeedback(document.querySelector('#fixture'), adapter, { surface });
+      },
+      close: () => {
+        mounted?.destroy();
+        mounted = undefined;
+      },
+    };
+    Object.defineProperty(adapter, 'canPreview', { get: () => window.fixture.canPreview });
+    window.fixture.remount(params.get('surface') || 'submission');
+    </script>
+  </body>
+</html>

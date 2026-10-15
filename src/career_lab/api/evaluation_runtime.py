@@ -11,9 +11,14 @@ from sqlalchemy import select
 
 from career_lab.api.feedback_provenance import attach_score_range
 from career_lab.contracts import v2 as C
+from career_lab.contracts.v2.extensions import _ConfigTestRuns, _RuleCheckFacts
+from career_lab.evidence.v2.ports import CriterionPolicy
 from career_lab.evidence.v2.preview import prepare_preview_feedback
+from career_lab.evidence.v2.store_reader import FixedWindowReads, StoreEvidenceReader
+from career_lab.evidence.v2.submission_evaluator import SubmissionEvaluator
 from career_lab.rubrics.v4.score_range import installed_rubric
 from career_lab.runtime.model_slots import DEFAULT_INPUT_BYTES, ModelSlots
+from career_lab.scenarios.v2.release import require_evaluation
 from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.v2_store import references
 from career_lab.storage.v2_tables import v2_snapshots
@@ -44,6 +49,10 @@ class ScenarioEvidencePort:
         self.submission_rules = lambda auth, submission: self.with_business_response(
             auth, adapter.submission_rule_provider(auth, submission)
         )
+        self.draft_submission_rules = lambda auth, draft: self.with_business_response(
+            auth, adapter.draft_submission_rule_provider(auth, draft)
+        )
+        self.test_runs = adapter.test_runs
 
     def with_business_response(self, auth, snapshot):
         """State the recorded approval outcome, without grading the learner's choice."""
@@ -222,8 +231,6 @@ def create_feedback_handler(
     engine_factory: "RegisteredModelFactory | None" = None,
 ):
     """``slots`` gives the Judge and support verifier separately; else ``model`` serves both."""
-    from career_lab.evidence.v2.ports import CriterionPolicy
-
     if slots is not None:
         judge, support = slots.judge, slots.support
         judge_bytes, support_bytes = slots.judge_input_bytes, slots.support_input_bytes
@@ -234,19 +241,13 @@ def create_feedback_handler(
         judge_bytes = support_bytes = DEFAULT_INPUT_BYTES
         judge_url = support_url = None
 
-    bundle = C.EvaluationBundle.model_validate_json(
-        C.read_file(module.package.root, module.bindings.evaluation)
-    )
-    protocol = json.loads(C.read_file(module.package.root, bundle.protocol))
-    if not protocol.get("installed"):
+    installed = installed_evaluation(module)
+    if installed is None:
         return None
-    if protocol.get("owner") != "W05" or bundle.mode != "advisory":
-        raise C.ProtocolError("evaluation_runtime_unavailable", status=503)
+    bundle, policies = installed
     from career_lab.api.feedback_provenance import attach_provenance, feedback_provenance
     from career_lab.runtime.provenance import require_execution_snapshot
-    from career_lab.scenarios.v2.release import require_evaluation
 
-    require_evaluation(module.package.root, bundle, language=module.work_language)
     provenance = feedback_provenance(
         module,
         bundle,
@@ -257,7 +258,6 @@ def create_feedback_handler(
         base_url=judge_url,
         support_base_url=support_url,
     )
-    policies = tuple(CriterionPolicy(**p) for p in protocol["policies"])
     rubric, rubric_sha256 = installed_rubric(module.package.root, bundle)
 
     def traced(plan, reader, engine):
@@ -319,11 +319,7 @@ def create_feedback_handler(
             prepare_review_feedback,
             review_feedback_plan,
         )
-        from career_lab.evidence.v2.store_reader import StoreEvidenceReader
-        from career_lab.evidence.v2.submission_evaluator import (
-            SubmissionEvaluator,
-            submission_feedback_plan,
-        )
+        from career_lab.evidence.v2.submission_evaluator import submission_feedback_plan
         from career_lab.rubrics.v4.feedback import FeedbackEngine
         from career_lab.rubrics.v4.judge import AdvisoryJudge
         from career_lab.rubrics.v4.support import EvidenceSupportVerifier
@@ -378,3 +374,172 @@ def create_feedback_handler(
         return traced(review_feedback_plan(view, envelope.command, auth, prepared), reader, engine)
 
     return run
+
+
+def installed_evaluation(module):
+    """The installed evaluation bundle of ``module`` and its frozen criteria, or None when
+    the package installs no evaluation."""
+    bundle = C.EvaluationBundle.model_validate_json(
+        C.read_file(module.package.root, module.bindings.evaluation)
+    )
+    protocol = json.loads(C.read_file(module.package.root, bundle.protocol))
+    if not protocol.get("installed"):
+        return None
+    if protocol.get("owner") != "W05" or bundle.mode != "advisory":
+        raise C.ProtocolError("evaluation_runtime_unavailable", status=503)
+    require_evaluation(module.package.root, bundle, language=module.work_language)
+    return bundle, tuple(CriterionPolicy(**p) for p in protocol["policies"])
+
+
+class SubmissionRuleChecks:
+    """Read-only rule checks for sessions of one scenario module: the inputs a person is about
+    to submit (draft), or a saved submission again at its own point (saved). The rule items
+    come from the same evaluation the feedback worker runs. No model runs, nothing is written.
+    """
+
+    def __init__(self, module, policies):
+        self.module = module
+        self.policies = policies
+
+    def draft(self, store, auth, request: C.SubmissionRuleCheckRequest) -> C.SubmissionRuleCheck:
+        source = ScenarioEvidencePort(store, self.module)
+        reader = self._reader(store, auth, source, source.draft_submission_rules)
+        submission = unsaved_submission(store, auth, reader, request)
+        return self._check(auth, source, reader, submission, "draft")
+
+    def saved(self, store, auth, submission_id: str) -> C.SubmissionRuleCheck:
+        source = ScenarioEvidencePort(store, self.module)
+        reader = self._reader(store, auth, source, source.submission_rules)
+        submission = saved_submission(store, auth, submission_id)
+        return self._check(auth, source, reader, submission, "saved")
+
+    def _reader(self, store, auth, source, submission_rules):
+        return StoreEvidenceReader(
+            store,
+            auth,
+            policies=self.policies,
+            source_reader=source.source,
+            rule_provider=source.rules,
+            submission_rule_provider=submission_rules,
+        )
+
+    def _check(self, auth, source, reader, submission, basis):
+        evaluator = SubmissionEvaluator(
+            FixedWindowReads(reader), work_language=self.module.work_language
+        )
+        rule_items, packages = evaluator.rule_items(auth, submission)
+        runs = source.test_runs(auth, submission.as_of) if packages else ()
+        return C.SubmissionRuleCheck(
+            basis=basis,
+            session_id=auth.session_id,
+            as_of=submission.as_of,
+            submission=submission_ref(submission) if basis == "saved" else None,
+            decision=submission.decision,
+            products=submission.products,
+            config=submission.config,
+            evaluation=submission.evaluation,
+            work_language=self.module.work_language,
+            rule_items=rule_items,
+            facts=rule_check_facts(packages, runs),
+        )
+
+
+def rule_check_facts(packages, runs):
+    """The verified facts the criteria were judged on, for the reader to phrase. Every
+    criterion of one submission carries the same verified facts."""
+    facts = {}
+    for package in packages:
+        facts.update(package.rule_context["facts"])
+    updated = facts.get("affected_material_versions") or {}
+    return _RuleCheckFacts(
+        participants=facts.get("participants"),
+        capacity=facts.get("capacity"),
+        required_dev_days=facts.get("required_dev_days"),
+        available_dev_days=facts.get("available_dev_days"),
+        requested_launch_day=facts.get("requested_launch_day"),
+        deadline_day=facts.get("deadline_day"),
+        unapproved_resource_excess=facts.get("unapproved_resource_excess"),
+        config_version=packages[0].rule_context["config_version"] if packages else None,
+        policy_version=updated.get("policy"),
+        adjustment_actions=facts.get("adjustment_action_count"),
+        test_runs=tuple(
+            _ConfigTestRuns(config_version=run.config_version, runs=run.runs, retests=run.retests)
+            for run in runs
+        ),
+    )
+
+
+def create_rule_checks(module):
+    """None when the package installs no usable evaluation: the check is an optional read and
+    never stops a runtime from starting; submitting reports the evaluation state itself."""
+    try:
+        installed = installed_evaluation(module)
+    except C.ProtocolError:
+        return None
+    return None if installed is None else SubmissionRuleChecks(module, installed[1])
+
+
+def unsaved_submission(store, auth, reader, request):
+    """What submitting ``request`` now would save. It is built in memory and never written;
+    the state must be the one the request was made against."""
+
+    def current(view):
+        return view.state, view.bindings, view.current_cycle
+
+    state, bindings, cycle = store.query(auth, current)
+    if state.status == "submitted":
+        raise C.ProtocolError("session_submitted")
+    if state.status == "paused":
+        raise C.ProtocolError("session_paused")
+    if cycle is None:
+        raise C.ProtocolError("revision_cycle_required")
+    at = reader.captured_at
+    if (at.business_seq, at.workspace_revision) != (
+        request.expected_version,
+        request.expected_workspace_revision,
+    ):
+        raise C.ProtocolError("version_conflict", status=409)
+    body = request.payload
+    return C.SubmissionV2(
+        id=C.digest(
+            [
+                auth.session_id,
+                body.model_dump(mode="json"),
+                at.model_dump(mode="json"),
+                "unsaved-submission",
+            ]
+        ),
+        session_id=auth.session_id,
+        cycle=cycle.ref,
+        decision=body.decision,
+        products=body.products,
+        config=body.config,
+        evidence_refs=body.evidence_refs,
+        as_of=at,
+        scenario=bindings.scenario,
+        evaluation=reader.evaluation,
+        executor=auth.executor,
+    )
+
+
+def saved_submission(store, auth, submission_id):
+    def read(view):
+        return [
+            row.content
+            for row in view.objects
+            if row.ref.kind == "submission" and row.ref.object_id == submission_id
+        ]
+
+    rows = store.query(auth, read)
+    if not rows:
+        raise C.ProtocolError("object_not_found", status=404)
+    return C.SubmissionV2.model_validate(rows[-1])
+
+
+def submission_ref(submission):
+    return C.ObjectRef(
+        session_id=submission.session_id,
+        kind="submission",
+        object_id=submission.id,
+        version=submission.version,
+    )

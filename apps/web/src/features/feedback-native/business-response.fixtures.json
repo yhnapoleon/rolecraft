@@ -1,0 +1,62 @@
+{
+  "zh": {
+    "countered": {
+      "business_response": "已记录的业务决定（规则核实）：申请：名额: 100; 还价待接受; 名额: 60",
+      "decisions": [
+        {
+          "requested": {
+            "capacity": 100
+          },
+          "status": "countered"
+        }
+      ]
+    },
+    "decided": {
+      "business_response": "已记录的业务决定（规则核实）：申请：名额: 100; 已接受; 名额: 60\n申请：开发人日: 6; 未批准",
+      "decisions": [
+        {
+          "requested": {
+            "capacity": 100
+          },
+          "status": "accepted"
+        },
+        {
+          "requested": {
+            "dev_days": 6
+          },
+          "status": "rejected"
+        }
+      ]
+    }
+  },
+  "en": {
+    "countered": {
+      "business_response": "Recorded business decisions (rule checked): Requested Seats: 100; Counteroffer awaiting acceptance; Seats: 60",
+      "decisions": [
+        {
+          "requested": {
+            "capacity": 100
+          },
+          "status": "countered"
+        }
+      ]
+    },
+    "decided": {
+      "business_response": "Recorded business decisions (rule checked): Requested Developer-days: 6; Declined\nRequested Seats: 100; Accepted; Seats: 60",
+      "decisions": [
+        {
+          "requested": {
+            "capacity": 100
+          },
+          "status": "accepted"
+        },
+        {
+          "requested": {
+            "dev_days": 6
+          },
+          "status": "rejected"
+        }
+      ]
+    }
+  }
+}

@@ -289,6 +289,19 @@ OperationAvailability明确installed/ready/capability/unavailable_code，注册�
 标准无参数API/worker入口读取`installed/current.json`的中文当前安装，并核对其manifest真实hash；显式`scenario_root`、`CAREER_LAB_SCENARIO_V2`或多语言prepare目录继续按既有优先级使用。作者根保持可复现未安装评价口径，不作为默认有反馈的成品运行包。启动不重写包或修改绑定。
 
 
+### 交付前规则核对（169）
+
+公开导出包含 `POST /sessions/{session_id}/submission-rule-check` 与同路径的 `GET ?submission_id=...`，只允许本会话 human learner（Agent 委托 403 `human_required`），不是 Gateway 槽位或 MCP 工具。POST 请求为 `SubmissionRuleCheckRequest`：与提交命令同形，`operation` 固定为 `submissions.rule_check`，`payload` 为 `SubmitInput`；不记录请求、不排任务、不写对象或事件，`request_id` 不产生幂等结果；`expected_version`/`expected_workspace_revision` 须等于核对时点，否则 409 `version_conflict`。已提交或暂停的会话返回 `session_submitted`／`session_paused`。GET 按已保存提交自身的 as_of 重算。
+
+响应 `SubmissionRuleCheckResponse.result`（`SubmissionRuleCheck`）的 `rule_items` 与同一输入在同一时点交付后正式 `FeedbackV2.rule_items` 相同：复用反馈 worker 的事实生产方、证据组装与规则，Judge 不接模型，`mode` 恒为 `rules_only`；语义项保持待核验。`facts` 只列规则判断所用的已核实事实（人数、容量、所需与可用人日、上线日与期限、未获批超出、配置与政策版本、调整动作数），以及按配置版本的实际运行与政策最近一次更新后的复测次数；未核实为 null，测试记录不完整时 `test_runs` 为空。规则原文不变，界面据这些事实措辞。
+
+### 审批决定的判定依据与测试实际使用的配置（2026-10-14）
+
+BusinessDecision新增可选assessment段：每个申请条款的决定时额度、申请总量、已发布上限、所绑定方案的需要量，以及该条款的全部问题（over_limit、below_current、no_increase、no_shortfall、insufficient、need_over_limit），不只第一个失败项；方案策略缺少的工作项与是否缺人工兜底；决定所依据的已发布审批规则原句（本会话规则资料的确切来源版本，带span与quote，决定时观测）。status、reason_code、reason与判定顺序不变；未设时省略，旧决定、examples与线上字节不变。还价决定沿用原申请的assessment，接受决定带被接受条款的assessment。评价读取决定文本时去掉assessment，Judge证据输入字节不变。规则原句按审批规则资料的段落位置取用（适用范围、可审批上限、申请要件、缺口与整单退回、人工兜底与工作项、生效方式），每段引用前先核对内容标志：上限段须带三项上限事实，人工兜底段须含审批要求里的兜底与工作项标识，其余各段须含该段原文的特征短语（中英各一组）。段落数不是6时不记录引文，某段标志核不上时不引用该段；标志之外的改写不在核对范围内。
+
+timeline与workbench.read的workspace新增effective_config：已保存配置按当前已批准资源解析后的EffectiveConfig，与助手测试调用同一个policy.effective_config；可见范围与workspace相同，限定对象的委托读取仍无workspace。
+
+
 ### 继续码找回练习
 
 公开导出新增 `GET /sessions/{session_id}/continue-code`、`POST /sessions/{session_id}/continue-code` 与 `POST /continue-codes/exchange`，由正常运行入口随 v4 扩展挂载，不是 Gateway 动作，外部 Agent 与 MCP 工具够不到。前两者使用会话 Bearer 身份，只允许本会话 human learner 且具 delegate 能力；外部 Agent 授权、参考 Agent、研究与系统上下文返回 403 `human_required`。读取只返回 `ContinueCodeStatus`（是否存在、代数、生成时间），从不返回码或校验值。生成按 `ContinueCodeIssueInput.expected_generation`（看到的代数，0 表示尚无）创建或替换本练习唯一有效的码，代数不符返回 409 `continue_code_changed`。码为 20 位 Crockford Base32（100 位熵）分 5 组，只在 `ContinueCodeIssueResponse` 出现一次，响应带 `Cache-Control: no-store`。

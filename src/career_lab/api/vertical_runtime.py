@@ -8,6 +8,7 @@ import os
 from pathlib import Path
 
 from career_lab.api.app import create_app
+from career_lab.api.evaluation_runtime import create_rule_checks
 from career_lab.api.modules import ExtensionRegistry
 from career_lab.api.workspace_integration import install_workspace_recovery
 from career_lab.api.feedback_integration import install_feedback_recovery
@@ -74,6 +75,9 @@ def build_registry(
         from career_lab.api.registered_models import install_registered_models
 
         feedback_handler = install_registered_models(module, feedback_handler, slots)
+    rule_checks = create_rule_checks(module)
+    if rule_checks is not None:
+        registry.register_rule_check(module.bindings, rule_checks)
     from career_lab.api.v4_config import install_settings
 
     install_settings(registry, module)

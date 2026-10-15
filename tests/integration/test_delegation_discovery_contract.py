@@ -1,5 +1,6 @@
 """Same live installation drives HTTP, MCP and function-tool discovery."""
 
+from copy import deepcopy
 from dataclasses import replace
 from pathlib import Path
 
@@ -60,5 +61,43 @@ def test_tool_01_unready_registration_is_unavailable_in_every_catalogue(tmp_path
                 )
         app.state.extensions.operations["tests.create"] = operation
         assert next(tool for tool in backend.tools() if tool.name == "tests.create").available
+    finally:
+        app.state.store.close()
+
+
+def test_tool_02_bound_session_view_differs_only_by_an_optional_session_id(tmp_path: Path) -> None:
+    app, client, sid, headers, _ = connect(tmp_path)
+    try:
+
+        class BoundCatalogue:
+            session_id = sid
+
+            def tools(self) -> tuple[ToolSchema, ...]:
+                response = client.get("/sessions/" + sid + "/tools", headers=headers)
+                assert response.status_code == 200, response.text
+                return tuple(
+                    ToolSchema.model_validate(row)
+                    for row in response.json()["result"]["result"]["tools"]
+                )
+
+        backend = BoundCatalogue()
+        tools = {tool.name: tool for tool in backend.tools() if tool.available}
+        mcp = Protocol(backend).handle(
+            {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "tools/list",
+                "params": {"_meta": {VERSION: MODERN, CAPABILITIES: {}}},
+            }
+        )["tools"]
+        assert {row["name"] for row in mcp} == set(tools)
+        for row in mcp:
+            advertised = deepcopy(row["inputSchema"])
+            parameters = tools[row["name"]].parameters
+            session = advertised["properties"]["session_id"]
+            assert session.pop("description").startswith("Optional; defaults to")
+            assert "session_id" not in advertised.get("required", [])
+            advertised["required"] = ["session_id", *advertised.get("required", [])]
+            assert advertised == parameters
     finally:
         app.state.store.close()

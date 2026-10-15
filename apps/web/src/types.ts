@@ -60,6 +60,10 @@ export interface EventRecord {
   actor_id: string;
   payload: Record<string, unknown>;
   created_at?: string | null;
+  /** v2: the objects the event is about (a test, a submission, a revision cycle). */
+  refs?: { session_id: string; kind: string; object_id: string; version: number }[];
+  /** v2: who carried it out (human, external_agent, reference_agent or system). */
+  executor_kind?: string;
 }
 export interface Timeline {
   events: EventRecord[];
@@ -187,6 +191,8 @@ export interface LocalSession {
   v2Workspace?: { tasks: any[]; products: any[] };
   v2Domains?: string[];
   v2MaterialTitles?: Record<string, string>;
+  /** What the next test uses: the server's resolution of the saved settings. */
+  v2EffectiveConfig?: import('./contracts-v2').EffectiveConfig;
   /** Deployment assistant state from the server; never relabels saved answers. */
   v2Assistant?: 'model' | 'waiting_model' | 'unavailable';
   /** Browser-owned origins of tests whose answer is still being generated, by request ID. */

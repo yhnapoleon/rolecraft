@@ -14,11 +14,15 @@ from pydantic import ValidationError
 from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.discovery import public_models
 from career_lab.contracts.v2.export import integration_example
+from career_lab.contracts.v2.manifest_history import MANIFEST_HISTORY
 from career_lab.contracts.v2.projection import project_feedback_content
 from career_lab.contracts.v2.provenance import FeedbackProvenance, RegisteredModelIdentity
 
 ROOT = Path(__file__).resolve().parents[3]
 FIXTURES = Path(__file__).parent / "fixtures/model_assembly"
+# Public models published after d163747: one file per contract change, named by its manifest
+# history key, with the sha256 of the example bytes that change first exported.
+ADDED = Path(__file__).parent / "examples-added"
 RUBRIC = {
     "id": "rubric-v2-final-20261009",
     "sha256": "aa0de4302ca42368a262dc516fd3d8dab83286dd10dff7350c35b0c3772321cd",
@@ -134,10 +138,18 @@ def feedback_with(*items: dict[str, C.JsonValue]) -> C.FeedbackV2:
 
 def test_dto_01_every_public_example_keeps_its_pre_change_bytes() -> None:
     golden = json.loads((FIXTURES / "examples-main-d163747.json").read_text())["examples"]
-    # Models published after d163747 are listed with the bytes their own change first exported.
-    added = json.loads((FIXTURES / "examples-added-after-d163747.json").read_text())["examples"]
-    assert not set(golden) & set(added)
-    expected = golden | added
+    changes = {
+        key
+        for record in MANIFEST_HISTORY
+        for section in ("integration_changes", "review_fixes")
+        for key in record.get(section) or {}
+    }
+    expected = dict(golden)
+    for path in sorted(ADDED.glob("*.json")):
+        assert path.stem in changes, path.name
+        added = json.loads(path.read_text())["examples"]
+        assert not set(expected) & set(added), path.name
+        expected |= added
     models = public_models()
     assert sorted(models) == sorted(expected)
     changed = [

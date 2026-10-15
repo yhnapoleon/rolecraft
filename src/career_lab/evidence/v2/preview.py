@@ -11,6 +11,7 @@ from career_lab.evidence.v2.assembler import purpose_of
 from career_lab.evidence.v2.localization import message
 from career_lab.evidence.v2.store_reader import StoreEvidenceReader
 from career_lab.scenarios.v2.policy import effective_config
+from career_lab.workspace.domain import product_dependencies
 
 if TYPE_CHECKING:
     from career_lab.api.evaluation_runtime import ScenarioEvidencePort
@@ -355,7 +356,10 @@ def saved_version_check(
 
 
 def saved_version_missing(product: C.WorkProductVersion, purpose: str | None) -> tuple[str, ...]:
-    """Ordered structural gaps for this purpose; the text itself is not classified."""
+    """Ordered structural gaps for this purpose; the text itself is not classified.
+
+    Cited evidence and the tests or sources linked inside the work both count as its basis.
+    """
     if not product.purpose.strip():
         return ("purpose",)
     if purpose not in BUSINESS_PURPOSES:
@@ -366,9 +370,9 @@ def saved_version_missing(product: C.WorkProductVersion, purpose: str | None) ->
         missing += [] if payload.cases else ["test_cases"]
     elif purpose == "option":
         missing.append("candidate_config")
-    elif purpose == "commitment" and not product.evidence_refs:
+    elif purpose == "commitment" and not product_dependencies(product):
         missing.append("decision_evidence")
-    elif purpose == "result" and not product.evidence_refs:
+    elif purpose == "result" and not product_dependencies(product):
         missing.append("result_evidence")
     return tuple(missing)
 

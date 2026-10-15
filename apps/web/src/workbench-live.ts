@@ -1,15 +1,18 @@
 import { createGatewayTransport } from './gateway-transport';
-import { ApiError, request, sessionPath, type Transport } from './api';
+import { ApiError, request, retryableRead, sessionPath, type Transport } from './api';
 import { T, locale } from './app/i18n';
 import { V4LiveData } from './v4-live-data';
 import { V4Mounts } from './v4-mounts';
 import { projectNativeWorkspace } from './v4-workspace-projection';
 import {
   keepProductDraft,
+  productRef,
   readProduct,
   WorkspaceSlotController,
 } from './features/workspace/native-v4/slot-controller';
-import type { ProductCreate } from './contracts-v2';
+import type { EvidenceRefV2, ObjectRef, ProductCreate } from './contracts-v2';
+import { evidenceKey } from './evidence-picker';
+import { chooseWorkEvidence, evidenceChips, type EvidenceChip } from './native-evidence';
 import { workspaceActionMessage } from './features/workspace/native-v4/messages';
 import { canonicalPurpose } from './features/workspace/native-v4/form-values';
 import { blankPilot, v2Scenario, WorkspaceStore } from './store';
@@ -19,6 +22,7 @@ import {
   replaceContinueCode,
 } from './features/practice-recovery/client';
 import { quotedAnswer } from './app/assistant-mode';
+import { returnPlacement, unmatchedReturnText } from './app/agent-return';
 import type {
   Deliverable,
   LocalSession,
@@ -100,6 +104,7 @@ export class LiveWorkbench {
   private state: any;
   private readonly v4: V4LiveData;
   private readonly mounts = new V4Mounts();
+  private mountFailure = '';
   private notify = (_changed: boolean) => {};
   private signature = '';
   private materialCache = new Map<string, Material>();
@@ -248,6 +253,7 @@ export class LiveWorkbench {
         s.failedTurn,
         s.v2Workspace,
         s.v2Assistant,
+        s.v2EffectiveConfig,
         s.queuedTestRuns,
       ]),
     );
@@ -267,12 +273,15 @@ export class LiveWorkbench {
     };
     a.config = fromPilot(w.configs.pilot || blankPilot());
     a.configVersion = w.config_version;
+    a.effectiveConfig = s.v2EffectiveConfig ?? null;
     a.configDraft = s.configDraft ? fromPilot(s.configDraft) : null;
     a.backend = {
       status: w.status,
       version: w.version,
       configured: !!w.configs.pilot,
       materials: s.materials.map((m) => ({ ...m, body: m.content })),
+      // Exact-version titles, so an event names the version it was about.
+      materialTitles: s.v2MaterialTitles ?? {},
       pendingRequests: w.pending_requests,
       submissionId: this.store.submissionId(s),
     };
@@ -300,10 +309,11 @@ export class LiveWorkbench {
         citations: t.citations.map((c) => ({
           id: c.material_id,
           version: c.version,
+          // One name per document: its current title, whichever version the test cited.
           title:
-            (s.protocol === 2
-              ? s.v2MaterialTitles?.[c.material_id + ':' + c.version]
-              : s.materials.find((m) => m.id === c.material_id)?.title) || c.material_id,
+            s.materials.find((m) => m.id === c.material_id)?.title ||
+            s.v2MaterialTitles?.[`${c.material_id}:${c.version}`] ||
+            c.material_id,
         })),
         expectation: s.testNotes[t.id]?.expected ?? saved?.expectation ?? '',
         diagnosis: s.testNotes[t.id]?.diagnosis || '',
@@ -371,6 +381,8 @@ export class LiveWorkbench {
         text: '后端 · ' + e.event_type + ' · #' + e.seq,
         createdAt: e.created_at || '',
         detail: { ...e.payload, materialId: e.payload.material_id },
+        refs: e.refs ?? [],
+        agent: e.executor_kind === 'external_agent',
         seq: e.seq,
       });
     a.approvalDenials = s.timeline.approval_denials || [];
@@ -597,6 +609,56 @@ export class LiveWorkbench {
     if (session?.world.status !== 'active' || !product) throw new Error('editing_unavailable');
     await keepProductDraft(this.v4.host(session), product, patch);
   }
+  /** The work's evidence as it will be saved: its draft when one exists. */
+  nativeEvidence(a: Attempt, id: string): EvidenceRefV2[] {
+    return [...(this.nativeProductValue(a, id)?.evidence_refs ?? [])];
+  }
+  nativeEvidenceChips(a: Attempt, id: string): EvidenceChip[] {
+    const s = this.session(a);
+    if (!s) return [];
+    const titles = s.v2MaterialTitles ?? {},
+      products: { product_id?: string; title?: string }[] = s.v2Workspace?.products ?? [];
+    return evidenceChips(this.nativeEvidence(a, id), {
+      material: (material, version) => titles[`${material}:${version}`],
+      test: (test) => {
+        const run = s.tests.find((row) => row.id === test);
+        return run ? { query: run.query, config: run.config_version } : undefined;
+      },
+      product: (product) => products.find((row) => row.product_id === product)?.title,
+    });
+  }
+  /** Ask for this work's evidence and keep it in the work's draft; false when unchanged. */
+  async citeNative(a: Attempt, id: string, focus?: ObjectRef): Promise<boolean> {
+    const session = this.session(a),
+      product = this.nativeProduct(session, id);
+    if (
+      !session ||
+      !product ||
+      product.removed_at ||
+      session.world.status !== 'active' ||
+      !this.nativeProductEditable(a)
+    )
+      throw new Error(
+        T('这份作品现在不能修改依据。', 'The evidence of this work cannot be changed now.'),
+      );
+    const chosen = await chooseWorkEvidence(
+      this.v4.host(session),
+      productRef(product),
+      this.nativeEvidence(a, id),
+      focus,
+    );
+    if (!chosen) return false;
+    await this.keepNativeProductDraft(a, id, { evidence_refs: chosen });
+    return true;
+  }
+  /** Open the exact cited original of one of this work's evidence chips. */
+  openNativeEvidence(a: Attempt, id: string, key: string) {
+    const session = this.session(a),
+      ref = this.nativeEvidence(a, id).find((row) => evidenceKey(row) === key);
+    if (!session || !ref)
+      throw new Error(T('这条依据已不在这份作品里。', 'This evidence is no longer in this work.'));
+    return this.v4.host(session).openReference(ref);
+  }
   async restoreNativeProduct(a: Attempt, productId: string): Promise<void> {
     const session = this.session(a);
     const host = this.v4Host(a);
@@ -630,7 +692,26 @@ export class LiveWorkbench {
   mountV4(a: Attempt | null, selection: { taskId: string | null; productId: string | null }) {
     void this.mounts
       .sync(document, a ? this.session(a) : undefined, a ? this.v4Host(a) : null, selection)
-      .catch((error) => this.store.report({ error: error.message }));
+      .then(
+        () => {
+          // A recovered mount withdraws its own report, so a recurrence is shown again.
+          // An error reported elsewhere since then stays.
+          const own = this.mountFailure;
+          this.mountFailure = '';
+          if (own && this.store.getSnapshot().error === own) this.store.report({ error: '' });
+        },
+        (error) => {
+          // A read dropped while mounting (e.g. while the page loads) is read again by the next poll.
+          if (retryableRead(error)) {
+            this.store.report({ connected: false });
+            return;
+          }
+          // A report renders the page and every render mounts again: report a repeat once.
+          if (error.message === this.mountFailure) return;
+          this.mountFailure = error.message;
+          this.store.report({ error: error.message });
+        },
+      );
   }
   configDomains(a: Attempt) {
     const s = this.session(a);
@@ -1218,6 +1299,15 @@ export class LiveWorkbench {
     await this.store.health();
     if (a) await this.store.sync(a.id);
   }
+  /** Page load reads the current practice the way a poll does: a dropped read only marks the
+   * connection lost and the next poll reads again. Never rejects; resolves to whether it was read. */
+  async load(a?: Attempt) {
+    await this.store.health();
+    const s = a ? this.session(a) : undefined;
+    if (s?.protocol === 2) await this.store.poll(s.id);
+    else if (s) await this.store.sync(s.id);
+    return this.store.getSnapshot().connected;
+  }
   draftFromWorks(a: Attempt) {
     const list = this.base.currentArtifacts(a);
     return list
@@ -1421,8 +1511,9 @@ export class LiveWorkbench {
         s.v2MaterialTitles?.[id + ':' + version] ||
         s.materials.find((m) => m.id === id)?.title ||
         id;
+      // One copy of the text, under the server's field name; nothing reads a second one.
       if (exact && exact.content.trim())
-        materials.push({ id, version, title, content: exact.content, body: exact.content });
+        materials.push({ id, version, title, content: exact.content });
       else
         omittedMaterials.push({
           id,
@@ -1492,14 +1583,11 @@ export class LiveWorkbench {
     const exp = data.requestId
       ? (a.exports || []).find((x: any) => x.requestId === data.requestId)
       : null;
-    if (data.requestId && !exp && data.returnId)
-      throw new Error(
-        T(
-          '找不到对应的任务包；请核对 requestId，或去掉该字段后作为未关联回传导入。',
-          'No matching task package. Check the requestId, or remove it to import as an unlinked return.',
-        ),
-      );
-    if (exp?.taskId && taskId && exp.taskId !== taskId)
+    const tasks = (s.v2Workspace?.tasks || []).filter((t: any) => t.status !== 'removed');
+    // The rule the preview showed: its package's task, or the task the person chose.
+    const placement = returnPlacement(data, a.exports || [], tasks, taskId);
+    if (placement.status === 'unmatched') throw new Error(unmatchedReturnText());
+    if (placement.status === 'package' && taskId && placement.taskId !== taskId)
       throw new Error(
         T(
           '回传所属事项与任务包不一致，请在原事项导入。',
@@ -1524,11 +1612,12 @@ export class LiveWorkbench {
         productId: existing.product_id as string,
         taskId: existing.task?.object_id ?? null,
       };
-    const tasks = (s.v2Workspace?.tasks || []).filter((t: any) => t.status !== 'removed');
-    const task = tasks.find((t: any) => t.id === (taskId || exp?.taskId)) || tasks[0];
+    const task = tasks.find((t) => t.id === placement.taskId);
     if (!task)
       throw new Error(
-        T('请先建立一件事项，再导入回传。', 'Create a task before importing a return.'),
+        tasks.length
+          ? T('请选择放在哪件事项下。', 'Choose the task to file it under.')
+          : T('请先建立一件事项，再导入回传。', 'Create a task before importing a return.'),
       );
     const host = this.v4.host(s);
     let timeline: any = null;

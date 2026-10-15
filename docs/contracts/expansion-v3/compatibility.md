@@ -133,3 +133,8 @@ OperationAvailability明确installed/ready/capability/unavailable_code，注册�
 公共事件读取在`career_lab.api.vertical_reads.public_event_history`：输入同一个store/registry、原auth与实际VersionPoint，按持久化operation调用已安装投影。处于Gateway查询中时传其view，避免SQLite嵌套BEGIN IMMEDIATE；独立调用则经query_at验证历史点和当前权限。材料目录不伪装阅读事件；`GET /objects/material/{id}/{version}`是授权只读原文入口，`actions/read_material`另产生真实阅读记录。原生timeline提供实际公开事件供MCP接线，不输出原始private事件数据。
 
 W05 r9的39份owned已固定并挂载真实W02授权材料/规则端口、原子反馈任务与原生callbacks；本地评价政策及源码哈希从生成的EvaluationBundle核验，语义仍待接入。W03新原生部件待固定输入后组合；当前W04为r7的23份owned，W02/W03仍沿登记固定输入。英文语言字段本切片未新增；旧包按固定中文内容处理，界面locale不改变历史。
+
+
+## 测试运行与作品版本的确切引用（2026-10-14）
+
+`objects.read`（`GET /objects/{kind}/{object_id}/{version}`）对 `test` 与 `product`，在原有 `schema_version`、`ref`、`content` 之外附可选 `evidence_ref`：该确切版本的 EvidenceRefV2，`observed_at_seq` 为保存它的那次存储修订对应快照的 business_seq，`valid_from_seq` 为 0，不带段落与引文。规则与评价器核对对象来源时相同（`career_lab.evidence.v2.citation.object_citation`），作品、资源申请与异议补证引用测试运行或作品版本时直接使用它。找不到保存点时不返回该字段，客户端不得自行推算。材料继续按段落引用，其他类型不变；输入 DTO、路由与操作均未改变。

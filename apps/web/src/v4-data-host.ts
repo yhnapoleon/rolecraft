@@ -5,8 +5,15 @@ import {
   type GatewayCredentials,
   type GatewayTransport,
 } from './gateway-transport';
-import type { Command, ObjectRef, EvidenceRefV2, VersionPoint } from './contracts-v2';
 import type {
+  Command,
+  ObjectRef,
+  EvidenceRefV2,
+  SubmissionRuleCheck,
+  VersionPoint,
+} from './contracts-v2';
+import type {
+  EvidencePick,
   V4CommandResult,
   V4HostAdapter,
   V4HostSnapshot,
@@ -55,7 +62,7 @@ export interface V4HostPorts {
   storage: Pick<Storage, 'getItem' | 'setItem'>;
   uiLanguage(): WorkLanguage;
   openReference(ref: ObjectRef | EvidenceRefV2): Promise<void>;
-  chooseEvidence(): Promise<readonly EvidenceRefV2[]>;
+  chooseEvidence(pick?: EvidencePick): Promise<readonly EvidenceRefV2[]>;
   announce(message: string, kind?: 'status' | 'error'): void;
   fetcher?: typeof fetch;
   didRead?(operation: string, value: any, input: Input): void;
@@ -78,6 +85,14 @@ const unconfirmed = () =>
   );
 const copy = <T>(value: T): T => structuredClone(value);
 
+/** A grant issued on this page, with its secret: memory only, never journaled or stored. */
+type IssuedGrant = {
+  delegationId: string;
+  token: string;
+  label: string;
+  issuedAt: string;
+  expiresAt: string;
+};
 /** The sole v2 command/draft journal used by every native v4 slot.
  * Construction, refresh and recovery are read-only on the server. */
 export class V4DataHost implements V4HostAdapter {
@@ -93,10 +108,11 @@ export class V4DataHost implements V4HostAdapter {
     string,
     { slot: V4SlotId; key: string; value: unknown }
   >();
-  // The secret of the delegation issued on this page lives only in memory, for a one-time
-  // connection-config download. It never enters the request journal, drafts or storage.
-  private issued: { delegationId: string; token: string; label: string; issuedAt: string } | null =
-    null;
+  // The secret of the delegation issued on this page lives only in memory. The connection card
+  // may hand it out for each copy or download the person asks for until they finish, the page
+  // goes away, the grant expires or it is revoked. It never enters the journal, drafts or storage.
+  private issued: IssuedGrant | null = null;
+  private issuedExpiry: ReturnType<typeof setTimeout> | undefined;
   constructor(private readonly ports: V4HostPorts) {
     this.key = 'rolecraft.v4.session.' + ports.binding.sessionId;
     this.raw = createGatewayTransport(() => {
@@ -199,6 +215,9 @@ export class V4DataHost implements V4HostAdapter {
         'delegations.create': this.context?.available?.['delegations.create'] === true,
         'delegations.revoke': this.context?.available?.['delegations.revoke'] === true,
         'delegations.list': this.context?.available?.['delegations.create'] === true,
+        // A read-only check of what submitting would give: offered wherever submitting is.
+        'submissions.rule_check':
+          this.context?.available?.['submissions.create'] === true && !this.context?.read_only,
       },
       semantic: this.context?.semantic ?? {
         roles: 'unavailable',
@@ -211,27 +230,22 @@ export class V4DataHost implements V4HostAdapter {
   async query(operation: string, input: Input = {}): Promise<unknown> {
     if (input.session_id != null && input.session_id !== this.ports.binding.sessionId)
       throw new ApiError('Reference belongs to another session', 404, 'session_binding_mismatch');
+    if (operation === 'submissions.rule_check' || operation === 'submissions.rule_check.read')
+      return this.ruleCheck(operation, input);
     if (operation === 'workspace_imports') {
       if (input.mode !== 'preview')
         throw new ApiError('Only an import preview is a query', 400, 'invalid_read');
-      const state = await this.query('session.read');
-      if (!point(state)) throw unconfirmed();
-      const preview: any = await this.raw(this.path('/workspace-imports'), {
-        schema_version: 2,
-        request_id: crypto.randomUUID(),
-        expected_version: state.business_seq,
-        expected_workspace_revision: state.workspace_revision,
-        operation: 'workspace_imports',
-        payload: copy(input),
-      });
+      const preview = await this.readOnlyCommand('/workspace-imports', 'workspace_imports', input);
+      const result = obj(preview) ? preview.result : undefined;
       if (
-        preview.result?.mode !== 'preview' ||
-        preview.result?.applied !== false ||
-        preview.result?.package_id !== input.package_id ||
-        !point(preview.result?.as_of)
+        !obj(result) ||
+        result.mode !== 'preview' ||
+        result.applied !== false ||
+        result.package_id !== input.package_id ||
+        !point(result.as_of)
       )
         throw unconfirmed();
-      return preview.result;
+      return result;
     }
     const result: any = await this.raw(this.path(readRoute(operation, input)));
     if (operation === 'delegations.list' && Array.isArray(result?.result?.result?.items)) {
@@ -239,6 +253,7 @@ export class V4DataHost implements V4HostAdapter {
       const labels = this.agentLabels();
       for (const row of result.result.result.items)
         if (row && typeof row.id === 'string' && labels[row.id]) row.agent_label = labels[row.id];
+      this.withdrawUnlessActive(result.result.result.items);
     }
     if (operation === 'session.read') return result.state;
     if (operation === 'objects.read') return result;
@@ -272,6 +287,37 @@ export class V4DataHost implements V4HostAdapter {
     }
     this.ports.didRead?.(operation, copy(value), input);
     return value;
+  }
+  /** A read-only server check in the command envelope of the current point. The server records
+   * nothing for it, so it has no journal entry and no recovery. */
+  private async readOnlyCommand(path: string, operation: string, payload: Input): Promise<unknown> {
+    const state = await this.query('session.read');
+    if (!point(state)) throw unconfirmed();
+    return this.raw(this.path(path), {
+      schema_version: 2,
+      request_id: crypto.randomUUID(),
+      expected_version: state.business_seq,
+      expected_workspace_revision: state.workspace_revision,
+      operation,
+      payload: copy(payload),
+    });
+  }
+  /** Rule items of a submission: of this input now (draft), or of a saved one (saved). */
+  private async ruleCheck(operation: string, input: Input): Promise<SubmissionRuleCheck> {
+    const draft = operation === 'submissions.rule_check';
+    const response = draft
+      ? await this.readOnlyCommand('/submission-rule-check', operation, input)
+      : await this.raw(this.path(readRoute(operation, input)));
+    const result = obj(response) ? response.result : undefined;
+    if (
+      !obj(result) ||
+      result.session_id !== this.ports.binding.sessionId ||
+      result.basis !== (draft ? 'draft' : 'saved') ||
+      !point(result.as_of) ||
+      !Array.isArray(result.rule_items)
+    )
+      throw unconfirmed();
+    return copy(result) as SubmissionRuleCheck;
   }
   command<K extends V4Command>(
     operation: K,
@@ -398,16 +444,17 @@ export class V4DataHost implements V4HostAdapter {
         const token = result.token;
         delete result.token;
         if (typeof token === 'string' && typeof result.delegation?.id === 'string') {
-          this.issued = {
+          this.offer({
             delegationId: result.delegation.id,
             token,
             label: String(entry.input.agent_label ?? ''),
             issuedAt: new Date().toISOString(),
-          };
+            expiresAt: String(result.delegation.expires_at ?? entry.input.expires_at ?? ''),
+          });
           this.rememberAgentLabel(result.delegation.id, String(entry.input.agent_label ?? ''));
         }
       } else if (this.issued?.delegationId === entry.input.delegation_id) {
-        this.issued = null;
+        this.forget(false);
       }
       entry.outcome = { requestId, status: 'confirmed', result };
       this.save();
@@ -440,25 +487,58 @@ export class V4DataHost implements V4HostAdapter {
       /* A label is a convenience; the grant itself is already confirmed by the server. */
     }
   }
+  private offer(issued: IssuedGrant) {
+    this.forget(false);
+    const remaining = Date.parse(issued.expiresAt) - Date.now();
+    // A grant without a readable future expiry is never offered for connection.
+    if (!(remaining > 0)) return;
+    this.issued = issued;
+    this.issuedExpiry = setTimeout(() => this.forget(), Math.min(remaining, 2_147_483_647));
+  }
+  private forget(notify = true) {
+    if (this.issuedExpiry !== undefined) clearTimeout(this.issuedExpiry);
+    this.issuedExpiry = undefined;
+    if (!this.issued) return;
+    this.issued = null;
+    if (notify) this.emit();
+  }
+  /** The server lists every grant of the session: one revoked elsewhere, expired by the server
+   * clock or gone is no longer offered for connection. */
+  private withdrawUnlessActive(items: unknown[]) {
+    const id = this.issued?.delegationId;
+    if (!id) return;
+    const row = items.find((item) => obj(item) && item.id === id);
+    if (!obj(row) || row.revoked !== false || row.effective_status !== 'active') this.forget();
+  }
+  /** The grant still offered for connection; a late expiry timer never extends it. */
+  private offered() {
+    return this.issued && Date.now() < Date.parse(this.issued.expiresAt) ? this.issued : null;
+  }
+  /** Token-free description of the grant the connection card offers. */
   issuedDelegation() {
-    return this.issued
+    const issued = this.offered();
+    return issued
       ? {
-          delegationId: this.issued.delegationId,
-          label: this.issued.label,
-          issuedAt: this.issued.issuedAt,
+          delegationId: issued.delegationId,
+          label: issued.label,
+          issuedAt: issued.issuedAt,
+          expiresAt: issued.expiresAt,
         }
       : null;
   }
-  takeConnectionConfig(apiUrl: string) {
-    if (!this.issued) return null;
-    const config = {
-      api_url: apiUrl,
-      session_id: this.ports.binding.sessionId,
-      token: this.issued.token,
-    };
-    this.issued = null;
-    this.emit();
-    return config;
+  /** The token for one copy the person asked for. Callers never keep it. */
+  connectionSecret() {
+    const issued = this.offered();
+    return issued ? { sessionId: this.ports.binding.sessionId, token: issued.token } : null;
+  }
+  /** Private config for the local stdio adapter, built for one download the person asked for. */
+  connectionConfig(apiUrl: string) {
+    const secret = this.connectionSecret();
+    return secret ? { api_url: apiUrl, session_id: secret.sessionId, token: secret.token } : null;
+  }
+  /** The person is done: the token leaves memory and is never offered again. */
+  dismissConnection() {
+    this.forget();
   }
   private async send(
     operation: string,
@@ -714,8 +794,8 @@ export class V4DataHost implements V4HostAdapter {
     this.checkRef(ref);
     return this.ports.openReference(copy(ref));
   }
-  chooseEvidence() {
-    return this.ports.chooseEvidence();
+  chooseEvidence(pick?: EvidencePick) {
+    return this.ports.chooseEvidence(pick);
   }
   private checkRef(ref: ObjectRef) {
     if (ref.session_id !== this.ports.binding.sessionId)

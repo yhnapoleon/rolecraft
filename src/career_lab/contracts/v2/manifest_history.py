@@ -767,25 +767,61 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "expansion-v3-bdeee6db7f266c8490ad3cc7a9a0a82e81e490cc4c40a3137b8ffff8224ddc23"
         ),
         "integration_changes": {
-            "practice-continue-codes": "GET and POST /sessions/{session_id}/continue-code "
-            "(ContinueCodeStatusResponse; ContinueCodeIssueInput -> ContinueCodeIssueResponse): "
-            "the practice's own person, with delegate capability, creates or replaces its one "
-            "continue code, 20 Crockford Base32 symbols (100 bits) in five groups of four, shown "
-            "only in that response with Cache-Control: no-store. The server keeps a verifier "
-            "keyed with the deployment credential key, never the code, in separate "
-            "v4_continue_codes and v4_continue_code_attempts tables; frozen v2 tables are "
-            "unchanged. A replacement names the generation it replaces (continue_code_changed "
-            "otherwise) and stops the old code at once. POST /continue-codes/exchange "
-            "(ContinueCodeExchangeInput -> ContinueCodeExchangeResponse) takes a code without a "
-            "bearer, ten tries per source in fifteen minutes (continue_code_rate_limited, 429, "
-            "with retry_after_seconds), and issues a new owner credential derived with purpose "
-            "continue-code: the same code and request_id return the same token. Malformed, "
-            "unknown or replaced codes and practices this deployment cannot show are refused "
-            "(continue_code_malformed, continue_code_invalid, continue_code_scenario_unavailable) "
-            "before any credential is issued. Existing tokens, queued work and agent grants are "
-            "unchanged; a follow-up practice reopened by code still replays its original choice. "
-            "errors.json http_policy lists 429. career-lab serve no longer trusts forwarded "
-            "headers, so the counted source is the connecting peer."
+            "submission-rule-check": "Read-only submission rule check for the session's own "
+            "person (delegated agents get 403 human_required). POST /sessions/{session_id}/"
+            "submission-rule-check takes SubmissionRuleCheckRequest, shaped like the submit "
+            "command (operation submissions.rule_check, payload SubmitInput); nothing is recorded, "
+            "request_id has no idempotent result and the expected versions must equal the "
+            "checked point (else version_conflict). GET with ?submission_id= checks a saved "
+            "submission again at its own as_of. SubmissionRuleCheckResponse.result "
+            "(SubmissionRuleCheck: basis draft or saved, mode rules_only, as_of, decision, "
+            "products, config, evaluation, work_language) carries rule_items equal to the formal "
+            "FeedbackV2.rule_items of the same inputs at that point, computed by the feedback "
+            "worker's evaluation without any model, and _RuleCheckFacts: the verified numbers "
+            "behind them (participants, capacity, required and available developer-days, launch "
+            "and deadline day, unapproved excess, configuration and policy version, adjustment "
+            "actions) and actual test runs per configuration version with the retests after the "
+            "current policy update. Gateway operations, MCP tools, tables, FeedbackV2 and "
+            "scenario packages are unchanged."
+        },
+    },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-d2f0dd5a386651a1a86a581b3d18bdb98c7320ac05ffa35adef75993ce600c4a"
+        ),
+        "integration_changes": {
+            "approval-decision-assessment": "Optional BusinessDecision.assessment "
+            "(_ApprovalAssessment with _ApprovalTermCheck rows) records what a resource decision "
+            "was judged against: every requested term with its allocation at the time, requested "
+            "total, published ceiling and the bound plan's need, plus all of its issues "
+            "(over_limit, below_current, no_increase, no_shortfall, insufficient, "
+            "need_over_limit), not only the first failed check; strategy work items the plan "
+            "lacks and a missing human fallback; and the exact published approval-rule sentences "
+            "the decision applies (this session's rule material at its source version, with span "
+            "and quote, observed at the decision). Status, reason_code, reason and the decision "
+            "order are unchanged. Counteroffers keep the original request's assessment and "
+            "acceptances carry the accepted terms. Unset assessments are omitted, so existing "
+            "decisions, examples and wire bytes are unchanged; evaluators read decisions "
+            "without the assessment, so evaluation input bytes are unchanged.",
+            "workspace-effective-config": "The learner timeline and workbench.read workspace "
+            "add effective_config: the EffectiveConfig the next assistant test uses, resolved "
+            "from the saved configuration and the approved resources by the same function as "
+            "the test itself. Readers limited to named objects still receive no workspace.",
+        },
+    },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-79c05a8746fab4a04846161d71527de9c1b69b02834ecc8b6080433d4a44d624"
+        ),
+        "integration_changes": {
+            "object-evidence-ref": "objects.read of a test run or a work version (kind test or "
+            "product) adds an optional evidence_ref: the exact EvidenceRefV2 of that version, "
+            "observed at the business_seq of the stored snapshot that created it, valid from 0, "
+            "with no span or quote. It is the reference the evaluator's source reader verifies "
+            "for cited objects (both use evidence/v2/citation.py, now a contract input), so "
+            "work, resource requests and feedback supplements cite tests and work with it. It "
+            "is absent when the creation snapshot is not found; materials keep citing passages "
+            "and other kinds are unchanged. Request models, routes and operations are unchanged."
         },
     },
 )
