@@ -173,8 +173,8 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     first?.focus();
     host.announce(
       T(
-        '已按上限填好，确认理由后再提交。',
-        'Filled in at the ceiling. Check the reason, then send.',
+        '已按上限和方案需要填好，确认理由后再提交。',
+        'Filled in from the ceilings and what the plan needs. Check the reason, then send.',
       ),
       'status',
     );

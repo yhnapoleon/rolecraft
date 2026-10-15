@@ -165,9 +165,9 @@ function termLine(t: _ApprovalTermCheck): CardLine {
 }
 
 /**
- * Over-ceiling terms capped; terms with no shortfall, no increase or a reduction dropped;
- * terms the allocation in effect already reaches dropped too. Only offered while a capped
- * term is still left to ask for.
+ * Over-ceiling terms capped and terms asked below the plan's need raised to it; terms with no
+ * shortfall, no increase or a reduction dropped; terms the allocation in effect already reaches
+ * dropped too. Only offered while a capped term is still left to ask for.
  */
 function ceilingTerms(decision: BusinessDecision, current: Totals): Record<string, number> | null {
   if (decision.status !== 'rejected') return null;
@@ -178,7 +178,10 @@ function ceilingTerms(decision: BusinessDecision, current: Totals): Record<strin
     if (found.some((i) => i === 'no_shortfall' || i === 'no_increase' || i === 'below_current'))
       continue;
     const over = found.includes('over_limit');
-    const value = over ? t.limit : t.requested;
+    // A term asked below what the plan needs is filled with that need, which then fits the
+    // ceiling; keeping it would be declined again (185 P2-1).
+    const short = found.includes('insufficient') && !found.includes('need_over_limit');
+    const value = over ? t.limit : short ? t.needed : t.requested;
     if (value <= (current[t.resource] ?? t.current)) continue;
     result[t.resource] = value;
     capped ||= over;

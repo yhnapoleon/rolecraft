@@ -259,6 +259,37 @@ it('sends a plan missing a required safeguard to its settings, not to a capped r
   ]);
 });
 
+it('fills a term asked too low with what the plan needs, beside the capped one', () => {
+  // 185 P2-1: day 8 and 7 developer-days for a plan launching on day 9 that needs 6. Keeping
+  // day 8 would be declined again for the short deadline; day 9 fits the ceiling of day 10.
+  const declined = decision('rejected', {
+    terms: [
+      {
+        resource: 'deadline_day',
+        current: 7,
+        requested: 8,
+        limit: 10,
+        needed: 9,
+        issues: ['insufficient'],
+      },
+      {
+        resource: 'dev_days',
+        current: 3,
+        requested: 7,
+        limit: 6,
+        needed: 6,
+        issues: ['over_limit'],
+      },
+    ],
+    clauses: [ceiling],
+  });
+  const model = decisionCardModel(declined, request(), titles);
+  expect(model.ceiling).toEqual({ deadline_day: 9, dev_days: 6 });
+  const { refilled, button } = drawn(model);
+  button('按上限改申请')?.click();
+  expect(refilled).toEqual([{ deadline_day: 9, dev_days: 6 }]);
+});
+
 it('keeps the capped request when the plan itself fits under the ceiling', () => {
   const declined = decision('rejected', {
     terms: [

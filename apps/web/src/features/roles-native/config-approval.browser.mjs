@@ -332,38 +332,67 @@ try {
     await focusShot('.product-bar', 'bar-v2-before-approval');
   });
 
-  if (full) {
-    await step(
-      'a plan within the ceiling is approved and the card shows the covered term',
-      async () => {
-        await openRequests();
-        // The plan now needs 6, so the learner asks for 6 after adjusting the settings.
-        await browser.type('#res-form [name="dev_days"]', '6');
-        await browser.type(
-          '#res-form textarea[name="reason"]',
-          text('按上限申请', 'At the ceiling'),
-        );
-        const before = await browser.ev(`document.querySelectorAll('[data-request-id]').length`);
-        await browser.submit('#res-form');
-        await waitFor(browser, `document.querySelectorAll('[data-request-id]').length > ${before}`);
-        await clickReady(browser, text('核实申请', 'Check request'));
-        await waitFor(
-          browser,
-          `[...document.querySelectorAll('[data-decision-card] li.ok')].some((li) => li.innerText.includes(${JSON.stringify(text('开发人日：3 → 6（方案需要 6 · 上限 6）', 'Developer-days: 3 → 6 (plan needs 6 · ceiling 6)'))}))`,
-          20000,
-        );
-        // No card offers a capped request; the declined over-ceiling plan still names its way out.
-        assert.equal(
-          await browser.ev(
-            `[...document.querySelectorAll('[data-decision-card] button')].filter((b) => b.textContent.trim() === ${JSON.stringify(capped)}).length`,
-          ),
-          0,
-        );
-        assert.deepEqual(await cardButtons(0), [viewSource, adjust]);
-        await focusShot('[data-decision-card]', 'decision-approved', true);
-      },
+  // 185 P2-1: beside an over-ceiling term, a deadline asked short of the plan. The capped
+  // request fills the deadline with what the plan needs too, so it passes this time.
+  await step('the capped request fills a short term with what the plan needs', async () => {
+    await openSettings();
+    await browser.type('#config-form input[name="launchDay"]', '9');
+    await browser.submit('#config-form');
+    await waitFor(browser, `!document.querySelector('#sheet')?.open`);
+    await openRequests();
+    await browser.type('#res-form [name="deadline_day"]', '8');
+    await sendRequest(
+      7,
+      text('实时同步需要更多开发人日', 'Real-time sync needs more developer-days'),
     );
+    const card = await browser.ev(
+      `[...document.querySelectorAll('[data-decision-card]')].at(-1).innerText.replace(/\\s+/g, ' ').trim()`,
+    );
+    assert.ok(
+      card.includes(
+        text(
+          '截止日：申请第 8 天；计划第 9 天上线，申请不够',
+          'Deadline day: requested day 8; the plan launches on day 9, more than requested',
+        ),
+      ),
+      card,
+    );
+    assert.ok((await cardButtons(-1)).includes(capped), card);
+    await focusShot('[data-decision-card]', 'decision-capped', true);
+    const rows = await browser.ev(`document.querySelectorAll('[data-request-id]').length`);
+    await clickReady(browser, capped);
+    // The form, not the server, now holds the capped request: 6 developer-days and day 9.
+    assert.deepEqual(
+      await browser.ev(
+        `['dev_days', 'deadline_day'].map((k) => document.querySelector('#res-form [name="' + k + '"]').value)`,
+      ),
+      ['6', '9'],
+    );
+    assert.equal(await browser.ev(`document.querySelectorAll('[data-request-id]').length`), rows);
+    await focusShot('#res-form', 'capped-form');
+    await browser.type(
+      '#res-form textarea[name="reason"]',
+      text('按上限和方案需要申请', 'At the ceiling and what the plan needs'),
+    );
+    await browser.submit('#res-form');
+    await waitFor(browser, `document.querySelectorAll('[data-request-id]').length > ${rows}`);
+    await clickReady(browser, text('核实申请', 'Check request'));
+    await waitFor(
+      browser,
+      `[...document.querySelectorAll('[data-decision-card] li.ok')].some((li) => li.innerText.includes(${JSON.stringify(text('开发人日：3 → 6（方案需要 6 · 上限 6）', 'Developer-days: 3 → 6 (plan needs 6 · ceiling 6)'))}))`,
+      20000,
+    );
+    // No card offers a capped request once the allocation reaches it.
+    assert.equal(
+      await browser.ev(
+        `[...document.querySelectorAll('[data-decision-card] button')].filter((b) => b.textContent.trim() === ${JSON.stringify(capped)}).length`,
+      ),
+      0,
+    );
+    await focusShot('[data-decision-card]', 'decision-approved', true);
+  });
 
+  if (full) {
     await step('the rule sentence opens in its source', async () => {
       await clickReady(browser, text('看原文', 'View source'));
       await waitFor(
@@ -382,7 +411,7 @@ try {
       async () => {
         await waitFor(browser, `!document.querySelector('.product-bar [data-config-use]')`);
         assert.ok(
-          (await innerText('.product-bar .pb-state')).startsWith(text('配置 v3', 'Config v3')),
+          (await innerText('.product-bar .pb-state')).startsWith(text('配置 v4', 'Config v4')),
         );
         await shot('bar-funded');
         const answer = await runTest();
@@ -399,15 +428,20 @@ try {
       `[...document.querySelectorAll('.business-decisions p')].map((p) => p.textContent)`,
     );
     // Each request once with its latest decision, in the order they were made: 7, 6 and 7
-    // declined, then 6 approved.
+    // declined, day 8 with 7 declined, then day 9 with 6 approved.
     const declined7 = text('开发人日：申请 7 · 未批准', 'Developer-days: requested 7 · declined');
     const decided = [
       declined7,
       text('开发人日：申请 6 · 未批准', 'Developer-days: requested 6 · declined'),
       declined7,
-      ...(full
-        ? [text('开发人日：申请 6 · 已批准 6', 'Developer-days: requested 6 · approved 6')]
-        : []),
+      text(
+        '截止日：申请第 8 天 · 未批准、开发人日：申请 7 · 未批准',
+        'Deadline day: requested day 8 · declined, Developer-days: requested 7 · declined',
+      ),
+      text(
+        '截止日：申请第 9 天 · 已批准第 9 天、开发人日：申请 6 · 已批准 6',
+        'Deadline day: requested day 9 · approved day 9, Developer-days: requested 6 · approved 6',
+      ),
     ];
     assert.equal(
       lines[0],
