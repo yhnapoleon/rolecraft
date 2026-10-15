@@ -1,7 +1,7 @@
 /** Pilot settings in the learner's words. Labels come from the shared vocabulary. */
 import type { EffectiveConfig } from '../contracts-v2';
 import { locale, T } from './i18n';
-import { UPDATE, WORK_COST, WORK_ITEM } from './vocab.js';
+import { FALLBACK, UPDATE, WORK_COST, WORK_ITEM } from './vocab.js';
 
 // Server identifiers to the vocabulary's settings keys (the inverse of the API mapping).
 const WORK_KEYS: Readonly<Record<string, string>> = {
@@ -17,6 +17,7 @@ const STRATEGY_KEYS: Readonly<Record<string, string>> = {
 
 export const workItemLabel = (id: string) => WORK_ITEM(WORK_KEYS[id] ?? id);
 export const strategyLabel = (strategy: string) => UPDATE(STRATEGY_KEYS[strategy] ?? strategy);
+export const fallbackLabel = (fallback: string) => FALLBACK(fallback);
 
 // Work a strategy cannot run without. The settings include it with the strategy, so the
 // saved plan and its developer-day total say the same thing (approval rules: a real-time

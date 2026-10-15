@@ -1,11 +1,11 @@
 /**
  * One recorded approval decision as a card: the published rule sentence it applied, each
  * requested term's numbers and, for an over-ceiling rejection, a capped re-application, or the
- * pilot settings when the plan itself needs more than a ceiling.
+ * pilot settings when no request can pass until the plan changes.
  * Everything shown comes from the decision's recorded assessment; nothing is re-judged here.
  */
 import { T } from '../../app/i18n';
-import { strategyLabel, workItemLabel } from '../../app/pilot-config';
+import { fallbackLabel, strategyLabel, workItemLabel } from '../../app/pilot-config';
 import { resourceNames } from './decision-words';
 import type { Totals } from './request-terms';
 import type {
@@ -30,9 +30,10 @@ export interface DecisionCardModel {
   lines: CardLine[];
   /** Totals for "re-apply at the ceiling", or null when that would not help. */
   ceiling: Record<string, number> | null;
-  /** A declined plan that needs more than a ceiling: what to change first, one sentence per such
-   * term. No request can pass until the plan changes, so the card offers the settings instead of
-   * a capped re-application. Empty otherwise. */
+  /** A declined plan that no request can get through as it stands (it needs more than a ceiling,
+   * lacks work its strategy requires or the required hand-off): what to change first, one
+   * sentence each. The card then offers the settings instead of a capped re-application, which
+   * would only be declined again. Empty otherwise. */
   replan: string[];
 }
 type Issue = NonNullable<_ApprovalTermCheck['issues']>[number];
@@ -96,7 +97,7 @@ function needPart(t: _ApprovalTermCheck, has: (i: Issue) => boolean) {
 }
 
 /** The plan's own need is over the ceiling: what to change in the settings before asking again. */
-function replanNote(t: _ApprovalTermCheck) {
+function overCeilingNote(t: _ApprovalTermCheck) {
   const n = t.needed;
   const l = t.limit;
   if (t.resource === DAY)
@@ -113,6 +114,35 @@ function replanNote(t: _ApprovalTermCheck) {
     `方案需要 ${n}，上限 ${l}：先把方案降到 ${l} 以内再申请`,
     `The plan needs ${n}, over the ceiling of ${l}: bring it down to ${l} or less before requesting`,
   );
+}
+
+/**
+ * What the settings must change before any request can pass, from the recorded assessment of a
+ * declined request: a plan over a ceiling, work its strategy requires, the required hand-off.
+ * Asking at the ceiling would only be declined again (164 N1).
+ */
+function replanNotes(decision: BusinessDecision): string[] {
+  const assessment = decision.assessment;
+  if (decision.status !== 'rejected' || !assessment) return [];
+  const notes = (assessment.terms ?? [])
+    .filter((t) => t.issues?.includes('need_over_limit'))
+    .map(overCeilingNote);
+  const missing = (assessment.missing_work_items ?? []).map(workItemLabel);
+  if (missing.length)
+    notes.push(
+      T(
+        `方案缺少：${missing.join('、')}——先在设置里补上再申请`,
+        `The plan is missing ${missing.join(', ')}: add ${missing.length > 1 ? 'them' : 'it'} in the settings before requesting`,
+      ),
+    );
+  if (assessment.fallback_required)
+    notes.push(
+      T(
+        `答不了或不确定时要${fallbackLabel('human')}——先在设置里选上再申请`,
+        `Unanswered questions must go to a person: choose “${fallbackLabel('human')}” in the settings before requesting`,
+      ),
+    );
+  return notes;
 }
 
 function termLine(t: _ApprovalTermCheck): CardLine {
@@ -199,17 +229,12 @@ export function decisionCardModel(
         ]
       : [],
   );
-  // A plan that needs more than a ceiling cannot pass at any amount, so asking at the
-  // ceiling would only be declined again (164 N1).
-  const replan =
-    decision.status === 'rejected'
-      ? (assessment?.terms ?? []).filter((t) => t.issues?.includes('need_over_limit'))
-      : [];
+  const replan = replanNotes(decision);
   return {
     clauses,
     lines,
     ceiling: replan.length ? null : ceilingTerms(decision, current),
-    replan: replan.map(replanNote),
+    replan,
   };
 }
 

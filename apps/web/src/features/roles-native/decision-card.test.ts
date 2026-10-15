@@ -210,6 +210,55 @@ it('says what to change in the plan for each term over its ceiling, in both lang
   ).toBeDefined();
 });
 
+it('sends a plan missing a required safeguard to its settings, not to a capped request', () => {
+  // Real-time sync without the human hand-off: 6 developer-days fit the ceiling, but a request
+  // capped at 6 would be declined again for the missing safeguard.
+  const assessment = (extra: Partial<NonNullable<BusinessDecision['assessment']>>) =>
+    decision('rejected', {
+      terms: [
+        {
+          resource: 'dev_days',
+          current: 3,
+          requested: 7,
+          limit: 6,
+          needed: 6,
+          issues: ['over_limit'],
+        },
+      ],
+      clauses: [ceiling, safeguards],
+      ...extra,
+    });
+  const missing = decisionCardModel(
+    assessment({ missing_work_items: ['human_fallback'] }),
+    request(),
+    titles,
+  );
+  expect(missing.ceiling).toBeNull();
+  expect(missing.replan).toEqual(['方案缺少：人工入口——先在设置里补上再申请']);
+  const handOff = decisionCardModel(assessment({ fallback_required: true }), request(), titles);
+  expect(handOff.ceiling).toBeNull();
+  expect(handOff.replan).toEqual(['答不了或不确定时要转人工确认——先在设置里选上再申请']);
+  const { button, refilled } = drawn(missing);
+  expect(button('按上限改申请')).toBeUndefined();
+  expect(button('调整设置')?.dataset.action).toBe('config');
+  button('调整设置')?.click();
+  expect(refilled).toEqual([]);
+  setPreference('en');
+  expect(
+    decisionCardModel(
+      assessment({
+        missing_work_items: ['scope_filter', 'human_fallback'],
+        fallback_required: true,
+      }),
+      request('daily'),
+      titles,
+    ).replan,
+  ).toEqual([
+    'The plan is missing Scope filter, Human hand-off: add them in the settings before requesting',
+    'Unanswered questions must go to a person: choose “Hand off to a person” in the settings before requesting',
+  ]);
+});
+
 it('keeps the capped request when the plan itself fits under the ceiling', () => {
   const declined = decision('rejected', {
     terms: [

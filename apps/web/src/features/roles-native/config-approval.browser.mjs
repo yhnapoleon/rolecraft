@@ -1,8 +1,8 @@
 /**
  * Normal v4 entry over a real API and worker: saved vs used configuration, the real-time
- * strategy's work item, the request form's terms, the approval decision card (a plan over the
- * ceiling goes to its settings, one under it gets the capped request) and the decisions as the
- * feedback records them after delivery.
+ * strategy's work item, the request form's terms, the approval decision card (a plan that no
+ * request can pass, over the ceiling or missing its hand-off, goes to its settings) and the
+ * decisions as the feedback records them after delivery, in the order they were requested.
  *
  * Usage: CHROME_BIN=… node config-approval.browser.mjs <base URL> <evidence dir> <zh|en> [default]
  * The fourth argument runs with default motion and covers settings, requests and the delivered
@@ -276,8 +276,47 @@ try {
     await shot('decision-to-settings');
   });
 
+  // The same trap from a plan that fits: real-time sync without the human hand-off needs 6
+  // developer-days, but a capped request would be declined again for the missing safeguard.
+  await step(
+    'a plan missing its hand-off is sent to its settings, not to a capped request',
+    async () => {
+      // The settings are open from the decision card.
+      await browser.click('#config-form input[name="workItems"][value="fallback"]');
+      assert.ok((await innerText('[data-checks]')).includes(text('开发 6 人日', '6 person-days')));
+      await browser.submit('#config-form');
+      await waitFor(browser, `!document.querySelector('#sheet')?.open`);
+      await openRequests();
+      await sendRequest(
+        7,
+        text('实时同步需要更多开发人日', 'Real-time sync needs more developer-days'),
+      );
+      const card = await browser.ev(
+        `[...document.querySelectorAll('[data-decision-card]')].at(-1).innerText.replace(/\\s+/g, ' ').trim()`,
+      );
+      assert.ok(
+        card.includes(
+          text(
+            '方案缺少：人工入口——先在设置里补上再申请',
+            'The plan is missing Human hand-off: add it in the settings before requesting',
+          ),
+        ),
+        card,
+      );
+      const buttons = await cardButtons(-1);
+      assert.ok(buttons.includes(adjust) && !buttons.includes(capped), buttons.join(' | '));
+      await focusShot('[data-decision-card]', 'decision-missing-hand-off', true);
+      await clickReady(browser, adjust, '[data-decision-card] button');
+      await waitFor(
+        browser,
+        `!!document.querySelector('#config-form') && !document.querySelector('#res-form')`,
+      );
+    },
+  );
+
   await step('dropping the scope filter leaves real-time sync as the only reason', async () => {
-    // The settings are open from the decision card.
+    // The settings are open from the decision card; the hand-off goes back in.
+    await browser.click('#config-form input[name="workItems"][value="fallback"]');
     await browser.click('#config-form input[name="workItems"][value="scope"]');
     assert.ok((await innerText('[data-checks]')).includes(text('开发 6 人日', '6 person-days')));
     await browser.submit('#config-form');
@@ -343,7 +382,7 @@ try {
       async () => {
         await waitFor(browser, `!document.querySelector('.product-bar [data-config-use]')`);
         assert.ok(
-          (await innerText('.product-bar .pb-state')).startsWith(text('配置 v2', 'Config v2')),
+          (await innerText('.product-bar .pb-state')).startsWith(text('配置 v3', 'Config v3')),
         );
         await shot('bar-funded');
         const answer = await runTest();
@@ -359,10 +398,13 @@ try {
     const lines = await browser.ev(
       `[...document.querySelectorAll('.business-decisions p')].map((p) => p.textContent)`,
     );
-    // Each request once, with its latest decision: 7 and 6 declined, then 6 approved.
+    // Each request once with its latest decision, in the order they were made: 7, 6 and 7
+    // declined, then 6 approved.
+    const declined7 = text('开发人日：申请 7 · 未批准', 'Developer-days: requested 7 · declined');
     const decided = [
-      text('开发人日：申请 7 · 未批准', 'Developer-days: requested 7 · declined'),
+      declined7,
       text('开发人日：申请 6 · 未批准', 'Developer-days: requested 6 · declined'),
+      declined7,
       ...(full
         ? [text('开发人日：申请 6 · 已批准 6', 'Developer-days: requested 6 · approved 6')]
         : []),
@@ -371,7 +413,7 @@ try {
       lines[0],
       text('已记录的业务决定（规则核实）：', 'Recorded business decisions (rule checked): '),
     );
-    assert.deepEqual(lines.slice(1).sort(), decided.sort());
+    assert.deepEqual(lines.slice(1), decided);
     await shot('feedback');
     await focusShot('.business-decisions', 'feedback-decisions');
   });
