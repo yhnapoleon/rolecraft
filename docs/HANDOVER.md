@@ -5,7 +5,7 @@
 ## 起服务
 
 - 一个 checkout 一套环境：`uv sync --locked` 建 `.venv`，`apps/web` 里 `npm ci`。需要编码器时另建环境：`UV_PROJECT_ENVIRONMENT=<另一目录> uv sync --locked --extra encoder`，默认 `.venv` 不装 torch。
-- 三个进程：API（`career-lab serve`，下文用端口 18562；不加 `--port` 时是 8000）、worker（`career-lab worker`）、前端（`npm run preview` 或 `npm run dev`，下文用端口 18560，`ROLECRAFT_API_TARGET` 指向 API）。完整命令见下面的[启动工作台](#启动工作台)。
+- 三个进程：API（`career-lab serve`，下文用端口 18562；不加 `--port` 时是 8000）、worker（`career-lab worker`）、前端（`npm run preview` 或 `npm run dev`，下文用端口 18560；不加 `--port` 时 dev 是 5173、preview 是 4173）。前端经 `/api` 代理到 API，必须设 `ROLECRAFT_API_TARGET`，不设时代理指向 8502，和 serve 的缺省端口对不上。完整命令见下面的[启动工作台](#启动工作台)。
 - API 与 worker 共用同一数据库、`CAREER_LAB_SCENARIO_CATALOG`（不设只有中文主场景）、`CAREER_LAB_SCENARIO_ARCHIVE`、凭据密钥（`CAREER_LAB_CREDENTIAL_KEY_ID`、`CAREER_LAB_CREDENTIAL_KEY`）与模型配置。改任何一项两个都重启。
 - 凭据密钥没有缺省值：`CAREER_LAB_CREDENTIAL_KEY_ID`（1–64 位字母、数字、`_` 或 `-`）与 `CAREER_LAB_CREDENTIAL_KEY`（至少 32 字节）缺一或不合格时，服务照常启动、能新建练习，但创建 Agent 授权、开始补练、生成和使用继续码都返回 503 `credential_derivation_unavailable`。继续码的校验值用这把密钥计算，换密钥或密钥 ID 会让全部继续码失效（见[找回练习](#找回练习继续码)）。
 - 新 SQLite 库先启动 API，初始化完成后再启动 worker。验收用新数据库与新端口；并行的几条工作线各用自己的端口。
@@ -53,7 +53,7 @@
 
 ## 学员的 Agent 怎样连接（MCP）
 
-学员在 Agent 面板创建授权后，连接卡给出端点和 Claude Code、Codex 各一条命令，不需要安装本项目的 Python 包。令牌不在页面上明文显示（命令里是 `••••••`），只在这一页的内存里，复制或下载时才取出；点“完成”、离开练习（含切换到别的练习、关闭或刷新页面）、到期或撤销后清除，在别处撤销的，下次读取授权记录时清除。
+学员在 Agent 面板创建授权后，连接卡给出端点和 Claude Code、Codex 各一条命令，不需要安装本项目的 Python 包。令牌不在页面上明文显示（命令里是 `••••••`），只在这一页的内存里，复制或下载时才取出；只有点复制而浏览器拒绝写剪贴板时，才在卡内只读文本框里显示要复制的整段（含令牌）供手动选中。点“完成”、离开练习（含切换到别的练习、关闭或刷新页面）、到期或撤销后清除，在别处撤销的，下次读取授权记录时清除。
 
 - **端点**：`POST <前端>/api/sessions/<session_id>/mcp`（经前端代理，连接卡用这个），或直连 `<API>/sessions/<session_id>/mcp`。实现在 `src/career_lab/mcp/streamable_http.py`，由 `mount_delegations` 挂载，不进公开 OpenAPI 契约。
 - **协议**：MCP 2026-07-28（每个请求带 `_meta` 版本，HTTP 头 `MCP-Protocol-Version`、`Mcp-Method` 与 `tools/call` 的 `Mcp-Name` 须与请求体一致）和 2025-11-25（先 `initialize`，之后每个请求带 `MCP-Protocol-Version: 2025-11-25`）。只回 JSON，不发会话号、不开 SSE；GET、DELETE 回 405。
@@ -67,7 +67,7 @@
   - Codex：`ROLECRAFT_MCP_TOKEN='<令牌>' codex -c 'mcp_servers.rolecraft={ url = "<端点>", bearer_token_env_var = "ROLECRAFT_MCP_TOKEN" }'`（在这个终端启动已连好的 Codex，不写配置文件）。
   - Codex 桌面版和其他客户端：在 `~/.codex/config.toml` 的 `[mcp_servers.rolecraft]` 写 `url` 与 `http_headers = { Authorization = "Bearer <令牌>" }`；其他支持 Streamable HTTP 的客户端同样填端点和这个请求头。
   - 本机 Python 方式仍可用：下载的配置文件先 `chmod 600`，再 `python -m career_lab.mcp --config <文件>`。加载器只接受本人所有、组和其他用户没有任何权限的普通文件，否则退出并在 stderr 打印 `mcp_configuration_or_transport_unavailable`；浏览器保存的下载文件一般是 644，所以这一步不能省。
-- **测试**：`tests/integration/test_mcp_streamable_http.py`（协议两代、认证、跨会话、浏览器来源、头体校验、限流、日志）、`tests/e2e/test_mcp_http_live.py`（真实 `career-lab serve` 进程，中英）、`scripts/regression/mcp.py` 的 `exercise_http`（完整门禁经前端代理跑中英）、`apps/web/tests/regression/mcp-connection.mjs`（连接卡到回传作品、撤销）。这些都用脚本化 HTTP 客户端，不运行真实的 Claude Code 或 Codex。真实客户端只手工测过：2026-10-15 用 Claude Code 2.1.296（`claude -p` 加 `--mcp-config`）中英各走一轮，列工具、读委托与资料、回传作品都通过；新运行时协商 2026-07-28，设 `MCP_SDK_GENERATION=v1` 走 2025-11-25，也通过；含点号的工具名在客户端显示为下划线（如 `mcp__rolecraft__work_products_create`），调用时换回原名；撤销后在连接阶段报 `AUTH_HEADER_REJECTED`，带 `credential_revoked_or_invalid`。Codex 与其他客户端没有实测。经过见回执「164 真实 Claude Code MCP 往返」（项目本地，见[依据文档](#依据文档)）。
+- **测试**：`tests/integration/test_mcp_streamable_http.py`（协议两代、认证、跨会话、浏览器来源、头体校验、限流、日志）、`tests/e2e/test_mcp_http_live.py`（真实 `career-lab serve` 进程，中英）、`scripts/regression/mcp.py` 的 `exercise_http`（完整门禁经前端代理跑中英）、`apps/web/tests/regression/mcp-connection.mjs`（连接卡到回传作品、撤销）。这些都用脚本化 HTTP 客户端，不运行真实的 Claude Code 或 Codex。真实客户端只手工测过：2026-10-15 用 Claude Code 2.1.296（`claude -p` 加 `--mcp-config`）中英各走一轮，新运行时协商 2026-07-28，列工具、读委托与资料、回传作品都通过；另设 `MCP_SDK_GENERATION=v1` 强制 2025-11-25 补走一轮，只核了握手、列工具与 `materials.list`，都通过，读委托与回传作品只在 2026-07-28 下用真实客户端走过；含点号的工具名在客户端显示为下划线（如 `mcp__rolecraft__work_products_create`），调用时换回原名；撤销后在连接阶段报 `AUTH_HEADER_REJECTED`，带 `credential_revoked_or_invalid`。Codex 与其他客户端经这个 HTTP 端点没有实测（stdio 方式的官方 Codex 检查见 [W06](modules/expansion-v3/W06.md#官方codex客户端验证与配置)）。经过见回执「164 真实 Claude Code MCP 往返」（项目本地，见[依据文档](#依据文档)）。
 - **结果体积**：`observation` 与 `tools` 两个工具的结果目前各 12 万字符以上，超过 Claude Code 单次 5 万字符的上限，会被转存成本地文件，Agent 要有读文件或本机命令权限才看得到（见[后续清单](#mcp-结果过大)）。
 
 ## 没有负责方产物时怎样演示模型建议
@@ -136,12 +136,12 @@ CHROME_BIN=<chrome-headless-shell> uv run --locked python -m scripts.regression.
 - `run` 依次跑 lint、后端全部测试（junit）、前端 Vitest、72 项状态回归、构建、逐 ID 比较（含发布字节保护），`--browser` 再跑 MCP 双语（stdio 与 Streamable HTTP）与中英 published-flows（固定用缺省端口 19660／19662）。下面说的输出目录指浏览器这一步的目录：`run --browser` 时是 `$OUT/browser/`，单独调用 `scripts.regression.browser` 时是它的 `--output`。published-flows 全程模拟「减少动效」，之后同一套服务再跑一轮默认动效的 `default-motion`（中英：打开委托、返回、打开资料、返回、再打开另一份资料，每步限时求值并核对标题），结果在输出目录的 `default-motion.json`。单独调用 `scripts.regression.browser` 时可用 `--web-port`／`--api-port` 换端口；model-flows 紧跟在 `run --browser` 之后，所以换用 19770／19772，刚释放的 19660／19662 可能还没回收，启动前的端口检查会报 `Address already in use`。机器设了系统 HTTP 代理时，先设 `NO_PROXY=127.0.0.1,localhost`，否则就绪检查会把回环请求交给代理。
 - model-flows 默认三段：`linear`、`fusion`、`slots`（回环 JUDGE 与 ASSISTANT 槽）。可选段需 encoder 环境：`UV_PROJECT_ENVIRONMENT=<encoder 环境> uv run --locked --extra encoder python -m scripts.regression.browser --suite model-flows --phases encoder hetero --output <新目录>`；`xlmr` 段另需 `ROLECRAFT_XLMR_DIR` 指向本机下载的 XLM-R base（权重放仓库与云盘之外，登记只能是合成机制）。
 - published-flows 套件在启动服务前先跑交付前预演卡的真实 DOM 组件检查（`apps/web/src/features/feedback-native/presubmit.vitest.config.ts`：受控页，自起开发服务，任选空闲端口），在 published-flows 之后用同一套服务再跑一轮 `presubmit-flows`（中英，减少动效：新练习直接交付后，反馈页只在规则已定论的未满足项下出"交付时"行；预演卡的位置、计数、措辞、直达、按配置版本的措辞、重开记忆，以及与正式反馈一致），结果与截图在输出目录的 `presubmit-flows/`。最后再跑一轮 `practice-recovery`（中文减少动效、英文默认动效，不点资料卡）：⋯ 生成继续码，另一浏览器档案先遇错码提示再找回同一工作板、不把带来的回复当新消息，换码后旧码被拒，原浏览器输入自己的码只切换过去；结果在输出目录的 `practice-recovery.json` 与 `practice-recovery/`。
-- 不在 `run --browser` 里的浏览器检查，改到相关界面时自己跑：
+- PR #50、#53、#54 新增、不在 `run --browser` 里的浏览器检查，改到相关界面时自己跑（其余组件检查如 `apps/web/src/features/*/*.browser.mjs`、`apps/web/tests/regression/*.browser.mjs` 的跑法见各自文件头和模块文档）：
   - `qa-polish`：PR #50 那批界面打磨的逐项检查（检查名是 QA 走查的问题编号 F03–F31），自起自停服务：`CHROME_BIN=<chrome-headless-shell> uv run --locked python -m scripts.regression.browser --suite qa-polish --web-port <端口> --api-port <端口> --output <新目录>`。`QA_CHECKS=F03,F04` 只跑指定项，`QA_MOTION=default` 改用默认动效。
   - 配置与审批（`apps/web/src/features/roles-native/config-approval.browser.mjs`）和依据选择器（`apps/web/tests/regression/evidence-picker.browser.mjs`）不自起服务：先按[启动工作台](#启动工作台)用新库、新端口起一套，再在 `apps/web` 里运行 `CHROME_BIN=<chrome-headless-shell> node src/features/roles-native/config-approval.browser.mjs <前端地址> <新目录> <zh|en> [default]`（中英各跑一次；第四个参数 `default` 改用默认动效，只走设置、申请与交付后的反馈），以及 `CHROME_BIN=<chrome-headless-shell> BASE=<前端地址> OUT=<新目录> node tests/regression/evidence-picker.browser.mjs`（缺省跑中英 × 减少／默认动效 × 主流程与调查工作纸；`LANGS`、`MOTION`、`FLOWS`、`WIDTH` 可缩小范围）。
 - 可选 encoder 检查：`HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 <encoder 环境>/bin/python -m pytest -q tests/optional_encoder/check_encoder_v3.py tests/optional_encoder/check_local_encoder.py tests/optional_encoder/check_fusion_registration.py tests/optional_encoder/check_return_v3_plugin.py tests/optional_encoder/check_xlmr_smoke.py`（最后一个需要 `ROLECRAFT_XLMR_DIR` 指向下载的 XLM-R 目录，共 34 项；`check_return_v3_plugin.py` 的 11 项按负责方的用法跑 v3 补充包的编码器参考脚本：`predict` 行经 `verify-return` 重载一致、弃权与我方加载器相同、`seal` 的 `artifact_roles` 过 validate-handoff、序列分类模型的保存配方）；XLM-R 冒烟为 `<encoder 环境>/bin/python -m scripts.smoke.xlmr_base --model-dir <目录> --revision <40 位> --out <新目录>`。这些只证明加载与机制，不是质量证据。
 - **锁**：门禁对 CPU 负载与端口敏感。本机约定先对机器上登记的同一个锁文件取 `fcntl.flock` 独占锁再跑（macOS 没有 `flock` 命令），例如 `python3 -c 'import fcntl, subprocess, sys; f = open(sys.argv[1], "a"); fcntl.flock(f, fcntl.LOCK_EX); sys.exit(subprocess.call(sys.argv[2:]))' "$GATE_LOCK" sh -c '<上面三行>'`。排队时不另起第二套。
-- **基线**：`tests/regression/test-baseline.json` 是逐 ID 基线，只追加、不删改；新测试 ID 在全部合入后由收口线一次追加，并在提交说明里列来源与数量。平台差异只写进 `test-baseline-overrides.json`，每条带原因。
+- **基线**：`tests/regression/test-baseline.json` 是逐 ID 基线，只追加、不删改；新测试 ID 在一批 PR 全部合入后，按最终门禁的报告一次追加，并在提交说明里列来源与数量。平台差异只写进 `test-baseline-overrides.json`，每条带原因。
 - CI 在 PR 与 push main 时跑核心门禁（不含浏览器），不拦合并；合并证据以本机完整门禁为准，合入树须与门禁跑过的树相同。
 
 ## 契约重导出与重签
@@ -154,7 +154,7 @@ CHROME_BIN=<chrome-headless-shell> uv run --locked python -m scripts.regression.
 - `storage/` 的 `v2_tables.py`、`v2_store.py`、`v2_jobs.py`、`v2_snapshot.py`、`v2_lifecycle.py`、`v2_remap.py`、`object_plans.py`、`reference_graph.py`、`record_invariants.py`；
 - 手写文档 `docs/contracts/expansion-v3/` 的 `compatibility.md`、`module-interfaces.md`、`consumer-request-resolution.json`（以文档指纹记录）。
 
-改这些文件就要重导出，只由获准改契约的线做，其他线不碰；同一波有几条获准的线时依次合入，每条在自己的分支里重导出。步骤：
+改这些文件就要重导出，只由获准改契约的分支做，其他分支不碰；同一批有几个这样的分支时依次合入，每个分支在自己那里重导出。步骤：
 
 1. 在 `src/career_lab/contracts/v2/manifest_history.py` 的 `MANIFEST_HISTORY` 末尾追加一条：`previous_contract_revision` 写当前 `revision.txt` 的值，`integration_changes` 用新键写清变化。旧记录一字不改。
 2. 指纹范围新增文件时，`export.py` 的 `_implementation_files` 与 `tests/contracts/expansion_v3/test_export_reproducible.py` 的 `IMPLEMENTATION_INPUTS` 同步加入。
@@ -183,7 +183,7 @@ $PY -m scripts.regression.release_identity --refresh
 $PY -m scripts.regression.release_identity --check            # 0 problems
 ```
 
-`--refresh` 按当前字节重算全部受保护文件，会把意外改动一并签进去，所以先 `--check` 看清变化。`tests/contracts/expansion_v3/test_freeze.py` 核对 schema、examples、OpenAPI 与冻结一致，`test_export_reproducible.py` 核对导出确定、发布历史保留与受保护字节不变。随后跑 check-fast 与完整门禁。`main` 在合入前前进时（例如同一波另一条契约线先合入），先合入 `main`，把本线那条还没进 `main` 的历史记录的 `previous_contract_revision` 改为 `main` 当时的 `revision.txt`，再重导出；已进 `main` 的记录一字不改。
+`--refresh` 按当前字节重算全部受保护文件，会把意外改动一并签进去，所以先 `--check` 看清变化。`tests/contracts/expansion_v3/test_freeze.py` 核对 schema、examples、OpenAPI 与冻结一致，`test_export_reproducible.py` 核对导出确定、发布历史保留与受保护字节不变。随后跑 check-fast 与完整门禁。`main` 在合入前前进时（例如同一批里另一个改契约的分支先合入），先把 `main` 合进本分支，把本分支那条还没进 `main` 的历史记录的 `previous_contract_revision` 改为 `main` 当时的 `revision.txt`，再重导出；已进 `main` 的记录一字不改。
 
 ## 生成文件，不手改
 
@@ -229,8 +229,8 @@ $PY -m scripts.regression.release_identity --check            # 0 problems
 
 ### MCP 结果过大
 
-- **现象**：经 MCP 调 `tools` 返回 122,076 字符，`observation` 返回 12.4–13 万字符（可见资料片段越多越大；2026-10-15 实测），都超过 Claude Code 单次 5 万字符的上限，被转存成本地文件，Agent 只拿到文件路径，要用读文件工具或本机命令（如 `jq`）去翻；权限收紧时就看不到。服务端说明要求 Agent 先读 `observation`，所以每个 Agent 第一步就会碰到。
-- **根因**：`observation` 内嵌完整工具清单（40 个工具的全部参数结构，其中 34 个经 MCP 可用，约 12.2 万字符，占九成以上），`tools` 工具返回的也是这一份；两者都和 MCP 的 `tools/list` 重复。代码在 `src/career_lab/api/delegations_v2.py`（`tools`、`observation` 两个读操作都用 `ToolService.catalogue`）。
+- **现象**：经 MCP 调 `tools` 返回 122,076 字符，`observation` 返回 127,424 与 129,632 字符（2026-10-15 真实客户端中英两轮实测；可见资料片段越多越大），都超过 Claude Code 单次 5 万字符的上限，被转存成本地文件，Agent 只拿到文件路径，要用读文件工具或本机命令（如 `jq`）去翻；权限收紧时就看不到。服务端说明要求 Agent 先读 `observation`，所以每个 Agent 第一步就会碰到。
+- **根因**：`observation` 内嵌完整工具清单（40 个工具的全部参数结构，约 12.2 万字符，占九成以上；在“读取与操作、整个工作区”的授权下其中 34 个可用，可用数随授权范围变），`tools` 工具返回的也是这一份；两者都和 MCP 的 `tools/list` 重复。代码在 `src/career_lab/api/delegations_v2.py`（`tools`、`observation` 两个读操作都用 `ToolService.catalogue`）。
 - **建议**：只改 MCP 层，公开契约不动：经 MCP 返回 `observation` 时把工具清单换成精简清单（名称、是否可用、不可用原因）或去掉，`tools` 工具同样改成精简清单或不在 MCP 里列出；门禁加一条两者经 MCP 的结果都在 2 万字符以内。不靠 `_meta["anthropic/maxResultSizeChars"]` 放宽上限，那样每次会多塞 3 万以上 token 进上下文。
 
 ## 依据文档
