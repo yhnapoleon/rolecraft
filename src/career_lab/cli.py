@@ -95,6 +95,9 @@ def main(argv: list[str] | None = None) -> int:
             # The worker makes the model calls. Serve's stderr stays the whitelisted HTTP log.
             for line in app.state.model_slots.describe():
                 print(line, file=sys.stderr)
+            from career_lab.recognition.registry import print_status
+
+            print_status(sys.stderr)
         if args.command == "serve":
             import uvicorn
 

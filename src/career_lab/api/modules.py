@@ -105,6 +105,9 @@ PUBLIC_OPERATIONS = {
     "tools",
     "delegations.create",
     "delegations.revoke",
+    # Recognition layer reads (demo edition, contract not re-exported).
+    "recognition.read",
+    "behavior.read",
 }
 
 

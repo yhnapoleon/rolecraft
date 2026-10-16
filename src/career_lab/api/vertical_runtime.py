@@ -102,6 +102,9 @@ def build_registry(
         store_provider=store_provider,
         scenario_resolver=catalog.resolve,
     )
+    from career_lab.recognition.provenance import install_recognition_reads
+
+    install_recognition_reads(registry, scenario_resolver=catalog.resolve)
     return registry, module
 
 

@@ -49,6 +49,8 @@ from career_lab.storage.v2_store import (
 )
 
 from .engine import ScenarioEngine, ScenarioSnapshot
+from career_lab.recognition.assistant import with_drift
+from career_lab.recognition.registry import root as recognizer_root
 from .loader import load_package
 from .localization import text as localized_text
 from .policy import evaluate_request
@@ -503,7 +505,9 @@ class ScenarioModule:
             command.request_id,
             operation_name=command.operation,
             generation_permitted=generation_permitted,
+            recognize=recognition_enabled(),
         )
+        run = with_drift(self.package, view, run)
         for ref in run.result.citations:
             self.check_evidence(view, auth, ref)
         return result_plan(self, run)
@@ -645,3 +649,8 @@ class ScenarioModule:
             registry.register(operation)
         install_generation(registry, self)
         return registry
+
+
+def recognition_enabled() -> bool:
+    """Learner tests go through the recognition layer only when it is configured."""
+    return recognizer_root() is not None

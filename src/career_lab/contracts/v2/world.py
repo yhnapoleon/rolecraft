@@ -5,6 +5,7 @@ from pydantic import Field, JsonValue, model_validator
 from .core import *
 from .core import V2, EvidenceRefV2, Identifier, NonNegativeInt
 from .provider import ProviderMessage
+from .recognition import RecognitionRecord
 
 
 class DisclosurePolicy(V2):
@@ -159,6 +160,10 @@ class TestResultV2(V2):
     declared_expected: str | None = None
     observed_coverage: tuple[str, ...] = ()
     error_code: str | None = None
+    # Scope / retrieval / drift recognizer records for this test (demo edition).
+    recognition: tuple[RecognitionRecord, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
 
 class ScenarioBundle(V2):

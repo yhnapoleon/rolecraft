@@ -35,6 +35,8 @@ ROUTES = [
     ("GET", "/tools", "tools"),
     ("POST", "/delegations", "delegations.create"),
     ("DELETE", "/delegations/{delegation_id}", "delegations.revoke"),
+    ("GET", "/recognition", "recognition.read"),
+    ("GET", "/behavior", "behavior.read"),
 ]
 
 

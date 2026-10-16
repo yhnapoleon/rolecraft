@@ -131,6 +131,7 @@ class Assistant:
         now=None,
         operation_name="test_assistant",
         generation_permitted: bool = False,
+        recognize: bool = False,
     ):
         engine = ScenarioEngine(self.package)
         engine.authorize(auth, snapshot, operation_name)
@@ -188,6 +189,7 @@ class Assistant:
             workflow[1] if workflow else request.query, getattr(self.package, "locale", "zh")
         )
         scored = []
+        coverage = {}
         for candidate in candidates:
             candidate_terms = meaningful_tokens(
                 candidate.text, getattr(self.package, "locale", "zh")
@@ -200,9 +202,38 @@ class Assistant:
             overlap = query_terms & candidate_terms
             # Normalized query coverage avoids a shared "如何" returning every FAQ.
             score = len(overlap) / max(1, len(query_terms))
+            coverage[candidate.id] = score if overlap else 0.0
             if overlap and score >= tuning.min_score:
                 scored.append((score, candidate))
         scored.sort(key=lambda x: (-x[0], x[1].id))
+        recognition = []
+        scope_label = None
+        if recognize:
+            # Recognition layer (learner tests only): C2 re-ranks what passes the gate,
+            # C4 decides whether the question is in the assistant's domain at all.
+            from career_lab.recognition import assistant as recognizers
+
+            early = VersionPoint(
+                business_seq=snapshot.world.business_seq,
+                workspace_revision=snapshot.world.workspace_revision,
+                storage_revision=snapshot.world.storage_revision,
+            )
+            scope_label, scope_record = recognizers.scope_check(
+                self.package, request.query, cfg, rule_hit=bool(scored), as_of=early
+            )
+            scored, retrieval_record = recognizers.rerank(
+                request.query,
+                candidates,
+                scored,
+                as_of=early,
+                coverage=coverage,
+                min_score=tuning.min_score,
+                language=getattr(self.package, "locale", "zh"),
+                allow_dense=workflow is None,
+            )
+            recognition = [scope_record, retrieval_record]
+            if scope_record.fallback:
+                scope_label = None
         selected = []
         status = "fallback"
         code = None
@@ -227,6 +258,8 @@ class Assistant:
         )
         if custom_prohibited or (workflow is None and (prohibited or credential_value_request)):
             code = "prohibited_topic"
+        elif scope_label == "out" and workflow is None:
+            code = "outside_scope_ood"
         elif not scored:
             code = "no_retrieval_hit"
         else:
@@ -364,6 +397,7 @@ class Assistant:
             declared_expected=request.declared_expected,
             observed_coverage=tuple(sorted({c.domain for c in selected})),
             error_code=code,
+            recognition=tuple(recognition) if recognize else None,
         )
         source_visible = {
             m.id

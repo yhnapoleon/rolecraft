@@ -117,6 +117,7 @@ MESSAGES = {
         "prohibited_topic": "该主题禁止自动回答，请向授权负责人核验。",
         "outside_scope": "该问题超出当前开放知识范围，请转人工核验。",
         "no_retrieval_hit": "未检索到可靠依据，请转人工核验。",
+        "outside_scope_ood": "范围检测判定该问题不在知识库服务范围内，请转人工处理。",
         "manual_verification_required": "该知识域需要人工核验，当前未作自动回答。",
         "stale_source_guard": "索引与源版本不一致，新鲜度守卫已阻止自动回答。",
         "no_fallback": "当前无法可靠自动回答，且人工兜底尚未生效。",

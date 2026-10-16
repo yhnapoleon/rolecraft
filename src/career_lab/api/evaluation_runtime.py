@@ -296,22 +296,35 @@ def create_feedback_handler(
             rule_provider=source.rules,
             submission_rule_provider=source.submission_rules,
         )
+        from career_lab.recognition import registry as recognizers
+
+        recognizing = recognizers.root() is not None
+        verifier = EvidenceSupportVerifier(
+            OncePerInputModel(support) if support is not None else None,
+            input_bytes=support_bytes,
+        )
+        if recognizing:
+            # SUPPORT slot: recognizers check support first, the LLM only when undecided.
+            from career_lab.recognition.judge import RecognizerSupportVerifier
+
+            verifier = RecognizerSupportVerifier(verifier)
         engine = (
-            FeedbackEngine(
-                AdvisoryJudge(
-                    OncePerInputModel(judge),
-                    EvidenceSupportVerifier(
-                        OncePerInputModel(support) if support is not None else None,
-                        input_bytes=support_bytes,
-                    ),
-                    input_bytes=judge_bytes,
-                )
-            )
+            FeedbackEngine(AdvisoryJudge(OncePerInputModel(judge), verifier, input_bytes=judge_bytes))
             if judge is not None
             else FeedbackEngine()
         )
         if engine_factory is not None:
             engine = engine_factory.create(engine, envelope)
+        if recognizing:
+            from career_lab.recognition.judge import RecognitionFeedback
+
+            engine = RecognitionFeedback(
+                engine,
+                view=view,
+                auth=auth,
+                verifier=verifier if judge is not None else None,
+                language=module.work_language,
+            )
         subject = C.FeedbackInput.model_validate(envelope.command.payload).subject
         if subject.kind == "submission":
             submitted = C.SubmissionV2.model_validate(view.get(subject).content)
@@ -390,6 +403,8 @@ class SubmissionRuleChecks:
         )
         rule_items, packages = evaluator.rule_items(auth, submission)
         runs = source.test_runs(auth, submission.as_of) if packages else ()
+        from career_lab.recognition.judge import preview
+
         return C.SubmissionRuleCheck(
             basis=basis,
             session_id=auth.session_id,
@@ -402,6 +417,7 @@ class SubmissionRuleChecks:
             work_language=self.module.work_language,
             rule_items=rule_items,
             facts=rule_check_facts(packages, runs),
+            recognition=preview(packages, self.module.work_language) if packages else None,
         )
 
 

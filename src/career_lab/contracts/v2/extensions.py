@@ -173,6 +173,9 @@ class SubmissionRuleCheck(V2):
     work_language: Literal["zh", "en"]
     rule_items: tuple[FeedbackItem, ...]
     facts: _RuleCheckFacts = _RuleCheckFacts()
+    # Recognition layer (demo edition, contract not re-exported): C1 sentence labels of the
+    # work for the writing-area preview; see recognition.judge.preview.
+    recognition: dict[str, JsonValue] | None = None
 
     @model_validator(mode="after")
     def saved_names_its_submission(self):

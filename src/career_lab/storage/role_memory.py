@@ -24,6 +24,7 @@ from career_lab.contracts.v2 import (
     PositiveInt,
     ProtocolError,
     ProviderMessage,
+    RecognitionRecord,
     RoleContext,
     TurnInput,
     VersionPoint,
@@ -78,6 +79,10 @@ class RoleReply(V2):
 
     # The actual generator for this reply, never inferred from current configuration.
     generation_mode: Literal["local", "model"] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    # Intent and reply-grounding recognizer records (demo edition).
+    recognition: tuple[RecognitionRecord, ...] | None = Field(
         default=None, exclude_if=lambda value: value is None
     )
 

@@ -8,3 +8,4 @@ from .requests import *
 from .legacy import *
 from .provider import *
 from .extensions import *
+from .recognition import *
