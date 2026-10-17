@@ -1,0 +1,9 @@
+{
+  "description": "C6 cost matrix: decide[d][y] is the cost of deciding d when the truth is y. Wrongly deducting (deciding contradicted) costs 3, wrongly passing costs 1, sending to a person costs 0.5.",
+  "decide": {
+    "supported": {"supported": 0, "contradicted": 1, "insufficient": 1},
+    "contradicted": {"supported": 3, "contradicted": 0, "insufficient": 3},
+    "insufficient": {"supported": 0.5, "contradicted": 1, "insufficient": 0}
+  },
+  "defer": 0.5
+}

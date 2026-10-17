@@ -714,8 +714,12 @@ class ContextSnapshot:
         # A material that arrived with a later world change (e.g. a schedule notice) is
         # kept ahead of the initial materials it updates when the budget runs out.
         start = min((s.ref.observed_at_seq for s in rest), default=0)
-        ordered += [s for s in rest if s.ref.observed_at_seq > start]
-        ordered += [s for s in rest if s.ref.observed_at_seq <= start]
+        # Recognition layer (N3): inside each group, C2 relevance to the question decides
+        # the order; outside an active role recognition context this is the identity.
+        from career_lab.recognition.roles import rank
+
+        ordered += rank([s for s in rest if s.ref.observed_at_seq > start])
+        ordered += rank([s for s in rest if s.ref.observed_at_seq <= start])
         selected = []
         omitted = []
         used = 0
@@ -827,8 +831,15 @@ class ContextSnapshot:
             "pending_stance_proposals": len(self.stance_proposals),
             "omissions": {"budget": len(omitted), "learner_scope": self.permission_omissions(auth)},
         }
-        instructions = role_text(self.work_language, "instructions") + role_text(
-            self.work_language, "help_policy"
+        from career_lab.recognition.roles import learner_state_entry
+
+        learner_state, learner_guide = learner_state_entry(self.work_language)
+        if learner_state is not None:
+            payload["learner_state"] = learner_state
+        instructions = (
+            role_text(self.work_language, "instructions")
+            + role_text(self.work_language, "help_policy")
+            + learner_guide
         )
         messages = [
             {

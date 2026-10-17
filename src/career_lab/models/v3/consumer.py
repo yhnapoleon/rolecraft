@@ -241,7 +241,7 @@ class AdviceSource:
         for unit in plan.units:
             result, identity, load_error = self._judge(
                 unit,
-                sentence_input(item, unit.subject, unit.text),
+                _top_candidates(sentence_input(item, unit.subject, unit.text), unit.text),
                 unit_request_id(work_request, unit),
                 language,
                 load_error,
@@ -341,7 +341,47 @@ class AdviceSource:
         if public.status != "success" or public.probabilities is None:
             return invalid, recorded, load_error
         label = public.labels[max(range(len(public.labels)), key=lambda i: public.probabilities[i])]
-        return UnitResult(unit, "completed", label, public.evidence_ids), recorded, load_error
+        return (
+            UnitResult(
+                unit,
+                "completed",
+                label,
+                public.evidence_ids,
+                probabilities=tuple(float(p) for p in public.probabilities),
+            ),
+            recorded,
+            load_error,
+        )
+
+
+def _top_candidates(item: RelationInput, sentence: str, k: int = 5) -> RelationInput:
+    """C2 (recognition layer): only the sentence's top-k candidate units go to the encoder.
+
+    With ``CAREER_LAB_RECOGNIZERS`` unset the input is returned unchanged.
+    """
+    from career_lab.recognition import registry, retrieval
+
+    candidates = item.evidence.candidate_evidence
+    if registry.root() is None or len(candidates) <= k:
+        return item
+    hits, _, _ = retrieval.search(sentence, [c.text for c in candidates], k=k, method="rrf")
+    keep = {h.index for h in hits}
+    raw = item.evidence.model_dump(mode="json", exclude={"input_hash"})
+    raw["candidate_evidence"] = [
+        c.model_dump(mode="json") for i, c in enumerate(candidates) if i in keep
+    ]
+    context = dict(raw.get("rule_context") or {})
+    time_context = dict(context.get("evidence_time_context") or {})
+    if "validity_known_ids" in time_context:
+        kept = {c["id"] for c in raw["candidate_evidence"]}
+        time_context["validity_known_ids"] = [
+            i for i in time_context["validity_known_ids"] if i in kept
+        ]
+        context["evidence_time_context"] = time_context
+        raw["rule_context"] = context
+    return RelationInput(
+        evidence=EvidencePackageV2.model_validate(raw | {"input_hash": digest(raw)})
+    )
 
 
 def unit_request_id(work_request_id: str, unit: SupportUnit) -> str:
@@ -350,7 +390,7 @@ def unit_request_id(work_request_id: str, unit: SupportUnit) -> str:
 
 
 def _public_unit(row: UnitResult, candidates: dict[str, Any]) -> dict[str, Any]:
-    return {
+    public = {
         "index": row.unit.index,
         "subject": row.unit.subject,
         "unit_hash": row.unit.unit_hash,
@@ -360,6 +400,11 @@ def _public_unit(row: UnitResult, candidates: dict[str, Any]) -> dict[str, Any]:
         "citations": tuple(candidates[key].ref for key in row.evidence_ids),
         "reason_code": row.reason_code,
     }
+    if row.probabilities is not None and row.status == "completed":
+        names = ("supported", "contradicted", "insufficient")
+        public["probabilities"] = dict(zip(names, row.probabilities, strict=False))
+        public["confidence"] = max(row.probabilities)
+    return public
 
 
 # The journal records the historical public identity fields of the registration.

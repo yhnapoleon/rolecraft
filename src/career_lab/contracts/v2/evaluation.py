@@ -1,6 +1,7 @@
 from typing import Annotated, Literal
 
 from pydantic import Field, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 from . import provenance as _provenance
 from .core import *
@@ -15,6 +16,7 @@ from .core import (
     PositiveInt,
     VersionPoint,
 )
+from .recognition import RecognitionRecord as _RecognitionRecord  # not re-exported
 
 Applicability = Literal["applicable", "not_applicable", "undetermined"]
 CriterionLabel = Literal["MET", "PARTIAL", "NOT_MET", "INSUFFICIENT", "NOT_APPLICABLE"]
@@ -592,6 +594,11 @@ class _AdviceUnit(V2):
     evidence_ids: tuple[Identifier, ...] = ()
     citations: tuple[EvidenceRefV2, ...] = ()
     reason_code: Identifier | None = None
+    # Recognition layer (demo edition): the relation probabilities behind the label.
+    probabilities: SkipJsonSchema[dict[str, float] | None] = Field(
+        default=None, exclude_if=lambda v: v is None
+    )
+    confidence: SkipJsonSchema[float | None] = Field(default=None, exclude_if=lambda v: v is None)
 
     @model_validator(mode="after")
     def consistent(self) -> "_AdviceUnit":
@@ -746,6 +753,10 @@ class RegisteredModelAdvice(V2):
 
 class FeedbackV2(V2):
     model_advice: tuple[RegisteredModelAdvice, ...] | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
+    # Recognizer records that shaped this feedback (demo edition, contract not re-exported).
+    recognition: SkipJsonSchema[tuple[_RecognitionRecord, ...] | None] = Field(
         default=None, exclude_if=lambda value: value is None
     )
     provenance: _provenance.FeedbackProvenance | None = Field(

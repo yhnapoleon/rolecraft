@@ -67,6 +67,8 @@ class UnitResult:
     label: str | None = None
     evidence_ids: tuple[str, ...] = ()
     reason_code: str | None = None
+    # Relation probabilities (SUPPORTED, CONTRADICTED, INSUFFICIENT order) when known.
+    probabilities: tuple[float, ...] | None = None
 
 
 @dataclass(frozen=True)

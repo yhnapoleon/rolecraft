@@ -15,6 +15,9 @@ from .availability import unavailable, SAFE_REASON
 from .localization import message, validate_language, policy_description
 import re
 
+# Package budget when candidates are recognition units (C2).
+UNIT_MODEL_BYTES = 48000
+
 PURPOSES = {
     "draft": "exploration",
     "exploration": "exploration",
@@ -145,6 +148,12 @@ def model_input(item: EvidencePackageV2) -> dict:
         ],
         "rule_bound": item.rule_bound.model_dump(mode="json") if item.rule_bound else None,
         "completeness": item.completeness,
+        # Recognition summary (labels, confidences, sentence indices, evidence ids only).
+        **(
+            {"recognition": item.rule_context["recognition"]}
+            if "recognition" in item.rule_context
+            else {}
+        ),
     }
 
 
@@ -152,6 +161,13 @@ class EvidenceAssemblerV2:
     def __init__(self, reader: EvidenceReader, model_bytes: int = 16000, *, work_language="zh"):
         if model_bytes < 256:
             raise ValueError("model_bytes must be at least256")
+        from career_lab.recognition import registry as recognizers
+
+        # Recognition layer: sentence units carry more per-candidate overhead than whole
+        # materials, so the package budget grows (the Judge slot's own budget is 64 KB).
+        self.unitize = recognizers.root() is not None
+        if self.unitize:
+            model_bytes = max(model_bytes, UNIT_MODEL_BYTES)
         self.reader, self.model_bytes = reader, model_bytes
         self.work_language = validate_language(work_language)
 
@@ -416,6 +432,17 @@ class EvidenceAssemblerV2:
             raw["input_hash"] = digest(raw)
             return EvidencePackageV2.model_validate(raw)
 
+        if self.unitize:
+            # C2: materials, records and tests become sentence units; the work stays whole
+            # (it is the subject) and at most 80 units, ranked against the work, remain.
+            from career_lab.recognition.units import unitize_candidates
+
+            whole = {"e-" + digest(ref) for ref in subject_refs if ref is not None}
+            work = "\n\n".join(c.text for key, c in candidates.items() if key in whole)
+            candidates = {
+                c.id: c
+                for c in unitize_candidates(candidates.values(), keep_whole=whole, query=work)
+            }
         selected = []
         dropped = []
         for candidate in candidates.values():

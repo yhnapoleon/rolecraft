@@ -15,6 +15,10 @@ MESSAGES_EN = {
     "outside_scope": "This question is outside the currently enabled knowledge scope. Ask an authorized person to "
     "review it.",
     "no_retrieval_hit": "No sufficiently supported passage was retrieved. Please ask a person to check.",
+    "outside_scope_ood": (
+        "Scope detection found this question outside the knowledge base's service scope. "
+        "Please ask a person to handle it."
+    ),
     "manual_verification_required": "This knowledge domain requires human verification; no automatic answer was "
     "given.",
     "stale_source_guard": "The source and index versions differ. The freshness guard prevented an automatic answer.",
