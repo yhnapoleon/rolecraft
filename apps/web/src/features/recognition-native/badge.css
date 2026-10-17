@@ -1,0 +1,47 @@
+/* Recognition signature: one quiet line per recognizer call. Grey dashed = rule fallback. */
+.rc-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  margin: 6px 0 0;
+}
+.rc-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 18px;
+  padding: 1px 7px;
+  border-radius: 5px;
+  background: var(--accent-tint);
+  color: var(--ink-2);
+  font-size: 10.5px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  cursor: help;
+}
+.rc-badge::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  margin-right: 5px;
+  border-radius: 50%;
+  background: var(--p-assistant);
+  flex: none;
+}
+.rc-badge[data-fallback] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--ink-3);
+}
+.rc-badge[data-fallback]::before {
+  background: var(--ink-4);
+}
+.rc-summary {
+  margin: 4px 0 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.rc-summary strong {
+  color: var(--ink-2);
+  font-weight: 600;
+}

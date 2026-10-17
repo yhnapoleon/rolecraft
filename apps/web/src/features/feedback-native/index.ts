@@ -31,6 +31,7 @@ import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/
 import { readCatalog, referenceLabel, type ReferenceCatalog } from '../../reference-catalog';
 import type { EvidencePick } from '../../v4-host';
 import { EVIDENCE_KINDS, evidenceSummary } from '../../evidence-picker';
+import { type RecognitionRecord, renderBadges } from '../recognition-native/badge';
 
 export type SelectedProduct = Pick<
   WorkProductVersion,
@@ -48,6 +49,8 @@ type Item = {
 export type FeedbackSemanticStatus = 'waiting_for_model' | 'available' | 'pending' | 'failed';
 export type Report = {
   model_advice?: RegisteredAdvice[];
+  /** Recognizer records that shaped this feedback (relation, decision, arbiter, ...). */
+  recognition?: RecognitionRecord[];
   semantic_status?: FeedbackSemanticStatus;
   id: string;
   version: number;
@@ -722,6 +725,8 @@ export function mountNativeFeedback(
         ),
         el('p', itemDetail(item, lines.premises), 'rule-detail'),
       );
+      const signed = criterionRecords(report, item.criterion);
+      if (signed.length) section.append(renderBadges(doc, signed, language));
       // 164 F17: the versions behind an unmet item, from the same rules at submission.
       const fact = submissionFactLine(item, atSubmission, report.rule_items, language);
       if (fact) {
@@ -783,6 +788,8 @@ export function mountNativeFeedback(
       el('h3', T('理由与证据的支持关系', 'Support between reasoning and evidence')),
       evaluationModelLine(doc, report.provenance, language),
     );
+    const general = (report.recognition ?? []).filter((record) => !recordCriterion(record));
+    if (general.length) semantic.append(renderBadges(doc, general, language));
     const { advice } = feedbackSemanticPresentation(report, adapter.snapshot());
     if (!advice.length || report.model_advice !== undefined) {
       const block = el('div');
@@ -1066,3 +1073,13 @@ export function mountNativeFeedback(
 }
 
 export { mountNativeFeedback as mount };
+
+/** The criterion a recognition record speaks to (arbiter and criterion-level records). */
+function recordCriterion(record: RecognitionRecord): string | null {
+  const value = record.outputs?.criterion;
+  return typeof value === 'string' ? value : null;
+}
+
+function criterionRecords(report: Report, criterion: string): RecognitionRecord[] {
+  return (report.recognition ?? []).filter((record) => recordCriterion(record) === criterion);
+}

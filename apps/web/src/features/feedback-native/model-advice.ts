@@ -45,6 +45,8 @@ export type AdviceUnit = {
   evidence_ids: string[];
   citations: ObjectRef[];
   reason_code: string | null;
+  /** Recognition layer: the relation confidence behind the label (0..1), when recorded. */
+  confidence?: number | null;
 };
 export type AdviceCounts = Record<
   | 'supported'
@@ -253,6 +255,10 @@ function unit(value: unknown, sessionId: string): AdviceUnit {
     evidence_ids: evidence,
     citations: sources,
     reason_code: reason,
+    confidence:
+      typeof value.confidence === 'number' && Number.isFinite(value.confidence)
+        ? value.confidence
+        : null,
   };
 }
 const COUNTED = ['supported', 'contradicted', 'insufficient', 'abstained', 'failed'] as const;
@@ -667,6 +673,8 @@ export function updateRegisteredAdvice(
         const line = element('div', '');
         line.setAttribute('data-unit-line', '');
         line.append(marked('span', outcome, 'data-unit-result'));
+        if (adopted && unit.label && typeof unit.confidence === 'number')
+          line.append(marked('span', ` ${unit.confidence.toFixed(2)}`, 'data-unit-confidence'));
         if (adopted)
           for (const [index, source] of unit.citations.entries())
             line.append(reference(source, `${position}:${unit.index}:${index}:`));

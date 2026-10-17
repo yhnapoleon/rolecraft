@@ -23,6 +23,8 @@ import {
   assistantMark,
 } from './art.js';
 import * as Coach from './coach.js';
+import { badgesHtml, summaryText } from '../features/recognition-native/badge';
+import { behaviorHtml } from '../features/behavior-native/view';
 import {
   PRI,
   STATUS,
@@ -542,7 +544,7 @@ function announce(text) {
 const WS = ['work', 'task', 'doc', 'bench'];
 function parseRoute() {
   const [r, id] = location.hash.replace(/^#\/?/, '').split('/');
-  if (['pm', 'work', 'bench', 'review'].includes(r)) return { r, id: null };
+  if (['pm', 'work', 'bench', 'review', 'lab'].includes(r)) return { r, id: null };
   if ((r === 'task' || r === 'doc') && id) return { r, id: decodeURIComponent(id) };
   return { r: '', id: null };
 }
@@ -646,6 +648,7 @@ function render() {
   if (r === 'pm') app.innerHTML = banner + renderEntry();
   else if (WS.includes(ui.route) && current()) app.innerHTML = banner + renderWorkspace();
   else if (r === 'review' && current()) app.innerHTML = banner + renderReview();
+  else if (r === 'lab') app.innerHTML = banner + renderLab();
   else app.innerHTML = banner + renderCareers();
   afterRender();
   restoreFocus(key);
@@ -656,9 +659,30 @@ function mountNativeSlots() {
     productId: ui.obj?.type === 'work' ? ui.obj.id : null,
   });
 }
+function renderLab() {
+  const back = `<a class="btn quiet back" href="${current() ? '#/review' : '#/'}">${icon('back')}<span>${esc(current() ? T('交付与反馈', 'Submission and feedback') : T('首页', 'Home'))}</span></a>`;
+  return `${topbar(back)}<main id="main" class="page rc-lab" data-rc-lab tabindex="-1"></main>`;
+}
+function mountLabPage() {
+  const root = document.querySelector('[data-rc-lab]');
+  if (!root) return;
+  const a = current();
+  import('../features/recognition-lab/lab').then(({ mountLab }) =>
+    mountLab(root, {
+      language: locale(),
+      session: a && L.nativeWorkspace(a) ? () => L.recognition(a) : null,
+    }),
+  );
+}
 function afterRender() {
   refreshAgentIssued();
+  if (ui.route === 'lab') {
+    mountLabPage();
+    return;
+  }
   mountNativeSlots();
+  if (ui.route === 'review' && current() && L.nativeWorkspace(current()))
+    loadRecognitionSummary(current());
   // Only the workbench's own scroll regions move; browser focus must not shift
   // the entire fixed-height workspace (especially after viewport changes).
   if (WS.includes(ui.route) && window.scrollY) window.scrollTo(0, 0);
@@ -828,7 +852,7 @@ function renderCareers() {
           <div class="career-body">
             <h2 class="career-name"><span style="view-transition-name: career-pm">${T('AI 产品经理', 'AI Product Manager')}</span></h2>
             <p>${T('判断一个 AI 功能该不该上线、先给谁用、怎样保障，并为这个决定负责。', 'Decide whether an AI feature should launch, who gets it first and how it stays safe, then own the call.')}</p>
-            <p class="meta">${T('3 个情境，每次 20–30 分钟。上面是你会用到的工作板：三件起始事项和三位同事。', '3 situations, 20–30 min each. Above is the board you will work on: three starting tasks and three colleagues.')}</p>
+            <p class="meta">${T('4 个情境（含一个 IT 服务台领域），每次 20–30 分钟。上面是你会用到的工作板：三件起始事项和三位同事。', '4 situations (one in an IT service-desk domain), 20–30 min each. Above is the board you will work on: three starting tasks and three colleagues.')}</p>
             <div class="career-cta">${btn(a ? T('看看所有工作', 'See all work') : T('开始', 'Start'), 'open-career', a ? '' : 'primary large')}</div>
           </div>
         </article>
@@ -857,6 +881,10 @@ function renderEntry() {
       <section class="block">
         <h2 class="section-title">${T('同样的责任，换一个条件', 'Same job, one condition changed')}</h2>
         <div class="variants">${['urgent', 'capacity'].map((id) => variantCard(id, last(id))).join('')}</div>
+      </section>
+      <section class="block">
+        <h2 class="section-title">${T('同样的结构，换一个领域', 'Same structure, another domain')}</h2>
+        <div class="variants">${variantCard('itticket', last('itticket'))}</div>
       </section>
       <section class="block">${intakeBlock()}</section>
       ${recovery.entry()}
@@ -1917,7 +1945,7 @@ function runGroup(a, runs) {
           i,
         ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${i === 0 ? T('最新', 'Latest') : T('上一次', 'Previous')}</p>` : ''}
       <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${answerModeLine(x)}${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
-      <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T('政策源 v' + x.policyVersion + ' · 索引 v' + x.indexVersion, 'Policy v' + x.policyVersion + ' · index v' + x.indexVersion)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div></div>`,
+      <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T('政策源 v' + x.policyVersion + ' · 索引 v' + x.indexVersion, 'Policy v' + x.policyVersion + ' · index v' + x.indexVersion)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div>${badgesHtml(x.recognition, locale())}</div>`,
       )
       .join('')}</div>
     ${old(r) ? `<p class="flag">${icon('warn', 'i-sm')}${T('这次回答引用的版本已经不是最新。', 'This answer cites a version that is no longer current.')}</p>` : ''}
@@ -2309,7 +2337,7 @@ function renderReview() {
   if (current() && L.nativeWorkspace(current()))
     return `${topbar(backBtn('to-board', T('工作板', 'Board')))}
     <main id="main" class="page review" tabindex="-1">
-      <header class="review-hero"><div class="review-title"><p class="meta">${esc(CASE(current().scenarioId).title)}</p><h1 class="title-xl">${T('交付与反馈', 'Submission and feedback')}</h1></div></header>
+      <header class="review-hero"><div class="review-title"><p class="meta">${esc(CASE(current().scenarioId).title)}</p><h1 class="title-xl">${T('交付与反馈', 'Submission and feedback')}</h1>${recognitionSummary(current())}<a class="rc-lab-link" href="#/lab">${T('识别实验室：看每一步识别的中间结果 →', 'Recognition lab: see every recognition step →')}</a></div></header>
       <div class="review-grid">
         <div class="review-main" data-v4-feedback data-v4-region="feedback"></div>
         <aside class="review-side">
@@ -2321,6 +2349,7 @@ function renderReview() {
           <section class="review-practice" data-v4-practice aria-live="polite">
             ${practiceSection(current())}
           </section>
+          <section class="rc-behavior" data-rc-behavior aria-live="polite">${behaviorHtml(ui.behavior?.[current().id], locale())}</section>
         </aside>
       </div>
     </main>`;
@@ -2413,7 +2442,7 @@ function renderReview() {
         <aside class="review-side">
           <article class="paper deliverable">${stampMark(a)}<h2 class="paper-title">${T('你交付的内容', 'What you submitted')}</h2>${FIELDS.map((k) => `<section class="field-doc"><h3>${FIELD(k)}</h3>${content && content[k] ? `<div class="prose serif"${zhAttr(content[k])}>${md(content[k])}</div>` : `<p class="muted">${T('（空）', '(empty)')}</p>`}</section>`).join('')}</article>
           <section class="next"><h2 class="group-title">${T('接下来', 'Next')}</h2>
-            ${['pilot', 'urgent', 'capacity']
+            ${['pilot', 'urgent', 'capacity', 'itticket']
               .filter((id) => id !== a.scenarioId)
               .map(
                 (id) =>
@@ -2538,7 +2567,7 @@ function previewWork(a, id) {
 }
 // The visible condition change of a reviewed variant, from the same case texts the practice list shows.
 function practiceChange(optionId) {
-  const caseId = { pm_pilot_urgent: 'urgent', pm_pilot_capacity15: 'capacity' }[
+  const caseId = { pm_pilot_urgent: 'urgent', pm_pilot_capacity15: 'capacity', it_ticket_pilot: 'itticket' }[
     String(optionId).replace(/-(zh|en)$/, '')
   ];
   return caseId ? CASE(caseId).change || '' : '';
@@ -2548,6 +2577,35 @@ function practiceOriginNote(a) {
   if (!o) return '';
   const source = state.attempts.find((x) => x.id === o.sourceAttemptId);
   return `<p class="practice-origin">${icon('branch', 'i-sm')}<span class="grow">${esc((o.choice === 'choose_other' ? T('这是看过上一轮反馈后自选的练习：', 'Practice you picked after earlier feedback: ') : T('这是按上一轮反馈建议开始的补练：', 'Practice suggested by earlier feedback: ')) + (o.title || ''))}${o.criteria && o.criteria.length ? `<span class="meta"> · ${esc(o.criteria.map((c) => criterionLabels(locale())[c] || c).join(T('、', ', ')))}</span>` : ''}</span>${source ? btn(T('看原反馈', 'Original feedback'), 'review-attempt', 'small quiet', `data-id="${esc(source.id)}"`) : ''}</p>`;
+}
+/* recognition layer: one-line session summary on the review page */
+const recognitionReads = new Map();
+function recognitionSummary(a) {
+  const counts = ui.recognition?.[a?.id];
+  return `<p class="rc-summary" data-rc-summary>${counts ? esc(summaryText(counts, locale())) : ''}</p>`;
+}
+async function loadRecognitionSummary(a) {
+  const last = recognitionReads.get(a.id) ?? 0;
+  if (Date.now() - last < 3000) return;
+  recognitionReads.set(a.id, Date.now());
+  try {
+    const read = await L.recognition(a);
+    ui.recognition ||= {};
+    ui.recognition[a.id] = read.counts;
+    const box = document.querySelector('[data-rc-summary]');
+    if (box && current()?.id === a.id) box.textContent = summaryText(read.counts, locale());
+  } catch {
+    // The summary is an annotation; a failed read leaves the page as it was.
+  }
+  try {
+    const behavior = await L.behavior(a);
+    ui.behavior ||= {};
+    ui.behavior[a.id] = behavior;
+    const box = document.querySelector('[data-rc-behavior]');
+    if (box && current()?.id === a.id) box.innerHTML = behaviorHtml(behavior, locale());
+  } catch {
+    // Same: the behaviour section stays empty when the read fails.
+  }
 }
 const practiceReads = new Set();
 const practicePoints = new Map();

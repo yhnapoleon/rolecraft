@@ -1,0 +1,558 @@
+{
+  "n_train": 320,
+  "n_test": 80,
+  "strategies": [
+    "ask_heavy",
+    "policy_untested",
+    "request_first",
+    "revise_loop",
+    "rush",
+    "test_heavy",
+    "thorough",
+    "unread_request"
+  ],
+  "strategy": {
+    "dtw_1nn": {
+      "accuracy": 1.0,
+      "macro_f1": 1.0,
+      "confusion": [
+        [
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          10,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          10,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          10,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          10,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          10
+        ]
+      ],
+      "by_language": {
+        "zh": 1.0,
+        "en": 1.0
+      }
+    },
+    "edit_1nn": {
+      "accuracy": 1.0,
+      "macro_f1": 1.0,
+      "confusion": [
+        [
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          10,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          10,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          10,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          10,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          10
+        ]
+      ],
+      "by_language": {
+        "zh": 1.0,
+        "en": 1.0
+      }
+    },
+    "ngram_rf": {
+      "accuracy": 1.0,
+      "macro_f1": 1.0,
+      "confusion": [
+        [
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          10,
+          0,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          10,
+          0,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          10,
+          0,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          10,
+          0
+        ],
+        [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          10
+        ]
+      ],
+      "by_language": {
+        "zh": 1.0,
+        "en": 1.0
+      },
+      "oob_score": 1.0,
+      "top_features": [
+        [
+          "configure",
+          0.04343100312089751
+        ],
+        [
+          "read:policy",
+          0.03947106359059381
+        ],
+        [
+          "read:technical|configure",
+          0.030451598415687234
+        ],
+        [
+          "ask:tech_lead:ask_limit",
+          0.02255270675002779
+        ],
+        [
+          "read:technical",
+          0.02069688662908038
+        ],
+        [
+          "read:brief|read:policy|read:technical",
+          0.01971426064819765
+        ],
+        [
+          "event:demo_schedule_changed",
+          0.018856248960519323
+        ],
+        [
+          "test:policy",
+          0.01878120765329596
+        ],
+        [
+          "read:brief|read:technical|read:approvals",
+          0.017839840592863428
+        ],
+        [
+          "request:capacity|event:demo_schedule_changed|configure",
+          0.017795502366158
+        ],
+        [
+          "read:policy|read:technical",
+          0.017292821041927694
+        ],
+        [
+          "refresh_index",
+          0.01707827648168293
+        ],
+        [
+          "read:policy|submit",
+          0.01698436705991375
+        ],
+        [
+          "request:capacity",
+          0.016801354810341652
+        ],
+        [
+          "read:brief|read:faq|read:policy",
+          0.016567473618291455
+        ]
+      ]
+    }
+  },
+  "strategy_robustness": {
+    "0.0": {
+      "dtw_1nn": 1.0,
+      "ngram_rf": 1.0
+    },
+    "0.1": {
+      "dtw_1nn": 1.0,
+      "ngram_rf": 0.95
+    },
+    "0.2": {
+      "dtw_1nn": 0.9375,
+      "ngram_rf": 0.8625
+    },
+    "0.3": {
+      "dtw_1nn": 0.9125,
+      "ngram_rf": 0.725
+    },
+    "0.4": {
+      "dtw_1nn": 0.875,
+      "ngram_rf": 0.6875
+    },
+    "0.5": {
+      "dtw_1nn": 0.7125,
+      "ngram_rf": 0.55
+    }
+  },
+  "hmm": {
+    "bic": {
+      "3": 14888.60717235693,
+      "4": 13340.020559865714,
+      "5": 13276.357600840645
+    },
+    "states": 5,
+    "state_phase": [
+      3,
+      1,
+      0,
+      0,
+      2
+    ],
+    "state_rule_cooccurrence": [
+      [
+        47,
+        819,
+        440,
+        120
+      ],
+      [
+        40,
+        160,
+        80,
+        0
+      ],
+      [
+        338,
+        0,
+        0,
+        0
+      ],
+      [
+        350,
+        0,
+        0,
+        0
+      ],
+      [
+        429,
+        0,
+        80,
+        0
+      ]
+    ],
+    "emission_mass_by_group": [
+      [
+        0.049,
+        0.614,
+        0.308,
+        0.029
+      ],
+      [
+        0.14,
+        0.606,
+        0.253,
+        0.001
+      ],
+      [
+        0.967,
+        0.005,
+        0.027,
+        0.001
+      ],
+      [
+        0.99,
+        0.005,
+        0.004,
+        0.001
+      ],
+      [
+        0.842,
+        0.005,
+        0.152,
+        0.001
+      ]
+    ],
+    "top_symbols": [
+      [
+        "submit",
+        "test:normal",
+        "test:policy",
+        "test:oos",
+        "configure"
+      ],
+      [
+        "configure",
+        "event:demo_schedule_changed",
+        "read:policy",
+        "ask:business_lead:other",
+        "ask:tech_lead:ask_limit"
+      ],
+      [
+        "read:technical",
+        "read:policy",
+        "ask:supervisor:ask_process",
+        "ask:tech_lead:ask_process",
+        "ask:business_lead:seek_approval"
+      ],
+      [
+        "read:brief",
+        "read:user_groups",
+        "read:interviews",
+        "read:approvals",
+        "read:technical"
+      ],
+      [
+        "read:approvals",
+        "read:technical",
+        "request:capacity",
+        "ask:tech_lead:ask_limit",
+        "read:faq"
+      ]
+    ],
+    "transition": [
+      [
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.893,
+        0.107,
+        0.0,
+        0.0,
+        0.0
+      ],
+      [
+        0.0,
+        0.0,
+        0.0,
+        0.037,
+        0.963
+      ],
+      [
+        0.092,
+        0.0,
+        0.527,
+        0.018,
+        0.364
+      ],
+      [
+        0.0,
+        0.533,
+        0.265,
+        0.03,
+        0.172
+      ]
+    ]
+  },
+  "anomaly": {
+    "hmm_loglik": {
+      "auroc": 0.9
+    },
+    "isolation_forest": {
+      "auroc": 0.16666666666666663
+    },
+    "dtw_to_regular": {
+      "auroc": 0.8833333333333333
+    },
+    "rules": {
+      "precision": 1.0,
+      "recall": 1.0
+    }
+  },
+  "clustering": {
+    "silhouette": {
+      "3": 0.38961473929222057,
+      "4": 0.4834508982276812,
+      "5": 0.5734205088446575,
+      "6": 0.6035342428725025,
+      "7": 0.6965595949009384,
+      "8": 0.746153655811201,
+      "9": 0.7855729606055424,
+      "10": 0.7527646287399675
+    },
+    "k": 9,
+    "ari_vs_strategy": 0.9650309437943198,
+    "ari_at_8": 1.0
+  }
+}

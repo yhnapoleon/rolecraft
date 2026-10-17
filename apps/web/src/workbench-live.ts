@@ -22,6 +22,7 @@ import {
   replaceContinueCode,
 } from './features/practice-recovery/client';
 import { quotedAnswer } from './app/assistant-mode';
+import { readBehavior, readRecognition } from './features/recognition-native/client';
 import { returnPlacement, unmatchedReturnText } from './app/agent-return';
 import type {
   Deliverable,
@@ -42,6 +43,7 @@ const scenarios: Record<string, Scenario> = {
   pilot: 'pm_pilot',
   urgent: 'pm_pilot_urgent',
   capacity: 'pm_pilot_capacity15',
+  itticket: 'it_ticket_pilot',
 };
 export const roleIds: Record<string, RoleId> = {
   manager: 'supervisor',
@@ -344,6 +346,8 @@ export class LiveWorkbench {
         asOfSeq: t.as_of_seq,
         fallback: t.fallback,
         stale: t.stale,
+        recognition: t.recognition ?? [],
+        errorCode: t.error_code ?? null,
       };
     });
     a.turnTask ||= {};
@@ -892,6 +896,14 @@ export class LiveWorkbench {
   /** Whether this practice has a continue code; the code itself is never readable again. */
   continueCode(a: Attempt) {
     return readContinueCode(this.transport, this.held(a));
+  }
+  /** Every recognizer record of this practice (recognition layer), with counts. */
+  recognition(a: Attempt) {
+    return readRecognition(this.transport, this.held(a));
+  }
+  /** The C5 behaviour analysis of this practice (sequence, phases, strategy, anomalies). */
+  behavior(a: Attempt) {
+    return readBehavior(this.transport, this.held(a));
   }
   /** Creates or replaces the practice's continue code, returned this once only. */
   replaceContinueCode(a: Attempt, expectedGeneration: number) {

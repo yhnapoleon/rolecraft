@@ -72,6 +72,15 @@ export const CASE = (id) =>
       change: T('容量从 30 人降到 15 人', 'Capacity drops from 30 to 15 seats'),
       minutes: T('15–25 分钟', '15–25 min'),
     },
+    itticket: {
+      title: T('IT 工单助手，准备好试点了吗？', 'Is the IT ticket assistant ready for a pilot?'),
+      quote: T(
+        '服务台想让员工先问工单助手、答不了再建单。先服务谁、开放哪些问题、SLA 时限变了怎么办，你来定方案。',
+        'The service desk wants staff to ask the ticket assistant first and open a ticket only when it cannot help. Who it serves first, which questions it covers and what happens when the SLA changes is your call.',
+      ),
+      change: T('换一个领域：IT 服务台（中文）', 'Another domain: IT service desk (Chinese only)'),
+      minutes: T('20–30 分钟', '20–30 min'),
+    },
   })[id] || { title: id, quote: '', change: '', minutes: '' };
 
 export const SEEDS = {

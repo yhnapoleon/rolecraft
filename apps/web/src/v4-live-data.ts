@@ -176,6 +176,8 @@ export class V4LiveData {
           indexed_versions: t.execution.indexed_versions,
           config_version: t.config_ref.config_version,
           as_of_seq: t.as_of.business_seq,
+          recognition: t.recognition ?? [],
+          error_code: t.error_code ?? null,
         };
       });
     this.store.update(s.id, {
