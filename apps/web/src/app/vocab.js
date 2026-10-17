@@ -78,7 +78,7 @@ export const CASE = (id) =>
         '服务台想让员工先问工单助手、答不了再建单。先服务谁、开放哪些问题、SLA 时限变了怎么办，你来定方案。',
         'The service desk wants staff to ask the ticket assistant first and open a ticket only when it cannot help. Who it serves first, which questions it covers and what happens when the SLA changes is your call.',
       ),
-      change: T('换一个领域：IT 服务台（中文）', 'Another domain: IT service desk (Chinese only)'),
+      change: T('换一个领域：IT 服务台', 'Another domain: IT service desk'),
       minutes: T('20–30 分钟', '20–30 min'),
     },
   })[id] || { title: id, quote: '', change: '', minutes: '' };

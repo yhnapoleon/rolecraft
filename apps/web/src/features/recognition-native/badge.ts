@@ -66,14 +66,21 @@ export function describe(record: RecognitionRecord, language: Language) {
         t(language, 'top1', { score: fmt(record.score), material: record.label ?? '–' });
       break;
     }
-    case 'drift':
-      detail =
-        record.score != null
+    case 'drift': {
+      const out = (record.outputs ?? {}) as { numeric_change?: boolean; numbers_before?: string[]; numbers_after?: string[] };
+      detail = out.numeric_change
+        ? t(language, 'drift_numbers', {
+            before: (out.numbers_before ?? []).join('/') || '–',
+            after: (out.numbers_after ?? []).join('/') || '–',
+            score: fmt(record.score),
+          })
+        : record.score != null
           ? t(language, record.label === 'anomaly' ? 'drift_anomaly' : 'drift_normal', {
               score: fmt(record.score),
             })
           : t(language, record.label === 'changed' ? 'drift_changed' : 'drift_same');
       break;
+    }
     case 'intent':
       detail = `${record.label ?? '–'}${record.score != null ? ' ' + fmt(record.score) : ''}`;
       break;
