@@ -1,0 +1,59 @@
+{
+  "pairs": 28,
+  "by_condition": {
+    "on": {
+      "semantic_items": 357,
+      "pending_rate": 0.5742296918767507,
+      "labelled_rate": 0.4257703081232493,
+      "mean_citations": 1.1204481792717087,
+      "label_distribution": {
+        "PARTIAL": 86,
+        "INSUFFICIENT": 250,
+        "NOT_MET": 21
+      },
+      "prefix_rate": {
+        "disagree": 0.11764705882352941,
+        "agree": 0.20728291316526612,
+        "missing": 0.08683473389355742
+      }
+    },
+    "off": {
+      "semantic_items": 357,
+      "pending_rate": 0.6106442577030813,
+      "labelled_rate": 0.38935574229691877,
+      "mean_citations": 1.0476190476190477,
+      "label_distribution": {
+        "PARTIAL": 66,
+        "INSUFFICIENT": 263,
+        "NOT_MET": 23,
+        "MET": 5
+      },
+      "prefix_rate": {}
+    }
+  },
+  "agreement": {
+    "label_agreement": 0.6750700280112045,
+    "compared": 357,
+    "per_criterion": {
+      "R2.unknowns": 0.6071428571428571,
+      "R5.impact": 0.3333333333333333,
+      "R6.operations": 0.6428571428571429,
+      "R2.support": 0.39285714285714285,
+      "R6.consistency": 0.6071428571428571,
+      "R2.failure_analysis": 0.7857142857142857,
+      "R1.target": 0.42857142857142855,
+      "R1.metrics": 0.5,
+      "R6.alternatives": 0.4642857142857143,
+      "R3.resources": 1.0,
+      "R4.functional_tests": 1.0,
+      "R3.capacity": 1.0,
+      "R4.staleness_test": 1.0,
+      "R5.adjustment": 1.0
+    }
+  },
+  "arbiter": {
+    "records": 28,
+    "judge_decided": 17,
+    "conflict_rate": 0.23529411764705882
+  }
+}
