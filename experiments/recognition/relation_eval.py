@@ -42,13 +42,19 @@ def bodies(row):
     out = []
     for c in row["model_input"]["candidate_evidence"]:
         until = "open" if c.get("valid_until_seq") is None else c["valid_until_seq"]
-        out.append(f"{c['text']}\nobserved {c['observed_at_seq']}; valid from {c['valid_from_seq']}; valid until {until}")
+        out.append(
+            f"{c['text']}\nobserved {c['observed_at_seq']}; valid from "
+            f"{c['valid_from_seq']}; valid until {until}"
+        )
     return out
 
 
 def query(row):
     mi = row["model_input"]
-    return f"{mi['purpose']}\n{mi['claim']}\nreference time {mi['as_of']['business_seq']}; temporal scope known"
+    return (
+        f"{mi['purpose']}\n{mi['claim']}\nreference time {mi['as_of']['business_seq']}; "
+        "temporal scope known"
+    )
 
 
 def pair_probabilities(path, rows, temperature=None):
@@ -73,8 +79,9 @@ def ece(probs, labels, bins=10):
 
 
 def main(argv=None) -> int:
-    from career_lab.models.v3.huggingface import aggregate_pairs
     from career_lab.recognition.decision import costs
+
+    from career_lab.models.v3.huggingface import aggregate_pairs
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--encoder", required=True)
@@ -86,7 +93,13 @@ def main(argv=None) -> int:
         part = [r for r in rows if r["split"] == split]
         probs = pair_probabilities(args.encoder, part)
         raw = pair_probabilities(args.encoder, part, temperature=1.0)
-        labels = np.array([PAIR.index(r["pair_labels"][c["id"]]) for r in part for c in r["model_input"]["candidate_evidence"]])
+        labels = np.array(
+            [
+                PAIR.index(r["pair_labels"][c["id"]])
+                for r in part
+                for c in r["model_input"]["candidate_evidence"]
+            ]
+        )
         offset = 0
         claims = []
         for r in part:
@@ -94,18 +107,27 @@ def main(argv=None) -> int:
             rel, scores = aggregate_pairs(probs[offset : offset + n], 0.5)
             offset += n
             label = REL[int(np.argmax(rel))]
-            p = {k.lower(): float(v) for k, v in zip(REL, rel)}
+            p = {k.lower(): float(v) for k, v in zip(REL, rel, strict=False)}
             expected = {d: sum(p[y] * table["decide"][d][y] for y in p) for d in table["decide"]}
             best = min(expected, key=expected.get)
             ids = [c["id"] for c in r["model_input"]["candidate_evidence"]]
-            chosen = {i for i, s in zip(ids, scores) if s >= 0.5} if label != "INSUFFICIENT" else set()
-            claims.append({
-                "language": r["language"], "gold": r["label"], "pred": label,
-                "joint": label == r["label"] and chosen == set(r["evidence_ids"]),
-                "evidence_exact": chosen == set(r["evidence_ids"]),
-                "cost": expected[best], "defer": expected[best] >= table["defer"],
-                "phenomenon": r["phenomenon"],
-            })
+            chosen = (
+                {i for i, s in zip(ids, scores, strict=False) if s >= 0.5}
+                if label != "INSUFFICIENT"
+                else set()
+            )
+            claims.append(
+                {
+                    "language": r["language"],
+                    "gold": r["label"],
+                    "pred": label,
+                    "joint": label == r["label"] and chosen == set(r["evidence_ids"]),
+                    "evidence_exact": chosen == set(r["evidence_ids"]),
+                    "cost": expected[best],
+                    "defer": expected[best] >= table["defer"],
+                    "phenomenon": r["phenomenon"],
+                }
+            )
         entry = {"ece_t1": ece(raw, labels), "ece_fitted": ece(probs, labels)}
         for lang in ("zh", "en", "all"):
             sub = [c for c in claims if lang == "all" or c["language"] == lang]
@@ -123,23 +145,34 @@ def main(argv=None) -> int:
                 "accuracy": float(np.mean([c["gold"] == c["pred"] for c in sub])),
                 "joint": float(np.mean([c["joint"] for c in sub])),
                 "evidence_exact": float(np.mean([c["evidence_exact"] for c in sub])),
-                "confusion": [[sum(c["gold"] == x and c["pred"] == y for c in sub) for y in REL] for x in REL],
+                "confusion": [
+                    [sum(c["gold"] == x and c["pred"] == y for c in sub) for y in REL] for x in REL
+                ],
             }
         # Error-reject curve: keep the lowest-cost claims, defer the rest.
         order = sorted(claims, key=lambda c: c["cost"])
         curve = []
         for reject in (0.0, 0.1, 0.2, 0.3, 0.4, 0.5):
             kept = order[: max(1, int(len(order) * (1 - reject)))]
-            wrong_deduction = sum(c["pred"] == "CONTRADICTED" and c["gold"] != "CONTRADICTED" for c in kept)
-            curve.append({
-                "reject_rate": reject,
-                "error_rate": float(np.mean([c["gold"] != c["pred"] for c in kept])),
-                "wrong_deduction_rate": wrong_deduction / len(kept),
-            })
+            wrong_deduction = sum(
+                c["pred"] == "CONTRADICTED" and c["gold"] != "CONTRADICTED" for c in kept
+            )
+            curve.append(
+                {
+                    "reject_rate": reject,
+                    "error_rate": float(np.mean([c["gold"] != c["pred"] for c in kept])),
+                    "wrong_deduction_rate": wrong_deduction / len(kept),
+                }
+            )
         errors = np.array([c["gold"] != c["pred"] for c in claims])
         by_cost = np.argsort([-c["cost"] for c in claims])
         lift = [
-            {"top_fraction": f, "error_coverage": float(errors[by_cost[: max(1, int(len(claims) * f))]].sum() / max(1, errors.sum()))}
+            {
+                "top_fraction": f,
+                "error_coverage": float(
+                    errors[by_cost[: max(1, int(len(claims) * f))]].sum() / max(1, errors.sum())
+                ),
+            }
             for f in (0.1, 0.2, 0.3, 0.5)
         ]
         by_phenomenon = {}
@@ -152,7 +185,15 @@ def main(argv=None) -> int:
             accuracy_by_phenomenon={k: float(np.mean(v)) for k, v in by_phenomenon.items()},
         )
         report[split] = entry
-        print(split, json.dumps({k: entry[k]["macro_f1"] for k in ("zh", "en", "all")}), "ECE", round(entry["ece_t1"], 3), "->", round(entry["ece_fitted"], 3), flush=True)
+        print(
+            split,
+            json.dumps({k: entry[k]["macro_f1"] for k in ("zh", "en", "all")}),
+            "ECE",
+            round(entry["ece_t1"], 3),
+            "->",
+            round(entry["ece_fitted"], 3),
+            flush=True,
+        )
     save("e4_decision", report)
     lift_dev = next(x for x in report["dev"]["lift"] if x["top_fraction"] == 0.2)
     with (Path(args.encoder) / "lift.json").open("w", encoding="utf-8", newline="\n") as handle:

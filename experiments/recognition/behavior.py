@@ -27,6 +27,7 @@ import random
 from collections import Counter
 
 import numpy as np
+from career_lab.recognition.behavior import dtw
 from hmmlearn.hmm import CategoricalHMM
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import squareform
@@ -34,7 +35,6 @@ from sklearn.ensemble import IsolationForest, RandomForestClassifier
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.metrics import adjusted_rand_score, roc_auc_score, silhouette_score
 
-from career_lab.recognition.behavior import dtw
 from experiments.recognition.common import (
     DATA,
     RECOGNIZERS,
@@ -45,7 +45,10 @@ from experiments.recognition.common import (
     save,
 )
 
-PHASE_NAMES = {"zh": ["探索", "测试", "决策", "调整"], "en": ["explore", "test", "decide", "adjust"]}
+PHASE_NAMES = {
+    "zh": ["探索", "测试", "决策", "调整"],
+    "en": ["explore", "test", "decide", "adjust"],
+}
 REGULAR = {"thorough", "request_first", "test_heavy", "ask_heavy", "revise_loop"}
 
 
@@ -64,7 +67,9 @@ def edit(a, b):
     d[:, 0], d[0, :] = np.arange(n + 1), np.arange(m + 1)
     for i in range(1, n + 1):
         for j in range(1, m + 1):
-            d[i, j] = min(d[i - 1, j] + 1, d[i, j - 1] + 1, d[i - 1, j - 1] + (a[i - 1] != b[j - 1]))
+            d[i, j] = min(
+                d[i - 1, j] + 1, d[i, j - 1] + 1, d[i - 1, j - 1] + (a[i - 1] != b[j - 1])
+            )
     return d[n, m]
 
 
@@ -84,7 +89,9 @@ def fit_hmm(train_seqs, vocabulary, states, seed=0):
     index = {v: i for i, v in enumerate(vocabulary)}
     x = np.concatenate([[index[s] for s in seq] for seq in train_seqs]).reshape(-1, 1)
     lengths = [len(s) for s in train_seqs]
-    model = CategoricalHMM(n_components=states, n_iter=200, random_state=seed, n_features=len(vocabulary))
+    model = CategoricalHMM(
+        n_components=states, n_iter=200, random_state=seed, n_features=len(vocabulary)
+    )
     model.fit(x, lengths)
     # Additive smoothing: symbols unseen in a state must not make a sequence impossible.
     smoothed = model.emissionprob_ + 1e-3
@@ -102,22 +109,21 @@ def name_states_by_rule(model, index, sequences):
     a state; the Hungarian assignment first gives every phase one state, the remaining
     states take their best phase.
     """
-    from scipy.optimize import linear_sum_assignment
-
     from career_lab.recognition.behavior import rule_phase
+    from scipy.optimize import linear_sum_assignment
 
     states = model.n_components
     table = np.zeros((states, 4))
     for seq in sequences:
         path = model.predict(np.array([index[s] for s in seq]).reshape(-1, 1))
         submitted = False
-        for symbol, state in zip(seq, path):
+        for symbol, state in zip(seq, path, strict=False):
             table[state, rule_phase(symbol, submitted)] += 1
             submitted = submitted or symbol == "submit"
     share = table / np.maximum(table.sum(0, keepdims=True), 1)
     order = [int(share[s].argmax()) for s in range(states)]
     rows, cols = linear_sum_assignment(-share)
-    for s, p in zip(rows, cols):
+    for s, p in zip(rows, cols, strict=False):
         order[int(s)] = int(p)
     return order, table.astype(int).tolist()
 
@@ -155,7 +161,7 @@ def main(argv=None) -> int:
     for r in rows:
         by_strategy.setdefault(r["strategy"], []).append(r)
     train, test = [], []
-    for name, items in sorted(by_strategy.items()):
+    for _name, items in sorted(by_strategy.items()):
         rng.shuffle(items)
         cut = max(1, int(len(items) * 0.8))
         train += items[:cut]
@@ -183,13 +189,16 @@ def main(argv=None) -> int:
     }
     report["strategy"] = {
         name: {
-            "accuracy": sum(a == b for a, b in zip(gold, pred)) / max(1, len(gold)),
+            "accuracy": sum(a == b for a, b in zip(gold, pred, strict=False)) / max(1, len(gold)),
             "macro_f1": macro_f1(gold, pred, labels),
             "confusion": confusion(gold, pred, labels),
             "by_language": {
                 lang: sum(
-                    a == b for a, b, r in zip(gold, pred, test) if r["language"] == lang
-                ) / max(1, sum(r["language"] == lang for r in test))
+                    a == b
+                    for a, b, r in zip(gold, pred, test, strict=False)
+                    if r["language"] == lang
+                )
+                / max(1, sum(r["language"] == lang for r in test))
                 for lang in ("zh", "en")
             },
         }
@@ -223,12 +232,13 @@ def main(argv=None) -> int:
         dtw_pred = [min(train, key=lambda t: norm_dtw(s, t["sequence"]))["strategy"] for s in noisy]
         rf_pred = list(forest.predict(vec.transform([ngrams(s) for s in noisy])))
         robustness[str(p)] = {
-            "dtw_1nn": sum(a == b for a, b in zip(gold, dtw_pred)) / len(gold),
-            "ngram_rf": sum(a == b for a, b in zip(gold, rf_pred)) / len(gold),
+            "dtw_1nn": sum(a == b for a, b in zip(gold, dtw_pred, strict=False)) / len(gold),
+            "ngram_rf": sum(a == b for a, b in zip(gold, rf_pred, strict=False)) / len(gold),
         }
     report["strategy_robustness"] = robustness
     importances = sorted(
-        zip(vec.get_feature_names_out(), forest.feature_importances_), key=lambda p: -p[1]
+        zip(vec.get_feature_names_out(), forest.feature_importances_, strict=False),
+        key=lambda p: -p[1],
     )[:15]
     report["strategy"]["ngram_rf"]["top_features"] = [[f, float(v)] for f, v in importances]
 
@@ -274,7 +284,9 @@ def main(argv=None) -> int:
     y = [1 if r["expected_anomalies"] else 0 for r in test]
     scores = {
         "hmm_loglik": [hmm_score(r["sequence"]) for r in test],
-        "isolation_forest": list(-forest_if.score_samples(vec.transform([ngrams(r["sequence"]) for r in test]))),
+        "isolation_forest": list(
+            -forest_if.score_samples(vec.transform([ngrams(r["sequence"]) for r in test]))
+        ),
         "dtw_to_regular": [min(norm_dtw(r["sequence"], s) for s in regular_refs) for r in test],
     }
     rule_hits = [1 if r["rule_anomalies"] else 0 for r in test]
@@ -283,8 +295,9 @@ def main(argv=None) -> int:
         for name, s in scores.items()
     }
     report["anomaly"]["rules"] = {
-        "precision": sum(a and b for a, b in zip(rule_hits, y)) / max(1, sum(rule_hits)),
-        "recall": sum(a and b for a, b in zip(rule_hits, y)) / max(1, sum(y)),
+        "precision": sum(a and b for a, b in zip(rule_hits, y, strict=False))
+        / max(1, sum(rule_hits)),
+        "recall": sum(a and b for a, b in zip(rule_hits, y, strict=False)) / max(1, sum(y)),
     }
 
     # Unsupervised structure.
@@ -314,10 +327,20 @@ def main(argv=None) -> int:
     }
     save("e6_behavior", report)
     for name, r in report["strategy"].items():
-        print(f"strategy {name:<9} acc {r['accuracy']:.3f} macroF1 {r['macro_f1']:.3f} {r['by_language']}")
+        print(
+            f"strategy {name:<9} acc {r['accuracy']:.3f} macroF1 {r['macro_f1']:.3f} "
+            f"{r['by_language']}"
+        )
     print("hmm", report["hmm"]["bic"], "states", best_states, "phase", order)
     print("anomaly", report["anomaly"])
-    print("cluster k", best_k, "ARI", round(report["clustering"]["ari_vs_strategy"], 3), "ARI@8", round(report["clustering"]["ari_at_8"], 3))
+    print(
+        "cluster k",
+        best_k,
+        "ARI",
+        round(report["clustering"]["ari_vs_strategy"], 3),
+        "ARI@8",
+        round(report["clustering"]["ari_at_8"], 3),
+    )
 
     if args.register:
         target = RECOGNIZERS / "behavior-v1"

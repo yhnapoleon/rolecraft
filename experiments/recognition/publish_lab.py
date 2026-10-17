@@ -41,7 +41,10 @@ def main(argv=None) -> int:
     metrics = Path(args.c1) / "metrics.json"
     if metrics.exists():
         data = json.loads(metrics.read_text(encoding="utf-8"))
-        slim = {k: data[k] for k in ("dev", "test", "temperature", "ece_before", "ece_after", "lift", "history")}
+        slim = {
+            k: data[k]
+            for k in ("dev", "test", "temperature", "ece_before", "ece_after", "lift", "history")
+        }
         with (TARGET / "e1_relation.json").open("w", encoding="utf-8", newline="\n") as handle:
             json.dump(slim, handle, ensure_ascii=False)
         print("published e1_relation.json from", metrics)

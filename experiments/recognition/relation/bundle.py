@@ -1,6 +1,6 @@
 """Pack relation-v3 and the training script for Colab: ``runs/local/colab/c1-bundle.zip``.
 
-    python -m experiments.recognition.relation.bundle
+python -m experiments.recognition.relation.bundle
 """
 
 from __future__ import annotations

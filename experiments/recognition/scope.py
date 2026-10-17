@@ -95,7 +95,8 @@ def main(argv=None) -> int:
         drift_mean, drift_std = float(np.mean(same)), float(np.std(same))
         report["drift"][language] = {"mean": drift_mean, "std": drift_std, "pairs": len(same)}
         for setting in ("scope_off", "scope_on"):
-            def in_scope(domain):
+
+            def in_scope(domain, setting=setting):
                 return setting == "scope_off" or not str(domain).startswith("policy")
 
             keep_u = [i for i, u in enumerate(units) if in_scope(u["domain"])]
@@ -105,9 +106,11 @@ def main(argv=None) -> int:
             mean, precision = lw.location_, lw.precision_
             d = fit.shape[1]
 
-            def score(vectors):
+            def score(vectors, mean=mean, precision=precision, d=d):
                 delta = vectors - mean
-                return np.sqrt(np.einsum("ij,jk,ik->i", delta, precision, delta).clip(0)) / np.sqrt(d)
+                return np.sqrt(np.einsum("ij,jk,ik->i", delta, precision, delta).clip(0)) / np.sqrt(
+                    d
+                )
 
             labels = np.array(
                 [
@@ -151,10 +154,16 @@ def main(argv=None) -> int:
                 base["kmeans_centroid"] = km.transform(q_vectors).min(1)
                 mu, var = fit.mean(0), fit.var(0) + 1e-4
                 base["gaussian_nb"] = (((q_vectors - mu) ** 2) / var + np.log(var)).sum(1)
-                ae = MLPRegressor(hidden_layer_sizes=(32,), max_iter=3000, random_state=0).fit(fit, fit)
+                ae = MLPRegressor(hidden_layer_sizes=(32,), max_iter=3000, random_state=0).fit(
+                    fit, fit
+                )
                 base["autoencoder"] = ((ae.predict(q_vectors) - q_vectors) ** 2).sum(1)
-                base["one_class_svm"] = -OneClassSVM(nu=0.1, gamma="scale").fit(fit).score_samples(q_vectors)
-                base["isolation_forest"] = -IsolationForest(random_state=0).fit(fit).score_samples(q_vectors)
+                base["one_class_svm"] = (
+                    -OneClassSVM(nu=0.1, gamma="scale").fit(fit).score_samples(q_vectors)
+                )
+                base["isolation_forest"] = (
+                    -IsolationForest(random_state=0).fit(fit).score_samples(q_vectors)
+                )
                 base["mahalanobis"] = scores
                 report["baselines"][language] = {
                     name: evaluate(s[test & (labels == 0)], s[test & (labels == 1)])
@@ -165,7 +174,9 @@ def main(argv=None) -> int:
                     "units": pca.transform(unit_as_query[keep_u]).round(4).tolist(),
                     "queries": [
                         {"xy": xy, "kind": q["kind"], "score": float(s), "text": q["query"][:40]}
-                        for xy, q, s in zip(pca.transform(q_vectors).round(4).tolist(), qs, scores)
+                        for xy, q, s in zip(
+                            pca.transform(q_vectors).round(4).tolist(), qs, scores, strict=False
+                        )
                     ],
                     "threshold": threshold,
                 }

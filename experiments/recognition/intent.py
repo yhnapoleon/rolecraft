@@ -15,13 +15,13 @@ import argparse
 import json
 
 import joblib
+from career_lab.recognition.intent import LABELS, rule_intent
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 
-from career_lab.recognition.intent import LABELS, rule_intent
 from experiments.recognition.common import (
     DATA,
     RECOGNIZERS,
@@ -77,14 +77,14 @@ def main(argv=None) -> int:
         for language in ("zh", "en", "all"):
             subset = [
                 (x, y)
-                for x, y, r in zip(x_test, y_test, part["test"])
+                for x, y, r in zip(x_test, y_test, part["test"], strict=False)
                 if language == "all" or r["language"] == language
             ]
             xs, ys = [x for x, _ in subset], [y for _, y in subset]
             pred = [rule_intent(x)[0] for x in xs] if model is None else list(model.predict(xs))
             entry[language] = {
                 "n": len(ys),
-                "accuracy": sum(a == b for a, b in zip(ys, pred)) / max(1, len(ys)),
+                "accuracy": sum(a == b for a, b in zip(ys, pred, strict=False)) / max(1, len(ys)),
                 "macro_f1": macro_f1(ys, pred, labels),
                 "per_class": per_class(ys, pred, labels),
                 "confusion": confusion(ys, pred, labels),

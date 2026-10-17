@@ -34,7 +34,9 @@ DATASET = ROOT / "data/releases/relation-v3"
 def run(args: list[str]) -> dict:
     result = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, check=False)
     if result.returncode:
-        raise SystemExit(" ".join(args[:4]) + " failed:\n" + result.stdout[-2000:] + result.stderr[-3000:])
+        raise SystemExit(
+            " ".join(args[:4]) + " failed:\n" + result.stdout[-2000:] + result.stderr[-3000:]
+        )
     return json.loads(result.stdout.strip().splitlines()[-1])
 
 
@@ -82,7 +84,9 @@ def dataset_rows(split: str) -> list[dict]:
                 "schema_version": 2,
                 "task_type": "relation",
                 "input_hash": hashlib.sha256(
-                    json.dumps(model_input, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
+                    json.dumps(
+                        model_input, ensure_ascii=False, sort_keys=True, separators=(",", ":")
+                    ).encode()
                 ).hexdigest(),
                 "model_input": model_input,
             }
@@ -108,18 +112,32 @@ def main(argv=None) -> int:
     }
     (out / "training-report.json").write_text(json.dumps(report), encoding="utf-8")
     target = out / "return"
-    exported = run([
-        sys.executable, "-I", str(EXPORT), "export",
-        "--encoder-dir", str(train_out / "encoder"),
-        "--variant", "pair_aggregate",
-        "--source-revision", XLMR_REVISION,
-        "--weights-stage", "supervised_finetuned",
-        "--heads", str(train_out / "heads.npz"),
-        "--training-report", str(out / "training-report.json"),
-        "--max-tokens", str(c1.get("max_tokens", 256)),
-        "--evidence-threshold", "0.5",
-        "--out", str(target),
-    ])
+    exported = run(
+        [
+            sys.executable,
+            "-I",
+            str(EXPORT),
+            "export",
+            "--encoder-dir",
+            str(train_out / "encoder"),
+            "--variant",
+            "pair_aggregate",
+            "--source-revision",
+            XLMR_REVISION,
+            "--weights-stage",
+            "supervised_finetuned",
+            "--heads",
+            str(train_out / "heads.npz"),
+            "--training-report",
+            str(out / "training-report.json"),
+            "--max-tokens",
+            str(c1.get("max_tokens", 256)),
+            "--evidence-threshold",
+            "0.5",
+            "--out",
+            str(target),
+        ]
+    )
     print("export", json.dumps(exported)[:400])
     inputs = out / "dev.inputs.jsonl"
     with inputs.open("w", encoding="utf-8", newline="\n") as handle:
@@ -130,22 +148,58 @@ def main(argv=None) -> int:
         "train (DeepSeek-generated claims, label tier G2v), early stopping on dev joint.\n",
         encoding="utf-8",
     )
-    predicted = run([sys.executable, "-I", str(EXPORT), "predict", "--root", str(target), "--inputs", str(inputs), "--out", str(target / "predictions.dev.jsonl")])
+    predicted = run(
+        [
+            sys.executable,
+            "-I",
+            str(EXPORT),
+            "predict",
+            "--root",
+            str(target),
+            "--inputs",
+            str(inputs),
+            "--out",
+            str(target / "predictions.dev.jsonl"),
+        ]
+    )
     print("predict", json.dumps({k: predicted[k] for k in ("rows", "statuses", "model_revision")}))
     manifest_sha = hashlib.sha256((DATASET / "manifest.json").read_bytes()).hexdigest()
-    sealed = run([
-        sys.executable, "-I", str(EXPORT), "seal", "--root", str(target),
-        "--dataset-id", "rolecraft-relation-v3", "--dataset-manifest-sha256", manifest_sha,
-        "--label-tier", "G2v",
-    ])
+    sealed = run(
+        [
+            sys.executable,
+            "-I",
+            str(EXPORT),
+            "seal",
+            "--root",
+            str(target),
+            "--dataset-id",
+            "rolecraft-relation-v3",
+            "--dataset-manifest-sha256",
+            manifest_sha,
+            "--label-tier",
+            "G2v",
+        ]
+    )
     print("seal", json.dumps(sealed)[:300])
     registry = out / "registry"
-    registered = run([
-        sys.executable, "-m", "career_lab.models.v3.registry_cli", "register",
-        "--registry", str(registry), "--bundle-root", str(target),
-        "--bundle-path", sealed["bundle_path"], "--bundle-hash", sealed["bundle_hash"],
-        "--scope", "external_candidate",
-    ])
+    registered = run(
+        [
+            sys.executable,
+            "-m",
+            "career_lab.models.v3.registry_cli",
+            "register",
+            "--registry",
+            str(registry),
+            "--bundle-root",
+            str(target),
+            "--bundle-path",
+            sealed["bundle_path"],
+            "--bundle-hash",
+            sealed["bundle_hash"],
+            "--scope",
+            "external_candidate",
+        ]
+    )
     ref = json.dumps(registered["registration"], separators=(",", ":"))
     print("\n# runs/local/dev/env.ps1")
     print(f"$env:CAREER_LAB_MODEL_REGISTRY = '{registry}'")

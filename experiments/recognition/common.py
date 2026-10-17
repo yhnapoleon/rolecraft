@@ -29,7 +29,7 @@ def save(name: str, payload: dict[str, Any]) -> Path:
 def confusion(gold: list[str], pred: list[str], labels: list[str]) -> list[list[int]]:
     index = {label: i for i, label in enumerate(labels)}
     table = [[0] * len(labels) for _ in labels]
-    for g, p in zip(gold, pred):
+    for g, p in zip(gold, pred, strict=False):
         if g in index and p in index:
             table[index[g]][index[p]] += 1
     return table
@@ -38,9 +38,9 @@ def confusion(gold: list[str], pred: list[str], labels: list[str]) -> list[list[
 def per_class(gold: list[str], pred: list[str], labels: list[str]) -> dict[str, dict[str, float]]:
     out = {}
     for label in labels:
-        tp = sum(g == label and p == label for g, p in zip(gold, pred))
-        fp = sum(g != label and p == label for g, p in zip(gold, pred))
-        fn = sum(g == label and p != label for g, p in zip(gold, pred))
+        tp = sum(g == label and p == label for g, p in zip(gold, pred, strict=False))
+        fp = sum(g != label and p == label for g, p in zip(gold, pred, strict=False))
+        fn = sum(g == label and p != label for g, p in zip(gold, pred, strict=False))
         precision = tp / (tp + fp) if tp + fp else 0.0
         recall = tp / (tp + fn) if tp + fn else 0.0
         f1 = 2 * precision * recall / (precision + recall) if precision + recall else 0.0

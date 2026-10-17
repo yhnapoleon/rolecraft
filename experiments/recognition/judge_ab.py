@@ -22,10 +22,10 @@ import argparse
 import json
 import random
 from collections import Counter
-from pathlib import Path
+
+from scripts.recognition.run_strategies import STRATEGIES, Run
 
 from experiments.recognition.common import RESULTS, save
-from scripts.recognition.run_strategies import STRATEGIES, Run
 
 SEMANTIC = None  # every item whose source is model_advice or pending counts as semantic
 
@@ -35,7 +35,10 @@ def run(args) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     done = set()
     if out.exists():
-        done = {(r["strategy"], r["seed"], r["language"]) for r in map(json.loads, out.read_text(encoding="utf-8").splitlines())}
+        done = {
+            (r["strategy"], r["seed"], r["language"])
+            for r in map(json.loads, out.read_text(encoding="utf-8").splitlines())
+        }
     names = [n for n in STRATEGIES if n != "revise_loop"]
     with out.open("a", encoding="utf-8", newline="\n") as handle:
         for language in args.languages.split(","):
@@ -49,8 +52,10 @@ def run(args) -> None:
                     try:
                         original = r.submit
 
-                        def submit_and_wait(decision, n, wait=False, **numbers):
-                            return original(decision, n, wait=True, **numbers)
+                        def submit_and_wait(
+                            decision, n, wait=False, *, _submit=original, **numbers
+                        ):
+                            return _submit(decision, n, wait=True, **numbers)
 
                         r.submit = submit_and_wait
                         STRATEGIES[name](r)
@@ -80,14 +85,27 @@ def run(args) -> None:
                             for it in (feedback or {}).get("items", [])
                         ],
                         "recognition": [
-                            {k: rec.get(k) for k in ("task", "recognizer_id", "label", "fallback", "outputs")}
+                            {
+                                k: rec.get(k)
+                                for k in ("task", "recognizer_id", "label", "fallback", "outputs")
+                            }
                             for rec in (feedback or {}).get("recognition") or []
                             if rec.get("task") in {"arbiter", "relation", "decision"}
                         ],
                     }
                     handle.write(json.dumps(row, ensure_ascii=False) + "\n")
                     handle.flush()
-                    print(args.condition, language, name, i, "items", len(row["items"]), "err", error, flush=True)
+                    print(
+                        args.condition,
+                        language,
+                        name,
+                        i,
+                        "items",
+                        len(row["items"]),
+                        "err",
+                        error,
+                        flush=True,
+                    )
                     r.s.close()
 
 
@@ -123,7 +141,8 @@ def compare(args) -> None:
         report["by_condition"][condition] = {
             "semantic_items": len(items),
             "pending_rate": sum(it["source"] == "pending" for it in items) / max(1, len(items)),
-            "labelled_rate": sum(it["source"] == "model_advice" for it in items) / max(1, len(items)),
+            "labelled_rate": sum(it["source"] == "model_advice" for it in items)
+            / max(1, len(items)),
             "mean_citations": sum(it["citations"] for it in items) / max(1, len(items)),
             "label_distribution": dict(Counter(it["label"] for it in items)),
             "prefix_rate": {k: v / max(1, len(items)) for k, v in prefixes.items()},

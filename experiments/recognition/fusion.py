@@ -57,9 +57,9 @@ def macro(gold, probs):
     pred = [REL[i] for i in probs.argmax(1)]
     f1 = []
     for label in REL:
-        tp = sum(g == label and p == label for g, p in zip(gold, pred))
-        fp = sum(g != label and p == label for g, p in zip(gold, pred))
-        fn = sum(g == label and p != label for g, p in zip(gold, pred))
+        tp = sum(g == label and p == label for g, p in zip(gold, pred, strict=False))
+        fp = sum(g != label and p == label for g, p in zip(gold, pred, strict=False))
+        fn = sum(g == label and p != label for g, p in zip(gold, pred, strict=False))
         pr, rc = (tp / (tp + fp) if tp + fp else 0), (tp / (tp + fn) if tp + fn else 0)
         f1.append(2 * pr * rc / (pr + rc) if pr + rc else 0.0)
     return float(np.mean(f1)), pred
@@ -85,7 +85,11 @@ def main(argv=None) -> int:
         for a in np.linspace(0, 1, 21)
     }
     alpha = max(grid, key=grid.get)
-    report = {"dev_grid": grid, "alpha": alpha, "rule_active_rate": {s: float(rule[s][1].mean()) for s in part}}
+    report = {
+        "dev_grid": grid,
+        "alpha": alpha,
+        "rule_active_rate": {s: float(rule[s][1].mean()) for s in part},
+    }
     test = {
         "c1": c1["test"],
         "rule": np.where(rule["test"][1][:, None], rule["test"][0], np.array([[0.2, 0.2, 0.6]])),
@@ -98,14 +102,23 @@ def main(argv=None) -> int:
             entry[lang] = macro([gold["test"][i] for i in idx], probs[idx])[0]
         _, pred = macro(gold["test"], probs)
         by = {}
-        for r, p in zip(part["test"], pred):
+        for r, p in zip(part["test"], pred, strict=False):
             by.setdefault(r["phenomenon"], []).append(p == r["label"])
         entry["by_phenomenon"] = {k: float(np.mean(v)) for k, v in by.items()}
         report[name] = entry
-    report["early_fusion"] = "not run: needs the structured facts in the encoder input and retraining"
+    report["early_fusion"] = (
+        "not run: needs the structured facts in the encoder input and retraining"
+    )
     save("e10_fusion", report)
     with (Path(args.encoder) / "fusion.json").open("w", encoding="utf-8", newline="\n") as handle:
-        json.dump({"alpha": alpha, "dev_macro_f1": grid[alpha], "policy": "late fusion with the number-and-limit rule when it is active"}, handle)
+        json.dump(
+            {
+                "alpha": alpha,
+                "dev_macro_f1": grid[alpha],
+                "policy": "late fusion with the number-and-limit rule when it is active",
+            },
+            handle,
+        )
     for name in test:
         print(name, {k: round(v, 3) for k, v in report[name].items() if k != "by_phenomenon"})
     print("alpha", alpha, "dev", round(grid[alpha], 3))

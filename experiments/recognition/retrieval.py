@@ -25,7 +25,7 @@ def evaluate(queries, gold_ids, unit_ids, texts):
     out = {}
     for method in ("bm25", "dense", "rrf"):
         ranks = []
-        for query, gold in zip(queries, gold_ids):
+        for query, gold in zip(queries, gold_ids, strict=False):
             hits, used, _ = retrieval.search(query, texts, k=len(texts), method=method)
             order = [unit_ids[h.index] for h in hits]
             ranks.append(order.index(gold) + 1 if gold in order else len(texts) + 1)
@@ -64,8 +64,11 @@ def main() -> int:
             )
         material_units, _ = load_units(language)
         claims = [
-            r for r in relation
-            if r["language"] == language and r["label"] in {"SUPPORTED", "CONTRADICTED"} and r["split"] == "test"
+            r
+            for r in relation
+            if r["language"] == language
+            and r["label"] in {"SUPPORTED", "CONTRADICTED"}
+            and r["split"] == "test"
         ]
         report["relation"][language] = evaluate(
             [r["model_input"]["claim"] for r in claims],
@@ -76,7 +79,11 @@ def main() -> int:
     save("e3_retrieval", report)
     for scope, rows in report.items():
         for key, methods in rows.items():
-            print(scope, key, {m: (round(v["recall@5"], 3), round(v["mrr"], 3)) for m, v in methods.items()})
+            print(
+                scope,
+                key,
+                {m: (round(v["recall@5"], 3), round(v["mrr"], 3)) for m, v in methods.items()},
+            )
     return 0
 
 
