@@ -38,6 +38,8 @@ ROUTES = [
     ("GET", "/recognition", "recognition.read"),
     ("GET", "/behavior", "behavior.read"),
 ]
+# Recognition layer reads (demo edition): served, but kept out of the frozen OpenAPI.
+DEMO_OPERATIONS = {"recognition.read", "behavior.read"}
 
 
 def mount_v2_routes(app, gateway, auth_dependency):
@@ -80,4 +82,5 @@ def mount_v2_routes(app, gateway, auth_dependency):
             make_endpoint(name, method != "GET"),
             methods=[method],
             response_model=None,
+            include_in_schema=name not in DEMO_OPERATIONS,
         )

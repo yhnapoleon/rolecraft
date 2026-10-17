@@ -5,6 +5,7 @@ from datetime import datetime
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic.json_schema import SkipJsonSchema
 
 from .core import (
     Executor,
@@ -175,7 +176,9 @@ class SubmissionRuleCheck(V2):
     facts: _RuleCheckFacts = _RuleCheckFacts()
     # Recognition layer (demo edition, contract not re-exported): C1 sentence labels of the
     # work for the writing-area preview; see recognition.judge.preview.
-    recognition: dict[str, JsonValue] | None = None
+    recognition: SkipJsonSchema[dict[str, JsonValue] | None] = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def saved_names_its_submission(self):
