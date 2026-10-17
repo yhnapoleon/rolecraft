@@ -71,7 +71,12 @@ def run_pre_event_trial(package, trial_id, query, changes, *, now=None):
 
 def record_public_cases(package):
     trials = TRIALS
-    if getattr(package, "locale", "zh") == "en":
+    if getattr(getattr(package, "bundle", None), "id", None) == "it_ticket_pilot":
+        if getattr(package, "locale", "zh") == "en":
+            from .content_it_en import TRIALS as trials
+        else:
+            from .content_it import TRIALS as trials
+    elif getattr(package, "locale", "zh") == "en":
         from .public_cases_en import TRIALS_EN
 
         trials = TRIALS_EN

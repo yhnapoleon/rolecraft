@@ -65,12 +65,19 @@ def hotel_question(query, locale):
             "国内出差住宿每晚的报销上限",
             "出差住宿报销一晚能报多少",
             "住宿报销金额",
+            # it_ticket_pilot: the same dynamic-policy question about the P2 SLA.
+            "p2工单的响应时限是多少",
+            "p2工单的响应时限",
+            "p2工单响应时限",
+            "p2工单多久必须有人响应",
         )
         if locale == "zh"
         else (
             "whatisthehotelreimbursementlimitpernight",
             "whatisthehotelreimbursementlimit",
             "whatisthemaximumhotelreimbursementpernight",
+            "whatisthep2ticketresponsetime",
+            "whatistheresponsetimeforp2tickets",
         )
     )
     return q in values
