@@ -24,6 +24,7 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     TARGET.mkdir(parents=True, exist_ok=True)
     for name in (
+        "e1_baselines",
         "e3_retrieval",
         "e4_decision",
         "e5_scope",
