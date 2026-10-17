@@ -1,5 +1,6 @@
+import type { RecognitionRecord } from './features/recognition-native/badge';
 export type RoleId = 'supervisor' | 'tech_lead' | 'business_lead';
-export type Scenario = 'pm_pilot' | 'pm_pilot_urgent' | 'pm_pilot_capacity15';
+export type Scenario = 'pm_pilot' | 'pm_pilot_urgent' | 'pm_pilot_capacity15' | 'it_ticket_pilot';
 export interface Pilot {
   participants: number;
   knowledge_domains: string[];
@@ -87,6 +88,9 @@ export interface TestRun {
   as_of_seq: number;
   stale: boolean;
   created_at?: string | null;
+  /** Recognition layer records (scope, retrieval, drift) saved with this test. */
+  recognition?: RecognitionRecord[];
+  error_code?: string | null;
 }
 // Browser-owned provenance. These fields never enter the backend TestRequest.
 export interface TestRunOrigin {

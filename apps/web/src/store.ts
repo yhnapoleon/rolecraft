@@ -981,7 +981,7 @@ function validSession(s: any): s is LocalSession {
     typeof s.id === 'string' &&
     typeof s.token === 'string' &&
     !!s.token &&
-    ['pm_pilot', 'pm_pilot_urgent', 'pm_pilot_capacity15'].includes(s.scenario) &&
+    ['pm_pilot', 'pm_pilot_urgent', 'pm_pilot_capacity15', 'it_ticket_pilot'].includes(s.scenario) &&
     s.world?.session_id === s.id &&
     ['active', 'paused', 'submitted'].includes(s.world?.status) &&
     Number.isInteger(s.world?.version) &&

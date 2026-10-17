@@ -29,12 +29,40 @@ export type PresubmitLine = {
   tone: Tone;
   action: { action: Tool; label: string } | null;
 };
+/** One sentence of the work as the recognizers labelled it (C2 + C1 + C6). */
+export type PresubmitSentence = {
+  index: number;
+  quote: string;
+  /** supported / contradicted / insufficient, or deferred when C6 sends it to a person. */
+  tone: 'supported' | 'contradicted' | 'insufficient' | 'deferred';
+  label: string;
+  confidence: number;
+  evidence: string | null;
+};
+export type PresubmitRecognition = {
+  title: string;
+  counts: string;
+  by: string;
+  fallback: string | null;
+  note: string;
+  evidenceLabel: string;
+  sentences: PresubmitSentence[];
+};
+type RecognitionPreview = {
+  recognizer?: string;
+  fallback?: boolean;
+  duration_ms?: number;
+  counts?: { supported?: number; contradicted?: number; insufficient?: number; deferred?: number };
+  units?: { index: number; quote: string; label: string; confidence: number; decision: string; evidence: string | null }[];
+};
+
 export type PresubmitView = {
   title: string;
   count: { met: number; total: number; text: string } | null;
   empty: string | null;
   lines: PresubmitLine[];
   waiting: string | null;
+  recognition: PresubmitRecognition | null;
   details: {
     label: string;
     note: string;
@@ -187,6 +215,47 @@ const FINDINGS: Readonly<Record<string, PresubmitKey>> = {
   NOT_MET: 'notMet',
 };
 
+const SENTENCE_LABELS: Readonly<Record<PresubmitSentence['tone'], PresubmitKey>> = {
+  supported: 'recSupported',
+  contradicted: 'recContradicted',
+  insufficient: 'recInsufficient',
+  deferred: 'recDeferred',
+};
+
+/** The recognizers' sentence labels for the writing area, when the check carries them. */
+export function recognitionView(
+  raw: RecognitionPreview | null | undefined,
+  language: FeedbackLanguage,
+): PresubmitRecognition | null {
+  if (!raw || !Array.isArray(raw.units) || !raw.units.length) return null;
+  const t = (key: PresubmitKey, values?: Values) => say(language, key, values);
+  const c = raw.counts ?? {};
+  return {
+    title: t('recTitle'),
+    counts: t('recCounts', {
+      s: c.supported ?? 0,
+      c: c.contradicted ?? 0,
+      i: c.insufficient ?? 0,
+      d: c.deferred ?? 0,
+    }),
+    by: t('recBy', { name: raw.recognizer ?? '–', ms: Math.round(raw.duration_ms ?? 0) }),
+    fallback: raw.fallback ? t('recFallback') : null,
+    note: t('recNote'),
+    evidenceLabel: t('recEvidence'),
+    sentences: raw.units.map((u) => {
+      const tone = (u.decision === 'defer' ? 'deferred' : u.label) as PresubmitSentence['tone'];
+      return {
+        index: u.index,
+        quote: u.quote,
+        tone: SENTENCE_LABELS[tone] ? tone : 'insufficient',
+        label: t(SENTENCE_LABELS[tone] ?? 'recInsufficient'),
+        confidence: u.confidence,
+        evidence: tone === 'supported' || tone === 'contradicted' ? u.evidence : null,
+      };
+    }),
+  };
+}
+
 /** The card's content: rule-decided items counted and phrased; the rest summarised by count. */
 export function presubmitView(
   check: SubmissionRuleCheck,
@@ -228,6 +297,10 @@ export function presubmitView(
         : t('emptyNone'),
     lines,
     waiting: counts.pending ? t('waiting', { n: counts.pending }) : null,
+    recognition: recognitionView(
+      (check as SubmissionRuleCheck & { recognition?: RecognitionPreview | null }).recognition,
+      language,
+    ),
     details: {
       label: t('basis'),
       note: t('readOnly'),
@@ -360,7 +433,8 @@ export function createPresubmitSchedule(options: {
 }
 
 export const PRESUBMIT_STYLE =
-  '.presubmit{margin:14px 0;padding:14px 16px;border:1px solid var(--line-2);border-radius:var(--r-md,12px);background:var(--surface-2);display:grid;gap:8px}.presubmit p,.presubmit ul{margin:0}.presubmit__title{margin:0;font-size:15px;font-weight:600}.presubmit[aria-busy="true"] .presubmit__result{opacity:.55}.presubmit__meter{display:flex;align-items:center;gap:10px}.presubmit__bar{flex:1;max-width:220px;height:6px;border-radius:999px;background:var(--line-2);overflow:hidden}.presubmit__fill{display:block;height:100%;background:var(--good)}.presubmit__count{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}.presubmit__items{list-style:none;padding:0;display:grid;gap:6px}.presubmit__items li{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.presubmit__mark{flex:none;width:1.1em;font-weight:700;color:var(--ink-2)}.presubmit__items [data-tone="good"] .presubmit__mark{color:var(--good)}.presubmit__items [data-tone="bad"] .presubmit__mark{color:var(--bad)}.presubmit__items [data-tone="warn"] .presubmit__mark{color:var(--warn)}.presubmit__text{flex:1 1 14em;min-width:0}.presubmit .btn.small{min-height:28px;margin:0}.presubmit__muted,.presubmit__waiting{color:var(--ink-3);font-size:13px}.presubmit details{font-size:13px;color:var(--ink-2)}.presubmit details p{margin-block:6px}';
+  '.presubmit{margin:14px 0;padding:14px 16px;border:1px solid var(--line-2);border-radius:var(--r-md,12px);background:var(--surface-2);display:grid;gap:8px}.presubmit p,.presubmit ul{margin:0}.presubmit__title{margin:0;font-size:15px;font-weight:600}.presubmit[aria-busy="true"] .presubmit__result{opacity:.55}.presubmit__meter{display:flex;align-items:center;gap:10px}.presubmit__bar{flex:1;max-width:220px;height:6px;border-radius:999px;background:var(--line-2);overflow:hidden}.presubmit__fill{display:block;height:100%;background:var(--good)}.presubmit__count{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}.presubmit__items{list-style:none;padding:0;display:grid;gap:6px}.presubmit__items li{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.presubmit__mark{flex:none;width:1.1em;font-weight:700;color:var(--ink-2)}.presubmit__items [data-tone="good"] .presubmit__mark{color:var(--good)}.presubmit__items [data-tone="bad"] .presubmit__mark{color:var(--bad)}.presubmit__items [data-tone="warn"] .presubmit__mark{color:var(--warn)}.presubmit__text{flex:1 1 14em;min-width:0}.presubmit .btn.small{min-height:28px;margin:0}.presubmit__muted,.presubmit__waiting{color:var(--ink-3);font-size:13px}.presubmit details{font-size:13px;color:var(--ink-2)}.presubmit details p{margin-block:6px}' +
+  '.presubmit__rec{display:grid;gap:6px;padding-top:8px;border-top:1px dashed var(--line-2)}.presubmit__rec-head{font-size:13.5px}.presubmit__sentences{list-style:none;padding:0;margin:0;display:grid;gap:6px}.presubmit__sentences li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 10px;border-left:3px solid var(--line-2);border-radius:6px;background:var(--surface-1,transparent);font-size:13.5px}.presubmit__sentences [data-tone="supported"]{border-left-color:var(--good)}.presubmit__sentences [data-tone="contradicted"]{border-left-color:var(--bad)}.presubmit__sentences [data-tone="insufficient"]{border-left-color:var(--warn)}.presubmit__sentences [data-tone="deferred"]{border-left-color:var(--ink-3);border-left-style:dashed}.presubmit__tag{font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}.presubmit__sentences [data-tone="supported"] .presubmit__tag{color:var(--good)}.presubmit__sentences [data-tone="contradicted"] .presubmit__tag{color:var(--bad)}.presubmit__sentences [data-tone="insufficient"] .presubmit__tag{color:var(--warn)}.presubmit__evidence{grid-column:1/-1;color:var(--ink-3);font-size:12px}.presubmit__rec [data-fallback]{color:var(--ink-3)}';
 
 /** The card above the submit button. update() takes the current choice, or null when the person
  * has not chosen both a decision and at least one version. */
@@ -434,6 +508,28 @@ export function mountPresubmitCard(
       nodes.push(list);
     }
     if (view.waiting) nodes.push(el('p', view.waiting, 'presubmit__waiting'));
+    if (view.recognition) {
+      const rec = view.recognition;
+      const box = el('div', '', 'presubmit__rec');
+      box.dataset.presubmitRecognition = '';
+      const head = el('p', '', 'presubmit__rec-head');
+      head.append(el('b', rec.title), doc.createTextNode(` ${rec.counts}`));
+      const by = el('p', rec.fallback ? `${rec.by} · ${rec.fallback}` : rec.by, 'presubmit__muted');
+      if (rec.fallback) by.dataset.fallback = '';
+      const list = el('ol', '', 'presubmit__sentences');
+      for (const s of rec.sentences) {
+        const item = el('li');
+        item.dataset.tone = s.tone;
+        item.title = `${s.label} · ${s.confidence.toFixed(2)}`;
+        const quote = el('span', s.quote, 'presubmit__quote');
+        const tag = el('span', `${s.label} ${s.confidence.toFixed(2)}`, 'presubmit__tag');
+        item.append(quote, tag);
+        if (s.evidence) item.append(el('small', `${rec.evidenceLabel}${s.evidence}`, 'presubmit__evidence'));
+        list.append(item);
+      }
+      box.append(head, by, list, el('p', rec.note, 'presubmit__muted'));
+      nodes.push(box);
+    }
     const details = el('details');
     details.append(el('summary', view.details.label));
     for (const row of view.details.basis) {

@@ -502,7 +502,7 @@ test('岗位层：产品经理可进入，工程师标为稍后开放且没有�
   const pm = E.careers.find((c) => c.id === 'pm');
   const eng = E.careers.find((c) => c.id === 'engineer');
   assert.equal(pm.status, 'open');
-  assert.deepEqual(pm.cases, ['pilot', 'urgent', 'capacity']);
+  assert.deepEqual(pm.cases, ['pilot', 'urgent', 'capacity', 'itticket']);
   assert.equal(eng.status, 'later');
   assert.deepEqual(eng.cases, []);
 });

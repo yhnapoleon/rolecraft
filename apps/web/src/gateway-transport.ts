@@ -102,7 +102,8 @@ export function createGatewayTransport(
         redirect: 'error',
         credentials: 'omit',
         cache: 'no-store',
-        signal: AbortSignal.timeout(20000),
+        // The pre-submission preview runs the sentence recognizers (C1 on CPU): allow longer.
+        signal: AbortSignal.timeout(path.includes('/submission-rule-check') ? 60000 : 20000),
       });
     } catch {
       throw new ApiError(

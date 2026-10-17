@@ -1,0 +1,72 @@
+.rc-behavior {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+  font-size: 12.5px;
+}
+.rc-behavior h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+}
+.rc-phasebar {
+  display: flex;
+  gap: 2px;
+  margin: 4px 0 8px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.rc-phase {
+  min-width: 0;
+  padding: 3px 6px;
+  color: var(--ink-2);
+  font-size: 10.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rc-phase[data-phase='0'],
+.rc-steps li[data-phase='0'] {
+  background: rgba(61, 99, 245, 0.12);
+}
+.rc-phase[data-phase='1'],
+.rc-steps li[data-phase='1'] {
+  background: rgba(13, 148, 132, 0.14);
+}
+.rc-phase[data-phase='2'],
+.rc-steps li[data-phase='2'] {
+  background: rgba(194, 68, 159, 0.12);
+}
+.rc-phase[data-phase='3'],
+.rc-steps li[data-phase='3'] {
+  background: var(--warn-tint);
+}
+.rc-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 10px;
+  padding: 0;
+  list-style: none;
+  counter-reset: step;
+}
+.rc-steps li {
+  padding: 1px 6px;
+  border-radius: 5px;
+  color: var(--ink-2);
+  font-size: 10.5px;
+}
+.rc-align-label {
+  margin: 8px 0 2px;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+.rc-align,
+.rc-anomalies {
+  margin: 0;
+  padding-left: 18px;
+}
+.rc-anomalies li {
+  color: var(--warn);
+}

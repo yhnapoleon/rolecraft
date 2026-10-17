@@ -58,6 +58,15 @@
       capacity: 15,
       deadline: 7,
     },
+    {
+      id: 'itticket',
+      title: 'IT 工单助手，准备好试点了吗？',
+      kicker: '换一个领域 · IT 服务台',
+      description: '同样的结构换到 IT 服务台：工单助手先服务谁、开放哪些问题，SLA 时限更新后怎么保障。',
+      duration: '约 20–30 分钟 · 可随时暂停',
+      capacity: 30,
+      deadline: 7,
+    },
   ];
   const roles = [
     {
@@ -94,7 +103,7 @@
       status: 'open',
       summary: '判断一个 AI 功能该不该上线、先给谁用、怎样保障，并为这个决定负责。',
       work: ['弄清需求和约束', '亲手测试 AI 助手', '和三位同事协商', '交付有依据的决定'],
-      cases: ['pilot', 'urgent', 'capacity'],
+      cases: ['pilot', 'urgent', 'capacity', 'itticket'],
     },
     {
       id: 'engineer',
@@ -206,7 +215,7 @@
       version: VERSION,
       activeId: null,
       attempts: [],
-      casePriorities: { pilot: 'first', urgent: 'next', capacity: 'later' },
+      casePriorities: { pilot: 'first', urgent: 'next', capacity: 'later', itticket: 'later' },
     };
   }
   function getAttempt(s) {

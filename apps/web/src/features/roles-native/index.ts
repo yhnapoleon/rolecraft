@@ -8,7 +8,8 @@ import {
 import { renderShortResult } from '../results-native/short-result';
 import { hasMarkdownStructure, markdownNodes } from '../../app/markdown';
 /** Native v4 colleague slot. The injected client owns API calls, journals and jobs. */
-import { T, onLocaleChange } from '../../app/i18n';
+import { T, locale, onLocaleChange } from '../../app/i18n';
+import { type RecognitionRecord, renderBadges } from '../recognition-native/badge';
 import './roles.css';
 
 export type RoleId = 'supervisor' | 'business_lead' | 'tech_lead';
@@ -49,6 +50,8 @@ export interface ConversationTurn {
   canRefresh?: boolean;
   canRecordDisplay?: boolean;
   displayRecorded?: boolean; // Public server receipt, never inferred from a read.
+  /** Intent and grounding-check signatures saved on the reply (recognition layer). */
+  recognition?: RecognitionRecord[];
 }
 /** Presentation data, not a new server schema. Never pass private audit objects. */
 export interface RolesView {
@@ -445,6 +448,9 @@ export function mount(
           },
         });
         item.append(short.element);
+        if (turn.recognition?.length) {
+          item.append(renderBadges(doc, turn.recognition, locale()));
+        }
         if (displayObserver && turn.canRecordDisplay !== false && !turn.displayRecorded) {
           // A reply counts as displayed only when its complete text is painted.
           const visibleText = presentation.partial || !short.lead ? reply : short.lead;
