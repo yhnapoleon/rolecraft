@@ -117,7 +117,9 @@ def split(rows: list[dict], key_of, seed: int = 7, ratios=(0.6, 0.2, 0.2)) -> li
     groups = sorted({key_of(r) for r in rows})
     random.Random(seed).shuffle(groups)
     cut1, cut2 = int(len(groups) * ratios[0]), int(len(groups) * (ratios[0] + ratios[1]))
-    part = {g: ("train" if i < cut1 else "dev" if i < cut2 else "test") for i, g in enumerate(groups)}
+    part = {
+        g: ("train" if i < cut1 else "dev" if i < cut2 else "test") for i, g in enumerate(groups)
+    }
     for r in rows:
         r["split"] = part[key_of(r)]
     return rows
@@ -128,7 +130,8 @@ SCENARIO = {
         "场景：星桥数字公司内部知识助手试点。学员扮演产品经理，要决定首批给谁用、开放范围、资源和验证。"
         "同事有经理（supervisor）、技术负责人（tech_lead）、业务负责人陈敏（business_lead）。"
         "已知约束：预留容量 30 人，可用开发资源 3 人日，正式试点第 7 天；候选员工 50 人；"
-        "可审批上限容量 60 人、开发 6 人日、期限第 10 天；知识库含 FAQ、入职、差旅政策、餐费、请假。"
+        "可审批上限容量 60 人、开发 6 人日、期限第 10 天；知识库含 FAQ、入职、差旅政策、"
+        "餐费、请假。"
     ),
     "en": (
         "Scenario: an internal knowledge-assistant pilot at Xingqiao Digital. The learner is a "
@@ -144,11 +147,26 @@ SCENARIO = {
 # ---- intent ------------------------------------------------------------------------------
 
 INTENTS = {
-    "ask_limit": ("询问限制、上限、约束、容量（问“最多/上限/能不能超过”）", "asks about limits, caps, constraints or capacity"),
-    "ask_resource": ("询问资源、人力、天数、预算、工作量", "asks about resources, people, days, budget or effort"),
-    "ask_process": ("询问流程、步骤、怎么做、下一步", "asks how to do something, the process, steps or next step"),
-    "seek_approval": ("请求对方批准、同意、放行、签字", "asks the colleague to approve, agree, grant or sign off"),
-    "other": ("闲聊、表达情绪、确认收到、与工作无关或以上都不是", "small talk, feelings, acknowledgements, off-topic, or none of the above"),
+    "ask_limit": (
+        "询问限制、上限、约束、容量（问“最多/上限/能不能超过”）",
+        "asks about limits, caps, constraints or capacity",
+    ),
+    "ask_resource": (
+        "询问资源、人力、天数、预算、工作量",
+        "asks about resources, people, days, budget or effort",
+    ),
+    "ask_process": (
+        "询问流程、步骤、怎么做、下一步",
+        "asks how to do something, the process, steps or next step",
+    ),
+    "seek_approval": (
+        "请求对方批准、同意、放行、签字",
+        "asks the colleague to approve, agree, grant or sign off",
+    ),
+    "other": (
+        "闲聊、表达情绪、确认收到、与工作无关或以上都不是",
+        "small talk, feelings, acknowledgements, off-topic, or none of the above",
+    ),
 }
 STYLES = {
     "formal": ("正式书面", "formal written"),
@@ -163,6 +181,7 @@ def gen_intent(language: str, per_cell: int) -> list[dict]:
     jobs = []
     for intent, (dz, de) in INTENTS.items():
         for style, (sz, se) in STYLES.items():
+
             def job(intent=intent, style=style, dz=dz, de=de, sz=sz, se=se):
                 system = SCENARIO[language] + (
                     "\n你在为意图识别器造训练数据。只输出 JSON。"
@@ -171,7 +190,7 @@ def gen_intent(language: str, per_cell: int) -> list[dict]:
                 )
                 user = (
                     f"写 {per_cell} 句学员对同事说的话，意图是：{dz}；文风：{sz}。彼此要有差异，"
-                    f"不要都用同一个关键词。输出 {{\"items\": [\"...\"]}}。"
+                    f'不要都用同一个关键词。输出 {{"items": ["..."]}}。'
                     if zh
                     else f"Write {per_cell} things the learner says to a colleague. Intent: {de}. "
                     f"Style: {se}. Vary them; do not reuse one keyword. "
@@ -183,6 +202,7 @@ def gen_intent(language: str, per_cell: int) -> list[dict]:
                     for t in found.get("items", [])
                     if isinstance(t, str) and t.strip()
                 ]
+
             jobs.append(job)
     rows = [row for batch in parallel(jobs) for row in batch]
     return review_intent(rows, language)
@@ -198,24 +218,30 @@ def review_intent(rows: list[dict], language: str) -> list[dict]:
     def job(chunk):
         def run():
             numbered = {str(i): r["text"] for i, r in enumerate(chunk)}
-            found = chat(
-                SCENARIO[language]
-                + ("\n你是标注员，只输出 JSON。" if zh else "\nYou are an annotator. Output JSON only."),
-                (
-                    f"给每句话标一个意图（{labels}）。定义：{guide}。"
-                    f'输出 {{"labels": {{"编号": "意图"}}}}。\n'
-                    if zh
-                    else f"Label each utterance with one intent ({labels}). Definitions: {guide}. "
-                    'Output {"labels": {"id": "intent"}}.\n'
+            found = (
+                chat(
+                    SCENARIO[language]
+                    + (
+                        "\n你是标注员，只输出 JSON。"
+                        if zh
+                        else "\nYou are an annotator. Output JSON only."
+                    ),
+                    (
+                        f"给每句话标一个意图（{labels}）。定义：{guide}。"
+                        f'输出 {{"labels": {{"编号": "意图"}}}}。\n'
+                        if zh
+                        else f"Label each utterance with one intent ({labels}). Definitions: "
+                        f"{guide}. "
+                        'Output {"labels": {"id": "intent"}}.\n'
+                    )
+                    + json.dumps(numbered, ensure_ascii=False),
+                    temperature=0.0,
                 )
-                + json.dumps(numbered, ensure_ascii=False),
-                temperature=0.0,
-            ) or {}
+                or {}
+            )
             got = found.get("labels", {})
-            return [
-                r | {"review": got.get(str(i))}
-                for i, r in enumerate(chunk)
-            ]
+            return [r | {"review": got.get(str(i))} for i, r in enumerate(chunk)]
+
         return run
 
     reviewed = [r for batch in parallel([job(c) for c in chunks]) for r in batch]
@@ -259,7 +285,9 @@ def kb_units(language: str) -> list[dict]:
     from career_lab.recognition.units import split_material
     from career_lab.scenarios.v2.loader import load_package
 
-    index = json.loads((ROOT / "scenarios/pm_pilot/v2/installed/current.json").read_text(encoding="utf-8"))
+    index = json.loads(
+        (ROOT / "scenarios/pm_pilot/v2/installed/current.json").read_text(encoding="utf-8")
+    )
     pkg = load_package(ROOT / index["main"][language]["root"])
     kb = {mid for ids in pkg.bundle.domains.values() for mid in ids}
     domain_of = {mid: d for d, ids in pkg.bundle.domains.items() for mid in ids}
@@ -286,27 +314,44 @@ def gen_queries(language: str, units: list[dict], per_unit: int, kind: str) -> l
     zh = language == "zh"
     jobs = []
     for unit in units:
+
         def job(unit=unit):
             if kind == "direct":
                 ask = (
-                    f"根据这段知识库原文，写 {per_unit} 个员工会问知识助手的问题，答案就在原文里，用词可以接近原文。"
+                    (
+                        f"根据这段知识库原文，写 {per_unit} 个员工会问知识助手的问题，"
+                        "答案就在原文里，用词可以接近原文。"
+                    )
                     if zh
-                    else f"From this knowledge-base passage, write {per_unit} questions an employee would "
-                    "ask the assistant whose answer is in the passage; wording may stay close to it."
+                    else f"From this knowledge-base passage, write {per_unit} questions an "
+                    "employee would "
+                    "ask the assistant whose answer is in the passage; wording may stay "
+                    "close to it."
                 )
             else:
                 ask = (
-                    f"根据这段知识库原文，写 {per_unit} 个员工会问的问题，答案在原文里，但要换说法："
+                    f"根据这段知识库原文，写 {per_unit} 个员工会问的问题，答案在原文里，"
+                    "但要换说法："
                     "尽量不用原文的关键词，用同义词、口语或举例来问。"
                     if zh
-                    else f"From this passage, write {per_unit} questions whose answer is in it, but "
-                    "rephrase: avoid the passage's key words, use synonyms, casual speech or examples."
+                    else f"From this passage, write {per_unit} questions whose answer is in it, "
+                    "but "
+                    "rephrase: avoid the passage's key words, use synonyms, casual speech "
+                    "or examples."
                 )
-            found = chat(
-                "Output JSON only.",
-                ask + ('\n输出 {"items": ["..."]}\n原文：' if zh else '\nOutput {"items": ["..."]}\nPassage: ')
-                + unit["text"],
-            ) or {}
+            found = (
+                chat(
+                    "Output JSON only.",
+                    ask
+                    + (
+                        '\n输出 {"items": ["..."]}\n原文：'
+                        if zh
+                        else '\nOutput {"items": ["..."]}\nPassage: '
+                    )
+                    + unit["text"],
+                )
+                or {}
+            )
             return [
                 {
                     "query": q.strip(),
@@ -319,35 +364,49 @@ def gen_queries(language: str, units: list[dict], per_unit: int, kind: str) -> l
                 for q in found.get("items", [])
                 if isinstance(q, str) and q.strip()
             ]
+
         jobs.append(job)
     return [row for batch in parallel(jobs) for row in batch]
 
 
 def gen_out_of_domain(language: str, near: int, far: int) -> list[dict]:
     zh = language == "zh"
-    found_near = chat(
-        "Output JSON only.",
-        (
-            f"一家公司的内部知识助手只覆盖：常见办公 FAQ、入职、差旅住宿与交通报销、餐费报销、请假流程。"
-            f"写 {near} 个员工可能会问、但不在这些范围内的公司内部问题（例如薪资发放、体检、晋升、IT 采购、"
-            f"团建、股权），要像真的员工提问。输出 {{\"items\": [\"...\"]}}"
-            if zh
-            else f"A company's internal assistant covers only: office FAQ, onboarding, travel hotel and "
-            f"transport claims, meal claims and leave. Write {near} realistic employee questions about "
-            "company matters outside that scope (payroll dates, health checks, promotion, IT purchases, "
-            'team events, equity). Output {"items": ["..."]}'
-        ),
-    ) or {}
-    found_far = chat(
-        "Output JSON only.",
-        (
-            f"写 {far} 个与公司工作完全无关的问题（天气、股票、菜谱、娱乐、编程题、闲聊等），风格各异。"
-            f'输出 {{"items": ["..."]}}'
-            if zh
-            else f"Write {far} questions unrelated to company work (weather, stocks, recipes, "
-            'entertainment, coding puzzles, chit-chat), in varied styles. Output {"items": ["..."]}'
-        ),
-    ) or {}
+    found_near = (
+        chat(
+            "Output JSON only.",
+            (
+                "一家公司的内部知识助手只覆盖：常见办公 FAQ、入职、差旅住宿与交通报销、"
+                "餐费报销、请假流程。"
+                f"写 {near} 个员工可能会问、但不在这些范围内的公司内部问题（例如薪资发放、"
+                "体检、晋升、IT 采购、"
+                f'团建、股权），要像真的员工提问。输出 {{"items": ["..."]}}'
+                if zh
+                else "A company's internal assistant covers only: office FAQ, onboarding, "
+                "travel hotel and "
+                f"transport claims, meal claims and leave. Write {near} realistic employee "
+                "questions about "
+                "company matters outside that scope (payroll dates, health checks, "
+                "promotion, IT purchases, "
+                'team events, equity). Output {"items": ["..."]}'
+            ),
+        )
+        or {}
+    )
+    found_far = (
+        chat(
+            "Output JSON only.",
+            (
+                f"写 {far} 个与公司工作完全无关的问题（天气、股票、菜谱、娱乐、编程题、"
+                "闲聊等），风格各异。"
+                f'输出 {{"items": ["..."]}}'
+                if zh
+                else f"Write {far} questions unrelated to company work (weather, stocks, recipes, "
+                "entertainment, coding puzzles, chit-chat), in varied styles. Output "
+                '{"items": ["..."]}'
+            ),
+        )
+        or {}
+    )
     rows = [
         {"query": q.strip(), "language": language, "kind": "out_near"}
         for q in found_near.get("items", [])

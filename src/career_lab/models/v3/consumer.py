@@ -402,7 +402,7 @@ def _public_unit(row: UnitResult, candidates: dict[str, Any]) -> dict[str, Any]:
     }
     if row.probabilities is not None and row.status == "completed":
         names = ("supported", "contradicted", "insufficient")
-        public["probabilities"] = dict(zip(names, row.probabilities))
+        public["probabilities"] = dict(zip(names, row.probabilities, strict=False))
         public["confidence"] = max(row.probabilities)
     return public
 

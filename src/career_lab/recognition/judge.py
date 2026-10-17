@@ -377,7 +377,9 @@ class RecognitionFeedback:
         analysis = analyze_support(support, work_language) if support is not None else None
         tests = scope_tests(packages[0]) if packages else []
         behaviour = self._behaviour()
-        body = summary(analysis, tests, {k: v for k, v in (behaviour or {}).items() if k != "record"})
+        body = summary(
+            analysis, tests, {k: v for k, v in (behaviour or {}).items() if k != "record"}
+        )
         packages = tuple(with_recognition(p, body) for p in packages)
         report, diagnostics = self.inner.evaluate(
             session_id,
@@ -418,8 +420,20 @@ class RecognitionFeedback:
             outputs={
                 "criterion": None,
                 "units": [
-                    {k: r[k] for k in ("index", "quote", "label", "confidence", "probabilities",
-                                       "evidence_ids", "reason", "decision", "expected_cost")}
+                    {
+                        k: r[k]
+                        for k in (
+                            "index",
+                            "quote",
+                            "label",
+                            "confidence",
+                            "probabilities",
+                            "evidence_ids",
+                            "reason",
+                            "decision",
+                            "expected_cost",
+                        )
+                    }
                     for r in rows
                 ],
                 "counts": analysis["counts"],
@@ -436,9 +450,7 @@ class RecognitionFeedback:
             {"units": [r["unit_hash"] for r in rows]},
             label=None,
             outputs={
-                "per_sentence_top": [
-                    {"index": r["index"], "top": r["top"]} for r in rows
-                ],
+                "per_sentence_top": [{"index": r["index"], "top": r["top"]} for r in rows],
                 "k": relation.TOP_K,
                 "candidates": analysis["candidates"],
             },
@@ -465,9 +477,7 @@ class RecognitionFeedback:
     def _arbitrate(self, report, package, analysis, as_of):
         recognized = analysis["aggregate"]
         items = list(report.items)
-        index = next(
-            (i for i, item in enumerate(items) if item.criterion == "R2.support"), None
-        )
+        index = next((i for i, item in enumerate(items) if item.criterion == "R2.support"), None)
         if index is None or recognized is None:
             return report, None
         item = items[index]

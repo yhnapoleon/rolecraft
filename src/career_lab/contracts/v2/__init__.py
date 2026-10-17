@@ -8,4 +8,4 @@ from .requests import *
 from .legacy import *
 from .provider import *
 from .extensions import *
-from .recognition import *
+from .recognition import *  # noqa: F403
