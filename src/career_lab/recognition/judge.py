@@ -154,6 +154,22 @@ def preview(packages, language: str) -> dict[str, Any] | None:
     support = next((p for p in packages if p.criterion == "R2.support"), None)
     if support is None:
         return None
+    # The preview is re-requested whenever the chosen versions or decision change; the same
+    # package (same input hash) gives the same labels, so reuse them.
+    cached = _PREVIEWS.get((support.input_hash, language))
+    if cached is not None:
+        return cached
+    result = _preview(support, language)
+    if len(_PREVIEWS) >= 64:
+        _PREVIEWS.pop(next(iter(_PREVIEWS)))
+    _PREVIEWS[(support.input_hash, language)] = result
+    return result
+
+
+_PREVIEWS: dict[tuple[str, str], dict[str, Any]] = {}
+
+
+def _preview(support: EvidencePackageV2, language: str) -> dict[str, Any]:
     analysis = analyze_support(support, language)
     texts = {c.id: c.text for c in support.candidate_evidence}
     units = []
