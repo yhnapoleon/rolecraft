@@ -51,13 +51,15 @@ TABLES = (*BY_SESSION, "jobs", "job_times")
 def _rows(c: sqlite3.Connection, sql: str, args=()) -> list[dict]:
     cur = c.execute(sql, args)
     names = [d[0] for d in cur.description]
-    return [dict(zip(names, row)) for row in cur.fetchall()]
+    return [dict(zip(names, row, strict=False)) for row in cur.fetchall()]
 
 
 def _schema(c: sqlite3.Connection) -> dict[str, str]:
     marks = ",".join("?" * len(TABLES))
     return dict(
-        c.execute(f"SELECT name, sql FROM sqlite_master WHERE type='table' AND name IN ({marks})", TABLES)
+        c.execute(
+            f"SELECT name, sql FROM sqlite_master WHERE type='table' AND name IN ({marks})", TABLES
+        )
     )
 
 
@@ -71,7 +73,10 @@ def export_session(c: sqlite3.Connection, sid: str, tables: set[str], catalog: d
         raise SystemExit(f"session {sid} not found")
     jobs = _rows(
         c,
-        "SELECT * FROM jobs WHERE request_key LIKE ? OR json_extract(payload, '$.context.session_id') = ?",
+        (
+            "SELECT * FROM jobs WHERE request_key LIKE ? OR json_extract(payload, "
+            "'$.context.session_id') = ?"
+        ),
         (sid + ":%", sid),
     )
     rows["jobs"] = jobs
@@ -169,7 +174,13 @@ def import_session(c: sqlite3.Connection, entry: dict, replace: bool) -> bool:
         for row in rows:
             if table == "jobs" and row["status"] in ("queued", "running"):
                 # Never let the target's worker pick an imported job up and call a model.
-                row = {**row, "status": "failed", "lease_token": None, "lease_until": 0, "error": "imported"}
+                row = {
+                    **row,
+                    "status": "failed",
+                    "lease_token": None,
+                    "lease_until": 0,
+                    "error": "imported",
+                }
             names = list(row)
             c.execute(
                 f"INSERT INTO {table} ({','.join(names)}) VALUES ({','.join('?' * len(names))})",
@@ -197,19 +208,28 @@ def cmd_import(args) -> int:
     hashes = None
     catalog = args.catalog
     if catalog and Path(catalog).is_file():
-        hashes = {s["scenario_hash"] for s in json.loads(Path(catalog).read_text(encoding="utf-8"))["scenarios"]}
+        hashes = {
+            s["scenario_hash"]
+            for s in json.loads(Path(catalog).read_text(encoding="utf-8"))["scenarios"]
+        }
     results = []
     with c:
         for entry in pack["sessions"]:
             if hashes is not None and entry["scenario_manifest_sha256"] not in hashes:
-                print(f"! {entry['label']}: scenario {entry['scenario_manifest_sha256'][:12]} is not in {catalog}")
+                print(
+                    f"! {entry['label']}: scenario "
+                    f"{entry['scenario_manifest_sha256'][:12]} is not in {catalog}"
+                )
             done = import_session(c, entry, args.replace)
             results.append((entry, done))
     c.close()
     print()
     for entry, done in results:
         if not done:
-            print(f"- {entry['label']}: already present (use --replace to overwrite); a new code is still issued")
+            print(
+                f"- {entry['label']}: already present (use --replace to overwrite); a new "
+                "code is still issued"
+            )
         owner = _owner(entry["rows"]["v2_credentials"])
         if owner is None:
             print(f"- {entry['label']}: no owner credential, cannot issue a continue code")
@@ -217,7 +237,10 @@ def cmd_import(args) -> int:
         auth = C.AuthContext.model_validate(owner)
         generation = continue_codes.status(store, entry["session_id"])["generation"] or 0
         code = continue_codes.issue(store, auth, generation)["code"]
-        print(f"{code}  {entry['label']}  ({entry['scenario']}, {entry['work_language']}, {entry['status']})")
+        print(
+            f"{code}  {entry['label']}  ({entry['scenario']}, {entry['work_language']}, "
+            f"{entry['status']})"
+        )
     return 0
 
 
@@ -226,7 +249,10 @@ def cmd_show(args) -> int:
     print(pack["format"], pack["created"])
     for entry in pack["sessions"]:
         counts = {t: len(v) for t, v in entry["rows"].items() if v}
-        print(f"- {entry['label']}  {entry['scenario']} {entry['work_language']} {entry['status']}  {counts}")
+        print(
+            f"- {entry['label']}  {entry['scenario']} {entry['work_language']} "
+            f"{entry['status']}  {counts}"
+        )
     return 0
 
 
@@ -243,7 +269,9 @@ def main(argv=None) -> int:
     i.add_argument("--db", required=True)
     i.add_argument("--pack", required=True)
     i.add_argument("--replace", action="store_true")
-    i.add_argument("--catalog", default=None, help="warn when a session's scenario is not installed")
+    i.add_argument(
+        "--catalog", default=None, help="warn when a session's scenario is not installed"
+    )
     s = sub.add_parser("show")
     s.add_argument("--pack", required=True)
     args = parser.parse_args(argv)

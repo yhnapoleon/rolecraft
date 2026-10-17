@@ -32,14 +32,23 @@ TEXT = {
             ("supervisor", "如果首批只开 20 人，还需要先申请资源吗？"),
         ],
         "work": [
-            "建议首批只开放给新员工组的 20 人，先验证入口指引类问题；动态政策问题暂不自动回答，转人工核验。",
-            "目前项目预留容量是 30 人，可用开发资源 3 人日，正式试点期限为第 7 天；20 人在容量以内，不需要申请扩容。",
+            (
+                "建议首批只开放给新员工组的 20 人，先验证入口指引类问题；"
+                "动态政策问题暂不自动回答，转人工核验。"
+            ),
+            (
+                "目前项目预留容量是 30 人，可用开发资源 3 人日，正式试点期限为第 7 天；20 "
+                "人在容量以内，不需要申请扩容。"
+            ),
             "政策已更新：国内出差住宿报销上限为每人每晚 400 元，超出须事前取得经理书面批准。",
             "SD-120 的 429 分钟测算把等待时长也算成了节省，不能直接当作人力节省。",
             "人工兜底已经落实：陈敏每天安排 45 分钟值班接单。",
             "第 3 天由我和技术负责人复核检索错误与转人工记录；错误边界清楚后再向经理建议扩大范围。",
         ],
-        "fix": "人工兜底尚未落实：陈敏的 45 分钟只用于查看试用记录，不等于有人值班；上线前需要她确认值班人员与服务时段。",
+        "fix": (
+            "人工兜底尚未落实：陈敏的 45 分钟只用于查看试用记录，不等于有人值班；"
+            "上线前需要她确认值班人员与服务时段。"
+        ),
         "title": "首批试点方案",
     },
     ("it_ticket_pilot", "zh"): {
@@ -51,14 +60,23 @@ TEXT = {
             ("supervisor", "如果首批只开 20 人，还需要先申请资源吗？"),
         ],
         "work": [
-            "建议首批只开放给新员工组的 20 人，先验证 VPN、账号、打印机等入口指引类问题；SLA 时限类问题暂不自动回答，转人工核验。",
-            "目前项目预留容量是 30 人，可用开发资源 3 人日，正式试点期限为第 7 天；20 人在容量以内，不需要申请扩容。",
+            (
+                "建议首批只开放给新员工组的 20 人，先验证 VPN、账号、打印机等入口指引类问题；"
+                "SLA 时限类问题暂不自动回答，转人工核验。"
+            ),
+            (
+                "目前项目预留容量是 30 人，可用开发资源 3 人日，正式试点期限为第 7 天；20 "
+                "人在容量以内，不需要申请扩容。"
+            ),
             "SLA 已更新：P2 工单响应时限为 2 小时，超时须由业务负责人记录原因并通知提单人。",
             "SD-120 的 429 分钟测算把等待时长也算成了节省，不能直接当作服务台人力节省。",
             "人工兜底已经落实：陈敏每天安排 45 分钟值班接单。",
             "第 3 天由我和技术负责人复核检索错误与转人工记录；错误边界清楚后再向经理建议扩大范围。",
         ],
-        "fix": "人工兜底尚未落实：陈敏的 45 分钟只用于查看试用记录，不等于有人值班；上线前需要她确认值班人员与服务时段。",
+        "fix": (
+            "人工兜底尚未落实：陈敏的 45 分钟只用于查看试用记录，不等于有人值班；"
+            "上线前需要她确认值班人员与服务时段。"
+        ),
         "title": "首批试点方案",
     },
     ("pm_pilot", "en"): {
@@ -71,17 +89,42 @@ TEXT = {
         "asks": [
             ("tech_lead", "How many people can the pilot take at most?"),
             ("business_lead", "Can the 429 minutes in SD-120 be counted directly as labor saved?"),
-            ("supervisor", "If the first wave is only 20 people, do I still need to request resources?"),
+            (
+                "supervisor",
+                "If the first wave is only 20 people, do I still need to request resources?",
+            ),
         ],
         "work": [
-            "Open the first wave to the 20 new hires only and validate entry-point questions first; dynamic policy questions are not answered automatically and go to a person.",
-            "The project currently has capacity for 30 people, 3 developer-days and a pilot deadline of day 7; 20 people fit the capacity, so no capacity request is needed.",
-            "The policy has been updated: the domestic hotel reimbursement cap is CNY 400 per person per night, and costs above it need prior written manager approval.",
-            "The 429-minute estimate in SD-120 counts waiting time as savings, so it cannot be treated as labor saved.",
+            (
+                "Open the first wave to the 20 new hires only and validate entry-point "
+                "questions first; dynamic policy questions are not answered automatically and "
+                "go to a person."
+            ),
+            (
+                "The project currently has capacity for 30 people, 3 developer-days and a "
+                "pilot deadline of day 7; 20 people fit the capacity, so no capacity request "
+                "is needed."
+            ),
+            (
+                "The policy has been updated: the domestic hotel reimbursement cap is CNY 400 "
+                "per person per night, and costs above it need prior written manager approval."
+            ),
+            (
+                "The 429-minute estimate in SD-120 counts waiting time as savings, so it "
+                "cannot be treated as labor saved."
+            ),
             "Human fallback is in place: Chen Min staffs a 45-minute duty slot every day.",
-            "On day 3 the technical lead and I review retrieval errors and handoff records; once the error boundary is clear we recommend widening the scope to the manager.",
+            (
+                "On day 3 the technical lead and I review retrieval errors and handoff "
+                "records; once the error boundary is clear we recommend widening the scope to "
+                "the manager."
+            ),
         ],
-        "fix": "Human fallback is not in place yet: Chen Min's 45 minutes are for reviewing trial records, not a duty slot; before launch she needs to confirm staffing and service hours.",
+        "fix": (
+            "Human fallback is not in place yet: Chen Min's 45 minutes are for reviewing trial "
+            "records, not a duty slot; before launch she needs to confirm staffing and service "
+            "hours."
+        ),
         "title": "First-wave pilot plan",
     },
     ("it_ticket_pilot", "en"): {
@@ -93,18 +136,46 @@ TEXT = {
         "policy": "What is the P2 ticket response time?",
         "asks": [
             ("tech_lead", "How many people can the pilot take at most?"),
-            ("business_lead", "Can the 429 minutes in SD-120 be counted directly as service-desk labor saved?"),
-            ("supervisor", "If the first wave is only 20 people, do I still need to request resources?"),
+            (
+                "business_lead",
+                "Can the 429 minutes in SD-120 be counted directly as service-desk labor saved?",
+            ),
+            (
+                "supervisor",
+                "If the first wave is only 20 people, do I still need to request resources?",
+            ),
         ],
         "work": [
-            "Open the first wave to the 20 new hires only and validate entry-point questions such as VPN, accounts and printers first; SLA time-limit questions are not answered automatically and go to a person.",
-            "The project currently has capacity for 30 people, 3 developer-days and a pilot deadline of day 7; 20 people fit the capacity, so no capacity request is needed.",
-            "The SLA has been updated: P2 tickets must receive a response within 2 hours, and the business lead records the reason when the limit is missed.",
-            "The 429-minute estimate in SD-120 counts waiting time as savings, so it cannot be treated as service-desk labor saved.",
+            (
+                "Open the first wave to the 20 new hires only and validate entry-point "
+                "questions such as VPN, accounts and printers first; SLA time-limit questions "
+                "are not answered automatically and go to a person."
+            ),
+            (
+                "The project currently has capacity for 30 people, 3 developer-days and a "
+                "pilot deadline of day 7; 20 people fit the capacity, so no capacity request "
+                "is needed."
+            ),
+            (
+                "The SLA has been updated: P2 tickets must receive a response within 2 hours, "
+                "and the business lead records the reason when the limit is missed."
+            ),
+            (
+                "The 429-minute estimate in SD-120 counts waiting time as savings, so it "
+                "cannot be treated as service-desk labor saved."
+            ),
             "Human fallback is in place: Chen Min staffs a 45-minute duty slot every day.",
-            "On day 3 the technical lead and I review retrieval errors and handoff records; once the error boundary is clear we recommend widening the scope to the manager.",
+            (
+                "On day 3 the technical lead and I review retrieval errors and handoff "
+                "records; once the error boundary is clear we recommend widening the scope to "
+                "the manager."
+            ),
         ],
-        "fix": "Human fallback is not in place yet: Chen Min's 45 minutes are for reviewing trial records, not a duty slot; before launch she needs to confirm staffing and service hours.",
+        "fix": (
+            "Human fallback is not in place yet: Chen Min's 45 minutes are for reviewing trial "
+            "records, not a duty slot; before launch she needs to confirm staffing and service "
+            "hours."
+        ),
         "title": "First-wave pilot plan",
     },
 }
@@ -205,8 +276,12 @@ def play(
         # Left before submission: opening the submit panel shows the sentence-coloured
         # pre-submission preview live.
         print("  draft saved, not submitted")
-        issued = s.http.post(s.path("continue-code"), headers=s.headers, json={"expected_generation": 0})
-        code = (issued.json().get("result") or {}).get("code") if issued.status_code == 200 else None
+        issued = s.http.post(
+            s.path("continue-code"), headers=s.headers, json={"expected_generation": 0}
+        )
+        code = (
+            (issued.json().get("result") or {}).get("code") if issued.status_code == 200 else None
+        )
         print("  continue code:", code)
         s.close()
         return s.session_id, code
@@ -222,7 +297,9 @@ def play(
         submitted = submit(s, product)
         restored = s.wait_request(submitted["_request_id"], timeout=900)
         print("  resubmit:", [j["status"] for j in restored.get("jobs") or []])
-    issued = s.http.post(s.path("continue-code"), headers=s.headers, json={"expected_generation": 0})
+    issued = s.http.post(
+        s.path("continue-code"), headers=s.headers, json={"expected_generation": 0}
+    )
     code = (issued.json().get("result") or {}).get("code") if issued.status_code == 200 else None
     print("  continue code:", code)
     s.close()
@@ -235,7 +312,9 @@ def main(argv=None) -> int:
     parser.add_argument("--scenario", default="pm_pilot", choices=["pm_pilot", "it_ticket_pilot"])
     parser.add_argument("--language", default="zh", choices=["zh", "en"])
     parser.add_argument("--revise", action="store_true")
-    parser.add_argument("--tries", type=int, default=3, help="start over when a colleague reply is withheld")
+    parser.add_argument(
+        "--tries", type=int, default=3, help="start over when a colleague reply is withheld"
+    )
     parser.add_argument("--draft-only", action="store_true", help="stop before submitting")
     args = parser.parse_args(argv)
     for _ in range(args.tries):

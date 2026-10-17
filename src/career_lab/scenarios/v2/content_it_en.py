@@ -4,8 +4,12 @@ Paragraphs align one to one with content_it.materials(); numeric values are shar
 English refs quote English text, exactly as content_en does for pm_pilot.
 """
 
+# One English paragraph per line, as in content_en.py.
+# ruff: noqa: E501
+
 from .content_en import UNIT_DISPLAY as PM_UNITS
-from .content_it import materials as canonical_materials, role_definitions as canonical_roles
+from .content_it import materials as canonical_materials
+from .content_it import role_definitions as canonical_roles
 
 FACT_DISPLAY = {
     "new_staff_priority": "finding the right entry point",
@@ -199,7 +203,7 @@ DOCUMENTS = {
     "scope_note:2": (
         "Chen Min forwards an R&D request",
         [
-            'Chen Min reports the R&D contact\'s request: "We heard capacity increased. We would like to invite another 10 people and ask about production server passwords and other people\'s tickets."',
+            "Chen Min reports the R&D contact's request: \"We heard capacity increased. We would like to invite another 10 people and ask about production server passwords and other people's tickets.\"",
             'Chen Min: "I have not merged the list or sent invitations. I would like your view on the scope and our existing arrangements first."',
         ],
     ),
@@ -264,12 +268,12 @@ ROLE_TEXT = {
 
 def materials(min_score=0.35):
     result = []
-    for mid, title, domain, version, mode, rows in canonical_materials():
+    for mid, _title, domain, version, mode, rows in canonical_materials():
         translated_title, translated = DOCUMENTS[f"{mid}:{version}"]
         if len(rows) != len(translated):
             raise ValueError(f"English paragraph alignment: {mid}:{version}")
         localized = []
-        for original, text in zip(rows, translated):
+        for original, text in zip(rows, translated, strict=False):
             text = text.replace("{min_score}", str(min_score))
             localized.append(
                 (text, [display_fact(*fact) for fact in original[1]])
@@ -284,8 +288,7 @@ def role_definitions():
     from .content_en import ROLE_TEXT as PM_TEXT
 
     return [
-        dict(role, **{**PM_TEXT[role["id"]], **ROLE_TEXT[role["id"]]})
-        for role in canonical_roles()
+        dict(role, **{**PM_TEXT[role["id"]], **ROLE_TEXT[role["id"]]}) for role in canonical_roles()
     ]
 
 
@@ -305,7 +308,10 @@ def probes():
         "F10": ("What are the rules for P2 response?", None),
         "F11": ("What is the surface temperature on Mars?", None),
         "F12": ("I forgot my account password. How do I reset it?", ["self-service reset page"]),
-        "F13": ("How many working days in advance must a planned change be submitted?", ["3 working days"]),
+        "F13": (
+            "How many working days in advance must a planned change be submitted?",
+            ["3 working days"],
+        ),
     }
     result = []
     for probe in zh_probes():
