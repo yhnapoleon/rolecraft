@@ -16,6 +16,7 @@ label follows the rule outcome (``no_retrieval_hit`` means out of scope), ``fall
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 
 import numpy as np
@@ -25,6 +26,7 @@ from career_lab.recognition.base import FALLBACK_REVISION, record, stopwatch
 
 ID = "scope-mahalanobis-v1"
 DRIFT_ID = "drift-cosine-v1"
+_NUMBER = re.compile(r"\d+(?:\.\d+)?")
 
 
 def fit_key(scenario: str, language: str, scope_filter: bool) -> str:
@@ -139,7 +141,11 @@ def drift(
         fit = (fits[0].get(key) if fits else None) or {}
         mean, std = float(fit.get("drift_mean", 0.05)), float(fit.get("drift_std", 0.03))
         threshold = mean + 2 * std
-    anomaly = value > threshold
+    # Sentence vectors barely move when only a number changes ("500" -> "400"), which is
+    # exactly the drift that matters here; a changed set of numbers is flagged as well.
+    numbers = [sorted(set(_NUMBER.findall(text or ""))) for text in (before, after)]
+    numeric_change = bool(numbers[0] or numbers[1]) and numbers[0] != numbers[1]
+    anomaly = value > threshold or numeric_change
     return record(
         DRIFT_ID,
         embedder.revision,
@@ -148,7 +154,13 @@ def drift(
         label="anomaly" if anomaly else "normal",
         score=value,
         threshold=threshold,
-        outputs={"drift_anomaly": anomaly, "fit_key": key},
+        outputs={
+            "drift_anomaly": anomaly,
+            "fit_key": key,
+            "numeric_change": numeric_change,
+            "numbers_before": numbers[0],
+            "numbers_after": numbers[1],
+        },
         as_of=as_of,
         duration_ms=clock.ms,
         fallback=not fit,

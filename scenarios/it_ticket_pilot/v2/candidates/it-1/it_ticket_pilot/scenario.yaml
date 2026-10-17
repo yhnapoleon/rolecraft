@@ -28,7 +28,7 @@ business_events:
 - id: business_scope_requested
   material_updates:
     scope_note: 2
-  notice: 周岚转来研发组追加意向，请查看业务范围讨论的新记录。
+  notice: 陈敏转来研发组追加意向，请查看业务范围讨论的新记录。
   'on': capacity_approved
   visible_to:
   - learner

@@ -164,4 +164,24 @@ def create_runtime_app(
     app.state.scenario_v2 = module
     app.state.model_provider = provider
     app.state.model_slots = slots
+    if os.getenv("CAREER_LAB_RECOGNIZERS"):
+        _warm_recognizers()
     return app
+
+
+def _warm_recognizers():
+    """Load e5 and the C1 encoder in the background, so the first pre-submission preview
+    (computed in this process) does not pay the 10–20 s model load (demo edition)."""
+    import threading
+
+    def warm():
+        try:
+            from career_lab.recognition import relation
+            from career_lab.recognition.embedder import Embedder
+
+            Embedder.get()
+            relation.encoder_relation()
+        except Exception:  # noqa: BLE001 - warming is best effort; requests load lazily anyway
+            pass
+
+    threading.Thread(target=warm, name="recognizer-warmup", daemon=True).start()

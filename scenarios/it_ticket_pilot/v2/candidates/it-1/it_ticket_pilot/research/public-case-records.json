@@ -3,8 +3,8 @@
   "locale": "zh",
   "source_kind": "actual_deterministic_module_run_on_synthetic_scenario",
   "story_phase": "before_pm_handoff",
-  "captured_at": "2026-10-17T01:10:27.785912+00:00",
-  "input_bundle_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
+  "captured_at": "2026-10-17T01:51:15.960508+00:00",
+  "input_bundle_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
   "executor": "system:w02-pre-event-recorder",
   "http_or_human_trial": false,
   "expected_answers_included": false,
@@ -139,7 +139,7 @@
         "query": "VPN客户端在哪里下载和登录",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-17T01:10:27.790543Z",
+          "executed_at": "2026-10-17T01:51:15.965798Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -299,8 +299,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
-        "created_at": "2026-10-17T01:10:27.790543+00:00",
+        "scenario_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
+        "created_at": "2026-10-17T01:51:15.965798+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -473,7 +473,7 @@
         "query": "我的账号密码忘记了，需要重置",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-17T01:10:27.792051Z",
+          "executed_at": "2026-10-17T01:51:15.968016Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -633,8 +633,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
-        "created_at": "2026-10-17T01:10:27.792051+00:00",
+        "scenario_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
+        "created_at": "2026-10-17T01:51:15.968016+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -807,7 +807,7 @@
         "query": "入职账号没有开通通知该怎么办",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-17T01:10:27.794304Z",
+          "executed_at": "2026-10-17T01:51:15.970002Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -967,8 +967,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
-        "created_at": "2026-10-17T01:10:27.794304+00:00",
+        "scenario_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
+        "created_at": "2026-10-17T01:51:15.970002+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1141,7 +1141,7 @@
         "query": "电脑坏了想报修应该提供哪些信息",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-17T01:10:27.796874Z",
+          "executed_at": "2026-10-17T01:51:15.972519Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -1262,8 +1262,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
-        "created_at": "2026-10-17T01:10:27.796874+00:00",
+        "scenario_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
+        "created_at": "2026-10-17T01:51:15.972519+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1434,7 +1434,7 @@
         "query": "P2工单多久必须有人响应",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-17T01:10:27.798396Z",
+          "executed_at": "2026-10-17T01:51:15.975136Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -1555,8 +1555,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
-        "created_at": "2026-10-17T01:10:27.798396+00:00",
+        "scenario_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
+        "created_at": "2026-10-17T01:51:15.975136+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1727,7 +1727,7 @@
         "query": "P1工单响应时限",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-17T01:10:27.803237Z",
+          "executed_at": "2026-10-17T01:51:15.977135Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -1758,7 +1758,7 @@
           "chunks": [
             {
               "schema_version": 2,
-              "id": "68d3c4d6506aba33fd4dd633df1462685eab7c56848a2ae94a579326ad55082f",
+              "id": "8c30b74650e8d5f02f6e2e6638a93d5bf404204a5b38c608d1ba114a72aa27ca",
               "material_id": "policy",
               "version": 1,
               "ref": {
@@ -1768,8 +1768,8 @@
                 "object_id": "policy",
                 "version": 1,
                 "config_version": null,
-                "span_start": 89,
-                "span_end": 132,
+                "span_start": 88,
+                "span_end": 131,
                 "quote": "P1 工单（影响多人或核心系统的故障）响应时限为30分钟；夜间与节假日走值班电话升级。",
                 "observed_at_seq": 0,
                 "valid_from_seq": 0,
@@ -1864,8 +1864,8 @@
             "object_id": "policy",
             "version": 1,
             "config_version": null,
-            "span_start": 89,
-            "span_end": 132,
+            "span_start": 88,
+            "span_end": 131,
             "quote": "P1 工单（影响多人或核心系统的故障）响应时限为30分钟；夜间与节假日走值班电话升级。",
             "observed_at_seq": 0,
             "valid_from_seq": 0,
@@ -1887,8 +1887,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
-        "created_at": "2026-10-17T01:10:27.803237+00:00",
+        "scenario_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
+        "created_at": "2026-10-17T01:51:15.977135+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -1911,7 +1911,7 @@
           "policy": 1
         },
         "chunk_ids": [
-          "68d3c4d6506aba33fd4dd633df1462685eab7c56848a2ae94a579326ad55082f"
+          "8c30b74650e8d5f02f6e2e6638a93d5bf404204a5b38c608d1ba114a72aa27ca"
         ],
         "tuning": {
           "min_score": 0.35,
@@ -2061,7 +2061,7 @@
         "query": "今年耗材领用每人额度多少",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-17T01:10:27.805948Z",
+          "executed_at": "2026-10-17T01:51:15.979143Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -2221,8 +2221,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
-        "created_at": "2026-10-17T01:10:27.805948+00:00",
+        "scenario_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
+        "created_at": "2026-10-17T01:51:15.979143+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -2395,7 +2395,7 @@
         "query": "计划性系统变更需要提前多久提交",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-17T01:10:27.810417Z",
+          "executed_at": "2026-10-17T01:51:15.982143Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -2555,8 +2555,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
-        "created_at": "2026-10-17T01:10:27.810417+00:00",
+        "scenario_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
+        "created_at": "2026-10-17T01:51:15.982143+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -2726,7 +2726,7 @@
         "query": "P2工单的响应时限",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-17T01:10:27.814788Z",
+          "executed_at": "2026-10-17T01:51:15.984120Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -2841,8 +2841,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
-        "created_at": "2026-10-17T01:10:27.814788+00:00",
+        "scenario_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
+        "created_at": "2026-10-17T01:51:15.984120+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -3013,7 +3013,7 @@
         "query": "P2工单的响应时限",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-17T01:10:27.818626Z",
+          "executed_at": "2026-10-17T01:51:15.986754Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -3044,7 +3044,7 @@
           "chunks": [
             {
               "schema_version": 2,
-              "id": "6baa74b550c51b87de4b3cef859f231cec41aea7c65a797c47cad62340dbdd94",
+              "id": "b8974517e2693c87d652cd5ad12cec22aba83d968fa5803b720f93b111308256",
               "material_id": "policy",
               "version": 1,
               "ref": {
@@ -3055,8 +3055,8 @@
                 "version": 1,
                 "config_version": null,
                 "span_start": 39,
-                "span_end": 87,
-                "quote": "P2 工单（影响个人办公的故障）响应时限为4小时；超出时限须由服务台负责人记录原因并通知提单人。",
+                "span_end": 86,
+                "quote": "P2 工单（影响个人办公的故障）响应时限为4小时；超出时限须由业务负责人记录原因并通知提单人。",
                 "observed_at_seq": 0,
                 "valid_from_seq": 0,
                 "valid_until_seq": null
@@ -3145,7 +3145,7 @@
           }
         },
         "status": "answered",
-        "answer": "P2 工单（影响个人办公的故障）响应时限为4小时；超出时限须由服务台负责人记录原因并通知提单人。",
+        "answer": "P2 工单（影响个人办公的故障）响应时限为4小时；超出时限须由业务负责人记录原因并通知提单人。",
         "citations": [
           {
             "schema_version": 2,
@@ -3155,8 +3155,8 @@
             "version": 1,
             "config_version": null,
             "span_start": 39,
-            "span_end": 87,
-            "quote": "P2 工单（影响个人办公的故障）响应时限为4小时；超出时限须由服务台负责人记录原因并通知提单人。",
+            "span_end": 86,
+            "quote": "P2 工单（影响个人办公的故障）响应时限为4小时；超出时限须由业务负责人记录原因并通知提单人。",
             "observed_at_seq": 0,
             "valid_from_seq": 0,
             "valid_until_seq": null
@@ -3177,8 +3177,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
-        "created_at": "2026-10-17T01:10:27.818626+00:00",
+        "scenario_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
+        "created_at": "2026-10-17T01:51:15.986754+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -3201,7 +3201,7 @@
           "policy": 1
         },
         "chunk_ids": [
-          "6baa74b550c51b87de4b3cef859f231cec41aea7c65a797c47cad62340dbdd94"
+          "b8974517e2693c87d652cd5ad12cec22aba83d968fa5803b720f93b111308256"
         ],
         "tuning": {
           "min_score": 0.35,
@@ -3351,7 +3351,7 @@
         "query": "P2工单的响应时限",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-17T01:10:27.821984Z",
+          "executed_at": "2026-10-17T01:51:15.989775Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -3472,8 +3472,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
-        "created_at": "2026-10-17T01:10:27.821984+00:00",
+        "scenario_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
+        "created_at": "2026-10-17T01:51:15.989775+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,
@@ -3644,7 +3644,7 @@
         "query": "海王星大气的主要成分",
         "execution": {
           "schema_version": 2,
-          "executed_at": "2026-10-17T01:10:27.825878Z",
+          "executed_at": "2026-10-17T01:51:15.992280Z",
           "executor": {
             "schema_version": 2,
             "id": "w02-pre-event-recorder",
@@ -3765,8 +3765,8 @@
       },
       "provenance": {
         "mode": "local-extractive-v2",
-        "scenario_hash": "f0499720d1497ca25014096b590386c910a4f45b7c0d13f428e3b868e8744332",
-        "created_at": "2026-10-17T01:10:27.825878+00:00",
+        "scenario_hash": "7b61b23779ab798a0414f7fb0a78d908c593f87027c78da11676c3758878794a",
+        "created_at": "2026-10-17T01:51:15.992280+00:00",
         "source_versions": {
           "faq": 1,
           "leave": 1,

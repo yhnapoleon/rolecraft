@@ -417,7 +417,11 @@ class SubmissionRuleChecks:
             work_language=self.module.work_language,
             rule_items=rule_items,
             facts=rule_check_facts(packages, runs),
-            recognition=preview(packages, self.module.work_language) if packages else None,
+            # Only the writing-area preview shows sentence labels; a saved submission's check
+            # (feedback page) skips the C1 pass, which costs seconds on CPU.
+            recognition=preview(packages, self.module.work_language)
+            if packages and basis == "draft"
+            else None,
         )
 
 
