@@ -159,7 +159,7 @@ export function scatter(groups: { name: string; points: { x: number; y: number; 
     .reverse()
     .map(({ g, gi }) =>
       g.points
-        .map((p) => `<circle class="rc-dot" data-s="${gi + 1}" cx="${X(p.x)}" cy="${Y(p.y)}" r="4"><title>${esc(`${g.name}${p.label ? ': ' + p.label : ''}`)}</title></circle>`)
+        .map((p) => `<circle class="rc-dot" data-s="${gi + 1}" cx="${X(p.x)}" cy="${Y(p.y)}" r="4"><title>${esc(`${g.name}${p.label ? `: ${p.label}` : ''}`)}</title></circle>`)
         .join(''),
     )
     .join('');

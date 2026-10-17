@@ -171,13 +171,13 @@ function chainHtml(data: SessionRecognition | null, l: Language, selected: numbe
   const records = data.records.map((r) => r.record);
   const relation = [...records]
     .reverse()
-    .find((r) => r.task === 'relation' && Array.isArray((r.outputs ?? {}).units));
+    .find((r) => r.task === 'relation' && Array.isArray(r.outputs?.units));
   if (!relation) return `<p class="meta">${t('noRelation')}</p>`;
   const units = (relation.outputs?.units ?? []) as Unit[];
   const unit = units.find((u) => u.index === selected) ?? units[0];
   const retrieval = [...records]
     .reverse()
-    .find((r) => r.task === 'retrieval' && Array.isArray((r.outputs ?? {}).per_sentence_top));
+    .find((r) => r.task === 'retrieval' && Array.isArray(r.outputs?.per_sentence_top));
   const top = ((retrieval?.outputs?.per_sentence_top ?? []) as { index: number; top: Record<string, unknown>[] }[])
     .find((row) => row.index === unit.index)?.top ?? [];
   const decision = [...records].reverse().find((r) => r.task === 'decision');
@@ -225,6 +225,9 @@ function chainHtml(data: SessionRecognition | null, l: Language, selected: numbe
     </ol>`;
 }
 
+type PcaQuery = { kind: string; xy: [number, number]; text: string; score: number };
+
+// biome-ignore lint/suspicious/noExplicitAny: experiment JSON from public/lab is read field by field
 function experimentsHtml(results: Record<string, any>, l: Language) {
   const t = (k: Key, v: Record<string, string | number> = {}) => copyText(COPY, l, k, v);
   const section = (title: Key, body: string | null) =>
@@ -328,11 +331,11 @@ function experimentsHtml(results: Record<string, any>, l: Language) {
             { name: t('units'), points: pca.units.map((p: number[]) => ({ x: p[0], y: p[1] })) },
             {
               name: t('inDomain'),
-              points: pca.queries.filter((q: any) => q.kind.startsWith('in_')).map((q: any) => ({ x: q.xy[0], y: q.xy[1], label: `${q.text} · ${f2(q.score)}` })),
+              points: pca.queries.filter((q: PcaQuery) => q.kind.startsWith('in_')).map((q: PcaQuery) => ({ x: q.xy[0], y: q.xy[1], label: `${q.text} · ${f2(q.score)}` })),
             },
             {
               name: t('outDomain'),
-              points: pca.queries.filter((q: any) => q.kind.startsWith('out_')).map((q: any) => ({ x: q.xy[0], y: q.xy[1], label: `${q.text} · ${f2(q.score)}` })),
+              points: pca.queries.filter((q: PcaQuery) => q.kind.startsWith('out_')).map((q: PcaQuery) => ({ x: q.xy[0], y: q.xy[1], label: `${q.text} · ${f2(q.score)}` })),
             },
           ],
           { tableCaption: t('table') },

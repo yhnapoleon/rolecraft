@@ -135,7 +135,7 @@ export function behaviorHtml(data: Behavior | null | undefined, l: Language) {
   if (!data) return '';
   const fallback = data.recognizer.endsWith('@rule-fallback');
   const head = `<h2>${t(l, 'title')}</h2><p class="meta">${t(l, 'lead')}</p>`;
-  if (!data.sequence.length) return head + `<p class="meta">${t(l, 'empty')}</p>`;
+  if (!data.sequence.length) return `${head}<p class="meta">${t(l, 'empty')}</p>`;
   const total = data.sequence.length;
   const bar = data.phases
     .map((p) => {
@@ -166,7 +166,7 @@ export function behaviorHtml(data: Behavior | null | undefined, l: Language) {
     declared: has(data.executor.declared) ? t(l, data.executor.declared as Key) : data.executor.declared,
   });
   return `${head}
-    <p class="rc-badges"><span class="rc-badge" data-task="behavior"${fallback ? ' data-fallback=""' : ''} title="${esc(data.recognizer)}">${esc(data.recognizer)}${fallback ? ' · ' + t(l, 'fallback') : ''}</span></p>
+    <p class="rc-badges"><span class="rc-badge" data-task="behavior"${fallback ? ' data-fallback=""' : ''} title="${esc(data.recognizer)}">${esc(data.recognizer)}${fallback ? ` · ${t(l, 'fallback')}` : ''}</span></p>
     <p class="rc-align-label">${t(l, 'phases')} · ${total}</p>
     <div class="rc-phasebar">${bar}</div>
     <ol class="rc-steps">${chips}</ol>

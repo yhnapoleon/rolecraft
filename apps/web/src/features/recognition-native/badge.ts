@@ -62,7 +62,7 @@ export function describe(record: RecognitionRecord, language: Language) {
       }
       const method = String(out.method ?? '');
       detail =
-        (method ? method + ' · ' : '') +
+        (method ? `${method} · ` : '') +
         t(language, 'top1', { score: fmt(record.score), material: record.label ?? '–' });
       break;
     }
@@ -82,7 +82,7 @@ export function describe(record: RecognitionRecord, language: Language) {
       break;
     }
     case 'intent':
-      detail = `${record.label ?? '–'}${record.score != null ? ' ' + fmt(record.score) : ''}`;
+      detail = `${record.label ?? '–'}${record.score != null ? ` ${fmt(record.score)}` : ''}`;
       break;
     case 'reply_check': {
       const grounded = num(out.grounded);
