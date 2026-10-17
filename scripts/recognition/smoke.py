@@ -18,7 +18,8 @@ from scripts.recognition.client import DEFAULT_API, Session
 WORK = {
     "zh": (
         "试点先只开放给已完成人工复核的团队，有据可查。若名额超过上限，需要先申请扩容。\n\n"
-        "政策规定住宿上限为每晚500元。超出部分必须事先取得书面批准。我们计划安排 50 人参加试点。\n\n"
+        "政策规定住宿上限为每晚500元。超出部分必须事先取得书面批准。我们计划安排 50 "
+        "人参加试点。\n\n"
         "- 保留人工兜底\n- 记录未知条件"
     ),
     "en": (
@@ -36,7 +37,8 @@ IT = {
     "work": {
         "zh": (
             "试点先只开放给已完成人工复核的团队，有据可查。若名额超过上限，需要先申请扩容。\n\n"
-            "SLA 规定 P2 工单响应时限为4小时。超时须由服务台负责人记录原因。我们计划安排 50 人参加试点。\n\n"
+            "SLA 规定 P2 工单响应时限为4小时。超时须由服务台负责人记录原因。我们计划安排 "
+            "50 人参加试点。\n\n"
             "- 保留人工兜底\n- 记录未知条件"
         ),
     },
@@ -69,14 +71,28 @@ def main(argv: list[str] | None = None) -> int:
     test = trial["result"]["test"]
     print("test:", test.get("status"), "|", (test.get("answer") or "")[:80])
     if "recognition" in (test.get("data") or {}) or "recognition" in test:
-        print("test recognition:", json.dumps(test.get("recognition") or test["data"]["recognition"], ensure_ascii=False)[:400])
+        print(
+            "test recognition:",
+            json.dumps(test.get("recognition") or test["data"]["recognition"], ensure_ascii=False)[
+                :400
+            ],
+        )
     asked = session.ask("tech_lead", ask)
     session.wait_request(asked["_request_id"])
     for reply in session.objects("role_reply"):
         content = reply["content"]
         print("reply:", " ".join((content.get("text") or "")[:80].split()))
         for rec in content.get("recognition") or []:
-            print("   ", rec["task"], rec["recognizer_id"], rec["label"], rec["score"], "fallback" if rec["fallback"] else "", rec["outputs"].get("grounded"), rec["outputs"].get("leaks"))
+            print(
+                "   ",
+                rec["task"],
+                rec["recognizer_id"],
+                rec["label"],
+                rec["score"],
+                "fallback" if rec["fallback"] else "",
+                rec["outputs"].get("grounded"),
+                rec["outputs"].get("leaks"),
+            )
     submitted = session.submit([product])
     restored = session.wait_request(submitted["_request_id"])
     print("jobs:", [job["status"] for job in restored["jobs"]])
@@ -98,12 +114,30 @@ def main(argv: list[str] | None = None) -> int:
             f"  advice {advice.get('criterion')} status={advice.get('status')} units={len(units)}"
         )
         for unit in units[:8]:
-            print(f"    [{unit.get('index')}] {unit.get('label')} {unit['subject']['quote'][:50]!r}")
+            print(
+                f"    [{unit.get('index')}] {unit.get('label')} {unit['subject']['quote'][:50]!r}"
+            )
     for rec in report.get("recognition") or []:
         out = rec["outputs"]
-        print("  rec", rec["task"], rec["recognizer_id"], rec["label"], "fallback" if rec["fallback"] else "", out.get("criterion"), out.get("counts") or out.get("agreement") or out.get("deferred"))
+        print(
+            "  rec",
+            rec["task"],
+            rec["recognizer_id"],
+            rec["label"],
+            "fallback" if rec["fallback"] else "",
+            out.get("criterion"),
+            out.get("counts") or out.get("agreement") or out.get("deferred"),
+        )
         for unit in (out.get("units") or [])[:8]:
-            print("      ", unit["index"], unit["label"], unit["confidence"], unit["decision"], unit["reason"], unit["quote"][:30])
+            print(
+                "      ",
+                unit["index"],
+                unit["label"],
+                unit["confidence"],
+                unit["decision"],
+                unit["reason"],
+                unit["quote"][:30],
+            )
     try:
         rec = session.get("recognition")
         print("GET /recognition counts:", rec["result"]["result"]["counts"])

@@ -42,12 +42,7 @@ def main(argv=None) -> int:
     for language in args.languages:
         package = load_package(PACKAGE if language == "zh" else PACKAGE / "locales/en")
         kb = {mid: domain for domain, mids in package.bundle.domains.items() for mid in mids}
-        units = [
-            (kb[m.id], f.text)
-            for m in package.materials
-            if m.id in kb
-            for f in m.fragments
-        ]
+        units = [(kb[m.id], f.text) for m in package.materials if m.id in kb for f in m.fragments]
         vectors = embedder.encode([text for _, text in units], "query")
         passages = embedder.encode([text for _, text in units], "passage")
         same = [
@@ -60,7 +55,8 @@ def main(argv=None) -> int:
         q_vectors = embedder.encode([q["query"] for q in rows], "query")
         for setting in ("scope_off", "scope_on"):
             keep = [
-                i for i, (domain, _) in enumerate(units)
+                i
+                for i, (domain, _) in enumerate(units)
                 if setting == "scope_off" or not domain.startswith("policy")
             ]
             lw = LedoitWolf().fit(vectors[keep])
