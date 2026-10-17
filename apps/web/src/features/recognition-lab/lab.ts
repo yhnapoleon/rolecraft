@@ -38,6 +38,7 @@ const zh = {
   e7cm: 'E7 · TF-IDF+LR 意图混淆矩阵（test，中英合计）',
   e1: 'E1 · C1 关系判定（XLM-R pair_aggregate）：分语言 macro-F1 与 joint（test）',
   e1cm: 'E1 · C1 混淆矩阵（test）',
+  e1base: 'E1 · C3 经典基线与集成 vs C1（test macro-F1）：纯词面特征的模型大多接近瞎猜，LR 叠加 C1 的堆叠最好',
   e3: 'E3 · C2 检索：Recall@5（test；直述问题三法都接近 1.0，差别在改写问题）',
   e4: 'E4 · C6 误差—拒识曲线（test）：按置信从低到高送人工',
   e4lift: 'E4 · 提升图：按期望代价排序后，前 x 比例覆盖了多少错误（test）',
@@ -62,6 +63,7 @@ const zh = {
   pmFit: 'C4 用 pm_pilot 拟合 · AUROC',
   itFit: 'C4 只用 IT 知识库拟合 · AUROC',
   itRecall: 'C2 e5 改写问题 · Recall@5',
+  itC1: 'C1（pm_pilot 训练）· IT macro-F1',
   table: '表格视图',
   units: '知识库单元',
   inDomain: '域内问题',
@@ -100,6 +102,7 @@ const en: Record<keyof typeof zh, string> = {
   e7cm: 'E7 · TF-IDF+LR intent confusion matrix (test, both languages)',
   e1: 'E1 · C1 relation (XLM-R pair_aggregate): macro-F1 and joint by language (test)',
   e1cm: 'E1 · C1 confusion matrix (test)',
+  e1base: 'E1 · C3 classical baselines and ensembles vs C1 (test macro-F1): most lexical-only models are near chance; LR stacked on C1 is best',
   e3: 'E3 · C2 retrieval: Recall@5 (test; all three are near 1.0 on direct questions, paraphrases separate them)',
   e4: 'E4 · C6 error–reject curve (test): lowest-confidence claims go to a person first',
   e4lift: 'E4 · Lift: share of errors covered by the top x of claims ranked by expected cost (test)',
@@ -124,6 +127,7 @@ const en: Record<keyof typeof zh, string> = {
   pmFit: 'C4 fitted on pm_pilot · AUROC',
   itFit: 'C4 fitted on IT KB only · AUROC',
   itRecall: 'C2 e5 paraphrases · Recall@5',
+  itC1: 'C1 (trained on pm_pilot) · IT macro-F1',
   table: 'Table view',
   units: 'KB units',
   inDomain: 'in-domain questions',
@@ -239,6 +243,19 @@ function experimentsHtml(results: Record<string, any>, l: Language) {
     ),
   );
   if (e1) parts.push(section('e1cm', heatmap(['SUPPORTED', 'CONTRADICTED', 'INSUFFICIENT'], e1.test.all.confusion, { tableCaption: t('table'), rowLabel: t('gold'), colLabel: t('predicted') })));
+  const base = results.e1_baselines?.models as Record<string, { test: Record<string, { macro_f1: number }> }> | undefined;
+  if (base) {
+    const names = Object.keys(base);
+    parts.push(
+      section(
+        'e1base',
+        groupedBars(names, ['zh', 'en'].map((lang) => ({
+          name: lang,
+          values: names.map((n) => base[n].test[lang]?.macro_f1 ?? 0),
+        })), { tableCaption: t('table') }),
+      ),
+    );
+  }
   const e3 = results.e3_retrieval;
   const methodNames: Record<string, string> = { bm25: 'BM25', dense: 'e5', rrf: 'RRF' };
   parts.push(
@@ -383,12 +400,13 @@ function experimentsHtml(results: Record<string, any>, l: Language) {
     section(
       'e9',
       e9
-        ? groupedBars([t('pmFit'), t('itFit'), t('itRecall')], ['zh', 'en'].map((lang) => ({
+        ? groupedBars([t('pmFit'), t('itFit'), t('itRecall'), t('itC1')], ['zh', 'en'].map((lang) => ({
             name: lang,
             values: [
               e9.scope?.[lang]?.pm_fit_on_it?.auroc ?? 0,
               e9.scope?.[lang]?.it_units_only_fit?.auroc ?? 0,
               e9.retrieval?.[`${lang}/in_paraphrase`]?.dense?.['recall@5'] ?? 0,
+              e9.relation?.[lang]?.macro_f1 ?? 0,
             ],
           })), { tableCaption: t('table') })
         : null,
@@ -432,7 +450,7 @@ export async function mountLab(
   root.innerHTML = `<header class="rc-lab-head"><h1 class="title-xl">${t('title')}</h1><p class="meta">${t('lead')}</p></header>
     <section class="rc-lab-chain"><h2>${t('chain')}</h2><div data-rc-chain><p class="meta">…</p></div></section>
     <section class="rc-lab-exps"><h2>${t('experiments')}</h2><div data-rc-exps><p class="meta">…</p></div></section>`;
-  const names = ['e1_relation', 'e3_retrieval', 'e4_decision', 'e5_scope', 'e6_behavior', 'e7_intent', 'e8_judge', 'e9_cross_domain', 'e10_fusion'];
+  const names = ['e1_relation', 'e1_baselines', 'e3_retrieval', 'e4_decision', 'e5_scope', 'e6_behavior', 'e7_intent', 'e8_judge', 'e9_cross_domain', 'e10_fusion'];
   const loaded = await Promise.all(names.map((n) => staticJson(n)));
   const results = Object.fromEntries(names.map((n, i) => [n, loaded[i]]));
   const exps = root.querySelector<HTMLElement>('[data-rc-exps]');

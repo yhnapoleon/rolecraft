@@ -129,5 +129,42 @@
       "n_out": 60
     }
   },
-  "relation": null
+  "relation": {
+    "zh": {
+      "n": 610,
+      "macro_f1": 0.5919801833776989,
+      "accuracy": 0.6032786885245902,
+      "by_phenomenon": {
+        "direct": 0.3163265306122449,
+        "paraphrase": 0.336734693877551,
+        "negation": 0.9595959595959596,
+        "unfounded_inference": 0.7978723404255319,
+        "numeric_compare": 0.6857142857142857,
+        "number_format": 0.4626865671641791,
+        "slot_mismatch": 0.5901639344262295,
+        "request_as_approval": 0.8571428571428571,
+        "old_version": 0.5
+      }
+    },
+    "en": {
+      "n": 589,
+      "macro_f1": 0.6312870578375548,
+      "accuracy": 0.6400679117147708,
+      "by_phenomenon": {
+        "direct": 0.84375,
+        "paraphrase": 0.4583333333333333,
+        "negation": 0.9270833333333334,
+        "unfounded_inference": 0.9270833333333334,
+        "number_format": 0.8125,
+        "numeric_compare": 0.0963855421686747,
+        "slot_mismatch": 0.0,
+        "request_as_approval": 0.5,
+        "old_version": 0.0
+      }
+    },
+    "pm_pilot_test_macro_f1": {
+      "zh": 0.6555709884811757,
+      "en": 0.6082454100052778
+    }
+  }
 }
