@@ -1400,16 +1400,30 @@ class HelpAssessment(BaseModel):
     language_match: bool
     decision: Literal["supported", "unsupported", "undetermined"]
 
-    def permits_publication(self) -> bool:
-        # Demo edition: only the safety flags withhold a reply. The quality flags (overall
-        # decision, citations, one question, conditions, language) proved too strict for the
-        # hosted model; grounding is annotated per sentence by recognition C10 instead.
-        return bool(self.request_kinds) and all(
-            (
-                self.within_knowledge,
-                self.preserves_stance,
-                self.no_resource_approval,
-                self.no_complete_solution,
+    def permits_publication(self, relaxed: bool = False) -> bool:
+        safety = (
+            self.within_knowledge,
+            self.preserves_stance,
+            self.no_resource_approval,
+            self.no_complete_solution,
+        )
+        if relaxed:
+            # Demo edition, recognition on: only the safety flags withhold a reply. The quality
+            # flags (overall decision, citations, one question, conditions, language) proved too
+            # strict for the hosted model; recognition C10 annotates grounding per sentence.
+            return bool(self.request_kinds) and all(safety)
+        return (
+            bool(self.request_kinds)
+            and self.decision == "supported"
+            and all(
+                (
+                    self.facts_answered,
+                    self.citations_supported,
+                    *safety,
+                    self.one_main_question,
+                    self.language_match,
+                    self.conditions_preserved,
+                )
             )
         )
 
@@ -1495,9 +1509,22 @@ class CooperativeHelpVerifier:
             raise ProtocolError("role_attempt_guard_unavailable", status=409)
         messages, _, _ = snapshot.build_prompt(auth, max_chars=self.max_context_chars)
         context = json.loads(messages[0]["content"].split("\nCONTEXT\n", 1)[1])
-        # Demo edition: the bracket-citation format no longer withholds a reply. Whether each
-        # sentence is grounded is judged by the recognition layer (C10 reply_check, shown
-        # under the bubble).
+        from career_lab.recognition import roles as role_recognition
+
+        # Demo edition: while role recognition is on, the bracket-citation format no longer
+        # withholds a reply; C10 reply_check judges per sentence (shown under the bubble).
+        # Without recognizers the original citation checks apply.
+        relaxed = role_recognition.active() is not None
+        citations = []
+        if not relaxed:
+            labels = {source["display_name"] for source in context["sources"]}
+            citations = [
+                label
+                for label in re.findall(r"\[([^\]\n]+)\]", text)
+                if label in labels or " · v" in label
+            ]
+            if any(label not in labels for label in citations):
+                raise ProtocolError("role_help_citation_invalid", status=422)
         begin_call("role_help_review", self.revision + ":" + self.model.revision)
         inputs = {
             "policy_revision": HELP_POLICY_REVISION,
@@ -1539,8 +1566,10 @@ class CooperativeHelpVerifier:
             review = HelpAssessment.model_validate(answer)
         except ValidationError:
             raise ProtocolError("role_help_review_invalid", status=409) from None
-        if not review.permits_publication():
+        if not review.permits_publication(relaxed):
             raise ProtocolError("role_help_unverified", status=409)
+        if not relaxed and "fact" in review.request_kinds and not citations:
+            raise ProtocolError("role_help_citation_invalid", status=422)
         source = Path(__file__)
         return ReplyVerification(
             "consistent",
