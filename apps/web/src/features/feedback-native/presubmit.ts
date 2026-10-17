@@ -238,7 +238,7 @@ export function recognitionView(
       i: c.insufficient ?? 0,
       d: c.deferred ?? 0,
     }),
-    by: t('recBy', { name: raw.recognizer ?? '–', ms: raw.duration_ms ?? 0 }),
+    by: t('recBy', { name: raw.recognizer ?? '–', ms: Math.round(raw.duration_ms ?? 0) }),
     fallback: raw.fallback ? t('recFallback') : null,
     note: t('recNote'),
     evidenceLabel: t('recEvidence'),
