@@ -2,27 +2,26 @@
 
 写给下一个接手的会话或组员。执行依据仍是[完整设计](pattern-recognition-design-20261016.md)；本文记录做到哪、怎么跑、下一步按什么顺序做、和设计有出入的地方。**接手先读第 0 节和第 4 节。**
 
-## 0. 暂停时的现场（10-17 凌晨）
+## 0. 现场（10-17 第二个会话结束时）
 
-- **开发服务正在跑旧代码，用之前必须重启**：最后一次重启之后又改了 `src/career_lab/recognition/{relation,judge,behavior}.py`（见 4.1），反馈 handler 会因源码快照变化拒绝执行（`execution_restart_required`）。重启：PowerShell 里 `$env:RC_OFF='0'; . runs\local\dev\start.ps1`。
-- E4 评测已在暂停后跑完（`experiments/recognition/results/e4_decision.json`，并已更新 `c1-xlmr-cpu/lift.json`）。后台没有在跑的实验任务。
-- 前端预览（18560）和开发服务（18562，1 个 API + 3 个 worker）都还开着。数据服务（18572）已停。
-- 全部改动在本地工作区，**未提交、未推送**。推送前问用户。
+- **用户 10-17 定的方向**：这是 PoC 级演示 MVP，不在稳定性/安全性上发力、不总跑全量测试；先把模块搭完，模型效果（Colab C1 等）后面再说；ROLES / ASSISTANT 槽也接 DeepSeek；PR 一块一个。
+- **git**：本地分支 `claude/rc1-recognition-backend`（= main + 后端提交 bbe0d2d），已推送并开 **PR #58**（后端识别层，未合并——合并要用户或组员来点，自动模式不允许 Claude 自合）。之后的改动（前端、实验、IT 场景、本文件）都在这个分支的工作区里**未提交**；第 4.0 节列了还要开的 PR。
+- 开发服务（18562）与前端预览（18560）开着，跑的是最新代码；四个模型槽全是 DeepSeek；目录里多了 `it_ticket_pilot`（中文）。后台没有在跑的实验。
 
 ## 1. 进度一览
 
 | 步骤 | 状态 | 说明 |
 |---|---|---|
-| S0 环境 | 完成 | `.venv-encoder`（torch 2.8.0 CPU / transformers 4.57.1；另用 `uv pip` 装了 hmmlearn 0.3.3，未进 uv.lock）；e5-small、XLM-R base 权重在 `runs/local/`；JUDGE/SUPPORT 接 DeepSeek |
+| S0 环境 | 完成 | `.venv-encoder`（torch 2.8.0 CPU / transformers 4.57.1；另用 `uv pip` 装了 hmmlearn 0.3.3，未进 uv.lock）；e5-small、XLM-R base 权重在 `runs/local/`；四个槽（JUDGE/SUPPORT/ROLES/ASSISTANT）都接 DeepSeek（`env.ps1`；`$env:RC_LOCAL_ROLES='1'` 退回本地模板同事） |
 | S1 骨架 | 完成 | 契约 `contracts/v2/recognition.py`；`FeedbackV2`/`TestResultV2`/`RoleReply` 加可选 `recognition`；`GET /sessions/{id}/recognition`、`/behavior`；前端署名组件、复盘页汇总行 |
 | S2 C2 | 完成 | assembler 候选切单元（≤80，预算 48 KB）；助手打分 = max(覆盖率, 校准 e5 相关度)；consumer 逐句只送 C2 top-5 |
 | S3 数据 | 完成 | 第 3 节 |
 | S4 轻量识别器 | 完成并登记 | C11 意图、C4 范围、C5 行为（`runs/local/recognizers/manifest.json`） |
 | S5 三入口装配 | 完成 | JUDGE / ROLES / ASSISTANT 全部接上；端到端核过（第 5 节） |
-| S6 C1 | 本机 CPU 版已训练并登记 | `runs/local/recognizers/c1-xlmr-cpu`（冻结 10 层、2 轮、max_len 160）；以 external_candidate 登记在 `runs/local/c1-return`；`env.ps1` 已切到它。Colab 版（冻结 8 层、3 轮）未跑 |
-| S7 页面 | 完成 | 复盘页「你的行为模式」；识别实验室 `#/lab` |
-| S8 it_ticket_pilot | 只做了数据版 | `data/releases/it-ticket-v1`；可玩场景未做 |
-| S9 实验 | 见第 2 节 | E3、E4、E5、E6、E7、E9（检索与范围）完成；E1 基线需重跑；E8 需重跑；E10 待跑 |
+| S6 C1 | 本机 CPU 版已训练并登记；E10 晚期融合已启用 | `runs/local/recognizers/c1-xlmr-cpu`（冻结 10 层、2 轮、max_len 160）；以 external_candidate 登记在 `runs/local/c1-return`；`fusion.json` α=0.4。Colab 版暂缓（用户：先搭模块） |
+| S7 页面 | 完成 | 复盘页「你的行为模式」；识别实验室 `#/lab`（E1、E3–E10 全部有图）；**交付前预演卡逐句标色**（R2.support 的 C2+C1+C6，附依据原句） |
+| S8 it_ticket_pilot | **中文可玩** | `content_it.py` + `scripts/recognition/build_it_scenario.py` 生成包 `scenarios/it_ticket_pilot/v2/candidates/it-1/`；C4 有 IT 专属拟合；前端入口「同样的结构，换一个领域」。英文未做；B1 工程师路径接 C1 不做（自报是结构化 pass/fail，没有给 C1 判的句子） |
+| S9 实验 | 见第 2 节 | E3、E4、E5、E6、E7、E10、E9（检索与范围）完成；E1 基线需重跑；E8 需重跑 |
 | S10 报告 | 未开始 | |
 
 ## 2. 实验状态与结果（test）
@@ -39,7 +38,7 @@
 | E7 C11 | 完成 | LR 准确率 0.946/0.824，macro-F1 0.886；关键词规则 0.525 |
 | E8 Judge 开/关 | **需重跑** | 旧结果只有 10 对且「开」组是规则回退版：待核验 0.60 vs 0.74，引用 0.99 vs 0.74，标签一致 0.65，冲突率 0.4。要在重启后的 C1 版上重跑「开」组 |
 | E9 跨领域 | 检索与范围完成；C1 待跑 | pm_pilot 的 C4 拟合搬到 IT：AUROC 0.60/0.50；只用 IT 知识库单元拟合：0.986/0.949；IT 改写问题 e5 Recall@5 0.82/0.64 |
-| E10 晚期融合 | 待跑 | `experiments/recognition/fusion.py` 已写好，跑完会写 `c1-xlmr-cpu/fusion.json`，产品端随即启用融合 |
+| E10 晚期融合 | 完成 | α=0.4（dev 0.634）；test macro-F1：C1 0.656/0.608/0.625（中/英/合计），规则 0.311，晚期融合 0.655/0.616/0.630。增益小，但冒烟里「住宿上限 500 元」从误判矛盾变成支持、「50 人」判成超限（置信 0.54 送人工）。早期融合未做（要重训） |
 
 ## 3. 数据（`data/releases/`，未入库）
 
@@ -56,44 +55,44 @@ DeepSeek 合计约 2,600 次调用。生成与复核同为 DeepSeek，报告须�
 
 ## 4. 下一步（按顺序）
 
-### 4.1 先确认三处未经服务验证的改动
+### 4.0 先把未提交的改动开成 PR（等用户点头）
 
-最后一次重启后改了这三处，只做过导入检查：
+PR #58（后端）已开。工作区里还有三块，按目录拆，各自基于 main（互不依赖，合并顺序随意，只是前端/IT 场景运行时需要 #58 的接口）：
 
-1. `recognition/relation.py`：C1 可用且存在 `fusion.json` 时，与数值规则做晚期融合（规则「无可比依据」时只用 C1）。
-2. `recognition/judge.py`：识别器核验不再返回 unsupported，只在引文全部落地时放行，其余交 LLM。原因：Judge 的解释句是批评（「计划 50 人超过容量 30 人」），被 C1 当成断言判为矛盾，导致两项被打回。
-3. `recognition/behavior.py`：首次提交前不出现「调整」阶段（冲突时回到规则阶段）。
+| PR | 内容 | 路径 |
+|---|---|---|
+| 2/4 前端 | 署名组件、复盘页汇总、行为页、实验室页（含 E3/E4/E8/E9/E10 新图）、预演卡逐句标色 | `apps/web/**`（`public/lab/*.json` 一起） |
+| 3/4 实验 | 实验脚本与结果、C1 训练/登记、`publish_lab.py` | `experiments/**` |
+| 4/4 IT 场景 | `content_it.py`、`variants/seed/localization/public_cases/evaluation_facts` 的场景分支、构建与 C4 拟合脚本、冒烟 `--scenario`、生成的包、本文件 | `src/career_lab/scenarios/v2/**`、`scenarios/it_ticket_pilot/**`、`scripts/recognition/{build_it_scenario,fit_it_scope,smoke}.py`、`docs/plans/progress-…md`；前端入口那几行在 PR 2 |
 
-### 4.2 命令
+同事回复不拦截引文（`roles_v2.py`）、预演识别（`judge.py`、`evaluation_runtime.py`、`extensions.py`）、`client.py` 信封修复都已在 #58 里。PR 2/3 的描述草稿在本会话 scratchpad（`pr2-web.md`、`pr3-experiments.md`），丢了就照 #58 的格式重写；描述里写「演示版，契约未重导出」。
+
+### 4.1 演示前还值得做的（都不是性能优化）
+
+1. **E8 重跑「开」组**（报告核心表）：删掉 `e8_raw_on_*.jsonl`，`judge_ab run --condition on --count 2 --languages zh`、再 `en`，`judge_ab compare`，`publish_lab`，`npm run build`。跑期间不要改 `src/`，不要和别的 CPU 重任务同时跑。
+2. **IT 场景英文**：写 `content_it_en.py`（`materials(min_score)`、`role_definitions()`、`probes()`、`TRIALS`、`MESSAGES`，结构照 `content_en.py`），`build_it_scenario --languages zh en`，`fit_it_scope --languages zh en`，catalog 加 en 条目。
+3. IT 场景的同事显示名：前端 `workbench-engine.js` 的 `roles` 是写死的「业务负责人 · Mei」，IT 场景里后端角色叫「服务台负责人」。演示若切 IT 场景要讲一句或改成读后端名。
+4. S10 报告、slides、视频、架构图。
+
+### 4.2 性能项（用户说放最后）
+
+- 加权基线 + C1 堆叠（`baselines --encoder …`，CPU 约 1 小时）；E9 的 C1 部分（`cross_domain --encoder …`）；Colab 版 C1（第 7 节）；E2。
+
+### 4.3 命令备忘
 
 ```powershell
 cd D:\HuaweiMoveData\Users\13736\Desktop\AIS\5002GPJ
-$env:PYTHONUTF8='1'; $env:CAREER_LAB_RECOGNIZERS="$PWD\runs\local\recognizers"
-# 1. E10：选融合权重，写 fusion.json
-.venv-encoder\Scripts\python -m experiments.recognition.fusion --encoder runs/local/recognizers/c1-xlmr-cpu
-# 2. 重启开发服务（识别层开、C1 登记）并冒烟
+$env:PYTHONUTF8='1'
 $env:RC_OFF='0'; . runs\local\dev\start.ps1
 .venv\Scripts\python -m scripts.recognition.smoke --language zh --continue-code
-# 3. E8：删掉 e8_raw_on_*.jsonl，重跑「开」组（中英两个进程），再 compare
-.venv\Scripts\python -m experiments.recognition.judge_ab run --condition on --count 2 --languages zh
-.venv\Scripts\python -m experiments.recognition.judge_ab run --condition on --count 2 --languages en
-.venv\Scripts\python -m experiments.recognition.judge_ab compare
-# 4. 加权基线 + C1 堆叠/融合（CPU 约 1 小时）
-.venv-encoder\Scripts\python -m experiments.recognition.baselines --encoder runs/local/recognizers/c1-xlmr-cpu
-# 5. E9 的 C1 部分
-.venv-encoder\Scripts\python -m experiments.recognition.cross_domain --encoder runs/local/recognizers/c1-xlmr-cpu
-# 6. 发布到实验室页
+.venv\Scripts\python -m scripts.recognition.smoke --scenario it_ticket_pilot --language zh --continue-code
+.venv-encoder\Scripts\python -m scripts.recognition.build_it_scenario          # 重建 IT 包，打印 catalog 条目
+.venv-encoder\Scripts\python -m scripts.recognition.fit_it_scope               # 重拟合 IT 的 C4 并重新登记
 .venv\Scripts\python -m experiments.recognition.publish_lab --c1 runs/local/recognizers/c1-xlmr-cpu
 cd apps\web; npm run build
 ```
 
-注意：步骤 3 跑 E8 期间不要改 `src/`；不要和步骤 4 同时跑（CPU 打满后 SQLite 会锁超时，会话报 500）。
-
-### 4.3 之后
-
-- 冒烟里观察到 C1 把「我们计划安排 50 人参加试点」判成 insufficient、把「住宿上限 500 元」判成 contradicted；E10 融合后复查。更好的 C1 走 Colab（第 7 节）。
-- 实验室页的 E4、E8、E10 图表还没做（`publish_lab.py` 已会发布 `e8_judge.json`；`lab.ts` 需加对应小节）。
-- S8 可玩场景、E2、人机判别、S10 报告。
+重建 IT 包后 `scenario_hash` 会变，要同步改 `runs/local/dev/catalog.json` 里那一条再重启。
 
 ## 5. 已核过的验收
 
@@ -101,6 +100,10 @@ cd apps\web; npm run build
 - 3.1：含「安排 50 人」的作品，R2.support 解释以 `[识别一致]` 开头（C1 版）；`GET /recognition` 有 relation、retrieval、decision、arbiter 记录；不设 `CAREER_LAB_RECOGNIZERS` 时回到原行为。
 - 3.2：同事回复下有意图与依据核查署名；`learner_state` 出现在 `role_context` 私有审计对象里。
 - 3.3：「火星天气」域外；「住宿报销上限」全范围域内、排除政策后域外。漂移标注未做端到端验证（这一版场景很难触发索引前后版本不同）。
+- 10-17 第二会话（重启后冒烟）：4.1 旧三处都生效——融合后「住宿上限 500 元」支持 0.51、「50 人」矛盾 0.54 送人工；SUPPORT 核验只出 supported/unverified；行为阶段 探索→测试→探索→决策，无提交前「调整」。
+- DeepSeek 同事：回复 `generation_mode=model`；技术负责人曾答「上限是 60 人」（把可审批上限当现有容量），C10 把这句判为与 brief 矛盾——演示里可以拿来讲「识别层抓 LLM 的错」。
+- 预演卡：`GET /sessions/{id}/submission-rule-check?submission_id=` 带 `recognition`（7 句，CPU 约 3–12 秒），依据列给出命中的那一句原文。
+- IT 场景：助手答「P2 响应时限为4小时」，C4 用 IT 拟合（域内 1.21 / 阈 1.89）；Judge R2.support `[识别一致]`；融合识别出「4 hour」同量、「50>30」超限。首页 `#/pm` 出现 IT 卡片（headless Edge 截图核过）。
 
 ## 6. 怎么跑
 
@@ -111,9 +114,9 @@ cd apps\web; npm run build
 
 ## 7. 需要人决定或动手
 
-- **Colab 训更好的 C1**：打开 `runs/local/colab/colab_train_c1.ipynb`，上传同目录 `c1-bundle.zip`，下载 `c1-out.zip` 解压到 `runs/local/recognizers/c1-xlmr/`，然后 `python -m experiments.recognition.relation.register_c1 --train-out runs/local/recognizers/c1-xlmr --out runs/local/c1-return-colab`，把打印的变量写进 `runs/local/dev/env.ps1`，再从 4.2 的 E10 起重跑。
-- ROLES / ASSISTANT 槽要不要也接 DeepSeek（现在同事回复是本地模板）。
-- 何时提交、怎么切 PR（设计第 10 节建议按 S 步拆）。
+- **合并 PR**：#58 及 4.0 节的后续 PR 由用户或组员合并（自动模式不允许 Claude 自合，也拦了后续 git 操作，开 PR 2–4 要用户放行）。
+- **Colab 训更好的 C1**（用户 10-17：暂缓，模块搭完再说）：打开 `runs/local/colab/colab_train_c1.ipynb`，上传同目录 `c1-bundle.zip`，下载 `c1-out.zip` 解压到 `runs/local/recognizers/c1-xlmr/`，然后 `python -m experiments.recognition.relation.register_c1 --train-out runs/local/recognizers/c1-xlmr --out runs/local/c1-return-colab`，把打印的变量写进 `runs/local/dev/env.ps1`，再重跑 E10（`experiments.recognition.fusion`）。
+- 已定：ROLES / ASSISTANT 接 DeepSeek（10-17 已接）；PR 一块一个。
 
 ## 8. 与设计的出入（代码注释里都写了）
 
@@ -124,15 +127,19 @@ cd apps\web; npm run build
 5. C4 的 scope_on 定义为「开了范围过滤且排除了政策类领域」。
 6. SUPPORT 槽：识别器只放行不否决（4.1 第 2 条）。
 7. 行为异常规则 1 泛化为「世界变化（里程碑通知或索引刷新）后未再测就提交」。
-8. 人机判别未做（无 Agent 轨迹）；S8 只有数据版。
+8. 人机判别未做（无 Agent 轨迹）；S8 可玩版只有中文，B1（工程师路径接 C1）不做。
 9. 助手 C2 用 e5 而非 RRF（E3 的结论）。
+10. ROLES 接 DeepSeek 后，`CooperativeHelpVerifier` 的方括号引文格式与五个质量项不再拦截回复，只留四个安全项（`roles_v2.py` 注释）；每句依据由 C10 标注。不这样改约一半回复被拦。
+11. IT 场景是「换皮」：所有材料 id、事实 id 和数值与 pm_pilot 相同（`hotel_limit` 在 IT 里是 P2 响应时限 4→2 小时），所以评分规则、识别器、行为模型不用改；数值与 `it-ticket-v1` 数据版（E9 用）的账本不一致（候选 50 人 vs 60 人），两者独立。
+12. 预演卡调用了识别器（C1 在 API 进程里推理），不再是「不调用模型」；文案改成「不调用大模型」。
 
 ## 9. 坑
 
 - 改了 `src/` 下任何 .py 都要重启服务（`execution_restart_required`）。
 - Bash heredoc 会吃反斜杠；含 `\n`、`\\` 的补丁用 Write/Edit 或写成脚本文件。
 - Claude in Chrome 窗口被最小化时截图超时、布局宽 0；改用 `msedge --headless=new --screenshot=<png> --window-size=1280,3000 <url>`。
-- `GET /recognition`、`/behavior` 的响应信封是 `{"result": {"result": {...}}}`。
+- `GET /recognition`、`/behavior`、`/timeline` 的响应信封都是 `{"result": {"result": {...}}}`（`client.objects` 已改成逐层解开；之前的冒烟其实从没打印出同事回复）。
+- Windows 上 `write_text` 会把 `\n` 写成 `\r\n`，而发布记录用 `read_text` 读回清单再比 hash → `release_content_mismatch`。构建场景包时清单一律 `write_bytes(...encode())`。另外仓库 `.gitattributes` 是 `eol=lf`，包里文件若是 CRLF，提交后别人检出的字节就和清单里的 hash 对不上；`build_it_scenario.py` 已把 `Path.write_text` 强制成 LF。
 - 重 CPU 负载 + 多 worker 时 SQLite 锁超时（500 `OperationalError`）。
 - DeepSeek 起草材料时会把账本键名写进句子；`synth_domain.py` 已改为自然语言账本 + 键名回填 + 拒收。
 - Windows 下远端单测约 70 个平台性失败（文件锁、symlink、权限），与本次改动无关；前端 `score-range.test.ts` 在 CPU 满载时会 5 秒超时。

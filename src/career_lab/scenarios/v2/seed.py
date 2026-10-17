@@ -45,6 +45,14 @@ def build_seed(
         definitions = list(business_materials())
         role_data = role_definitions()
     definitions = material_definitions(locale, min_score, scenario_id)
+    from .variants import SECOND_DOMAIN
+
+    if scenario_id in SECOND_DOMAIN:
+        if locale == "en":
+            from .content_it_en import role_definitions as it_roles
+        else:
+            from .content_it import role_definitions as it_roles
+        role_data = it_roles()
     scenario_session = f"scenario:{scenario_id}:v2"
     root = Path(root)
     if root.exists() and any(root.iterdir()):
@@ -216,14 +224,14 @@ def build_seed(
                 "id": "demo_schedule_changed",
                 "on": "first_resource_request",
                 "material_updates": {"demo": 2},
-                "notice": text(locale, "demo_notice"),
+                "notice": text(locale, "demo_notice", scenario_id),
                 "visible_to": ["learner", "supervisor", "tech_lead"],
             },
             {
                 "id": "business_scope_requested",
                 "on": "capacity_approved",
                 "material_updates": {"scope_note": 2},
-                "notice": text(locale, "scope_notice"),
+                "notice": text(locale, "scope_notice", scenario_id),
                 "visible_to": ["learner", "supervisor", "business_lead"],
             },
         ],
@@ -366,7 +374,13 @@ def build_seed(
             },
         },
     ]
-    if locale == "en":
+    if scenario_id in SECOND_DOMAIN:
+        if locale == "en":
+            from .content_it_en import probes as it_probes
+        else:
+            from .content_it import probes as it_probes
+        probes = it_probes()
+    elif locale == "en":
         from .probes_en import translate_probes
 
         probes = translate_probes(probes)

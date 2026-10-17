@@ -132,13 +132,23 @@ MESSAGES = {
 }
 
 
-def text(package_or_locale, key):
+def text(package_or_locale, key, scenario_id=None):
     locale = (
         package_or_locale
         if isinstance(package_or_locale, str)
         else getattr(package_or_locale, "locale", "zh")
     )
     require_locale(locale)
+    if scenario_id is None and not isinstance(package_or_locale, str):
+        bundle = getattr(package_or_locale, "bundle", None)
+        scenario_id = getattr(bundle, "id", None)
+    if scenario_id == "it_ticket_pilot":
+        if locale == "en":
+            from .content_it_en import MESSAGES as overrides
+        else:
+            from .content_it import MESSAGES as overrides
+        if key in overrides:
+            return overrides[key]
     if locale == "en":
         from .localization_en import MESSAGES_EN
 

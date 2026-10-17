@@ -11,7 +11,10 @@ SCENARIOS = {
     "pm_pilot": {"capacity": 30, "dev_days": 3, "deadline_day": 7},
     "pm_pilot_urgent": {"capacity": 30, "dev_days": 3, "deadline_day": 5},
     "pm_pilot_capacity15": {"capacity": 15, "dev_days": 3, "deadline_day": 7},
+    # Second domain (design 6.1): same structure and numbers, IT service-desk wording.
+    "it_ticket_pilot": {"capacity": 30, "dev_days": 3, "deadline_day": 7},
 }
+SECOND_DOMAIN = frozenset({"it_ticket_pilot"})
 
 
 def resources(scenario_id):
@@ -21,6 +24,15 @@ def resources(scenario_id):
 
 
 def material_definitions(locale, min_score, scenario_id="pm_pilot"):
+    if scenario_id in SECOND_DOMAIN:
+        if locale == "en":
+            from .content_it_en import materials
+
+            return deepcopy(materials(min_score))
+        from .content_it import materials
+
+        # The IT brief already states its own allocation and the saved draft.
+        return deepcopy(materials())
     if locale == "en":
         from .content_en import materials
 
@@ -77,7 +89,7 @@ def practice_paths(paths, scenario_id):
     """Private regression candidates, never learner suggestions or gold scores."""
     paths = deepcopy(paths)
     limits = resources(scenario_id)
-    if scenario_id == "pm_pilot":
+    if scenario_id == "pm_pilot" or scenario_id in SECOND_DOMAIN:
         return paths
     for path in paths:
         if path["id"] != "delayed_realtime":

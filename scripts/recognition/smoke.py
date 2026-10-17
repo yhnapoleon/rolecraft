@@ -32,6 +32,19 @@ WORK = {
 }
 QUERY = {"zh": "住宿报销上限是多少？", "en": "What is the hotel reimbursement limit?"}
 ASK = {"zh": "试点最多能上多少人？", "en": "How many people can the pilot take at most?"}
+# Second domain (it_ticket_pilot): the same three moves on the IT materials.
+IT = {
+    "work": {
+        "zh": (
+            "试点先只开放给已完成人工复核的团队，有据可查。若名额超过上限，需要先申请扩容。\n\n"
+            "SLA 规定 P2 工单响应时限为4小时。超时须由服务台负责人记录原因。我们计划安排 "
+            "50 人参加试点。\n\n"
+            "- 保留人工兜底\n- 记录未知条件"
+        ),
+    },
+    "query": {"zh": "P2工单的响应时限是多少？"},
+    "ask": {"zh": "试点最多能上多少人？"},
+}
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -42,14 +55,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--continue-code", action="store_true", help="issue a continue code to open it in a browser"
     )
+    parser.add_argument("--scenario", default="pm_pilot", choices=["pm_pilot", "it_ticket_pilot"])
     args = parser.parse_args(argv)
 
-    session = Session(args.api, args.language)
+    it = args.scenario == "it_ticket_pilot"
+    work = IT["work"][args.language] if it else WORK[args.language]
+    query = IT["query"][args.language] if it else QUERY[args.language]
+    ask = IT["ask"][args.language] if it else ASK[args.language]
+    session = Session(args.api, args.language, scenario=args.scenario + "_v2")
     print("session", session.session_id)
     read = session.read("brief")
     fragments = read["result"]["fragments"]
-    product = session.draft(WORK[args.language], [fragments[min(1, len(fragments) - 1)]["ref"]])
-    trial = session.test(QUERY[args.language])
+    product = session.draft(work, [fragments[min(1, len(fragments) - 1)]["ref"]])
+    trial = session.test(query)
     test = trial["result"]["test"]
     print("test:", test.get("status"), "|", (test.get("answer") or "")[:80])
     if "recognition" in (test.get("data") or {}) or "recognition" in test:
@@ -59,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
                 :400
             ],
         )
-    asked = session.ask("tech_lead", ASK[args.language])
+    asked = session.ask("tech_lead", ask)
     session.wait_request(asked["_request_id"])
     for reply in session.objects("role_reply"):
         content = reply["content"]

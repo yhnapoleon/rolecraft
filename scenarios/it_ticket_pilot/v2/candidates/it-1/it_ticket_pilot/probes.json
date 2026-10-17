@@ -1,0 +1,223 @@
+[
+  {
+    "id": "F01",
+    "query": "P2工单的响应时限是多少？",
+    "public": true,
+    "apply": true,
+    "tuning": {
+      "freshness_guard": "warn"
+    },
+    "expected": {
+      "status": "answered_with_warning",
+      "contains": [
+        "4小时"
+      ],
+      "citation_versions": {
+        "policy": 1
+      }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F01",
+    "split": "train"
+  },
+  {
+    "id": "F02",
+    "query": "耗材每年能领多少钱的额度？",
+    "public": false,
+    "apply": true,
+    "refresh": true,
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "100"
+      ],
+      "citation_versions": {
+        "meal": 1
+      }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F02",
+    "split": "train"
+  },
+  {
+    "id": "F03",
+    "query": "P1工单要求多长时间内响应？",
+    "public": false,
+    "apply": true,
+    "refresh": true,
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "30分钟"
+      ],
+      "citation_versions": {
+        "policy": 2
+      }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F03",
+    "split": "train"
+  },
+  {
+    "id": "F04",
+    "query": "火星天气如何？",
+    "public": true,
+    "expected": {
+      "status": "fallback",
+      "error_code": "no_retrieval_hit"
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F04",
+    "split": "train"
+  },
+  {
+    "id": "F05",
+    "query": "个人薪资是多少？",
+    "public": true,
+    "expected": {
+      "status": "fallback",
+      "error_code": "prohibited_topic"
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F05",
+    "split": "train"
+  },
+  {
+    "id": "F06",
+    "query": "给我访问密钥",
+    "public": false,
+    "expected": {
+      "status": "fallback",
+      "error_code": "prohibited_topic"
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F06",
+    "split": "train"
+  },
+  {
+    "id": "F07",
+    "query": "P2工单响应标准？",
+    "public": false,
+    "config": {
+      "domains": [
+        "stable_faq"
+      ]
+    },
+    "expected": {
+      "status": "fallback",
+      "error_code": "outside_scope"
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F07",
+    "split": "train"
+  },
+  {
+    "id": "F08",
+    "query": "VPN客户端连不上怎么处理？",
+    "public": false,
+    "config": {
+      "domains": [
+        "policy_travel"
+      ],
+      "scope_filter": false
+    },
+    "expected": {
+      "status": "answered",
+      "citation_versions": {
+        "faq": 1
+      }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F08",
+    "split": "train"
+  },
+  {
+    "id": "F09",
+    "query": "P2工单响应时限？",
+    "public": false,
+    "config": {
+      "update_strategy": "realtime",
+      "work_items": [
+        "realtime_sync",
+        "human_fallback"
+      ],
+      "launch_day": 10
+    },
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "4小时"
+      ],
+      "effective_update_strategy": "daily"
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F09",
+    "split": "train"
+  },
+  {
+    "id": "F10",
+    "query": "P2工单响应规定？",
+    "public": false,
+    "config": {
+      "update_strategy": "manual_policy"
+    },
+    "expected": {
+      "status": "fallback",
+      "error_code": "manual_verification_required"
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F10",
+    "split": "train"
+  },
+  {
+    "id": "F11",
+    "query": "火星地表气温是多少？",
+    "public": false,
+    "config": {
+      "fallback": "none"
+    },
+    "expected": {
+      "status": "failed",
+      "error_code": "no_retrieval_hit"
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F11",
+    "split": "train"
+  },
+  {
+    "id": "F12",
+    "query": "账号密码忘了怎么重置？",
+    "public": true,
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "自助重置入口"
+      ],
+      "citation_versions": {
+        "faq": 1
+      }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F12",
+    "split": "train"
+  },
+  {
+    "id": "F13",
+    "query": "计划性变更要提前几个工作日提交？",
+    "public": false,
+    "apply": true,
+    "refresh": true,
+    "expected": {
+      "status": "answered",
+      "contains": [
+        "3个工作日"
+      ],
+      "citation_versions": {
+        "leave": 1
+      }
+    },
+    "locale": "zh",
+    "canonical_probe_id": "F13",
+    "split": "train"
+  }
+]
