@@ -4,7 +4,6 @@ from pydantic import Field, model_validator
 
 from . import provenance as _provenance
 from .core import *
-from .recognition import RecognitionRecord
 from .core import (
     V2,
     EvidenceRefV2,
@@ -16,6 +15,7 @@ from .core import (
     PositiveInt,
     VersionPoint,
 )
+from .recognition import RecognitionRecord
 
 Applicability = Literal["applicable", "not_applicable", "undetermined"]
 CriterionLabel = Literal["MET", "PARTIAL", "NOT_MET", "INSUFFICIENT", "NOT_APPLICABLE"]

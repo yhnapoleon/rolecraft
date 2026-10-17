@@ -46,14 +46,49 @@ STYLES = {
 }
 PHENOMENA = {
     "direct": ("SUPPORTED", "直接复述这条事实", "state the fact directly"),
-    "paraphrase": ("SUPPORTED", "换一种说法复述，意思不变，不照抄原文用词", "restate it in other words without copying its wording"),
-    "number_format": ("SUPPORTED", "复述时把数字换成中文数字、约数或换算写法（意思仍相同）", "restate it writing the number differently (words, approximations, conversions) with the same meaning"),
-    "negation": ("CONTRADICTED", "说出与这条事实相反的话（否定它）", "say the opposite of the fact (negate it)"),
-    "numeric_compare": ("CONTRADICTED", "给出一个违反这条数值事实的数字（超过上限、少于下限或数值不同）", "use a number that violates the fact (above the cap, below the floor, or different)"),
-    "slot_mismatch": ("CONTRADICTED", "把这条事实里的数字安到另一个量上（数对了但对象错了）", "attach the fact's number to a different quantity (right number, wrong thing)"),
-    "old_version": ("CONTRADICTED", "沿用这条事实更新前的旧数值（旧值见“旧版本”）", "keep using the value from before this update (see 'older version')"),
-    "request_as_approval": ("CONTRADICTED", "把“提交了申请/可以申请”说成“已经批准/已经拿到”", "treat 'requested / may request' as 'already approved / already granted'"),
-    "unfounded_inference": ("INSUFFICIENT", "做一个与这条事实相关、但原文并未提供依据的推断或预测", "make a related inference or prediction the text gives no basis for"),
+    "paraphrase": (
+        "SUPPORTED",
+        "换一种说法复述，意思不变，不照抄原文用词",
+        "restate it in other words without copying its wording",
+    ),
+    "number_format": (
+        "SUPPORTED",
+        "复述时把数字换成中文数字、约数或换算写法（意思仍相同）",
+        (
+            "restate it writing the number differently (words, approximations, conversions) "
+            "with the same meaning"
+        ),
+    ),
+    "negation": (
+        "CONTRADICTED",
+        "说出与这条事实相反的话（否定它）",
+        "say the opposite of the fact (negate it)",
+    ),
+    "numeric_compare": (
+        "CONTRADICTED",
+        "给出一个违反这条数值事实的数字（超过上限、少于下限或数值不同）",
+        "use a number that violates the fact (above the cap, below the floor, or different)",
+    ),
+    "slot_mismatch": (
+        "CONTRADICTED",
+        "把这条事实里的数字安到另一个量上（数对了但对象错了）",
+        "attach the fact's number to a different quantity (right number, wrong thing)",
+    ),
+    "old_version": (
+        "CONTRADICTED",
+        "沿用这条事实更新前的旧数值（旧值见“旧版本”）",
+        "keep using the value from before this update (see 'older version')",
+    ),
+    "request_as_approval": (
+        "CONTRADICTED",
+        "把“提交了申请/可以申请”说成“已经批准/已经拿到”",
+        "treat 'requested / may request' as 'already approved / already granted'",
+    ),
+    "unfounded_inference": (
+        "INSUFFICIENT",
+        "做一个与这条事实相关、但原文并未提供依据的推断或预测",
+        "make a related inference or prediction the text gives no basis for",
+    ),
 }
 PAIR = {"SUPPORTED": "SUPPORTS", "CONTRADICTED": "CONTRADICTS", "INSUFFICIENT": "UNRELATED"}
 _NUM = re.compile(r"\d+(?:\.\d+)?")
@@ -63,7 +98,9 @@ def load_units(language: str) -> tuple[list[dict], dict]:
     from career_lab.recognition.units import split_material
     from career_lab.scenarios.v2.loader import load_package
 
-    index = json.loads((ROOT / "scenarios/pm_pilot/v2/installed/current.json").read_text(encoding="utf-8"))
+    index = json.loads(
+        (ROOT / "scenarios/pm_pilot/v2/installed/current.json").read_text(encoding="utf-8")
+    )
     pkg = load_package(ROOT / index["main"][language]["root"])
     versions: dict[str, list[int]] = {}
     for m in pkg.materials:
@@ -110,7 +147,9 @@ def legal_cells(unit: dict, older: dict | None) -> list[str]:
         cells += ["number_format", "numeric_compare", "slot_mismatch"]
     if older is not None and unit["version"] > older["version"]:
         cells.append("old_version")
-    if unit["material_id"] == "approvals" or re.search(r"申请|审批|批准|request|approv", unit["text"], re.I):
+    if unit["material_id"] == "approvals" or re.search(
+        r"申请|审批|批准|request|approv", unit["text"], re.I
+    ):
         cells.append("request_as_approval")
     return cells
 
@@ -121,7 +160,9 @@ def generate(language: str, unit: dict, cells: list[str], older: dict | None, rn
     asks = []
     for i, cell in enumerate(cells):
         label, dz, de = PHENOMENA[cell]
-        asks.append({"cell": cell, "style": styles[(i + rng.randint(0, 3)) % 4], "do": dz if zh else de})
+        asks.append(
+            {"cell": cell, "style": styles[(i + rng.randint(0, 3)) % 4], "do": dz if zh else de}
+        )
     system = SCENARIO[language] + (
         "\n你在为“断言—证据关系”识别器写训练数据：写产品经理学员在方案里会写的句子。只输出 JSON。"
         if zh
@@ -132,7 +173,11 @@ def generate(language: str, unit: dict, cells: list[str], older: dict | None, rn
         ("原文事实：" if zh else "Source fact: ")
         + unit["text"]
         + (
-            ("\n旧版本（已被上面这条取代）：" if zh else "\nOlder version (superseded by the above): ")
+            (
+                "\n旧版本（已被上面这条取代）："
+                if zh
+                else "\nOlder version (superseded by the above): "
+            )
             + older["text"]
             if older is not None and "old_version" in cells
             else ""
@@ -164,24 +209,31 @@ def review(language: str, rows: list[dict]) -> list[dict]:
     def job(chunk):
         def run():
             items = {
-                str(i): {"claim": r["claim"], "evidence": r["gold_text"]} for i, r in enumerate(chunk)
+                str(i): {"claim": r["claim"], "evidence": r["gold_text"]}
+                for i, r in enumerate(chunk)
             }
-            found = chat(
-                "You are a careful annotator. Output JSON only.",
-                (
-                    "对每一对，判断证据与断言的关系：SUPPORTED（证据足以支持断言）、CONTRADICTED（证据与断言冲突，"
-                    "包括数值超限、否定、对象错配、把申请当批准、使用已被取代的旧值）、INSUFFICIENT（证据相关但不足以支持或否定）。"
-                    '输出 {"labels": {"编号": "SUPPORTED|CONTRADICTED|INSUFFICIENT"}}。\n'
-                    if zh
-                    else "For each pair, judge the evidence-claim relation: SUPPORTED (the evidence "
-                    "suffices to support the claim), CONTRADICTED (it conflicts: a number beyond a cap, "
-                    "a negation, the wrong object, a request treated as approval, a superseded value), "
-                    "INSUFFICIENT (related but neither establishes nor refutes it). "
-                    'Output {"labels": {"id": "SUPPORTED|CONTRADICTED|INSUFFICIENT"}}.\n'
+            found = (
+                chat(
+                    "You are a careful annotator. Output JSON only.",
+                    (
+                        "对每一对，判断证据与断言的关系：SUPPORTED（证据足以支持断言）、CONTRADICTED（证据与断言冲突，"
+                        "包括数值超限、否定、对象错配、把申请当批准、使用已被取代的旧值）、INSUFFICIENT（证据相关但不足以支持或否定）。"
+                        '输出 {"labels": {"编号": "SUPPORTED|CONTRADICTED|INSUFFICIENT"}}。\n'
+                        if zh
+                        else "For each pair, judge the evidence-claim relation: SUPPORTED (the "
+                        "evidence "
+                        "suffices to support the claim), CONTRADICTED (it conflicts: a "
+                        "number beyond a cap, "
+                        "a negation, the wrong object, a request treated as approval, a "
+                        "superseded value), "
+                        "INSUFFICIENT (related but neither establishes nor refutes it). "
+                        'Output {"labels": {"id": "SUPPORTED|CONTRADICTED|INSUFFICIENT"}}.\n'
+                    )
+                    + json.dumps(items, ensure_ascii=False),
+                    temperature=0.0,
                 )
-                + json.dumps(items, ensure_ascii=False),
-                temperature=0.0,
-            ) or {}
+                or {}
+            )
             got = found.get("labels", {})
             return [r | {"review": got.get(str(i))} for i, r in enumerate(chunk)]
 
@@ -202,7 +254,9 @@ def candidate(unit: dict, *, valid_from: int, valid_until: int | None, observed:
     }
 
 
-def assemble(language: str, rows: list[dict], units: list[dict], versions: dict, rng: random.Random):
+def assemble(
+    language: str, rows: list[dict], units: list[dict], versions: dict, rng: random.Random
+):
     from career_lab.recognition import relation, retrieval
 
     texts = [u["text"] for u in units]
@@ -229,7 +283,9 @@ def assemble(language: str, rows: list[dict], units: list[dict], versions: dict,
                 continue
             if claim_q & relation.quantities(u["text"]):
                 continue  # states the claim's own quantity: ambiguous negative
-            cands.append(candidate(u, valid_from=0, valid_until=None, observed=rng.randint(1, as_of - 1)))
+            cands.append(
+                candidate(u, valid_from=0, valid_until=None, observed=rng.randint(1, as_of - 1))
+            )
         rng.shuffle(cands)
         pair_labels = {c["id"]: "UNRELATED" for c in cands}
         pair_labels[gold["unit_id"]] = PAIR[r["label"]]
@@ -238,7 +294,11 @@ def assemble(language: str, rows: list[dict], units: list[dict], versions: dict,
             "criterion": None,
             "purpose": "commitment",
             "claim": r["claim"],
-            "as_of": {"business_seq": as_of, "workspace_revision": as_of, "storage_revision": as_of},
+            "as_of": {
+                "business_seq": as_of,
+                "workspace_revision": as_of,
+                "storage_revision": as_of,
+            },
             "applicability": "applicable",
             "rule_context": {
                 "evidence_time_context": {
@@ -292,12 +352,17 @@ def cmd_relation(args) -> None:
             cells = legal_cells(unit, older)
             rng.shuffle(cells)
             cells = cells[: args.per_unit]
+            job_seed = rng.random()
 
-            def job(unit=unit, older=older, cells=cells, seed=rng.random()):
+            def job(unit=unit, older=older, cells=cells, seed=job_seed, language=language):
                 made = generate(language, unit, cells, older, random.Random(seed))
                 return [
-                    m | {"gold": unit, "older": older if m["cell"] == "old_version" else None,
-                         "gold_text": unit["text"]}
+                    m
+                    | {
+                        "gold": unit,
+                        "older": older if m["cell"] == "old_version" else None,
+                        "gold_text": unit["text"],
+                    }
                     for m in made
                 ]
 
@@ -306,10 +371,22 @@ def cmd_relation(args) -> None:
         reviewed = review(language, generated)
         agreed = [r for r in reviewed if r["review"] == r["label"]]
         rejected += [
-            {k: v for k, v in r.items() if k not in ("gold", "older")} for r in reviewed if r["review"] != r["label"]
+            {k: v for k, v in r.items() if k not in ("gold", "older")}
+            for r in reviewed
+            if r["review"] != r["label"]
         ]
         out_rows += assemble(language, agreed, units, versions, rng)
-        print(language, "units", len(pick), "generated", len(generated), "agreed", len(agreed), USAGE, flush=True)
+        print(
+            language,
+            "units",
+            len(pick),
+            "generated",
+            len(generated),
+            "agreed",
+            len(agreed),
+            USAGE,
+            flush=True,
+        )
     split(out_rows, key_of=lambda r: (r["language"], r["fact_root"]), seed=13)
     pairs = sum(len(r["pair_labels"]) for r in out_rows)
     write_release(

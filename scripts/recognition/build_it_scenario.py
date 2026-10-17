@@ -35,7 +35,9 @@ _write_text = Path.write_text
 
 
 def _write_text_lf(self, data, encoding=None, errors=None, newline=None):
-    return _write_text(self, data, encoding=encoding or "utf-8", errors=errors, newline=newline or "\n")
+    return _write_text(
+        self, data, encoding=encoding or "utf-8", errors=errors, newline=newline or "\n"
+    )
 
 
 Path.write_text = _write_text_lf
@@ -78,7 +80,9 @@ def stage(locale: str, work: Path) -> Path:
         for path in EVAL_FILES
         if path not in listed
     )
-    private = tuple(dict.fromkeys((*bundle.private_files, *(p for p in EVAL_FILES if p not in listed))))
+    private = tuple(
+        dict.fromkeys((*bundle.private_files, *(p for p in EVAL_FILES if p not in listed)))
+    )
     bundle = bundle.model_copy(update={"files": files, "private_files": private})
     # Bytes, not write_text: on Windows text mode would write CRLF, and the release record
     # compares the manifest read back as text (LF) with the hash of the raw bytes.
@@ -91,7 +95,9 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--languages", nargs="+", default=["zh"], choices=["zh", "en"])
     args = parser.parse_args(argv)
-    contract = "expansion-v3-" + sha((ROOT / "docs/contracts/expansion-v3/manifest.json").read_bytes())
+    contract = "expansion-v3-" + sha(
+        (ROOT / "docs/contracts/expansion-v3/manifest.json").read_bytes()
+    )
     entries = []
     with tempfile.TemporaryDirectory() as tmp:
         for locale in args.languages:

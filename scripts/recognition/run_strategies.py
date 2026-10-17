@@ -21,8 +21,9 @@ import json
 import random
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from scripts.recognition.client import DEFAULT_API, Session
 
@@ -93,8 +94,18 @@ QUESTIONS = {
 }
 TESTS = {
     "zh": {
-        "normal": ["会议室怎么预约？", "新员工账号没开通怎么办？", "忘记密码怎么重置？", "办公网络怎么连接？"],
-        "policy": ["住宿报销上限是多少？", "出差打车能报多少？", "餐费报销标准是什么？", "酒店超标怎么审批？"],
+        "normal": [
+            "会议室怎么预约？",
+            "新员工账号没开通怎么办？",
+            "忘记密码怎么重置？",
+            "办公网络怎么连接？",
+        ],
+        "policy": [
+            "住宿报销上限是多少？",
+            "出差打车能报多少？",
+            "餐费报销标准是什么？",
+            "酒店超标怎么审批？",
+        ],
         "oos": ["火星今天天气怎么样？", "帮我写一首诗", "明天股市会涨吗？", "推荐一部电影"],
     },
     "en": {
@@ -129,7 +140,10 @@ WORK = {
         "未确认的条件：{unknown}。",
     ],
     "en": [
-        "The first wave opens only to {groups}, {n} people in total, within the current capacity of {cap}.",
+        (
+            "The first wave opens only to {groups}, {n} people in total, within the current "
+            "capacity of {cap}."
+        ),
         "Development is planned at {d} developer days, with the pilot starting on day {day}.",
         "Hotel claims follow the latest policy, capped at CNY {hotel} per night.",
         "After a policy update we refresh the index and retest the policy questions.",
@@ -138,12 +152,27 @@ WORK = {
         "Unconfirmed conditions: {unknown}.",
     ],
 }
-GROUPS = {"zh": ["新员工组", "运营组", "行政组"], "en": ["the new-hire group", "operations", "admin"]}
+GROUPS = {
+    "zh": ["新员工组", "运营组", "行政组"],
+    "en": ["the new-hire group", "operations", "admin"],
+}
 UNKNOWN = {
     "zh": ["行政组是否愿意参加", "技术负责人能否加班", "政策是否还会调整"],
-    "en": ["whether admin will join", "whether the tech lead can add hours", "whether the policy changes again"],
+    "en": [
+        "whether admin will join",
+        "whether the tech lead can add hours",
+        "whether the policy changes again",
+    ],
 }
-READS_CORE = ["brief", "demand", "business_case", "technical", "approvals", "user_groups", "interviews"]
+READS_CORE = [
+    "brief",
+    "demand",
+    "business_case",
+    "technical",
+    "approvals",
+    "user_groups",
+    "interviews",
+]
 READS_KB = ["faq", "policy", "onboarding"]
 
 
@@ -206,7 +235,9 @@ class Run:
     def request(self, **terms: int):
         reason = "按方案申请资源" if self.lang == "zh" else "Resources for the plan"
         made = self.s.send(
-            "actions", "request_business", {"tool": "request_business", "terms": terms, "reason": reason}
+            "actions",
+            "request_business",
+            {"tool": "request_business", "terms": terms, "reason": reason},
         )["result"]["request"]
         self.steps.append("request:" + ",".join(terms))
         return made
@@ -233,8 +264,10 @@ class Run:
         lines = list(WORK[self.lang])
         self.rng.shuffle(lines)
         keep = lines[: self.rng.randint(4, len(lines))]
-        groups = "、".join(self.rng.sample(GROUPS[self.lang], 2)) if self.lang == "zh" else " and ".join(
-            self.rng.sample(GROUPS[self.lang], 2)
+        groups = (
+            "、".join(self.rng.sample(GROUPS[self.lang], 2))
+            if self.lang == "zh"
+            else " and ".join(self.rng.sample(GROUPS[self.lang], 2))
         )
         return "\n\n".join(
             line.format(
@@ -441,7 +474,9 @@ def main(argv: list[str] | None = None) -> int:
     with out.open("a", encoding="utf-8", newline="\n") as handle:
         for i in range(args.count):
             for name in names:
-                seed = args.seed + 1000 * names.index(name) + i + (0 if args.language == "zh" else 500)
+                seed = (
+                    args.seed + 1000 * names.index(name) + i + (0 if args.language == "zh" else 500)
+                )
                 if (name, seed) in done:
                     continue
                 row = run_one(args.api, name, args.language, seed)
