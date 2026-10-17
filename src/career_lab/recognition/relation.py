@@ -41,9 +41,7 @@ _UNITS = (
     (r"%|percent", "pct"),
 )
 _NUMBER = re.compile(
-    r"(?:cny|rmb|¥)?\s*(\d+(?:\.\d+)?)\s*("
-    + "|".join(p for p, _ in _UNITS)
-    + r")",
+    r"(?:cny|rmb|¥)?\s*(\d+(?:\.\d+)?)\s*(" + "|".join(p for p, _ in _UNITS) + r")",
     re.IGNORECASE,
 )
 _CURRENCY_FIRST = re.compile(r"(?:cny|rmb|¥|yuan)\s*(\d+(?:\.\d+)?)", re.IGNORECASE)
@@ -95,7 +93,7 @@ def rule_judge(claim: str, candidates: Sequence[tuple[str, str]], lexical: Seque
     claimed = quantities(claim)
     contradiction: tuple[float, str, str] | None = None
     support: tuple[float, str, str] | None = None
-    for cand, lex in zip(candidates, lexical):
+    for cand, lex in zip(candidates, lexical, strict=False):
         cid, text = cand[0], cand[1]
         stated = quantities(text)
         limited = bool(_LIMIT.search(text))
@@ -118,7 +116,11 @@ def rule_judge(claim: str, candidates: Sequence[tuple[str, str]], lexical: Seque
             elif lex >= 0.35 and unit != "day_index" and value not in same_unit:
                 score = 0.62
                 if contradiction is None or score > contradiction[0]:
-                    contradiction = (score, cid, f"different_quantity:{value:g}!={same_unit[0]:g} {unit}")
+                    contradiction = (
+                        score,
+                        cid,
+                        f"different_quantity:{value:g}!={same_unit[0]:g} {unit}",
+                    )
         if not claimed and lex >= 0.55:
             score = 0.5 + 0.25 * min(lex, 1.0)
             if support is None or score > support[0]:
@@ -129,7 +131,9 @@ def rule_judge(claim: str, candidates: Sequence[tuple[str, str]], lexical: Seque
     if support is not None and support[0] >= 0.6:
         p, cid, reason = support
         return Judgement("supported", _distribution("supported", p), (cid,), reason=reason)
-    return Judgement("insufficient", _distribution("insufficient", 0.6), (), reason="no_comparable_evidence")
+    return Judgement(
+        "insufficient", _distribution("insufficient", 0.6), (), reason="no_comparable_evidence"
+    )
 
 
 @lru_cache(maxsize=1)
@@ -218,8 +222,8 @@ def fusion_alpha() -> float | None:
 
 def criterion_label(counts: dict[str, int]) -> str | None:
     """Aggregate decided sentences to a rubric label (design 3.1 item 6)."""
-    decided = counts.get("supported", 0) + counts.get("contradicted", 0) + counts.get(
-        "insufficient", 0
+    decided = (
+        counts.get("supported", 0) + counts.get("contradicted", 0) + counts.get("insufficient", 0)
     )
     if not decided:
         return None

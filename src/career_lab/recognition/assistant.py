@@ -171,8 +171,6 @@ def with_drift(package, view, run):
         return run
     previous = max(earlier, key=lambda item: item.as_of.business_seq)
     drift = drift_record(package, previous, result)
-    drift = drift.model_copy(
-        update={"outputs": {**drift.outputs, "previous_test_id": previous.id}}
-    )
+    drift = drift.model_copy(update={"outputs": {**drift.outputs, "previous_test_id": previous.id}})
     updated = result.model_copy(update={"recognition": (*result.recognition, drift)})
     return replace(run, result=updated)

@@ -183,7 +183,9 @@ def hmm_phases(sequence: list[str], hmm: dict) -> list[int]:
     """Viterbi path over the categorical HMM; unknown symbols use a uniform emission."""
     vocabulary = [str(v) for v in hmm["vocabulary"]]
     index = {v: i for i, v in enumerate(vocabulary)}
-    start, transition, emission = (np.log(hmm[k] + 1e-12) for k in ("start", "transition", "emission"))
+    start, transition, emission = (
+        np.log(hmm[k] + 1e-12) for k in ("start", "transition", "emission")
+    )
     states = len(start)
     if not sequence:
         return []
@@ -252,7 +254,11 @@ def anomalies(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 x.startswith("test:") for x in later[: later.index("submit")]
             ):
                 found.append(
-                    {"rule": "policy_update_untested_submit", "score": 0.9, "at_seq": rows[i]["seq"]}
+                    {
+                        "rule": "policy_update_untested_submit",
+                        "score": 0.9,
+                        "at_seq": rows[i]["seq"],
+                    }
                 )
                 break
     # 2. Requested resources before reading the technical material.
@@ -327,9 +333,7 @@ def analyze(view, auth, *, language: str = "zh") -> dict[str, Any]:
                 strategy = {
                     "nearest": nearest["strategy"],
                     "distance": distance,
-                    "top3": [
-                        {"strategy": ref["strategy"], "distance": d} for d, ref in ranked[:3]
-                    ],
+                    "top3": [{"strategy": ref["strategy"], "distance": d} for d, ref in ranked[:3]],
                 }
                 aligned = alignment(sequence, nearest["sequence"])
         else:
@@ -339,7 +343,7 @@ def analyze(view, auth, *, language: str = "zh") -> dict[str, Any]:
             for symbol in sequence:
                 path.append(rule_phase(symbol, submitted))
                 submitted = submitted or symbol == "submit"
-        for row, state in zip(rows, path):
+        for row, state in zip(rows, path, strict=False):
             row["phase"] = names[min(state, len(names) - 1)]
         phases = []
         for row in rows:

@@ -86,13 +86,9 @@ def before_reply(view, auth, envelope) -> dict[str, Any]:
         return {}
     intent_record = intent.recognize(request.input.text, as_of=request.as_of)
     try:
-        state = behavior.learner_state(
-            view, auth, language="en", intent_record=intent_record
-        )
+        state = behavior.learner_state(view, auth, language="en", intent_record=intent_record)
     except Exception:  # noqa: BLE001 - state is an annotation, never a reason to fail
-        state = {
-            "intent": {"label": intent_record.label, "confidence": intent_record.score}
-        }
+        state = {"intent": {"label": intent_record.label, "confidence": intent_record.score}}
     return {"intent": intent_record, "learner_state": state, "question": request.input.text}
 
 
@@ -106,7 +102,10 @@ def after_reply(reply, snapshot, auth, recognized: dict[str, Any]):
             for s in snapshot.select_sources(auth, 10**9)[0]
         ]
         private = [
-            (f"fact:{fact.id}@{fact.version}", fact.source.quote or f"{fact.value} {fact.unit or ''}")
+            (
+                f"fact:{fact.id}@{fact.version}",
+                fact.source.quote or f"{fact.value} {fact.unit or ''}",
+            )
             for fact in snapshot.private_facts
             if fact.disclosure.mode != "public"
         ]

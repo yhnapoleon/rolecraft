@@ -93,12 +93,14 @@ class EncoderRelation:
         probabilities, scores = aggregate_pairs(pairs, self.threshold)
         probabilities = np.asarray(probabilities, dtype=float)
         label = LABELS[int(np.argmax(probabilities))]
-        evidence = tuple(
-            c[0] for c, s in zip(candidates, scores) if s >= self.threshold
-        ) if label != "insufficient" else ()
+        evidence = (
+            tuple(c[0] for c, s in zip(candidates, scores, strict=False) if s >= self.threshold)
+            if label != "insufficient"
+            else ()
+        )
         return Judgement(
             label=label,
-            probabilities={name: float(p) for name, p in zip(LABELS, probabilities)},
+            probabilities={name: float(p) for name, p in zip(LABELS, probabilities, strict=False)},
             evidence_ids=evidence,
             recognizer_id=ENCODER_ID,
             revision=self.revision,

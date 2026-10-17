@@ -70,9 +70,7 @@ def split_text(text: str) -> list[Span]:
             start, stop = block_start + sentence.start, block_start + sentence.end
             line_start = text.rfind("\n", 0, start) + 1
             marker = _LIST_ITEM.match(text, line_start)
-            kind: UnitKind = (
-                "item" if marker is not None and marker.end() == start else "sentence"
-            )
+            kind: UnitKind = "item" if marker is not None and marker.end() == start else "sentence"
             spans.extend(_cut_long(text, start, stop, kind))
         block_start = None
 
@@ -186,9 +184,7 @@ def candidate_units(candidate: CandidateEvidenceV2) -> list[CandidateEvidenceV2]
                 "quote": span.text,
             }
         )
-        found.append(
-            CandidateEvidenceV2(id="e-" + digest(unit_ref), text=span.text, ref=unit_ref)
-        )
+        found.append(CandidateEvidenceV2(id="e-" + digest(unit_ref), text=span.text, ref=unit_ref))
     return found
 
 

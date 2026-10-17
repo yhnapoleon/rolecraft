@@ -101,7 +101,5 @@ def install_recognition_reads(registry, *, scenario_resolver) -> None:
 
     for name, handler in (("recognition.read", recognition_read), ("behavior.read", behavior_read)):
         registry.register(
-            Operation(
-                name, "read", ResourcePage, handler, mutates=False, response_model=V2Response
-            )
+            Operation(name, "read", ResourcePage, handler, mutates=False, response_model=V2Response)
         )

@@ -309,7 +309,9 @@ def create_feedback_handler(
 
             verifier = RecognizerSupportVerifier(verifier)
         engine = (
-            FeedbackEngine(AdvisoryJudge(OncePerInputModel(judge), verifier, input_bytes=judge_bytes))
+            FeedbackEngine(
+                AdvisoryJudge(OncePerInputModel(judge), verifier, input_bytes=judge_bytes)
+            )
             if judge is not None
             else FeedbackEngine()
         )
