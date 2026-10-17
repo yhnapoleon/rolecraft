@@ -2,7 +2,7 @@
   {
     "schema_version": 2,
     "id": "supervisor",
-    "name": "IT 服务经理",
+    "name": "经理",
     "responsibilities": [
       "明确服务台目标与承诺",
       "审批容量、开发资源和期限",
@@ -62,7 +62,7 @@
   {
     "schema_version": 2,
     "id": "business_lead",
-    "name": "服务台负责人",
+    "name": "业务负责人",
     "responsibilities": [
       "解释员工报障需求和服务台流程",
       "协调 SLA 时限解释与超时个案核验",

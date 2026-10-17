@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "scenarios": [
+    {
+      "root": "scenarios/pm_pilot/v2/candidates/rubric-final-v1-2.9.6/pm_pilot",
+      "work_language": "zh",
+      "scenario_hash": "6b4cbd6aa534b0c16101b464e53bdb53ad15e396755f91e47a7ec88b58ed2057",
+      "authored_manifest": "6b4cbd6aa534b0c16101b464e53bdb53ad15e396755f91e47a7ec88b58ed2057"
+    },
+    {
+      "root": "scenarios/pm_pilot/v2/candidates/rubric-final-v1-2.9.6/pm_pilot/locales/en",
+      "work_language": "en",
+      "scenario_hash": "420afb709e140b148ab280f0211041a4e7b2f51834ef4bbce3621575962e5586",
+      "authored_manifest": "420afb709e140b148ab280f0211041a4e7b2f51834ef4bbce3621575962e5586"
+    },
+    {
+      "root": "scenarios/pm_pilot/v2/candidates/rubric-final-v1-2.9.6/pm_pilot_urgent",
+      "work_language": "zh",
+      "scenario_hash": "da4ff87847bf8ae8f83a1f00c8c380ec3fefa4008a822b757c64aa38430814e8",
+      "authored_manifest": "da4ff87847bf8ae8f83a1f00c8c380ec3fefa4008a822b757c64aa38430814e8",
+      "reviewed_authored_manifest": "09604036833180f0f5d16185798f24cb13e04184d86fa5b6c97a3cd09abea505"
+    },
+    {
+      "root": "scenarios/pm_pilot/v2/candidates/rubric-final-v1-2.9.6/pm_pilot_urgent/locales/en",
+      "work_language": "en",
+      "scenario_hash": "10299249a097281f99993241087dbc88fd2110cfcf8c594239c59e2c18492b9e",
+      "authored_manifest": "10299249a097281f99993241087dbc88fd2110cfcf8c594239c59e2c18492b9e",
+      "reviewed_authored_manifest": "6d151e276528bf27132d136b2a41bc256b7a6437f193c101596091484e252750"
+    },
+    {
+      "root": "scenarios/pm_pilot/v2/candidates/rubric-final-v1-2.9.6/pm_pilot_capacity15",
+      "work_language": "zh",
+      "scenario_hash": "ae4f5ea875930a717395afe388e09dd192c0c32eb992360944e1bbf7e32adaac",
+      "authored_manifest": "ae4f5ea875930a717395afe388e09dd192c0c32eb992360944e1bbf7e32adaac",
+      "reviewed_authored_manifest": "0348f566f4f2f112d4e2f80e72e735c58c87a38f86991b347c6d5215981d36c7"
+    },
+    {
+      "root": "scenarios/pm_pilot/v2/candidates/rubric-final-v1-2.9.6/pm_pilot_capacity15/locales/en",
+      "work_language": "en",
+      "scenario_hash": "47b3340c303c825d29995293df421cf2e2dbcf184d8f93634f320ec401a81a0c",
+      "authored_manifest": "47b3340c303c825d29995293df421cf2e2dbcf184d8f93634f320ec401a81a0c",
+      "reviewed_authored_manifest": "0e434a840f5fbb8e540f4ac5ce9aa9b5b3351373c0e982e4e2c7b7924f08f19b"
+    },
+    {
+      "root": "scenarios/it_ticket_pilot/v2/candidates/it-1/it_ticket_pilot",
+      "work_language": "zh",
+      "scenario_hash": "06efaad4ad51d7251302ba8c5015ffecdb1b6eb2625e186f6d579885f477dd96",
+      "authored_manifest": "06efaad4ad51d7251302ba8c5015ffecdb1b6eb2625e186f6d579885f477dd96"
+    },
+    {
+      "root": "scenarios/it_ticket_pilot/v2/candidates/it-1/it_ticket_pilot/locales/en",
+      "work_language": "en",
+      "scenario_hash": "b9bca57f09a6bad28246079c79dcb83c79b90ca477a8b56a32f9ebcd34ae3ca4",
+      "authored_manifest": "b9bca57f09a6bad28246079c79dcb83c79b90ca477a8b56a32f9ebcd34ae3ca4"
+    }
+  ]
+}

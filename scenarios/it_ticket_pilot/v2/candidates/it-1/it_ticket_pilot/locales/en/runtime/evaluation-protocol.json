@@ -1,0 +1,200 @@
+{
+  "mode": "advisory",
+  "installed": true,
+  "owner": "W05",
+  "semantic_status": "waiting_for_model",
+  "model_retries": 0,
+  "source_manifest_sha256": "04c18e529c2447f606c36230198e9e7fcfc34c3753cd925ecca8068ef9ec58e8",
+  "source_files": {
+    "src/career_lab/evidence/v2/__init__.py": "09055f6b25786f7a2052e0255116ac7ef55f16b535cc78534f8aecda9bba974b",
+    "src/career_lab/evidence/v2/assembler.py": "9e4296a6493facc3c6f41145ad4cce2545886ea22516770822b927f273cae327",
+    "src/career_lab/evidence/v2/availability.py": "aea8ce5ff16f4af1ea956296afdf1430538c113ff25af34c31e8d10b829975ed",
+    "src/career_lab/evidence/v2/factual.py": "c42060a256e7787992729c815388f124ee3f1e054ef67a315282e6e35da221ec",
+    "src/career_lab/evidence/v2/formal_feedback.py": "079a9bdf28727f214a6c411a1729c299faea461e36ac457b4434c299bf09e2e3",
+    "src/career_lab/evidence/v2/history.py": "d671423b138d577d651c39ac505de3089b27ba60b2748882af9332c28d90560d",
+    "src/career_lab/evidence/v2/localization.py": "faa9f794ad2085fc323cc9ffab1cb210dc20b488b6037bf2c4e953a247662f99",
+    "src/career_lab/evidence/v2/ports.py": "972160076b74497a3b71e55d66df302775b0d2b3c933dc02628ce29faf0cdafe",
+    "src/career_lab/evidence/v2/review_evaluator.py": "aa1b1a18a7983a465efc9f94baffc35f6f0362ce0ae66cdba6726a10c18bdfcb",
+    "src/career_lab/evidence/v2/review_ports.py": "bdbe241b1201d80c3b59a9df0fc5453cd5b954aa89a78d5ced6ebc8ac69cafbe",
+    "src/career_lab/evidence/v2/snapshot_reader.py": "de1dc2a2aee126d6b9025aa0e67561cd55b1545bd5b4c0bcd63aec06e8e09669",
+    "src/career_lab/evidence/v2/store_reader.py": "32b02186d5e8191874c74f08617411a134ace84820b5c1d208f6988cf85f6d6e",
+    "src/career_lab/evidence/v2/submission_evaluator.py": "026b4d2ee24952dacc2a68aa5d8f7c32ed0ba32f3fd8b299a056afd0bb14675b",
+    "src/career_lab/evidence/v2/work_summary.py": "4b53f2be46e477ff2b7b37690c9b428a48d710de502ce596da056ebe1a2b985b",
+    "src/career_lab/rubrics/v4/__init__.py": "7cc8aae0dd49bb2bbdc7ec09a582c5f5215f14daa9a1d763abd3ca27ff06224f",
+    "src/career_lab/rubrics/v4/applicability.py": "ba02d4c9dbdc5d214404149a18f55081c7e3c12b35d30671cb1f0b778b378e54",
+    "src/career_lab/rubrics/v4/feedback.py": "d230cda7eb0cf63d6a1f4d9c532c4bea2028fb7d2eca5d202ba054c632bf10b7",
+    "src/career_lab/rubrics/v4/judge.py": "59e86c512e625ee9f67636ec848646f0bfd1abb15d434e05aa6715c166e6fe41",
+    "src/career_lab/rubrics/v4/practice.py": "e5ea26093a678fdc37fa2f363af7eefecf4096686c974a4aa005097ebfdcbaf2",
+    "src/career_lab/rubrics/v4/provider.py": "d8148696a2342676e058cb2c6667fdc153ae82d788abfbf8f5c56dcd0c79f635",
+    "src/career_lab/rubrics/v4/rubric_v2.py": "d4ebb4b61dd8554bf37447a874fb3bdd7e9267d977bf2bb6e1e0c4512cf85394",
+    "src/career_lab/rubrics/v4/rules.py": "30e4f8c9b2a5e197bdfd35960cf09007bc5d27fa29de5b89e8faa34f5627afa2",
+    "src/career_lab/rubrics/v4/rules_v2.py": "e5b2e15b9e62726562df92188b5887f2f10bf910354b67d921ad257030933cf6",
+    "src/career_lab/rubrics/v4/support.py": "97d9428c14b53362b5d7a49916a02f61ac6edd208a471fe24edeb33f82a06ee8",
+    "src/career_lab/scenarios/v2/evidence_ports/store.py": "2c88ae8e47584f88644fe427992c3f683171d2cb0f338657a2ddae9d7d99ec11",
+    "src/career_lab/scenarios/v2/evidence_ports/__init__.py": "baa7ea738ee822fbdadb7a7ceece9ef43e1d38ab3508a032389f178c1e37104b"
+  },
+  "policies": [
+    {
+      "id": "R1.target",
+      "description": "Whether target users and business goals match the demand evidence.\nMET: Within the purpose of this work, identify the users and business problem and connect them to demand evidence available at the time. In exploration, clearly identify untested users or problems as hypotheses.\nPARTIAL: A verified part of the user or goal definition is present, but a specific gap remains, such as an unclear user boundary or an incomplete connection to demand. Exploration alone is not a partial failure.\nNOT_MET: For a commitment or result carrying final decision responsibility, complete content review confirms a missing target user or business goal, or authoritative evidence contradicts the committed target judgment. A no-go decision alone never triggers this label.\nINSUFFICIENT: The demand sources, completeness of the work or formation time cannot be verified well enough to distinguish an absent target from an unverified one. Failure to extract a template field is not proof of absence.\nNOT_APPLICABLE: An explicit task or review scope establishes that this specialized work carries no target-user or goal-definition responsibility. An unknown purpose or unclear target is not grounds for this label.",
+      "mechanism": "v2.target",
+      "purposes": [
+        "exploration",
+        "option",
+        "plan",
+        "commitment",
+        "result"
+      ],
+      "launch_only": false
+    },
+    {
+      "id": "R1.metrics",
+      "description": "Whether success metrics have definitions, targets and observable measures.\nMET: Provide decision-appropriate success, risk, cost or stopping measures for the plan, commitment or result. Definitions, measurement basis, target conditions and observation methods are verifiable and suited to the question.\nPARTIAL: Verifiable measures exist but specific definitions, targets or observation details are missing. A deterministic definition or target gap permits only a NOT_MET-to-PARTIAL bound; it does not automatically award PARTIAL.\nNOT_MET: The responsibility applies and complete review confirms no success, risk, cost or stopping measure, or the stated measurement basis is demonstrably incapable of testing the claimed decision condition.\nINSUFFICIENT: The measure evidence, complete content, target meaning or observability cannot be verified. This does not establish that metrics are absent, and planned targets are not achieved results.\nNOT_APPLICABLE: The work is exploration or an option without a planning acceptance duty, or its explicit specialized scope does not require metrics. A no-go or deferral still needs this criterion when stopping or reconsideration conditions are required.",
+      "mechanism": "v2.metrics",
+      "purposes": [
+        "plan",
+        "commitment",
+        "result"
+      ],
+      "launch_only": false
+    },
+    {
+      "id": "R2.support",
+      "description": "Whether key judgments are supported by evidence available at the time.\nMET: Each key judgment is supported by authorized evidence available at the time. Quotes, versions and timing are valid, and the relationship between evidence and conclusion has been independently checked for semantic support.\nPARTIAL: Some key judgments are fully supported while identifiable others have only partial support. The gap does not erase the verified portion, and citation count is not a measure of support.\nNOT_MET: Verified contemporaneous evidence contradicts a key asserted conclusion, or complete review establishes that cited material does not support the conclusion while it is presented as supporting it.\nINSUFFICIENT: A key source is missing, conflict is unresolved, permission or temporal validity cannot be checked, or the evidence does not permit a support judgment. A valid citation alone does not establish support.\nNOT_APPLICABLE: The explicitly bounded work contains no claim requiring evidential support, such as a procedural record with no factual or causal assertion. Missing citations alone do not make this criterion inapplicable.",
+      "mechanism": "v2.support",
+      "purposes": [
+        "exploration",
+        "option",
+        "plan",
+        "commitment",
+        "result"
+      ],
+      "launch_only": false
+    },
+    {
+      "id": "R2.unknowns",
+      "description": "Whether facts, assumptions and unconfirmed resources are distinguished.\nMET: Distinguish facts, unverified assumptions, requests, approvals, effective commitments and actual execution. Give proportionate checks for key unknowns and do not present projected benefits or resources as established facts.\nPARTIAL: Major unknowns are identified, but a specific condition, validation step or boundary between fact and assumption is incomplete. No unapproved resource excess has been established.\nNOT_MET: Deterministic records establish actual execution or an effective commitment beyond authorized resources without approval, or a key unverified claim is demonstrably presented as approved, validated or executed.\nINSUFFICIENT: The effective commitment, approval, resources, exact wording or time window cannot be verified sufficiently to distinguish a conditional proposal from an unconditional commitment.\nNOT_APPLICABLE: Task scope and complete content establish that the work contains no uncertain claim, unresolved condition or resource/execution-state judgment. A hypothesis, no-go or deferral does not automatically remove this responsibility.",
+      "mechanism": "v2.unknowns",
+      "purposes": [
+        "exploration",
+        "option",
+        "plan",
+        "commitment",
+        "result"
+      ],
+      "launch_only": false
+    },
+    {
+      "id": "R2.failure_analysis",
+      "description": "Whether failure cases are cited or reproduced and their failure modes explained.\nMET: Cite a verifiable relevant failure case or reproduce it, then correctly explain its failure mode, causes and limits from the original results, separating observed facts from causal hypotheses.\nPARTIAL: A relevant case is cited or reproduced but its cause, boundary or consequence is incompletely explained. A complete ledger with no case sets an upper bound of PARTIAL; that bound does not prove partial analysis exists.\nNOT_MET: Authoritative evidence refutes the failure explanation, or complete work lacks substantive analysis where this duty explicitly applies. Absence of a dedicated failure form is not sufficient evidence of failure.\nINSUFFICIENT: The case, reproduction, source version or ledger completeness cannot be verified, or causal evidence is inadequate. An unobserved case is not proof that no investigation occurred.\nNOT_APPLICABLE: An explicit exploratory or specialized task carries no failure-analysis duty and makes no commitment requiring such evidence. Exploration is not automatically deficient for omitting failure cases.",
+      "mechanism": "v2.failure_analysis",
+      "purposes": [
+        "exploration",
+        "option",
+        "plan",
+        "commitment",
+        "result"
+      ],
+      "launch_only": false
+    },
+    {
+      "id": "R3.capacity",
+      "description": "Whether committed launch participants fit the effective capacity.\nMET: For a commitment or result with a launch duty, the exact committed configuration has a positive participant count within capacity authorized at that time. Actual usage is checked separately at its occurrence time.\nPARTIAL: This exact capacity constraint has no intermediate calibrated label: use MET within the limit and NOT_MET for a verified excess or invalid launch count. Comparable text/configuration conflicts belong to R6.consistency.\nNOT_MET: A launch obligation exists and deterministic records establish participants beyond effective capacity, or the declared launch count is invalid. A request or verbal intention is not approval.\nINSUFFICIENT: The participant commitment, effective capacity, approval scope or matching version/time cannot be verified. Do not fill the gap with zero, a guess or later approval.\nNOT_APPLICABLE: The purpose is neither commitment nor result, or a no-go/deferral carries no current launch duty. Previously incurred over-capacity actions remain in historical responsibility records.",
+      "mechanism": "v2.capacity",
+      "purposes": [
+        "commitment",
+        "result"
+      ],
+      "launch_only": true
+    },
+    {
+      "id": "R3.resources",
+      "description": "Whether committed launch resources and timing have valid support.\nMET: Verifiable developer-days, configuration work items and the committed date for an effective commitment or actual execution fit resources and deadlines authorized at that time, with exact configuration and approval references.\nPARTIAL: This exact resource/deadline constraint has no intermediate calibrated label. A verified breach is NOT_MET; missing key evidence is INSUFFICIENT. Meeting only some necessary constraints is not a pass.\nNOT_MET: Reliable configuration, cost and approval records establish that an effective commitment or actual execution exceeds resources or deadlines. A withdrawn, unexecuted commitment is not automatically a breach.\nINSUFFICIENT: Configuration costs, resource allocation, approval or effective timing cannot be verified. A draft, request, resource catalogue or later approval cannot establish earlier authorization.\nNOT_APPLICABLE: The purpose is neither commitment nor result, or the current no-go/deferral has no execution-resource duty. Prior resource use, excess and false completion claims remain separately verifiable.",
+      "mechanism": "v2.resources",
+      "purposes": [
+        "commitment",
+        "result"
+      ],
+      "launch_only": true
+    },
+    {
+      "id": "R4.functional_tests",
+      "description": "Whether actual tests on the relevant configuration cover verified categories and acceptance criteria.\nMET: Actual runs on the exact current configuration cover at least two independently verified relevant categories, such as normal and out-of-scope requests, with verified observable acceptance criteria.\nPARTIAL: Valid actual tests exist, but verified categories or acceptance criteria cover only part of the requirements, for example one category or explicitly incomplete criteria. Repeated questions in one category do not increase coverage.\nNOT_MET: The commitment or result has a test duty and a complete relevant ledger establishes no actual test on that configuration, with no technical failure explaining the gap.\nINSUFFICIENT: The ledger, configuration binding, categories or acceptance criteria cannot be verified, or technical execution failures prevent using the run as evidence. Self-declared category/expected fields do not establish validity.\nNOT_APPLICABLE: The purpose is neither commitment nor result, or the current stopping/deferral decision has no launch acceptance-test duty. Testing may support a stopping rationale without imposing launch tests.",
+      "mechanism": "v2.functional_tests",
+      "purposes": [
+        "commitment",
+        "result"
+      ],
+      "launch_only": true
+    },
+    {
+      "id": "R4.staleness_test",
+      "description": "Whether testing followed a policy update and the latest relevant dynamic test used current versions.\nMET: An occurred update affects the current commitment or result, and the latest relevant dynamic test after that update on the submitted configuration has trustworthy usage records showing all affected source versions were current at that time.\nPARTIAL: A relevant post-update dynamic test exists, but its latest actual usage records still include at least one stale source version. An earlier success does not validate a newer configuration.\nNOT_MET: The current duty is affected by the update and a complete reliable ledger establishes no relevant post-update dynamic retest on that configuration. Technical failure is not converted into noncompliance.\nINSUFFICIENT: The occurrence or relevance of the update, latest test identity, configuration, used versions or time window cannot be verified. Preserve separate reasons for missing records, conflicts and execution failures.\nNOT_APPLICABLE: The purpose is neither commitment nor result, there is no current launch duty, or complete records establish no relevant update or no effect on this subject. Future updates never retroactively penalize earlier work.",
+      "mechanism": "v2.staleness_test",
+      "purposes": [
+        "commitment",
+        "result"
+      ],
+      "launch_only": true
+    },
+    {
+      "id": "R5.impact",
+      "description": "Whether the effects of a known change on the current proposal are explained.\nMET: Accurately explain how an occurred relevant change affects users, knowledge scope, configuration or responsibilities, and why that matters to the current decision, using evidence available then.\nPARTIAL: The change and part of its impact are correctly identified, but specific affected users, dependencies, duties or consequences remain incompletely explained. Event occurrence alone is not a complete impact analysis.\nNOT_MET: Contemporaneous trustworthy facts contradict a key impact judgment, or complete work omits explanation of a verified relevant impact where this duty explicitly applies.\nINSUFFICIENT: The change, its relevance or the relationship between the stated impact and evidence cannot be verified. Displaying a real event does not establish a semantic impact conclusion.\nNOT_APPLICABLE: The work has no plan, commitment or result-level impact-analysis duty, or a complete window confirms no relevant change or no effect on this subject. An unknown window does not prove no change occurred.",
+      "mechanism": "v2.impact",
+      "purposes": [
+        "plan",
+        "commitment",
+        "result"
+      ],
+      "launch_only": false
+    },
+    {
+      "id": "R5.adjustment",
+      "description": "Whether an affected proposal was actually adjusted and retested, beyond a stated intention.\nMET: Take an appropriate actual response to a verified change affecting the current duty, and verify its effect with the latest relevant retest on the bound configuration and valid sources. Justified narrowing, pausing or stopping can be a response.\nPARTIAL: An actual response exists, but complete records establish that relevant retesting has not covered or passed all requirements. A proposal falsely described as completed permits at most a NOT_MET-to-PARTIAL bound; the upper bound is not execution success.\nNOT_MET: The duty is affected and the complete action ledger establishes no relevant configuration change, refresh, retest or verifiable alternative response. A verified proposal-only completion claim retains its broader rule bound for further responsibility assessment.\nINSUFFICIENT: The effect, action-ledger completeness, appropriateness of the response or retest/version evidence cannot establish the consequence. An action, proposal or technical failure alone proves neither success nor failure.\nNOT_APPLICABLE: The purpose is neither commitment nor result, there is no relevant current execution duty, or the change is verified not to affect this subject. A later stopping decision does not erase historical actions.",
+      "mechanism": "v2.adjustment",
+      "purposes": [
+        "commitment",
+        "result"
+      ],
+      "launch_only": true
+    },
+    {
+      "id": "R6.consistency",
+      "description": "Whether text, configuration, actual results and the decision are consistent.\nMET: For the same subject, version, time and responsibility scope, text, configuration, actual results and the decision agree. Intentional alternatives and historical changes are identified, and content consistency has been checked.\nPARTIAL: An identifiable same-scope numeric/configuration conflict remains, or an explanation resolves only part of the inconsistency. A verified conflict caps the rule bound at PARTIAL without automatically awarding that label.\nNOT_MET: Trustworthy evidence directly contradicts a key delivery claim against the same-scope configuration or actual result, and the verified conflict materially undermines the declared decision or completion.\nINSUFFICIENT: The compared subject, version, time or wording cannot be established well enough to distinguish a contradiction from an alternative, revision or unverified statement. Structural validity is not semantic consistency.\nNOT_APPLICABLE: The explicit scope contains no claims, configurations or results requiring cross-checking. A single work, absent template or missing attachment does not automatically make this criterion inapplicable.",
+      "mechanism": "v2.consistency",
+      "purposes": [
+        "exploration",
+        "option",
+        "plan",
+        "commitment",
+        "result"
+      ],
+      "launch_only": false
+    },
+    {
+      "id": "R6.operations",
+      "description": "Whether owner, observation window, exit conditions and follow-up actions are complete and executable.\nMET: Owners, observation windows, exit conditions and follow-up actions appropriate to the plan, commitment or result are explicit, supported and executable. Assess no-go/deferral against its stopping, handover and reconsideration duties.\nPARTIAL: All four elements exist but specific execution gaps remain, or verified arrangements cover only part of the duty. Presence of all four establishes a PARTIAL-to-MET bound, not an automatic MET.\nNOT_MET: The duty applies and complete review confirms all four elements are absent. When all four are verified present, preserve the PARTIAL-to-MET bound: assess execution gaps within that bound and list them separately, never downgrade to NOT_MET.\nINSUFFICIENT: The completeness, ownership, meaning of conditions or executability cannot be verified. An unextracted field or unavailable semantic model is not evidence that the content is absent.\nNOT_APPLICABLE: The work is exploration or an option without execution-planning duties, or its explicit specialized scope excludes this responsibility. Stopping or deferring does not remove necessary follow-up duties.",
+      "mechanism": "v2.operations",
+      "purposes": [
+        "plan",
+        "commitment",
+        "result"
+      ],
+      "launch_only": false
+    },
+    {
+      "id": "R6.alternatives",
+      "description": "Whether viable alternatives are compared and trade-offs explained.\nMET: Genuinely compare at least two materially different alternatives in any work format and justify the choice and trade-offs with authorized evidence. Infeasible options may be rejected on evidence; the selected response needs a defensible feasibility basis. Alternatives may include narrowing, manual handling, deferral or stopping.\nPARTIAL: A real comparison has incomplete trade-off reasoning, or complete review finds only one substantive option. Selecting an option despite accessible valid infeasibility evidence permits at most a PARTIAL upper bound.\nNOT_MET: The duty applies and complete review confirms no meaningful comparison, or reliable evidence establishes that the purported comparison has no substantive alternative or decision basis.\nINSUFFICIENT: Comparison completeness, differences between options, feasibility sources or choice rationale cannot be verified. Hidden route whitelists or probes unavailable to the learner cannot lower the assessment.\nNOT_APPLICABLE: An explicit exploratory or specialized scope does not yet require option selection or comparison. Free text without an options template is neither an absence nor a reason for inapplicability.",
+      "mechanism": "v2.alternatives",
+      "purposes": [
+        "option",
+        "plan",
+        "commitment",
+        "result"
+      ],
+      "launch_only": false
+    }
+  ],
+  "fact_adapter": "career_lab.scenarios.v2.evaluation_facts.ScenarioFactAdapter",
+  "fact_adapter_factory": "career_lab.scenarios.v2.evidence_ports.store.create_store_fact_adapter"
+}

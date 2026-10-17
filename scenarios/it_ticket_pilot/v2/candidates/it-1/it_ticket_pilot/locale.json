@@ -5,12 +5,12 @@
   "original_language": "zh",
   "translation_basis_commit": "b821b0e67c9e5d20f386f44efb1f4a6be297e7a4",
   "canonical_scenario_id": "it_ticket_pilot",
-  "canonical_fact_root_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c",
+  "canonical_fact_root_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf",
   "lineage": {
     "schema_version": 2,
     "structure_id": "index_scope_resource_dependency",
     "fact_root_ids": [
-      "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c"
+      "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf"
     ],
     "run_id": null,
     "session_id": null,
@@ -473,11 +473,11 @@
       "id": "support_observation_minutes",
       "version": 1,
       "value": 45,
-      "unit": "分钟/天；周岚观察意向",
+      "unit": "分钟/天；陈敏观察意向",
       "material_id": "restricted",
       "paragraph_index": 2,
       "display_value": 45,
-      "display_unit": "分钟/天；周岚观察意向"
+      "display_unit": "分钟/天；陈敏观察意向"
     },
     "demo_day@1": {
       "id": "demo_day",
@@ -556,43 +556,43 @@
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:brief@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:brief@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:brief@1",
       "path": "materials/brief-v1.md",
-      "sha256": "9ced82e9fb3c5b7553acf800bb5fc74a08e90dea63828cac615f7adbfec0ed2c"
+      "sha256": "277a718a69866b6dad44d43743a5a1f267bb45c1d5c129a9a0b499f8cc5a7b19"
     },
     {
       "id": "demand",
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:demand@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:demand@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:demand@1",
       "path": "materials/demand-v1.md",
-      "sha256": "1e87ed3056d79c810c0d8118cc9d379c302da4c2ecce7f273fa37a85771e9cf1"
+      "sha256": "c8c6f507538ddd40ac48a6720f12a2dbbb80430426864fdb9e8ac12b3895536a"
     },
     {
       "id": "business_case",
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:business_case@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:business_case@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:business_case@1",
       "path": "materials/business_case-v1.md",
-      "sha256": "c3bd3826007badbf2cc7f79b36bc13b33f1e46ea58d8af0d4cb752c852a21c9a"
+      "sha256": "b44658171a70aaa4837a4dae2003b0e8ae03646a514a7526d6c7ca4e350b664b"
     },
     {
       "id": "coordination",
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:coordination@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:coordination@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:coordination@1",
       "path": "materials/coordination-v1.md",
-      "sha256": "b040b90282fb2d51a470b2f2defd0de8681446d39f969c67db7840fc8321c7c8"
+      "sha256": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5"
     },
     {
       "id": "user_groups",
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:user_groups@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:user_groups@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:user_groups@1",
       "path": "materials/user_groups-v1.md",
       "sha256": "41c177c8162347d96b0864d559463f0f8d4aa3435a21f7ca321c7e705cab4eca"
     },
@@ -601,16 +601,16 @@
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:interviews@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:interviews@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:interviews@1",
       "path": "materials/interviews-v1.md",
-      "sha256": "835197b7276bf2603a14a40d26a5c656e0c17f6afee4c011bc4f13b006ff59f6"
+      "sha256": "1a76eb7b0e2a39d2a649f670b5d2405c9cd44f574345c8435e21bf2bcc4f067d"
     },
     {
       "id": "technical",
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:technical@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:technical@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:technical@1",
       "path": "materials/technical-v1.md",
       "sha256": "40d0d24a65c4f876cde1f2ec8c7e00c759e6f2b939cafb5dd4fb438c3889fd40"
     },
@@ -619,16 +619,16 @@
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:approvals@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:approvals@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:approvals@1",
       "path": "materials/approvals-v1.md",
-      "sha256": "572babfbc2854ddeb0c4dc3c6e37de813d0730140016eda8363ef5c7d35dc5e1"
+      "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13"
     },
     {
       "id": "faq",
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:faq@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:faq@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:faq@1",
       "path": "materials/faq-v1.md",
       "sha256": "ef1321ed07bd68d10092139b66db1ec46d453abe7bd7316c7a093d09a9c40256"
     },
@@ -637,7 +637,7 @@
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:onboarding@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:onboarding@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:onboarding@1",
       "path": "materials/onboarding-v1.md",
       "sha256": "e251382ce7e309f2124b4da28d5423b33605d7ad57fd3086e3fed628ef1f0b78"
     },
@@ -646,25 +646,25 @@
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:policy@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:policy@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:policy@1",
       "path": "materials/policy-v1.md",
-      "sha256": "b225bc378c34ad774ab2517f79047c4f87287760a7a2bfb4489fca80d4d1928e"
+      "sha256": "ea1077b230a1c6cf227a2196f5a22f4162da76c0a10f5d61e9fc2ab47a3cf698"
     },
     {
       "id": "policy",
       "version": 2,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:policy@2",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:policy@2",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:policy@2",
       "path": "materials/policy-v2.md",
-      "sha256": "015c4eda03fc32d56195902bcd5775409b2ca129d5095d5bf1ff489ca207da86"
+      "sha256": "07b2313fd0ae839e4dfe93e36bf57364616eaae26a5c6ea1fc95816951e40d8b"
     },
     {
       "id": "meal",
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:meal@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:meal@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:meal@1",
       "path": "materials/meal-v1.md",
       "sha256": "e44d6cc7ae960ac70ac01ccf4f1e6c7b6d0c016e4718f5403f462e83c9267c49"
     },
@@ -673,7 +673,7 @@
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:leave@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:leave@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:leave@1",
       "path": "materials/leave-v1.md",
       "sha256": "b88a5160ea98d08c8c72fe388c153d04b3d4457730470b9f688fc17d69f52f8e"
     },
@@ -682,25 +682,25 @@
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:restricted@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:restricted@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:restricted@1",
       "path": "materials/restricted-v1.md",
-      "sha256": "1746daa68d3573692cae5d97cdc2f38930bb6d63db1333bb0eae2c31005ab8dc"
+      "sha256": "a71bdc53b798dc9ed19950c56b047f72d2362477e9469d2f358d0fe88a980760"
     },
     {
       "id": "demo",
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:demo@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:demo@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:demo@1",
       "path": "materials/demo-v1.md",
-      "sha256": "4e6481428747d7d01d7523d7e8943bc61a8bb716386682a01f51d39906411f22"
+      "sha256": "1d680d56eae5283324e1dc9d8abd99d2495ca2fb24914ef699649241fe562606"
     },
     {
       "id": "demo",
       "version": 2,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:demo@2",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:demo@2",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:demo@2",
       "path": "materials/demo-v2.md",
       "sha256": "fb86f44ee7df15c79990740da322fff3555d617cf3311ace042e939c5f13a874"
     },
@@ -709,25 +709,25 @@
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:scope_note@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:scope_note@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:scope_note@1",
       "path": "materials/scope_note-v1.md",
-      "sha256": "abb501a6556c1901eaea1016d2547784e8ec9f8b3b173bbd611f140b11f2deac"
+      "sha256": "c3cb06d22b91c81d6c0dc4661e8c5d3954826c0d787b4438c164719df9d1d36e"
     },
     {
       "id": "scope_note",
       "version": 2,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:scope_note@2",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:scope_note@2",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:scope_note@2",
       "path": "materials/scope_note-v2.md",
-      "sha256": "09c884703879890e24d2223c1364f6d5d841735dd6c88de47a9077fdeb105709"
+      "sha256": "32b247052193d176aaf9b84bd74d0ce5db385b6667eddda24ee26ec6d0938869"
     },
     {
       "id": "tech_private",
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:tech_private@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:tech_private@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:tech_private@1",
       "path": "materials/tech_private-v1.md",
       "sha256": "a5fa9ae780e10788b79151bd97fabbddd40183eb2c5778e23037b94d20e2ded7"
     },
@@ -736,7 +736,7 @@
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:tech_diagnostics@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:tech_diagnostics@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:tech_diagnostics@1",
       "path": "materials/tech_diagnostics-v1.md",
       "sha256": "7dc867646bff9e33b15b2df4089baaf3f8befb23cfd14537987fbaa19517b4a1"
     },
@@ -745,7 +745,7 @@
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:world_private@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:world_private@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:world_private@1",
       "path": "materials/world_private-v1.md",
       "sha256": "97ee621793774fd024266127495b3a99ce489a3b9ebbbe194119fb3d2e9b4ebf"
     },
@@ -754,18 +754,18 @@
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:failures@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:failures@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:failures@1",
       "path": "materials/failures-v1.md",
-      "sha256": "513a1b5fb59edb766417b4001c81d0b43226ef69e54f9627a4f4540d0db41f30"
+      "sha256": "1adc8c27dd06eb952b7da771624756719a405567e372f9888fd472058a09c164"
     },
     {
       "id": "trial_details",
       "version": 1,
       "locale": "zh",
       "canonical_record_id": "it_ticket_pilot:trial_details@1",
-      "translation_group_id": "pm-pilot-facts-65b4bb4ae1e50ea0bd1e76fc9a179540d279fb2115e63136303361b314caa22c:trial_details@1",
+      "translation_group_id": "pm-pilot-facts-db38c840f438feb11f66b86f63b834ebc04ffc90ce49c30ce24922c45b26d5cf:trial_details@1",
       "path": "materials/trial_details-v1.md",
-      "sha256": "d080a540d66a28082b858fe94b22f9e47133aa812ccb15881a0ad6f3951518a5"
+      "sha256": "6a4cdefa5cb3dd0bc4324cb3a3ea656e84b565a9df05ff3f5dd7e6be18e0847a"
     }
   ],
   "reference_contract": "Offsets and source hashes belong to this locale bundle. Static fact source seq0 is an authoring placeholder; use authoritative material_activation and runtime projection.",

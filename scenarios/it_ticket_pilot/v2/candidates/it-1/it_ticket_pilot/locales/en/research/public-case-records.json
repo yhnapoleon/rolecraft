@@ -1,0 +1,3852 @@
+{
+  "schema_version": 2,
+  "locale": "en",
+  "source_kind": "actual_deterministic_module_run_on_synthetic_scenario",
+  "story_phase": "before_pm_handoff",
+  "captured_at": "2026-10-17T01:51:19.642050+00:00",
+  "input_bundle_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+  "executor": "system:w02-pre-event-recorder",
+  "http_or_human_trial": false,
+  "expected_answers_included": false,
+  "records": [
+    {
+      "trial_id": "Q01",
+      "label": "Q01",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q01",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q01",
+          "session_id": "pre-event-Q01",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "b699ff9051eb2abc8a9bfaaa5e039a66e398a9ed0f4a07eca79d0e58b954c2c3",
+        "session_id": "pre-event-Q01",
+        "version": 1,
+        "query": "Where do I download and sign in to the VPN client",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-17T01:51:19.653913Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "44c751cc193ee2b4d2bd46336591a23060b26077ddabd1ffabee9342e89d1a65",
+              "material_id": "faq",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q01",
+                "kind": "material",
+                "object_id": "faq",
+                "version": 1,
+                "config_version": null,
+                "span_start": 99,
+                "span_end": 398,
+                "quote": "VPN: on a managed laptop, open the company VPN client, sign in with your office account and complete two-step verification. If it will not connect, check the network and the client version first, then send a screenshot of the error to the service desk. The assistant cannot connect for you remotely.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.75
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q01",
+          "kind": "config",
+          "object_id": "trial-Q01",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q01",
+            "session_id": "pre-event-Q01",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q01",
+            "session_id": "pre-event-Q01",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "VPN: on a managed laptop, open the company VPN client, sign in with your office account and complete two-step verification. If it will not connect, check the network and the client version first, then send a screenshot of the error to the service desk. The assistant cannot connect for you remotely.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q01",
+            "kind": "material",
+            "object_id": "faq",
+            "version": 1,
+            "config_version": null,
+            "span_start": 99,
+            "span_end": 398,
+            "quote": "VPN: on a managed laptop, open the company VPN client, sign in with your office account and complete two-step verification. If it will not connect, check the network and the client version first, then send a screenshot of the error to the service desk. The assistant cannot connect for you remotely.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "stable_faq"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+        "created_at": "2026-10-17T01:51:19.653913+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "44c751cc193ee2b4d2bd46336591a23060b26077ddabd1ffabee9342e89d1a65"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "4d25360bb98e39f538e6b063832048551dbca23799a5ba2e9c161f49908f4bdd",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q02",
+      "label": "Q02",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q02",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q02",
+          "session_id": "pre-event-Q02",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "84e7e5468b944a57c65fc7c677109c6b0296823b9568821b271fb103222b028b",
+        "session_id": "pre-event-Q02",
+        "version": 1,
+        "query": "I forgot my account password and need to reset it",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-17T01:51:19.659623Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q02",
+          "kind": "config",
+          "object_id": "trial-Q02",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q02",
+            "session_id": "pre-event-Q02",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q02",
+            "session_id": "pre-event-Q02",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "fallback",
+        "answer": "This topic cannot be answered automatically. Check with an authorized owner.",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "prohibited_topic"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+        "created_at": "2026-10-17T01:51:19.659623+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "a30ca5f2351e9ca875490418a9dca4e9077c7707cc165c6620bd95921621952d",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q03",
+      "label": "Q03",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q03",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q03",
+          "session_id": "pre-event-Q03",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "42f2e386cdcd582a6f1814d87bedbfc9c34d5e38907c401af8b93bbb86f5d6a8",
+        "session_id": "pre-event-Q03",
+        "version": 1,
+        "query": "What should I do if I never got an account activation notice",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-17T01:51:19.665750Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "487833eccc5e696e9d59c8f60b8357b6e5a1a9e11b1dde1793d90fb9240bacb1",
+              "material_id": "onboarding",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q03",
+                "kind": "material",
+                "object_id": "onboarding",
+                "version": 1,
+                "config_version": null,
+                "span_start": 127,
+                "span_end": 384,
+                "quote": "Account activation: after receiving the activation notice, sign in to the office system and check the organization and access scope. Send identity documents and personal information through the designated channel, not as complete originals to the assistant.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.6
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q03",
+          "kind": "config",
+          "object_id": "trial-Q03",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q03",
+            "session_id": "pre-event-Q03",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q03",
+            "session_id": "pre-event-Q03",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "Account activation: after receiving the activation notice, sign in to the office system and check the organization and access scope. Send identity documents and personal information through the designated channel, not as complete originals to the assistant.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q03",
+            "kind": "material",
+            "object_id": "onboarding",
+            "version": 1,
+            "config_version": null,
+            "span_start": 127,
+            "span_end": 384,
+            "quote": "Account activation: after receiving the activation notice, sign in to the office system and check the organization and access scope. Send identity documents and personal information through the designated channel, not as complete originals to the assistant.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "onboarding"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+        "created_at": "2026-10-17T01:51:19.665750+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "487833eccc5e696e9d59c8f60b8357b6e5a1a9e11b1dde1793d90fb9240bacb1"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "a71deacd610f0f2445c56b901d7c8726fabb61984a44f2f82e88cee0e94a5a83",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q04",
+      "label": "Q04",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q04",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q04",
+          "session_id": "pre-event-Q04",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "4d2d517ef0ad0adfc4aeb2be07676c5d5438b2dbd287ed2ad29cd0e03cf7ac31",
+        "session_id": "pre-event-Q04",
+        "version": 1,
+        "query": "My laptop is broken, what information should a repair request include",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-17T01:51:19.674169Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "0575f6936d349edbd1b7843520461fa2204686b998a11caaae9f566ca84567cc",
+              "material_id": "onboarding",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q04",
+                "kind": "material",
+                "object_id": "onboarding",
+                "version": 1,
+                "config_version": null,
+                "span_start": 617,
+                "span_end": 775,
+                "quote": "Laptop and peripherals: check the device ID and accessories on receipt. For a fault, record symptoms, attempted steps and contact times in the repair request.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.5
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q04",
+          "kind": "config",
+          "object_id": "trial-Q04",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q04",
+            "session_id": "pre-event-Q04",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q04",
+            "session_id": "pre-event-Q04",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "Laptop and peripherals: check the device ID and accessories on receipt. For a fault, record symptoms, attempted steps and contact times in the repair request.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q04",
+            "kind": "material",
+            "object_id": "onboarding",
+            "version": 1,
+            "config_version": null,
+            "span_start": 617,
+            "span_end": 775,
+            "quote": "Laptop and peripherals: check the device ID and accessories on receipt. For a fault, record symptoms, attempted steps and contact times in the repair request.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "onboarding"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+        "created_at": "2026-10-17T01:51:19.674169+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "0575f6936d349edbd1b7843520461fa2204686b998a11caaae9f566ca84567cc"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "e23f90de1d990c3dd24ebb08b5b77f88e22f527b5857cddf515099c9e3273273",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q05",
+      "label": "Q05",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q05",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q05",
+          "session_id": "pre-event-Q05",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "509de09660438d1d71e2fa7b52e6673bb4da4b3f3247e155e15e435b99a09e86",
+        "session_id": "pre-event-Q05",
+        "version": 1,
+        "query": "How soon must someone respond to a P2 ticket",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-17T01:51:19.680778Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q05",
+          "kind": "config",
+          "object_id": "trial-Q05",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q05",
+            "session_id": "pre-event-Q05",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q05",
+            "session_id": "pre-event-Q05",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "fallback",
+        "answer": "No sufficiently supported passage was retrieved. Please ask a person to check.",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "no_retrieval_hit"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+        "created_at": "2026-10-17T01:51:19.680778+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "7fdf041922ec1f344f80d20c3da8bce064c577bf153e53348754de62c548d42c",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q06",
+      "label": "Q06",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q06",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q06",
+          "session_id": "pre-event-Q06",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "fee023862b8e00c87da7fbaae5373c3fa892699c6b8df7d62d68157780a9dd0e",
+        "session_id": "pre-event-Q06",
+        "version": 1,
+        "query": "P1 ticket response time",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-17T01:51:19.687383Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "351b5346e5e1c5d46483f853cc2fff207358e8481dd90fd29dd7158160c03d4e",
+              "material_id": "policy",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q06",
+                "kind": "material",
+                "object_id": "policy",
+                "version": 1,
+                "config_version": null,
+                "span_start": 290,
+                "span_end": 463,
+                "quote": "P1 tickets (a fault affecting many people or a core system) must receive a response within 30 minutes; at night and on holidays they are escalated through the on-call phone.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.5
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q06",
+          "kind": "config",
+          "object_id": "trial-Q06",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q06",
+            "session_id": "pre-event-Q06",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q06",
+            "session_id": "pre-event-Q06",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "P1 tickets (a fault affecting many people or a core system) must receive a response within 30 minutes; at night and on holidays they are escalated through the on-call phone.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q06",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": 290,
+            "span_end": 463,
+            "quote": "P1 tickets (a fault affecting many people or a core system) must receive a response within 30 minutes; at night and on holidays they are escalated through the on-call phone.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_travel"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+        "created_at": "2026-10-17T01:51:19.687383+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "351b5346e5e1c5d46483f853cc2fff207358e8481dd90fd29dd7158160c03d4e"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "d7d98facb7d514959e72c8aa62f672e57b8a519a95d51a819955d63750b47ede",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q07",
+      "label": "Q07",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q07",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q07",
+          "session_id": "pre-event-Q07",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "5d97e941f71f78916498d2f670c2d81df6de45ef0a7eb48f8b300d806a350548",
+        "session_id": "pre-event-Q07",
+        "version": 1,
+        "query": "What is the consumables allowance per person this year",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-17T01:51:19.694659Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "47f2a614f6edaeec53475ea19504eaa413e71003f3fc5870306887238646014c",
+              "material_id": "meal",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q07",
+                "kind": "material",
+                "object_id": "meal",
+                "version": 1,
+                "config_version": null,
+                "span_start": 112,
+                "span_end": 287,
+                "quote": "Keyboards, mice, headsets and similar consumables have an allowance of CNY 100 per person per year; Asset Management reviews requests above the allowance or repeated requests.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 1.0
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q07",
+          "kind": "config",
+          "object_id": "trial-Q07",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q07",
+            "session_id": "pre-event-Q07",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q07",
+            "session_id": "pre-event-Q07",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "Keyboards, mice, headsets and similar consumables have an allowance of CNY 100 per person per year; Asset Management reviews requests above the allowance or repeated requests.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q07",
+            "kind": "material",
+            "object_id": "meal",
+            "version": 1,
+            "config_version": null,
+            "span_start": 112,
+            "span_end": 287,
+            "quote": "Keyboards, mice, headsets and similar consumables have an allowance of CNY 100 per person per year; Asset Management reviews requests above the allowance or repeated requests.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_meal"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+        "created_at": "2026-10-17T01:51:19.694659+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "47f2a614f6edaeec53475ea19504eaa413e71003f3fc5870306887238646014c"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "d2aebb7cb6519c72ec66119240d051176f29792460e1bb8113bd8b3498d99f2e",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q08",
+      "label": "Q08",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q08",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q08",
+          "session_id": "pre-event-Q08",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "944ba94d85a992b6d76951fbf343d6bdac9f142df0b6ec9a6859385b42d45c6b",
+        "session_id": "pre-event-Q08",
+        "version": 1,
+        "query": "How far in advance must a planned system change be submitted",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-17T01:51:19.700781Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "9b1ac9e2517cd4850e491169f3c8f30247d89563a3ba17f38216e902180b7e4e",
+              "material_id": "leave",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q08",
+                "kind": "material",
+                "object_id": "leave",
+                "version": 1,
+                "config_version": null,
+                "span_start": 122,
+                "span_end": 289,
+                "quote": "Submit a change request for a planned system change at least 3 working days in advance and include a rollback plan; for an emergency change, contact the on-duty owner.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.5714285714285714
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q08",
+          "kind": "config",
+          "object_id": "trial-Q08",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q08",
+            "session_id": "pre-event-Q08",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q08",
+            "session_id": "pre-event-Q08",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "Submit a change request for a planned system change at least 3 working days in advance and include a rollback plan; for an emergency change, contact the on-duty owner.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q08",
+            "kind": "material",
+            "object_id": "leave",
+            "version": 1,
+            "config_version": null,
+            "span_start": 122,
+            "span_end": 289,
+            "quote": "Submit a change request for a planned system change at least 3 working days in advance and include a rollback plan; for an emergency change, contact the on-duty owner.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_leave"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+        "created_at": "2026-10-17T01:51:19.700781+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "9b1ac9e2517cd4850e491169f3c8f30247d89563a3ba17f38216e902180b7e4e"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "105ad744ff86d1417af3198eb932c58491b3d2e6466473d0e66e69a664872ad9",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q09",
+      "label": "Q09",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q09",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q09",
+          "session_id": "pre-event-Q09",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "3c8db184cf618a204e38ed1b4d24a438cd075a282ece3c5188e68fe640960b15",
+        "session_id": "pre-event-Q09",
+        "version": 1,
+        "query": "What is the P2 ticket response time",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-17T01:51:19.707297Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "40178bbca926b0f7e01219bca3cdd220dee5be60084fcf7a720cb8f14029304e",
+              "material_id": "faq",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q09",
+                "kind": "material",
+                "object_id": "faq",
+                "version": 1,
+                "config_version": null,
+                "span_start": 741,
+                "span_end": 962,
+                "quote": "Device repair: give the internal service desk the device ID, fault symptoms, steps already tried and a time when you can be contacted. Keep the ticket number. Repair instructions do not mean the repair has been completed.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.5
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q09",
+          "kind": "config",
+          "object_id": "trial-Q09",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q09",
+            "session_id": "pre-event-Q09",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q09",
+            "session_id": "pre-event-Q09",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "answered",
+        "answer": "Device repair: give the internal service desk the device ID, fault symptoms, steps already tried and a time when you can be contacted. Keep the ticket number. Repair instructions do not mean the repair has been completed.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q09",
+            "kind": "material",
+            "object_id": "faq",
+            "version": 1,
+            "config_version": null,
+            "span_start": 741,
+            "span_end": 962,
+            "quote": "Device repair: give the internal service desk the device ID, fault symptoms, steps already tried and a time when you can be contacted. Keep the ticket number. Repair instructions do not mean the repair has been completed.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "stable_faq"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+        "created_at": "2026-10-17T01:51:19.707297+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "40178bbca926b0f7e01219bca3cdd220dee5be60084fcf7a720cb8f14029304e"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "3f4a75aa03d3b5df60c6b27d3afb114ee7f37323a968825164a82198b68323b4",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q10",
+      "label": "Q10",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q10",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q10",
+          "session_id": "pre-event-Q10",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "realtime",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "realtime_sync",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 10
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "2d6fee85ccc0701f663701d156f22aae0cd714ba23da7e1e2044350a355b765e",
+        "session_id": "pre-event-Q10",
+        "version": 1,
+        "query": "What is the P2 ticket response time",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-17T01:51:19.715598Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [
+            {
+              "schema_version": 2,
+              "id": "0bb707bfa576b82982f9789ca677efb88f192aaf87ad8f88ceea14e684238467",
+              "material_id": "policy",
+              "version": 1,
+              "ref": {
+                "schema_version": 2,
+                "session_id": "pre-event-Q10",
+                "kind": "material",
+                "object_id": "policy",
+                "version": 1,
+                "config_version": null,
+                "span_start": 112,
+                "span_end": 288,
+                "quote": "P2 tickets (a fault affecting one person's work) must receive a response within 4 hours; if the limit is missed, the business lead records the reason and informs the requester.",
+                "observed_at_seq": 0,
+                "valid_from_seq": 0,
+                "valid_until_seq": null
+              },
+              "score": 0.5
+            }
+          ],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q10",
+          "kind": "config",
+          "object_id": "trial-Q10",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q10",
+            "session_id": "pre-event-Q10",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "realtime",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "realtime_sync",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 10
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q10",
+            "session_id": "pre-event-Q10",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": false,
+            "update_strategy": "daily",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 10
+          },
+          "differences": {
+            "work_items": "requested_work_exceeds_approved_budget",
+            "update_strategy": "realtime_sync_not_provisioned",
+            "scope_filter": "scope_filter_not_provisioned",
+            "launch_day": "requested_launch_exceeds_approved_deadline"
+          }
+        },
+        "status": "answered",
+        "answer": "P2 tickets (a fault affecting one person's work) must receive a response within 4 hours; if the limit is missed, the business lead records the reason and informs the requester.",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "pre-event-Q10",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null,
+            "span_start": 112,
+            "span_end": 288,
+            "quote": "P2 tickets (a fault affecting one person's work) must receive a response within 4 hours; if the limit is missed, the business lead records the reason and informs the requester.",
+            "observed_at_seq": 0,
+            "valid_from_seq": 0,
+            "valid_until_seq": null
+          }
+        ],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [
+          "policy_travel"
+        ],
+        "error_code": null
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+        "created_at": "2026-10-17T01:51:19.715598+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [
+          "0bb707bfa576b82982f9789ca677efb88f192aaf87ad8f88ceea14e684238467"
+        ],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "e791a094c15e151232699061d7a53f97378c6e5b638d533f85d3c3ea45277427",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q11",
+      "label": "Q11",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q11",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q11",
+          "session_id": "pre-event-Q11",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "manual_policy",
+          "fallback": "human",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "3f01d4a998b30d89db0f0ba0ba6b3a67d30c62a7d2e7e89e8bf577d0c95f7db7",
+        "session_id": "pre-event-Q11",
+        "version": 1,
+        "query": "What is the P2 ticket response time",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-17T01:51:19.723033Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q11",
+          "kind": "config",
+          "object_id": "trial-Q11",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q11",
+            "session_id": "pre-event-Q11",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "manual_policy",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q11",
+            "session_id": "pre-event-Q11",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "manual_policy",
+            "fallback": "human",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "fallback",
+        "answer": "This knowledge domain requires human verification; no automatic answer was given.",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "manual_verification_required"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+        "created_at": "2026-10-17T01:51:19.723033+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "167d1c61ee7151e9326d3d2607991e445e29b924865c4e94d17d83b5e6551ace",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    },
+    {
+      "trial_id": "Q12",
+      "label": "Q12",
+      "story_phase": "before_pm_handoff",
+      "locale": "en",
+      "input_snapshot": {
+        "world": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0,
+          "session_id": "pre-event-Q12",
+          "status": "active",
+          "cycle_id": "initial",
+          "config_version": 0,
+          "resources": {
+            "capacity": 30,
+            "dev_days": 3,
+            "deadline_day": 7
+          },
+          "applied_milestones": []
+        },
+        "source_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "indexed_versions": {
+          "approvals": 1,
+          "brief": 1,
+          "business_case": 1,
+          "coordination": 1,
+          "demand": 1,
+          "demo": 1,
+          "failures": 1,
+          "faq": 1,
+          "interviews": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1,
+          "restricted": 1,
+          "scope_note": 1,
+          "tech_diagnostics": 1,
+          "tech_private": 1,
+          "technical": 1,
+          "trial_details": 1,
+          "user_groups": 1,
+          "world_private": 1
+        },
+        "material_activation": {
+          "approvals:1": 0,
+          "brief:1": 0,
+          "business_case:1": 0,
+          "coordination:1": 0,
+          "demand:1": 0,
+          "demo:1": 0,
+          "failures:1": 0,
+          "faq:1": 0,
+          "interviews:1": 0,
+          "leave:1": 0,
+          "meal:1": 0,
+          "onboarding:1": 0,
+          "policy:1": 0,
+          "restricted:1": 0,
+          "scope_note:1": 0,
+          "tech_diagnostics:1": 0,
+          "tech_private:1": 0,
+          "technical:1": 0,
+          "trial_details:1": 0,
+          "user_groups:1": 0,
+          "world_private:1": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "id": "trial-Q12",
+          "session_id": "pre-event-Q12",
+          "version": 1,
+          "config_version": 0,
+          "domains": [
+            "stable_faq",
+            "onboarding",
+            "policy_travel",
+            "policy_meal",
+            "policy_leave"
+          ],
+          "scope_filter": true,
+          "update_strategy": "daily",
+          "fallback": "none",
+          "chunk_size": 500,
+          "retrieval_limit": 1,
+          "min_score": 0.35,
+          "min_score_calibration": null,
+          "freshness_guard": "none",
+          "manual_domains": [],
+          "prohibited_topics": [],
+          "work_items": [
+            "scope_filter",
+            "human_fallback"
+          ],
+          "participants": 20,
+          "launch_day": 7
+        }
+      },
+      "result": {
+        "schema_version": 2,
+        "id": "d02a812538d0e17c8add6895fc312d5ac97ca6ae6d73a5603c599793079d6ff5",
+        "session_id": "pre-event-Q12",
+        "version": 1,
+        "query": "What makes up Neptune's atmosphere?",
+        "execution": {
+          "schema_version": 2,
+          "executed_at": "2026-10-17T01:51:19.729745Z",
+          "executor": {
+            "schema_version": 2,
+            "id": "w02-pre-event-recorder",
+            "kind": "system",
+            "delegation_id": null
+          },
+          "source_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "indexed_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "used_versions": {
+            "faq": 1,
+            "leave": 1,
+            "meal": 1,
+            "onboarding": 1,
+            "policy": 1
+          },
+          "chunks": [],
+          "projection_actor": "learner",
+          "attempts": [],
+          "cost_complete": true
+        },
+        "config_ref": {
+          "schema_version": 2,
+          "session_id": "pre-event-Q12",
+          "kind": "config",
+          "object_id": "trial-Q12",
+          "version": 1,
+          "config_version": 0
+        },
+        "config": {
+          "schema_version": 2,
+          "requested": {
+            "schema_version": 2,
+            "id": "trial-Q12",
+            "session_id": "pre-event-Q12",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "none",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "effective": {
+            "schema_version": 2,
+            "id": "trial-Q12",
+            "session_id": "pre-event-Q12",
+            "version": 1,
+            "config_version": 0,
+            "domains": [
+              "stable_faq",
+              "onboarding",
+              "policy_travel",
+              "policy_meal",
+              "policy_leave"
+            ],
+            "scope_filter": true,
+            "update_strategy": "daily",
+            "fallback": "none",
+            "chunk_size": 500,
+            "retrieval_limit": 1,
+            "min_score": 0.35,
+            "min_score_calibration": null,
+            "freshness_guard": "none",
+            "manual_domains": [],
+            "prohibited_topics": [],
+            "work_items": [
+              "scope_filter",
+              "human_fallback"
+            ],
+            "participants": 20,
+            "launch_day": 7
+          },
+          "differences": {}
+        },
+        "status": "failed",
+        "answer": "An automatic answer is not sufficiently supported, and human fallback is not provisioned.",
+        "citations": [],
+        "as_of": {
+          "schema_version": 2,
+          "business_seq": 0,
+          "workspace_revision": 0,
+          "storage_revision": 0
+        },
+        "declared_category": null,
+        "declared_expected": null,
+        "observed_coverage": [],
+        "error_code": "no_retrieval_hit"
+      },
+      "provenance": {
+        "mode": "local-extractive-v2",
+        "scenario_hash": "d9caa01939f9babe8afd458dde763caae0be8d1cbc7fb15be783525fd1a62574",
+        "created_at": "2026-10-17T01:51:19.729745+00:00",
+        "source_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "indexed_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "used_versions": {
+          "faq": 1,
+          "leave": 1,
+          "meal": 1,
+          "onboarding": 1,
+          "policy": 1
+        },
+        "chunk_ids": [],
+        "tuning": {
+          "min_score": 0.35,
+          "freshness_guard": "none",
+          "manual_domains": []
+        },
+        "executor": {
+          "schema_version": 2,
+          "id": "w02-pre-event-recorder",
+          "kind": "system",
+          "delegation_id": null
+        },
+        "public_workflow_alias": null,
+        "authorization_digest": "203948ca0fd38e758154cba59a4cc48900d99ce6b8c9ae277c946e1d2d6065b3",
+        "retrieved_source_stale": false,
+        "declared_expectation_is_gold": false,
+        "result_is_evaluation": false
+      }
+    }
+  ]
+}

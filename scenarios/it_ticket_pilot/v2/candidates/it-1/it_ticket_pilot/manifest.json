@@ -19,55 +19,55 @@
     {
       "schema_version": 2,
       "path": "facts.json",
-      "sha256": "ef06528cd74f1b91298f1662667ed1222307c32ddf4326f8ac6a123c017224ab",
+      "sha256": "01ceeead073a463a9d9d37f840e76871bfdc9646ba681173cccaaae97f14b268",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "locale.json",
-      "sha256": "914a77c119139df5e9094fbd572f1f1f808626677b4ea9d7c6c297eb12068218",
+      "sha256": "c9479dc48ab1f2adf1726aa21bcf59eee894cd1ee4be50699ea9a68a41b2b37a",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "materials.json",
-      "sha256": "8b58762406e8a5896de45729bcdffc80526c15b010dc654fe709bdff473c54d7",
+      "sha256": "8308a43c0154a764213e7402ab03122f3c69da0fafc2c0e59b1012f2386f3d09",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "materials/approvals-v1.md",
-      "sha256": "572babfbc2854ddeb0c4dc3c6e37de813d0730140016eda8363ef5c7d35dc5e1",
+      "sha256": "857f89f672ac700ef16a85b86205082bb2b9bc59331b65e1ac6d8ac36d09db13",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/brief-v1.md",
-      "sha256": "9ced82e9fb3c5b7553acf800bb5fc74a08e90dea63828cac615f7adbfec0ed2c",
+      "sha256": "277a718a69866b6dad44d43743a5a1f267bb45c1d5c129a9a0b499f8cc5a7b19",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/business_case-v1.md",
-      "sha256": "c3bd3826007badbf2cc7f79b36bc13b33f1e46ea58d8af0d4cb752c852a21c9a",
+      "sha256": "b44658171a70aaa4837a4dae2003b0e8ae03646a514a7526d6c7ca4e350b664b",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/coordination-v1.md",
-      "sha256": "b040b90282fb2d51a470b2f2defd0de8681446d39f969c67db7840fc8321c7c8",
+      "sha256": "b5622603a74d9cdf7541b603971b55849cc8fc206319a2dc15fa7d920cb2b5b5",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/demand-v1.md",
-      "sha256": "1e87ed3056d79c810c0d8118cc9d379c302da4c2ecce7f273fa37a85771e9cf1",
+      "sha256": "c8c6f507538ddd40ac48a6720f12a2dbbb80430426864fdb9e8ac12b3895536a",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/demo-v1.md",
-      "sha256": "4e6481428747d7d01d7523d7e8943bc61a8bb716386682a01f51d39906411f22",
+      "sha256": "1d680d56eae5283324e1dc9d8abd99d2495ca2fb24914ef699649241fe562606",
       "media_type": "text/markdown"
     },
     {
@@ -79,7 +79,7 @@
     {
       "schema_version": 2,
       "path": "materials/failures-v1.md",
-      "sha256": "513a1b5fb59edb766417b4001c81d0b43226ef69e54f9627a4f4540d0db41f30",
+      "sha256": "1adc8c27dd06eb952b7da771624756719a405567e372f9888fd472058a09c164",
       "media_type": "text/markdown"
     },
     {
@@ -91,7 +91,7 @@
     {
       "schema_version": 2,
       "path": "materials/interviews-v1.md",
-      "sha256": "835197b7276bf2603a14a40d26a5c656e0c17f6afee4c011bc4f13b006ff59f6",
+      "sha256": "1a76eb7b0e2a39d2a649f670b5d2405c9cd44f574345c8435e21bf2bcc4f067d",
       "media_type": "text/markdown"
     },
     {
@@ -115,31 +115,31 @@
     {
       "schema_version": 2,
       "path": "materials/policy-v1.md",
-      "sha256": "b225bc378c34ad774ab2517f79047c4f87287760a7a2bfb4489fca80d4d1928e",
+      "sha256": "ea1077b230a1c6cf227a2196f5a22f4162da76c0a10f5d61e9fc2ab47a3cf698",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/policy-v2.md",
-      "sha256": "015c4eda03fc32d56195902bcd5775409b2ca129d5095d5bf1ff489ca207da86",
+      "sha256": "07b2313fd0ae839e4dfe93e36bf57364616eaae26a5c6ea1fc95816951e40d8b",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/restricted-v1.md",
-      "sha256": "1746daa68d3573692cae5d97cdc2f38930bb6d63db1333bb0eae2c31005ab8dc",
+      "sha256": "a71bdc53b798dc9ed19950c56b047f72d2362477e9469d2f358d0fe88a980760",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/scope_note-v1.md",
-      "sha256": "abb501a6556c1901eaea1016d2547784e8ec9f8b3b173bbd611f140b11f2deac",
+      "sha256": "c3cb06d22b91c81d6c0dc4661e8c5d3954826c0d787b4438c164719df9d1d36e",
       "media_type": "text/markdown"
     },
     {
       "schema_version": 2,
       "path": "materials/scope_note-v2.md",
-      "sha256": "09c884703879890e24d2223c1364f6d5d841735dd6c88de47a9077fdeb105709",
+      "sha256": "32b247052193d176aaf9b84bd74d0ce5db385b6667eddda24ee26ec6d0938869",
       "media_type": "text/markdown"
     },
     {
@@ -163,7 +163,7 @@
     {
       "schema_version": 2,
       "path": "materials/trial_details-v1.md",
-      "sha256": "d080a540d66a28082b858fe94b22f9e47133aa812ccb15881a0ad6f3951518a5",
+      "sha256": "6a4cdefa5cb3dd0bc4324cb3a3ea656e84b565a9df05ff3f5dd7e6be18e0847a",
       "media_type": "text/markdown"
     },
     {
@@ -193,13 +193,13 @@
     {
       "schema_version": 2,
       "path": "research/public-case-records.json",
-      "sha256": "0b63ec1cbc6c16faad4e1b1f49c8e49c92f89af95fadd5c714a5e942c89eb139",
+      "sha256": "18f2463210701c0527cc4aedf204048a29ac6a79f36f2f7827f0869763ad514e",
       "media_type": "application/json"
     },
     {
       "schema_version": 2,
       "path": "roles.json",
-      "sha256": "590256beea4810c0dfc84991ac4c434d279f0b4f9542827f18320aff4f8247d7",
+      "sha256": "b50f816c69c3edc24744172075b5d7440472cbd53d0ca983a834c6b1e69e1130",
       "media_type": "application/json"
     },
     {
@@ -217,7 +217,7 @@
     {
       "schema_version": 2,
       "path": "runtime/bundle.json",
-      "sha256": "5d9a23ea01da931a69c28033ebe185c07661eba06281017315e055486d65a64d",
+      "sha256": "45e2b930a7cb67a0c1d2ae87d5ed9aeee16f4dd17ab70744707097870f072a50",
       "media_type": "application/json"
     },
     {
@@ -253,7 +253,7 @@
     {
       "schema_version": 2,
       "path": "runtime/source-files.json",
-      "sha256": "d0adb6c815a79619d3a77c285d3edc3e55d705f2045ddbf25cd315287dae96ec",
+      "sha256": "d4427891ec83302e48ce668d6ea20003c60fa934eaa29c76d4160283284c2c97",
       "media_type": "application/json"
     },
     {
@@ -265,7 +265,7 @@
     {
       "schema_version": 2,
       "path": "scenario.yaml",
-      "sha256": "83390bbd7dc8dc8ce2f34aea564b5cd5685bb863bcdfc9672a25d99e52848ba5",
+      "sha256": "1dbbbb592f1501def8172c76120560adce144ab4ee3217723dc82b1146faa224",
       "media_type": "application/json"
     },
     {
@@ -283,7 +283,7 @@
     {
       "schema_version": 2,
       "path": "runtime/release.json",
-      "sha256": "cbacb58e69c79feec920cc79cf5f6729b57c8c9122c60dc265c3bc1e58465a4e",
+      "sha256": "76b7810f739af5d87123172e295d04242c986e6e0e2629e4f06a77a5bd52886a",
       "media_type": "application/json"
     },
     {
@@ -356,7 +356,7 @@
     {
       "schema_version": 2,
       "id": "supervisor",
-      "name": "IT 服务经理",
+      "name": "经理",
       "responsibilities": [
         "明确服务台目标与承诺",
         "审批容量、开发资源和期限",
@@ -416,7 +416,7 @@
     {
       "schema_version": 2,
       "id": "business_lead",
-      "name": "服务台负责人",
+      "name": "业务负责人",
       "responsibilities": [
         "解释员工报障需求和服务台流程",
         "协调 SLA 时限解释与超时个案核验",
