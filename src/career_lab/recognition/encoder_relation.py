@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 
 from career_lab.models.v3.huggingface import aggregate_pairs
-from career_lab.recognition.relation import ENCODER_ID, LABELS, Judgement
+from career_lab.recognition.relation import ENCODER_ID, LABELS, STACK_ID, Judgement
 
 _LOCK = threading.Lock()
 
@@ -79,8 +79,13 @@ class EncoderRelation:
         language: str = "zh",
         as_of: int = 0,
         purpose: str = "commitment",
+        stack=None,
     ) -> Judgement:
-        """``candidates``: (id, text) or (id, text, observed, valid_from, valid_until)."""
+        """``candidates``: (id, text) or (id, text, observed, valid_from, valid_until).
+
+        With ``stack`` (``recognition.stack.RelationStack``) the C1 pair probabilities are
+        combined with the lexical branch by the meta-learner before aggregation.
+        """
         query = f"{purpose}\n{claim}\nreference time {as_of}; temporal scope known"
         bodies = []
         for c in candidates:
@@ -90,6 +95,10 @@ class EncoderRelation:
                 f"{c[1]}\nobserved {observed}; valid from {valid_from}; valid until {until}"
             )
         pairs = self.pair_probabilities(query, bodies)
+        recognizer, revision = ENCODER_ID, self.revision
+        if stack is not None:
+            pairs = stack.pair_probabilities(claim, as_of, candidates, pairs)
+            recognizer, revision = STACK_ID, f"{stack.revision}+{self.revision}"
         probabilities, scores = aggregate_pairs(pairs, self.threshold)
         probabilities = np.asarray(probabilities, dtype=float)
         label = LABELS[int(np.argmax(probabilities))]
@@ -102,8 +111,8 @@ class EncoderRelation:
             label=label,
             probabilities={name: float(p) for name, p in zip(LABELS, probabilities, strict=False)},
             evidence_ids=evidence,
-            recognizer_id=ENCODER_ID,
-            revision=self.revision,
+            recognizer_id=recognizer,
+            revision=revision,
             fallback=False,
             reason="pair_aggregate",
         )

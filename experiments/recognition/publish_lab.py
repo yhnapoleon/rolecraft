@@ -25,6 +25,7 @@ def main(argv=None) -> int:
     TARGET.mkdir(parents=True, exist_ok=True)
     for name in (
         "e1_baselines",
+        "e1_stack",
         "e3_retrieval",
         "e4_decision",
         "e5_scope",
@@ -38,6 +39,10 @@ def main(argv=None) -> int:
         if source.exists():
             shutil.copyfile(source, TARGET / source.name)
             print("published", source.name)
+    figure = ROOT / "docs/figures/architecture.png"
+    if figure.exists():
+        shutil.copyfile(figure, TARGET / figure.name)
+        print("published", figure.name)
     metrics = Path(args.c1) / "metrics.json"
     if metrics.exists():
         data = json.loads(metrics.read_text(encoding="utf-8"))
