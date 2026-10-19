@@ -15,13 +15,13 @@ import argparse
 import json
 
 import joblib
-from career_lab.recognition.intent import LABELS, rule_intent
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.pipeline import Pipeline
 from sklearn.svm import LinearSVC
 
+from career_lab.recognition.intent import LABELS, rule_intent
 from experiments.recognition.common import (
     DATA,
     RECOGNIZERS,

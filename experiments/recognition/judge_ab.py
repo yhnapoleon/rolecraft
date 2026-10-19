@@ -23,9 +23,8 @@ import json
 import random
 from collections import Counter
 
-from scripts.recognition.run_strategies import STRATEGIES, Run
-
 from experiments.recognition.common import RESULTS, save
+from scripts.recognition.run_strategies import STRATEGIES, Run
 
 SEMANTIC = None  # every item whose source is model_advice or pending counts as semantic
 

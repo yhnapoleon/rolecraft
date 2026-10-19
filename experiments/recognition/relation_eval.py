@@ -79,9 +79,8 @@ def ece(probs, labels, bins=10):
 
 
 def main(argv=None) -> int:
-    from career_lab.recognition.decision import costs
-
     from career_lab.models.v3.huggingface import aggregate_pairs
+    from career_lab.recognition.decision import costs
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--encoder", required=True)
