@@ -6,6 +6,8 @@
 
 10-06 定的公开来源这次正式取齐了，分三个发布目录：**真实文本加真实标签**（`public-real-v1`）、**真实 PM 材料**（`public-materials-v1`，未经模型改写）、**以真实材料为证据、由 DeepSeek 写断言的合成数据**（`public-synth-v1`）。关系类记录和 relation-v3 同形，C1 和堆叠的评测代码不用改就能读。
 
+同日第二批（第 7 节）：给原来只有合成数据的识别器（C10 回复核查、C4 范围、C2 检索、C5 行为、C11 意图）各补一份数据，真实优先，找不到标签对得上的真实数据就以真实材料为底合成。第 6 节是用这些数据跑的关系链路迁移实验（E11）。
+
 ## 1. 三个发布目录
 
 | 目录 | 内容 | 条数 | 标签从哪来 | 等级 |
@@ -111,15 +113,69 @@ uv run --no-project --with pyyaml python -m scripts.public.build_materials
 - Jira 子集是按「计划顺延」特征挑的，刻意偏向延期的 issue；个人字段已被数据集作者匿名化。
 - 合成部分的生成、翻译和复核都是 DeepSeek，同源偏差和 relation-v3 一样。
 
-## 6. 格式冒烟
+## 6. E11：关系链路迁移到真实文本
 
-用产品里的 C1 加载器（`runs/local/recognizers/c1-xlmr-cpu`）对每份 test 各抽一小批跑了一遍，三份真实数据和合成数据都原样读入。抽样太小，下面的数字只说明「能跑」，不是实验结论：
+`experiments/recognition/relation/transfer_public.py`，结果在 `experiments/recognition/results/e11_transfer_public.json`。所有模型都只在 relation-v3（pm_pilot 材料 + DeepSeek 断言）上拟合过，这里不重训，直接在各份数据的**完整 test** 上评。claim 级 macro-F1：
 
-| 文件 | 抽样 | 准确率 | macro-F1 | 预测分布 |
-|---|---|---|---|---|
-| relation-contractnli | 60（三类各 20） | 0.350 | 0.237 | 47 条判成 INSUFFICIENT |
-| relation-vitaminc | 60 | 0.367 | 0.286 | 41 条判成 INSUFFICIENT |
-| relation-cfever | 60 | 0.367 | 0.296 | 44 条判成 INSUFFICIENT |
-| public-synth（中英混合） | 90（三类各 30） | 0.700 | 0.683 | SUPPORTED 29 / CONTRADICTED 18 / INSUFFICIENT 43 |
+| test 集 | 条数 | 词法 LR | C1 | C1 + 规则 | 堆叠 | 堆叠 + 规则（产品） |
+|---|---|---|---|---|---|---|
+| relation-v3（域内参照） | 1,324 | 0.600 | 0.625 | 0.630 | **0.663** | 0.658 |
+| public-synth（DeepSeek 断言 + 真实证据） | 806 | 0.621 | 0.655 | 0.661 | **0.695** | 0.687 |
+| ContractNLI（人写断言，en） | 2,091 | 0.339 | 0.311 | 0.311 | **0.377** | 0.377 |
+| VitaminC（人写断言，en） | 4,000 | 0.371 | 0.316 | 0.359 | 0.383 | **0.385** |
+| CFEVER（人写断言，zh） | 2,629 | 0.272 | 0.343 | **0.375** | 0.322 | 0.340 |
 
-信号是：只在 pm_pilot 合成数据上训练的 C1，碰到「DeepSeek 写的断言 + 真实证据」还能保持 0.7 左右（和它在 relation-v3 test 上差不多），碰到人写的真实断言就大多退回「证据不足」。也就是说短板更可能在断言的写法和标注口径，而不只是证据文本是不是真实的。样本太小，要写进报告得在完整 test 上正式跑一次迁移实验（C1、LR、堆叠各一行，按来源分开报）。
+域内那一行和产品登记的数字一致（堆叠 + 规则：中文 0.698、英文 0.635），说明评测链路没走样。
+
+读法：
+
+- **证据换成真实文本，问题不大。** public-synth 的证据全是真实句子，断言仍是 DeepSeek 按同一套矩阵写的，堆叠 0.695，和域内持平。
+- **断言换成人写的，就掉到接近随机**（三分类随机约 0.33）。差距集中在 CONTRADICTED：产品链路在 ContractNLI / VitaminC / CFEVER 上这一类的 F1 只有 0.16 / 0.09 / 0.11，模型大多退回 INSUFFICIENT 或 SUPPORTED。人写的矛盾（换个限定、换个时间、改一处事实）和生成矩阵里的矛盾（否定、数字超限、旧值）不是一回事。
+- 规则只在有数字和限额可比时介入（ContractNLI 0%、VitaminC 55%、CFEVER 17%），所以 ContractNLI 上「加规则」没有变化。
+- 这是报告「局限与讨论」该写的一条：识别器学到的是生成数据的断言写法。三份真实数据都带 train 划分，下一步可以拿它们和 relation-v3 混训，看域内掉多少、真实数据涨多少。
+
+## 7. 第二批：给只有合成数据的识别器补数据（10-20 晚）
+
+原则：真实优先；标签对不上、或者缺中文的部分，以第 1 节的真实材料为底合成，协议同上（生成计划 + 盲判一致才保留，G2v）。
+
+### 7.1 按识别器
+
+| 识别器 | 真实数据 | 合成数据（以真实材料为底） | 产品能否直接读 |
+|---|---|---|---|
+| C10 同事回复核查 | `public-reply-v1`：RAGTruth，17,790 条真实大模型回答（6 个模型）、2,965 份源文档，131,160 句。句子按人工逐词标注分成 grounded / conflict / baseless，test 里是 17,375 / 587 / 968 | `public-reply-synth-v1`：603 条中英同事回复、2,724 句（grounded 1,504 / conflict 462 / baseless 455 / leak 303），一半回复带「泄露内部备注」 | `check_reply(reply, visible, private)` 能直接跑，句子和金标逐句对齐（需设 `CAREER_LAB_RELATION_ENCODER`，否则走规则兜底） |
+| C4 范围检测 | `public-scope-v1`：CLINC150（英，150 个意图 22,500 条 + 范围外 1,200 条，范围外检测的标准基准）；MASSIVE 1.1 中英平行各 16,521 条，办公类场景算范围内、闲聊和常识问答算远域、其余助手任务算近域 | 和 C2 共用 `public-queries-synth-v1` | 字段同 `assistant-queries-v1` |
+| C2 检索 | `public-retrieval-v1`：PrivacyQA，35 份隐私政策、1,750 个真人问题，专家标了相关句和能不能答 | `public-queries-synth-v1`：2,658 个中英知识库问题（in_direct 898 / in_paraphrase 885 / out_near 574 / out_far 301），知识库是 155 个真实材料片段 | 字段同 `assistant-queries-v1` |
+| C5 行为轨迹 | `public-sequence-v1`：tau-bench 1,980 条 Agent 运行（按环境奖励分成功 / 失败）、Jira 400 条变更序列（按最终处理结果） | 不需要（已有 `trajectories-v1`） | `sequence` 字段同 `trajectories-v1`，但符号表是各来源自己的 |
+| C11 意图 | 没有：五个类别是我们自己定的，没有标签对得上的公开数据 | `public-intent-synth-v1`：1,354 句中英提问，五类、四种文风同 intent-v1，但话题换成真实材料 | 字段同 `intent-v1` |
+
+格式冒烟（只说明能跑，不是实验结论）：产品的 C11 在 intent-v1 test 上中文 0.946 / 英文 0.824，在 `public-intent-synth-v1` test 上 0.867 / 0.852。
+
+### 7.2 新增来源登记
+
+| 来源 | 固定版本 | 许可 | 进了哪里 |
+|---|---|---|---|
+| RAGTruth | `c103204b9ce2` | MIT | public-reply-v1 |
+| CLINC150（`clinc/oos-eval`） | `828f8093932c` | CC BY 3.0 | public-scope-v1 |
+| MASSIVE 1.1（S3 tar 包 + HF 卡 `ff6bd8e4b27c`） | 1.1 | CC BY 4.0 | public-scope-v1 |
+| PrivacyQA（`PrivacyQA_EMNLP`） | `5178ff3eaf61` | MIT | public-retrieval-v1 |
+
+tau-bench、Jira、site-policy、KEP、TheAgentCompany 沿用第 2 节已下载的版本。
+
+### 7.3 怎么重跑
+
+```bash
+.venv/Scripts/python.exe -m scripts.public.fetch ragtruth clinc150 massive privacyqa
+.venv/Scripts/python.exe -m scripts.public.build_tasks                    # 真实部分，确定可复现
+.venv/Scripts/python.exe -m scripts.public.synth_tasks reply queries intent  # 合成部分，调 DeepSeek
+```
+
+`build_tasks` 依赖 `public-materials-v1`（tau-bench、Jira 轨迹），`synth_tasks` 依赖 `public-synth-v1/units.jsonl`（中英对照的真实单元）。这一批合成用了 2,192 次 DeepSeek 调用，约 89.7 万输入 + 21.3 万输出 token。
+
+### 7.4 已知限制
+
+- RAGTruth 只有英文，而且没有「泄露」这一类；中文和泄露只能靠合成补。RAGTruth 的回答是通用问答、新闻摘要、餐厅介绍，不是同事口吻。
+- MASSIVE 的范围内 / 近域 / 远域是我们按场景划的（写在 manifest 里），`domain` 保留了原场景，可以重划。CLINC150 的范围外问题没有区分近域和远域。
+- PrivacyQA 的 test 用「六位标注员任一人认为相关」，所以 test 里能答的比例（366 / 400）比 train 高；同时给了多数票版本 `relevant_majority_unit_ids`。
+- 合成的知识库问题只复核了「能不能答」，近域和远域按生成计划，没有复核。
+- 合成的回复里，计划写得很明确，盲判一致率很高（616 条丢 13 条），这说明标签和计划一致，不说明句子难。
+- tau-bench 和 Jira 的符号表和产品的 C5 不同，只能检验 DTW / HMM / n-gram 这些方法，不能直接套产品的参考库。

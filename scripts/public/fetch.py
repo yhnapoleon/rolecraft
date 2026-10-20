@@ -22,6 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 RAW = ROOT / "data" / "raw" / "public"
 HF = "https://hf-mirror.com/datasets"
+MASSIVE_CARD = f"{HF}/AmazonScience/massive/resolve/ff6bd8e4b27c3543e4f8fe2108f32bb95a6f8740"
 
 SOURCES = {
     "vitaminc": {
@@ -98,6 +99,61 @@ SOURCES = {
             "Inference for Contracts. Findings of EMNLP 2021."
         ),
     },
+    # second batch (10-20): one real source per recogniser that only had synthetic data
+    "ragtruth": {
+        "kind": "git",
+        "url": "https://github.com/ParticleMedia/RAGTruth.git",
+        "depth": 1,
+        "license": "MIT",
+        "license_file": "LICENSE",
+        "page": "https://github.com/ParticleMedia/RAGTruth",
+        "citation": (
+            "Niu et al. RAGTruth: A Hallucination Corpus for Developing Trustworthy "
+            "Retrieval-Augmented Language Models. ACL 2024."
+        ),
+    },
+    "clinc150": {
+        "kind": "git",
+        "url": "https://github.com/clinc/oos-eval.git",
+        "depth": 1,
+        "license": "CC-BY-3.0",
+        "license_file": "LICENSE",
+        "page": "https://github.com/clinc/oos-eval",
+        "citation": (
+            "Larson et al. An Evaluation Dataset for Intent Classification and Out-of-Scope "
+            "Prediction. EMNLP-IJCNLP 2019."
+        ),
+    },
+    "massive": {
+        "kind": "url",
+        "revision": "1.1 (HF card ff6bd8e4b27c)",
+        "files": {
+            "amazon-massive-dataset-1.1.tar.gz": (
+                "https://amazon-massive-nlu-dataset.s3.amazonaws.com/amazon-massive-dataset-1.1.tar.gz"
+            ),
+            "LICENSE": f"{MASSIVE_CARD}/LICENSE",
+            "README.md": f"{MASSIVE_CARD}/README.md",
+        },
+        "license": "CC-BY-4.0",
+        "license_file": "LICENSE",
+        "page": "https://github.com/alexa/massive",
+        "citation": (
+            "FitzGerald et al. MASSIVE: A 1M-Example Multilingual Natural Language "
+            "Understanding Dataset with 51 Typologically-Diverse Languages. ACL 2023."
+        ),
+    },
+    "privacyqa": {
+        "kind": "git",
+        "url": "https://github.com/AbhilashaRavichander/PrivacyQA_EMNLP.git",
+        "depth": 1,
+        "license": "MIT",
+        "license_file": "LICENSE",
+        "page": "https://github.com/AbhilashaRavichander/PrivacyQA_EMNLP",
+        "citation": (
+            "Ravichander et al. Question Answering for Privacy Policies: Combining "
+            "Computational and Legal Perspectives. EMNLP 2019."
+        ),
+    },
 }
 
 
@@ -114,10 +170,14 @@ def run(*args: str, cwd: Path | None = None) -> str:
 
 
 def fetch_hf(name: str, spec: dict, out: Path) -> dict:
+    urls = {f: f"{HF}/{spec['repo']}/resolve/{spec['revision']}/{f}" for f in spec["files"]}
+    return {"repo": spec["repo"], "revision": spec["revision"], "files": download(name, urls, out)}
+
+
+def download(name: str, urls: dict[str, str], out: Path) -> dict:
     files = {}
-    for file in spec["files"]:
+    for file, url in urls.items():
         target = out / file
-        url = f"{HF}/{spec['repo']}/resolve/{spec['revision']}/{file}"
         for attempt in range(6):
             done = subprocess.run(
                 ["curl", "-sSL", "-C", "-", "--retry", "3", "-o", str(target), url]
@@ -129,7 +189,7 @@ def fetch_hf(name: str, spec: dict, out: Path) -> dict:
             raise SystemExit(f"{name}: {file} failed")
         files[file] = {"url": url, "sha256": sha256(target), "bytes": target.stat().st_size}
         print(name, file, files[file]["bytes"], flush=True)
-    return {"repo": spec["repo"], "revision": spec["revision"], "files": files}
+    return files
 
 
 def fetch_git(name: str, spec: dict, out: Path) -> dict:
@@ -155,6 +215,9 @@ def fetch(name: str) -> None:
     elif spec["kind"] == "git":
         record = fetch_git(name, spec, out)
         license_path = out / "repo" / spec["license_file"]
+    elif spec["kind"] == "url":
+        record = {"revision": spec["revision"], "files": download(name, spec["files"], out)}
+        license_path = out / spec["license_file"]
     else:
         base = ROOT / spec["path"]
         record = {
