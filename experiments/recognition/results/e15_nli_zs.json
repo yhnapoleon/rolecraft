@@ -1,0 +1,413 @@
+{
+  "model": "runs/local/weights/mdeberta-v3-base-xnli-2mil7",
+  "time_suffix": false,
+  "max_length": 256,
+  "sources": {
+    "relation-v3": {
+      "claims": 1324,
+      "pair_recall": {
+        "SUPPORTS": 0.872168284789644,
+        "CONTRADICTS": 0.8169642857142857,
+        "UNRELATED": 0.7278330962541489
+      },
+      "nli": {
+        "zh": {
+          "n": 493,
+          "macro_f1": 0.6792063049383863
+        },
+        "en": {
+          "n": 831,
+          "macro_f1": 0.7377796629064578
+        },
+        "all": {
+          "n": 1324,
+          "macro_f1": 0.7162098437760344
+        },
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.9529085872576177,
+            "recall": 0.5566343042071198,
+            "f1": 0.7027579162410623,
+            "support": 618
+          },
+          "CONTRADICTED": {
+            "precision": 0.5752840909090909,
+            "recall": 0.9040178571428571,
+            "f1": 0.703125,
+            "support": 448
+          },
+          "INSUFFICIENT": {
+            "precision": 0.7413127413127413,
+            "recall": 0.7441860465116279,
+            "f1": 0.7427466150870408,
+            "support": 258
+          }
+        },
+        "predicted": {
+          "CONTRADICTED": 704,
+          "INSUFFICIENT": 259,
+          "SUPPORTED": 361
+        }
+      },
+      "nli_rule": {
+        "zh": {
+          "n": 493,
+          "macro_f1": 0.6755929197349119
+        },
+        "en": {
+          "n": 831,
+          "macro_f1": 0.7325173771152532
+        },
+        "all": {
+          "n": 1324,
+          "macro_f1": 0.7112909304121543
+        },
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.8926829268292683,
+            "recall": 0.5922330097087378,
+            "f1": 0.7120622568093384,
+            "support": 618
+          },
+          "CONTRADICTED": {
+            "precision": 0.5797317436661699,
+            "recall": 0.8683035714285714,
+            "f1": 0.6952636282394994,
+            "support": 448
+          },
+          "INSUFFICIENT": {
+            "precision": 0.7489711934156379,
+            "recall": 0.7054263565891473,
+            "f1": 0.7265469061876249,
+            "support": 258
+          }
+        },
+        "predicted": {
+          "CONTRADICTED": 671,
+          "INSUFFICIENT": 243,
+          "SUPPORTED": 410
+        }
+      }
+    },
+    "contractnli": {
+      "claims": 2091,
+      "pair_recall": {
+        "SUPPORTS": 0.3198077949813134,
+        "CONTRADICTS": 0.36220472440944884,
+        "UNRELATED": 0.8639910813823858
+      },
+      "nli": {
+        "en": {
+          "n": 2091,
+          "macro_f1": 0.4804754209209934
+        },
+        "all": {
+          "n": 2091,
+          "macro_f1": 0.4804754209209934
+        },
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.7989130434782609,
+            "recall": 0.4555785123966942,
+            "f1": 0.5802631578947368,
+            "support": 968
+          },
+          "CONTRADICTED": {
+            "precision": 0.19081272084805653,
+            "recall": 0.4909090909090909,
+            "f1": 0.2748091603053435,
+            "support": 220
+          },
+          "INSUFFICIENT": {
+            "precision": 0.5652620760534429,
+            "recall": 0.6090808416389811,
+            "f1": 0.5863539445628997,
+            "support": 903
+          }
+        },
+        "predicted": {
+          "INSUFFICIENT": 973,
+          "CONTRADICTED": 566,
+          "SUPPORTED": 552
+        }
+      },
+      "nli_rule": {
+        "en": {
+          "n": 2091,
+          "macro_f1": 0.4804754209209934
+        },
+        "all": {
+          "n": 2091,
+          "macro_f1": 0.4804754209209934
+        },
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.7989130434782609,
+            "recall": 0.4555785123966942,
+            "f1": 0.5802631578947368,
+            "support": 968
+          },
+          "CONTRADICTED": {
+            "precision": 0.19081272084805653,
+            "recall": 0.4909090909090909,
+            "f1": 0.2748091603053435,
+            "support": 220
+          },
+          "INSUFFICIENT": {
+            "precision": 0.5652620760534429,
+            "recall": 0.6090808416389811,
+            "f1": 0.5863539445628997,
+            "support": 903
+          }
+        },
+        "predicted": {
+          "INSUFFICIENT": 973,
+          "CONTRADICTED": 566,
+          "SUPPORTED": 552
+        }
+      }
+    },
+    "vitaminc": {
+      "claims": 4000,
+      "pair_recall": {
+        "SUPPORTS": 0.8748753738783649,
+        "CONTRADICTS": 0.6226749335695305,
+        "UNRELATED": 0.5791907514450867
+      },
+      "nli": {
+        "en": {
+          "n": 4000,
+          "macro_f1": 0.7006569439177367
+        },
+        "all": {
+          "n": 4000,
+          "macro_f1": 0.7006569439177367
+        },
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.8060046189376443,
+            "recall": 0.8698903290129611,
+            "f1": 0.8367298010069527,
+            "support": 2006
+          },
+          "CONTRADICTED": {
+            "precision": 0.7806818181818181,
+            "recall": 0.608503100088574,
+            "f1": 0.6839223494275759,
+            "support": 1129
+          },
+          "INSUFFICIENT": {
+            "precision": 0.5539267015706806,
+            "recall": 0.6115606936416185,
+            "f1": 0.5813186813186813,
+            "support": 865
+          }
+        },
+        "predicted": {
+          "CONTRADICTED": 880,
+          "INSUFFICIENT": 955,
+          "SUPPORTED": 2165
+        }
+      },
+      "nli_rule": {
+        "en": {
+          "n": 4000,
+          "macro_f1": 0.6859785885297734
+        },
+        "all": {
+          "n": 4000,
+          "macro_f1": 0.6859785885297734
+        },
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.755741127348643,
+            "recall": 0.9022931206380858,
+            "f1": 0.8225403317427856,
+            "support": 2006
+          },
+          "CONTRADICTED": {
+            "precision": 0.7911802853437094,
+            "recall": 0.5403011514614703,
+            "f1": 0.6421052631578947,
+            "support": 1129
+          },
+          "INSUFFICIENT": {
+            "precision": 0.60431654676259,
+            "recall": 0.5826589595375723,
+            "f1": 0.5932901706886404,
+            "support": 865
+          }
+        },
+        "predicted": {
+          "CONTRADICTED": 771,
+          "INSUFFICIENT": 834,
+          "SUPPORTED": 2395
+        }
+      }
+    },
+    "cfever": {
+      "claims": 2629,
+      "pair_recall": {
+        "SUPPORTS": 0.49520958083832334,
+        "CONTRADICTS": 0.5043936731107206,
+        "UNRELATED": 0.6998481292282204
+      },
+      "nli": {
+        "zh": {
+          "n": 2629,
+          "macro_f1": 0.5783948020559234
+        },
+        "all": {
+          "n": 2629,
+          "macro_f1": 0.5783948020559234
+        },
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.6322089227421109,
+            "recall": 0.6052083333333333,
+            "f1": 0.61841405002661,
+            "support": 960
+          },
+          "CONTRADICTED": {
+            "precision": 0.62134944612286,
+            "recall": 0.6201005025125628,
+            "f1": 0.6207243460764587,
+            "support": 995
+          },
+          "INSUFFICIENT": {
+            "precision": 0.4811715481171548,
+            "recall": 0.5118694362017804,
+            "f1": 0.4960460100647016,
+            "support": 674
+          }
+        },
+        "predicted": {
+          "SUPPORTED": 919,
+          "INSUFFICIENT": 717,
+          "CONTRADICTED": 993
+        }
+      },
+      "nli_rule": {
+        "zh": {
+          "n": 2629,
+          "macro_f1": 0.5781014797222837
+        },
+        "all": {
+          "n": 2629,
+          "macro_f1": 0.5781014797222837
+        },
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.6135216952573158,
+            "recall": 0.6333333333333333,
+            "f1": 0.6232701178882625,
+            "support": 960
+          },
+          "CONTRADICTED": {
+            "precision": 0.6323529411764706,
+            "recall": 0.6050251256281407,
+            "f1": 0.618387262455059,
+            "support": 995
+          },
+          "INSUFFICIENT": {
+            "precision": 0.48833819241982507,
+            "recall": 0.4970326409495549,
+            "f1": 0.4926470588235294,
+            "support": 674
+          }
+        },
+        "predicted": {
+          "SUPPORTED": 991,
+          "INSUFFICIENT": 686,
+          "CONTRADICTED": 952
+        }
+      }
+    },
+    "public-synth": {
+      "claims": 806,
+      "pair_recall": {
+        "SUPPORTS": 0.9061662198391421,
+        "CONTRADICTS": 0.8057553956834532,
+        "UNRELATED": 0.6083713220058019
+      },
+      "nli": {
+        "zh": {
+          "n": 384,
+          "macro_f1": 0.7178970092983494
+        },
+        "en": {
+          "n": 422,
+          "macro_f1": 0.7430947051463286
+        },
+        "all": {
+          "n": 806,
+          "macro_f1": 0.731054584333973
+        },
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.9463414634146341,
+            "recall": 0.5201072386058981,
+            "f1": 0.6712802768166091,
+            "support": 373
+          },
+          "CONTRADICTED": {
+            "precision": 0.568445475638051,
+            "recall": 0.8812949640287769,
+            "f1": 0.691114245416079,
+            "support": 278
+          },
+          "INSUFFICIENT": {
+            "precision": 0.7941176470588235,
+            "recall": 0.8709677419354839,
+            "f1": 0.8307692307692308,
+            "support": 155
+          }
+        },
+        "predicted": {
+          "INSUFFICIENT": 170,
+          "CONTRADICTED": 431,
+          "SUPPORTED": 205
+        }
+      },
+      "nli_rule": {
+        "zh": {
+          "n": 384,
+          "macro_f1": 0.7252413423573465
+        },
+        "en": {
+          "n": 422,
+          "macro_f1": 0.747214253042401
+        },
+        "all": {
+          "n": 806,
+          "macro_f1": 0.7365623281749761
+        },
+        "per_class": {
+          "SUPPORTED": {
+            "precision": 0.9262672811059908,
+            "recall": 0.5388739946380697,
+            "f1": 0.6813559322033899,
+            "support": 373
+          },
+          "CONTRADICTED": {
+            "precision": 0.5748218527315915,
+            "recall": 0.8705035971223022,
+            "f1": 0.6924177396280401,
+            "support": 278
+          },
+          "INSUFFICIENT": {
+            "precision": 0.8035714285714286,
+            "recall": 0.8709677419354839,
+            "f1": 0.8359133126934984,
+            "support": 155
+          }
+        },
+        "predicted": {
+          "INSUFFICIENT": 168,
+          "CONTRADICTED": 421,
+          "SUPPORTED": 217
+        }
+      }
+    }
+  }
+}

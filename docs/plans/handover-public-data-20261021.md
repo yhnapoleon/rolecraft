@@ -40,6 +40,12 @@
    - `docs/superpowers/`（10-06 扩建规范、执行计划、数据计划，10-16 模式识别重设计 v3.2）入库，提交前扫过没有密钥。
 4. **打包清单**：`docs/data/DATA_INVENTORY.md`（英文，可以直接放进交付包）。
 
+### 1.3 晚上：根因溯源 → 复核 → 换底座（E14、E15，登记文档第 10 节）
+
+- E14a `diagnose_public.py`：问题在句对分类——C1 只认出 ContractNLI 6.5 % 的金标支持条款、VitaminC 7.6 % 的矛盾修订；截断、聚合规则都不是主因。
+- E14b `review_errors.py`：DeepSeek 盲判 390 条，错误桶里同意金标的比例和随机对照相当，绝大多数是模型真错。
+- E15 `nli_relation.py`：句对分类器换成 mDeBERTa-v3 多语言 NLI（`runs/local/weights/mdeberta-v3-base-xnli-2mil7/`），混合微调后（`runs/local/recognizers/c1-mdeberta-mix/`，未登记）relation-v3 0.658 → 0.903、ContractNLI 0.377 → 0.806、VitaminC 0.385 → 0.792、CFEVER 0.340 → 0.641、public-synth 0.687 → 0.825；C10 合成回复 0.705 → 0.928，RAGTruth AUROC 0.462 → 0.735（按块读）。**产品还没换**：新模型只在实验脚本里用。
+
 ## 2. 结论速记
 
 产品链路（堆叠 + 规则）的 macro-F1，详细表格在登记文档里：
@@ -79,7 +85,9 @@ python -m experiments.recognition.public_eval intent|sequence|retrieval|scope|re
 
 ## 4. 没做的（按需再做）
 
-- **用混合数据重训 C1**：E12 说明这是真正要做的一步（浅层混训的上限已经看到了）。本机 CPU 约每秒 4–6 个句对，relation-v3 训 2 轮用了 80 分钟；如果每份真实数据各取 2,000 条断言（约 2 万个句对）加 relation-v3，2 轮约 3–4 小时，之后重算五份 test 和三份 dev 的概率再要 1.5–2 小时。Colab T4 会快得多（`experiments/recognition/relation/colab_train_c1.ipynb`）。C10 的 RAGTruth 也可以一起放进去（train 约 10 万句）。
+- **把 E15 的 NLI 模型接进产品**（已经做完的是实验，产品仍用 `c1-xlmr-cpu` + 堆叠）：`encoder_relation.py` 要支持 `AutoModelForSequenceClassification` 这种结构（前提 = 证据 + 有效期，假设 = 断言，标签顺序 蕴含 / 中立 / 矛盾），按 registry 登记；新模型单独已经比堆叠好，融合规则在混合微调后反而略降（0.903 → 0.882），接入时可以不再用堆叠和规则，或重新选 α。C10 的 `check_reply` 改按块读（前 3 个单元拼成一段）。改动要挂在 `CAREER_LAB_RECOGNIZERS` 开关下，CI 才不受影响。
+- **C10 在真实回答上继续提高**：用 RAGTruth train（约 10 万句，按块组织）微调，本机 CPU 抽 1–2 万句约 2–3 小时。
+- E15 没有做留一来源，也只训了 1 轮。
 - **识别实验室页**没有加 E11–E13 的图（`experiments/recognition/publish_lab.py`）。
 - `docs/reports/expansion-progress.md`（10-06 扩建工作的进度记录）也一直没入库，这次没动，要不要一起入库由用户定。
 - C10 的泄露漏判没有拆开记是哪一边的判断出了错（见登记文档 9.1）。

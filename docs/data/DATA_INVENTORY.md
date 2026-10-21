@@ -14,14 +14,15 @@ own `data_card.md`, `manifest.json` and `SHA256SUMS`.
 | Path | Size | Contents | Needed for |
 |---|---|---|---|
 | `data/releases/` | 310 MB | All released datasets (section 2) | Re-running the experiments; reading the data |
-| `runs/local/recognizers/` | 1.6 GB | Recognizer weights and the registry manifest (section 4) | Running the product with recognition on; the experiments |
+| `runs/local/recognizers/` | 2.7 GB | Recognizer weights and the registry manifest (section 4); 1.6 GB without the E15 experiment model `c1-mdeberta-mix/` | Running the product with recognition on; the experiments |
 | `data/raw/` | 1.7 GB | Raw downloads of the public sources (section 3) | Rebuilding the public releases only; everything here can be downloaded again with `python -m scripts.public.fetch` |
 | `runs/local/weights/xlm-roberta-base/` | 1.1 GB | The pretrained base model that C1 was fine-tuned from | Re-training C1 only (C1 itself is self-contained in `recognizers/c1-xlmr-cpu/`) |
+| `runs/local/weights/mdeberta-v3-base-xnli-2mil7/` | 0.6 GB | The multilingual NLI model E15 starts from (zero-shot rows of E15) | Re-running E15 zero-shot or re-training `c1-mdeberta-mix` |
 | `runs/local/c1-return/registry/encoder-bb7895c0…/` | 1.1 GB | C1 packaged in the encoder-return format the feedback page's sentence-level model suggestions load | That one feedback-page column; the other entry `encoder-65dbaea3…` is stale and can be left out |
 | `data/annotation/v2-pilot/` | 0.4 MB | Two-annotator sheet for 100 controlled items (human annotation still pending) | Reference only |
 | `data/external-samples/` | 0.6 MB | The 10-06 hand-written drafts, now in `_superseded/` and `_reference/` with a README each | Reference only |
 | `demo/` | 2 MB | Eight pre-recorded demo sessions (in git already) | The demo |
-| `experiments/recognition/results/` | small | All experiment results E1–E13 as JSON (in git already) | The report's numbers |
+| `experiments/recognition/results/` | small | All experiment results E1–E15 as JSON (in git already) | The report's numbers |
 
 Do **not** pack: `ds.txt` and `openai.txt` at the repository root (API keys), `runs/local/data/`
 and `runs/local/dev/` (local server databases and logs), `runs/local/cache/` (recomputable
@@ -113,11 +114,12 @@ written for this project; synthetic text was generated with DeepSeek (`deepseek-
 | `retrieval-e5/` | C2 retrieval, C4 embeddings | `intfloat/multilingual-e5-small`, unchanged | – (pretrained) | 470 MB |
 | `scope-mahalanobis-v1/` | C4 scope | Ledoit-Wolf mean and precision per language and scope setting | KB units + paraphrases-v1 | 5 MB |
 | `intent-tfidf-lr-v1/` | C11 intent | TF-IDF character 2–4 grams + logistic regression | intent-v1 train + dev | 2 MB |
+| `c1-mdeberta-mix/` | Relation pair classifier (E15 experiment, not registered, not used by the product yet) | mDeBERTa-v3 multilingual NLI cross-encoder fine-tuned 1 epoch | relation-v3 train + 6,000 sampled ContractNLI / VitaminC / CFEVER train claims | 1.1 GB |
 | `behavior-v1/` | C5 behaviour | DTW reference medoids and the phase HMM | trajectories-v1 | 20 KB |
 | `manifest.json` | – | Registry of the entries above with SHA-256 | – | – |
 
-Pretrained models: `FacebookAI/xlm-roberta-base` (MIT) and `intfloat/multilingual-e5-small`
-(MIT). The judge, role and assistant slots call DeepSeek over its API; no LLM weights are
+Pretrained models: `FacebookAI/xlm-roberta-base` (MIT), `intfloat/multilingual-e5-small`
+(MIT) and `MoritzLaurer/mDeBERTa-v3-base-xnli-multilingual-nli-2mil7` (MIT, revision `b5113eb`). The judge, role and assistant slots call DeepSeek over its API; no LLM weights are
 shipped.
 
 To switch recognition on after unpacking, set `CAREER_LAB_RECOGNIZERS=<repo>/runs/local/recognizers`
