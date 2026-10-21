@@ -1,0 +1,1118 @@
+{
+  "limit": 300,
+  "datasets": {
+    "ragtruth": {
+      "product": {
+        "replies": 300,
+        "sentences": 2211,
+        "gold": {
+          "grounded": 1953,
+          "conflict": 77,
+          "baseless": 181
+        },
+        "predicted": {
+          "supported": 1529,
+          "insufficient": 591,
+          "contradicted": 91
+        },
+        "fallback_share": 0.0,
+        "three_class": {
+          "n": 2211,
+          "accuracy": 0.61917684305744,
+          "macro_f1": 0.28806589304769437,
+          "per_class": {
+            "supported": {
+              "precision": 0.8731196860693263,
+              "recall": 0.6835637480798771,
+              "f1": 0.7668006892590465,
+              "support": 1953
+            },
+            "contradicted": {
+              "precision": 0.01098901098901099,
+              "recall": 0.012987012987012988,
+              "f1": 0.011904761904761906,
+              "support": 77
+            },
+            "insufficient": {
+              "precision": 0.05583756345177665,
+              "recall": 0.18232044198895028,
+              "f1": 0.08549222797927461,
+              "support": 181
+            }
+          },
+          "confusion": [
+            [
+              1335,
+              81,
+              537
+            ],
+            [
+              55,
+              1,
+              21
+            ],
+            [
+              139,
+              9,
+              33
+            ]
+          ]
+        },
+        "not_grounded": {
+          "precision": 0.093841642228739,
+          "recall": 0.24806201550387597,
+          "f1": 0.13617021276595745,
+          "positives": 258,
+          "flagged": 682,
+          "n": 2211,
+          "auroc": 0.4618089046071042
+        },
+        "reply_level": {
+          "precision": 0.5170731707317073,
+          "recall": 0.7066666666666667,
+          "f1": 0.5971830985915494,
+          "positives": 150,
+          "flagged": 205,
+          "n": 300,
+          "auroc": 0.5583999999999999
+        },
+        "splitter_agreement": 1.0,
+        "by_task_type": {
+          "Data2txt": {
+            "replies": 100,
+            "sentences": 935,
+            "gold": {
+              "grounded": 850,
+              "conflict": 40,
+              "baseless": 45
+            },
+            "predicted": {
+              "supported": 458,
+              "insufficient": 454,
+              "contradicted": 23
+            },
+            "fallback_share": 0.0,
+            "three_class": {
+              "n": 935,
+              "accuracy": 0.4588235294117647,
+              "macro_f1": 0.24442686645073067,
+              "per_class": {
+                "supported": {
+                  "precision": 0.8930131004366813,
+                  "recall": 0.4811764705882353,
+                  "f1": 0.6253822629969419,
+                  "support": 850
+                },
+                "contradicted": {
+                  "precision": 0.043478260869565216,
+                  "recall": 0.025,
+                  "f1": 0.03174603174603175,
+                  "support": 40
+                },
+                "insufficient": {
+                  "precision": 0.04185022026431718,
+                  "recall": 0.4222222222222222,
+                  "f1": 0.07615230460921843,
+                  "support": 45
+                }
+              },
+              "confusion": [
+                [
+                  409,
+                  21,
+                  420
+                ],
+                [
+                  24,
+                  1,
+                  15
+                ],
+                [
+                  25,
+                  1,
+                  19
+                ]
+              ]
+            },
+            "not_grounded": {
+              "precision": 0.07547169811320754,
+              "recall": 0.4235294117647059,
+              "f1": 0.1281138790035587,
+              "positives": 85,
+              "flagged": 477,
+              "n": 935,
+              "auroc": 0.4569688581314879
+            },
+            "reply_level": {
+              "precision": 0.4948453608247423,
+              "recall": 0.96,
+              "f1": 0.6530612244897959,
+              "positives": 50,
+              "flagged": 97,
+              "n": 100,
+              "auroc": 0.4684
+            }
+          },
+          "QA": {
+            "replies": 100,
+            "sentences": 757,
+            "gold": {
+              "grounded": 645,
+              "baseless": 104,
+              "conflict": 8
+            },
+            "predicted": {
+              "supported": 643,
+              "insufficient": 73,
+              "contradicted": 41
+            },
+            "fallback_share": 0.0,
+            "three_class": {
+              "n": 757,
+              "accuracy": 0.7344782034346103,
+              "macro_f1": 0.3137757190815407,
+              "per_class": {
+                "supported": {
+                  "precision": 0.8522550544323484,
+                  "recall": 0.8496124031007752,
+                  "f1": 0.8509316770186336,
+                  "support": 645
+                },
+                "contradicted": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 8
+                },
+                "insufficient": {
+                  "precision": 0.1095890410958904,
+                  "recall": 0.07692307692307693,
+                  "f1": 0.0903954802259887,
+                  "support": 104
+                }
+              },
+              "confusion": [
+                [
+                  548,
+                  34,
+                  63
+                ],
+                [
+                  6,
+                  0,
+                  2
+                ],
+                [
+                  89,
+                  7,
+                  8
+                ]
+              ]
+            },
+            "not_grounded": {
+              "precision": 0.14912280701754385,
+              "recall": 0.15178571428571427,
+              "f1": 0.15044247787610618,
+              "positives": 112,
+              "flagged": 114,
+              "n": 757,
+              "auroc": 0.5013635105204872
+            },
+            "reply_level": {
+              "precision": 0.6,
+              "recall": 0.6,
+              "f1": 0.6,
+              "positives": 50,
+              "flagged": 50,
+              "n": 100,
+              "auroc": 0.6476
+            }
+          },
+          "Summary": {
+            "replies": 100,
+            "sentences": 519,
+            "gold": {
+              "grounded": 458,
+              "conflict": 29,
+              "baseless": 32
+            },
+            "predicted": {
+              "supported": 428,
+              "insufficient": 64,
+              "contradicted": 27
+            },
+            "fallback_share": 0.0,
+            "three_class": {
+              "n": 519,
+              "accuracy": 0.7398843930635838,
+              "macro_f1": 0.3260910458991723,
+              "per_class": {
+                "supported": {
+                  "precision": 0.883177570093458,
+                  "recall": 0.8253275109170306,
+                  "f1": 0.8532731376975169,
+                  "support": 458
+                },
+                "contradicted": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 29
+                },
+                "insufficient": {
+                  "precision": 0.09375,
+                  "recall": 0.1875,
+                  "f1": 0.125,
+                  "support": 32
+                }
+              },
+              "confusion": [
+                [
+                  378,
+                  26,
+                  54
+                ],
+                [
+                  25,
+                  0,
+                  4
+                ],
+                [
+                  25,
+                  1,
+                  6
+                ]
+              ]
+            },
+            "not_grounded": {
+              "precision": 0.12087912087912088,
+              "recall": 0.18032786885245902,
+              "f1": 0.1447368421052632,
+              "positives": 61,
+              "flagged": 91,
+              "n": 519,
+              "auroc": 0.5217266805068366
+            },
+            "reply_level": {
+              "precision": 0.4827586206896552,
+              "recall": 0.56,
+              "f1": 0.5185185185185185,
+              "positives": 50,
+              "flagged": 58,
+              "n": 100,
+              "auroc": 0.5592000000000001
+            }
+          }
+        }
+      },
+      "rule_fallback": {
+        "replies": 300,
+        "sentences": 2211,
+        "gold": {
+          "grounded": 1953,
+          "conflict": 77,
+          "baseless": 181
+        },
+        "predicted": {
+          "insufficient": 1993,
+          "supported": 218
+        },
+        "fallback_share": 1.0,
+        "three_class": {
+          "n": 2211,
+          "accuracy": 0.17639077340569878,
+          "macro_f1": 0.11968462763101635,
+          "per_class": {
+            "supported": {
+              "precision": 0.9678899082568807,
+              "recall": 0.1080389144905274,
+              "f1": 0.1943804698295716,
+              "support": 1953
+            },
+            "contradicted": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "support": 77
+            },
+            "insufficient": {
+              "precision": 0.08981435022579026,
+              "recall": 0.988950276243094,
+              "f1": 0.16467341306347746,
+              "support": 181
+            }
+          },
+          "confusion": [
+            [
+              211,
+              0,
+              1742
+            ],
+            [
+              5,
+              0,
+              72
+            ],
+            [
+              2,
+              0,
+              179
+            ]
+          ]
+        },
+        "not_grounded": {
+          "precision": 0.12594079277471149,
+          "recall": 0.9728682170542635,
+          "f1": 0.22301199466903593,
+          "positives": 258,
+          "flagged": 1993,
+          "n": 2211,
+          "auroc": 0.5404456272798358
+        },
+        "reply_level": {
+          "precision": 0.5,
+          "recall": 1.0,
+          "f1": 0.6666666666666666,
+          "positives": 150,
+          "flagged": 300,
+          "n": 300,
+          "auroc": 0.5
+        },
+        "splitter_agreement": 1.0,
+        "by_task_type": {
+          "Data2txt": {
+            "replies": 100,
+            "sentences": 935,
+            "gold": {
+              "grounded": 850,
+              "conflict": 40,
+              "baseless": 45
+            },
+            "predicted": {
+              "insufficient": 910,
+              "supported": 25
+            },
+            "fallback_share": 1.0,
+            "three_class": {
+              "n": 935,
+              "accuracy": 0.0748663101604278,
+              "macro_f1": 0.050461231613064074,
+              "per_class": {
+                "supported": {
+                  "precision": 1.0,
+                  "recall": 0.029411764705882353,
+                  "f1": 0.05714285714285715,
+                  "support": 850
+                },
+                "contradicted": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 40
+                },
+                "insufficient": {
+                  "precision": 0.04945054945054945,
+                  "recall": 1.0,
+                  "f1": 0.09424083769633507,
+                  "support": 45
+                }
+              },
+              "confusion": [
+                [
+                  25,
+                  0,
+                  825
+                ],
+                [
+                  0,
+                  0,
+                  40
+                ],
+                [
+                  0,
+                  0,
+                  45
+                ]
+              ]
+            },
+            "not_grounded": {
+              "precision": 0.09340659340659341,
+              "recall": 1.0,
+              "f1": 0.1708542713567839,
+              "positives": 85,
+              "flagged": 910,
+              "n": 935,
+              "auroc": 0.5147058823529411
+            },
+            "reply_level": {
+              "precision": 0.5,
+              "recall": 1.0,
+              "f1": 0.6666666666666666,
+              "positives": 50,
+              "flagged": 100,
+              "n": 100,
+              "auroc": 0.5
+            }
+          },
+          "QA": {
+            "replies": 100,
+            "sentences": 757,
+            "gold": {
+              "grounded": 645,
+              "baseless": 104,
+              "conflict": 8
+            },
+            "predicted": {
+              "insufficient": 606,
+              "supported": 151
+            },
+            "fallback_share": 1.0,
+            "three_class": {
+              "n": 757,
+              "accuracy": 0.3289299867899604,
+              "macro_f1": 0.21889022577677117,
+              "per_class": {
+                "supported": {
+                  "precision": 0.9735099337748344,
+                  "recall": 0.22790697674418606,
+                  "f1": 0.3693467336683417,
+                  "support": 645
+                },
+                "contradicted": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 8
+                },
+                "insufficient": {
+                  "precision": 0.16831683168316833,
+                  "recall": 0.9807692307692307,
+                  "f1": 0.28732394366197184,
+                  "support": 104
+                }
+              },
+              "confusion": [
+                [
+                  147,
+                  0,
+                  498
+                ],
+                [
+                  2,
+                  0,
+                  6
+                ],
+                [
+                  2,
+                  0,
+                  102
+                ]
+              ]
+            },
+            "not_grounded": {
+              "precision": 0.1782178217821782,
+              "recall": 0.9642857142857143,
+              "f1": 0.30083565459610023,
+              "positives": 112,
+              "flagged": 606,
+              "n": 757,
+              "auroc": 0.5965877630121816
+            },
+            "reply_level": {
+              "precision": 0.5,
+              "recall": 1.0,
+              "f1": 0.6666666666666666,
+              "positives": 50,
+              "flagged": 100,
+              "n": 100,
+              "auroc": 0.5
+            }
+          },
+          "Summary": {
+            "replies": 100,
+            "sentences": 519,
+            "gold": {
+              "grounded": 458,
+              "conflict": 29,
+              "baseless": 32
+            },
+            "predicted": {
+              "insufficient": 477,
+              "supported": 42
+            },
+            "fallback_share": 1.0,
+            "three_class": {
+              "n": 519,
+              "accuracy": 0.13680154142581888,
+              "macro_f1": 0.09391224623444662,
+              "per_class": {
+                "supported": {
+                  "precision": 0.9285714285714286,
+                  "recall": 0.0851528384279476,
+                  "f1": 0.156,
+                  "support": 458
+                },
+                "contradicted": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 29
+                },
+                "insufficient": {
+                  "precision": 0.06708595387840671,
+                  "recall": 1.0,
+                  "f1": 0.12573673870333987,
+                  "support": 32
+                }
+              },
+              "confusion": [
+                [
+                  39,
+                  0,
+                  419
+                ],
+                [
+                  3,
+                  0,
+                  26
+                ],
+                [
+                  0,
+                  0,
+                  32
+                ]
+              ]
+            },
+            "not_grounded": {
+              "precision": 0.12159329140461216,
+              "recall": 0.9508196721311475,
+              "f1": 0.21561338289962828,
+              "positives": 61,
+              "flagged": 477,
+              "n": 519,
+              "auroc": 0.5176820101653662
+            },
+            "reply_level": {
+              "precision": 0.5,
+              "recall": 1.0,
+              "f1": 0.6666666666666666,
+              "positives": 50,
+              "flagged": 100,
+              "n": 100,
+              "auroc": 0.5
+            }
+          }
+        }
+      }
+    },
+    "synth": {
+      "product": {
+        "replies": 122,
+        "sentences": 546,
+        "gold": {
+          "grounded": 309,
+          "baseless": 84,
+          "leak": 62,
+          "conflict": 91
+        },
+        "predicted": {
+          "insufficient": 196,
+          "supported": 288,
+          "contradicted": 62
+        },
+        "fallback_share": 0.0,
+        "three_class": {
+          "n": 484,
+          "accuracy": 0.762396694214876,
+          "macro_f1": 0.7053589991052523,
+          "per_class": {
+            "supported": {
+              "precision": 0.9,
+              "recall": 0.7864077669902912,
+              "f1": 0.8393782383419689,
+              "support": 309
+            },
+            "contradicted": {
+              "precision": 0.75,
+              "recall": 0.4945054945054945,
+              "f1": 0.5960264900662252,
+              "support": 91
+            },
+            "insufficient": {
+              "precision": 0.525974025974026,
+              "recall": 0.9642857142857143,
+              "f1": 0.680672268907563,
+              "support": 84
+            }
+          },
+          "confusion": [
+            [
+              243,
+              15,
+              51
+            ],
+            [
+              24,
+              45,
+              22
+            ],
+            [
+              3,
+              0,
+              81
+            ]
+          ]
+        },
+        "not_grounded": {
+          "precision": 0.7441860465116279,
+          "recall": 0.810126582278481,
+          "f1": 0.7757575757575758,
+          "positives": 237,
+          "flagged": 258,
+          "n": 546,
+          "auroc": 0.8236723881310338
+        },
+        "reply_level": {
+          "precision": 1.0,
+          "recall": 0.9508196721311475,
+          "f1": 0.9747899159663865,
+          "positives": 122,
+          "flagged": 116,
+          "n": 122,
+          "auroc": null
+        },
+        "leak": {
+          "precision": 0.9534883720930233,
+          "recall": 0.6612903225806451,
+          "f1": 0.780952380952381,
+          "positives": 62,
+          "flagged": 43,
+          "n": 546
+        },
+        "splitter_agreement": 0.7295081967213115,
+        "by_language": {
+          "en": {
+            "replies": 59,
+            "sentences": 274,
+            "gold": {
+              "grounded": 153,
+              "conflict": 50,
+              "baseless": 40,
+              "leak": 31
+            },
+            "predicted": {
+              "insufficient": 91,
+              "supported": 155,
+              "contradicted": 28
+            },
+            "fallback_share": 0.0,
+            "three_class": {
+              "n": 243,
+              "accuracy": 0.7654320987654321,
+              "macro_f1": 0.7002542308519115,
+              "per_class": {
+                "supported": {
+                  "precision": 0.8873239436619719,
+                  "recall": 0.8235294117647058,
+                  "f1": 0.8542372881355933,
+                  "support": 153
+                },
+                "contradicted": {
+                  "precision": 0.8518518518518519,
+                  "recall": 0.46,
+                  "f1": 0.5974025974025975,
+                  "support": 50
+                },
+                "insufficient": {
+                  "precision": 0.5,
+                  "recall": 0.925,
+                  "f1": 0.6491228070175439,
+                  "support": 40
+                }
+              },
+              "confusion": [
+                [
+                  126,
+                  4,
+                  23
+                ],
+                [
+                  13,
+                  23,
+                  14
+                ],
+                [
+                  3,
+                  0,
+                  37
+                ]
+              ]
+            },
+            "not_grounded": {
+              "precision": 0.773109243697479,
+              "recall": 0.7603305785123967,
+              "f1": 0.7666666666666667,
+              "positives": 121,
+              "flagged": 119,
+              "n": 274,
+              "auroc": 0.8148868362772106
+            },
+            "reply_level": {
+              "precision": 1.0,
+              "recall": 0.9491525423728814,
+              "f1": 0.9739130434782608,
+              "positives": 59,
+              "flagged": 56,
+              "n": 59,
+              "auroc": null
+            },
+            "leak": {
+              "precision": 0.9473684210526315,
+              "recall": 0.5806451612903226,
+              "f1": 0.72,
+              "positives": 31,
+              "flagged": 19,
+              "n": 274
+            }
+          },
+          "zh": {
+            "replies": 63,
+            "sentences": 272,
+            "gold": {
+              "grounded": 156,
+              "baseless": 44,
+              "leak": 31,
+              "conflict": 41
+            },
+            "predicted": {
+              "insufficient": 105,
+              "supported": 133,
+              "contradicted": 34
+            },
+            "fallback_share": 0.0,
+            "three_class": {
+              "n": 241,
+              "accuracy": 0.7593360995850622,
+              "macro_f1": 0.709405225307088,
+              "per_class": {
+                "supported": {
+                  "precision": 0.9140625,
+                  "recall": 0.75,
+                  "f1": 0.823943661971831,
+                  "support": 156
+                },
+                "contradicted": {
+                  "precision": 0.6666666666666666,
+                  "recall": 0.5365853658536586,
+                  "f1": 0.5945945945945946,
+                  "support": 41
+                },
+                "insufficient": {
+                  "precision": 0.55,
+                  "recall": 1.0,
+                  "f1": 0.7096774193548387,
+                  "support": 44
+                }
+              },
+              "confusion": [
+                [
+                  117,
+                  11,
+                  28
+                ],
+                [
+                  11,
+                  22,
+                  8
+                ],
+                [
+                  0,
+                  0,
+                  44
+                ]
+              ]
+            },
+            "not_grounded": {
+              "precision": 0.7194244604316546,
+              "recall": 0.8620689655172413,
+              "f1": 0.7843137254901961,
+              "positives": 116,
+              "flagged": 139,
+              "n": 272,
+              "auroc": 0.8474248452696729
+            },
+            "reply_level": {
+              "precision": 1.0,
+              "recall": 0.9523809523809523,
+              "f1": 0.975609756097561,
+              "positives": 63,
+              "flagged": 60,
+              "n": 63,
+              "auroc": null
+            },
+            "leak": {
+              "precision": 0.9583333333333334,
+              "recall": 0.7419354838709677,
+              "f1": 0.8363636363636364,
+              "positives": 31,
+              "flagged": 24,
+              "n": 272
+            }
+          }
+        }
+      },
+      "rule_fallback": {
+        "replies": 122,
+        "sentences": 546,
+        "gold": {
+          "grounded": 309,
+          "baseless": 84,
+          "leak": 62,
+          "conflict": 91
+        },
+        "predicted": {
+          "insufficient": 438,
+          "supported": 108
+        },
+        "fallback_share": 1.0,
+        "three_class": {
+          "n": 484,
+          "accuracy": 0.36363636363636365,
+          "macro_f1": 0.26882146456747646,
+          "per_class": {
+            "supported": {
+              "precision": 0.8518518518518519,
+              "recall": 0.2977346278317152,
+              "f1": 0.44124700239808157,
+              "support": 309
+            },
+            "contradicted": {
+              "precision": 0.0,
+              "recall": 0.0,
+              "f1": 0.0,
+              "support": 91
+            },
+            "insufficient": {
+              "precision": 0.22340425531914893,
+              "recall": 1.0,
+              "f1": 0.3652173913043478,
+              "support": 84
+            }
+          },
+          "confusion": [
+            [
+              92,
+              0,
+              217
+            ],
+            [
+              16,
+              0,
+              75
+            ],
+            [
+              0,
+              0,
+              84
+            ]
+          ]
+        },
+        "not_grounded": {
+          "precision": 0.5045662100456622,
+          "recall": 0.9324894514767933,
+          "f1": 0.6548148148148148,
+          "positives": 237,
+          "flagged": 438,
+          "n": 546,
+          "auroc": 0.6155080359947019
+        },
+        "reply_level": {
+          "precision": 1.0,
+          "recall": 0.9918032786885246,
+          "f1": 0.9958847736625513,
+          "positives": 122,
+          "flagged": 121,
+          "n": 122,
+          "auroc": null
+        },
+        "leak": {
+          "precision": 0.9649122807017544,
+          "recall": 0.8870967741935484,
+          "f1": 0.9243697478991597,
+          "positives": 62,
+          "flagged": 57,
+          "n": 546
+        },
+        "splitter_agreement": 0.7295081967213115,
+        "by_language": {
+          "en": {
+            "replies": 59,
+            "sentences": 274,
+            "gold": {
+              "grounded": 153,
+              "conflict": 50,
+              "baseless": 40,
+              "leak": 31
+            },
+            "predicted": {
+              "insufficient": 225,
+              "supported": 49
+            },
+            "fallback_share": 1.0,
+            "three_class": {
+              "n": 243,
+              "accuracy": 0.3333333333333333,
+              "macro_f1": 0.24927364531324928,
+              "per_class": {
+                "supported": {
+                  "precision": 0.8367346938775511,
+                  "recall": 0.2679738562091503,
+                  "f1": 0.40594059405940597,
+                  "support": 153
+                },
+                "contradicted": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 50
+                },
+                "insufficient": {
+                  "precision": 0.20618556701030927,
+                  "recall": 1.0,
+                  "f1": 0.3418803418803419,
+                  "support": 40
+                }
+              },
+              "confusion": [
+                [
+                  41,
+                  0,
+                  112
+                ],
+                [
+                  8,
+                  0,
+                  42
+                ],
+                [
+                  0,
+                  0,
+                  40
+                ]
+              ]
+            },
+            "not_grounded": {
+              "precision": 0.5022222222222222,
+              "recall": 0.9338842975206612,
+              "f1": 0.653179190751445,
+              "positives": 121,
+              "flagged": 225,
+              "n": 274,
+              "auroc": 0.6003348998001404
+            },
+            "reply_level": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "positives": 59,
+              "flagged": 59,
+              "n": 59,
+              "auroc": null
+            },
+            "leak": {
+              "precision": 1.0,
+              "recall": 1.0,
+              "f1": 1.0,
+              "positives": 31,
+              "flagged": 31,
+              "n": 274
+            }
+          },
+          "zh": {
+            "replies": 63,
+            "sentences": 272,
+            "gold": {
+              "grounded": 156,
+              "baseless": 44,
+              "leak": 31,
+              "conflict": 41
+            },
+            "predicted": {
+              "insufficient": 213,
+              "supported": 59
+            },
+            "fallback_share": 1.0,
+            "three_class": {
+              "n": 241,
+              "accuracy": 0.3941908713692946,
+              "macro_f1": 0.2879330452082047,
+              "per_class": {
+                "supported": {
+                  "precision": 0.864406779661017,
+                  "recall": 0.3269230769230769,
+                  "f1": 0.47441860465116276,
+                  "support": 156
+                },
+                "contradicted": {
+                  "precision": 0.0,
+                  "recall": 0.0,
+                  "f1": 0.0,
+                  "support": 41
+                },
+                "insufficient": {
+                  "precision": 0.24175824175824176,
+                  "recall": 1.0,
+                  "f1": 0.3893805309734513,
+                  "support": 44
+                }
+              },
+              "confusion": [
+                [
+                  51,
+                  0,
+                  105
+                ],
+                [
+                  8,
+                  0,
+                  33
+                ],
+                [
+                  0,
+                  0,
+                  44
+                ]
+              ]
+            },
+            "not_grounded": {
+              "precision": 0.5070422535211268,
+              "recall": 0.9310344827586207,
+              "f1": 0.6565349544072948,
+              "positives": 116,
+              "flagged": 213,
+              "n": 272,
+              "auroc": 0.6296419098143236
+            },
+            "reply_level": {
+              "precision": 1.0,
+              "recall": 0.9841269841269841,
+              "f1": 0.9919999999999999,
+              "positives": 63,
+              "flagged": 62,
+              "n": 63,
+              "auroc": null
+            },
+            "leak": {
+              "precision": 0.9230769230769231,
+              "recall": 0.7741935483870968,
+              "f1": 0.8421052631578947,
+              "positives": 31,
+              "flagged": 26,
+              "n": 272
+            }
+          }
+        }
+      }
+    }
+  }
+}

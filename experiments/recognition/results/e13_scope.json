@@ -1,0 +1,788 @@
+{
+  "clinc150/en": {
+    "n_fit": 15000,
+    "classes": 150,
+    "n_test_in": 4500,
+    "n_test_all_out": 1000,
+    "methods": {
+      "mahalanobis": {
+        "all_out": {
+          "auroc": 0.8683259999999999,
+          "fpr_at_tpr95": 0.561
+        },
+        "dev_threshold": 1.3349831149043028,
+        "in_rejected_at_threshold": 0.05466666666666667,
+        "out_accepted_at_threshold": 0.546,
+        "accuracy_at_threshold": 0.856
+      },
+      "class_mahalanobis": {
+        "all_out": {
+          "auroc": 0.927956,
+          "fpr_at_tpr95": 0.365
+        },
+        "dev_threshold": 1.4140966941292774,
+        "in_rejected_at_threshold": 0.052,
+        "out_accepted_at_threshold": 0.358,
+        "accuracy_at_threshold": 0.8923636363636364
+      },
+      "max_softmax": {
+        "all_out": {
+          "auroc": 0.9559888888888888,
+          "fpr_at_tpr95": 0.228
+        },
+        "dev_threshold": -0.07707681506872177,
+        "in_rejected_at_threshold": 0.04711111111111111,
+        "out_accepted_at_threshold": 0.243,
+        "accuracy_at_threshold": 0.9172727272727272
+      },
+      "max_cosine": {
+        "all_out": {
+          "auroc": 0.9434705555555555,
+          "fpr_at_tpr95": 0.326
+        },
+        "dev_threshold": -0.8880634903907776,
+        "in_rejected_at_threshold": 0.05266666666666667,
+        "out_accepted_at_threshold": 0.316,
+        "accuracy_at_threshold": 0.8994545454545455
+      },
+      "kmeans_centroid": {
+        "all_out": {
+          "auroc": 0.7984042222222222,
+          "fpr_at_tpr95": 0.703
+        },
+        "dev_threshold": 0.4977450668811798,
+        "in_rejected_at_threshold": 0.060222222222222226,
+        "out_accepted_at_threshold": 0.67,
+        "accuracy_at_threshold": 0.8289090909090909
+      },
+      "gaussian_nb": {
+        "all_out": {
+          "auroc": 0.7134073333333333,
+          "fpr_at_tpr95": 0.815
+        },
+        "dev_threshold": -2407.87451171875,
+        "in_rejected_at_threshold": 0.06,
+        "out_accepted_at_threshold": 0.793,
+        "accuracy_at_threshold": 0.8067272727272727
+      },
+      "autoencoder": {
+        "all_out": {
+          "auroc": 0.8010693333333333,
+          "fpr_at_tpr95": 0.692
+        },
+        "dev_threshold": 0.2186850607395172,
+        "in_rejected_at_threshold": 0.057555555555555554,
+        "out_accepted_at_threshold": 0.665,
+        "accuracy_at_threshold": 0.832
+      },
+      "one_class_svm": {
+        "all_out": {
+          "auroc": 0.7127193333333334,
+          "fpr_at_tpr95": 0.788
+        },
+        "dev_threshold": -178.79778327788645,
+        "in_rejected_at_threshold": 0.059111111111111114,
+        "out_accepted_at_threshold": 0.765,
+        "accuracy_at_threshold": 0.8125454545454546
+      },
+      "isolation_forest": {
+        "all_out": {
+          "auroc": 0.6885997777777778,
+          "fpr_at_tpr95": 0.792
+        },
+        "dev_threshold": 0.46323181011968173,
+        "in_rejected_at_threshold": 0.05377777777777778,
+        "out_accepted_at_threshold": 0.782,
+        "accuracy_at_threshold": 0.8138181818181818
+      }
+    }
+  },
+  "massive/zh": {
+    "n_fit": 3972,
+    "classes": 15,
+    "n_test_in": 1014,
+    "n_test_all_out": 1960,
+    "n_test_out_near": 1483,
+    "n_test_out_far": 477,
+    "methods": {
+      "mahalanobis": {
+        "all_out": {
+          "auroc": 0.9612919132149902,
+          "fpr_at_tpr95": 0.2316326530612245
+        },
+        "out_near": {
+          "auroc": 0.9588385662092804,
+          "fpr_at_tpr95": 0.2521915037086986
+        },
+        "out_far": {
+          "auroc": 0.9689194050587375,
+          "fpr_at_tpr95": 0.16771488469601678
+        },
+        "dev_threshold": 1.5272581916048242,
+        "in_rejected_at_threshold": 0.04339250493096647,
+        "out_accepted_at_threshold": 0.24183673469387756,
+        "accuracy_at_threshold": 0.8258238063214526
+      },
+      "class_mahalanobis": {
+        "all_out": {
+          "auroc": 0.9634258141126273,
+          "fpr_at_tpr95": 0.2096938775510204
+        },
+        "out_near": {
+          "auroc": 0.961245197045809,
+          "fpr_at_tpr95": 0.2265677680377613
+        },
+        "out_far": {
+          "auroc": 0.9702053845740347,
+          "fpr_at_tpr95": 0.15723270440251572
+        },
+        "dev_threshold": 1.48575925865548,
+        "in_rejected_at_threshold": 0.04930966469428008,
+        "out_accepted_at_threshold": 0.21581632653061225,
+        "accuracy_at_threshold": 0.8409549428379287
+      },
+      "max_softmax": {
+        "all_out": {
+          "auroc": 0.9063674878235319,
+          "fpr_at_tpr95": 0.45510204081632655
+        },
+        "out_near": {
+          "auroc": 0.9098367959823429,
+          "fpr_at_tpr95": 0.42953472690492245
+        },
+        "out_far": {
+          "auroc": 0.8955813578455087,
+          "fpr_at_tpr95": 0.5345911949685535
+        },
+        "dev_threshold": -0.24696004390716553,
+        "in_rejected_at_threshold": 0.03944773175542406,
+        "out_accepted_at_threshold": 0.5127551020408163,
+        "accuracy_at_threshold": 0.64862138533961
+      },
+      "max_cosine": {
+        "all_out": {
+          "auroc": 0.9645347784084048,
+          "fpr_at_tpr95": 0.18214285714285713
+        },
+        "out_near": {
+          "auroc": 0.9610653148570054,
+          "fpr_at_tpr95": 0.20364126770060686
+        },
+        "out_far": {
+          "auroc": 0.9753213915042653,
+          "fpr_at_tpr95": 0.11530398322851153
+        },
+        "dev_threshold": -0.9212038516998291,
+        "in_rejected_at_threshold": 0.04930966469428008,
+        "out_accepted_at_threshold": 0.19285714285714287,
+        "accuracy_at_threshold": 0.8560860793544048
+      },
+      "kmeans_centroid": {
+        "all_out": {
+          "auroc": 0.9552776436018194,
+          "fpr_at_tpr95": 0.2642857142857143
+        },
+        "out_near": {
+          "auroc": 0.9532505808764952,
+          "fpr_at_tpr95": 0.28927848954821306
+        },
+        "out_far": {
+          "auroc": 0.9615798113621045,
+          "fpr_at_tpr95": 0.18658280922431866
+        },
+        "dev_threshold": 0.40038543939590454,
+        "in_rejected_at_threshold": 0.0611439842209073,
+        "out_accepted_at_threshold": 0.23979591836734693,
+        "accuracy_at_threshold": 0.8211163416274377
+      },
+      "gaussian_nb": {
+        "all_out": {
+          "auroc": 0.8975131324719238,
+          "fpr_at_tpr95": 0.45816326530612245
+        },
+        "out_near": {
+          "auroc": 0.8896411134208737,
+          "fpr_at_tpr95": 0.5165205664194201
+        },
+        "out_far": {
+          "auroc": 0.9219873552239299,
+          "fpr_at_tpr95": 0.27672955974842767
+        },
+        "dev_threshold": -2581.08349609375,
+        "in_rejected_at_threshold": 0.0670611439842209,
+        "out_accepted_at_threshold": 0.4086734693877551,
+        "accuracy_at_threshold": 0.7078009414929388
+      },
+      "autoencoder": {
+        "all_out": {
+          "auroc": 0.9238387070804653,
+          "fpr_at_tpr95": 0.4035714285714286
+        },
+        "out_near": {
+          "auroc": 0.9184312411139529,
+          "fpr_at_tpr95": 0.4605529332434255
+        },
+        "out_far": {
+          "auroc": 0.940650598125199,
+          "fpr_at_tpr95": 0.22641509433962265
+        },
+        "dev_threshold": 0.17636778950691223,
+        "in_rejected_at_threshold": 0.0641025641025641,
+        "out_accepted_at_threshold": 0.34591836734693876,
+        "accuracy_at_threshold": 0.7501681237390719
+      },
+      "one_class_svm": {
+        "all_out": {
+          "auroc": 0.8724565269894939,
+          "fpr_at_tpr95": 0.5127551020408163
+        },
+        "out_near": {
+          "auroc": 0.8603755115503651,
+          "fpr_at_tpr95": 0.5758597437626433
+        },
+        "out_far": {
+          "auroc": 0.9100165812792809,
+          "fpr_at_tpr95": 0.3165618448637317
+        },
+        "dev_threshold": -212.53134455004843,
+        "in_rejected_at_threshold": 0.0621301775147929,
+        "out_accepted_at_threshold": 0.4596938775510204,
+        "accuracy_at_threshold": 0.675857431069267
+      },
+      "isolation_forest": {
+        "all_out": {
+          "auroc": 0.8739262568932898,
+          "fpr_at_tpr95": 0.5530612244897959
+        },
+        "out_near": {
+          "auroc": 0.8594897330827618,
+          "fpr_at_tpr95": 0.6169925826028321
+        },
+        "out_far": {
+          "auroc": 0.9188096212769652,
+          "fpr_at_tpr95": 0.35429769392033544
+        },
+        "dev_threshold": 0.4701888440039983,
+        "in_rejected_at_threshold": 0.045364891518737675,
+        "out_accepted_at_threshold": 0.5693877551020409,
+        "accuracy_at_threshold": 0.609280430396772
+      }
+    }
+  },
+  "massive/en": {
+    "n_fit": 3972,
+    "classes": 15,
+    "n_test_in": 1014,
+    "n_test_all_out": 1960,
+    "n_test_out_near": 1483,
+    "n_test_out_far": 477,
+    "methods": {
+      "mahalanobis": {
+        "all_out": {
+          "auroc": 0.9403026003300728,
+          "fpr_at_tpr95": 0.373469387755102
+        },
+        "out_near": {
+          "auroc": 0.9363769000679628,
+          "fpr_at_tpr95": 0.40728253540121373
+        },
+        "out_far": {
+          "auroc": 0.9525076600548299,
+          "fpr_at_tpr95": 0.26834381551362685
+        },
+        "dev_threshold": 1.5317370632387926,
+        "in_rejected_at_threshold": 0.055226824457593686,
+        "out_accepted_at_threshold": 0.33214285714285713,
+        "accuracy_at_threshold": 0.7622730329522529
+      },
+      "class_mahalanobis": {
+        "all_out": {
+          "auroc": 0.9437683653342995,
+          "fpr_at_tpr95": 0.3433673469387755
+        },
+        "out_near": {
+          "auroc": 0.9403023882768684,
+          "fpr_at_tpr95": 0.3749157113958193
+        },
+        "out_far": {
+          "auroc": 0.9545441388692477,
+          "fpr_at_tpr95": 0.24528301886792453
+        },
+        "dev_threshold": 1.5101285972634964,
+        "in_rejected_at_threshold": 0.05818540433925049,
+        "out_accepted_at_threshold": 0.31785714285714284,
+        "accuracy_at_threshold": 0.7706792199058508
+      },
+      "max_softmax": {
+        "all_out": {
+          "auroc": 0.9052464476915025,
+          "fpr_at_tpr95": 0.42857142857142855
+        },
+        "out_near": {
+          "auroc": 0.900942436369585,
+          "fpr_at_tpr95": 0.4383007417397168
+        },
+        "out_far": {
+          "auroc": 0.9186276820529361,
+          "fpr_at_tpr95": 0.39832285115303984
+        },
+        "dev_threshold": -0.2771541476249695,
+        "in_rejected_at_threshold": 0.04930966469428008,
+        "out_accepted_at_threshold": 0.4326530612244898,
+        "accuracy_at_threshold": 0.6980497646267653
+      },
+      "max_cosine": {
+        "all_out": {
+          "auroc": 0.9508397737793343,
+          "fpr_at_tpr95": 0.2801020408163265
+        },
+        "out_near": {
+          "auroc": 0.945901678590096,
+          "fpr_at_tpr95": 0.3068105192178018
+        },
+        "out_far": {
+          "auroc": 0.9661923841894815,
+          "fpr_at_tpr95": 0.1970649895178197
+        },
+        "dev_threshold": -0.8896539211273193,
+        "in_rejected_at_threshold": 0.055226824457593686,
+        "out_accepted_at_threshold": 0.27040816326530615,
+        "accuracy_at_threshold": 0.8029589778076665
+      },
+      "kmeans_centroid": {
+        "all_out": {
+          "auroc": 0.9472799178843135,
+          "fpr_at_tpr95": 0.31479591836734694
+        },
+        "out_near": {
+          "auroc": 0.9438075972128569,
+          "fpr_at_tpr95": 0.3472690492245448
+        },
+        "out_far": {
+          "auroc": 0.95807541380836,
+          "fpr_at_tpr95": 0.2138364779874214
+        },
+        "dev_threshold": 0.4783641993999481,
+        "in_rejected_at_threshold": 0.04930966469428008,
+        "out_accepted_at_threshold": 0.3168367346938776,
+        "accuracy_at_threshold": 0.7743779421654338
+      },
+      "gaussian_nb": {
+        "all_out": {
+          "auroc": 0.8789739564464839,
+          "fpr_at_tpr95": 0.5346938775510204
+        },
+        "out_near": {
+          "auroc": 0.8702387744869201,
+          "fpr_at_tpr95": 0.5731625084288604
+        },
+        "out_far": {
+          "auroc": 0.9061317653480208,
+          "fpr_at_tpr95": 0.41509433962264153
+        },
+        "dev_threshold": -2439.48486328125,
+        "in_rejected_at_threshold": 0.05029585798816568,
+        "out_accepted_at_threshold": 0.5357142857142857,
+        "accuracy_at_threshold": 0.6297915265635508
+      },
+      "autoencoder": {
+        "all_out": {
+          "auroc": 0.9025369319325364,
+          "fpr_at_tpr95": 0.44540816326530613
+        },
+        "out_near": {
+          "auroc": 0.8947386621021145,
+          "fpr_at_tpr95": 0.48415374241402565
+        },
+        "out_far": {
+          "auroc": 0.9267818672753361,
+          "fpr_at_tpr95": 0.3249475890985325
+        },
+        "dev_threshold": 0.25247347354888916,
+        "in_rejected_at_threshold": 0.04437869822485207,
+        "out_accepted_at_threshold": 0.47908163265306125,
+        "accuracy_at_threshold": 0.6691324815063887
+      },
+      "one_class_svm": {
+        "all_out": {
+          "auroc": 0.8651174375075473,
+          "fpr_at_tpr95": 0.5015306122448979
+        },
+        "out_near": {
+          "auroc": 0.8548906010392603,
+          "fpr_at_tpr95": 0.5394470667565745
+        },
+        "out_far": {
+          "auroc": 0.8969128221668135,
+          "fpr_at_tpr95": 0.3836477987421384
+        },
+        "dev_threshold": -185.62439067949796,
+        "in_rejected_at_threshold": 0.047337278106508875,
+        "out_accepted_at_threshold": 0.5061224489795918,
+        "accuracy_at_threshold": 0.6503026227303296
+      },
+      "isolation_forest": {
+        "all_out": {
+          "auroc": 0.8143702451394759,
+          "fpr_at_tpr95": 0.7316326530612245
+        },
+        "out_near": {
+          "auroc": 0.7990639476193706,
+          "fpr_at_tpr95": 0.7761294672960216
+        },
+        "out_far": {
+          "auroc": 0.8619577487502016,
+          "fpr_at_tpr95": 0.5932914046121593
+        },
+        "dev_threshold": 0.4669130026609731,
+        "in_rejected_at_threshold": 0.05621301775147929,
+        "out_accepted_at_threshold": 0.713265306122449,
+        "accuracy_at_threshold": 0.5107599193006053
+      }
+    }
+  },
+  "queries-synth/zh": {
+    "n_fit": 1573,
+    "classes": 5,
+    "n_test_in": 152,
+    "n_test_all_out": 74,
+    "n_test_out_near": 48,
+    "n_test_out_far": 26,
+    "methods": {
+      "mahalanobis": {
+        "all_out": {
+          "auroc": 0.7699146514935988,
+          "fpr_at_tpr95": 0.7567567567567568
+        },
+        "out_near": {
+          "auroc": 0.6768092105263158,
+          "fpr_at_tpr95": 0.9375
+        },
+        "out_far": {
+          "auroc": 0.9418016194331984,
+          "fpr_at_tpr95": 0.4230769230769231
+        },
+        "dev_threshold": 1.412524232813365,
+        "in_rejected_at_threshold": 0.08552631578947369,
+        "out_accepted_at_threshold": 0.6351351351351351,
+        "accuracy_at_threshold": 0.7345132743362832
+      },
+      "class_mahalanobis": {
+        "all_out": {
+          "auroc": 0.7690256045519203,
+          "fpr_at_tpr95": 0.7432432432432432
+        },
+        "out_near": {
+          "auroc": 0.6755756578947368,
+          "fpr_at_tpr95": 0.9375
+        },
+        "out_far": {
+          "auroc": 0.9415485829959515,
+          "fpr_at_tpr95": 0.38461538461538464
+        },
+        "dev_threshold": 1.3403273789700587,
+        "in_rejected_at_threshold": 0.07894736842105263,
+        "out_accepted_at_threshold": 0.6621621621621622,
+        "accuracy_at_threshold": 0.7300884955752213
+      },
+      "max_softmax": {
+        "all_out": {
+          "auroc": 0.6670519203413939,
+          "fpr_at_tpr95": 0.918918918918919
+        },
+        "out_near": {
+          "auroc": 0.6071820175438596,
+          "fpr_at_tpr95": 0.9583333333333334
+        },
+        "out_far": {
+          "auroc": 0.777580971659919,
+          "fpr_at_tpr95": 0.8461538461538461
+        },
+        "dev_threshold": -0.4398230314254761,
+        "in_rejected_at_threshold": 0.1118421052631579,
+        "out_accepted_at_threshold": 0.8648648648648649,
+        "accuracy_at_threshold": 0.6415929203539823
+      },
+      "max_cosine": {
+        "all_out": {
+          "auroc": 0.8697546230440968,
+          "fpr_at_tpr95": 0.581081081081081
+        },
+        "out_near": {
+          "auroc": 0.8140076754385965,
+          "fpr_at_tpr95": 0.8125
+        },
+        "out_far": {
+          "auroc": 0.9726720647773279,
+          "fpr_at_tpr95": 0.15384615384615385
+        },
+        "dev_threshold": -0.9100110530853271,
+        "in_rejected_at_threshold": 0.05921052631578947,
+        "out_accepted_at_threshold": 0.527027027027027,
+        "accuracy_at_threshold": 0.7876106194690266
+      },
+      "kmeans_centroid": {
+        "all_out": {
+          "auroc": 0.7280405405405405,
+          "fpr_at_tpr95": 0.7567567567567568
+        },
+        "out_near": {
+          "auroc": 0.6119791666666667,
+          "fpr_at_tpr95": 0.9166666666666666
+        },
+        "out_far": {
+          "auroc": 0.9423076923076923,
+          "fpr_at_tpr95": 0.46153846153846156
+        },
+        "dev_threshold": 0.4225231409072876,
+        "in_rejected_at_threshold": 0.03289473684210526,
+        "out_accepted_at_threshold": 0.7972972972972973,
+        "accuracy_at_threshold": 0.7168141592920354
+      },
+      "gaussian_nb": {
+        "all_out": {
+          "auroc": 0.6295341394025604,
+          "fpr_at_tpr95": 0.7837837837837838
+        },
+        "out_near": {
+          "auroc": 0.48067434210526316,
+          "fpr_at_tpr95": 0.8958333333333334
+        },
+        "out_far": {
+          "auroc": 0.9043522267206479,
+          "fpr_at_tpr95": 0.5769230769230769
+        },
+        "dev_threshold": -2529.51904296875,
+        "in_rejected_at_threshold": 0.039473684210526314,
+        "out_accepted_at_threshold": 0.8378378378378378,
+        "accuracy_at_threshold": 0.6991150442477876
+      },
+      "autoencoder": {
+        "all_out": {
+          "auroc": 0.6283783783783784,
+          "fpr_at_tpr95": 0.7432432432432432
+        },
+        "out_near": {
+          "auroc": 0.47738486842105265,
+          "fpr_at_tpr95": 0.8958333333333334
+        },
+        "out_far": {
+          "auroc": 0.9071356275303644,
+          "fpr_at_tpr95": 0.46153846153846156
+        },
+        "dev_threshold": 0.2112356722354889,
+        "in_rejected_at_threshold": 0.02631578947368421,
+        "out_accepted_at_threshold": 0.8513513513513513,
+        "accuracy_at_threshold": 0.7035398230088495
+      },
+      "one_class_svm": {
+        "all_out": {
+          "auroc": 0.6753200568990042,
+          "fpr_at_tpr95": 0.6486486486486487
+        },
+        "out_near": {
+          "auroc": 0.5163103070175439,
+          "fpr_at_tpr95": 0.8958333333333334
+        },
+        "out_far": {
+          "auroc": 0.9688765182186234,
+          "fpr_at_tpr95": 0.19230769230769232
+        },
+        "dev_threshold": -108.07531098461492,
+        "in_rejected_at_threshold": 0.039473684210526314,
+        "out_accepted_at_threshold": 0.7027027027027027,
+        "accuracy_at_threshold": 0.7433628318584071
+      },
+      "isolation_forest": {
+        "all_out": {
+          "auroc": 0.5456970128022759,
+          "fpr_at_tpr95": 0.9054054054054054
+        },
+        "out_near": {
+          "auroc": 0.45627741228070173,
+          "fpr_at_tpr95": 0.9583333333333334
+        },
+        "out_far": {
+          "auroc": 0.7107793522267207,
+          "fpr_at_tpr95": 0.8076923076923077
+        },
+        "dev_threshold": 0.46980106490195545,
+        "in_rejected_at_threshold": 0.05921052631578947,
+        "out_accepted_at_threshold": 0.9054054054054054,
+        "accuracy_at_threshold": 0.6637168141592921
+      }
+    }
+  },
+  "queries-synth/en": {
+    "n_fit": 1511,
+    "classes": 5,
+    "n_test_in": 158,
+    "n_test_all_out": 80,
+    "n_test_out_near": 53,
+    "n_test_out_far": 27,
+    "methods": {
+      "mahalanobis": {
+        "all_out": {
+          "auroc": 0.8321993670886075,
+          "fpr_at_tpr95": 0.55
+        },
+        "out_near": {
+          "auroc": 0.7694053021256271,
+          "fpr_at_tpr95": 0.7169811320754716
+        },
+        "out_far": {
+          "auroc": 0.9554617909048289,
+          "fpr_at_tpr95": 0.2222222222222222
+        },
+        "dev_threshold": 1.4357052295879156,
+        "in_rejected_at_threshold": 0.13924050632911392,
+        "out_accepted_at_threshold": 0.35,
+        "accuracy_at_threshold": 0.7899159663865546
+      },
+      "class_mahalanobis": {
+        "all_out": {
+          "auroc": 0.8325158227848102,
+          "fpr_at_tpr95": 0.55
+        },
+        "out_near": {
+          "auroc": 0.769763553857177,
+          "fpr_at_tpr95": 0.7169811320754716
+        },
+        "out_far": {
+          "auroc": 0.9556962025316456,
+          "fpr_at_tpr95": 0.2222222222222222
+        },
+        "dev_threshold": 1.3844994413685923,
+        "in_rejected_at_threshold": 0.12658227848101267,
+        "out_accepted_at_threshold": 0.35,
+        "accuracy_at_threshold": 0.7983193277310925
+      },
+      "max_softmax": {
+        "all_out": {
+          "auroc": 0.6641613924050633,
+          "fpr_at_tpr95": 0.9125
+        },
+        "out_near": {
+          "auroc": 0.5733221877239074,
+          "fpr_at_tpr95": 0.9245283018867925
+        },
+        "out_far": {
+          "auroc": 0.8424753867791842,
+          "fpr_at_tpr95": 0.8888888888888888
+        },
+        "dev_threshold": -0.44989460706710815,
+        "in_rejected_at_threshold": 0.15822784810126583,
+        "out_accepted_at_threshold": 0.625,
+        "accuracy_at_threshold": 0.6848739495798319
+      },
+      "max_cosine": {
+        "all_out": {
+          "auroc": 0.9000791139240507,
+          "fpr_at_tpr95": 0.375
+        },
+        "out_near": {
+          "auroc": 0.8576546453307858,
+          "fpr_at_tpr95": 0.5283018867924528
+        },
+        "out_far": {
+          "auroc": 0.983356774496015,
+          "fpr_at_tpr95": 0.07407407407407407
+        },
+        "dev_threshold": -0.8908675312995911,
+        "in_rejected_at_threshold": 0.11392405063291139,
+        "out_accepted_at_threshold": 0.275,
+        "accuracy_at_threshold": 0.8319327731092437
+      },
+      "kmeans_centroid": {
+        "all_out": {
+          "auroc": 0.7635284810126582,
+          "fpr_at_tpr95": 0.625
+        },
+        "out_near": {
+          "auroc": 0.6739909242894675,
+          "fpr_at_tpr95": 0.7735849056603774
+        },
+        "out_far": {
+          "auroc": 0.9392873886544773,
+          "fpr_at_tpr95": 0.3333333333333333
+        },
+        "dev_threshold": 0.5019652247428894,
+        "in_rejected_at_threshold": 0.08227848101265822,
+        "out_accepted_at_threshold": 0.6125,
+        "accuracy_at_threshold": 0.7394957983193278
+      },
+      "gaussian_nb": {
+        "all_out": {
+          "auroc": 0.7948575949367088,
+          "fpr_at_tpr95": 0.6625
+        },
+        "out_near": {
+          "auroc": 0.7326247910198233,
+          "fpr_at_tpr95": 0.8113207547169812
+        },
+        "out_far": {
+          "auroc": 0.9170182841068917,
+          "fpr_at_tpr95": 0.37037037037037035
+        },
+        "dev_threshold": -2405.32177734375,
+        "in_rejected_at_threshold": 0.0759493670886076,
+        "out_accepted_at_threshold": 0.625,
+        "accuracy_at_threshold": 0.7394957983193278
+      },
+      "autoencoder": {
+        "all_out": {
+          "auroc": 0.7799050632911393,
+          "fpr_at_tpr95": 0.6375
+        },
+        "out_near": {
+          "auroc": 0.711010269882971,
+          "fpr_at_tpr95": 0.7924528301886793
+        },
+        "out_far": {
+          "auroc": 0.9151429910923582,
+          "fpr_at_tpr95": 0.3333333333333333
+        },
+        "dev_threshold": 0.28699204325675964,
+        "in_rejected_at_threshold": 0.10759493670886076,
+        "out_accepted_at_threshold": 0.55,
+        "accuracy_at_threshold": 0.7436974789915967
+      },
+      "one_class_svm": {
+        "all_out": {
+          "auroc": 0.7842563291139241,
+          "fpr_at_tpr95": 0.625
+        },
+        "out_near": {
+          "auroc": 0.7033675662765704,
+          "fpr_at_tpr95": 0.7924528301886793
+        },
+        "out_far": {
+          "auroc": 0.9430379746835443,
+          "fpr_at_tpr95": 0.2962962962962963
+        },
+        "dev_threshold": -90.68998993073525,
+        "in_rejected_at_threshold": 0.06962025316455696,
+        "out_accepted_at_threshold": 0.575,
+        "accuracy_at_threshold": 0.7605042016806722
+      },
+      "isolation_forest": {
+        "all_out": {
+          "auroc": 0.7133702531645569,
+          "fpr_at_tpr95": 0.75
+        },
+        "out_near": {
+          "auroc": 0.6659899689515166,
+          "fpr_at_tpr95": 0.8679245283018868
+        },
+        "out_far": {
+          "auroc": 0.806375996249414,
+          "fpr_at_tpr95": 0.5185185185185185
+        },
+        "dev_threshold": 0.47232913055315284,
+        "in_rejected_at_threshold": 0.056962025316455694,
+        "out_accepted_at_threshold": 0.7375,
+        "accuracy_at_threshold": 0.7142857142857143
+      }
+    }
+  }
+}
