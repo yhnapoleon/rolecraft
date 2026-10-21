@@ -27,7 +27,6 @@ import random
 from collections import Counter
 
 import numpy as np
-from career_lab.recognition.behavior import dtw
 from hmmlearn.hmm import CategoricalHMM
 from scipy.cluster.hierarchy import fcluster, linkage
 from scipy.spatial.distance import squareform
@@ -35,6 +34,7 @@ from sklearn.ensemble import IsolationForest, RandomForestClassifier
 from sklearn.feature_extraction import DictVectorizer
 from sklearn.metrics import adjusted_rand_score, roc_auc_score, silhouette_score
 
+from career_lab.recognition.behavior import dtw
 from experiments.recognition.common import (
     DATA,
     RECOGNIZERS,
@@ -109,8 +109,9 @@ def name_states_by_rule(model, index, sequences):
     a state; the Hungarian assignment first gives every phase one state, the remaining
     states take their best phase.
     """
-    from career_lab.recognition.behavior import rule_phase
     from scipy.optimize import linear_sum_assignment
+
+    from career_lab.recognition.behavior import rule_phase
 
     states = model.n_components
     table = np.zeros((states, 4))

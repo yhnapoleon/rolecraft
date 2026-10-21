@@ -22,7 +22,6 @@ import argparse
 import re
 
 import numpy as np
-from career_lab.recognition.relation import quantities
 from scipy.sparse import csr_matrix, hstack
 from sklearn.decomposition import TruncatedSVD
 from sklearn.ensemble import AdaBoostClassifier, BaggingClassifier, RandomForestClassifier
@@ -36,6 +35,7 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
 from career_lab.models.v3.huggingface import aggregate_pairs
+from career_lab.recognition.relation import quantities
 from experiments.recognition.common import DATA, jsonl, save
 
 PAIR = ("SUPPORTS", "CONTRADICTS", "UNRELATED")

@@ -43,7 +43,6 @@ def main(argv=None) -> int:
     args = parser.parse_args(argv)
     from career_lab.recognition.embedder import Embedder
     from career_lab.recognition.scope import _arrays
-
     from experiments.recognition.retrieval import evaluate as retrieval_eval
 
     embedder = Embedder.get()

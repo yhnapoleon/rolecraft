@@ -14,6 +14,11 @@ below, marked ``fallback`` in its record:
 
 Probabilities are calibrated by hand for the fallback, so the cost-sensitive decision
 (C6) treats rule contradictions with appropriate caution.
+
+When the recognizer registry also holds ``relation-stack-v1`` (``recognition.stack``),
+the C1 pair probabilities go through the stacked ensemble with the TF-IDF + feature
+logistic regression before aggregation, and the late-fusion weight with the rule comes
+from the ensemble's own ``fusion.json``.
 """
 
 from __future__ import annotations
@@ -30,6 +35,7 @@ from career_lab.recognition.base import FALLBACK_REVISION
 LABELS = ("supported", "contradicted", "insufficient")
 RULE_ID = "relation-rule-v1"
 ENCODER_ID = "xlm-r-pair-v1"
+STACK_ID = "relation-stack-v1"
 TOP_K = 5
 
 _UNITS = (
@@ -180,9 +186,10 @@ def judge(
     model = encoder_relation()
     found = rule_judge(claim, chosen, [h.bm25 for h in hits])
     if model is not None:
-        result = model.judge(claim, chosen, language=language, as_of=as_of)
-        alpha = fusion_alpha()
-        if alpha is not None and found.reason != "no_comparable_evidence":
+        ensemble = stack_for(model)
+        result = model.judge(claim, chosen, language=language, as_of=as_of, stack=ensemble)
+        alpha = fusion_alpha() if ensemble is None else ensemble.alpha
+        if alpha is not None and alpha < 1 and found.reason != "no_comparable_evidence":
             # E10 late fusion: the learned model and the number-and-limit rule, weighted
             # by the dev-chosen alpha; the rule abstains when it has nothing to compare.
             fused = {
@@ -195,7 +202,7 @@ def judge(
                 label=label,
                 probabilities=fused,
                 evidence_ids=evidence if label != "insufficient" else (),
-                recognizer_id=ENCODER_ID + "+rule",
+                recognizer_id=result.recognizer_id + "+rule",
                 revision=result.revision,
                 fallback=False,
                 reason=f"late_fusion:{alpha:g}|{found.reason}",
@@ -203,6 +210,16 @@ def judge(
             )
         return Judgement(**{**result.__dict__, "top": top})
     return Judgement(**{**found.__dict__, "top": top})
+
+
+def stack_for(model):
+    """The stacked ensemble (E1) when registered and fitted against this C1 revision."""
+    from career_lab.recognition import stack
+
+    ensemble = stack.load()
+    if ensemble is None or ensemble.encoder_revision != model.revision:
+        return None
+    return ensemble
 
 
 @lru_cache(maxsize=1)
