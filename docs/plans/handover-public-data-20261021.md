@@ -1,29 +1,22 @@
-# 交接：公开数据（真实 + 基于真实的合成）与 E11
+# 交接：公开数据、E11–E13、数据清单
 
-日期：2026-10-21　详细登记：[公开数据 v1](../data/public-sources-v1.md)（来源、条数、读法、限制、重跑命令都在那里，这里只记状态、入口和坑）
+日期：2026-10-21（同日两轮：上午公开数据 + E11，下午 E12 混训 + E13 各识别器正式实验）　详细登记：[公开数据 v1](../data/public-sources-v1.md)（来源、条数、读法、限制、重跑命令、E11–E13 的完整表格都在那里，这里只记状态、入口和坑）　打包清单：[DATA_INVENTORY](../data/DATA_INVENTORY.md)
 
 ## 0. 先看这里
 
-- 这一轮只做了数据和一组迁移实验，没碰产品代码和契约。
-- 全部改动在 **PR #66**（分支 `claude/rc9-public-data`），等用户手动合。
-- **合并顺序：#65 → #63 → #66。** #66 的 CI 现在是红的，两个原因：
+- 两轮都只加数据、实验脚本、结果和文档，没碰产品代码和契约。
+- 全部改动在 **PR #66**（分支 `claude/rc9-public-data`），等用户手动合。下午这一轮是加在 #66 上的新提交，没开新 PR。
+- **合并顺序：#65 → #63 → #66**（#64 和这条线无关，随时可合）。#66 的 CI 现在是红的，两个原因：
   - 7 条是 main 上本来就有的 import 排序问题，#65 修；
   - 1 条是 `experiments/recognition/relation/transfer_public.py` 引用了 `career_lab.recognition.stack`，这个模块只在 #63 里。main 上找不到它，ruff 就把它当成三方包，排序结论跟着变。
 
-  #63 合进去之后重跑 #66 的 CI 即可，`transfer_public.py` 不用改。
-- 本机工作区停在 `local/deliverables-20261019`（#63–#65 的本地合并，没推）。这一轮新增的文件在工作区里是**未跟踪的副本**，和 PR 分支逐字节相同：
-  - `scripts/public/`
-  - `docs/data/public-sources-v1.md`
-  - `docs/plans/handover-public-data-20261021.md`
-  - `experiments/recognition/relation/transfer_public.py`
-  - `experiments/recognition/results/e11_transfer_public.json`
-
-  合并后切到 main 拉取之前，先删掉这些副本，否则 git 会拒绝覆盖未跟踪文件。
-- 数据不在仓库里：原始文件在 `data/raw/public/`（约 1.6 GB）和 `data/raw/contractnli/`，发布目录是 `data/releases/public-*`（约 300 MB），都在 `.gitignore` 里。随 ZIP 怎么交还没定。
+  #63 合进去之后重跑 #66 的 CI 即可，`transfer_public.py` 不用改。下午新加的 `mix_public.py`、`public_eval.py` 按 CI 的 stdin 口径过了 ruff format 和 ruff check。
+- 本机工作区停在 `local/deliverables-20261019`（#63–#65 的本地合并，没推）。#66 的文件在工作区里都是**未跟踪的副本**，和 PR 分支逐字节相同：`scripts/public/`、`docs/data/public-sources-v1.md`、`docs/data/DATA_INVENTORY.md`、`docs/plans/handover-public-data-20261021.md`、`docs/superpowers/`、`experiments/recognition/relation/{transfer_public,mix_public}.py`、`experiments/recognition/public_eval.py`、`experiments/recognition/results/e1{1,2,3}_*.json`。合并后切到 main 拉取之前，先删掉这些副本，否则 git 会拒绝覆盖未跟踪文件。
+- 数据和权重都不在仓库里，位置、大小和该不该打包见 [DATA_INVENTORY](../data/DATA_INVENTORY.md) 第 1 节。用户 10-21 定：清单写好，打包他自己来，Canvas 装不装得下不管。
 
 ## 1. 做了什么
 
-两批，共 10 个发布目录。真实部分用原数据集自己的标签（G1）；合成部分由 DeepSeek 按计划生成，盲判一致才保留（G2v），并且都以真实材料为底。
+### 1.1 上午：公开数据（10 个发布目录）
 
 | 目录 | 给谁用 | 真实 / 合成 | 规模 | 脚本 |
 |---|---|---|---|---|
@@ -38,17 +31,28 @@
 | `public-sequence-v1` | C5 行为 | 真实：tau-bench、Jira | 1,980 + 400 条序列 | `build_tasks.py sequence` |
 | `public-intent-synth-v1` | C11 意图 | 合成（没有标签对得上的真实数据） | 1,354 句 | `synth_tasks.py intent` |
 
-字段都沿用现有数据集：关系类同 relation-v3，范围 / 检索同 `assistant-queries-v1`，意图同 `intent-v1`，序列同 `trajectories-v1`。
+### 1.2 下午：用户要的四件事
 
-## 2. E11 的结论
+1. **混训（E12）**：词法 LR 和堆叠加入三份真实数据重拟合，C1 不重训。登记文档第 8 节。
+2. **各识别器正式实验（E13）**：C10、C4、C2、C5、C11 全做了。登记文档第 9 节。
+3. **小收尾**：
+   - `data/external-samples/` 按 10-06 数据计划 4.4 节归档：两份合成会话、场景链、三份外部样例进 `_superseded/`，`info-action` 进 `_reference/`，各写了 README（被什么取代、合成会话和引擎不一致的六处）。这个目录本来就没入库，只是本地移动。
+   - `docs/superpowers/`（10-06 扩建规范、执行计划、数据计划，10-16 模式识别重设计 v3.2）入库，提交前扫过没有密钥。
+4. **打包清单**：`docs/data/DATA_INVENTORY.md`（英文，可以直接放进交付包）。
 
-`transfer_public.py`：只在 relation-v3 上拟合过的链路，不重训，在各份完整 test 上评。产品链路（堆叠 + 规则）的 macro-F1：
+## 2. 结论速记
 
-- 域内参照（relation-v3）：0.658，和产品登记数字一致。
-- DeepSeek 写断言 + 真实证据（public-synth）：0.687。
-- 人写断言：ContractNLI 0.377、VitaminC 0.385、CFEVER 0.340。
+产品链路（堆叠 + 规则）的 macro-F1，详细表格在登记文档里：
 
-证据换成真实文本没问题；断言换成人写的，就掉到接近随机，差距集中在 CONTRADICTED。完整五行表和读法见登记文档第 6 节，原始结果在 `experiments/recognition/results/e11_transfer_public.json`。
+- **E11（迁移，不重训）**：域内 0.658；DeepSeek 写的断言配真实证据 0.687；人写的断言 ContractNLI / VitaminC / CFEVER 只有 0.377 / 0.385 / 0.340，差距集中在 CONTRADICTED。
+- **E12（混训浅层）**：ContractNLI 涨到 0.50–0.56，VitaminC、CFEVER 在 ±3 个点以内，域内掉到 0.46–0.47；留一来源时，没见过的来源三份里两份更差。只看词法 LR 域内也掉，所以是混训本身的代价，不是融合权重的问题。真实数据上混训 LR 单独比堆叠好，说明 C1 拖后腿。**产品不换**，混训版存在 `runs/local/recognizers/relation-stack-mix-v1/`（未登记）。
+- **E13 C10**：合成回复上三分类 0.705、「没有依据」F1 0.776、AUROC 0.824；RAGTruth 真实回答上基本失效（0.288 / 0.136 / 0.462）。泄露检测规则兜底更好（F1 0.924 对 0.781）。
+- **E13 C4**：远域都容易，近域难；产品的单高斯马氏距离在 CLINC150 上 0.868，最近邻余弦 0.943、最大 softmax 0.956；最近邻余弦在公开数据上每一份都不比马氏距离差。
+- **E13 C2**：PrivacyQA（真人提问 + 法律文本）稠密最好（MRR 0.562），RRF 0.536，BM25 0.412；合成问题全知识库 RRF 最好（0.872 / 0.883）。
+- **E13 C5**：tau-bench 成败每类 HMM 最好（macro-F1 0.674，AUROC 0.681），产品的 DTW 1-NN 最弱（0.502）；Jira 关单前的序列预测结局，各方法接近随机——负面结果。
+- **E13 C11**：产品模型迁到真实话题中文掉 8 个点、英文涨 2 个点；混训后合成 test 0.98、英文 intent-v1 0.82 → 0.86、中文 intent-v1 0.94 → 0.90。合成句子更直白（关键词规则都有 0.82–0.88），0.98 不能当真实水平。
+
+报告「局限与讨论」可以用的主线：识别器学到的是生成数据的写法（E11、E13 的 C10）；只在浅层补真实数据解决不了（E12）；检索和范围检测换到真实数据还站得住，但方法选择会变（C2 稠密、C4 最近邻）。
 
 ## 3. 怎么跑
 
@@ -60,34 +64,37 @@
 | `jira_stream.py` | `uv run --no-project --with pymongo python -m ...` |
 | `build_real.py` | `uv run --no-project --with scikit-learn --with opencc-python-reimplemented python -m ...` |
 | `build_materials.py` | `uv run --no-project --with pyyaml python -m ...` |
-| `transfer_public.py`，以及任何要用 C1 的冒烟 | `.venv-encoder/Scripts/python.exe`，设 `USE_TF=0 HF_HUB_OFFLINE=1 HF_HUB_DISABLE_SYMLINKS=1` |
+| `transfer_public.py`、`mix_public.py`、`public_eval.py`，以及任何要用 C1 的冒烟 | `.venv-encoder/Scripts/python.exe`，设 `USE_TF=0 HF_HUB_OFFLINE=1 HF_HUB_DISABLE_SYMLINKS=1 PYTHONUTF8=1` |
 
-- `uv run --with` 用的是临时环境，不动项目依赖。
-- 合成脚本读 `ds.txt` 里的 DeepSeek 密钥；都有 `--smoke N`，只跑几个单元、不写文件。
-- 下载和 `build_*` 是确定的：版本固定，重跑出来的文件哈希不变（已核对）。合成部分每次结果不同。
-- 产品识别器的环境变量：
-  - `CAREER_LAB_RECOGNIZERS=<仓库>/runs/local/recognizers`：意图、范围、行为、堆叠的权重。
-  - `CAREER_LAB_RELATION_ENCODER=<仓库>/runs/local/recognizers/c1-xlmr-cpu`：C1。不设的话，`check_reply` 和 `relation.judge` 会静默走规则兜底（输出里 `fallback: true`）。
-- E11 的 C1 句对概率缓存在 `runs/local/cache/c1-pairs/<revision>-public-<来源>-<条数>.npy`，重跑只要几分钟。第一次跑完整 test 在本机 CPU 上约一个半小时。
+```bash
+python -m experiments.recognition.relation.transfer_public --encoder runs/local/recognizers/c1-xlmr-cpu   # E11
+python -m experiments.recognition.relation.mix_public --encoder runs/local/recognizers/c1-xlmr-cpu --save  # E12，约 2 小时
+python -m experiments.recognition.public_eval intent|sequence|retrieval|scope|reply|all [--limit 300]   # E13
+```
+
+- E13 各子命令在本机的用时：intent 1 分钟、sequence 约 15 分钟（纯 Python 的 DTW）、retrieval 约 20 分钟、scope 约 15 分钟、reply 约 1 小时（C1 推理，`--limit` 是 RAGTruth 抽多少条回复）。
+- `public_eval.py` 自己会把 `CAREER_LAB_RECOGNIZERS` 和 `CAREER_LAB_RELATION_ENCODER` 默认指到 `runs/local/recognizers/`；`reply` 没加载到 C1 会直接退出，不会静默走规则。
+- C1 的句对概率缓存在 `runs/local/cache/c1-pairs/`：E11 的五份 test、E12 的 ContractNLI / VitaminC / CFEVER dev 都已缓存，E12 重跑只花 LR 拟合的时间（每组 15–20 分钟）。
+- 合成脚本读 `ds.txt` 里的 DeepSeek 密钥；都有 `--smoke N`。下载和 `build_*` 是确定的（重跑哈希不变），合成部分每次结果不同。
 
 ## 4. 没做的（按需再做）
 
-- **混训**：三份真实数据都带 train 划分，可以和 relation-v3 一起拟合 LR / 堆叠（或重训 C1），再跑 E11，看域内掉多少、真实数据涨多少。
-- **各识别器在新数据上的正式实验**：这一轮只做了格式冒烟，没出正式数字：
-  - C10：RAGTruth 抽了几条、合成回复抽了 2 条；
-  - C11：在 intent-v1 test 上中文 0.946 / 英文 0.824，在 `public-intent-synth-v1` test 上 0.867 / 0.852；
-  - C4（CLINC150、MASSIVE）、C2（PrivacyQA）、C5（tau-bench、Jira）都还没跑。
-- 10-06 的 `data/external-samples/` 草稿没移进 `_superseded/`。
-- `docs/superpowers/`（含 10-06 的数据计划）仍未入库。登记文档引用它时注明了「本地，未入库」。
+- **用混合数据重训 C1**：E12 说明这是真正要做的一步（浅层混训的上限已经看到了）。本机 CPU 约每秒 4–6 个句对，relation-v3 训 2 轮用了 80 分钟；如果每份真实数据各取 2,000 条断言（约 2 万个句对）加 relation-v3，2 轮约 3–4 小时，之后重算五份 test 和三份 dev 的概率再要 1.5–2 小时。Colab T4 会快得多（`experiments/recognition/relation/colab_train_c1.ipynb`）。C10 的 RAGTruth 也可以一起放进去（train 约 10 万句）。
+- **识别实验室页**没有加 E11–E13 的图（`experiments/recognition/publish_lab.py`）。
+- `docs/reports/expansion-progress.md`（10-06 扩建工作的进度记录）也一直没入库，这次没动，要不要一起入库由用户定。
+- C10 的泄露漏判没有拆开记是哪一边的判断出了错（见登记文档 9.1）。
 
 ## 5. 坑
 
 - **Windows 路径太长**：在 scratchpad 里开 worktree 会检出失败（`scenarios/` 下的长路径）。建提交改用底层命令：临时 `GIT_INDEX_FILE` + `read-tree` + `hash-object -w` + `update-index` + `commit-tree`，不动工作区和暂存区。要一棵干净树复现 CI，就用稀疏检出，只检出 `pyproject.toml`、`experiments/`、`src/career_lab/`、`scripts/`。
 - **Git Bash 改写路径**：`sparse-checkout set /pattern` 里以 `/` 开头的模式会被改成 `D:/Git/...`，要设 `MSYS_NO_PATHCONV=1`。
 - **本机 lint 绿不代表 CI 绿**：ruff 判断包归属时会看子模块在不在。本机工作区合着没推的 PR，CI 只有 main。复现方法是在稀疏检出的 PR 分支里用 stdin 模式跑 ruff（CI 的 `scripts/regression/lint.py` 就是这么喂的）。
+- **产品切句器遇到「数字后的句号」不断句**：`version 1.5.2. It was` 会并成一句。合成回复只有 73 % 和金标切法一致，E13 的 C10 因此改按金标句子判（第一次跑按产品切句对齐，跳过了 27 % 的回复，而且跳过的正好是带数字的，结果有偏；旧结果留在 `runs/local/logs/e13_reply.skip-misaligned.json`）。产品里这个行为没改。
+- **混合 dev 上 α 会被选成 0**：规则在真实断言上很少介入，网格是平的，「平手取最小」就落到 0。E12 因此同时报了产品的 α = 0.4。以后在新数据上选 α 要先看网格。
+- **Jira 序列要截在关单之前**：`public-sequence-v1/jira.jsonl` 的 `sequence` 里含 `resolution:*` 和关单状态，直接拿来预测结局等于把标签放进了输入。
 - `python -I` 会忽略 `PYTHONIOENCODING`。要打印中文，脚本里先写 `sys.stdout.reconfigure(encoding="utf-8")`。
-- heredoc 会吃反斜杠：带正则的代码一律用 Write / Edit 写。这一轮在 `build_real.py` 里踩过一次，写进了空字节。
-- **Zenodo 约 0.7 MB/s**：Public Jira Dataset 不要整包下（5.8 GB），用 `jira_stream.py` 按 HTTP 分段边下边解析，够数就停（只读前 100 MB）。
-- **CFEVER 用 HF 版**：证据是字典格式；维基原文是分词后带空格的，还有 `-LSB-`、`-{zh-cn:…}-` 这类标记。`build_real.py` 已经处理，剩 1 处嵌套标记没清。
+- heredoc 会吃反斜杠：带正则的代码一律用 Write / Edit 写。
+- **Zenodo 约 0.7 MB/s**：Public Jira Dataset 不要整包下（5.8 GB），用 `jira_stream.py` 按 HTTP 分段边下边解析。
+- **CFEVER 用 HF 版**：证据是字典格式；维基原文有分词空格和 `-LSB-`、`-{zh-cn:…}-` 这类标记，`build_real.py` 已经处理，剩 1 处嵌套标记没清。
 - **MASSIVE** 直接从 tar 包里读中英两个文件，不要全解压（51 种语言，656 MB）。
-- `ruff format` 会改正在后台运行的生成脚本的源文件。这不影响已经加载的进程，但别在生成过程中改提示词，否则数据和脚本对不上。
+- `ruff format` 会改正在后台运行的脚本的源文件。不影响已经加载的进程，但别在生成或实验跑着的时候改逻辑，否则结果和脚本对不上（这一轮 E12 就是停掉重跑的，旧日志在 `runs/local/logs/e12_mix_public.run1.log`）。
