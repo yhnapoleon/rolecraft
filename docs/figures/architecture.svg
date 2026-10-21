@@ -1,0 +1,234 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080" font-family="'Segoe UI', 'Helvetica Neue', Arial, sans-serif">
+  <title>RoleCraft system architecture: a recognition layer between the learner workbench and three generators</title>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#16324F"/>
+    </marker>
+    <marker id="arrow-teal" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#1F7A7A"/>
+    </marker>
+    <marker id="arrow-grey" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#7A8591"/>
+    </marker>
+    <style>
+      .kicker { font-size: 20px; font-weight: 700; letter-spacing: 1.5px; fill: #1F7A7A; }
+      .kicker-r { font-size: 18px; letter-spacing: 1.5px; fill: #5B6470; }
+      .title { font-family: Georgia, 'Times New Roman', serif; font-size: 40px; font-weight: 700; fill: #16324F; }
+      .sub { font-size: 23px; fill: #5B6470; }
+      .zone { font-size: 17px; font-weight: 600; letter-spacing: 1.2px; fill: #5B6470; }
+      .h { font-size: 21px; font-weight: 700; fill: #16324F; }
+      .h-w { font-size: 21px; font-weight: 700; fill: #7A4A10; }
+      .m { font-size: 16px; fill: #1F7A7A; }
+      .m-w { font-size: 16px; fill: #9A5B13; }
+      .t { font-size: 15px; fill: #5B6470; }
+      .tag { font-size: 13px; font-weight: 700; letter-spacing: 1px; fill: #FFFFFF; }
+      .mono { font-family: Consolas, 'Courier New', monospace; font-size: 15px; fill: #1F7A7A; }
+      .edge { font-size: 14px; fill: #16324F; }
+      .edge-g { font-size: 14px; fill: #5B6470; }
+    </style>
+  </defs>
+
+  <rect width="1920" height="1080" fill="#FAF8F4"/>
+
+  <!-- Header -->
+  <text x="60" y="58" class="kicker">ROLECRAFT / ISY5002 · PATTERN RECOGNITION SYSTEMS</text>
+  <text x="1860" y="58" class="kicker-r" text-anchor="end">SYSTEM ARCHITECTURE</text>
+  <text x="60" y="122" class="title">Six recognisers read what learners write and do; three generators act on their output.</text>
+  <text x="60" y="164" class="sub">Sense → pre-process → represent → recognise → decide, then generate. Online path in the upper band, offline training below.</text>
+
+  <!-- Zone labels -->
+  <text x="60" y="226" class="zone">01 · SENSE</text>
+  <text x="410" y="226" class="zone">02 · RECOGNISE</text>
+  <text x="1400" y="226" class="zone">03 · GENERATE</text>
+
+  <!-- ============ Zone 1: sense ============ -->
+  <rect x="60" y="244" width="300" height="118" rx="10" fill="#FFFFFF" stroke="#16324F" stroke-width="1.5"/>
+  <rect x="60" y="244" width="6" height="118" fill="#16324F"/>
+  <text x="82" y="278" class="h">Learner workbench</text>
+  <text x="82" y="304" class="m">Vite · TypeScript · FastAPI</text>
+  <text x="82" y="330" class="t">read · ask · test · configure</text>
+  <text x="82" y="350" class="t">write · submit · revise</text>
+
+  <path d="M140,362 L140,404" stroke="#16324F" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+  <path d="M280,362 L280,404" stroke="#16324F" stroke-width="1.6" fill="none" marker-end="url(#arrow)"/>
+  <text x="290" y="390" class="edge-g">events</text>
+  <text x="56" y="390" class="edge-g">text</text>
+
+  <rect x="60" y="410" width="300" height="168" rx="10" fill="#FFFFFF" stroke="#16324F" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="82" y="444" class="h">Text stream</text>
+  <text x="82" y="470" class="t">plan sentences (claims)</text>
+  <text x="82" y="492" class="t">questions to colleagues</text>
+  <text x="82" y="514" class="t">queries to the assistant</text>
+  <text x="82" y="536" class="t">colleague replies</text>
+  <text x="82" y="558" class="t">versioned materials · zh / en</text>
+
+  <rect x="60" y="596" width="300" height="194" rx="10" fill="#FFFFFF" stroke="#16324F" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="82" y="630" class="h">Behaviour stream</text>
+  <text x="82" y="656" class="t">workbench events → symbols</text>
+  <text x="82" y="682" class="mono">read:technical</text>
+  <text x="82" y="704" class="mono">ask:tech_lead:ask_limit</text>
+  <text x="82" y="726" class="mono">configure · test:policy</text>
+  <text x="82" y="748" class="mono">request:capacity</text>
+  <text x="82" y="770" class="mono">refresh_index · submit</text>
+
+  <!-- stream → layer arrows -->
+  <path d="M360,494 L404,494" stroke="#16324F" stroke-width="1.8" fill="none" marker-end="url(#arrow)"/>
+  <path d="M360,693 L404,693" stroke="#16324F" stroke-width="1.8" fill="none" marker-end="url(#arrow)"/>
+
+  <!-- ============ Zone 2: recognition layer ============ -->
+  <rect x="410" y="244" width="930" height="546" rx="14" fill="#E6F1F0" stroke="#1F7A7A" stroke-width="2.5"/>
+  <text x="432" y="278" class="h" fill="#1F7A7A" style="fill:#1F7A7A">Recognition layer</text>
+  <text x="620" y="278" class="mono">src/career_lab/recognition</text>
+  <text x="1318" y="278" class="t" text-anchor="end">every output: label · score · threshold · recogniser revision</text>
+
+  <!-- row 1 -->
+  <g>
+    <rect x="432" y="296" width="290" height="148" rx="10" fill="#FFFFFF" stroke="#1F7A7A" stroke-width="1.4"/>
+    <text x="450" y="328" class="h">Evidence retrieval</text>
+    <text x="450" y="354" class="m">sentence units · BM25 / e5 / RRF</text>
+    <text x="450" y="380" class="t">versioned materials split into</text>
+    <text x="450" y="400" class="t">sentence and list-item units</text>
+    <text x="450" y="426" class="t">→ top-k units per claim or query</text>
+  </g>
+  <g>
+    <rect x="740" y="296" width="290" height="148" rx="10" fill="#FFFFFF" stroke="#1F7A7A" stroke-width="2.4"/>
+    <rect x="740" y="296" width="96" height="22" rx="4" fill="#1F7A7A"/>
+    <text x="750" y="312" class="tag">PRIMARY</text>
+    <text x="758" y="342" class="h">Claim–evidence relation</text>
+    <text x="758" y="366" class="m">XLM-R cross-encoder stacked with</text>
+    <text x="758" y="388" class="m">TF-IDF + feature LR · rule fusion</text>
+    <text x="758" y="412" class="t">→ supported / contradicted /</text>
+    <text x="758" y="430" class="t">   insufficient, with probabilities</text>
+  </g>
+  <g>
+    <rect x="1048" y="296" width="270" height="148" rx="10" fill="#FFFFFF" stroke="#1F7A7A" stroke-width="1.4"/>
+    <text x="1066" y="328" class="h">Scope &amp; drift detection</text>
+    <text x="1066" y="354" class="m">e5 embedding · Mahalanobis</text>
+    <text x="1066" y="378" class="m">distance, per scenario &amp; language</text>
+    <text x="1066" y="404" class="t">→ in / out of scope</text>
+    <text x="1066" y="426" class="t">→ answer drift after re-index</text>
+  </g>
+
+  <!-- row 2 -->
+  <g>
+    <rect x="432" y="462" width="290" height="148" rx="10" fill="#FFFFFF" stroke="#1F7A7A" stroke-width="1.4"/>
+    <text x="450" y="494" class="h">Question intent</text>
+    <text x="450" y="520" class="m">TF-IDF n-grams + logistic</text>
+    <text x="450" y="544" class="m">regression</text>
+    <text x="450" y="570" class="t">→ ask limit · ask resource ·</text>
+    <text x="450" y="590" class="t">   ask process · seek approval · other</text>
+  </g>
+  <g>
+    <rect x="740" y="462" width="290" height="148" rx="10" fill="#FFFFFF" stroke="#1F7A7A" stroke-width="1.4"/>
+    <text x="758" y="494" class="h">Behaviour recognition</text>
+    <text x="758" y="520" class="m">DTW 1-NN strategy · HMM</text>
+    <text x="758" y="544" class="m">(Viterbi) phases · anomaly rules</text>
+    <text x="758" y="570" class="t">→ strategy · phase timeline ·</text>
+    <text x="758" y="590" class="t">   anomalous steps</text>
+  </g>
+  <g>
+    <rect x="1048" y="462" width="270" height="148" rx="10" fill="#FFFFFF" stroke="#1F7A7A" stroke-width="1.4"/>
+    <text x="1066" y="494" class="h">Reply grounding check</text>
+    <text x="1066" y="520" class="m">retrieval + relation on each</text>
+    <text x="1066" y="544" class="m">sentence of a colleague reply</text>
+    <text x="1066" y="570" class="t">→ grounded / ungrounded ·</text>
+    <text x="1066" y="590" class="t">   private-fact leak</text>
+  </g>
+
+  <!-- row 3: decision layer -->
+  <g>
+    <rect x="432" y="628" width="886" height="140" rx="10" fill="#FFFFFF" stroke="#16324F" stroke-width="1.6"/>
+    <rect x="432" y="628" width="6" height="140" fill="#16324F"/>
+    <text x="456" y="662" class="h">Decision layer</text>
+    <text x="456" y="690" class="m" style="fill:#16324F">cost-sensitive reject option</text>
+    <text x="456" y="712" class="t">expected cost per label vs. cost of deferring;</text>
+    <text x="456" y="732" class="t">high-cost sentences go to a human queue</text>
+    <text x="760" y="690" class="m" style="fill:#16324F">arbiter</text>
+    <text x="760" y="712" class="t">compares the Judge's rubric label with the</text>
+    <text x="760" y="732" class="t">relation recogniser; keeps the cautious one</text>
+    <text x="1066" y="690" class="m" style="fill:#16324F">session summary</text>
+    <text x="1066" y="712" class="t">counts per recogniser, shown on</text>
+    <text x="1066" y="732" class="t">the review page</text>
+  </g>
+
+  <!-- ============ Zone 3: generators ============ -->
+  <!-- layer → LLM arrows -->
+  <path d="M1340,314 L1394,314" stroke="#1F7A7A" stroke-width="2" fill="none" marker-end="url(#arrow-teal)"/>
+  <path d="M1340,484 L1394,484" stroke="#1F7A7A" stroke-width="2" fill="none" marker-end="url(#arrow-teal)"/>
+  <path d="M1340,654 L1394,654" stroke="#1F7A7A" stroke-width="2" fill="none" marker-end="url(#arrow-teal)"/>
+  <text x="1346" y="304" class="edge" style="fill:#1F7A7A">input</text>
+
+  <g>
+    <rect x="1400" y="244" width="460" height="150" rx="10" fill="#FBF1E4" stroke="#9A5B13" stroke-width="1.4"/>
+    <text x="1420" y="276" class="h-w">JUDGE · rubric feedback</text>
+    <text x="1420" y="302" class="m-w">input: evidence units, per-sentence</text>
+    <text x="1420" y="322" class="m-w">relation summary, behaviour summary</text>
+    <text x="1420" y="348" class="t">labels each semantic rubric item within</text>
+    <text x="1420" y="368" class="t">rule bounds → arbiter → feedback page</text>
+  </g>
+  <g>
+    <rect x="1400" y="414" width="460" height="150" rx="10" fill="#FBF1E4" stroke="#9A5B13" stroke-width="1.4"/>
+    <text x="1420" y="446" class="h-w">ROLES · three colleagues</text>
+    <text x="1420" y="472" class="m-w">input: sources ranked by retrieval,</text>
+    <text x="1420" y="492" class="m-w">question intent, learner phase</text>
+    <text x="1420" y="518" class="t">manager · tech lead · business lead</text>
+    <text x="1420" y="538" class="t">reply → reply grounding check</text>
+  </g>
+  <g>
+    <rect x="1400" y="584" width="460" height="150" rx="10" fill="#FBF1E4" stroke="#9A5B13" stroke-width="1.4"/>
+    <text x="1420" y="616" class="h-w">ASSISTANT · knowledge assistant (RAG)</text>
+    <text x="1420" y="642" class="m-w">input: retrieved units, scope gate,</text>
+    <text x="1420" y="662" class="m-w">source and index versions</text>
+    <text x="1420" y="688" class="t">extractive answer, or LLM generation if the</text>
+    <text x="1420" y="708" class="t">learner picks it; out-of-scope → human</text>
+  </g>
+  <text x="1400" y="762" class="t">LLM calls go to DeepSeek (deepseek-chat) per model slot.</text>
+
+  <!-- feedback loop: colleague replies back into text stream -->
+  <path d="M1630,564 L1630,574" stroke="#7A8591" stroke-width="0" fill="none"/>
+
+  <!-- ============ band: show ============ -->
+  <rect x="60" y="806" width="1110" height="64" rx="10" fill="#FFFFFF" stroke="#16324F" stroke-width="1.2"/>
+  <text x="82" y="844" class="h" style="font-size:18px">04 · SHOW</text>
+  <text x="196" y="831" class="t" style="font-size:16px">Pages that use a recogniser show its name and score: assistant test card · colleague</text>
+  <text x="196" y="853" class="t" style="font-size:16px">reply · pre-submission rehearsal · feedback items · session summary · behaviour section · lab</text>
+
+  <!-- ============ offline band ============ -->
+  <text x="60" y="900" class="zone">OFFLINE · DATA → TRAINING → REGISTRY → EXPERIMENTS</text>
+
+  <rect x="60" y="914" width="420" height="132" rx="10" fill="#FFFFFF" stroke="#7A8591" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="80" y="946" class="h" style="font-size:19px">Datasets · zh / en</text>
+  <text x="80" y="972" class="t">relation 4,325 claims / 17,281 pairs · intent 1,236</text>
+  <text x="80" y="994" class="t">queries 538 · trajectories 400 · IT domain 1,199</text>
+  <text x="80" y="1016" class="t">LLM-generated + blind second-pass review;</text>
+  <text x="80" y="1036" class="t">scripted trajectories; group-aware splits</text>
+
+  <path d="M480,980 L524,980" stroke="#7A8591" stroke-width="1.6" fill="none" marker-end="url(#arrow-grey)"/>
+
+  <rect x="530" y="914" width="420" height="132" rx="10" fill="#FFFFFF" stroke="#7A8591" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="550" y="946" class="h" style="font-size:19px">Training</text>
+  <text x="550" y="972" class="t">XLM-R fine-tune · logistic regression</text>
+  <text x="550" y="994" class="t">HMM (BIC state count) · Ledoit-Wolf covariance</text>
+  <text x="550" y="1016" class="t">stacking meta-learner · temperature scaling</text>
+  <text x="550" y="1036" class="t">fusion weight chosen on dev</text>
+
+  <path d="M950,980 L994,980" stroke="#7A8591" stroke-width="1.6" fill="none" marker-end="url(#arrow-grey)"/>
+
+  <rect x="1000" y="914" width="400" height="132" rx="10" fill="#FFFFFF" stroke="#7A8591" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="1020" y="946" class="h" style="font-size:19px">Recogniser registry</text>
+  <text x="1020" y="972" class="t">manifest with weight hashes; every</text>
+  <text x="1020" y="994" class="t">recognition record carries the revision</text>
+  <text x="1020" y="1016" class="t">it was produced by</text>
+
+  <path d="M1250,914 L1250,796" stroke="#7A8591" stroke-width="1.6" fill="none" stroke-dasharray="5 4" marker-end="url(#arrow-grey)"/>
+  <text x="1262" y="846" class="edge-g">load weights at start-up</text>
+
+  <path d="M1400,980 L1444,980" stroke="#7A8591" stroke-width="1.6" fill="none" marker-end="url(#arrow-grey)"/>
+
+  <rect x="1450" y="914" width="410" height="132" rx="10" fill="#FFFFFF" stroke="#7A8591" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="1470" y="946" class="h" style="font-size:19px">Experiments E1, E3–E10</text>
+  <text x="1470" y="972" class="t">classical baselines and ensembles · retrieval</text>
+  <text x="1470" y="994" class="t">reject option · scope · behaviour · intent</text>
+  <text x="1470" y="1016" class="t">Judge with / without recognition · cross-domain</text>
+  <text x="1470" y="1036" class="t">→ published to the recognition lab page</text>
+</svg>
