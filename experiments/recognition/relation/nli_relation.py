@@ -276,9 +276,9 @@ def run_train(args):
 
 def run_reply(args):
     """C10 with the NLI pair classifier: C2 top-3 per sentence, per unit or as one chunk."""
-    from experiments.recognition import public_eval as pe  # sets the recognizer env first
-
+    # public_eval sets the recognizer env defaults; the embedder reads them on first use.
     from career_lab.recognition import retrieval
+    from experiments.recognition import public_eval as pe
 
     scorer = Scorer(args.model, args.max_length)
     suffix = "\n[valid from 0 until open; checked at 0]" if args.time else ""
