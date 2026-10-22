@@ -52,9 +52,21 @@ ISY5002 Pattern Recognition Systems · Practice Module · Group 47 · [English](
 | 行为异常 | AUROC | HMM 对数似然 0.90，DTW 距离 0.88 |
 | 评审有 / 无识别摘要 | 给出标签的项 | 42.6% / 38.9%；每项引用 1.12 / 1.05 |
 
+### 公开数据上的评测
+
+各识别器在带人工标注的公开数据上重新评测；关系判定还换了句对分类器：多语言 NLI 交叉编码器（mDeBERTa-v3，在 XNLI 和多语言 NLI 上预训练），在 `relation-v3` 加 ContractNLI、VitaminC、CFEVER 的 train 上微调。这个分类器是离线评测，产品里的判定链是上表第一行。方法、数据和完整表格见 [`docs/data/public-sources-v1.md`](docs/data/public-sources-v1.md) 第 8–10 节。
+
+| 任务 | 测试数据 | 指标 | 结果 |
+|---|---|---|---|
+| 断言—证据关系，NLI 交叉编码器 | `relation-v3`（中 / 英） | 断言级 macro-F1 | **0.903**（0.894 / 0.908） |
+| 断言—证据关系，NLI 交叉编码器 | ContractNLI / VitaminC / CFEVER（人写的断言） | 断言级 macro-F1 | 0.806 / 0.792 / 0.641 |
+| 同事回复依据核查，NLI 交叉编码器，检索到的三个单元合成一段来读 | 基于真实材料的同事口吻回复（中 / 英） | 逐句三分类 macro-F1；泄露 F1 | 0.928；0.94 |
+| 范围检测，产品方法按数据集重新拟合 | MASSIVE 中 / 英 | AUROC | 0.961 / 0.940 |
+| 证据检索，e5 稠密 | PrivacyQA（众包提问，专家标注相关句） | Recall@5 / MRR | 0.770 / 0.562 |
+
 ## 数据
 
-全部中英双语，在 `data/releases/<name>/`，每个目录有 `manifest.json`、`data_card.md` 和 `SHA256SUMS`。
+都在 `data/releases/<name>/`，每个目录有 `manifest.json`、`data_card.md` 和 `SHA256SUMS`。项目自建的数据全部中英双语：
 
 | 数据 | 内容 | 规模 |
 |---|---|---|
@@ -66,6 +78,23 @@ ISY5002 Pattern Recognition Systems · Practice Module · Group 47 · [English](
 | `it-ticket-v1` | 第二领域（IT 工单助手），做跨领域测试 | 1,199 断言、624 查询 |
 
 断言和问题由 DeepSeek 生成，只保留看不到标签的第二遍复核一致的条目（关系 93.7%、意图 91.0%）；助手查询要求来源单元能被检索到。关系断言按语言和来源材料分组划分，同一事实的改写不会跨分区。
+
+公开数据转成同样的记录格式：一类是真实文本加原数据集自带的人工标注，另一类是合成数据，但证据都取自真实的公开材料。
+
+| 数据 | 来源 | 用于 | 规模 |
+|---|---|---|---|
+| `public-real-v1` | ContractNLI、VitaminC、CFEVER | 断言—证据关系 | 50,515 条断言 |
+| `public-materials-v1` | GitHub site-policy、Kubernetes KEP、Public Jira Dataset、TheAgentCompany、tau-bench | 证据单元、签核清单、轨迹 | 13,319 个单元 |
+| `public-synth-v1` | 对着真实证据单元写的断言 | 断言—证据关系 | 3,839 条断言 |
+| `public-reply-v1` | RAGTruth | 回复依据核查 | 17,790 条回答、131,160 句 |
+| `public-reply-synth-v1` | 基于真实材料的同事回复，含泄露 | 回复依据核查 | 603 条回复 |
+| `public-scope-v1` | CLINC150、MASSIVE 1.1（中、英） | 范围检测 | 23,700 + 33,042 个查询 |
+| `public-retrieval-v1` | PrivacyQA | 证据检索 | 1,750 个问题、35 份政策 |
+| `public-queries-synth-v1` | 基于真实材料的知识库问题 | 检索、范围检测 | 2,658 个查询 |
+| `public-sequence-v1` | tau-bench 运行记录、Jira 变更记录 | 行为识别 | 1,980 + 400 条序列 |
+| `public-intent-synth-v1` | 基于真实材料的学员提问 | 提问意图 | 1,354 |
+
+来源、固定版本和许可见 [`docs/data/public-sources-v1.md`](docs/data/public-sources-v1.md)；每个数据和权重目录是什么、放在哪，见 [`docs/data/DATA_INVENTORY.md`](docs/data/DATA_INVENTORY.md)。
 
 ## 场景
 
@@ -128,7 +157,7 @@ uv run career-lab worker --database-url sqlite:///runs/local/rolecraft.db   # �
 
 ### 复现数据、模型和实验
 
-命令同[英文版](README.md#reproducing-data-models-and-experiments)。实际用的生成参数记在每个数据目录的 `manifest.json` 里；行为实验另需 `hmmlearn==0.3.3`。
+命令同[英文版](README.md#reproducing-data-models-and-experiments)，包括公开数据上的 E11–E15。实际用的生成参数记在每个数据目录的 `manifest.json` 里；行为实验另需 `hmmlearn==0.3.3`。公开数据的下载、转换、合成命令和各脚本要用的环境，见 [`docs/data/public-sources-v1.md`](docs/data/public-sources-v1.md) 第 4 节和第 7.3 节。
 
 ## 目录
 
@@ -142,8 +171,9 @@ src/career_lab/
   scenarios/       场景引擎与场景包
   api/ jobs/ storage/ mcp/ delegations/   服务、任务队列、事件存储、Agent 接入
 apps/web/          学员工作台与识别实验室（Vite + TypeScript）
-experiments/recognition/   E1、E3–E10 的脚本与结果
+experiments/recognition/   E1、E3–E15 的脚本与结果
 scripts/recognition/       数据生成、策略运行器、演示录制与导入
+scripts/public/            公开数据下载、转换与基于真实材料的合成
 scenarios/         已安装的场景包（pm_pilot、it_ticket_pilot）
 demo/              录好的会话与目录
 docs/              设计、计划、图

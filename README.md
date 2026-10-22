@@ -52,9 +52,21 @@ Held-out test sets, Chinese / English, except the last row (28 paired live sessi
 | Behaviour anomaly | AUROC | HMM log-likelihood 0.90, DTW distance 0.88 |
 | Judge with / without recognition summary | items labelled | 42.6% / 38.9%; citations per item 1.12 / 1.05 |
 
+### Evaluation on public data
+
+The recognisers were re-evaluated on public datasets with human labels, and the relation task was trained with an upgraded pair classifier: a multilingual NLI cross-encoder (mDeBERTa-v3, pre-trained on XNLI and multilingual NLI) fine-tuned on `relation-v3` plus the ContractNLI, VitaminC and CFEVER train splits. This classifier is evaluated offline; the deployed chain is the first row of the table above. Method, data and full tables: [`docs/data/public-sources-v1.md`](docs/data/public-sources-v1.md), sections 8–10.
+
+| Task | Test data | Metric | Result |
+|---|---|---|---|
+| Claim–evidence relation, NLI cross-encoder | `relation-v3` (zh / en) | claim-level macro-F1 | **0.903** (0.894 / 0.908) |
+| Claim–evidence relation, NLI cross-encoder | ContractNLI / VitaminC / CFEVER (human-written claims) | claim-level macro-F1 | 0.806 / 0.792 / 0.641 |
+| Reply grounding check, NLI cross-encoder reading the three retrieved units as one passage | colleague-style replies on real material (zh / en) | sentence three-class macro-F1; leak F1 | 0.928; 0.94 |
+| Scope detection, deployed method refitted per dataset | MASSIVE zh / en | AUROC | 0.961 / 0.940 |
+| Evidence retrieval, e5 dense | PrivacyQA (crowdworker questions, expert relevance) | Recall@5 / MRR | 0.770 / 0.562 |
+
 ## Data
 
-All sets are bilingual (zh / en) and live in `data/releases/<name>/` with a `manifest.json`, `data_card.md` and `SHA256SUMS`.
+All sets live in `data/releases/<name>/` with a `manifest.json`, `data_card.md` and `SHA256SUMS`. The project's own sets are bilingual (zh / en):
 
 | Set | Content | Size |
 |---|---|---|
@@ -66,6 +78,23 @@ All sets are bilingual (zh / en) and live in `data/releases/<name>/` with a `man
 | `it-ticket-v1` | second domain (IT ticket assistant) for cross-domain tests | 1,199 claims, 624 queries |
 
 Claims and questions were generated with DeepSeek and kept only when a label-blind second pass agreed (relation 93.7%, intent 91.0%) or, for assistant queries, when the source unit was retrievable. Relation claims are split by language and source material, so paraphrases of one fact never cross partitions.
+
+Public data, converted to the same record formats (real text with the datasets' own human labels, and synthetic sets whose evidence is real public material):
+
+| Set | Source | For | Size |
+|---|---|---|---|
+| `public-real-v1` | ContractNLI, VitaminC, CFEVER | claim–evidence relation | 50,515 claims |
+| `public-materials-v1` | GitHub site-policy, Kubernetes KEPs, Public Jira Dataset, TheAgentCompany, tau-bench | evidence units, checklists, trajectories | 13,319 units |
+| `public-synth-v1` | claims written against real evidence units | claim–evidence relation | 3,839 claims |
+| `public-reply-v1` | RAGTruth | reply grounding check | 17,790 responses, 131,160 sentences |
+| `public-reply-synth-v1` | colleague replies on real material, with leaks | reply grounding check | 603 replies |
+| `public-scope-v1` | CLINC150, MASSIVE 1.1 (zh, en) | scope detection | 23,700 + 33,042 queries |
+| `public-retrieval-v1` | PrivacyQA | evidence retrieval | 1,750 questions, 35 policies |
+| `public-queries-synth-v1` | knowledge-base questions on real material | retrieval, scope | 2,658 queries |
+| `public-sequence-v1` | tau-bench runs, Jira change logs | behaviour recognition | 1,980 + 400 sequences |
+| `public-intent-synth-v1` | learner questions on real material | question intent | 1,354 |
+
+Sources, pinned versions and licences: [`docs/data/public-sources-v1.md`](docs/data/public-sources-v1.md). What each dataset and weight directory is, and where it lives: [`docs/data/DATA_INVENTORY.md`](docs/data/DATA_INVENTORY.md).
 
 ## Scenarios
 
@@ -145,6 +174,21 @@ uv run python -m experiments.recognition.publish_lab --c1 runs/local/recognizers
 
 Generation parameters actually used are recorded in each release's `manifest.json`. The behaviour experiment additionally needs `hmmlearn==0.3.3`.
 
+Public data and the experiments on it (E11–E15); the download, conversion and synthesis commands and the environments each script needs are in [`docs/data/public-sources-v1.md`](docs/data/public-sources-v1.md), sections 4 and 7.3:
+
+```sh
+python -m experiments.recognition.relation.transfer_public --encoder runs/local/recognizers/c1-xlmr-cpu  # E11
+python -m experiments.recognition.relation.mix_public --encoder runs/local/recognizers/c1-xlmr-cpu      # E12
+python -m experiments.recognition.public_eval all                                                     # E13
+python -m experiments.recognition.relation.diagnose_public --encoder runs/local/recognizers/c1-xlmr-cpu # E14
+python -m experiments.recognition.relation.nli_relation train \
+  --base runs/local/weights/mdeberta-v3-base-xnli-2mil7 --out runs/local/recognizers/c1-mdeberta-mix   # E15
+python -m experiments.recognition.relation.nli_relation predict \
+  --model runs/local/recognizers/c1-mdeberta-mix --tag mix --time
+python -m experiments.recognition.relation.nli_relation reply \
+  --model runs/local/recognizers/c1-mdeberta-mix --tag mix --time
+```
+
 ## Repository layout
 
 ```text
@@ -157,8 +201,9 @@ src/career_lab/
   scenarios/       scenario engine and packages
   api/ jobs/ storage/ mcp/ delegations/   service, worker queue, event store, agent access
 apps/web/          learner workbench and recognition lab (Vite + TypeScript)
-experiments/recognition/   E1, E3–E10 scripts and results
+experiments/recognition/   E1, E3–E15 scripts and results
 scripts/recognition/       data generation, strategy runner, demo recording and import
+scripts/public/            public-data download, conversion and grounded synthesis
 scenarios/         installed scenario packages (pm_pilot, it_ticket_pilot)
 demo/              recorded sessions and catalog
 docs/              design, plans, figures
