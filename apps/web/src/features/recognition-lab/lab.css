@@ -22,6 +22,19 @@
 .rc-lab-head p {
   margin-top: 10px;
 }
+.rc-lab-arch {
+  margin: 20px 0 0;
+}
+.rc-lab-arch img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line, #d9d6cf);
+  border-radius: 10px;
+}
+.rc-lab-arch figcaption {
+  margin-top: 6px;
+}
 .rc-lab h2 {
   margin: 28px 0 10px;
   font-size: 17px;

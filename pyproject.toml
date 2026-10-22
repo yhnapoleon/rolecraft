@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "career-lab"
 version = "0.1.0"
-description = "ISY5002 AI PM career task training environment"
+description = "ISY5002 pattern recognition system: evidence-grounding and behaviour recognition in simulated workplace practice"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi==0.115.12",

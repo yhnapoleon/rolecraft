@@ -145,3 +145,35 @@ cd apps\web; npm run build
 - 重 CPU 负载 + 多 worker 时 SQLite 锁超时（500 `OperationalError`）。
 - DeepSeek 起草材料时会把账本键名写进句子；`synth_domain.py` 已改为自然语言账本 + 键名回填 + 拒收。
 - Windows 下远端单测约 70 个平台性失败（文件锁、symlink、权限），与本次改动无关；前端 `score-range.test.ts` 在 CPU 满载时会 5 秒超时。
+
+## 10. 10-19：交付物准备（非报告部分）
+
+PR #58–#62 已合入 main（`18ecf41`）。这一轮按「模式识别系统」的叙事把对外的东西都改了，报告、slides、视频之外的部分做完：
+
+- **架构图** [`docs/figures/architecture.svg`](../figures/architecture.svg) / `.png`（1920×1080，英文）：识别层居中（六个识别器 + 决策层），左边感知两条流，右边三个生成器，底部离线的数据 → 训练 → 登记 → 实验。视频、slides、报告共用。改 SVG 后用 `msedge --headless=new --window-size=1920,1080 --screenshot=<png> file:///<svg>` 重出 PNG，再 `publish_lab` 复制到实验室页。
+- **README** 改成英文、以识别为中心（[`README.md`](../../README.md)），中文版 [`README.zh-CN.md`](../../README.zh-CN.md)。旧中文 README（10-03 版，讲 controlled-v2 和 v1 接口）在 git 历史里。
+- **识别实验室页**：顶部放架构图；对外文案不再出现 C1/C2/C4/C5/C6/C11 编号，改成名字；新增 E1-S 图；去掉提升图（test 上不比随机好，结果仍在 `e4_decision.json`，报告讨论一节写）。
+- **堆叠集成进产品**（E1-S）：`recognition/stack.py`，登记为 `relation-stack-v1`，见下。
+- **文档与代码不一致**修了两处：handover 里「不设 `CAREER_LAB_RECOGNIZERS` = 全部规则回退」（实际是绕开识别层）；`demo/README.md` 里仲裁「评审 INSUFFICIENT，取保守」（实际记 `judge_undecided`、保留评审标签）。
+- `trajectories-v1` 补了 `manifest.json`、`data_card.md`、`SHA256SUMS`。
+- 机制速查（核过代码，写报告和讲稿用）：仓库外的 skill 文件 `AIS/.claude/skills/ais-design-writing/references/rolecraft-mechanisms.md`。
+
+### 10.1 堆叠集成（E1-S）
+
+- 词面分支：句对文本字符 2–4 gram TF-IDF + 7 个手工特征，类别均衡 LR（C = 8），train 句对上训；元学习器：LR 读 [LR 的 S/C/U, C1 的 S/C/U]，dev 句对上训（与 E1 的 `stack_lr_encoder` 同一配方，`fit_stack` 先断言特征与 `baselines.py` 逐对一致）。
+- 是否再与数值限额规则晚期融合、α 多少：用 dev 上五折（按断言分组）的外预测选，不在元学习器自己的训练预测上选。
+- 产品接法：`relation.judge` → `stack_for(model)`（登记了且绑定的 C1 修订号与当前 C1 一致才用）→ `EncoderRelation.judge(stack=…)` 在聚合前替换逐对概率 → 按堆叠自己的 `fusion.json` 融合规则。记录里的 recognizer_id 是 `relation-stack-v1`（融合时 `relation-stack-v1+rule`），revision 是「堆叠修订号+C1 修订号」。没登记或 C1 换了就退回原来的 C1 + 规则融合，行为不变。
+- 重训：`python -m experiments.recognition.relation.fit_stack --encoder runs/local/recognizers/c1-xlmr-cpu`（C1 逐对概率缓存在 `runs/local/cache/c1-pairs/`，首次约 40 分钟），然后 `publish_lab`、重启服务。
+- 结果（`experiments/recognition/results/e1_stack.json`，test macro-F1 中 / 英 / 合计）：
+
+  | 链 | macro-F1 | 误扣分率（送人工 0 / 10% / 20%） | 代价矩阵下送人工 |
+  |---|---|---|---|
+  | C1 | 0.656 / 0.608 / 0.625 | 6.3% / 2.4% / 0.8% | 7.9% |
+  | C1 + 规则 α=0.4（原产品） | 0.655 / 0.616 / 0.630 | 5.3% / 3.6% / 1.8% | 17.0% |
+  | 堆叠 | 0.713 / 0.633 / 0.663 | 3.7% / 0.8% / 0.5% | 4.4% |
+  | **堆叠 + 规则 α=0.4（现产品）** | **0.698 / 0.635 / 0.658** | 4.2% / 2.6% / 0.7% | 14.7% |
+
+  堆叠单独复现了 E1 的 0.7134 / 0.6327。断言级 joint 0.611 → 0.652，证据 F1 0.752 → 0.767（堆叠 vs C1）；逐对 ECE 0.006 → 0.015。
+- **α 怎么定的（如实记录）**：dev 五折外预测的网格在 0.4–1.0 之间几乎是平的（0.4 为 0.6721，0.55–1.0 都是 0.6735）。第一次跑取了第一个最大值 0.55；随后改成「并列取最大 α（只用堆叠）」，冒烟发现堆叠单独会把场景自己的两条数值断言判错（「安排 50 人」→ 证据不足 0.99，C1 本身也把这对判成无关；「住宿上限 400 元」对 v2 政策 → 矛盾 0.94，词面 LR 与 C1 都偏向矛盾），之前是规则融合在兜这两条。最后定为「与最好值相差 0.005 以内取最小 α」，让规则在它能比较数值的断言上说了算（数值与限额由规则判、语义由模型判，是系统的设计原则），得到 α = 0.4，两条都判对。规则改过两次、改的时候看过冒烟，报告里写清楚。
+- 冒烟：`relation.judge` 开 / 关登记各跑四条（50 人、400 元、自助重置密码、已获扩容审批）；端到端 `scripts.recognition.smoke --language zh` 通过，关系记录的 recognizer_id 为 `relation-stack-v1(+rule)`。
+- 顺带：本机 `runs/local/c1-return` 的 C1 回传登记因 main 上 `models/v3/consumer.py` 变了（源码摘要）报 `model_files_changed`，反馈页「逐句模型建议」整列失败；已用 `registry_cli register` 对原封存包重新登记（`encoder-bb7895c0…`），`runs/local/dev/env.ps1` 已改。组员机器上同样要重新登记。

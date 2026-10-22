@@ -7,9 +7,10 @@
 - 识别层（C1 关系判定、C2 检索、C4 范围、C5 行为、C6 拒识与仲裁、C10 回复核查、C11 意图）已经占住三个 LLM 入口（评审 JUDGE、同事 ROLES、知识助手 ASSISTANT）的输入装配，每一页都有识别署名；四个模型槽都接 DeepSeek。
 - 第二个领域 `it_ticket_pilot`（IT 工单助手）中英都能玩；实验 E1、E3–E10 全部跑完，识别实验室页有图。
 - `demo/` 里有 8 局录好的练习，任何部署一条命令导入，用继续码打开，**不调用任何模型**。
-- 报告、slides、视频还没开始。全部代码在 5 个 PR 里，**都没合并**。
+- 报告、slides、视频还没开始。全部代码在 5 个 PR 里，**10-19 已全部合入 main**（`18ecf41`）。
+- 10-19 起进入交付物阶段：架构图在 [`docs/figures/`](../figures/)，README 改成以识别为中心的英文版，旧中文 README 的内容见 git 历史（`18ecf41:README.md`）。
 
-## 2. 合并 PR
+## 2. 合并 PR（已完成，留作记录）
 
 | PR | 内容 | 依赖 |
 |---|---|---|
@@ -45,7 +46,7 @@
 $env:CAREER_LAB_SCENARIO_CATALOG = "demo/catalog.json"          # 仓库相对路径，从仓库根目录启动
 $env:CAREER_LAB_CREDENTIAL_KEY_ID = "local-dev-v1"
 $env:CAREER_LAB_CREDENTIAL_KEY = "<至少 32 字节>"
-$env:CAREER_LAB_RECOGNIZERS = "<拷来的>\recognizers"             # 不设 = 全部规则回退
+$env:CAREER_LAB_RECOGNIZERS = "<拷来的>\recognizers"             # 不设 = 三个入口都不经过识别层（回到原行为）；设了但缺某个权重 = 该识别器规则回退
 $env:CAREER_LAB_RELATION_ENCODER = "<拷来的>\recognizers\c1-xlmr-cpu"
 foreach ($s in 'JUDGE','ROLES','ASSISTANT') {
   Set-Item "Env:CAREER_LAB_${s}_PROVIDER" 'deepseek'
@@ -90,6 +91,7 @@ foreach ($s in 'JUDGE','ROLES','ASSISTANT') {
 ## 7. 已知问题
 
 - **C1 准确率只有 0.6 出头**，会误判：录好的演示局里，技术负责人说对的「可审批上限 60 人」被 C10 标成矛盾；故意写的过度表述「人工兜底已经落实」没被抓到。讲的时候说「识别器给出可核查的信号，不是裁决」。
+  注意和[进度文档](progress-pattern-recognition-20261016.md)第 5 节区分：那里记的是**另一局**，DeepSeek 技术负责人把可审批上限说成现有容量（「上限是 60 人」），C10 判矛盾是对的。录好的演示包里是本条这种误判，视频里不能拿演示包这一局讲「识别层抓 LLM 的错」。
 - **预演慢**：首算约 23 秒，再算约 8 秒（8 秒是规则核查本身，没识别器也要 8.7 秒）。前端给了 60 秒。
 - **同事回复偶尔被拦**：LLM 安全复核（`role_help_unverified`）不放行时，气泡显示失败，重问一次即可。
 - **SQLite 并发**：多局并行或实验和服务同时跑会报 `database is locked`。单人演示不会碰到。
