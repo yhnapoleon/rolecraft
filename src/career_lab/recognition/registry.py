@@ -33,6 +33,7 @@ KNOWN = (
     ("scope-mahalanobis-v1", "scope"),
     ("intent-tfidf-lr-v1", "intent"),
     ("behavior-v1", "behavior"),
+    ("relation-stack-v1", "relation"),
 )
 
 
