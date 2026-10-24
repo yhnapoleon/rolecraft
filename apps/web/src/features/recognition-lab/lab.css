@@ -8,22 +8,34 @@
   padding-bottom: 120px;
 }
 
-/* ---------- header ---------- */
+/* ---------- header: title, then the lead and the three jumps on one line ---------- */
 .rc-head {
-  padding: 28px 0 8px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 32px;
+  padding: 0;
+}
+.rc-head .title-xl {
+  flex: 1 0 100%;
+  line-height: 1.12;
 }
 .rc-lab-lead {
+  flex: 1 1 32em;
   max-width: 62ch;
-  margin-top: 12px;
   color: var(--ink-2);
   font-size: 15px;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 .rc-toc {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 20px;
-  margin-top: 18px;
+}
+@media (min-width: 721px) {
+  .rc-toc {
+    margin-left: auto;
+  }
 }
 .rc-toc-link {
   padding: 4px 0;
@@ -51,15 +63,19 @@
 
 /* ---------- sections ---------- */
 .rc-section {
-  margin-top: 64px;
+  margin-top: 56px;
   scroll-margin-top: calc(var(--toolbar-h) + 16px);
 }
+.rc-head + .rc-section {
+  margin-top: 26px;
+}
 .rc-sec-head {
-  margin-bottom: 18px;
+  margin-bottom: 12px;
 }
 .rc-sec-head h2 {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 600;
+  line-height: 1.3;
   letter-spacing: -0.01em;
   outline: none;
 }
@@ -73,7 +89,7 @@
 }
 .rc-sec-lead {
   max-width: 68ch;
-  margin-top: 6px;
+  margin-top: 4px;
   color: var(--ink-3);
   font-size: 13.5px;
   line-height: 1.55;
@@ -86,16 +102,159 @@
 
 /* ---------- pipeline ---------- */
 .rc-pipe {
-  padding: 28px 32px 22px;
+  container: rc-pipe / inline-size;
+  padding: 18px 28px 14px;
 }
-.rc-claim-meta {
+/* The choices: deliveries (when more than one), the work's sentences, replay at the end. */
+.rc-claim-bar {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 14px;
+  gap: 10px 20px;
+}
+.rc-lab-units {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-width: 0;
+}
+.rc-lab-units-label {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+/* A radio group drawn as one instrument strip: keys on a soft well, the chosen key raised. */
+.rc-lab-radios {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  padding: 3px;
+  border-radius: var(--r-sm);
+  background: var(--fill);
+}
+.rc-lab-radio {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 32px;
+  min-height: 34px;
+  padding: 5px 7px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color var(--fast) var(--ease),
+    color var(--fast) var(--ease),
+    box-shadow var(--fast) var(--ease),
+    transform var(--fast) var(--ease);
+}
+.rc-lab-radio[data-rc-delivery] {
+  flex-direction: row;
+  gap: 6px;
+  padding: 5px 11px;
+  white-space: nowrap;
+}
+.rc-lab-radio-sub {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+.rc-lab-radio[aria-checked="true"] {
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+  box-shadow: var(--shadow-card);
+}
+@media (hover: hover) and (pointer: fine) {
+  .rc-lab-radio[aria-checked="false"]:hover {
+    background: var(--fill);
+    color: var(--ink);
+  }
+}
+.rc-lab-radio:active {
+  transform: scale(0.97);
+}
+.rc-lab-radio:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+/* The lens's sentence marks: solid green holds, solid red contradicts, grey ring not known,
+   grey dashed ring sent to a person. */
+.rc-lab-mark {
+  display: inline-block;
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+.rc-lab-mark[data-tone="supported"] {
+  background: var(--good);
+}
+.rc-lab-mark[data-tone="contradicted"] {
+  background: var(--bad);
+  box-shadow: 0 0 0 2px var(--bad-tint);
+}
+.rc-lab-mark[data-tone="insufficient"] {
+  border: 1.5px solid var(--p-neutral);
+}
+.rc-lab-mark[data-tone="deferred"] {
+  border: 1.5px dashed var(--p-neutral);
+}
+.rc-lab-units-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.rc-lab-key {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.rc-lab-key b {
+  color: var(--ink-2);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.rc-play {
+  margin-left: auto;
+  transition: transform var(--fast) var(--ease);
+}
+.rc-play:active {
+  transform: scale(0.97);
+}
+.rc-claim-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   color: var(--ink-3);
   font-size: 12.5px;
   font-variant-numeric: tabular-nums;
+}
+.rc-claim-bar + .rc-claim-meta {
+  margin-top: 12px;
+}
+.rc-claim-meta > p {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  min-width: 0;
+}
+.rc-claim-meta .rc-lab-key {
+  color: var(--ink-2);
 }
 .rc-example {
   padding: 1px 9px;
@@ -104,68 +263,40 @@
   color: var(--ink-2);
   font-size: 11.5px;
 }
-.rc-claim-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 12px;
-  margin-left: auto;
-}
-.rc-pick {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  max-width: 100%;
-}
-.rc-pick > span {
-  flex: none;
-  white-space: nowrap;
-}
-.rc-pick select {
-  min-width: 0;
-  max-width: min(320px, 100%);
-  padding: 5px 8px;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-xs);
-  background: var(--surface);
-  color: var(--ink);
-  font: inherit;
-  font-size: 12.5px;
-}
-.rc-play {
-  transition: transform var(--fast) var(--ease);
-}
-.rc-play:active {
-  transform: scale(0.97);
-}
 .rc-claim-quote {
-  max-width: 60ch;
-  margin: 14px 0 0;
+  max-width: 46em;
+  margin: 8px 0 0;
   color: var(--ink);
   font-family: var(--serif);
-  font-size: 19px;
-  line-height: 1.6;
+  font-size: 20px;
+  line-height: 1.55;
 }
 
 .rc-track {
   display: grid;
   grid-template-columns: repeat(6, minmax(0, 1fr));
-  margin: 30px 0 0;
+  /* node · number · name · course families · result: each row as tall as its tallest station,
+     so the families line up across the six stations whatever the results say. */
+  grid-template-rows: repeat(5, auto);
+  margin: 18px 0 0;
   padding: 0;
   list-style: none;
 }
 .rc-station {
   position: relative;
+  display: grid;
+  grid-row: span 5;
+  grid-template-rows: subgrid;
   min-width: 0;
 }
 .rc-st {
   position: relative;
   display: grid;
+  grid-row: 1 / -1;
+  grid-template-rows: subgrid;
   align-content: start;
   width: 100%;
-  min-height: 100%;
-  padding: 0 14px 14px 0;
+  padding: 0 14px 12px 0;
   border: 0;
   background: none;
   color: inherit;
@@ -179,6 +310,7 @@
   outline-offset: 4px;
 }
 .rc-node {
+  grid-row: 1;
   position: relative;
   z-index: 1;
   width: 11px;
@@ -197,13 +329,15 @@
   transform: scale(0.85);
 }
 .rc-st-num {
-  margin-top: 14px;
+  grid-row: 2;
+  margin-top: 12px;
   color: var(--ink-4);
   font-family: var(--mono);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }
 .rc-st-name {
+  grid-row: 3;
   position: relative;
   justify-self: start;
   margin-top: 2px;
@@ -228,8 +362,21 @@
     opacity var(--fast) var(--ease),
     transform var(--fast) var(--ease);
 }
+.rc-st-fams {
+  grid-row: 4;
+  display: flex;
+  flex-wrap: wrap;
+  align-content: start;
+  gap: 4px;
+  margin-top: 6px;
+}
 .rc-st-note {
-  margin-top: 8px;
+  grid-row: 5;
+  display: -webkit-box;
+  margin-top: 6px;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   color: var(--ink-2);
   font-size: 12.5px;
   line-height: 1.45;
@@ -265,7 +412,8 @@
   border-color: var(--ink);
   background: var(--ink);
 }
-.rc-station[data-state="current"] .rc-node {
+/* The halo marks the chosen station: it follows a click, a key and the head of the walk. */
+.rc-station[data-halo] .rc-node {
   box-shadow: 0 0 0 5px var(--fill-2);
 }
 .rc-station[data-state="reached"] .rc-st-name,
@@ -294,22 +442,44 @@
 }
 
 .rc-st-panel {
-  min-height: 160px;
-  margin-top: 14px;
-  padding: 20px 0 4px;
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-height: 128px;
+  margin-top: 2px;
+  padding: 14px 0 2px;
   border-top: 1px solid var(--line);
   color: var(--ink-2);
   font-size: 14px;
   line-height: 1.6;
   outline: none;
 }
+/* What the stage does on the left, its figure on the right, once the paper is wide enough. */
+@container rc-pipe (min-width: 720px) {
+  .rc-st-panel {
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    column-gap: 40px;
+  }
+  .rc-st-text:only-child {
+    grid-column: 1 / -1;
+  }
+}
+.rc-st-text,
+.rc-st-figure {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+.rc-figure-note {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
 .rc-st-panel:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 4px;
   border-radius: 6px;
-}
-.rc-st-panel > * + * {
-  margin-top: 10px;
 }
 .rc-st-panel p {
   max-width: 72ch;
@@ -317,18 +487,19 @@
 .rc-st-panel.is-entering {
   animation: rc-enter var(--mid) var(--spring) both;
 }
+/* The arriving stage's detail settles in from a faint start, never from an empty panel. */
 @keyframes rc-enter {
   from {
-    opacity: 0;
-    transform: translateY(4px);
+    opacity: 0.3;
+    transform: translateY(3px);
   }
 }
 .rc-pipe.is-playing .rc-st-panel.is-entering {
   animation-delay: var(--fast);
 }
 .rc-pipe-hint {
-  margin-top: 14px;
-  color: var(--ink-4);
+  margin-top: 6px;
+  color: var(--ink-3);
   font-size: 12px;
 }
 @media (hover: none) {
@@ -356,16 +527,19 @@
 }
 .rc-hits {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 .rc-hits li {
   display: grid;
-  grid-template-columns: 22px minmax(0, 1fr) auto;
-  gap: 4px 12px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 0 10px;
   align-items: baseline;
+}
+.rc-hit-score {
+  grid-column: 2;
 }
 .rc-hit-rank {
   color: var(--ink-3);
@@ -373,10 +547,14 @@
   font-size: 12px;
 }
 .rc-hit-quote {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   color: var(--ink);
   font-family: var(--serif);
-  font-size: 15px;
-  line-height: 1.55;
+  font-size: 14.5px;
+  line-height: 1.5;
 }
 .rc-hit-score {
   color: var(--ink-3);
@@ -455,8 +633,8 @@
 
 /* ---------- recogniser register ---------- */
 .rc-families-index {
-  margin-bottom: 22px;
-  padding: 16px 0 0;
+  margin-bottom: 18px;
+  padding: 14px 0 0;
   border-top: 1px solid var(--line);
 }
 .rc-index-title {
@@ -482,17 +660,14 @@
 }
 .rc-register {
   margin: 0;
-  padding: 4px 32px;
-  border-radius: 14px;
-  background: var(--paper);
-  box-shadow: var(--shadow-paper);
+  padding: 2px 28px;
   list-style: none;
 }
 .rc-rec {
   display: grid;
-  grid-template-columns: minmax(0, 13em) minmax(0, 1fr) minmax(0, 18em);
-  gap: 16px 32px;
-  padding: 22px 0;
+  grid-template-columns: minmax(0, 12em) minmax(0, 1fr) minmax(0, 17em);
+  gap: 12px 32px;
+  padding: 18px 0;
 }
 .rc-rec + .rc-rec {
   border-top: 1px solid var(--line);
@@ -503,16 +678,20 @@
   font-weight: 600;
 }
 .rc-rec[data-primary] {
-  padding: 30px 0 28px;
+  padding: 24px 0 22px;
 }
 .rc-rec[data-primary] .rc-rec-title {
-  font-size: 21px;
+  font-size: 20px;
 }
 .rc-families {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  margin-top: 10px;
+  margin-top: 8px;
+}
+/* In a stage's detail the families head the text column. */
+.rc-st-text .rc-families {
+  margin: 0 0 2px;
 }
 .rc-family {
   padding: 1px 9px;
@@ -526,6 +705,16 @@
 .rc-family[data-extra] {
   border-style: dashed;
   color: var(--ink-3);
+}
+/* On the track, under each station's name: the same pills, quieter. A label wider than the
+   station wraps after its “·” inside the pill (soft corners instead of a capsule then). */
+.rc-st-fams .rc-family {
+  max-width: 100%;
+  padding: 0 7px 1px;
+  border-radius: 10px;
+  color: var(--ink-3);
+  line-height: 1.4;
+  white-space: normal;
 }
 .rc-rec-what {
   color: var(--ink);
@@ -561,7 +750,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 8px 0;
-  margin: 16px 0 0;
+  margin: 12px 0 0;
   padding: 0;
   list-style: none;
 }
@@ -590,7 +779,7 @@
 }
 .rc-rec-metrics ul {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -623,15 +812,16 @@
 
 /* ---------- experiment story ---------- */
 .rc-chapter + .rc-chapter {
-  margin-top: 56px;
+  margin-top: 44px;
 }
 .rc-chapter-head {
   margin-bottom: 4px;
 }
 .rc-chapter-title {
   color: var(--ink);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
+  line-height: 1.3;
 }
 .rc-range {
   margin-left: 6px;
@@ -647,12 +837,12 @@
   line-height: 1.55;
 }
 .rc-story-entry {
-  padding: 28px 0 8px;
+  padding: 22px 0 4px;
   border-top: 1px solid var(--line);
   scroll-margin-top: calc(var(--toolbar-h) + 16px);
 }
 .rc-chapter-head + .rc-story-entry {
-  margin-top: 16px;
+  margin-top: 14px;
 }
 .rc-story-entry[data-tag="branch"] {
   margin-left: 40px;
@@ -677,8 +867,9 @@
 }
 .rc-story-head h4 {
   color: var(--ink);
-  font-size: 17px;
+  font-size: 16px;
   font-weight: 600;
+  line-height: 1.35;
 }
 .rc-story-tag {
   padding: 0 8px;
@@ -700,12 +891,12 @@
 .rc-story-body {
   display: grid;
   grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
-  gap: 20px 40px;
-  margin-top: 16px;
+  gap: 18px 40px;
+  margin-top: 12px;
 }
 .rc-lab-steps {
   display: grid;
-  gap: 12px;
+  gap: 10px;
   margin: 0;
   align-content: start;
 }
@@ -717,7 +908,7 @@
   margin: 2px 0 0;
   color: var(--ink-2);
   font-size: 14px;
-  line-height: 1.62;
+  line-height: 1.58;
 }
 .rc-lab-step[data-step="found"] dd,
 .rc-lab-step[data-step="use"] dd {
@@ -901,28 +1092,40 @@
 }
 @media (max-width: 720px) {
   .rc-head {
-    padding-top: 12px;
+    padding-top: 4px;
   }
   .rc-section {
-    margin-top: 48px;
+    margin-top: 44px;
+  }
+  .rc-head + .rc-section {
+    margin-top: 28px;
   }
   .rc-pipe {
-    padding: 20px 18px 16px;
+    padding: 18px 16px 14px;
   }
-  .rc-claim-actions {
-    flex-wrap: nowrap;
-    margin-left: 0;
-    width: 100%;
+  /* The sentence keys share the line evenly; a long work wraps onto a second row. */
+  .rc-lab-units,
+  .rc-lab-units .rc-lab-radios {
+    flex: 1 1 100%;
   }
-  .rc-pick {
+  .rc-lab-units .rc-lab-radio {
+    flex: 1 0 28px;
+    min-width: 28px;
+    max-width: 48px;
+    padding-inline: 2px;
+  }
+  .rc-lab-radios[data-rc-group="deliveries"] {
     flex: 1 1 auto;
   }
-  .rc-pick select {
-    flex: 1 1 auto;
-    max-width: none;
+  /* Name over count, so neither is squeezed onto a line of its own word by word. */
+  .rc-lab-radios[data-rc-group="deliveries"] .rc-lab-radio {
+    flex: 1 1 0;
+    flex-direction: column;
+    gap: 3px;
+    padding-block: 6px;
   }
-  .rc-play {
-    flex: none;
+  .rc-claim-bar + .rc-claim-meta {
+    margin-top: 14px;
   }
   .rc-claim-quote {
     font-size: 17px;
@@ -930,12 +1133,29 @@
   /* The track turns vertical: node on the left, its note beside it. */
   .rc-track {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: none;
     margin-top: 22px;
   }
+  .rc-station {
+    display: block;
+    grid-row: auto;
+  }
   .rc-st {
+    grid-row: auto;
+    grid-template-rows: none;
     grid-template-columns: auto minmax(0, 1fr);
     column-gap: 10px;
     padding: 0 0 16px 26px;
+  }
+  .rc-st-num,
+  .rc-st-name,
+  .rc-st-fams,
+  .rc-st-note {
+    grid-row: auto;
+  }
+  .rc-st-fams {
+    grid-column: 1 / -1;
+    margin-top: 5px;
   }
   .rc-node {
     position: absolute;
@@ -1009,7 +1229,8 @@
   .rc-st-note,
   .rc-seg-fill,
   .rc-toc-link,
-  .rc-play {
+  .rc-play,
+  .rc-lab-radio {
     transition: none;
   }
   .rc-st-panel.is-entering {

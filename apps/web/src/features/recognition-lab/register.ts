@@ -265,5 +265,5 @@ export function registerHtml(results: Results, language: Language) {
       <div class="rc-rec-metrics"><h4 class="sr-only">${t('f_metric')}</h4><ul>${metrics}</ul></div>
     </li>`;
   }).join('');
-  return `<div class="rc-families-index"><p class="rc-index-title" id="rc-families-title">${t('covTitle')}</p><dl aria-labelledby="rc-families-title">${families}</dl></div><ol class="rc-register">${rows}</ol>`;
+  return `<div class="rc-families-index"><p class="rc-index-title" id="rc-families-title">${t('covTitle')}</p><dl aria-labelledby="rc-families-title">${families}</dl></div><ol class="paper rc-register">${rows}</ol>`;
 }
