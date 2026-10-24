@@ -45,8 +45,74 @@
 .mb-side {
   border-radius: var(--r-panel);
 }
+/* The product under test is an instrument panel: name and keys on top, readings underneath. */
 .product-bar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  padding: 16px 16px 16px 18px;
   background: var(--surface);
+}
+.pb-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+.pb-top .pb-name {
+  flex: 1 1 220px;
+}
+.pb-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.product-bar .pb-state {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 30px;
+  margin: 0;
+  padding: 12px 0 0 50px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.product-bar .pb-gauge {
+  display: grid;
+  gap: 1px;
+  height: auto;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+}
+.pb-k {
+  font-size: 11.5px;
+  color: var(--ink-3);
+}
+.pb-v {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 600 14px / 1.3 var(--sans);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  color: var(--ink);
+}
+/* Only the lagging reading turns amber; the panel itself keeps no amber outline. */
+.product-bar.is-stale {
+  box-shadow: var(--shadow-card);
+}
+.product-bar .pb-gauge.warn {
+  background: none;
+}
+.product-bar .pb-gauge.warn .pb-v {
+  color: var(--warn);
+}
+.product-bar .pb-gauge.muted {
+  align-self: center;
+  color: var(--ink-3);
+}
+.product-bar .config-use {
+  margin: 0;
+  padding-left: 50px;
 }
 .ws-toolbar {
   background: var(--surface);
@@ -98,8 +164,7 @@
   order: -1;
   font-size: 12.5px;
 }
-/* The whole value reads in the narrow instrument face; once the value is split into a number
-   and its unit, the number grows and the unit drops to body size beside it. */
+/* The number reads in the narrow instrument face; its unit sits beside it at body size. */
 .brief-band .cond-val {
   display: flex;
   align-items: baseline;
@@ -175,18 +240,27 @@
   border: 0;
 }
 
-/* ---------- handed in: a band with a green line, not a box ---------- */
-body:has(.state-chip.submitted) .stage-banner {
+/* ---------- handed in: a green line across the top of the board's column, not a box ----------
+   It sits in the page, not over it, so the green light shows through and nothing scrolls under
+   it; its edges are the board's (max 1180px, 28px padding; 14px at phone width). */
+.stage-banner.is-submitted {
+  position: static;
+  margin: 18px max(28px, calc((100% - 1124px) / 2)) 0;
+  padding: 14px 0 0;
   border-radius: 0;
-  background: color-mix(in oklab, var(--canvas), transparent 8%);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  box-shadow:
-    inset 0 2px 0 var(--good),
-    inset 0 -1px 0 color-mix(in oklab, var(--good), transparent 78%);
+  background: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: inset 0 2px 0 var(--good);
 }
-body:has(.state-chip.submitted) .stage-banner > .i {
+.stage-banner.is-submitted > .i {
   color: var(--good);
+}
+.stage-banner.is-submitted .sb-when {
+  color: var(--good);
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- the event lives in the light ----------
@@ -228,12 +302,35 @@ body:has(.state-chip.submitted) .stage-banner > .i {
 .we-title {
   font-size: 17px;
 }
+/* What changed is the notice's own words, so it is set in the world's serif. */
+.we-change {
+  margin-top: 4px;
+  max-width: 64ch;
+  font: 400 16px / 1.45 var(--serif);
+  color: var(--ink);
+  text-wrap: pretty;
+}
 .world-event .btn.primary {
   background: var(--warn);
   color: var(--on-primary);
 }
 .world-event .btn.primary:hover {
   background: color-mix(in oklab, var(--warn), var(--canvas) 12%);
+}
+
+/* Handed in, the event is a record: no amber line, no light, one quiet key. */
+.world-event.is-record {
+  padding-top: 14px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.world-event.is-record::before {
+  content: none;
+}
+.world-event.is-record .we-icon {
+  color: var(--ink-3);
+}
+.world-event.is-record .we-title {
+  font-size: 15px;
 }
 
 /* ---------- world light ----------
@@ -254,7 +351,7 @@ body:has(.state-chip.submitted) .stage-banner > .i {
   opacity: 0;
   transition: opacity var(--slow) var(--ease-out);
 }
-.stage-inner:has(.world-event)::before {
+.stage-inner:has(.world-event:not(.is-record))::before {
   --world-light: var(--light-warn);
   opacity: 1;
 }
@@ -270,6 +367,26 @@ body:has(.state-chip.submitted) .stage-inner::before {
   }
 }
 @media (max-width: 720px) {
+  .product-bar .pb-state,
+  .product-bar .config-use {
+    padding-left: 0;
+  }
+  .product-bar .pb-state {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 16px;
+  }
+  .pb-keys {
+    width: 100%;
+    flex-wrap: nowrap;
+    gap: 2px;
+  }
+  .pb-keys .btn.small {
+    padding: 0 9px;
+  }
+  .stage-banner.is-submitted {
+    margin: 14px 14px 0;
+  }
   .brief-band .band-letter {
     padding: 20px 20px 18px;
   }
@@ -281,6 +398,13 @@ body:has(.state-chip.submitted) .stage-inner::before {
   }
   .brief-band .cond-num {
     font-size: 34px;
+  }
+}
+@media (max-width: 400px) {
+  /* Three named keys do not fit: the test bench keeps its name, settings and requests show
+     their icons; every key keeps its name for assistive tech. */
+  .pb-keys .btn:not(:first-child) .pb-key-label {
+    display: none;
   }
 }
 @media (prefers-reduced-motion: reduce) {
