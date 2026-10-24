@@ -1,0 +1,38 @@
+/* Every island's root carries .rc-island. It takes no box of its own, and maps the variables
+ * copied shadcn / Magic UI / AI Elements components expect onto ours. */
+.rc-island {
+  display: contents;
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --card-foreground: var(--ink);
+  --popover: var(--surface);
+  --popover-foreground: var(--ink);
+  --primary-foreground: var(--on-primary);
+  --secondary: var(--surface-2);
+  --secondary-foreground: var(--ink);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--ink-3);
+  --accent-foreground: var(--ink);
+  --destructive: var(--bad);
+  --border: var(--line);
+  --input: var(--line-2);
+  --ring: var(--ink);
+  --radius: 8px;
+}
+/* A portal (sheet, tooltip, toaster) renders outside the island; it gets the same mapping. */
+.rc-portal {
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --card: var(--paper);
+  --popover: var(--surface);
+  --primary-foreground: var(--on-primary);
+  --muted: var(--surface-2);
+  --muted-foreground: var(--ink-3);
+  --border: var(--line);
+  --ring: var(--ink);
+  --radius: 8px;
+}
+.rc-island-slot {
+  display: contents;
+}

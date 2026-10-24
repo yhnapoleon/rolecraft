@@ -1,0 +1,24 @@
+/* Shell-wide pieces that live outside a single screen. */
+
+/* Toasts sit at the bottom centre of the main screen: with the right rail on screen, the
+ * centre moves left by half its width, so the rail's input is never covered. */
+:root {
+  --rail-w: 0px;
+}
+@media (min-width: 1280px) {
+  body[data-view="work"] {
+    --rail-w: 368px;
+  }
+}
+.rc-toaster[data-sonner-toaster][data-x-position="center"] {
+  left: calc(50% - var(--rail-w) / 2);
+}
+@media (prefers-reduced-motion: reduce) {
+  /* Sonner sets the toast's transform inline; reduced motion must still win. */
+  .rc-toaster [data-sonner-toast] {
+    /* biome-ignore lint/complexity/noImportantStyles: beats Sonner's inline animation */
+    transition: opacity 160ms linear !important;
+    /* biome-ignore lint/complexity/noImportantStyles: beats Sonner's inline animation */
+    transform: none !important;
+  }
+}

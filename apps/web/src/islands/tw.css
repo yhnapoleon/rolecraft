@@ -1,0 +1,58 @@
+/* Tailwind v4 for React islands only: no preflight, every class prefixed (tw:flex), colours,
+ * type and radii mapped to our variables so light/dark follow the existing theme. Never use
+ * the dark: variant. The theme layer only defines --tw-* variables. Utilities stay unlayered on
+ * purpose: our global element rules (button, a, h1…, :focus-visible) are unlayered, and a
+ * layered utility would always lose to them. Prefixed utilities only match tw: classes, so
+ * existing pages are untouched. */
+@layer theme;
+@import "tailwindcss/theme.css" layer(theme) prefix(tw);
+@import "tailwindcss/utilities.css" source(none);
+/* Only our TSX is scanned; only tw:-prefixed tokens generate anything. */
+@source "../**/*.{tsx,ts}";
+/* Hover only where a fine pointer can hover (button states, §2.4). */
+@custom-variant hover {
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      @slot;
+    }
+  }
+}
+@theme inline {
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-ink-4: var(--ink-4);
+  --color-paper: var(--paper);
+  --color-desk: var(--canvas);
+  --color-inst: var(--surface);
+  --color-inst-2: var(--surface-2);
+  --color-inst-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-2: var(--line-2);
+  --color-fill: var(--fill);
+  --color-fill-2: var(--fill-2);
+  --color-primary: var(--primary);
+  --color-on-primary: var(--on-primary);
+  --color-good: var(--good);
+  --color-good-tint: var(--good-tint);
+  --color-warn: var(--warn);
+  --color-warn-tint: var(--warn-tint);
+  --color-bad: var(--bad);
+  --color-bad-tint: var(--bad-tint);
+  --color-unk: var(--p-neutral);
+  --color-manager: var(--p-manager);
+  --color-business: var(--p-business);
+  --color-technical: var(--p-technical);
+  --font-sans: var(--sans);
+  --font-serif: var(--serif);
+  --font-mono: var(--mono);
+  --radius-paper: 3px;
+  --radius-key: 8px;
+  --radius-panel: 12px;
+  --radius-dialog: 16px;
+  --shadow-paper: var(--shadow-paper);
+  --shadow-card: var(--shadow-card);
+  --shadow-float: var(--shadow-float);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-drawer: cubic-bezier(0.32, 0.72, 0, 1);
+}

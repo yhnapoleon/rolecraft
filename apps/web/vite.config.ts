@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
+import tailwindcss from '@tailwindcss/vite';
 import { fileURLToPath } from 'node:url';
 import { PRODUCT_NAME } from './src/app/product.js';
 
@@ -17,7 +18,8 @@ const productName = {
   transformIndexHtml: (html: string) => html.replaceAll('%PRODUCT_NAME%', PRODUCT_NAME),
 };
 export default defineConfig({
-  plugins: [react(), productName],
+  // Tailwind only reaches src/islands/tw.css (prefixed tw:, no preflight); see that file.
+  plugins: [react(), tailwindcss(), productName],
   build: {
     rolldownOptions: {
       input: {

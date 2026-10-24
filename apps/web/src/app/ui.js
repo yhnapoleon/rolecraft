@@ -128,12 +128,24 @@ import {
   openEngineerHandover,
   openEngineerTicket,
 } from '../features/engineer-desk/entry';
+import {
+  afterShellRender,
+  dismissToasts,
+  dispatchRegistered,
+  installShell,
+  isRegisteredRoute,
+  onRouteRegistered,
+  pmStage,
+  registeredRoute,
+  registeredRouteNames,
+  registerStage,
+  showToast,
+} from '../shell';
 
 const L = window.PracticeLive;
 const E = L.engine;
 const app = document.getElementById('app');
 const sheet = document.getElementById('sheet');
-const toastEl = document.getElementById('toast');
 const KEY = 'rolecraft.open-work.ui.v1';
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const documentMotion = createDocumentMotion();
@@ -227,7 +239,6 @@ const ui = {
 };
 let dirty = null;
 let saveTimer = null;
-let toastTimer = null;
 let sheetReturn = null;
 let dragId = null;
 
@@ -555,23 +566,19 @@ function notify(text, opts = {}) {
     return;
   }
   const act = opts.undo ? { label: T('撤销', 'Undo'), run: opts.undo } : opts.action;
-  toastEl.innerHTML = `${opts.lead || ''}<span class="toast-text">${esc(text)}</span>${act ? `<button type="button" class="toast-act">${esc(act.label)}</button>` : ''}`;
-  toastEl.classList.add('visible');
-  toastEl.classList.toggle('actionable', !!act);
   ui.lastUndo = opts.undo || null;
-  if (act)
-    toastEl.querySelector('.toast-act').onclick = () => {
-      act.run();
-      ui.lastUndo = null;
-      toastEl.classList.remove('visible');
-    };
+  // One global Sonner toaster (shell/toast.ts): bottom centre of the main screen.
+  showToast(text, {
+    lead: opts.lead,
+    label: act?.label,
+    run: act
+      ? () => {
+          act.run();
+          ui.lastUndo = null;
+        }
+      : undefined,
+  });
   announce(text);
-  const hide = () => {
-    if (!toastEl.matches(':hover, :focus-within')) toastEl.classList.remove('visible');
-    else toastTimer = setTimeout(hide, 1500);
-  };
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(hide, act ? 6500 : 3200);
 }
 function announce(text) {
   const el = document.getElementById('announcer');
@@ -585,11 +592,15 @@ function announce(text) {
 /* ---------- routing ---------- */
 // #/ jobs · #/pm entry · #/work board · #/task/<id> task workbench · #/doc/<id> · #/bench · #/review
 const WS = ['work', 'task', 'doc', 'bench'];
+// Screens other lines register (shell/registry.ts) are drawn in the workspace's main screen.
+WS.push(...registeredRouteNames());
+onRouteRegistered((name) => WS.push(name));
 function parseRoute() {
   const [r, id] = location.hash.replace(/^#\/?/, '').split('/');
   if (['pm', 'work', 'bench', 'review', 'lab', 'engineer-report'].includes(r))
     return { r, id: null };
   if ((r === 'task' || r === 'doc') && id) return { r, id: decodeURIComponent(id) };
+  if (isRegisteredRoute(r)) return { r, id: id ? decodeURIComponent(id) : null };
   // The engineer's desk (#/engineer/<ticket>) and a review's report (#/engineer-review/<review>).
   if (ENGINEER_ROUTES.includes(r)) return { r, id: id ? decodeURIComponent(id) : null };
   return { r: '', id: null };
@@ -620,7 +631,7 @@ function withTransition(fn) {
 function dropUndo() {
   if (ui.lastUndo) {
     ui.lastUndo = null;
-    toastEl.classList.remove('visible');
+    dismissToasts();
   }
 }
 function go(route, opts = {}) {
@@ -787,6 +798,7 @@ function mountEngineer() {
   );
 }
 function afterRender() {
+  afterShellRender();
   refreshAgentIssued();
   if (ui.route !== 'lab') labView = null;
   // The arrival is played once; cards drawn later (the native board mounts after this render)
@@ -806,6 +818,9 @@ function afterRender() {
     return;
   }
   mountNativeSlots();
+  const registered = registeredRoute(ui.route);
+  const stageRoot = registered && document.getElementById('ws-stage');
+  if (stageRoot) registered.mount?.(stageRoot);
   if (ui.route === 'review' && current() && L.nativeWorkspace(current()))
     loadRecognitionSummary(current());
   // Only the workbench's own scroll regions move; browser focus must not shift
@@ -1408,6 +1423,8 @@ function wsStage(a) {
       : st === 'submitted'
         ? `<div class="stage-banner is-submitted">${icon('stamp', 'i-sm')}${handedIn(a)}</div>`
         : '';
+  const registered = registeredRoute(ui.route);
+  if (registered) return lock + registered.render(ui.routeId);
   const t = routeTask(a);
   if (t) return lock + taskView(a, t);
   if (ui.route === 'doc')
@@ -4328,7 +4345,7 @@ function setObj(obj) {
   document.getElementById('ws-object')?.scrollIntoView?.({ block: 'start' });
 }
 
-async function act(el) {
+async function act(el, ev = new Event('rc-action')) {
   const a = current();
   const id = el.dataset.id;
   const action = el.dataset.action;
@@ -4337,6 +4354,7 @@ async function act(el) {
     if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']);
     else render();
   }
+  if (await dispatchRegistered(action, el, ev)) return;
   if (nativeCiteAction(nativeCiteHost, a, action, el.dataset)) return;
   switch (action) {
     case 'investigate-run':
@@ -5105,7 +5123,7 @@ async function act(el) {
       sheetDeliver(true);
       break;
     case 'live-feedback':
-      toastEl.classList.remove('visible');
+      dismissToasts();
       await L.feedback(a, el.dataset.retry === 'true');
       render();
       break;
@@ -5814,7 +5832,7 @@ document.addEventListener('click', (e) => {
   if (el.tagName === 'A') e.preventDefault();
   ui.kbd = e.detail === 0;
   document.documentElement.dataset.input = ui.kbd ? 'keyboard' : 'pointer';
-  Promise.resolve(act(el)).catch((err) =>
+  Promise.resolve(act(el, e)).catch((err) =>
     notify(
       errText(err) || T('这一步没有完成，内容还在。', 'That did not go through. Nothing was lost.'),
     ),
@@ -6328,7 +6346,7 @@ document.addEventListener('keydown', (e) => {
     const u = ui.lastUndo;
     ui.lastUndo = null;
     u();
-    toastEl.classList.remove('visible');
+    dismissToasts();
     notify(T('已撤销', 'Undone'));
   }
   if (e.key === 'Escape' && !sheet.open) {
@@ -6648,4 +6666,13 @@ if ((WS.includes(ui.route) || ui.route === 'review') && !current()) {
   ui.routeId = null;
   history.replaceState(null, '', '#/');
 }
+installShell((el, ev) => act(el, ev));
+// The product manager's stage: no draft yet → Investigate; a draft → Decide; submitted → Delivered.
+registerStage('pm', (a) =>
+  pmStage({
+    hasDraft: works(a).some((x) => String(editorView(a, x).body || '').trim()),
+    delivered: statusOf(a) === 'submitted',
+    onResult: ui.route === 'review',
+  }),
+);
 render();
