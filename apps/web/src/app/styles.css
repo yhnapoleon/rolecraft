@@ -1,67 +1,80 @@
 /* RoleCraft workbench
    A workplace, not a quiz: your work on the left, the desk in the middle, your team
-   on the right. Colour carries meaning — the case has its own light, each colleague
-   has a colour that follows their words, documents are paper, the product under test
-   looks like a product. Everything else stays quiet. */
+   on the right. Colour carries meaning — each colleague has a colour that follows their
+   words, documents are paper, the product under test looks like a product, and the desk
+   is lit only when the world changes. Everything else stays quiet.
+   Materials: the desk is a calibrated instrument and whatever arrives from the world is
+   paper. Depth comes from lightness steps (recess < desk < instrument < paper), not from
+   cards; the shapes, surfaces and the light that apply them live in material.css. */
 
 :root {
   color-scheme: light;
-  --canvas: #eceef2;
-  --surface: #ffffff;
-  --surface-2: #f6f7f9;
-  --surface-3: #eef0f4;
+  --canvas: #e6eae7;
+  --surface: #f1f3f1;
+  --surface-2: #e8ebe9;
+  --surface-3: #dce1dd;
   --paper: #ffffff;
-  --glass: rgba(248, 249, 251, 0.74);
-  --glass-strong: rgba(250, 251, 252, 0.96);
-  --ink: #15171c;
-  --ink-2: #4b505b;
-  --ink-3: #7b818d;
-  --ink-4: #a9aeb7;
-  --line: rgba(20, 24, 32, 0.08);
-  --line-2: rgba(20, 24, 32, 0.14);
-  --fill: rgba(20, 24, 32, 0.05);
-  --fill-2: rgba(20, 24, 32, 0.08);
-  --primary: #15171c;
-  --on-primary: #ffffff;
+  --glass: rgba(241, 243, 241, 0.8);
+  --glass-strong: rgba(243, 245, 243, 0.97);
+  --ink: #111715;
+  --ink-2: #434c49;
+  --ink-3: #5a6461;
+  --ink-4: #8a938f;
+  --line: rgba(17, 23, 21, 0.09);
+  --line-2: rgba(17, 23, 21, 0.15);
+  --fill: rgba(17, 23, 21, 0.05);
+  --fill-2: rgba(17, 23, 21, 0.08);
+  --primary: #111715;
+  --on-primary: #f6f7f6;
   /* Colour has one meaning each. Ink: you and what you can do. Amber: the world changed or is out of date.
      Green: holds / done. Red: over a limit. Grey: not known yet. Hues name people (see --p-*). */
-  --accent: #15171c;
-  --accent-ink: #15171c;
-  --accent-tint: rgba(20, 24, 32, 0.07);
-  --warn: #b5530b;
-  --warn-tint: #fff2e5;
-  --good: #16794a;
-  --good-tint: #e8f6ee;
-  --bad: #c0392b;
-  --bad-tint: #fdeceb;
-  --p-manager: #7457e8;
-  --p-business: #c2449f;
-  --p-technical: #0d9484;
-  --p-neutral: #8b93a2;
-  --p-assistant: #3d63f5;
-  --p-agent: #3a3f4b;
-  --amb-a: rgba(120, 130, 160, 0.1);
-  --amb-b: rgba(120, 130, 160, 0.07);
-  --amb-c: rgba(120, 130, 160, 0.05);
+  --accent: #111715;
+  --accent-ink: #111715;
+  --accent-tint: rgba(17, 23, 21, 0.07);
+  --warn: #96500a;
+  --warn-tint: #f4e5d0;
+  --good: #1b7149;
+  --good-tint: #dcede2;
+  --bad: #b3372a;
+  --bad-tint: #f6e1dc;
+  --p-manager: #6550d0;
+  --p-business: #ad3f88;
+  --p-technical: #0e7e70;
+  --p-neutral: #8a938f;
+  --p-assistant: #3557d2;
+  --p-agent: #343b39;
+  /* The desk has no light of its own; it is lit only while the world has changed
+     (amber) or the work has just been handed in (green). */
+  --amb-a: transparent;
+  --amb-b: transparent;
+  --amb-c: transparent;
+  --light-warn: rgba(222, 146, 58, 0.22);
+  --light-good: rgba(52, 160, 104, 0.24);
   --shadow-paper:
-    0 1px 1px rgba(16, 18, 24, 0.04), 0 4px 14px -4px rgba(16, 18, 24, 0.08),
-    0 22px 44px -26px rgba(16, 18, 24, 0.18);
-  --shadow-card: 0 1px 1px rgba(16, 18, 24, 0.04), 0 10px 30px -18px rgba(16, 18, 24, 0.22);
-  --shadow-float: 0 2px 6px rgba(16, 18, 24, 0.06), 0 26px 70px -18px rgba(16, 18, 24, 0.32);
+    0 0 0 0.5px rgba(17, 23, 21, 0.11), 0 1px 0 rgba(17, 23, 21, 0.035),
+    0 14px 30px -20px rgba(17, 23, 21, 0.42);
+  --shadow-card: 0 0 0 0.5px rgba(17, 23, 21, 0.11), 0 1px 1px rgba(17, 23, 21, 0.05);
+  --shadow-float:
+    0 0 0 0.5px rgba(17, 23, 21, 0.14), 0 2px 4px rgba(17, 23, 21, 0.04),
+    0 24px 48px -20px rgba(17, 23, 21, 0.38);
   --r-xs: 6px;
   --r-sm: 9px;
   --r-md: 12px;
   --r-lg: 16px;
   --r-xl: 22px;
+  /* Paper sheets are near-square, instrument keys are 8px, pills are kept for status. */
+  --r-paper: 3px;
+  --r-key: 8px;
+  --r-panel: 12px;
   --sans:
-    -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei", system-ui, sans-serif;
+    "Instrument Sans Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
   --display:
-    -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC", "Hiragino Sans GB",
-    "Microsoft YaHei", system-ui, sans-serif;
+    "Instrument Sans Variable", -apple-system, BlinkMacSystemFont, "SF Pro Display", "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
   --serif:
-    "Newsreader", "Iowan Old Style", "Charter", "Songti SC", "Noto Serif SC", "Source Han Serif SC",
-    "PingFang SC", system-ui, sans-serif;
+    "Newsreader Variable", "Newsreader", "Iowan Old Style", "Charter", "Songti SC", "Noto Serif SC",
+    "Source Han Serif SC", "PingFang SC", system-ui, sans-serif;
   --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --toolbar-h: 56px;
   /* Springs sampled from WWDC23 duration/bounce into CSS linear(). */
@@ -108,6 +121,7 @@
     1
   );
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --fast: 160ms;
   --mid: 280ms;
   --slow: 520ms;
@@ -115,43 +129,47 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --canvas: #0e0f12;
-    --surface: #17191e;
-    --surface-2: #1d2026;
-    --surface-3: #23272e;
-    --paper: #1b1e23;
-    --glass: rgba(22, 24, 29, 0.72);
-    --glass-strong: rgba(24, 26, 31, 0.96);
-    --ink: #f2f3f5;
-    --ink-2: #b4b9c2;
-    --ink-3: #868c97;
-    --ink-4: #5d636e;
-    --line: rgba(255, 255, 255, 0.08);
-    --line-2: rgba(255, 255, 255, 0.14);
+    --canvas: #0e1211;
+    --surface: #151a18;
+    --surface-2: #1c2220;
+    --surface-3: #090c0b;
+    --paper: #1c2220;
+    --glass: rgba(21, 26, 24, 0.8);
+    --glass-strong: rgba(22, 27, 25, 0.97);
+    --ink: #e8edea;
+    --ink-2: #b1bab6;
+    --ink-3: #8d9692;
+    --ink-4: #5c6561;
+    --line: rgba(255, 255, 255, 0.075);
+    --line-2: rgba(255, 255, 255, 0.13);
     --fill: rgba(255, 255, 255, 0.06);
     --fill-2: rgba(255, 255, 255, 0.1);
-    --primary: #f2f3f5;
-    --on-primary: #121317;
-    --accent: #f2f3f5;
-    --accent-ink: #f2f3f5;
+    --primary: #e8edea;
+    --on-primary: #0e1211;
+    --accent: #e8edea;
+    --accent-ink: #e8edea;
     --accent-tint: rgba(255, 255, 255, 0.1);
-    --warn: #f0a35b;
-    --warn-tint: rgba(240, 163, 91, 0.13);
-    --good: #57c98c;
-    --good-tint: rgba(87, 201, 140, 0.13);
-    --bad: #f07a6e;
-    --bad-tint: rgba(240, 122, 110, 0.13);
-    --p-manager: #9b86ff;
-    --p-business: #ec7ccb;
-    --p-technical: #2fc2ad;
-    --p-assistant: #7d95ff;
-    --p-agent: #c9ced8;
-    --amb-a: rgba(140, 150, 180, 0.08);
-    --amb-b: rgba(140, 150, 180, 0.05);
-    --amb-c: rgba(140, 150, 180, 0.04);
-    --shadow-paper: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 18px 40px -24px rgba(0, 0, 0, 0.7);
-    --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.05), 0 16px 34px -22px rgba(0, 0, 0, 0.7);
-    --shadow-float: 0 0 0 1px rgba(255, 255, 255, 0.07), 0 30px 70px -20px rgba(0, 0, 0, 0.8);
+    --warn: #e7a15a;
+    --warn-tint: rgba(231, 161, 90, 0.12);
+    --good: #5bc28e;
+    --good-tint: rgba(91, 194, 142, 0.13);
+    --bad: #ee7a6a;
+    --bad-tint: rgba(238, 122, 106, 0.14);
+    --p-manager: #a08fff;
+    --p-business: #ea7fc6;
+    --p-technical: #3cc2ae;
+    --p-assistant: #7f97ff;
+    --p-agent: #c9d0cd;
+    --amb-a: transparent;
+    --amb-b: transparent;
+    --amb-c: transparent;
+    --light-warn: rgba(231, 150, 70, 0.16);
+    --light-good: rgba(70, 190, 128, 0.16);
+    --shadow-paper:
+      0 0 0 0.5px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      0 18px 36px -22px rgba(0, 0, 0, 0.85);
+    --shadow-card: 0 0 0 0.5px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.03);
+    --shadow-float: 0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 28px 60px -20px rgba(0, 0, 0, 0.85);
   }
 }
 
@@ -591,14 +609,14 @@ a {
     0 1px 2px rgba(43, 80, 210, 0.25);
 }
 .mark-agent {
-  background: linear-gradient(145deg, #545a67, #15171c);
+  background: linear-gradient(145deg, #4a5451, #111715);
   box-shadow:
     inset 0 0 0 0.5px rgba(255, 255, 255, 0.22),
     0 1px 2px rgba(16, 18, 24, 0.3);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .mark-agent {
-    background: linear-gradient(145deg, #767d8b, #3a3f4b);
+    background: linear-gradient(145deg, #7d8885, #343b39);
   }
 }
 .mark-xs {
@@ -2230,7 +2248,7 @@ button.crumb:hover {
   align-items: flex-start;
   gap: 12px 14px;
   padding: 20px 22px 18px;
-  background: linear-gradient(180deg, color-mix(in oklab, #3d63f5, transparent 94%), transparent);
+  background: linear-gradient(180deg, color-mix(in oklab, var(--p-assistant), transparent 94%), transparent);
 }
 .console.is-stale .console-head {
   background: linear-gradient(

@@ -49,6 +49,7 @@ import {
   UPDATE,
   FALLBACK,
   DOMAIN,
+  DECISION,
   WORK_ITEM,
   materialTitle,
   criterionName,
@@ -893,7 +894,7 @@ function renderCareers() {
   const a = current() && caseShown(current().scenarioId) ? current() : null;
   const t = a && a.tasks.find((x) => x.id === a.selectedTaskId);
   const resume = a
-    ? `<section class="resume"><span class="resume-icon">${icon('note')}</span><div class="grow"><p class="resume-title">${esc(CASE(a.scenarioId).title)}</p><p class="resume-sub">${statusOf(a) === 'submitted' ? T('已交付，可以看评审', 'Submitted. The review is ready to read.') : t ? esc(T('停在「' + taskTitle(t) + '」', 'Stopped at “' + taskTitle(t) + '”')) : T('还没开始具体的事', 'Nothing started yet')}</p></div>${btn(statusOf(a) === 'submitted' ? T('看评审', 'See review') : T('继续', 'Continue'), statusOf(a) === 'submitted' ? 'review-attempt' : 'resume', 'primary', `data-id="${a.id}"`)}</section>`
+    ? `<section class="resume"><span class="resume-icon">${icon('note')}</span><div class="grow"><p class="resume-title">${esc(CASE(a.scenarioId).title)}</p><p class="resume-sub">${statusOf(a) === 'submitted' ? T('已交付，可以看结果', 'Submitted. The result is ready to read.') : t ? esc(T(`停在「${taskTitle(t)}」`, `Stopped at “${taskTitle(t)}”`)) : T('还没开始具体的事', 'Nothing started yet')}</p></div>${btn(statusOf(a) === 'submitted' ? T('看结果', 'See the result') : T('继续', 'Continue'), statusOf(a) === 'submitted' ? 'review-attempt' : 'resume', 'primary', `data-id="${a.id}"`)}</section>`
     : '';
   const preview = `<div class="mini-board" aria-hidden="true">
     <div class="mb-cols">${[
@@ -1109,7 +1110,7 @@ function practiceList(list) {
           : st === 'paused'
             ? T('已暂停', 'Paused')
             : T('进行中', 'In progress');
-      return `<div class="list-row"><span class="resume-icon">${icon('note', 'i-sm')}</span><div class="grow"><p class="row-title">${esc(CASE(a.scenarioId).title)}${a.practiceOrigin ? `<span class="tag">${T('补练', 'Practice round')}</span>` : ''}</p><p class="row-sub">${label}${recovery.since(a.createdAt, sessionOf(a))}</p></div>${st === 'submitted' ? btn(T('看评审', 'Review'), 'review-attempt', 'small quiet', `data-id="${a.id}"`) : ''}${btn(T('打开', 'Open'), 'resume-attempt', 'small', `data-id="${a.id}"`)}</div>`;
+      return `<div class="list-row"><span class="resume-icon">${icon('note', 'i-sm')}</span><div class="grow"><p class="row-title">${esc(CASE(a.scenarioId).title)}${a.practiceOrigin ? `<span class="tag">${T('补练', 'Practice round')}</span>` : ''}</p><p class="row-sub">${label}${recovery.since(a.createdAt, sessionOf(a))}</p></div>${st === 'submitted' ? btn(T('看结果', 'See the result'), 'review-attempt', 'small quiet', `data-id="${a.id}"`) : ''}${btn(T('打开', 'Open'), 'resume-attempt', 'small', `data-id="${a.id}"`)}</div>`;
     })
     .join('')}</div></section>`;
 }
@@ -1173,7 +1174,7 @@ function wsToolbar(a) {
     ${modelChip(a)}
     ${langControl()}
     <div class="menu-wrap">${btn(icon('more'), 'menu', 'icon quiet', `data-menu="more" aria-haspopup="menu" aria-expanded="${ui.menu === 'more'}" aria-label="${esc(T('更多', 'More'))}"`)}${ui.menu === 'more' ? moreMenu(a) : ''}</div>
-    ${st === 'submitted' ? btn(T('看评审', 'See review'), 'to-review', 'primary') : btn(icon('stamp', 'i-sm') + T('交付', 'Submit'), 'submit', hasDecision(a) ? 'primary' : '')}
+    ${st === 'submitted' ? btn(T('看结果', 'See the result'), 'to-review', 'primary') : btn(icon('stamp', 'i-sm') + T('交付', 'Submit'), 'submit', hasDecision(a) ? 'primary' : '')}
   </header>`;
 }
 /** The practice's one model status, once the server has read it; null for legacy practice. */
@@ -1305,6 +1306,14 @@ function intakeNote(a) {
   const gaps = intakeLines(a.intake.gaps, a.intake.notModeled);
   return `<div class="intake-note"><p class="meta">${T('按你描述的业务', 'From your description')}</p><ul class="ticks small">${fits.map((x) => `<li>${icon('check', 'i-xs')}${esc(x)}</li>`).join('')}${gaps.map((x) => `<li class="muted">${icon('minus', 'i-xs')}${esc(x)}</li>`).join('')}</ul></div>`;
 }
+// A condition reads like an instrument: the number carries the weight, its unit sits beside it.
+// The text stays the same ("30 seats", "第 7 天"); only the number gets its own span.
+const readout = (value) => {
+  const m = /^(\D*?)(\d+(?:\.\d+)?)(\D*)$/.exec(value);
+  return m
+    ? `${m[1] ? `<span class="cond-unit">${m[1]}</span>` : ''}<span class="cond-num">${m[2]}</span>${m[3] ? `<span class="cond-unit">${m[3]}</span>` : ''}`
+    : value;
+};
 // Conditions are numbers with names. An approved change shows the old value beside it.
 function conditions(a, cls = '') {
   const base = worldOf(a.scenarioId);
@@ -1312,7 +1321,7 @@ function conditions(a, cls = '') {
   const lit = (k) =>
     ui.changed && ui.changed.until > Date.now() && ui.changed.keys.includes(k) ? ' lit' : '';
   const item = (value, label, was, k = '') =>
-    `<div class="cond ${was ? 'changed' : ''}${lit(k)}"><span class="cond-val">${value}</span><span class="cond-label">${label}</span>${was ? `<span class="cond-was">${T('原', 'was')} ${was} · ${T('已批准', 'approved')}</span>` : ''}</div>`;
+    `<div class="cond ${was ? 'changed' : ''}${lit(k)}"><span class="cond-val">${readout(value)}</span><span class="cond-label">${label}</span>${was ? `<span class="cond-was">${T('原', 'was')} ${was} · ${T('已批准', 'approved')}</span>` : ''}</div>`;
   return `<div class="conds ${cls}">
     ${item(T(w.capacity + ' 人', w.capacity + ' seats'), T('试点容量', 'Capacity'), w.capacity !== base.capacity ? T(base.capacity + ' 人', String(base.capacity)) : '', 'capacity')}
     ${item(T(w.devDays + ' 人日', w.devDays + ' person-days'), T('可用开发', 'Engineering'), w.devDays !== base.devDays ? T(base.devDays + ' 人日', String(base.devDays)) : '', 'devDays')}
@@ -1327,7 +1336,7 @@ function wsStage(a) {
     : st === 'paused'
       ? `<div class="stage-banner">${icon('pause', 'i-sm')}<span class="grow">${T('练习已暂停。资料可以看，操作要先恢复。', 'Paused. You can read; resume to act.')}</span>${btn(T('恢复', 'Resume'), 'live-session', 'small')}</div>`
       : st === 'submitted'
-        ? `<div class="stage-banner">${icon('stamp', 'i-sm')}<span class="grow">${T('已固定交付，这次练习只读。', 'Submitted. This practice is read-only now.')}</span>${btn(T('看评审', 'See review'), 'to-review', 'small')}</div>`
+        ? `<div class="stage-banner is-submitted">${icon('stamp', 'i-sm')}${handedIn(a)}</div>`
         : '';
   const t = routeTask(a);
   if (t) return lock + taskView(a, t);
@@ -1414,12 +1423,108 @@ function revisionNote(a) {
     : T('改好再交给我。', 'Bring it back to me when it is ready.');
   return `<aside class="revise-note" data-revise-note aria-label="${esc(T('从哪里修订', 'Where to revise'))}">${letter('manager', said + next, 'sm')}${btn(T('知道了', 'Got it'), 'revise-note-ok', 'small quiet')}</aside>`;
 }
+// What changed, in the notice's own words: the first clause of the new policy text, with the
+// number it replaced read from the version before. Both versions come from the read-only
+// materials query (no read is recorded), are fetched once per practice and kept here.
+function policyText(a, version) {
+  ui.policyTexts = ui.policyTexts || {};
+  const key = `${a.id}@${version}`;
+  if (key in ui.policyTexts) return ui.policyTexts[key];
+  ui.policyTexts[key] = null;
+  Promise.resolve(L.materialVersion(a, 'policy', version))
+    .then((m) => {
+      if (m?.content) {
+        ui.policyTexts[key] = String(m.content);
+        refreshWS(['stage']);
+      }
+    })
+    .catch(() => {
+      /* the band keeps its title; the change line waits for the text */
+    });
+  return null;
+}
+function policyChange(a, v) {
+  const current = policyText(a, v);
+  if (!current) return '';
+  const prev = v > 1 ? policyText(a, v - 1) : null;
+  const text = current.replace(/^#.*\n+/, '').replace(/[*_`]/g, '').trim();
+  let clause = text.split(/(?<=[。；！？])|(?<=[;.!?])\s+/)[0].replace(/[。；;.]$/, '');
+  const colon = clause.search(/[：:]\s?/);
+  if (colon > 0 && colon < 40) clause = clause.slice(colon + 1).trim();
+  if (!clause) return '';
+  clause = clause[0].toUpperCase() + clause.slice(1);
+  const nums = (t) => String(t).match(/\d+(?:\.\d+)?/g) || [];
+  const now = prev ? nums(clause).find((n) => !nums(prev).includes(n)) : undefined;
+  const was = now ? nums(prev).find((n) => !nums(text).includes(n)) : undefined;
+  let old = '';
+  if (was) {
+    const around = new RegExp(`([A-Z]{3}\\s?)?${now}(元|%)?`).exec(clause);
+    old = (around?.[1] || '') + was + (around?.[2] || '');
+  }
+  return clause + (old ? T(`（原为${old}）`, ` (was ${old})`) : '') + T('。', '.');
+}
+// The latest delivery (its call and when it was made), read once per practice for the
+// handed-in band.
+function delivered(a) {
+  ui.deliveredDecisions = ui.deliveredDecisions || {};
+  if (a.id in ui.deliveredDecisions) return ui.deliveredDecisions[a.id];
+  ui.deliveredDecisions[a.id] = null;
+  const host = L.nativeWorkspace(a) ? L.v4Host(a) : null;
+  Promise.resolve(host?.query('submissions.list'))
+    .then((list) => {
+      const rows = Array.isArray(list) ? list : Array.isArray(list?.items) ? list.items : [];
+      const last = rows.at(-1);
+      if (last?.decision) {
+        ui.deliveredDecisions[a.id] = { decision: last.decision, at: last.created_at || null };
+        refreshWS(['stage']);
+      }
+    })
+    .catch(() => {
+      /* the band falls back to the plain sentence */
+    });
+  return null;
+}
+// "12:18  Submitted: proceed with a limited scope. This practice is read-only now."
+function handedIn(a) {
+  const d = delivered(a);
+  const at = a.submittedAt || d?.at;
+  const call = d ? DECISION(d.decision) : '';
+  const said = call
+    ? `<b>${T(`已交付：${call}。`, `Submitted: ${call[0].toLowerCase() + call.slice(1)}.`)}</b> ${T('现在只能查看。', 'This practice is read-only now.')}`
+    : T('已固定交付，现在只能查看。', 'Submitted. This practice is read-only now.');
+  return `${at ? `<time class="sb-when">${esc(when(at))}</time>` : ''}<span class="grow">${said}</span>`;
+}
 function situationBanner(a) {
   const v = a.world.policyVersion;
   const behind = a.world.indexVersion < v;
+  const change = policyChange(a, v);
+  // Handed in, the board only reads: the event stays as a record of what changed.
+  if (statusOf(a) === 'submitted')
+    return `<section class="world-event is-record" role="status">
+    <span class="we-icon">${icon('bolt')}</span>
+    <div class="grow"><p class="we-title">${T(`差旅政策更新为 v${v}`, `The travel policy is now v${v}`)}</p>${change ? `<p class="we-change">${esc(change)}</p>` : ''}</div>
+    <div class="we-actions">${btn(T('看哪里变了', 'See what changed'), 'open-doc', 'small quiet', 'data-id="policy" data-compare="1"')}</div>
+  </section>`;
+  const before = a.tests.filter((r) => r.policyVersion < v).length;
+  const after = [
+    behind
+      ? T(
+          `知识助手的索引还是 v${a.world.indexVersion}，它会继续按旧版本回答，直到你刷新索引。`,
+          `The assistant still indexes v${a.world.indexVersion} and will keep answering from it until you refresh the index.`,
+        )
+      : '',
+    before
+      ? T(
+          `你之前的 ${before} 次测试用的是旧版政策。`,
+          before > 1
+            ? `Your ${before} earlier tests used the old policy.`
+            : 'Your earlier test used the old policy.',
+        )
+      : '',
+  ].filter(Boolean);
   return `<section class="world-event" role="status">
     <span class="we-icon">${icon('bolt')}</span>
-    <div class="grow"><p class="we-kicker">${T('刚发生', 'Just happened')}</p><p class="we-title">${T(`差旅政策更新为 v${v}`, `The travel policy is now v${v}`)}</p>${behind ? `<p class="we-sub">${T(`知识助手的索引还是 v${a.world.indexVersion}，它会继续按旧版本回答，直到你刷新索引。`, `The assistant still indexes v${a.world.indexVersion} and will keep answering from it until you refresh the index.`)}</p>` : ''}</div>
+    <div class="grow"><p class="we-kicker">${T('刚发生', 'Just happened')}</p><p class="we-title">${T(`差旅政策更新为 v${v}`, `The travel policy is now v${v}`)}</p>${change ? `<p class="we-change">${esc(change)}</p>` : ''}${after.length ? `<p class="we-sub">${after.join(' ')}</p>` : ''}</div>
     <div class="we-actions">${btn(T('看哪里变了', 'See what changed'), 'open-doc', 'small primary', 'data-id="policy" data-compare="1"')}${btn(T('记为事项', 'Add as a task'), 'situation-task', 'small')}${btn(T('知道了', 'Got it'), 'ack', 'small quiet', `data-key="policy-v${v}"`)}</div>
   </section>`;
 }
@@ -1429,18 +1534,49 @@ function configUseLine(use, prefix = '') {
     ? `<p class="config-use${use.unfunded ? ' bad' : ''}" data-config-use>${icon(use.unfunded ? 'x' : 'minus', 'i-xs')}<span>${esc(prefix + use.text)}</span></p>`
     : '';
 }
+// The product under test as an instrument panel: its name and keys on top, the settings it
+// runs with read out underneath. An index that lags the policy is the one amber reading.
 function productBar(a) {
   const c = a.config;
   const configured = !!a.backend?.configured;
   const stale = a.world.indexVersion < a.world.policyVersion;
   const use = configured ? configUse(a.effectiveConfig, a.world.devDays) : null;
+  const gauge = (k, v, cls = '', extra = '') =>
+    `<li class="pb-gauge ${cls}"><span class="pb-k">${k}</span> <span class="pb-v">${v}</span>${extra}</li>`;
+  const sources = c.domains.map(DOMAIN);
+  const gauges = configured
+    ? [
+        gauge(use ? T('已保存', 'Saved') : T('配置', 'Config'), `v${a.configVersion}`),
+        gauge(T('开放人数', 'Participants'), c.participants),
+        gauge(
+          T('知识来源', 'Sources'),
+          sources.length,
+          '',
+          sources.length ? `<span class="sr-only">${esc(sources.join(T('、', ', ')))}</span>` : '',
+        ),
+        gauge(T('索引方式', 'Index'), UPDATE_SHORT(c.update)),
+      ]
+    : [`<li class="pb-gauge muted">${T('还没有试点设置', 'No pilot settings yet')}</li>`];
+  gauges.push(
+    gauge(T('政策', 'Policy'), `v${a.world.policyVersion}`),
+    gauge(
+      T('索引基于', 'Index built on'),
+      stale
+        ? `${icon('stale', 'i-xs')}${T(`v${a.world.indexVersion}，落后`, `v${a.world.indexVersion}, behind`)}`
+        : `v${a.world.indexVersion}`,
+      stale ? 'warn' : '',
+    ),
+  );
   return `<section class="product-bar ${stale ? 'is-stale' : ''}" aria-label="${esc(T('知识助手', 'Knowledge assistant'))}">
-    ${assistantMark('md')}
-    <div class="grow"><p class="pb-name">${T('知识助手', 'Knowledge assistant')}<span class="pb-role">${T('你要决定能否试点的产品', 'The product you are deciding on')}</span></p>
-      <ul class="pb-state">${configured ? `<li>${use ? T('已保存 v', 'Saved v') : T('配置 v', 'Config v')}${a.configVersion}</li><li>${T(`${c.participants} 人`, `${c.participants} users`)}</li><li>${c.domains.map(DOMAIN).join(' + ') || T('未开放知识', 'No knowledge')}</li><li>${UPDATE(c.update)}</li>` : `<li class="muted">${T('还没有试点设置', 'No pilot settings yet')}</li>`}<li class="${stale ? 'warn' : ''}">${stale ? icon('stale', 'i-xs') : ''}${T(`政策 v${a.world.policyVersion} / 索引 v${a.world.indexVersion}`, `Policy v${a.world.policyVersion} / index v${a.world.indexVersion}`)}${stale ? T('，索引落后', ', index behind') : ''}</li></ul>${configUseLine(use)}</div>
-    ${btn(icon('flask', 'i-sm') + T('测试台', 'Test bench') + (a.tests.length ? `<span class="btn-count">${a.tests.length}</span>` : ''), 'open-bench', 'small')}${btn(icon('gear', 'i-sm') + T('设置', 'Settings'), 'config', configured ? 'small quiet' : 'small primary')}${btn(icon('hand', 'i-sm') + T('申请', 'Requests'), 'resources', 'small quiet')}
+    <div class="pb-top">${assistantMark('md')}<p class="pb-name">${T('知识助手', 'Knowledge assistant')}<span class="pb-role">${T('你要决定能否试点的产品', 'The product you are deciding on')}</span></p>
+      <div class="pb-keys">${btn(`${icon('flask', 'i-sm')}<span class="pb-key-label">${T('测试台', 'Test bench')}</span>${a.tests.length ? `<span class="btn-count">${a.tests.length}</span>` : ''}`, 'open-bench', 'small', `aria-label="${esc(T('测试台', 'Test bench'))}"`)}${btn(`${icon('gear', 'i-sm')}<span class="pb-key-label">${T('设置', 'Settings')}</span>`, 'config', configured ? 'small quiet' : 'small primary', `aria-label="${esc(T('设置', 'Settings'))}"`)}${btn(`${icon('hand', 'i-sm')}<span class="pb-key-label">${T('申请', 'Requests')}</span>`, 'resources', 'small quiet', `aria-label="${esc(T('申请', 'Requests'))}"`)}</div></div>
+    <ul class="pb-state">${gauges.join('')}</ul>${configUseLine(use)}
   </section>`;
 }
+const UPDATE_SHORT = (k) =>
+  ({ daily: T('每日', 'Daily'), realtime: T('实时', 'Real-time'), manual: T('转人工', 'Manual check') })[
+    k
+  ] || UPDATE(k);
 function rankMenu() {
   return `<div class="menu" role="menu"><p class="menu-cap">${T('想听谁的看法', 'Whose view?')}</p>${ROLES.map((r) => `<button type="button" role="menuitem" data-action="ask-priority" data-role="${r}">${avatar(r, 'xs')}<span class="grow">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span></button>`).join('')}</div>`;
 }

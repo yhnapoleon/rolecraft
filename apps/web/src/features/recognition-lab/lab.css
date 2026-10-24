@@ -172,7 +172,7 @@
   font: inherit;
   text-align: left;
   cursor: pointer;
-  border-radius: 6px;
+  border-radius: var(--r-xs);
 }
 .rc-st:focus-visible {
   outline: 2px solid var(--ink);
@@ -306,7 +306,7 @@
 .rc-st-panel:focus-visible {
   outline: 2px solid var(--ink);
   outline-offset: 4px;
-  border-radius: 6px;
+  border-radius: var(--r-xs);
 }
 .rc-st-panel > * + * {
   margin-top: 10px;

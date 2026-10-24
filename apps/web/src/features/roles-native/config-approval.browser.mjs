@@ -183,7 +183,7 @@ try {
     assert.ok((await savedPilot()).work_items.includes('realtime_sync'));
     assert.equal(await innerText('.product-bar [data-config-use]'), gapLine);
     assert.ok(
-      (await innerText('.product-bar .pb-state')).startsWith(text('已保存 v1', 'Saved v1')),
+      (await innerText('.product-bar .pb-state')).replace(/\s+/g, ' ').startsWith(text('已保存 v1', 'Saved v1')),
     );
     await shot('bar-gap');
     await viewport(390, 844, true);
@@ -424,7 +424,7 @@ try {
       async () => {
         await waitFor(browser, `!document.querySelector('.product-bar [data-config-use]')`);
         assert.ok(
-          (await innerText('.product-bar .pb-state')).startsWith(text('配置 v4', 'Config v4')),
+          (await innerText('.product-bar .pb-state')).replace(/\s+/g, ' ').startsWith(text('配置 v4', 'Config v4')),
         );
         await shot('bar-funded');
         const answer = await runTest();
