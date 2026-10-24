@@ -13,3 +13,4 @@ export function caseShown(id: string): boolean;
 export function PRI(priority: string): string;
 export function STATUS(status: string): string;
 export function purposeLabel(purpose: string): string;
+export function OPENER(person: string): string;

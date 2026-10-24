@@ -589,6 +589,19 @@ def _usage(raw, key):
     return value if type(value) is int and value >= 0 else None
 
 
+# A sentence ends at 。！？!? or at a period before whitespace; closing quotes and brackets
+# and the citations right after it belong to the sentence they close.
+_SENTENCE_END = re.compile(
+    r"(?:[。！？!?]|\.(?=\s|$))[”’」』）)\"']*(?:[ \t]*\[[^\[\]\n]+ · v\d+\])*"
+)
+
+
+def _whole_sentences(text):
+    """The text up to its last complete sentence; empty when none is complete."""
+    ends = [match.end() for match in _SENTENCE_END.finditer(text)]
+    return text[: ends[-1]].rstrip() if ends else ""
+
+
 def generate_plan(
     snapshot,
     auth,
@@ -698,6 +711,13 @@ def generate_plan(
             or any(key in response.text for key in private_metadata)
         ):
             status, error = "failed", "role_output_blocked"
+    if error is None and response.finish_reason == "length":
+        # The provider stopped at its token budget. The whole text was checked above; only
+        # its complete sentences are published, so a half sentence never reads as the
+        # colleague's complete answer.
+        response = response.model_copy(update={"text": _whole_sentences(response.text)})
+        if not response.text:
+            status, error = "failed", "role_model_invalid"
     input_tokens, output_tokens = _usage(raw, "prompt_tokens"), _usage(raw, "completion_tokens")
     usage = (
         raw.usage

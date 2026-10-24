@@ -37,6 +37,10 @@ function setup(
     receivedVersionsOnly?: boolean;
     generationMode?: 'local' | 'model';
     currentMode?: RolesView['mode'];
+    spokenEvidence?: unknown[];
+    materialTitles?: Record<string, string>;
+    /** The turn's job ended without a reply. */
+    job?: { status: string; error_code?: string };
   },
 ) {
   let currentMode = presentation?.currentMode ?? 'local_reference';
@@ -73,10 +77,11 @@ function setup(
       omission_count: presentation?.omissionCount ?? 0,
       received_versions_only: presentation?.receivedVersionsOnly,
       generation_mode: presentation?.generationMode,
+      spoken_evidence: presentation?.spokenEvidence,
       request: turn.ref,
     },
   };
-  const records = [turn, reply];
+  const records = presentation?.job ? [turn] : [turn, reply];
   const host = {
     snapshot: () => snapshot,
     subscribe: () => () => {},
@@ -84,7 +89,7 @@ function setup(
       objects: changeDuringRead && calls === 0 ? [turn] : records,
       role_mode: currentMode,
       workspace: {
-        material_titles: { 'policy:1': 'Policy' },
+        material_titles: presentation?.materialTitles ?? { 'policy:1': 'Policy' },
         source_versions: { policy: presentation?.currentVersion ?? 1 },
       },
     }),
@@ -98,6 +103,15 @@ function setup(
         };
       // Production recovery emits through V4Mounts even when the snapshot is unchanged.
       handle.update(snapshot);
+      if (presentation?.job)
+        return {
+          requestId: 'request',
+          status: presentation.job.status === 'failed' ? 'failed' : 'pending',
+          result: {
+            response: { result: { turn: turn.ref, question: 'question', role_id: 'supervisor' } },
+            jobs: [presentation.job],
+          },
+        };
       return {
         requestId: 'request',
         status: 'confirmed',
@@ -175,6 +189,47 @@ it('keeps access limits and old source versions in the public colleague view', a
     expect(view.turns[0].stale).toBe(true);
     expect(view.turns[0].materials).toEqual([{ id: 'policy', title: 'Policy', version: 1 }]);
     expect(view.turns[0].reply).toBe('[Policy · v1] This applies only after explicit approval.');
+  } finally {
+    test.destroy();
+  }
+});
+
+it('passes verified quotes and sources named in book quotes to the conversation', async () => {
+  const quote = '目前为项目预留的容量是30人。';
+  const test = setup(false, {
+    text: `依据是《经理委托 · v1》原文：“${quote}”另见[规则 · v2]。`,
+    omissionCount: 0,
+    currentVersion: 1,
+    materialTitles: { 'brief:1': '经理委托', 'rules:2': '规则' },
+    spokenEvidence: [
+      { label: 'utterance-1', quote, verification: 'verified' },
+      { label: 'utterance-2', quote: '模型抽取的一句。', verification: 'model_extracted' },
+      { label: 'utterance-3', verification: 'verified' },
+    ],
+  });
+  try {
+    const view = await test.read();
+    expect(view.turns[0].evidence).toEqual([quote]);
+    expect(view.turns[0].materials).toEqual([
+      { id: 'brief', title: '经理委托', version: 1 },
+      { id: 'rules', title: '规则', version: 2 },
+    ]);
+  } finally {
+    test.destroy();
+  }
+});
+
+it('keeps the job error code of a reply that did not come through', async () => {
+  const test = setup(false, {
+    text: '',
+    omissionCount: 0,
+    currentVersion: 1,
+    job: { status: 'failed', error_code: 'role_help_unverified' },
+  });
+  try {
+    const view = await test.read();
+    expect(view.turns[0]).toMatchObject({ status: 'failed', errorCode: 'role_help_unverified' });
+    expect(view.turns[0].reply).toBeUndefined();
   } finally {
     test.destroy();
   }
