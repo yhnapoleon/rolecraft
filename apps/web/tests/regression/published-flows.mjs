@@ -109,8 +109,10 @@ async function toolbarHoldsStill(context) {
     previous = current;
     await delay(1000);
   }
+  // Language lives in the toolbar's ⋯ since the second-round shell bar: hold ⋯, and the menu
+  // that opens carries the language row.
   const point = await browser.ev(`(() => {
-    const box = document.querySelector('#ws-toolbar [data-menu="lang"]').getBoundingClientRect();
+    const box = document.querySelector('#ws-toolbar [data-menu="more"]').getBoundingClientRect();
     return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
   })()`);
   const press = { ...point, button: 'left', clickCount: 1 };
@@ -118,7 +120,7 @@ async function toolbarHoldsStill(context) {
   await browser.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...press });
   await delay(1800);
   await browser.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...press });
-  const open = `!!document.querySelector('#ws-toolbar .menu [data-action="set-lang"]')`;
+  const open = `!!document.querySelector('#ws-toolbar .menu [data-menu="lang"]')`;
   await waitFor(browser, open, 3000);
   await browser.ev(`window.regressionToolbar = document.getElementById('ws-toolbar')`);
   await delay(4500);
@@ -130,7 +132,7 @@ async function toolbarHoldsStill(context) {
   await delay(300);
   assert.equal(await browser.ev(kept), true, 'A notice that leaves the toolbar unchanged keeps it');
   await browser.ev(`window.PracticeLive.store.report({ notice: '' })`);
-  await browser.click('#ws-toolbar [data-menu="lang"]');
+  await browser.click('#ws-toolbar [data-menu="more"]');
   await waitFor(browser, `!document.querySelector('#ws-toolbar .menu')`);
 }
 
@@ -153,10 +155,40 @@ async function inspectResourceRegion(context) {
 }
 
 async function readAndTest(context) {
-  const { browser, question, shot } = context;
-  await browser.click('.doc-card[data-id="brief"]');
-  await waitFor(browser, `location.hash.startsWith('#/doc/')`);
-  await browser.click('[data-action="to-board"]');
+  const { browser, question, text, shot } = context;
+  const row = '[data-doc-row="brief"]';
+  const title = await browser.ev(`document.querySelector('${row} .doc-row-title').textContent`);
+  for (const close of ['escape', 'dim']) {
+    await browser.click(row);
+    await waitFor(browser, `!!document.querySelector('.mat-sheet[data-state="open"]')`);
+    assert.equal(await browser.ev('location.hash'), '#/work');
+    assert.equal(await browser.ev(`document.querySelector('.mat-title').textContent`), title);
+    await waitFor(browser, `document.querySelector('.mat-body')?.innerText.length > 40`);
+    // The reading sheet covers only the desk: the colleague rail remains usable.
+    await browser.click('.person[data-role="business"]');
+    const note = text('阅读时的问题草稿', 'Question drafted while reading');
+    await browser.type('#chat-input', note);
+    assert.equal(await browser.ev(`document.querySelector('#chat-input').value`), note);
+    assert.equal(
+      await browser.ev(`!!document.querySelector('.mat-sheet[data-state="open"]')`),
+      true,
+    );
+    await shot(`material-${close}`);
+    if (close === 'escape') {
+      for (const type of ['keyDown', 'keyUp'])
+        await browser.send('Input.dispatchKeyEvent', {
+          type,
+          key: 'Escape',
+          code: 'Escape',
+          windowsVirtualKeyCode: 27,
+        });
+    } else await browser.click('.mat-dim');
+    await waitFor(browser, `!document.querySelector('.mat-sheet[data-state="open"]')`);
+    await waitFor(browser, `document.activeElement === document.querySelector('${row}')`);
+    assert.equal(await browser.ev(`document.querySelector('#chat-input').value`), note);
+    await browser.type('#chat-input', '');
+    await browser.click('[data-action="rail"][data-rail="team"]');
+  }
   await browser.click('.product-bar [data-action="open-bench"]');
   await browser.type('#lab-q', question);
   await browser.submit('[data-form="run-test"]');
@@ -229,7 +261,9 @@ async function recoverAccess(context) {
     })()`);
   assert.equal(count, 1);
   assert.equal(
-    await browser.ev(`document.querySelectorAll('.ag-connect .ag-cmd:not(.is-ask) .ag-copy').length`),
+    await browser.ev(
+      `document.querySelectorAll('.ag-connect .ag-cmd:not(.is-ask) .ag-copy').length`,
+    ),
     1,
     'Recovered access shows the command through the host subscription',
   );
@@ -241,7 +275,11 @@ async function submitDeferral(context) {
   await browser.click('[data-action="to-board"]');
   await browser.click('.ws-toolbar [data-action="submit"]');
   await waitFor(browser, `!!document.querySelector('.native-feedback input[type="checkbox"]')`);
-  await browser.click('.native-feedback input[type="checkbox"]');
+  assert.equal(
+    await browser.ev(`document.querySelector('.native-feedback input[type="checkbox"]').checked`),
+    true,
+    'The latest saved work is selected by default',
+  );
   // The decision is one of four paper options (a radio group named "本次决定").
   await browser.click(
     '.native-feedback [data-decision-cards] .decision-card[data-decision="defer_with_conditions"] input',
@@ -696,6 +734,11 @@ async function runLanguage(language) {
       JSON.stringify(
         await browser.ev(
           `({
+            focus: {
+              tag: document.activeElement?.tagName,
+              id: document.activeElement?.id,
+              evidence: document.activeElement?.matches('[data-reference-kind]') ?? false,
+            },
             buttons: [...document.querySelectorAll('button')]
               .filter(button => button.offsetParent !== null)
               .map(button => ({text: button.textContent, disabled: button.disabled})),
@@ -717,4 +760,12 @@ async function runLanguage(language) {
   }
 }
 
-for (const language of ['zh', 'en']) await runLanguage(language);
+const failures = [];
+for (const language of ['zh', 'en']) {
+  try {
+    await runLanguage(language);
+  } catch (error) {
+    failures.push(error);
+  }
+}
+if (failures.length) throw new AggregateError(failures, 'Published flows failed');
