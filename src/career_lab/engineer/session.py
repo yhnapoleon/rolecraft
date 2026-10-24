@@ -15,15 +15,19 @@ Seven session operations are installed in the ``ExtensionRegistry`` and routed b
 
 Everything executes for real with the rule-based retrieval. Nothing here writes PM business
 state: configuration versions, tests, work products and submissions are untouched; records
-live in the engineer directory (``session_store``). Hidden probes run only inside the
-existing trusted review, and only its public projection is ever returned.
+live in the engineer directory (``session_store``). The one exception is a seeded ticket on
+a session whose pilot is not live yet: the system puts it live first, labelled and kept out
+of the learner's PM work (``golive.py``). Reviews and trials run the scenario's engineer
+regression suite (``suite.py``), never the authored probes; a scenario without one has no
+engineer path. Hidden probes run only inside the existing trusted review, and only its
+public projection is ever returned. Every result stays within an Agent's tool result.
 """
 
 import hashlib
 import json
 import os
 import shutil
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
@@ -54,12 +58,14 @@ from .candidate import (
 from .capture import capture, package_files
 from .execution import matches, run_query, suite_probes
 from .files import encode, file_ref, publish, retained_documentation
+from .golive import go_live
 from .pack import reproduce_pack
 from .review import review_configuration
 from .review_evaluation import stored_evaluation
 from .seeded import ORIGIN_LABELS, SEEDED_TICKETS, seed_record, seeded_ticket, tests_title
 from .session_store import EngineerStore, checked, read_json, record_id, records, write_json
 from .submission import submit_configuration, verified_pack
+from .suite import require_suite
 
 OP_CREATE = "engineer.tickets.create"
 OP_READ = "engineer.tickets.read"
@@ -73,12 +79,29 @@ ROLE = "engineer"
 REVIEW_LIMIT = 3
 EXPERIMENT_LIMIT = 50
 DRAFT_LIMIT = 50
-# The ticket detail lists the latest experiments and drafts, so it stays within an Agent
-# tool result (50,000 characters); the budgets still count every record.
-LISTED_TRIALS = 20
-LISTED_DRAFTS = 10
 IMPACT_NOTE_LIMIT = 500
-SUMMARY_LIMIT = 400
+# Every result of the five Agent tools stays within an Agent's tool result: at most 20,000
+# characters of MCP text in the worst case (tests/integration/test_engineer_result_size.py).
+# Records keep everything; views are bounded:
+HANDOVER_LIMIT = 10  # tests handed over in one ticket
+DRAFT_TEXT_LIMIT = 2000  # explanation + statement reasons and values + unresolved descriptions
+UNRESOLVED_LIMIT = 10
+PAGE_LIMIT = 40  # tickets or reviews per listed page
+QUERY_SUMMARY = 100
+ANSWER_SUMMARY = 160
+EXPLANATION_SUMMARY = 160
+LISTED_CITATIONS = 3
+QUOTE_SUMMARY = 80
+# A ticket lists up to ten target tests beside its latest draft, so each is shorter still;
+# reproduction shows more of each answer.
+TARGET_QUERY_SUMMARY = 80
+TARGET_ANSWER_SUMMARY = 100
+TARGET_QUOTE_SUMMARY = 60
+# The ticket detail lists up to this many latest trials and drafts (summaries), fewer when
+# the widest content would not fit; the budgets still count every record.
+LISTED_TRIALS = 10
+LISTED_DRAFTS = 10
+DETAIL_BUDGET = 19_500
 RETRIEVAL_NOTE = {
     "zh": "试跑与复核固定使用规则版检索，与是否配置识别器无关。",
     "en": "Trials and reviews always use the rule-based retrieval, whether or not "
@@ -136,7 +159,7 @@ class DraftInput(C.V2):
     explanation: Annotated[str, Field(max_length=4000)] = ""
     change_statements: Annotated[tuple[ChangeStatement, ...], Field(max_length=20)] = ()
     claimed_results: dict[str, Literal["pass", "fail", "error"]] = {}
-    unresolved: Annotated[tuple[UnresolvedInput, ...], Field(max_length=20)] = ()
+    unresolved: Annotated[tuple[UnresolvedInput, ...], Field(max_length=UNRESOLVED_LIMIT)] = ()
 
 
 class SignInput(C.V2):
@@ -160,26 +183,42 @@ def executor_view(executor: C.Executor) -> dict[str, Any]:
     return value
 
 
-def summary(text: str) -> str:
-    return text if len(text) <= SUMMARY_LIMIT else text[: SUMMARY_LIMIT - 1] + "…"
+def summary(text: str, limit: int = ANSWER_SUMMARY) -> str:
+    return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
-def citation_view(ref: C.EvidenceRefV2) -> dict[str, Any]:
+def size(value: Any) -> int:
+    """Characters of compact JSON, as an MCP tool result carries it."""
+    return len(json.dumps(value, ensure_ascii=False, separators=(",", ":")))
+
+
+def citation_view(ref: C.EvidenceRefV2, quote: int = QUOTE_SUMMARY) -> dict[str, Any]:
     return {
         "object_id": ref.object_id,
         "version": ref.version,
         "span_start": ref.span_start,
         "span_end": ref.span_end,
-        "quote": ref.quote,
+        "quote": summary(ref.quote, quote) if ref.quote is not None else None,
     }
 
 
-def point_view(at: C.VersionPoint) -> dict[str, int]:
+def citations_view(
+    refs: Sequence[C.EvidenceRefV2], listed: int = LISTED_CITATIONS, quote: int = QUOTE_SUMMARY
+) -> dict[str, Any]:
+    """The first citations with short quotes, and how many there are."""
     return {
-        "business_seq": at.business_seq,
-        "workspace_revision": at.workspace_revision,
-        "storage_revision": at.storage_revision,
+        "citations": [citation_view(ref, quote) for ref in refs[:listed]],
+        "citation_count": len(refs),
     }
+
+
+def draft_text(payload: "DraftInput") -> int:
+    """The draft's free text, counted once across its fields."""
+    return (
+        len(payload.explanation)
+        + sum(len(s.reason) + size(s.before) + size(s.after) for s in payload.change_statements)
+        + sum(len(u.description) for u in payload.unresolved)
+    )
 
 
 def human_only(auth: C.AuthContext, code: str) -> None:
@@ -192,9 +231,17 @@ def request_hash(payload: C.V2) -> str:
 
 
 class EngineerService:
-    def __init__(self, root: Path, modules: Sequence[ScenarioModule]):
+    def __init__(
+        self,
+        root: Path,
+        modules: Sequence[ScenarioModule],
+        apply_handler: Callable[[], Any] | None = None,
+    ):
         self.files = EngineerStore(root)
         self.modules = {C.canonical(m.bindings): m for m in modules}
+        # The installed configuration.apply handler, read when a seeded ticket needs the
+        # pilot live (see golive.py); the registry installs it before these operations.
+        self.apply_handler = apply_handler
 
     # Session, module and ticket lookup ---------------------------------------------------
 
@@ -244,6 +291,9 @@ class EngineerService:
     ) -> dict[str, Any]:
         human_only(auth, "engineer_ticket_requires_human")
         module = self.bound_module(store, auth, OP_CREATE)
+        # Without an engineer suite the review would run authored probes with their own
+        # preconditions under one configuration: false regressions. No engineer path then.
+        require_suite(module.package)
         sid = auth.session_id
         if payload.source == "seeded":
             if payload.test_ids:
@@ -252,8 +302,13 @@ class EngineerService:
             ticket_id = record_id("ticket", [sid, "seeded", module.package.bundle.id, query])
         else:
             ids = sorted(set(payload.test_ids))
-            if not ids or len(ids) > 100:
+            if not ids:
                 raise C.ProtocolError("engineer_test_selection_required")
+            if len(ids) > HANDOVER_LIMIT:
+                raise C.ProtocolError(
+                    "engineer_test_selection_too_large",
+                    f"at most {HANDOVER_LIMIT} tests per ticket",
+                )
             ticket_id = record_id("ticket", [sid, "tests", ids])
         folder = self.files.ticket(sid, ticket_id)
         with self.files.lock(sid, "tickets"):
@@ -262,8 +317,10 @@ class EngineerService:
             if folder.exists():
                 # A creation that stopped before its record: our own unfinished staging.
                 shutil.rmtree(folder)
-            seed = None
+            self.check_baseline(store, module, auth)
+            seed = setup = None
             if payload.source == "seeded":
+                setup = self.world_setup(store, module, auth)
                 files, seed = self.capture_seeded(store, module, auth, query, ticket_id)
             else:
                 files = capture(store, module, auth, ids, operation=OP_CREATE)
@@ -291,9 +348,28 @@ class EngineerService:
                     "pack_index_sha256": hashlib.sha256(files["index.json"]).hexdigest(),
                     "target_test_ids": [ref["object_id"] for ref in pack["failures"]],
                     "seed_test_sha256": seed_sha,
+                    "world_setup": setup,
                 },
             )
         return {"ticket": self.detail(module, sid, ticket_id), "created": True}
+
+    @staticmethod
+    def check_baseline(store: V2Store, module: ScenarioModule, auth: C.AuthContext) -> None:
+        """The current settings must be a valid engineer candidate themselves: otherwise every
+        trial is refused, and the ticket view would not stay within its bound."""
+        config = store.query(auth, lambda view: module.snapshot(view).config, operation=OP_CREATE)
+        try:
+            candidate_config(module.package, config, {}, auth.session_id)
+        except C.ProtocolError:
+            raise C.ProtocolError("engineer_baseline_unsupported", status=409) from None
+
+    def world_setup(
+        self, store: V2Store, module: ScenarioModule, auth: C.AuthContext
+    ) -> dict[str, Any] | None:
+        """The pilot goes live by the system when the world has not reached the ticket yet."""
+        if self.apply_handler is None:
+            raise C.ProtocolError("module_unavailable", status=503)
+        return go_live(store, module, self.apply_handler(), auth, OP_CREATE)
 
     def capture_seeded(
         self,
@@ -331,7 +407,11 @@ class EngineerService:
                 if ticket.get("session_id") == sid:
                     rows.append(self.ticket_summary(ticket))
         rows.sort(key=lambda row: (row["created_at"], row["id"]))
-        return {"tickets": rows[payload.cursor : payload.cursor + max(1, min(payload.limit, 100))]}
+        return {
+            "tickets": rows[
+                payload.cursor : payload.cursor + max(1, min(payload.limit, PAGE_LIMIT))
+            ]
+        }
 
     def ticket_summary(self, ticket: dict[str, Any]) -> dict[str, Any]:
         language = ticket["work_language"]
@@ -370,43 +450,86 @@ class EngineerService:
         language = ticket["work_language"]
         signoffs = self.signoffs(folder)
         trials, drafts = self.ordered(folder / "trials"), self.ordered(folder / "drafts")
-        return {
+        baseline_settings = supported_settings(baseline)
+        view = {
             **self.ticket_summary(ticket),
+            # The system's go-live for this ticket, if it had to run one; never learner work.
+            "world_setup": ticket.get("world_setup"),
             "target_tests": [
-                self.target_view(t, "ticket_seed" if t.id in seeds else "learner_test", language)
+                self.target_view(
+                    t,
+                    "ticket_seed" if t.id in seeds else "learner_test",
+                    language,
+                    baseline_settings,
+                )
                 for t in tests
             ],
             "public_probes": [{"id": p["id"], "query": p["query"]} for p in probes],
-            "baseline_config": supported_settings(baseline),
+            "baseline_config": baseline_settings,
             "editable_fields": editable_fields(module.package),
             "review_budget": self.budget(signoffs),
             "experiment_budget": {"used": len(trials), "limit": EXPERIMENT_LIMIT},
             "draft_budget": {"used": len(drafts), "limit": DRAFT_LIMIT},
             "retrieval": {"mode": "rule_based", "note": RETRIEVAL_NOTE[language]},
             "trials": [self.trial_summary(row) for row in trials[-LISTED_TRIALS:]],
-            "drafts": [self.draft_view(row) for row in drafts[-LISTED_DRAFTS:]],
+            "drafts": [self.draft_summary(row) for row in drafts[-LISTED_DRAFTS:]],
+            # The person signs what they can read: the latest draft in full.
+            "latest_draft": self.draft_view(drafts[-1]) if drafts else None,
             "reviews": [self.review_summary(row) for row in signoffs],
         }
+        return self.fit(view)
 
-    def target_view(self, test: C.TestResultV2, origin: str, language: str) -> dict[str, Any]:
+    @staticmethod
+    def fit(view: dict[str, Any]) -> dict[str, Any]:
+        """Drop the oldest listed trial or draft summary until the detail fits its budget."""
+        trials, drafts = view["trials"], view["drafts"]
+        while size(view) > DETAIL_BUDGET and (trials or drafts):
+            oldest = (
+                trials
+                if trials and (not drafts or trials[0]["created_at"] <= drafts[0]["created_at"])
+                else drafts
+            )
+            oldest.pop(0)
+        return view
+
+    def target_view(
+        self,
+        test: C.TestResultV2,
+        origin: str,
+        language: str,
+        baseline: dict[str, Any],
+    ) -> dict[str, Any]:
+        """One target test, bounded: short question and answer, its first citation, the
+        versions it used, the sources whose index lags, and how its settings differ from the
+        ticket baseline. Reproduction shows more of each answer."""
+        execution = test.execution
+        lagging = {
+            key
+            for key, version in execution.source_versions.items()
+            if execution.indexed_versions.get(key) != version
+        }
+        requested = supported_settings(test.config.requested)
         return {
             "test_id": test.id,
             "origin": origin,
             "origin_label": ORIGIN_LABELS[origin][language],
-            "executor": executor_view(test.execution.executor),
-            "query": test.query,
+            "executor": executor_view(execution.executor),
+            "query": summary(test.query, TARGET_QUERY_SUMMARY),
             "status": test.status,
             "error_code": test.error_code,
-            "answer_summary": summary(test.answer),
-            "citations": [citation_view(ref) for ref in test.citations],
-            "source_versions": dict(test.execution.source_versions),
-            "indexed_versions": dict(test.execution.indexed_versions),
-            "used_versions": dict(test.execution.used_versions),
-            "as_of": point_view(test.as_of),
+            "answer_summary": summary(test.answer, TARGET_ANSWER_SUMMARY),
+            **citations_view(test.citations, 1, TARGET_QUOTE_SUMMARY),
+            "source_versions": {
+                k: v for k, v in sorted(execution.source_versions.items()) if k in lagging
+            },
+            "indexed_versions": {
+                k: v for k, v in sorted(execution.indexed_versions.items()) if k in lagging
+            },
+            "used_versions": dict(execution.used_versions),
             "config_version": test.config_ref.config_version,
             "config": {
-                "requested": supported_settings(test.config.requested),
-                "effective": supported_settings(test.config.effective),
+                "same_as_baseline": requested == baseline,
+                "changed_fields": [k for k in EDITABLE_FIELDS if requested[k] != baseline[k]],
                 "differences": dict(test.config.differences),
             },
         }
@@ -424,24 +547,32 @@ class EngineerService:
 
     @staticmethod
     def trial_summary(row: dict[str, Any]) -> dict[str, Any]:
+        """A listed experiment: which settings it changed; the full change is in its result."""
         return {
-            key: row[key]
-            for key in (
-                "id",
-                "kind",
-                "executor",
-                "role",
-                "created_at",
-                "config_hash",
-                "changes",
-                "counts",
-                "status",
-            )
+            **{
+                key: row[key]
+                for key in ("id", "kind", "executor", "role", "created_at", "config_hash")
+            },
+            "changed_fields": list(row["changes"]),
+            **{key: row[key] for key in ("counts", "status")},
         }
 
     @staticmethod
     def draft_view(row: dict[str, Any]) -> dict[str, Any]:
-        return {key: value for key, value in row.items() if key not in {"request_hash"}}
+        """A whole draft as written; the full candidate configuration stays in the record."""
+        return {
+            key: value for key, value in row.items() if key not in {"request_hash", "candidate"}
+        }
+
+    @staticmethod
+    def draft_summary(row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            **{key: row[key] for key in ("id", "executor", "role", "created_at", "config_hash")},
+            "changed_fields": list(row["changes"]),
+            "explanation_summary": summary(row["explanation"], EXPLANATION_SUMMARY),
+            "claimed": bool(row["claimed_results"]),
+            "unresolved_count": len(row["unresolved"]),
+        }
 
     @staticmethod
     def review_summary(row: dict[str, Any]) -> dict[str, Any]:
@@ -499,7 +630,7 @@ class EngineerService:
             rows = [
                 {
                     "test_id": row["source_test"]["object_id"],
-                    "query": row["recorded"]["query"],
+                    "query": summary(row["recorded"]["query"], QUERY_SUMMARY),
                     "matches_record": row["matches_record"],
                     "recorded": self.behavior(row["recorded"]),
                     "reproduced": self.behavior(row["reproduced"]),
@@ -527,14 +658,20 @@ class EngineerService:
 
     @staticmethod
     def behavior(value: dict[str, Any]) -> dict[str, Any]:
+        refs = value["citations"]
         return {
             "status": value["status"],
             "error_code": value["error_code"],
             "answer_summary": summary(value["answer"]),
             "citations": [
-                {key: ref.get(key) for key in ("object_id", "version", "quote")}
-                for ref in value["citations"]
+                {
+                    "object_id": ref.get("object_id"),
+                    "version": ref.get("version"),
+                    "quote": summary(ref["quote"], QUOTE_SUMMARY) if ref.get("quote") else None,
+                }
+                for ref in refs[:LISTED_CITATIONS]
             ],
+            "citation_count": len(refs),
         }
 
     @staticmethod
@@ -608,7 +745,7 @@ class EngineerService:
         A target asking a hidden probe's question runs as that target, without an expected
         status, so the trial never reveals that a hidden probe exists.
         """
-        suite = suite_probes(C.read_file(module.package.root, module.files["probes.json"]))
+        suite = suite_probes(require_suite(module.package))
         public = [probe for probe in suite if probe.public]
         target_queries = [t.query for t in targets]
         rows = []
@@ -665,16 +802,14 @@ class EngineerService:
             "id": row_id,
             "kind": kind,
             "is_target": is_target,
-            "query": query,
+            "query": summary(query, QUERY_SUMMARY),
             "expected_status": expected_status,
             "actual_status": actual.status if actual is not None else None,
             "error_code": actual.error_code
             if actual is not None
             else "engineer_probe_execution_failed",
             "answer_summary": summary(actual.answer) if actual is not None else "",
-            "citations": [citation_view(ref) for ref in actual.citations]
-            if actual is not None
-            else [],
+            **citations_view(actual.citations if actual is not None else ()),
             "result": result,
         }
 
@@ -713,6 +848,12 @@ class EngineerService:
             fields = [statement.field for statement in payload.change_statements]
             if len(set(fields)) != len(fields) or set(fields) - set(EDITABLE_FIELDS):
                 raise C.ProtocolError("engineer_change_statement_invalid")
+            if draft_text(payload) > DRAFT_TEXT_LIMIT:
+                raise C.ProtocolError(
+                    "engineer_draft_text_too_long",
+                    f"draft text over {DRAFT_TEXT_LIMIT} characters: explanation, statement "
+                    "reasons and values, unresolved descriptions",
+                )
             public = {row["id"] for row in json.loads(pack_files[index.public_probes.path])}
             claimed = dict(payload.claimed_results)
             if set(claimed) - public or any(set(u.probe_ids) - public for u in payload.unresolved):
@@ -952,7 +1093,7 @@ class EngineerService:
                 raise C.ProtocolError("engineer_review_not_found", status=404)
             return {"review": self.review_view(sid, match)}
         unique = list({row["review_id"]: row for row in rows}.values())
-        page = unique[payload.cursor : payload.cursor + max(1, min(payload.limit, 100))]
+        page = unique[payload.cursor : payload.cursor + max(1, min(payload.limit, PAGE_LIMIT))]
         return {
             "reviews": [{**self.review_summary(row), "ticket_id": row["ticket_id"]} for row in page]
         }
@@ -963,7 +1104,9 @@ def install_engineer_operations(
 ) -> EngineerService:
     """Install after the scenario catalog; handlers select the module by session binding."""
     service = EngineerService(
-        Path(root or os.getenv("CAREER_LAB_ENGINEER_ROOT") or "runs/local/engineer"), modules
+        Path(root or os.getenv("CAREER_LAB_ENGINEER_ROOT") or "runs/local/engineer"),
+        modules,
+        lambda: registry.operations["configuration.apply"].handler,
     )
 
     def act(name: str, capability: str, model: type[C.V2], handler: Any) -> Operation:

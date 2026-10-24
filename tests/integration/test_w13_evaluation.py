@@ -67,13 +67,14 @@ def rewrite(source: Path, update: dict[str, Any]) -> None:
 
 def test_review_reports_hidden_comparison_counts_only(session: Session) -> None:
     target = target_session(session)
-    pack, source = prepare(target, {"freshness_guard": "warn"})
+    # The demo's over-broad change: the warning plus a lower threshold.
+    pack, source = prepare(target, {"freshness_guard": "warn", "min_score": 0.2})
     report, public, public_raw, folder = reviewed(target, pack, source)
     # A submission without change claims is still accepted and stored byte for byte.
     assert "changes" not in json.loads(source.read_bytes())
     assert (folder / "submission.json").read_bytes() == source.read_bytes()
     rows = {row.probe_id: row for row in report.results}
-    assert rows["F09"].visibility == "hidden" and rows["F09"].result == "fail"
+    assert rows["F16"].visibility == "hidden" and rows["F16"].result == "fail"
     comparison = report.hidden_comparison
     assert comparison is not None and comparison.new_failures == 1
     assert comparison.unverified == 0
@@ -147,18 +148,20 @@ def test_freshness_guard_repair_rule_conclusions(session: Session) -> None:
     rewrite(source, {"id": "repair-claimed", "regression_report": claim_file(source, actual)})
     report, public, public_raw, folder = reviewed(target, pack, source)
     assert report.status == "verified" and report.claim_check == "matched"
-    assert report.hidden_comparison is not None and report.hidden_comparison.new_failures == 1
+    # The root-cause repair: no new hidden failure, the target's two hidden kin fixed.
+    assert report.hidden_comparison is not None and report.hidden_comparison.new_failures == 0
+    assert report.hidden_comparison.fixed == 2
     evaluation = evaluate(report, folder)
     assert labels(evaluation) == {
         "E1": "MET",
-        "E2": "NOT_MET",
+        "E2": "MET",
         "E3": "MET",
         "E4": "MET",
         "E5": None,
     }
     e1, e2 = evaluation.conclusion("E1.target_fixed"), evaluation.conclusion("E2.no_regressions")
     assert e1.probe_ids == ("F01",)
-    assert e2.probe_ids == () and e2.hidden_probes == 1
+    assert e2.probe_ids == () and e2.hidden_probes == 0
     e5 = evaluation.conclusion("E5.remaining_explanation")
     assert e5.status == "waiting_model" and e5.precheck is not None
     assert set(e5.precheck.unexplained_probe_ids) == {k for k, v in actual.items() if v == "fail"}

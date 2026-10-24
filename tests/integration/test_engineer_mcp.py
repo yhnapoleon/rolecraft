@@ -19,8 +19,8 @@ from test_engineer_session import (
 
 from career_lab.mcp.protocol import CAPABILITIES, MODERN, VERSION
 
-# The MCP result limit the delegated client is held to.
-RESULT_LIMIT = 50_000
+# The MCP result limit the delegated client is held to (an Agent's tool result).
+RESULT_LIMIT = 20_000
 PERSON_ONLY = {"engineer.tickets.create", "engineer.submissions.sign"}
 
 
@@ -56,7 +56,7 @@ class Agent:
         assert result["isError"] is False, result
         (content,) = result["content"]
         if name.startswith("engineer."):
-            assert len(content["text"]) < RESULT_LIMIT, (name, len(content["text"]))
+            assert len(content["text"]) <= RESULT_LIMIT, (name, len(content["text"]))
         return result["structuredContent"]
 
     def read(self, name: str, **query: Any) -> dict[str, Any]:
@@ -162,9 +162,11 @@ def test_agent_works_the_ticket_over_mcp_and_the_person_signs(
     reviews = agent.read("engineer.reviews.read")["reviews"]
     assert [row["review_id"] for row in reviews] == [review_id]
     review = agent.read("engineer.reviews.read", review_id=review_id)["review"]
-    assert review["report"]["hidden_comparison"]["new_failures"] == 1
+    # The Agent's root-cause fix: no new hidden failure, the target's two hidden kin fixed.
+    assert review["report"]["hidden_comparison"]["new_failures"] == 0
+    assert review["report"]["hidden_comparison"]["fixed"] == 2
     labels = {item["criterion"][:2]: item["label"] for item in review["evaluation"]["criteria"]}
-    assert labels == {"E1": "MET", "E2": "NOT_MET", "E3": "MET", "E4": "MET", "E5": None}
+    assert labels == {"E1": "MET", "E2": "MET", "E3": "MET", "E4": "MET", "E5": None}
     assert review["evaluation"] == signed["review"]["evaluation"]
     text = "\n".join(agent.texts)
     assert token not in text and person.token not in text
@@ -210,7 +212,8 @@ def test_a_busy_ticket_detail_stays_within_the_result_limit(eng: tuple[Eng, Test
     detail = Agent(person, loopback, token).read("engineer.tickets.read", ticket_id=ticket["id"])[
         "ticket"
     ]
-    assert [row["id"] for row in detail["trials"]] == trials[-20:]
+    assert [row["id"] for row in detail["trials"]] == trials[-10:]
     assert [row["id"] for row in detail["drafts"]] == drafts[-10:]
+    assert detail["latest_draft"]["id"] == drafts[-1]
     assert detail["experiment_budget"] == {"used": 22, "limit": 50}
     assert detail["draft_budget"] == {"used": 12, "limit": 50}

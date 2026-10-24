@@ -200,8 +200,10 @@ def test_agent_works_the_ticket_over_stdio_and_the_person_signs(live: tuple[Eng,
             item["criterion"][:2]: item["label"]
             for item in review["review"]["evaluation"]["criteria"]
         }
-        assert labels == {"E1": "MET", "E2": "NOT_MET", "E3": "MET", "E4": "MET", "E5": None}
-        assert review["review"]["report"]["hidden_comparison"]["new_failures"] == 1
+        # The root-cause fix: no new hidden failure, the target's two hidden kin fixed.
+        assert labels == {"E1": "MET", "E2": "MET", "E3": "MET", "E4": "MET", "E5": None}
+        assert review["review"]["report"]["hidden_comparison"]["new_failures"] == 0
+        assert review["review"]["report"]["hidden_comparison"]["fixed"] == 2
     finally:
         transcript = pipe.close()
     assert token not in transcript and person.token not in transcript

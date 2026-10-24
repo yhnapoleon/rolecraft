@@ -6,13 +6,13 @@ from typing import Any
 from career_lab.contracts import v2 as C
 from career_lab.scenarios.v2.engine import ScenarioSnapshot
 from career_lab.scenarios.v2.module import ScenarioModule, ref_for
-from career_lab.scenarios.v2.probes import export_public_probes
 from career_lab.storage.v2_lifecycle import point
 from career_lab.storage.v2_store import TransactionView, V2Store
 
 from .files import RetainedDocumentation, encode, file_ref
 from .guide import handoff_guide
 from .identity import source_version
+from .suite import public_probe_rows
 
 LEGACY_REQUIREMENTS = (
     "Configuration-only handoff; no code execution.",
@@ -142,7 +142,7 @@ def package_files(
     retained: RetainedDocumentation | None,
 ) -> dict[str, bytes]:
     schema_version = retained[0].schema_version if retained else 2
-    probes = [{"id": p["id"], "query": p["query"]} for p in export_public_probes(module.package)]
+    probes = public_probe_rows(module.package)
     files: dict[str, bytes] = {
         "config.json": encode(snapshot.config),
         "materials.json": encode(case_materials(view, module, auth, snapshot)),

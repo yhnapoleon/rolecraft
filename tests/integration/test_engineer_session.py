@@ -155,11 +155,14 @@ def eng(
 
 
 def hidden_queries(eng: Eng) -> list[str]:
+    """Hidden questions of the authored probes and of the engineer suite the review runs."""
     from career_lab.contracts.v2 import read_file
+    from career_lab.engineer.suite import engineer_suite
 
     module = eng.app.state.scenario_v2
     rows = json.loads(read_file(module.package.root, module.files["probes.json"]))
-    return [row["query"] for row in rows if not row["public"]]
+    rows += json.loads(engineer_suite(module.package) or b"[]")
+    return list(dict.fromkeys(row["query"] for row in rows if not row["public"]))
 
 
 def test_seeded_ticket_detail(eng: Eng) -> None:
@@ -406,13 +409,15 @@ def test_seeded_round_trip_signed_by_the_person(eng: Eng) -> None:
     )
     full = private_report(eng, review["review_id"])
     rows = {row.probe_id: row for row in full.results}
-    assert rows["F09"].result == "fail" and rows["F09"].visibility == "hidden"
+    # The root-cause fix passes every probe of the engineer suite, hidden ones included.
+    assert {row.result for row in full.results} == {"pass"}
+    assert rows["F14"].visibility == rows["F15"].visibility == "hidden"
     hidden_regressions = [
         f.probe_ids
         for f in full.findings
         if f.kind == "new_regression" and f.status == "fail" and f.visibility == "hidden"
     ]
-    assert hidden_regressions == [("F09",)]
+    assert hidden_regressions == []
     baseline = json.loads(
         (
             eng.root
@@ -426,8 +431,10 @@ def test_seeded_round_trip_signed_by_the_person(eng: Eng) -> None:
     baseline_hidden_fails = sum(
         row["visibility"] == "hidden" and row["result"] == "fail" for row in baseline
     )
-    # The public summary shows exactly one more hidden failure than the baseline had.
-    assert report["hidden"]["failed"] == baseline_hidden_fails + 1
+    # The baseline's two hidden failures (the target's own kind) are fixed; none is left.
+    assert baseline_hidden_fails == 2 and report["hidden"]["failed"] == 0
+    assert report["hidden_comparison"]["fixed"] == 2
+    assert report["hidden_comparison"]["new_failures"] == 0
     assert full.reviewer.kind == "human"
     read = eng.ok(eng.read("/engineer/reviews/" + review["review_id"]))["review"]
     assert read["report"] == report and read["impact_note"] == signed["signoff"]["impact_note"]
@@ -436,7 +443,8 @@ def test_seeded_round_trip_signed_by_the_person(eng: Eng) -> None:
     detail = eng.ok(eng.read("/engineer/tickets/" + ticket["id"]))["ticket"]
     assert [r["review_id"] for r in detail["reviews"]] == [review["review_id"]]
     assert detail["review_budget"] == {"used": 1, "limit": 3}
-    assert detail["drafts"][0]["change_statements"][0]["field"] == "freshness_guard"
+    assert [row["id"] for row in detail["drafts"]] == [drafted["id"]]
+    assert detail["latest_draft"]["change_statements"][0]["field"] == "freshness_guard"
 
 
 def test_review_budget_counts_distinct_inputs(eng: Eng) -> None:
@@ -773,11 +781,11 @@ def test_catalog_deployment_selects_the_session_package(
             variant = Eng(
                 app, client, created["session_id"], created["token"], "zh", tmp_path / "engineer"
             )
-            # Scenario-supplied tickets exist only where their text is authored.
+            # The variant has no engineer regression suite, so it has no engineer path.
             refused = variant.call(
                 "/engineer/tickets", "engineer.tickets.create", {"from": "seeded"}, "seed"
             )
-            assert refused.status_code == 404
-            assert refused.json()["code"] == "engineer_seeded_ticket_unavailable"
+            assert refused.status_code == 409
+            assert refused.json()["code"] == "engineer_suite_unavailable"
     finally:
         app.state.store.close()

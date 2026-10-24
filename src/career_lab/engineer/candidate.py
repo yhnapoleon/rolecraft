@@ -27,8 +27,10 @@ EDITABLE_FIELDS = (
     "chunk_size",
     "min_score",
 )
-MAX_TOPICS = 20
-MAX_TOPIC_LENGTH = 60
+# Topics are short phrases; the bound also keeps every engineer view within an Agent's tool
+# result (see session.py).
+MAX_TOPICS = 10
+MAX_TOPIC_LENGTH = 40
 
 
 def supported_settings(config: C.AssistantConfig) -> dict[str, Any]:

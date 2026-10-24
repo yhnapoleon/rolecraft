@@ -1,8 +1,8 @@
 """Scenario-supplied engineering tickets, indexed by scenario ID and work language.
 
 The published scenario packages are byte-protected, so the ticket text lives here. The
-target question itself is read from the installed package's trusted probe suite by its
-canonical probe ID, in the session's own work language.
+target question itself is read from the scenario's engineer regression suite (a public row)
+by its canonical probe ID, in the session's own work language.
 """
 
 import json
@@ -11,6 +11,8 @@ from typing import Any
 from career_lab.contracts import v2 as C
 from career_lab.scenarios.v2.module import ScenarioModule
 from career_lab.storage.v2_store import TransactionView
+
+from .suite import require_suite
 
 SEED_EXECUTOR = C.Executor(id="engineer-ticket-seed", kind="system")
 
@@ -44,10 +46,10 @@ def seeded_ticket(module: ScenarioModule) -> tuple[dict[str, Any], str]:
     entry = SEEDED_TICKETS.get(module.package.bundle.id)
     if entry is None:
         raise C.ProtocolError("engineer_seeded_ticket_unavailable", status=404)
-    rows = json.loads(C.read_file(module.package.root, module.files["probes.json"]))
+    rows = json.loads(require_suite(module.package))
     wanted = entry["canonical_probe_id"]
     query = next(
-        (row["query"] for row in rows if row.get("canonical_probe_id", row["id"]) == wanted),
+        (row["query"] for row in rows if row["public"] and row["canonical_probe_id"] == wanted),
         None,
     )
     if query is None:

@@ -15,6 +15,7 @@ from .execution import Probe, suite_probes
 from .files import PackIndex, check_directory, encode, file_ref
 from .identity import source_version
 from .submission import submission_files, validate_staged_submission, verified_pack
+from .suite import require_suite
 
 
 @dataclass(frozen=True)
@@ -36,7 +37,8 @@ def fixed_files(
 ) -> dict[str, bytes]:
     return {
         "scenario.json": C.read_file(module.package.root, index.source.bindings.scenario),
-        "probe-suite.json": C.read_file(module.package.root, module.files["probes.json"]),
+        # The engineer regression suite: one candidate configuration, no preconditions.
+        "probe-suite.json": require_suite(module.package),
         "reviewer.json": encode({"implementation": source_version(), "mode": "local-extractive"}),
         "resources.json": encode(
             {
