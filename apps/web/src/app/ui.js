@@ -25,6 +25,7 @@ import {
 import * as Coach from './coach.js';
 import { summaryText } from '../features/recognition-native/badge';
 import { lensOn, onLensChange, setLens } from '../features/recognition-native/lens';
+import { playReading } from '../features/recognition-native/sentences';
 import { signalsHtml } from '../features/recognition-native/signals';
 import { behaviorHtml } from '../features/behavior-native/view';
 import {
@@ -1146,13 +1147,14 @@ document.addEventListener('keydown', (e) => {
   toggleReviewMenu(false);
   wrap.querySelector('[data-action="review-menu"]')?.focus();
 });
-/** The lens switch in the submission dialog's header, before its close button. */
+/** The lens switch in the submission dialog's header, before its close button, and beside it
+ * "Replay" while the lens is open (icon only on a phone, named for screen readers). */
 function mountLensSwitch(head) {
   const close = head?.querySelector('[data-action="close"]');
   if (!close || head.querySelector('[data-lens-switch]')) return;
   close.insertAdjacentHTML(
     'beforebegin',
-    `<button type="button" class="rc-switch" role="switch" aria-checked="${lensOn()}" data-action="lens-switch" data-lens-switch><span class="rc-switch__track" aria-hidden="true"></span><span class="rc-switch__long">${T('识别透镜', 'Recognition lens')}</span><span class="rc-switch__short">${T('透镜', 'Lens')}</span></button>`,
+    `<button type="button" class="rc-switch" role="switch" aria-checked="${lensOn()}" data-action="lens-switch" data-lens-switch><span class="rc-switch__track" aria-hidden="true"></span><span class="rc-switch__long">${T('识别透镜', 'Recognition lens')}</span><span class="rc-switch__short">${T('透镜', 'Lens')}</span></button><button type="button" class="rc-replay rc-replay--head" data-action="lens-replay" data-lens-replay aria-label="${esc(T('重放', 'Replay'))}"${lensOn() ? '' : ' hidden'}><span class="rc-replay__icon" aria-hidden="true"></span><span class="rc-replay__label">${T('重放', 'Replay')}</span></button>`,
   );
 }
 /** Close an open menu without redrawing the page (inputs and scroll stay as they are). */
@@ -1176,6 +1178,7 @@ function runSignals(a, x) {
 onLensChange((on) => {
   for (const toggle of document.querySelectorAll('[data-lens-switch]'))
     toggle.setAttribute('aria-checked', String(on));
+  for (const replay of document.querySelectorAll('[data-lens-replay]')) replay.hidden = !on;
   const a = current();
   if (!a) return;
   document.querySelectorAll('[data-rc-run]').forEach((node) => {
@@ -4200,6 +4203,11 @@ async function act(el) {
     case 'lens-switch':
       setLens(!lensOn());
       break;
+    case 'lens-replay': {
+      const block = document.querySelector('.sheet [data-rc-sentences]');
+      if (block) playReading(block);
+      break;
+    }
     case 'open-lab':
       go('lab', { transition: true });
       break;

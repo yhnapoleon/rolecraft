@@ -23,10 +23,12 @@ export type SureLevel = 'high' | 'mid' | 'low';
 export type ChainStepName = 'retrieval' | 'relation' | 'fusion' | 'decision' | 'arbiter';
 /** A run of text; `num` marks the work's number in conflict, `src` the material's. */
 export type Part = { text: string; mark?: 'num' | 'src' };
+export type ChainHit = { rank: number; quote: string; cited: boolean };
+/** One step, five lines at most: name, result, confidence cells, method, course category. */
 export type ChainStepView = {
   step: ChainStepName;
   name: string;
-  /** The step's finding in one or two words. */
+  /** The step's finding in plain words. */
   result: string;
   resultTone: 'good' | 'bad' | 'unknown' | 'ink';
   /** Confidence as 0–5 lit cells (relation only); null where a step has no confidence. */
@@ -38,16 +40,19 @@ export type ChainStepView = {
   fallback: boolean;
   /** Before submission, arbitration has not happened yet. */
   muted: boolean;
-  /** One line of detail under the finding. */
-  note: string | null;
-  /** The first retrieval hit, shown; the rest go behind "Show all". */
-  hit: { rank: number; quote: string; cited: boolean } | null;
-  more: {
-    label: string;
-    hits: { rank: number; quote: string; cited: boolean }[];
-    probabilities: { key: string; label: string; meter: Meter }[];
-  } | null;
 };
+/** Everything longer, behind one "Details" under the whole chain. */
+export type ChainDetails = {
+  label: string;
+  sections: {
+    step: ChainStepName;
+    name: string;
+    lines: string[];
+    hits: ChainHit[];
+    probabilities: { key: string; label: string; meter: Meter }[];
+  }[];
+};
+export type ChainView = { head: string; quote: string; steps: ChainStepView[]; details: ChainDetails };
 export type SourceView = {
   title: string | null;
   version: string | null;
@@ -74,7 +79,7 @@ export type SentenceView = {
   shown: 'always' | 'open' | null;
   /** The numbers the rule found in conflict ("80" against a limit of "30" people). */
   conflict: { value?: string; limit?: string; unit?: string; unitLabel?: string } | null;
-  chain: { head: string; quote: string; steps: ChainStepView[] };
+  chain: ChainView;
 };
 export type SentenceLensView = {
   title: string;
@@ -158,14 +163,24 @@ export function markNumber(text: string, value: string | undefined, mark: 'num' 
 
 const cellsOf = (p: number) => Math.max(0, Math.min(5, Math.round(p * 5)));
 
-/** The five steps of one sentence. Steps the records do not carry say so instead of guessing;
- * a rule fallback is named as such, never as a learned model. */
-export function chainSteps(chain: RecognitionChain | null, language: Language, beforeSubmission: boolean): ChainStepView[] {
+const shortTitle = (title: string) => title.split(/[：:]/)[0].trim() || title;
+
+/** The five steps of one sentence and their details. Results are plain words; numbers come only
+ * from the recorded rule; steps the records do not carry say so instead of guessing; a rule
+ * fallback is named as such, never as a learned model. */
+export function chainView(
+  chain: RecognitionChain | null,
+  language: Language,
+  beforeSubmission: boolean,
+  quote = '',
+): ChainView {
+  const head = t(language, 'chainHead');
+  const empty: ChainView = { head, quote, steps: [], details: { label: t(language, 'details'), sections: [] } };
   const unit = chain?.unit;
-  if (!chain || !unit) return [];
-  const base = { cells: null, cellsLabel: null, fallback: false, muted: false, note: null, hit: null, more: null };
+  if (!chain || !unit) return empty;
+  const base = { cells: null, cellsLabel: null, fallback: false, muted: false };
   const cited = unit.evidence_ids?.[0];
-  const hits = chain.retrieval.slice(0, 5).map((hit) => ({
+  const hits: ChainHit[] = chain.retrieval.slice(0, 5).map((hit) => ({
     rank: hit.rank,
     quote: closestSentence(unit.quote, hit.quote),
     cited: !!hit.evidenceId && hit.evidenceId === cited,
@@ -178,6 +193,7 @@ export function chainSteps(chain: RecognitionChain | null, language: Language, b
   };
   const ruleOnly = !!relation.fallback;
   const fusion = chain.fusion;
+  const rule = fusion && fusion.kind !== 'model_only' ? fusion.rule : null;
   const label = unit.label === 'supported' || unit.label === 'contradicted' ? unit.label : 'insufficient';
   const probabilities = unit.probabilities
     ? ['supported', 'contradicted', 'insufficient'].map((key) => {
@@ -194,24 +210,54 @@ export function chainSteps(chain: RecognitionChain | null, language: Language, b
     INSUFFICIENT: 'lbl_INSUFFICIENT',
   };
   const word = (v: string) => (VERDICT[v] ? t(language, VERDICT[v]) : v || '–');
-  return [
+  // Retrieval: name the material when the records do.
+  const source = chain.source?.title
+    ? [shortTitle(chain.source.title), chain.source.version != null ? t(language, 'version', { n: chain.source.version }) : '']
+        .filter(Boolean)
+        .join(language === 'zh' ? ' ' : ', ')
+    : null;
+  const found = source
+    ? t(language, 'r_found_source', { title: source })
+    : hits.length
+      ? chain.retrieval.length === 1
+        ? t(language, 'r_found_one')
+        : t(language, 'r_found', { n: chain.retrieval.length })
+      : chain.evidence
+        ? t(language, 'r_one')
+        : t(language, 'r_nothing');
+  // Fusion: the conflict in numbers when the rule has them.
+  const unitWord = (code?: string) => {
+    const key = `unit_${code}`;
+    return code && known(key) ? t(language, key) : (code ?? '');
+  };
+  const fusionResult = !fusion
+    ? t(language, 'f_res_none')
+    : rule?.value && rule.limit
+      ? t(language, 'f_res_conflict', { value: rule.value, limit: rule.limit })
+      : rule?.value && rule.kind === 'same_quantity'
+        ? t(language, 'f_res_agree', { value: rule.value, unit: unitWord(rule.unit) }).trim()
+        : fusion.kind === 'model_only'
+          ? t(language, 'f_res_model')
+          : fusion.kind === 'late_fusion'
+            ? t(language, 'f_res_late')
+            : t(language, 'f_res_rule');
+  const fusionNote = !fusion
+    ? t(language, ruleOnly ? 'fusion_off' : 'fusion_unknown')
+    : fusion.kind === 'late_fusion'
+      ? t(language, 'fusion_late', { alpha: fusion.alpha, rule: ruleText(fusion.rule, language) })
+      : fusion.kind === 'model_only'
+        ? t(language, 'fusion_model')
+        : t(language, 'fusion_rule', { rule: ruleText(fusion.rule, language) });
+  const defer = chain.decision.action === 'defer';
+  const steps: ChainStepView[] = [
     {
       ...base,
       step: 'retrieval',
       name: t(language, 'step_retrieval'),
-      result: hits.length
-        ? chain.retrieval.length === 1
-          ? t(language, 'r_found_one')
-          : t(language, 'r_found', { n: chain.retrieval.length })
-        : chain.evidence
-          ? t(language, 'r_one')
-          : t(language, 'r_nothing'),
+      result: found,
       resultTone: 'ink',
       method: t(language, 'm_retrieval'),
       category: t(language, 'cat_hybrid'),
-      note: hits.length ? null : chain.evidence,
-      hit: hits[0] ?? null,
-      more: hits.length > 1 ? { label: t(language, 'showAll'), hits: hits.slice(1), probabilities: [] } : null,
     },
     {
       ...base,
@@ -224,36 +270,24 @@ export function chainSteps(chain: RecognitionChain | null, language: Language, b
       method: t(language, ruleOnly ? 'm_relation_rule' : /stack/.test(relation.recognizer_id) ? 'm_relation_stack' : 'm_relation'),
       category: ruleOnly ? t(language, 'fallback') : categoryOf(relation, language),
       fallback: ruleOnly,
-      more: probabilities.length ? { label: t(language, 'showAll'), hits: [], probabilities } : null,
     },
     {
       ...base,
       step: 'fusion',
       name: t(language, 'step_fusion'),
-      result: t(
-        language,
-        !fusion ? 'f_res_none' : fusion.kind === 'late_fusion' ? 'f_res_late' : fusion.kind === 'model_only' ? 'f_res_model' : 'f_res_rule',
-      ),
-      resultTone: 'ink',
+      result: fusionResult,
+      resultTone: rule?.value && rule.limit ? 'bad' : 'ink',
       method: t(language, 'm_fusion'),
       category: t(language, 'cat_ensemble'),
-      note: !fusion
-        ? t(language, ruleOnly ? 'fusion_off' : 'fusion_unknown')
-        : fusion.kind === 'late_fusion'
-          ? t(language, 'fusion_late', { alpha: fusion.alpha, rule: ruleText(fusion.rule, language) })
-          : fusion.kind === 'model_only'
-            ? t(language, 'fusion_model')
-            : t(language, 'fusion_rule', { rule: ruleText(fusion.rule, language) }),
     },
     {
       ...base,
       step: 'decision',
       name: t(language, 'step_decision'),
-      result: t(language, chain.decision.action === 'defer' ? 'd_res_defer' : 'd_res_decide'),
-      resultTone: chain.decision.action === 'defer' ? 'unknown' : 'ink',
+      result: t(language, defer ? 'd_res_defer' : 'd_res_decide'),
+      resultTone: defer ? 'unknown' : 'ink',
       method: t(language, 'm_decision'),
       category: t(language, 'cat_decision'),
-      note: t(language, chain.decision.action === 'defer' ? 'd_defer' : 'd_decide'),
     },
     {
       ...base,
@@ -266,11 +300,33 @@ export function chainSteps(chain: RecognitionChain | null, language: Language, b
       method: t(language, 'm_arbiter'),
       category: t(language, 'cat_decision'),
       muted: !arbiter,
-      note: arbiter
-        ? t(language, 'a_line', { judge: word(arbiter.judge), recognizer: word(arbiter.recognizer), final: word(arbiter.final) })
-        : null,
     },
   ];
+  const section = (step: ChainStepName, lines: (string | null | undefined)[], extra: Partial<ChainDetails['sections'][number]> = {}) => ({
+    step,
+    name: steps.find((s) => s.step === step)?.name ?? '',
+    lines: lines.filter((line): line is string => !!line),
+    hits: [],
+    probabilities: [],
+    ...extra,
+  });
+  const sections = [
+    section('retrieval', [hits.length ? t(language, 'r_hits') : chain.evidence ? t(language, 'r_matched') : null, hits.length ? null : chain.evidence], { hits }),
+    section('relation', [], { probabilities }),
+    section('fusion', [fusionNote, fusion?.kind === 'late_fusion' ? t(language, 'd_alpha', { alpha: fusion.alpha }) : null]),
+    section('decision', [t(language, defer ? 'd_defer' : 'd_decide')]),
+    section('arbiter', [
+      arbiter
+        ? t(language, 'a_line', { judge: word(arbiter.judge), recognizer: word(arbiter.recognizer), final: word(arbiter.final) })
+        : null,
+    ]),
+  ].filter((s) => s.lines.length || s.hits.length || s.probabilities.length);
+  return { head, quote, steps, details: { label: t(language, 'details'), sections } };
+}
+
+/** The five steps alone (kept for callers that only list them). */
+export function chainSteps(chain: RecognitionChain | null, language: Language, beforeSubmission: boolean): ChainStepView[] {
+  return chainView(chain, language, beforeSubmission).steps;
 }
 
 /** The lens-closed line for the preview: "与材料一致 2/10 句 · 1 句与材料矛盾". */
@@ -355,7 +411,7 @@ export function sentenceLensView(source: SentenceSource): SentenceLensView | nul
       source: sourceView,
       shown: sourceView ? (tone === 'contradicted' ? 'always' : 'open') : null,
       conflict,
-      chain: { head: t(language, 'chainHead'), quote: unit.quote, steps: chainSteps(chain, language, !fromRecords) },
+      chain: chainView(chain, language, !fromRecords, unit.quote),
     };
   });
   return {

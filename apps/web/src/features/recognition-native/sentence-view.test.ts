@@ -76,8 +76,23 @@ describe('work sentences as data', () => {
       ['decision', '统计决策 · 混合'],
       ['arbiter', '统计决策 · 混合'],
     ]);
-    expect(first.chain.steps[1]).toMatchObject({ result: '矛盾', resultTone: 'bad', cells: 4 });
-    expect(first.chain.steps[2].note).toBe('数值限额规则参与融合（权重 α=0.4）：80 人超过材料里的上限 30 人');
+    expect(first.chain.steps.map((step) => step.result)).toEqual([
+      '找到：委托',
+      '矛盾',
+      '数字对不上：80 对 30',
+      '现在就给你看',
+      '没有仲裁记录',
+    ]);
+    expect(first.chain.steps[1]).toMatchObject({ resultTone: 'bad', cells: 4 });
+    // Longer reasons and parameters live in the one "Details" under the chain.
+    const fusion = first.chain.details.sections.find((part) => part.step === 'fusion');
+    expect(fusion?.lines).toEqual(['数值限额规则参与融合（权重 α=0.4）：80 人超过材料里的上限 30 人', '融合权重 α=0.4']);
+    expect(first.chain.details.sections.find((part) => part.step === 'retrieval')?.hits[0]).toEqual({
+      rank: 1,
+      quote: '目前项目预留容量是 30 人。',
+      cited: true,
+    });
+    expect(JSON.stringify(first.chain.steps)).not.toContain('α');
     expect(second).toMatchObject({ tone: 'deferred', certain: false, sure: 'low', source: null, shown: null, conflict: null });
     expect(second.chain.steps[4]).toMatchObject({ result: '没有仲裁记录', muted: true });
   });
@@ -98,7 +113,10 @@ describe('work sentences as data', () => {
     ]);
     const steps = view?.sentences[0].chain.steps ?? [];
     expect(steps[1]).toMatchObject({ category: 'Rule fallback', method: 'Number-and-limit rule', fallback: true });
-    expect(steps[2].note).toContain('nothing to fuse');
+    expect(view?.sentences[0].chain.details.sections.find((part) => part.step === 'fusion')?.lines[0]).toContain(
+      'nothing to fuse',
+    );
+    expect(steps[3].result).toBe('Shown to you now');
     expect(steps[4]).toMatchObject({ result: 'After you submit', muted: true });
     expect(view?.sentences[0].source?.quote).toBe('The cap is 400.');
     expect(JSON.stringify(view)).not.toContain('Deep learning');
@@ -123,5 +141,36 @@ describe('work sentences as data', () => {
     expect(markNumber('第 30 天，容量 300 人', '30', 'num')[1]).toEqual({ text: '30', mark: 'num' });
     expect(markNumber('容量 300 人', '30', 'num')).toEqual([{ text: '容量 300 人' }]);
     expect(markNumber('没有数字', undefined, 'num')).toEqual([{ text: '没有数字' }]);
+  });
+
+  it('says a sent-to-a-person decision and agreeing numbers in plain words', () => {
+    const view = sentenceLensView({
+      language: 'en',
+      preview: {
+        recognizer: 'xlm-r-pair-v1@abc',
+        defer_cost: 0.5,
+        units: [
+          {
+            index: 0,
+            quote: 'It needs 3 dev-days.',
+            label: 'supported',
+            confidence: 0.8,
+            decision: 'decide',
+            reason: 'late_fusion:0.4|same_quantity:3 pday',
+            evidence: 'Delivery needs 3 dev-days.',
+            source: { kind: 'material', object_id: 'technical', version: 1, title: 'Technical handover: current scope' },
+          },
+          { index: 1, quote: 'Fallback is staffed.', label: 'insufficient', confidence: 0.5, decision: 'defer', reason: 'pair_aggregate' },
+        ],
+      },
+    });
+    const [first, second] = view?.sentences ?? [];
+    expect(first.chain.steps.map((step) => step.result).slice(0, 3)).toEqual([
+      'Found: Technical handover, v1',
+      'Supports',
+      'Numbers agree: 3 dev-days',
+    ]);
+    expect(second.chain.steps[2].result).toBe('Model decided alone');
+    expect(second.chain.steps[3].result).toBe('Sent to a person: a wrong call would cost more');
   });
 });

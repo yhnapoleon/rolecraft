@@ -17,6 +17,11 @@ export type SentenceLensInput = SentenceSource & {
   view?: SentenceLensView | null;
   /** Play the reading once this block is in the page. */
   play?: boolean;
+  /** Show "Replay" in the block's own head (feedback page); a dialog puts it in its header. */
+  replay?: boolean;
+  /** 'paper' (default): the block is its own sheet of paper. 'flat': no frame, for a host that
+   * already places it as paper (the submission dialog after spec 197 §8). */
+  frame?: 'paper' | 'flat';
 };
 
 const ENTER_MS = 300;
@@ -91,6 +96,7 @@ export function renderSentenceLens(doc: Document, input: SentenceLensInput): HTM
   const view = input.view ?? sentenceLensView(input);
   const root = el('section', 'rc-sentences');
   root.setAttribute('data-rc-sentences', '');
+  root.dataset.frame = input.frame ?? 'paper';
   if (!view) return root;
   const head = el('header', 'rc-sentences__head');
   head.append(el('h4', 'rc-sentences__title', view.title), el('span', 'rc-sentences__counts', view.counts));
@@ -107,7 +113,8 @@ export function renderSentenceLens(doc: Document, input: SentenceLensInput): HTM
   icon.setAttribute('aria-hidden', 'true');
   replay.append(icon, el('span', 'rc-replay__label', view.replay));
   replay.addEventListener('click', () => playReading(root));
-  head.append(cats, replay);
+  head.append(cats);
+  if (input.replay !== false) head.append(replay);
   const legend = el('p', 'rc-sentences__legend');
   for (const item of view.legend) {
     const key = el('span', 'rc-key');
@@ -174,7 +181,7 @@ export function renderSentenceLens(doc: Document, input: SentenceLensInput): HTM
       }
       if (isOpen && !filled) {
         filled = true;
-        chain.append(renderChain(doc, sentence, view.showAll));
+        chain.append(renderChain(doc, sentence));
       }
     };
     show(open.has(sentence.index), false);
@@ -194,6 +201,7 @@ export function renderSentenceLens(doc: Document, input: SentenceLensInput): HTM
       if (opening) open.add(sentence.index);
       else open.delete(sentence.index);
       show(opening, true);
+      layoutMargin(root);
     });
   }
   // Up and down move between sentences.
@@ -208,74 +216,141 @@ export function renderSentenceLens(doc: Document, input: SentenceLensInput): HTM
     next.toggle.focus();
   });
   root.append(list);
-  if (input.play && typeof requestAnimationFrame === 'function')
+  if (typeof requestAnimationFrame === 'function')
     requestAnimationFrame(() => {
-      if (root.isConnected) playReading(root);
+      if (!root.isConnected) return;
+      layoutMargin(root);
+      watchLayout(root);
+      if (input.play) playReading(root);
     });
   return root;
 }
 
-function renderChain(doc: Document, sentence: SentenceView, showAll: string): HTMLElement {
+function renderChain(doc: Document, sentence: SentenceView): HTMLElement {
   const el = maker(doc);
+  const chain = sentence.chain;
   const panel = el('div', 'rc-chain__panel');
   const head = el('p', 'rc-chain__head');
-  head.append(el('b', '', sentence.chain.head), el('q', '', sentence.chain.quote));
-  panel.append(head, renderSteps(doc, sentence.chain.steps, showAll));
-  return panel;
-}
-
-function renderSteps(doc: Document, steps: ChainStepView[], showAll: string) {
-  const el = maker(doc);
+  head.append(el('b', '', chain.head), el('q', '', chain.quote));
   const list = el('ol', 'rc-steps');
-  for (const step of steps) {
-    const li = el('li', 'rc-step');
-    li.dataset.step = step.step;
-    if (step.muted) li.dataset.muted = '';
-    li.append(el('p', 'rc-step__name', step.name));
-    const result = el('p', 'rc-step__result', step.result);
-    result.dataset.tone = step.resultTone;
-    li.append(result);
-    if (step.cells != null) {
-      const cells = el('span', 'rc-cells');
-      cells.setAttribute('role', 'img');
-      cells.setAttribute('aria-label', step.cellsLabel ?? '');
-      for (let i = 0; i < 5; i++) {
-        const cell = el('i', 'rc-cell');
-        if (i < step.cells) cell.dataset.on = '';
-        cells.append(cell);
+  for (const step of chain.steps) list.append(renderStep(doc, step));
+  panel.append(head, list);
+  if (chain.details.sections.length) {
+    const details = el('details', 'rc-chain__details');
+    details.append(el('summary', '', chain.details.label));
+    for (const part of chain.details.sections) {
+      const section = el('section', 'rc-detail');
+      section.dataset.step = part.step;
+      section.append(el('p', 'rc-detail__name', part.name));
+      for (const line of part.lines) section.append(el('p', 'rc-detail__line', line));
+      for (const hit of part.hits) {
+        const row = el('p', hit.cited ? 'rc-hit is-cited' : 'rc-hit');
+        row.append(el('span', 'rc-hit__rank', `#${hit.rank}`), el('span', 'rc-hit__quote', hit.quote));
+        section.append(row);
       }
-      li.append(cells);
-    }
-    li.append(el('p', 'rc-step__method', step.method));
-    const category = el('span', 'rc-step__cat', step.category);
-    if (step.fallback) category.dataset.fallback = '';
-    li.append(category);
-    if (step.note) li.append(el('p', 'rc-step__note', step.note));
-    if (step.hit) li.append(hitRow(doc, step.hit));
-    if (step.more) {
-      const more = el('details', 'rc-step__more');
-      more.append(el('summary', '', step.more.label || showAll));
-      for (const hit of step.more.hits) more.append(hitRow(doc, hit));
-      if (step.more.probabilities.length) {
+      if (part.probabilities.length) {
         const probs = el('ul', 'rc-probs');
-        for (const p of step.more.probabilities) {
+        for (const p of part.probabilities) {
           const row = el('li');
           row.dataset.label = p.key;
           row.append(el('span', '', p.label), renderMeter(doc, p.meter));
           probs.append(row);
         }
-        more.append(probs);
+        section.append(probs);
       }
-      li.append(more);
+      details.append(section);
     }
-    list.append(li);
+    panel.append(details);
   }
-  return list;
+  return panel;
 }
 
-function hitRow(doc: Document, hit: { rank: number; quote: string; cited: boolean }) {
+/** One step in five lines: name, result, confidence cells, method, course category. */
+function renderStep(doc: Document, step: ChainStepView) {
   const el = maker(doc);
-  const row = el('p', hit.cited ? 'rc-hit is-cited' : 'rc-hit');
-  row.append(el('span', 'rc-hit__rank', `#${hit.rank}`), el('span', 'rc-hit__quote', hit.quote));
-  return row;
+  const li = el('li', 'rc-step');
+  li.dataset.step = step.step;
+  if (step.muted) li.dataset.muted = '';
+  li.append(el('p', 'rc-step__name', step.name));
+  const result = el('p', 'rc-step__result', step.result);
+  result.dataset.tone = step.resultTone;
+  result.setAttribute('title', step.result);
+  li.append(result);
+  const cells = el('span', 'rc-cells');
+  if (step.cells != null) {
+    cells.setAttribute('role', 'img');
+    cells.setAttribute('aria-label', step.cellsLabel ?? '');
+    for (let i = 0; i < 5; i++) {
+      const cell = el('i', 'rc-cell');
+      if (i < step.cells) cell.dataset.on = '';
+      cells.append(cell);
+    }
+  } else cells.setAttribute('aria-hidden', 'true');
+  li.append(cells);
+  const method = el('p', 'rc-step__method', step.method);
+  method.setAttribute('title', step.method);
+  li.append(method);
+  const category = el('span', 'rc-step__cat', step.category);
+  if (step.fallback) category.dataset.fallback = '';
+  li.append(category);
+  return li;
+}
+
+/** Wide containers: each margin paper sits beside its sentence, pushed down past the paper
+ * above it (12px apart); its leader line bends to reach it; an open sentence's chain starts below
+ * its paper; the list is tall enough for the last paper. Narrow: papers flow under sentences. */
+export function layoutMargin(root: HTMLElement) {
+  if (typeof root.querySelector !== 'function') return;
+  const list = root.querySelector<HTMLElement>('.rc-slist');
+  if (!list || typeof getComputedStyle !== 'function' || typeof list.getBoundingClientRect !== 'function') return;
+  const papers = [...list.querySelectorAll<HTMLElement>('.rc-s__match')];
+  for (const row of list.querySelectorAll<HTMLElement>('.rc-srow')) row.style.removeProperty('--rc-chain-gap');
+  const wide = papers.some((paper) => getComputedStyle(paper).position === 'absolute');
+  if (!wide) {
+    list.style.minHeight = '';
+    for (const paper of papers) {
+      paper.style.top = '';
+      paper.style.removeProperty('--rc-dy');
+    }
+    return;
+  }
+  let below = Number.NEGATIVE_INFINITY;
+  for (const paper of papers) {
+    if (paper.hidden) continue;
+    const row = paper.closest<HTMLElement>('.rc-srow');
+    const main = row?.querySelector<HTMLElement>('.rc-srow__main');
+    const mark = row?.querySelector<HTMLElement>('.rc-mkr');
+    if (!row || !main || !mark) continue;
+    const origin = list.getBoundingClientRect().top;
+    const mainBox = main.getBoundingClientRect();
+    const markBox = mark.getBoundingClientRect();
+    const top = Math.max(mainBox.top - origin + 1, below + 12);
+    const center = markBox.top - origin + markBox.height / 2;
+    paper.style.top = `${Math.round(top)}px`;
+    paper.style.setProperty('--rc-dy', `${Math.max(0, Math.round(top + 17 - center))}px`);
+    below = top + paper.offsetHeight;
+    if (row.dataset.open !== undefined) {
+      const gap = Math.max(0, below + 12 - (mainBox.bottom - origin));
+      row.style.setProperty('--rc-chain-gap', `${Math.round(gap)}px`);
+    }
+  }
+  list.style.minHeight = Number.isFinite(below) ? `${Math.ceil(below + 4)}px` : '';
+}
+
+const observed = new WeakSet<HTMLElement>();
+function watchLayout(root: HTMLElement) {
+  if (observed.has(root)) return;
+  observed.add(root);
+  const run = () => {
+    if (root.isConnected) layoutMargin(root);
+  };
+  if (typeof ResizeObserver === 'function') {
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(run);
+    });
+    observer.observe(root);
+  }
+  if (typeof document !== 'undefined') void document.fonts?.ready.then(run);
 }

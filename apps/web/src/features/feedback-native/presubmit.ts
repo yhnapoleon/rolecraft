@@ -423,7 +423,7 @@ export function createSentencePass(options: {
 
 export const PRESUBMIT_STYLE =
   '.presubmit{margin:14px 0;padding:14px 16px;border:1px solid var(--line-2);border-radius:var(--r-md,12px);background:var(--surface-2);display:grid;gap:8px}.presubmit p,.presubmit ul{margin:0}.presubmit__title{margin:0;font-size:15px;font-weight:600}.presubmit[aria-busy="true"] .presubmit__result{opacity:.55}.presubmit__meter{display:flex;align-items:center;gap:10px}.presubmit__bar{flex:1;max-width:220px;height:6px;border-radius:999px;background:var(--line-2);overflow:hidden}.presubmit__fill{display:block;height:100%;background:var(--good)}.presubmit__count{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}.presubmit__items{list-style:none;padding:0;display:grid;gap:6px}.presubmit__items li{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.presubmit__mark{flex:none;width:1.1em;font-weight:700;color:var(--ink-2)}.presubmit__items [data-tone="good"] .presubmit__mark{color:var(--good)}.presubmit__items [data-tone="bad"] .presubmit__mark{color:var(--bad)}.presubmit__items [data-tone="warn"] .presubmit__mark{color:var(--warn)}.presubmit__text{flex:1 1 14em;min-width:0}.presubmit .btn.small{min-height:28px;margin:0}.presubmit__muted,.presubmit__waiting{color:var(--ink-3);font-size:13px}.presubmit details{font-size:13px;color:var(--ink-2)}.presubmit details p{margin-block:6px}' +
-  '@media (max-width:560px){.presubmit{padding:12px 10px}}.presubmit__rec{display:grid;gap:4px;padding-top:8px;border-top:1px dashed var(--line-2)}.presubmit__rec:empty{display:none}.presubmit__stage{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:13px;color:var(--ink-2)}.presubmit__stage-done{color:var(--ink-3)}.presubmit__stage-done b{color:var(--good);font-weight:600;margin-inline-end:3px}.presubmit__elapsed{color:var(--ink-3);font-variant-numeric:tabular-nums}';
+  '.presubmit[data-frame="flat"]{padding:0;border:0;border-radius:0;background:none}@media (max-width:560px){.presubmit:not([data-frame="flat"]){padding:12px 10px}}.presubmit__rec{display:grid;gap:4px;padding-top:8px;border-top:1px dashed var(--line-2)}.presubmit__rec:empty{display:none}.presubmit__stage{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:13px;color:var(--ink-2)}.presubmit__stage-done{color:var(--ink-3)}.presubmit__stage-done b{color:var(--good);font-weight:600;margin-inline-end:3px}.presubmit__elapsed{color:var(--ink-3);font-variant-numeric:tabular-nums}';
 
 /** The card above the submit button. update() takes the current choice, or null when the person
  * has not chosen both a decision and at least one version. */
@@ -431,12 +431,18 @@ export function mountPresubmitCard(
   doc: Document,
   language: FeedbackLanguage,
   load: (choice: SubmitChoice) => Promise<SubmissionRuleCheck>,
-  options: { recognize?: (choice: SubmitChoice) => Promise<SentenceResult> } = {},
+  options: {
+    recognize?: (choice: SubmitChoice) => Promise<SentenceResult>;
+    /** 'panel' (default): the grey preview panel. 'flat': no panel frame, so the work's
+     * sentences sit as paper directly in the host (spec 197 §8, submission dialog). */
+    frame?: 'panel' | 'flat';
+  } = {},
 ) {
   const t = (key: PresubmitKey, values?: Values) => say(language, key, values);
   const root = doc.createElement('section');
   root.className = 'presubmit';
   root.dataset.presubmit = '';
+  root.dataset.frame = options.frame ?? 'panel';
   const title = doc.createElement('h3');
   title.className = 'presubmit__title';
   title.id = `presubmit-${Math.random().toString(36).slice(2)}`;
@@ -545,7 +551,14 @@ export function mountPresubmitCard(
       const quiet = previewQuiet(pass.preview, language);
       rec.replaceChildren(
         lensOn()
-          ? renderSentenceLens(doc, { preview: pass.preview, language, open: chains, play: playNext })
+          ? renderSentenceLens(doc, {
+              preview: pass.preview,
+              language,
+              open: chains,
+              play: playNext,
+              // The submission dialog shows Replay in its header, beside the lens switch.
+              replay: false,
+            })
           : el('p', quiet ?? '', 'presubmit__muted'),
       );
       playNext = false;

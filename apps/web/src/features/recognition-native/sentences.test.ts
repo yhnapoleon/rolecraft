@@ -158,4 +158,30 @@ describe('work sentences in the lens', () => {
     );
     expect(previewQuiet({ units: [] }, 'zh')).toBeNull();
   });
+
+  it('keeps every step to five lines and puts the long parts in one Details under the chain', () => {
+    const root = asFake(renderSentenceLens(fakeDocument(), { records, language: 'zh' }));
+    rows(root)[1].byClass('rc-s')[0].click();
+    const chain = rows(root)[1].byClass('rc-chain')[0];
+    for (const step of chain.byClass('rc-step'))
+      expect(step.children.map((c) => (c as FakeElement).className)).toEqual([
+        'rc-step__name',
+        'rc-step__result',
+        'rc-cells',
+        'rc-step__method',
+        'rc-step__cat',
+      ]);
+    expect(chain.byClass('rc-chain__details')).toHaveLength(1);
+    expect(chain.byClass('rc-chain__details')[0].textContent).toContain('详情');
+    expect(chain.byClass('rc-step__result').map((e) => e.textContent)).toContain('现在就给你看');
+  });
+
+  it('can leave Replay to its host and drop its own paper frame', () => {
+    const own = asFake(renderSentenceLens(fakeDocument(), { records, language: 'en' }));
+    expect(own.byClass('rc-replay')).toHaveLength(1);
+    expect(own.dataset.frame).toBe('paper');
+    const hosted = asFake(renderSentenceLens(fakeDocument(), { records, language: 'en', replay: false, frame: 'flat' }));
+    expect(hosted.byClass('rc-replay')).toHaveLength(0);
+    expect(hosted.dataset.frame).toBe('flat');
+  });
 });

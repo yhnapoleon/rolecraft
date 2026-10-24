@@ -8,6 +8,7 @@
   --rc-ease: var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
   --rc-gap: 30px;
   --rc-unk: var(--p-neutral, var(--ink-3));
+  --rc-margin: 38%;
   container-type: inline-size;
   display: grid;
   gap: 6px;
@@ -87,6 +88,18 @@
   outline: 2px solid var(--ink);
   outline-offset: 2px;
 }
+.rc-replay[hidden] {
+  display: none;
+}
+/* In the dialog header, beside the lens switch. */
+.rc-replay--head {
+  margin-inline-start: 0;
+}
+@media (max-width: 560px) {
+  .rc-replay--head .rc-replay__label {
+    display: none;
+  }
+}
 .rc-replay__icon {
   inline-size: 12px;
   block-size: 12px;
@@ -143,7 +156,14 @@
   color: var(--ink-3);
   font-size: 12px;
 }
+.rc-sentences[data-frame='flat'] {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
 .rc-slist {
+  position: relative;
   display: grid;
   margin: 0;
   padding: 0;
@@ -161,16 +181,20 @@
 }
 @container (min-width: 620px) {
   .rc-srow {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 0.62fr);
+    position: static;
+    grid-template-columns: minmax(0, 1fr) var(--rc-margin);
     column-gap: var(--rc-gap);
   }
 }
+/* The sentence and its mark; hover, press and the open state tint only this, not the margin. */
 .rc-srow__main {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 12px;
   column-gap: 16px;
   align-items: start;
-  padding: 5px 0;
+  margin: 0 -8px;
+  padding: 5px 8px;
+  border-radius: var(--r-xs);
 }
 .rc-s {
   appearance: none;
@@ -191,14 +215,12 @@
   outline-offset: 2px;
 }
 @media (hover: hover) and (pointer: fine) {
-  .rc-srow:hover {
+  .rc-srow__main:hover {
     background: var(--accent-tint);
   }
 }
-.rc-srow[data-open] {
-  background: var(--accent-tint);
-}
-.rc-srow:has(.rc-s:active) {
+.rc-srow[data-open] .rc-srow__main,
+.rc-srow__main:has(.rc-s:active) {
   background: var(--accent-tint);
 }
 /* Sure relations: a line drawn under the words (background, so it can be drawn along them). */
@@ -340,36 +362,48 @@
 .rc-s__match[data-relation='supports'] .rc-src__rel {
   color: var(--good);
 }
-/* Wide: the paper sits in the margin on the same line, top-aligned, with a leader line from the
- * sentence's mark to the paper's edge (an inline element, no SVG). */
+/* Wide: the paper sits in the margin beside its sentence, out of the text flow so sentences keep
+ * their natural spacing. layoutMargin() sets its top (pushed past the paper above, 12px apart)
+ * and --rc-dy, how far below the sentence's mark the paper's anchor ended up. The leader line goes
+ * from the mark across half the gap, down by --rc-dy, and on to the paper's edge (inline elements,
+ * no SVG); it is straight when the paper sits level with its sentence. */
 @container (min-width: 620px) {
   .rc-s__match {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: start;
-    margin: 1px 0 0;
+    --rc-thread: var(--bad);
+    position: absolute;
+    inset-inline-end: 0;
+    inline-size: var(--rc-margin);
+    margin: 0;
+  }
+  .rc-s__match[data-relation='supports'] {
+    --rc-thread: var(--good);
   }
   .rc-lead {
-    inset-block-start: 21px;
-    inset-inline-start: auto;
-    inset-inline-end: 100%;
-    inline-size: var(--rc-gap);
-    block-size: 1.25px;
-    background: var(--bad);
-    transform-origin: 0 50%;
-  }
-  .rc-s__match[data-relation='supports'] .rc-lead {
-    background: var(--good);
+    box-sizing: border-box;
+    inset-block-start: calc(17px - var(--rc-dy, 0px));
+    inset-inline-start: calc(-1 * var(--rc-gap));
+    inline-size: calc(var(--rc-gap) / 2);
+    block-size: var(--rc-dy, 0px);
+    background: none;
+    border-block-start: 1.25px solid var(--rc-thread);
+    border-inline-end: 1.25px solid var(--rc-thread);
+    border-start-end-radius: min(4px, var(--rc-dy, 0px));
+    transform-origin: 0 0;
   }
   .rc-lead::before {
-    display: none;
+    inset-block-start: calc(100% - 1.25px);
+    inset-inline-start: 100%;
+    inline-size: calc(var(--rc-gap) / 2 + 1.25px);
+    block-size: 0;
+    border-radius: 0;
+    background: none;
+    border-block-start: 1.25px solid var(--rc-thread);
   }
   .rc-lead::after {
-    inset-block-start: -2px;
+    inset-block-start: calc(100% - 3.125px);
     inset-block-end: auto;
-    inset-inline-start: auto;
-    inset-inline-end: -2.5px;
-    background: inherit;
+    inset-inline-start: calc(100% + var(--rc-gap) / 2 - 2.5px);
+    background: var(--rc-thread);
   }
 }
 @container (max-width: 619px) {
@@ -380,6 +414,7 @@
 /* The chain: a floating sheet under the open sentence, five steps. */
 .rc-chain {
   grid-column: 1 / -1;
+  margin-block-start: var(--rc-chain-gap, 0px);
 }
 .rc-chain[hidden] {
   display: none;
@@ -427,13 +462,13 @@
   gap: 6px;
   min-width: 0;
 }
-@container (min-width: 860px) {
+@container (min-width: 640px) {
   .rc-steps {
     grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 0;
   }
   .rc-step {
-    padding: 0 16px;
+    padding: 0 10px;
     box-shadow: inset 1px 0 0 var(--line);
   }
   .rc-step:first-child {
@@ -459,11 +494,17 @@
   border-radius: 50%;
   background: var(--ink-4);
 }
+/* Results keep their numbers and reasons: up to three lines (English runs longer than Chinese). */
 .rc-step__result {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
   color: var(--ink);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   line-height: 1.35;
+  text-wrap: pretty;
 }
 .rc-step__result[data-tone='good'] {
   color: var(--good);
@@ -481,6 +522,9 @@
   gap: 3px;
   block-size: 4px;
 }
+.rc-cells:empty {
+  visibility: hidden;
+}
 .rc-cell {
   border-radius: 2px;
   background: var(--fill, var(--line-2));
@@ -489,6 +533,10 @@
   background: var(--ink-2);
 }
 .rc-step__method {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   color: var(--ink-2);
   font-size: 12px;
   line-height: 1.45;
@@ -498,21 +546,64 @@
 }
 .rc-step__cat {
   justify-self: start;
-  padding: 5px 7px;
+  max-inline-size: 100%;
+  padding: 4px 7px;
   border-radius: var(--r-xs);
   background: var(--fill, var(--accent-tint));
   color: var(--ink-2);
   font-size: 11px;
   font-weight: 500;
-  line-height: 1;
+  line-height: 1.3;
 }
 .rc-step__cat[data-fallback] {
   background: transparent;
   outline: 1px dashed var(--rc-unk);
   outline-offset: -1px;
 }
-.rc-step__note {
+/* One "Details" under the whole chain: hits, probabilities, the rule's sentence, parameters. */
+.rc-chain__details {
+  padding-block-start: 10px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.rc-chain__details > summary {
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.rc-chain__details > summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: var(--r-xs);
+}
+.rc-chain__details[open] {
+  display: grid;
+  gap: 10px;
+}
+@container (min-width: 640px) {
+  .rc-chain__details[open] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
+  .rc-chain__details > summary {
+    grid-column: 1 / -1;
+  }
+}
+.rc-detail {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.rc-detail p {
+  margin: 0;
+}
+.rc-detail__name {
   color: var(--ink-3);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+.rc-detail__line {
+  color: var(--ink-2);
   font-size: 12px;
   line-height: 1.5;
 }
@@ -534,15 +625,6 @@
 }
 .rc-hit__quote {
   font-family: var(--serif);
-}
-.rc-step__more > summary {
-  color: var(--ink-2);
-  font-size: 12px;
-  cursor: pointer;
-}
-.rc-step__more[open] {
-  display: grid;
-  gap: 4px;
 }
 .rc-probs {
   display: grid;
@@ -574,6 +656,13 @@
   }
   to {
     opacity: 1;
+  }
+}
+/* A number in conflict keeps its digits; only its highlight arrives. */
+@keyframes rc-num {
+  from {
+    background-color: transparent;
+    color: inherit;
   }
 }
 /* Unsure lines fade in without the words they sit under. */
@@ -623,7 +712,7 @@
   animation-delay: calc(var(--rc-t) + 340ms);
 }
 .rc-sentences[data-reading='draw'] .rc-s__text .rc-num {
-  animation: rc-fade var(--mid) ease both;
+  animation: rc-num var(--mid) ease both;
   animation-delay: calc(var(--rc-t) + 480ms);
 }
 .rc-sentences[data-reading='draw'] .rc-s__match {
@@ -655,13 +744,16 @@
   .rc-sentences[data-reading] .rc-srow[data-certain] .rc-s__text {
     animation: none;
   }
+  .rc-sentences[data-reading] .rc-num {
+    animation: rc-num var(--fast) ease both;
+    animation-delay: 0ms;
+  }
   .rc-sentences[data-reading] .rc-srow:not([data-certain]) .rc-s__text {
     animation: rc-ink var(--fast) ease both;
     animation-delay: 0ms;
   }
   .rc-sentences[data-reading='flat'] .rc-srow,
   .rc-sentences[data-reading] .rc-mkr,
-  .rc-sentences[data-reading] .rc-num,
   .rc-sentences[data-reading] .rc-s__match,
   .rc-sentences[data-reading] .rc-lead,
   .rc-s__match[data-entering],
