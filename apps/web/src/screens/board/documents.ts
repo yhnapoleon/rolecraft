@@ -33,6 +33,10 @@ function stateMark(s: DocState) {
   return '';
 }
 
+/** One document row, the same wherever a document is listed (the board, the findings dossier). */
+export const docRowHtml = (r: DocRow) =>
+  `<button type="button" class="doc-row is-${r.state}" data-action="open-doc" data-id="${esc(r.id)}" data-doc-row="${esc(r.id)}">${icon('doc', 'i-sm doc-row-i')}<span class="doc-row-title">${esc(r.title)}</span><span class="doc-row-v">v${r.version}</span><span class="doc-row-state">${stateMark(r.state)}</span></button>`;
+
 export function documentsSection(rows: DocRow[], opts: { all: boolean; loading?: string }) {
   const unread = rows.filter((r) => r.state === 'unread' || r.state === 'new').length;
   // "Documents  18 · 15 unread" (decision 9): a small count beside the heading, the dot between
@@ -49,12 +53,7 @@ export function documentsSection(rows: DocRow[], opts: { all: boolean; loading?:
   const shown = opts.all ? list : list.filter((r, i) => i < FIRST || r.state === 'agent');
   const more = list.length - shown.length;
   return `<section class="work-sec docs-sec" aria-labelledby="docs-h">${head}
-    <ul class="doc-list" role="list">${shown
-      .map(
-        (r) =>
-          `<li><button type="button" class="doc-row is-${r.state}" data-action="open-doc" data-id="${esc(r.id)}" data-doc-row="${esc(r.id)}">${icon('doc', 'i-sm doc-row-i')}<span class="doc-row-title">${esc(r.title)}</span><span class="doc-row-v">v${r.version}</span><span class="doc-row-state">${stateMark(r.state)}</span></button></li>`,
-      )
-      .join('')}</ul>
+    <ul class="doc-list" role="list">${shown.map((r) => `<li>${docRowHtml(r)}</li>`).join('')}</ul>
     ${more > 0 ? `<button type="button" class="doc-more" data-action="board-docs-all" aria-expanded="false">${T(`显示全部 ${list.length} 份`, `Show all ${list.length}`)}</button>` : opts.all && list.length > FIRST ? `<button type="button" class="doc-more" data-action="board-docs-all" aria-expanded="true">${T('收起', 'Show fewer')}</button>` : ''}
   </section>`;
 }

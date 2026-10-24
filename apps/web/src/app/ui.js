@@ -158,6 +158,7 @@ import {
 import { HatScale, PrimaryKey } from '../shell/bar';
 import '../shell/bar.css';
 import * as Board from '../screens/board';
+import { dossierHtml, installDossier } from '../screens/investigate';
 import { islandSlot, keepIsland } from '../islands/mount';
 import {
   entryHtml,
@@ -1407,6 +1408,9 @@ function mountShellBar() {
     stepName,
     delivered,
     lang: locale(),
+    ...(hat === 'pm' && pmViewing(a)
+      ? { viewing: pmViewing(a), viewingWord: T('在看', 'Viewing'), back: stageBack(a) }
+      : {}),
   });
   const p = stage?.primary;
   if (p)
@@ -1427,6 +1431,96 @@ function mountShellBar() {
       icon: p.action === 'submit' ? 'stamp' : 'none',
     });
 }
+// The product manager's steps and their screens: Investigate → the findings dossier; Decide → the
+// board; Delivered → the result. The board is also where the Investigate step is worked, so it
+// counts as the current step's own screen until the practice is delivered.
+const pmCurrent = (a) =>
+  statusOf(a) === 'submitted'
+    ? 'delivered'
+    : works(a).some((x) => String(editorView(a, x).body || '').trim())
+      ? 'decide'
+      : 'investigate';
+function pmViewing(a) {
+  const now = pmCurrent(a);
+  if (ui.route === 'investigate') return 'investigate';
+  if (ui.route === 'review') return now === 'delivered' ? null : 'delivered';
+  if (now === 'delivered' && ['work', 'task', 'doc', 'bench'].includes(ui.route)) return 'decide';
+  return null;
+}
+// The way back to the current step's own screen, as the scale's ghost key and the dossier's.
+function stageBack(a) {
+  const now = pmCurrent(a);
+  const label =
+    now === 'delivered'
+      ? T('回到结果', 'Back to the result')
+      : pmViewing(a) === now
+        ? T('回到工作板', 'Back to the board')
+        : now === 'decide'
+          ? T('回到决定', 'Back to Decide')
+          : T('回到调查', 'Back to Investigate');
+  return { label, action: 'stage-back' };
+}
+// Between the board and the dossier the old page leaves first (160ms, fading and blurring a
+// little), then the new one rises 10px into place (280ms): two pages of text never overlap.
+// Reduced motion: the new page fades in over 160ms.
+function switchStage(run) {
+  const old = document.getElementById('ws-stage');
+  const arrive = () => {
+    const next = document.getElementById('ws-stage');
+    if (!next) return;
+    next.animate(
+      reduceMotion.matches
+        ? [{ opacity: 0 }, { opacity: 1 }]
+        : [
+            { opacity: 0, transform: 'translateY(10px)' },
+            { opacity: 1, transform: 'none' },
+          ],
+      { duration: reduceMotion.matches ? 160 : 280, easing: 'cubic-bezier(.23,1,.32,1)' },
+    );
+  };
+  if (!old || reduceMotion.matches) {
+    run();
+    arrive();
+    return;
+  }
+  old
+    .animate(
+      [
+        { opacity: 1, filter: 'blur(0)' },
+        { opacity: 0, filter: 'blur(2px)' },
+      ],
+      { duration: 160, easing: 'ease-out', fill: 'forwards' },
+    )
+    .finished.then(() => {
+      run();
+      arrive();
+    });
+}
+// Going back to the board puts it where it was left.
+function goBoard() {
+  const y = ui.boardY || 0;
+  const held = ui.boardH || 0;
+  switchStage(() => {
+    go('work');
+    if (!y) return;
+    // The board is drawn at its old height and scroll before it rises; its cards mount a moment
+    // later, then the held height is let go. So it arrives where it was, without a jump.
+    const stage = document.getElementById('ws-stage');
+    const main = document.getElementById('main');
+    if (stage && held) stage.style.minHeight = `${held}px`;
+    if (main) main.scrollTop = y;
+    Board.tasksDrawn(1, 1500).then(() =>
+      requestAnimationFrame(() => {
+        if (stage?.isConnected) stage.style.minHeight = '';
+      }),
+    );
+  });
+}
+const keepBoardPlace = () => {
+  if (ui.route !== 'work') return;
+  ui.boardY = document.getElementById('main')?.scrollTop || 0;
+  ui.boardH = document.getElementById('ws-stage')?.offsetHeight || 0;
+};
 // The bar never overlaps itself. The title gives way first (down to its minimum, with an
 // ellipsis); if the row still does not fit, things fold in a fixed order: the lamp's words and
 // the disabled key's reason, then the scale to "1/3", then the hat switch into ⋯.
@@ -2025,12 +2119,86 @@ const citedMaterials = (a) =>
       (shown(x).evidence || []).filter((ev) => ev.type === 'material').map((ev) => ev.id),
     ),
   );
+// The first sentence of a text, without Markdown, for a one-line summary.
+const firstLine = (text, max = 140) => {
+  const t = String(text || '')
+    .replace(/^#{1,6}\s+/gm, '')
+    .replace(/[*_`>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const one = t.split(/(?<=[。！？])|(?<=[.!?])\s/)[0] || t;
+  return one.length > max ? `${one.slice(0, max - 1)}…` : one;
+};
+// What has been found so far, for the Investigate dossier: plain facts the practice already
+// holds (reads, citations, conversations, test runs, tasks and works). No model, no recognition.
+function findingsOf(a) {
+  const read = readSet(a);
+  const cited = citedMaterials(a);
+  const docs = E.getMaterials(a).map((m) => {
+    const acked = (a.acks || []).includes(`read-${m.id}-v${m.version}`);
+    const group = cited.has(m.id)
+      ? 'cited'
+      : m.version > 1 && !acked
+        ? 'new'
+        : read.has(m.id) || acked
+          ? 'read'
+          : 'unread';
+    return { id: m.id, title: materialTitle(m), version: m.version, group };
+  });
+  const people = ROLES.map((r) => {
+    const msgs = a.conversations[r] || [];
+    const asked = msgs.filter((m) => m.role === 'user').at(-1);
+    const reply = msgs.filter((m) => m.role !== 'user').at(-1);
+    return {
+      role: r,
+      name: PEOPLE[r].name,
+      title: ROLE_TITLE(r),
+      asked: asked ? firstLine(asked.text, 120) : '',
+      reply: reply ? previewLine(reply.text) || firstLine(reply.text, 120) : '',
+      count: msgs.length,
+    };
+  });
+  const old = (x) => (x.stale !== undefined ? !!x.stale : x.indexVersion < x.policyVersion);
+  const tests = a.tests
+    .slice()
+    .reverse()
+    .map((r) => {
+      const tk = r.taskId && a.tasks.find((t) => t.id === r.taskId);
+      return {
+        id: r.id,
+        question: r.question,
+        answer: firstLine(r.answer),
+        versions: T(
+          `政策 v${r.policyVersion} · 索引 v${r.indexVersion}`,
+          `Policy v${r.policyVersion} · index v${r.indexVersion}`,
+        ),
+        stale: old(r),
+        task: tk ? taskTitle(tk) : '',
+      };
+    });
+  const workOf = (w) => ({
+    id: w.id,
+    title: shown(w).title || T('未命名', 'Untitled'),
+    purpose: purposeLabel(shown(w).purpose),
+    version: workVersion(w.revision || 1),
+    adopted: !!w.adopted,
+  });
+  const tasks = a.tasks.map((t) => ({
+    id: t.id,
+    title: taskTitle(t),
+    status: t.status,
+    statusLabel: STATUS(t.status),
+    works: taskWorks(a, t.id).map(workOf),
+  }));
+  const unfiled = (a.artifacts || []).filter((w) => !w.taskId && !w.removedAt).map(workOf);
+  return { docs, people, tests, tasks, unfiled };
+}
 function docGrid(a) {
   const list = E.getMaterials(a);
   const read = readSet(a);
   const cited = citedMaterials(a);
   const rows = list.map((m) => {
-    const fresh = m.version > 1 && !(a.acks || []).includes('read-' + m.id + '-v' + m.version);
+    const fresh = m.version > 1 && !(a.acks || []).includes(`read-${m.id}-v${m.version}`);
     const state = fresh
       ? 'new'
       : Board.agentReading(m.id)
@@ -5739,12 +5907,42 @@ async function act(el, ev = new Event('rc-action')) {
       go('engineer', { id: ticket });
       break;
     }
-    // A step on the product manager's scale: Delivered opens the result, the others the board.
-    case 'stage-pm':
+    // A step on the product manager's scale opens that step's screen, read only where it is not
+    // the current one: Investigate the findings dossier, Decide the board, Delivered the result
+    // (before submitting, a line saying so).
+    case 'stage-pm': {
       if (!a) break;
-      if (el.dataset.step === 'delivered') {
-        if (statusOf(a) === 'submitted') go('review', { transition: true });
-      } else if (ui.route !== 'work') go('work', { transition: true });
+      const step = el.dataset.step;
+      if (step === 'delivered') {
+        if (statusOf(a) === 'submitted') {
+          keepBoardPlace();
+          go('review', { transition: true });
+        } else
+          // What to do next, by where the practice stands.
+          notify(
+            pmCurrent(a) === 'decide'
+              ? T(
+                  '交付以后这里是结果。准备好了就点右上角「交付」。',
+                  'Your result shows here once you submit. When you are ready, use Submit at the top right.',
+                )
+              : T(
+                  '交付以后这里是结果。先写一份作品草稿，再点右上角「交付」。',
+                  'Your result shows here once you submit. Draft your work first, then use Submit at the top right.',
+                ),
+          );
+      } else if (step === 'investigate') {
+        if (ui.route !== 'investigate') {
+          keepBoardPlace();
+          switchStage(() => go('investigate'));
+        }
+      } else if (ui.route !== 'work') goBoard();
+      break;
+    }
+    // Back to the current step's own screen: the result once delivered, else the board.
+    case 'stage-back':
+      if (!a) break;
+      if (statusOf(a) === 'submitted') go('review', { transition: true });
+      else goBoard();
       break;
     // The agent lamp: the My agent screen once the agent line registers it; until then the
     // rail's agent tab.
@@ -7336,6 +7534,12 @@ Board.installBoard({
 });
 // The result page is a screen of the workspace: the shell keeps the topbar and the people.
 registerRoute('review', () => (current() ? renderReview() : ''));
+// "Investigate" on the scale: what has been found so far, read only (screens/investigate).
+registerRoute('investigate', () => {
+  const a = current();
+  return a ? dossierHtml(findingsOf(a), stageBack(a)) : '';
+});
+installDossier({ redraw: () => refreshWS(['stage']) });
 registerResultScreen({
   host: (a) => (a && L.nativeWorkspace(a) ? L.v4Host(a) : null),
   sessionOf: (a) => (a && L.nativeWorkspace(a) ? a.id : null),
