@@ -230,8 +230,9 @@ html.scrolled body:not([data-view="work"]) .topbar {
   transform: scale(0.97);
 }
 .note-actions .link:not(.quiet) {
-  background: var(--primary);
-  color: var(--on-primary);
+  background: var(--key-bg);
+  box-shadow: var(--shadow-key);
+  color: var(--ink);
 }
 .note-actions .link.quiet {
   padding: 0 8px;
@@ -326,7 +327,7 @@ html.scrolled body:not([data-view="work"]) .topbar {
   color: var(--on-primary);
 }
 .world-event .btn.primary:hover {
-  background: color-mix(in oklab, var(--warn), var(--canvas) 12%);
+  background: var(--warn);
 }
 
 /* Handed in, the event is a record: no amber line, no light, one quiet key. */
@@ -443,5 +444,19 @@ html.scrolled body:not([data-view="work"]) .topbar {
   .stage-inner::before,
   .stage-inner::after {
     transition: none;
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .note-actions .link:not(.quiet):hover {
+    background: color-mix(in oklab, var(--key-bg) 94%, var(--ink) 6%);
+  }
+}
+.note-actions .link:not(.quiet):active {
+  background: color-mix(in oklab, var(--key-bg) 90%, var(--ink) 10%);
+}
+@media (prefers-reduced-motion: reduce) {
+  .note-actions .link:active {
+    transform: none;
   }
 }

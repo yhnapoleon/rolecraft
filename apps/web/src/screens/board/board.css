@@ -420,7 +420,6 @@
 .doc-row {
   appearance: none;
   width: 100%;
-  border-radius: 0;
   display: grid;
   /* The state column has a fixed width, so a row without a state keeps its version in line. */
   grid-template-columns: 18px minmax(0, 1fr) auto 152px;
@@ -429,21 +428,27 @@
   padding: 11px 6px;
   border: 0;
   background: none;
-  box-shadow: inset 0 1px 0 var(--line);
+  position: relative;
+  box-shadow: none;
   color: var(--ink-3);
   font-size: 13px;
   text-align: left;
   cursor: pointer;
   transition: background var(--fast) ease;
+  border-radius: var(--r-row);
 }
-.doc-list li:last-child .doc-row {
-  box-shadow:
-    inset 0 1px 0 var(--line),
-    inset 0 -1px 0 var(--line);
+.doc-list li + li .doc-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 36px;
+  right: 6px;
+  height: 0.5px;
+  background: var(--line);
 }
 @media (hover: hover) and (pointer: fine) {
   .doc-row:hover {
-    background: var(--fill);
+    background: var(--fill-2);
   }
 }
 .doc-row:focus-visible {
@@ -691,29 +696,40 @@
 }
 .mat-compare .track {
   position: relative;
-  width: 26px;
-  height: 16px;
+  flex: none;
+  width: var(--switch-width);
+  height: var(--switch-height);
   border-radius: 999px;
   background: var(--fill-2);
-  transition: background var(--fast) ease;
+  box-shadow: inset 0 0 0 0.5px var(--line-2);
+  transition: background-color var(--fast) ease;
 }
 .mat-compare .track::after {
   content: "";
   position: absolute;
   top: 2px;
   left: 2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: var(--paper);
-  box-shadow: var(--shadow-card);
-  transition: transform var(--mid) var(--ease-out);
+  width: var(--switch-knob);
+  height: var(--switch-knob);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: var(--switch-shadow);
+  transition:
+    transform 320ms var(--spring),
+    width 200ms var(--ease-out);
 }
 .mat-compare[aria-checked="true"] .track {
   background: var(--primary);
+  box-shadow: none;
 }
 .mat-compare[aria-checked="true"] .track::after {
-  transform: translateX(10px);
+  transform: translateX(var(--switch-travel));
+}
+.mat-compare:active .track::after {
+  width: var(--switch-pressed);
+}
+.mat-compare[aria-checked="true"]:active .track::after {
+  transform: translateX(var(--switch-pressed-travel));
 }
 /* The new version marks its change in place: the old figure struck, the new one set. */
 .mat-body .prose del,
@@ -1019,7 +1035,7 @@
 }
 .rail-board .people-sep {
   height: 1px;
-  margin: 6px 8px;
+  margin: 6px 8px 6px 50px;
   background: var(--line);
 }
 
@@ -1328,5 +1344,25 @@ button.rec-open {
 @keyframes fade-only {
   from {
     opacity: 0;
+  }
+}
+
+.rail-board .person {
+  position: relative;
+  border-radius: var(--r-row);
+}
+.rail-board .person + .person::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 50px;
+  right: 8px;
+  height: 0.5px;
+  background: var(--line);
+}
+@media (prefers-reduced-motion: reduce) {
+  .mat-compare .track,
+  .mat-compare .track::after {
+    transition: none;
   }
 }

@@ -22,6 +22,13 @@
   --color-ink-2: var(--ink-2);
   --color-ink-3: var(--ink-3);
   --color-ink-4: var(--ink-4);
+  --color-key: var(--key-bg);
+  --color-thumb: var(--seg-thumb);
+  --color-seg-on: var(--seg-on);
+  --color-seg-track: var(--seg-track);
+  --shadow-key: var(--shadow-key);
+  --shadow-primary: var(--shadow-primary);
+  --shadow-thumb: var(--shadow-thumb);
   --color-paper: var(--paper);
   --color-desk: var(--canvas);
   --color-inst: var(--surface);
@@ -47,9 +54,9 @@
   --font-serif: var(--serif);
   --font-mono: var(--mono);
   --radius-paper: 3px;
-  --radius-key: 8px;
-  --radius-panel: 12px;
-  --radius-dialog: 16px;
+  --radius-key: var(--r-key);
+  --radius-panel: var(--r-panel);
+  --radius-dialog: var(--r-dialog);
   --shadow-paper: var(--shadow-paper);
   --shadow-card: var(--shadow-card);
   --shadow-float: var(--shadow-float);
