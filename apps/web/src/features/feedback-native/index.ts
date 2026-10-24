@@ -578,7 +578,9 @@ export function mountNativeFeedback(
   // The latest version of the pilot decision is chosen when the dialog opens (decision 20).
   let defaulted = false;
   function defaultChoice(state: FeedbackNativeState) {
-    if (defaulted || !preview || selected.size || restoring || state.status !== 'active') return;
+    // A choice remembered from an earlier opening wins, even an empty one.
+    if (defaulted || !preview || selected.size || rememberedAtOpen || state.status !== 'active')
+      return;
     const live = state.products.filter((p) => !p.removed_at);
     if (!live.length) return;
     defaulted = true;
@@ -601,6 +603,7 @@ export function mountNativeFeedback(
     }
   }
   let restoring = preview ? adapter.rememberedChoice?.() : undefined;
+  const rememberedAtOpen = !!restoring;
   /** Put back the choice made before the panel was last closed, once its versions are listed. */
   function restoreChoice(state: FeedbackNativeState) {
     if (!restoring || !state.products.length) return;
