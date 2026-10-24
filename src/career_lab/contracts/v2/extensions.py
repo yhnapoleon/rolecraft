@@ -71,6 +71,60 @@ class DelegationListResponse(V2):
     result: DelegationListResult
 
 
+class AgentActivityObject(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: str
+    id: str
+    version: int | None = None
+    title: str | None = None
+
+
+class AgentClient(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str
+    version: str
+
+
+class AgentActivity(BaseModel):
+    """One MCP connection or tool call by the person's own Agent. No arguments or bodies."""
+
+    model_config = ConfigDict(extra="forbid")
+    seq: PositiveInt
+    at: datetime
+    delegation_id: str
+    kind: Literal["connected", "tool_call"]
+    tool: str | None = None
+    capability: Literal["read", "act", "submit"] | None = None
+    objects: tuple[AgentActivityObject, ...] = ()
+    count: NonNegativeInt | None = None
+    status: Literal["ok", "error"]
+    error_code: str | None = None
+    client: AgentClient | None = None
+
+
+class AgentConnection(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    state: Literal["none", "connected", "idle"]
+    client: str | None = None
+    last_seen: datetime | None = None
+
+
+class AgentActivityPage(V2):
+    items: tuple[AgentActivity, ...]
+    next_cursor: NonNegativeInt
+    complete: bool
+    connection: AgentConnection
+    checked_at: datetime
+
+
+class AgentActivityResult(V2):
+    result: AgentActivityPage
+
+
+class AgentActivityResponse(V2):
+    result: AgentActivityResult
+
+
 class PracticeView(ShownPractice):
     options: tuple[dict[str, JsonValue], ...]
     can_decline: Literal[True] = True

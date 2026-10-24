@@ -965,4 +965,27 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "contract; openapi.json, schemas, examples and errors.json are unchanged.",
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-1e0e9cc07fd0a051cf396667e782daa9e100ee6ddc906839f1fd65c3913e7491"
+        ),
+        "integration_changes": {
+            "agent-activity": "GET /sessions/{session_id}/agent-activity?after= "
+            "(AgentActivityResponse, the list-read envelope around AgentActivityResult: an "
+            "AgentActivityPage of AgentActivity rows with "
+            "AgentActivityObject and AgentClient, and an AgentConnection) lists, for the "
+            "practice's own person only, what their delegated Agent did over the MCP Streamable "
+            "HTTP endpoint: each connection (client name and version as the client reports them) "
+            "and each tools/call (tool, capability, objects touched as kind, id, version and an "
+            "optional short title, list row count, ok or error with its code), oldest first after "
+            "the seq cursor, at most 200 per page. connection.state is connected when a grant "
+            "still in force (not revoked, not expired) made an MCP request in the last ten "
+            "minutes, idle when the last request was earlier or its grant has ended, and none "
+            "when never. Rows live in separate append-only v4_agent_activity and "
+            "v4_agent_presence tables; frozen v2 tables are unchanged. No token, argument, header "
+            "or result body is stored, and an Agent credential is refused (human_required). "
+            "Delegation issuance accepts expiries up to 24 hours instead of one; the "
+            "DelegationInput model is unchanged.",
+        },
+    },
 )

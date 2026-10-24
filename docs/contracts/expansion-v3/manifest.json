@@ -159,6 +159,13 @@
       "DelegationListPage",
       "DelegationListResult",
       "DelegationListResponse",
+      "AgentActivityObject",
+      "AgentClient",
+      "AgentActivity",
+      "AgentConnection",
+      "AgentActivityPage",
+      "AgentActivityResult",
+      "AgentActivityResponse",
       "PracticeView",
       "PracticeReadResponse",
       "PracticePlan",
@@ -294,6 +301,13 @@
       "DelegationListPage",
       "DelegationListResult",
       "DelegationListResponse",
+      "AgentActivityObject",
+      "AgentClient",
+      "AgentActivity",
+      "AgentConnection",
+      "AgentActivityPage",
+      "AgentActivityResult",
+      "AgentActivityResponse",
       "PracticeView",
       "PracticeReadResponse",
       "PracticePlan",
@@ -330,7 +344,7 @@
     },
     "module-interfaces.md": {
       "path": "module-interfaces.md",
-      "sha256": "bf685ab3dfd9e0f860dcd2358a6a9896e474e122ee9c997ca9ef2acd2a4c9caa"
+      "sha256": "b81d8ef952f2fe3d6934477cf499e948b62dcffd3d9ce20055262a6dc1e094c4"
     }
   },
   "errors": {
@@ -360,6 +374,7 @@
     "W07-W08-data-slice": "Explicit fixture bucket; separate metadata projection with language/provenance/lineage/snapshot identities; paired pending/accepted tier checks and historical-evidence-time-v1 validation.",
     "W07-W08-empty-joint-target": "Accepted evaluable conclusions require every acceptable evidence set nonempty unless label is INSUFFICIENT or NOT_APPLICABLE; non-evaluable cases remain valid without evidence.",
     "W07-W08-semantic-consensus": "Only independent-pass consensus uses semantic_decision_key; G2/G2v final remains bound by the full normalized decision_key to the actual selected pass.",
+    "agent-activity": "GET /sessions/{session_id}/agent-activity?after= (AgentActivityResponse, the list-read envelope around AgentActivityResult: an AgentActivityPage of AgentActivity rows with AgentActivityObject and AgentClient, and an AgentConnection) lists, for the practice's own person only, what their delegated Agent did over the MCP Streamable HTTP endpoint: each connection (client name and version as the client reports them) and each tools/call (tool, capability, objects touched as kind, id, version and an optional short title, list row count, ok or error with its code), oldest first after the seq cursor, at most 200 per page. connection.state is connected when a grant still in force (not revoked, not expired) made an MCP request in the last ten minutes, idle when the last request was earlier or its grant has ended, and none when never. Rows live in separate append-only v4_agent_activity and v4_agent_presence tables; frozen v2 tables are unchanged. No token, argument, header or result body is stored, and an Agent credential is refused (human_required). Delegation issuance accepts expiries up to 24 hours instead of one; the DelegationInput model is unchanged.",
     "approval-card-way-out": "The learner's approval card reads only a decision's recorded _ApprovalAssessment. A declined request that records missing work items or a required hand-off cannot pass as the plan stands, nor can one that includes a term recording need_over_limit; instead of a request capped at the ceiling the card says what to change and opens the pilot settings, and drops that advice once a later approval has raised an allocation past what the decision recorded. A capped request fills a term recorded insufficient without need_over_limit with its need. The assessment and the decision bytes are unchanged.",
     "approval-decision-assessment": "Optional BusinessDecision.assessment (_ApprovalAssessment with _ApprovalTermCheck rows) records what a resource decision was judged against: every requested term with its allocation at the time, requested total, published ceiling and the bound plan's need, plus all of its issues (over_limit, below_current, no_increase, no_shortfall, insufficient, need_over_limit), not only the first failed check; strategy work items the plan lacks and a missing human fallback; and the exact published approval-rule sentences the decision applies (this session's rule material at its source version, with span and quote, observed at the decision). Status, reason_code, reason and the decision order are unchanged. Counteroffers keep the original request's assessment and acceptances carry the accepted terms. Unset assessments are omitted, so existing decisions, examples and wire bytes are unchanged; evaluators read decisions without the assessment, so evaluation input bytes are unchanged.",
     "assistant-generator": "Only add optional AssistantConfig.generator (extractive|llm), default extractive. The default is omitted from serialization; all previous examples and instance bytes remain unchanged. Provider wiring uses the configured model, with local role substitutes mapped to None.",
@@ -390,10 +405,10 @@
   },
   "openapi": {
     "path": "openapi.json",
-    "sha256": "990260a6cd7f5e74c892711b10f31d9af2e991b254d1453cf89ac280c5555cf8"
+    "sha256": "2348b09c3d1f9ad11f0a5f2ac8f3ec0e95d438401bc8133ecf2a8aea25b36c4e"
   },
   "owner": "rolecraft-032-foundation",
-  "previous_contract_revision": "expansion-v3-fa8eb9b341cf1cb6488a61e7cf8dffc5674a45796a8d746b15f50b8bcf7a4390",
+  "previous_contract_revision": "expansion-v3-1e0e9cc07fd0a051cf396667e782daa9e100ee6ddc906839f1fd65c3913e7491",
   "previous_draft": "draft-391f39156eba1a56b7fbb1228484e5e31143027bfe637bf45fb029ec369d222e",
   "publication_package": "W14",
   "request_payloads": {
@@ -529,6 +544,111 @@
       "owner": "W01",
       "schema": "schemas/Adoption.json",
       "schema_sha256": "ba17f7c6c04fab725cb6fb006e08c93faaee11e2011266e1cabf258f02cc323c",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "AgentActivity": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/AgentActivity.json",
+      "example_sha256": "4f5f591d623698f3f87183b136c1bf77e6bd60557719433cac496ee9a800d188",
+      "owner": "W01",
+      "schema": "schemas/AgentActivity.json",
+      "schema_sha256": "677c1198139e572c20cd95fee389c7aa6427bc31b7948b0a0d6b54ab5b663eb1",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "AgentActivityObject": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/AgentActivityObject.json",
+      "example_sha256": "8a6358d60db7059b0f6a254cd8f98091c5f1446048644e47d2c6fe64f0319d78",
+      "owner": "W01",
+      "schema": "schemas/AgentActivityObject.json",
+      "schema_sha256": "7696af2904084bf2a9a9f580529762283171459c92e3d2d69f1b99750babf527",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "AgentActivityPage": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/AgentActivityPage.json",
+      "example_sha256": "e1deff38fde77dadc6e5a2230ff42e1c3ae737ee457a84b1b8a4c0162d9fd3b6",
+      "owner": "W01",
+      "schema": "schemas/AgentActivityPage.json",
+      "schema_sha256": "25950592b8d4c3b0a28717839b6923f7d92e0e3291943f08b68ed49126e77092",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "AgentActivityResponse": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/AgentActivityResponse.json",
+      "example_sha256": "1e8f5da0fda48febff52e7efecdf907794930abd243b1d3431490310a7db66b8",
+      "owner": "W01",
+      "schema": "schemas/AgentActivityResponse.json",
+      "schema_sha256": "9fe0ceed9d48c6e60efcd9fa2afc42a20018b6dfdc7035add2342b09ee9d8b0f",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "AgentActivityResult": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/AgentActivityResult.json",
+      "example_sha256": "c79113f09a4d0ca38a425618fe6c8bdb064ca1e8569fff9f22967807247bd1d1",
+      "owner": "W01",
+      "schema": "schemas/AgentActivityResult.json",
+      "schema_sha256": "e306ff27b21279127394796a5c6234dc2480925c2504937273ce4343a780c6f5",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "AgentClient": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/AgentClient.json",
+      "example_sha256": "2fb8fddd70f4a2941d500b8f281b07a437fbbfc748db3af754b8644feb2c8e31",
+      "owner": "W01",
+      "schema": "schemas/AgentClient.json",
+      "schema_sha256": "ad7cfe2e27a57a6084b2f75b4fe41487cb359d4825f82d5d108d25bb1887fd26",
+      "schema_version": 2,
+      "tests": [
+        "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
+      ]
+    },
+    "AgentConnection": {
+      "consumers": [
+        "W06",
+        "W14"
+      ],
+      "example": "examples/AgentConnection.json",
+      "example_sha256": "6932ed51c019edaaf4d2b7afee00396a4eb67d95e9b61fc81fa447a012b2757b",
+      "owner": "W01",
+      "schema": "schemas/AgentConnection.json",
+      "schema_sha256": "d69be0158b73f217b2f517e33d58344e9aea5eb4437dd86c2e7cb814df5e55b4",
       "schema_version": 2,
       "tests": [
         "tests/contracts/expansion_v3/test_freeze.py::test_all_frozen_models_examples_and_openapi_agree"
@@ -3404,7 +3524,7 @@
     "src/career_lab/api/app.py": "724dbce95e80071580fad7891630229a9b899da3ac6ce18d556d855c4ba4d3f0",
     "src/career_lab/api/business_record.py": "3681161609d4001702ec4a3bc6536724e3b8827f7d02a9339ef03943b1e8f908",
     "src/career_lab/api/continue_codes.py": "2ca0a42aeab2d257f57da9f70f8010650f913f7071c8d966b98f852b43d1cd75",
-    "src/career_lab/api/evaluation_runtime.py": "ebe4d648df0799f3566802dbfdcecbb49b80dcb69ea25aa470704eef6bc89fd4",
+    "src/career_lab/api/evaluation_runtime.py": "4c574f9f0b2267e41e23ec19493107b3eb22ef15c300e193f15308dc16f60c31",
     "src/career_lab/api/feedback_integration.py": "141556c752437082bc2da2d8186615f2121cf42103942d4e9f6b9f6c58633dbe",
     "src/career_lab/api/lifecycle_integration.py": "753c970349beeb4aac5edc6f58a96c19f249b4ba0fe27e55310784a93b3f64a3",
     "src/career_lab/api/modules.py": "9f4992c56c0397285ace72fe030a9b0a31dd21a5aa1db52f3713c6f28c1428f4",
@@ -3415,9 +3535,9 @@
     "src/career_lab/api/role_snapshot.py": "5225127e6666c70e644e49629fa74a40411cd124b4e53d738bd5fa5db89511b1",
     "src/career_lab/api/v2_routes.py": "b2d33032c482da5a786d60f3c71c17e5eae22ed2f6c113b1f04f3ad2ec219cea",
     "src/career_lab/api/v4_config.py": "23b5678779c9925c86e545c4b953497672895d32a6636c1e5c9f3196556ad5e4",
-    "src/career_lab/api/v4_extensions.py": "07a374a8333db05ef18ef53b3a94572b2d7c9227c818e8a6e2950badc4988832",
+    "src/career_lab/api/v4_extensions.py": "002b03542da3da16447fcc32f20756997eb9cc0d368a58a3d3416c1bdb1f5e81",
     "src/career_lab/api/vertical_reads.py": "379017ffb26ef5568d61efc24ccf965befebf14355752071bc59a7a33d5c5829",
-    "src/career_lab/api/vertical_runtime.py": "46f4b2b88b363e9c3746ecbbd2b0f53320668eff4ca6d49900638538f24d8db0",
+    "src/career_lab/api/vertical_runtime.py": "e34b021b31bc74365bce7c907300a76dd2eb38bd6c9f36ea9da724f584e0d30e",
     "src/career_lab/api/workspace_integration.py": "580d03db16bf1310e4713965501cf8fe924472d8646d6890fa85d4b30045559b",
     "src/career_lab/cli.py": "ddff1fc28ba96039b0eda92799f54fed138929c2236db7408fdb07a7b9b178c6",
     "src/career_lab/contracts/__init__.py": "650246fed3d082cc58505d728f750218b601580ff7a00a03ae8e610bd9d316bc",
@@ -3437,11 +3557,11 @@
     "src/career_lab/contracts/v2/engineer_export.py": "cb03edb975fb004f2956ec1db93a40b7ed6a1dd473b74b9c9395ca5409e15342",
     "src/career_lab/contracts/v2/evaluation.py": "9ef2ccbf8ae1f83b6f2992fa21c28f020decb472edced9e7ca4e7f6718d2e0e9",
     "src/career_lab/contracts/v2/examples.py": "37017f679fe580af5b55e435eb78b39e039435d4ea7f182fe8bde2b0b93c34ef",
-    "src/career_lab/contracts/v2/export.py": "5440b60b691e9ff0c09592cb0e1966cbe18ee23ecfd357080b8da822148cb02f",
-    "src/career_lab/contracts/v2/extensions.py": "ac11759dff6d9a6e715e908c1f5789cfa8cc37f6d76cd5081a3ee6bdfe76b006",
+    "src/career_lab/contracts/v2/export.py": "a9c0eaf4900c9bdf89049d2a365f22d687791f8f576725fa3575b85a82a6fd80",
+    "src/career_lab/contracts/v2/extensions.py": "c55b08ed5be3629a911d6db217bf54814b4236b7a50edca40427d5376942d47a",
     "src/career_lab/contracts/v2/files.py": "3b3f8e9ac47acacfcdd3052f7b0d94698ff8622c0ca34299b47a544bad048577",
     "src/career_lab/contracts/v2/legacy.py": "47a9fb0d4414326b2e05ba863ce29a905f9734b1eb881a85b41af769df5fbbd5",
-    "src/career_lab/contracts/v2/manifest_history.py": "f6132081a73ba73b57cdc77e7a9d6b8d7f662d1edbbe25afd7d63d0ffac2fc6e",
+    "src/career_lab/contracts/v2/manifest_history.py": "af197f8cec1416b89a7179084c5f9788476c5041daf046853b1116f951597e98",
     "src/career_lab/contracts/v2/projection.py": "de1c239f0faf7ae41c82a13c3ee380020ac288e4eafae41b683e351bb5c31e9e",
     "src/career_lab/contracts/v2/provenance.py": "d752a89634ca3608aad3ee533c23522c592cd48e7f40a0fed37a56e515301cf1",
     "src/career_lab/contracts/v2/provider.py": "97b6f25a7ba7e93a84b77af980b00d6d371d770239cc59f6bc09ceb0ebf4994d",
@@ -3455,7 +3575,7 @@
     "src/career_lab/jobs/repository.py": "583c03ea8172027b6fa7c7130a1f2747ed9405415557bebc2d912c0b49d4324f",
     "src/career_lab/jobs/worker.py": "a773253fa493e26705466c8d9e58cd9d6458b8f43db6b5f4a27940465dbad642",
     "src/career_lab/rubrics/registry.py": "2a4b32a9e641e299e7e498832ee8cb5adcd78be295dcbc885abf22e0172a2c04",
-    "src/career_lab/runtime/model_adapter.py": "afc08209084c01e5bf498152e0885fa7be3d2061993cc7c4c90c1b2067c50539",
+    "src/career_lab/runtime/model_adapter.py": "c6dec0801ff941187d1778c3d48adc367f08290fa1f4cfd1626b7b4242d67ab6",
     "src/career_lab/runtime/model_slots.py": "2a2346bbe95eb17a902c7c00a0fe89b2347c55a54ebe2bd5603df289c32144ba",
     "src/career_lab/runtime/role_snapshot.py": "a534cc6771418b1178b3b2b85652802790ba95edd4dc6d264d2baf3bef158f28",
     "src/career_lab/storage/object_plans.py": "1fb37cc03155ba11d886772fd90f9e0fb4906294fbae4d5c3991ee840b6b6fbf",

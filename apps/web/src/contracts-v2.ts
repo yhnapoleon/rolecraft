@@ -1,4 +1,4 @@
-// Generated from frozen manifest SHA256 1e0e9cc07fd0a051cf396667e782daa9e100ee6ddc906839f1fd65c3913e7491. Do not edit.
+// Generated from frozen manifest SHA256 936bb19b8859f21cf6884160a710713b30c3ed6b4978e719631472048fc6d396. Do not edit.
 // Includes the approved optional FeedbackV2 provenance extension.
 export type ActionBoundary = {
   end_seq: number;
@@ -30,6 +30,40 @@ export type Adoption = {
   adopter?: Executor | null;
   schema_version?: 2;
   status?: 'unadopted' | 'adopted' | 'rejected';
+};
+export type AgentActivity = {
+  at: string;
+  capability?: 'read' | 'act' | 'submit' | null;
+  client?: AgentClient | null;
+  count?: number | null;
+  delegation_id: string;
+  error_code?: string | null;
+  kind: 'connected' | 'tool_call';
+  objects?: AgentActivityObject[];
+  seq: number;
+  status: 'ok' | 'error';
+  tool?: string | null;
+};
+export type AgentActivityObject = {
+  id: string;
+  kind: string;
+  title?: string | null;
+  version?: number | null;
+};
+export type AgentActivityPage = {
+  checked_at: string;
+  complete: boolean;
+  connection: AgentConnection;
+  items: AgentActivity[];
+  next_cursor: number;
+  schema_version?: 2;
+};
+export type AgentActivityResult = { result: AgentActivityPage; schema_version?: 2 };
+export type AgentClient = { name: string; version: string };
+export type AgentConnection = {
+  client?: string | null;
+  last_seen?: string | null;
+  state: 'none' | 'connected' | 'idle';
 };
 export type ApprovalInput = {
   expected_request_revision: number;

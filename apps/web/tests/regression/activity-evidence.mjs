@@ -2,6 +2,7 @@
  * the Agent log. Each step takes the published-flows context and asserts what a person sees. */
 import assert from 'node:assert/strict';
 import { waitFor } from './browser-support.mjs';
+import { openMyAgent } from './mcp-connection.mjs';
 
 const attempt = 'window.PracticeLive.engine.getAttempt(window.PracticeLive.state)';
 const host = `window.PracticeLive.v4Host(${attempt})`;
@@ -163,14 +164,18 @@ export async function readActivity(context) {
     'open-run',
   );
   await shot('activity');
-  await browser.click('.rail-tabs [data-tab="agent"]');
-  const log = '[data-agent-activity]';
-  await waitFor(
-    browser,
-    `document.querySelector('${log}')?.innerText.includes(${JSON.stringify(text('签发了授权', 'Granted access'))})`,
-  );
-  const written = await browser.ev(`document.querySelector('${log}').innerText`);
+  // The Agent log is the My agent page's transmission stream: sentences, tool names apart.
+  await openMyAgent(browser);
+  const written = await browser.ev(`document.querySelector('[data-agent-page]').innerText`);
   for (const noise of ['工作记录', 'Work record', '查看依据', 'View source', '你 · ', 'You · '])
     assert.ok(!written.includes(noise), `the Agent log lists “${noise}”`);
+  const said = await browser.text('.ag-line .ag-say');
+  assert.deepEqual(
+    said.filter((line) => /[a-z]+_[a-z_]+/.test(line)),
+    [],
+    'no tool or event codes in the Agent sentences',
+  );
   await shot('agent-log');
+  await browser.ev(`location.hash = '#/work'`);
+  await waitFor(browser, `!!document.querySelector('.card-open')`);
 }
