@@ -1,0 +1,114 @@
+/* Motion for kit components that Tailwind classes cannot express: enter/exit by data-state.
+ * 280ms on the drawer curve; reduced motion becomes a 160ms fade without movement. */
+.rc-sheet-scrim[data-state="open"] {
+  animation: rc-fade-in 280ms var(--ease) both;
+}
+.rc-sheet-scrim[data-state="closed"] {
+  animation: rc-fade-out 200ms var(--ease) both;
+}
+.rc-sheet[data-side="right"][data-state="open"] {
+  animation: rc-sheet-in-right 280ms var(--ease) both;
+}
+.rc-sheet[data-side="right"][data-state="closed"] {
+  animation: rc-sheet-out-right 200ms var(--ease) both;
+}
+.rc-sheet[data-side="left"][data-state="open"] {
+  animation: rc-sheet-in-left 280ms var(--ease) both;
+}
+.rc-sheet[data-side="left"][data-state="closed"] {
+  animation: rc-sheet-out-left 200ms var(--ease) both;
+}
+.rc-sheet[data-side="bottom"][data-state="open"] {
+  animation: rc-sheet-in-bottom 280ms var(--ease) both;
+}
+.rc-sheet[data-side="bottom"][data-state="closed"] {
+  animation: rc-sheet-out-bottom 200ms var(--ease) both;
+}
+.rc-tooltip[data-state="delayed-open"] {
+  animation: rc-pop-in 160ms var(--ease-out) both;
+}
+.rc-tooltip[data-state="closed"] {
+  animation: rc-fade-out 120ms var(--ease-out) both;
+}
+.rc-collapsible[data-state="open"] {
+  animation: rc-open 280ms var(--ease-out);
+}
+.rc-collapsible[data-state="closed"] {
+  animation: rc-close 200ms var(--ease-out);
+}
+@keyframes rc-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes rc-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+@keyframes rc-sheet-in-right {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes rc-sheet-out-right {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes rc-sheet-in-left {
+  from {
+    transform: translateX(-100%);
+  }
+}
+@keyframes rc-sheet-out-left {
+  to {
+    transform: translateX(-100%);
+  }
+}
+@keyframes rc-sheet-in-bottom {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes rc-sheet-out-bottom {
+  to {
+    transform: translateY(100%);
+  }
+}
+@keyframes rc-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+@keyframes rc-open {
+  from {
+    height: 0;
+  }
+  to {
+    height: var(--radix-collapsible-content-height);
+  }
+}
+@keyframes rc-close {
+  from {
+    height: var(--radix-collapsible-content-height);
+  }
+  to {
+    height: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-sheet[data-state="open"],
+  .rc-sheet-scrim[data-state="open"],
+  .rc-tooltip[data-state="delayed-open"] {
+    animation: rc-fade-in 160ms linear both;
+  }
+  .rc-sheet[data-state="closed"],
+  .rc-sheet-scrim[data-state="closed"] {
+    animation: rc-fade-out 160ms linear both;
+  }
+  .rc-collapsible[data-state] {
+    animation: none;
+  }
+}

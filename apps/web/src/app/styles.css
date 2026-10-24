@@ -66,6 +66,9 @@
   --r-paper: 3px;
   --r-key: 8px;
   --r-panel: 12px;
+  --r-dialog: 16px;
+  /* Scrim behind a sheet that covers the main screen. */
+  --dim: rgba(17, 23, 21, 0.16);
   --sans:
     "Instrument Sans Variable", -apple-system, BlinkMacSystemFont, "SF Pro Text", "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", system-ui, sans-serif;
@@ -170,6 +173,7 @@
       0 18px 36px -22px rgba(0, 0, 0, 0.85);
     --shadow-card: 0 0 0 0.5px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.03);
     --shadow-float: 0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 28px 60px -20px rgba(0, 0, 0, 0.85);
+    --dim: rgba(0, 0, 0, 0.42);
   }
 }
 
