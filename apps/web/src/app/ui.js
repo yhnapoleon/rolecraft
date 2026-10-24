@@ -102,6 +102,7 @@ import { copyBlockedText, returnPlacement, unmatchedReturnText } from './agent-r
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
 import { createConnectionKeeper, renderAgentConnection } from './agent-connection';
+import { provideAgentPage, syncAgentFeed } from '../features/agent-page';
 import './agent-connection.css';
 import { installV4References } from '../v4-references';
 import {
@@ -2437,7 +2438,7 @@ function wsRail(a) {
     ui.railTab === 'feedback'
       ? railFeedback(a, t)
       : ui.railTab === 'agent'
-        ? railAgent(a, t)
+        ? railAgent(a)
         : ui.railTab === 'activity'
           ? railActivity(a, t)
           : ui.rail === 'chat' && ui.chatRole
@@ -2596,6 +2597,7 @@ function fbItem(a, i, full = false) {
 const issuedViews = new WeakMap();
 const connectionKeeper = createConnectionKeeper(() => refreshAgentIssued());
 function refreshAgentIssued() {
+  syncAgentFeed();
   const a = current();
   // The token is offered only while its practice is on screen; leaving or switching withdraws it.
   const onPractice =
@@ -2615,23 +2617,19 @@ function refreshAgentIssued() {
     refresh: refreshAgentIssued,
   });
 }
-function railAgent(a, t) {
+// The agent has its own page (#/agent); the rail only points there until its tab goes.
+function railAgent(a) {
+  return `<div class="rail-pad agent-panel"><section class="agent-conn"><div class="conn-row">${agentMark('md')}<div class="grow"><p class="agent-name">${T('我的 Agent', 'My agent')}</p><p class="meta">${T('连接、传输和交回的作品都在它自己的页面。', 'Connecting, transmission and returned work live on its own page.')}</p></div></div><div class="row-actions">${btn(T('打开我的 Agent', 'Open My agent'), 'open-agent', 'small')}</div></section></div>`;
+}
+// "No MCP? Hand over a package": the manual way, kept at the foot of the My agent page.
+function agentPackageHtml(a) {
+  const t = routeTask(a);
   const sc = ui.exportScope;
   const read = readSet(a);
   read.add('brief');
   const scopeWorks = (t ? works(a).filter((w) => w.taskId === t.id) : works(a)).length;
-  const log = agentLog(a, t && !ui.scopeAll ? t.id : null);
-  const native = L.nativeWorkspace(a);
-  return `<div class="rail-pad agent-panel" ${native ? 'data-agent-native data-v4-region="agent"' : ''}>
-    <section class="agent-conn">
-      <div class="conn-row">${agentMark('md')}<div class="grow"><p class="agent-name">${T('我的 Agent', 'My agent')}</p><p class="meta">${T('你自己的工具：只看到你交出去的内容', 'Your own tool: it only sees what you hand over')}</p></div></div>
-      <div class="conn-ways" data-agent-connection>
-        <div class="way on"><span class="way-dot"></span><span class="grow">${T('任务包（复制或下载，手动带回）', 'Task package (copy or download, bring back by hand)')}</span><span class="way-state">${T('可用', 'Available')}</span></div>
-        <div class="way ${native ? 'on' : ''}"><span class="way-dot ${native ? '' : 'off'}"></span><span class="grow">${T('MCP 直连', 'Direct MCP connection')}</span><span class="way-state">${native ? T('授权后可用', 'Available after you grant access') : T('这个练习不支持', 'Not available in this practice')}</span></div>
-      </div>
-      <div data-agent-issued></div>
-    </section>
-    <section class="agent-step"><h3><span class="step-n">1</span>${T('交出去', 'Hand over')}</h3><p class="agent-test-hint">${T('把任务包交给 Codex 等外部 Agent。需要测试时，它可以带回测试计划，也可以选择并组合证据模块，形成调查视图。', 'Give the package to your external agent, such as Codex. It can return a runnable test plan or compose an investigation from evidence modules.')}</p>
+  return `<details class="ag-fallback"><summary>${icon('chev', 'i-sm')}<span><b>${T('没有 MCP？', 'No MCP?')}</b> ${T('交给它一个任务包', 'Hand over a package')}</span></summary><div class="ag-fallback-body agent-panel">
+    <section class="agent-step"><h3><span class="step-n">1</span>${T('交出去', 'Hand over')}</h3><p class="agent-test-hint">${T('复制或下载任务包，交给任何 Agent。', 'Copy or download the package and give it to any agent.')}</p>
       <div class="checks">
         <label class="check"><input type="checkbox" checked disabled><span>${t ? esc(T('这件事：' + taskTitle(t), 'This task: ' + taskTitle(t))) : T('整件工作', 'The whole job')}</span></label>
         <label class="check"><input type="checkbox" data-scope="artifacts" ${sc.artifacts ? 'checked' : ''}><span>${T('作品', 'Work')}</span><small>${scopeWorks}</small></label>
@@ -2640,27 +2638,14 @@ function railAgent(a, t) {
       </div>
       <div class="row-actions">${btn(icon('copy', 'i-sm') + T('复制任务包', 'Copy package'), 'copy-package', 'small')}${btn(icon('download', 'i-sm') + T('下载', 'Download'), 'download-package', 'small quiet')}</div>
     </section>
-    <section class="agent-step" data-agent-returns><h3><span class="step-n">2</span>${T('带回来', 'Bring back')}</h3>
+    <section class="agent-step"><h3><span class="step-n">2</span>${T('带回来', 'Bring back')}</h3>
       <form data-form="import" id="import-form" class="stack">
         <label class="sr-only" for="import-content">${T('粘贴 Agent 的产出', 'Paste your agent’s output')}</label>
         <textarea class="textarea" name="content" id="import-content" rows="3" required ${canWrite(a) ? '' : 'disabled'} placeholder="${esc(T('粘贴 Agent 的文字、测试计划或调查…', 'Paste your agent’s writing, test plan or investigation…'))}">${esc(importDraft(a))}</textarea>${canWrite(a) ? '' : `<p class="meta">${T('这次练习已交付或只读，不能带回新作品；开始修订或新练习后再导入。', 'This practice is submitted or read-only. Start a revision or a new practice to bring work back.')}</p>`}
         <div class="row-actions"><label class="file-pick">${icon('upload', 'i-sm')}<span>${T('选择文件', 'Choose a file')}</span><input type="file" id="import-file" accept=".md,.txt,.json,text/plain,application/json" ${canWrite(a) ? '' : 'disabled'}></label><span class="spacer"></span><button type="submit" class="btn small primary" ${canWrite(a) ? '' : 'disabled'}>${T('预览', 'Preview return')}</button></div>
       </form>
     </section>
-    <section class="agent-log" data-agent-activity><h3 class="mini-title">${T('它做了什么', 'What it did')}</h3>
-      ${log.length ? `<ol class="log">${log.map((e) => `<li class="log-item">${e.icon}<div class="grow"><p>${esc(e.text)}</p>${e.sub ? `<p class="meta">${esc(e.sub)}</p>` : ''}</div>${e.at ? `<time>${when(e.at)}</time>` : ''}</li>`).join('')}</ol>` : `<p class="feed-empty">${T('交出任务包、带回作品、采用、关联测试和授权都会记在这里。', 'Hand-overs, returns, adoptions, linked tests and access grants are recorded here.')}</p>`}
-      ${
-        native
-          ? ''
-          : `<div class="mcp-preview"><p class="mcp-cap">${T('MCP 接入后，这里会逐条记录 Agent 的动作。示例：', 'Once MCP is connected, each agent action is logged here. Example:')}</p>
-        <ol class="log ghost" aria-label="${esc(T('示例，不是真实记录', 'Example, not a real record'))}">
-          <li class="log-item">${icon('doc', 'i-sm')}<div class="grow"><p>${T('读取《差旅政策》v2', 'Read “Travel policy” v2')}</p></div><span class="tag">${T('示例', 'Example')}</span></li>
-          <li class="log-item">${icon('flask', 'i-sm')}<div class="grow"><p>${T('请求运行测试：住宿报销上限是多少？', 'Asked to run: what is the hotel limit?')}</p><p class="meta">${T('需要你确认后执行', 'Runs only after you confirm')}</p></div><span class="tag">${T('示例', 'Example')}</span></li>
-          <li class="log-item">${icon('note', 'i-sm')}<div class="grow"><p>${T('写回草稿《测试集》，待你检查', 'Wrote back the draft “Test set”, waiting for your check')}</p></div><span class="tag">${T('示例', 'Example')}</span></li>
-        </ol></div>`
-      }
-    </section>
-  </div>`;
+  </div></details>`;
 }
 function agentLog(a, taskId) {
   const out = [];
@@ -6671,6 +6656,71 @@ if ((WS.includes(ui.route) || ui.route === 'review') && !current()) {
   ui.routeId = null;
   history.replaceState(null, '', '#/');
 }
+provideAgentPage({
+  current,
+  host: (a) => (a && L.nativeWorkspace(a) ? L.v4Host(a) : null),
+  language: locale,
+  workspace: (a, hat) => {
+    const docs = E.getMaterials(a).length;
+    const rows = [
+      { key: 'documents', label: ['资料', 'Documents'], value: String(docs) },
+      {
+        key: 'brief',
+        label: [`${PEOPLE.manager.name} 的委托`, `${PEOPLE.manager.ref}’s brief`],
+        value: readSet(a).has('brief') ? T('已读', 'Read') : T('未读', 'Unread'),
+      },
+      { key: 'tests', label: ['测试记录', 'Test runs'], value: String(a.tests.length) },
+      {
+        key: 'work',
+        label: ['作品', 'Work'],
+        value: String((a.artifacts || []).filter((w) => !w.removedAt).length),
+      },
+      { key: 'tasks', label: ['事项', 'Tasks'], value: String(a.tasks.length) },
+    ];
+    if (hat === 'engineer')
+      return [
+        {
+          key: 'ticket',
+          label: [`${PEOPLE.technical.name} 的工单`, `${PEOPLE.technical.ref}’s ticket`],
+          value: T('进行中', 'Open'),
+        },
+        ...rows.filter((r) => r.key !== 'brief' && r.key !== 'tasks'),
+      ];
+    return rows;
+  },
+  returned: (a) =>
+    (a.artifacts || [])
+      .filter((w) => w.source !== 'user')
+      .map((w) => {
+        const v = shown(w);
+        const body = String(editorView(a, w).body || '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        return {
+          id: w.id,
+          title: v.title || T('未命名', 'Untitled'),
+          excerpt: body.length > 220 ? body.slice(0, 219) + '…' : body,
+          version: Number(w.revision) || 1,
+          adopted: !!w.adopted,
+          removed: !!w.removedAt,
+        };
+      }),
+  packageHtml: agentPackageHtml,
+  refresh: (a) => L.refresh(a),
+  openWork: (a, id) => {
+    const x = (a.artifacts || []).find((w) => w.id === id);
+    if (x?.taskId) openTask(x.taskId, { type: 'work', id });
+    else previewWork(a, id);
+  },
+  adopt: (id) => {
+    const el = document.createElement('button');
+    el.dataset.action = 'adopt';
+    el.dataset.id = id;
+    void act(el);
+  },
+  notify,
+  back: () => go('work'),
+});
 installShell((el, ev) => act(el, ev));
 // The product manager's stage: no draft yet → Investigate; a draft → Decide; submitted → Delivered.
 registerStage('pm', (a) =>

@@ -103,6 +103,7 @@ export interface V4Queries {
   observation: { input: PageInput; output: C.Observation };
   tools: { input: PageInput; output: { tools: C.ToolSchema[] } };
   'delegations.list': { input: PageInput; output: DelegationPage };
+  agent_activity: { input: { after?: number }; output: C.AgentActivityPage };
   'objects.read': {
     input: Omit<C.ObjectRef, 'session_id'> & { session_id?: string };
     output: PublicObject;

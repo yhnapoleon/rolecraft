@@ -4,7 +4,7 @@ import { askHowToPrioritise, openEvidence, readActivity } from './activity-evide
 import assert from 'node:assert/strict';
 import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { delay, launch } from '../walkthrough/cdp.mjs';
-import { connectAgentOverMcp } from './mcp-connection.mjs';
+import { connectAgentOverMcp, openMyAgent } from './mcp-connection.mjs';
 
 const base = process.env.BASE;
 const output = process.env.OUT;
@@ -202,44 +202,36 @@ async function saveAndShare(context) {
 
 async function recoverAccess(context) {
   const { browser, text, shot } = context;
-  await browser.click('.rail-tabs [data-tab="agent"]');
-  await waitFor(browser, `!!document.querySelector('[name="agentName"]')`);
+  await openMyAgent(browser);
   assert.equal(
-    await browser.ev(`document.querySelectorAll('[data-v4-region="agent"]').length`),
+    await browser.ev(`document.querySelectorAll('[data-agent-page]').length`),
     1,
-    'One named region owns the Agent controls',
-  );
-  await browser.type('[name="agentName"]', 'Recovery check');
-  await browser.click(
-    `[aria-label="${text('授权整个工作区的可见内容', 'Allow visible content across the workspace')}"]`,
+    'One page owns the Agent controls',
   );
   await browser.ev('window.regressionDropNext = true');
-  await browser.submit('.agent-v4-grant');
+  await browser.click('.ag-cta button');
   await waitFor(browser, 'window.regressionResponseLost === true');
+  // The page says the answer never arrived and that pressing again checks the same request.
+  await waitFor(
+    browser,
+    `document.querySelector('.ag-cta-error')?.innerText.includes(${JSON.stringify(
+      text('不会多开一份', 'it will not open a second one'),
+    )})`,
+  );
   await browser.goto(base + context.taskRoute);
-  await waitFor(browser, `!!document.querySelector('.rail-tabs [data-tab="agent"]')`);
-  await browser.click('.rail-tabs [data-tab="agent"]');
-  await clickReady(browser, text('核对原请求结果', 'Check original result'));
-  await waitFor(browser, `document.querySelectorAll('.agent-v4-access-row').length === 1`);
+  await openMyAgent(browser);
+  await browser.click('.ag-cta button');
+  await waitFor(browser, `document.querySelector('.ag-rig')?.dataset.phase === 'waiting'`);
   const count = await browser.ev(`(async () => {
       const live = window.PracticeLive;
       const host = live.v4Host(live.engine.getAttempt(live.state));
       return (await host.query('delegations.list')).items.length;
     })()`);
   assert.equal(count, 1);
-  await waitFor(
-    browser,
-    `(() => {
-    const input = document.querySelector('.agent-v4-grant [name="agentName"]');
-    return !!input && !input.disabled;
-  })()`,
-  );
   assert.equal(
-    await browser.ev(
-      `document.querySelectorAll('[data-connection-action="download-config"]').length`,
-    ),
+    await browser.ev(`document.querySelectorAll('.ag-connect .ag-cmd:not(.is-ask) .ag-copy').length`),
     1,
-    'Recovered access shows the connection card through the host subscription',
+    'Recovered access shows the command through the host subscription',
   );
   await shot('recovered-access');
 }
@@ -484,7 +476,10 @@ async function boardOrderPersists(context) {
     `document.querySelector('.kanban .card[data-task-id=${JSON.stringify(toFirst)}] .card-open').focus()`,
   );
   await altKey('ArrowLeft', 'ArrowLeft', 37);
-  await waitFor(browser, `${stored(toFirst)}?.priority === 0 && ${ids('first')}.includes(${JSON.stringify(toFirst)})`);
+  await waitFor(
+    browser,
+    `${stored(toFirst)}?.priority === 0 && ${ids('first')}.includes(${JSON.stringify(toFirst)})`,
+  );
   // 2. Option + Up: the last card of "Up next" moves to its top; the server keeps that order.
   const next = await browser.ev(ids('next'));
   assert.ok(next.length >= 2, JSON.stringify(next));
@@ -494,7 +489,10 @@ async function boardOrderPersists(context) {
   );
   for (let i = 1; i < next.length; i++) {
     await altKey('ArrowUp', 'ArrowUp', 38);
-    await waitFor(browser, `${ids('next')}.indexOf(${JSON.stringify(toTop)}) === ${next.length - 1 - i}`);
+    await waitFor(
+      browser,
+      `${ids('next')}.indexOf(${JSON.stringify(toTop)}) === ${next.length - 1 - i}`,
+    );
   }
   // 3. Drag: the last card of "Up next" is dropped on "Later"; the server records priority 2.
   const dragged = await browser.ev(`${ids('next')}.at(-1)`);
@@ -520,10 +518,15 @@ async function boardOrderPersists(context) {
   // After a reload every card is where it was put.
   await reload(total);
   assert.deepEqual(await where(), placed, 'the board keeps its new order after a reload');
-  assert.ok(placed.first.includes(toFirst) && placed.later.includes(dragged), JSON.stringify(placed));
+  assert.ok(
+    placed.first.includes(toFirst) && placed.later.includes(dragged),
+    JSON.stringify(placed),
+  );
   assert.equal(placed.next[0], toTop, 'the card moved up stays first in its column');
   await shot('board-order-after-reload');
-  console.log(`board order ${context.language}: before ${JSON.stringify(start)} after reload ${JSON.stringify(placed)}`);
+  console.log(
+    `board order ${context.language}: before ${JSON.stringify(start)} after reload ${JSON.stringify(placed)}`,
+  );
 }
 
 async function runLanguage(language) {
@@ -677,7 +680,7 @@ async function runLanguage(language) {
     );
     await step('connection card: agent returns work over MCP until revoked', async () => {
       await browser.goto(base + context.taskRoute);
-      await waitFor(browser, `!!document.querySelector('.rail-tabs [data-tab="agent"]')`);
+      await waitFor(browser, `!!document.querySelector('#ws-stage')`);
       await connectAgentOverMcp(context);
     });
     assert.deepEqual(
