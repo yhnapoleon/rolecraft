@@ -128,11 +128,13 @@ import { provideTaskCardFacts, testFacts } from '../features/workspace/native-v4
 import {
   ENGINEER_CASES,
   ENGINEER_ROUTES,
-  engineerBackHref,
   engineerCareerCardHtml,
-  mountEngineerRoute,
+  engineerEntryId,
+  installEngineer,
+  navigateStage,
   openEngineerHandover,
   openEngineerTicket,
+  takeInPractice,
 } from '../features/engineer-desk/entry';
 import {
   afterShellRender,
@@ -743,8 +745,6 @@ function render() {
   else if (r === 'review' && current()) app.innerHTML = banner + renderReview();
   else if (r === 'lab') app.innerHTML = banner + renderLab();
   else if (r === 'engineer-report') app.innerHTML = banner + renderEngineerReport();
-  else if (ENGINEER_ROUTES.includes(r) && current() && L.nativeWorkspace(current()))
-    app.innerHTML = banner + renderEngineer();
   else app.innerHTML = banner + renderCareers();
   afterRender();
   restoreFocus(key);
@@ -824,33 +824,6 @@ function mountEngineerReportRoute() {
       if (root.isConnected) m.mountEngineerReportPage(root, { language: locale() });
     });
 }
-// The engineer's screens: back goes up one level (report -> desk -> product board); the screens
-// themselves live in features/engineer-desk and keep their element across redraws.
-function renderEngineer() {
-  const back =
-    ui.route === 'engineer'
-      ? `<a class="btn quiet back" href="#/work" aria-label="${esc(T('回到产品经理工作板', 'Back to the product board'))}">${icon('back')}<span>${esc(T('产品经理工作板', 'Product board'))}</span></a>`
-      : `<a class="btn quiet back" href="${esc(engineerBackHref(ui.routeId))}" data-engineer-back>${icon('back')}<span>${esc(T('签字台', 'Sign-off desk'))}</span></a>`;
-  return `${topbar(back)}<main id="main" class="page" data-engineer-screen tabindex="-1"></main>`;
-}
-function mountEngineer() {
-  const a = current();
-  const root = document.querySelector('[data-engineer-screen]');
-  if (!a || !root) return;
-  document.title = `${ui.route === 'engineer' ? T('签字台', 'Sign-off desk') : T('复核报告', 'Review report')} · ${PRODUCT_NAME}`;
-  mountEngineerRoute(
-    root,
-    { route: ui.route, id: ui.routeId, sessionId: a.id, language: locale() },
-    () => ({
-      caseTitle: CASE(a.scenarioId).title,
-      transport: L.gatewayTransport(a),
-      agentHost: L.v4Host(a),
-      navigate: (route, id) => go(route, { id, transition: true }),
-      notify,
-      download,
-    }),
-  );
-}
 function afterRender() {
   afterShellRender();
   syncHat();
@@ -867,10 +840,6 @@ function afterRender() {
   }
   if (ui.route === 'engineer-report') {
     mountEngineerReportRoute();
-    return;
-  }
-  if (ENGINEER_ROUTES.includes(ui.route)) {
-    mountEngineer();
     return;
   }
   mountNativeSlots();
@@ -5338,7 +5307,8 @@ async function act(el, ev = new Event('rc-action')) {
       await leaveForBrief();
       go('pm');
       break;
-    // The engineer card: a new practice with the engineer's hat on, starting from its ticket.
+    // The engineer card: a new practice with the engineer's hat on, starting from its ticket
+    // (the intro first: "same practice, second hat").
     case 'engineer-start': {
       el.disabled = true;
       el.textContent = T('正在准备委托…', 'Preparing the ticket…');
@@ -5346,7 +5316,7 @@ async function act(el, ev = new Event('rc-action')) {
         const na = await startAttempt('pilot', {});
         const ticket = await openEngineerTicket(L.gatewayTransport(na), na.id, { from: 'seeded' });
         setHat(na.id, 'engineer');
-        go('engineer', { id: ticket.id, transition: true });
+        go('engineer', { id: engineerEntryId(na.id, ticket.id, 'new'), transition: true });
       } finally {
         if (el.isConnected) {
           el.disabled = false;
@@ -5357,11 +5327,11 @@ async function act(el, ev = new Event('rc-action')) {
     }
     // The same practice, the other hat: the ticket that comes with the situation.
     case 'engineer-take': {
+      // The ticket that comes with the situation, only while its problem exists here (189);
+      // a delivered practice opens a revision first (on the intro).
       el.disabled = true;
       try {
-        const ticket = await openEngineerTicket(L.gatewayTransport(a), a.id, { from: 'seeded' });
-        setHat(a.id, 'engineer');
-        go('engineer', { id: ticket.id, transition: true });
+        await takeInPractice(a);
       } finally {
         if (el.isConnected) el.disabled = false;
       }
@@ -5376,7 +5346,7 @@ async function act(el, ev = new Event('rc-action')) {
           .slice()
           .reverse()
           .map((t) => ({ id: t.id, question: t.question, answer: t.answer, stale: !!t.stale })),
-        open: (ticketId) => go('engineer', { id: ticketId, transition: true }),
+        open: (ticketId) => navigateStage('engineer', engineerEntryId(a.id, ticketId, 'handover')),
       });
       break;
     case 'set-lang':
@@ -7510,6 +7480,20 @@ provideAgentPage({
   back: () => go('work'),
 });
 installShell((el, ev) => act(el, ev));
+// The engineer's screens (201): what they need from this file to draw inside the workspace.
+installEngineer({
+  current,
+  language: () => locale(),
+  native: (a) => !!L.nativeWorkspace(a),
+  transport: (a) => L.gatewayTransport(a),
+  agentHost: (a) => L.v4Host(a),
+  navigate: (route, id, transition) => go(route, { id, transition }),
+  refresh: (parts) => {
+    if (current() && WS.includes(ui.route)) refreshWS(parts);
+  },
+  notify,
+  download,
+});
 onAgentEvent(pulseLamp);
 onAgentConnection(() => {
   if (inPractice()) {

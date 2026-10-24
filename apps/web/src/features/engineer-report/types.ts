@@ -223,6 +223,8 @@ export interface EngineerReviewRecord {
   readonly status: EngineerReviewStatus;
   readonly signed_at: string;
   readonly signed_by: EngineerExecutor;
+  /** Who wrote the signed draft (absent from older servers). */
+  readonly draft_executor?: EngineerExecutor;
   readonly draft_id: string;
   readonly ticket_id: string;
   /** The submitter's own note; not shown by the report. */

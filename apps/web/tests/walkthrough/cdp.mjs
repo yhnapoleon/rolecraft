@@ -46,8 +46,11 @@ export async function launch({
   let id = 0;
   const pending = new Map();
   const logs = [];
+  const handlers = new Map();
   ws.addEventListener('message', (ev) => {
     const msg = JSON.parse(ev.data);
+    if (msg.method && handlers.has(msg.method))
+      for (const cb of handlers.get(msg.method)) cb(msg.params);
     if (msg.id && pending.has(msg.id)) {
       const p = pending.get(msg.id);
       pending.delete(msg.id);
@@ -101,6 +104,12 @@ export async function launch({
   const api = {
     send,
     logs,
+    /** Listen to a CDP event (e.g. Page.screencastFrame); returns the unsubscribe. */
+    on(method, cb) {
+      if (!handlers.has(method)) handlers.set(method, new Set());
+      handlers.get(method).add(cb);
+      return () => handlers.get(method).delete(cb);
+    },
     async goto(url) {
       await send('Page.navigate', { url });
       await delay(700);
