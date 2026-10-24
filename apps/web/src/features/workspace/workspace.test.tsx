@@ -251,10 +251,10 @@ describe('W03 independent workspace feature (explicit transport double)', () => 
   it('uses existing v4 T() labels in native slot helpers', () => {
     setPreference('en');
     expect(purposeText('freeform')).toBe('Freeform work');
-    expect(recipientText('tech_lead')).toBe('Technical lead');
+    expect(recipientText('tech_lead')).toBe('Daniel (technical lead)');
     setPreference('zh');
     expect(purposeText('freeform')).toBe('自由作品');
-    expect(recipientText('tech_lead')).toBe('技术负责人');
+    expect(recipientText('tech_lead')).toBe('Daniel（技术负责人）');
   });
 });
 

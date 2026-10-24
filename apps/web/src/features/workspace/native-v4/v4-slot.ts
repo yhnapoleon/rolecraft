@@ -21,6 +21,7 @@ import { changedMaterials, outcomeView, renderOutcome, type PreviewEntry } from 
 import { recipientShares, rememberRequest } from '../../roles-native/v4-data';
 import { agentMark, avatar, icon, PEOPLE, priMark, statusMark } from '../../../app/art.js';
 import { workFolderMarkup } from '../../../app/work-folder.js';
+import { personLabel } from '../../../app/people.js';
 import { PRI, STATUS, purposeLabel } from '../../../app/vocab.js';
 import { cardPeople, taskCardFacts, taskProgress } from './card-facts';
 
@@ -274,13 +275,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     });
   }
   const roleLabel = (role: string) =>
-    (
-      ({
-        supervisor: T('经理', 'Manager'),
-        business_lead: T('陈敏（业务负责人）', 'Chen Min (business lead)'),
-        tech_lead: T('技术负责人', 'Technical lead'),
-      }) as Record<string, string>
-    )[role] ?? T('指定同事', 'Selected colleague');
+    T(personLabel(role, 'zh'), personLabel(role, 'en')) || T('指定同事', 'Selected colleague');
   // An explicit share opens a discussion with that colleague: the person's own question (or a plain
   // note that they shared this exact version) is sent together with the colleague's current shares.
   const discuss = async (role: string, text: string) => {

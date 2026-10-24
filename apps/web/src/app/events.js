@@ -3,6 +3,7 @@
 import { T, locale } from './i18n';
 import { serverText } from '../store';
 import { describeServerEvent } from './event-copy';
+import { personName } from './people.js';
 import { buildCatalog, catalogLookups } from '../reference-catalog';
 
 const WORLD = [
@@ -63,8 +64,8 @@ export function eventLine(a, e) {
       return d.rule_id === 'capacity_approved'
         ? {
             text: T(
-              `经理批准扩容：上限 ${w.capacity} 人`,
-              `The manager approved more seats: up to ${w.capacity}`,
+              `${personName('manager')} 批准扩容：上限 ${w.capacity} 人`,
+              `${personName('manager')} approved more seats: up to ${w.capacity}`,
             ),
             icon: 'check',
             tone: 'good',
@@ -73,8 +74,8 @@ export function eventLine(a, e) {
           }
         : {
             text: T(
-              `经理批准资源：${w.devDays} 人日，第 ${w.deadline} 天上线`,
-              `The manager approved resources: ${w.devDays} person-days, launch on day ${w.deadline}`,
+              `${personName('manager')} 批准资源：${w.devDays} 人日，第 ${w.deadline} 天上线`,
+              `${personName('manager')} approved resources: ${w.devDays} person-days, launch on day ${w.deadline}`,
             ),
             icon: 'check',
             tone: 'good',

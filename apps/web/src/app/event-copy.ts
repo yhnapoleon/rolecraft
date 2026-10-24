@@ -3,6 +3,11 @@
  * shown and nothing is inferred from server prose. Shared by the activity tab, the Agent log and
  * the evidence reader. */
 import { outcomeTerm } from '../features/workspace/native-v4/outcome-copy';
+import { personName } from './people.js';
+
+// Colleagues by name (people.js): the manager decides requests, the business lead forwards scope.
+const G = personName('manager');
+const C = personName('business');
 
 export type CopyLanguage = 'zh' | 'en';
 export type EventRef = {
@@ -147,8 +152,8 @@ export function describeServerEvent(
     case 'business_requested':
       return {
         text: withTerms(
-          ['向经理申请：', 'Asked the manager for: '],
-          ['向经理提交了申请', 'Sent the manager a request'],
+          [`向 ${G} 申请：`, `Asked ${G} for: `],
+          [`向 ${G} 提交了申请`, `Sent ${G} a request`],
           data.requested,
         ),
         icon: 'hand',
@@ -162,8 +167,8 @@ export function describeServerEvent(
           text:
             status === 'approved'
               ? withTerms(
-                  ['经理批准了申请：', 'The manager approved: '],
-                  ['经理批准了申请', 'The manager approved the request'],
+                  [`${G} 批准了申请：`, `${G} approved: `],
+                  [`${G} 批准了申请`, `${G} approved the request`],
                   data.granted,
                 )
               : withTerms(
@@ -179,14 +184,14 @@ export function describeServerEvent(
       return {
         text:
           status === 'rejected'
-            ? say(['经理没有批准这次申请', 'The manager did not approve the request'])
+            ? say([`${G} 没有批准这次申请`, `${G} did not approve the request`])
             : status === 'countered'
               ? withTerms(
-                  ['经理给出还价：', 'The manager countered: '],
-                  ['经理给出了还价', 'The manager made a counteroffer'],
+                  [`${G} 给出还价：`, `${G} countered: `],
+                  [`${G} 给出了还价`, `${G} made a counteroffer`],
                   data.countered,
                 )
-              : say(['经理回复了申请', 'The manager answered the request']),
+              : say([`${G} 回复了申请`, `${G} answered the request`]),
         icon: 'hand',
         world: true,
         subject: resources,
@@ -194,7 +199,7 @@ export function describeServerEvent(
     }
     case 'business_counteroffer_accepted':
       return {
-        text: say(['你接受了经理的还价', 'You accepted the manager’s counteroffer']),
+        text: say([`你接受了 ${G} 的还价`, `You accepted ${G}’s counteroffer`]),
         icon: 'check',
         world: true,
         subject: resources,
@@ -244,9 +249,9 @@ export function describeServerEvent(
     const named = documents(moved);
     const lead: Pair =
       event.type === 'demo_schedule_changed'
-        ? ['经理改了演示安排', 'The manager changed the demo schedule']
+        ? [`${G} 改了演示安排`, `${G} changed the demo schedule`]
         : event.type === 'business_scope_requested'
-          ? ['陈敏转来新的范围请求', 'Chen Min forwarded a new scope request']
+          ? [`${C} 转来新的范围请求`, `${C} forwarded a new scope request`]
           : ['资料更新', 'Document updated'];
     const { id, version } = moved[0];
     return {

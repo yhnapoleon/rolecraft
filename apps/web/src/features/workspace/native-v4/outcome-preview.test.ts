@@ -168,7 +168,7 @@ describe('outcome preview model', () => {
       '已应用试点配置 v1：试点人数 30',
       '资源申请已批准：容量 60',
       '已运行测试 2 次，最近一次已回答（配置 v1）',
-      '第 1 版已分享给经理',
+      '第 1 版已分享给 Grace',
     ]);
     expect(zh?.main.outcomes[1].summary).toBe(
       '若明确提交，交付将固定这份作品第 1 版和第 0 版配置。',
@@ -183,7 +183,7 @@ describe('outcome preview model', () => {
       'Pilot configuration v1 applied: pilot users 30',
       'Resource request approved: capacity 60',
       'Test runs: 2; latest answered (configuration v1)',
-      'Version 1 shared with the manager',
+      'Version 1 shared with Grace',
     ]);
   });
 

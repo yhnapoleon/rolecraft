@@ -2,6 +2,7 @@
 import type { V4SlotContext, V4SlotHandle, V4HostSnapshot, V4CommandResult } from '../../v4-host';
 import type { ObjectRef } from '../../contracts-v2';
 import { T } from '../../app/i18n';
+import { personName } from '../../app/people.js';
 import {
   mountConversation,
   type RoleId,
@@ -313,12 +314,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       mode: ['local_reference', 'model', 'unavailable'].includes(mode) ? mode : 'unavailable',
       colleagues: roles.map((id) => ({
         id,
-        name:
-          id === 'supervisor'
-            ? T('经理', 'Manager')
-            : id === 'business_lead'
-              ? T('陈敏', 'Chen Min')
-              : T('技术负责人', 'Technical lead'),
+        name: personName(id),
         available: mode !== 'unavailable',
       })),
       turns,

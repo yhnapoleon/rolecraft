@@ -21,7 +21,7 @@ const data: Behavior = {
 
 describe('behaviour view', () => {
   it('names symbols in both languages', () => {
-    expect(symbolLabel('ask:tech_lead:ask_limit', 'zh')).toBe('问技术负责人 · 上限');
+    expect(symbolLabel('ask:tech_lead:ask_limit', 'zh')).toBe('问 Daniel · 上限');
     expect(symbolLabel('read:policy', 'en')).toBe('read policy');
     expect(symbolLabel('submit', 'zh')).toBe('提交');
   });

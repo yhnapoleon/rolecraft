@@ -1607,7 +1607,7 @@ function startView(a, t) {
       <p class="mini-title">${T('手边可以用', 'At hand')}</p>
       ${docs.map((m) => `<button type="button" class="hint-row" data-action="obj" data-type="doc" data-id="${esc(m.id)}">${icon('doc', 'i-sm')}<span class="grow">${esc(materialTitle(m))}</span><span class="ver">v${m.version}</span></button>`).join('')}
       <button type="button" class="hint-row" data-action="obj" data-type="bench">${assistantMark('xs')}<span class="grow">${T('在测试台问知识助手', 'Ask the knowledge assistant')}</span></button>
-      <button type="button" class="hint-row" data-action="chat" data-role="${who}">${avatar(who, 'xs')}<span class="grow">${T('问' + PEOPLE[who].name, 'Ask ' + PEOPLE[who].ref)}</span></button>
+      <button type="button" class="hint-row" data-action="chat" data-role="${who}">${avatar(who, 'xs')}<span class="grow">${T(`问 ${PEOPLE[who].name}`, `Ask ${PEOPLE[who].ref}`)}</span></button>
       <button type="button" class="hint-row" data-action="agent">${agentMark('xs')}<span class="grow">${T('交给我的 Agent', 'Hand to my agent')}</span></button>
     </div>
   </div>`;
@@ -2279,7 +2279,7 @@ function railChat(a, role) {
         ? `<div class="chat-quote" data-quote="${esc(q)}"><span class="chat-quote-label">${icon('quote', 'i-xs')}${T('一起发送的测试引用', 'Test quote sent with your message')}</span><p class="chat-quote-text">${esc(q)}</p><button type="button" class="btn icon quiet small" data-action="drop-quote" aria-label="${esc(T('移除这段引用', 'Remove this quote'))}">${icon('x', 'i-xs')}</button></div>`
         : '';
     })()}
-    <form class="composer" data-form="chat"><label class="sr-only" for="chat-input">${esc(T(`给${PEOPLE[role].name}的消息`, `Message to ${PEOPLE[role].ref}`))}</label><textarea id="chat-input" name="text" rows="2" maxlength="4000" required placeholder="${esc(ui.chatQuotes[quoteKey(a, role)] ? T('你想就这次测试确认什么？', 'What do you want to check about this test?') : T(`写给${PEOPLE[role].name}…`, `Message ${PEOPLE[role].ref}…`))}">${esc(question)}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></form>
+    <form class="composer" data-form="chat"><label class="sr-only" for="chat-input">${esc(T(`给 ${PEOPLE[role].name} 的消息`, `Message to ${PEOPLE[role].ref}`))}</label><textarea id="chat-input" name="text" rows="2" maxlength="4000" required placeholder="${esc(ui.chatQuotes[quoteKey(a, role)] ? T('你想就这次测试确认什么？', 'What do you want to check about this test?') : T(`写给 ${PEOPLE[role].name}…`, `Message ${PEOPLE[role].ref}…`))}">${esc(question)}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></form>
   </div>`;
 }
 // The server's local provider answers with a fact list, not a reply. Label it so nobody mistakes it for the colleague.
@@ -2539,7 +2539,7 @@ function activity(a, taskId) {
       at: t.answered,
       order: 1e9,
       icon: 'bubble',
-      text: T(PEOPLE[role].name + '回复了你', PEOPLE[role].subject + ' replied'),
+      text: T(`${PEOPLE[role].name} 回复了你`, `${PEOPLE[role].subject} replied`),
       open: { action: 'chat', role },
     });
   });
@@ -3212,7 +3212,7 @@ function sheetResources() {
         .join('')}</div></fieldset>
       <label class="field"><span>${T('理由', 'Why')}</span><textarea class="textarea" name="reason" required maxlength="4000" rows="4" placeholder="${esc(T('要多少、做什么、为什么值得', 'How much, for what, and why it is worth it'))}"></textarea></label>
     </form>
-    ${pending.length ? `<section class="pending"><h3 class="mini-title">${T('等待经理处理', 'Waiting for the manager')}</h3>${pending.map((rule) => `<div class="pending-row">${avatar('manager', 'sm')}<span class="grow">${rule === 'capacity_approved' ? T('扩容申请', 'Seat request') : T('资源与延期申请', 'Resource request')}</span>${btn(T('请经理处理', 'Ask the manager to decide'), 'live-approval', 'small', `data-id="${esc(rule)}"`)}</div>`).join('')}</section>` : ''}`,
+    ${pending.length ? `<section class="pending"><h3 class="mini-title">${T(`等待 ${PEOPLE.manager.name} 处理`, `Waiting for ${PEOPLE.manager.ref}`)}</h3>${pending.map((rule) => `<div class="pending-row">${avatar('manager', 'sm')}<span class="grow">${rule === 'capacity_approved' ? T('扩容申请', 'Seat request') : T('资源与延期申请', 'Resource request')}</span>${btn(T(`请 ${PEOPLE.manager.name} 处理`, `Ask ${PEOPLE.manager.ref} to decide`), 'live-approval', 'small', `data-id="${esc(rule)}"`)}</div>`).join('')}</section>` : ''}`,
     `<button type="submit" form="res-form" class="btn primary">${T('提交申请', 'Send request')}</button>`,
     'narrow',
     s?.protocol === 2 ? 'resource-requests' : '',
@@ -3405,7 +3405,7 @@ function sheetAbout() {
       <li><span class="sw bad"></span>${T('超出限制', 'Over a limit')}</li>
       <li><span class="sw grey"></span>${T('还不知道：证据不足、需要核验', 'Not known yet: thin evidence, needs checking')}</li>
       <li><span class="sw-shape">${modelWaitHtml()}</span>${T('等模型接入：现在用规则或原文代替', 'Awaiting a model: rules or source passages stand in for now')}</li>
-      <li><span class="sw-people">${avatar('manager', 'xs')}${avatar('business', 'xs')}${avatar('technical', 'xs')}${assistantMark('xs')}</span>${T('谁：经理、业务负责人陈敏、技术负责人、知识助手', 'Who: the manager, Chen Min (business lead), the technical lead, the knowledge assistant')}</li>
+      <li><span class="sw-people">${avatar('manager', 'xs')}${avatar('business', 'xs')}${avatar('technical', 'xs')}${assistantMark('xs')}</span>${T(`谁：${ROLES.map((r) => PEOPLE[r].label).join('、')}、知识助手`, `Who: ${ROLES.map((r) => PEOPLE[r].label).join(', ')}, the knowledge assistant`)}</li>
       <li><span class="sw-shape">${priMark('first')}${priMark('next')}${priMark('later')}</span>${T('优先级：先做、随后、暂放', 'Priority: do first, up next, later')}</li>
       <li><span class="sw-shape">${statusMark('open')}${statusMark('working')}${statusMark('done')}</span>${T('进展：待处理、正在做、已处理', 'Progress: to do, in progress, done')}</li>
     </ul>
@@ -3516,7 +3516,7 @@ function noticeArrivals() {
         ui.chatRole === r &&
         railVisible();
       if (!visible)
-        notify(T(PEOPLE[r].name + '回复了', PEOPLE[r].subject + ' replied'), {
+        notify(T(`${PEOPLE[r].name} 回复了`, `${PEOPLE[r].subject} replied`), {
           lead: avatar(r, 'sm'),
           action: { label: T('查看', 'View'), run: () => openChat(r) },
         });
@@ -5950,7 +5950,7 @@ document.addEventListener('submit', async (e) => {
         await L.action(a, String(f.get('kind')), { reason: String(f.get('reason')).trim() });
         sheetResources();
         refreshWS();
-        notify(T('申请已提交给经理', 'Request sent to the manager'));
+        notify(T(`申请已提交给 ${PEOPLE.manager.name}`, `Request sent to ${PEOPLE.manager.ref}`));
         break;
       case 'live-deliver':
         saveDraftFields(a, form);

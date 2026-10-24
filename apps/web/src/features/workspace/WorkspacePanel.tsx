@@ -3,6 +3,7 @@ import { WorkspaceClient, draftOf } from './client';
 import type { ImportResult, WorkspaceImport } from './contract-types';
 import { buildBrowserImport } from './import-browser';
 import './workspace.css';
+import { personLabel } from '../../app/people.js';
 
 type Locale = 'zh' | 'en';
 const words = (locale: Locale) => (zh: string, en: string) => (locale === 'zh' ? zh : en);
@@ -421,9 +422,11 @@ export function WorkspacePanel({
               <label>
                 {t('同事', 'Colleague')}
                 <select value={recipient} onChange={(e) => setRecipient(e.target.value)}>
-                  <option value="tech_lead">{t('技术负责人', 'Technical lead')}</option>
-                  <option value="business_lead">{t('业务负责人', 'Business lead')}</option>
-                  <option value="supervisor">{t('经理', 'Manager')}</option>
+                  {['tech_lead', 'business_lead', 'supervisor'].map((id) => (
+                    <option key={id} value={id}>
+                      {t(personLabel(id, 'zh'), personLabel(id, 'en'))}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label>

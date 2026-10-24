@@ -64,17 +64,17 @@ describe('activity lines for server events', () => {
       '测试：住宿报销上限是多少？',
       '试点设置已保存为配置 v2',
       '资料更新：《费用管理通知：差旅住宿标准》v2',
-      '向经理申请：开发人日 6',
-      '经理改了演示安排：《经理日程：内部演示》v2',
-      '经理批准了申请：开发人日 6',
+      '向 Grace 申请：开发人日 6',
+      'Grace 改了演示安排：《经理日程：内部演示》v2',
+      'Grace 批准了申请：开发人日 6',
       '资源已生效：开发人日 6',
-      '经理没有批准这次申请',
+      'Grace 没有批准这次申请',
       '助手索引已刷新：《费用管理通知：差旅住宿标准》v2',
       '第 1 次交付已提交',
       '开始修订',
       '第 2 次交付已提交',
-      '陈敏转来新的范围请求：《业务范围讨论纪要 SCOPE-01》v2',
-      '你接受了经理的还价',
+      'Chen 转来新的范围请求：《业务范围讨论纪要 SCOPE-01》v2',
+      '你接受了 Grace 的还价',
       '记录了一项变化',
     ]);
   });
@@ -85,8 +85,8 @@ describe('activity lines for server events', () => {
     expect(line(a, 2).text).toBe('Test: 住宿报销上限是多少？');
     // A document published in Chinese keeps its Chinese title in the English interface.
     expect(line(a, 4).text).toBe('Document updated: “费用管理通知：差旅住宿标准” v2');
-    expect(line(a, 5).text).toBe('Asked the manager for: dev days 6');
-    expect(line(a, 7).text).toBe('The manager approved: dev days 6');
+    expect(line(a, 5).text).toBe('Asked Grace for: dev days 6');
+    expect(line(a, 7).text).toBe('Grace approved: dev days 6');
     expect(line(a, 11).text).toBe('Delivery 1 submitted');
     expect(line(a, 12).text).toBe('Started a revision');
     expect(line(a, 16).text).toBe('A change was recorded');

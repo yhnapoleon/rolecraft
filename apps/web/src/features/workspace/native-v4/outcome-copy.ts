@@ -1,6 +1,8 @@
 /** Authored copy for the work view's "possible outcome" (formerly "outcome preview"). Stored preview
  * text is shown as saved. A work's version is "第 N 版" / "version N"; settings and documents keep
  * "vN". Decisions use the delivery panel's words. */
+import { personName } from '../../../app/people.js';
+
 export type OutcomeLanguage = 'zh' | 'en';
 
 const zh = {
@@ -32,7 +34,7 @@ const zh = {
   actualApproval: '资源申请{status}',
   actualTests: '已运行测试 {n} 次，最近一次{status}（配置 v{v}）',
   actualSubmission: '已提交第 {v} 版，结论：{decision}',
-  actualShare: '第 {v} 版已分享给{role}',
+  actualShare: '第 {v} 版已分享给 {role}',
   actualShareRevoked: '给{role}的第 {v} 版分享已撤回',
   details: '成立条件与依据',
   kindFact: '事实',
@@ -134,9 +136,10 @@ const zhTerms = {
   decision_launch_narrow: '缩小范围推进',
   decision_defer_with_conditions: '满足条件后再推进',
   decision_no_go: '停止这项方案',
-  role_supervisor: '经理',
-  role_business_lead: '业务负责人',
-  role_tech_lead: '技术负责人',
+  // Colleagues by name (app/people.js), the same in both languages.
+  role_supervisor: personName('supervisor'),
+  role_business_lead: personName('business_lead'),
+  role_tech_lead: personName('tech_lead'),
   resource_capacity: '容量',
   resource_dev_days: '开发人日',
   resource_deadline_day: '截止日',
@@ -173,9 +176,9 @@ const enTerms: Record<TermKey, string> = {
   decision_launch_narrow: 'proceed with a limited scope',
   decision_defer_with_conditions: 'defer until conditions are met',
   decision_no_go: 'do not proceed with this proposal',
-  role_supervisor: 'the manager',
-  role_business_lead: 'the business lead',
-  role_tech_lead: 'the technical lead',
+  role_supervisor: personName('supervisor'),
+  role_business_lead: personName('business_lead'),
+  role_tech_lead: personName('tech_lead'),
   resource_capacity: 'capacity',
   resource_dev_days: 'dev days',
   resource_deadline_day: 'deadline day',

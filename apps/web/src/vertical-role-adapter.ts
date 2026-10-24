@@ -2,6 +2,7 @@ import type { RolesNativeAdapter, RoleId } from './features/roles-native';
 /** Public adapter for the fixed W04 native component. No private audit reaches it. */
 import type { VerticalClient, Ref } from './vertical-client';
 import { T } from './app/i18n';
+import { personName } from './app/people.js';
 
 function localReplyText(text: string): string {
   return text
@@ -40,9 +41,9 @@ export function roleAdapter(
   open: (ref: Ref) => Promise<void>,
 ): RolesNativeAdapter {
   const names: Record<RoleId, string> = {
-    supervisor: '经理',
-    business_lead: '陈敏',
-    tech_lead: '技术负责人',
+    supervisor: personName('supervisor'),
+    business_lead: personName('business_lead'),
+    tech_lead: personName('tech_lead'),
   };
   const requestIds = (): string[] => JSON.parse(client.draft('role-request-ids', '[]'));
   const requestForTurn = new Map<string, any>();

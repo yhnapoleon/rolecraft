@@ -72,7 +72,7 @@
     {
       id: 'manager',
       name: '经理',
-      person: 'Priya',
+      person: 'Grace',
       initials: '经',
       job: '目标、资源与优先级',
       color: 'purple',
@@ -80,7 +80,7 @@
     {
       id: 'business',
       name: '业务负责人',
-      person: 'Mei',
+      person: 'Chen',
       initials: '业',
       job: '需求、流程与政策',
       color: 'amber',
@@ -2018,7 +2018,7 @@
         why: '承诺需要有条件支撑。可以缩小首批范围，或把扩容写成有条件的下一步。',
         actions: [
           { label: '打开决定', act: 'open-artifact', id: decision.id },
-          { label: '问 Priya', act: 'chat', role: 'manager' },
+          { label: '问 Grace', act: 'chat', role: 'manager' },
         ],
         refs: [{ type: 'artifact', id: decision.id, label: decision.title }],
         taskId: decision.taskId,
@@ -2065,12 +2065,12 @@
         tone: 'unknown',
         title: '看不到需求方面的依据',
         observed:
-          '「' + decision.title + '」选了范围，但记录里没有查看首批需求，也没有和 Mei 讨论。',
+          '「' + decision.title + '」选了范围，但记录里没有查看首批需求，也没有和 Chen 讨论。',
         basis: '需求材料一直可读；没有读不代表你不了解。',
-        why: '证据里看不到范围是按什么定的。可以引用依据，或者和 Mei 确认一次。',
+        why: '证据里看不到范围是按什么定的。可以引用依据，或者和 Chen 确认一次。',
         actions: [
           { label: '看首批需求', act: 'material', id: 'business' },
-          { label: '问 Mei', act: 'chat', role: 'business' },
+          { label: '问 Chen', act: 'chat', role: 'business' },
         ],
         refs: [{ type: 'artifact', id: decision.id, label: decision.title }],
         taskId: decision.taskId,

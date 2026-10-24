@@ -10,6 +10,17 @@ export function avatar(
 export function agentMark(size?: string): string;
 export function assistantMark(size?: string): string;
 export const PEOPLE: Readonly<
-  Record<string, { readonly name: string; readonly ref: string; readonly subject: string }>
+  Record<
+    string,
+    {
+      readonly name: string;
+      readonly ref: string;
+      readonly subject: string;
+      readonly initial: string;
+      readonly title: string;
+      readonly label: string;
+      readonly titled: boolean;
+    }
+  >
 >;
 export const ROLES: readonly string[];

@@ -64,7 +64,7 @@ try {
   );
   await delay(500);
   await shot('02-request-pending');
-  await step('ask Priya', () => b.click('[data-action="live-approval"]'));
+  await step('ask Grace', () => b.click('[data-action="live-approval"]'));
   await delay(1800);
   await shot('03-after-approval');
   results.push([

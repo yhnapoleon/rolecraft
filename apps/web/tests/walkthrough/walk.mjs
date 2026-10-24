@@ -112,7 +112,7 @@ try {
   await step('answer', () => waitFor(`document.querySelectorAll('.run').length > 0`, 15000));
   await delay(1500);
   await shot('07-task-bench');
-  await step('ask Mei from rail', async () => {
+  await step('ask Chen from rail', async () => {
     await openRail();
     await b.click('.rail-tabs [data-tab="team"]');
     await b.click('.person[data-role="business"]');

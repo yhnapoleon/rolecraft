@@ -3,6 +3,7 @@
  * Placement is decided by BEHAVIOR_PLACEMENT; with the recognition layer off it never shows. */
 import { copyText, type CopyTable, type Language } from '../results-native/localization';
 import './behavior.css';
+import { personName } from '../../app/people.js';
 
 /** Where the section appears: 'lens' = only with the recognition lens open (user decision
  * 2026-10-24); 'default' = also in the learner's default view, without course labels. */
@@ -60,7 +61,7 @@ const zh = {
   s_revise_loop: '提交后修订',
   sym_read: '读 {x}',
   sym_read_title: '读《{x}》',
-  sym_ask: '问{x}',
+  sym_ask: '问 {x}',
   sym_test: '测 {x}',
   sym_request: '申请 {x}',
   sym_approved: '获批',
@@ -147,9 +148,10 @@ const has = (k: string): k is Key => k in zh;
 const esc = (v: string) =>
   v.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
 
+// Colleagues by name (app/people.js), the same in both languages.
 const ROLE = {
-  zh: { supervisor: '经理', tech_lead: '技术负责人', business_lead: '业务负责人' },
-  en: { supervisor: 'manager', tech_lead: 'tech lead', business_lead: 'business lead' },
+  zh: { supervisor: personName('supervisor'), tech_lead: personName('tech_lead'), business_lead: personName('business_lead') },
+  en: { supervisor: personName('supervisor'), tech_lead: personName('tech_lead'), business_lead: personName('business_lead') },
 } as const;
 
 export function symbolLabel(symbol: string, l: Language, materialName?: (id: string) => string) {

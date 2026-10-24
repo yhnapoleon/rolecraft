@@ -2,6 +2,7 @@
 // replies, feedback reasons) is not translated here; it is shown as the backend sends it.
 import { T, locale } from './i18n';
 import { documentName } from '../reference-catalog';
+import { personName } from './people.js';
 
 // The words this product uses for the same thing everywhere; the table is in
 // docs/design/frontend-style.md, section 3.8 "统一词汇".
@@ -52,16 +53,16 @@ export const KNOWS = (r) =>
 export const OPENER = (r) =>
   ({
     manager: T(
-      '目标、资源、先做什么，都可以找经理谈。',
-      'Talk to the manager about goals, resources and what comes first.',
+      `目标、资源、先做什么，都可以找 ${personName('manager')} 谈。`,
+      `Talk to ${personName('manager')} about goals, resources and what comes first.`,
     ),
     business: T(
-      '首批员工真正要问什么、政策怎么变，陈敏最清楚。',
-      'Chen Min knows what first users actually ask and how policy changes.',
+      `首批员工真正要问什么、政策怎么变，${personName('business')} 最清楚。`,
+      `${personName('business')} knows what first users actually ask and how policy changes.`,
     ),
     technical: T(
-      '系统能做什么、索引多久更新、测试说明了什么，问技术负责人。',
-      'Ask the technical lead what the system can do, how fresh the index is and what a test shows.',
+      `系统能做什么、索引多久更新、测试说明了什么，问 ${personName('technical')}。`,
+      `Ask ${personName('technical')} what the system can do, how fresh the index is and what a test shows.`,
     ),
   })[r];
 

@@ -7,14 +7,15 @@ import {
   type RoleId,
 } from './index';
 import { setPreference } from '../../app/i18n';
+import { personName } from '../../app/people.js';
 import { createGatewayTransport } from '../../gateway-transport';
 import { request as legacyRead } from '../../api';
 setPreference('zh');
 const node = document.querySelector<HTMLElement>('#roles')!;
 const colleagues = [
-  { id: 'supervisor' as const, name: '经理', available: true },
-  { id: 'business_lead' as const, name: '业务负责人', available: true },
-  { id: 'tech_lead' as const, name: '技术负责人', available: true },
+  { id: 'supervisor' as const, name: personName('supervisor'), available: true },
+  { id: 'business_lead' as const, name: personName('business_lead'), available: true },
+  { id: 'tech_lead' as const, name: personName('tech_lead'), available: true },
 ];
 let view: RolesView = {
   sessionId: 'component-fixture',
