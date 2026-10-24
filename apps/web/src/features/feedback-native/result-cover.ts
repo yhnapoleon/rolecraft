@@ -7,7 +7,7 @@ import { feedbackText, type FeedbackLanguage } from './localization';
 import { feedbackClass, ruleItems } from './short-summary';
 import { criterionLabels } from './criteria';
 import { decisionName } from './decision-cards';
-import { attachmentLine, attachmentText, deliveryStamp, stampTime } from './delivery';
+import { attachmentLine, attachmentSlip, deliveryStamp, stampTime } from './delivery';
 import type { FeedbackNativeState, Report } from './index';
 import type { ObjectRef } from '../workspace/contract-types';
 import './result-cover.css';
@@ -42,6 +42,8 @@ export interface CoverView {
   }[];
   /** No feedback for this delivery yet. */
   waiting: boolean;
+  /** Just delivered from this page: the records are being read back. */
+  confirming?: boolean;
   failed: boolean;
   met: CoverRow[];
   unknown: CoverRow[];
@@ -133,9 +135,54 @@ function rows(report: Report, state: FeedbackNativeState, language: FeedbackLang
   });
 }
 
-/** The cover for the latest delivery, or null before anything was delivered. */
-export function coverView(state: FeedbackNativeState, language: FeedbackLanguage): CoverView | null {
+/** A delivery this page just made: decision, moment and versions are known before the records
+ * are read back, so the results page can open on its cover at once. Page memory only. */
+export interface DeliveryNote {
+  sessionId: string;
+  decision: string;
+  at: string;
+  products: { ref: ObjectRef; title: string; purpose?: string }[];
+  /** When the stamp's press began on a cover (ms since epoch), page memory. */
+  pressedAt?: number;
+}
+/** The press lasts its delay (160 ms) plus the slow tier (520 ms). */
+export const STAMP_PRESS_MS = 680;
+let lastDelivery: DeliveryNote | null = null;
+export function rememberDelivery(note: DeliveryNote) {
+  lastDelivery = { ...note };
+}
+/** The delivery just made here, while it is recent. */
+export function deliveryNote(now = Date.now()): DeliveryNote | null {
+  return lastDelivery && now - Date.parse(lastDelivery.at) < 10 * 60_000 ? lastDelivery : null;
+}
+
+/** The cover for the latest delivery, or null before anything was delivered. A delivery just made
+ * here stands in until its record is read back. */
+export function coverView(
+  state: FeedbackNativeState,
+  language: FeedbackLanguage,
+  note: DeliveryNote | null = null,
+): CoverView | null {
   const latest = state.submission;
+  const sameSession =
+    !!note &&
+    (state.products.length === 0 || state.products.some((p) => p.session_id === note.sessionId));
+  if (!latest && note && sameSession)
+    return {
+      decision: decisionName(note.decision, language),
+      when: stampTime(note.at, language),
+      attachments: note.products.map((item) => {
+        const shown = { title: item.title, version: item.ref.version, purpose: item.purpose };
+        return { ref: item.ref, line: attachmentLine(shown, language), product: shown };
+      }),
+      waiting: true,
+      confirming: true,
+      failed: false,
+      met: [],
+      unknown: [],
+      unmet: [],
+      compare: null,
+    };
   if (!latest) return null;
   const deliveries = state.references?.deliveries ?? {};
   const number = (ref: ObjectRef | undefined) =>
@@ -177,10 +224,18 @@ export function coverView(state: FeedbackNativeState, language: FeedbackLanguage
         changes.push({ criterion: old.criterion, name: old.name, from: old.mark, to: 'na' });
     compare = { previous: number(previous?.ref), changes };
   }
+  // The moment of a delivery just made here, until its own record of it is read.
+  const justMade =
+    note &&
+    note.sessionId === latest.ref.session_id &&
+    note.products.length === latest.products.length &&
+    note.products.every((p, i) => p.ref.object_id === latest.products[i]?.object_id)
+      ? note.at
+      : undefined;
   return {
     decision: decisionName(latest.decision, language),
     delivery: number(latest.ref),
-    when: stampTime(state.submittedAt?.[latest.ref.object_id], language),
+    when: stampTime(state.submittedAt?.[latest.ref.object_id] ?? justMade, language),
     attachments,
     waiting: !report,
     failed: !report && !!state.failedFeedback,
@@ -224,7 +279,14 @@ export function renderCover(
   view: CoverView,
   language: FeedbackLanguage,
   actions: CoverActions,
-  wait: { phase?: FeedbackNativeState['feedbackPhase']; seconds?: number } = {},
+  wait: {
+    phase?: FeedbackNativeState['feedbackPhase'];
+    seconds?: number;
+    /** Press the stamp once: the cover of a delivery just made on this page. */
+    freshStamp?: boolean;
+    /** How far into the press this drawing is (ms), when the page is drawn again mid-press. */
+    pressElapsed?: number;
+  } = {},
 ): HTMLElement {
   const T = (zh: string, en: string) => feedbackText(language, zh, en);
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', cls = '') => {
@@ -251,6 +313,8 @@ export function renderCover(
       decision: view.decision,
       when: view.when || undefined,
       language,
+      fresh: !!wait.freshStamp,
+      elapsed: wait.pressElapsed,
     }),
   );
   const facts = el('div', '', 'result-cover__facts');
@@ -267,12 +331,15 @@ export function renderCover(
     const list = el('ul', '', 'result-cover__attachments');
     list.setAttribute('aria-label', T('附上的作品', 'Attached work'));
     for (const item of view.attachments) {
-      const row = el('li');
-      const open = button('', () => actions.openReference(item.ref), 'result-cover__slip');
-      open.append(attachmentText(doc, item.product, language));
+      const row = el('li', '', 'result-cover__attachment');
+      // A paper slip (title, version small) that opens the version; its purpose beside it.
+      const parts = attachmentSlip(doc, item.product, language, 'button');
+      const open = parts.slip;
+      open.classList.add('result-cover__slip');
+      open.addEventListener('click', () => actions.openReference(item.ref));
       open.dataset.referenceKind = item.ref.kind;
       open.setAttribute('aria-label', T('打开附件：', 'Open attachment: ') + item.line);
-      row.append(open);
+      row.append(parts);
       list.append(row);
     }
     facts.append(list);
@@ -293,7 +360,9 @@ export function renderCover(
         'span',
         view.failed
           ? T('反馈这次没有生成，交付仍保留。', 'The feedback did not complete; the delivery is kept.')
-          : wait.phase === 'queued'
+          : view.confirming
+            ? T('已交付，正在确认交付记录…', 'Submitted. Confirming the delivery record…')
+            : wait.phase === 'queued'
             ? T('反馈在排队', 'Your feedback is queued')
             : wait.phase === 'running'
               ? T('反馈正在生成', 'Your feedback is being written')
@@ -375,17 +444,17 @@ export function renderCover(
     const key = item.reason ?? '';
     reasons.set(key, [...(reasons.get(key) ?? []), item]);
   }
-  const unknownRows = [...reasons].map(([reason, items]) =>
-    items.length === 1
-      ? row('unknown', items[0].name, reason, [items[0].criterion])
-      : row(
-          'unknown',
-          reason,
-          T(`${items.length} 项：`, `${items.length} items: `) +
-            items.map((item) => item.name).join(T('、', ', ')),
-          items.map((item) => item.criterion),
-        ),
-  );
+  // One line per reason with its count; the names fold into that line's disclosure.
+  const unknownRows = [...reasons].map(([reason, items]) => {
+    const li = row('unknown', `${reason} · ${T(`${items.length} 项`, `${items.length} ${items.length === 1 ? 'item' : 'items'}`)}`, '', items.map((item) => item.criterion));
+    const names = el('details', '', 'result-cover__names');
+    names.append(
+      el('summary', T(`展开 ${items.length} 项`, `Show ${items.length === 1 ? 'it' : `all ${items.length}`}`)),
+      el('p', items.map((item) => item.name).join(T('、', ', ')), 'result-cover__reason'),
+    );
+    li.querySelector('.result-cover__words')?.append(names);
+    return li;
+  });
   columns.append(
     column(
       T('站得住的', 'Holds up'),

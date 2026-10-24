@@ -15,6 +15,10 @@ export interface TaskCardFacts {
   reviseHere?: boolean;
   /** The current policy version, to name it in the stale-test flag. */
   policyVersion?: number;
+  /** Whose request a starting task is, from its own brief. */
+  requestedBy?: CardRole;
+  /** A question was asked in this task's context. */
+  asked?: boolean;
 }
 type Provider = (taskId: string) => TaskCardFacts | null;
 let provider: Provider | null = null;
@@ -47,4 +51,26 @@ export function testFacts(
       known.length === mine.length &&
       known.every((test) => Number(test.policyVersion) < Number(policyVersion)),
   };
+}
+
+/** The progress circle: done when done, half once anything is on record for the task (the server
+ * says it is active, or it has work, tests or a question), otherwise empty. */
+export function taskProgress(
+  status: string | undefined,
+  record: { works: number; tests?: number; asked?: boolean },
+): 'open' | 'working' | 'done' {
+  if (status === 'done') return 'done';
+  if (status === 'active' || record.works > 0 || (record.tests ?? 0) > 0 || record.asked)
+    return 'working';
+  return 'open';
+}
+/** Who appears at the card's foot, once each: whose request it is, then who left a reminder. */
+export function cardPeople(
+  facts: Pick<TaskCardFacts, 'requestedBy' | 'reminders'> | null,
+): { role: CardRole; why: 'asked' | 'reminder' }[] {
+  const out: { role: CardRole; why: 'asked' | 'reminder' }[] = [];
+  if (facts?.requestedBy) out.push({ role: facts.requestedBy, why: 'asked' });
+  for (const role of facts?.reminders ?? [])
+    if (!out.some((p) => p.role === role)) out.push({ role, why: 'reminder' });
+  return out;
 }

@@ -1,4 +1,4 @@
-import { clickReady, waitFor } from './browser-support.mjs';
+import { clickReady, waitFor, submitDelivery } from './browser-support.mjs';
 /** Cite read passages, test runs and work versions in the normal v4 entry, then read the
  * shortened feedback. Real HTTP API and worker; BASE is the web entry, OUT a new directory. */
 import assert from 'node:assert/strict';
@@ -256,11 +256,7 @@ async function run(language, reduced, width, flow) {
       await waitFor(browser, `!!document.querySelector('.native-feedback input[type="checkbox"]')`);
       await browser.click('.native-feedback input[type="checkbox"]');
       await browser.select('.native-feedback select', 'launch_narrow');
-      await clickReady(
-        browser,
-        text('提交选中的版本', 'Submit selected versions'),
-        '#sheet button',
-      );
+      await submitDelivery(browser);
       await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`);
       await browser.ev(`document.querySelector('#sheet')?.close()`);
       await browser.goto(`${base}#/review`);

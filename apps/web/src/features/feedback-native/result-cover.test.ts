@@ -167,3 +167,34 @@ describe('feedback wait narrative', () => {
     expect(phaseWords(undefined, 'zh')).toBe('');
   });
 });
+
+describe('the cover of a delivery just made here', () => {
+  const note = {
+    sessionId: 's',
+    decision: 'launch_narrow',
+    at: new Date().toISOString(),
+    products: [{ ref: ref('product', 'p', 2), title: '首批试点方案', purpose: 'commitment' }],
+  };
+  it('stands in with the decision, time and versions until the record is read back', () => {
+    const view = coverView(
+      { status: 'submitted', busy: true, products: [], reports: [], submission: null },
+      'zh',
+      note,
+    );
+    expect(view).toMatchObject({
+      decision: '缩小范围推进',
+      confirming: true,
+      waiting: true,
+      met: [],
+      unknown: [],
+      unmet: [],
+    });
+    expect(view?.when).toMatch(/^\d{2}:\d{2}$/);
+    expect(view?.attachments.map((a) => a.line)).toEqual(['《首批试点方案》 · 第 2 版 · 试点决定']);
+  });
+  it('gives way to the delivery record once it is read, and ignores another practice', () => {
+    expect(cover(state(), 'zh').confirming).toBeUndefined();
+    const other = { ...note, sessionId: 'elsewhere' };
+    expect(coverView(state({ submission: null, submissions: [] }), 'zh', other)).toBeNull();
+  });
+});

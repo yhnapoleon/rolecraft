@@ -22,7 +22,7 @@ import { recipientShares, rememberRequest } from '../../roles-native/v4-data';
 import { agentMark, avatar, icon, PEOPLE, priMark, statusMark } from '../../../app/art.js';
 import { workFolderMarkup } from '../../../app/work-folder.js';
 import { PRI, STATUS, purposeLabel } from '../../../app/vocab.js';
-import { taskCardFacts } from './card-facts';
+import { cardPeople, taskCardFacts, taskProgress } from './card-facts';
 
 const PRIORITY_KEYS = ['first', 'next', 'later'] as const;
 /** A board card keeps keyboard focus through a move, even when the board remounts this slot. */
@@ -760,7 +760,14 @@ export function mount(context: V4SlotContext): V4SlotHandle {
   }
   function taskCard(task: WorkspaceTask, index: number) {
     const facts = taskCardFacts(task.id);
-    const progress = task.status === 'done' ? 'done' : task.status === 'active' ? 'working' : 'open';
+    const works = controller.state.products
+      .filter((p) => p.task?.object_id === task.id && !p.removed_at)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const progress = taskProgress(task.status, {
+      works: works.length,
+      tests: facts?.tests,
+      asked: facts?.asked,
+    });
     const row = el('li', '', `card ${progress}${task.status === 'paused' ? ' paused' : ''}`);
     row.dataset.taskId = task.id;
     row.style.setProperty('--i', String(index));
@@ -785,9 +792,6 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     const head = markup('card-head', statusMark(progress));
     head.title = STATUS(progress);
     head.append(el('span', task.title, 'card-title'), el('span', STATUS(progress), 'sr-only'));
-    const works = controller.state.products
-      .filter((p) => p.task?.object_id === task.id && !p.removed_at)
-      .sort((a, b) => a.created_at.localeCompare(b.created_at));
     const latest = works.at(-1);
     // Work line: the latest work's title on paper (serif), its version and purpose small.
     const recent = el(
@@ -838,11 +842,16 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       chip.append(T('从这里修订', 'Revise from here'));
       meta.append(chip);
     }
-    const reminders = [...new Set(facts?.reminders ?? [])];
-    if (reminders.length) {
-      const notes = markup('card-notes', reminders.map((r) => avatar(r, 'xs')).join(''));
-      const names = reminders.map((r) => PEOPLE[r]?.name ?? '').join(T('、', ', '));
-      notes.title = T(`${names} 有提醒`, `${names} left a reminder`);
+    // Whose request this is, then who left a reminder: the colleagues this task involves.
+    const people = cardPeople(facts);
+    if (people.length) {
+      const notes = markup('card-notes', people.map((p) => avatar(p.role, 'xs')).join(''));
+      notes.title = people
+        .map((p) => {
+          const name = PEOPLE[p.role]?.name ?? '';
+          return p.why === 'asked' ? T(`${name}提的请求`, `Asked by ${name}`) : T(`${name}有提醒`, `${name} left a reminder`);
+        })
+        .join(T('；', '; '));
       notes.append(el('span', notes.title, 'sr-only'));
       meta.append(notes);
     }
@@ -1123,7 +1132,9 @@ export function mount(context: V4SlotContext): V4SlotHandle {
             : lanesOrdered(priority);
         lane.replaceChildren(...list.map((task, index) => taskCard(task, index)));
         if (priority !== null && !list.length) {
+          // The drop hint shows only while a card is being dragged (styles); not read aloud.
           const empty = el('li', T('拖到这里', 'Drop here'), 'col-empty');
+          empty.setAttribute('aria-hidden', 'true');
           lane.append(empty);
         }
       }

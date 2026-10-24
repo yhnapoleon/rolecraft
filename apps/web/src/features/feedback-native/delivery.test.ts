@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { buildCatalog, referenceLabel } from '../../reference-catalog';
-import { attachmentLine, snapshotHeading, snapshotName, stampTime } from './delivery';
+import {
+  attachmentLine,
+  snapshotHeading,
+  snapshotName,
+  stampTime,
+  submitLabel,
+} from './delivery';
 import { decisionName } from './decision-cards';
 
 const submission = (id: string) => ({
@@ -76,5 +82,15 @@ describe('delivery panel attachments and stamp', () => {
     expect(decisionName('launch_narrow', 'zh')).toBe('缩小范围推进');
     expect(decisionName('defer_with_conditions', 'en')).toBe('Defer until conditions are met');
     expect(decisionName('maybe_later', 'zh')).toBe('maybe_later');
+  });
+});
+
+describe('the delivery button says what it will submit', () => {
+  it('names the one version, the count, or the plain action', () => {
+    expect(submitLabel([{ version: 1 }], 'zh')).toBe('提交第 1 版');
+    expect(submitLabel([{ version: 3 }], 'en')).toBe('Submit version 3');
+    expect(submitLabel([{ version: 1 }, { version: 2 }], 'zh')).toBe('提交 2 个版本');
+    expect(submitLabel([{ version: 1 }, { version: 2 }], 'en')).toBe('Submit 2 versions');
+    expect(submitLabel([], 'zh')).toBe('提交选中的版本');
   });
 });

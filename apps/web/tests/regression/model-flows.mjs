@@ -20,7 +20,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, readdirSync, readFileSync, statSync, utimesSync, writeFileSync } from 'node:fs';
 import { delay, launch } from '../walkthrough/cdp.mjs';
-import { clickReady, waitFor } from './browser-support.mjs';
+import { waitFor, submitDelivery } from './browser-support.mjs';
 
 const BASE = process.env.BASE;
 const OUT = process.env.OUT;
@@ -151,7 +151,7 @@ async function submitWork(browser, language) {
   await waitFor(browser, `!!document.querySelector('#sheet .native-feedback input[type="checkbox"]')`);
   await browser.click('#sheet .native-feedback input[type="checkbox"]');
   await browser.select('#sheet .native-feedback select', 'defer_with_conditions');
-  await clickReady(browser, copy.submit, '#sheet button');
+  await submitDelivery(browser);
   await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`, 60000);
   await browser.ev(`document.querySelector('#sheet')?.close()`);
   await browser.goto(`${BASE}#/review`);

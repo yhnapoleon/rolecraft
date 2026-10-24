@@ -11,7 +11,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { delay, launch } from '../walkthrough/cdp.mjs';
-import { clickReady, waitFor } from './browser-support.mjs';
+import { waitFor, submitDelivery } from './browser-support.mjs';
 
 const base = process.env.BASE;
 assert.ok(base && process.env.OUT, 'BASE and OUT are required');
@@ -139,8 +139,8 @@ async function startPractice(browser, language, t) {
 
 /** Submit the versions and decision shown in the panel; then wait for the formal feedback and
  * return its rule items as [criterion, label, source, applicability]. */
-async function submitShown(browser, t) {
-  await clickReady(browser, t('提交选中的版本', 'Submit selected versions'), '#sheet button');
+async function submitShown(browser) {
+  await submitDelivery(browser);
   await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`, 60000);
   const formal = await browser.ev(`(async () => {
     const s = window.PracticeLive.store.active();
@@ -194,7 +194,7 @@ async function runLanguage(language) {
     await browser.click('#sheet .native-feedback input[type="checkbox"]');
     await browser.select('#sheet .native-feedback select', 'launch');
     await settled(browser, `!!c.querySelector('.presubmit__count')`);
-    const direct = decidedBy(await submitShown(browser, t));
+    const direct = decidedBy(await submitShown(browser));
     assert.deepEqual(
       direct.filter(([, label]) => label !== 'MET').map(([criterion]) => criterion),
       ['R4.functional_tests'],
@@ -340,7 +340,7 @@ async function runLanguage(language) {
     await viewport(browser, 1440, 1000, false);
 
     // 8. Submit the same choice: the formal feedback decides each item as the preview did.
-    const decided = decidedBy(await submitShown(browser, t));
+    const decided = decidedBy(await submitShown(browser));
     assert.deepEqual(
       decided.map(([criterion, label]) => [criterion, label === 'MET']),
       lastPreview.lines.map((line) => [line.criterion, line.met]),

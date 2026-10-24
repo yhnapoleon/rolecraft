@@ -15,7 +15,7 @@ import { createServer } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { delay, launch } from '../walkthrough/cdp.mjs';
-import { clickReady, waitFor } from './browser-support.mjs';
+import { waitFor, submitDelivery } from './browser-support.mjs';
 
 const WEB = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const ROOT = resolve(WEB, '../..');
@@ -392,7 +392,7 @@ async function submitAfterGeneratedRetest(browser, language, calls, before) {
   await waitFor(browser, `!!document.querySelector('.native-feedback input[type="checkbox"]')`);
   await browser.click('.native-feedback input[type="checkbox"]');
   await browser.select('.native-feedback select', 'launch');
-  await clickReady(browser, text.submit, '#sheet button');
+  await submitDelivery(browser);
   await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`);
   await browser.ev(`document.querySelector('#sheet')?.close()`);
   await browser.goto(`${BASE}#/review`);

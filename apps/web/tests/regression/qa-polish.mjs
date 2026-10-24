@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { delay, launch } from '../walkthrough/cdp.mjs';
-import { clickReady, waitFor } from './browser-support.mjs';
+import { clickReady, waitFor, submitDelivery } from './browser-support.mjs';
 
 const base = process.env.BASE;
 const output = process.env.OUT;
@@ -86,7 +86,7 @@ async function ensureWork(context) {
 /** Opens the delivery panel, selects the work written in these checks (or the first
  * version listed) and submits a decision; returns the selected version's label. */
 async function submitOnce(context, decision) {
-  const { browser, text } = context;
+  const { browser } = context;
   await closeOverlays(browser);
   await toBoard(context);
   await browser.click('.ws-toolbar [data-action="submit"]');
@@ -97,8 +97,8 @@ async function submitOnce(context, decision) {
   const chosen = await browser.ev(`(() => {
     const rows = [...document.querySelectorAll('#sheet .native-feedback label.field-row')]
       .filter((row) => row.querySelector('input[type="checkbox"]'));
-    // Each version reads as an attachment slip: 《title》 · 第 N 版 · purpose.
-    const line = (r) => r.querySelector('.delivery-attachment__line')?.textContent ?? r.textContent;
+    // Each version reads as a paper slip: its title, with the version small.
+    const line = (r) => r.querySelector('.paper-slip__title')?.textContent ?? r.textContent;
     const row =
       rows.find((r) => line(r).includes(${JSON.stringify(context.workTitle)})) ?? rows[0];
     const box = row.querySelector('input[type="checkbox"]');
@@ -108,7 +108,7 @@ async function submitOnce(context, decision) {
   await browser.click(
     `#sheet .native-feedback [data-decision-cards] .decision-card[data-decision="${decision}"] input`,
   );
-  await clickReady(browser, text('提交选中的版本', 'Submit selected versions'), '#sheet button');
+  await submitDelivery(browser);
   await waitFor(browser, `${status} === 'submitted'`, 20000);
   return chosen;
 }
@@ -444,13 +444,14 @@ async function snapshotNames(context) {
   // saved snapshot: the delivery's name and the exact versions it attached.
   await waitFor(
     browser,
-    `location.hash === '#/review' && !!document.querySelector('[data-result-cover] .result-cover__slip')`,
+    `location.hash === '#/review' && !!document.querySelector('[data-result-cover] .result-cover__slip')
+      && document.querySelector('[data-result-cover] .result-cover__title')?.textContent === ${JSON.stringify(text('第 1 次交付', 'Delivery 1'))}`,
     20000,
   );
   const receipt = await browser.ev(`document.querySelector('[data-result-cover]').innerText`);
-  // The slip read "《title》 · <version> · <purpose>"; the snapshot names that work and the
-  // delivery as every evidence button does.
-  const title = submitted.split(' · ')[0].replace(/^[《“]|[》”]$/g, '');
+  // The slip names the work; the snapshot names that work and the delivery as every evidence
+  // button does.
+  const title = submitted;
   assert.ok(receipt.includes(title), JSON.stringify({ receipt, submitted }));
   assert.ok(receipt.includes(text('第 1 次交付', 'Delivery 1')), receipt);
   assert.doesNotMatch(receipt, RECORD_ID);

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { provideTaskCardFacts, taskCardFacts, testFacts } from './card-facts';
+import {
+  cardPeople,
+  provideTaskCardFacts,
+  taskCardFacts,
+  taskProgress,
+  testFacts,
+} from './card-facts';
 
 describe('board card facts', () => {
   it('counts only the tests run for that task', () => {
@@ -49,5 +55,24 @@ describe('board card facts', () => {
     });
     expect(taskCardFacts('t1')).toBeNull();
     provideTaskCardFacts(null);
+  });
+});
+
+describe('board card progress and people', () => {
+  it('shows a task as in progress once anything is on record for it', () => {
+    expect(taskProgress('open', { works: 0 })).toBe('open');
+    expect(taskProgress('open', { works: 0, tests: 1 })).toBe('working');
+    expect(taskProgress('open', { works: 1 })).toBe('working');
+    expect(taskProgress('open', { works: 0, asked: true })).toBe('working');
+    expect(taskProgress('active', { works: 0 })).toBe('working');
+    expect(taskProgress('done', { works: 3, tests: 2 })).toBe('done');
+  });
+  it('puts whose request it is first, then reminders, each colleague once', () => {
+    expect(cardPeople({ requestedBy: 'business', reminders: ['technical', 'business'] })).toEqual([
+      { role: 'business', why: 'asked' },
+      { role: 'technical', why: 'reminder' },
+    ]);
+    expect(cardPeople({ reminders: [] })).toEqual([]);
+    expect(cardPeople(null)).toEqual([]);
   });
 });

@@ -72,23 +72,6 @@ export function attachmentLine(
 ): string {
   return attachmentParts(product, language).join(' · ');
 }
-/** The attachment line as text whose version and purpose never break inside themselves. */
-export function attachmentText(
-  doc: Document,
-  product: { title?: string | null; version: number; purpose?: string },
-  language: FeedbackLanguage,
-): DocumentFragment {
-  const out = doc.createDocumentFragment();
-  attachmentParts(product, language).forEach((part, i) => {
-    if (i) out.append(' · ');
-    const span = doc.createElement('span');
-    span.textContent = part;
-    if (i) span.className = 'attachment-part';
-    out.append(span);
-  });
-  return out;
-}
-
 /** The delivery time as people read it on a stamp: today shows the time, other days the date. */
 export function stampTime(at: string | undefined, language: FeedbackLanguage, now = new Date()) {
   const when = at ? new Date(at) : null;
@@ -104,10 +87,19 @@ export function stampTime(at: string | undefined, language: FeedbackLanguage, no
 /** The delivered stamp: "已交付", the decision in words, and when. `fresh` plays the press once. */
 export function deliveryStamp(
   doc: Document,
-  input: { decision: string; when?: string; language: FeedbackLanguage; fresh?: boolean },
+  input: {
+    decision: string;
+    when?: string;
+    language: FeedbackLanguage;
+    fresh?: boolean;
+    /** Already this far into the press (ms): continue it rather than start over. */
+    elapsed?: number;
+  },
 ): HTMLElement {
   const stamp = doc.createElement('div');
   stamp.className = `delivery-stamp${input.fresh ? ' is-fresh' : ''}`;
+  if (input.fresh && input.elapsed)
+    stamp.style.animationDelay = `calc(var(--fast) - ${Math.round(input.elapsed)}ms)`;
   stamp.dataset.deliveryStamp = '';
   const kicker = doc.createElement('span');
   kicker.className = 'delivery-stamp__kicker';
@@ -123,4 +115,50 @@ export function deliveryStamp(
     stamp.append(when);
   }
   return stamp;
+}
+
+/** What the delivery button says it will do: the one version, how many, or (nothing chosen yet)
+ * the plain action. */
+export function submitLabel(
+  products: readonly { version: number }[],
+  language: FeedbackLanguage,
+): string {
+  if (products.length === 1)
+    return language === 'en'
+      ? `Submit version ${products[0].version}`
+      : `提交第 ${products[0].version} 版`;
+  if (products.length > 1)
+    return language === 'en' ? `Submit ${products.length} versions` : `提交 ${products.length} 个版本`;
+  return language === 'en' ? 'Submit selected versions' : '提交选中的版本';
+}
+
+/** A work version as a paper slip: its title, with the version small; the purpose sits outside
+ * the slip as a plain note. */
+export function attachmentSlip(
+  doc: Document,
+  product: { title?: string | null; version: number; purpose?: string },
+  language: FeedbackLanguage,
+  tag: 'span' | 'button' = 'span',
+): DocumentFragment & { slip: HTMLElement } {
+  const out = doc.createDocumentFragment() as DocumentFragment & { slip: HTMLElement };
+  const slip = doc.createElement(tag);
+  slip.className = 'paper-slip';
+  if (tag === 'button') (slip as HTMLButtonElement).type = 'button';
+  const title = doc.createElement('span');
+  title.className = 'paper-slip__title';
+  title.textContent = product.title || (language === 'en' ? 'Untitled work' : '未命名作品');
+  const version = doc.createElement('small');
+  version.className = 'paper-slip__version';
+  version.textContent = versionWords(product.version, language);
+  slip.append(title, version);
+  out.append(slip);
+  const purpose = purposeWords(product.purpose, language);
+  if (purpose) {
+    const note = doc.createElement('span');
+    note.className = 'paper-slip__purpose';
+    note.textContent = purpose;
+    out.append(note);
+  }
+  out.slip = slip;
+  return out;
 }

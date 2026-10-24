@@ -33,6 +33,7 @@ import {
   OPENER,
   CASE,
   SEED_KEYS,
+  SEEDS,
   situationTask,
   taskTitle,
   taskNote,
@@ -1186,7 +1187,7 @@ function boardView(a) {
     ${productBar(a)}
     ${unfiledWorks(a)}
     <section class="work-sec" aria-labelledby="tasks-h">
-      <header class="sec-head"><h2 id="tasks-h">${T('事项', 'Tasks')}</h2><span class="sec-hint">${T('拖动卡片调整优先级，或按住 Option 用方向键', 'Drag to reprioritise, or hold Option and use the arrow keys')}</span><span class="spacer"></span>
+      <header class="sec-head"><h2 id="tasks-h">${T('事项', 'Tasks')}</h2><span class="sec-hint"><span class="hint-drag">${T('拖动卡片调整优先级', 'Drag to reprioritise')}</span><span class="hint-keys">${T('，或按住 Option 用方向键', ', or hold Option and use the arrow keys')}</span></span><span class="spacer"></span>
         <div class="menu-wrap">${btn(icon('bubble', 'i-sm') + T('问问怎么排', 'Ask how to prioritise'), 'menu', 'small quiet', `data-menu="rank" aria-haspopup="menu" aria-expanded="${ui.menu === 'rank'}"`)}${ui.menu === 'rank' ? rankMenu() : ''}</div>
         ${btn(icon('plus', 'i-sm') + T('新事项', 'New task'), 'new-task', 'small')}</header>
       ${revisionNote(a)}
@@ -1198,6 +1199,13 @@ function boardView(a) {
       ${docGrid(a)}
     </section>
   </div>`;
+}
+// Whose request each starting task is, as its own brief says: the business team asked for the
+// first users' needs and for policy Q&A; the manager asked for the pilot decision (SEEDS).
+const SEED_FROM = { needs: 'business', policy: 'business', decision: 'manager' };
+function seedRequester(title) {
+  const key = Object.keys(SEEDS).find((k) => SEEDS[k].zh[0] === title || SEEDS[k].en[0] === title);
+  return key ? SEED_FROM[key] : undefined;
 }
 // After "Start a revision": where to pick the work up, from the last delivery's unmet items,
 // said by the manager in the work's own words. It stays until dismissed or the next delivery.
@@ -2571,7 +2579,7 @@ function practiceSection(a) {
           (
             o,
           ) => `<article class="practice-option"><h3 class="row-title">${esc(o.title)}</h3>${o.reason ? `<p class="meta">${esc(o.reason)}</p>` : ''}<p class="meta">${esc(practiceCardLine(o))}</p>
-    ${btn(icon('play', 'i-sm') + T('用这个情境补练', 'Practise with this situation'), 'practice-choose', 'small primary', `data-option="${esc(o.id)}" ${busy}`)}</article>`,
+    ${btn(icon('play', 'i-sm') + T('用这个情境补练', 'Practise with this situation'), 'practice-choose', 'small', `data-option="${esc(o.id)}" ${busy}`)}</article>`,
         )
         .join('')}`
     : '';
@@ -3048,13 +3056,22 @@ function sheetDeliver(readOnly = false) {
   const a = current();
   const s = sessionOf(a);
   if (L.nativeWorkspace(a)) {
+    // The delivery's own button sits at the right of this footer (placed there by the panel,
+    // right after the pre-submission card in reading order); the way to past feedback is a text
+    // button on the left.
     openSheet(
       T('交付试点决定', 'Submit your pilot decision'),
-      `<div class="deliver-doc paper"
+      `<div class="deliver-doc"
         data-v4-submission data-v4-region="submission"></div>`,
       btn(T('查看提交与反馈', 'View submission and feedback'), 'v4-feedback', 'quiet'),
-      'wide doc',
+      'wide doc deliver-sheet',
     );
+    // Start reading at the title: no control looks chosen until the person moves.
+    const title = sheet.querySelector('#sheet-title');
+    if (title) {
+      title.tabIndex = -1;
+      title.focus({ preventScroll: true });
+    }
     return;
   }
   if (s.world.status === 'submitted' && !readOnly) {
@@ -5999,8 +6016,13 @@ installV4References(() => L.v4Host(current()));
 provideTaskCardFacts((taskId) => {
   const a = current();
   if (!a?.world) return null;
+  const t = a.tasks.find((x) => x.id === taskId);
   return {
     ...testFacts(a.tests || [], taskId, a.world.policyVersion),
+    requestedBy: t ? seedRequester(t.title) : undefined,
+    asked: Object.values(a.conversations || {}).some((list) =>
+      (list || []).some((m) => m.role === 'user' && m.context?.task_id === taskId),
+    ),
     reminders: [
       ...new Set((ui.notesCache || []).filter((n) => n.taskId === taskId).map((n) => n.role)),
     ],

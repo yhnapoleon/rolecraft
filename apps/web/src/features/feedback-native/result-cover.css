@@ -35,32 +35,20 @@
   padding: 0;
   list-style: none;
 }
+.result-cover__attachment {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  min-width: 0;
+}
 .native-feedback .result-cover__slip {
-  display: inline-block;
-  max-width: 100%;
-  min-height: 0;
   margin: 0;
-  padding: 5px 10px 6px;
-  border: 0;
-  border-radius: var(--r-sm);
-  background: var(--surface-2);
-  box-shadow: inset 0 0 0 1px var(--line);
-  color: var(--ink);
-  font: 400 14px / 1.45 var(--serif);
-  text-align: left;
-  white-space: normal;
   cursor: pointer;
-  transition:
-    background var(--fast) ease,
-    transform var(--fast) var(--ease);
+  transition: transform var(--fast) var(--ease);
 }
 .native-feedback .result-cover__slip:active {
   transform: scale(0.98);
-}
-@media (hover: hover) and (pointer: fine) {
-  .native-feedback .result-cover__slip:hover {
-    background: var(--fill);
-  }
 }
 .result-cover__columns {
   display: grid;
@@ -285,4 +273,18 @@
   .native-feedback .result-cover__slip {
     transition: none;
   }
+}
+
+/* A reason that waits on several criteria: the names fold into its own disclosure. */
+.result-cover__names {
+  margin-top: 2px;
+}
+.result-cover__names summary {
+  width: fit-content;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.result-cover__names[open] summary {
+  margin-bottom: 2px;
 }
