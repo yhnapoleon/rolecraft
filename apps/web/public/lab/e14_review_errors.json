@@ -1,0 +1,93 @@
+{
+  "usage": {
+    "calls": 390,
+    "prompt_tokens": 111832,
+    "completion_tokens": 16534
+  },
+  "groups": {
+    "contractnli|control": {
+      "n": 40,
+      "agrees_gold": 36,
+      "agrees_pred": 4,
+      "neither": 0,
+      "failed": 0
+    },
+    "contractnli|SUPPORTED->INSUFFICIENT:missed_gold_pair": {
+      "n": 30,
+      "agrees_gold": 27,
+      "agrees_pred": 3,
+      "neither": 0,
+      "failed": 0
+    },
+    "contractnli|INSUFFICIENT->SUPPORTED:spurious_support_non_evidence": {
+      "n": 30,
+      "agrees_gold": 24,
+      "agrees_pred": 5,
+      "neither": 1,
+      "failed": 0
+    },
+    "contractnli|SUPPORTED->CONTRADICTED:support_read_as_contradiction": {
+      "n": 30,
+      "agrees_gold": 28,
+      "agrees_pred": 0,
+      "neither": 2,
+      "failed": 0
+    },
+    "vitaminc|control": {
+      "n": 40,
+      "agrees_gold": 33,
+      "agrees_pred": 2,
+      "neither": 5,
+      "failed": 0
+    },
+    "vitaminc|CONTRADICTED->SUPPORTED:contradiction_read_as_support": {
+      "n": 30,
+      "agrees_gold": 24,
+      "agrees_pred": 5,
+      "neither": 1,
+      "failed": 0
+    },
+    "vitaminc|SUPPORTED->INSUFFICIENT:missed_gold_pair": {
+      "n": 30,
+      "agrees_gold": 23,
+      "agrees_pred": 3,
+      "neither": 4,
+      "failed": 0
+    },
+    "vitaminc|CONTRADICTED->INSUFFICIENT:missed_gold_pair": {
+      "n": 30,
+      "agrees_gold": 20,
+      "agrees_pred": 7,
+      "neither": 3,
+      "failed": 0
+    },
+    "cfever|control": {
+      "n": 40,
+      "agrees_gold": 33,
+      "agrees_pred": 3,
+      "neither": 4,
+      "failed": 0
+    },
+    "cfever|CONTRADICTED->INSUFFICIENT:missed_gold_pair": {
+      "n": 30,
+      "agrees_gold": 21,
+      "agrees_pred": 3,
+      "neither": 6,
+      "failed": 0
+    },
+    "cfever|SUPPORTED->INSUFFICIENT:missed_gold_pair": {
+      "n": 30,
+      "agrees_gold": 29,
+      "agrees_pred": 1,
+      "neither": 0,
+      "failed": 0
+    },
+    "cfever|CONTRADICTED->SUPPORTED:contradiction_read_as_support": {
+      "n": 30,
+      "agrees_gold": 23,
+      "agrees_pred": 7,
+      "neither": 0,
+      "failed": 0
+    }
+  }
+}
