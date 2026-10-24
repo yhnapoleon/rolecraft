@@ -86,7 +86,10 @@ IMPACT_NOTE_LIMIT = 500
 HANDOVER_LIMIT = 10  # tests handed over in one ticket
 DRAFT_TEXT_LIMIT = 2000  # explanation + statement reasons and values + unresolved descriptions
 UNRESOLVED_LIMIT = 10
-PAGE_LIMIT = 40  # tickets or reviews per listed page
+PAGE_LIMIT = 40  # tickets per listed page
+# Reviews per listed page: each row names two executors (signer and draft author), so a full
+# page of Agent-drafted reviews stays under the MCP result limit.
+REVIEW_PAGE_LIMIT = 30
 QUERY_SUMMARY = 100
 ANSWER_SUMMARY = 160
 EXPLANATION_SUMMARY = 160
@@ -539,7 +542,16 @@ class EngineerService:
         return sorted(records(folder), key=lambda row: (row["created_at"], row["id"]))
 
     def signoffs(self, folder: Path) -> list[dict[str, Any]]:
-        return [row for row in self.ordered(folder / "signoffs") if row["state"] == "complete"]
+        rows = self.ordered(folder / "signoffs")
+        return [self.with_author(folder, row) for row in rows if row["state"] == "complete"]
+
+    @staticmethod
+    def with_author(folder: Path, row: dict[str, Any]) -> dict[str, Any]:
+        """A sign-off written before the draft's author was kept reads it from the draft."""
+        if "draft_executor" not in row:
+            draft = read_json(folder / "drafts" / (row["draft_id"] + ".json"))
+            row["draft_executor"] = draft["executor"]
+        return row
 
     @staticmethod
     def budget(signoffs: list[dict[str, Any]]) -> dict[str, int]:
@@ -547,13 +559,15 @@ class EngineerService:
 
     @staticmethod
     def trial_summary(row: dict[str, Any]) -> dict[str, Any]:
-        """A listed experiment: which settings it changed; the full change is in its result."""
+        """A listed experiment: each changed setting with its ticket-baseline value and the
+        value tried; per-probe rows stay in the experiment's own result."""
         return {
             **{
                 key: row[key]
                 for key in ("id", "kind", "executor", "role", "created_at", "config_hash")
             },
             "changed_fields": list(row["changes"]),
+            "changes": row["changes"],
             **{key: row[key] for key in ("counts", "status")},
         }
 
@@ -582,6 +596,8 @@ class EngineerService:
             "signed_at": row["signed_at"],
             "signed_by": row["signed_by"],
             "draft_id": row["draft_id"],
+            # Who wrote the draft the person signed: the person or their Agent.
+            "draft_executor": row["draft_executor"],
         }
 
     # Experiments -------------------------------------------------------------------------
@@ -922,6 +938,7 @@ class EngineerService:
         with self.files.lock(sid, payload.ticket_id):
             record = read_json(path) if path.is_file() else None
             if record is not None and record["state"] == "complete":
+                record = self.with_author(folder, record)
                 return self.signed(sid, folder, record, already_signed=True)
             if self.budget(self.signoffs(folder))["used"] >= REVIEW_LIMIT:
                 raise C.ProtocolError("engineer_review_budget_exhausted", status=409)
@@ -936,6 +953,7 @@ class EngineerService:
                     "created_at": now(),
                 }
             record["impact_note"] = note
+            record.setdefault("draft_executor", draft["executor"])
             write_json(path, record)
             staged = folder / "submission-inputs" / signoff_id
             publish(staged, self.submission_files(folder, record, draft, module, auth))
@@ -1093,7 +1111,8 @@ class EngineerService:
                 raise C.ProtocolError("engineer_review_not_found", status=404)
             return {"review": self.review_view(sid, match)}
         unique = list({row["review_id"]: row for row in rows}.values())
-        page = unique[payload.cursor : payload.cursor + max(1, min(payload.limit, PAGE_LIMIT))]
+        width = max(1, min(payload.limit, REVIEW_PAGE_LIMIT))
+        page = unique[payload.cursor : payload.cursor + width]
         return {
             "reviews": [{**self.review_summary(row), "ticket_id": row["ticket_id"]} for row in page]
         }

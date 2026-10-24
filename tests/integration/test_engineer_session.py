@@ -574,6 +574,74 @@ def test_agent_works_the_ticket_but_cannot_sign(eng: Eng) -> None:
     assert [row["review_id"] for row in reviews] == [person["review"]["review_id"]]
 
 
+def test_ticket_detail_lists_each_trial_with_before_and_after(eng: Eng) -> None:
+    """The signing desk shows what every trial changed, the Agent's included."""
+    eng.advance_world()
+    ticket = eng.seeded()
+    agent = eng.grant("engineer-agent", ["read", "act"], ENGINEER_AGENT_ACTIONS)
+    eng.ok(
+        eng.call(
+            ticket_path(ticket, "reproductions"),
+            "engineer.reproduce",
+            {"ticket_id": ticket["id"]},
+            "repro",
+        )
+    )
+    eng.ok(trial(eng, ticket, {"freshness_guard": "warn"}, "person-trial"))
+    eng.ok(
+        trial(
+            eng,
+            ticket,
+            {"freshness_guard": "warn", "min_score": 0.2},
+            "agent-trial",
+            token=agent,
+        )
+    )
+    detail = eng.ok(eng.read("/engineer/tickets/" + ticket["id"]))["ticket"]
+    listed = {(row["kind"], row["executor"]["kind"]): row for row in detail["trials"]}
+    assert listed[("reproduce", "human")]["changes"] == {}
+    assert listed[("trial", "human")]["changes"] == {
+        "freshness_guard": {"before": "none", "after": "warn"}
+    }
+    assert listed[("trial", "external_agent")]["changes"] == {
+        "freshness_guard": {"before": "none", "after": "warn"},
+        "min_score": {"before": detail["baseline_config"]["min_score"], "after": 0.2},
+    }
+    assert detail["baseline_config"]["min_score"] != 0.2
+    # Field names stay as they were; rows stay with the run itself.
+    assert listed[("trial", "external_agent")]["changed_fields"] == [
+        "freshness_guard",
+        "min_score",
+    ]
+    assert all("rows" not in row for row in detail["trials"])
+
+
+def test_review_names_who_wrote_the_signed_draft(eng: Eng) -> None:
+    """A review shows whose draft the person signed: the Agent's or the person's own."""
+    eng.advance_world()
+    ticket = eng.seeded()
+    agent = eng.grant("engineer-agent", ["read", "act"], ENGINEER_AGENT_ACTIONS)
+    by_agent = eng.ok(draft(eng, ticket, "agent-draft", token=agent))["draft"]
+    signed = eng.ok(sign(eng, ticket, by_agent["id"], "sign-agent-draft"))
+    author = signed["review"]["draft_executor"]
+    assert author["kind"] == "external_agent" and author["delegation_id"]
+    assert author == by_agent["executor"]
+    assert signed["review"]["signed_by"]["kind"] == "human"
+    by_person = eng.ok(
+        draft(eng, ticket, "person-draft", explanation="Warn on a stale index, signed by me.")
+    )["draft"]
+    eng.ok(sign(eng, ticket, by_person["id"], "sign-person-draft"))
+    detail = eng.ok(eng.read("/engineer/tickets/" + ticket["id"]))["ticket"]
+    authors = {row["draft_id"]: row["draft_executor"] for row in detail["reviews"]}
+    assert authors == {by_agent["id"]: by_agent["executor"], by_person["id"]: by_person["executor"]}
+    assert by_person["executor"]["kind"] == "human"
+    listed = eng.ok(eng.read("/engineer/reviews", token=agent))["reviews"]
+    assert {row["draft_id"]: row["draft_executor"] for row in listed} == authors
+    review_id = signed["review"]["review_id"]
+    read = eng.ok(eng.read("/engineer/reviews/" + review_id))["review"]
+    assert read["draft_executor"] == by_agent["executor"]
+
+
 def test_engineer_work_leaves_pm_state_unchanged(eng: Eng) -> None:
     eng.advance_world()
     pm_query = TARGET_QUERY[eng.language]
