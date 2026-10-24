@@ -1,0 +1,288 @@
+/* Results cover (frontend-style 3.6): one sheet of paper that answers "what did this delivery
+   do". Green only for what holds up, grey dashed for what is not known, red/amber/ink for unmet
+   items by the same rule as the pre-submission card. Space separates the parts, not rules. */
+.result-cover {
+  display: grid;
+  gap: 22px;
+  margin: 0 0 24px;
+  padding: 22px 24px 22px;
+  border-radius: var(--r-lg);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.result-cover__head {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+.result-cover__head .delivery-stamp {
+  flex: none;
+}
+.result-cover__facts {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+.native-feedback .result-cover__title {
+  margin: 0;
+  font: 600 17px / 1.3 var(--display);
+}
+.result-cover__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.native-feedback .result-cover__slip {
+  display: inline-block;
+  max-width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 5px 10px 6px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  box-shadow: inset 0 0 0 1px var(--line);
+  color: var(--ink);
+  font: 400 14px / 1.45 var(--serif);
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+  transition:
+    background var(--fast) ease,
+    transform var(--fast) var(--ease);
+}
+.native-feedback .result-cover__slip:active {
+  transform: scale(0.98);
+}
+@media (hover: hover) and (pointer: fine) {
+  .native-feedback .result-cover__slip:hover {
+    background: var(--fill);
+  }
+}
+.result-cover__columns {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px 24px;
+}
+.native-feedback .result-cover__col-title {
+  margin: 0 0 6px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 600;
+}
+.result-cover__rows,
+.result-cover__changes {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.result-cover__row,
+.result-cover__change {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 7px 0;
+}
+.result-cover__row + .result-cover__row,
+.result-cover__change + .result-cover__change {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.result-cover__mark {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 0.5px;
+  border-radius: 50%;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+[data-mark="met"] > .result-cover__mark,
+.result-cover__mark.is-met {
+  background: var(--good-tint);
+  color: var(--good);
+}
+[data-mark="unknown"] > .result-cover__mark,
+.result-cover__mark.is-unknown {
+  border: 1px dashed var(--ink-4);
+  color: var(--ink-3);
+}
+.result-cover__mark.is-na {
+  color: var(--ink-4);
+}
+[data-mark="unmet"] > .result-cover__mark,
+.result-cover__mark.is-unmet {
+  background: var(--fill-2);
+  color: var(--ink);
+}
+[data-tone="bad"] > .result-cover__mark {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+[data-tone="warn"] > .result-cover__mark {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+.result-cover__words {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.result-cover__name {
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.45;
+}
+.is-unknown .result-cover__name {
+  color: var(--ink-2);
+}
+.result-cover__reason {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+.native-feedback .result-cover__empty {
+  margin: 2px 0 0;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.result-cover__pair {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+}
+.result-cover__arrow {
+  color: var(--ink-4);
+  font-size: 12px;
+}
+.result-cover__steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+.native-feedback .result-cover__steps .btn {
+  margin: 0;
+}
+.result-cover__rows.is-unmet {
+  margin-bottom: 2px;
+}
+
+/* The wait for feedback: the server's stage and the real seconds, no progress bar. */
+.result-cover__wait {
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+  padding: 14px 16px 16px;
+  border-radius: var(--r-md);
+  background: var(--fill);
+}
+.native-feedback .result-cover__wait-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+  color: var(--ink);
+  font-weight: 600;
+}
+.result-cover__pulse {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  /* The same breathing as a colleague who is typing: something is being written. */
+  animation: breathe 1.4s ease-in-out infinite;
+}
+.result-cover__elapsed {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.native-feedback .result-cover__wait-hint {
+  margin: 0;
+  max-width: 60ch;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.native-feedback .result-cover__wait .btn {
+  margin: 2px 0 0;
+}
+
+.result-cover__stages {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+.result-cover__stage {
+  color: var(--ink-4);
+}
+.result-cover__stage[data-state="done"] {
+  color: var(--ink-3);
+}
+.result-cover__stage[data-state="now"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+.result-cover__stage-sep {
+  color: var(--ink-4);
+}
+.native-feedback .result-cover__lead {
+  margin: 0 0 2px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+/* Feedback arriving after the wait: the parts settle in, a beat apart. */
+.result-cover.is-arriving > * {
+  animation: result-cover-in var(--mid) var(--spring) both;
+}
+.result-cover.is-arriving > :nth-child(2) {
+  animation-delay: calc(var(--fast) / 4);
+}
+.result-cover.is-arriving > :nth-child(3) {
+  animation-delay: calc(var(--fast) / 2);
+}
+.result-cover.is-arriving > :nth-child(4) {
+  animation-delay: calc(var(--fast) * 3 / 4);
+}
+@keyframes result-cover-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (max-width: 720px) {
+  .result-cover {
+    padding: 18px 16px;
+  }
+  .result-cover__head {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+  .result-cover__columns {
+    grid-template-columns: 1fr;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-cover__pulse,
+  .result-cover.is-arriving > * {
+    animation: none;
+  }
+  .native-feedback .result-cover__slip {
+    transition: none;
+  }
+}

@@ -250,7 +250,10 @@ async function submitDeferral(context) {
   await browser.click('.ws-toolbar [data-action="submit"]');
   await waitFor(browser, `!!document.querySelector('.native-feedback input[type="checkbox"]')`);
   await browser.click('.native-feedback input[type="checkbox"]');
-  await browser.select('.native-feedback select', 'defer_with_conditions');
+  // The decision is one of four paper options (a radio group named "本次决定").
+  await browser.click(
+    '.native-feedback [data-decision-cards] .decision-card[data-decision="defer_with_conditions"] input',
+  );
   await clickReady(browser, text('提交选中的版本', 'Submit selected versions'), '#sheet button');
   await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`);
   await browser.ev(`document.querySelector('#sheet')?.close()`);

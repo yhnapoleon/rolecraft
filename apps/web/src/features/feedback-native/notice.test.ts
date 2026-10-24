@@ -36,3 +36,20 @@ describe('status line after a submission', () => {
     );
   });
 });
+
+describe('status line while the delivery is read again (164 N10)', () => {
+  it('keeps saying the feedback is being generated while the records are read', () => {
+    expect(feedbackNotice(submitted({ busy: true }), 'zh')).toBe('本次提交已保存，反馈正在生成…');
+    expect(feedbackNotice(submitted({ busy: true, awaitingFeedback: true }), 'en')).toBe(
+      'Submission saved. Feedback is being generated…',
+    );
+  });
+  it('still waits for confirmation while submitting, and once feedback is there', () => {
+    expect(
+      feedbackNotice({ status: 'active', busy: true, products: [], reports: [] }, 'zh'),
+    ).toBe('正在等待服务端确认…');
+    expect(feedbackNotice(submitted({ busy: true, reports: [earlier, latest] }), 'zh')).toBe(
+      '正在等待服务端确认…',
+    );
+  });
+});

@@ -97,13 +97,17 @@ async function submitOnce(context, decision) {
   const chosen = await browser.ev(`(() => {
     const rows = [...document.querySelectorAll('#sheet .native-feedback label.field-row')]
       .filter((row) => row.querySelector('input[type="checkbox"]'));
+    // Each version reads as an attachment slip: 《title》 · 第 N 版 · purpose.
+    const line = (r) => r.querySelector('.delivery-attachment__line')?.textContent ?? r.textContent;
     const row =
-      rows.find((r) => r.textContent.startsWith(${JSON.stringify(context.workTitle)})) ?? rows[0];
+      rows.find((r) => line(r).includes(${JSON.stringify(context.workTitle)})) ?? rows[0];
     const box = row.querySelector('input[type="checkbox"]');
     if (!box.checked) box.click();
-    return row.textContent;
+    return line(row);
   })()`);
-  await browser.select('#sheet .native-feedback select', decision);
+  await browser.click(
+    `#sheet .native-feedback [data-decision-cards] .decision-card[data-decision="${decision}"] input`,
+  );
   await clickReady(browser, text('提交选中的版本', 'Submit selected versions'), '#sheet button');
   await waitFor(browser, `${status} === 'submitted'`, 20000);
   return chosen;
@@ -436,19 +440,17 @@ async function snapshotNames(context) {
   const { browser, text, shot } = context;
   await ensureWork(context);
   const submitted = await submitOnce(context, 'defer_with_conditions');
-  const heading = text('已保存的提交快照', 'Saved submission snapshot');
+  // A confirmed delivery is stamped and handed over to the results page, whose cover is the
+  // saved snapshot: the delivery's name and the exact versions it attached.
   await waitFor(
     browser,
-    `[...document.querySelectorAll('#sheet h3')].some((h) => h.textContent.startsWith(${JSON.stringify(heading)}))`,
+    `location.hash === '#/review' && !!document.querySelector('[data-result-cover] .result-cover__slip')`,
+    20000,
   );
-  const receipt = await browser.ev(`(() => {
-    const h = [...document.querySelectorAll('#sheet h3')]
-      .find((node) => node.textContent.startsWith(${JSON.stringify(heading)}));
-    return h.parentElement.innerText;
-  })()`);
-  // The row read "<title> · <version>[ · made by an agent]"; the snapshot names that work and
-  // the delivery as every evidence button does.
-  const title = submitted.split(' · ')[0];
+  const receipt = await browser.ev(`document.querySelector('[data-result-cover]').innerText`);
+  // The slip read "《title》 · <version> · <purpose>"; the snapshot names that work and the
+  // delivery as every evidence button does.
+  const title = submitted.split(' · ')[0].replace(/^[《“]|[》”]$/g, '');
   assert.ok(receipt.includes(title), JSON.stringify({ receipt, submitted }));
   assert.ok(receipt.includes(text('第 1 次交付', 'Delivery 1')), receipt);
   assert.doesNotMatch(receipt, RECORD_ID);

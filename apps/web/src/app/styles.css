@@ -4489,9 +4489,11 @@ textarea.doc-input[name="rationale"] {
     transform var(--mid) var(--spring),
     box-shadow var(--mid) ease;
 }
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-float);
+@media (hover: hover) and (pointer: fine) {
+  .card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-float);
+  }
 }
 .card.dragging {
   opacity: 0.45;
@@ -4594,6 +4596,7 @@ textarea.doc-input[name="rationale"] {
   top: 10px;
   right: 8px;
   opacity: 0;
+  transition: opacity var(--fast) ease;
 }
 .card:hover .card-more,
 .card:focus-within .card-more {
@@ -5775,4 +5778,37 @@ button.act-open:hover {
     transform: none;
     transition: opacity 80ms;
   }
+}
+
+/* The manager's second line in the brief: what to hand back, by when, and where. Same voice
+   and serif as the brief, a breath below it. */
+.brief-letter .brief-direction {
+  margin-top: 10px;
+}
+
+/* "Start a revision" lands here: the manager's note on where to pick the work up. */
+.revise-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+.revise-note .letter {
+  flex: 1;
+  min-width: 0;
+}
+.revise-note > button.btn {
+  flex: none;
+}
+@media (max-width: 720px) {
+  .revise-note {
+    flex-direction: column;
+  }
+}
+.revise-note .letter-body {
+  max-width: 72ch;
 }
