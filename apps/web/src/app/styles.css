@@ -3245,6 +3245,8 @@ button.crumb:hover {
 .review-side {
   display: grid;
   gap: 20px;
+  /* A grid item may shrink below its content: nothing inside widens the side column. */
+  min-width: 0;
   position: sticky;
   top: calc(var(--toolbar-h) + 12px);
   /* Never taller than the window: the column scrolls on its own, so practice choices and

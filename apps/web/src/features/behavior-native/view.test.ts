@@ -77,4 +77,38 @@ describe('behaviour view', () => {
     expect(view?.order).toEqual(['Requested resources before reading the technical material']);
     expect(behaviorView(data, 'en')).toBeNull();
   });
+
+  it('labels only the phases wide enough and keys every phase in a legend under the bar', () => {
+    const symbols = (phase: string, n: number, from: number) =>
+      Array.from({ length: n }, (_, i) => ({ seq: from + i, symbol: 'submit', phase }));
+    const many: Behavior = {
+      ...data,
+      sequence: [...symbols('explore', 12, 1), ...symbols('test', 1, 13), ...symbols('decide', 1, 14), ...symbols('adjust', 8, 15)],
+      phases: [
+        { name: 'explore', from_seq: 1, to_seq: 12 },
+        { name: 'test', from_seq: 13, to_seq: 13 },
+        { name: 'decide', from_seq: 14, to_seq: 14 },
+        { name: 'adjust', from_seq: 15, to_seq: 22 },
+      ],
+    };
+    const view = behaviorView(many, 'en', { lens: true });
+    expect(view?.phases.map((p) => [p.name, p.labelled, p.style])).toEqual([
+      ['explore', true, 0],
+      ['test', false, 1],
+      ['decide', false, 2],
+      ['adjust', true, 3],
+    ]);
+    expect(view?.legend).toEqual([
+      { name: 'explore', style: 0 },
+      { name: 'test', style: 1 },
+      { name: 'decide', style: 2 },
+      { name: 'adjust', style: 3 },
+    ]);
+    const html = behaviorHtml(many, 'en', { lens: true });
+    // A narrow segment carries no text (its name is in the legend and its hover title).
+    expect(html).toMatch(/<span class="rc-phase" data-style="1"[^>]*title="test"><\/span>/);
+    expect(html).toMatch(/<span class="rc-phase" data-style="0"[^>]*>explore<\/span>/);
+    expect(html).toContain('class="rc-phase-legend"');
+    expect(html).not.toContain('…');
+  });
 });
