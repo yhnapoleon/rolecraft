@@ -1,6 +1,6 @@
-import { feedbackCoverageText } from './coverage';
 import {
   MODEL_ADVICE_STYLE,
+  adviceRowLine,
   evaluationModelLine,
   updateRegisteredAdvice,
   type RegisteredAdvice,
@@ -10,27 +10,30 @@ import type { SubmissionRuleCheck, SubmitInput, _RuleScoreRange } from '../../co
 /** Native DOM submission/review surface. Inject the shared client; no credentials,
  * queue, mutation journal, global navigation or React root is created here. */
 import { mountReviewControls, isSubmitDecision } from './review-controls';
-import { feedbackText, type FeedbackLanguage } from './localization';
+import { feedbackCopy, feedbackCount, feedbackText, type FeedbackLanguage } from './localization';
 import {
   declaredPurpose,
-  feedbackShortResult,
+  laterPurpose,
+  purposePromptElement,
+  purposeUnknown,
   reviewedAs,
   ruleItems,
   type PurposeChoice,
 } from './short-summary';
 import { evaluationVersionLine } from './evaluation-version';
-import { itemDetail, renderRuleLines, ruleLines } from './rule-lines';
 import { renderDecisions } from './business-decisions';
-import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
-import { criterionLabels } from './criteria';
-import { exactRefKey } from './exact-ref';
 import {
-  mountPresubmitCard,
-  PRESUBMIT_STYLE,
-  submissionFactLine,
-  type SentenceResult,
-} from './presubmit';
+  disclosure,
+  earlierSummary,
+  feedbackItemsView,
+  renderFeedbackItems,
+  renderItemRow,
+} from './feedback-items';
+import { decisionName } from './decision-cards';
+import { criterionChecks, criterionLabels, criterionQuestions } from './criteria';
+import { exactRefKey } from './exact-ref';
+import { mountPresubmitCard, PRESUBMIT_STYLE, type SentenceResult } from './presubmit';
 import {
   attachmentLine,
   attachmentSlip,
@@ -54,6 +57,7 @@ import { EVIDENCE_KINDS, evidenceSummary } from '../../evidence-picker';
 import type { RecognitionRecord } from '../recognition-native/badge';
 import { lensOn, onLensChange } from '../recognition-native/lens';
 import { splitRecognitionPrefix } from '../recognition-native/prefix';
+import type { FeedbackActivityCount, FeedbackReferenceCheck } from '../../contracts-v2';
 import { renderSentenceLens } from '../recognition-native/sentences';
 import { renderExplanationTag, renderSignals } from '../recognition-native/signals';
 
@@ -86,7 +90,12 @@ export type Report = {
         subject?: ObjectRef;
         status?: 'verified' | 'partial' | 'unknown';
         summary: string[];
-        references: { verified_ref?: EvidenceRefV2 | null }[];
+        references: ({ verified_ref?: EvidenceRefV2 | null } & Partial<
+          Pick<FeedbackReferenceCheck, 'valid_at_subject' | 'status'>
+        >)[];
+        /** Verified activity counts by kind (contract `VerifiedFactsSnapshot`; read only). */
+        activity_totals?: Record<string, FeedbackActivityCount>;
+        verified_source_count?: number | null;
       }[]
     | null;
   historical_responsibilities?:
@@ -262,11 +271,9 @@ export function feedbackNotice(state: FeedbackNativeState, language: FeedbackLan
       '可以继续工作，选择准备交付的版本。',
       'Continue your work and select versions for submission.',
     );
+  // With its feedback in, the results cover says what was delivered (195): no status sentence.
   if (state.reports.some((r) => r.subject.object_id === state.submission?.ref.object_id))
-    return T(
-      '本次提交已保存，可以看反馈、提出异议或开始修订。',
-      'Submission saved. Review feedback, raise a challenge or start revising.',
-    );
+    return '';
   return state.failedFeedback
     ? T('本次提交已保存，反馈尚未就绪。', 'Submission saved. Feedback is not ready yet.')
     : T('本次提交已保存，反馈正在生成…', 'Submission saved. Feedback is being generated…');
@@ -294,8 +301,7 @@ export function mountNativeFeedback(
   const selected = new Map<string, ObjectRef>();
   const selectedTitles = new Map<string, string>();
   const draftResponses = new Map<string, { text: string; evidence: EvidenceRefV2[] }>();
-  // Presentation only: disclosure and purpose choice survive re-renders, not reloads.
-  const openResults = new Set<string>();
+  // Presentation only: the purpose choice survives re-renders, not reloads.
   // Open recognition chains per report, kept across redraws (lens toggles, refreshes).
   const lensChains = new Map<string, Set<number>>();
   let playReading = false;
@@ -306,11 +312,34 @@ export function mountNativeFeedback(
   type ResponseKind = 'objection' | 'supplement';
   const recorded: { feedback: string; kind: ResponseKind; text: string }[] = [];
   const recordedForms = new Map<string, ResponseKind>();
+  /** Beside a form, once the server confirms what it saved. */
+  const savedText = (kind: ResponseKind) =>
+    kind === 'objection'
+      ? T(
+          '已记下你的看法，仍待核验；这份反馈保持原样。',
+          'Your view is saved. It still needs checking; this feedback stays as it is.',
+        )
+      : T(
+          '已记下补充的依据，仍待核验；这份反馈保持原样。',
+          'Your evidence is saved. It still needs checking; this feedback stays as it is.',
+        );
+  /** In the list of what was saved. */
   const recordedText = (kind: ResponseKind) =>
-    (kind === 'objection'
-      ? T('异议已记录', 'Challenge recorded')
-      : T('补证已记录', 'Additional evidence recorded')) +
-    T(' · 等待核验', ' · Awaiting verification');
+    kind === 'objection'
+      ? T('你的看法 · 仍待核验', 'Your view · still to be checked')
+      : T('补充的依据 · 仍待核验', 'Added evidence · still to be checked');
+  // Presentation only: which rows, bases and notes are open, kept across redraws.
+  const openKeys = new Set<string>();
+  // When this page last read the feedback (shown beside the refresh control).
+  let readAt = Date.now();
+  let readReports = '';
+  const chevronNode = () => {
+    const node = doc.createElement('span');
+    node.className = 'fb-chev';
+    node.setAttribute('aria-hidden', 'true');
+    node.textContent = '›';
+    return node;
+  };
   const persist = (key: string, draft: { text: string; evidence: EvidenceRefV2[] }) => {
     const value = structuredClone(draft);
     savedDrafts = savedDrafts
@@ -359,10 +388,6 @@ export function mountNativeFeedback(
   const revisionReason = el('textarea', '', 'textarea');
   revisionReason.rows = 3;
   revisionReason.setAttribute('aria-label', T('这次准备怎样修订', 'What will you revise?'));
-  revisionReason.placeholder = T(
-    '保留上次提交，说明这次准备补充或调整什么。',
-    'Keep the previous submission and describe what you will add or change.',
-  );
   revisionReason.value = adapter.readDraft('revision')?.text ?? '';
   revisionReason.addEventListener('input', () => {
     void persist('revision', { text: revisionReason.value, evidence: [] });
@@ -532,8 +557,19 @@ export function mountNativeFeedback(
       }),
     );
   });
-  revisions.append(el('h2', T('接着修订', 'Continue revising')), revisionReason, revise);
-  const refresh = button(T('查看最新反馈', 'Refresh feedback'), () => adapter.refresh());
+  revisions.append(el('h2', T('修订', 'Revise')), revisionReason, revise);
+  // One refresh control, as an icon beside the time this page last read the feedback.
+  const refreshRow = el('p', '', 'fb-refresh');
+  const updated = el('span', '', 'fb-refresh__time');
+  const refresh = button('', async () => {
+    await adapter.refresh();
+    readAt = Date.now();
+  });
+  refresh.classList.add('icon', 'small', 'quiet');
+  refresh.setAttribute('aria-label', feedbackCopy(language, 'refreshLabel'));
+  refresh.title = feedbackCopy(language, 'refreshLabel');
+  refresh.append(refreshIcon(doc), el('span', feedbackCopy(language, 'refresh'), 'sr-only'));
+  refreshRow.append(updated, refresh);
   // The results cover sits first on the feedback page (it is never part of the submit panel).
   const coverHost = el('div', '', 'result-cover-host');
   let coverShown = '';
@@ -544,12 +580,14 @@ export function mountNativeFeedback(
   root.append(notice, failedNote, retryFeedback);
   if (options.surface !== 'feedback') root.append(submissions);
   if (options.surface === 'feedback') root.append(recover);
-  if (options.surface !== 'submission') root.append(refresh, reports, responseHistory, revisions);
+  if (options.surface !== 'submission')
+    root.append(refreshRow, reports, responseHistory, revisions);
   const reviewControls =
     options.surface !== 'submission' && adapter.review
       ? mountReviewControls(doc, adapter, language)
       : undefined;
-  if (reviewControls) root.insertBefore(reviewControls.element, reports);
+  // Getting a review and the list of deliveries and reviews follow the feedback.
+  if (reviewControls) root.insertBefore(reviewControls.element, revisions);
   host.replaceChildren(root);
   // The object's own name and version; the full name, with the action, for screen readers.
   const nameOf = (ref: ObjectRef | EvidenceRefV2) =>
@@ -572,26 +610,39 @@ export function mountNativeFeedback(
     }
     parent.append(row);
   }
-  function responseForm(
-    report: Report,
-    criterion?: string,
-    section:
-      | 'general'
-      | 'verified_facts'
-      | 'historical_responsibilities'
-      | 'rule_items'
-      | 'model_advice' = 'general',
-  ) {
+  /** Sources as chips that open the exact cited text; a quoted passage follows its chip. */
+  function chips(values: (ObjectRef | EvidenceRefV2)[]) {
+    const row = el('div', '', 'fb-sources');
+    for (const ref of values) {
+      const name = nameOf(ref);
+      const link = button(name.text, () => adapter.openReference(ref));
+      link.className = 'chip';
+      link.setAttribute('aria-label', name.label);
+      link.dataset.referenceKind = ref.kind;
+      link.dataset.referenceKey = key(ref);
+      row.append(link);
+      if ('quote' in ref && ref.quote) {
+        if (language === 'en' && /[一-鿿]/u.test(ref.quote))
+          row.append(el('small', 'Chinese source', 'muted'));
+        row.append(el('blockquote', ref.quote));
+      }
+    }
+    return row;
+  }
+  type Section = 'general' | 'verified_facts' | 'historical_responsibilities' | 'rule_items' | 'model_advice';
+  /** The existing response form of one item (or of the whole report), opened by "补充依据" or
+   * "我有不同看法"; its own summary is not shown, the two buttons are the way in. */
+  function responseForm(report: Report, criterion?: string, section: Section = 'general') {
     const id = [report.id, report.version, section, criterion ?? ''].join(':');
     const draft = draftResponses.get(id) ?? adapter.readDraft(id) ?? { text: '', evidence: [] };
     draftResponses.set(id, draft);
-    const form = el('details');
+    const form = el('details', '', 'fb-respond');
     form.dataset.responseId = id;
-    form.append(el('summary', T('提出异议或补充依据', 'Challenge or supplement the evidence')));
+    form.append(el('summary', T('补充依据或提出不同看法', 'Add evidence or share a different view')));
     const body = el('textarea', '', 'textarea');
     body.rows = 3;
     body.value = draft.text;
-    body.setAttribute('aria-label', T('异议或补证内容', 'Challenge or additional evidence'));
+    body.setAttribute('aria-label', T('你的看法或要补充的内容', 'Your view or what you are adding'));
     body.addEventListener('input', () => {
       draft.text = body.value;
       void persist(id, draft);
@@ -607,25 +658,26 @@ export function mountNativeFeedback(
         evidence.textContent = evidenceSummary(draft.evidence);
       }
     });
+    choose.classList.add('small');
     choose.disabled = !adapter.chooseEvidence;
     // What this form last recorded, shown beside it the moment the server confirms.
     const status = el('p', '', 'muted');
     status.setAttribute('role', 'status');
     const showRecorded = () => {
       const kind = recordedForms.get(id);
-      status.textContent = kind ? recordedText(kind) : '';
+      status.textContent = kind ? savedText(kind) : '';
       status.hidden = !kind;
     };
     showRecorded();
     const send = (kind: ResponseKind) => async () => {
       if (!draft.text.trim())
         throw Error(
-          T('请写下具体的异议或补充内容。', 'Describe your challenge or additional evidence.'),
+          T('请写下你的看法或要补充的内容。', 'Describe your view or the evidence you are adding.'),
         );
       if (kind === 'supplement' && !draft.evidence.length)
         throw Error(
           T(
-            '补证需要先选择至少一处原始引用。',
+            '补充依据需要先选择至少一处原始引用。',
             'Choose at least one original reference before submitting evidence.',
           ),
         );
@@ -656,95 +708,212 @@ export function mountNativeFeedback(
       body.value = '';
       evidence.textContent = evidenceSummary([]);
     };
-    const objection = button(T('记录异议', 'Record a challenge'), send('objection'));
-    const supplement = button(T('提交补证', 'Submit additional evidence'), send('supplement'));
+    const objection = button(T('记下我的看法', 'Save my view'), send('objection'));
+    const supplement = button(T('补上这些依据', 'Add this evidence'), send('supplement'));
     objection.dataset.responseAction = 'objection';
     supplement.dataset.responseAction = 'supplement';
+    objection.classList.add('small');
+    supplement.classList.add('small');
     objection.disabled = supplement.disabled =
       adapter.snapshot().busy || !!adapter.snapshot().pending || adapter.canRespond === false;
-    form.append(
-      body,
-      evidence,
-      choose,
-      objection,
-      supplement,
-      status,
-      el(
-        'p',
-        T(
-          '记录关联后仍等待核验，不会自动改写原反馈或认定异议已解决。',
-          'Linked records still await verification. They do not rewrite earlier feedback or automatically resolve a challenge.',
-        ),
-        'muted',
-      ),
-    );
+    const actions = el('div', '', 'fb-basis__actions');
+    actions.append(choose, supplement, objection);
+    form.append(body, evidence, actions, status);
     return form;
   }
-  function reportPanel(report: Report) {
-    const latest = adapter.snapshot().submission?.ref;
-    const current =
-      report.subject.kind === 'submission' &&
-      (!latest ||
-        (report.subject.object_id === latest.object_id &&
-          report.subject.version === latest.version));
-    const panel = el('article');
-    panel.append(
-      el(
-        'h2',
-        report.subject.kind === 'review'
-          ? T('作品评审反馈', 'Artifact review feedback')
-          : current
-            ? T('最近提交的反馈', 'Latest submission feedback')
-            : T('此前提交的反馈', 'Earlier submission feedback'),
-      ),
-    );
-    const review =
-      report.subject.kind === 'review'
-        ? adapter
-            .snapshot()
-            .reviews?.find(
-              (r) => r.id === report.subject.object_id && r.version === report.subject.version,
-            )
-        : undefined;
-    const purposeLine = reviewedAs(review, language);
-    if (purposeLine) panel.append(el('p', purposeLine, 'muted'));
-    // A submission reads "第 N 次交付", like every other reference to it.
-    refs(panel, [report.subject]);
-    panel.append(evaluationVersionLine(doc, report, language));
-    if (report.subject.kind === 'review') {
-      if (review) {
-        panel.append(
-          el(
-            'p',
-            review.question ||
-              T(
-                '按作品形成时的信息评审。',
-                'Reviewed against information available when the artifact was formed.',
-              ),
-            'muted',
-          ),
-        );
-        refs(panel, review.subjects);
-      }
+  /** Open a response form for one intent, with the text box ready. */
+  function openResponse(form: HTMLDetailsElement, intent: ResponseKind) {
+    const opening = !form.open || form.dataset.intent !== intent;
+    form.dataset.intent = intent;
+    form.open = opening;
+    if (opening) form.querySelector('textarea')?.focus({ preventScroll: true });
+  }
+  /** "补充依据" and "我有不同看法" for one form. */
+  function responseButtons(form: HTMLDetailsElement) {
+    const row = el('div', '', 'fb-basis__actions');
+    const add = el('button', T('补充依据', 'Add evidence'), 'btn small');
+    const differ = el('button', T('我有不同看法', 'I see it differently'), 'btn small quiet');
+    for (const [node, intent] of [
+      [add, 'supplement'],
+      [differ, 'objection'],
+    ] as const) {
+      node.type = 'button';
+      node.dataset.respondIntent = intent;
+      node.setAttribute('aria-controls', form.dataset.responseId ?? '');
+      node.addEventListener('click', () => openResponse(form, intent));
     }
-    // Detail stays as it was; it is folded behind the short result below.
-    const body: Node[] = [];
-    const facts = el('section');
-    facts.append(el('h3', T('你做过的工作与依据', 'Your recorded work and evidence')));
-    if (!report.verified_facts?.length)
-      facts.append(
-        el(
-          'p',
-          T(
-            '事实记录还未就绪，不能据此判断你没有调查。',
-            'Fact records are not ready. This does not show that you did no investigation.',
-          ),
-          'muted',
+    row.append(add, differ);
+    return row;
+  }
+  const disclosures = { isOpen: (k: string) => openKeys.has(k), onToggle: (k: string, open: boolean) => (open ? openKeys.add(k) : openKeys.delete(k)) };
+  /** This delivery's (or review's) decision, by the four names of the delivery panel. */
+  function decisionOf(report: Report, review: ReviewRecord | undefined): string | null {
+    if (report.subject.kind === 'review') return review?.decision ?? null;
+    const state = adapter.snapshot();
+    const own = (state.submissions ?? []).find(
+      (s) => s.ref.object_id === report.subject.object_id && s.ref.version === report.subject.version,
+    );
+    if (own) return own.decision;
+    const latest = state.submission;
+    return latest && latest.ref.object_id === report.subject.object_id ? latest.decision : null;
+  }
+  /** The criteria of one report, item by item. Read-only for an earlier delivery: no responses,
+   * no direct steps, no recognition reading. */
+  function itemsSection(report: Report, review: ReviewRecord | undefined, readOnly: boolean) {
+    const state = adapter.snapshot();
+    const semantic = feedbackSemanticPresentation(report, state);
+    const fallback = adviceFallback(report, state);
+    const view = feedbackItemsView(report, {
+      language,
+      decision: decisionOf(report, review),
+      kind: report.subject.kind,
+      atSubmission: savedRuleCheck(report),
+      adviceLine: adviceRowLine(report.model_advice, language, fallback),
+      legacyAdvice: semantic.advice,
+    });
+    const scopeBasis = [...view.premises, ...report.next_options].map((text) => el('p', text));
+    // The delivery this list belongs to, first on its line (an earlier one names it on its row).
+    const subject = readOnly ? null : (chips([report.subject]).firstElementChild as HTMLElement | null);
+    const lens = lensOn() && !readOnly;
+    const after: Node[] = [];
+    if (lens) {
+      // With the recognition lens open: this feedback's recognizer signals and the work sentence
+      // by sentence, from the records stored with it. Closed: nothing.
+      const general = (report.recognition ?? []).filter((record) => !recordCriterion(record));
+      const box = el('section', '', 'fb-lens');
+      // The sentence block below already counts the relation labels; no second chip for them.
+      const lensChips = renderSignals(
+        doc,
+        general.filter(
+          (record) => !(record.task === 'relation' && Array.isArray(record.outputs?.units)),
         ),
+        language,
+        { context: 'feedback', lens: true },
       );
-    for (const snapshot of report.verified_facts ?? []) {
-      if (snapshot.subject) refs(facts, [snapshot.subject]);
-      facts.append(
+      if (lensChips) box.append(lensChips);
+      if (general.some((record) => record.task === 'relation' && Array.isArray(record.outputs?.units))) {
+        const chainKey = `${report.id}:${report.version}`;
+        if (!lensChains.has(chainKey)) lensChains.set(chainKey, new Set());
+        box.append(
+          renderSentenceLens(doc, {
+            records: report.recognition ?? [],
+            language,
+            open: lensChains.get(chainKey),
+            play: playReading,
+          }),
+        );
+      }
+      if (box.childElementCount) after.push(box);
+    }
+    const legacy = semantic.advice;
+    return renderFeedbackItems(doc, view, language, {
+      id: `${report.id}-${report.version}`,
+      ...disclosures,
+      scopeBasis,
+      after,
+      subject: subject ?? undefined,
+      action: (row) => {
+        if (readOnly || !row.action) return null;
+        const go = el('button', row.action.label, 'btn small');
+        go.type = 'button';
+        go.dataset.action = row.action.tool;
+        go.setAttribute('aria-label', `${row.action.label} · ${row.name}`);
+        return go;
+      },
+      basis: (row) => {
+        const nodes: Node[] = [];
+        // R2.support: the registered model advice, as advice (never scored).
+        if (row.criterion === 'R2.support' && showsAdviceBlock(report)) nodes.push(adviceBlock(report, lens));
+        for (const item of legacy.filter((entry) => entry.criterion === row.criterion)) {
+          // The reviewer's recognition prefix is never shown as text; the lens shows it as a tag.
+          const split = splitRecognitionPrefix(item.explanation);
+          if (lens) {
+            const tag = renderExplanationTag(doc, split, language);
+            if (tag) nodes.push(tag);
+          }
+          nodes.push(el('p', T('模型建议 · ', 'Model advice · ') + split.text, 'fb-basis__text'));
+          if (item.citations.length) nodes.push(chips(item.citations));
+          if (!readOnly) nodes.push(responseForm(report, item.criterion, 'model_advice'));
+        }
+        if (row.item.citations.length) {
+          const sources = el('div', '', 'fb-basis__block');
+          sources.append(el('p', T('依据', 'Sources'), 'fb-basis__label'), chips(row.item.citations));
+          nodes.push(sources);
+        }
+        if (row.weight) {
+          const weight = el('p', row.weight, 'fb-weight');
+          weight.dataset.criterionWeight = row.criterion;
+          nodes.push(weight);
+        }
+        // Recognition signals of this criterion: nothing by default, chips in the lens.
+        const signed = renderSignals(doc, criterionRecords(report, row.criterion), language, {
+          context: 'criterion',
+          lens,
+        });
+        if (signed) nodes.push(signed);
+        if (!readOnly) {
+          const form = responseForm(report, row.criterion, 'rule_items');
+          nodes.push(responseButtons(form), form);
+        }
+        return nodes;
+      },
+    });
+  }
+  /** The registered model advice is shown unless only older-protocol advice items exist. */
+  function showsAdviceBlock(report: Report) {
+    return (
+      !feedbackSemanticPresentation(report, adapter.snapshot()).advice.length ||
+      report.model_advice !== undefined
+    );
+  }
+  function adviceBlock(report: Report, lens: boolean) {
+    const block = el('div');
+    block.dataset.modelAdviceReport = report.id;
+    updateRegisteredAdvice(
+      block,
+      report.model_advice,
+      language,
+      (ref) => adapter.openReference(ref),
+      adviceFallback(report, adapter.snapshot()),
+      nameOf,
+      { lens, sessionId: report.subject.session_id },
+    );
+    return block;
+  }
+  /** What the feedback is based on: one line of counts, the stored sentences in Details. */
+  function recordsSection(report: Report) {
+    const box = el('section', '', 'fb-records');
+    box.dataset.feedbackRecords = report.id;
+    box.setAttribute('aria-label', feedbackCopy(language, 'recordsTitle'));
+    const snapshots = report.verified_facts ?? [];
+    const top = el('p', '', 'fb-records__top');
+    top.append(el('span', feedbackCopy(language, 'recordsTitle'), 'fb-records__title'));
+    if (!snapshots.length)
+      top.append(el('span', feedbackCopy(language, 'recordsNotReady'), 'fb-records__counts'));
+    for (const snapshot of snapshots) {
+      const line = recordCounts(snapshot, language);
+      const prefix =
+        snapshots.length > 1 && snapshot.subject ? `${nameOf(snapshot.subject).text}：` : '';
+      if (line) top.append(el('span', prefix + line, 'fb-records__counts'));
+    }
+    box.append(top);
+    if (hasBusinessResponse(report)) box.append(renderDecisions(doc, report));
+    // Past actions and commitments, only when there are some.
+    const entries = (report.historical_responsibilities ?? []).flatMap((s) => s.entries);
+    if (entries.length) {
+      const history = el('div', '', 'fb-records__details');
+      history.append(el('p', feedbackCopy(language, 'pastActions'), 'fb-basis__label'));
+      for (const entry of entries) {
+        history.append(el('p', entry.explanation));
+        if (entry.sources.length) history.append(chips(entry.sources));
+      }
+      box.append(history);
+    }
+    const details = el('div', '', 'fb-records__details');
+    details.id = `fb-records-${report.id}-${report.version}`.replace(/[^A-Za-z0-9_-]+/g, '-');
+    for (const snapshot of snapshots) {
+      if (snapshot.subject) details.append(chips([snapshot.subject]));
+      details.append(
         el(
           'p',
           snapshot.status === 'verified'
@@ -755,214 +924,175 @@ export function mountNativeFeedback(
                   'Some evidence is verified; missing records remain unverified',
                 )
               : T('记录待核验', 'Records awaiting verification'),
-          'muted',
         ),
       );
-      for (const text of snapshot.summary.slice(0, 3)) facts.append(el('p', text));
-      if (snapshot.summary.length > 3) {
-        const details = el('details');
-        details.append(el('summary', T('查看核实明细', 'View verification details')));
-        for (const text of snapshot.summary.slice(3)) details.append(el('p', text));
-        facts.append(details);
-      }
-      refs(
-        facts,
-        snapshot.references.flatMap((x) => (x.verified_ref ? [x.verified_ref] : [])),
-      );
+      for (const text of snapshot.summary) details.append(el('p', text));
+      const verified = snapshot.references.flatMap((x) => (x.verified_ref ? [x.verified_ref] : []));
+      if (verified.length) details.append(chips(verified));
     }
-    body.push(facts);
-    const history = el('section');
-    history.append(el('h3', T('历史行动与承诺', 'Past actions and commitments')));
-    for (const snapshot of report.historical_responsibilities ?? [])
-      for (const entry of snapshot.entries) {
-        history.append(el('p', entry.explanation));
-        refs(history, entry.sources);
-      }
-    if (!report.historical_responsibilities?.some((s) => s.entries.length))
-      history.append(
-        el(
-          'p',
-          T(
-            '当前没有可展示的历史责任结论。',
-            'No historical responsibility finding is currently available.',
-          ),
-          'muted',
-        ),
-      );
-    body.push(history);
-    const criteria = criterionLabels(language);
-    const lines = ruleLines(ruleItems(report), criteria, language);
-    const atSubmission = savedRuleCheck(report);
-    const notApplicable = el('details');
-    notApplicable.append(
-      el('summary', T('查看本次未适用的验收项', 'View criteria not applicable to this submission')),
-    );
-    let inactive = 0;
-    for (const item of ruleItems(report)) {
-      const section = el('section');
-      section.append(
-        el('h3', criteria[item.criterion] ?? T('具体反馈项', 'Feedback criterion')),
-        el(
-          'p',
-          item.source === 'verified_rule'
-            ? T('规则核实', 'Verified by rules')
-            : T('等待核验', 'Awaiting verification'),
-          'muted',
-        ),
-        el('p', splitRecognitionPrefix(itemDetail(item, lines.premises)).text, 'rule-detail'),
-      );
-      // Recognition signals of this criterion: nothing by default, chips in the lens.
-      const signed = renderSignals(doc, criterionRecords(report, item.criterion), language, {
-        context: 'criterion',
-        lens: lensOn(),
-      });
-      if (signed) section.append(signed);
-      // 164 F17: the versions behind an unmet item, from the same rules at submission.
-      const fact = submissionFactLine(item, atSubmission, report.rule_items, language);
-      if (fact) {
-        const line = el('p', fact);
-        line.dataset.ruleFact = item.criterion;
-        section.append(line);
-      }
-      if (item.rule_bound) {
-        const labels: Record<string, string> = {
-          NOT_MET: T('未满足', 'Not met'),
-          PARTIAL: T('部分满足', 'Partially met'),
-          MET: T('满足', 'Met'),
-        };
-        section.append(
-          el(
-            'p',
-            item.rule_bound.lower === item.rule_bound.upper
-              ? T('规则确定：', 'Rule finding: ') +
-                  (labels[item.rule_bound.lower] ?? item.rule_bound.lower)
-              : T('规则已核实范围：', 'Verified rule interval: ') +
-                  // Said the way the rule lines say it (N7): "between A and B", not "A—B".
-                  T(
-                    `介于${labels[item.rule_bound.lower] ?? item.rule_bound.lower}和${labels[item.rule_bound.upper] ?? item.rule_bound.upper}之间`,
-                    `between ${(labels[item.rule_bound.lower] ?? item.rule_bound.lower).toLowerCase()} and ${(labels[item.rule_bound.upper] ?? item.rule_bound.upper).toLowerCase()}`,
-                  ) +
-                  T(
-                    '；范围内的具体判断仍待核验。',
-                    '; the exact judgment within this interval remains unverified.',
-                  ),
-            'muted',
-          ),
-        );
-      }
-      const weight = criterionWeightText(report, item.criterion, language);
-      if (weight) {
-        const line = el('p', weight, 'muted');
-        line.dataset.criterionWeight = item.criterion;
-        section.append(line);
-      }
-      refs(section, item.citations);
-      section.append(responseForm(report, item.criterion, 'rule_items'));
-      if (item.label === 'NOT_APPLICABLE') {
-        notApplicable.append(section);
-        inactive++;
-      } else body.push(section);
+    if (details.childElementCount) {
+      const toggle = el('button', '', 'fb-scope__toggle');
+      toggle.type = 'button';
+      toggle.append(el('span', feedbackCopy(language, 'recordsDetails')), chevronNode());
+      toggle.setAttribute('aria-controls', details.id);
+      const wrap = el('div', '', 'fb-scope');
+      wrap.append(toggle, details);
+      box.append(wrap);
+      disclosure(doc, toggle, details, `${report.id}:${report.version}:records`, disclosures, wrap);
     }
-    if (inactive) body.push(notApplicable);
-    const coverage = el(
-      'p',
-      feedbackCoverageText(
-        report,
-        feedbackSemanticPresentation(report, adapter.snapshot()).advice,
-        language,
+    return box;
+  }
+  function reportPanel(report: Report, role: 'latest' | 'earlier') {
+    const review =
+      report.subject.kind === 'review'
+        ? adapter
+            .snapshot()
+            .reviews?.find(
+              (r) => r.id === report.subject.object_id && r.version === report.subject.version,
+            )
+        : undefined;
+    if (role === 'earlier') return earlierPanel(report, review);
+    const panel = el('article', '', 'fb-report');
+    panel.dataset.reportId = report.id;
+    panel.append(
+      el(
+        'h2',
+        report.subject.kind === 'review'
+          ? T('作品评审反馈', 'Artifact review feedback')
+          : feedbackCopy(language, 'itemsTitle'),
       ),
-      'muted',
     );
-    coverage.dataset.feedbackCoverage = report.id;
-    body.push(coverage);
-    const semantic = el('section');
-    semantic.append(
-      el('h3', T('理由与证据的支持关系', 'Support between reasoning and evidence')),
-      evaluationModelLine(doc, report.provenance, language),
+    const purposeLine = reviewedAs(review, language);
+    if (purposeLine) panel.append(el('p', purposeLine, 'muted'));
+    if (report.subject.kind === 'review' && review) {
+      panel.append(
+        el(
+          'p',
+          review.question ||
+            T(
+              '按作品形成时的信息评审。',
+              'Reviewed against information available when the artifact was formed.',
+            ),
+          'muted',
+        ),
+      );
+      refs(panel, review.subjects);
+    }
+    // Workbench internals: kept with the report as hidden records, read in About.
+    panel.append(
+      evaluationVersionLine(doc, report, language),
+      evaluationModelLine(doc, report.provenance, language, report.subject.session_id),
     );
-    // With the recognition lens open: this feedback's recognizer signals and the work sentence
-    // by sentence, from the records stored with it. Closed: nothing.
-    if (lensOn()) {
-      const general = (report.recognition ?? []).filter((record) => !recordCriterion(record));
-      // The sentence block below already counts the relation labels; no second chip for them.
-      const chips = renderSignals(
-        doc,
-        general.filter((record) => !(record.task === 'relation' && Array.isArray(record.outputs?.units))),
-        language,
-        { context: 'feedback', lens: true },
-      );
-      if (chips) semantic.append(chips);
-      if (general.some((record) => record.task === 'relation' && Array.isArray(record.outputs?.units))) {
-        const key = `${report.id}:${report.version}`;
-        if (!lensChains.has(key)) lensChains.set(key, new Set());
-        semantic.append(
-          renderSentenceLens(doc, {
-            records: report.recognition ?? [],
-            language,
-            open: lensChains.get(key),
-            play: playReading,
-          }),
-        );
-      }
-    }
-    const { advice } = feedbackSemanticPresentation(report, adapter.snapshot());
-    if (!advice.length || report.model_advice !== undefined) {
-      const block = el('div');
-      block.dataset.modelAdviceReport = report.id;
-      semantic.append(block);
-      updateRegisteredAdvice(
-        block,
-        report.model_advice,
-        language,
-        (ref) => adapter.openReference(ref),
-        adviceFallback(report, adapter.snapshot()),
-        nameOf,
-      );
-    }
-    for (const item of advice) {
-      // The reviewer's recognition prefix is never shown as text; the lens shows it as a tag.
-      const split = splitRecognitionPrefix(item.explanation);
-      if (lensOn()) {
-        const tag = renderExplanationTag(doc, split, language);
-        if (tag) semantic.append(tag);
-      }
-      semantic.append(el('p', T('模型建议 · ', 'Model advice · ') + split.text));
-      refs(semantic, item.citations);
-      semantic.append(responseForm(report, item.criterion, 'model_advice'));
-    }
-    for (const text of report.next_options) body.push(el('p', text, 'muted'));
     const id = `${report.id}:${report.version}`;
     const state = adapter.snapshot();
     const canReview = !!adapter.review && adapter.canReview !== false && state.status === 'active';
-    panel.append(
-      feedbackShortResult(doc, {
-        report,
-        language,
-        review,
-        reviews: state.reviews,
-        semantic,
-        lines: renderRuleLines(doc, lines, language),
-        body,
-        open: openResults.has(id),
-        onToggle: (open) => {
-          if (open) openResults.add(id);
-          else openResults.delete(id);
-        },
-        prompt:
-          review && canReview
-            ? {
-                name: `purpose-${id}`,
-                selected:
-                  purposeChoices.get(id) ?? declaredPurpose(review.subjects, state.products),
-                disabled: state.busy || !!state.pending,
-                select: (purpose) => purposeChoices.set(id, purpose),
-                submit: (purpose) => void reviewAgain(review, purpose),
-              }
-            : undefined,
-      }).element,
-      renderDecisions(doc, report),
-      responseForm(report),
+    const unknown = purposeUnknown(report, review);
+    const later = unknown && review ? laterPurpose(review, state.reviews ?? []) : undefined;
+    if (later)
+      panel.append(
+        el(
+          'p',
+          feedbackCopy(language, 'purposeChosen', { purpose: feedbackCopy(language, later) }),
+          'muted',
+        ),
+      );
+    else if (unknown) {
+      panel.append(el('p', feedbackCopy(language, 'purposeUnknown', { n: ruleItems(report).length }), 'muted'));
+      if (review && canReview)
+        panel.append(
+          purposePromptElement(doc, language, {
+            name: `purpose-${id}`,
+            selected: purposeChoices.get(id) ?? declaredPurpose(review.subjects, state.products),
+            disabled: state.busy || !!state.pending,
+            select: (purpose) => purposeChoices.set(id, purpose),
+            submit: (purpose) => void reviewAgain(review, purpose),
+          }),
+        );
+    }
+    if (ruleItems(report).length) panel.append(itemsSection(report, review, false));
+    else panel.append(el('p', feedbackCopy(language, 'noItems'), 'muted'));
+    // Without an R2.support row (no criteria yet, or an older record), the advice still lives in
+    // a closed "判断的证据支持" row of its own.
+    if (!ruleItems(report).some((item) => item.criterion === 'R2.support') && showsAdviceBlock(report)) {
+      const fallback = adviceFallback(report, adapter.snapshot());
+      const said = adviceRowLine(report.model_advice, language, fallback);
+      const alone = el('section', '', 'fb-group');
+      alone.dataset.group = 'advice';
+      const list = el('ul', '', 'fb-list');
+      list.append(
+        renderItemRow(
+          doc,
+          {
+            criterion: 'R2.support',
+            name: criterionLabels(language)['R2.support'] ?? '',
+            mark: 'unknown',
+            line: said?.text ?? criterionQuestions(language)['R2.support'] ?? '',
+            ...(said?.tone === 'bad' ? { lineTone: 'bad' as const } : {}),
+            ...(said?.waiting ? { lineWaits: true } : {}),
+            checks: criterionChecks(language)['R2.support'],
+            found: [],
+            item: { criterion: 'R2.support', explanation: '', source: 'model_advice', label: 'INSUFFICIENT', citations: [] },
+          },
+          language,
+          {
+            id: `${report.id}-${report.version}`,
+            ...disclosures,
+            basis: () => [adviceBlock(report, lensOn())],
+          },
+        ),
+      );
+      alone.append(list);
+      panel.append(alone);
+    }
+    panel.append(recordsSection(report));
+    const general = responseForm(report);
+    // The one honest line of the page, and a way to disagree with the feedback as a whole.
+    const honest = el('p', '', 'fb-honest');
+    const mark = el('span', '?', 'fb-mark');
+    mark.setAttribute('aria-hidden', 'true');
+    const differ = el('button', T('我有不同看法', 'I see it differently'), 'btn small quiet');
+    differ.type = 'button';
+    differ.dataset.respondIntent = 'objection';
+    differ.addEventListener('click', () => openResponse(general, 'objection'));
+    honest.append(mark, el('span', feedbackCopy(language, 'honest'), 'fb-honest__text'), differ);
+    panel.append(honest, general);
+    return panel;
+  }
+  /** An earlier delivery (or a review made before the latest delivery) in one line; opened, its
+   * items as they were, read-only. */
+  function earlierPanel(report: Report, review: ReviewRecord | undefined) {
+    const panel = el('article', '', 'fb-earlier');
+    panel.dataset.reportId = report.id;
+    const head = el('h2', '', 'fb-earlier__head');
+    const subject = chips([report.subject]).firstElementChild as HTMLElement | null;
+    const view = feedbackItemsView(report, {
+      language,
+      decision: decisionOf(report, review),
+      kind: report.subject.kind,
+      atSubmission: savedRuleCheck(report),
+    });
+    const decision = decisionOf(report, review);
+    const lead =
+      report.subject.kind === 'review'
+        ? (reviewedAs(review, language) ?? feedbackCopy(language, 'reviewRow'))
+        : decision
+          ? decisionName(decision, language)
+          : '';
+    const toggle = el('button', '', 'fb-earlier__toggle');
+    toggle.type = 'button';
+    toggle.append(
+      el('span', [lead, earlierSummary(view, language)].filter(Boolean).join(' · '), 'fb-earlier__summary'),
+      chevronNode(),
     );
+    if (subject) head.append(subject);
+    head.append(toggle);
+    const body = el('div', '', 'fb-earlier__body');
+    body.id = `fb-earlier-${report.id}-${report.version}`.replace(/[^A-Za-z0-9_-]+/g, '-');
+    toggle.setAttribute('aria-controls', body.id);
+    body.append(evaluationVersionLine(doc, report, language));
+    if (ruleItems(report).length) body.append(itemsSection(report, review, true));
+    panel.append(head, body);
+    disclosure(doc, toggle, body, `${report.id}:${report.version}:earlier`, disclosures, panel);
     return panel;
   }
   /** A saved submission checked again at its own point, read once per submission; null until
@@ -1033,6 +1163,7 @@ export function mountNativeFeedback(
       ? [...latest.querySelectorAll<HTMLDetailsElement>(':scope > details[data-response-id]')].at(-1)
       : undefined;
     if (!form) return;
+    form.dataset.intent = 'supplement';
     form.open = true;
     form.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' });
     form.querySelector('textarea')?.focus({ preventScroll: true });
@@ -1214,32 +1345,57 @@ export function mountNativeFeedback(
     // Do not rebuild the response editor while it holds focus. Its content is
     // retained in the per-report draft even when the shared client refreshes.
     if (!reports.contains(doc.activeElement)) {
-      const expandedModels = new Set(
-        [...reports.querySelectorAll<HTMLElement>('[data-model-advice-report]')]
-          .filter((node) => node.querySelector<HTMLDetailsElement>('[data-model-advice]')?.open)
-          .map((node) => node.dataset.modelAdviceReport),
-      );
       const expanded = new Set(
         [...reports.querySelectorAll<HTMLDetailsElement>('details[data-response-id][open]')].map(
           (n) => n.dataset.responseId,
         ),
       );
-      reports.replaceChildren(
-        ...[...state.reports]
-          .sort(
-            (a, b) =>
-              Number(b.subject.object_id === state.submission?.ref.object_id) -
-              Number(a.subject.object_id === state.submission?.ref.object_id),
-          )
-          .map(reportPanel),
+      const intents = new Map(
+        [...reports.querySelectorAll<HTMLDetailsElement>('details[data-response-id]')].map(
+          (n) => [n.dataset.responseId, n.dataset.intent],
+        ),
       );
+      const latest = state.submission?.ref;
+      // The latest delivery's feedback in full; earlier deliveries (and, once something is
+      // delivered, reviews made before) one line each.
+      const roleOf = (report: Report): 'latest' | 'earlier' =>
+        report.subject.kind === 'submission'
+          ? !latest ||
+            (report.subject.object_id === latest.object_id &&
+              report.subject.version === latest.version)
+            ? 'latest'
+            : 'earlier'
+          : latest
+            ? 'earlier'
+            : 'latest';
+      const ordered = [...state.reports].sort(
+        (a, b) => Number(roleOf(a) === 'earlier') - Number(roleOf(b) === 'earlier'),
+      );
+      const panels: Node[] = [];
+      const earlier = ordered.filter((report) => roleOf(report) === 'earlier');
+      for (const report of ordered) {
+        if (report === earlier[0])
+          panels.push(
+            el(
+              'h2',
+              feedbackCopy(
+                language,
+                earlier.some((r) => r.subject.kind === 'review')
+                  ? 'earlierDeliveriesAndReviews'
+                  : 'earlierDeliveries',
+              ),
+              'fb-earlier-title',
+            ),
+          );
+        panels.push(reportPanel(report, roleOf(report)));
+      }
+      reports.replaceChildren(...panels);
       for (const detail of reports.querySelectorAll<HTMLDetailsElement>(
         'details[data-response-id]',
-      ))
+      )) {
         detail.open = expanded.has(detail.dataset.responseId);
-      for (const node of reports.querySelectorAll<HTMLElement>('[data-model-advice-report]')) {
-        const detail = node.querySelector<HTMLDetailsElement>('[data-model-advice]');
-        if (detail) detail.open = expandedModels.has(node.dataset.modelAdviceReport);
+        const intent = intents.get(detail.dataset.responseId);
+        if (intent) detail.dataset.intent = intent;
       }
     }
     // Model references must reflect current permissions even while this report holds focus.
@@ -1252,13 +1408,8 @@ export function mountNativeFeedback(
         (ref) => adapter.openReference(ref),
         adviceFallback(report, state),
         nameOf,
+        { lens: lensOn() && !node.closest('.fb-earlier'), sessionId: report?.subject.session_id },
       );
-    }
-    for (const node of reports.querySelectorAll<HTMLElement>('[data-feedback-coverage]')) {
-      const report = state.reports.find((entry) => entry.id === node.dataset.feedbackCoverage);
-      node.textContent = report
-        ? feedbackCoverageText(report, feedbackSemanticPresentation(report, state).advice, language)
-        : '';
     }
     // Preserve the focused editor, but never preserve stale request permissions.
     for (const action of reports.querySelectorAll<HTMLButtonElement>(
@@ -1279,7 +1430,7 @@ export function mountNativeFeedback(
     const listed = [...(state.responses ?? []), ...unlisted];
     if (listed.length) {
       responseHistory.append(
-        el('h3', T('已记录的异议与补证', 'Recorded challenges and additional evidence')),
+        el('h3', T('已记下的看法与补充依据', 'Saved views and added evidence')),
       );
       for (const response of listed)
         responseHistory.append(
@@ -1288,6 +1439,27 @@ export function mountNativeFeedback(
         );
     }
     revisions.hidden = state.status !== 'submitted';
+    const round = state.submission
+      ? state.references?.deliveries?.[state.submission.ref.object_id]
+      : undefined;
+    revisionReason.placeholder = Number.isFinite(round)
+      ? T(
+          `这次要补什么、改什么？第 ${round} 次交付和它的反馈都会保留。`,
+          `What will you add or change? Delivery ${round} and its feedback stay on record.`,
+        )
+      : T(
+          '这次要补什么、改什么？这次交付和它的反馈都会保留。',
+          'What will you add or change? This delivery and its feedback stay on record.',
+        );
+    // The time beside the refresh control: when feedback last arrived or was read again here.
+    const shownReports = state.reports.map((r) => `${r.id}:${r.version}`).join('|');
+    if (shownReports !== readReports) {
+      readReports = shownReports;
+      readAt = Date.now();
+    }
+    updated.textContent = state.reports.length
+      ? feedbackCopy(language, 'updatedAt', { time: clockTime(readAt, language) })
+      : '';
     revise.disabled =
       state.busy || !!state.pending || !!state.awaitingFeedback || !state.submission;
     reports.hidden = !!state.error && !state.reports.length;
@@ -1356,4 +1528,75 @@ export function revisionStart(
     products: submission.products.map((ref) => ref.object_id),
     reason: reason.trim(),
   };
+}
+
+/** Hours and minutes of a moment, as the page's clock shows it. */
+function clockTime(at: number, language: FeedbackLanguage): string {
+  return new Date(at).toLocaleTimeString(language === 'en' ? 'en-GB' : 'zh-CN', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+/** The workbench's refresh glyph (art.js `refresh`), drawn as an element. */
+function refreshIcon(doc: Document): SVGSVGElement {
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = doc.createElementNS(ns, 'svg');
+  svg.setAttribute('class', 'i i-sm');
+  svg.setAttribute('viewBox', '0 0 24 24');
+  svg.setAttribute('aria-hidden', 'true');
+  for (const d of ['M19.5 12a7.5 7.5 0 1 1-2.2-5.3', 'M19.5 4.5v4.2h-4.2']) {
+    const path = doc.createElementNS(ns, 'path');
+    path.setAttribute('d', d);
+    svg.append(path);
+  }
+  return svg;
+}
+
+/** The stored empty default of the business response, in either language: nothing to show. */
+const EMPTY_BUSINESS = new Set([
+  '当前没有可核验的业务决定记录。',
+  'No verifiable business decision record is currently available.',
+]);
+function hasBusinessResponse(report: Report): boolean {
+  const text = report.business_response.trim();
+  return !!text && !EMPTY_BUSINESS.has(text);
+}
+
+type Snapshot = NonNullable<Report['verified_facts']>[number];
+const ACTIVITY: readonly [string, 'activityMaterial' | 'activityTest' | 'activityQuestion' | 'activityReply' | 'activityShown'][] = [
+  ['material_read', 'activityMaterial'],
+  ['test_run', 'activityTest'],
+  ['question_sent', 'activityQuestion'],
+  ['reply_received', 'activityReply'],
+  ['learner_displayed', 'activityShown'],
+];
+/** One line of counts from the verified facts: what was read, run and asked, and the cited
+ * sources, e.g. "读资料 9 次 · 测试 5 次 · 问同事 3 次 · 收到回复 3 条 · 引用资料 2 份（都是当时
+ * 有效版本）". Only verified records are counted; completeness stays in Details. */
+export function recordCounts(snapshot: Snapshot, language: FeedbackLanguage): string {
+  const parts: string[] = [];
+  for (const [kind, key] of ACTIVITY) {
+    const total = snapshot.activity_totals?.[kind];
+    const n = total?.verified_records ?? 0;
+    if (n > 0) parts.push(feedbackCount(language, key, n));
+  }
+  const n = snapshot.verified_source_count ?? 0;
+  if (n > 0) {
+    const checked = snapshot.references.filter((ref) => ref.verified_ref);
+    const expired = checked.filter((ref) => ref.valid_at_subject === false).length;
+    const current = checked.filter((ref) => ref.valid_at_subject === true).length;
+    parts.push(
+      expired
+        ? feedbackCopy(language, 'sourcesExpired', { n, expired })
+        : current >= n
+          ? feedbackCopy(
+              language,
+              n === 1 ? 'sourcesCurrentOne' : n === 2 ? 'sourcesCurrentTwo' : 'sourcesCurrent',
+              { n },
+            )
+          : feedbackCount(language, 'sources', n),
+    );
+  }
+  return parts.join(' · ');
 }

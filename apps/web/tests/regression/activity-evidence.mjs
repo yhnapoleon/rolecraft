@@ -57,9 +57,12 @@ export async function openEvidence(context) {
     await browser.ev(`(() => {
       window.scrollTo(0, 0);
       const button = document.querySelector(${selector});
-      // Cited evidence sits in folded detail; a person unfolds it first.
-      for (let node = button.parentElement; node; node = node.parentElement)
+      // Cited evidence sits in folded detail (a feedback row's basis, 195); a person unfolds it first.
+      for (let node = button.parentElement; node; node = node.parentElement) {
         if (node.tagName === 'DETAILS') node.open = true;
+        if (node.hidden && node.id)
+          document.querySelector('[aria-controls="' + node.id + '"][aria-expanded="false"]')?.click();
+      }
       button.scrollIntoView({ block: 'center' });
       button.focus();
       button.click();
@@ -103,7 +106,7 @@ export async function openEvidence(context) {
     // Refreshing the feedback rebuilds its sections while the reader is open: the evidence
     // button is replaced and its section folds again. Closing still returns focus to it.
     await browser.ev(`document.querySelector(${selector}).dataset.beforeRefresh = 'true'`);
-    await browser.clickText(text('查看最新反馈', 'Refresh feedback'), '.native-feedback button');
+    await browser.clickText(text('刷新', 'Refresh'), '.native-feedback button');
     await waitFor(
       browser,
       `!document.querySelector(${selector}).dataset.beforeRefresh &&

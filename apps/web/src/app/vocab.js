@@ -66,8 +66,18 @@ export const OPENER = (r) =>
     ),
   })[r];
 
-export const CASE = (id) =>
-  ({
+/** World text — the manager's words, what happened in the situation — is in the practice's work
+ * language, so switching the interface language never rewrites it (项目定义 2026-10-07: the work
+ * language decides the scenario's text; the interface language can change). `lang` is that work
+ * language; without one (no practice, or an old local one) the interface language is used. */
+export const say = (lang) => (zh, en) =>
+  lang === 'en' ? en : lang === 'zh' ? zh : T(zh, en);
+
+/** A situation's words. Inside a practice pass its work language; the home page and the
+ * situation lists leave it out and follow the interface language. */
+export const CASE = (id, lang) => {
+  const T = say(lang);
+  const cases = {
     pilot: {
       title: T('知识助手，准备好试点了吗？', 'Is the knowledge assistant ready for a pilot?'),
       quote: T(
@@ -104,7 +114,9 @@ export const CASE = (id) =>
       change: T('换一个领域：IT 服务台', 'Another domain: IT service desk'),
       minutes: T('20–30 分钟', '20–30 min'),
     },
-  })[id] || { title: id, quote: '', change: '', minutes: '' };
+  };
+  return cases[id] || { title: id, quote: '', change: '', minutes: '' };
+};
 
 export const SEEDS = {
   needs: {

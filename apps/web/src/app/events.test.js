@@ -111,6 +111,26 @@ describe('activity lines for server events', () => {
     expect([1, 2, 3, 5, 10, 11, 12].some((seq) => line(a, seq).world)).toBe(false);
   });
 
+  it('tells changes in the world in the work language, your own actions in the interface language', () => {
+    // An English practice seen in the Chinese interface (and the other way round).
+    const a = attempt();
+    const english = (seq) => eventLine(a, a.events.find((e) => e.seq === seq), 'en').text;
+    expect(english(7)).toBe('Grace approved: dev days 6');
+    expect(english(4)).toBe('Document updated: “费用管理通知：差旅住宿标准” v2');
+    expect(english(3)).toBe('试点设置已保存为配置 v2');
+    expect(english(5)).toBe('向 Grace 申请：开发人日 6');
+    const policy = server(20, 'policy_updated', {
+      material_versions: [{ material_id: 'policy', version: 2 }],
+    });
+    expect(eventLine(a, policy, 'en').text).toBe('Travel policy updated to v2');
+    expect(eventLine(a, policy).text).toBe('差旅政策更新为 v2');
+    setPreference('en');
+    expect(eventLine(a, policy, 'zh').text).toBe('差旅政策更新为 v2');
+    const chinese = (seq) => eventLine(a, a.events.find((e) => e.seq === seq), 'zh').text;
+    expect(chinese(7)).toBe('Grace 批准了申请：开发人日 6');
+    expect(chinese(3)).toBe('Pilot settings saved as config v2');
+  });
+
   it('falls back to a plain sentence when the test or document is no longer readable', () => {
     const a = { ...attempt(), tests: [], backend: { materials: [] } };
     expect(line(a, 2).text).toBe('运行了一次测试');

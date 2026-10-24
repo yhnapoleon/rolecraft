@@ -1,0 +1,584 @@
+/* Feedback item by item (195): one paper list per group, a row per criterion that opens its
+   basis in place. Green only for what holds up, grey dashed for what is not known yet, red /
+   amber / ink for unmet items by the results cover's rule. Space separates groups; fine lines
+   only inside a list. Motion: the chevron turns and an opened basis fades in once (160 ms),
+   nothing on a redraw, nothing with reduced motion. */
+.native-feedback .fb-report {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.native-feedback .fb-report > h2 {
+  margin: 0;
+  font: 600 17px / 1.3 var(--display);
+}
+.native-feedback .fb-items {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+}
+.native-feedback .fb-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  margin: -6px 0 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+/* A narrow screen wraps the counts without leaving one or two characters alone on a line. */
+.native-feedback .fb-meta__count {
+  text-wrap: pretty;
+}
+.native-feedback .fb-meta .chip {
+  height: 24px;
+  margin: 0 2px 0 0;
+  padding: 0 9px;
+  font-size: 12px;
+}
+.native-feedback .fb-range {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 6px;
+  margin: -8px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+/* The refresh control sits at the right of the list's heading line. */
+.native-feedback .fb-refresh {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 2px;
+  height: 30px;
+  margin: 0 0 -30px auto;
+  width: fit-content;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.native-feedback .fb-refresh .btn {
+  margin: 0;
+}
+.native-feedback .fb-info {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin: 0 0 0 -2px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    background var(--fast) ease,
+    color var(--fast) ease;
+}
+.native-feedback .fb-info[aria-expanded='true'] {
+  background: var(--fill);
+  color: var(--ink);
+}
+.native-feedback .fb-tip {
+  max-width: 62ch;
+  margin: -6px 0 0;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+/* "Checked against what you committed", and its basis. */
+.fb-scope {
+  display: grid;
+  gap: 6px;
+}
+.native-feedback .fb-scope__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+.native-feedback .fb-scope__toggle,
+.native-feedback .fb-na__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 4px;
+  border: 0;
+  border-radius: var(--r-xs);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  cursor: pointer;
+  transition: color var(--fast) ease;
+}
+.fb-scope__basis {
+  display: grid;
+  gap: 4px;
+  max-width: 72ch;
+  padding: 2px 0 2px 12px;
+  box-shadow: inset 2px 0 0 var(--line);
+}
+.native-feedback .fb-scope__basis p {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+/* Groups and their paper lists. */
+.fb-group {
+  display: grid;
+  gap: 8px;
+}
+.native-feedback .fb-group__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin: 4px 0 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.fb-group__title {
+  color: var(--ink);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.fb-group__note {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 400;
+}
+.native-feedback .fb-list {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-radius: var(--r-lg);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+/* A row brought into view by focus or an opened basis stays clear of the sticky toolbar. */
+.fb-item {
+  scroll-margin-top: 72px;
+}
+.fb-item + .fb-item {
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.fb-item__row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+.native-feedback .fb-item__row > .btn {
+  flex: none;
+  margin: 0 12px 0 0;
+}
+.native-feedback .fb-item__head {
+  display: grid;
+  flex: 1;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  min-width: 0;
+  margin: 0;
+  padding: 12px 14px;
+  border: 0;
+  border-radius: var(--r-lg);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--fast) ease;
+}
+.native-feedback .fb-item__head:focus-visible,
+.native-feedback .fb-earlier__toggle:focus-visible {
+  outline-offset: -2px;
+  border-radius: var(--r-lg);
+}
+@media (hover: hover) and (pointer: fine) {
+  .native-feedback .fb-item__head:hover,
+  .native-feedback .fb-earlier__toggle:hover {
+    background: var(--fill);
+  }
+  .native-feedback .fb-scope__toggle:hover,
+  .native-feedback .fb-na__toggle:hover {
+    color: var(--ink);
+  }
+  .native-feedback .fb-info:hover {
+    background: var(--fill);
+    color: var(--ink);
+  }
+}
+.native-feedback .fb-item__head:active,
+.native-feedback .fb-earlier__toggle:active {
+  background: var(--fill-2);
+}
+.fb-item__words {
+  display: grid;
+  gap: 1px;
+  min-width: 0;
+}
+.fb-item__name {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+}
+[data-mark='unknown'] .fb-item__name,
+[data-mark='na'] .fb-item__name {
+  color: var(--ink-2);
+}
+.fb-item__line {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.fb-item__line[data-tone='bad'] {
+  color: var(--bad);
+}
+.fb-chev {
+  align-self: center;
+  color: var(--ink-4);
+  font-size: 16px;
+  line-height: 1;
+  transition: transform var(--fast) var(--ease);
+}
+[data-open='true'] > .fb-item__row .fb-chev,
+[data-open='true'] > .fb-scope__line .fb-chev,
+[data-open='true'] > .fb-na__toggle .fb-chev,
+[data-open='true'] > .fb-earlier__head .fb-chev {
+  transform: rotate(90deg);
+}
+
+/* The marks, by the results cover's rule. */
+.fb-mark {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-top: 1px;
+  border-radius: 50%;
+  font-size: 11.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+[data-mark='met'] .fb-mark {
+  background: var(--good-tint);
+  color: var(--good);
+}
+[data-mark='unknown'] .fb-mark,
+.fb-honest .fb-mark {
+  border: 1px dashed var(--ink-4);
+  color: var(--ink-3);
+  font-weight: 600;
+}
+[data-mark='na'] .fb-mark {
+  color: var(--ink-4);
+}
+[data-mark='unmet'] .fb-mark {
+  background: var(--fill-2);
+  color: var(--ink);
+}
+[data-mark='unmet'][data-tone='bad'] .fb-mark {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+[data-mark='unmet'][data-tone='warn'] .fb-mark {
+  background: var(--warn-tint);
+  color: var(--warn);
+}
+
+/* The basis of one row. */
+.fb-basis {
+  display: grid;
+  gap: 12px;
+  padding: 0 18px 16px 44px;
+}
+.fb-basis__block {
+  display: grid;
+  gap: 3px;
+  max-width: 72ch;
+}
+.native-feedback .fb-basis__label {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+:lang(en) .fb-basis__label {
+  letter-spacing: 0.02em;
+}
+.native-feedback .fb-basis__text {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.native-feedback .fb-basis__note,
+.native-feedback .fb-basis .fb-weight {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.fb-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.native-feedback .fb-sources .chip {
+  margin: 0;
+}
+.native-feedback .fb-sources blockquote {
+  flex-basis: 100%;
+  margin: 2px 0 4px;
+  font: 400 14px / 1.6 var(--serif);
+}
+.fb-basis__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.native-feedback .fb-basis__actions .btn {
+  margin: 0;
+}
+/* A response form opened from its two buttons; its own summary is not a second control. */
+.native-feedback details.fb-respond > summary {
+  display: none;
+}
+.native-feedback details.fb-respond[open] {
+  display: grid;
+  gap: 6px;
+  max-width: 72ch;
+}
+.native-feedback details.fb-respond .btn {
+  margin: 0 6px 0 0;
+}
+
+/* The records behind the feedback, the one honest line, earlier deliveries. */
+.native-feedback .fb-records {
+  display: grid;
+  gap: 8px;
+  margin: 4px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.native-feedback .fb-records__top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.fb-records__title {
+  color: var(--ink);
+  font-weight: 600;
+}
+.fb-records__counts {
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+}
+.fb-records__details {
+  display: grid;
+  gap: 6px;
+  max-width: 72ch;
+}
+.native-feedback .fb-records__details p {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.native-feedback .fb-records .business-decisions {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.native-feedback .fb-honest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 6px 10px;
+  margin: 2px 0 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.fb-honest__text {
+  flex: 1 1 260px;
+  min-width: 0;
+  padding-top: 1px;
+}
+.native-feedback .fb-honest > .btn.quiet {
+  margin: -5px 0 0;
+}
+.native-feedback .fb-records .fb-scope__toggle {
+  margin-left: -4px;
+}
+.native-feedback .fb-earlier-title {
+  margin: 18px 0 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+.native-feedback .fb-earlier {
+  margin: 8px 0 0;
+  border-radius: var(--r-md);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.native-feedback .fb-earlier__head {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0 0 0 12px;
+  font: inherit;
+}
+.native-feedback .fb-earlier__head .chip {
+  flex: none;
+  margin: 0;
+}
+.native-feedback .fb-earlier__toggle {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+  padding: 8px 14px 8px 6px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink-2);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: start;
+  cursor: pointer;
+  transition: background var(--fast) ease;
+}
+.fb-earlier__summary {
+  flex: 1;
+  min-width: 0;
+}
+.fb-earlier__body {
+  display: grid;
+  gap: 12px;
+  padding: 4px 14px 16px;
+}
+/* Inside an earlier delivery's sheet its lists are part of the same paper. */
+.native-feedback .fb-earlier .fb-list {
+  border-radius: var(--r-md);
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+/* Quiet disclosures of the feedback surface (getting a review, the list of deliveries). */
+.native-feedback summary.fb-disclosure {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  width: fit-content;
+  padding: 2px 4px;
+  border-radius: var(--r-xs);
+  color: var(--ink-2);
+  font-size: 13px;
+  list-style: none;
+  cursor: pointer;
+  transition: color var(--fast) ease;
+}
+.native-feedback summary.fb-disclosure::-webkit-details-marker {
+  display: none;
+}
+.native-feedback summary.fb-disclosure::after {
+  content: '›';
+  color: var(--ink-4);
+  font-size: 16px;
+  line-height: 1;
+  transition: transform var(--fast) var(--ease);
+}
+.native-feedback details[open] > summary.fb-disclosure::after {
+  transform: rotate(90deg);
+}
+@media (hover: hover) and (pointer: fine) {
+  .native-feedback summary.fb-disclosure:hover {
+    color: var(--ink);
+  }
+}
+
+/* Opening plays once; a redraw shows the basis at rest. */
+[data-opening] > .fb-basis,
+.fb-tip[data-opening],
+.fb-scope__basis[data-opening],
+.fb-earlier__body[data-opening],
+.fb-list[data-opening] {
+  animation: fb-open var(--fast) var(--ease) both;
+}
+@keyframes fb-open {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@media (max-width: 720px) {
+  .fb-basis {
+    padding-left: 16px;
+  }
+  .native-feedback .fb-earlier__head {
+    flex-wrap: wrap;
+    padding: 8px 0 0 12px;
+  }
+  .native-feedback .fb-earlier__toggle {
+    flex-basis: 100%;
+    padding-left: 12px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-opening] > .fb-basis,
+  .fb-tip[data-opening],
+  .fb-scope__basis[data-opening],
+  .fb-earlier__body[data-opening],
+  .fb-list[data-opening] {
+    animation: none;
+  }
+  .fb-chev,
+  .native-feedback summary.fb-disclosure::after,
+  .native-feedback .fb-item__head,
+  .native-feedback .fb-earlier__toggle,
+  .native-feedback .fb-info {
+    transition: none;
+  }
+}

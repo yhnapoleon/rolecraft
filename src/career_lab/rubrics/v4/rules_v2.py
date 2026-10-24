@@ -293,10 +293,10 @@ def run_rules_v2(item, *, work_language="zh"):
         if kind == "staleness_test":
             return result(
                 "MET" if fresh else "PARTIAL",
-                "已核对更新后最新相关动态测试的实际使用版本："
-                + ("当前有效。" if fresh else "仍有过期版本。"),
-                "The latest relevant dynamic test after the update used "
-                + ("current versions." if fresh else "at least one stale version."),
+                "政策更新后最近一次复测，"
+                + ("用的是当前有效版本。" if fresh else "仍用了过期版本。"),
+                "Your latest retest after the policy update used "
+                + ("the current versions." if fresh else "at least one out-of-date version."),
                 (*names, "affected_material_versions"),
                 extra=extra,
             )
@@ -311,9 +311,9 @@ def run_rules_v2(item, *, work_language="zh"):
         passed = fresh and record["id"] in facts["passing_dynamic_test_ids"]
         return result(
             "MET" if passed else "PARTIAL",
-            "实际调整与最新相关复测已核对：" + ("复测通过。" if passed else "尚未通过。"),
-            "Actual adjustment and the latest relevant retest are verified: "
-            + ("passed." if passed else "not yet passed."),
+            "已实际调整，最近一次复测" + ("通过。" if passed else "尚未通过。"),
+            "You adjusted the setup, and the latest retest "
+            + ("passed." if passed else "has not passed yet."),
             (
                 *names,
                 "affected_material_versions",
@@ -433,11 +433,24 @@ def change_observations(item, *, work_language="zh"):
             and t["record"]["config"]["effective"]["config_version"] == ctx["config_version"]
         ]
         failed = sum(t["record"]["status"] == "failed" for t in tests)
-        text = (
-            f"Relevant dynamic retests after the change on this configuration: {len(tests)}; technical failures: {failed}. Running does not prove success."
-            if en
-            else f"政策更新后当前配置的相关动态复测：{len(tests)} 次，其中技术失败 {failed} 次；运行不代表通过。"
-        )
+        runs = len(tests)
+        if en:
+            text = (
+                (
+                    f"{runs} retest{'' if runs == 1 else 's'} on this configuration "
+                    + "after the change, "
+                    + ("none failed to run." if failed == 0 else f"{failed} failed to run.")
+                    + " A run alone doesn’t show the answers were right."
+                )
+                if runs
+                else "No retest on this configuration after the change."
+            )
+        else:
+            text = (
+                f"变化后在这套配置上复测 {runs} 次，{failed} 次运行失败。跑过不等于答对。"
+                if runs
+                else "变化后没有在这套配置上复测。"
+            )
         add(
             text,
             (
@@ -459,12 +472,11 @@ def change_observations(item, *, work_language="zh"):
         ):
             add(
                 (
-                    "Actual relevant configuration/refresh/retest actions after the change: "
-                    if en
-                    else "变更后实际相关配置调整／刷新／复测动作："
+                    f"{count} setting, refresh or retest action{'' if count == 1 else 's'} after "
+                    "the change (this counts actions, not their quality)."
                 )
-                + str(count)
-                + (" (does not prove quality)." if en else " 次；次数不证明调整质量。"),
+                if en
+                else f"变化后的设置、刷新或复测共 {count} 次（只计次数，不评质量）。",
                 ("policy_change_seq", "adjustment_action_count", "adjustment_log_complete"),
             )
     return tuple(out)

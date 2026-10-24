@@ -95,7 +95,7 @@ async function openFeedback(browser, t) {
       await browser.clickText(again, 'button');
     } else
       await browser
-        .clickText(t('查看最新反馈', 'Refresh feedback'), 'button')
+        .clickText(t('刷新', 'Refresh'), 'button')
         .catch(() => undefined);
   }
   await delay(500);

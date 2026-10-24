@@ -114,10 +114,12 @@ def suggestions(auth, feedback_ref, feedback, catalog, *, work_language):
         "can_decline": True,
         "can_choose_other": True,
         "learning_gain": "not_established",
+        # Shown behind the practice rail's ⓘ; the rail's buttons already offer the choices.
         "note": (
-            "You may decline, choose another reviewed scenario, or continue revising. Any new feedback must use the new actions and evidence; no learning gain is assumed."
+            "New feedback looks only at what you do in the new situation; "
+            "no learning gain is assumed."
             if english
-            else "可以拒绝、自选其他已审核情境，或继续原修订。下一轮反馈只依据新行动和证据，不预先认定已有学习收益。"
+            else "新反馈只看你在新情境里做的事，不预先认定学习收益。"
         ),
     }
     return {**data, "suggestion_hash": C.digest(data)}

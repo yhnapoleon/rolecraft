@@ -360,7 +360,7 @@ it('offers passages, test runs and work with the current choice and summarises i
   const button = f.form.all().find((node) => node.textContent === '选择依据');
   if (!button) throw Error('Expected the evidence control');
   const summary = () => f.form.all().find((node) => node.textContent.startsWith('已选依据'));
-  expect(f.form.all().some((node) => node.textContent === '还没有选择依据')).toBe(true);
+  expect(f.form.all().some((node) => node.textContent === '还没选依据')).toBe(true);
   button.dispatchEvent(new Event('click'));
   await settle();
   expect(summary()?.textContent).toBe('已选依据：1 次测试 · 1 份作品');

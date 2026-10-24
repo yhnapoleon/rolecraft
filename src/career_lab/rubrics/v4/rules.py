@@ -3,6 +3,12 @@ from career_lab.contracts.v2.core import EvidenceRefV2, ProtocolError
 from career_lab.contracts.v2.evaluation import FeedbackItem, RuleBound
 
 
+def _say(work_language, zh, en, **values):
+    """A rule finding written here in both languages (the shared catalog keeps older wording)."""
+    validate_language(work_language)
+    return (en if work_language == "en" else zh).format(**values)
+
+
 def pending(item, reason):
     return FeedbackItem(
         criterion=item.criterion,
@@ -83,8 +89,12 @@ def _run_rules(item, *, work_language="zh"):
             )
         return verified(
             "MET" if 0 < v[0] <= v[1] else "NOT_MET",
-            message(
-                work_language, "按评价时点核对：固定配置人数{p0}，有效容量{p1}。", p0=v[0], p1=v[1]
+            _say(
+                work_language,
+                "固定配置开放 {p0} 人，当时容量 {p1}。",
+                "{p0} participants on the fixed configuration; capacity was {p1} at the time.",
+                p0=v[0],
+                p1=v[1],
             ),
             names,
         )
@@ -98,9 +108,10 @@ def _run_rules(item, *, work_language="zh"):
         okay = v[0] <= v[1] and 0 < v[2] <= v[3]
         return verified(
             "MET" if okay else "NOT_MET",
-            message(
+            _say(
                 work_language,
-                "当时所需/可用人日为{p0}/{p1}，承诺日/有效期限为{p2}/{p3}。",
+                "需要 {p0} 人日，可用 {p1} 人日；第 {p2} 天上线，期限第 {p3} 天。",
+                "Needs {p0} person-days, {p1} available; launch on day {p2}, deadline day {p3}.",
                 p0=v[0],
                 p1=v[1],
                 p2=v[2],

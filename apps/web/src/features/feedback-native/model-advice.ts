@@ -3,6 +3,8 @@ import type { ObjectRef } from '../workspace/contract-types';
 import type { FeedbackLanguage } from './localization';
 import { adviceCopy, type ModelAdviceCopyKey } from './model-advice-copy';
 import { modelWaitNode } from '../../app/model-status';
+import { noteAboutFact } from '../../app/about-facts';
+import { renderMeter, sureMeter } from '../recognition-native/signals';
 
 type Status = 'completed' | 'failed' | 'unavailable' | 'synthetic_mechanism_only';
 type Relation = 'SUPPORTED' | 'CONTRADICTED' | 'INSUFFICIENT';
@@ -432,7 +434,11 @@ export function registeredAdviceSummary(
 }
 
 const TOO_LONG = 'unit_exceeds_encoder_limit';
-/** Non-zero sentence counts in a fixed order, e.g. "By sentence: supported 3 · contradicted 1". */
+/** A counted phrase; English says "1 contradicts" but "2 contradict". */
+const counted = (language: FeedbackLanguage, key: ModelAdviceCopyKey, n: number) =>
+  adviceCopy(language, (n === 1 ? `${key}One` : key) as ModelAdviceCopyKey, { n });
+/** Non-zero sentence counts in a fixed order, in plain words (197 n4), e.g.
+ * "1 句与材料矛盾 · 9 句太长，模型没有核查". */
 export function adviceCountsText(entry: RegisteredAdvice, language: FeedbackLanguage) {
   if (!entry.units || !entry.aggregation) return undefined;
   const { counts } = entry.aggregation;
@@ -449,16 +455,49 @@ export function adviceCountsText(entry: RegisteredAdvice, language: FeedbackLang
     ['countShort', counts.skipped_short],
     ['countOverBudget', counts.over_budget],
   ];
-  const shown = parts.filter(([, n]) => n > 0).map(([key, n]) => adviceCopy(language, key, { n }));
-  return shown.length
-    ? adviceCopy(language, 'countsLead') + shown.join(adviceCopy(language, 'countSeparator'))
-    : undefined;
+  const shown = parts.filter(([, n]) => n > 0).map(([key, n]) => counted(language, key, n));
+  return shown.length ? shown.join(adviceCopy(language, 'countSeparator')) : undefined;
 }
 /** A result is shown only when it was produced; failures and abstentions are never adopted. */
 const shownResult = (entry: RegisteredAdvice) =>
   (entry.status === 'completed' || entry.status === 'synthetic_mechanism_only') && entry.label
     ? entry.label
     : null;
+
+/** The R2.support row's one line while it is closed: what the model said, never scored; red
+ * only for a contradiction; "模型建议" with the grey mark while it waits for a model. Undefined
+ * when there is no advice to speak of (the row then asks its question). */
+export function adviceRowLine(
+  advice: RegisteredAdvice[] | undefined,
+  language: FeedbackLanguage,
+  fallback: AdviceFallback,
+):
+  | { text: string; tone: 'bad' | 'ink'; waiting?: true; kind?: 'abstained' | 'advised' }
+  | undefined {
+  const key = titleKey(advice, fallback);
+  // Waiting for a model: "模型建议" with the grey mark (frontend-style 3.6).
+  if (key === 'titleWaiting') return { text: adviceCopy(language, key), tone: 'ink', waiting: true };
+  if (!advice?.length && key === 'titleUnavailable') return undefined;
+  const C = (k: ModelAdviceCopyKey, values?: Record<string, string | number>) =>
+    adviceCopy(language, k, values);
+  // `kind` tells the basis what was found: the model judged no sentence, or it advised.
+  if (key === 'titleAbstained')
+    return { text: C('rowAdvice', { what: C('rowAbstained') }), tone: 'ink', kind: 'abstained' };
+  if (key !== 'titleCompleted') return { text: C(key), tone: 'ink' };
+  const lead = advice?.find((entry) => entry.units) ?? advice?.find((entry) => shownResult(entry));
+  const result = lead && shownResult(lead);
+  if (result === 'CONTRADICTED') {
+    const n = lead?.units?.filter((unit) => unit.label === 'CONTRADICTED').length || 1;
+    return {
+      text: C('rowAdvice', { what: counted(language, 'countContradicted', n) }),
+      tone: 'bad',
+      kind: 'advised',
+    };
+  }
+  if (result === 'SUPPORTED')
+    return { text: C('rowAdvice', { what: C('rowSupported') }), tone: 'ink', kind: 'advised' };
+  return { text: C('rowAdvice', { what: C('rowInsufficient') }), tone: 'ink', kind: 'advised' };
+}
 
 function failureKey(code: string | null): ModelAdviceCopyKey {
   switch (code) {
@@ -487,12 +526,6 @@ function failureKey(code: string | null): ModelAdviceCopyKey {
     default:
       return 'failDefault';
   }
-}
-function abstainKey(code: string | null): ModelAdviceCopyKey {
-  if (code === 'empty_claim') return 'reasonEmptyClaim';
-  if (code === 'encoder_input_truncated') return 'reasonTruncated';
-  if (code === 'no_candidate_evidence') return 'reasonNoCandidate';
-  return 'reasonOther';
 }
 const KINDS: Record<string, ModelAdviceCopyKey> = {
   linear: 'kindLinear',
@@ -574,8 +607,13 @@ function identityLines(identity: ModelRegistration, language: FeedbackLanguage):
   return lines;
 }
 
-/** Folded block: state, mechanism notice, work-level conclusion and sentence counts; expanded:
- * identity, the sentences with their own results and evidence, and any failure. */
+const RELATION_ORDER: Record<Relation, number> = { CONTRADICTED: 0, INSUFFICIENT: 1, SUPPORTED: 2 };
+
+/** The advice block inside the R2.support row's basis (195, 2026-10-24): a heading line with the
+ * state, the counts in plain words and the work-level conclusion; then only the sentences the
+ * model labelled, contradictions first (too long and unjudged ones are counted, not listed); one
+ * provenance line. Model identity goes to "⋯ → About this workspace"; it stays here as a hidden
+ * record. Confidence is never a number: with the lens open it is the lens's short bar. */
 export function updateRegisteredAdvice(
   container: HTMLElement,
   advice: RegisteredAdvice[] | undefined,
@@ -584,6 +622,7 @@ export function updateRegisteredAdvice(
   fallback: AdviceFallback,
   /** The cited object's name and version, with a screen-reader label, when the host knows it. */
   nameOf?: (ref: ObjectRef) => { text: string; label: string },
+  options: { lens?: boolean; sessionId?: string } = {},
 ): void {
   const doc = container.ownerDocument;
   const C = (key: ModelAdviceCopyKey, values?: Record<string, string | number>) =>
@@ -598,16 +637,24 @@ export function updateRegisteredAdvice(
     node.setAttribute(mark, '');
     return node;
   };
-  let details = container.querySelector<HTMLDetailsElement>('details[data-model-advice]');
-  if (!details) {
-    details = element('details', '');
-    details.dataset.modelAdvice = 'true';
-    details.append(element('summary', ''), element('div', ''));
-    container.replaceChildren(details);
+  let block = container.querySelector<HTMLElement>('[data-model-advice]');
+  if (!block) {
+    block = element('div', '');
+    block.dataset.modelAdvice = 'true';
+    block.className = 'model-advice';
+    block.tabIndex = -1;
+    const head = element('div', '');
+    head.className = 'model-advice__head';
+    head.setAttribute('data-model-advice-head', '');
+    const body = element('div', '');
+    body.className = 'model-advice__body';
+    body.setAttribute('data-model-advice-body', '');
+    block.append(head, body);
+    container.replaceChildren(block);
   }
-  const summary = details.querySelector('summary');
-  const body = details.querySelector('div');
-  if (!summary || !body) throw Error('Invalid model advice view');
+  const head = block.querySelector<HTMLElement>('[data-model-advice-head]');
+  const body = block.querySelector<HTMLElement>('[data-model-advice-body]');
+  if (!head || !body) throw Error('Invalid model advice view');
   const focused = body.contains(doc.activeElement);
   const focusKey =
     doc.activeElement instanceof HTMLElement
@@ -625,12 +672,12 @@ export function updateRegisteredAdvice(
     headline.push(marked('span', C('syntheticNotice'), 'data-model-advice-notice'));
   // 2026-10-12 decision 5: sentences first; the work-level conclusion follows, quieter.
   const lead = advice?.find((entry) => entry.units);
-  const counted = lead && adviceCountsText(lead, language);
-  if (counted) headline.push(marked('span', counted, 'data-model-advice-counts'));
+  const counts = lead && adviceCountsText(lead, language);
+  if (counts) headline.push(marked('span', counts, 'data-model-advice-counts'));
   const conclusion = lead && shownResult(lead);
   if (conclusion)
     headline.push(marked('span', C(`conclusion${conclusion}`), 'data-model-advice-conclusion'));
-  summary.replaceChildren(...headline);
+  head.replaceChildren(...headline);
   const reference = (source: ObjectRef, key: string) => {
     const kind = REFERENCE_KINDS[source.kind];
     const name = nameOf?.(source);
@@ -641,7 +688,7 @@ export function updateRegisteredAdvice(
     );
     if (name) button.setAttribute('aria-label', name.label);
     button.type = 'button';
-    button.className = 'btn small';
+    button.className = 'chip';
     button.dataset.modelReference = JSON.stringify(source);
     button.dataset.modelReferenceKey = key + JSON.stringify(source);
     button.addEventListener('click', () => openReference(source));
@@ -653,63 +700,75 @@ export function updateRegisteredAdvice(
     section.dataset.modelAdviceEntry = String(position);
     const result = shownResult(entry);
     const adopted = entry.status === 'completed' || entry.status === 'synthetic_mechanism_only';
-    // Why nothing was adopted comes first; the sentences follow; identity closes the entry.
+    // Why nothing was adopted comes first; the labelled sentences follow.
+    // When every sentence went unjudged, the count line above already says why.
+    const counted = entry.error_code === 'all_units_abstained' && !!adviceCountsText(entry, language);
     if (entry.error_code && entry.error_code !== 'synthetic_mechanism_only') {
-      section.append(element('p', C(failureKey(entry.error_code))));
+      if (!counted) section.append(element('p', C(failureKey(entry.error_code))));
       if (!result) section.append(element('p', C('notAdopted')));
     }
     if (entry.units) {
-      const list = element('ol', '');
-      list.setAttribute('data-model-units', '');
-      for (const unit of entry.units) {
-        const item = element('li', '');
-        item.dataset.modelUnit = String(unit.index);
-        item.dataset.unitStatus = unit.status;
-        // A reason already given for the whole work is not repeated on every sentence.
-        const outcome =
-          adopted && unit.label
-            ? C(`label${unit.label}`)
-            : unit.status === 'abstained'
-              ? unit.reason_code === TOO_LONG
-                ? C('unitTooLong')
-                : C('unitAbstained', { reason: C(abstainKey(unit.reason_code)) })
-              : unit.reason_code === entry.error_code
-                ? C('unitNotJudged')
-                : C('unitFailed', { reason: C(failureKey(unit.reason_code)) });
-        const line = element('div', '');
-        line.setAttribute('data-unit-line', '');
-        line.append(marked('span', outcome, 'data-unit-result'));
-        if (adopted && unit.label && typeof unit.confidence === 'number')
-          line.append(marked('span', ` ${unit.confidence.toFixed(2)}`, 'data-unit-confidence'));
-        if (adopted)
-          for (const [index, source] of unit.citations.entries())
+      const labelled = adopted
+        ? entry.units
+            .filter((unit) => unit.label !== null)
+            .sort(
+              (a, b) =>
+                RELATION_ORDER[a.label as Relation] - RELATION_ORDER[b.label as Relation] ||
+                a.index - b.index,
+            )
+        : [];
+      if (labelled.length) {
+        const list = element('ol', '');
+        list.setAttribute('data-model-units', '');
+        for (const unit of labelled) {
+          const item = element('li', '');
+          item.dataset.modelUnit = String(unit.index);
+          item.dataset.unitStatus = unit.status;
+          item.dataset.unitLabel = unit.label ?? '';
+          const line = element('div', '');
+          line.setAttribute('data-unit-line', '');
+          const tag = marked('span', C(`label${unit.label as Relation}`), 'data-unit-result');
+          tag.dataset.tone = unit.label ?? '';
+          line.append(tag);
+          // The lens shows how sure the model was as its short bar; never a decimal.
+          if (options.lens && typeof unit.confidence === 'number')
+            line.append(renderMeter(doc, sureMeter(unit.confidence, language)));
+          // The same object cited twice (two passages of one document) is one source here.
+          const cited = new Set<string>();
+          for (const [index, source] of unit.citations.entries()) {
+            const same = JSON.stringify([source.kind, source.object_id, source.version, source.config_version ?? null]);
+            if (cited.has(same)) continue;
+            cited.add(same);
             line.append(reference(source, `${position}:${unit.index}:${index}:`));
-        item.append(element('blockquote', excerpt(unit.quote)), line);
-        list.append(item);
+          }
+          item.append(element('blockquote', excerpt(unit.quote)), line);
+          list.append(item);
+        }
+        section.append(list);
       }
-      const notes = [C('unitsPolicy')];
-      if (entry.units.some((unit) => unit.status === 'abstained' && unit.reason_code === TOO_LONG))
-        notes.push(C('unitsTooLong'));
-      const counts = entry.aggregation?.counts;
-      if (counts?.skipped_short) notes.push(C('unitsShort', { n: counts.skipped_short }));
-      if (counts?.over_budget) notes.push(C('unitsOverBudget', { n: counts.over_budget }));
       const note = element('div', '');
       note.setAttribute('data-model-units-note', '');
-      note.append(...notes.map((text) => element('p', text)));
-      section.append(list, note);
+      note.append(element('p', C('unitsPolicy')));
+      section.append(note);
     } else {
       if (result) section.append(element('p', C('relation', { label: C(`label${result}`) })));
       for (const [index, source] of entry.citations.entries())
         section.append(reference(source, `${position}:work:${index}:`));
     }
     if (entry.registration) {
+      if (entry.registration.scope === 'external_candidate')
+        section.append(marked('p', C('externalNotice'), 'data-model-advice-provenance'));
+      // Identity is a workbench internal: kept here as a hidden record, read in About.
       const identity = element('div', '');
       identity.setAttribute('data-model-identity', '');
-      for (const text of identityLines(entry.registration, language))
-        identity.append(element('p', text));
-      if (entry.registration.scope === 'external_candidate')
-        identity.append(element('p', C('externalNotice')));
+      identity.hidden = true;
+      const lines = identityLines(entry.registration, language);
+      for (const text of lines) identity.append(element('p', text));
       section.append(identity);
+      noteAboutFact(options.sessionId, `relation-model:${position}`, {
+        label: C('aboutRelationModel'),
+        value: lines.join(C('countSeparator')),
+      });
     }
     rows.push(section);
   }
@@ -720,7 +779,7 @@ export function updateRegisteredAdvice(
     const target = [
       ...body.querySelectorAll<HTMLButtonElement>('button[data-model-reference]'),
     ].find((button) => button.dataset.modelReferenceKey === focusKey);
-    (target ?? summary).focus();
+    (target ?? block).focus();
   }
 }
 
@@ -754,32 +813,62 @@ export function evaluationModelText(
   if (support) parts.push(adviceCopy(language, 'supportModel', { name: support }));
   return parts.join(adviceCopy(language, 'countSeparator'));
 }
+/** The evaluation model as a value for "⋯ → About this workspace". */
+export function evaluationModelValue(
+  provenance: RecordedProvenance | undefined,
+  language: FeedbackLanguage,
+): string {
+  const judge = recordedName(provenance);
+  const parts = [
+    judge === null
+      ? adviceCopy(language, 'valueNotConnected')
+      : judge === undefined
+        ? adviceCopy(language, 'valueNotRecorded')
+        : judge,
+  ];
+  const support = row(provenance) ? recordedName(provenance.support_model) : undefined;
+  if (support) parts.push(adviceCopy(language, 'supportModel', { name: support }));
+  return parts.join(adviceCopy(language, 'countSeparator'));
+}
+/** The recorded evaluation model: a workbench internal, kept with the report as a hidden record
+ * and noted for "⋯ → About this workspace" (195, 2026-10-24). */
 export function evaluationModelLine(
   doc: Document,
   provenance: RecordedProvenance | undefined,
   language: FeedbackLanguage,
+  sessionId?: string,
 ): HTMLElement {
   const line = doc.createElement('p');
   line.className = 'muted';
   line.dataset.evaluationModel = '';
   line.textContent = evaluationModelText(provenance, language);
+  line.hidden = true;
+  noteAboutFact(sessionId, 'evaluation-model', {
+    label: adviceCopy(language, 'aboutEvaluationModel'),
+    value: evaluationModelValue(provenance, language),
+  });
   return line;
 }
 
 /** Layout of the advice block; colours come from the workbench tokens, so dark mode follows. */
 export const MODEL_ADVICE_STYLE =
-  '.native-feedback [data-model-advice]>summary{cursor:pointer}' +
-  '.native-feedback [data-model-advice-title]{font-weight:600}' +
-  '.native-feedback [data-model-advice-notice],.native-feedback [data-model-advice-conclusion],.native-feedback [data-model-advice-counts]{display:block;margin-top:2px;padding-inline-start:1.1em;font-size:13.5px;line-height:1.5}' +
-  '.native-feedback [data-model-advice-notice]{color:var(--ink-2,#4b505b)}' +
-  '.native-feedback [data-model-advice-conclusion]{color:var(--ink-3,#7b818d)}' +
-  '.native-feedback [data-model-units]{list-style:decimal;margin:10px 0;padding-inline-start:1.6em}' +
-  '.native-feedback [data-model-unit]{margin-block:12px}' +
-  '.native-feedback [data-model-unit]::marker{color:var(--ink-3)}' +
-  '.native-feedback [data-model-unit] blockquote{margin:0;padding:0 0 0 10px}' +
-  '.native-feedback [data-unit-line]{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:6px}' +
-  '.native-feedback [data-unit-result]{font-size:13.5px;font-weight:600;margin-inline-end:4px}' +
-  '.native-feedback [data-model-advice] .btn.small{min-height:28px;margin:0}' +
-  '.native-feedback [data-model-units-note],.native-feedback [data-model-identity]{color:var(--ink-3);font-size:12.5px;line-height:1.5}' +
-  '.native-feedback [data-model-identity]{margin-top:10px}' +
-  '.native-feedback [data-model-identity] p,.native-feedback [data-model-units-note] p{margin:0;line-height:1.5}';
+  '.native-feedback .model-advice{display:grid;gap:8px;padding:12px 14px;border-radius:var(--r-md);background:var(--fill)}' +
+  '.native-feedback .model-advice:focus{outline:none}' +
+  '.native-feedback [data-model-advice-head]{display:grid;gap:2px}' +
+  '.native-feedback [data-model-advice-title]{color:var(--ink-2);font-size:12px;font-weight:600}' +
+  '.native-feedback [data-model-advice-notice],.native-feedback [data-model-advice-conclusion],.native-feedback [data-model-advice-counts]{font-size:13px;line-height:1.5}' +
+  '.native-feedback [data-model-advice-counts]{color:var(--ink-2)}' +
+  '.native-feedback [data-model-advice-notice]{color:var(--ink-2)}' +
+  '.native-feedback [data-model-advice-conclusion]{color:var(--ink-3)}' +
+  '.native-feedback [data-model-advice-body]{display:grid;gap:8px}' +
+  '.native-feedback [data-model-advice-body] section{display:grid;gap:6px;margin:0}' +
+  '.native-feedback [data-model-advice-body] p{margin:0;color:var(--ink-2);font-size:13px;line-height:1.5}' +
+  '.native-feedback [data-model-units]{list-style:none;display:grid;gap:10px;margin:2px 0;padding:0}' +
+  '.native-feedback [data-model-unit] blockquote{margin:0;padding:0;border:0;color:var(--ink);font:400 14.5px/1.6 var(--serif)}' +
+  '.native-feedback [data-unit-line]{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;margin-top:4px}' +
+  '.native-feedback [data-unit-result]{display:inline-flex;align-items:center;min-height:20px;padding:1px 8px;border-radius:var(--r-pill);background:var(--fill-2);color:var(--ink-2);font-size:11.5px;font-weight:600;white-space:nowrap}' +
+  '.native-feedback [data-unit-result][data-tone="CONTRADICTED"]{background:var(--bad-tint);color:var(--bad)}' +
+  '.native-feedback [data-unit-result][data-tone="SUPPORTED"]{background:var(--good-tint);color:var(--good)}' +
+  '.native-feedback [data-unit-result][data-tone="INSUFFICIENT"]{background:transparent;outline:1px dashed var(--ink-4);outline-offset:-1px;color:var(--ink-3)}' +
+  '.native-feedback [data-model-advice] .chip{margin:0}' +
+  '.native-feedback [data-model-advice-body] [data-model-units-note] p,.native-feedback [data-model-advice-body] p[data-model-advice-provenance]{color:var(--ink-3);font-size:12px;line-height:1.5}';

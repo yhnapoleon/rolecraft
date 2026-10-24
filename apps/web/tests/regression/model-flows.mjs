@@ -40,21 +40,22 @@ const WORK = {
     'Hotels above CNY 500 per night are exempt from prior approval. Taxi rides are capped at CNY 200.\n\n' +
     '- Keep human fallback\n- Record unknown conditions',
 };
+// Labelled sentences are listed contradictions first (195), each label group in sentence order.
 const KEYWORD_RESULTS = [
-  'SUPPORTED',
-  'INSUFFICIENT',
   'CONTRADICTED',
   'INSUFFICIENT',
   'INSUFFICIENT',
   'INSUFFICIENT',
+  'INSUFFICIENT',
+  'SUPPORTED',
 ];
 const COPY = {
   zh: {
     title: '合成机制演示',
-    abstained: '模型未判断任何句子',
-    tooLong: '超长未核',
+    abstained: '模型这次一句也没能判断',
+    tooLong: '句太长，模型没有核查',
     notice: '合成或未训练权重，不是模型判断，不计分。',
-    counts: '逐句：支持 1 · 矛盾 1 · 证据不足 4',
+    counts: '1 句与材料一致 · 1 句与材料矛盾 · 4 句证据不足',
     conclusion: '作品整体：存在矛盾',
     failed: '模型建议失败',
     drift: '模型文件或推理环境已变化，需重新核验注册。',
@@ -68,10 +69,10 @@ const COPY = {
   },
   en: {
     title: 'Synthetic mechanism demo',
-    abstained: 'The model judged no sentence',
-    tooLong: 'Too long to check',
+    abstained: 'The model couldn’t check any sentence',
+    tooLong: 'too long for the model to check',
     notice: 'Synthetic or untrained weights: not a model judgment, not scored.',
-    counts: 'By sentence: supported 1 · contradicted 1 · insufficient evidence 4',
+    counts: '1 matches the materials · 1 contradicts the materials · 4 lack enough evidence',
     conclusion: 'Whole work: contradiction found',
     failed: 'Model advice failed',
     drift: 'Model files or the inference environment changed; verify the registration again.',
@@ -85,6 +86,9 @@ const COPY = {
   },
 };
 const advice = `document.querySelector('[data-model-advice]')`;
+// The block lives in the basis of the R2.support row (195); opening the row shows it.
+const supportHead = `document.querySelector('[data-feedback-item="R2.support"] .fb-item__head')`;
+const openSupport = `(() => { const h = ${supportHead}; if (h && h.getAttribute('aria-expanded') !== 'true') h.click(); return true; })()`;
 const keyword = ['linear', 'fusion', 'slots'].includes(PHASE.name);
 const results = [];
 
@@ -164,7 +168,7 @@ async function submitWork(browser, language) {
     );
     assert.ok(waited < 300, 'feedback with model advice did not appear');
     await delay(2000);
-    await browser.clickText(language === 'zh' ? '查看最新反馈' : 'Refresh feedback', 'button').catch(
+    await browser.clickText(language === 'zh' ? '刷新' : 'Refresh', 'button').catch(
       () => undefined,
     );
   }
@@ -172,7 +176,7 @@ async function submitWork(browser, language) {
 }
 
 async function readAdvice(browser) {
-  await browser.ev(`${advice}.open = true`);
+  await browser.ev(openSupport);
   await delay(200);
   return JSON.parse(
     await browser.ev(`JSON.stringify({
@@ -195,12 +199,12 @@ async function readAdvice(browser) {
 
 /** A sentence result as its label; other outcomes keep their status. */
 const LABELS = {
-  支持: 'SUPPORTED',
-  矛盾: 'CONTRADICTED',
+  与材料一致: 'SUPPORTED',
+  与材料矛盾: 'CONTRADICTED',
   证据不足: 'INSUFFICIENT',
-  Supported: 'SUPPORTED',
-  Contradicted: 'CONTRADICTED',
-  'Insufficient evidence': 'INSUFFICIENT',
+  'Matches the materials': 'SUPPORTED',
+  'Contradicts the materials': 'CONTRADICTED',
+  'Not enough evidence': 'INSUFFICIENT',
 };
 const outcome = (unit) => LABELS[unit.result] ?? unit.status;
 
@@ -210,7 +214,7 @@ async function mainPath(browser, language) {
     await enter(browser, language);
     await submitWork(browser, language);
     const folded = {
-      open: await browser.ev(`${advice}.open`),
+      open: await browser.ev(`${supportHead}?.getAttribute('aria-expanded') === 'true'`),
       title: await text(browser, '[data-model-advice-title]'),
       notice: await text(browser, '[data-model-advice-notice]'),
     };
@@ -227,12 +231,13 @@ async function mainPath(browser, language) {
     );
     await shot(browser, `${language}-folded-desktop-light`);
     const view = await readAdvice(browser);
-    assert.ok(view.units.length > 0, 'sentences are listed');
+    // Only labelled sentences are listed; too-long ones are one count in the heading line.
     if (unjudged)
       assert.ok(
-        view.units.every((u) => u.status === 'abstained' && u.result === copy.tooLong),
-        JSON.stringify(view.units),
+        view.units.length === 0 && (view.counts ?? '').includes(copy.tooLong),
+        JSON.stringify(view),
       );
+    else assert.ok(view.units.length > 0, 'sentences are listed');
     results.push({ phase: PHASE.name, language, unjudged });
     assert.ok(!view.body.includes('模型建议（不计分）') && !view.body.includes('Model advice (not scored)'));
     if (keyword) {
@@ -296,7 +301,7 @@ async function mainPath(browser, language) {
       ['desktop-dark', 1440, 1000, true],
     ]) {
       await viewport(browser, width, height, dark);
-      await browser.ev(`${advice}.open = true; ${advice}.scrollIntoView({block: 'start'})`);
+      await browser.ev(`${openSupport}; ${advice}.scrollIntoView({block: 'start'})`);
       await delay(250);
       assert.equal(
         await browser.ev('document.documentElement.scrollWidth > document.documentElement.clientWidth'),

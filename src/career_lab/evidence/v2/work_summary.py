@@ -15,7 +15,15 @@ def work_summary(totals, verified_sources, records, language):
         opening = (
             ("记录显示，你已经" + "、".join(activities) + "。")
             if zh
-            else ("The records show that you have " + ", ".join(activities) + ".")
+            else (
+                "The records show that you have "
+                + (
+                    ", ".join(activities[:-1]) + " and " + activities[-1]
+                    if len(activities) > 1
+                    else activities[0]
+                )
+                + "."
+            )
         )
         if any(r["executor"]["kind"] == "external_agent" for r in records):
             opening += (

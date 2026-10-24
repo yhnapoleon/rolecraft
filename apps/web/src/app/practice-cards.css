@@ -5,3 +5,55 @@
   font-size: 13px;
   line-height: 1.5;
 }
+/* The ⓘ after that line: a quiet round control that opens the honesty note under it. */
+.practice-info {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  margin-inline-start: 6px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-3);
+  vertical-align: -5px;
+  transition:
+    background var(--fast) ease,
+    color var(--fast) ease,
+    transform var(--fast) var(--ease);
+}
+.practice-info:hover,
+.practice-info[aria-expanded='true'] {
+  background: var(--fill);
+  color: var(--ink);
+}
+.practice-info:active {
+  transform: scale(0.94);
+}
+.practice-note {
+  margin: -4px 0 8px;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+  transition:
+    opacity var(--fast) ease,
+    transform var(--fast) var(--ease);
+  @starting-style {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .practice-info,
+  .practice-note {
+    transition: none;
+  }
+}
+/* A Chinese full stop already carries its own space before the ⓘ. */
+:lang(zh-CN) .practice-info {
+  margin-inline-start: 0;
+}

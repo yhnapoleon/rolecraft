@@ -37,6 +37,7 @@ import {
   KNOWS,
   OPENER,
   CASE,
+  say,
   SEED_KEYS,
   SEEDS,
   situationTask,
@@ -103,7 +104,12 @@ import './work-folder.css';
 import { createConnectionKeeper, renderAgentConnection } from './agent-connection';
 import './agent-connection.css';
 import { installV4References } from '../v4-references';
-import { practiceCardLine, practiceCards, practiceSharedLine } from './practice-cards';
+import {
+  changeSentence,
+  practiceCardLine,
+  practiceCards,
+  practiceSharedLine,
+} from './practice-cards';
 import { nativeCiteAction } from './native-cite';
 import { createPracticeRecovery } from '../features/practice-recovery/view';
 import { criterionLabels } from '../features/feedback-native/index';
@@ -185,6 +191,7 @@ const ui = {
   practice: {},
   practiceBusy: false,
   practiceBrowse: null,
+  practiceNote: null,
   exportScope: { artifacts: true, materials: true, tests: true },
   labPrefill: '',
   compare: false,
@@ -223,6 +230,18 @@ const esc = (v) =>
   );
 const current = () => E.getAttempt(state);
 const sessionOf = (a) => (a ? L.session(a) : null);
+// The practice's work language ('zh' | 'en'), fixed when it started; null for an old local one.
+// World text inside a practice (the manager's words, what happened) is told in it; labels follow
+// the interface. caseOf is the situation's words inside this practice.
+const workLang = (a) => {
+  const l = sessionOf(a)?.v2Binding?.workLanguage;
+  return l === 'zh' || l === 'en' ? l : null;
+};
+const worldText = (a) => say(workLang(a));
+const caseOf = (a) => CASE(a.scenarioId, workLang(a));
+// Marks text whose language differs from the interface, for screen readers and fonts.
+const langAttr = (l) => (l && l !== locale() ? ` lang="${l === 'zh' ? 'zh-CN' : 'en'}"` : '');
+const langOf = (a) => langAttr(workLang(a));
 // Server-confirmed sealed binding (an old package after a switch); the host context knows first.
 const sealedSession = (a) =>
   sessionOf(a)?.v2ReadOnly === true || L.v4Host(a)?.snapshot()?.readOnly === true;
@@ -763,7 +782,7 @@ function afterRender() {
   if (activeWork?.kind === 'investigation') loadInvestigationSources(a, shown(activeWork));
   document.title =
     (WS.includes(ui.route) || ui.route === 'review') && a
-      ? `${CASE(a.scenarioId).title} · ${PRODUCT_NAME}`
+      ? `${caseOf(a).title} · ${PRODUCT_NAME}`
       : T(`${PRODUCT_NAME} · 在真实的工作里练习`, `${PRODUCT_NAME} · Learn on real work`);
   const skip = document.querySelector('.skip-link');
   if (skip) skip.textContent = T('跳到主要内容', 'Skip to content');
@@ -866,7 +885,7 @@ const letter = (role, quote, size = '') =>
 function briefDirection(a) {
   const day = a?.world?.deadline;
   if (!Number.isFinite(day)) return '';
-  return T(
+  return worldText(a)(
     `第 ${day} 天上线前，把你的试点决定和依据交给我。写好了，点右上角的「交付」。`,
     `Before launch on day ${day}, bring me your pilot decision and the evidence behind it. When it is ready, use Submit at the top right.`,
   );
@@ -874,7 +893,7 @@ function briefDirection(a) {
 const briefLetter = (a, size = '') => {
   const direction = briefDirection(a);
   const p = PEOPLE.manager;
-  return `<figure class="letter brief-letter ${size}">${avatar('manager', size === 'sm' ? 'sm' : 'md')}<div class="letter-body"><blockquote>${esc(CASE(a.scenarioId).quote)}</blockquote>${direction ? `<blockquote class="brief-direction" data-brief-direction>${esc(direction)}</blockquote>` : ''}<figcaption>${p.name}${p.titled ? '' : `<span>${ROLE_TITLE('manager')}</span>`}</figcaption></div></figure>`;
+  return `<figure class="letter brief-letter ${size}">${avatar('manager', size === 'sm' ? 'sm' : 'md')}<div class="letter-body"><blockquote${langOf(a)}>${esc(caseOf(a).quote)}</blockquote>${direction ? `<blockquote class="brief-direction" data-brief-direction${langOf(a)}>${esc(direction)}</blockquote>` : ''}<figcaption>${p.name}${p.titled ? '' : `<span>${ROLE_TITLE('manager')}</span>`}</figcaption></div></figure>`;
 };
 const facts = (w) => [
   ['seats', T(`${w.capacity} 人容量`, `${w.capacity} seats`)],
@@ -991,7 +1010,7 @@ function caseConditions(id) {
     ${item(T(w.capacity + ' 人', w.capacity + ' seats'), T('试点容量', 'Capacity'), w.capacity !== base.capacity ? T(base.capacity + ' 人', String(base.capacity)) : '')}
     ${item(T(w.devDays + ' 人日', w.devDays + ' person-days'), T('可用开发', 'Engineering'))}
     ${item(T('第 ' + w.deadline + ' 天', 'Day ' + w.deadline), T('期望上线', 'Launch target'), w.deadline !== base.deadline ? T('第 ' + base.deadline + ' 天', 'day ' + base.deadline) : '')}
-    ${item(T(INDEX_DELAY_HOURS + ' 小时', INDEX_DELAY_HOURS + ' h'), T('索引最长滞后', 'Index lag, max'))}
+    ${item(T(`${INDEX_DELAY_HOURS} 小时`, `${INDEX_DELAY_HOURS} h`), T('索引最长滞后', 'Max index lag'))}
   </div>`;
 }
 function caseHero(id, existing) {
@@ -1174,7 +1193,7 @@ function wsToolbar(a) {
   return `<header class="topbar ws-toolbar" id="ws-toolbar">
     ${back}
     <nav class="crumbbar" aria-label="${esc(T('位置', 'Location'))}">
-      <div class="menu-wrap title-wrap"><h1 class="ws-title"><button type="button" class="title-btn" data-action="menu" data-menu="brief" aria-expanded="${ui.menu === 'brief'}" aria-haspopup="dialog" title="${esc(T('委托与条件', 'Brief and conditions'))}"><span class="title-text" style="view-transition-name: case-title">${esc(CASE(a.scenarioId).title)}</span>${icon('down', 'i-sm')}</button></h1>${ui.menu === 'brief' ? briefPopover(a) : ''}</div>
+      <div class="menu-wrap title-wrap"><h1 class="ws-title"><button type="button" class="title-btn" data-action="menu" data-menu="brief" aria-expanded="${ui.menu === 'brief'}" aria-haspopup="dialog" title="${esc(T('委托与条件', 'Brief and conditions'))}"><span class="title-text" style="view-transition-name: case-title"${langOf(a)}>${esc(caseOf(a).title)}</span>${icon('down', 'i-sm')}</button></h1>${ui.menu === 'brief' ? briefPopover(a) : ''}</div>
       ${here}
     </nav>
     ${st !== 'active' ? `<span class="state-chip ${st}">${sessionOf(a)?.v2ReadOnly ? T('旧版 · 只读', 'Earlier version · Read-only') : st === 'paused' ? T('已暂停', 'Paused') : T('已交付', 'Submitted')}</span>` : ''}
@@ -1336,7 +1355,7 @@ function conditions(a, cls = '') {
     ${item(T(w.capacity + ' 人', w.capacity + ' seats'), T('试点容量', 'Capacity'), w.capacity !== base.capacity ? T(base.capacity + ' 人', String(base.capacity)) : '', 'capacity')}
     ${item(T(w.devDays + ' 人日', w.devDays + ' person-days'), T('可用开发', 'Engineering'), w.devDays !== base.devDays ? T(base.devDays + ' 人日', String(base.devDays)) : '', 'devDays')}
     ${item(T('第 ' + w.deadline + ' 天', 'Day ' + w.deadline), T('期望上线', 'Launch target'), w.deadline !== base.deadline ? T('第 ' + base.deadline + ' 天', 'day ' + base.deadline) : '', 'deadline')}
-    ${item(T(INDEX_DELAY_HOURS + ' 小时', INDEX_DELAY_HOURS + ' h'), T('索引最长滞后', 'Index lag, max'))}
+    ${item(T(`${INDEX_DELAY_HOURS} 小时`, `${INDEX_DELAY_HOURS} h`), T('索引最长滞后', 'Max index lag'))}
   </div>`;
 }
 function wsStage(a) {
@@ -1374,7 +1393,7 @@ function boardView(a) {
         <div class="menu-wrap">${btn(icon('bubble', 'i-sm') + T('问问怎么排', 'Ask how to prioritise'), 'menu', 'small quiet', `data-menu="rank" aria-haspopup="menu" aria-expanded="${ui.menu === 'rank'}"`)}${ui.menu === 'rank' ? rankMenu() : ''}</div>
         ${btn(icon('plus', 'i-sm') + T('新事项', 'New task'), 'new-task', 'small')}</header>
       ${revisionNote(a)}
-      <p id="move-help" class="sr-only">${T('按住 Option 或 Alt：左右方向键换列（改优先级），上下方向键调整顺序。', 'Hold Option or Alt: left and right move between columns (priority), up and down change the order.')}</p>
+      <p id="move-help" class="sr-only">${T('按住 ⌥ Option 或 Alt：← → 改优先级，↑ ↓ 调顺序。', 'Hold ⌥ Option or Alt, then ← → to change priority and ↑ ↓ to reorder.')}</p>
       <div class="kanban">${['first', 'next', 'later'].map((p) => column(a, p)).join('')}</div>
     </section>
     <section class="work-sec" aria-labelledby="docs-h">
@@ -1471,7 +1490,8 @@ function policyChange(a, v) {
     const around = new RegExp(`([A-Z]{3}\\s?)?${now}(元|%)?`).exec(clause);
     old = (around?.[1] || '') + was + (around?.[2] || '');
   }
-  return clause + (old ? T(`（原为${old}）`, ` (was ${old})`) : '') + T('。', '.');
+  const W = worldText(a);
+  return clause + (old ? W(`（原为${old}）`, ` (was ${old})`) : '') + W('。', '.');
 }
 // The latest delivery (its call and when it was made), read once per practice for the
 // handed-in band.
@@ -1508,23 +1528,26 @@ function situationBanner(a) {
   const v = a.world.policyVersion;
   const behind = a.world.indexVersion < v;
   const change = policyChange(a, v);
+  // What happened is world text, in the work language; the kicker and actions are labels.
+  const W = worldText(a);
+  const what = `<p class="we-title"${langOf(a)}>${W(`差旅政策更新为 v${v}`, `The travel policy is now v${v}`)}</p>${change ? `<p class="we-change"${langOf(a)}>${esc(change)}</p>` : ''}`;
   // Handed in, the board only reads: the event stays as a record of what changed.
   if (statusOf(a) === 'submitted')
     return `<section class="world-event is-record" role="status">
     <span class="we-icon">${icon('bolt')}</span>
-    <div class="grow"><p class="we-title">${T(`差旅政策更新为 v${v}`, `The travel policy is now v${v}`)}</p>${change ? `<p class="we-change">${esc(change)}</p>` : ''}</div>
+    <div class="grow">${what}</div>
     <div class="we-actions">${btn(T('看哪里变了', 'See what changed'), 'open-doc', 'small quiet', 'data-id="policy" data-compare="1"')}</div>
   </section>`;
   const before = a.tests.filter((r) => r.policyVersion < v).length;
   const after = [
     behind
-      ? T(
+      ? W(
           `知识助手的索引还是 v${a.world.indexVersion}，它会继续按旧版本回答，直到你刷新索引。`,
           `The assistant still indexes v${a.world.indexVersion} and will keep answering from it until you refresh the index.`,
         )
       : '',
     before
-      ? T(
+      ? W(
           `你之前的 ${before} 次测试用的是旧版政策。`,
           before > 1
             ? `Your ${before} earlier tests used the old policy.`
@@ -1534,7 +1557,7 @@ function situationBanner(a) {
   ].filter(Boolean);
   return `<section class="world-event" role="status">
     <span class="we-icon">${icon('bolt')}</span>
-    <div class="grow"><p class="we-kicker">${T('刚发生', 'Just happened')}</p><p class="we-title">${T(`差旅政策更新为 v${v}`, `The travel policy is now v${v}`)}</p>${change ? `<p class="we-change">${esc(change)}</p>` : ''}${after.length ? `<p class="we-sub">${after.join(' ')}</p>` : ''}</div>
+    <div class="grow"><p class="we-kicker">${T('刚发生', 'Just happened')}</p>${what}${after.length ? `<p class="we-sub"${langOf(a)}>${after.join(' ')}</p>` : ''}</div>
     <div class="we-actions">${btn(T('看哪里变了', 'See what changed'), 'open-doc', 'small primary', 'data-id="policy" data-compare="1"')}${btn(T('记为事项', 'Add as a task'), 'situation-task', 'small')}${btn(T('知道了', 'Got it'), 'ack', 'small quiet', `data-key="policy-v${v}"`)}</div>
   </section>`;
 }
@@ -2275,7 +2298,7 @@ function bench(a, t) {
         <label class="sr-only" for="lab-q">${T('你想问助手什么', 'Your question for the assistant')}</label>
         <textarea id="lab-q" name="question" class="console-q" rows="2" required maxlength="4000" placeholder="${esc(T('像员工那样问它一个问题…', 'Ask what an employee would ask…'))}">${esc(s?.inputs.question || ui.labPrefill)}</textarea>
         <div class="console-row"><label class="sr-only" for="lab-e">${T('想确认什么（选填）', 'What are you checking? (optional)')}</label><input id="lab-e" name="expectation" class="input" maxlength="5000" value="${esc(s?.inputs.expected || '')}" placeholder="${esc(T('想确认什么？选填', 'What are you checking? Optional'))}"><button type="submit" class="btn primary run-btn" ${ui.busy || !configured ? 'disabled' : ''}>${icon('play', 'i-sm')}${ui.busy ? T('运行中', 'Running') : T('运行', 'Run')}</button></div>
-        <p class="console-file">${icon('note', 'i-xs')}${t ? esc(T('结果记在「' + taskTitle(t) + '」下', 'Results are filed under “' + taskTitle(t) + '”')) : T('结果不归入具体事项；从事项里打开测试台可以归档', 'Results are not filed under a task; open the bench from a task to file them')}</p>
+        <p class="console-file">${icon('note', 'i-xs')}${t ? esc(T(`结果记在「${taskTitle(t)}」下`, `Results are filed under “${taskTitle(t)}”`)) : T('这些结果不归入事项；从事项里打开测试台才会归档。', 'These results aren’t filed under a task. Open the bench from a task to file them.')}</p>
       </form>
     </section>
     ${t ? `<div class="runs-head"><div class="segmented" role="group"><span class="thumb"></span><button type="button" aria-pressed="${!ui.benchAll}" data-action="bench-scope" data-all="0">${T('这件事的测试', 'This task')}</button><button type="button" aria-pressed="${!!ui.benchAll}" data-action="bench-scope" data-all="1">${T('全部测试', 'All tests')}</button></div></div>` : ''}
@@ -2331,7 +2354,7 @@ function runGroup(a, runs) {
       )
       .join('')}</div>
     ${old(r) ? `<p class="flag">${icon('warn', 'i-sm')}${T('这次回答引用的版本已经不是最新。', 'This answer cites a version that is no longer current.')}</p>` : ''}
-    <div class="run-actions">${btn(icon('layers', 'i-xs') + T('核对依据', 'Inspect evidence'), 'investigate-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('refresh', 'i-xs') + T('同题重测', 'Run again'), 'rerun', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('quote', 'i-xs') + T('作为依据', 'Use as evidence'), 'cite-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(avatar('technical', 'xs') + T('问技术负责人', 'Ask the technical lead'), 'discuss-run', 'small quiet', `data-id="${esc(r.id)}"`)}</div>
+    <div class="run-actions">${btn(icon('layers', 'i-xs') + T('看依据', 'Check sources'), 'investigate-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('refresh', 'i-xs') + T('同题重测', 'Run again'), 'rerun', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(icon('quote', 'i-xs') + T('作为依据', 'Use as evidence'), 'cite-run', 'small quiet', `data-id="${esc(r.id)}"`)}${btn(avatar('technical', 'xs') + T('问技术负责人', 'Ask the technical lead'), 'discuss-run', 'small quiet', `data-id="${esc(r.id)}"`)}</div>
   </article>`;
 }
 
@@ -2628,7 +2651,7 @@ function activity(a, taskId) {
   a.events.forEach((e, i) => {
     if (e.server) {
       if (['save_artifact', 'pause', 'resume'].includes(e.type)) return;
-      const l = eventLine(a, e);
+      const l = eventLine(a, e, workLang(a));
       if (taskId && !l.world && l.taskId !== taskId) return;
       out.push({
         at: e.createdAt || times[e.seq] || '',
@@ -2738,17 +2761,16 @@ function railActivity(a, t) {
 
 /* ---------- 4. review ---------- */
 function renderReview() {
+  // References look clickable, so no hint precedes them. The reader opens in the side column's
+  // first slot; `display: contents` keeps the empty slot from adding a gap above the practice.
   if (current() && L.nativeWorkspace(current()))
     return `${topbar(backBtn('to-board', T('工作板', 'Board')), reviewMenu())}
     <main id="main" class="page review" tabindex="-1">
-      <header class="review-hero"><div class="review-title"><p class="meta">${esc(CASE(current().scenarioId).title)}</p><h1 class="title-xl">${T('交付与反馈', 'Submission and feedback')}</h1>${recognitionHero(current())}</div></header>
+      <header class="review-hero"><div class="review-title"><p class="meta"${langOf(current())}>${esc(caseOf(current()).title)}</p><h1 class="title-xl">${T('交付与反馈', 'Submission and feedback')}</h1>${recognitionHero(current())}</div></header>
       <div class="review-grid">
         <div class="review-main" data-v4-feedback data-v4-region="feedback"></div>
         <aside class="review-side">
-          <div class="reference-side" data-v4-reference-side><p class="meta" data-reference-hint>${T(
-            '打开依据，核对当时的原文与版本。',
-            'Open a reference to inspect its original text and version.',
-          )}</p></div>
+          <div class="reference-side" data-v4-reference-side style="display: contents"></div>
           ${practiceOriginNote(current())}
           <section class="review-practice" data-v4-practice aria-live="polite">
             ${practiceSection(current())}
@@ -2796,7 +2818,7 @@ function renderReview() {
   return `${head}
     <main id="main" class="page review" tabindex="-1">
       <header class="review-hero">
-        <div class="review-title"><p class="meta">${esc(CASE(a.scenarioId).title)}</p><h1 class="title-xl">${T('上线评审', 'Launch review')}</h1>
+        <div class="review-title"><p class="meta"${langOf(a)}>${esc(caseOf(a).title)}</p><h1 class="title-xl">${T('上线评审', 'Launch review')}</h1>
           <p class="review-stamp">${icon('stamp', 'i-sm')}${T('已固定交付', 'Submitted')}${art ? `<span>${T('交付稿 v' + art.version, 'Deliverable v' + art.version)}</span><span>${T('配置 v' + art.config_version, 'Config v' + art.config_version)}</span>` : ''}${fb ? `<span>${T('截至事件 #' + fb.as_of_seq, 'As of event #' + fb.as_of_seq)}</span>` : ''}</p></div>
         <div class="review-conds"><p class="meta">${T('交付时的条件', 'Conditions at submission')}</p>${conditions(a, 'compact')}</div>
       </header>
@@ -2864,9 +2886,9 @@ function practiceSection(a) {
   const v = ui.practice[a.id];
   if (!v) {
     queueMicrotask(() => loadPractice(a));
-    return `<h2 class="group-title">${icon('branch', 'i-sm')}${T('补练（可选）', 'Optional practice')}</h2><p class="meta">${T('正在查看这轮反馈有没有可选的补练…', 'Checking whether this feedback suggests an optional practice…')}</p>`;
+    return `<h2 class="group-title">${icon('branch', 'i-sm')}${practiceHeading()}</h2><p class="meta">${T('正在查看这轮反馈有没有可选的补练…', 'Checking whether this feedback suggests an optional practice…')}</p>`;
   }
-  const head = `<h2 class="group-title">${icon('branch', 'i-sm')}${T('补练（可选）', 'Optional practice')}</h2>`;
+  const head = `<h2 class="group-title">${icon('branch', 'i-sm')}${practiceHeading()}</h2>`;
   // A sealed session will never get new feedback or practice: say so instead of "check again".
   const sealed = v.sealed === true || sealedSession(a);
   if (v.error || (sealed && v.state === 'feedback_pending')) {
@@ -2902,19 +2924,21 @@ function practiceSection(a) {
   const shownOptions = (v.options || []).filter(practiceOptionShown);
   const shownCatalog = (v.catalog || []).filter(practiceOptionShown);
   const suggested = practiceCards(
-    shownOptions,
+    shownOptions.map((o) => ({ ...o, work_language: practiceLanguage(o) })),
     shownCatalog,
     criterionLabels(locale()),
     practiceChange,
   );
-  const shared = practiceSharedLine(suggested);
+  // One front-end sentence says what the suggestions share; the server's reasons are not repeated.
+  // The honesty note (new feedback looks only at the new situation) sits behind ⓘ.
+  const note = practiceNote(a, v);
   const options = suggested.cards.length
-    ? `${suggested.reason ? `<p class="meta">${esc(suggested.reason)}</p>` : ''}${shared ? `<p class="practice-shared">${esc(shared)}</p>` : ''}${suggested.cards
+    ? `<p class="practice-shared">${esc(practiceSharedLine(suggested))}${note.button}</p>${note.body}${suggested.cards
         .map(
           (
             o,
-          ) => `<article class="practice-option"><h3 class="row-title">${esc(o.title)}</h3>${o.reason ? `<p class="meta">${esc(o.reason)}</p>` : ''}<p class="meta">${esc(practiceCardLine(o))}</p>
-    ${btn(icon('play', 'i-sm') + T('用这个情境补练', 'Practise with this situation'), 'practice-choose', 'small', `data-option="${esc(o.id)}" ${busy}`)}</article>`,
+          ) => `<article class="practice-option"><h3 class="row-title"${langAttr(o.language)}>${esc(o.title)}</h3><p class="meta">${esc(practiceCardLine(o))}</p>
+    ${btn(icon('play', 'i-sm') + T('练这个', 'Practise this one'), 'practice-choose', 'small', `data-option="${esc(o.id)}" ${busy}`)}</article>`,
         )
         .join('')}`
     : '';
@@ -2930,29 +2954,44 @@ function practiceSection(a) {
       ? `<div class="practice-browse"><p class="meta">${T('审核过的情境都可以自己选；会记下这是你自选的，并和这次反馈关联。', 'You can pick any reviewed situation. It is recorded as your own pick and linked to this feedback.')}</p>
     ${
       shownCatalog
-        .map(
-          (
-            o,
-          ) => `<article class="practice-option"><h3 class="row-title">${esc(o.title)}${o.suggested ? `<span class="tag">${T('建议', 'Suggested')}</span>` : ''}</h3>${practiceChange(o.id) ? `<p class="meta">${esc(T('改变的条件：', 'What changes: ') + practiceChange(o.id))}</p>` : ''}
-      ${btn(icon('play', 'i-sm') + T('用这个情境练习', 'Practise with this situation'), 'practice-choose-other', 'small', `data-option="${esc(o.id)}" ${busy}`)}</article>`,
-        )
+        .map((o) => {
+          const lang = practiceLanguage(o);
+          const change = changeSentence(practiceChange(o.id, lang), lang);
+          return `<article class="practice-option"><h3 class="row-title"${langAttr(lang)}>${esc(o.title)}${o.suggested ? `<span class="tag">${T('建议', 'Suggested')}</span>` : ''}</h3>${change ? `<p class="meta"${langAttr(lang)}>${esc(change)}</p>` : ''}
+      ${btn(icon('play', 'i-sm') + T('练这个', 'Practise this one'), 'practice-choose-other', 'small', `data-option="${esc(o.id)}" ${busy}`)}</article>`;
+        })
         .join('') ||
       `<p class="meta">${T('这个语言暂时没有可选的审核情境。', 'No reviewed situation is available in this language yet.')}</p>`
     }</div>`
       : '';
   return `${head}
     ${resume}
-    ${options || `<p class="meta">${T('这轮反馈没有需要换情境再练的事项。', 'This feedback has nothing that calls for practice in another situation.')}</p>`}
-    <div class="practice-actions">${btn(T('继续修订原作品', 'Keep revising this work'), 'practice-continue', 'small quiet', busy)}${btn(T('不需要', 'Not needed'), 'practice-decline', 'small quiet', busy)}${btn(ui.practiceBrowse === a.id ? T('收起审核情境', 'Hide reviewed situations') : T('自己选一个审核情境', 'Pick a reviewed situation myself'), 'practice-browse', 'small quiet', `aria-expanded="${ui.practiceBrowse === a.id}"`)}</div>
+    ${options || `<p class="meta">${T('这轮反馈没有需要换情境再练的事项。', 'This feedback has nothing that calls for practice in another situation.')}${note.button}</p>${note.body}`}
+    <div class="practice-actions">${btn(T('继续修订', 'Keep revising instead'), 'practice-continue', 'small quiet', busy)}${btn(T('暂不需要', 'Not now'), 'practice-decline', 'small quiet', busy)}${btn(ui.practiceBrowse === a.id ? T('收起情境', 'Hide situations') : T('自己选情境', 'Choose another situation'), 'practice-browse', 'small quiet', `aria-expanded="${ui.practiceBrowse === a.id}"`)}</div>
     ${browse}
-    ${links ? `<ul class="practice-links">${links}</ul>` : ''}
-    <p class="review-foot">${icon('info', 'i-xs')}${esc(v.note || '')}</p>`;
+    ${links ? `<ul class="practice-links">${links}</ul>` : ''}`;
+}
+const practiceHeading = () => T('换个情境再练', 'Practise in another situation');
+// A suggested situation's work language, from its server record or the -zh/-en of its id.
+const practiceLanguage = (o) =>
+  o?.work_language === 'zh' || o?.work_language === 'en'
+    ? o.work_language
+    : (/-(zh|en)$/.exec(String(o?.id ?? '')) || [])[1] || null;
+// The server's honesty note for the next feedback, one ⓘ away; empty without a note.
+function practiceNote(a, v) {
+  if (!v.note) return { button: '', body: '' };
+  const open = ui.practiceNote === a.id;
+  const label = T('之后的反馈看什么', 'What later feedback looks at');
+  return {
+    button: `<button type="button" class="practice-info" data-action="practice-note" aria-expanded="${open}" aria-controls="practice-note" aria-label="${esc(label)}" title="${esc(label)}">${icon('info', 'i-xs')}</button>`,
+    body: `<p class="practice-note" id="practice-note"${langAttr(v.work_language)}${open ? '' : ' hidden'}>${esc(v.note)}</p>`,
+  };
 }
 // Work saved without a task (for example, returned by an Agent over MCP) stays visible on the board.
 function unfiledWorks(a) {
   const list = (a.artifacts || []).filter((w) => !w.taskId && !w.removedAt);
   if (!list.length) return '';
-  return `<section class="work-sec" aria-labelledby="unfiled-h"><header class="sec-head"><h2 id="unfiled-h">${T('未归入事项的作品', 'Work not filed under a task')}</h2><span class="sec-hint">${T('先查看确切版本，再决定是否采用', 'Check the exact version before adopting')}</span></header>
+  return `<section class="work-sec" aria-labelledby="unfiled-h"><header class="sec-head"><h2 id="unfiled-h">${T('不在事项里的作品', 'Work outside any task')}</h2><span class="sec-hint">${T('先查看确切版本，再决定是否采用', 'Check which version it is before you adopt it')}</span></header>
     <div class="unfiled-list">${list.map((w) => `<button type="button" class="next-row" data-action="preview-work" data-id="${esc(w.id)}">${icon(w.source === 'external-agent' ? 'spark' : 'note', 'i-sm row-icon')}<span class="grow"><span class="row-title">${esc(w.title || T('未命名', 'Untitled'))}</span><span class="row-sub">${esc(purposeLabel(w.purpose))} · ${workVersion(w.revision)} · ${w.adopted ? T('已采用', 'Adopted') : T('待你检查', 'Awaiting your check')}${w.source === 'external-agent' ? T(' · 来自我的 Agent', ' · from my Agent') : ''}</span></span>${icon('chev', 'i-sm')}</button>`).join('')}</div></section>`;
 }
 function previewWork(a, id) {
@@ -2975,11 +3014,12 @@ function previewWork(a, id) {
 const practiceScenario = (optionId) => String(optionId).replace(/-(zh|en)$/, '');
 const practiceOptionShown = (o) => caseShown(practiceScenario(o.id));
 // The visible condition change of a reviewed variant, from the same case texts the practice list shows.
-function practiceChange(optionId) {
+// It is world text, so it is told in that practice's work language.
+function practiceChange(optionId, language = null) {
   const caseId = { pm_pilot_urgent: 'urgent', pm_pilot_capacity15: 'capacity', it_ticket_pilot: 'itticket' }[
     String(optionId).replace(/-(zh|en)$/, '')
   ];
-  return caseId ? CASE(caseId).change || '' : '';
+  return caseId ? CASE(caseId, language).change || '' : '';
 }
 function practiceOriginNote(a) {
   const o = a && a.practiceOrigin;
@@ -3422,12 +3462,17 @@ function sheetDeliver(readOnly = false) {
   if (L.nativeWorkspace(a)) {
     // The delivery's own button sits at the right of this footer (placed there by the panel,
     // right after the pre-submission card in reading order); the way to past feedback is a text
-    // button on the left.
+    // button on the left. On a phone it says only "View feedback", so it stays on one line; the
+    // hidden label is display: none, so a screen reader hears just the one shown.
     openSheet(
       T('交付试点决定', 'Submit your pilot decision'),
       `<div class="deliver-doc"
         data-v4-submission data-v4-region="submission"></div>`,
-      btn(T('查看提交与反馈', 'View submission and feedback'), 'v4-feedback', 'quiet'),
+      btn(
+        `<span class="when-wide">${T('查看提交与反馈', 'View submission and feedback')}</span><span class="when-narrow">${T('查看反馈', 'View feedback')}</span>`,
+        'v4-feedback',
+        'quiet',
+      ),
       'wide doc deliver-sheet',
     );
     mountLensSwitch(sheet.querySelector('.sheet-head'));
@@ -3701,7 +3746,7 @@ function noticeArrivals() {
     a.eventTimes[e.seq] = e.createdAt || (first ? null : new Date().toISOString());
     dirtyRecord = true;
     if (first) continue;
-    const l = eventLine(a, e);
+    const l = eventLine(a, e, workLang(a));
     if (l.announce)
       notify(
         l.text,
@@ -5000,15 +5045,19 @@ async function act(el) {
         `<ol class="log-list">${
           events
             .map((e) => {
-              const l = eventLine(a, {
-                server: true,
-                type: e.event_type,
-                detail: { ...e.payload, materialId: e.payload.material_id },
-                refs: e.refs,
-                agent: e.executor_kind === 'external_agent',
-                seq: e.seq,
-                actor: e.actor_id,
-              });
+              const l = eventLine(
+                a,
+                {
+                  server: true,
+                  type: e.event_type,
+                  detail: { ...e.payload, materialId: e.payload.material_id },
+                  refs: e.refs,
+                  agent: e.executor_kind === 'external_agent',
+                  seq: e.seq,
+                  actor: e.actor_id,
+                },
+                workLang(a),
+              );
               return `<li>${icon(l.icon || 'info', 'i-sm')}<span class="grow">${esc(l.text)}</span><span class="meta">#${e.seq}</span></li>`;
             })
             .join('') || `<li class="muted">${T('还没有记录。', 'Nothing yet.')}</li>`
@@ -5354,6 +5403,15 @@ async function act(el) {
     case 'practice-choose-other':
       await choosePractice(a, 'choose_other', el.dataset.option);
       break;
+    case 'practice-note': {
+      // Toggled in place, so focus stays on the ⓘ; the choice survives the next redraw.
+      ui.practiceNote = ui.practiceNote === a.id ? null : a.id;
+      const open = ui.practiceNote === a.id;
+      el.setAttribute('aria-expanded', String(open));
+      const body = document.getElementById(el.getAttribute('aria-controls'));
+      if (body) body.hidden = !open;
+      break;
+    }
     case 'practice-browse': {
       ui.practiceBrowse = ui.practiceBrowse === a.id ? null : a.id;
       const box = document.querySelector('[data-v4-practice]');

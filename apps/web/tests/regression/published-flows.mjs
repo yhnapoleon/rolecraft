@@ -281,13 +281,9 @@ async function submitDeferral(context) {
   );
   await waitFor(
     browser,
-    `document.querySelector('.native-feedback [role="status"]')?.textContent === ${JSON.stringify(
-      text(
-        '本次提交已保存，可以看反馈、提出异议或开始修订。',
-        'Submission saved. Review feedback, raise a challenge or start revising.',
-      ),
-    )} && [...document.querySelectorAll(${reportHeadings})].map((node) => node.textContent)[0] === ${JSON.stringify(
-      text('最近提交的反馈', 'Latest submission feedback'),
+    // With its feedback in, the results cover says what was delivered: the status line is empty (195).
+    `document.querySelector('.native-feedback [role="status"]')?.textContent === '' && [...document.querySelectorAll(${reportHeadings})].map((node) => node.textContent)[0] === ${JSON.stringify(
+      text('逐项', 'Item by item'),
     )}`,
     30000,
   );

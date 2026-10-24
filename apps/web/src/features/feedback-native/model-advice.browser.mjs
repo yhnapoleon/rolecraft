@@ -7,6 +7,15 @@ import { recorded, recordedReport, scenarios } from './model-advice.scenarios.mj
 const port = Number(process.env.MODEL_ADVICE_PORT || 19810);
 const page = (language) =>
   `http://127.0.0.1:${port}/src/features/feedback-native/review-check.html?lang=${language}`;
+// 195 (2026-10-24): the block lives in the basis of the "判断的证据支持" row, closed by default.
+const supportHead = `document.querySelector('[data-feedback-item="R2.support"] .fb-item__head')`;
+const supportOpen = (browser) =>
+  browser.ev(`${supportHead}?.getAttribute('aria-expanded') === 'true'`);
+const openSupport = (browser) =>
+  browser.ev(
+    `(() => { const h = ${supportHead}; if (h.getAttribute('aria-expanded') !== 'true') h.click(); return true; })()`,
+  );
+const toggleSupport = (browser) => browser.click('[data-feedback-item="R2.support"] .fb-item__head');
 let server;
 beforeAll(async () => {
   server = await createServer({ server: { port, strictPort: true }, logLevel: 'error' });
@@ -29,12 +38,12 @@ it('MODEL-02: synthetic feedback stays folded and identifies the mechanism demo'
       mode: 'advisory', affects_score: false
     }]; window.fixture.update();`);
     expect(
-      await browser.ev(`document.querySelector('[data-model-advice] summary')?.textContent`),
+      await browser.ev(`document.querySelector('[data-model-advice-head]')?.textContent`),
     ).toBe(
       'Synthetic mechanism demo' +
         'Synthetic or untrained weights: not a model judgment, not scored.',
     );
-    expect(await browser.ev(`document.querySelector('[data-model-advice]').open`)).toBe(false);
+    expect(await supportOpen(browser)).toBe(false);
     expect(await browser.ev('window.fixture.calls')).toEqual([]);
   } finally {
     await browser.close();
@@ -86,13 +95,21 @@ it.each(['zh', 'en'])(
           ],
         })}); window.fixture.update();`,
       );
+      // Counts follow the listed rows; the advice is the R2.support row's line, never a count.
       const coverage = await browser.ev(
-        `document.querySelector('[data-feedback-coverage]')?.textContent`,
+        `document.querySelector('.fb-meta__count')?.textContent`,
       );
       expect(coverage).toBe(
+        language === 'en' ? '1 of 1 checked by rules · 0 not known yet' : '规则核实 1 项／共 1 项适用 · 还不知道 0 项',
+      );
+      expect(
+        await browser.ev(
+          `document.querySelector('[data-feedback-item="R2.support"] .fb-item__line')?.textContent`,
+        ),
+      ).toBe(
         language === 'en'
-          ? 'Verified 1 of 3 applicable items · Model advice 1 · Pending verification 1'
-          : '已核实 1 项／共 3 项适用 · 模型建议 1 项 · 待核验 1 项',
+          ? 'Model advice: everything matches the materials (not scored)'
+          : '模型建议：都与材料一致（不计分）',
       );
       expect(await browser.ev('window.fixture.calls')).toEqual([]);
     } finally {
@@ -112,7 +129,7 @@ async function withFeedback(language, run) {
   }
 }
 const summaryText = (browser) =>
-  browser.ev(`document.querySelector('[data-model-advice] summary')?.textContent`);
+  browser.ev(`document.querySelector('[data-model-advice-head]')?.textContent`);
 const setReport = (browser, report) =>
   browser.ev(
     `Object.assign(window.fixture.state.reports[0], ${JSON.stringify(report)}); window.fixture.update();`,
@@ -136,16 +153,16 @@ it.each(['zh', 'en'])(
       expect(await summaryText(browser)).toBe(en ? 'Model advice failed' : '模型建议失败');
       await setReport(browser, { semantic_status: 'available', model_advice: [completed] });
       expect(await summaryText(browser)).toBe(
-        en ? 'Model advice (not scored)' : '模型建议（不计分）',
+        en ? 'Sentence by sentence · model advice, not scored' : '逐句看 · 模型建议，不计分',
       );
-      expect(await browser.ev(`document.querySelector('[data-model-advice]').open`)).toBe(false);
-      await browser.click('[data-model-advice] summary');
-      expect(await browser.ev(`document.querySelector('[data-model-advice]').open`)).toBe(true);
+      expect(await supportOpen(browser)).toBe(false);
+      await toggleSupport(browser);
+      expect(await supportOpen(browser)).toBe(true);
       await browser.ev('window.fixture.update()');
-      expect(await browser.ev(`document.querySelector('[data-model-advice]').open`)).toBe(true);
-      await browser.click('[data-model-advice] summary');
+      expect(await supportOpen(browser)).toBe(true);
+      await toggleSupport(browser);
       await browser.ev('window.fixture.update()');
-      expect(await browser.ev(`document.querySelector('[data-model-advice]').open`)).toBe(false);
+      expect(await supportOpen(browser)).toBe(false);
       expect(await browser.ev('window.fixture.calls')).toEqual([]);
     });
   },
@@ -161,7 +178,7 @@ it.each(['zh', 'en'])(
         citations: [{ ...completed.citations[0], object_id: 'other' }],
       };
       await setReport(browser, { model_advice: [completed, second], items: [item('R2.support')] });
-      await browser.click('[data-model-advice] summary');
+      await openSupport(browser);
       await browser.ev(`document.querySelector('[data-model-reference]').focus()`);
       const denied = {
         ...completed,
@@ -172,8 +189,9 @@ it.each(['zh', 'en'])(
         error_code: 'evidence_unavailable',
       };
       await setReport(browser, { model_advice: [denied, second] });
-      expect(await browser.ev(`document.querySelector('[data-model-advice]').open`)).toBe(true);
-      expect(await browser.ev(`document.activeElement.tagName`)).toBe('SUMMARY');
+      expect(await supportOpen(browser)).toBe(true);
+      // Focus stays in the block when the focused reference goes away.
+      expect(await browser.ev(`document.activeElement.dataset.modelAdvice`)).toBe('true');
       expect(await browser.ev(`document.querySelectorAll('[data-model-reference]').length`)).toBe(
         1,
       );
@@ -181,8 +199,14 @@ it.each(['zh', 'en'])(
         await browser.ev(`document.querySelector('[data-model-advice]').innerText`),
       ).not.toContain('public-source');
       expect(
-        await browser.ev(`document.querySelector('[data-feedback-coverage]').textContent`),
-      ).toContain(language === 'en' ? 'Model advice 0' : '模型建议 0 项');
+        await browser.ev(
+          `document.querySelector('[data-feedback-item="R2.support"] .fb-item__line').textContent`,
+        ),
+      ).toBe(
+        language === 'en'
+          ? 'Model advice: everything matches the materials (not scored)'
+          : '模型建议：都与材料一致（不计分）',
+      );
       await browser.click('[data-model-reference]');
       expect(await browser.ev('window.fixture.calls')).toEqual([
         { operation: 'openReference', ref: second.citations[0] },
@@ -219,7 +243,7 @@ it.each(['zh', 'en'])(
       expect(await summaryText(browser)).toBe(
         language === 'en' ? 'Model advice failed' : '模型建议失败',
       );
-      await browser.click('[data-model-advice] summary');
+      await openSupport(browser);
       expect(await browser.ev(`document.querySelector('[data-model-advice]').innerText`)).toContain(
         language === 'en'
           ? 'The registered model could not be loaded; no other model was substituted.'
@@ -246,7 +270,7 @@ it.each(['zh', 'en'])(
         },
       };
       await setReport(browser, { model_advice: [long] });
-      await browser.click('[data-model-advice] summary');
+      await openSupport(browser);
       expect(await browser.ev('document.documentElement.scrollWidth > innerWidth')).toBe(false);
     });
   },
@@ -256,8 +280,8 @@ it.each(['zh', 'en'])(
   'MODEL-UI-keyboard: %s opens and closes by Enter with native key text',
   async (language) => {
     await withFeedback(language, async (browser) => {
-      await browser.ev(`document.querySelector('[data-model-advice] summary').focus()`);
-      expect(await browser.ev(`document.activeElement.tagName`)).toBe('SUMMARY');
+      await browser.ev(`${supportHead}.focus()`);
+      expect(await browser.ev(`document.activeElement.tagName`)).toBe('BUTTON');
       const press = async () => {
         await browser.send('Input.dispatchKeyEvent', {
           type: 'keyDown',
@@ -275,11 +299,11 @@ it.each(['zh', 'en'])(
         });
       };
       await press();
-      expect(await browser.ev(`document.querySelector('[data-model-advice]').open`)).toBe(true);
+      expect(await supportOpen(browser)).toBe(true);
       await browser.ev('window.fixture.update()');
-      expect(await browser.ev(`document.activeElement.tagName`)).toBe('SUMMARY');
+      expect(await browser.ev(`document.activeElement.tagName`)).toBe('BUTTON');
       await press();
-      expect(await browser.ev(`document.querySelector('[data-model-advice]').open`)).toBe(false);
+      expect(await supportOpen(browser)).toBe(false);
     });
   },
 );
@@ -316,50 +340,57 @@ it.each(['zh', 'en'])(
       expect(await visible(browser, '[data-model-advice-counts]')).toBe(
         T(
           language,
-          '逐句：支持 1 · 矛盾 1 · 证据不足 4',
-          'By sentence: supported 1 · contradicted 1 · insufficient evidence 4',
+          '1 句与材料一致 · 1 句与材料矛盾 · 4 句证据不足',
+          '1 matches the materials · 1 contradicts the materials · 4 lack enough evidence',
         ),
       );
-      expect(await browser.ev(`document.querySelector('[data-model-advice]').open`)).toBe(false);
+      expect(await supportOpen(browser)).toBe(false);
       const block = await browser.ev(`document.querySelector('[data-model-advice]').textContent`);
-      for (const judged of ['模型建议（不计分）', 'Model advice (not scored)', '机制验证'])
+      for (const judged of ['逐句看 · 模型建议，不计分', 'Sentence by sentence · model advice, not scored', '机制验证'])
         expect(block).not.toContain(judged);
-      await browser.click('[data-model-advice] summary');
+      await openSupport(browser);
       const rows =
         await browser.ev(`[...document.querySelectorAll('[data-model-unit]')].map((li) => ({
         quote: li.querySelector('blockquote')?.textContent,
         result: li.querySelector('[data-unit-result]')?.textContent,
         evidence: li.querySelectorAll('[data-model-reference]').length,
       }))`);
-      const units = recorded.advice[language].units;
+      // Only labelled sentences, contradictions first, each label in sentence order.
+      const order = { CONTRADICTED: 0, INSUFFICIENT: 1, SUPPORTED: 2 };
+      const units = recorded.advice[language].units
+        .filter((u) => u.label)
+        .map((u, i) => ({ ...u, i }))
+        .sort((a, b) => order[a.label] - order[b.label] || a.index - b.index);
       expect(rows.map((r) => r.quote)).toEqual(units.map((u) => u.subject.quote));
       expect(rows.map((r) => r.result)).toEqual(
         language === 'en'
           ? [
-              'Supported',
-              'Insufficient evidence',
-              'Contradicted',
-              'Insufficient evidence',
-              'Insufficient evidence',
-              'Insufficient evidence',
+              'Contradicts the materials',
+              'Not enough evidence',
+              'Not enough evidence',
+              'Not enough evidence',
+              'Not enough evidence',
+              'Matches the materials',
             ]
-          : ['支持', '证据不足', '矛盾', '证据不足', '证据不足', '证据不足'],
+          : ['与材料矛盾', '证据不足', '证据不足', '证据不足', '证据不足', '与材料一致'],
       );
-      expect(rows.map((r) => r.evidence)).toEqual(units.map((u) => u.citations.length));
+      expect(rows.map((r) => r.evidence)).toEqual(
+        units.map(
+          (u) =>
+            new Set(
+              u.citations.map((c) => JSON.stringify([c.kind, c.object_id, c.version, c.config_version ?? null])),
+            ).size,
+        ),
+      );
       expect(await browser.ev('window.fixture.calls')).toEqual([]);
+      const named = await browser.ev(
+        `JSON.parse(document.querySelector('[data-model-unit] [data-model-reference]').dataset.modelReference)`,
+      );
       await browser.click('[data-model-unit] [data-model-reference]');
       expect(await browser.ev('window.fixture.calls')).toEqual([
-        {
-          operation: 'openReference',
-          ref: {
-            session_id: 'fixture',
-            kind: 'config',
-            object_id: 'pilot',
-            version: 1,
-            config_version: 0,
-          },
-        },
+        { operation: 'openReference', ref: named },
       ]);
+      expect(units[0].citations.map((c) => c.object_id)).toContain(named.object_id);
     });
   },
 );
@@ -368,7 +399,14 @@ const showReport = (browser, language, advice) =>
   browser.ev(`window.fixture.state.reports = [${JSON.stringify(recordedReport(language, []))}];
     window.fixture.state.reports[0].model_advice = window.fixture.read(${JSON.stringify(advice)});
     window.fixture.update();`);
-const verdicts = ['支持', '矛盾', '证据不足', 'Supported', 'Contradicted', 'Insufficient evidence'];
+const verdicts = [
+  '与材料一致',
+  '与材料矛盾',
+  '证据不足',
+  'Matches the materials',
+  'Contradicts the materials',
+  'Not enough evidence',
+];
 
 it.each(['zh', 'en'])(
   'UI-07: %s load failure, timeout and all-abstained are explicit, never adopted, and keep the work',
@@ -376,7 +414,7 @@ it.each(['zh', 'en'])(
     await withFeedback(language, async (browser) => {
       await showReport(browser, language, []);
       const rules = await browser.ev(`document.querySelector('.native-feedback').innerText`);
-      const coverage = await visible(browser, '[data-feedback-coverage]');
+      const coverage = await visible(browser, '.fb-meta__count');
       await browser.click('.native-feedback article > details[data-response-id] summary');
       const draft = T(language, '我的异议原文', 'My own challenge text');
       await browser.type('.native-feedback article > details[data-response-id] textarea', draft);
@@ -394,28 +432,24 @@ it.each(['zh', 'en'])(
         },
         timeout: {
           title: T(language, '模型调用超时', 'Model call timed out'),
-          counts: T(language, '逐句：失败 6', 'By sentence: failed 6'),
+          counts: T(language, '6 句没能判断', '6 could not be judged'),
           reason: T(
             language,
             '模型调用超时，没有自动重试。',
             'The model call timed out and was not retried automatically.',
           ),
-          unit: T(language, '未判断', 'Not judged'),
+          unit: null,
         },
         abstained: {
-          title: T(language, '模型未判断任何句子', 'The model judged no sentence'),
-          counts: T(language, '逐句：超长未核 6', 'By sentence: too long to check 6'),
+          title: T(language, '模型这次一句也没能判断', 'The model couldn’t check any sentence'),
+          // The count line says why; too-long sentences are not listed one by one (195).
+          counts: T(language, '6 句太长，模型没有核查', '6 were too long for the model to check'),
           reason: T(
             language,
-            '每一句都超过模型输入上限或被模型弃权。',
-            'Every sentence exceeded the model’s input limit or was abstained on.',
+            '6 句太长，模型没有核查',
+            '6 were too long for the model to check',
           ),
-          unit: T(language, '超长未核', 'Too long to check'),
-          note: T(
-            language,
-            '超长未核：句子超过模型输入上限，未截断、未判断。',
-            'Too long to check: the sentence exceeds the model’s input limit; it was not truncated or judged.',
-          ),
+          unit: null,
         },
       };
       for (const [name, want] of Object.entries(expected)) {
@@ -423,24 +457,23 @@ it.each(['zh', 'en'])(
         expect(await visible(browser, '[data-model-advice-title]')).toBe(want.title);
         expect(await visible(browser, '[data-model-advice-counts]')).toBe(want.counts);
         expect(await visible(browser, '[data-model-advice-conclusion]')).toBe(null);
-        await browser.ev(`document.querySelector('[data-model-advice]').open = true`);
+        await openSupport(browser);
         const block = await browser.ev(`document.querySelector('[data-model-advice]').innerText`);
         expect(block).toContain(want.reason);
         expect(block).toContain(
           T(
             language,
-            '未采用任何模型建议；原作品与已核实的规则结果都保留。',
-            'No model advice was adopted; your work and the verified rule results are retained.',
+            '没有采用模型建议；你的作品和规则核实结果都不受影响。',
+            'Nothing from the model was used. Your work and the rule-checked results stand.',
           ),
         );
-        if (want.note) expect(block).toContain(want.note);
         const results = await browser.text('[data-unit-result]');
         expect(results).toEqual(want.unit ? Array(6).fill(want.unit) : []);
         for (const verdict of verdicts) expect(results).not.toContain(verdict);
         expect(await browser.ev(`document.querySelectorAll('[data-model-reference]').length`)).toBe(
           0,
         );
-        expect(await visible(browser, '[data-feedback-coverage]')).toBe(coverage);
+        expect(await visible(browser, '.fb-meta__count')).toBe(coverage);
         expect(
           await browser.ev(
             `document.querySelector('.native-feedback article > details[data-response-id] textarea').value`,
@@ -449,7 +482,7 @@ it.each(['zh', 'en'])(
         const page = await browser.ev(`document.querySelector('.native-feedback').innerText`);
         const ruleLines = rules
           .split('\n')
-          .filter((l) => l.includes('规则核实') || l.includes('Verified by rules'));
+          .filter((l) => l.includes('规则核实') || l.includes('checked by rules'));
         expect(ruleLines.length).toBeGreaterThan(0);
         for (const line of ruleLines) expect(page).toContain(line);
       }
@@ -465,9 +498,9 @@ it.each(['zh', 'en'])(
       await browser.ev(`performance.clearResourceTimings()`);
       for (const name of Object.keys(scenarios)) {
         await showReport(browser, language, [scenarios[name](language)]);
-        await browser.click('[data-model-advice] summary');
+        await toggleSupport(browser);
         await browser.ev('window.fixture.update()');
-        await browser.click('[data-model-advice] summary');
+        await toggleSupport(browser);
       }
       expect(await browser.ev('window.fixture.calls')).toEqual([]);
       expect(
@@ -486,12 +519,12 @@ it.each(['zh', 'en'])(
     await withFeedback(language, async (browser) => {
       const lines = async () => ({
         range: await visible(browser, '[data-score-range]'),
-        coverage: await visible(browser, '[data-feedback-coverage]'),
+        coverage: await visible(browser, '.fb-meta__count'),
         weights: await browser.text('[data-criterion-weight]'),
       });
       await showReport(browser, language, []);
       const none = await lines();
-      expect(none.range).toMatch(language === 'en' ? /^Rule-anchored part: / : /^规则已定标部分：/);
+      expect(none.range).toMatch(language === 'en' ? /^Rule-checked range: / : /^规则已定标部分：/);
       // Synthetic results never count as model coverage, labelled or not.
       await showReport(browser, language, [scenarios.synthetic(language)]);
       expect(await lines()).toEqual(none);
@@ -607,11 +640,12 @@ it.each(['zh', 'en'])(
       const block = await browser.ev(`document.querySelector('[data-model-advice]').textContent`);
       expect(block).not.toMatch(/人工标签|human label/i);
       await showReport(browser, language, [scenarios.external(language)]);
-      expect((await lines()).at(-1)).toBe(
+      // The one provenance line left in the basis; identity is a hidden record read in About.
+      expect(await visible(browser, '[data-model-advice-provenance]')).toBe(
         T(
           language,
-          '外部候选；模型质量尚未验证。',
-          'External candidate; model quality has not been validated.',
+          '这条建议来自外部提供的模型，质量尚未验证，也从不计入分数。',
+          'This advice comes from an outside model. It isn’t validated yet and never counts toward your score.',
         ),
       );
       expect(await browser.ev('window.fixture.calls')).toEqual([]);
@@ -626,7 +660,7 @@ it.each(['zh', 'en'])(
       await showReport(browser, language, [scenarios.synthetic(language)]);
       expect(
         await browser.ev(
-          `[...document.querySelector('[data-model-advice] summary').children].map((n) =>
+          `[...document.querySelector('[data-model-advice-head]').children].map((n) =>
             n.getAttributeNames().find((name) => name.startsWith('data-model-advice-')))`,
         ),
       ).toEqual([

@@ -6,7 +6,8 @@ const browser = await launch();
 try {
   await browser.goto(base + '/src/features/feedback-native/review-check.html?lang=en');
   await browser.ev('window.fixture.state.busy=true; window.fixture.update()');
-  await browser.clickText('Challenge or supplement the evidence');
+  // The response form opens from "I see it differently" (195); its own summary is not a control.
+  await browser.clickText('I see it differently');
   await browser.type(
     'details[data-response-id] textarea',
     'Preserve this challenge while request state changes.',
@@ -16,7 +17,7 @@ try {
   );
   const state = () =>
     browser.ev(
-      `({focused:document.activeElement===window.responseEditor,value:window.responseEditor.value,sameNode:document.querySelector('details[data-response-id] textarea')===window.responseEditor,disabled:[...document.querySelectorAll('details[data-response-id] button')].filter(b=>/Record a challenge|Submit additional evidence/.test(b.textContent)).map(b=>b.disabled)})`,
+      `({focused:document.activeElement===window.responseEditor,value:window.responseEditor.value,sameNode:document.querySelector('details[data-response-id] textarea')===window.responseEditor,disabled:[...document.querySelectorAll('details[data-response-id] button')].filter(b=>/Save my view|Add this evidence/.test(b.textContent)).map(b=>b.disabled)})`,
     );
   await browser.ev('window.fixture.state.busy=false; window.fixture.update()');
   let observed = await state();
