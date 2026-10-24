@@ -24,6 +24,8 @@ import {
 } from './art.js';
 import * as Coach from './coach.js';
 import { badgesHtml, summaryText } from '../features/recognition-native/badge';
+// The system profile page (#/lab) loads its code on demand, its styles with the main bundle.
+import '../features/recognition-lab/lab.css';
 import { behaviorHtml } from '../features/behavior-native/view';
 import {
   PRI,
@@ -669,19 +671,36 @@ function renderLab() {
   const back = `<a class="btn quiet back" href="${current() ? '#/review' : '#/'}">${icon('back')}<span>${esc(current() ? T('交付与反馈', 'Submission and feedback') : T('首页', 'Home'))}</span></a>`;
   return `${topbar(back)}<main id="main" class="page rc-lab" data-rc-lab tabindex="-1"></main>`;
 }
+// The lab keeps its element across redraws: mounted once per entry into the route, and
+// again only when the language or the practice changes (its data stay cached).
+let labView = null;
 function mountLabPage() {
-  const root = document.querySelector('[data-rc-lab]');
-  if (!root) return;
+  const slot = document.querySelector('[data-rc-lab]');
+  if (!slot) return;
   const a = current();
+  const sessionKey = a && L.nativeWorkspace(a) ? a.id : '';
+  const key = `${locale()}|${sessionKey}`;
+  document.title = T('系统剖面 · Practice', 'System profile · Practice');
+  const skip = document.querySelector('.skip-link');
+  if (skip) skip.textContent = T('跳到主要内容', 'Skip to content');
+  if (labView?.key === key) {
+    slot.replaceWith(labView.el);
+    return;
+  }
+  const refresh = !labView;
+  labView = { key, el: slot };
   import('../features/recognition-lab/lab').then(({ mountLab }) =>
-    mountLab(root, {
+    mountLab(slot, {
       language: locale(),
-      session: a && L.nativeWorkspace(a) ? () => L.recognition(a) : null,
+      session: sessionKey ? () => L.recognition(a) : null,
+      sessionKey,
+      refresh,
     }),
   );
 }
 function afterRender() {
   refreshAgentIssued();
+  if (ui.route !== 'lab') labView = null;
   if (ui.route === 'lab') {
     mountLabPage();
     return;
