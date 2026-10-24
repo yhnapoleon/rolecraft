@@ -7,6 +7,10 @@
     "kind": "human"
   },
   "draft_id": "draft-b729961b2621e117dfedbf0310a41b82b7a5413f307ae864fa9053b14c14ef92",
+  "draft_executor": {
+    "id": "human:68583e36351748b695cceecf775a2d5a",
+    "kind": "human"
+  },
   "ticket_id": "ticket-5b641caca7511e9b4c6804cf35702d81b6e974643ab4bbda267ac94354337e08",
   "impact_note": "Other answers from older sources may now carry a warning; the lower threshold may answer more questions.",
   "retrieval": {

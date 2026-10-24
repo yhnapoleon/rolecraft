@@ -144,3 +144,22 @@ export function valueText(field: string, value: unknown): string {
   if (value === null || value === undefined || value === '') return T('无', 'None');
   return choiceText(field, String(value));
 }
+
+/** The practice's name under the engineer's hat (top bar and tab): the ticket's task in short,
+ * as a [Chinese, English] pair for the shell's `Stage.title`. */
+export function engineerHatTitlePair(ticket: {
+  readonly source: string;
+  readonly target_tests: readonly unknown[];
+}): [zh: string, en: string] {
+  if (ticket.source === 'seeded') return ['住宿上限排查 · 工程师', 'Hotel-limit fix · Engineer'];
+  const n = ticket.target_tests.length;
+  return [`${n} 条测试排查 · 工程师`, `${n} handed-over ${n === 1 ? 'test' : 'tests'} · Engineer`];
+}
+
+/** The same name in the interface language (the browser tab). */
+export function engineerHatTitle(ticket: {
+  readonly source: string;
+  readonly target_tests: readonly unknown[];
+}): string {
+  return T(...engineerHatTitlePair(ticket));
+}

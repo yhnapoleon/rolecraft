@@ -686,6 +686,14 @@ export function engineerReportView(
     };
   }
 
+  // Fixed, compared, nothing newly failing: the headline says both halves, in the same form as
+  // "fixed, but 1 new failure", so two reviews read side by side (the board says the same).
+  else if (verdict?.state === 'fixed' && regression.tone === 'good')
+    verdict = {
+      ...verdict,
+      title: t('verdictLeadFixed') + t('verdictTurnSep') + t('verdictTurnNone'),
+    };
+
   const retrievalNote = options.retrievalNote?.trim();
   return {
     language,

@@ -68,13 +68,17 @@ describe('engineer desk · setting values in words', () => {
   });
 });
 
-describe('engineer desk · the home card', () => {
-  it('ED-44 the first step names the product manager, not the internal "AIPM"', () => {
+describe('engineer desk · the home row', () => {
+  it('ED-44 names the product manager, not the internal "AIPM", and says one practice, two hats', () => {
     const zh = engineerCareerCardHtml({ practice: false });
-    expect(zh).toContain('复现产品经理记录的失败');
+    expect(zh).toContain('修好产品经理测出的问题');
+    expect(zh).toContain('一局、两顶帽子');
+    expect(zh).not.toContain('engineer-take');
     setPreference('en');
     const en = engineerCareerCardHtml({ practice: true });
-    expect(en).toContain('Reproduce the failure the product manager recorded');
+    expect(en).toContain('Fix what the product manager found');
+    expect(en).toContain('One practice, two hats');
+    expect(en).toContain('data-action="engineer-take"');
     expect(zh + en).not.toMatch(/AIPM/);
   });
 });

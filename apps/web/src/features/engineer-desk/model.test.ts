@@ -17,6 +17,8 @@ import {
   HANDOVER_LIMIT,
   nextAfterReview,
   parseField,
+  quoteExcerpt,
+  signedDraftStale,
   signSheet,
   signState,
   ticketFacts,
@@ -379,5 +381,38 @@ describe('engineer desk · after a review', () => {
       hidden_comparison: { new_failures: 0, fixed: 2, still_failing: 0, unverified: 1 },
     };
     expect(nextAfterReview(engineerReportView(unknown, { language: 'en' }))).toBe('again');
+  });
+});
+
+describe('engineer desk · quoting an answer in a small space', () => {
+  it('ED-84 a long answer keeps the sentence with the number, never cuts it off', () => {
+    expect(
+      quoteExcerpt(
+        '国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。',
+      ),
+    ).toBe('国内出差住宿报销上限为每人每晚500元…');
+    expect(
+      quoteExcerpt(
+        'Domestic hotel reimbursement is capped at CNY 500 per person per night. Anything above the cap needs written approval from your manager before the trip.',
+      ),
+    ).toBe('Domestic hotel reimbursement is capped at CNY 500 per person per night…');
+    // The number in a later sentence: that sentence, marked as cut at both ends.
+    expect(quoteExcerpt('Ask your manager first. The cap is CNY 500 a night. Keep receipts.')).toBe(
+      '…The cap is CNY 500 a night…',
+    );
+    // Already cut by the server right after a sentence: one ellipsis, not ".…".
+    expect(quoteExcerpt('The cap is CNY 500 per person per night.…')).toBe(
+      'The cap is CNY 500 per person per night…',
+    );
+    // One sentence: whole. Decimals are not sentence ends.
+    expect(quoteExcerpt('The cap is CNY 500.00 a night.')).toBe('The cap is CNY 500.00 a night.');
+  });
+});
+
+describe('engineer desk · signing the draft you saw', () => {
+  it('ED-85 the draft changed while you held the key: the signature stops', () => {
+    expect(signedDraftStale(SIGNED.latest_draft?.id ?? '', SIGNED)).toBe(false);
+    expect(signedDraftStale('draft-older', SIGNED)).toBe(true);
+    expect(signedDraftStale('draft-older', { ...SIGNED, latest_draft: null })).toBe(true);
   });
 });
