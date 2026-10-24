@@ -1,7 +1,8 @@
 /** Pre-submission preview in the normal v4 entry, zh and en, reduced motion: a round of the
  * browser gate, after published-flows on the same services. A new practice submitted straight
  * away gets an "at submission" line on the feedback page only under the item the rules found
- * unmet. On a second practice the card sits right above "Submit selected versions", counts
+ * unmet. On a second practice the card sits right above the submit button (which names the
+ * version already ticked, 199 decision 20), counts
  * rule-met items without any percentage, phrases one fact per item, follows the decision, opens
  * the tool that fixes an unmet item, names configuration versions after a retest on an earlier
  * one (164 F17), remembers the choice when the panel is reopened, and agrees with the formal
@@ -51,6 +52,14 @@ async function settled(browser, predicate) {
     30000,
   );
   return read(browser);
+}
+
+/** The panel opens with the latest version of the work ticked (199 decision 20); tick it only
+ * when it is not, so the click never unticks it. */
+async function tickVersion(browser) {
+  const box = `document.querySelector('#sheet .native-feedback input[type="checkbox"]')`;
+  if (!(await browser.ev(`${box}.checked`)))
+    await browser.click('#sheet .native-feedback input[type="checkbox"]');
 }
 
 async function openDelivery(browser) {
@@ -189,7 +198,7 @@ async function runLanguage(language) {
     // line; the change rules that do not apply and the items awaiting a model get none.
     await startPractice(browser, language, t);
     await openDelivery(browser);
-    await browser.click('#sheet .native-feedback input[type="checkbox"]');
+    await tickVersion(browser);
     await browser.select('#sheet .native-feedback select', 'launch');
     await settled(browser, `!!c.querySelector('.presubmit__count')`);
     const direct = decidedBy(await submitShown(browser));
@@ -215,14 +224,15 @@ async function runLanguage(language) {
     // 2. Placement and the empty state.
     await openDelivery(browser);
     let seen = await read(browser);
-    assert.equal(seen.aboveSubmit, t('提交选中的版本', 'Submit selected versions'));
+    // The latest version is already ticked, so the button names it.
+    assert.match(seen.aboveSubmit, t(/^提交第 \d+ 版$/, /^Submit version \d+$/));
     assert.ok(
       seen.text.includes(t('选好作品版本和决定后', 'Choose versions and a decision')),
       'the card asks for a choice before computing',
     );
 
     // 3. A fresh launch: two limits met, configuration v0 untested, everything else waits.
-    await browser.click('#sheet .native-feedback input[type="checkbox"]');
+    await tickVersion(browser);
     await browser.select('#sheet .native-feedback select', 'launch');
     seen = await settled(browser, `!!c.querySelector('.presubmit__count')`);
     assert.equal(seen.count, t('2/3 项已满足', '2/3 met'));
