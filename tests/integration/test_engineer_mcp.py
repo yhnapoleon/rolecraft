@@ -135,14 +135,19 @@ def test_agent_works_the_ticket_over_mcp_and_the_person_signs(
     person, loopback = eng
     person.advance_world()
     ticket = person.seeded()
-    # An MCP client starts from the observation, so the grant allows it beside the five.
-    token = person.grant("mcp-engineer", ["read", "act"], [*ENGINEER_AGENT_ACTIONS, "observation"])
+    # An MCP client starts from the observation; the tool index comes from the `tools` tool
+    # (over MCP the observation carries no tool catalogue), so the grant allows both.
+    token = person.grant(
+        "mcp-engineer", ["read", "act"], [*ENGINEER_AGENT_ACTIONS, "observation", "tools"]
+    )
     agent = Agent(person, loopback, token)
-    assert agent.tools() == {*ENGINEER_AGENT_ACTIONS, "observation", "requests.read"}
-    catalogue = agent.call("observation", {})["result"]["tools"]
+    assert agent.tools() == {*ENGINEER_AGENT_ACTIONS, "observation", "tools", "requests.read"}
+    catalogue = agent.call("tools", {})["result"]["result"]["tools"]
     engineer = {tool["name"]: tool for tool in catalogue if tool["name"].startswith("engineer.")}
     assert set(engineer) == set(ENGINEER_AGENT_ACTIONS)
-    assert all(tool["available"] for tool in engineer.values()), engineer
+    assert all(
+        tool["available"] and tool["unavailable_code"] is None for tool in engineer.values()
+    ), engineer
     made = work_the_ticket(agent, ticket["id"])
     # Signing stays with the person: no tool, and the route refuses the Agent's token.
     refused = sign(person, ticket, made["id"], "agent-sign", token=token)
