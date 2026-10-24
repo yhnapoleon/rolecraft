@@ -3,7 +3,7 @@
  * keeps the actions. Shapes follow D「仪器与纸」(197-visual-d.md); decisions 5–7 of 199. */
 import './home.css';
 import { agentMark, avatar, icon, PEOPLE } from '../../app/art.js';
-import { T } from '../../app/i18n';
+import { locale, T } from '../../app/i18n';
 import { PRI } from '../../app/vocab.js';
 
 export { fadeIn, walkIn } from './walk-in';
@@ -46,6 +46,8 @@ export type ContinueInfo = {
   submitted: boolean;
   /** Present when this practice has had the engineer's hat on at least once. */
   engineer: { stage: string } | null;
+  /** The practice's own language; inside it the interface speaks it. */
+  lang?: 'zh' | 'en' | null;
 };
 
 const HAT = (h: Hat) =>
@@ -71,7 +73,7 @@ function continueSlip(c: ContinueInfo): string {
     <span class="hm-cont__glyph" aria-hidden="true"><i></i></span>
     <div class="hm-cont__body">
       <p class="hm-cont__line"><span class="hm-cont__kicker">${T('接着做', 'Continue')}</span><span class="hm-cont__title" id="hm-cont-title">${esc(c.title)}</span></p>
-      <p class="hm-cont__row">${pmLine}${eng ? `<span class="hm-cont__sep" aria-hidden="true"></span>${eng}` : ''}</p>
+      <p class="hm-cont__row">${pmLine}${eng ? `<span class="hm-cont__sep" aria-hidden="true"></span>${eng}` : ''}${c.lang && c.lang !== locale() ? `<span class="hm-cont__lang">${c.lang === 'zh' ? T('', 'This practice is in Chinese') : T('这一局用英文', '')}</span>` : ''}</p>
     </div>
     <div class="hm-cont__go">${main}</div>
     <p class="hm-cont__note">${TWO_HATS()}</p>

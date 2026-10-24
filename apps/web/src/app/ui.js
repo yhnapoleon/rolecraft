@@ -11,6 +11,8 @@ import {
   detect,
   when,
   isChinese,
+  practiceLocale,
+  setPracticeLocale,
 } from './i18n';
 import {
   icon,
@@ -31,6 +33,7 @@ import { playReading } from '../features/recognition-native/sentences';
 import { signalsHtml } from '../features/recognition-native/signals';
 // The system profile page (#/lab) loads its code on demand, its styles with the main bundle.
 import '../features/recognition-lab/lab.css';
+import './practice-language.css';
 import { behaviorHtml } from '../features/behavior-native/view';
 import {
   PRI,
@@ -641,15 +644,19 @@ function withTransition(fn) {
   }
   if (!document.startViewTransition || reduceMotion.matches) {
     fn();
-    return;
+    return Promise.resolve();
   }
   const transition = document.startViewTransition(() => {
     fn();
   });
   activeTransition = transition;
+  // A transition skipped by the next one rejects these; nothing is lost.
+  transition.ready.catch(() => {});
   transition.finished.finally(() => {
     if (activeTransition === transition) activeTransition = null;
   });
+  // Resolves once the new page is drawn (and, inside a practice, speaks its language).
+  return transition.updateCallbackDone.catch(() => {});
 }
 // An undo belongs to the page it was offered on; leaving the page withdraws it.
 function dropUndo() {
@@ -716,6 +723,10 @@ function render() {
     ui.route = p.r;
     ui.routeId = p.id;
   }
+  // One practice, one language: inside a practice the interface speaks the practice's own
+  // language; on home, the job page and the lab the preference does. A change redraws through
+  // onLocaleChange, so this pass stops here.
+  if (setPracticeLocale(practiceUiLocale())) return;
   const r = ui.route;
   if (r === 'task' && current() && !current().tasks.some((t) => t.id === ui.routeId)) {
     ui.route = 'work';
@@ -972,7 +983,20 @@ function langItems() {
   return `${item('auto', T('跟随系统', 'Match system'), detect() === 'zh' ? '中文' : 'English')}${item('zh', '中文')}${item('en', 'English')}`;
 }
 function langMenu() {
+  if (practiceLocale()) return practiceLangNote();
   return `<div class="menu right" role="menu">${langItems()}</div>`;
+}
+// The language of the practice on screen, or null off a practice (home, job page, lab, samples).
+function practiceUiLocale() {
+  const a = current();
+  if (!a) return null;
+  const r = ui.route;
+  const here = WS.includes(r) || r === 'review' || ENGINEER_ROUTES.includes(r) || isRegisteredRoute(r);
+  return here ? workLang(a) : null;
+}
+// Inside a practice the language is the practice's: say so instead of offering a half switch.
+function practiceLangNote() {
+  return `<div class="menu right lang-note" role="dialog" aria-label="${esc(T('界面语言', 'Language'))}"><p class="lang-note__head">${icon('globe', 'i-sm')}<span>${T('这一局是中文的', 'This practice is in English')}</span></p><p class="lang-note__body">${T('界面跟着它走。想用英文练，回首页切到 English 再开一局。', 'The interface follows it. To practise in Chinese, go home, switch to 中文 and start a new practice.')}</p>${btn(T('回首页', 'Go home'), 'home', 'small')}</div>`;
 }
 // Inside a practice every screen (board, result, sign-off desk, registered screens) shares one
 // shell bar; elsewhere (home, job page, lab) the light topbar stays.
@@ -1065,6 +1089,7 @@ function continueInfo(a) {
     stage: submitted ? T('已交付', 'Delivered') : stepWords('pm', a),
     submitted,
     engineer: everEngineer(a.id) ? { stage: stepWords('engineer', a) } : null,
+    lang: workLang(a),
   };
 }
 
@@ -1490,7 +1515,8 @@ function moreMenu(a) {
     sessionOf(a)?.protocol === 2 ? menuItem('continue-code', recovery.menuLabel(), 'sync') : '',
     lensMenuItems(),
     `<div class="menu-sep" role="separator"></div>`,
-    `<button type="button" role="menuitem" data-action="menu" data-menu="lang">${icon('globe', 'i-sm')}<span class="grow">${T('界面语言', 'Language')}</span><span class="menu-value">${locale() === 'zh' ? '中文' : 'English'}</span></button>`,
+    // Inside a practice the language is the practice's: the row says so and is marked locked.
+    `<button type="button" role="menuitem" data-action="menu" data-menu="lang">${icon('globe', 'i-sm')}<span class="grow">${T('语言', 'Language')}</span><span class="menu-value">${practiceLocale() ? T('跟随这一局', 'Follows this practice') : locale() === 'zh' ? '中文' : 'English'}</span>${practiceLocale() ? icon('lock', 'i-xs lang-lock') : ''}</button>`,
     modelStatusOf(a)
       ? `<button type="button" role="menuitem" data-action="menu" data-menu="model">${icon('circle', 'i-sm')}<span class="grow">${T('模型', 'Model')}</span><span class="menu-value">${esc(modelStatusOf(a).short)}</span></button>`
       : '',
@@ -4674,7 +4700,7 @@ async function enterWork(fn, trigger) {
   if (reduceMotion.matches) {
     show();
     fadeIn();
-  } else withTransition(show);
+  } else await withTransition(show);
 }
 async function runQuestion(question, expectation) {
   if (ui.busy) return;

@@ -111,6 +111,16 @@
 .hm-cont[data-hat="engineer"] .hm-cont__stage--eng {
   color: var(--ink);
 }
+/* The practice speaks another language than home: say so before Continue switches to it. */
+.hm-cont__lang {
+  margin-left: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
 .hm-cont__sep {
   width: 1px;
   height: 12px;

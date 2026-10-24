@@ -2,6 +2,7 @@
  * a tag, the replying row and the grey line for a reply that did not come through. Text is only
  * ever set as text; the few icons are fixed markup. */
 import { T } from '../../app/i18n';
+import { localizeConfigTerms } from '../../app/config-terms';
 import { markdownNodes } from '../../app/markdown';
 import { PERSON_OF_ROLE, personName } from '../../app/people.js';
 import { NAME_CLOSE, NAME_OPEN, type Cite, type NoticeKind } from './chat-model';
@@ -79,6 +80,7 @@ export function replyBubble(doc: Document, text: string, cls = '') {
   const bubble = maker(doc)('div', `rc-bubble rc-bubble--them rc-roles__md${cls ? ` ${cls}` : ''}`);
   bubble.append(...markdownNodes(doc, text));
   setNames(doc, bubble);
+  localizeConfigTerms(doc, bubble);
   return bubble;
 }
 
@@ -186,7 +188,7 @@ export function noticeRow(
   const make = maker(doc);
   const row = make('div', `rc-sys rc-sys--${kind} rc-roles__turn-status`);
   row.setAttribute('role', 'status');
-const icon = glyph(doc, kind === 'held' ? 'held' : kind === 'failed' ? 'retry' : 'unknown', 16);
+  const icon = glyph(doc, kind === 'held' ? 'held' : kind === 'failed' ? 'retry' : 'unknown', 16);
   icon.classList.add('rc-sys__icon');
   row.append(icon);
   const body = make('div', 'rc-sys__body');
