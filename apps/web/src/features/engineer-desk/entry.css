@@ -1,0 +1,67 @@
+/* The engineer role in the main bundle: its home card, and the back key of its screens.
+   The card's picture is the job's own work object: a log tape of the three steps on the
+   recess, ending on a signature line. Shapes and surfaces follow the PM card. */
+.eng-career__art {
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  padding: 24px 26px 22px;
+  background: var(--surface-3);
+}
+.eng-career__tape {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+.eng-career__tape li {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: baseline;
+  padding: 9px 0;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+.eng-career__n {
+  color: var(--ink-4);
+  font: 500 11.5px / 1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+/* The one thing only the person does: sign. A ruled line with its caption, as on a form. */
+.eng-career__sign {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  margin: 4px 0 0;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.eng-career__rule {
+  height: 22px;
+  border-bottom: 1px solid var(--ink-3);
+}
+.eng-career .career-body > p {
+  text-wrap: pretty;
+}
+.eng-career__cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+@media (max-width: 720px) {
+  .eng-career__art {
+    padding: 20px 18px 18px;
+  }
+  .eng-career__cta .btn {
+    white-space: normal;
+    text-align: left;
+  }
+}
+
+/* The engineer screens' back key (top left) is a link like the lab's; drawn as the key it is. */
+body:is([data-view="engineer"], [data-view="engineer-review"]) .topbar a.btn {
+  text-decoration: none;
+}

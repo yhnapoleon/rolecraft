@@ -1,0 +1,101 @@
+{
+ "id": "trial-778672cdbaafd8205542232faa8a07bed92d8feed2e221e6fa7d7a19932442c1",
+ "kind": "trial",
+ "ticket_id": "ticket-e33e76121d13fe9aeaa3e7e8f5d435f814bd003746248533f86409ca0568b183",
+ "executor": {
+  "id": "human:cbb29b71a5d9479ba58134169ac9338b",
+  "kind": "human"
+ },
+ "role": "engineer",
+ "created_at": "2026-10-24T09:22:15.114873+00:00",
+ "config_hash": "8fecb1fe00ce778d3765d3cce5b4e1f87c627f488fc136c62e4f1a05bcc00244",
+ "changes": {
+  "freshness_guard": {
+   "before": "none",
+   "after": "warn"
+  },
+  "min_score": {
+   "before": 0.35,
+   "after": 0.2
+  }
+ },
+ "effective_differences": {},
+ "status": "completed",
+ "counts": {
+  "passed": 4,
+  "failed": 0,
+  "errors": 0,
+  "unchecked": 0,
+  "total": 4
+ },
+ "rows": [
+  {
+   "id": "F01",
+   "kind": "public_probe",
+   "is_target": true,
+   "query": "住宿报销上限是多少？",
+   "expected_status": "answered_with_warning",
+   "actual_status": "answered_with_warning",
+   "error_code": null,
+   "answer_summary": "来源索引版本落后，以下内容须核验当前政策。\n国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+   "citations": [
+    {
+     "object_id": "policy",
+     "version": 1,
+     "span_start": 34,
+     "span_end": 78,
+     "quote": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。"
+    }
+   ],
+   "citation_count": 1,
+   "result": "pass"
+  },
+  {
+   "id": "F04",
+   "kind": "public_probe",
+   "is_target": false,
+   "query": "火星天气如何？",
+   "expected_status": "fallback",
+   "actual_status": "fallback",
+   "error_code": "no_retrieval_hit",
+   "answer_summary": "未检索到可靠依据，请转人工核验。",
+   "citations": [],
+   "citation_count": 0,
+   "result": "pass"
+  },
+  {
+   "id": "F05",
+   "kind": "public_probe",
+   "is_target": false,
+   "query": "个人薪资是多少？",
+   "expected_status": "fallback",
+   "actual_status": "fallback",
+   "error_code": "prohibited_topic",
+   "answer_summary": "该主题禁止自动回答，请向授权负责人核验。",
+   "citations": [],
+   "citation_count": 0,
+   "result": "pass"
+  },
+  {
+   "id": "F12",
+   "kind": "public_probe",
+   "is_target": false,
+   "query": "账号密码忘了怎么重置？",
+   "expected_status": "answered",
+   "actual_status": "answered",
+   "error_code": null,
+   "answer_summary": "账号密码忘记或需要重置：通过办公系统的自助重置入口完成身份核验。无法通过时联系内部服务台；不要把密码或验证码发给助手。这里提供流程，不会告知任何人的现有密码。",
+   "citations": [
+    {
+     "object_id": "faq",
+     "version": 1,
+     "span_start": 93,
+     "span_end": 172,
+     "quote": "账号密码忘记或需要重置：通过办公系统的自助重置入口完成身份核验。无法通过时联系内部服务台；不要把密码或验证码发给助手。这里提供流程，不会告知任何人的现有密码。"
+    }
+   ],
+   "citation_count": 1,
+   "result": "pass"
+  }
+ ]
+}

@@ -1,0 +1,215 @@
+{
+ "id": "ticket-e33e76121d13fe9aeaa3e7e8f5d435f814bd003746248533f86409ca0568b183",
+ "source": "seeded",
+ "title": "委托：住宿报销上限的回答需要排查",
+ "work_language": "zh",
+ "created_at": "2026-10-24T09:22:00.531234+00:00",
+ "created_by": {
+  "id": "human:cbb29b71a5d9479ba58134169ac9338b",
+  "kind": "human"
+ },
+ "role": "engineer",
+ "world_setup": {
+  "config_version": 1,
+  "executor": {
+   "id": "engineer-ticket-golive",
+   "kind": "system"
+  },
+  "note": "试点配置已上线（系统为工程委托准备起始状态，不是学员的操作）"
+ },
+ "target_tests": [
+  {
+   "test_id": "4bbcb1473d8f7a566c654e9e9aef0215ee1661547d56aa5e6851c244750a3f2d",
+   "origin": "ticket_seed",
+   "origin_label": "委托附带的复现记录",
+   "executor": {
+    "id": "engineer-ticket-seed",
+    "kind": "system"
+   },
+   "query": "住宿报销上限是多少？",
+   "status": "answered",
+   "error_code": null,
+   "answer_summary": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。",
+   "citations": [
+    {
+     "object_id": "policy",
+     "version": 1,
+     "span_start": 34,
+     "span_end": 78,
+     "quote": "国内出差住宿报销上限为每人每晚500元；超出上限须在出行前取得经理书面批准，并保留票据。"
+    }
+   ],
+   "citation_count": 1,
+   "source_versions": {
+    "policy": 2
+   },
+   "indexed_versions": {
+    "policy": 1
+   },
+   "used_versions": {
+    "faq": 1,
+    "leave": 1,
+    "meal": 1,
+    "onboarding": 1,
+    "policy": 1
+   },
+   "config_version": 1,
+   "config": {
+    "same_as_baseline": true,
+    "changed_fields": [],
+    "differences": {}
+   }
+  }
+ ],
+ "public_probes": [
+  {
+   "id": "F01",
+   "query": "住宿报销上限是多少？"
+  },
+  {
+   "id": "F04",
+   "query": "火星天气如何？"
+  },
+  {
+   "id": "F05",
+   "query": "个人薪资是多少？"
+  },
+  {
+   "id": "F12",
+   "query": "账号密码忘了怎么重置？"
+  }
+ ],
+ "baseline_config": {
+  "domains": [
+   "stable_faq",
+   "onboarding",
+   "policy_travel",
+   "policy_meal",
+   "policy_leave"
+  ],
+  "scope_filter": true,
+  "update_strategy": "daily",
+  "fallback": "human",
+  "freshness_guard": "none",
+  "work_items": [
+   "scope_filter",
+   "human_fallback"
+  ],
+  "manual_domains": [],
+  "prohibited_topics": [],
+  "retrieval_limit": 1,
+  "chunk_size": 500,
+  "min_score": 0.35
+ },
+ "editable_fields": [
+  {
+   "field": "domains",
+   "type": "set",
+   "choices": [
+    "onboarding",
+    "policy_leave",
+    "policy_meal",
+    "policy_travel",
+    "stable_faq"
+   ]
+  },
+  {
+   "field": "scope_filter",
+   "type": "boolean"
+  },
+  {
+   "field": "update_strategy",
+   "type": "choice",
+   "choices": [
+    "daily",
+    "realtime",
+    "manual_policy"
+   ]
+  },
+  {
+   "field": "fallback",
+   "type": "choice",
+   "choices": [
+    "human",
+    "none"
+   ]
+  },
+  {
+   "field": "freshness_guard",
+   "type": "choice",
+   "choices": [
+    "none",
+    "warn",
+    "fallback"
+   ]
+  },
+  {
+   "field": "work_items",
+   "type": "set",
+   "choices": [
+    "human_fallback",
+    "realtime_sync",
+    "scope_filter"
+   ],
+   "costs": {
+    "human_fallback": 1,
+    "realtime_sync": 5,
+    "scope_filter": 1
+   }
+  },
+  {
+   "field": "manual_domains",
+   "type": "set",
+   "choices": [
+    "onboarding",
+    "policy_leave",
+    "policy_meal",
+    "policy_travel",
+    "stable_faq"
+   ]
+  },
+  {
+   "field": "prohibited_topics",
+   "type": "text_list",
+   "max_items": 10,
+   "max_length": 40
+  },
+  {
+   "field": "retrieval_limit",
+   "type": "integer",
+   "minimum": 1,
+   "maximum": 20
+  },
+  {
+   "field": "chunk_size",
+   "type": "integer",
+   "minimum": 1,
+   "maximum": 4000
+  },
+  {
+   "field": "min_score",
+   "type": "number",
+   "minimum": 0
+  }
+ ],
+ "review_budget": {
+  "used": 0,
+  "limit": 3
+ },
+ "experiment_budget": {
+  "used": 0,
+  "limit": 50
+ },
+ "draft_budget": {
+  "used": 0,
+  "limit": 50
+ },
+ "retrieval": {
+  "mode": "rule_based",
+  "note": "试跑与复核固定使用规则版检索，与是否配置识别器无关。"
+ },
+ "trials": [],
+ "drafts": [],
+ "latest_draft": null,
+ "reviews": []
+}
