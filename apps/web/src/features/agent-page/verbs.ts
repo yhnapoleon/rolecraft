@@ -43,18 +43,18 @@ export const VERBS: Record<string, Verb> = {
   'requests.read': read('查了一次请求的结果', 'Checked on a request'),
   'workspace_imports.list': read('翻阅了', 'Looked through'),
   'workspace_imports.read': read('读了导入', 'Read an import'),
-  'engineer.tickets.read': read('读了工单', 'Read the ticket'),
-  'engineer.reviews.read': read('读了复核', 'Read the review'),
+  'engineer.tickets.read': read('读了', 'Read'),
+  'engineer.reviews.read': read('读了', 'Read'),
   'tests.create': act('跑了一次测试', 'Ran a test'),
   'engineer.reproduce': act('复现了', 'Reproduced'),
-  'engineer.trial': act('试跑了', 'Ran a trial'),
+  'engineer.trial': act('试跑了', 'Ran a trial on'),
   'feedback.responses.create': handBack('回应了反馈', 'Replied to feedback'),
   'work_products.create': handBack('交回了', 'Handed back'),
   'work_products.versions.create': handBack('交回了新版本', 'Handed back a new version of'),
   'work_items.create': handBack('加了一件事', 'Added a task'),
   'work_items.update': handBack('改了一件事', 'Updated a task'),
   'work_items.batch': handBack('整理了事项', 'Rearranged tasks'),
-  'engineer.submissions.draft': handBack('起草了签字', 'Drafted a sign-off'),
+  'engineer.submissions.draft': handBack('起草了签字', 'Drafted a sign-off for'),
 };
 
 /** Tools a connection is granted: everything above, nothing a person must do themselves. */

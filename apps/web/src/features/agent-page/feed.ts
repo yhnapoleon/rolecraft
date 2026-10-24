@@ -46,10 +46,19 @@ function engineerTitle(kind: string, objects: readonly { kind: string; title?: s
   return undefined;
 }
 
-/** A ticket's title starts with "委托：" / "Ticket: "; in a row the verb already says what it is. */
+/** Recorded calls can predate short names. Render known tickets in the practice language;
+ * unknown tickets and reviews keep a plain noun instead of exposing a backend title. */
 function ticketName(kind: string, title: string | undefined) {
-  if (!title || !['ticket', 'experiment', 'draft'].includes(kind)) return title;
-  return title.replace(/^(委托[：:]\s*|Ticket:\s*)/i, '') || title;
+  const en = locale() === 'en';
+  if (kind === 'review') return en ? 'the review' : '复核';
+  if (!['ticket', 'experiment', 'draft'].includes(kind)) return title;
+  const hotel = [
+    '委托：住宿报销上限的回答需要排查',
+    'Ticket: the hotel reimbursement limit answer needs investigation',
+    '住宿上限委托',
+    'the hotel-limit ticket',
+  ].includes(title ?? '');
+  return hotel ? (en ? 'the hotel-limit ticket' : '住宿上限委托') : en ? 'the ticket' : '工单';
 }
 
 export function toEvent(row: AgentActivity): AgentEvent {

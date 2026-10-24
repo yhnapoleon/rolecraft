@@ -166,6 +166,12 @@ def test_agent_activity_stores_no_body_or_token(env, mcp):
             ),
         ),
         (
+            "engineer.tickets.read",
+            {"query": {}},
+            {"result": {"tickets": [{"id": "t2", "title": "委托：住宿报销上限的回答需要排查"}]}},
+            ([{"kind": "ticket", "id": "t2", "version": None, "title": "住宿上限委托"}], None),
+        ),
+        (
             "engineer.trial",
             {"command": {"payload": {"ticket_id": "t1"}}},
             {"result": {"trial": {"id": "x7", "ticket_id": "t1"}}},

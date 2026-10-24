@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { setPreference } from '../../app/i18n';
 import type { AgentActivity } from '../../contracts-v2';
 import { createAgentFeed, toEvent } from './feed';
 import { accessInput } from './grant';
@@ -119,7 +120,11 @@ describe('agent activity feed', () => {
         ],
       }),
     );
-    expect(titled.object?.title).toBe('住宿报销上限的回答需要排查');
+    expect(titled.object?.title).toBe('住宿上限委托');
+    setPreference('en');
+    expect(toEvent(row(8, { tool: 'engineer.tickets.read', objects: [{ kind: 'ticket', id: 't1', version: null, title: '住宿上限委托' }] })).object?.title).toBe('the hotel-limit ticket');
+    expect(toEvent(row(9, { tool: 'engineer.trial', objects: [{ kind: 'ticket', id: 't2', version: null, title: 'An unknown backend title' }] })).object?.title).toBe('the ticket');
+    setPreference('zh');
     const review = toEvent(
       row(7, {
         tool: 'engineer.reviews.read',
