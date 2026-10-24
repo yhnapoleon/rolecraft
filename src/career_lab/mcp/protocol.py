@@ -15,6 +15,8 @@ from pydantic import ValidationError
 
 from career_lab.delegations.http_client import RemoteFailure
 
+from .results import agent_view
+
 MODERN = "2026-07-28"
 LEGACY = "2025-11-25"
 VERSION = "io.modelcontextprotocol/protocolVersion"
@@ -24,7 +26,8 @@ INSTRUCTIONS = (
     "RoleCraft workspace tools for one delegated practice session. Only the listed tools are "
     "authorized; server permissions and business rules still apply. session_id is optional "
     "and defaults to the session this connection is authorized for; if given, it must match. "
-    "Start with observation. The JSON-RPC id is not the business request_id: after an unknown "
+    "Start with observation; tools shows which tools are available now. "
+    "The JSON-RPC id is not the business request_id: after an unknown "
     "result keep command.request_id unchanged and read requests.read; re-execution requires "
     "an explicit user decision."
 )
@@ -211,7 +214,7 @@ class Protocol:
                 # An explicit session is passed through for the backend's own match check.
                 arguments = {**arguments, "session_id": bound}
             try:
-                result = self.backend.call(name, arguments)
+                result = agent_view(name, arguments, self.backend.call(name, arguments))
                 return self._result(
                     {
                         "content": [
