@@ -77,6 +77,8 @@ describe('when the browser blocks copying the package', () => {
     setPreference(language);
     expect(copyBlockedText()).toContain(act);
     expect(copyBlockedText()).not.toContain(view);
-    expect(unmatchedReturnText()).toContain(view === '查看' ? '“查看”' : 'viewing a package');
+    expect(unmatchedReturnText()).toContain(
+      view === '查看' ? '里查看不算交出' : 'viewing a package',
+    );
   });
 });

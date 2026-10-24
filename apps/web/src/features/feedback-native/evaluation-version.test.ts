@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { aboutFacts } from '../../app/about-facts';
 import { evaluationVersionLine, evaluationVersionText } from './evaluation-version';
 
 describe('saved report rubric version', () => {
@@ -34,5 +35,24 @@ describe('saved report rubric version', () => {
     const old = evaluationVersionLine(doc, { id: 'f0' }, 'zh');
     expect(old.dataset.rubricVersion).toBe('not_recorded');
     expect(old.textContent).toBe('评价标准版本：未记录');
+  });
+
+  it('keeps the rubric out of the learner view and notes it for About this workspace', () => {
+    const doc = {
+      createElement: () => ({ dataset: {} as Record<string, string> }),
+    } as unknown as Document;
+    const line = evaluationVersionLine(
+      doc,
+      {
+        id: 'f2',
+        provenance: { evaluation_version: 'feedback-rubric-v2-final.1' },
+        subject: { session_id: 'about-session' },
+      },
+      'zh',
+    );
+    expect(line.hidden).toBe(true);
+    expect(aboutFacts('about-session')).toEqual([
+      { label: '评价标准', value: 'rubric-v2 定稿（2026-10-09）' },
+    ]);
   });
 });

@@ -9,6 +9,7 @@ import type {
   _PreviewState as PreviewState,
 } from '../../../contracts-v2';
 import { outcomeTerm, outcomeText, type OutcomeKey, type OutcomeLanguage } from './outcome-copy';
+import { modelWaitNode } from '../../../app/model-status';
 
 export type PreviewEntry = { preview: FeedbackV2; state: PreviewState | null };
 type Row = Record<string, unknown>;
@@ -85,6 +86,8 @@ export type PreviewView = {
   heading: string;
   version: string;
   meta: string[];
+  /** The semantic judgement waits for a model: the grey mark follows the meta line. */
+  waiting: string | null;
   status: 'current' | 'stale';
   statusLabel: string;
   response: string;
@@ -189,6 +192,7 @@ export function previewView(
     heading: t('title'),
     version: t('version', { v: version }),
     meta: [t('ruleChecked'), ...(model ? [t(model)] : [])],
+    waiting: model === 'waitingModel' ? t('waitingNote') : null,
     status: stale ? 'stale' : 'current',
     statusLabel: t(stale ? 'stale' : 'current'),
     response: preview.business_response,
@@ -370,7 +374,9 @@ function previewNodes(el: Make, view: PreviewView, primary: boolean): HTMLElemen
     head.append(el('h3', view.heading, 'w03-outcome-title'), badge);
     nodes.push(head);
   }
-  nodes.push(el('p', [view.version, ...view.meta].join(' · '), 'w03-outcome-meta'));
+  const meta = el('p', [view.version, ...view.meta].join(' · '), 'w03-outcome-meta');
+  if (view.waiting) meta.append(modelWaitNode(meta.ownerDocument, view.waiting));
+  nodes.push(meta);
   const summary = el('p', '', 'w03-outcome-summary');
   summary.append(el('strong', view.response));
   nodes.push(summary);
@@ -412,6 +418,7 @@ function previewNodes(el: Make, view: PreviewView, primary: boolean): HTMLElemen
   if (view.actual.length) nodes.push(box('actual', view.labels.actual, list(view.actual)));
   const details = el('details', '', 'w03-outcome-details');
   details.append(el('summary', view.labels.details));
+  if (view.waiting) details.append(el('p', view.waiting, 'muted'));
   for (const outcome of view.outcomes) {
     if (!outcome.conditions.length && !outcome.waitsFor) continue;
     const item = el('div', '', `w03-outcome-detail ${outcome.kind}`);

@@ -13,6 +13,8 @@ export type NativeCiteHost<A extends { id: string }, W extends Work> = {
   native(a: A): boolean;
   /** The work open on the stage, if any. */
   open(): W | null;
+  /** A work by id, for evidence chips shown outside the stage (for example a work preview). */
+  find?(a: A, id: string): W | null;
   /** The newest work of the open task, cited into when no work is open. */
   newest(a: A): W | null;
   /** Opens the picker on the work's draft; false when the person closes it. */
@@ -55,7 +57,7 @@ export function nativeCiteAction<A extends { id: string }, W extends Work>(
   host: NativeCiteHost<A, W>,
   a: A | null | undefined,
   action: string | undefined,
-  data: { id?: string; key?: string },
+  data: { id?: string; key?: string; work?: string },
 ): Promise<void> | null {
   if (!a || !action || !ACTIONS.has(action) || !host.native(a)) return null;
   return run(host, a, action, data).catch((error: unknown) => {
@@ -67,10 +69,10 @@ async function run<A extends { id: string }, W extends Work>(
   host: NativeCiteHost<A, W>,
   a: A,
   action: string,
-  data: { id?: string; key?: string },
+  data: { id?: string; key?: string; work?: string },
 ): Promise<void> {
   if (action === 'view-evidence') {
-    const work = host.open();
+    const work = (data.work && host.find?.(a, data.work)) || host.open();
     if (work && data.key) await host.view(a, work, data.key);
     return;
   }

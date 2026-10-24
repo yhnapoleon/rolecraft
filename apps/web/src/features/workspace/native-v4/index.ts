@@ -344,7 +344,7 @@ export function mountNativeWorkspace(
         const row = node('details'),
           heading = node(
             'summary',
-            T('第 ' + p.version + ' 版 · ', 'v' + p.version + ' · ') + p.title,
+            `${T(`第 ${p.version} 版`, `version ${p.version}`)} · ${p.title}`,
           );
         const content = node('pre', p.content, 'native-version-content');
         row.append(heading, content);
@@ -419,10 +419,7 @@ export function mountNativeWorkspace(
           }
         : undefined;
     serverText.textContent = product
-      ? T('第 ' + product.version + ' 版 · ', 'v' + product.version + ' · ') +
-        product.title +
-        '\n' +
-        product.content
+      ? `${T(`第 ${product.version} 版`, `version ${product.version}`)} · ${product.title}\n${product.content}`
       : '';
     merge.disabled = readonly || pending || !reviewed;
     recover.hidden = !state.journal.pending;

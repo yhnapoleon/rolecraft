@@ -23,7 +23,15 @@ export type Activity = {
   verification?: string;
 };
 /** One line of "What it did": a sentence, an optional note and the object it opens. */
-export type AgentLine = { id: string; text: string; detail?: string; marker?: string; open?: Ref };
+export type AgentLine = {
+  id: string;
+  text: string;
+  detail?: string;
+  marker?: string;
+  /** The marker is "awaiting model": shown as the grey mark, its name read aloud. */
+  waiting?: boolean;
+  open?: Ref;
+};
 export type ReturnedWork = {
   ref: Ref;
   title: string;
@@ -191,6 +199,7 @@ export function agentLogLines(
       text: t(language, '我的 Agent：', 'My agent: ') + copy.text,
       ...(event.summary ? { detail: event.summary } : {}),
       ...(marker ? { marker } : {}),
+      ...(awaitsModel(event.semanticStatus) ? { waiting: true } : {}),
       ...(open ? { open } : {}),
     });
   }
@@ -254,11 +263,13 @@ export function restoreDraft(value: unknown, sessionId: string): Draft {
     return blank;
   }
 }
+/** A semantic status that waits for a model. */
+export const awaitsModel = (status?: string) =>
+  ['waiting_model', 'awaiting_model', 'unavailable', 'placeholder'].includes(status ?? '');
 export function semanticLabel(language: Language, status?: string, verification?: string): string {
-  if (['waiting_model', 'awaiting_model', 'unavailable', 'placeholder'].includes(status ?? ''))
-    return t(language, '等待模型接入', 'Waiting for model connection');
+  if (awaitsModel(status)) return t(language, '等待模型接入', 'Awaiting model connection');
   if (['rule_verified', 'rules_verified'].includes(verification ?? ''))
-    return t(language, '规则核实', 'Rule verified');
+    return t(language, '规则核实', 'Rule-checked');
   return '';
 }
 export function grantInput(draft: Draft, sessionId: string, now: Date): DelegationInput {

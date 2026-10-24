@@ -423,7 +423,7 @@ export function mount(
             ? [
                 {
                   text: presentation.status,
-                  tone: turn.generationMode === 'local' ? 'waiting' : undefined,
+                  awaitsModel: presentation.waitingNote,
                 },
               ]
             : [],
@@ -433,7 +433,17 @@ export function mount(
           actions: refs.childElementCount ? [refs] : [],
           more: {
             ...replyDisclosure(presentation),
-            body: [reply, ...materials.filter((ref) => ref !== lead).map(link)],
+            body: [
+              ...(presentation.waitingNote
+                ? [
+                    Object.assign(el('p', 'rc-roles__limitation'), {
+                      textContent: presentation.waitingNote,
+                    }),
+                  ]
+                : []),
+              reply,
+              ...materials.filter((ref) => ref !== lead).map(link),
+            ],
             open: expandedReplies.has(turn.id),
             onToggle: (open) => {
               if (open) expandedReplies.add(turn.id);

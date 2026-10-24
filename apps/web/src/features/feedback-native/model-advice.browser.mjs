@@ -123,13 +123,15 @@ it.each(['zh', 'en'])(
   async (language) => {
     await withFeedback(language, async (browser) => {
       const en = language === 'en';
-      expect(await summaryText(browser)).toBe(en ? 'Awaiting model connection' : '等待模型接入');
+      // "Model advice" with the grey mark, whose readable name follows it.
+      const waiting = en ? 'Model adviceAwaiting model connection' : '模型建议等待模型接入';
+      expect(await summaryText(browser)).toBe(waiting);
       await setReport(browser, { semantic_status: 'pending', model_advice: [] });
       expect(await summaryText(browser)).toBe(
         en ? 'Model advice awaiting verification' : '模型建议待核验',
       );
       await setReport(browser, { semantic_status: 'waiting_for_model' });
-      expect(await summaryText(browser)).toBe(en ? 'Awaiting model connection' : '等待模型接入');
+      expect(await summaryText(browser)).toBe(waiting);
       await setReport(browser, { semantic_status: 'failed' });
       expect(await summaryText(browser)).toBe(en ? 'Model advice failed' : '模型建议失败');
       await setReport(browser, { semantic_status: 'available', model_advice: [completed] });

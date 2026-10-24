@@ -118,27 +118,24 @@ describe('outcome preview model', () => {
       'zh',
       all,
     );
-    expect(view?.main.heading).toBe('outcome 预览');
+    expect(view?.main.heading).toBe('可能结果');
     expect(view?.main.version).toBe('按第 1 版计算');
-    expect(view?.main.meta).toEqual(['规则核实', '语义判断：等待模型接入']);
-    expect(view?.main.statusLabel).toBe('当前预览');
+    expect(view?.main.meta).toEqual(['规则核实', '语义判断']);
+    expect(view?.main.waiting).toBe('语义判断等模型接入；现在只按规则核实。');
+    expect(view?.main.statusLabel).toBe('当前');
     expect(view?.main.questions).toEqual(['「确认需求」的决定依据哪些资料或测试结果？']);
     expect(view?.main.outcomes.map((o) => o.label)).toEqual(['事实', '条件预测', '待核验']);
     expect(view?.main.outcomes[2].waitsFor).toBe('提交并经过评审');
-    expect(view?.main.basis).toBe('依据：已保存的第 1 版 · 第 0 版试点配置');
+    expect(view?.main.basis).toBe('依据：已保存的第 1 版 · 试点配置 v0');
     expect(view?.earlier).toEqual([]);
   });
 
   it('OUT-UI-02: an earlier preview is labelled stale with every changed condition', () => {
     for (const [language, label, lines] of [
-      [
-        'zh',
-        '旧预览，条件已变',
-        ['试点配置第 0 版 → 第 1 版', '「演示日程」有新版本 v2', '资源变化：容量 30 → 60'],
-      ],
+      ['zh', '条件已变', ['试点配置 v0 → v1', '「演示日程」有新版本 v2', '资源变化：容量 30 → 60']],
       [
         'en',
-        'Earlier preview, conditions changed',
+        'Conditions changed',
         [
           'Pilot configuration v0 → v1',
           '“Demo schedule” has a new version: v2',
@@ -168,9 +165,9 @@ describe('outcome preview model', () => {
       all,
     );
     expect(zh?.main.actual).toEqual([
-      '已应用第 1 版试点配置：试点人数 30',
+      '已应用试点配置 v1：试点人数 30',
       '资源申请已批准：容量 60',
-      '已运行测试 2 次，最近一次已回答（第 1 版配置）',
+      '已运行测试 2 次，最近一次已回答（配置 v1）',
       '第 1 版已分享给经理',
     ]);
     expect(zh?.main.outcomes[1].summary).toBe(
@@ -186,7 +183,7 @@ describe('outcome preview model', () => {
       'Pilot configuration v1 applied: pilot users 30',
       'Resource request approved: capacity 60',
       'Test runs: 2; latest answered (configuration v1)',
-      'v1 shared with the manager',
+      'Version 1 shared with the manager',
     ]);
   });
 
@@ -239,8 +236,8 @@ describe('outcome preview model', () => {
       all,
     );
     expect(view?.main.version).toBe('按第 1 版计算');
-    expect(view?.main.changes).toEqual(['这份作品已保存第 2 版（预览按第 1 版）']);
-    expect(view?.main.draftNote).toBe('预览对应已保存的第 1 版；草稿里未保存的修改不在其中。');
+    expect(view?.main.changes).toEqual(['这份作品已保存第 2 版（推演按第 1 版）']);
+    expect(view?.main.draftNote).toBe('按已保存的第 1 版推演；草稿里未保存的修改不在其中。');
     const both = outcomeView(
       entries(
         [preview(1), { ...superseded, superseded_by: ref('feedback', 'f2') }],
@@ -252,9 +249,9 @@ describe('outcome preview model', () => {
     );
     expect(both?.main.version).toBe('按第 2 版计算');
     expect(both?.earlier.map((row) => [row.label, row.view.statusLabel])).toEqual([
-      ['第 1 版的预览', '旧预览，条件已变'],
+      ['第 1 版的可能结果', '条件已变'],
     ]);
-    expect(both?.earlier[0].view.newer).toBe('较新的版本已有自己的预览。');
+    expect(both?.earlier[0].view.newer).toBe('较新的版本已有自己的可能结果。');
     expect(both?.earlier[0].view.links).toEqual([]);
   });
 
@@ -349,8 +346,8 @@ describe('outcome preview model', () => {
       'zh',
       all,
     );
-    expect(carried?.main.statusLabel).toBe('当前预览');
-    expect(carried?.main.carried).toBe('第 2 版内容与此相同，这条预览仍适用。');
+    expect(carried?.main.statusLabel).toBe('当前');
+    expect(carried?.main.carried).toBe('第 2 版内容与此相同，这条推演仍适用。');
     const exact = outcomeView(
       entries([preview(1), state(1)]),
       { version: 1, hasDraft: false },

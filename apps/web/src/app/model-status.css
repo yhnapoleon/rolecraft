@@ -1,0 +1,106 @@
+/* The grey "awaiting model" mark: grey is "not known yet", drawn as a dashed ring (2.3 colour
+ * semantics). It never carries text on screen; its name is read and shown on hover. */
+.model-wait {
+  display: inline-block;
+  flex: none;
+  position: relative;
+  width: 0.78em;
+  height: 0.78em;
+  margin-inline: 0.3em;
+  border: 1.5px dashed var(--ink-3, #7b818d);
+  border-radius: 50%;
+  vertical-align: -0.08em;
+  box-sizing: border-box;
+}
+.model-wait__name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Toolbar chip: one short label for the whole practice. */
+.model-chip {
+  gap: 6px;
+  padding: 0 10px;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-weight: 500;
+}
+.model-chip .model-wait {
+  margin: 0;
+  width: 10px;
+  height: 10px;
+}
+.model-chip__on {
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--good, #16794a);
+}
+.model-wrap .model-pop {
+  left: auto;
+  right: 0;
+  /* Grows from its chip, not from the middle. */
+  transform-origin: top right;
+  width: min(340px, calc(100vw - 32px));
+  gap: 10px;
+  font-size: 13.5px;
+}
+.model-pop__lead {
+  margin: 0;
+  color: var(--ink-2);
+}
+.model-pop__parts {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.model-pop__parts li {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+.model-pop__parts .model-wait,
+.model-pop__parts .model-chip__on {
+  margin: 0;
+  width: 10px;
+  height: 10px;
+  transform: translateY(1px);
+}
+.model-pop__parts b {
+  display: block;
+  font-weight: 600;
+}
+.model-pop__now {
+  display: block;
+  color: var(--ink-3);
+}
+@media (max-width: 720px) {
+  /* The chip sits mid-toolbar on a phone: the popover spans the width under the toolbar. */
+  .model-wrap .model-pop {
+    position: fixed;
+    top: calc(var(--toolbar-h, 52px) + 8px);
+    left: 16px;
+    right: 16px;
+    width: auto;
+    transform-origin: top center;
+  }
+  .model-chip {
+    width: 34px;
+    padding: 0;
+    justify-content: center;
+  }
+  .model-chip__label {
+    display: none;
+  }
+}

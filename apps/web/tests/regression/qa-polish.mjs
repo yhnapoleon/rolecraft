@@ -285,23 +285,36 @@ const importButton = `document.querySelector('#sheet [data-action="confirm-impor
 const productTask = (returnId) =>
   `window.PracticeLive.store.active().v2Workspace.products.find((p) => p.source_return_id === ${JSON.stringify(returnId)})?.task?.object_id`;
 
-/** F29: the two Agent buttons say what each does. */
+/** F29: the two Agent buttons say what each does. The raw package view lives in
+ * "⋯ → About this workspace" (190: internals leave the working view). */
 async function agentLabels(context) {
   const { browser, text, shot } = context;
   await openAgent(context, 0);
   const labels = await browser.ev(`[
-    document.querySelector('[data-action="package"]').textContent.trim(),
+    document.querySelector('[data-action="copy-package"]').textContent.trim(),
     document.querySelector('#import-form [type="submit"]').textContent.trim(),
   ]`);
-  assert.deepEqual(labels, text(['查看', '预览'], ['View package', 'Preview return']));
+  assert.deepEqual(labels, text(['复制任务包', '预览'], ['Copy package', 'Preview return']));
+  assert.equal(
+    await browser.ev(`!!document.querySelector('.agent-panel [data-action="package"]')`),
+    false,
+  );
   await shot('F29-agent');
+}
+
+/** Opens the raw task package from "⋯ → About this workspace". */
+async function openPackageFromAbout(browser) {
+  await browser.click('button[data-action="menu"][data-menu="more"]');
+  await browser.click('[data-action="about"]');
+  await waitFor(browser, `!!document.querySelector('#sheet [data-action="package"]')`);
+  await browser.click('#sheet [data-action="package"]');
 }
 
 /** F28: each document in the task package carries its text once (the brief always goes). */
 async function packageDocuments(context) {
   const { browser } = context;
   await openAgent(context, 0);
-  await browser.click('[data-action="package"]');
+  await openPackageFromAbout(browser);
   await waitFor(browser, `!!document.querySelector('#package-text')`);
   const pkg = JSON.parse(await browser.ev(`document.querySelector('#package-text').value`));
   assert.ok(pkg.materials.length >= 1);

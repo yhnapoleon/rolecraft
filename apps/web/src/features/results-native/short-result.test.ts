@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { renderShortResult } from './short-result';
+import { setPreference } from '../../app/i18n';
 import { asFake, fakeDocument, type FakeElement } from './fake-dom';
 import { copyText, type CopyTable } from './localization';
 
@@ -49,6 +50,23 @@ describe('063-03 short result frame', () => {
     expect(items.map((n) => n.dataset.tone)).toEqual(['verified', 'waiting']);
     expect(root.byTag('ul')[0].getAttribute('aria-label')).toBe('Result status');
     expect(root.byClass('short-result__note')[0].textContent).toBe('Permission limited');
+  });
+
+  it('UI-02b follows a status that waits for a model with the named grey mark', () => {
+    setPreference('en');
+    const doc = fakeDocument();
+    const view = renderShortResult(doc, {
+      kind: 'reply',
+      statuses: [{ text: 'Rule-checked', awaitsModel: 'Judgment waits for a model.' }],
+    });
+    const item = asFake(view.element).byTag('li')[0];
+    expect(item.textContent).toBe('Rule-checkedAwaiting model connection');
+    expect(item.dataset.tone).toBeUndefined();
+    const mark = asFake(view.element).byClass('model-wait')[0];
+    expect((mark as unknown as { title: string }).title).toBe(
+      'Awaiting model connection · Judgment waits for a model.',
+    );
+    setPreference('zh');
   });
 
   it('UI-04 treats markup-like text as text and adds no actions of its own', () => {

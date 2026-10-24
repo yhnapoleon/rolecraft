@@ -2,7 +2,7 @@
 // Notice: apps/web/licenses/react-bits-folder.txt.
 // Readable horizontal cards replace the tiny fan per the user's 2026-10-05 refinement.
 import { T } from './i18n';
-import { purposeLabel } from './vocab.js';
+import { purposeLabel, workVersion } from './vocab.js';
 const esc = (v) =>
   String(v ?? '').replace(
     /[&<>"']/g,
@@ -69,7 +69,7 @@ export function workFolderMarkup({ taskId, title = '', works = [] }) {
 export function workFolderTrayMarkup({ taskId, title = '', works }) {
   return `<section id="${esc(id(taskId, 'tray'))}" class="work-folder-tray" data-folder-tray="${esc(taskId)}" role="region" aria-labelledby="${esc(id(taskId, 'heading'))}">
     <header class="work-folder-tray-head"><div><h2 id="${esc(id(taskId, 'heading'))}">${esc(title || T('这件事的作品', 'Work for this task'))}</h2><p>${T(works.length + ' 份作品 · 选择一份打开', works.length + ' works · Choose one to open')}</p></div><button type="button" id="${esc(id(taskId, 'close'))}" class="work-folder-tray-close" data-folder-close aria-label="${esc(T('收起作品', 'Close works'))}"><span>${T('收起', 'Close')}</span><span aria-hidden="true">×</span></button></header>
-    <div class="work-folder-tray-row" data-folder-row>${works.map((w) => `<div class="work-folder-slot" data-folder-slot="${esc(w.id)}"><button type="button" id="${esc(id(taskId, 'paper', w.id))}" class="work-folder-card" data-folder-card="${esc(w.id)}" data-folder-task="${esc(taskId)}" draggable="false"><span class="work-folder-card-meta">${paperIcon}<span>${esc(w.kind)}</span><span>v${esc(w.version)}</span>${w.pending ? `<span class="work-folder-pending">${T('待检查', 'To check')}</span>` : ''}</span><span class="work-folder-card-title" data-work-flight-title>${esc(w.title)}</span><span class="work-folder-card-summary">${esc(w.summary)}</span><span class="work-folder-card-open">${T('打开作品', 'Open work')}${arrow}</span></button></div>`).join('')}</div></section>`;
+    <div class="work-folder-tray-row" data-folder-row>${works.map((w) => `<div class="work-folder-slot" data-folder-slot="${esc(w.id)}"><button type="button" id="${esc(id(taskId, 'paper', w.id))}" class="work-folder-card" data-folder-card="${esc(w.id)}" data-folder-task="${esc(taskId)}" draggable="false"><span class="work-folder-card-meta">${paperIcon}<span>${esc(w.kind)}</span><span>${esc(workVersion(w.version))}</span>${w.pending ? `<span class="work-folder-pending">${T('待检查', 'To check')}</span>` : ''}</span><span class="work-folder-card-title" data-work-flight-title>${esc(w.title)}</span><span class="work-folder-card-summary">${esc(w.summary)}</span><span class="work-folder-card-open">${T('打开作品', 'Open work')}${arrow}</span></button></div>`).join('')}</div></section>`;
 }
 
 /** Call sync() after board rendering, before the application's focus restoration. */

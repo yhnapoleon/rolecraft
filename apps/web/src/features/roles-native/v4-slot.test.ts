@@ -288,10 +288,7 @@ for (const language of ['zh', 'en'] as const) {
         currentMode: originalMode === 'local' ? 'local_reference' : 'model',
       });
       const label = {
-        local:
-          language === 'zh'
-            ? '本地来源：规则核实 · 判断等待模型接入'
-            : 'Sources checked by rules · judgment waiting for model connection',
+        local: language === 'zh' ? '规则核实' : 'Rule-checked',
         model:
           language === 'zh'
             ? '模型建议（不计分） · 保留原回复'

@@ -1,7 +1,7 @@
 import { T, when, locale, isChinese } from './i18n';
 import { icon, agentMark, assistantMark } from './art.js';
-import { materialTitle } from './vocab.js';
-import { answerModeLabel, assistantText } from './assistant-mode';
+import { materialTitle, DOMAIN, UPDATE, FALLBACK, WORK_ITEM, workVersion } from './vocab.js';
+import { answerModeLabel, answerWaitMark, assistantText } from './assistant-mode';
 
 const esc = (v) =>
   String(v ?? '').replace(
@@ -98,7 +98,7 @@ export function testSetView({
       ${strip}
       <header class="test-set-head"><div class="test-set-kicker"><span class="test-eyebrow">${icon('flask', 'i-sm')}${T('测试计划', 'Test plan')}</span><span class="test-count">${T(work.cases.length + ' 个问题', work.cases.length + ' questions')}</span></div>
         <label class="sr-only" for="editor-title">${T('标题', 'Title')}</label><input id="editor-title" class="editor-title" data-edit="title" value="${esc(work.title)}" maxlength="160" ${editable ? '' : 'readonly'}>
-        <div class="editor-meta"><span>${work.source === 'user' ? T('你写的', 'By you') : T('来自你的 Agent', 'From your agent')}</span><span data-revision-label>v${work.revision}</span><span class="save" data-save></span></div>
+        <div class="editor-meta"><span>${work.source === 'user' ? T('你写的', 'By you') : T('来自你的 Agent', 'From your agent')}</span><span data-revision-label>${workVersion(work.revision)}</span><span class="save" data-save></span></div>
         <p class="test-set-intro">${T('把想确认的事，变成可以亲手验证的问题。', 'Turn what you want to know into questions you can test.')}</p>
       </header>
       <div class="test-set-status"><div class="test-progress" aria-hidden="true">${work.cases.map((c, i) => `<span class="${states[i].current ? 'recorded' : ''}"></span>`).join('')}</div><span class="test-count-results">${T(done + ' / ' + work.cases.length + ' 问题有结果', done + ' / ' + work.cases.length + ' questions have results')}</span><span class="test-review-note">${T('结果由你核对', 'Results for you to review')}</span></div>
@@ -147,6 +147,44 @@ export function testSetView({
   </div>`;
 }
 
+// The effective configuration of a run, in the words of the settings sheet (never raw JSON).
+const WORK_KEYS = { scope_filter: 'scope', human_fallback: 'fallback', realtime_sync: 'realtime' };
+function configRows(config) {
+  const list = (values, name) =>
+    Array.isArray(values) ? values.map(name).join(T('、', ', ')) : '';
+  const rows = [
+    [T('试点人数', 'Users'), config.participants != null ? String(config.participants) : ''],
+    [
+      T('开放的知识', 'Knowledge'),
+      list(config.knowledge_domains ?? config.domains, (d) =>
+        DOMAIN(d === 'stable_faq' ? 'faq' : d),
+      ),
+    ],
+    [
+      T('上线日', 'Launch day'),
+      config.launch_day != null ? T(`第 ${config.launch_day} 天`, `Day ${config.launch_day}`) : '',
+    ],
+    [
+      T('政策怎么保持最新', 'Keeping policy current'),
+      config.update_strategy
+        ? UPDATE(config.update_strategy === 'manual_policy' ? 'manual' : config.update_strategy)
+        : '',
+    ],
+    [T('答不了时', 'When it cannot answer'), config.fallback ? FALLBACK(config.fallback) : ''],
+    [
+      T('开发安排', 'Engineering work'),
+      list(config.work_items, (w) => WORK_ITEM(WORK_KEYS[w] || w)),
+    ],
+    [
+      T('回答方式', 'How it answers'),
+      config.generator
+        ? assistantText(config.generator === 'llm' ? 'generator_llm' : 'generator_extractive')
+        : '',
+    ],
+  ].filter(([, value]) => value);
+  return `<dl class="kv">${rows.map(([k, v]) => `<div><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join('')}</dl>`;
+}
+
 function generationDetails(run) {
   // Exactly one mode label, from this run's own record; the answer text carries no prefix.
   const label = answerModeLabel(run);
@@ -154,10 +192,10 @@ function generationDetails(run) {
   const identity = [run.generation?.provider, run.generation?.model_revision].filter(Boolean);
   const config = assistantText('assistant_mode_effective_config');
   return `<div class="test-generation" data-generation-mode="${esc(label.mode)}">
-    <span class="test-generation-label"${label.hint ? ` title="${esc(label.hint)}"` : ''}>${esc(label.text)}</span>
+    <span class="test-generation-label"${label.hint ? ` title="${esc(label.hint)}"` : ''}>${esc(label.text)}${answerWaitMark(label)}</span>
     ${identity.length ? `<span>${esc(identity.join(' / '))}</span>` : ''}
     ${sources.length ? `<span>${T('引用：', 'Citations: ')}${esc(sources.join(' · '))}</span>` : ''}
-    ${run.effectiveConfig ? `<details class="test-effective-config"><summary>${esc(config)} · v${esc(run.configVersion)}</summary><pre>${esc(JSON.stringify(run.effectiveConfig, null, 2))}</pre></details>` : `<span>${esc(assistantText('assistant_mode_effective_config_unavailable'))}</span>`}
+    ${run.effectiveConfig ? `<details class="test-effective-config"><summary>${esc(config)} · v${esc(run.configVersion)}</summary>${configRows(run.effectiveConfig)}</details>` : `<span>${esc(assistantText('assistant_mode_effective_config_unavailable'))}</span>`}
   </div>`;
 }
 

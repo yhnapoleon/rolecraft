@@ -1,6 +1,7 @@
 /** 063-03 short result: one primary result first, evidence and full detail on demand.
  * Plain DOM and text only. Consumers pass already-localized text and existing nodes;
  * this frame never parses markup, invents results or performs business actions. */
+import { modelWaitNode } from '../../app/model-status';
 import './short-result.css';
 
 export type ShortResultKind = 'reply' | 'review' | 'feedback' | 'comparison' | 'source' | 'result';
@@ -9,6 +10,8 @@ export type ShortResultTone = 'verified' | 'pending' | 'waiting' | 'unsupported'
 export interface ShortResultStatus {
   readonly text: string;
   readonly tone?: ShortResultTone;
+  /** This part waits for a model: the grey mark follows the text, with this hover sentence. */
+  readonly awaitsModel?: string;
 }
 export interface ShortResultMore {
   /** Expand control text, e.g. "展开原文" or "展开 14 项". */
@@ -67,6 +70,7 @@ export function renderShortResult(doc: Document, input: ShortResultInput): Short
     for (const status of statuses) {
       const item = node('li', '', status.text);
       if (status.tone) item.dataset.tone = status.tone;
+      if (status.awaitsModel !== undefined) item.append(modelWaitNode(doc, status.awaitsModel));
       list.append(item);
     }
     element.append(list);

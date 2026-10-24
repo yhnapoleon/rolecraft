@@ -179,8 +179,8 @@ export function WorkspacePanel({
                   )
                 }
               >
-                <option value={0}>{t('先做', 'First')}</option>
-                <option value={1}>{t('随后', 'Next')}</option>
+                <option value={0}>{t('先做', 'Do first')}</option>
+                <option value={1}>{t('随后', 'Up next')}</option>
                 <option value={2}>{t('暂放', 'Later')}</option>
               </select>
             </label>
@@ -201,7 +201,7 @@ export function WorkspacePanel({
               >
                 <option value="open">{t('待处理', 'Open')}</option>
                 <option value="active">{t('正在做', 'Working')}</option>
-                <option value="paused">{t('暂放', 'Paused')}</option>
+                <option value="paused">{t('已暂停', 'Paused')}</option>
                 <option value="blocked">{t('受阻', 'Blocked')}</option>
                 <option value="done">{t('已处理', 'Done')}</option>
                 <option value="removed">{t('已移除', 'Removed')}</option>

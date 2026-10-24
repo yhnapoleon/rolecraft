@@ -214,7 +214,7 @@ describe('Agent slot public projection and domain inputs', () => {
   });
   it('shows model/rule attribution only from explicit statuses and in both languages', () => {
     expect(semanticLabel('zh', 'placeholder')).toBe('等待模型接入');
-    expect(semanticLabel('en', undefined, 'rule_verified')).toBe('Rule verified');
+    expect(semanticLabel('en', undefined, 'rule_verified')).toBe('Rule-checked');
     expect(semanticLabel('en', undefined, 'unverified')).toBe('');
   });
 });

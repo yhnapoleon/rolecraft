@@ -10,7 +10,8 @@ const zh = {
   titleSynthetic: '合成机制演示',
   titleCompleted: '模型建议（不计分）',
   titlePending: '模型建议待核验',
-  titleWaiting: '等待模型接入',
+  // Shown with the grey "awaiting model" mark, whose name is read with it.
+  titleWaiting: '模型建议',
   titleUnavailable: '当前模型建议不可读取',
   syntheticNotice: '合成或未训练权重，不是模型判断，不计分。',
   externalNotice: '外部候选；模型质量尚未验证。',
@@ -106,7 +107,7 @@ export const MODEL_ADVICE_COPY: CopyTable<ModelAdviceCopyKey> = {
     titleSynthetic: 'Synthetic mechanism demo',
     titleCompleted: 'Model advice (not scored)',
     titlePending: 'Model advice awaiting verification',
-    titleWaiting: 'Awaiting model connection',
+    titleWaiting: 'Model advice',
     titleUnavailable: 'Model advice is unavailable',
     syntheticNotice: 'Synthetic or untrained weights: not a model judgment, not scored.',
     externalNotice: 'External candidate; model quality has not been validated.',

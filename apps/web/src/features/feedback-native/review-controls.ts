@@ -233,7 +233,10 @@ export function mountReviewControls(
             }
             void save();
           });
-          row.append(c, el('span', `${p.title} · v${p.version}`));
+          row.append(
+            c,
+            el('span', `${p.title} · ${t(`第 ${p.version} 版`, `version ${p.version}`)}`),
+          );
           return row;
         }),
     );

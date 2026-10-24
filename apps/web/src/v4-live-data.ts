@@ -139,10 +139,9 @@ export class V4LiveData {
             trace_id: r.ref.object_id,
             role_id: r.content.input.role_id,
             question: r.content.input.text,
-            text:
-              (context.semantic.roles === 'waiting_model'
-                ? T('等待模型接入\n', 'Waiting for model connection\n')
-                : '') + reply.content.text,
+            // The reply as saved. Whether colleagues wait for a model is shown once, by the
+            // toolbar's model status and a grey mark beside the reply, never inside the text.
+            text: reply.content.text,
             status: reply.content.status,
             model_revision: reply.content.model_revision ?? '',
             as_of_seq: r.content.as_of.business_seq,
