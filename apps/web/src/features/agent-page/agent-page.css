@@ -786,14 +786,23 @@
   color: var(--ink-3);
 }
 
-/* compact: the engineer's sign-off desk shows the last three lines */
+/* compact: the engineer's sign-off desk shows the last three lines. The panel is narrow, so the
+ * tool name sits under the sentence and the object gets the whole width. */
 .ag-stream.is-compact .ag-line {
-  grid-template-columns: 16px minmax(0, auto) minmax(12px, 1fr) auto;
+  grid-template-columns: 16px minmax(0, 1fr);
+  row-gap: 1px;
   padding: 6px 0;
   font-size: 12.5px;
 }
 .ag-stream.is-compact .ag-obj {
   font-size: 13.5px;
+}
+.ag-stream.is-compact .ag-leader {
+  display: none;
+}
+.ag-stream.is-compact .ag-tool {
+  grid-column: 2;
+  font-size: 11px;
 }
 
 /* ---------- the manual hand-over, below everything ---------- */

@@ -150,6 +150,28 @@ def test_agent_activity_stores_no_body_or_token(env, mcp):
             ([{"kind": "material", "id": "m1", "version": 2, "title": "Policy"}], None),
         ),
         (
+            "engineer.tickets.read",
+            {"query": {"ticket_id": "t1"}},
+            {"result": {"ticket": {"id": "t1", "title": "Hotel-limit answers need a look"}}},
+            (
+                [
+                    {
+                        "kind": "ticket",
+                        "id": "t1",
+                        "version": None,
+                        "title": "Hotel-limit answers need a look",
+                    }
+                ],
+                None,
+            ),
+        ),
+        (
+            "engineer.tickets.read",
+            {"query": {}},
+            {"result": {"tickets": [{"id": "t2", "title": "委托：住宿报销上限的回答需要排查"}]}},
+            ([{"kind": "ticket", "id": "t2", "version": None, "title": "住宿上限委托"}], None),
+        ),
+        (
             "engineer.trial",
             {"command": {"payload": {"ticket_id": "t1"}}},
             {"result": {"trial": {"id": "x7", "ticket_id": "t1"}}},
