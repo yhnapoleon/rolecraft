@@ -109,3 +109,11 @@ def test_engine_cache_parameter_is_read_from_the_page():
     html = '<script src="/workbench-engine.js?v=20261014" defer></script>'
     assert launcher.engine_param(html) == "20261014"
     assert launcher.engine_param("<html></html>") is None
+
+
+def test_recognition_layer_is_on_whenever_its_directory_is_named():
+    loaded = {"retrieval-e5": {"loaded": True, "revision": "unhashed"}}
+    fallback = {"retrieval-e5": {"loaded": False, "reason": "not_configured"}}
+    assert launcher.recognition_layer(None, loaded) == "off"
+    assert launcher.recognition_layer("runs/demo-stack/no-weights", fallback) == "fallback"
+    assert launcher.recognition_layer("runs/local/recognizers", loaded) == "weights"

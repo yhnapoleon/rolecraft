@@ -156,6 +156,13 @@ def parse_worker_log(text: str) -> dict:
     return {"slots": slots, "recognizers": recognizers}
 
 
+def recognition_layer(root: str | None, recognizers: dict[str, dict]) -> str:
+    """``off`` (the lens has nothing to show), ``fallback`` (on, rules only) or ``weights``."""
+    if not root:
+        return "off"
+    return "weights" if any(info.get("loaded") for info in recognizers.values()) else "fallback"
+
+
 def verdict(findings: list[dict]) -> str:
     """``blocked`` if anything stops recording, ``replay`` if the live system is not full."""
     levels = {f["level"] for f in findings}
@@ -422,6 +429,10 @@ def cmd_up(args) -> int:
         extra.update(values)
         if ignored:
             print(t("env 文件里忽略了：", "Ignored in the env file: ") + ", ".join(ignored))
+    if not extra.get("CAREER_LAB_RECOGNIZERS") and not args.no_recognition:
+        # The layer is on whenever the variable is set; a directory without weights keeps it
+        # on with rule fallback, so the lens still shows sentences and recognition chains.
+        extra["CAREER_LAB_RECOGNIZERS"] = str(run_dir / "no-weights")
     encoder = args.encoder or bool(extra.get("CAREER_LAB_RELATION_ENCODER"))
     total = 8
 
@@ -701,7 +712,7 @@ RECOGNIZER_NAMES = {
     "relation-stack-v1": ("关系判定堆叠集成", "relation stacked ensemble"),
 }
 FALLBACK_REASONS = {
-    "not_configured": ("未设 CAREER_LAB_RECOGNIZERS", "CAREER_LAB_RECOGNIZERS not set"),
+    "not_configured": ("没有这项权重", "no weights for it"),
     "missing": ("权重目录不在", "weight directory missing"),
     "hash_mismatch": ("权重与登记的哈希不一致", "weights do not match the manifest hash"),
 }
@@ -873,6 +884,27 @@ def cmd_check(args) -> int:
                 "configuration only: no model was called to test the key; try one reply first",
             ),
         )
+    layer = recognition_layer(env.get("CAREER_LAB_RECOGNIZERS"), worker["recognizers"])
+    if layer == "off":
+        add(
+            "recognizers",
+            "block",
+            t(
+                "识别层关着（未设 CAREER_LAB_RECOGNIZERS）：透镜里看不到逐句与识别链，"
+                "去掉 --no-recognition 重新 up",
+                "recognition layer off (CAREER_LAB_RECOGNIZERS unset): the lens shows no "
+                "sentences or chains; run up without --no-recognition",
+            ),
+        )
+    elif layer == "fallback":
+        add(
+            "recognizers",
+            "replay",
+            t(
+                "识别层开着，但没有权重：全部走规则回退，透镜里如实标「规则回退」",
+                "recognition layer on without weights: everything uses rule fallback",
+            ),
+        )
     for rid in RECOGNIZERS:
         info = worker["recognizers"].get(rid)
         name = t(*RECOGNIZER_NAMES[rid])
@@ -965,6 +997,42 @@ def cmd_check(args) -> int:
             + json.dumps(registered.get("tasks") or registered.get("reason")),
         )
 
+    # Recording
+    served = 0
+    assets = sorted((WEB / "public").glob("lab/*.json")) + sorted(
+        (WEB / "public").glob("engineer/*.json")
+    )
+    for asset in assets:
+        relative = asset.relative_to(WEB / "public").as_posix()
+        if http_get(f"{urls['web']}/{relative}")[1] == asset.read_bytes():
+            served += 1
+    add(
+        "recording",
+        "ok" if served == len(assets) else "block",
+        t(
+            f"系统剖面与回归报告样例的数据 {served}/{len(assets)} 份可取",
+            f"system-profile and regression-report data {served}/{len(assets)} served",
+        ),
+    )
+    add("recording", "info", t("识别透镜：", "recognition lens: ") + f"{urls['web']}/?lens=1#/work")
+    add("recording", "info", t("系统剖面：", "system profile: ") + f"{urls['web']}/#/lab")
+    add(
+        "recording",
+        "info",
+        t("回归报告样例：", "regression report samples: ") + f"{urls['web']}/#/engineer-report",
+    )
+    add(
+        "recording",
+        "warn",
+        t(
+            "录前把要拍的页面各打开一遍预热：继续码找回的局，第一次打开结果页或系统剖面页"
+            "要等 5–10 秒；自动录制用真实指针点击（见 docs/RUN-DEMO.md「录制前」）",
+            "open every page you will film once first: a recovered session's review or "
+            "system-profile page takes 5–10 s the first time; script clicks with a real "
+            "pointer (docs/RUN-DEMO.md)",
+        ),
+    )
+
     # Continue codes
     codes_file = run_dir / "continue-codes.json"
     if codes_file.is_file():
@@ -1000,9 +1068,10 @@ SECTIONS = {
     "models": ("模型槽（worker 启动时）", "Model slots (worker at startup)"),
     "recognizers": ("识别器（worker 启动时）", "Recognizers (worker at startup)"),
     "advice": ("评审页模型建议", "Review-page model advice"),
+    "recording": ("录制前", "Before recording"),
     "codes": ("演示包", "Demo pack"),
 }
-MARKS = {"ok": "✓", "warn": "!", "replay": "○", "block": "✗"}
+MARKS = {"ok": "✓", "info": "·", "warn": "!", "replay": "○", "block": "✗"}
 
 
 def report(args, state: dict | None, findings: list[dict]) -> int:
@@ -1080,6 +1149,7 @@ def main(argv=None) -> int:
     up.add_argument("--encoder", action="store_true", help="install torch (uv --extra encoder)")
     up.add_argument("--catalog", choices=sorted(CATALOGS), default="demo")
     up.add_argument("--no-demo-pack", action="store_true")
+    up.add_argument("--no-recognition", action="store_true", help="leave the recognition layer off")
     up.add_argument("--reimport", action="store_true", help="replace demo sessions, new codes")
     up.add_argument("--workers", type=int, default=1)
     up.add_argument("--no-encoder-load", action="store_true", help=argparse.SUPPRESS)
