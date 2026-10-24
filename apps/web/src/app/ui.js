@@ -937,6 +937,7 @@ function focusKey() {
     'status',
     'mode',
     'investigationReview',
+    'docRow',
   ]
     .filter((k) => d[k] !== undefined)
     .map(

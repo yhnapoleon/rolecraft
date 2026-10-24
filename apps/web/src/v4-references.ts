@@ -38,9 +38,18 @@ function locate(opener: HTMLElement | null): () => HTMLElement | null {
   const index = same().indexOf(opener);
   return () => (opener.isConnected ? opener : (same()[index] ?? null));
 }
+/** A refreshed feedback panel can replace and fold the evidence that opened either reader. */
+function restoreFocus(opener: () => HTMLElement | null) {
+  const back = opener();
+  if (!back) return;
+  for (let node = back.parentElement; node; node = node.parentElement)
+    if (node instanceof HTMLDetailsElement) node.open = true;
+  back.focus();
+}
 /** Without a reading column the original opens in a sheet. */
-function sheetReader(title: string): ReaderView {
+function sheetReader(title: string, opener: () => HTMLElement | null): ReaderView {
   const sheet = sheetDialog(title);
+  sheet.element.addEventListener('close', () => restoreFocus(opener), { once: true });
   return { body: sheet.body, heading: sheet.heading, modal: sheet.element };
 }
 /** The reader beside the feedback: placed first in the side column so it is in view, with a
@@ -61,12 +70,7 @@ function sideReader(
   close.onclick = () => {
     reader.remove();
     if (hint) hint.hidden = false;
-    const back = opener();
-    if (!back) return;
-    // A rebuilt panel folds its detail again; unfold the way back to the evidence.
-    for (let node = back.parentElement; node; node = node.parentElement)
-      if (node instanceof HTMLDetailsElement) node.open = true;
-    back.focus();
+    restoreFocus(opener);
   };
   head.append(heading, close);
   reader.append(head);
@@ -123,7 +127,7 @@ export function installV4References(getHost: () => V4HostAdapter | null) {
       host = getHost();
     if (!host || host.snapshot().session?.protocol !== 2) return;
     detail.handled = true;
-    // Focus returns here when the reader beside the feedback is closed.
+    // Both reading surfaces return to this evidence, even when feedback replaces its button.
     const opener = locate(
       document.activeElement instanceof HTMLElement ? document.activeElement : null,
     );
@@ -147,7 +151,7 @@ export function installV4References(getHost: () => V4HostAdapter | null) {
       const catalog = withRecord(readCatalog(timeline), ref, content);
       const title = referenceLabel(ref, catalog, locale()).full;
       const side = document.querySelector<HTMLElement>('[data-v4-reference-side]');
-      const view = side ? sideReader(side, title, opener) : sheetReader(title);
+      const view = side ? sideReader(side, title, opener) : sheetReader(title, opener);
       const target = view.body;
       if ('quote' in ref && ref.quote) target.append(node('blockquote', ref.quote, 'prose'));
       // A history record has no body of its own; it opens the document version it changed.
