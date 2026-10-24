@@ -711,6 +711,7 @@ function renderEngineerReport() {
   return `${topbar(back)}<main id="main" class="page" data-engineer-report-page tabindex="-1"></main>`;
 }
 function mountEngineerReportRoute() {
+  document.title = T(`回归报告样例 · ${PRODUCT_NAME}`, `Regression report sample · ${PRODUCT_NAME}`);
   const root = document.querySelector('[data-engineer-report-page]');
   if (root)
     import('../features/engineer-report/page').then((m) => {
