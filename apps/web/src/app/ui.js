@@ -2,6 +2,7 @@
 // each task opens its own workbench. Server state (materials, colleagues, tests,
 // approvals, submission, review) comes from the API through window.PracticeLive;
 // tasks, work, agent imports and the scenario rules in coach.js are local.
+import { createPageTransition } from './view-transition';
 import {
   T,
   locale,
@@ -630,27 +631,8 @@ function parseRoute() {
   return { r: '', id: null };
 }
 const hashOf = (r, id) => '#/' + r + (id ? '/' + encodeURIComponent(id) : '');
-let activeTransition = null;
-function withTransition(fn) {
-  if (activeTransition) {
-    try {
-      activeTransition.skipTransition();
-    } catch (_) {
-      /* finished */
-    }
-  }
-  if (!document.startViewTransition || reduceMotion.matches) {
-    fn();
-    return;
-  }
-  const transition = document.startViewTransition(() => {
-    fn();
-  });
-  activeTransition = transition;
-  transition.finished.finally(() => {
-    if (activeTransition === transition) activeTransition = null;
-  });
-}
+const pageTransition = createPageTransition(document, reduceMotion);
+const withTransition = pageTransition.run;
 // An undo belongs to the page it was offered on; leaving the page withdraws it.
 function dropUndo() {
   if (ui.lastUndo) {
@@ -677,7 +659,7 @@ function go(route, opts = {}) {
     document.getElementById('main')?.scrollTo?.(0, 0);
   };
   if ((from === 'work' && route === 'doc') || (from === 'doc' && route === 'work')) {
-    activeTransition?.skipTransition();
+    pageTransition.skip();
     documentMotion.transition(from, route, route === 'doc' ? id : fromId, run);
   } else {
     documentMotion.cancel();
@@ -700,7 +682,7 @@ window.addEventListener('popstate', () => {
     if (p.r === 'doc') document.getElementById('main')?.scrollTo(0, 0);
   };
   if ((from === 'work' && p.r === 'doc') || (from === 'doc' && p.r === 'work')) {
-    activeTransition?.skipTransition();
+    pageTransition.skip();
     documentMotion.transition(from, p.r, p.r === 'doc' ? p.id : fromId, update);
   } else {
     documentMotion.cancel();
@@ -7101,8 +7083,7 @@ document.addEventListener('rolecraft:delivered', () => {
   const root = document.documentElement;
   root.classList.add('rc-handover');
   go('review', { transition: true });
-  if (activeTransition) activeTransition.finished.finally(() => root.classList.remove('rc-handover'));
-  else root.classList.remove('rc-handover');
+  pageTransition.afterFinished(() => root.classList.remove('rc-handover'));
 });
 // "Start a revision" returns to the board with where to pick the work up.
 document.addEventListener('rolecraft:revision-started', (event) => {
@@ -7141,8 +7122,7 @@ const workFolders = installWorkFolders(document, {
     if (ui.kbd) {
       const focusWork = () =>
         document.getElementById('editor-title')?.focus({ preventScroll: true });
-      if (activeTransition) activeTransition.updateCallbackDone.then(focusWork);
-      else focusWork();
+      pageTransition.afterUpdate(focusWork);
     }
   },
   onInteract: () => {

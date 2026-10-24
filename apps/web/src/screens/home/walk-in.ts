@@ -19,9 +19,13 @@ function spring(): string {
   const v = getComputedStyle(document.documentElement).getPropertyValue('--spring').trim();
   return v && CSS.supports('animation-timing-function', v) ? v : EASE_OUT;
 }
-function stripIds(node: Element) {
-  node.removeAttribute('id');
-  for (const n of node.querySelectorAll('[id]')) n.removeAttribute('id');
+function prepareCopy(node: HTMLElement) {
+  // Copies never own the live page's identities, including its transition snapshots.
+  // A task can open while the entrance cover still carries the old case-title.
+  for (const n of [node, ...node.querySelectorAll<HTMLElement>('*')]) {
+    n.removeAttribute('id');
+    n.style.viewTransitionName = 'none';
+  }
 }
 const fade = (el: Element, from: number, to: number, delay = 0) =>
   el
@@ -64,7 +68,7 @@ export async function walkIn(o: {
         const from = source.getBoundingClientRect();
         const el = source.cloneNode(true) as HTMLElement;
         el.removeAttribute('style');
-        stripIds(el);
+        prepareCopy(el);
         el.inert = true;
         Object.assign(el.style, {
           left: `${from.left}px`,
@@ -116,7 +120,7 @@ export async function walkIn(o: {
   cover.className = 'hm-cover';
   if (app) {
     const copy = app.cloneNode(true) as HTMLElement;
-    stripIds(copy);
+    prepareCopy(copy);
     copy.style.transform = `translateY(${-window.scrollY}px)`;
     cover.append(copy);
   }
