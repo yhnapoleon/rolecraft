@@ -124,6 +124,8 @@ describe('agent activity feed', () => {
     setPreference('en');
     expect(toEvent(row(8, { tool: 'engineer.tickets.read', objects: [{ kind: 'ticket', id: 't1', version: null, title: '住宿上限委托' }] })).object?.title).toBe('the hotel-limit ticket');
     expect(toEvent(row(9, { tool: 'engineer.trial', objects: [{ kind: 'ticket', id: 't2', version: null, title: 'An unknown backend title' }] })).object?.title).toBe('the ticket');
+    expect(toEvent(row(10, { tool: 'engineer.tickets.read', objects: [] })).object?.title).toBe('the ticket');
+    expect(toEvent(row(11, { tool: 'engineer.reviews.read', objects: [] })).object?.title).toBe('the review');
     setPreference('zh');
     const review = toEvent(
       row(7, {
