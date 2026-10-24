@@ -151,3 +151,68 @@ describe('the claim that walks the pipeline', () => {
     expect(chain.top).toEqual([]);
   });
 });
+
+/** The full run of the demo pack: delivery 1 had 9 sentences, the revision (delivery 2) 10. */
+const twoDeliveries = () => {
+  const first = { kind: 'feedback', object_id: 'fb-1', version: 1 };
+  const relationOf = (carrier: typeof first, units: ReturnType<typeof unit>[], position: number) => ({
+    carrier,
+    position,
+    record: {
+      recognizer_id: 'xlm-r-pair-v1',
+      revision: 'abc',
+      task: 'relation',
+      outputs: { candidates: 13, units },
+    },
+  });
+  // Criterion-level relation records carry no units; they must not hide the sentence ones.
+  const criterion = (carrier: typeof first, position: number) => ({
+    carrier,
+    position,
+    record: { recognizer_id: 'xlm-r-pair-v1', revision: 'abc', task: 'relation', outputs: { mode: 'support_check' } },
+  });
+  return {
+    ...practice,
+    records: [
+      relationOf(first, [unit(0, 'insufficient'), unit(1, 'supported')], 0),
+      criterion(first, 1),
+      relationOf(feedback, [unit(0, 'insufficient'), unit(1, 'supported'), unit(2, 'insufficient')], 2),
+      criterion(feedback, 3),
+    ],
+  };
+};
+
+describe('which delivery the sentence comes from', () => {
+  it('reads the latest delivery by default and numbers each when every delivery left sentence records', () => {
+    const chain = chainFor(twoDeliveries(), 'zh', undefined, { submitted: 2 });
+    expect(chain.total).toBe(3);
+    expect(chain.deliveries).toEqual([
+      { number: 1, total: 2 },
+      { number: 2, total: 3 },
+    ]);
+    expect(chain.deliveryAt).toBe(1);
+    expect(chain.units.map((u) => u.index)).toEqual([0, 1, 2]);
+  });
+
+  it('switches to an earlier delivery with its own sentences and count', () => {
+    const chain = chainFor(twoDeliveries(), 'zh', 1, { submitted: 2, delivery: 0 });
+    expect(chain.deliveryAt).toBe(0);
+    expect(chain.total).toBe(2);
+    expect(chain.index).toBe(1);
+    expect(chain.units.map((u) => u.index)).toEqual([0, 1]);
+  });
+
+  it('does not number deliveries it cannot match one to one with the submissions', () => {
+    const unknown = chainFor(twoDeliveries(), 'zh');
+    expect(unknown.deliveries.map((d) => d.number)).toEqual([null, null]);
+    const gap = chainFor(twoDeliveries(), 'zh', undefined, { submitted: 3 });
+    expect(gap.deliveries.map((d) => d.number)).toEqual([null, null]);
+    expect(gap.deliveryAt).toBe(1);
+  });
+
+  it('has no deliveries for the example', () => {
+    const chain = chainFor(null, 'zh');
+    expect(chain.deliveries).toEqual([]);
+    expect(chain.deliveryAt).toBe(-1);
+  });
+});

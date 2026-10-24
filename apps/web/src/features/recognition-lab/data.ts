@@ -132,6 +132,25 @@ export interface Chain {
   counts: Record<string, number> | null;
   /** Every sentence of the work, for the picker (empty for the example). */
   units: { index: number; quote: string; label: Relation; decision: 'decide' | 'defer' }[];
+  /** Every delivery that left sentence records, oldest first (empty for the example). A
+   * delivery is numbered only when they match the practice's submissions one to one. */
+  deliveries: Delivery[];
+  /** Which of `deliveries` the sentence comes from; -1 for the example. */
+  deliveryAt: number;
+}
+
+export interface Delivery {
+  /** "第 N 次交付", or null when the records cannot be matched to the submissions. */
+  number: number | null;
+  /** Sentences the work of this delivery was split into. */
+  total: number;
+}
+
+export interface ChainOptions {
+  /** Index into the deliveries with sentence records; the latest when absent. */
+  delivery?: number;
+  /** How many times this practice was submitted (its timeline), when known. */
+  submitted?: number | null;
 }
 
 type Unit = {
@@ -174,17 +193,40 @@ function telling(units: Unit[]) {
   return units.reduce((best, u) => (rank(u) > rank(best) ? u : best), units[0]);
 }
 
+type Entry = SessionRecognition['records'][number];
+
+/** The sentence records of each delivery, oldest first: one feedback carries one delivery's. */
+function byDelivery(records: Entry[]) {
+  const groups = new Map<string, Entry>();
+  for (const entry of records) {
+    const units = entry.record.outputs?.units;
+    if (entry.record.task === 'relation' && Array.isArray(units) && units.length)
+      groups.set(entry.carrier.object_id, entry);
+  }
+  return [...groups.values()];
+}
+
 export function chainFor(
   data: SessionRecognition | null,
   language: Language,
   selected?: number,
+  options: ChainOptions = {},
 ): Chain {
   const records = data?.records ?? [];
-  const relationEntry = [...records]
-    .reverse()
-    .find((r) => r.record.task === 'relation' && Array.isArray(r.record.outputs?.units));
-  const units = (relationEntry?.record.outputs?.units ?? []) as Unit[];
-  if (!relationEntry || !units.length) return example(language);
+  const groups = byDelivery(records);
+  if (!groups.length) return example(language);
+  const at =
+    options.delivery != null && options.delivery >= 0 && options.delivery < groups.length
+      ? options.delivery
+      : groups.length - 1;
+  const relationEntry = groups[at];
+  const units = relationEntry.record.outputs?.units as Unit[];
+  // Numbered by order only when every submission left sentence records.
+  const numbered = options.submitted != null && options.submitted === groups.length;
+  const deliveries = groups.map((entry, i) => ({
+    number: numbered ? i + 1 : null,
+    total: (entry.record.outputs?.units as Unit[] | undefined)?.length ?? 0,
+  }));
   const carrier = relationEntry.carrier.object_id;
   const sibling = (task: string) =>
     records.find((r) => r.carrier.object_id === carrier && r.record.task === task)?.record;
@@ -238,12 +280,15 @@ export function chainFor(
       label: relation(u.label),
       decision: u.decision === 'defer' ? 'defer' : 'decide',
     })),
+    deliveries,
+    deliveryAt: at,
   };
 }
 
 /** The example is real recorded output, not made up: sentence 5 of the demo pack's
  * completed knowledge-assistant run (`demo/demo-pack-v1.json.gz`, pm_pilot zh / en,
- * revision feedback). Shown only with the 「示例」 mark. */
+ * revision feedback, i.e. its second delivery: 10 sentences, where the first delivery's work
+ * had 9). Shown only with the 「示例」 mark, and the lead names that delivery. */
 const EXAMPLE_ARBITER: Arbitration = {
   criterion: 'R2.support',
   judge: 'INSUFFICIENT',
@@ -251,6 +296,8 @@ const EXAMPLE_ARBITER: Arbitration = {
   final: 'INSUFFICIENT',
   agreement: false,
 };
+/** The recorded delivery the example comes from (its caption names it). */
+export const EXAMPLE_DELIVERY = 2;
 const EXAMPLE_COUNTS = {
   scope: 5,
   retrieval: 7,
@@ -262,7 +309,7 @@ const EXAMPLE_COUNTS = {
   arbiter: 2,
   behavior: 2,
 };
-const EXAMPLES: Record<Language, Omit<Chain, 'example' | 'units'>> = {
+const EXAMPLES: Record<Language, Omit<Chain, 'example' | 'units' | 'deliveries' | 'deliveryAt'>> = {
   zh: {
     quote: '政策已更新：国内出差住宿报销上限为每人每晚 400 元，超出须事前取得经理书面批准。',
     index: 4,
@@ -344,5 +391,5 @@ const EXAMPLES: Record<Language, Omit<Chain, 'example' | 'units'>> = {
 };
 
 function example(language: Language): Chain {
-  return { ...EXAMPLES[language], example: true, units: [] };
+  return { ...EXAMPLES[language], example: true, units: [], deliveries: [], deliveryAt: -1 };
 }

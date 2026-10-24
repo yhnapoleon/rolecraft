@@ -236,6 +236,11 @@
 #sheet.deliver-sheet .native-feedback > section.delivery-paper {
   margin-top: 0;
 }
+/* The page's first heading sits right under the dialog's own head (with or without the lens
+   switch on): no section gap above it. */
+#sheet.deliver-sheet .native-feedback > section.delivery-paper > .group-title:first-child {
+  margin-top: 0;
+}
 #sheet.deliver-sheet .native-feedback [data-presubmit] {
   margin: 0;
 }

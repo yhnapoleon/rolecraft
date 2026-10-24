@@ -697,12 +697,19 @@ function mountLabPage() {
   }
   const refresh = !labView;
   labView = { key, el: slot };
+  // How many times this practice was submitted: the lab numbers deliveries only when their
+  // sentence records match these one to one.
+  const events = sessionKey ? sessionOf(a)?.timeline?.events : null;
+  const submitted = Array.isArray(events)
+    ? events.filter((e) => e?.event_type === 'submitted').length
+    : null;
   import('../features/recognition-lab/lab').then(({ mountLab }) =>
     mountLab(slot, {
       language: locale(),
       session: sessionKey ? () => L.recognition(a) : null,
       sessionKey,
       refresh,
+      submitted,
     }),
   );
 }
