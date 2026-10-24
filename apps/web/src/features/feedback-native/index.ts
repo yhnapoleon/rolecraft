@@ -443,6 +443,9 @@ export function mountNativeFeedback(
   const preview = load
     ? mountPresubmitCard(doc, language, load, {
         recognize: adapter.previewRecognition?.bind(adapter),
+        // The delivery dialog is the page: the preview is a section of it, so the work's
+        // sentences sit on it directly as paper (dialog → work paper, no panel between).
+        frame: 'flat',
       })
     : undefined;
   let restoring = preview ? adapter.rememberedChoice?.() : undefined;

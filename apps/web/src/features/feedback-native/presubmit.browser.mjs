@@ -53,10 +53,7 @@ const requested = (browser, operation) =>
   browser.ev(
     `window.fixture.calls.filter((c) => c.operation === '${operation}').map((c) => ({ decision: c.input.decision, products: c.input.products }))`,
   );
-const submitButton = (language) =>
-  `[...document.querySelectorAll('#fixture button')].find((b) => b.textContent.trim() === '${
-    language === 'en' ? 'Submit selected versions' : '提交选中的版本'
-  }')`;
+const submitButton = (_language) => `document.querySelector('#fixture [data-delivery-submit]')`;
 
 it.each(LANGUAGES)(
   'PRESUBMIT-UI-01 %s: the card sits between the decision and the submit button',

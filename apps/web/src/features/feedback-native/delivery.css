@@ -221,8 +221,9 @@
 }
 
 /* One surface, not three nested ones: in the delivery dialog the panel is the dialog's own page
-   (no grey backdrop, no inner card), and the pre-submission preview is a section of it rather
-   than a grey panel, so what the preview holds can sit on it directly as paper. */
+   (no grey backdrop, no inner card). The pre-submission preview is mounted with frame 'flat'
+   (a section of the dialog, not a grey panel), so what it holds sits on it directly as paper;
+   here it only gives up its outer margin. */
 #sheet.deliver-sheet .sheet-body {
   background: var(--surface);
 }
@@ -237,10 +238,6 @@
 }
 #sheet.deliver-sheet .native-feedback [data-presubmit] {
   margin: 0;
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: none;
 }
 /* The footer's text button never runs under the delivery button: it keeps to the space left of
    it and wraps there if it must (phone width). */
