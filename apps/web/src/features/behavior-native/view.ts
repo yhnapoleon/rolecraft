@@ -184,7 +184,10 @@ export type BehaviorView = {
   categories: { text: string; fallback: boolean }[];
   empty: string | null;
   phasesLabel: string;
-  phases: { name: string; steps: number }[];
+  /** Each run of one phase: its share of the bar, its neutral style, and whether its name fits
+   * inside it (narrow runs stay unlabelled; the legend under the bar names every phase). */
+  phases: { name: string; steps: number; style: number; labelled: boolean }[];
+  legend: { name: string; style: number }[];
   stepsLabel: string;
   steps: string[];
   nearest: string | null;
@@ -196,6 +199,33 @@ export type BehaviorView = {
   orderNone: string | null;
   executor: string;
 };
+
+/** The four phases in their working order; each has one neutral style (0–3). */
+const PHASE_ORDER: Record<string, number> = {
+  探索: 0, 测试: 1, 决策: 2, 调整: 3, explore: 0, test: 1, decide: 2, adjust: 3,
+};
+/** Width the bar can count on in the review side column (narrowest layout, inside padding). */
+const BAR_WIDTH = 280;
+const labelWidth = (name: string, l: Language) => name.length * (l === 'zh' ? 11 : 6.4) + 12;
+
+function phaseRuns(data: Behavior, l: Language) {
+  const total = Math.max(1, data.sequence.length);
+  const seen: string[] = [];
+  const styleOf = (name: string) => {
+    if (name in PHASE_ORDER) return PHASE_ORDER[name];
+    if (!seen.includes(name)) seen.push(name);
+    return seen.indexOf(name) % 4;
+  };
+  const phases = data.phases.map((p) => {
+    const steps =
+      data.sequence.filter((r) => r.seq >= p.from_seq && r.seq <= p.to_seq && r.phase === p.name).length || 1;
+    return { name: p.name, steps, style: styleOf(p.name), labelled: (steps / total) * BAR_WIDTH >= labelWidth(p.name, l) };
+  });
+  const legend = [...new Map(phases.map((p) => [p.name, { name: p.name, style: p.style }])).values()].sort(
+    (a, b) => a.style - b.style,
+  );
+  return { phases, legend };
+}
 
 /** What the section says, as data; null when it does not show (layer off, or placement). */
 export function behaviorView(
@@ -221,11 +251,7 @@ export function behaviorView(
       : [],
     empty: data.sequence.length ? null : t(l, 'empty'),
     phasesLabel: `${t(l, 'phases')} · ${data.sequence.length}`,
-    phases: data.phases.map((p) => ({
-      name: p.name,
-      steps:
-        data.sequence.filter((r) => r.seq >= p.from_seq && r.seq <= p.to_seq && r.phase === p.name).length || 1,
-    })),
+    ...phaseRuns(data, l),
     stepsLabel: t(l, 'steps'),
     steps: data.sequence.map((r) => label(r.symbol)),
     nearest: strategy ? t(l, 'nearest', { name: strategyName(strategy.nearest, l) }) : null,
@@ -269,8 +295,14 @@ export function behaviorHtml(
   const head = `<h2>${esc(view.title)}</h2>${cats}<p class="meta">${esc(view.lead)}</p>`;
   if (view.empty) return `${head}<p class="meta">${esc(view.empty)}</p>`;
   const bar = view.phases
-    .map((p) => `<span class="rc-phase" style="flex:${p.steps}" title="${esc(p.name)}">${esc(p.name)}</span>`)
+    .map(
+      (p) =>
+        `<span class="rc-phase" data-style="${p.style}" style="flex:${p.steps}" title="${esc(p.name)}">${p.labelled ? esc(p.name) : ''}</span>`,
+    )
     .join('');
+  const legend = `<p class="rc-phase-legend">${view.legend
+    .map((p) => `<span><i data-style="${p.style}" aria-hidden="true"></i>${esc(p.name)}</span>`)
+    .join('')}</p>`;
   const strategy = view.nearest
     ? `<p class="rc-behavior__nearest">${esc(view.nearest)}</p>${view.runnersUp ? `<p class="meta">${esc(view.runnersUp)}</p>` : ''}`
     : `<p class="meta">${esc(view.noStrategy ?? '')}</p>`;
@@ -285,7 +317,8 @@ export function behaviorHtml(
     : `<p class="meta">${esc(view.orderNone ?? '')}</p>`;
   return `${head}
     <p class="rc-align-label">${esc(view.phasesLabel)}</p>
-    <div class="rc-phasebar">${bar}</div>
+    <div class="rc-phasebar" aria-hidden="true">${bar}</div>
+    ${legend}
     <p class="rc-align-label">${esc(view.stepsLabel)}</p>
     <ol class="rc-steps-row">${view.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
     ${strategy}${alignment}

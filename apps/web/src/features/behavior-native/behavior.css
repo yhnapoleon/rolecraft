@@ -1,6 +1,9 @@
 /* "Your behaviour pattern": recognition lens only. Neutral throughout; phases differ by label,
  * not by colour (persona hues and amber keep their own meanings). */
 .rc-behavior {
+  /* The panel never widens its column: long phase runs and step lists stay inside it. */
+  min-width: 0;
+  overflow-wrap: anywhere;
   margin-top: 18px;
   padding: 14px 16px;
   border-radius: var(--r-md);
@@ -39,19 +42,62 @@
 .rc-phasebar {
   display: flex;
   gap: 2px;
-  margin: 4px 0 8px;
+  min-width: 0;
+  min-height: 20px;
+  margin: 4px 0 6px;
   border-radius: var(--r-xs);
   overflow: hidden;
 }
+/* Each run is sized by its share of the steps alone (its label never pushes the bar wider). */
 .rc-phase {
   min-width: 0;
   padding: 3px 6px;
-  background: var(--accent-tint);
+  overflow: hidden;
+  contain: inline-size;
   color: var(--ink-2);
   font-size: 10.5px;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+}
+.rc-phase:empty {
+  padding: 0;
+}
+/* Phases differ by neutral fill and pattern, never by a meaning colour. */
+.rc-phase[data-style='0'],
+.rc-phase-legend i[data-style='0'] {
+  background: var(--accent-tint);
+}
+.rc-phase[data-style='1'],
+.rc-phase-legend i[data-style='1'] {
+  background: var(--line-2);
+}
+.rc-phase[data-style='2'],
+.rc-phase-legend i[data-style='2'] {
+  background:
+    repeating-linear-gradient(135deg, var(--line-2) 0 2px, transparent 2px 5px),
+    var(--accent-tint);
+}
+.rc-phase[data-style='3'],
+.rc-phase-legend i[data-style='3'] {
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+.rc-phase-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 12px;
+  margin: 0 0 8px;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+.rc-phase-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.rc-phase-legend i {
+  inline-size: 12px;
+  block-size: 8px;
+  border-radius: 2px;
 }
 .rc-steps-row {
   display: flex;
