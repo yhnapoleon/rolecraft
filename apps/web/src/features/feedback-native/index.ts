@@ -29,6 +29,7 @@ import {
   feedbackItemsView,
   renderFeedbackItems,
   renderItemRow,
+  type ItemRow,
 } from './feedback-items';
 import { decisionName } from './decision-cards';
 import { criterionChecks, criterionLabels, criterionQuestions } from './criteria';
@@ -50,6 +51,21 @@ import {
   renderCover,
   STAMP_PRESS_MS,
 } from './result-cover';
+import {
+  renderResultHead,
+  renderResultSkeleton,
+  type ResultGroup,
+} from '../../screens/result/result-head';
+import { renderColleagues } from '../../screens/result/by-colleague';
+import {
+  COLLEAGUE_NAMES,
+  colleagueOf,
+  type Colleague,
+} from '../../screens/result/colleagues';
+import { entranceFor, playEntrance, tickClock } from '../../screens/result/motion';
+import { resultSeen } from '../../screens/result/seen';
+import { createViewSwitch } from '../../screens/result/view-switch';
+import '../../screens/result/deliver.css';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 import { readCatalog, referenceLabel, type ReferenceCatalog } from '../../reference-catalog';
 import type { EvidencePick } from '../../v4-host';
@@ -64,7 +80,7 @@ import { renderExplanationTag, renderSignals } from '../recognition-native/signa
 export type SelectedProduct = Pick<
   WorkProductVersion,
   'session_id' | 'product_id' | 'version' | 'title' | 'removed_at' | 'author'
-> & { purpose?: string };
+> & { purpose?: string; content?: string };
 type Item = {
   applicability?: 'applicable' | 'not_applicable' | 'undetermined' | 'unknown';
   criterion: string;
@@ -278,7 +294,29 @@ export function feedbackNotice(state: FeedbackNativeState, language: FeedbackLan
     ? T('本次提交已保存，反馈尚未就绪。', 'Submission saved. Feedback is not ready yet.')
     : T('本次提交已保存，反馈正在生成…', 'Submission saved. Feedback is being generated…');
 }
-export type FeedbackMountOptions = { surface?: 'all' | 'submission' | 'feedback' };
+export type FeedbackMountOptions = {
+  surface?: 'all' | 'submission' | 'feedback';
+  /** The result page (206): the stamped result sheet first, the detail by status or colleague. */
+  layout?: 'result';
+};
+
+/** How the result page's detail is arranged; a per-viewer convenience kept in this browser. */
+type DetailView = 'status' | 'colleague';
+const DETAIL_VIEW = 'rolecraft.result.view';
+function savedDetailView(): DetailView {
+  try {
+    return localStorage.getItem(DETAIL_VIEW) === 'colleague' ? 'colleague' : 'status';
+  } catch {
+    return 'status';
+  }
+}
+function saveDetailView(view: DetailView) {
+  try {
+    localStorage.setItem(DETAIL_VIEW, view);
+  } catch {
+    // Not kept; it still applies on this page.
+  }
+}
 
 export function mountNativeFeedback(
   host: HTMLElement,
@@ -330,6 +368,7 @@ export function mountNativeFeedback(
       : T('补充的依据 · 仍待核验', 'Added evidence · still to be checked');
   // Presentation only: which rows, bases and notes are open, kept across redraws.
   const openKeys = new Set<string>();
+  let detailView: DetailView = options.layout === 'result' ? savedDetailView() : 'status';
   // When this page last read the feedback (shown beside the refresh control).
   let readAt = Date.now();
   let readReports = '';
@@ -419,6 +458,7 @@ export function mountNativeFeedback(
       if (!destroyed) render();
     }
   }
+  let submitting = false;
   const submit = button(
     T('提交选中的版本', 'Submit selected versions'),
     async () => {
@@ -434,7 +474,22 @@ export function mountNativeFeedback(
       const decision = choice.value;
       const products = [...selected.values()];
       const at = new Date().toISOString();
-      await adapter.submit({ decision, products });
+      // From the press until the result page takes over, the dialog holds still: the key turns to
+      // its loading state (same width, same words) and nothing else in the panel redraws.
+      submitting = true;
+      submit.style.minWidth = `${submit.offsetWidth}px`;
+      submit.dataset.state = 'loading';
+      submit.setAttribute('aria-busy', 'true');
+      submit.disabled = true;
+      try {
+        await adapter.submit({ decision, products });
+      } catch (error) {
+        submitting = false;
+        delete submit.dataset.state;
+        submit.removeAttribute('aria-busy');
+        submit.style.minWidth = '';
+        throw error;
+      }
       adapter.rememberChoice?.(null);
       // The decision, the moment and the versions are known here: the results page opens on its
       // cover at once and stamps it while the records are read back.
@@ -465,14 +520,86 @@ export function mountNativeFeedback(
   // Pre-submission preview (2026-10-14): read-only, right above the submit button.
   const load =
     options.surface !== 'feedback' ? adapter.previewSubmission?.bind(adapter) : undefined;
+  // The dialog's middle column (206): the work as paper, read sentence by sentence by the lens.
+  // Until the lens has read it, the chosen versions' text shows grey; with the lens closed, as
+  // plain paper. The margin originals come with the lens's own rows.
+  const reading = el('div', '', 'delivery-reading');
+  reading.dataset.deliveryReading = '';
+  const readingPaper = el('article', '', 'delivery-reading__paper');
+  let readingKind: 'idle' | 'running' | 'ready' | 'failed' = 'idle';
+  function syncReading(kind = readingKind) {
+    readingKind = kind;
+    const lensRead = kind === 'ready' && lensOn();
+    reading.dataset.state = kind;
+    reading.dataset.lens = String(lensOn());
+    readingPaper.hidden = lensRead;
+    if (lensRead) return;
+    // Waiting for the lens: the sentences are there, grey, before they are marked.
+    readingPaper.dataset.pending = String(lensOn());
+    const state = adapter.snapshot();
+    const parts: Node[] = [];
+    for (const ref of selected.values()) {
+      const product = state.products.find(
+        (p) => p.product_id === ref.object_id && p.version === ref.version,
+      );
+      if (!product) continue;
+      const head = el('header', '', 'delivery-reading__head');
+      head.append(
+        el('h3', product.title || T('未命名作品', 'Untitled artifact'), 'delivery-reading__title'),
+        el('span', versionLabel(product.version), 'delivery-reading__version'),
+      );
+      parts.push(head);
+      for (const para of (product.content ?? '').split(/\n{2,}/)) {
+        const text = para.replace(/^#+\s*/, '').trim();
+        if (text) parts.push(el('p', text, 'delivery-reading__text'));
+      }
+    }
+    if (!parts.length)
+      parts.push(
+        el(
+          'p',
+          T('选一个作品版本，它会显示在这里。', 'Choose a work version; it appears here.'),
+          'delivery-reading__empty',
+        ),
+      );
+    readingPaper.replaceChildren(...parts);
+  }
   const preview = load
     ? mountPresubmitCard(doc, language, load, {
         recognize: adapter.previewRecognition?.bind(adapter),
         // The delivery dialog is the page: the preview is a section of it, so the work's
         // sentences sit on it directly as paper (dialog → work paper, no panel between).
         frame: 'flat',
+        split: true,
+        onReading: (kind) => syncReading(kind),
       })
     : undefined;
+  if (preview) reading.append(preview.reading, readingPaper);
+  // The latest version of the pilot decision is chosen when the dialog opens (decision 20).
+  let defaulted = false;
+  function defaultChoice(state: FeedbackNativeState) {
+    if (defaulted || !preview || selected.size || restoring || state.status !== 'active') return;
+    const live = state.products.filter((p) => !p.removed_at);
+    if (!live.length) return;
+    defaulted = true;
+    const latest = new Map<string, (typeof live)[number]>();
+    for (const p of live) {
+      const seen = latest.get(p.product_id);
+      if (!seen || p.version > seen.version) latest.set(p.product_id, p);
+    }
+    const decisions = [...latest.values()].filter((p) => p.purpose === 'commitment');
+    const chosen = decisions.length ? decisions : [...latest.values()].slice(-1);
+    for (const p of chosen) {
+      const ref: ObjectRef = {
+        session_id: p.session_id,
+        kind: 'product',
+        object_id: p.product_id,
+        version: p.version,
+      };
+      selected.set(key(ref), ref);
+      selectedTitles.set(key(ref), p.title || T('未命名作品', 'Untitled artifact'));
+    }
+  }
   let restoring = preview ? adapter.rememberedChoice?.() : undefined;
   /** Put back the choice made before the panel was last closed, once its versions are listed. */
   function restoreChoice(state: FeedbackNativeState) {
@@ -494,6 +621,8 @@ export function mountNativeFeedback(
     const state = adapter.snapshot();
     const open = state.status === 'active' && adapter.canPreview !== false;
     preview.element.hidden = !open;
+    // The work stays on the page while it is being submitted: the dialog keeps its columns.
+    syncReading();
     if (open && !restoring)
       adapter.rememberChoice?.({ decision: choice.value, products: [...selected.values()] });
     preview.update(
@@ -526,13 +655,16 @@ export function mountNativeFeedback(
       ),
       'muted',
     ),
+    el('p', T('要交付的版本', 'Version to submit'), 'delivery-label'),
     selection,
     selectedSummary,
+    el('p', T('你的决定', 'Your decision'), 'delivery-label'),
     choice.element,
     ...(preview ? [preview.element] : []),
     submit,
     recover,
     receipt,
+    ...(preview ? [reading] : []),
   );
   const revise = button(T('开始修订', 'Start a revision'), async () => {
     const current = adapter.snapshot().submission;
@@ -574,7 +706,7 @@ export function mountNativeFeedback(
   const coverHost = el('div', '', 'result-cover-host');
   let coverShown = '';
   let coverWaited = false;
-  let ticker: ReturnType<typeof setInterval> | undefined;
+  let ticker: (() => void) | undefined;
   root.append(failure);
   if (options.surface !== 'submission') root.append(coverHost);
   root.append(notice, failedNote, retryFeedback);
@@ -806,13 +938,14 @@ export function mountNativeFeedback(
       if (box.childElementCount) after.push(box);
     }
     const legacy = semantic.advice;
-    return renderFeedbackItems(doc, view, language, {
+    const result = options.layout === 'result' && !readOnly;
+    const rowHooks = {
       id: `${report.id}-${report.version}`,
       ...disclosures,
-      scopeBasis,
-      after,
-      subject: subject ?? undefined,
-      action: (row) => {
+      action: (row: ItemRow) => {
+        // The result page: a row not known yet goes to the colleague who would check it.
+        const owner = result && row.mark === 'unknown' ? colleagueOf(row.criterion) : null;
+        if (owner) return askButton(owner, row.name);
         if (readOnly || !row.action) return null;
         const go = el('button', row.action.label, 'btn small');
         go.type = 'button';
@@ -820,7 +953,7 @@ export function mountNativeFeedback(
         go.setAttribute('aria-label', `${row.action.label} · ${row.name}`);
         return go;
       },
-      basis: (row) => {
+      basis: (row: ItemRow) => {
         const nodes: Node[] = [];
         // R2.support: the registered model advice, as advice (never scored).
         if (row.criterion === 'R2.support' && showsAdviceBlock(report)) nodes.push(adviceBlock(report, lens));
@@ -857,7 +990,75 @@ export function mountNativeFeedback(
         }
         return nodes;
       },
+    };
+    return renderFeedbackItems(doc, view, language, {
+      ...rowHooks,
+      scopeBasis,
+      after,
+      subject: subject ?? undefined,
+      ...(result
+        ? {
+            unknownShown: 3,
+            switcher: detailSwitch(),
+            ...(detailView === 'colleague'
+              ? { regrouped: () => renderColleagues(doc, view, language, rowHooks, askButton) }
+              : {}),
+          }
+        : {}),
     });
+  }
+  /** By status · By colleague: the shell's segmented control; the choice redraws the detail. */
+  let viewSwitch: ReturnType<typeof createViewSwitch> | undefined;
+  function detailSwitch() {
+    const props = {
+      value: detailView,
+      label: feedbackCopy(language, 'viewLabel'),
+      items: [
+        { value: 'status' as const, label: feedbackCopy(language, 'viewStatus') },
+        { value: 'colleague' as const, label: feedbackCopy(language, 'viewColleague') },
+      ],
+      onChange: (value: DetailView) => {
+        if (detailView === value) return;
+        detailView = value;
+        saveDetailView(value);
+        // The list is not rebuilt while it holds focus (a form may be open); the switch is in it.
+        const focused = doc.activeElement as HTMLElement | null;
+        const inSwitch = !!focused && !!viewSwitch?.element.contains(focused);
+        if (focused && reports.contains(focused)) focused.blur();
+        render();
+        if (inSwitch)
+          viewSwitch?.element
+            .querySelector<HTMLElement>('[data-state="on"], [aria-checked="true"]')
+            ?.focus({ preventScroll: true });
+      },
+    };
+    if (viewSwitch) viewSwitch.update(props);
+    else viewSwitch = createViewSwitch(doc, props);
+    return viewSwitch.element;
+  }
+  /** "Ask Chen": opens the right rail's conversation with that colleague (the shell's action). */
+  function askButton(who: Colleague, about?: string) {
+    const go = el('button', T(`问 ${COLLEAGUE_NAMES[who]}`, `Ask ${COLLEAGUE_NAMES[who]}`), 'btn small');
+    go.type = 'button';
+    go.dataset.action = 'chat';
+    go.dataset.role = who;
+    if (about) go.setAttribute('aria-label', `${go.textContent} · ${about}`);
+    return go;
+  }
+  /** A reading on the result sheet: its group in the detail, by status. */
+  function locate(group: ResultGroup) {
+    if (detailView !== 'status') {
+      detailView = 'status';
+      saveDetailView('status');
+      if (reports.contains(doc.activeElement)) (doc.activeElement as HTMLElement).blur();
+      render();
+    }
+    const box = reports.querySelector<HTMLElement>(`[data-result-detail] [data-group="${group}"]`);
+    const head = box?.querySelector<HTMLElement>('.fb-group__head');
+    if (!box || !head) return;
+    head.tabIndex = -1;
+    box.scrollIntoView({ block: 'start', behavior: reduced() ? 'auto' : 'smooth' });
+    head.focus({ preventScroll: true });
   }
   /** The registered model advice is shown unless only older-protocol advice items exist. */
   function showsAdviceBlock(report: Report) {
@@ -1190,6 +1391,18 @@ export function mountNativeFeedback(
       backToBoard: state.status === 'active',
       practise: !view.waiting,
     };
+    // The result page: until the records are read, the sheet's shape; the parts below wait.
+    if (options.layout === 'result') {
+      for (const part of [refreshRow, reviewControls?.element])
+        if (part) part.hidden = !view || view.waiting;
+      if (!view && state.busy) {
+        if (coverShown !== 'skeleton') {
+          coverShown = 'skeleton';
+          coverHost.replaceChildren(renderResultSkeleton(doc, language));
+        }
+        return;
+      }
+    }
     const signature = JSON.stringify([
       view,
       !!actions?.supplement,
@@ -1221,14 +1434,17 @@ export function mountNativeFeedback(
         const elapsed = Date.now() - note.pressedAt;
         if (elapsed < STAMP_PRESS_MS) pressed = elapsed;
       }
+      const wait = {
+        phase: state.feedbackPhase,
+        seconds: waitSeconds(state),
+        freshStamp: pressed !== undefined,
+        pressElapsed: pressed,
+      };
       const cover =
         view && actions
-          ? renderCover(doc, view, language, actions, {
-              phase: state.feedbackPhase,
-              seconds: waitSeconds(state),
-              freshStamp: pressed !== undefined,
-              pressElapsed: pressed,
-            })
+          ? options.layout === 'result'
+            ? renderResultHead(doc, view, language, { ...actions, locate }, wait)
+            : renderCover(doc, view, language, actions, wait)
           : null;
       // A redraw keeps the stamp already on the page, so a press in progress is never restarted.
       const before = coverHost.querySelector<HTMLElement>('[data-delivery-stamp]');
@@ -1239,9 +1455,26 @@ export function mountNativeFeedback(
         after.replaceWith(before);
       }
       // The feedback arriving after a wait is a change in the world: its parts settle in once.
-      if (cover && coverWaited && !view?.waiting) cover.classList.add('is-arriving');
+      const arriving = !!cover && coverWaited && !view?.waiting;
+      if (arriving && options.layout !== 'result') cover.classList.add('is-arriving');
       coverWaited = !!view?.waiting;
       coverHost.replaceChildren(...(cover ? [cover] : []));
+      // The result page: rises as it takes over the desk, presses a fresh stamp, and rolls its
+      // readings from 0 when they first show (on entry, or when the review arrives).
+      if (options.layout === 'result' && cover && view) {
+        const shown = state.submission?.ref.object_id ?? 'new';
+        const entrance = entranceFor(
+          doc,
+          `${shown}:${view.waiting ? 'waiting' : 'ready'}`,
+          view.waiting,
+        );
+        if (entrance)
+          queueMicrotask(
+            () =>
+              void playEntrance(cover, { ...entrance, stamp: entrance.rise && pressed !== undefined }),
+          );
+        if (!view.waiting && state.submission) resultSeen(state.submission.ref.object_id);
+      }
       if (same && cover) {
         const again = [...cover.querySelectorAll<HTMLElement>('button')].find((node) =>
           same.action ? node.dataset.action === same.action : node.textContent === same.text,
@@ -1254,18 +1487,27 @@ export function mountNativeFeedback(
     // Real seconds tick while the feedback is written; nothing else moves.
     const waiting = !!view?.waiting && !view.failed && !!state.feedbackSince;
     if (waiting && !ticker)
-      ticker = setInterval(() => {
-        const clock = coverHost.querySelector<HTMLElement>('[data-elapsed]');
-        const seconds = waitSeconds(adapter.snapshot());
-        if (clock && seconds !== undefined) clock.textContent = elapsedWords(seconds, language);
-      }, 1000);
+      ticker =
+        options.layout === 'result'
+          ? tickClock(coverHost, () => adapter.snapshot().feedbackSince)
+          : (() => {
+              const id = setInterval(() => {
+                const clock = coverHost.querySelector<HTMLElement>('[data-elapsed]');
+                const seconds = waitSeconds(adapter.snapshot());
+                if (clock && seconds !== undefined)
+                  clock.textContent = elapsedWords(seconds, language);
+              }, 1000);
+              return () => clearInterval(id);
+            })();
     if (!waiting && ticker) {
-      clearInterval(ticker);
+      ticker();
       ticker = undefined;
     }
   }
   function render() {
     if (destroyed) return;
+    // A delivery in flight: the dialog is left as it was pressed until the result page takes over.
+    if (submitting && options.surface === 'submission') return;
     const state = adapter.snapshot();
     reviewControls?.render();
     failedNote.hidden = !state.failedFeedback;
@@ -1283,6 +1525,7 @@ export function mountNativeFeedback(
       !state.pending;
     notice.classList.toggle('sr-only', !!coverHost.firstElementChild || plainDelivery);
     restoreChoice(state);
+    defaultChoice(state);
     selection.replaceChildren(
       ...state.products.map((product) => {
         const ref: ObjectRef = {
@@ -1438,7 +1681,10 @@ export function mountNativeFeedback(
           el('blockquote', response.text),
         );
     }
-    revisions.hidden = state.status !== 'submitted';
+    // On the result page the note waits for the result sheet (it is the page's last step).
+    revisions.hidden =
+      state.status !== 'submitted' ||
+      (options.layout === 'result' && !coverHost.querySelector('.result-paper[data-state="ready"]'));
     const round = state.submission
       ? state.references?.deliveries?.[state.submission.ref.object_id]
       : undefined;
@@ -1486,12 +1732,19 @@ export function mountNativeFeedback(
     render();
     playReading = false;
   });
+  // The topbar's "Revise" on the result page opens the revision note here.
+  const onRevise = () => {
+    if (options.surface !== 'submission') openRevision();
+  };
+  doc.addEventListener('rolecraft:result-revise', onRevise);
   render();
   return {
     refresh: () => act(() => adapter.refresh()),
     destroy: () => {
       destroyed = true;
-      clearInterval(ticker);
+      ticker?.();
+      viewSwitch?.destroy();
+      doc.removeEventListener('rolecraft:result-revise', onRevise);
       unsubscribe();
       unlens();
       reviewControls?.destroy();

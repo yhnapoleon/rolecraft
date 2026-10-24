@@ -53,23 +53,69 @@
   }
 }
 
-/* Exact versions as paper attachment slips: 《标题》 · 第 N 版 · 用途. */
+/* Exact versions to submit (D spec `.check`): a quiet row; once chosen it lifts as paper and its
+   box is ink with a white tick. The native checkbox keeps its place for keyboard and readers. */
 .native-feedback .field-row.delivery-attachment {
-  align-items: center;
-  gap: 12px;
-  margin: 6px 0;
-  padding: 10px 14px;
-  border-radius: var(--r-sm);
-  background: var(--paper);
-  box-shadow: inset 0 0 0 1px var(--line-2);
+  align-items: flex-start;
+  gap: 10px;
+  margin: 2px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: transparent;
   cursor: pointer;
-  transition: box-shadow var(--fast) ease;
+  transition:
+    background-color var(--fast) ease,
+    box-shadow var(--fast) ease;
 }
-.native-feedback .field-row.delivery-attachment input {
-  margin-top: 0;
+@media (hover: hover) and (pointer: fine) {
+  .native-feedback .field-row.delivery-attachment:not(:has(input:checked)):hover {
+    background: var(--fill);
+  }
 }
 .native-feedback .field-row.delivery-attachment:has(input:checked) {
-  box-shadow: inset 0 0 0 1.5px var(--ink);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+.native-feedback .field-row.delivery-attachment input {
+  appearance: none;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin: 3px 0 0;
+  border-radius: 4px;
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--ink-4);
+  cursor: pointer;
+  transition:
+    background-color var(--fast) ease,
+    box-shadow var(--fast) ease;
+}
+.native-feedback .field-row.delivery-attachment input::before {
+  content: "";
+  width: 11px;
+  height: 11px;
+  background: var(--on-primary);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  transform: scale(0.6);
+  opacity: 0;
+  transition:
+    opacity var(--fast) ease,
+    transform var(--fast) var(--ease-out);
+}
+.native-feedback .field-row.delivery-attachment input:checked {
+  background: var(--ink);
+  box-shadow: none;
+}
+.native-feedback .field-row.delivery-attachment input:checked::before {
+  opacity: 1;
+  transform: none;
+}
+.native-feedback .field-row.delivery-attachment input:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 .native-feedback .field-row.delivery-attachment:has(input:disabled) {
   cursor: default;
@@ -185,39 +231,6 @@
 }
 #sheet.deliver-sheet .native-feedback > section.delivery-paper {
   margin-bottom: 0;
-}
-
-/* A wide panel reads like the reference desk: what you choose on the left (versions, then the
-   decision), what it would lead to on the right (the pre-submission preview), the delivery's
-   button in the footer below it. Reading order is unchanged; a phone keeps one column. */
-#sheet.deliver-sheet .deliver-doc {
-  container: deliver / inline-size;
-}
-@container deliver (min-width: 720px) {
-  .native-feedback > section.delivery-paper:has(> [data-presubmit]:not([hidden])) {
-    display: grid;
-    grid-template-columns: minmax(0, 312px) minmax(0, 1fr);
-    column-gap: 28px;
-    align-items: start;
-  }
-  .native-feedback > section.delivery-paper:has(> [data-presubmit]:not([hidden])) > * {
-    grid-column: 1 / -1;
-  }
-  .native-feedback > section.delivery-paper:has(> [data-presubmit]:not([hidden])) > .delivery-versions {
-    grid-column: 1;
-    grid-row: 3;
-  }
-  .native-feedback > section.delivery-paper:has(> [data-presubmit]:not([hidden])) > [data-decision-cards] {
-    grid-column: 1;
-    grid-row: 4;
-    grid-template-columns: minmax(0, 1fr);
-    margin-top: 6px;
-  }
-  .native-feedback > section.delivery-paper:has(> [data-presubmit]:not([hidden])) > [data-presubmit] {
-    grid-column: 2;
-    grid-row: 3 / span 3;
-    margin-top: 6px;
-  }
 }
 
 /* One surface, not three nested ones: in the delivery dialog the panel is the dialog's own page

@@ -115,7 +115,7 @@ describe('195 feedback item by item: the view', () => {
       kind: 'submission',
       legacyAdvice: [{ ...items[4], source: 'model_advice', label: 'SUPPORTED' }],
     });
-    expect(advised.count).toBe('5 of 6 checked by rules · 2 not known yet (model advice on 1)');
+    expect(advised.count).toBe('5 of 6 checked by rules · 2 can’t tell yet (model advice on 1)');
     expect(advised.count).not.toMatch(/%/);
   });
 
@@ -156,8 +156,8 @@ describe('195 feedback item by item: the view', () => {
 
   it('sums an earlier delivery up in one line', () => {
     const view = feedbackItemsView(report(), { language: 'zh', kind: 'submission' });
-    expect(earlierSummary(view, 'zh')).toBe('没满足 3 项 · 站得住 1 项 · 还不知道 2 项');
-    expect(earlierSummary(view, 'en')).toBe('3 not met · 1 holds up · 2 not known yet');
+    expect(earlierSummary(view, 'zh')).toBe('没站住 3 项 · 站得住 1 项 · 还不知道 2 项');
+    expect(earlierSummary(view, 'en')).toBe('3 didn’t hold up · 1 holds up · 2 can’t tell yet');
   });
 });
 
@@ -211,7 +211,7 @@ describe('195 feedback item by item: the rows', () => {
       ),
     );
     expect(root.byTag('h3').map((h) => h.textContent)).toEqual([
-      '没满足 · 3再次交付前先处理这些。',
+      '没站住 · 3再次交付前先处理这些。',
       '还不知道 · 2评审还没确认这些项；这里的任何一项都不算你没做。',
       '站得住 · 1规则对照你的记录核实过。',
     ]);

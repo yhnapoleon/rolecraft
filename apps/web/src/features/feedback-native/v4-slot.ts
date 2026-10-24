@@ -898,7 +898,9 @@ export function mountV4Feedback(context: V4SlotContext): V4SlotHandle {
     if (!mounted || locale !== s.uiLanguage) {
       mounted?.destroy();
       locale = s.uiLanguage;
-      mounted = mountNativeFeedback(content, controller.adapter, { surface });
+      // The result page marks its region; the rail and the delivery dialog keep the plain layout.
+      const layout = content.dataset.resultLayout === 'true' ? ('result' as const) : undefined;
+      mounted = mountNativeFeedback(content, controller.adapter, { surface, layout });
     }
   }
   const onBlur = () => render(host.snapshot());

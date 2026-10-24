@@ -41,7 +41,7 @@ describe('behaviour view', () => {
       { lens: true },
     );
     expect(html).toContain('data-fallback');
-    expect(html).toContain('trajectory recognizer not loaded');
+    expect(html).toContain('The behaviour model isn’t loaded');
   });
 
   it('stays out of the learner’s default view, and away entirely when the layer is off', () => {

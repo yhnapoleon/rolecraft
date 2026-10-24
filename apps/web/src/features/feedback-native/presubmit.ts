@@ -436,6 +436,11 @@ export function mountPresubmitCard(
     /** 'panel' (default): the grey preview panel. 'flat': no panel frame, so the work's
      * sentences sit as paper directly in the host (spec 197 §8, submission dialog). */
     frame?: 'panel' | 'flat';
+    /** The sentence reading is placed by the host (`reading`), not under the rules (the
+     * three-column submission dialog, 206). */
+    split?: boolean;
+    /** Told the sentence step's state each time it is drawn. */
+    onReading?: (kind: 'idle' | 'running' | 'ready' | 'failed') => void;
   } = {},
 ) {
   const t = (key: PresubmitKey, values?: Values) => say(language, key, values);
@@ -504,7 +509,7 @@ export function mountPresubmitCard(
       nodes.push(list);
     }
     if (view.waiting) nodes.push(el('p', view.waiting, 'presubmit__waiting'));
-    nodes.push(rec);
+    if (!options.split) nodes.push(rec);
     const details = el('details');
     details.append(el('summary', view.details.label));
     for (const row of view.details.basis) {
@@ -564,6 +569,7 @@ export function mountPresubmitCard(
       playNext = false;
     } else if (pass.kind === 'failed') rec.replaceChildren(el('p', lens('stage_failed'), 'presubmit__muted'));
     else rec.replaceChildren();
+    options.onReading?.(pass.kind);
   }
   const pass = createSentencePass({
     recognize: options.recognize,
@@ -610,6 +616,8 @@ export function mountPresubmitCard(
   show({ kind: 'idle' });
   return {
     element: root,
+    /** The work sentence by sentence (or the stage while it runs); placed by a split host. */
+    reading: rec,
     update: schedule.request,
     destroy: () => {
       schedule.destroy();
