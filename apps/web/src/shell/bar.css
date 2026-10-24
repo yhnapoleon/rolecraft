@@ -691,3 +691,12 @@ html.scrolled body:not([data-view="work"]) .shell-bar {
 .shell-bar.fold-hat .menu .phone-item {
   display: contents;
 }
+
+/* The way up keeps one width whatever it says ("Board", "Sign-off desk"), so wearing the other
+ * hat on the same screen does not shift the bar. Wide screens only; phones keep the short key. */
+@media (min-width: 1101px) {
+  .shell-bar .btn.back.up {
+    min-width: 130px;
+    justify-content: flex-start;
+  }
+}

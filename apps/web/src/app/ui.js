@@ -750,10 +750,17 @@ function render() {
   restoreFocus(key);
 }
 // Being on a hat's own screen puts that hat on; the desk's ticket is remembered for the switch.
+const ticketOf = (id) => {
+  const t = String(id || '').split('?')[0];
+  return t.startsWith('ticket-') ? t : null;
+};
 function syncHat() {
   const a = current();
   if (!a || !inPractice()) return;
-  if (ui.route === 'engineer' && ui.routeId) setLastTicket(a.id, ui.routeId);
+  // Only a real ticket is worth coming back to (not the intro or the revision page, whose id
+  // part is "?intro…"); a query after the id is not part of it.
+  const ticketId = ticketOf(ui.routeId);
+  if (ui.route === 'engineer' && ticketId) setLastTicket(a.id, ticketId);
   if (ENGINEER_ROUTES.includes(ui.route)) setHat(a.id, 'engineer');
   else if (WS.slice(0, 4).includes(ui.route) || ui.route === 'review') setHat(a.id, 'pm');
 }
@@ -1303,10 +1310,21 @@ const routeTask = (a) =>
 function wsToolbar(a) {
   const t = routeTask(a);
   const m = ui.route === 'doc' ? E.getMaterials(a).find((x) => x.id === ui.routeId) : null;
+  // A screen another line registered (My agent…) is worn in the practice's hat: in the
+  // engineer's, "back" leads to the sign-off desk, not the product manager's board. The desk
+  // itself is the engineer's home screen (no way back, like the board); its report and any
+  // other screen go back to it.
+  const deskBack =
+    isRegisteredRoute(ui.route) && ui.route !== 'engineer' && hatHere(a) === 'engineer';
+  const ticket = deskBack ? ticketOf(lastTicket(a.id)) : null;
   const back =
-    ui.route === 'work'
+    ui.route === 'work' || (ui.route === 'engineer' && isRegisteredRoute('engineer'))
       ? ''
-      : `<button type="button" class="btn quiet back up" data-action="to-board">${icon('back')}<span>${T('工作板', 'Board')}</span></button>`;
+      : deskBack
+        ? ticket
+          ? `<a class="btn quiet back up" style="text-decoration: none" href="${esc(hashOf('engineer', ticket))}">${icon('back')}<span>${T('签字台', 'Sign-off desk')}</span></a>`
+          : `<button type="button" class="btn quiet back up" data-action="hat-switch" data-hat="engineer">${icon('back')}<span>${T('签字台', 'Sign-off desk')}</span></button>`
+        : `<button type="button" class="btn quiet back up" data-action="to-board">${icon('back')}<span>${T('工作板', 'Board')}</span></button>`;
   const here = t
     ? `<span class="crumb-sep">${icon('chev', 'i-xs')}</span><span class="crumb-now">${esc(taskTitle(t))}</span>`
     : m
