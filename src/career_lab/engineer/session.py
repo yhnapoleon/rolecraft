@@ -34,6 +34,7 @@ from pydantic import ConfigDict, Field, JsonValue, RootModel
 from career_lab.api.modules import Operation
 from career_lab.contracts import v2 as C
 from career_lab.contracts.v2.engineer import (
+    EngineerChangeClaim,
     EngineerClaimedReport,
     EngineerPublicReport,
     EngineerSubmissionRecord,
@@ -43,12 +44,19 @@ from career_lab.scenarios.v2.module import ScenarioModule, ref_for
 from career_lab.scenarios.v2.policy import effective_config
 from career_lab.storage.v2_store import TransactionView, V2Store
 
-from .candidate import candidate_config, editable_fields, settings_diff, supported_settings
+from .candidate import (
+    EDITABLE_FIELDS,
+    candidate_config,
+    editable_fields,
+    settings_diff,
+    supported_settings,
+)
 from .capture import capture, package_files
 from .execution import matches, run_query, suite_probes
 from .files import encode, file_ref, publish, retained_documentation
 from .pack import reproduce_pack
 from .review import review_configuration
+from .review_evaluation import stored_evaluation
 from .seeded import ORIGIN_LABELS, SEEDED_TICKETS, seed_record, seeded_ticket, tests_title
 from .session_store import EngineerStore, checked, read_json, record_id, records, write_json
 from .submission import submit_configuration, verified_pack
@@ -65,6 +73,10 @@ ROLE = "engineer"
 REVIEW_LIMIT = 3
 EXPERIMENT_LIMIT = 50
 DRAFT_LIMIT = 50
+# The ticket detail lists the latest experiments and drafts, so it stays within an Agent
+# tool result (50,000 characters); the budgets still count every record.
+LISTED_TRIALS = 20
+LISTED_DRAFTS = 10
 IMPACT_NOTE_LIMIT = 500
 SUMMARY_LIMIT = 400
 RETRIEVAL_NOTE = {
@@ -109,7 +121,8 @@ class ChangeStatement(C.V2):
     field: str
     before: JsonValue = None
     after: JsonValue = None
-    reason: Annotated[str, Field(min_length=1, max_length=1000)]
+    # The submitted EngineerChangeClaim keeps at most 500 characters of reason.
+    reason: Annotated[str, Field(min_length=1, max_length=500)]
 
 
 class UnresolvedInput(C.V2):
@@ -356,6 +369,7 @@ class EngineerService:
                     raise C.ProtocolError("engineer_source_unavailable", status=404)
         language = ticket["work_language"]
         signoffs = self.signoffs(folder)
+        trials, drafts = self.ordered(folder / "trials"), self.ordered(folder / "drafts")
         return {
             **self.ticket_summary(ticket),
             "target_tests": [
@@ -366,13 +380,11 @@ class EngineerService:
             "baseline_config": supported_settings(baseline),
             "editable_fields": editable_fields(module.package),
             "review_budget": self.budget(signoffs),
-            "experiment_budget": {
-                "used": len(records(folder / "trials")),
-                "limit": EXPERIMENT_LIMIT,
-            },
+            "experiment_budget": {"used": len(trials), "limit": EXPERIMENT_LIMIT},
+            "draft_budget": {"used": len(drafts), "limit": DRAFT_LIMIT},
             "retrieval": {"mode": "rule_based", "note": RETRIEVAL_NOTE[language]},
-            "trials": [self.trial_summary(row) for row in self.ordered(folder / "trials")],
-            "drafts": [self.draft_view(row) for row in self.ordered(folder / "drafts")],
+            "trials": [self.trial_summary(row) for row in trials[-LISTED_TRIALS:]],
+            "drafts": [self.draft_view(row) for row in drafts[-LISTED_DRAFTS:]],
             "reviews": [self.review_summary(row) for row in signoffs],
         }
 
@@ -695,13 +707,11 @@ class EngineerService:
             baseline = C.AssistantConfig.model_validate_json(pack_files[index.config.path])
             candidate = candidate_config(module.package, baseline, dict(payload.changes), sid)
             changes = settings_diff(baseline, candidate)
+            # Statements are the learner's (or their Agent's) account of the change and are kept
+            # as stated: one per editable setting. Whether they match the actual difference is
+            # judged after review (E3), so a wrong value is not refused here.
             fields = [statement.field for statement in payload.change_statements]
-            if len(set(fields)) != len(fields) or any(
-                s.field not in changes
-                or s.before != changes[s.field]["before"]
-                or s.after != changes[s.field]["after"]
-                for s in payload.change_statements
-            ):
+            if len(set(fields)) != len(fields) or set(fields) - set(EDITABLE_FIELDS):
                 raise C.ProtocolError("engineer_change_statement_invalid")
             public = {row["id"] for row in json.loads(pack_files[index.public_probes.path])}
             claimed = dict(payload.claimed_results)
@@ -759,6 +769,7 @@ class EngineerService:
                 "pack": ticket["pack_id"],
                 "candidate": draft["candidate"],
                 "explanation": draft["explanation"],
+                "change_statements": draft["change_statements"],
                 "claimed_results": draft["claimed_results"],
                 "unresolved": draft["unresolved"],
                 "signer": signer,
@@ -850,7 +861,6 @@ class EngineerService:
                 )
             )
             claim_ref = file_ref("claim.json", files["claim.json"])
-        # Change statements stay in the draft until the engineer-review contract has a field.
         files["submission.json"] = encode(
             EngineerSubmissionRecord(
                 contract_version="engineer-review-v1",
@@ -872,6 +882,16 @@ class EngineerService:
                 executor=auth.executor,
                 created_at=record["created_at"],
                 work_language=module.work_language,
+                # Stated as drafted; their agreement with the actual difference is E3's to judge.
+                changes=tuple(
+                    EngineerChangeClaim(
+                        field=item["field"],
+                        before=item["before"],
+                        after=item["after"],
+                        reason=item["reason"],
+                    )
+                    for item in draft["change_statements"]
+                ),
             )
         )
         return files
@@ -906,6 +926,11 @@ class EngineerService:
             "impact_note": record["impact_note"],
             "retrieval": {"mode": "rule_based", "note": RETRIEVAL_NOTE[language]},
             "report": report.model_dump(mode="json"),
+            # Rule conclusions E1-E4 (E5 waits for a model), computed from the private store;
+            # only public probe IDs and hidden counts appear in them.
+            "evaluation": stored_evaluation(self.files.private_reviews(sid), review_id).model_dump(
+                mode="json"
+            ),
         }
 
     def read_reviews(

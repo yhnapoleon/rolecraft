@@ -310,6 +310,46 @@
       "title": "EngineerFinding",
       "type": "object"
     },
+    "EngineerHiddenComparison": {
+      "additionalProperties": false,
+      "description": "Hidden probes compared between the original and candidate configurations; counts only.\n\nProbes passing under both are the remainder of the hidden total.",
+      "properties": {
+        "fixed": {
+          "minimum": 0,
+          "title": "Fixed",
+          "type": "integer"
+        },
+        "new_failures": {
+          "minimum": 0,
+          "title": "New Failures",
+          "type": "integer"
+        },
+        "schema_version": {
+          "const": 2,
+          "default": 2,
+          "title": "Schema Version",
+          "type": "integer"
+        },
+        "still_failing": {
+          "minimum": 0,
+          "title": "Still Failing",
+          "type": "integer"
+        },
+        "unverified": {
+          "minimum": 0,
+          "title": "Unverified",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "new_failures",
+        "fixed",
+        "still_failing",
+        "unverified"
+      ],
+      "title": "EngineerHiddenComparison",
+      "type": "object"
+    },
     "EngineerProbeExpectation": {
       "additionalProperties": false,
       "properties": {
@@ -1296,6 +1336,17 @@
       },
       "title": "Findings",
       "type": "array"
+    },
+    "hidden_comparison": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EngineerHiddenComparison"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
     },
     "id": {
       "minLength": 1,

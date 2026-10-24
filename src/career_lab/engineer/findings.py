@@ -5,6 +5,7 @@ from typing import Literal
 from career_lab.contracts.v2.engineer import (
     EngineerClaimedReport,
     EngineerFinding,
+    EngineerHiddenComparison,
     EngineerProbeResult,
 )
 
@@ -124,3 +125,19 @@ def regression_findings(
             )
         )
     return tuple(findings)
+
+
+def hidden_comparison(
+    baseline: tuple[EngineerProbeResult, ...],
+    actual: tuple[EngineerProbeResult, ...],
+) -> EngineerHiddenComparison:
+    """Counts of hidden outcomes between the original and candidate; no IDs or questions."""
+    originals = {row.probe_id: row.result for row in baseline}
+    pairs = [(originals[row.probe_id], row.result) for row in actual if row.visibility == "hidden"]
+    unverified = sum("error" in pair for pair in pairs)
+    return EngineerHiddenComparison(
+        new_failures=pairs.count(("pass", "fail")),
+        fixed=pairs.count(("fail", "pass")),
+        still_failing=pairs.count(("fail", "fail")),
+        unverified=unverified,
+    )

@@ -88,6 +88,9 @@
 - **目录**：根目录取 `CAREER_LAB_ENGINEER_ROOT`，缺省 `runs/local/engineer`（相对 API 的工作目录）。`sessions/<会话>/` 放委托、任务包、试验记录、草稿、签字记录和提交库；`public-reviews/<会话>/` 放公开报告；私有复核库在 `private-reviews/<会话>/`（权限 0700，含隐藏探针题目、预期与原始结果），任何 HTTP 或 MCP 响应都不读它，也不带任何路径。目录本身就是索引，API 重启后照常读回。部署时 API 进程要能写这个目录，换部署时连同数据库一起保留。
 - **规则版检索**：复现、试跑与复核固定用规则版检索（`engineer/execution.py` 显式 `recognize=False`），与是否配置 `CAREER_LAB_RECOGNIZERS` 无关；委托详情与复核结果里写明。
 - **候选设置**：只收助手行为字段（`domains`、`scope_filter`、`update_strategy`、`fallback`、`freshness_guard`、`work_items`、`manual_domains`、`prohibited_topics`、`retrieval_limit`、`chunk_size`、`min_score`），以对委托基线配置的差异（`changes`）给出，按 CLI 提交同一套严格校验；`prohibited_topics` 另拒收网址、路径样式的文字。场景自带委托的文案按场景 ID 与语言放在 `engineer/seeded.py`，已发布场景文件不动。
+- **逐条变更**：草稿的 `change_statements` 按学员（或其 Agent）写的原样保存，每个可改字段最多一条（`before` 与 `after` 相同表示声明未改），不要求与实际差异一致；签字时写进提交记录的 `EngineerSubmissionRecord.changes`，对不对由复核后的 E3 判。签字去重也算上逐条变更：只差逐条变更的两份草稿是两次不同复核。
+- **规则评价**：签字响应与 `engineer.reviews.read` 读单个复核时，`review` 里在 `report` 旁有 `evaluation`（`EngineerRuleEvaluation`：E1–E4 规则结论，E5 等待模型并附规则预检），由服务端从私有复核库读原配置、候选、提交记录、自报与私有报告现算（`engineer/review_evaluation.py`），只含公开探针 ID 与隐藏计数；私有记录缺失或被改动时返回 409 `engineer_review_changed`。
+- **Agent 经 MCP 可用的五个工具**：`engineer.tickets.read`、`engineer.reproduce`、`engineer.trial`、`engineer.submissions.draft`、`engineer.reviews.read`（`delegations/catalog.py` 的 `ROUTES`；两个读操作的 `ticket_id`、`review_id` 放在 `query` 里），三个写操作在 `api/vertical_runtime.py` 列为同步操作。`engineer.tickets.create` 与 `engineer.submissions.sign` 不是工具，Agent 令牌直接打这两个路由回 403。授权限定 `allowed_actions` 时，要连同 `observation` 一起给，MCP 客户端靠它列工具。委托详情只列最近 20 次试验与最近 10 份草稿（`experiment_budget`、`draft_budget` 计全部），让结果留在 5 万字符内；测试见 `tests/integration/test_engineer_mcp.py`（Streamable HTTP）与 `tests/e2e/test_engineer_mcp_stdio.py`（stdio），中英各一。
 
 ## 没有负责方产物时怎样演示模型建议
 

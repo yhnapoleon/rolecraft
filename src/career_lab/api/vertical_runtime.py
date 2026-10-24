@@ -167,10 +167,13 @@ def create_runtime_app(
     holder["store"] = app.state.v2_store
     app.state.v2_store.public_history_reader = history_reader(registry)
     from career_lab.delegations.factory import mount_delegations
-    from career_lab.delegations.catalog import SYNC_OPERATIONS
+    from career_lab.delegations.catalog import ENGINEER_SYNC_OPERATIONS, SYNC_OPERATIONS
 
     mount_delegations(
-        app, synchronous=SYNC_OPERATIONS | {"actions", "approvals.resolve", "tests.create"}
+        app,
+        synchronous=SYNC_OPERATIONS
+        | ENGINEER_SYNC_OPERATIONS
+        | {"actions", "approvals.resolve", "tests.create"},
     )
     app.state.scenario_v2 = module
     app.state.model_provider = provider

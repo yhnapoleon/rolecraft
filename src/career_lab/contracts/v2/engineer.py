@@ -2,9 +2,9 @@
 
 import json
 from pathlib import Path
-from typing import Annotated, Literal, Self
+from typing import Annotated, Literal, Self, get_args
 
-from pydantic import Field, model_validator
+from pydantic import Field, JsonValue, model_validator
 
 from .core import (
     V2,
@@ -12,6 +12,7 @@ from .core import (
     FileRef,
     Hash,
     Identifier,
+    NonNegativeInt,
     ObjectRef,
     ProtocolError,
     Timestamp,
@@ -37,6 +38,36 @@ class EngineerUnresolvedItem(V2):
     probe_ids: tuple[Identifier, ...] = ()
 
 
+# Learner-editable AssistantConfig settings. Identity, versions and the calibration
+# reference are never claimable; candidates cannot change them.
+ChangeField = Literal[
+    "domains",
+    "scope_filter",
+    "update_strategy",
+    "fallback",
+    "chunk_size",
+    "retrieval_limit",
+    "min_score",
+    "freshness_guard",
+    "manual_domains",
+    "prohibited_topics",
+    "work_items",
+    "participants",
+    "launch_day",
+    "generator",
+]
+CHANGE_FIELDS: tuple[str, ...] = get_args(ChangeField)
+
+
+class EngineerChangeClaim(V2):
+    """One structured statement about a setting; before == after declares it unchanged."""
+
+    field: ChangeField
+    before: JsonValue
+    after: JsonValue
+    reason: Annotated[str, Field(max_length=500)] | None = None
+
+
 class EngineerSubmissionRecord(V2):
     contract_version: Literal["engineer-review-v1"]
     id: Identifier
@@ -49,6 +80,15 @@ class EngineerSubmissionRecord(V2):
     executor: Executor
     created_at: Timestamp
     work_language: Literal["zh", "en"]
+    # Absent from records written before change claims existed; their bytes and IDs are unchanged.
+    changes: tuple[EngineerChangeClaim, ...] = Field(default=(), exclude_if=lambda value: not value)
+
+    @model_validator(mode="after")
+    def one_claim_per_field(self) -> Self:
+        fields = [claim.field for claim in self.changes]
+        if len(fields) != len(set(fields)):
+            raise ValueError("duplicate change claim")
+        return self
 
 
 REVIEW_MODELS: dict[str, type[V2]] = {"EngineerSubmission": EngineerSubmissionRecord}
@@ -201,6 +241,46 @@ class EngineerAdvice(V2):
         return self
 
 
+class EngineerProbeSummary(V2):
+    passed: int = Field(ge=0)
+    failed: int = Field(ge=0)
+    errors: int = Field(ge=0)
+
+
+class EngineerHiddenComparison(V2):
+    """Hidden probes compared between the original and candidate configurations; counts only.
+
+    Probes passing under both are the remainder of the hidden total.
+    """
+
+    new_failures: NonNegativeInt  # original passed, candidate failed
+    fixed: NonNegativeInt  # original failed, candidate passed
+    still_failing: NonNegativeInt  # failed under both
+    unverified: NonNegativeInt  # either side had an execution error
+
+
+def validate_hidden_comparison(
+    comparison: EngineerHiddenComparison | None, summary: EngineerProbeSummary
+) -> None:
+    """Counts must fit the candidate's hidden results; candidate errors are always unverified."""
+    if comparison is None:
+        return
+    total = summary.passed + summary.failed + summary.errors
+    counted = (
+        comparison.new_failures
+        + comparison.fixed
+        + comparison.still_failing
+        + comparison.unverified
+    )
+    if (
+        counted > total
+        or comparison.new_failures + comparison.still_failing > summary.failed
+        or comparison.fixed > summary.passed
+        or comparison.unverified < summary.errors
+    ):
+        raise ValueError("hidden comparison disagrees with hidden results")
+
+
 ReviewStatus = Literal["verified", "report_mismatch", "incomplete"]
 ClaimCheck = Literal["matched", "mismatch", "not_provided", "unverified"]
 
@@ -237,6 +317,10 @@ class EngineerRegressionReport(V2):
     findings: tuple[EngineerFinding, ...]
     unresolved: tuple[EngineerUnresolvedItem, ...]
     advice: EngineerAdvice
+    # Absent from reports written before the comparison existed; their bytes are unchanged.
+    hidden_comparison: EngineerHiddenComparison | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def consistent_input(self) -> Self:
@@ -270,16 +354,20 @@ class EngineerRegressionReport(V2):
         for finding in self.findings:
             if not set(finding.probe_ids) <= set(ids):
                 raise ValueError("finding references missing probe")
+        validate_hidden_comparison(self.hidden_comparison, hidden_summary(self.results))
         return self
 
 
 REVIEW_MODELS["RegressionReport"] = EngineerRegressionReport
 
 
-class EngineerProbeSummary(V2):
-    passed: int = Field(ge=0)
-    failed: int = Field(ge=0)
-    errors: int = Field(ge=0)
+def hidden_summary(results: tuple[EngineerProbeResult, ...]) -> EngineerProbeSummary:
+    hidden = [row for row in results if row.visibility == "hidden"]
+    return EngineerProbeSummary(
+        passed=sum(row.result == "pass" for row in hidden),
+        failed=sum(row.result == "fail" for row in hidden),
+        errors=sum(row.result == "error" for row in hidden),
+    )
 
 
 ArtifactKind = Literal["submission", "scenario", "configuration", "model"]
@@ -364,6 +452,9 @@ class EngineerPublicReport(V2):
     unresolved: tuple[EngineerUnresolvedItem, ...] = Field(max_length=0)
     advice: EngineerPublicAdvice | None
     affects_score: Literal[False] = False
+    hidden_comparison: EngineerHiddenComparison | None = Field(
+        default=None, exclude_if=lambda value: value is None
+    )
 
     @model_validator(mode="after")
     def public_only(self) -> Self:
@@ -390,6 +481,7 @@ class EngineerPublicReport(V2):
                 finding.kind, finding.status, self.work_language, has_probes=bool(finding.probe_ids)
             ):
                 raise ValueError("public findings require authored rule text")
+        validate_hidden_comparison(self.hidden_comparison, self.hidden)
         return self
 
 
@@ -444,7 +536,6 @@ def public_engineer_report(report: EngineerRegressionReport) -> EngineerPublicRe
     """Project trusted reviewer fields; no removal based on secret marker strings."""
     public = tuple(public_probe_result(row) for row in report.results if row.visibility == "public")
     ids = {row.probe_id for row in public}
-    hidden = tuple(row for row in report.results if row.visibility == "hidden")
     execution = next(
         (row.actual.execution for row in report.results if row.actual is not None), None
     )
@@ -483,11 +574,7 @@ def public_engineer_report(report: EngineerRegressionReport) -> EngineerPublicRe
             source_as_of=report.input.source_as_of,
         ),
         public_results=public,
-        hidden=EngineerProbeSummary(
-            passed=sum(row.result == "pass" for row in hidden),
-            failed=sum(row.result == "fail" for row in hidden),
-            errors=sum(row.result == "error" for row in hidden),
-        ),
+        hidden=hidden_summary(report.results),
         findings=tuple(
             EngineerFinding(
                 kind=row.kind,
@@ -503,6 +590,7 @@ def public_engineer_report(report: EngineerRegressionReport) -> EngineerPublicRe
         ),
         unresolved=(),
         advice=advice,
+        hidden_comparison=report.hidden_comparison,
     )
 
 

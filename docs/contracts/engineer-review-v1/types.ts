@@ -44,6 +44,14 @@ export type EngineerArtifactIdentity = {
   "sha256": string;
 };
 
+export type EngineerChangeClaim = {
+  "after": JsonValue;
+  "before": JsonValue;
+  "field": "domains" | "scope_filter" | "update_strategy" | "fallback" | "chunk_size" | "retrieval_limit" | "min_score" | "freshness_guard" | "manual_domains" | "prohibited_topics" | "work_items" | "participants" | "launch_day" | "generator";
+  "reason"?: (string | null);
+  "schema_version"?: 2;
+};
+
 export type EngineerClaimedReport = {
   "config": FileRef;
   "contract_version": "engineer-review-v1";
@@ -61,6 +69,14 @@ export type EngineerFinding = {
   "schema_version"?: 2;
   "status": "pass" | "fail" | "unverified";
   "visibility": "public" | "hidden";
+};
+
+export type EngineerHiddenComparison = {
+  "fixed": number;
+  "new_failures": number;
+  "schema_version"?: 2;
+  "still_failing": number;
+  "unverified": number;
 };
 
 export type EngineerProbeClaim = {
@@ -132,6 +148,7 @@ export type EngineerPublicReport = {
   "created_at": string;
   "findings": ReadonlyArray<EngineerFinding>;
   "hidden": EngineerProbeSummary;
+  "hidden_comparison"?: (EngineerHiddenComparison | null);
   "id": string;
   "input_hash": string;
   "public_results": ReadonlyArray<EngineerPublicProbeResult>;
@@ -149,6 +166,7 @@ export type EngineerRegressionReport = {
   "contract_version": "engineer-review-v1";
   "created_at": string;
   "findings": ReadonlyArray<EngineerFinding>;
+  "hidden_comparison"?: (EngineerHiddenComparison | null);
   "id": string;
   "input": EngineerReviewInput;
   "input_hash": string;
@@ -194,6 +212,7 @@ export type EngineerReviewInput = {
 
 export type EngineerSubmissionRecord = {
   "base_config_hash": string;
+  "changes"?: ReadonlyArray<EngineerChangeClaim>;
   "config": FileRef;
   "contract_version": "engineer-review-v1";
   "created_at": string;
@@ -243,6 +262,8 @@ export type FileRef = {
   "schema_version"?: 2;
   "sha256": string;
 };
+
+export type JsonValue = unknown;
 
 export type ModelAttemptUsage = {
   "attempt_id": string;

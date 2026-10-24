@@ -468,14 +468,16 @@ def test_review_budget_counts_distinct_inputs(eng: Eng) -> None:
             "engineer_claim_probe_unknown",
         ),
         (
+            # A wrong value is kept and judged by E3; two statements for one field are refused.
             {
                 "change_statements": [
+                    {"field": "freshness_guard", "before": "none", "after": "warn", "reason": "r"},
                     {
                         "field": "freshness_guard",
                         "before": "none",
                         "after": "fallback",
                         "reason": "r",
-                    }
+                    },
                 ]
             },
             "engineer_change_statement_invalid",

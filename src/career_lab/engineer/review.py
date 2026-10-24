@@ -19,7 +19,7 @@ from career_lab.storage.v2_store import V2Store
 
 from .execution import account_for_baseline_errors, execute_suite, interrupted_results
 from .files import encode, publish
-from .findings import claim_finding, compare_claim, regression_findings
+from .findings import claim_finding, compare_claim, hidden_comparison, regression_findings
 from .review_inputs import ReviewContext, prepare_review
 from .review_store import load_report, review_lock, save_report
 
@@ -60,6 +60,7 @@ def build_report(
             item.model_copy(update={"visibility": "hidden"}) for item in record.unresolved
         ),
         advice=EngineerAdvice(status="waiting_model", text=None, model=None, visibility="public"),
+        hidden_comparison=hidden_comparison(baseline, results),
     )
 
 
