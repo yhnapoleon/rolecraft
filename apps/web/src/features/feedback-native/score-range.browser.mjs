@@ -8,7 +8,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { delay, launch } from '../../../tests/walkthrough/cdp.mjs';
-import { clickReady, waitFor } from '../../../tests/regression/browser-support.mjs';
+import { clickReady, waitFor, submitDelivery } from '../../../tests/regression/browser-support.mjs';
 
 const base = process.env.BASE;
 const out = process.env.OUT;
@@ -73,7 +73,7 @@ async function submitLaunch(browser, language, t) {
   );
   await browser.click('#sheet .native-feedback input[type="checkbox"]');
   await browser.select('#sheet .native-feedback select', 'launch');
-  await clickReady(browser, t('提交选中的版本', 'Submit selected versions'), '#sheet button');
+  await submitDelivery(browser);
   await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`, 60000);
   await browser.ev(`document.querySelector('#sheet')?.close()`);
   await openFeedback(browser, t);

@@ -1,4 +1,4 @@
-import { waitFor, clickReady } from './browser-support.mjs';
+import { waitFor, clickReady, submitDelivery } from './browser-support.mjs';
 import { askHowToPrioritise, openEvidence, readActivity } from './activity-evidence.mjs';
 /** Normal v4 UI over real HTTP/worker and the unmodified published catalog. */
 import assert from 'node:assert/strict';
@@ -250,8 +250,11 @@ async function submitDeferral(context) {
   await browser.click('.ws-toolbar [data-action="submit"]');
   await waitFor(browser, `!!document.querySelector('.native-feedback input[type="checkbox"]')`);
   await browser.click('.native-feedback input[type="checkbox"]');
-  await browser.select('.native-feedback select', 'defer_with_conditions');
-  await clickReady(browser, text('提交选中的版本', 'Submit selected versions'), '#sheet button');
+  // The decision is one of four paper options (a radio group named "本次决定").
+  await browser.click(
+    '.native-feedback [data-decision-cards] .decision-card[data-decision="defer_with_conditions"] input',
+  );
+  await submitDelivery(browser);
   await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`);
   await browser.ev(`document.querySelector('#sheet')?.close()`);
   await browser.goto(`${base}#/review`);
@@ -436,6 +439,97 @@ async function reloadWithDroppedReads(context) {
   );
 }
 
+/** The board does what its hint says: Option/Alt with the arrow keys changes a card's priority
+ * and its order, dragging a card moves it to another column, and after a reload every card is
+ * where it was put (the order is the server's, not the page's). */
+async function boardOrderPersists(context) {
+  const { browser, shot } = context;
+  const lanes = ['first', 'next', 'later'];
+  const board = `document.querySelectorAll('.kanban .card-open').length >= 3`;
+  const ids = (lane) =>
+    `[...document.querySelectorAll('.kanban .col-${lane} .card')].map((c) => c.dataset.taskId)`;
+  const stored = (id) =>
+    `window.PracticeLive.store.active().v2Workspace.tasks.find((t) => t.id === ${JSON.stringify(id)})`;
+  const where = async () =>
+    Object.fromEntries(await Promise.all(lanes.map(async (l) => [l, await browser.ev(ids(l))])));
+  const reload = async (total) => {
+    await browser.send('Page.reload', {});
+    await waitFor(
+      browser,
+      `location.hash === '#/work' && document.querySelectorAll('.kanban .card').length === ${total}`,
+      20000,
+    );
+    await delay(600);
+  };
+  const altKey = async (key, code, keyCode) => {
+    await browser.send('Input.dispatchKeyEvent', {
+      type: 'rawKeyDown',
+      key,
+      code,
+      windowsVirtualKeyCode: keyCode,
+      modifiers: 1,
+    });
+    await browser.send('Input.dispatchKeyEvent', {
+      type: 'keyUp',
+      key,
+      code,
+      windowsVirtualKeyCode: keyCode,
+      modifiers: 1,
+    });
+  };
+  await browser.goto(`${base}#/work`);
+  await waitFor(browser, board, 20000);
+  await shot('board-order-before');
+  // 1. Option + Left: a card of "Up next" moves to "Do first"; the server records priority 0.
+  const start = await where();
+  const toFirst = start.next[0];
+  assert.ok(toFirst, JSON.stringify(start));
+  await browser.ev(
+    `document.querySelector('.kanban .card[data-task-id=${JSON.stringify(toFirst)}] .card-open').focus()`,
+  );
+  await altKey('ArrowLeft', 'ArrowLeft', 37);
+  await waitFor(browser, `${stored(toFirst)}?.priority === 0 && ${ids('first')}.includes(${JSON.stringify(toFirst)})`);
+  // 2. Option + Up: the last card of "Up next" moves to its top; the server keeps that order.
+  const next = await browser.ev(ids('next'));
+  assert.ok(next.length >= 2, JSON.stringify(next));
+  const toTop = next.at(-1);
+  await browser.ev(
+    `document.querySelector('.kanban .card[data-task-id=${JSON.stringify(toTop)}] .card-open').focus()`,
+  );
+  for (let i = 1; i < next.length; i++) {
+    await altKey('ArrowUp', 'ArrowUp', 38);
+    await waitFor(browser, `${ids('next')}.indexOf(${JSON.stringify(toTop)}) === ${next.length - 1 - i}`);
+  }
+  // 3. Drag: the last card of "Up next" is dropped on "Later"; the server records priority 2.
+  const dragged = await browser.ev(`${ids('next')}.at(-1)`);
+  assert.notEqual(dragged, toTop);
+  await browser.ev(`(() => {
+    const card = document.querySelector('.kanban .card[data-task-id=${JSON.stringify(dragged)}]');
+    const lane = document.querySelector('.kanban .col-later');
+    const data = new DataTransfer();
+    card.dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: data }));
+    lane.dispatchEvent(new DragEvent('dragover', { bubbles: true, cancelable: true, dataTransfer: data }));
+    lane.dispatchEvent(new DragEvent('drop', { bubbles: true, cancelable: true, dataTransfer: data }));
+    card.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: data }));
+  })()`);
+  await waitFor(browser, `${stored(dragged)}?.priority === 2`);
+  // The board is drawn again from the server's records: read it once every card is back.
+  const total = Object.values(start).flat().length;
+  await waitFor(
+    browser,
+    `${ids('later')}.includes(${JSON.stringify(dragged)}) && document.querySelectorAll('.kanban .card').length === ${total}`,
+  );
+  await delay(400);
+  const placed = await where();
+  // After a reload every card is where it was put.
+  await reload(total);
+  assert.deepEqual(await where(), placed, 'the board keeps its new order after a reload');
+  assert.ok(placed.first.includes(toFirst) && placed.later.includes(dragged), JSON.stringify(placed));
+  assert.equal(placed.next[0], toTop, 'the card moved up stays first in its column');
+  await shot('board-order-after-reload');
+  console.log(`board order ${context.language}: before ${JSON.stringify(start)} after reload ${JSON.stringify(placed)}`);
+}
+
 async function runLanguage(language) {
   const browser = await launch({ width: 1440, height: 1100, reduced: true });
   const en = language === 'en';
@@ -581,6 +675,9 @@ async function runLanguage(language) {
     );
     await step('a page reload with dropped reads shows no error and loads on the next poll', () =>
       reloadWithDroppedReads(context),
+    );
+    await step('board order: keys and dragging change it and a reload keeps it', () =>
+      boardOrderPersists(context),
     );
     await step('connection card: agent returns work over MCP until revoked', async () => {
       await browser.goto(base + context.taskRoute);

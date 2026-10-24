@@ -194,3 +194,122 @@
     gap: 2px;
   }
 }
+
+/* Board card "⋯" (frontend-style 3.6 board card): ordering, priority and pausing are out of
+   the card face. The button shows on hover or keyboard focus; on touch it stays visible. */
+.kanban .card-tools {
+  position: absolute;
+  top: 10px;
+  right: 8px;
+}
+.kanban .card-tools .card-more {
+  position: static;
+}
+.kanban .card.menu-open {
+  z-index: 20;
+}
+.kanban .card.menu-open .card-more {
+  opacity: 1;
+  background: var(--fill);
+}
+.kanban .card-menu {
+  top: calc(100% + 4px);
+  right: 0;
+  min-width: 188px;
+  transform-origin: top right;
+  animation: pop var(--fast) var(--spring-snappy);
+}
+.kanban .card-menu .pri-mark {
+  flex: none;
+}
+.kanban .card-menu [role="menuitemradio"][aria-checked="true"] {
+  font-weight: 600;
+}
+.kanban .card-menu [role="menuitemradio"][aria-checked="true"]::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.kanban .card-menu button:disabled {
+  color: var(--ink-4);
+  cursor: default;
+}
+.kanban .card-menu button:disabled .pri-mark {
+  opacity: 0.5;
+}
+.kanban .card-menu-sep {
+  height: 1px;
+  margin: 6px 8px;
+  background: var(--line);
+}
+.kanban .card.paused .card-title {
+  color: var(--ink-3);
+}
+.kanban .card-flags .flag-chip:not(.warn):not(.agent):not(.revise) {
+  background: var(--fill-2);
+  color: var(--ink-3);
+}
+/* Where the last delivery's revision starts: the person's own next step, in ink. */
+.kanban .flag-chip.revise {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--ink);
+  color: var(--ink);
+}
+.kanban .card[draggable="true"] {
+  cursor: grab;
+}
+.kanban .card[draggable="true"]:active {
+  cursor: grabbing;
+}
+@media (hover: none) {
+  .kanban .card-more {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .kanban .card-menu {
+    animation: none;
+  }
+}
+
+/* Card face (visual D "slip"): the work line and foot sit under the title, past the progress
+   circle; the work's title is paper (serif), its version and purpose small. */
+.kanban .card-latest,
+.kanban .card-meta {
+  padding-left: 22px;
+}
+.kanban .card-latest {
+  align-items: baseline;
+}
+.kanban .card-latest.empty {
+  color: var(--ink-3);
+}
+.kanban .card-work {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 14px;
+}
+.kanban .card-work-about {
+  flex: none;
+  color: var(--ink-3);
+  font-family: var(--sans);
+  font-size: 12px;
+}
+.kanban .card-meta {
+  flex-wrap: wrap;
+  gap: 6px 10px;
+}
+.kanban .card-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.kanban .card-meta .card-notes {
+  margin-left: auto;
+}

@@ -56,6 +56,7 @@ describe('readable real-work folder tray', () => {
       summary: 'pending 这是实际作品的正文。',
     });
     expect(html).toContain('待检查');
+    // A work version reads 第 N 版 / version N, like everywhere else.
     expect(html).toContain('第 7 版');
     expect(works).toEqual(snapshot);
   });

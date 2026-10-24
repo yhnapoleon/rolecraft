@@ -19,6 +19,14 @@ import {
 import { bindWorkspaceForm } from './form-slot';
 import { changedMaterials, outcomeView, renderOutcome, type PreviewEntry } from './outcome-preview';
 import { recipientShares, rememberRequest } from '../../roles-native/v4-data';
+import { agentMark, avatar, icon, PEOPLE, priMark, statusMark } from '../../../app/art.js';
+import { workFolderMarkup } from '../../../app/work-folder.js';
+import { PRI, STATUS, purposeLabel } from '../../../app/vocab.js';
+import { cardPeople, taskCardFacts, taskProgress } from './card-facts';
+
+const PRIORITY_KEYS = ['first', 'next', 'later'] as const;
+/** A board card keeps keyboard focus through a move, even when the board remounts this slot. */
+let pendingTaskFocus: { id: string; control: string; until?: number } | undefined;
 
 /** Bind only nodes assigned by the v4 host. See v4-slot.md for exact node keys.
  * No application root, navigation, credentials, transport or request journal. */
@@ -536,88 +544,352 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     });
   });
 
-  function taskCard(task: WorkspaceTask) {
-    const row = el('li', '', 'card ' + (task.status ?? 'open'));
+  // The card follows the board-card row of the design notes (frontend-style 3.6): progress
+  // circle, title, latest work and its purpose, work and test counts, colleague reminders,
+  // the stale-test and Agent-return flags, and the work folder. Ordering and pausing live in
+  // the card's "⋯" menu; Option/Alt + arrows and dragging the card do the same.
+  const lanesOrdered = (priority: number) =>
+    controller.state.tasks
+      .filter((t) => t.status !== 'removed' && (t.priority ?? 0) === priority)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.id.localeCompare(b.id));
+  const priorityKey = (n: number | undefined) => PRIORITY_KEYS[n ?? 0] ?? 'first';
+  const markup = (cls: string, html: string, tag: keyof HTMLElementTagNameMap = 'span') => {
+    const node = el(tag, '', cls);
+    node.innerHTML = html;
+    return node;
+  };
+  const say = (zh: string, en: string) => host.announce(T(zh, en), 'status');
+  /** The card keeps focus on itself through a move: the next render, here or after a remount,
+   * puts focus back on the same control of the same task. */
+  const keepFocus = (taskId: string, control = 'open') => {
+    pendingTaskFocus = { id: taskId, control, until: Date.now() + 8000 };
+  };
+  const lanes = () =>
+    (['tasks0', 'tasks1', 'tasks2', 'taskList'] as const).flatMap((n) => (nodes[n] ? [nodes[n]] : []));
+  const lanesOwn = (node: Element) => lanes().some((lane) => lane.contains(node));
+  /** Put focus back on the card control that had it before a re-render or remount. Only when
+   * nothing else holds focus, and never once the person has moved on. */
+  function restoreTaskFocus(blocked: boolean) {
+    const want = pendingTaskFocus;
+    if (!want || blocked) return;
+    if (want.until && Date.now() > want.until) {
+      pendingTaskFocus = undefined;
+      return;
+    }
+    const active = doc.activeElement as HTMLElement | null;
+    if (active && active !== doc.body && active.isConnected) {
+      if (!lanesOwn(active)) pendingTaskFocus = undefined;
+      return;
+    }
+    for (const lane of lanes()) {
+      const card = [...lane.querySelectorAll<HTMLElement>('[data-task-id]')].find(
+        (node) => node.dataset.taskId === want.id,
+      );
+      const target =
+        card?.querySelector<HTMLElement>(`[data-w03-task-control="${want.control}"]:not(:disabled)`) ??
+        card?.querySelector<HTMLElement>('[data-w03-task-control="open"]');
+      if (target) {
+        target.focus({ preventScroll: true });
+        pendingTaskFocus = undefined;
+        return;
+      }
+    }
+  }
+  const reportPlace = (taskId: string) => {
+    const moved = controller.state.tasks.find((t) => t.id === taskId);
+    if (!moved) return;
+    const lane = lanesOrdered(moved.priority ?? 0);
+    const place = lane.findIndex((t) => t.id === taskId) + 1;
+    const name = PRI(priorityKey(moved.priority));
+    say(
+      `「${moved.title}」现在在${name}第 ${place} 位，共 ${lane.length} 项`,
+      `“${moved.title}” is now ${place} of ${lane.length} in ${name}`,
+    );
+  };
+  const movePriority = (task: WorkspaceTask, to: number) =>
+    act(async () => {
+      if (to < 0 || to > 2) {
+        say('已经到头了', 'Already at the end');
+        return;
+      }
+      keepFocus(task.id);
+      await controller.patchTask(task, { priority: to });
+      reportPlace(task.id);
+    });
+  const moveOrder = (task: WorkspaceTask, direction: -1 | 1) =>
+    act(async () => {
+      const lane = lanesOrdered(task.priority ?? 0);
+      const index = lane.findIndex((t) => t.id === task.id);
+      if (index + direction < 0 || index + direction >= lane.length) {
+        say('已经到头了', 'Already at the end');
+        return;
+      }
+      keepFocus(task.id);
+      await controller.moveTask(task, direction);
+      reportPlace(task.id);
+    });
+  let openMenu: { menu: HTMLElement; more: HTMLButtonElement } | undefined;
+  function closeMenu(focusButton = false) {
+    if (!openMenu) return;
+    const { menu, more } = openMenu;
+    openMenu = undefined;
+    menu.hidden = true;
+    more.setAttribute('aria-expanded', 'false');
+    more.closest('.card')?.classList.remove('menu-open');
+    if (focusButton) more.focus({ preventScroll: true });
+  }
+  on(doc.documentElement, 'pointerdown', (event) => {
+    if (openMenu && !openMenu.menu.parentElement?.contains(event.target as Node)) closeMenu();
+  });
+  function cardMenu(task: WorkspaceTask, canMove: boolean, canUpdate: boolean) {
+    const tools = el('div', '', 'card-tools');
+    const more = el('button', '', 'btn icon quiet small card-more') as HTMLButtonElement;
+    more.type = 'button';
+    more.innerHTML = icon('more');
+    more.setAttribute('aria-haspopup', 'menu');
+    more.setAttribute('aria-expanded', 'false');
+    more.setAttribute('aria-label', T(`「${task.title}」的更多操作`, `More for “${task.title}”`));
+    more.dataset.w03TaskControl = 'more';
+    more.draggable = false;
+    const menu = el('div', '', 'menu card-menu');
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('aria-label', T(`「${task.title}」`, `“${task.title}”`));
+    menu.hidden = true;
+    const item = (
+      text: string,
+      control: string,
+      run: (() => unknown) | null,
+      role = 'menuitem',
+      html = '',
+    ) => {
+      const node = el('button', '', '') as HTMLButtonElement;
+      node.type = 'button';
+      node.setAttribute('role', role);
+      node.tabIndex = -1;
+      node.innerHTML = html;
+      node.append(el('span', text, 'grow'));
+      node.dataset.w03TaskControl = control;
+      if (run)
+        node.addEventListener('click', (event) => {
+          if (destroyed) return;
+          event.preventDefault();
+          event.stopPropagation();
+          closeMenu();
+          void run();
+        });
+      return node;
+    };
+    const cap = el('p', T('优先级', 'Priority'), 'menu-cap');
+    cap.setAttribute('aria-hidden', 'true');
+    const group = el('div', '', 'card-menu-group');
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', T(`优先级：${task.title}`, `Priority: ${task.title}`));
+    PRIORITY_KEYS.forEach((key, n) => {
+      const choice = item(
+        PRI(key),
+        `priority-${n}`,
+        () => (n === (task.priority ?? 0) ? undefined : movePriority(task, n)),
+        'menuitemradio',
+        priMark(key),
+      );
+      choice.setAttribute('aria-checked', String(n === (task.priority ?? 0)));
+      choice.disabled = !canUpdate;
+      group.append(choice);
+    });
+    const line = el('div', '', 'card-menu-sep');
+    line.setAttribute('role', 'separator');
+    const up = item(T('上移', 'Move up'), 'up', () => moveOrder(task, -1));
+    const down = item(T('下移', 'Move down'), 'down', () => moveOrder(task, 1));
+    const lane = lanesOrdered(task.priority ?? 0);
+    const index = lane.findIndex((t) => t.id === task.id);
+    up.disabled = !canMove || index <= 0;
+    down.disabled = !canMove || index < 0 || index >= lane.length - 1;
+    const paused = task.status === 'paused';
+    const pause = item(
+      paused ? T('继续这件事', 'Resume task') : T('暂停这件事', 'Pause task'),
+      'pause',
+      () =>
+        act(async () => {
+          keepFocus(task.id);
+          await controller.patchTask(task, { status: paused ? 'open' : 'paused' });
+        }),
+    );
+    pause.disabled = !canUpdate;
+    // Editing opens the existing task sheet through the shell's own action.
+    const edit = item(T('编辑这件事', 'Edit task'), 'edit', null);
+    edit.dataset.action = 'edit-task';
+    edit.dataset.id = task.id;
+    edit.addEventListener('click', () => closeMenu());
+    menu.append(cap, group, line, up, down, pause, edit);
+    const items = () =>
+      [...menu.querySelectorAll<HTMLButtonElement>('button')].filter((b) => !b.disabled);
+    more.addEventListener('click', (event) => {
+      if (destroyed) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (openMenu?.menu === menu) {
+        closeMenu(true);
+        return;
+      }
+      closeMenu();
+      openMenu = { menu, more };
+      menu.hidden = false;
+      more.setAttribute('aria-expanded', 'true');
+      tools.closest('.card')?.classList.add('menu-open');
+      (menu.querySelector<HTMLButtonElement>('[aria-checked="true"]:not(:disabled)') ?? items()[0])
+        ?.focus({ preventScroll: true });
+    });
+    menu.addEventListener('keydown', (event) => {
+      const list = items(),
+        at = list.indexOf(doc.activeElement as HTMLButtonElement);
+      const go = (n: number) => list[(n + list.length) % list.length]?.focus();
+      if (event.key === 'ArrowDown') go(at + 1);
+      else if (event.key === 'ArrowUp') go(at - 1);
+      else if (event.key === 'Home') go(0);
+      else if (event.key === 'End') go(list.length - 1);
+      else if (event.key === 'Escape') closeMenu(true);
+      else if (event.key === 'Tab') {
+        closeMenu();
+        return;
+      } else return;
+      event.preventDefault();
+      event.stopPropagation();
+    });
+    tools.append(more, menu);
+    return tools;
+  }
+  function taskCard(task: WorkspaceTask, index: number) {
+    const facts = taskCardFacts(task.id);
+    const works = controller.state.products
+      .filter((p) => p.task?.object_id === task.id && !p.removed_at)
+      .sort((a, b) => a.created_at.localeCompare(b.created_at));
+    const progress = taskProgress(task.status, {
+      works: works.length,
+      tests: facts?.tests,
+      asked: facts?.asked,
+    });
+    const row = el('li', '', `card ${progress}${task.status === 'paused' ? ' paused' : ''}`);
     row.dataset.taskId = task.id;
-    const open = button(
-      task.title,
-      task.title,
-      async () => {
+    row.style.setProperty('--i', String(index));
+    const canMove = !controller.blocked() && controller.can('work_items.batch');
+    const canUpdate = !controller.blocked() && controller.can('work_items.update');
+    // Dragging reorders through the board's own drop handling (priority and order).
+    row.draggable = canMove && canUpdate;
+    const open = el('button', '', 'card-open') as HTMLButtonElement;
+    open.type = 'button';
+    open.dataset.id = task.id;
+    open.dataset.w03TaskControl = 'open';
+    open.setAttribute('aria-describedby', 'move-help');
+    open.addEventListener('click', (event) => {
+      if (destroyed) return;
+      event.preventDefault();
+      event.stopPropagation();
+      void act(async () => {
         await controller.flush();
         host.selectTask(taskRef(task));
-      },
-      'card-open',
-    );
-    open.className = 'card-open';
-    const head = el('span', '', 'card-head'),
-      title = el('span', task.title, 'card-title');
-    head.append(title);
-    const works = controller.state.products.filter(
-      (p) => p.task?.object_id === task.id && !p.removed_at,
-    );
-    const latest = [...works].sort((a, b) => a.created_at.localeCompare(b.created_at)).at(-1);
+      });
+    });
+    const head = markup('card-head', statusMark(progress));
+    head.title = STATUS(progress);
+    head.append(el('span', task.title, 'card-title'), el('span', STATUS(progress), 'sr-only'));
+    const latest = works.at(-1);
+    // Work line: the latest work's title on paper (serif), its version and purpose small.
     const recent = el(
       'span',
-      latest?.title ?? T('还没有作品', 'No work yet'),
+      latest ? '' : T('还没有作品', 'No work yet'),
       'card-latest' + (latest ? '' : ' empty'),
     );
-    const metadata = el(
-      'span',
-      T(works.length + ' 份作品', works.length + ' work products'),
-      'card-meta',
-    );
-    open.replaceChildren(head, recent, metadata);
-    const actions = el('div', '', 'row-actions');
-    open.dataset.w03TaskControl = 'open';
-    const up = button('上移', 'Move up', () => controller.moveTask(task, -1));
-    const down = button('下移', 'Move down', () => controller.moveTask(task, 1));
-    const pause = button(
-      task.status === 'paused' ? '继续这件事' : '暂放这件事',
-      task.status === 'paused' ? 'Resume task' : 'Pause task',
-      () => controller.patchTask(task, { status: task.status === 'paused' ? 'open' : 'paused' }),
-    );
-    const priority = el('select');
-    priority.setAttribute('aria-label', T('优先级', 'Priority'));
-    for (const [value, zh, en] of [
-      ['0', '先做', 'Now'],
-      ['1', '随后', 'Next'],
-      ['2', '暂放', 'Later'],
-    ]) {
-      const option = el('option', T(zh, en));
-      option.value = value;
-      priority.append(option);
+    if (latest) {
+      recent.append(el('span', latest.title || T('未命名作品', 'Untitled work'), 'card-work'));
+      const about = [
+        T(`第 ${latest.version} 版`, `version ${latest.version}`),
+        ...(latest.purpose ? [purposeLabel(latest.purpose)] : []),
+      ].join(' · ');
+      recent.append(el('small', about, 'card-work-about'));
     }
-    priority.value = String(task.priority ?? 0);
-    priority.addEventListener('change', (event) => {
-      if (destroyed) return;
-      event.stopPropagation();
-      void act(() => controller.patchTask(task, { priority: Number(priority.value) }));
-    });
-    for (const b of [up, down, pause])
-      b.disabled =
-        controller.blocked() ||
-        !controller.can(b === pause ? 'work_items.update' : 'work_items.batch');
-    for (const [control, node] of [
-      ['up', up],
-      ['down', down],
-      ['pause', pause],
-      ['priority', priority],
-    ] as const)
-      node.dataset.w03TaskControl = control;
-    priority.disabled = controller.blocked() || !controller.can('work_items.update');
+    // Foot: counts in words, the states that need a look, then who left a reminder (right).
+    const meta = el('span', '', 'card-meta');
+    const count = (glyph: string, words: string) => {
+      const node = markup('card-count', icon(glyph, 'i-xs'));
+      node.append(words);
+      return node;
+    };
+    if (works.length)
+      meta.append(count('note', T(`${works.length} 份作品`, `${works.length} ${works.length === 1 ? 'work' : 'works'}`)));
+    if (facts?.tests)
+      meta.append(count('flask', T(`${facts.tests} 次测试`, `${facts.tests} ${facts.tests === 1 ? 'test' : 'tests'}`)));
+    if (facts?.testsPredatePolicy) {
+      const chip = markup('flag-chip warn', icon('stale', 'i-xs'));
+      chip.append(
+        Number.isFinite(facts.policyVersion)
+          ? T(`测试早于政策 v${facts.policyVersion}`, `Tests predate policy v${facts.policyVersion}`)
+          : T('测试早于政策更新', 'Tests predate the policy update'),
+      );
+      meta.append(chip);
+    }
+    const toCheck = works.filter(
+      (p) => !!p.source_return_id && p.adoption?.status !== 'adopted',
+    ).length;
+    if (toCheck) {
+      const chip = markup('flag-chip agent', agentMark('xs'));
+      chip.append(T(`${toCheck} 份回传待检查`, `${toCheck} agent return(s) to check`));
+      meta.append(chip);
+    }
+    if (task.status === 'paused') meta.append(el('span', T('已暂停', 'Paused'), 'flag-chip'));
+    if (facts?.reviseHere) {
+      const chip = markup('flag-chip revise', icon('edit', 'i-xs'));
+      chip.dataset.reviseHere = '';
+      chip.append(T('从这里修订', 'Revise from here'));
+      meta.append(chip);
+    }
+    // Whose request this is, then who left a reminder: the colleagues this task involves.
+    const people = cardPeople(facts);
+    if (people.length) {
+      const notes = markup('card-notes', people.map((p) => avatar(p.role, 'xs')).join(''));
+      notes.title = people
+        .map((p) => {
+          const name = PEOPLE[p.role]?.name ?? '';
+          return p.why === 'asked' ? T(`${name}提的请求`, `Asked by ${name}`) : T(`${name}有提醒`, `${name} left a reminder`);
+        })
+        .join(T('；', '; '));
+      notes.append(el('span', notes.title, 'sr-only'));
+      meta.append(notes);
+    }
+    open.append(head, recent);
+    if (meta.childElementCount) open.append(meta);
     open.addEventListener('keydown', (event) => {
-      if (!destroyed && event.altKey && (event.key === 'ArrowUp' || event.key === 'ArrowDown')) {
-        event.preventDefault();
-        event.stopPropagation();
-        void act(() => controller.moveTask(task, event.key === 'ArrowUp' ? -1 : 1));
-      }
+      if (destroyed || !event.altKey || !event.key.startsWith('Arrow')) return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+        if (canMove) void moveOrder(task, event.key === 'ArrowUp' ? -1 : 1);
+      } else if (canUpdate)
+        void movePriority(task, (task.priority ?? 0) + (event.key === 'ArrowLeft' ? -1 : 1));
     });
-    actions.append(up, down, pause, priority);
-    row.append(open, actions);
+    row.append(open);
+    const folder = workFolderMarkup({
+      taskId: task.id,
+      title: task.title,
+      works: works.map((p) => ({
+        id: p.product_id,
+        title: p.title,
+        purpose: p.purpose,
+        kind: p.kind === 'test_plan' ? 'test_set' : p.kind,
+        body: p.content,
+        revision: p.version,
+        source: p.source_return_id ? 'external-agent' : 'user',
+        adopted: !p.source_return_id || p.adoption?.status === 'adopted',
+      })),
+    });
+    if (folder) {
+      const holder = doc.createElement('template');
+      holder.innerHTML = folder;
+      row.append(holder.content);
+    }
+    row.append(cardMenu(task, canMove, canUpdate));
     return row;
   }
   let taskRenderingKey = '';
-  let taskFocus: { id: string; control: string } | undefined;
   function render() {
     if (destroyed) return;
     const snap = host.snapshot(),
@@ -838,8 +1110,13 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     if (tk !== taskRenderingKey) {
       const focused = doc.activeElement as HTMLElement | null,
         card = focused?.closest<HTMLElement>('[data-task-id]');
-      if (card && focused?.dataset.w03TaskControl)
-        taskFocus = { id: card.dataset.taskId!, control: focused.dataset.w03TaskControl };
+      if (card && focused?.dataset.w03TaskControl && lanesOwn(card))
+        pendingTaskFocus ??= {
+          id: card.dataset.taskId ?? '',
+          // An item of an open menu comes back as that card's "⋯" button.
+          control: focused.closest('.card-menu') ? 'more' : focused.dataset.w03TaskControl,
+        };
+      closeMenu();
       taskRenderingKey = tk;
       for (const [name, priority] of [
         ['tasks0', 0],
@@ -849,32 +1126,20 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       ] as const) {
         const lane = nodes[name];
         if (!lane) continue;
-        lane.replaceChildren(
-          ...controller.state.tasks
-            .filter(
-              (t) =>
-                t.status !== 'removed' && (priority === null || (t.priority ?? 0) === priority),
-            )
-            .map(taskCard),
-        );
-        if (
-          taskFocus &&
-          !blocked &&
-          (doc.activeElement === doc.body || doc.activeElement === null)
-        ) {
-          const target = [...lane.querySelectorAll<HTMLElement>('[data-w03-task-control]')].find(
-            (n) =>
-              n.dataset.w03TaskControl === taskFocus?.control &&
-              n.closest<HTMLElement>('[data-task-id]')?.dataset.taskId === taskFocus?.id,
-          );
-          if (target) {
-            target.focus({ preventScroll: true });
-            taskFocus = undefined;
-          }
+        const list =
+          priority === null
+            ? controller.state.tasks.filter((t) => t.status !== 'removed')
+            : lanesOrdered(priority);
+        lane.replaceChildren(...list.map((task, index) => taskCard(task, index)));
+        if (priority !== null && !list.length) {
+          // The drop hint shows only while a card is being dragged (styles); not read aloud.
+          const empty = el('li', T('拖到这里', 'Drop here'), 'col-empty');
+          empty.setAttribute('aria-hidden', 'true');
+          lane.append(empty);
         }
       }
-      if (!blocked) taskFocus = undefined;
     }
+    restoreTaskFocus(blocked);
     forms.forEach((form) => form.update());
     if (!nodes.taskForm && nodes.newTask)
       (nodes.newTask as HTMLButtonElement).disabled =

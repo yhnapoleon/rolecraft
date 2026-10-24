@@ -18,3 +18,11 @@ export async function clickReady(browser, label, scope = 'button') {
   await waitFor(browser, query);
   await browser.clickText(label, scope);
 }
+
+/** The delivery panel's own button, by its mark: it says what it will submit ("提交第 2 版",
+ * "Submit 2 versions"), so scripts do not match its words. Waits until it can be pressed. */
+export async function submitDelivery(browser) {
+  const button = `document.querySelector('[data-delivery-submit]')`;
+  await waitFor(browser, `!!${button} && !${button}.disabled && ${button}.offsetParent !== null`);
+  await browser.click('[data-delivery-submit]');
+}

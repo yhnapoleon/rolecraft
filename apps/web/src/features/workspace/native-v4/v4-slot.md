@@ -20,7 +20,7 @@
 | taskForm | 原 `#task-form` 整表单；直接读取 name=title/note/priority/split、data-id。编辑须在挂载前由宿主把所展示的真实task.revision写入data-revision，或提供同任务的确切currentTask ref；不推算版本。外部form=task-form提交按钮可用，优先级first/next/later映射0/1/2，编辑＋拆分用同一batch。 |
 | productForm | 原 `#artifact-form` 整表单；直接读取title、purpose radio组及taskId select，绑定所选实际事项ref，保持普通文字作品。 |
 | taskTitle / taskGoal / taskPriority / newTask | 没有taskForm时的散装控件；taskPriority可为原radio容器或select；输入先存host draft。两个入口不能重复执行同一提交。 |
-| tasks0 / tasks1 / tasks2 | 原三个优先级列中的 `.cards`；只给对应列表内部，不给整个工作板。按实际 task 数据渲染本列卡片与排序/暂放操作 |
+| tasks0 / tasks1 / tasks2 | 原三个优先级列中的 `.cards`；只给对应列表内部，不给整个工作板。按实际 task 数据渲染本列卡片（设计规范 3.6 看板卡：进展圆形、最新作品与用途、作品数与测试数、提醒头像、测试早于政策更新、回传待检查、作品夹）；优先级、上移/下移、暂停这件事与编辑收在卡片“⋯”菜单，⌥/Alt+方向键与拖动做同样的事。测试数、提醒头像与“从这里修订”由外壳经 `card-facts.ts` 的 provider 提供，缺省不显示 |
 | taskList | 单个列表 surface 的替代入口；与上述三个列入口二选一，不能同时传入重复列表 |
 | newTitle / newBody / newPurpose / newKind / newTaskId / newProduct | 原作品起草控件和明确新建按钮；kind 沿 text/plan/test_plan/options/investigation，保存内容不因 kind 丢弃；缺失kind取text；newPurpose可为原select或radio容器，newTaskId可显式指定归属，否则用currentTask。startView由宿主在原editor-meta提供明确newProduct按钮。 |
 | folder | 原 work-folder 事件面；只把实际 `data-folder-card` 对应的服务端作品传给 host.selectProduct，不新建作品导航或文件夹壳 |

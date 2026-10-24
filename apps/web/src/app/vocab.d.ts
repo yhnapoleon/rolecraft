@@ -10,3 +10,6 @@ export function DECISION(key: string): string;
 export const HIDDEN_CASES: ReadonlySet<string>;
 export const HIDDEN_SCENARIOS: ReadonlySet<string>;
 export function caseShown(id: string): boolean;
+export function PRI(priority: string): string;
+export function STATUS(status: string): string;
+export function purposeLabel(purpose: string): string;

@@ -59,7 +59,19 @@ function capture(el, isPaper) {
 // owner of a v4 region.
 export function cleanClone(node) {
   const clone = node.cloneNode(true);
-  [clone, ...clone.querySelectorAll('*')].forEach((el) => {
+  // A deep copy keeps attributes, not what a control currently shows: carry the live value
+  // of each select, field and checkbox over so the copy never flashes defaults (164 N4).
+  const live = [node, ...node.querySelectorAll('*')];
+  [clone, ...clone.querySelectorAll('*')].forEach((el, i) => {
+    const from = live[i];
+    if (from && from.tagName === el.tagName) {
+      if (el.tagName === 'SELECT') el.selectedIndex = from.selectedIndex;
+      else if (el.tagName === 'TEXTAREA') el.value = from.value;
+      else if (el.tagName === 'INPUT') {
+        el.value = from.value;
+        el.checked = from.checked;
+      }
+    }
     el.removeAttribute('id');
     el.removeAttribute('autofocus');
     for (const name of el.getAttributeNames())

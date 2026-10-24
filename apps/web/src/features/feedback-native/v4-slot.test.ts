@@ -1,7 +1,12 @@
 import { fixtureHost, type HostFixture } from '../../host-test-support';
 import { describe, it, expect, vi } from 'vitest';
 import { ApiError } from '../../api';
-import { createV4FeedbackAdapter, W05_V4_OPERATIONS as op } from './v4-slot';
+import {
+  createV4FeedbackAdapter,
+  deliveryTimes,
+  jobPhase,
+  W05_V4_OPERATIONS as op,
+} from './v4-slot';
 import { EVIDENCE_KINDS } from '../../evidence-picker';
 import type { V4HostSnapshot, V4CommandResult, V4SlotId } from '../../v4-host';
 import recorded from './model-advice.fixtures.json';
@@ -319,6 +324,58 @@ describe('W05 v4 host adapter', () => {
     expect(ctl.adapter.snapshot().awaitingFeedback).toBe(false);
     expect(f.recovery).toEqual(['feedback-job', 'feedback-job']);
     ctl.destroy();
+  });
+  it('while feedback is written, reports the stage the server gives and then the feedback', async () => {
+    vi.useFakeTimers();
+    try {
+      const f = fixture();
+      const ctl = createV4FeedbackAdapter(fixtureHost(f.host));
+      await ctl.refresh();
+      f.setResult({
+        requestId: 'feedback-job',
+        status: 'pending',
+        result: { submission: ref('submission', 'sub'), feedback_status: 'queued' },
+      });
+      await ctl.adapter.submit({ decision: 'no_go', products: [ref('product', 'p', 2)] });
+      expect(ctl.adapter.snapshot().feedbackPhase).toBe('queued');
+      expect(typeof ctl.adapter.snapshot().feedbackSince).toBe('number');
+      // The worker picks the job up: the next read of the same request says so.
+      f.setResult({
+        requestId: 'feedback-job',
+        status: 'pending',
+        result: { jobs: [{ job_id: 'j', status: 'running' }] },
+      });
+      await vi.advanceTimersByTimeAsync(2600);
+      expect(ctl.adapter.snapshot().feedbackPhase).toBe('running');
+      expect(f.calls).toHaveLength(1);
+      // It completes: the records are read and nothing is sent again.
+      f.setResult({ requestId: 'feedback-job', status: 'confirmed', result: {} });
+      await vi.advanceTimersByTimeAsync(2600);
+      expect(ctl.adapter.snapshot().awaitingFeedback).toBe(false);
+      expect(ctl.adapter.snapshot().feedbackPhase).toBeUndefined();
+      expect(f.calls).toHaveLength(1);
+      ctl.destroy();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+  it('reads each delivery time and the reported job stage from the server records', () => {
+    expect(
+      deliveryTimes({
+        events: [
+          { type: 'read_material', created_at: '2026-10-24T01:00:00Z', refs: [] },
+          {
+            type: 'submitted',
+            created_at: '2026-10-24T02:00:00Z',
+            refs: [ref('submission', 'sub')],
+          },
+        ],
+      }),
+    ).toEqual({ sub: '2026-10-24T02:00:00Z' });
+    expect(deliveryTimes(null)).toEqual({});
+    expect(jobPhase({ jobs: [{ status: 'queued' }, { status: 'running' }] })).toBe('running');
+    expect(jobPhase({ jobs: [{ status: 'completed' }] })).toBeUndefined();
+    expect(jobPhase(null)).toBeUndefined();
   });
   it('names cited documents, test runs and work from the same timeline read', async () => {
     const f = fixture();

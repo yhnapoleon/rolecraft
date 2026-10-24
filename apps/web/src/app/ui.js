@@ -38,6 +38,7 @@ import {
   OPENER,
   CASE,
   SEED_KEYS,
+  SEEDS,
   situationTask,
   taskTitle,
   taskNote,
@@ -109,6 +110,7 @@ import {
   practiceUnavailableText,
 } from '../features/feedback-native/read-only-notice';
 import { afterPracticeRead } from '../features/feedback-native/practice-read';
+import { provideTaskCardFacts, testFacts } from '../features/workspace/native-v4/card-facts';
 
 const L = window.PracticeLive;
 const E = L.engine;
@@ -718,6 +720,10 @@ function mountEngineerReportRoute() {
 function afterRender() {
   refreshAgentIssued();
   if (ui.route !== 'lab') labView = null;
+  // The arrival is played once; cards drawn later (the native board mounts after this render)
+  // still settle in with it, but a later redraw of the lanes does not replay it.
+  const arriving = document.querySelector('.ws.arriving');
+  if (arriving) setTimeout(() => arriving.classList.remove('arriving'), 1400);
   if (ui.route === 'lab') {
     mountLabPage();
     return;
@@ -843,6 +849,22 @@ const topbar = (left, right = '') =>
   `<header class="topbar">${left}<div class="spacer"></div>${right}${langControl()}</header>`;
 const letter = (role, quote, size = '') =>
   `<figure class="letter ${size}">${avatar(role, size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md')}<div class="letter-body"><blockquote>${esc(quote)}</blockquote><figcaption>${PEOPLE[role].name}${PEOPLE[role].titled ? '' : `<span>${ROLE_TITLE(role)}</span>`}</figcaption></div></figure>`;
+// The manager's brief, plus one line in the manager's own voice on what to hand back, by when
+// and where: the decision and its evidence, before the launch day the situation sets, through
+// Submit at the top right. The day comes from the practice's own state; without it, no line.
+function briefDirection(a) {
+  const day = a?.world?.deadline;
+  if (!Number.isFinite(day)) return '';
+  return T(
+    `第 ${day} 天上线前，把你的试点决定和依据交给我。写好了，点右上角的「交付」。`,
+    `Before launch on day ${day}, bring me your pilot decision and the evidence behind it. When it is ready, use Submit at the top right.`,
+  );
+}
+const briefLetter = (a, size = '') => {
+  const direction = briefDirection(a);
+  const p = PEOPLE.manager;
+  return `<figure class="letter brief-letter ${size}">${avatar('manager', size === 'sm' ? 'sm' : 'md')}<div class="letter-body"><blockquote>${esc(CASE(a.scenarioId).quote)}</blockquote>${direction ? `<blockquote class="brief-direction" data-brief-direction>${esc(direction)}</blockquote>` : ''}<figcaption>${p.name}${p.titled ? '' : `<span>${ROLE_TITLE('manager')}</span>`}</figcaption></div></figure>`;
+};
 const facts = (w) => [
   ['seats', T(`${w.capacity} 人容量`, `${w.capacity} seats`)],
   ['hours', T(`${w.devDays} 人日开发`, `${w.devDays} person-days`)],
@@ -1269,9 +1291,8 @@ onLensChange((on) => {
   if (behavior) fillBehavior(behavior, a);
 });
 function briefPopover(a) {
-  const c = CASE(a.scenarioId);
   return `<div class="popover brief-pop" role="dialog" aria-label="${esc(T('委托与条件', 'Brief and conditions'))}">
-    ${letter('manager', c.quote, 'sm')}
+    ${briefLetter(a, 'sm')}
     ${intakeNote(a)}
     ${conditions(a, 'compact')}
     <div class="pop-actions">${btn(icon('doc', 'i-sm') + T('看完整委托', 'Read the full brief'), 'open-doc', 'small', 'data-id="brief"')}${btn(icon('hand', 'i-sm') + T('申请资源', 'Request resources'), 'resources', 'small quiet')}</div>
@@ -1321,7 +1342,7 @@ function boardView(a) {
   const policyNew = v > 1 && !(a.acks || []).includes('policy-v' + v);
   return `<div class="board">
     <section class="brief-band" style="view-transition-name: case-surface">
-      <div class="band-letter">${letter('manager', CASE(a.scenarioId).quote)}<div class="band-actions">${btn(icon('doc', 'i-sm') + T('看完整委托', 'Read the full brief'), 'open-doc', 'small quiet', 'data-id="brief"')}</div>${intakeNote(a)}</div>
+      <div class="band-letter">${briefLetter(a)}<div class="band-actions">${btn(icon('doc', 'i-sm') + T('看完整委托', 'Read the full brief'), 'open-doc', 'small quiet', 'data-id="brief"')}</div>${intakeNote(a)}</div>
       ${conditions(a)}
     </section>
     ${practiceOriginNote(a)}
@@ -1329,9 +1350,10 @@ function boardView(a) {
     ${productBar(a)}
     ${unfiledWorks(a)}
     <section class="work-sec" aria-labelledby="tasks-h">
-      <header class="sec-head"><h2 id="tasks-h">${T('事项', 'Tasks')}</h2><span class="sec-hint">${T('拖动卡片调整优先级', 'Drag cards to reprioritise')}</span><span class="spacer"></span>
+      <header class="sec-head"><h2 id="tasks-h">${T('事项', 'Tasks')}</h2><span class="sec-hint"><span class="hint-drag">${T('拖动卡片调整优先级', 'Drag to reprioritise')}</span><span class="hint-keys">${T('，或按住 Option 用方向键', ', or hold Option and use the arrow keys')}</span></span><span class="spacer"></span>
         <div class="menu-wrap">${btn(icon('bubble', 'i-sm') + T('问问怎么排', 'Ask how to prioritise'), 'menu', 'small quiet', `data-menu="rank" aria-haspopup="menu" aria-expanded="${ui.menu === 'rank'}"`)}${ui.menu === 'rank' ? rankMenu() : ''}</div>
         ${btn(icon('plus', 'i-sm') + T('新事项', 'New task'), 'new-task', 'small')}</header>
+      ${revisionNote(a)}
       <p id="move-help" class="sr-only">${T('按住 Option 或 Alt：左右方向键换列（改优先级），上下方向键调整顺序。', 'Hold Option or Alt: left and right move between columns (priority), up and down change the order.')}</p>
       <div class="kanban">${['first', 'next', 'later'].map((p) => column(a, p)).join('')}</div>
     </section>
@@ -1340,6 +1362,56 @@ function boardView(a) {
       ${docGrid(a)}
     </section>
   </div>`;
+}
+// Whose request each starting task is, as its own brief says: the business team asked for the
+// first users' needs and for policy Q&A; the manager asked for the pilot decision (SEEDS).
+const SEED_FROM = { needs: 'business', policy: 'business', decision: 'manager' };
+function seedRequester(title) {
+  const key = Object.keys(SEEDS).find((k) => SEEDS[k].zh[0] === title || SEEDS[k].en[0] === title);
+  return key ? SEED_FROM[key] : undefined;
+}
+// After "Start a revision": where to pick the work up, from the last delivery's unmet items,
+// said by the manager in the work's own words. It stays until dismissed or the next delivery.
+function revisionGuide(a) {
+  const g = a?.revisionGuide;
+  return g && !g.dismissed && statusOf(a) === 'active' ? g : null;
+}
+function revisionTaskIds(a) {
+  const g = revisionGuide(a);
+  if (!g) return new Set();
+  return new Set(
+    (a.artifacts || [])
+      .filter((x) => (g.products || []).includes(x.id) && x.taskId)
+      .map((x) => x.taskId),
+  );
+}
+function revisionNote(a) {
+  const g = revisionGuide(a);
+  if (!g) return '';
+  // Inside the manager's quoted words: corner brackets in Chinese, single quotes in English.
+  const quote = (t) => T(`「${t}」`, `‘${t}’`);
+  const names = (g.unmet || []).slice(0, 3).map(quote);
+  const more = (g.unmet || []).length - names.length;
+  const listed = names.join(T('、', ', ')) + (more > 0 ? T(` 等 ${g.unmet.length} 项`, ` and ${more} more`) : '');
+  const tasks = [...revisionTaskIds(a)]
+    .map((id) => a.tasks.find((t) => t.id === id))
+    .filter(Boolean)
+    .map((t) => quote(taskTitle(t)));
+  const works = (g.products || [])
+    .map((id) => a.artifacts.find((x) => x.id === id))
+    .filter(Boolean)
+    .map((x) => T(`《${shown(x).title}》`, `‘${shown(x).title}’`));
+  const where = tasks[0] || works[0] || '';
+  const round = Number.isFinite(g.delivery) ? T(`第 ${g.delivery} 次交付里，`, `In delivery ${g.delivery}, `) : T('上次交付里，', 'In your last delivery, ');
+  const said = names.length
+    ? round + T(`${listed}还没站住。`, `${listed} did not hold up yet. `)
+    : g.reason
+      ? T(`你说这次要「${g.reason.replace(/[。.]$/, '')}」。`, `You said: ‘${g.reason.replace(/[.。]$/, '')}’. `)
+      : '';
+  const next = where
+    ? T(`从${where}接着改，改好再交给我。`, `Pick it up from ${where} and bring it back to me when it is ready.`)
+    : T('改好再交给我。', 'Bring it back to me when it is ready.');
+  return `<aside class="revise-note" data-revise-note aria-label="${esc(T('从哪里修订', 'Where to revise'))}">${letter('manager', said + next, 'sm')}${btn(T('知道了', 'Got it'), 'revise-note-ok', 'small quiet')}</aside>`;
 }
 function situationBanner(a) {
   const v = a.world.policyVersion;
@@ -2683,7 +2755,7 @@ function practiceSection(a) {
           (
             o,
           ) => `<article class="practice-option"><h3 class="row-title">${esc(o.title)}</h3>${o.reason ? `<p class="meta">${esc(o.reason)}</p>` : ''}<p class="meta">${esc(practiceCardLine(o))}</p>
-    ${btn(icon('play', 'i-sm') + T('用这个情境补练', 'Practise with this situation'), 'practice-choose', 'small primary', `data-option="${esc(o.id)}" ${busy}`)}</article>`,
+    ${btn(icon('play', 'i-sm') + T('用这个情境补练', 'Practise with this situation'), 'practice-choose', 'small', `data-option="${esc(o.id)}" ${busy}`)}</article>`,
         )
         .join('')}`
     : '';
@@ -3189,14 +3261,23 @@ function sheetDeliver(readOnly = false) {
   const a = current();
   const s = sessionOf(a);
   if (L.nativeWorkspace(a)) {
+    // The delivery's own button sits at the right of this footer (placed there by the panel,
+    // right after the pre-submission card in reading order); the way to past feedback is a text
+    // button on the left.
     openSheet(
       T('交付试点决定', 'Submit your pilot decision'),
-      `<div class="deliver-doc paper"
+      `<div class="deliver-doc"
         data-v4-submission data-v4-region="submission"></div>`,
       btn(T('查看提交与反馈', 'View submission and feedback'), 'v4-feedback', 'quiet'),
-      'wide doc',
+      'wide doc deliver-sheet',
     );
     mountLensSwitch(sheet.querySelector('.sheet-head'));
+    // Start reading at the title: no control looks chosen until the person moves.
+    const title = sheet.querySelector('#sheet-title');
+    if (title) {
+      title.tabIndex = -1;
+      title.focus({ preventScroll: true });
+    }
     return;
   }
   if (s.world.status === 'submitted' && !readOnly) {
@@ -3767,7 +3848,7 @@ function flip(mutate) {
           { opacity: 0, transform: 'translateY(-6px)' },
           { opacity: 1, transform: 'none' },
         ],
-        { duration: 300, easing: 'cubic-bezier(.32,.72,0,1)' },
+        { duration: 280, easing: 'cubic-bezier(.32,.72,0,1)' },
       );
       return;
     }
@@ -3776,16 +3857,39 @@ function flip(mutate) {
     const dy = b.top - r.top;
     if (dx || dy)
       el.animate([{ transform: `translate(${dx}px,${dy}px)` }, { transform: 'none' }], {
-        duration: 420,
+        duration: 280,
         easing: 'cubic-bezier(.32,.72,0,1)',
       });
   });
 }
+// A dropped card moves at once (position tween, FLIP) and the server's order follows; if the
+// server does not confirm, the board is drawn again from its records.
+function placeCard(id, to) {
+  const card = document.querySelector(`.kanban .card[data-task-id="${CSS.escape(id)}"]`);
+  const lane = document.querySelector(`.kanban .col-${to.priority} .cards`);
+  if (!card || !lane) return;
+  const before = to.beforeId
+    ? lane.querySelector(`.card[data-task-id="${CSS.escape(to.beforeId)}"]`)
+    : null;
+  const from = card.parentElement;
+  lane.querySelector(':scope > .col-empty')?.remove();
+  lane.insertBefore(card, before);
+  if (from && from !== lane && !from.querySelector('.card')) {
+    const empty = document.createElement('li');
+    empty.className = 'col-empty';
+    empty.textContent = T('拖到这里', 'Drop here');
+    from.append(empty);
+  }
+}
 function moveWithUndo(a, id, to, message) {
   if (L.nativeWorkspace(a)) {
+    flip(() => placeCard(id, to));
     void L.moveNativeTask(a, id, to)
       .then(() => notify(message))
-      .catch((error) => notify(errText(error)));
+      .catch((error) => {
+        notify(errText(error));
+        refreshWS(['stage']);
+      });
     return;
   }
   let before;
@@ -4812,6 +4916,21 @@ async function act(el) {
     case 'to-review':
       go('review', { transition: true });
       break;
+    case 'revise-note-ok':
+      if (a.revisionGuide) a.revisionGuide.dismissed = true;
+      persist();
+      refreshWS(['stage']);
+      break;
+    case 'review-practice': {
+      // The results cover's "practise" step: bring the optional practice into view.
+      const choice = document.querySelector(
+        '[data-v4-practice] [data-action="practice-choose"], [data-v4-practice] button',
+      );
+      const column = document.querySelector('[data-v4-practice]');
+      column?.scrollIntoView({ block: 'nearest', behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+      (choice || column)?.focus?.({ preventScroll: true });
+      break;
+    }
     case 'open-rail':
       ui.railOpen = true;
       refreshWS(['toolbar', 'rail']);
@@ -6107,6 +6226,33 @@ window.addEventListener('v4-selection', (event) => {
     }
   }
 });
+// The delivery panel stamps a confirmed delivery, then hands over to the results page.
+document.addEventListener('rolecraft:delivered', () => {
+  const a = current();
+  if (!a) return;
+  if (a.revisionGuide) {
+    delete a.revisionGuide;
+    persist();
+  }
+  if (!sheet.open || !sheet.querySelector('[data-v4-region="submission"]')) return;
+  closeSheet(true);
+  go('review', { transition: true });
+});
+// "Start a revision" returns to the board with where to pick the work up.
+document.addEventListener('rolecraft:revision-started', (event) => {
+  const a = current();
+  if (!a) return;
+  const d = event.detail || {};
+  a.revisionGuide = {
+    at: new Date().toISOString(),
+    delivery: Number.isFinite(d.delivery) ? d.delivery : null,
+    unmet: Array.isArray(d.unmet) ? d.unmet.slice(0, 12) : [],
+    products: Array.isArray(d.products) ? d.products.slice(0, 12) : [],
+    reason: String(d.reason || '').slice(0, 200),
+  };
+  persist();
+  if (ui.route === 'review') go('work', { transition: true });
+});
 sheet.addEventListener('w03:form-confirmed', (event) => {
   if (!event.detail.changedWhileWaiting && sheet.open && event.target.closest?.('#sheet')) {
     closeSheet(true);
@@ -6143,6 +6289,24 @@ const workFolders = installWorkFolders(document, {
   },
 });
 installV4References(() => L.v4Host(current()));
+// Board cards drawn by the native workspace read tests, reminders and the revision start here.
+provideTaskCardFacts((taskId) => {
+  const a = current();
+  if (!a?.world) return null;
+  const t = a.tasks.find((x) => x.id === taskId);
+  return {
+    ...testFacts(a.tests || [], taskId, a.world.policyVersion),
+    requestedBy: t ? seedRequester(t.title) : undefined,
+    asked: Object.values(a.conversations || {}).some((list) =>
+      (list || []).some((m) => m.role === 'user' && m.context?.task_id === taskId),
+    ),
+    reminders: [
+      ...new Set((ui.notesCache || []).filter((n) => n.taskId === taskId).map((n) => n.role)),
+    ],
+    reviseHere: revisionTaskIds(a).has(taskId),
+    policyVersion: a.world.policyVersion,
+  };
+});
 L.attach(state, onLive);
 // Like a poll: a read dropped while the page loads only marks the connection lost.
 L.load(current()).then((loaded) => {

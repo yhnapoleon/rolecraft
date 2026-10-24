@@ -115,6 +115,37 @@ const rememberedChoices = new Map<string, RememberedChoice>();
 
 /** A dropped read is asked again after these delays (ms) before it is shown as a failure. */
 const READ_AGAIN_MS = [1500, 3000, 6000];
+/** While feedback is written, its request is read again this often for the stage it is in. */
+const JOB_WATCH_MS = 2500;
+/** When this page first saw each feedback request waiting, for the seconds shown; page memory. */
+const waitSeen = new Map<string, number>();
+
+/** The stage the server reports for a waiting request's job, if it reports one. */
+export function jobPhase(result: unknown): 'queued' | 'running' | undefined {
+  if (!object(result)) return undefined;
+  const jobs = Array.isArray(result.jobs) ? result.jobs : [];
+  const statuses = jobs.map((job) => (object(job) ? job.status : undefined));
+  if (statuses.includes('running')) return 'running';
+  if (statuses.includes('queued')) return 'queued';
+  if (result.feedback_status === 'queued' || result.status === 'queued') return 'queued';
+  return undefined;
+}
+/** Server time of each delivery, from the timeline's submitted events. */
+export function deliveryTimes(timeline: unknown): Record<string, string> {
+  const times: Record<string, string> = {};
+  const events = object(timeline) && Array.isArray(timeline.events) ? timeline.events : [];
+  for (const event of events) {
+    if (!object(event)) continue;
+    const type = event.type ?? event.event_type;
+    const at = event.created_at ?? event.at;
+    if (type !== 'submitted' || typeof at !== 'string') continue;
+    const refs = Array.isArray(event.refs) ? event.refs : [];
+    const submission = refs.find((ref) => object(ref) && ref.kind === 'submission');
+    if (object(submission) && typeof submission.object_id === 'string')
+      times[submission.object_id] ??= at;
+  }
+  return times;
+}
 
 export function createV4FeedbackAdapter(host: V4HostAdapter) {
   const first = host.snapshot();
@@ -162,6 +193,68 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
   function emit() {
     for (const fn of listeners) fn();
   }
+  let jobTimer: ReturnType<typeof setTimeout> | undefined;
+  /** The waiting fields: whether feedback is awaited, its reported stage and since when. */
+  function waiting(): Pick<
+    FeedbackNativeState,
+    'pending' | 'awaitingFeedback' | 'failedFeedback' | 'feedbackPhase' | 'feedbackSince'
+  > {
+    const awaiting = pending?.status === 'pending';
+    let since: number | undefined;
+    if (awaiting && pending) {
+      const at = state.submission ? state.submittedAt?.[state.submission.ref.object_id] : undefined;
+      const server = at ? Date.parse(at) : Number.NaN;
+      // Server time when it is plausible for this wait; otherwise when this page first saw it.
+      if (Number.isFinite(server) && Date.now() - server < 30 * 60_000 && server <= Date.now() + 60_000)
+        since = server;
+      else {
+        if (!waitSeen.has(pending.requestId)) waitSeen.set(pending.requestId, Date.now());
+        since = waitSeen.get(pending.requestId);
+      }
+    }
+    return {
+      pending: pending !== null && ['unconfirmed', 'needs_context'].includes(pending.status),
+      awaitingFeedback: awaiting,
+      failedFeedback: pending?.status === 'failed',
+      feedbackPhase: awaiting ? jobPhase(pending?.result) : undefined,
+      feedbackSince: since,
+    };
+  }
+  /** While feedback is written, read its request again for the stage the server reports; once
+   * it completes, read the records so the feedback shows where the wait was. */
+  function watchJob() {
+    clearTimeout(jobTimer);
+    jobTimer = undefined;
+    if (closed || pending?.status !== 'pending') return;
+    jobTimer = setTimeout(async () => {
+      jobTimer = undefined;
+      const watched = pending;
+      if (closed || watched?.status !== 'pending') return;
+      if (loading || host.snapshot().busy) {
+        watchJob();
+        return;
+      }
+      try {
+        const recovered = await host.recover(watched.requestId);
+        if (closed || pending !== watched) return;
+        pending = recovered.status === 'confirmed' ? null : recovered;
+        await host.keepDraft(
+          'feedback',
+          'last-request',
+          pending ? { requestId: pending.requestId, status: pending.status } : null,
+        );
+        state = { ...state, ...waiting() };
+        emit();
+        if (!pending) {
+          await readEffect();
+          return;
+        }
+      } catch {
+        // A dropped read keeps what is shown; the next tick asks again.
+      }
+      watchJob();
+    }, JOB_WATCH_MS);
+  }
   function sync(s: Readonly<V4HostSnapshot>) {
     if (s.session?.protocol !== 2 || s.session.sessionId !== sid) {
       epoch++;
@@ -188,9 +281,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       ...state,
       status: s.state === 'submitted' ? 'submitted' : s.state === 'active' ? 'active' : 'paused',
       busy: s.busy || loading,
-      pending: pending !== null && ['unconfirmed', 'needs_context'].includes(pending.status),
-      awaitingFeedback: pending?.status === 'pending',
-      failedFeedback: pending?.status === 'failed',
+      ...waiting(),
       workLanguage: s.session.workLanguage,
       uiLanguage: s.uiLanguage,
       semanticStatus: semantic(s),
@@ -474,6 +565,15 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
         point: loadedPoint,
         products: selected,
         references: readCatalog(timeline, selected),
+        submittedAt: {
+          ...Object.fromEntries(
+            saved.flatMap((row) => {
+              const at = host.draft<string>('feedback', `delivered-at:${String(row.id)}`);
+              return typeof at === 'string' ? [[String(row.id), at]] : [];
+            }),
+          ),
+          ...deliveryTimes(timeline),
+        },
         reports,
         responses,
         reviews,
@@ -515,11 +615,10 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
         state = {
           ...state,
           busy: host.snapshot().busy,
-          pending: pending !== null && ['unconfirmed', 'needs_context'].includes(pending.status),
-          awaitingFeedback: pending?.status === 'pending',
-          failedFeedback: pending?.status === 'failed',
+          ...waiting(),
         };
         emit();
+        watchJob();
       }
       if (refreshAgain) {
         refreshAgain = false;
@@ -531,7 +630,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
     valid();
     if (result.status === 'pending') {
       pending = result;
-      state = { ...state, pending: false, awaitingFeedback: true };
+      state = { ...state, ...waiting() };
       emit();
       await readEffect();
       return;
@@ -540,12 +639,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       pending = ['pending', 'unconfirmed', 'needs_context', 'failed'].includes(result.status)
         ? result
         : null;
-      state = {
-        ...state,
-        pending: pending !== null && ['unconfirmed', 'needs_context'].includes(pending.status),
-        awaitingFeedback: pending?.status === 'pending',
-        failedFeedback: pending?.status === 'failed',
-      };
+      state = { ...state, ...waiting() };
       emit();
       throw Error(
         text(
@@ -647,7 +741,17 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
     submit: (input) => {
       valid();
       for (const ref of input.products) reference(ref, sid!);
-      return command(W05_V4_OPERATIONS.submit, submitInput(input));
+      const at = new Date().toISOString();
+      return command(W05_V4_OPERATIONS.submit, submitInput(input)).then(async () => {
+        // The records do not carry a delivery time; this browser keeps the moment it delivered,
+        // for the stamp and the seconds of the feedback wait. Another device shows no time.
+        const id = state.submission?.ref.object_id;
+        if (!id || host.draft('feedback', `delivered-at:${id}`)) return;
+        await host.keepDraft('feedback', `delivered-at:${id}`, at).catch(() => undefined);
+        state = { ...state, submittedAt: { ...state.submittedAt, [id]: at } };
+        state = { ...state, ...waiting() };
+        emit();
+      });
     },
     previewSubmission: async (input) => {
       const id = checkable();
@@ -751,6 +855,7 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
     destroy: () => {
       closed = true;
       epoch++;
+      clearTimeout(jobTimer);
       stopReadingAgain();
       unsubscribe();
       listeners.clear();

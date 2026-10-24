@@ -31,7 +31,22 @@ import {
   submissionFactLine,
   type SentenceResult,
 } from './presubmit';
-import { snapshotHeading } from './delivery';
+import {
+  attachmentLine,
+  attachmentSlip,
+  snapshotHeading,
+  submitLabel,
+  versionWords,
+} from './delivery';
+import { mountDecisionCards } from './decision-cards';
+import {
+  coverView,
+  deliveryNote,
+  elapsedWords,
+  rememberDelivery,
+  renderCover,
+  STAMP_PRESS_MS,
+} from './result-cover';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 import { readCatalog, referenceLabel, type ReferenceCatalog } from '../../reference-catalog';
 import type { EvidencePick } from '../../v4-host';
@@ -141,6 +156,13 @@ export interface FeedbackNativeState {
   /** The records point the shown products and submissions were read at. */
   point?: string;
   failedFeedback?: boolean;
+  /** Presentation only: the feedback job's stage as the server reports it while it is written. */
+  feedbackPhase?: 'queued' | 'running';
+  /** When the wait for this delivery's feedback began (ms since epoch), for the seconds shown. */
+  feedbackSince?: number;
+  /** When each delivery was made, by submission id: the server's time where its records carry
+   * one, else the moment this browser delivered it. Absent for deliveries made elsewhere. */
+  submittedAt?: Readonly<Record<string, string>>;
   error?: string;
 }
 /** The exact versions and decision a person chooses to submit. */
@@ -220,7 +242,16 @@ export { criterionLabels };
  * queued or running); a failed job says not ready, and its own note offers a new request. */
 export function feedbackNotice(state: FeedbackNativeState, language: FeedbackLanguage): string {
   const T = (zh: string, en: string) => feedbackText(language, zh, en);
-  if (state.busy) return T('正在等待服务端确认…', 'Waiting for server confirmation…');
+  // Once the delivery is saved, reading the records again is not a new confirmation: while its
+  // feedback is still being generated the line keeps saying so (164 N10).
+  const generating =
+    state.status === 'submitted' &&
+    !!state.submission &&
+    !state.pending &&
+    !state.failedFeedback &&
+    !state.reports.some((r) => r.subject.object_id === state.submission?.ref.object_id);
+  if (state.busy && !generating)
+    return T('正在等待服务端确认…', 'Waiting for server confirmation…');
   if (state.pending)
     return T(
       '上一请求结果尚未确认，请先恢复。',
@@ -250,7 +281,9 @@ export function mountNativeFeedback(
   const doc = host.ownerDocument;
   const language = adapter.snapshot().uiLanguage ?? adapter.snapshot().workLanguage ?? 'zh';
   const T = (zh: string, en: string) => feedbackText(language, zh, en);
-  const versionLabel = (n: number) => (language === 'en' ? 'v' + n : '第 ' + n + ' 版');
+  const versionLabel = (n: number) => versionWords(n, language);
+  const reduced = () =>
+    doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, text = '', cls = '') => {
     const n = doc.createElement(tag);
     n.textContent = text;
@@ -315,19 +348,9 @@ export function mountNativeFeedback(
   selectedSummary.setAttribute('aria-label', T('本次将提交的版本', 'Versions to submit'));
   const selection = el('div');
   selection.setAttribute('aria-label', T('选择确切作品版本', 'Select exact artifact versions'));
-  const choice = el('select', '', 'select');
-  choice.setAttribute('aria-label', T('本次决定', 'Your decision'));
-  for (const [value, text] of [
-    ['', T('请选择本次决定', 'Choose a decision')],
-    ['launch', T('按方案推进', 'Proceed with the proposal')],
-    ['launch_narrow', T('缩小范围推进', 'Proceed with a limited scope')],
-    ['defer_with_conditions', T('满足条件后再推进', 'Defer until conditions are met')],
-    ['no_go', T('停止这项方案', 'Do not proceed with this proposal')],
-  ]) {
-    const option = el('option', text);
-    option.value = value;
-    choice.append(option);
-  }
+  selection.className = 'delivery-versions';
+  // The four decisions as paper options; a choice re-runs the pre-submission preview.
+  const choice = mountDecisionCards(doc, language, () => syncPreview());
   const receipt = el('div');
   const responseHistory = el('section');
   const reports = el('div');
@@ -383,11 +406,37 @@ export function mountNativeFeedback(
         );
       if (!selected.size)
         throw Error(T('请选择这次要交付的作品版本。', 'Select the artifact versions to submit.'));
-      await adapter.submit({ decision: choice.value, products: [...selected.values()] });
+      const decision = choice.value;
+      const products = [...selected.values()];
+      const at = new Date().toISOString();
+      await adapter.submit({ decision, products });
       adapter.rememberChoice?.(null);
+      // The decision, the moment and the versions are known here: the results page opens on its
+      // cover at once and stamps it while the records are read back.
+      rememberDelivery({
+        sessionId: products[0]?.session_id ?? '',
+        decision,
+        at,
+        products: products.map((ref) => {
+          const shown = adapter
+            .snapshot()
+            .products.find((p) => p.product_id === ref.object_id && p.version === ref.version);
+          return {
+            ref,
+            title: shown?.title ?? selectedTitles.get(key(ref)) ?? '',
+            purpose: shown?.purpose,
+          };
+        }),
+      });
+      root.dispatchEvent(
+        new CustomEvent('rolecraft:delivered', { bubbles: true, detail: { decision } }),
+      );
     },
     true,
   );
+  // Tests and scripts find the delivery's own button by this mark, whatever it says.
+  submit.dataset.deliverySubmit = '';
+  submit.classList.add('delivery-submit');
   // Pre-submission preview (2026-10-14): read-only, right above the submit button.
   const load =
     options.surface !== 'feedback' ? adapter.previewSubmission?.bind(adapter) : undefined;
@@ -425,7 +474,6 @@ export function mountNativeFeedback(
         : null,
     );
   }
-  choice.addEventListener('change', syncPreview);
   const retryFeedback = button(T('重新请求反馈', 'Request feedback again'), () =>
     adapter.retry?.(),
   );
@@ -440,6 +488,7 @@ export function mountNativeFeedback(
   const recover = button(T('确认上一请求', 'Check the previous request'), () =>
     adapter.recover?.(),
   );
+  submissions.classList.add('delivery-paper');
   submissions.append(
     el(
       'p',
@@ -451,7 +500,7 @@ export function mountNativeFeedback(
     ),
     selection,
     selectedSummary,
-    choice,
+    choice.element,
     ...(preview ? [preview.element] : []),
     submit,
     recover,
@@ -470,11 +519,26 @@ export function mountNativeFeedback(
           'The revision note is not saved. Keep a copy of your text.',
         ),
       );
-    await adapter.beginRevision({ parent_submission: current.ref, reason: revisionReason.value });
+    const reason = revisionReason.value;
+    await adapter.beginRevision({ parent_submission: current.ref, reason });
+    // Back to the board, with where to pick the work up: the unmet items of this delivery.
+    root.dispatchEvent(
+      new CustomEvent('rolecraft:revision-started', {
+        bubbles: true,
+        detail: revisionStart(adapter.snapshot(), current, language, reason),
+      }),
+    );
   });
   revisions.append(el('h2', T('接着修订', 'Continue revising')), revisionReason, revise);
   const refresh = button(T('查看最新反馈', 'Refresh feedback'), () => adapter.refresh());
-  root.append(failure, notice, failedNote, retryFeedback);
+  // The results cover sits first on the feedback page (it is never part of the submit panel).
+  const coverHost = el('div', '', 'result-cover-host');
+  let coverShown = '';
+  let coverWaited = false;
+  let ticker: ReturnType<typeof setInterval> | undefined;
+  root.append(failure);
+  if (options.surface !== 'submission') root.append(coverHost);
+  root.append(notice, failedNote, retryFeedback);
   if (options.surface !== 'feedback') root.append(submissions);
   if (options.surface === 'feedback') root.append(recover);
   if (options.surface !== 'submission') root.append(refresh, reports, responseHistory, revisions);
@@ -935,6 +999,8 @@ export function mountNativeFeedback(
     );
   }
   function renderSelected() {
+    // The button says what it will do: which version, or how many.
+    submit.textContent = submitLabel([...selected.values()], language);
     selectedSummary.replaceChildren(
       ...[...selected].map(([id, ref]) => {
         const row = el('p');
@@ -955,6 +1021,113 @@ export function mountNativeFeedback(
       }),
     );
   }
+  /** The general response form of the latest delivery's feedback, opened, with focus in it. */
+  function openSupplement() {
+    const latest = reports.querySelector<HTMLElement>(':scope > article');
+    const form = latest
+      ? [...latest.querySelectorAll<HTMLDetailsElement>(':scope > details[data-response-id]')].at(-1)
+      : undefined;
+    if (!form) return;
+    form.open = true;
+    form.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' });
+    form.querySelector('textarea')?.focus({ preventScroll: true });
+  }
+  function openRevision() {
+    revisions.scrollIntoView({ block: 'center', behavior: reduced() ? 'auto' : 'smooth' });
+    revisionReason.focus({ preventScroll: true });
+  }
+  const waitSeconds = (state: FeedbackNativeState) =>
+    state.feedbackSince ? (Date.now() - state.feedbackSince) / 1000 : undefined;
+  function renderCoverNow(state: FeedbackNativeState) {
+    const note = deliveryNote();
+    const view = coverView(state, language, note);
+    // Not tied to reads in flight, so the step does not flicker while records refresh; the
+    // revision control itself still refuses while a request is busy.
+    const canRevise =
+      state.status === 'submitted' && !state.readOnly && !state.awaitingFeedback && !state.pending;
+    const actions = view && {
+      openReference: (ref: ObjectRef) => adapter.openReference(ref),
+      ...(!view.waiting && adapter.canRespond !== false && !state.readOnly
+        ? { supplement: openSupplement }
+        : {}),
+      ...(canRevise ? { revise: openRevision } : {}),
+      backToBoard: state.status === 'active',
+      practise: !view.waiting,
+    };
+    const signature = JSON.stringify([
+      view,
+      !!actions?.supplement,
+      !!actions?.revise,
+      actions?.backToBoard,
+      state.feedbackPhase,
+      !!state.feedbackSince,
+    ]);
+    if (signature !== coverShown) {
+      // A focused control in the cover keeps focus across the redraw: the same control when it
+      // is still there, else the cover's heading (for example when the feedback arrives).
+      const focused = coverHost.contains(doc.activeElement)
+        ? (doc.activeElement as HTMLElement)
+        : null;
+      const same = focused && {
+        action: focused.dataset.action,
+        text: focused.textContent,
+      };
+      coverShown = signature;
+      // The stamp of a delivery just made here is pressed once. The page may be drawn again
+      // while it presses; each drawing picks the press up where it is (never restarts it).
+      let pressed: number | undefined;
+      if (
+        note &&
+        !reduced() &&
+        (!state.submission || state.submission.ref.session_id === note.sessionId)
+      ) {
+        note.pressedAt ??= Date.now();
+        const elapsed = Date.now() - note.pressedAt;
+        if (elapsed < STAMP_PRESS_MS) pressed = elapsed;
+      }
+      const cover =
+        view && actions
+          ? renderCover(doc, view, language, actions, {
+              phase: state.feedbackPhase,
+              seconds: waitSeconds(state),
+              freshStamp: pressed !== undefined,
+              pressElapsed: pressed,
+            })
+          : null;
+      // A redraw keeps the stamp already on the page, so a press in progress is never restarted.
+      const before = coverHost.querySelector<HTMLElement>('[data-delivery-stamp]');
+      const after = cover?.querySelector<HTMLElement>('[data-delivery-stamp]');
+      if (before && after) {
+        // Same element, new words (the time may arrive with the record): a press keeps going.
+        before.replaceChildren(...after.childNodes);
+        after.replaceWith(before);
+      }
+      // The feedback arriving after a wait is a change in the world: its parts settle in once.
+      if (cover && coverWaited && !view?.waiting) cover.classList.add('is-arriving');
+      coverWaited = !!view?.waiting;
+      coverHost.replaceChildren(...(cover ? [cover] : []));
+      if (same && cover) {
+        const again = [...cover.querySelectorAll<HTMLElement>('button')].find((node) =>
+          same.action ? node.dataset.action === same.action : node.textContent === same.text,
+        );
+        const title = cover.querySelector<HTMLElement>('.result-cover__title');
+        if (title) title.tabIndex = -1;
+        (again ?? title)?.focus({ preventScroll: true });
+      }
+    }
+    // Real seconds tick while the feedback is written; nothing else moves.
+    const waiting = !!view?.waiting && !view.failed && !!state.feedbackSince;
+    if (waiting && !ticker)
+      ticker = setInterval(() => {
+        const clock = coverHost.querySelector<HTMLElement>('[data-elapsed]');
+        const seconds = waitSeconds(adapter.snapshot());
+        if (clock && seconds !== undefined) clock.textContent = elapsedWords(seconds, language);
+      }, 1000);
+    if (!waiting && ticker) {
+      clearInterval(ticker);
+      ticker = undefined;
+    }
+  }
   function render() {
     if (destroyed) return;
     const state = adapter.snapshot();
@@ -963,6 +1136,9 @@ export function mountNativeFeedback(
     retryFeedback.hidden = !state.failedFeedback || !adapter.retry;
     retryFeedback.disabled = state.busy || adapter.canRetry === false;
     notice.textContent = feedbackNotice(state, language);
+    if (options.surface !== 'submission') renderCoverNow(state);
+    // With the cover shown, the status line stays for screen readers only; the cover says it.
+    notice.classList.toggle('sr-only', !!coverHost.firstElementChild);
     restoreChoice(state);
     selection.replaceChildren(
       ...state.products.map((product) => {
@@ -986,23 +1162,32 @@ export function mountNativeFeedback(
           renderSelected();
           syncPreview();
         });
-        row.append(
-          checkbox,
-          el(
-            'span',
-            `${product.title || T('未命名作品', 'Untitled artifact')} · ${versionLabel(product.version)}${product.author.kind === 'external_agent' ? T(' · Agent制作', ' · Created by an Agent') : ''}`,
-          ),
-        );
+        // Each version reads like an attachment slip: 《标题》 · 第 N 版 · 用途.
+        row.classList.add('delivery-attachment');
+        const slip = el('span', '', 'delivery-attachment__slip');
+        slip.append(attachmentSlip(doc, product, language));
+        if (product.author.kind === 'external_agent')
+          slip.append(el('span', T('Agent 制作', 'Made by an Agent'), 'delivery-attachment__by'));
+        const view = button(T('查看', 'View'), () => adapter.openReference(ref));
+        view.classList.add('quiet', 'small', 'delivery-attachment__view');
+        view.setAttribute('aria-label', T('查看 ', 'View ') + attachmentLine(product, language));
+        row.append(checkbox, slip, view);
         return row;
       }),
     );
     renderSelected();
-    selectedSummary.hidden = state.status === 'submitted';
+    // The attachment slips above already show and open each chosen version.
+    selectedSummary.hidden = true;
     if (state.status === 'submitted' && state.submission) choice.value = state.submission.decision;
     submit.disabled =
       state.status !== 'active' || state.busy || !!state.pending || adapter.canSubmit === false;
     choice.disabled = submit.disabled;
-    recover.hidden = (!state.pending && !state.awaitingFeedback) || !adapter.recover;
+    // While feedback is written the cover reads its progress by itself; the manual check stays
+    // for an unconfirmed request only (one refresh control is enough).
+    recover.hidden =
+      (!state.pending && !state.awaitingFeedback) ||
+      !adapter.recover ||
+      (!state.pending && !!coverHost.firstElementChild);
     recover.disabled = state.busy;
     recover.textContent = state.awaitingFeedback
       ? T('查看反馈进度', 'Check feedback progress')
@@ -1122,6 +1307,7 @@ export function mountNativeFeedback(
     refresh: () => act(() => adapter.refresh()),
     destroy: () => {
       destroyed = true;
+      clearInterval(ticker);
       unsubscribe();
       unlens();
       reviewControls?.destroy();
@@ -1141,4 +1327,21 @@ function recordCriterion(record: RecognitionRecord): string | null {
 
 function criterionRecords(report: Report, criterion: string): RecognitionRecord[] {
   return (report.recognition ?? []).filter((record) => recordCriterion(record) === criterion);
+}
+
+/** What "Start a revision" hands the board: the delivery's number, its unmet items by name, the
+ * versions it delivered and the person's own words for the revision. */
+export function revisionStart(
+  state: FeedbackNativeState,
+  submission: { ref: ObjectRef; products: ObjectRef[] },
+  language: FeedbackLanguage,
+  reason: string,
+) {
+  const view = coverView({ ...state, submission: { ...submission, decision: '' } }, language);
+  return {
+    delivery: view?.delivery,
+    unmet: view?.unmet.map((row) => row.name) ?? [],
+    products: submission.products.map((ref) => ref.object_id),
+    reason: reason.trim(),
+  };
 }
