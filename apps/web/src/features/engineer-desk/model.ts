@@ -3,7 +3,7 @@
  * (`src/career_lab/engineer/session.py`); the desk draws them. Words follow the interface
  * language (T); text from the server (questions, answers, titles) stays in the work language. */
 import { T } from '../../app/i18n';
-import { ENGINEER_REPORT_COPY } from '../engineer-report';
+import { ENGINEER_REPORT_COPY, type EngineerReportView } from '../engineer-report';
 import { copyText } from '../results-native/localization';
 import { engineerErrorText, fieldName, valueText } from './copy';
 
@@ -232,8 +232,8 @@ export function ticketFacts(ticket: TicketDetail): TicketFacts {
   return {
     source:
       ticket.source === 'seeded'
-        ? T('委托附带', 'Came with the ticket')
-        : T('产品经理交来', 'Handed over by product'),
+        ? T('来源：委托附带', 'Source: attached to the ticket')
+        : T('来源：产品经理交来', 'Source: handed over by product'),
     targets: ticket.target_tests.map(targetFacts),
     setup: world
       ? T(
@@ -243,7 +243,7 @@ export function ticketFacts(ticket: TicketDetail): TicketFacts {
       : '',
     retrieval:
       ticket.retrieval.mode === 'rule_based'
-        ? T('规则版检索', 'Rule-based retrieval')
+        ? T('检索：规则版（不用模型）', 'Retrieval: rule-based (no model)')
         : (ticket.retrieval.note ?? ''),
     reviewsLeft: Math.max(0, ticket.review_budget.limit - ticket.review_budget.used),
   };
@@ -660,4 +660,16 @@ export function handoverChoices(tests: readonly HandoverTest[]): HandoverChoice[
       chosen: pick,
     };
   });
+}
+
+/* ---------- after a review ---------- */
+
+/** The report screen's one ink key. Only when the target is fixed and the reviewer found nothing
+ * newly failing (public and hidden, comparison complete) is the work done here: then the next
+ * step is back to the product board, and another round becomes the secondary key. */
+export function nextAfterReview(view: EngineerReportView): 'board' | 'again' {
+  const regression = view.checks.lines.find((line) => line.kind === 'new_regression');
+  return view.verdict?.state === 'fixed' && !view.verdict.turn && regression?.tone === 'good'
+    ? 'board'
+    : 'again';
 }

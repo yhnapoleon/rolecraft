@@ -111,6 +111,8 @@ export function openHandover(ctx: HandoverContext): HTMLDialogElement {
   dialog.foot.append(cancel, submit);
   sync();
   dialog.element.showModal();
-  (boxes[0] ?? submit).focus();
+  // The title takes the first focus, so nothing looks chosen yet; Tab moves on from there.
+  dialog.heading.tabIndex = -1;
+  dialog.heading.focus();
   return dialog.element;
 }

@@ -153,6 +153,13 @@ async function draftAndSign({ explanation, reasons, impact }) {
   await setValue('#ed-impact', impact);
   await waitFor(enabled('#ed-sign'));
   await browser.ev(`document.querySelector('.ed-sheet').scrollIntoView({ block: 'start' })`);
+  await delay(100);
+  assert.ok(
+    await browser.ev(
+      `document.querySelector('#ed-sheet-h').getBoundingClientRect().top >= document.querySelector('.topbar').getBoundingClientRect().bottom`,
+    ),
+    'the sign sheet title lands below the top bar',
+  );
   await shot('desk-sign-sheet');
   await browser.click('#ed-sign');
   await waitFor(
@@ -178,7 +185,9 @@ try {
       null,
     );
     assert.ok(
-      card.includes(say('复现 AIPM 记录的失败', 'Reproduce the failure the AIPM recorded')),
+      card.includes(
+        say('复现产品经理记录的失败', 'Reproduce the failure the product manager recorded'),
+      ) && !card.includes('AIPM'),
       card,
     );
     await shot('home');
@@ -361,6 +370,33 @@ try {
         `[...document.querySelectorAll('.er-criterion')].map(n => n.dataset.criterion + ':' + n.dataset.mark).join(' ')`,
       );
       assert.ok(/E2[^ ]*:not_met/.test(evaluation), evaluation);
+      // The headline says both: the target fixed, and one new failure (amber turn and line).
+      assert.equal(
+        await text('.er-verdict__title'),
+        say('目标修好了，但新增 1 处失败', 'Target fixed, but 1 new failure'),
+      );
+      assert.equal(
+        await browser.ev(
+          `[...document.querySelectorAll('.er-verdict, .er-verdict__turn, .er-verdict__mark')].map(n => n.dataset.tone).join(' ')`,
+        ),
+        'warn warn warn',
+      );
+      assert.equal(
+        await browser.ev(
+          `[...document.querySelectorAll('.er-verdict__line')].map(n => n.dataset.tone + ':' + n.textContent).join(' | ')`,
+        ),
+        say(
+          'good:✓F01 现在给出了委托记录的预期答案 | warn:↓1 个原来通过的隐藏探针现在失败',
+          'good:✓F01 now gives the expected answer recorded with the ticket. | warn:↓1 hidden probe that passed before now fails.',
+        ),
+      );
+      // Something newly broken: another round is the one ink key.
+      assert.equal(
+        await browser.ev(
+          `[...document.querySelectorAll('.ed .btn.primary')].map(n => n.id).join(' ')`,
+        ),
+        'ed-again',
+      );
       assert.ok(
         !(await browser.ev(`document.querySelector('main').innerText`)).includes(
           say('发回产品经理', 'Send back to product'),
@@ -416,6 +452,23 @@ try {
       );
       assert.ok(/E1[^ ]*:met/.test(evaluation) && /E2[^ ]*:met/.test(evaluation), evaluation);
       assert.equal(await browser.ev(`document.querySelectorAll('.ed-review-list li').length`), 2);
+      assert.equal(
+        await text('.er-verdict__title'),
+        say('目标问题已修好', 'Target fixed'),
+      );
+      assert.equal(await browser.ev(`document.querySelectorAll('.er-verdict__lines').length`), 0);
+      // Everything holds: back to the product board leads; another round steps down.
+      assert.equal(
+        await browser.ev(
+          `[...document.querySelectorAll('.ed .btn.primary')].map(n => n.id).join(' ')`,
+        ),
+        'ed-to-board',
+      );
+      assert.equal(
+        await text('#ed-to-board'),
+        say('回到产品经理工作板', 'Back to the product board'),
+      );
+      assert.ok(await browser.ev(`!!document.querySelector('#ed-again:not(.primary)')`));
       await shot('report-root-cause', true);
       await shot('report-root-cause-top');
     },
@@ -452,6 +505,10 @@ try {
     await waitFor(`!!document.querySelector('dialog.ed-handover[open]')`);
     const count = await text('.ed-handover__count');
     assert.ok(count.includes(say('最多 10 条', 'up to 10')), count);
+    assert.ok(
+      await browser.ev(`document.activeElement?.matches('dialog.ed-handover .sheet-head h2')`),
+      'the dialog title takes the first focus',
+    );
     await shot('handover-dialog');
     await browser.click('#ed-handover-submit');
     await waitFor(
@@ -459,7 +516,10 @@ try {
       30000,
     );
     const facts = await text('.ed-facts');
-    assert.ok(facts.includes(say('产品经理交来', 'Handed over by product')), facts);
+    assert.ok(
+      facts.includes(say('来源：产品经理交来', 'Source: handed over by product')),
+      facts,
+    );
     await shot('desk-from-tests');
   });
 
@@ -477,7 +537,10 @@ try {
         `location.hash.startsWith('#/engineer/') && !!document.querySelector('.ed-slip .ed-target')`,
         30000,
       );
-      assert.equal(await text('.ed-facts .ed-fact'), say('委托附带', 'Came with the ticket'));
+      assert.equal(
+        await text('.ed-facts .ed-fact'),
+        say('来源：委托附带', 'Source: attached to the ticket'),
+      );
       assert.equal(
         await browser.ev(`document.querySelectorAll('.ed-review-list li').length`),
         2,

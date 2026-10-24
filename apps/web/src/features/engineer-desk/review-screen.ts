@@ -1,6 +1,7 @@
 /** The report screen: one signed review's regression report (the 190 report component), the way
- * back to the desk for another round, and this ticket's reviews in order. No "send to product":
- * that hand-back is not built, so it is not offered. */
+ * back to the desk for another round, and this ticket's reviews in order. When everything holds
+ * the one ink key leads back to the product board (the hat's own level) and another round steps
+ * down; otherwise another round leads. No "send to product": that hand-back is not built. */
 import { T } from '../../app/i18n';
 import {
   renderEngineerReport,
@@ -10,13 +11,13 @@ import {
 import { reviewViewOptions } from '../engineer-report/page';
 import { failureText, type EngineerApi } from './api';
 import { append, button, el, iconNode, workLang } from './dom';
-import { clock, type TicketDetail } from './model';
+import { clock, nextAfterReview, type TicketDetail } from './model';
 
 export interface ReviewContext {
   readonly doc: Document;
   readonly caseTitle: string;
   readonly api: EngineerApi;
-  navigate(route: 'engineer' | 'engineer-review', id?: string): void;
+  navigate(route: 'engineer' | 'engineer-review' | 'work', id?: string): void;
   remember(reviewId: string, ticketId: string): void;
   /** Point the page's back key at the desk of this review's ticket. */
   backTo(ticketId: string): void;
@@ -77,13 +78,24 @@ export class EngineerReviewScreen {
     const language = T('zh', 'en') as 'zh' | 'en';
     const reviews = ticket?.reviews ?? [];
     const index = reviews.findIndex((r) => r.review_id === review.review_id);
+    const view = engineerReportView(review.report, reviewViewOptions(review, language));
+    const settled = nextAfterReview(view) === 'board';
     const again = button(
       doc,
       [iconNode(doc, 'refresh', 'i-xs'), T('再修一轮', 'Fix it again')],
-      'btn primary',
+      settled ? 'btn' : 'btn primary',
       { id: 'ed-again' },
     );
     again.addEventListener('click', () => this.ctx.navigate('engineer', review.ticket_id));
+    const board = settled
+      ? button(
+          doc,
+          [iconNode(doc, 'back', 'i-xs'), T('回到产品经理工作板', 'Back to the product board')],
+          'btn primary',
+          { id: 'ed-to-board' },
+        )
+      : null;
+    board?.addEventListener('click', () => this.ctx.navigate('work'));
     const left = ticket
       ? Math.max(0, ticket.review_budget.limit - ticket.review_budget.used)
       : null;
@@ -142,12 +154,12 @@ export class EngineerReviewScreen {
               )
             : null,
         ),
-        again,
+        el(doc, 'div', { class: 'ed-review__keys' }, again, board),
       ),
     );
     const sheet = renderEngineerReport(
       doc,
-      engineerReportView(review.report, reviewViewOptions(review, language)),
+      view,
       {
         basisOpen: this.basisOpen,
         onBasisToggle: (open) => {

@@ -36,7 +36,7 @@ export function renderEngineerReport(
     return node;
   };
   const level = options.headingLevel ?? 2;
-  const heading = (offset: number, className: string, text: string) =>
+  const heading = (offset: number, className: string, text?: string) =>
     el(`h${Math.min(level + offset, 6)}` as 'h2', className, text);
   const mark = (tone: EngineerTone, className: string, glyph = MARK[tone]) => {
     const node = el('span', className, glyph === OPEN ? '' : glyph);
@@ -68,8 +68,15 @@ export function renderEngineerReport(
     verdict.dataset.state = view.verdict.state;
     verdict.dataset.source = view.verdict.source;
     const verdictBody = el('div', 'er-verdict__body');
-    const title = heading(0, 'er-verdict__title', view.verdict.title);
+    const { title: titleText, turn } = view.verdict;
+    const title = heading(0, 'er-verdict__title');
     title.setAttribute('id', `${base}-verdict`);
+    // A split headline keeps one heading; only its turn ("but 1 new failure") takes the amber.
+    if (turn && titleText.endsWith(turn)) {
+      const turnNode = el('span', 'er-verdict__turn', turn);
+      turnNode.dataset.tone = 'warn';
+      title.append(titleText.slice(0, titleText.length - turn.length), turnNode);
+    } else title.textContent = titleText;
     verdictBody.append(title);
     for (const query of view.verdict.targets) {
       const target = el('p', 'er-verdict__target', query);
@@ -77,9 +84,28 @@ export function renderEngineerReport(
       verdictBody.append(target);
     }
     if (view.verdict.detail) verdictBody.append(el('p', 'er-verdict__detail', view.verdict.detail));
+    if (view.verdict.lines?.length) {
+      const lines = el('ul', 'er-verdict__lines');
+      for (const line of view.verdict.lines) {
+        const item = el('li', 'er-verdict__line');
+        item.dataset.tone = line.tone;
+        item.append(
+          mark(line.tone, 'er-verdict__line-mark', line.tone === 'ink' ? OPEN : MARK[line.tone]),
+          el('span', 'er-verdict__line-text', line.text),
+        );
+        lines.append(item);
+      }
+      verdictBody.append(lines);
+    }
     const state = view.verdict.state;
     const verdictGlyph =
-      state === 'not_fixed' ? OPEN : state === 'partial' ? '◐' : MARK[view.verdict.tone];
+      view.verdict.tone === 'warn'
+        ? MARK.warn
+        : state === 'not_fixed'
+          ? OPEN
+          : state === 'partial'
+            ? '◐'
+            : MARK[view.verdict.tone];
     verdict.append(mark(view.verdict.tone, 'er-verdict__mark', verdictGlyph), verdictBody);
     head.append(verdict);
   }

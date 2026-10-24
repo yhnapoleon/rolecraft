@@ -4,6 +4,10 @@ import reproduction from './fixtures/reproduction.zh.json';
 import seeded from './fixtures/ticket-seeded.zh.json';
 import signed from './fixtures/ticket-signed.zh.json';
 import overreach from './fixtures/trial-overreach.zh.json';
+import overreachReview from '../../../public/engineer/sample-overreach.en.json';
+import rootCause from '../../../public/engineer/sample-root-cause.en.json';
+import { engineerReportView, type EngineerReviewRecord } from '../engineer-report';
+import { reviewViewOptions } from '../engineer-report/page';
 import {
   candidateChanges,
   claimsFromTrial,
@@ -11,6 +15,7 @@ import {
   experimentRows,
   handoverChoices,
   HANDOVER_LIMIT,
+  nextAfterReview,
   parseField,
   signSheet,
   signState,
@@ -36,7 +41,7 @@ const field = (name: string) =>
 describe('engineer desk · the ticket in work words', () => {
   it('ED-20 source, lagging versions and the system’s setup read as facts', () => {
     const facts = ticketFacts(SEEDED);
-    expect(facts.source).toBe('委托附带');
+    expect(facts.source).toBe('来源：委托附带');
     expect(facts.targets).toHaveLength(1);
     const target = facts.targets[0];
     expect(target.query).toBe('住宿报销上限是多少？');
@@ -45,11 +50,12 @@ describe('engineer desk · the ticket in work words', () => {
     expect(target.origin).toBe('委托附带的复现记录');
     expect(target.config).toBe('');
     expect(facts.setup).toBe('起始状态由系统准备，不是你的操作：试点配置已上线为 v1。');
-    expect(facts.retrieval).toBe('规则版检索');
+    expect(facts.retrieval).toBe('检索：规则版（不用模型）');
     expect(facts.reviewsLeft).toBe(3);
     setPreference('en');
     const en = ticketFacts(SEEDED);
-    expect(en.source).toBe('Came with the ticket');
+    expect(en.source).toBe('Source: attached to the ticket');
+    expect(en.retrieval).toBe('Retrieval: rule-based (no model)');
     expect(en.targets[0].versions[0].text).toBe('Travel policy v2 / index v1, index behind');
     expect(en.setup).toBe(
       'The system prepared this starting state, not you: the pilot configuration went live as v1.',
@@ -59,7 +65,10 @@ describe('engineer desk · the ticket in work words', () => {
   it('ED-21 a ticket without setup says nothing about it; a target on other settings says which', () => {
     const own = { ...SEEDED, world_setup: null, source: 'tests' as const };
     expect(ticketFacts(own).setup).toBe('');
-    expect(ticketFacts(own).source).toBe('产品经理交来');
+    expect(ticketFacts(own).source).toBe('来源：产品经理交来');
+    setPreference('en');
+    expect(ticketFacts(own).source).toBe('Source: handed over by product');
+    setPreference('zh');
     const changed = {
       ...own,
       target_tests: [
@@ -344,5 +353,31 @@ describe('engineer desk · handing tests to engineering', () => {
     );
     expect(many.filter((c) => c.chosen)).toHaveLength(HANDOVER_LIMIT);
     expect(HANDOVER_LIMIT).toBe(10);
+  });
+});
+
+describe('engineer desk · after a review', () => {
+  const view = (record: EngineerReviewRecord) =>
+    engineerReportView(record.report, reviewViewOptions(record, 'en'));
+  const ROOT = rootCause as unknown as EngineerReviewRecord;
+  const OVER = overreachReview as unknown as EngineerReviewRecord;
+
+  it('ED-43 everything holds: back to the product board leads; a new failure keeps "fix it again" first', () => {
+    expect(nextAfterReview(view(ROOT))).toBe('board');
+    expect(nextAfterReview(view(OVER))).toBe('again');
+    // Target not fixed, even with nothing newly broken: another round is still the next step.
+    const notFixed = {
+      ...ROOT.report,
+      findings: ROOT.report.findings.map((f) =>
+        f.kind === 'target_fix' ? { ...f, status: 'fail' as const } : f,
+      ),
+    };
+    expect(nextAfterReview(engineerReportView(notFixed, { language: 'en' }))).toBe('again');
+    // A comparison that could not finish is not "everything holds".
+    const unknown = {
+      ...ROOT.report,
+      hidden_comparison: { new_failures: 0, fixed: 2, still_failing: 0, unverified: 1 },
+    };
+    expect(nextAfterReview(engineerReportView(unknown, { language: 'en' }))).toBe('again');
   });
 });

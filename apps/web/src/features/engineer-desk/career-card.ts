@@ -13,7 +13,7 @@ export const ENGINEER_CASES: readonly string[] = ['pilot'];
 
 export function engineerCareerCardHtml(options: { practice: boolean }): string {
   const steps = [
-    T('复现 AIPM 记录的失败', 'Reproduce the failure the AIPM recorded'),
+    T('复现产品经理记录的失败', 'Reproduce the failure the product manager recorded'),
     T('只调受支持的配置', 'Change only supported settings'),
     T('用真实回归证明', 'Prove it with a real regression run'),
   ];

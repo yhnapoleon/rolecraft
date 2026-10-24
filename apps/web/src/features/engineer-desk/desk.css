@@ -13,6 +13,12 @@
   margin: 0 auto;
   padding-top: 4px;
 }
+/* Whatever the page scrolls or moves focus to (the sign sheet, the impact note, a new trial line,
+   an error, a report section) stops below the sticky top bar instead of under it. */
+.ed,
+.ed * {
+  scroll-margin-top: calc(var(--toolbar-h) + 16px);
+}
 .ed p,
 .ed h1,
 .ed h2,
@@ -311,7 +317,7 @@
 }
 .ed-review-list time {
   color: var(--ink-3);
-  font: 12px var(--mono);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 .ed-review-list__here {
@@ -422,9 +428,14 @@
 .ed-field.is-changed .ed-field__name {
   color: var(--ink);
 }
+/* The setting's own name, as the Agent says it: a code identifier, so monospace, and one click
+   selects it whole for copying. Only on the sign-off desk. */
 .ed-key {
-  color: var(--ink-4);
-  font: 11px / 1.4 var(--mono);
+  color: var(--ink-3);
+  font: 12px / 1.4 var(--mono);
+  white-space: nowrap;
+  -webkit-user-select: all;
+  user-select: all;
 }
 .ed-field__was {
   color: var(--ink-3);
@@ -538,7 +549,7 @@
 }
 .ed-line__time {
   color: var(--ink-3);
-  font: 12px var(--mono);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
 }
 .ed-line__who {
@@ -559,7 +570,8 @@
   white-space: nowrap;
 }
 .ed-line__tally {
-  font: 500 12px var(--mono);
+  font-size: 12px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -826,7 +838,7 @@
 }
 .ed-impact__count {
   color: var(--ink-4);
-  font: 11.5px var(--mono);
+  font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
 .ed-impact__count[data-over="true"] {
@@ -987,7 +999,7 @@
 .ed-compose__count {
   margin-right: auto;
   color: var(--ink-4);
-  font: 11.5px var(--mono);
+  font-size: 11.5px;
   font-variant-numeric: tabular-nums;
 }
 .ed-compose__count[data-over="true"] {
@@ -1005,6 +1017,12 @@
   justify-content: space-between;
   gap: 10px 16px;
 }
+.ed-review__keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
 .ed-review__sheet {
   min-width: 0;
 }
@@ -1013,6 +1031,10 @@
 }
 
 /* ---------- hand to engineering (bench dialog) ---------- */
+/* The title holds the first focus only to place the reader; it is not a control. */
+.ed-handover .sheet-head h2:focus {
+  outline: none;
+}
 .ed-handover__lead {
   margin: 0 0 12px;
   color: var(--ink-2);

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { setPreference } from '../../app/i18n';
+import { engineerCareerCardHtml } from './career-card';
 import { ENGINEER_ERROR_CODES, engineerErrorText, valueText } from './copy';
 
 afterEach(() => setPreference('zh'));
@@ -64,5 +65,16 @@ describe('engineer desk · setting values in words', () => {
     expect(valueText('freshness_guard', 'fallback')).toBe('Hand off');
     expect(valueText('domains', ['onboarding', 'policy_leave'])).toBe('Onboarding, Leave policy');
     expect(valueText('scope_filter', false)).toBe('Off');
+  });
+});
+
+describe('engineer desk · the home card', () => {
+  it('ED-44 the first step names the product manager, not the internal "AIPM"', () => {
+    const zh = engineerCareerCardHtml({ practice: false });
+    expect(zh).toContain('复现产品经理记录的失败');
+    setPreference('en');
+    const en = engineerCareerCardHtml({ practice: true });
+    expect(en).toContain('Reproduce the failure the product manager recorded');
+    expect(zh + en).not.toMatch(/AIPM/);
   });
 });

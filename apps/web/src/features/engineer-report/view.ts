@@ -105,6 +105,12 @@ export interface EngineerBasisRow {
   /** True for hash prefixes (shown in monospace). */
   readonly code: boolean;
 }
+/** One fact under a split headline: ✓ the target (good), ↓ new failures (warn), an open circle
+ * for a target still failing (ink), a dashed circle when not known (unknown). */
+export interface EngineerVerdictLine {
+  readonly tone: EngineerTone;
+  readonly text: string;
+}
 export type EngineerVerdictState = 'fixed' | 'not_fixed' | 'partial' | 'unknown' | 'waiting';
 export interface EngineerReportView {
   readonly language: Language;
@@ -124,6 +130,11 @@ export interface EngineerReportView {
     readonly detail: string;
     /** Public target questions as written in the suite; never hidden ones. */
     readonly targets: readonly string[];
+    /** Present only when something that passed before fails now: the tail of `title` that says
+     * so (drawn amber). The title then names both facts, and `lines` say each one with its mark;
+     * `detail` and `targets` are empty. */
+    readonly turn?: string;
+    readonly lines?: readonly EngineerVerdictLine[];
   };
   readonly publicSection: {
     readonly title: string;
@@ -614,6 +625,65 @@ export function engineerReportView(
     if (ev.review_id)
       basisRows.push(code('basisEvaluatedReview', ev.review_id.replace(/^review-/, '')));
     if (ev.submission_hash) basisRows.push(code('basisEvaluatedSubmission', ev.submission_hash));
+  }
+
+  // Fixed one, broke one: when anything that passed before fails now, the headline says both.
+  // The turn ("but 1 new failure") and its line are amber; the target keeps its own mark.
+  const newTotal = publicNew + hiddenNew;
+  if (verdict && newTotal > 0) {
+    const state = verdict.state;
+    const lead =
+      state === 'fixed'
+        ? t('verdictLeadFixed')
+        : state === 'not_fixed'
+          ? t('verdictLeadNotFixed')
+          : state === 'partial'
+            ? t('verdictLeadPartial')
+            : verdict.title;
+    const but = state === 'fixed' || state === 'partial';
+    const turn =
+      newTotal === 1
+        ? t(but ? 'verdictTurnButOne' : 'verdictTurnAndOne')
+        : t(but ? 'verdictTurnBut' : 'verdictTurnAnd', { n: newTotal });
+    const ids = [...targetIds];
+    let targetLine: EngineerVerdictLine | undefined;
+    if (verdict.source === 'public' && state === 'fixed' && ids.length)
+      targetLine = {
+        tone: 'good',
+        text: t(ids.length === 1 ? 'lineTargetFixed' : 'lineTargetsFixed', {
+          ids: ids.join(t('idJoin')),
+        }),
+      };
+    else if (verdict.source === 'public' && state === 'not_fixed' && targetIds.size === 1) {
+      const failed = byId.get(ids[0]);
+      targetLine = failed
+        ? { tone: 'ink', text: t('lineTargetFailed', { id: ids[0], diff: diffOf(failed) }) }
+        : verdict.detail
+          ? { tone: 'ink', text: verdict.detail }
+          : undefined;
+    } else if (verdict.detail) targetLine = { tone: verdict.tone, text: verdict.detail };
+    const newLine: EngineerVerdictLine = {
+      tone: 'warn',
+      text:
+        publicNew && hiddenNew
+          ? t('lineNewBoth', { n: newTotal, p: publicNew, h: hiddenNew })
+          : hiddenNew
+            ? hiddenNew === 1
+              ? t('lineNewHiddenOne')
+              : t('lineNewHidden', { n: hiddenNew })
+            : publicNew === 1
+              ? t('lineNewPublicOne')
+              : t('lineNewPublic', { n: publicNew }),
+    };
+    verdict = {
+      ...verdict,
+      tone: 'warn',
+      title: lead + t('verdictTurnSep') + turn,
+      turn,
+      detail: '',
+      targets: [],
+      lines: targetLine ? [targetLine, newLine] : [newLine],
+    };
   }
 
   const retrievalNote = options.retrievalNote?.trim();
