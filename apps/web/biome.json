@@ -47,6 +47,11 @@
   "assist": {
     "enabled": false
   },
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
   "html": {
     "formatter": {
       "enabled": true,
