@@ -552,7 +552,8 @@ function announce(text) {
 const WS = ['work', 'task', 'doc', 'bench'];
 function parseRoute() {
   const [r, id] = location.hash.replace(/^#\/?/, '').split('/');
-  if (['pm', 'work', 'bench', 'review', 'lab'].includes(r)) return { r, id: null };
+  if (['pm', 'work', 'bench', 'review', 'lab', 'engineer-report'].includes(r))
+    return { r, id: null };
   if ((r === 'task' || r === 'doc') && id) return { r, id: decodeURIComponent(id) };
   return { r: '', id: null };
 }
@@ -657,6 +658,7 @@ function render() {
   else if (WS.includes(ui.route) && current()) app.innerHTML = banner + renderWorkspace();
   else if (r === 'review' && current()) app.innerHTML = banner + renderReview();
   else if (r === 'lab') app.innerHTML = banner + renderLab();
+  else if (r === 'engineer-report') app.innerHTML = banner + renderEngineerReport();
   else app.innerHTML = banner + renderCareers();
   afterRender();
   restoreFocus(key);
@@ -698,11 +700,27 @@ function mountLabPage() {
     }),
   );
 }
+// #/engineer-report: read-only sample regression reports; the page keeps itself across re-renders.
+function renderEngineerReport() {
+  const back = `<a class="btn quiet back" href="#/">${icon('back')}<span>${esc(T('首页', 'Home'))}</span></a>`;
+  return `${topbar(back)}<main id="main" class="page" data-engineer-report-page tabindex="-1"></main>`;
+}
+function mountEngineerReportRoute() {
+  const root = document.querySelector('[data-engineer-report-page]');
+  if (root)
+    import('../features/engineer-report/page').then((m) => {
+      if (root.isConnected) m.mountEngineerReportPage(root, { language: locale() });
+    });
+}
 function afterRender() {
   refreshAgentIssued();
   if (ui.route !== 'lab') labView = null;
   if (ui.route === 'lab') {
     mountLabPage();
+    return;
+  }
+  if (ui.route === 'engineer-report') {
+    mountEngineerReportRoute();
     return;
   }
   mountNativeSlots();
