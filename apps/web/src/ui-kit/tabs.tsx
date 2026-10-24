@@ -1,11 +1,9 @@
 // Tabs on Radix (shadcn tabs, MIT), drawn as the same segmented control as the hat switch:
-// real tab semantics (Radix triggers), the same sliding ink thumb.
-import { LayoutGroup, motion, useReducedMotion } from 'motion/react';
+// real tab semantics (Radix triggers), the same sliding ink plate.
 import { Tabs as Radix } from 'radix-ui';
-import { useId } from 'react';
 import type * as React from 'react';
 import { cn } from './cn';
-import { type Segment, segmentClass, trackClass } from './toggle-group';
+import { InkLayer, type Segment, segmentClass, trackClass, useInkClip } from './toggle-group';
 
 export function Tabs<V extends string>({
   value,
@@ -22,37 +20,22 @@ export function Tabs<V extends string>({
   children: React.ReactNode;
   className?: string;
 }) {
-  const id = useId();
-  const reduce = useReducedMotion();
+  const { track, layer } = useInkClip(value);
   return (
     <Radix.Root value={value} onValueChange={(v) => onChange(v as V)} className={className}>
-      <LayoutGroup id={id}>
-        <Radix.List aria-label={label} className={trackClass()}>
-          {items.map((it) => {
-            const on = it.value === value;
-            return (
-              <Radix.Trigger
-                key={it.value}
-                value={it.value}
-                title={it.title}
-                className={segmentClass(on, 'sm')}
-              >
-                {on && (
-                  <motion.span
-                    layoutId="thumb"
-                    aria-hidden="true"
-                    className="tw:absolute tw:inset-0 tw:-z-10 tw:rounded-[6px] tw:bg-primary"
-                    transition={
-                      reduce ? { duration: 0 } : { type: 'spring', duration: 0.2, bounce: 0.12 }
-                    }
-                  />
-                )}
-                <span className="tw:relative">{it.label}</span>
-              </Radix.Trigger>
-            );
-          })}
-        </Radix.List>
-      </LayoutGroup>
+      <Radix.List ref={track} aria-label={label} className={trackClass()}>
+        {items.map((it) => (
+          <Radix.Trigger
+            key={it.value}
+            value={it.value}
+            title={it.title}
+            className={segmentClass(false, 'sm')}
+          >
+            {it.label}
+          </Radix.Trigger>
+        ))}
+        <InkLayer layer={layer} items={items} size="sm" />
+      </Radix.List>
       {children}
     </Radix.Root>
   );

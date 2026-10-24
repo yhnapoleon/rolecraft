@@ -84,11 +84,14 @@ everEngineer(sessionKey)               // home's continue slip
 ## Stage and the primary key — `stage.ts`
 
 ```ts
-registerStage('engineer', (attempt) => ({ steps: [...], primary: { label: [zh, en], action, id?, disabledReason? } }));  // fixed
+registerStage('engineer', (attempt) => ({ title?: [zh, en], steps: [...], primary: { label: [zh, en], action, id?, disabledReason? } }));  // fixed; title is an addition
 stageOf(hat, attempt): Stage | null
 ```
 
 The topbar draws the scale and the one primary key from the current hat's stage. The product
+`title` (optional) replaces the topbar title for that hat; without it the engineer's hat shows
+the situation's name, never the product manager's question. An action's error may carry
+`toastAction: { label, action, data }`; the hat switch shows it as the toast's key. The product
 manager's stage is the shell's (`pm-stage.ts`): Investigate (no draft) → Decide (a draft) →
 Delivered (submitted); primary Submit → See the result → Revise. 201 registers the engineer's.
 
@@ -113,6 +116,32 @@ showToast(text, { label, run, long, lead });  dismissToasts()   // for function 
 One Sonner toaster for the whole app, bottom centre of the main screen (clear of the right
 rail). 3.2s, or 6.5s with an action or `undo`. One toast at a time; at most one action.
 `ui.js`'s `notify()` already goes through it.
+
+## The topbar — `bar.tsx`, `bar.css`, `shellBar()` in `ui.js`
+
+Every screen inside a practice gets the same bar from `topbar()` / `wsToolbar()`; a registered
+route gets it automatically. It reads `hatOf` / `stageOf` and `agentConnection()`; you never draw
+it. Actions it sends, which you may register to take over:
+
+| action | sent by | default in `ui.js` |
+|---|---|---|
+| `hat-switch` (`data-hat`) | the hat switch, ⋯ at phone width | board, or the desk's last ticket / the seeded one |
+| `stage-pm` (`data-step`) | a step on the product manager's scale | Delivered → result, others → board |
+| `stage-engineer` (`data-step`) | a step on the engineer's scale | nothing — 201 registers it |
+| `open-agent` | the agent lamp | `#/agent` once registered, else the rail's Agent tab |
+| `records` | ⏱ | the rail's Activity tab — the board line registers its drawer (and `records-close`, which returns focus to ⏱) |
+
+The primary key runs `stage.primary.action` like any button. The lamp pulses on every
+`emitAgentEvent`; its label follows `setAgentConnection`.
+
+## Keys and island components
+
+- Native: `.btn` (secondary), `.btn.primary`, `.btn.quiet` (ghost), `.btn.icon` (32px). A reason
+  under a disabled key: `<span class="key-reason">…</span>`. Loading / done:
+  `setKeyState(button, 'loading' | 'done' | 'idle')`.
+- Islands: `src/ui-kit` — `Button` (four variants, `state`, `reason`), `Segmented`, `Tabs` /
+  `TabPanel`, `Tooltip` / `TooltipProvider`, `Sheet*` (`container` to cover only the main
+  screen), `Collapsible*`, and `cn()` for merging prefixed classes.
 
 ## Rules that come with the shell
 

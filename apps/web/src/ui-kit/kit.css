@@ -1,3 +1,22 @@
+/* The segmented control's ink plate: a copy of the labels, in ink, clipped to the active item.
+ * The clip moves on the spring curve (200ms, WAAPI in useInkClip); clip-path is this control's
+ * one documented exception to "transform and opacity only". */
+.rc-ink-layer {
+  position: absolute;
+  inset: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border-radius: inherit;
+  background: var(--primary);
+  pointer-events: none;
+  clip-path: inset(50%);
+}
+.rc-ink-layer > span {
+  color: var(--on-primary);
+}
+
 /* Motion for kit components that Tailwind classes cannot express: enter/exit by data-state.
  * 280ms on the drawer curve; reduced motion becomes a 160ms fade without movement. */
 .rc-sheet-scrim[data-state="open"] {

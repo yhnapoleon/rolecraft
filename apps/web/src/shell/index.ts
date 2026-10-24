@@ -12,6 +12,7 @@ export * from './stage';
 export * from './agent-bus';
 export * from './toast';
 export { pmStage, type PmFacts } from './pm-stage';
+export { setKeyState } from './keys';
 
 let installed = false;
 

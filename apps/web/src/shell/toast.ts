@@ -15,7 +15,13 @@ export function toast(
   const act = opts?.action;
   showToast(text, {
     label: act?.label,
-    run: act ? () => runAction(act.action) : undefined,
+    run: act
+      ? () => {
+          runAction(act.action).catch((err: unknown) =>
+            showToast(err instanceof Error ? err.message : String(err)),
+          );
+        }
+      : undefined,
     long: !!(act || opts?.undo),
   });
 }

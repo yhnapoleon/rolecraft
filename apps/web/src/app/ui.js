@@ -63,7 +63,7 @@ import {
   workVersion,
   caseShown,
 } from './vocab.js';
-import { modelChipHtml, modelPartsHtml, modelStatus, modelWaitHtml } from './model-status';
+import { modelPartsHtml, modelPopoverHtml, modelStatus, modelWaitHtml } from './model-status';
 import { awaitingRoles, isLocalReply, previewLine } from '../features/roles-native/chat-model';
 import { requestRefs } from '../features/roles-native/v4-data';
 import { aboutFacts } from './about-facts';
@@ -130,17 +130,29 @@ import {
 } from '../features/engineer-desk/entry';
 import {
   afterShellRender,
+  agentConnection,
   dismissToasts,
+  hasStage,
+  hatOf,
   installShell,
+  lastTicket,
+  onAgentConnection,
+  onAgentEvent,
+  setHat,
+  setLastTicket,
+  stageOf,
   isRegisteredRoute,
   onRouteRegistered,
   pmStage,
-  registeredAction,
   registeredRoute,
+  registeredAction,
   registeredRouteNames,
   registerStage,
   showToast,
 } from '../shell';
+import { HatScale, PrimaryKey } from '../shell/bar';
+import '../shell/bar.css';
+import { islandSlot, keepIsland } from '../islands/mount';
 
 const L = window.PracticeLive;
 const E = L.engine;
@@ -713,6 +725,14 @@ function render() {
   afterRender();
   restoreFocus(key);
 }
+// Being on a hat's own screen puts that hat on; the desk's ticket is remembered for the switch.
+function syncHat() {
+  const a = current();
+  if (!a || !inPractice()) return;
+  if (ui.route === 'engineer' && ui.routeId) setLastTicket(a.id, ui.routeId);
+  if (ENGINEER_ROUTES.includes(ui.route)) setHat(a.id, 'engineer');
+  else if (WS.slice(0, 4).includes(ui.route) || ui.route === 'review') setHat(a.id, 'pm');
+}
 function mountNativeSlots() {
   L.mountV4(current(), {
     taskId: task()?.id || null,
@@ -763,7 +783,10 @@ function renderEngineerReport() {
   return `${topbar(back)}<main id="main" class="page" data-engineer-report-page tabindex="-1"></main>`;
 }
 function mountEngineerReportRoute() {
-  document.title = T(`回归报告样例 · ${PRODUCT_NAME}`, `Regression report sample · ${PRODUCT_NAME}`);
+  document.title = T(
+    `回归报告样例 · ${PRODUCT_NAME}`,
+    `Regression report sample · ${PRODUCT_NAME}`,
+  );
   const root = document.querySelector('[data-engineer-report-page]');
   if (root)
     import('../features/engineer-report/page').then((m) => {
@@ -799,6 +822,8 @@ function mountEngineer() {
 }
 function afterRender() {
   afterShellRender();
+  syncHat();
+  mountShellBar();
   refreshAgentIssued();
   if (ui.route !== 'lab') labView = null;
   // The arrival is played once; cards drawn later (the native board mounts after this render)
@@ -922,20 +947,34 @@ function restoreFocus(key) {
 
 /* ---------- shared chrome ---------- */
 const wordmark = () =>
-  `<button type="button" class="wordmark" data-action="home" aria-label="${esc(T(`${PRODUCT_NAME}，回到岗位选择`, `${PRODUCT_NAME}, back to jobs`))}"><span class="wordmark-glyph" aria-hidden="true"></span><span>${esc(PRODUCT_NAME)}</span></button>`;
+  `<button type="button" class="wordmark" data-action="home" aria-label="${esc(T(`${PRODUCT_NAME}，回到岗位选择`, `${PRODUCT_NAME}, back to jobs`))}"><span class="wordmark-glyph" aria-hidden="true"></span><span class="wordmark-text">${esc(PRODUCT_NAME)}</span></button>`;
 const backBtn = (action, label) =>
   `<button type="button" class="btn quiet back" data-action="${action}">${icon('back')}<span>${esc(label)}</span></button>`;
 function langControl() {
   return `<div class="menu-wrap"><button type="button" class="btn quiet lang-btn" data-action="menu" data-menu="lang" aria-haspopup="menu" aria-expanded="${ui.menu === 'lang'}" aria-label="${esc(T('界面语言：中文', 'Interface language: English'))}">${icon('globe', 'i-sm')}<span class="lang-now">${locale() === 'zh' ? '中文' : 'EN'}</span></button>${ui.menu === 'lang' ? langMenu() : ''}</div>`;
 }
-function langMenu() {
+function langItems() {
   const pref = getPreference();
   const item = (v, label, sub = '') =>
     `<button type="button" role="menuitemradio" aria-checked="${pref === v}" data-action="set-lang" data-lang="${v}"><span class="grow">${label}${sub ? `<small>${sub}</small>` : ''}</span>${pref === v ? icon('check', 'i-sm') : ''}</button>`;
-  return `<div class="menu" role="menu">${item('auto', T('跟随系统', 'Match system'), detect() === 'zh' ? '中文' : 'English')}${item('zh', '中文')}${item('en', 'English')}</div>`;
+  return `${item('auto', T('跟随系统', 'Match system'), detect() === 'zh' ? '中文' : 'English')}${item('zh', '中文')}${item('en', 'English')}`;
 }
+function langMenu() {
+  return `<div class="menu right" role="menu">${langItems()}</div>`;
+}
+// Inside a practice every screen (board, result, sign-off desk, registered screens) shares one
+// shell bar; elsewhere (home, job page, lab) the light topbar stays.
+const inPractice = () =>
+  !!current() &&
+  (WS.includes(ui.route) || ui.route === 'review' || ENGINEER_ROUTES.includes(ui.route));
 const topbar = (left, right = '') =>
-  `<header class="topbar">${left}<div class="spacer"></div>${right}${langControl()}</header>`;
+  inPractice()
+    ? shellBar(current(), {
+        // The result page and the desk are peers of the board: the hat and the scale lead there.
+        back: ui.route === 'review' || ui.route === 'engineer' ? '' : left,
+        more: right,
+      })
+    : `<header class="topbar">${left}<div class="spacer"></div>${right}${langControl()}</header>`;
 const letter = (role, quote, size = '') =>
   `<figure class="letter ${size}">${avatar(role, size === 'sm' ? 'sm' : size === 'lg' ? 'lg' : 'md')}<div class="letter-body"><blockquote>${esc(quote)}</blockquote><figcaption>${PEOPLE[role].name}${PEOPLE[role].titled ? '' : `<span>${ROLE_TITLE(role)}</span>`}</figcaption></div></figure>`;
 // The manager's brief, plus one line in the manager's own voice on what to hand back, by when
@@ -1222,22 +1261,11 @@ function renderWorkspace() {
 const routeTask = (a) =>
   ui.route === 'task' ? a.tasks.find((t) => t.id === ui.routeId) || null : null;
 function wsToolbar(a) {
-  const st = statusOf(a);
-  const n = snap();
-  const s = sessionOf(a);
   const t = routeTask(a);
   const m = ui.route === 'doc' ? E.getMaterials(a).find((x) => x.id === ui.routeId) : null;
-  const conn = !n.connected
-    ? `<button type="button" class="conn bad" data-action="live-refresh" title="${esc(T('连接不上后端，点击重试', 'Cannot reach the server. Click to retry.'))}"><span class="conn-dot"></span>${T('离线', 'Offline')}</button>`
-    : s?.pending && !s.pending.jobId && !n.busy
-      ? `<button type="button" class="conn warn" data-action="live-retry" title="${esc(T('上一个操作没有得到确认，点击用原请求重试', 'The last action was not confirmed. Retry the same request.'))}">${icon('refresh', 'i-sm')}${T('待确认', 'Unconfirmed')}</button>`
-      : '';
-  const typing = typingRole(a);
-  const replying = replyingRoles(a);
-  const noteRoles = new Set((ui.notesCache || []).map((x) => x.role));
   const back =
     ui.route === 'work'
-      ? `<button type="button" class="btn quiet back" data-action="to-entry" title="${esc(T('离开工作台，回到 AI 产品经理', 'Leave the workspace for AI Product Manager'))}">${icon('back')}<span class="hide-md">${T('离开', 'Leave')}</span></button>`
+      ? ''
       : `<button type="button" class="btn quiet back up" data-action="to-board">${icon('back')}<span>${T('工作板', 'Board')}</span></button>`;
   const here = t
     ? `<span class="crumb-sep">${icon('chev', 'i-xs')}</span><span class="crumb-now">${esc(taskTitle(t))}</span>`
@@ -1246,31 +1274,190 @@ function wsToolbar(a) {
       : ui.route === 'bench'
         ? `<span class="crumb-sep">${icon('chev', 'i-xs')}</span><span class="crumb-now">${T('测试台', 'Test bench')}</span>`
         : '';
-  return `<header class="topbar ws-toolbar" id="ws-toolbar">
-    ${back}
-    <nav class="crumbbar" aria-label="${esc(T('位置', 'Location'))}">
-      <div class="menu-wrap title-wrap"><h1 class="ws-title"><button type="button" class="title-btn" data-action="menu" data-menu="brief" aria-expanded="${ui.menu === 'brief'}" aria-haspopup="dialog" title="${esc(T('委托与条件', 'Brief and conditions'))}"><span class="title-text" style="view-transition-name: case-title"${langOf(a)}>${esc(caseOf(a).title)}</span>${icon('down', 'i-sm')}</button></h1>${ui.menu === 'brief' ? briefPopover(a) : ''}</div>
-      ${here}
-    </nav>
-    ${st !== 'active' ? `<span class="state-chip ${st}">${sessionOf(a)?.v2ReadOnly ? T('旧版 · 只读', 'Earlier version · Read-only') : st === 'paused' ? T('已暂停', 'Paused') : T('已交付', 'Submitted')}</span>` : ''}
+  return shellBar(a, { back, here, id: 'ws-toolbar', cls: 'ws-toolbar', brief: true });
+}
+/* ---------- the shell bar (decision 1) ---------- */
+// The situation's own name, for a hat that has no title of its own yet (the engineer's, until
+// its line registers one): never the product manager's question.
+const SITUATION = {
+  pilot: ['知识助手试点', 'Knowledge-assistant pilot'],
+  urgent: ['知识助手试点 · 期限提前', 'Knowledge-assistant pilot, earlier deadline'],
+  capacity: ['知识助手试点 · 容量受限', 'Knowledge-assistant pilot, limited capacity'],
+  itticket: ['IT 工单助手试点', 'IT ticket-assistant pilot'],
+};
+const situationName = (a) => {
+  const n = SITUATION[a.scenarioId] || SITUATION.pilot;
+  return T(n[0], n[1]);
+};
+// Which hat this screen is worn in: the desk and its reports are the engineer's, the board and
+// the result the product manager's; screens other lines register follow the practice's hat.
+function hatHere(a) {
+  if (ENGINEER_ROUTES.includes(ui.route)) return 'engineer';
+  if (WS.slice(0, 4).includes(ui.route) || ui.route === 'review') return 'pm';
+  return hatOf(a.id);
+}
+function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief = false } = {}) {
+  const st = statusOf(a);
+  const n = snap();
+  const s = sessionOf(a);
+  const conn = !n.connected
+    ? `<button type="button" class="conn bad" data-action="live-refresh" title="${esc(T('连接不上后端，点击重试', 'Cannot reach the server. Click to retry.'))}"><span class="conn-dot"></span>${T('离线', 'Offline')}</button>`
+    : s?.pending && !s.pending.jobId && !n.busy
+      ? `<button type="button" class="conn warn" data-action="live-retry" title="${esc(T('上一个操作没有得到确认，点击用原请求重试', 'The last action was not confirmed. Retry the same request.'))}">${icon('refresh', 'i-sm')}${T('待确认', 'Unconfirmed')}</button>`
+      : '';
+  const typing = typingRole(a);
+  const replying = replyingRoles(a);
+  const noteRoles = new Set((ui.notesCache || []).map((x) => x.role));
+  // The title is what this hat is working on: the case's question for the product manager, the
+  // ticket for the engineer (its line registers it as Stage.title; until then a neutral name).
+  const hat = hatHere(a);
+  const own = stageOf(hat, a)?.title;
+  const titleText =
+    hat === 'engineer'
+      ? `<span class="title-text">${esc(own ? T(own[0], own[1]) : situationName(a))}</span>`
+      : `<span class="title-text" style="view-transition-name: case-title"${langOf(a)}>${esc(own ? T(own[0], own[1]) : caseOf(a).title)}</span>`;
+  const title =
+    brief && hat === 'pm'
+      ? `<div class="menu-wrap title-wrap"><h1 class="ws-title"><button type="button" class="title-btn" data-action="menu" data-menu="brief" aria-expanded="${ui.menu === 'brief'}" aria-haspopup="dialog" title="${esc(T('委托与条件', 'Brief and conditions'))}">${titleText}</button></h1>${ui.menu === 'brief' ? briefPopover(a) : ''}</div>`
+      : `<p class="ws-title"><span class="title-btn">${titleText}</span></p>`;
+  // Phone width keeps a way out even where the wide bar has none.
+  const narrowBack = back
+    ? ''
+    : `<button type="button" class="btn quiet back narrow-only" data-action="to-entry" aria-label="${esc(T('离开练习', 'Leave the practice'))}">${icon('back')}</button>`;
+  const c = agentConnection();
+  const lampLabel =
+    c.state === 'none'
+      ? T('连接 Agent', 'Connect agent')
+      : c.state === 'waiting'
+        ? T('等待 Agent', 'Waiting for agent')
+        : c.client || T('我的 Agent', 'My agent');
+  const lampTitle =
+    c.state === 'idle' && c.lastSeen
+      ? T(`我的 Agent · 上次 ${when(c.lastSeen)}`, `My agent · Last seen ${when(c.lastSeen)}`)
+      : T('我的 Agent', 'My agent');
+  const lamp = `<button type="button" class="agent-lamp" data-action="open-agent" data-state="${c.state}" title="${esc(lampTitle)}" aria-label="${esc(`${lampTitle}: ${lampLabel}`)}"><span class="lamp" aria-hidden="true"><span class="lamp-ring"></span></span><span class="lamp-label">${esc(lampLabel)}</span></button>`;
+  const record = `<button type="button" class="btn quiet icon icon-key record-btn" data-action="records" aria-label="${esc(T('记录', 'Record'))}" title="${esc(T('记录', 'Record'))}">${icon('hours', 'i-sm')}</button>`;
+  const moreWrap =
+    more ||
+    `<div class="menu-wrap">${btn(icon('more'), 'menu', 'icon quiet icon-key', `data-menu="more" aria-haspopup="menu" aria-expanded="${['more', 'lang', 'model'].includes(ui.menu)}" aria-label="${esc(T('更多', 'More'))}"`)}${ui.menu === 'more' ? moreMenu(a) : ui.menu === 'lang' ? langMenu() : ui.menu === 'model' && modelStatusOf(a) ? modelPopoverHtml(modelStatusOf(a)) : ''}</div>`;
+  return `<header class="topbar shell-bar ${cls} ${barFolds.join(' ')}" ${id ? `id="${id}"` : ''} data-hat="${hat}">
+    ${back}${narrowBack}${wordmark()}<span class="sep before-title" aria-hidden="true"></span>
+    <nav class="crumbbar" aria-label="${esc(T('位置', 'Location'))}">${title}${here}</nav>
+    ${/* Delivered is the scale's to say; the chip stays only for states the scale does not show. */ ''}
+    ${st !== 'active' && (st !== 'submitted' || s?.v2ReadOnly) ? `<span class="state-chip ${st}">${s?.v2ReadOnly ? T('旧版 · 只读', 'Earlier version · Read-only') : T('已暂停', 'Paused')}</span>` : ''}
     ${conn}
+    <span class="sep before-hat" aria-hidden="true"></span>
+    ${islandSlot('shell-hatscale')}
     <div class="spacer"></div>
     <button type="button" class="team-btn" data-action="open-rail" aria-label="${esc(T('团队', 'Team'))}">${ROLES.map((r) => avatar(r, 'sm', { typing: typing === r || replying.has(r), dot: unread(a, r) > 0 || noteRoles.has(r) })).join('')}</button>
-    ${modelChip(a)}
-    ${langControl()}
-    <div class="menu-wrap">${btn(icon('more'), 'menu', 'icon quiet', `data-menu="more" aria-haspopup="menu" aria-expanded="${ui.menu === 'more'}" aria-label="${esc(T('更多', 'More'))}"`)}${ui.menu === 'more' ? moreMenu(a) : ''}</div>
-    ${st === 'submitted' ? btn(T('看结果', 'See the result'), 'to-review', 'primary') : btn(icon('stamp', 'i-sm') + T('交付', 'Submit'), 'submit', hasDecision(a) ? 'primary' : '')}
+    ${lamp}${record}${moreWrap}
+    ${islandSlot('shell-primary')}
   </header>`;
+}
+/** Mounts or updates the bar's islands after a render: hat + scale, and the primary key. */
+function mountShellBar() {
+  const a = current();
+  if (!a || !document.querySelector('[data-island="shell-hatscale"]')) return;
+  requestAnimationFrame(fitShellBar);
+  const hat = hatHere(a);
+  const stage = stageOf(hat, a);
+  const steps = (stage?.steps || []).map((x) => ({
+    id: x.id,
+    label: T(x.label[0], x.label[1]),
+    state: x.state,
+  }));
+  const delivered = steps.length > 0 && steps.every((x) => x.state === 'done');
+  const at = delivered
+    ? steps.length - 1
+    : Math.max(
+        0,
+        steps.findIndex((x) => x.state === 'current'),
+      );
+  const stepName = steps.length
+    ? T(
+        `第 ${at + 1} 步，共 ${steps.length} 步：${steps[at].label}`,
+        `Step ${at + 1} of ${steps.length}: ${steps[at].label}`,
+      )
+    : '';
+  keepIsland('shell-hatscale', HatScale, {
+    hat,
+    hats: {
+      pm: T('产品经理', 'Product manager'),
+      engineer: T('工程师', 'Engineer'),
+      label: T('帽子', 'Hat'),
+      busy: T('正在换帽子', 'Switching hats'),
+    },
+    canSwitch: !!L.nativeWorkspace(a) && !sessionOf(a)?.v2ReadOnly,
+    steps,
+    scaleLabel: hat === 'pm' ? T('这一局的阶段', 'Stage') : T('签字的步骤', 'Sign-off steps'),
+    stepName,
+    delivered,
+    lang: locale(),
+  });
+  const p = stage?.primary;
+  if (p)
+    keepIsland('shell-primary', PrimaryKey, {
+      label: T(p.label[0], p.label[1]),
+      action: p.action,
+      id: p.id,
+      reason: p.disabledReason ? T(p.disabledReason[0], p.disabledReason[1]) : undefined,
+      // The manager's line on what to hand back and when, moved out of the brief onto the key.
+      hint:
+        p.action === 'submit'
+          ? briefDirection(a) ||
+            T(
+              '把试点决定和依据交给经理',
+              'Hand your pilot decision and its evidence to the manager',
+            )
+          : undefined,
+      icon: p.action === 'submit' ? 'stamp' : 'none',
+    });
+}
+// The bar never overlaps itself. The title gives way first (down to its minimum, with an
+// ellipsis); if the row still does not fit, things fold in a fixed order: the lamp's words and
+// the disabled key's reason, then the scale to "1/3", then the hat switch into ⋯.
+const BAR_FOLDS = ['fold-words', 'fold-scale', 'fold-hat'];
+// A redrawn bar starts with the last folds, so it never paints one frame overlapped.
+let barFolds = [];
+const watchedBar = new WeakSet();
+const barResize = new ResizeObserver(() => requestAnimationFrame(fitShellBar));
+function fitShellBar() {
+  const bar = document.querySelector('.shell-bar');
+  if (!bar) return;
+  bar.classList.remove(...BAR_FOLDS);
+  barFolds = [];
+  for (const fold of BAR_FOLDS) {
+    if (bar.scrollWidth <= bar.clientWidth + 1) break;
+    bar.classList.add(fold);
+    barFolds.push(fold);
+  }
+  // The islands draw after this render and change width with the stage: fit again then.
+  for (const el of bar.querySelectorAll('.rc-hatscale, .rc-primary, .crumbbar'))
+    if (!watchedBar.has(el)) {
+      watchedBar.add(el);
+      barResize.observe(el);
+    }
+}
+window.addEventListener('resize', () => requestAnimationFrame(fitShellBar));
+// A real agent call: the lamp's ring grows to 2.2x and fades, once (520ms).
+function pulseLamp() {
+  const ring = document.querySelector('.agent-lamp .lamp-ring');
+  if (!ring?.animate) return;
+  ring.animate(
+    reduceMotion.matches
+      ? [{ opacity: 0.6 }, { opacity: 0 }]
+      : [
+          { opacity: 0.7, transform: 'scale(1)' },
+          { opacity: 0, transform: 'scale(2.2)' },
+        ],
+    { duration: reduceMotion.matches ? 160 : 520, easing: 'cubic-bezier(.23,1,.32,1)' },
+  );
 }
 /** The practice's one model status, once the server has read it; null for legacy practice. */
 function modelStatusOf(a) {
   const host = a && L.nativeWorkspace(a) ? L.v4Host(a) : null;
   const read = host?.snapshot();
   return read?.asOf ? modelStatus(read.semantic) : null;
-}
-function modelChip(a) {
-  const status = modelStatusOf(a);
-  return status ? modelChipHtml(status, ui.menu === 'model') : '';
 }
 const menuItem = (action, label, ic, attrs = '') =>
   `<button type="button" role="menuitem" data-action="${action}" ${attrs}>${icon(ic, 'i-sm')}<span class="grow">${label}</span></button>`;
@@ -1288,6 +1475,15 @@ function moreMenu(a) {
       : '',
     sessionOf(a)?.protocol === 2 ? menuItem('continue-code', recovery.menuLabel(), 'sync') : '',
     lensMenuItems(),
+    `<div class="menu-sep" role="separator"></div>`,
+    `<button type="button" role="menuitem" data-action="menu" data-menu="lang">${icon('globe', 'i-sm')}<span class="grow">${T('界面语言', 'Language')}</span><span class="menu-value">${locale() === 'zh' ? '中文' : 'English'}</span></button>`,
+    modelStatusOf(a)
+      ? `<button type="button" role="menuitem" data-action="menu" data-menu="model">${icon('circle', 'i-sm')}<span class="grow">${T('模型', 'Model')}</span><span class="menu-value">${esc(modelStatusOf(a).short)}</span></button>`
+      : '',
+    `<span class="narrow-item">${menuItem('open-rail', T('团队与信号', 'Team and signals'), 'team')}</span>`,
+    L.nativeWorkspace(a)
+      ? `<span class="phone-item">${menuItem('hat-switch', hatHere(a) === 'pm' ? T('换成工程师', 'Switch to Engineer') : T('换成产品经理', 'Switch to Product manager'), 'sync', `data-hat="${hatHere(a) === 'pm' ? 'engineer' : 'pm'}"`)}</span>`
+      : '',
     menuItem('about', T('关于这个工作台', 'About this workspace'), 'info'),
     menuItem('to-entry', T('离开工作台', 'Leave the workspace'), 'back'),
   ];
@@ -1318,7 +1514,8 @@ function toggleReviewMenu(open) {
   if (menu) return;
   wrap.insertAdjacentHTML(
     'beforeend',
-    `<div class="menu right" role="menu">${lensMenuItems()}<button type="button" role="menuitem" data-action="about">${icon('info', 'i-sm')}<span class="grow">${T('关于这个工作台', 'About this workspace')}</span></button></div>`,
+    // The same ⋯ as on every other screen of the practice; it only opens in place here.
+    moreMenu(current()),
   );
   trigger?.setAttribute('aria-expanded', 'true');
   if (ui.kbd) wrap.querySelector('.menu button')?.focus();
@@ -1369,7 +1566,11 @@ onLensChange((on) => {
   document.querySelectorAll('[data-rc-run]').forEach((node) => {
     const run = (a.tests || []).find((t) => t.id === node.dataset.rcRun);
     node.innerHTML = run
-      ? signalsHtml(run.recognition, locale(), { context: 'test', lens: lensOn(), materialName: materialNameOf(a) })
+      ? signalsHtml(run.recognition, locale(), {
+          context: 'test',
+          lens: lensOn(),
+          materialName: materialNameOf(a),
+        })
       : '';
   });
   const hero = document.querySelector('[data-rc-hero]');
@@ -1489,7 +1690,9 @@ function revisionNote(a) {
   const quote = (t) => T(`「${t}」`, `‘${t}’`);
   const names = (g.unmet || []).slice(0, 3).map(quote);
   const more = (g.unmet || []).length - names.length;
-  const listed = names.join(T('、', ', ')) + (more > 0 ? T(` 等 ${g.unmet.length} 项`, ` and ${more} more`) : '');
+  const listed =
+    names.join(T('、', ', ')) +
+    (more > 0 ? T(` 等 ${g.unmet.length} 项`, ` and ${more} more`) : '');
   const tasks = [...revisionTaskIds(a)]
     .map((id) => a.tasks.find((t) => t.id === id))
     .filter(Boolean)
@@ -1499,14 +1702,22 @@ function revisionNote(a) {
     .filter(Boolean)
     .map((x) => T(`《${shown(x).title}》`, `‘${shown(x).title}’`));
   const where = tasks[0] || works[0] || '';
-  const round = Number.isFinite(g.delivery) ? T(`第 ${g.delivery} 次交付里，`, `In delivery ${g.delivery}, `) : T('上次交付里，', 'In your last delivery, ');
+  const round = Number.isFinite(g.delivery)
+    ? T(`第 ${g.delivery} 次交付里，`, `In delivery ${g.delivery}, `)
+    : T('上次交付里，', 'In your last delivery, ');
   const said = names.length
     ? round + T(`${listed}还没站住。`, `${listed} did not hold up yet. `)
     : g.reason
-      ? T(`你说这次要「${g.reason.replace(/[。.]$/, '')}」。`, `You said: ‘${g.reason.replace(/[.。]$/, '')}’. `)
+      ? T(
+          `你说这次要「${g.reason.replace(/[。.]$/, '')}」。`,
+          `You said: ‘${g.reason.replace(/[.。]$/, '')}’. `,
+        )
       : '';
   const next = where
-    ? T(`从${where}接着改，改好再交给我。`, `Pick it up from ${where} and bring it back to me when it is ready.`)
+    ? T(
+        `从${where}接着改，改好再交给我。`,
+        `Pick it up from ${where} and bring it back to me when it is ready.`,
+      )
     : T('改好再交给我。', 'Bring it back to me when it is ready.');
   return `<aside class="revise-note" data-revise-note aria-label="${esc(T('从哪里修订', 'Where to revise'))}">${letter('manager', said + next, 'sm')}${btn(T('知道了', 'Got it'), 'revise-note-ok', 'small quiet')}</aside>`;
 }
@@ -1534,7 +1745,10 @@ function policyChange(a, v) {
   const current = policyText(a, v);
   if (!current) return '';
   const prev = v > 1 ? policyText(a, v - 1) : null;
-  const text = current.replace(/^#.*\n+/, '').replace(/[*_`]/g, '').trim();
+  const text = current
+    .replace(/^#.*\n+/, '')
+    .replace(/[*_`]/g, '')
+    .trim();
   let clause = text.split(/(?<=[。；！？])|(?<=[;.!?])\s+/)[0].replace(/[。；;.]$/, '');
   const colon = clause.search(/[：:]\s?/);
   if (colon > 0 && colon < 40) clause = clause.slice(colon + 1).trim();
@@ -1665,9 +1879,11 @@ function productBar(a) {
   </section>`;
 }
 const UPDATE_SHORT = (k) =>
-  ({ daily: T('每日', 'Daily'), realtime: T('实时', 'Real-time'), manual: T('转人工', 'Manual check') })[
-    k
-  ] || UPDATE(k);
+  ({
+    daily: T('每日', 'Daily'),
+    realtime: T('实时', 'Real-time'),
+    manual: T('转人工', 'Manual check'),
+  })[k] || UPDATE(k);
 function rankMenu() {
   return `<div class="menu" role="menu"><p class="menu-cap">${T('想听谁的看法', 'Whose view?')}</p>${ROLES.map((r) => `<button type="button" role="menuitem" data-action="ask-priority" data-role="${r}">${avatar(r, 'xs')}<span class="grow">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span></button>`).join('')}</div>`;
 }
@@ -3077,9 +3293,11 @@ const practiceOptionShown = (o) => caseShown(practiceScenario(o.id));
 // The visible condition change of a reviewed variant, from the same case texts the practice list shows.
 // It is world text, so it is told in that practice's work language.
 function practiceChange(optionId, language = null) {
-  const caseId = { pm_pilot_urgent: 'urgent', pm_pilot_capacity15: 'capacity', it_ticket_pilot: 'itticket' }[
-    String(optionId).replace(/-(zh|en)$/, '')
-  ];
+  const caseId = {
+    pm_pilot_urgent: 'urgent',
+    pm_pilot_capacity15: 'capacity',
+    it_ticket_pilot: 'itticket',
+  }[String(optionId).replace(/-(zh|en)$/, '')];
   return caseId ? CASE(caseId, language).change || '' : '';
 }
 function practiceOriginNote(a) {
@@ -3100,7 +3318,10 @@ function recognitionHero(a) {
   return `<div class="rc-hero" data-rc-hero>${recognitionHeroInner(a)}</div>`;
 }
 function behaviorInner(a) {
-  return behaviorHtml(ui.behavior?.[a?.id], locale(), { lens: lensOn(), materialName: materialNameOf(a) });
+  return behaviorHtml(ui.behavior?.[a?.id], locale(), {
+    lens: lensOn(),
+    materialName: materialNameOf(a),
+  });
 }
 function behaviorSection(a) {
   const html = behaviorInner(a);
@@ -4217,8 +4438,7 @@ function startingOrder(caseId, el) {
   return card ? [...card.querySelectorAll('select[data-change="triage"]')].map((x) => x.value) : [];
 }
 async function startAttempt(caseId, opts) {
-  if (!caseShown(caseId))
-    throw new Error(T('这个情境暂不开放。', 'This situation is not open.'));
+  if (!caseShown(caseId)) throw new Error(T('这个情境暂不开放。', 'This situation is not open.'));
   const a = await L.start(caseId, {
     ...opts,
     initialTasks: SEED_KEYS.map((key) => ({ title: seedText(key) })),
@@ -5191,6 +5411,23 @@ async function act(el, ev = new Event('rc-action')) {
     }
     case 'menu': {
       const m = el.dataset.menu;
+      // On the result page ⋯ opens in place (a redraw would remount the feedback): its
+      // language and model rows swap the menu for their panel there too.
+      const inPlace = el.closest('[data-review-menu]');
+      if (inPlace && (m === 'lang' || m === 'model')) {
+        const status = modelStatusOf(a);
+        inPlace.querySelector('.menu')?.remove();
+        inPlace.insertAdjacentHTML(
+          'beforeend',
+          m === 'lang'
+            ? langMenu()
+            : status
+              ? `<div class="menu right">${modelPopoverHtml(status)}</div>`
+              : '',
+        );
+        if (ui.kbd) inPlace.querySelector('.menu button')?.focus();
+        break;
+      }
       ui.menu = ui.menu === m ? null : m;
       if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']);
       else render();
@@ -5241,10 +5478,84 @@ async function act(el, ev = new Event('rc-action')) {
         '[data-v4-practice] [data-action="practice-choose"], [data-v4-practice] button',
       );
       const column = document.querySelector('[data-v4-practice]');
-      column?.scrollIntoView({ block: 'nearest', behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+      column?.scrollIntoView({
+        block: 'nearest',
+        behavior: reduceMotion.matches ? 'auto' : 'smooth',
+      });
       (choice || column)?.focus?.({ preventScroll: true });
       break;
     }
+    // The hat switch (topbar, or ⋯ at phone width). The engineer's side opens the desk's
+    // ticket from before, or the one that comes with the situation.
+    case 'hat-switch': {
+      if (!a) break;
+      const to = el.dataset.hat === 'engineer' ? 'engineer' : 'pm';
+      // No page-wide view transition: the bar stays put and its thumb slides; only the main
+      // screen changes.
+      if (to === 'pm') {
+        setHat(a.id, 'pm');
+        go('work');
+        break;
+      }
+      let ticket = lastTicket(a.id);
+      if (!ticket) {
+        try {
+          ticket = (await openEngineerTicket(L.gatewayTransport(a), a.id, { from: 'seeded' })).id;
+        } catch (err) {
+          // Only reached when the engineer line's own hat-switch is absent or failed. A delivered
+          // practice offers a revision (wording from 201); the key runs hat-switch again.
+          if (statusOf(a) === 'submitted') {
+            const refused = new Error(
+              T(
+                '这一局已经交付。要接手工程委托，先开一轮修订：你的交付和反馈都保留。',
+                'This practice is delivered. Open a revision to take the engineering ticket; your delivery and feedback stay.',
+              ),
+            );
+            refused.toastAction = {
+              label: T('开始修订', 'Open a revision'),
+              action: 'hat-switch',
+              data: { hat: 'engineer' },
+            };
+            throw refused;
+          }
+          throw new Error(
+            err?.message || T('委托没能打开，再试一次。', 'The ticket did not open. Try again.'),
+          );
+        }
+        setLastTicket(a.id, ticket);
+      }
+      setHat(a.id, 'engineer');
+      go('engineer', { id: ticket });
+      break;
+    }
+    // A step on the product manager's scale: Delivered opens the result, the others the board.
+    case 'stage-pm':
+      if (!a) break;
+      if (el.dataset.step === 'delivered') {
+        if (statusOf(a) === 'submitted') go('review', { transition: true });
+      } else if (ui.route !== 'work') go('work', { transition: true });
+      break;
+    // The agent lamp: the My agent screen once the agent line registers it; until then the
+    // rail's agent tab.
+    case 'open-agent':
+      if (isRegisteredRoute('agent')) go('agent', { transition: true });
+      else {
+        if (!WS.includes(ui.route)) go('work');
+        ui.railTab = 'agent';
+        ui.rail = 'team';
+        if (narrowRail()) ui.railOpen = true;
+        refreshWS(['rail', 'toolbar']);
+      }
+      break;
+    // ⏱ The record. The board line registers its drawer under the same name (and wins); this is
+    // the rail's record tab until then.
+    case 'records':
+      if (!WS.includes(ui.route)) go('work');
+      ui.railTab = 'activity';
+      ui.rail = 'team';
+      if (narrowRail()) ui.railOpen = true;
+      refreshWS(['rail', 'toolbar']);
+      break;
     case 'open-rail':
       ui.railOpen = true;
       refreshWS(['toolbar', 'rail']);
@@ -6672,10 +6983,33 @@ if ((WS.includes(ui.route) || ui.route === 'review') && !current()) {
   history.replaceState(null, '', '#/');
 }
 installShell((el, ev) => act(el, ev));
+onAgentEvent(pulseLamp);
+onAgentConnection(() => {
+  if (inPractice()) {
+    if (WS.includes(ui.route)) refreshWS(['toolbar']);
+    else {
+      const lamp = document.querySelector('.agent-lamp');
+      if (lamp) lamp.dataset.state = agentConnection().state;
+    }
+  }
+});
+// The engineer's scale until 201 registers the real one: the three steps, the first current.
+if (!hasStage('engineer'))
+  registerStage('engineer', () => ({
+    steps: [
+      { id: 'reproduce', label: ['复现', 'Reproduce'], state: 'current' },
+      { id: 'fix', label: ['修复与试跑', 'Fix & trial'], state: 'todo' },
+      { id: 'sign', label: ['签字', 'Sign off'], state: 'todo' },
+    ],
+  }));
 // The product manager's stage: no draft yet → Investigate; a draft → Decide; submitted → Delivered.
 registerStage('pm', (a) =>
   pmStage({
-    hasDraft: works(a).some((x) => String(editorView(a, x).body || '').trim()),
+    // A native practice keeps its work on the server (any product counts as a draft); a local
+    // one in its records.
+    hasDraft:
+      (sessionOf(a)?.v2Workspace?.products ?? []).length > 0 ||
+      works(a).some((x) => String(editorView(a, x).body || '').trim()),
     delivered: statusOf(a) === 'submitted',
     onResult: ui.route === 'review',
   }),

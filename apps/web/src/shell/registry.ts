@@ -64,14 +64,18 @@ export function setActionRunner(fn: (el: HTMLElement, ev: Event) => unknown): vo
 
 /**
  * Runs an action by name from code that has no button of its own (a toast, an island). It goes
- * through the same path as a click: registered handlers first, then ui.js.
+ * through the same path as a click: registered handlers first, then ui.js. The promise rejects
+ * with the action's error, so the caller can say what went wrong.
  */
-export function runAction(name: string, id?: string, data: Record<string, string> = {}): void {
+export function runAction(
+  name: string,
+  id?: string,
+  data: Record<string, string> = {},
+): Promise<unknown> {
   const el = document.createElement('button');
   el.dataset.action = name;
   if (id != null) el.dataset.id = id;
   for (const [k, v] of Object.entries(data)) el.dataset[k] = v;
   const ev = new Event('rc-action');
-  if (runner) void runner(el, ev);
-  else void dispatchRegistered(name, el, ev);
+  return Promise.resolve(runner ? runner(el, ev) : dispatchRegistered(name, el, ev));
 }

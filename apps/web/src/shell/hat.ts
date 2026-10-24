@@ -64,3 +64,24 @@ onHatChange((key, hat) => {
     /* page only */
   }
 });
+
+/* ---------- the engineer's desk to come back to ---------- */
+
+const TICKET = 'rolecraft.hat.ticket.v1';
+/** The ticket last open on this practice's sign-off desk, for the hat switch. */
+export function lastTicket(sessionKey: string): string | null {
+  try {
+    return JSON.parse(localStorage.getItem(TICKET) || '{}')[sessionKey] ?? null;
+  } catch {
+    return null;
+  }
+}
+export function setLastTicket(sessionKey: string, ticketId: string): void {
+  try {
+    const all = JSON.parse(localStorage.getItem(TICKET) || '{}');
+    all[sessionKey] = ticketId;
+    localStorage.setItem(TICKET, JSON.stringify(all));
+  } catch {
+    /* page only */
+  }
+}

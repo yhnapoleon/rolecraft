@@ -26,7 +26,7 @@ export function pmStage(f: PmFacts): Stage {
   ] as Stage['steps'];
   const primary: Stage['primary'] = f.delivered
     ? f.onResult
-      ? { label: ['修订', 'Revise'], action: 'practice-continue' }
+      ? { label: ['修订', 'Revise'], action: 'result-revise' }
       : { label: ['看结果', 'See the result'], action: 'to-review' }
     : f.hasDraft
       ? { label: ['交付', 'Submit'], action: 'submit' }

@@ -10,8 +10,11 @@
     --rail-w: 368px;
   }
 }
-.rc-toaster[data-sonner-toaster][data-x-position="center"] {
-  left: calc(50% - var(--rail-w) / 2);
+/* Phones keep Sonner's own 16px side offsets (its own breakpoint is 600px). */
+@media (min-width: 600px) {
+  .rc-toaster[data-sonner-toaster][data-x-position="center"] {
+    left: calc(50% - var(--rail-w) / 2);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   /* Sonner sets the toast's transform inline; reduced motion must still win. */

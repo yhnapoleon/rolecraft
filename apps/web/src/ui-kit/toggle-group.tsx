@@ -1,9 +1,9 @@
-// Segmented control on Radix ToggleGroup (shadcn toggle-group, MIT). The selected item gets an
-// ink thumb that slides between items (Motion layoutId, ~200ms spring). Used by the hat switch
-// and the result page's view switch.
-import { LayoutGroup, motion, useReducedMotion } from 'motion/react';
+// Segmented control on Radix ToggleGroup (shadcn toggle-group, MIT). The selected item sits on
+// an ink plate that slides between items (~200ms on the spring curve). Used by the hat switch
+// and, through Tabs, the result page's view switch.
+import './kit.css';
 import { ToggleGroup as Radix } from 'radix-ui';
-import { useId } from 'react';
+import { useLayoutEffect, useRef } from 'react';
 import { cn } from './cn';
 
 /** The control's track: instrument inset with a hairline. */
@@ -23,6 +23,72 @@ export const segmentClass = (on: boolean, size: 'sm' | 'md') =>
 
 export type Segment<V extends string> = { value: V; label: React.ReactNode; title?: string };
 
+/**
+ * The ink plate, done the clip-path way (Emil Kowalski): a copy of the labels in ink, clipped to
+ * the active item's box, sits over the plain labels. Moving the clip moves the plate, and the
+ * text under it is always the right colour, mid-slide included.
+ */
+export function useInkClip(value: string) {
+  const track = useRef<HTMLDivElement>(null);
+  const layer = useRef<HTMLDivElement>(null);
+  const last = useRef<string | null>(null);
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-measure whenever the value moves
+  useLayoutEffect(() => {
+    const el = track.current;
+    const ink = layer.current;
+    if (!el || !ink) return;
+    const clipOf = () => {
+      const on = el.querySelector<HTMLElement>('[data-state="on"], [data-state="active"]');
+      if (!on) return 'inset(50%)';
+      const l = on.offsetLeft;
+      const r = el.clientWidth - l - on.offsetWidth;
+      const t = on.offsetTop;
+      const b = el.clientHeight - t - on.offsetHeight;
+      return `inset(${t}px ${r}px ${b}px ${l}px round 6px)`;
+    };
+    const next = clipOf();
+    ink.style.clipPath = next;
+    // Animated with WAAPI, not a CSS transition: under ui.js the island is moved into a freshly
+    // drawn bar on the same click, and a moved node loses its running transitions.
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (last.current && last.current !== next && !reduce) {
+      const spring = getComputedStyle(document.documentElement).getPropertyValue('--spring').trim();
+      ink.animate([{ clipPath: last.current }, { clipPath: next }], {
+        duration: 200,
+        easing: spring || 'cubic-bezier(.23,1,.32,1)',
+      });
+    }
+    last.current = next;
+    const ro = new ResizeObserver(() => {
+      last.current = clipOf();
+      ink.style.clipPath = last.current;
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [value]);
+  return { track, layer };
+}
+
+export function InkLayer({
+  layer,
+  items,
+  size,
+}: {
+  layer: React.RefObject<HTMLDivElement | null>;
+  items: { value: string; label: React.ReactNode }[];
+  size: 'sm' | 'md';
+}) {
+  return (
+    <div ref={layer} className="rc-ink-layer" aria-hidden="true">
+      {items.map((it) => (
+        <span key={it.value} className={segmentClass(true, size)}>
+          {it.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 export function Segmented<V extends string>({
   value,
   onChange,
@@ -38,42 +104,28 @@ export function Segmented<V extends string>({
   size?: 'sm' | 'md';
   className?: string;
 }) {
-  const id = useId();
-  const reduce = useReducedMotion();
+  const { track, layer } = useInkClip(value);
   return (
-    <LayoutGroup id={id}>
-      <Radix.Root
-        type="single"
-        value={value}
-        // Radix lets a single group be emptied by clicking the active item; we always keep one.
-        onValueChange={(v) => v && onChange(v as V)}
-        aria-label={label}
-        className={cn(trackClass(), className)}
-      >
-        {items.map((it) => {
-          const on = it.value === value;
-          return (
-            <Radix.Item
-              key={it.value}
-              value={it.value}
-              title={it.title}
-              className={segmentClass(on, size)}
-            >
-              {on && (
-                <motion.span
-                  layoutId="thumb"
-                  aria-hidden="true"
-                  className="tw:absolute tw:inset-0 tw:-z-10 tw:rounded-[6px] tw:bg-primary"
-                  transition={
-                    reduce ? { duration: 0 } : { type: 'spring', duration: 0.2, bounce: 0.12 }
-                  }
-                />
-              )}
-              <span className="tw:relative">{it.label}</span>
-            </Radix.Item>
-          );
-        })}
-      </Radix.Root>
-    </LayoutGroup>
+    <Radix.Root
+      ref={track}
+      type="single"
+      value={value}
+      // Radix lets a single group be emptied by clicking the active item; we always keep one.
+      onValueChange={(v) => v && onChange(v as V)}
+      aria-label={label}
+      className={cn(trackClass(), className)}
+    >
+      {items.map((it) => (
+        <Radix.Item
+          key={it.value}
+          value={it.value}
+          title={it.title}
+          className={segmentClass(false, size)}
+        >
+          {it.label}
+        </Radix.Item>
+      ))}
+      <InkLayer layer={layer} items={items} size={size} />
+    </Radix.Root>
   );
 }

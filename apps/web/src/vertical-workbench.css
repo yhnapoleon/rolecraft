@@ -60,7 +60,7 @@
 .v2-paper {
   padding: 32px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--r-paper);
   box-shadow: var(--shadow-paper);
   min-width: 0;
 }
@@ -248,7 +248,7 @@
   max-height: 85dvh;
   padding: 28px;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--r-dialog);
   background: var(--surface);
   color: var(--ink);
   overflow: auto;
@@ -277,7 +277,7 @@
 #native-feedback > section {
   background: var(--paper);
   padding: 28px;
-  border-radius: 16px;
+  border-radius: var(--r-panel);
 }
 #native-feedback h2 {
   font-size: 21px;
