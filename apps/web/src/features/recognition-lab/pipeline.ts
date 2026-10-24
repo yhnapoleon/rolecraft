@@ -155,9 +155,10 @@ function families(stage: Stage, c: Chain, l: Language): string[] {
   }
 }
 
-/** A stage's course families as pills ('' when it has none): the station and its detail
- * draw the same ones. */
-function familyPills(stage: Stage, c: Chain, l: Language) {
+/** A stage's course families ('' when it has none), from one list for both places: pills in
+ * the stage's detail, plain notes (one per line) on the track, where a capsule that wraps to
+ * two lines would look like a layout error. */
+function familyPills(stage: Stage, c: Chain, l: Language, as: 'pills' | 'notes' = 'pills') {
   // A narrow station may wrap a long label; it breaks only after “·” (“Supervised ·” /
   // “deep learning”), never inside a family name.
   const unbroken = (label: string) =>
@@ -165,11 +166,10 @@ function familyPills(stage: Stage, c: Chain, l: Language) {
       .split(' · ')
       .map((part) => part.replace(/ /g, '\u00a0'))
       .join('\u00a0· ');
+  const extra = c.fallback && stage === 'recog' ? ' data-extra' : '';
+  const cls = as === 'pills' ? 'rc-family' : 'rc-st-fam';
   return families(stage, c, l)
-    .map(
-      (x) =>
-        `<span class="rc-family"${c.fallback && stage === 'recog' ? ' data-extra' : ''}>${esc(unbroken(x))}</span>`,
-    )
+    .map((x) => `<span class="${cls}"${extra}>${esc(unbroken(x))}</span>`)
     .join('');
 }
 
@@ -350,7 +350,7 @@ export function pipelineHtml(c: Chain, l: Language) {
   const stations = STAGES.map(
     (s, i) =>
       `<li class="rc-station" data-state="ahead" role="presentation"><button type="button" role="tab" id="rc-st-${i}" class="rc-st" aria-selected="false" aria-controls="rc-st-panel" tabindex="-1" data-rc-stage="${i}"><span class="rc-node" aria-hidden="true"></span><span class="rc-st-num" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span><span class="rc-st-name">${t(STAGE_NAME[s])}</span>${(() => {
-        const tags = familyPills(s, c, l);
+        const tags = familyPills(s, c, l, 'notes');
         return tags ? `<span class="rc-st-fams" aria-hidden="true">${tags}</span>` : '';
       })()}<span class="rc-st-note">${esc(brief[s])}</span></button>${i < STAGES.length - 1 ? '<span class="rc-seg" aria-hidden="true"><i class="rc-seg-fill"></i></span>' : ''}</li>`,
   ).join('');

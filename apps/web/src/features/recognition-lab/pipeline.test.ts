@@ -116,6 +116,9 @@ describe('choosing a sentence on the system profile', () => {
 /** The course-family pills in a piece of HTML, in order. */
 const pills = (html: string) =>
   [...html.matchAll(/<span class="rc-family"[^>]*>([^<]*)<\/span>/g)].map(([, x]) => x.replace(/\u00a0/g, ' '));
+/** The course-family notes (plain text, one per line) on a station, in order. */
+const notes = (html: string) =>
+  [...html.matchAll(/<span class="rc-st-fam"[^>]*>([^<]*)<\/span>/g)].map(([, x]) => x.replace(/\u00a0/g, ' '));
 /** The station of stage i as drawn on the track. */
 const station = (html: string, i: number) =>
   html.match(new RegExp(`<li class="rc-station"[^>]*><button[^>]*data-rc-stage="${i}"[\\s\\S]*?</li>`))?.[0] ?? '';
@@ -136,10 +139,10 @@ describe('the six stations on the system profile', () => {
     const chain = chainFor(practice, 'zh', 1, { submitted: 2 });
     const html = pipelineHtml(chain, 'zh');
     STAGES.forEach((stage, i) => {
-      expect(pills(station(html, i)), stage).toEqual(pills(stageDetail(stage, chain, 'zh')));
+      expect(notes(station(html, i)), stage).toEqual(pills(stageDetail(stage, chain, 'zh')));
     });
-    expect(pills(station(html, 2))).toEqual(['混合']);
-    expect(pills(station(html, 3))).toEqual(['监督 · 深度学习', '集成 · 混合']);
+    expect(notes(station(html, 2))).toEqual(['混合']);
+    expect(notes(station(html, 3))).toEqual(['监督 · 深度学习', '集成 · 混合']);
     // Reading in and splitting are not the course's “sensing”: no pill, no empty row.
     expect(station(html, 0)).not.toContain('rc-st-fams');
     expect(station(html, 1)).not.toContain('rc-st-fams');
@@ -148,7 +151,19 @@ describe('the six stations on the system profile', () => {
     expect(represent.indexOf('rc-st-name')).toBeLessThan(represent.indexOf('rc-st-fams'));
     expect(represent.indexOf('rc-st-fams')).toBeLessThan(represent.indexOf('rc-st-note'));
     const fallback = pipelineHtml({ ...chain, fallback: true }, 'zh');
-    expect(pills(station(fallback, 3))).toEqual(['规则回退']);
+    expect(notes(station(fallback, 3))).toEqual(['规则回退']);
+  });
+
+  it('writes the station families as plain notes and keeps pills in the stage detail', () => {
+    const chain = chainFor(practice, 'en', 1, { submitted: 2 });
+    const html = pipelineHtml(chain, 'en');
+    const track = html.slice(html.indexOf('rc-track'), html.indexOf('data-rc-panel'));
+    // On the track: no capsules, one note per family (a long one wraps by words).
+    expect(track).not.toContain('class="rc-family"');
+    expect(notes(station(html, 3))).toEqual(['Supervised · deep learning', 'Ensemble · hybrid']);
+    // In the detail below: the same families, still as pills.
+    expect(pills(stageDetail('recog', chain, 'en'))).toEqual(['Supervised · deep learning', 'Ensemble · hybrid']);
+    expect(stageDetail('recog', chain, 'en')).not.toContain('rc-st-fam');
   });
 
   it('says the decision and the reviewer summary in plain English, with the right plural', () => {
