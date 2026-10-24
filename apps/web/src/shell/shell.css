@@ -22,3 +22,15 @@
     transform: none !important;
   }
 }
+
+/* The old #toast, kept as an invisible mirror of the toast on screen (see toast.ts). Rendered,
+ * so its text can be read, but clipped to nothing and out of the way. */
+.toast-mirror {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  pointer-events: none;
+}

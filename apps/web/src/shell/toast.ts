@@ -24,6 +24,33 @@ export function toast(
 
 let last: string | number | null = null;
 
+/*
+ * The page's old #toast element stays as an invisible mirror of the toast on screen: its text,
+ * and the class "visible" while the toast is up. Browser regression suites read it; people never
+ * see it, and screen readers hear the toast once (aria-hidden here).
+ */
+function mirror(): HTMLElement | null {
+  const el = document.getElementById('toast');
+  if (el && !el.dataset.mirror) {
+    el.dataset.mirror = '1';
+    el.className = 'toast-mirror';
+    el.removeAttribute('role');
+    el.setAttribute('aria-hidden', 'true');
+  }
+  return el;
+}
+function mirrorShow(id: string | number, text: string, label?: string) {
+  const el = mirror();
+  if (!el) return;
+  el.dataset.toastId = String(id);
+  el.textContent = label ? `${text} ${label}` : text;
+  el.classList.add('visible');
+}
+function mirrorHide(id: string | number) {
+  const el = mirror();
+  if (el && el.dataset.toastId === String(id)) el.classList.remove('visible');
+}
+
 /** A toast whose action is a callback. Replaces the toast on screen (one at a time). */
 export function showToast(
   text: string,
@@ -31,8 +58,12 @@ export function showToast(
 ): void {
   if (last != null) sonner.dismiss(last);
   const run = opts.run;
+  const id = `t${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
   last = sonner(text, {
+    id,
     duration: opts.long || run ? LONG : SHORT,
+    onDismiss: () => mirrorHide(id),
+    onAutoClose: () => mirrorHide(id),
     // lead: trusted markup from our own templates (an avatar, an icon).
     icon: opts.lead
       ? createElement('span', {
@@ -52,10 +83,12 @@ export function showToast(
           }
         : undefined,
   });
+  mirrorShow(id, text, run ? opts.label : undefined);
 }
 
 /** Withdraws the toast on screen (an undo belongs to the page it was offered on). */
 export function dismissToasts(): void {
   sonner.dismiss();
   last = null;
+  mirror()?.classList.remove('visible');
 }
