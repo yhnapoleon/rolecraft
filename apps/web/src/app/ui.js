@@ -25,6 +25,8 @@ import {
 import * as Coach from './coach.js';
 import { summaryText } from '../features/recognition-native/badge';
 import { lensOn, onLensChange, setLens } from '../features/recognition-native/lens';
+import { openLensForDelivery } from '../screens/result/deliver-lens';
+import { registerResultScreen } from '../screens/result';
 import { playReading } from '../features/recognition-native/sentences';
 import { signalsHtml } from '../features/recognition-native/signals';
 // The system profile page (#/lab) loads its code on demand, its styles with the main bundle.
@@ -148,6 +150,7 @@ import {
   registeredRoute,
   registeredAction,
   registeredRouteNames,
+  registerRoute,
   registerStage,
   showToast,
 } from '../shell';
@@ -2874,27 +2877,10 @@ function msgHtml(a, role, m) {
       : '');
   return `<div class="msg ${mine ? 'me' : 'them'}${local ? ' local' : ''}"><div class="bubble"${zhAttr(m.text)}>${mine ? esc(text) : md(text)}</div>${time || tag || (mine && tk) ? `<span class="msg-foot">${tag}${mine && tk ? (task ? `<button type="button" class="msg-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : `<span class="msg-task" title="${esc(tk)}">${esc(T('关联事项：', 'Linked task: ') + Array.from(String(tk)).slice(0, 8).join('') + (Array.from(String(tk)).length > 8 ? '…' : ''))}</span>`) : ''}${time ? `<time title="${esc(time)}">${when(time)}</time>` : ''}</span>` : ''}</div>`;
 }
-function railFeedback(a, t) {
-  if (L.nativeWorkspace(a)) {
-    return `<div class="rail-pad fb-pad" data-v4-feedback
-      data-v4-region="feedback" data-open-review="${!!ui.reviewFor}"></div>`;
-  }
-  const scoped = t && !ui.scopeAll;
-  const items = Coach.observations(a, E, scoped ? t.id : null);
-  const x =
-    t && ui.obj && ui.obj.type === 'work'
-      ? a.artifacts.find((y) => y.id === ui.obj.id && !y.removedAt)
-      : null;
-  const review =
-    ui.reviewFor && x && ui.reviewFor === x.id
-      ? Coach.checks(a, E, Object.assign({}, shown(x), { revision: x.revision }))
-      : null;
-  return `<div class="rail-pad fb-pad">
-    ${x ? `<div class="fb-req"><div class="grow"><p class="fb-req-title">${esc(shown(x).title)}</p><p class="meta">${esc(purposeLabel(shown(x).purpose))} · ${workVersion(x.revision)}</p></div>${btn(icon('eye', 'i-sm') + T('请求评审', 'Request a review'), 'request-review', 'small')}</div>` : ''}
-    ${review ? `<section class="checks-list"><h3 class="mini-title">${T('记录核对', 'Record check')}</h3>${review.map((c) => `<p class="${c.ok ? 'ok' : 'bad'}">${icon(c.ok ? 'check' : 'warn', 'i-sm')}<span>${esc(c.text)}</span></p>`).join('')}</section>` : ''}
-    ${items.length ? `<ol class="feedback">${items.map((i) => fbItem(a, i)).join('')}</ol>` : `<p class="feed-empty">${T('从现有记录里，暂时没有要提醒的地方。这不等于论证已经成立。', 'Nothing to flag from the record so far. That does not mean the reasoning holds.')}</p>`}
-    <p class="fb-label">${icon('info', 'i-xs')}${T('规则示意：根据已经发生的记录生成，不打分。正式评审在交付后由后端生成。', 'Rule-based: generated from what has happened, no scores. The formal review comes from the server after you submit.')}</p>
-  </div>`;
+// The rail no longer carries the result (it lives on the result page, the main screen). Until
+// the board line drops this tab, it holds one line and the way there.
+function railFeedback(a) {
+  return `<div class="rail-pad"><p class="feed-empty">${statusOf(a) === 'submitted' ? T('结果在结果页。', 'The result is on the result page.') : T('交付以后，结果会在主屏打开。', 'After you submit, the result opens on the main screen.')}</p>${statusOf(a) === 'submitted' ? btn(T('看结果', 'See the result'), 'to-review', 'small') : ''}</div>`;
 }
 function fbItem(a, i, full = false) {
   const candidate =
@@ -3187,33 +3173,33 @@ function keepDocSheet(a) {
 }
 
 /* ---------- 4. review ---------- */
+// The result page (#/review) is drawn in the workspace's main screen (registered below): the
+// topbar and the people stay, the main screen holds the stamped result and its detail, then the
+// optional practice. References open as a sheet over the main screen; recognition counts live
+// in #/lab, not here.
 function renderReview() {
-  // References look clickable, so no hint precedes them. The reader opens in the side column's
-  // first slot; `display: contents` keeps the empty slot from adding a gap above the practice.
-  if (current() && L.nativeWorkspace(current()))
-    return `${topbar(backBtn('to-board', T('工作板', 'Board')), reviewMenu())}
-    <main id="main" class="page review" tabindex="-1">
-      <header class="review-hero"><div class="review-title"><p class="meta"${langOf(current())}>${esc(caseOf(current()).title)}</p><h1 class="title-xl">${T('交付与反馈', 'Submission and feedback')}</h1>${recognitionHero(current())}</div></header>
-      <div class="review-grid">
-        <div class="review-main" data-v4-feedback data-v4-region="feedback"></div>
-        <aside class="review-side">
-          <div class="reference-side" data-v4-reference-side style="display: contents"></div>
-          ${practiceOriginNote(current())}
+  if (current() && L.nativeWorkspace(current())) {
+    const a = current();
+    return `<div class="result-desk">
+        <h1 class="sr-only">${T('结果', 'Result')}</h1>
+        <div class="result-main" data-v4-feedback data-v4-region="feedback" data-result-layout="true"></div>
+        <section class="result-after" aria-label="${esc(T('接下来', 'What next'))}">
+          ${behaviorSection(a)}
+          ${practiceOriginNote(a)}
           <section class="review-practice" data-v4-practice aria-live="polite">
-            ${practiceSection(current())}
+            ${practiceSection(a)}
           </section>
-          ${behaviorSection(current())}
-        </aside>
-      </div>
-    </main>`;
+        </section>
+      </div>`;
+  }
   const a = current();
   const s = sessionOf(a);
   const fb = s?.feedback;
   const submission = s ? L.store.submissionId(s) : '';
   const pending = s?.pending && (s.pending.job?.kind ?? s.pending.kind) === 'feedback';
-  const head = topbar(backBtn('to-board', T('工作板', 'Board')));
+  const head = '';
   if (!submission)
-    return `${head}<main id="main" class="page review" tabindex="-1"><div class="empty big"><h1 class="title-l">${T('交付之后，评审会出现在这里', 'The review appears here after you submit')}</h1>${btn(T('回到工作台', 'Back to the workspace'), 'to-work', 'primary')}</div></main>`;
+    return `<div class="page review"><div class="empty big"><h1 class="title-l">${T('交付之后，评审会出现在这里', 'The review appears here after you submit')}</h1>${btn(T('回到工作台', 'Back to the workspace'), 'to-work', 'primary')}</div></div>`;
   const items = fb ? fb.items : [];
   const groups = [
     ['NOT_MET', T('需要补上', 'Needs work'), 'warn'],
@@ -3243,7 +3229,7 @@ function renderReview() {
   const firstCrit = items[0] ? items[0].criterion_id : '';
   ui.reviewCommon = common;
   return `${head}
-    <main id="main" class="page review" tabindex="-1">
+    <div class="page review">
       <header class="review-hero">
         <div class="review-title"><p class="meta"${langOf(a)}>${esc(caseOf(a).title)}</p><h1 class="title-xl">${T('上线评审', 'Launch review')}</h1>
           <p class="review-stamp">${icon('stamp', 'i-sm')}${T('已固定交付', 'Submitted')}${art ? `<span>${T('交付稿 v' + art.version, 'Deliverable v' + art.version)}</span><span>${T('配置 v' + art.config_version, 'Config v' + art.config_version)}</span>` : ''}${fb ? `<span>${T('截至事件 #' + fb.as_of_seq, 'As of event #' + fb.as_of_seq)}</span>` : ''}</p></div>
@@ -3306,7 +3292,7 @@ function renderReview() {
           </section>
         </aside>
       </div>
-    </main>`;
+    </div>`;
 }
 // Optional practice after feedback (W05 rules, reviewed situations only). Nothing here is required or scored.
 function practiceSection(a) {
@@ -3465,9 +3451,6 @@ function recognitionHeroInner(a) {
   const read = ui.recognition?.[a?.id];
   if (!lensOn() || !read || read.enabled === false) return '';
   return `<p class="rc-summary">${esc(summaryText(read.counts, locale()))}</p><a class="rc-lab-link" href="#/lab">${T('系统剖面：看每一步识别的中间结果 →', 'System profile: see every recognition step →')}</a>`;
-}
-function recognitionHero(a) {
-  return `<div class="rc-hero" data-rc-hero>${recognitionHeroInner(a)}</div>`;
 }
 function behaviorInner(a) {
   return behaviorHtml(ui.behavior?.[a?.id], locale(), {
@@ -3916,6 +3899,7 @@ function sheetDeliver(readOnly = false) {
       'wide doc deliver-sheet',
     );
     mountLensSwitch(sheet.querySelector('.sheet-head'));
+    openLensForDelivery(sheet);
     // Start reading at the title: no control looks chosen until the person moves.
     const title = sheet.querySelector('#sheet-title');
     if (title) {
@@ -7082,8 +7066,13 @@ document.addEventListener('rolecraft:delivered', () => {
     persist();
   }
   if (!sheet.open || !sheet.querySelector('[data-v4-region="submission"]')) return;
-  closeSheet(true);
+  // The dialog closes inside the page transition: it fades straight into the result page, and
+  // the board behind it never shows on its own (its named parts do not fly out over the dialog).
+  const root = document.documentElement;
+  root.classList.add('rc-handover');
   go('review', { transition: true });
+  if (activeTransition) activeTransition.finished.finally(() => root.classList.remove('rc-handover'));
+  else root.classList.remove('rc-handover');
 });
 // "Start a revision" returns to the board with where to pick the work up.
 document.addEventListener('rolecraft:revision-started', (event) => {
@@ -7315,6 +7304,15 @@ Board.installBoard({
       refreshWS(['rail', 'toolbar']);
     }
   },
+});
+// The result page is a screen of the workspace: the shell keeps the topbar and the people.
+registerRoute('review', () => (current() ? renderReview() : ''));
+registerResultScreen({
+  host: (a) => (a && L.nativeWorkspace(a) ? L.v4Host(a) : null),
+  sessionOf: (a) => (a && L.nativeWorkspace(a) ? a.id : null),
+  current,
+  route: () => ui.route,
+  language: locale,
 });
 // The product manager's stage: no draft yet → Investigate; a draft → Decide; submitted → Delivered.
 registerStage('pm', (a) =>

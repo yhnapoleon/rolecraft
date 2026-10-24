@@ -294,6 +294,12 @@ export interface ItemsRenderHooks {
   readonly after?: Node[];
   /** The delivery or review the list belongs to, as a reference chip (first on the meta line). */
   readonly subject?: Node;
+  /** "Can't tell yet" shows this many rows first, the rest behind "Show n more" (result page). */
+  readonly unknownShown?: number;
+  /** The view switch (By status · By colleague), placed on the meta line (result page). */
+  readonly switcher?: Node;
+  /** When given, the groups by status give way to this view of the same rows. */
+  readonly regrouped?: () => Node;
 }
 
 type El = HTMLElement;
@@ -351,7 +357,11 @@ export function renderFeedbackItems(
   const meta = el('p', '', 'fb-meta');
   if (hooks.subject) meta.append(hooks.subject);
   meta.append(el('span', view.count, 'fb-meta__count'));
-  root.append(meta);
+  if (hooks.switcher) {
+    const bar = el('div', '', 'fb-detail-bar');
+    bar.append(meta, hooks.switcher);
+    root.append(bar);
+  } else root.append(meta);
   let tip: El | undefined;
   if (view.range) {
     const line = el('p', '', 'fb-range');
@@ -408,13 +418,41 @@ export function renderFeedbackItems(
       el('span', T(note), 'fb-group__note'),
     );
     const list = el('ul', '', 'fb-list');
-    list.append(...rows.map(row));
+    const shown = kind === 'unknown' && hooks.unknownShown ? hooks.unknownShown : rows.length;
+    list.append(...rows.slice(0, shown).map(row));
     box.append(heading, list);
-    root.append(box);
+    // The rest of a long group behind one quiet line; opened, it stays open across redraws.
+    if (rows.length > shown) {
+      const more = el('ul', '', 'fb-list fb-list--more');
+      more.id = `${safe(hooks.id)}-${kind}-more`;
+      more.append(...rows.slice(shown).map(row));
+      const toggle = el('button', '', 'fb-more__toggle');
+      toggle.type = 'button';
+      toggle.setAttribute('aria-controls', more.id);
+      const label = el('span', '');
+      toggle.append(label, chevron(doc));
+      const words = () =>
+        (label.textContent =
+          toggle.getAttribute('aria-expanded') === 'true'
+            ? T('groupFewer')
+            : T('groupMore', { n: rows.length - shown }));
+      box.append(more, toggle);
+      disclosure(doc, toggle, more, `${hooks.id}:${kind}:more`, hooks, box);
+      toggle.addEventListener('click', words);
+      words();
+    }
+    detail.append(box);
   };
-  group('unmet', 'groupUnmet', 'groupUnmetNote', view.unmet);
-  group('unknown', 'groupUnknown', 'groupUnknownNote', view.unknown);
-  group('met', 'groupMet', 'groupMetNote', view.met);
+  // The detail: by status, or the same rows regrouped (result page).
+  const detail = el('div', '', 'fb-detail');
+  detail.dataset.resultDetail = hooks.regrouped ? 'colleague' : 'status';
+  root.append(detail);
+  if (hooks.regrouped) detail.append(hooks.regrouped());
+  else {
+    group('unmet', 'groupUnmet', 'groupUnmetNote', view.unmet);
+    group('unknown', 'groupUnknown', 'groupUnknownNote', view.unknown);
+    group('met', 'groupMet', 'groupMetNote', view.met);
+  }
   root.append(...(hooks.after ?? []));
   if (view.na.length) {
     const box = el('section', '', 'fb-group fb-group--na');

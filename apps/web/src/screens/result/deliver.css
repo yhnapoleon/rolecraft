@@ -1,0 +1,184 @@
+/* The submission dialog (206; decision 20, D spec §7): full width, three columns. Left (272px):
+   the versions, the decision and the rules' check — what you choose. Middle: the work as paper,
+   read sentence by sentence by the lens. Right: the margin originals, which the lens places in
+   its own rows (≥ 620px) — this file only gives them room. A phone keeps one column with the
+   work first. The lens's own timing and markup are untouched. */
+#sheet.deliver-sheet {
+  width: min(1380px, calc(100vw - 48px));
+  height: min(calc(100dvh - 48px), 980px);
+  max-height: none;
+  border-radius: var(--r-dialog, 16px);
+}
+#sheet.deliver-sheet .sheet-body {
+  flex: 1;
+}
+#sheet.deliver-sheet .deliver-doc {
+  container: deliver / inline-size;
+}
+@container deliver (min-width: 860px) {
+  .native-feedback > section.delivery-paper:has(> [data-delivery-reading]:not([hidden])) {
+    display: grid;
+    grid-template-columns: 272px minmax(0, 1fr);
+    grid-auto-rows: min-content;
+    column-gap: 36px;
+    align-items: start;
+  }
+  .native-feedback > section.delivery-paper:has(> [data-delivery-reading]:not([hidden])) > * {
+    grid-column: 1;
+  }
+  .native-feedback
+    > section.delivery-paper:has(> [data-delivery-reading]:not([hidden]))
+    > [data-delivery-reading] {
+    grid-column: 2;
+    grid-row: 1 / span 40;
+    margin: 0;
+  }
+  .native-feedback
+    > section.delivery-paper:has(> [data-delivery-reading]:not([hidden]))
+    > [data-decision-cards] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+/* The middle column: the work on paper. */
+.delivery-reading {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+.delivery-reading > .presubmit__rec {
+  padding-top: 0;
+  border-top: 0;
+}
+.delivery-reading__paper {
+  display: grid;
+  gap: 12px;
+  max-width: 68ch;
+  padding: 28px 32px 32px;
+  border-radius: var(--r-paper, 3px);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.delivery-reading__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 0 0 4px;
+}
+.native-feedback .delivery-reading__title {
+  margin: 0;
+  font: 500 19px / 1.3 var(--serif);
+}
+.delivery-reading__version {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 500;
+}
+.native-feedback .delivery-reading__text {
+  margin: 0;
+  color: var(--ink);
+  font: 400 16px / 1.62 var(--serif);
+  transition: color var(--mid) ease;
+}
+/* Before the lens has read them, the sentences wait in grey. */
+.delivery-reading__paper[data-pending="true"] .delivery-reading__text {
+  color: var(--ink-4);
+}
+.native-feedback .delivery-reading__empty {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 14px;
+}
+/* The left column's decisions read as a list, not as four large cards. */
+@container deliver (min-width: 860px) {
+  .native-feedback .delivery-paper > [data-decision-cards] .decision-card {
+    padding: 10px 12px;
+  }
+}
+@media (max-width: 720px) {
+  #sheet.deliver-sheet {
+    width: 100vw;
+    height: 100dvh;
+    border-radius: 0;
+  }
+  .delivery-reading__paper {
+    padding: 20px 18px 22px;
+  }
+  .native-feedback .delivery-reading__text {
+    font-size: 15px;
+  }
+}
+/* Small labels over the left column's parts (D spec `.lbl`). */
+.native-feedback .delivery-label {
+  margin: 14px 0 6px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+/* Three columns on a wide dialog (D spec §7.3): the work is paper; the margin originals sit in a
+   272px column on the dialog's instrument surface, 52px clear of the paper, joined by their
+   leader lines. Only the lens's outer box is restyled here (its sizes are its own variables);
+   the grey paper before the lens has read uses the same box, so nothing moves when it arrives. */
+@container deliver (min-width: 860px) {
+  .native-feedback .delivery-reading .rc-sentences {
+    --rc-margin: 272px;
+    --rc-gap: 88px;
+    position: relative;
+    isolation: isolate;
+    margin: 0;
+    padding: 30px 0 26px 36px;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+  }
+  .native-feedback .delivery-reading .rc-sentences::before {
+    content: "";
+    position: absolute;
+    inset: 0 324px 0 0;
+    z-index: -1;
+    border-radius: var(--r-paper, 3px);
+    background: var(--paper);
+    box-shadow: var(--shadow-paper);
+  }
+  .native-feedback .delivery-reading .rc-sentences > :not(.rc-slist) {
+    margin-inline-end: 360px;
+  }
+  .native-feedback .delivery-reading .delivery-reading__paper {
+    max-width: none;
+    margin-inline-end: 324px;
+    padding: 30px 36px 26px;
+  }
+}
+
+/* The delivery key while the server accepts it (button state "loading"): a turning dot where an
+   icon would be; the width and the words stay. */
+.native-feedback .delivery-submit[data-state="loading"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  opacity: 1;
+  cursor: progress;
+}
+.native-feedback .delivery-submit[data-state="loading"]::before {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--on-primary), transparent 65%);
+  border-top: 1.5px solid var(--on-primary);
+  box-sizing: border-box;
+  animation: delivery-spin 700ms linear infinite;
+}
+@keyframes delivery-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .native-feedback .delivery-submit[data-state="loading"]::before {
+    animation-duration: 1400ms;
+  }
+}

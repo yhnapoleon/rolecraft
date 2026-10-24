@@ -1,0 +1,76 @@
+/* The stamp (shared: result page, engineer sign-off). A double rule in the stamp's colour,
+   pressed on paper, turned 2°. The decided words are serif; kicker and time are sans. */
+.rc-stamp {
+  --rc-stamp-turn: -2deg;
+  --rc-stamp-c: var(--good);
+  display: inline-grid;
+  justify-items: center;
+  gap: 3px;
+  max-width: 280px;
+  padding: 10px 18px 11px;
+  border: 2px solid currentColor;
+  border-radius: 4px;
+  outline: 1px solid currentColor;
+  outline-offset: -6px;
+  color: color-mix(in oklab, var(--rc-stamp-c), transparent 6%);
+  /* Pressed onto the paper itself: nothing beneath shows through its words. */
+  background: color-mix(in oklab, var(--paper), transparent 6%);
+  transform: rotate(var(--rc-stamp-turn));
+  line-height: 1.25;
+  text-align: center;
+}
+.rc-stamp[data-tone="ink"] {
+  --rc-stamp-c: var(--ink);
+}
+.rc-stamp__kicker {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.rc-stamp__kicker:lang(zh),
+:lang(zh) > .rc-stamp .rc-stamp__kicker {
+  letter-spacing: 0.04em;
+}
+.rc-stamp__text {
+  font-family: var(--serif);
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.2;
+  overflow-wrap: break-word;
+}
+.rc-stamp__when {
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.rc-stamp[data-size="lg"] {
+  padding: 11px 20px 12px;
+}
+.rc-stamp[data-size="lg"] .rc-stamp__text {
+  font-size: 19px;
+}
+.rc-stamp[data-size="sm"] {
+  gap: 1px;
+  max-width: 200px;
+  padding: 6px 11px 7px;
+  outline-offset: -5px;
+}
+.rc-stamp[data-size="sm"] .rc-stamp__text {
+  font-size: 13.5px;
+}
+.rc-stamp[data-size="sm"] .rc-stamp__kicker,
+.rc-stamp[data-size="sm"] .rc-stamp__when {
+  font-size: 10px;
+}
+@media (max-width: 720px) {
+  .rc-stamp[data-size="lg"] {
+    max-width: 240px;
+    padding: 8px 14px 9px;
+  }
+  .rc-stamp[data-size="lg"] .rc-stamp__text {
+    font-size: 16px;
+  }
+}

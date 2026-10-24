@@ -1,0 +1,647 @@
+/* The result page (206; plan §4.4, decisions 21–22): the stamped result sheet takes over the
+   desk under a faint green light, three large readings answer "did anything fail?", the detail
+   below reads by status or by colleague. Paper is 3px and near square; tools are instrument
+   surface. Motion lives in motion.ts; here only press feedback and the waiting shimmer. */
+
+/* ---------- the desk ---------- */
+.ws.view-review .stage-inner::before {
+  --world-light: var(--light-good);
+  opacity: 1;
+}
+.result-desk {
+  display: grid;
+  gap: 32px;
+  width: min(100%, 960px);
+  margin: 0 auto;
+  padding: 36px 40px 72px;
+}
+.result-main {
+  min-width: 0;
+}
+.result-after {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+}
+.result-after:not(:has(> :not([hidden]):not(:empty))) {
+  display: none;
+}
+/* The feedback surface's own top margins give way to the desk's spacing. */
+.result-main .native-feedback > .result-cover-host {
+  margin: 0 0 28px;
+}
+
+/* ---------- the result sheet ---------- */
+.result-paper {
+  display: grid;
+  gap: 28px;
+  padding: 30px 34px 26px;
+  border-radius: var(--r-paper, 3px);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.result-paper__top {
+  display: flex;
+  align-items: center;
+  gap: 30px;
+  min-width: 0;
+}
+.result-paper .result-paper__stamp {
+  flex: none;
+}
+.result-paper__facts {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.native-feedback .result-paper__title {
+  margin: 0;
+  color: var(--ink);
+  font: 500 28px / 1.15 var(--serif);
+  letter-spacing: -0.01em;
+}
+.result-paper__attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.result-paper__attachment {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  min-width: 0;
+}
+.native-feedback .result-paper__attachment .paper-slip {
+  margin: 0;
+  cursor: pointer;
+  transition: transform var(--fast) var(--ease-out);
+}
+.native-feedback .result-paper__attachment .paper-slip:active {
+  transform: scale(0.97);
+}
+
+/* Three readings: a number you can read across the room, its name, and what to do with it. */
+.result-readings {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin: 0 -12px;
+  padding-top: 22px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.native-feedback .result-reading {
+  display: grid;
+  justify-items: start;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  margin: 0;
+  padding: 6px 12px 8px;
+  border: 0;
+  border-radius: var(--r-key, 8px);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    background-color var(--fast) ease,
+    transform var(--fast) var(--ease-out);
+}
+.native-feedback .result-reading:disabled {
+  cursor: default;
+}
+@media (hover: hover) and (pointer: fine) {
+  .native-feedback .result-reading:not(:disabled):hover {
+    background: var(--fill);
+  }
+}
+.native-feedback .result-reading:not(:disabled):active {
+  transform: scale(0.97);
+}
+.native-feedback .result-reading:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.result-reading__n {
+  display: block;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 60px;
+  font-weight: 600;
+  font-stretch: 82%;
+  font-variation-settings: "wdth" 82;
+  line-height: 0.95;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.result-reading[data-group="unmet"] .result-reading__n {
+  color: var(--bad);
+}
+.result-reading[data-group="unknown"] .result-reading__n {
+  color: var(--p-neutral);
+}
+.result-reading[data-group="met"] .result-reading__n {
+  color: var(--good);
+}
+/* A zero is a known fact, not an unknown: ink, light. Grey stays "not known yet". */
+.result-reading[data-zero="true"] .result-reading__n {
+  color: var(--ink-2);
+  font-weight: 400;
+}
+.result-reading__label {
+  color: var(--ink);
+  font-size: 14.5px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+.result-reading__note {
+  min-height: 1.4em;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+/* Against the previous delivery. */
+.result-paper__compare {
+  display: grid;
+  gap: 8px;
+  margin-top: -6px;
+}
+.native-feedback .result-paper__compare-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.result-paper__compare-mark {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+.result-paper__changes {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0 0 0 30px;
+  list-style: none;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.result-paper__changes li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.result-paper__pair {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.result-mark {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 10.5px;
+  font-weight: 700;
+  line-height: 1;
+}
+.result-mark[data-mark="met"] {
+  background: var(--good-tint);
+  color: var(--good);
+}
+.result-mark[data-mark="unmet"] {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+.result-mark[data-mark="unknown"],
+.result-mark[data-mark="na"] {
+  box-shadow: inset 0 0 0 1.25px var(--p-neutral);
+  color: var(--p-neutral);
+}
+.result-mark.is-arrow {
+  width: auto;
+  color: var(--ink-4);
+}
+
+/* ---------- the wait ---------- */
+.result-wait {
+  display: grid;
+  gap: 18px;
+  padding-top: 22px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.result-wait__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px 28px;
+}
+.result-wait__steps {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 26px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.result-wait__step {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink-3);
+  font-size: 14px;
+  line-height: 1.4;
+}
+.result-wait__step[data-state="done"] {
+  color: var(--ink-2);
+}
+.result-wait__step[data-state="now"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+.result-wait__dot {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.25px var(--ink-4);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+.result-wait__step[data-state="done"] .result-wait__dot {
+  background: var(--good-tint);
+  box-shadow: none;
+  color: var(--good);
+}
+.result-wait__step[data-state="now"] .result-wait__dot {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+/* Exception (plan §3.2, AI Elements shimmer): the current step's words are swept by ink light.
+   It animates background-position on a text clip, not transform or opacity; current step only. */
+.result-wait__step[data-state="now"] .result-wait__label {
+  background:
+    linear-gradient(
+      100deg,
+      var(--ink) 0 38%,
+      color-mix(in oklab, var(--ink), transparent 62%) 50%,
+      var(--ink) 62% 100%
+    )
+    0 0 / 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: result-shimmer 2.2s linear infinite;
+}
+@keyframes result-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+  to {
+    background-position: 0 0;
+  }
+}
+.result-wait__clock {
+  color: var(--ink-2);
+  font-family: var(--sans);
+  font-size: 30px;
+  font-weight: 500;
+  font-stretch: 82%;
+  font-variation-settings: "wdth" 82;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.result-wait__tail {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.native-feedback .result-wait__hint,
+.native-feedback .result-wait__failed {
+  max-width: 60ch;
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.native-feedback .result-wait__tail .btn {
+  margin: 0;
+}
+
+/* ---------- the detail ---------- */
+.native-feedback .fb-detail-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.native-feedback .fb-detail-bar .fb-meta {
+  margin: 0;
+}
+.fb-detail {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+/* By status · By colleague: the shell's segmented control (an island, ui-kit Segmented). */
+.native-feedback .result-switch {
+  flex: none;
+}
+/* "Show 7 more": the long group continues as one sheet. */
+.native-feedback .fb-group .fb-list:has(+ .fb-list--more:not([hidden])) {
+  border-end-start-radius: 0;
+  border-end-end-radius: 0;
+}
+.native-feedback .fb-group .fb-list--more {
+  margin-top: -10px;
+  border-start-start-radius: 0;
+  border-start-end-radius: 0;
+  box-shadow:
+    var(--shadow-paper),
+    inset 0 1px 0 var(--line);
+}
+.native-feedback .fb-more__toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-self: start;
+  gap: 4px;
+  height: 28px;
+  margin: -4px 0 0;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color var(--fast) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .native-feedback .fb-more__toggle:hover {
+    background: var(--fill);
+  }
+}
+.native-feedback .fb-more__toggle .fb-chev {
+  transform: rotate(90deg);
+}
+.native-feedback .fb-more__toggle[aria-expanded="true"] .fb-chev {
+  transform: rotate(-90deg);
+}
+
+/* By colleague: three columns, one per person; the rows are the same rows. */
+.result-colleagues {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+.result-colleague {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.result-colleague[data-person="manager"] {
+  --c: var(--p-manager);
+}
+.result-colleague[data-person="business"] {
+  --c: var(--p-business);
+}
+.result-colleague[data-person="technical"] {
+  --c: var(--p-technical);
+}
+.result-colleague__head {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 4px 10px;
+  padding: 0 4px;
+}
+.result-colleague__avatar {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--paper), var(--c) 9%);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--c), transparent 66%);
+  color: var(--c);
+  font-size: 13px;
+  font-weight: 600;
+}
+.result-colleague__who {
+  min-width: 0;
+}
+.native-feedback .result-colleague__name {
+  margin: 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.native-feedback .result-colleague__remit {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+.native-feedback .result-colleague__tally {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  grid-column: 1 / -1;
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.result-colleague__count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.native-feedback .result-colleague__empty {
+  margin: 0;
+  padding: 0 4px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+/* "Ask Grace" at the foot of each person's column. */
+.result-colleague__foot {
+  padding: 0 4px;
+}
+.native-feedback .result-colleague__foot .btn {
+  margin: 0;
+}
+/* In a column the row's direct button goes under its words, lined up with them. */
+.result-colleague .fb-item__row {
+  flex-wrap: wrap;
+}
+.native-feedback .result-colleague .fb-item__head {
+  flex: 1 1 100%;
+}
+.native-feedback .result-colleague .fb-item__row > .btn {
+  margin: -6px 0 12px 46px;
+}
+
+/* ---------- narrow ---------- */
+@media (max-width: 1180px) {
+  .result-colleagues {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 720px) {
+  .result-desk {
+    gap: 24px;
+    padding: 16px 16px 48px;
+  }
+  .result-paper {
+    gap: 22px;
+    padding: 20px 18px 18px;
+  }
+  .result-paper__top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .native-feedback .result-paper__title {
+    font-size: 23px;
+  }
+  .result-readings {
+    margin: 0 -6px;
+    padding-top: 16px;
+  }
+  .native-feedback .result-reading {
+    padding: 4px 6px 6px;
+  }
+  .result-reading__n {
+    font-size: 44px;
+  }
+  .result-reading__label {
+    font-size: 13px;
+  }
+  .result-reading__note {
+    display: none;
+  }
+  .result-wait__clock {
+    font-size: 24px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result-wait__step[data-state="now"] .result-wait__label {
+    animation: none;
+    background: none;
+    color: var(--ink);
+  }
+}
+
+/* The feedback surface allows breaks anywhere (long ids, URLs); the sheet and the columns break
+   only between words, so no name is split letter by letter. */
+.native-feedback .result-paper,
+.native-feedback .result-colleagues {
+  overflow-wrap: break-word;
+}
+
+/* The result page is a screen of the workspace: the "handed in" banner above the board says
+   what the stamp already says. */
+.ws.view-review .stage-banner.is-submitted {
+  display: none;
+}
+
+/* Reading the records: the sheet's shape in quiet blocks. */
+.result-skel {
+  display: block;
+  border-radius: 4px;
+  background: var(--fill);
+}
+.result-skel--stamp {
+  width: 168px;
+  height: 64px;
+}
+.result-skel--title {
+  width: 220px;
+  height: 28px;
+}
+.result-skel--n {
+  width: 44px;
+  height: 52px;
+}
+.result-skel--label {
+  width: 96px;
+  height: 14px;
+  margin-top: 6px;
+}
+
+/* While the records are read or the review is written, the page is the sheet: what comes
+   after waits. */
+.result-desk:has(.result-paper[data-state="waiting"], .result-paper.is-skeleton) .result-after {
+  display: none;
+}
+
+/* On a phone a row's direct button goes under its words. */
+@media (max-width: 720px) {
+  .result-main .fb-item__row {
+    flex-wrap: wrap;
+  }
+  .result-main .native-feedback .fb-item__head {
+    flex: 1 1 100%;
+  }
+  .result-main .native-feedback .fb-item__row > .btn {
+    margin: -6px 0 12px 46px;
+  }
+}
+
+/* Handing over from the submission dialog: one cross-fade of the whole page, dialog to result.
+   No part of the board takes part on its own. */
+html.rc-handover *,
+html.rc-handover *::before,
+html.rc-handover *::after {
+  /* biome-ignore lint/complexity/noImportantStyles: the board names some parts in inline styles. */
+  view-transition-name: none !important;
+}
+
+/* "Your behaviour pattern" (recognition lens only, user decision 2026-10-24): an instrument
+   panel under the detail, before the optional practice. */
+.result-after .rc-behavior {
+  margin: 0;
+  padding: 18px 20px 20px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+/* The dialog blurs a little as it fades, so its sentences never read over the result sheet. */
+html.rc-handover::view-transition-old(root) {
+  animation-name: rc-handover-out;
+}
+@keyframes rc-handover-out {
+  to {
+    opacity: 0;
+    filter: blur(2px);
+  }
+}
