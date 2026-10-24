@@ -35,10 +35,11 @@ function stateMark(s: DocState) {
 
 export function documentsSection(rows: DocRow[], opts: { all: boolean; loading?: string }) {
   const unread = rows.filter((r) => r.state === 'unread' || r.state === 'new').length;
-  // "Documents · 18 · 15 unread" (decision 9): the separators keep the two figures apart.
+  // "Documents  18 · 15 unread" (decision 9): a small count beside the heading, the dot between
+  // the two figures only.
   const head = `<header class="sec-head"><h2 id="docs-h">${T('资料', 'Documents')}</h2>${
     rows.length
-      ? `<span class="sec-count">· ${T(`${rows.length} 份`, String(rows.length))}${unread ? ` · ${T(`${unread} 份未读`, `${unread} unread`)}` : ''}</span>`
+      ? `<span class="sec-count">${T(`${rows.length} 份`, String(rows.length))}${unread ? ` · ${T(`${unread} 份未读`, `${unread} unread`)}` : ''}</span>`
       : ''
   }</header>`;
   if (!rows.length)
