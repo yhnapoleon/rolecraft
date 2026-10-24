@@ -9,7 +9,7 @@
 - API 与 worker 共用同一数据库、`CAREER_LAB_SCENARIO_CATALOG`（不设只有中文主场景）、`CAREER_LAB_SCENARIO_ARCHIVE`、凭据密钥（`CAREER_LAB_CREDENTIAL_KEY_ID`、`CAREER_LAB_CREDENTIAL_KEY`）与模型配置。改任何一项两个都重启。
 - 凭据密钥没有缺省值：`CAREER_LAB_CREDENTIAL_KEY_ID`（1–64 位字母、数字、`_` 或 `-`）与 `CAREER_LAB_CREDENTIAL_KEY`（至少 32 字节）缺一或不合格时，服务照常启动、能新建练习，但创建 Agent 授权、开始补练、生成和使用继续码都返回 503 `credential_derivation_unavailable`。继续码的校验值用这把密钥计算，换密钥或密钥 ID 会让全部继续码失效（见[找回练习](#找回练习继续码)）。
 - 新 SQLite 库先启动 API，初始化完成后再启动 worker。验收用新数据库与新端口；并行的几条工作线各用自己的端口。
-- 更新代码后（例如合入新的 PR）先 `npm run build` 再起 `npm run preview`：preview 只发 `dist/`，不重建仍是旧界面。`apps/web/public/workbench-engine.js` 不经打包、按原文件名发出，靠 `index.html` 里的 `?v=` 参数（现为 `20261014`）让浏览器换掉缓存；改这个文件时同时改这个参数。
+- 更新代码后（例如合入新的 PR）先 `npm run build` 再起 `npm run preview`：preview 只发 `dist/`，不重建仍是旧界面。`apps/web/public/workbench-engine.js` 不经打包、按原文件名发出，靠 `index.html` 里的 `?v=` 参数（现为 `20261024`）让浏览器换掉缓存；改这个文件时同时改这个参数。
 - 默认 `--provider local` 不调用外部模型、不需要 key。真实 provider 与费用须另获授权。
 
 ### 启动工作台
