@@ -164,6 +164,8 @@ const memoryOf = (key: string) => {
 };
 /** A redraw of the rail remounts the thread; within this long it is the same look continuing. */
 const RESUME_MS = 4000;
+/** Space left above a long reply when following lands on its start: a sliver of the question. */
+const FOLLOW_GAP = 24;
 
 const reducedMotion = (doc: Document) =>
   !!doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -413,6 +415,20 @@ export function mount(
     { signature: string; node: HTMLLIElement; observe?: HTMLElement }
   >();
   const scroller = () => (historyOnly ? (root.parentElement ?? root) : (list as HTMLElement));
+  /** Where following the conversation lands: the end, or, when the latest reply is taller than
+   * the view, that reply's start just under the header, so the question and the first sentence
+   * are what you see. */
+  const followTop = (box: HTMLElement) => {
+    const last = list.lastElementChild;
+    const reply = last?.querySelector<HTMLElement>('.rc-msg--them');
+    if (!reply || last?.querySelector('.rc-typing')) return box.scrollHeight;
+    const top = box.scrollTop + reply.getBoundingClientRect().top - box.getBoundingClientRect().top;
+    return reply.offsetHeight > box.clientHeight - 2 * FOLLOW_GAP
+      ? Math.max(0, top - FOLLOW_GAP)
+      : box.scrollHeight;
+  };
+  /** Scrolls made here, so the scroll listener does not mistake them for your own reading. */
+  let placingUntil = 0;
   const actionButton = (
     title: string,
     name: string,
@@ -789,14 +805,21 @@ export function mount(
       ].join(':');
       const arrived = counts !== lastCounts && box.scrollHeight > height;
       lastCounts = counts;
+      // "Following" is kept in memory: being placed at a long reply's start still follows.
+      const following = memory ? memory.atBottom : fromBottom < 48;
       const follow = painted
-        ? (arrived && fromBottom < 48) || !!(pending && animations.length)
+        ? (arrived && (fromBottom < 48 || following)) || !!(pending && animations.length)
         : !resumed || !memory || memory.atBottom;
       if (loaded && follow) {
         const smooth = painted && !reducedMotion(doc);
-        if (box.scrollTo)
-          box.scrollTo({ top: box.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
-        else box.scrollTop = box.scrollHeight;
+        const top = followTop(box);
+        placingUntil = Date.now() + (smooth ? 800 : 100);
+        if (box.scrollTo) box.scrollTo({ top, behavior: smooth ? 'smooth' : 'auto' });
+        else box.scrollTop = top;
+        if (memory) {
+          memory.top = top;
+          memory.atBottom = true;
+        }
       } else if (loaded && !painted && memory) {
         box.scrollTop = memory.top;
       }
@@ -1001,7 +1024,7 @@ export function mount(
   // Where you were reading, kept for the next mount of this thread.
   const scrollBox = scroller();
   const onScroll = () => {
-    if (!memory || !painted) return;
+    if (!memory || !painted || Date.now() < placingUntil) return;
     memory.top = scrollBox.scrollTop;
     memory.atBottom = scrollBox.scrollHeight - scrollBox.scrollTop - scrollBox.clientHeight < 48;
   };
