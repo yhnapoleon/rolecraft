@@ -152,6 +152,7 @@ import {
 } from '../shell';
 import { HatScale, PrimaryKey } from '../shell/bar';
 import '../shell/bar.css';
+import * as Board from '../screens/board';
 import { islandSlot, keepIsland } from '../islands/mount';
 
 const L = window.PracticeLive;
@@ -1252,10 +1253,13 @@ function renderWorkspace() {
   const html = `<div class="ws view-${ui.route} ${arriving ? 'arriving' : ''} ${ui.railOpen ? 'rail-open' : ''}" data-status="${statusOf(a)}">
     ${wsToolbar(a)}
     <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${wsStage(a)}</div></main>
-    <aside class="rail" id="ws-rail" aria-label="${esc(T('团队与上下文', 'Team and context'))}">${wsRail(a)}</aside>
+    ${docLayer()}
+    <aside class="rail" id="ws-rail" aria-label="${esc(T('同事与需要你回应的事', 'Colleagues and what needs you'))}">${wsRail(a)}</aside>
     <button type="button" class="scrim" data-action="close-panels" aria-label="${esc(T('关闭面板', 'Close panel'))}" tabindex="-1"></button>
+    ${recordsDrawer()}
   </div>`;
   ui.landing = false;
+  requestAnimationFrame(boardSettle);
   return html;
 }
 const routeTask = (a) =>
@@ -1631,23 +1635,58 @@ function wsStage(a) {
   if (ui.route === 'doc')
     return lock + `<div class="page-pad">${docBody(a, ui.routeId, false)}</div>`;
   if (ui.route === 'bench') return lock + `<div class="page-pad">${bench(a, null)}</div>`;
-  return lock + boardView(a);
+  const v = a.world.policyVersion;
+  const policyNew = v > 1 && !(a.acks || []).includes('policy-v' + v);
+  return lock + (policyNew ? situationBanner(a) : '') + needsStrip(a) + boardView(a);
 }
 
 /* the board */
+// The brief has been read once its document was opened (locally at once, on the server after).
+const briefRead = (a) =>
+  readSet(a).has('brief') || (a.acks || []).some((k) => String(k).startsWith('read-brief-'));
+// The manager's letter on the board: the brief in serif, signed underneath, with the way to the
+// full brief on the same line. What to hand back and where lives with the Submit key now.
+function boardMemo(a) {
+  const p = PEOPLE.manager;
+  const rolled = briefRead(a);
+  return `<article class="band-letter memo"><blockquote${langOf(a)}>${esc(caseOf(a).quote)}</blockquote>
+    <p class="memo-by">${avatar('manager', 'sm')}<span><b>${p.name}</b>${p.titled ? '' : `<span>${ROLE_TITLE('manager')}</span>`}</span><span class="spacer"></span><button type="button" class="brief-line-read" data-action="open-doc" data-id="brief">${icon('doc', 'i-sm')}${T('看完整委托', 'Read the full brief')}</button>${rolled ? `<button type="button" class="btn icon quiet small brief-line-toggle" data-action="board-brief-toggle" aria-expanded="true" aria-label="${esc(T('收起委托', 'Roll the brief up'))}"><svg class="i i-sm" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg></button>` : ''}</p>
+    ${intakeNote(a)}</article>`;
+}
+function boardBrief(a) {
+  if (!Board.briefRolled(a.id, briefRead(a) && ui.docSheet !== 'brief'))
+    return `<section class="brief-band" data-flip="brief" style="view-transition-name: case-surface">${boardMemo(a)}${conditions(a)}</section>`;
+  return Board.rolledBrief({
+    avatar: avatar('manager', 'sm'),
+    line: Board.briefKeyLine(caseOf(a).quote),
+    lang: langOf(a),
+    readouts: conditions(a, 'mini'),
+    roll: Board.takeRoll(a.id),
+    esc,
+  }).replace('data-brief-rolled', 'data-brief-rolled data-flip="brief"');
+}
+// The tray: drafts your agent handed back that you have not adopted yet.
+function boardTray(a) {
+  const drafts = (a.artifacts || [])
+    .filter((x) => !x.removedAt && x.source === 'external-agent' && !x.adopted)
+    .map((x) => ({
+      id: x.id,
+      title: shown(x).title || T('未命名', 'Untitled'),
+      kind: purposeLabel(shown(x).purpose),
+      version: x.revision || 1,
+      at: x.updatedAt || x.createdAt || '',
+      review: x.taskId ? 'open-artifact' : 'preview-work',
+    }));
+  const html = Board.agentTray({ connected: Board.agentConnected() || drafts.length > 0, drafts });
+  return html ? `<div data-flip="tray">${html}</div>` : '';
+}
 function boardView(a) {
-  const v = a.world.policyVersion;
-  const policyNew = v > 1 && !(a.acks || []).includes('policy-v' + v);
   return `<div class="board">
-    <section class="brief-band" style="view-transition-name: case-surface">
-      <div class="band-letter">${briefLetter(a)}<div class="band-actions">${btn(icon('doc', 'i-sm') + T('看完整委托', 'Read the full brief'), 'open-doc', 'small quiet', 'data-id="brief"')}</div>${intakeNote(a)}</div>
-      ${conditions(a)}
-    </section>
+    ${boardBrief(a)}
     ${practiceOriginNote(a)}
-    ${policyNew ? situationBanner(a) : ''}
-    ${productBar(a)}
-    ${unfiledWorks(a)}
-    <section class="work-sec" aria-labelledby="tasks-h">
+    <div data-flip="product">${productBar(a)}</div>
+    ${boardTray(a)}
+    <section class="work-sec" aria-labelledby="tasks-h" data-flip="tasks" data-board-tasks>
       <header class="sec-head"><h2 id="tasks-h">${T('事项', 'Tasks')}</h2><span class="sec-hint"><span class="hint-drag">${T('拖动卡片调整优先级', 'Drag to reprioritise')}</span><span class="hint-keys">${T('，或按住 Option 用方向键', ', or hold Option and use the arrow keys')}</span></span><span class="spacer"></span>
         <div class="menu-wrap">${btn(icon('bubble', 'i-sm') + T('问问怎么排', 'Ask how to prioritise'), 'menu', 'small quiet', `data-menu="rank" aria-haspopup="menu" aria-expanded="${ui.menu === 'rank'}"`)}${ui.menu === 'rank' ? rankMenu() : ''}</div>
         ${btn(icon('plus', 'i-sm') + T('新事项', 'New task'), 'new-task', 'small')}</header>
@@ -1655,10 +1694,8 @@ function boardView(a) {
       <p id="move-help" class="sr-only">${T('按住 ⌥ Option 或 Alt：← → 改优先级，↑ ↓ 调顺序。', 'Hold ⌥ Option or Alt, then ← → to change priority and ↑ ↓ to reorder.')}</p>
       <div class="kanban">${['first', 'next', 'later'].map((p) => column(a, p)).join('')}</div>
     </section>
-    <section class="work-sec" aria-labelledby="docs-h">
-      <header class="sec-head"><h2 id="docs-h">${T('资料', 'Documents')}</h2></header>
-      ${docGrid(a)}
-    </section>
+    <div data-flip="docs">${docGrid(a)}</div>
+    ${unfiledWorks(a)}
   </div>`;
 }
 // Whose request each starting task is, as its own brief says: the business team asked for the
@@ -1796,40 +1833,67 @@ function handedIn(a) {
     : T('已固定交付，现在只能查看。', 'Submitted. This practice is read-only now.');
   return `${at ? `<time class="sb-when">${esc(when(at))}</time>` : ''}<span class="grow">${said}</span>`;
 }
+// When the world changed: "Just now" for the first few minutes, then the time it happened.
+function changedAt(a) {
+  const times = a.eventTimes || {};
+  const e = (a.events || []).filter((x) => x.type === 'policy_updated').at(-1);
+  const at = e && (e.createdAt || times[e.seq]);
+  const t = at ? Date.parse(at) : NaN;
+  return Number.isFinite(t) && Date.now() - t > 5 * 60_000 ? when(at) : T('刚刚', 'Just now');
+}
+// True while the page's own dialog covers the board; the board is drawn again when it closes, so
+// what changed meanwhile (a policy update, a new config version) plays where it can be seen.
+function sheetCovers(a) {
+  const covered = sheet.open;
+  if (covered && !ui.arrivalWaits) {
+    ui.arrivalWaits = true;
+    sheet.addEventListener(
+      'close',
+      () =>
+        setTimeout(() => {
+          ui.arrivalWaits = false;
+          if (current() === a && WS.includes(ui.route)) refreshWS(['stage']);
+        }, 160),
+      { once: true },
+    );
+  }
+  return covered;
+}
+// The event lives in the light, right under the topbar: when, what changed (world text in the
+// work language, the first sentence set in ink), and three keys. Its line draws once.
 function situationBanner(a) {
   const v = a.world.policyVersion;
   const behind = a.world.indexVersion < v;
   const change = policyChange(a, v);
-  // What happened is world text, in the work language; the kicker and actions are labels.
   const W = worldText(a);
-  const what = `<p class="we-title"${langOf(a)}>${W(`差旅政策更新为 v${v}`, `The travel policy is now v${v}`)}</p>${change ? `<p class="we-change"${langOf(a)}>${esc(change)}</p>` : ''}`;
-  // Handed in, the board only reads: the event stays as a record of what changed.
-  if (statusOf(a) === 'submitted')
-    return `<section class="world-event is-record" role="status">
-    <span class="we-icon">${icon('bolt')}</span>
-    <div class="grow">${what}</div>
-    <div class="we-actions">${btn(T('看哪里变了', 'See what changed'), 'open-doc', 'small quiet', 'data-id="policy" data-compare="1"')}</div>
-  </section>`;
+  const title = W(`差旅政策更新为 v${v}。`, `The travel policy is now v${v}.`);
   const before = a.tests.filter((r) => r.policyVersion < v).length;
   const after = [
-    behind
-      ? W(
-          `知识助手的索引还是 v${a.world.indexVersion}，它会继续按旧版本回答，直到你刷新索引。`,
-          `The assistant still indexes v${a.world.indexVersion} and will keep answering from it until you refresh the index.`,
-        )
-      : '',
+    change,
     before
       ? W(
           `你之前的 ${before} 次测试用的是旧版政策。`,
           before > 1
-            ? `Your ${before} earlier tests used the old policy.`
-            : 'Your earlier test used the old policy.',
+            ? `The ${before} tests you ran before this used v${v - 1}.`
+            : `The test you ran before this used v${v - 1}.`,
+        )
+      : '',
+    behind
+      ? W(
+          `知识助手的索引还是 v${a.world.indexVersion}，刷新前它会继续按旧版回答。`,
+          `The assistant still indexes v${a.world.indexVersion} until you refresh it.`,
         )
       : '',
   ].filter(Boolean);
-  return `<section class="world-event" role="status">
-    <span class="we-icon">${icon('bolt')}</span>
-    <div class="grow"><p class="we-kicker">${T('刚发生', 'Just happened')}</p>${what}${after.length ? `<p class="we-sub"${langOf(a)}>${after.join(' ')}</p>` : ''}</div>
+  const what = `<p class="we-what"${langOf(a)}><strong>${esc(title)}</strong> ${esc(after.join(' '))}</p>`;
+  // Handed in, the board only reads: the event stays as a record of what changed.
+  if (statusOf(a) === 'submitted')
+    return `<section class="world-event is-record" role="status"><span class="we-when">${esc(changedAt(a))}</span>${what}<div class="we-actions">${btn(T('看哪里变了', 'See what changed'), 'open-doc', 'small quiet', 'data-id="policy" data-compare="1"')}</div></section>`;
+  // A change that lands while a dialog is open arrives when the dialog has gone.
+  const covered = sheetCovers(a);
+  const age = covered ? null : Board.arrivalAge(a.id, `policy-v${v}`);
+  if (age != null) ui.amberArriving = age;
+  return `<section class="world-event${age != null ? ' arriving' : covered ? ' pending' : ''}" role="status"${age ? ` style="--arrive-age: ${age}ms"` : ''}><span class="we-when">${esc(changedAt(a))}</span>${what}
     <div class="we-actions">${btn(T('看哪里变了', 'See what changed'), 'open-doc', 'small primary', 'data-id="policy" data-compare="1"')}${btn(T('记为事项', 'Add as a task'), 'situation-task', 'small')}${btn(T('知道了', 'Got it'), 'ack', 'small quiet', `data-key="policy-v${v}"`)}</div>
   </section>`;
 }
@@ -1849,17 +1913,24 @@ function productBar(a) {
   const gauge = (k, v, cls = '', extra = '') =>
     `<li class="pb-gauge ${cls}"><span class="pb-k">${k}</span> <span class="pb-v">${v}</span>${extra}</li>`;
   const sources = c.domains.map(DOMAIN);
+  // A reading that moved since it was last drawn rolls and glows once (Board.reading); under an
+  // open dialog the bar keeps showing what it showed, and plays when the dialog has gone.
+  const covered = sheetCovers(a);
+  const read = (name, value, prefix = '') =>
+    covered
+      ? `${prefix}${Board.readingShown(a.id, name) ?? value}`
+      : Board.reading(a.id, name, value, prefix);
   const gauges = configured
     ? [
-        gauge(use ? T('已保存', 'Saved') : T('配置', 'Config'), `v${a.configVersion}`),
-        gauge(T('开放人数', 'Participants'), c.participants),
+        gauge(use ? T('已保存', 'Saved') : T('配置', 'Config'), read('config', a.configVersion, 'v')),
+        gauge(T('开放人数', 'Participants'), read('participants', Number(c.participants))),
         gauge(
           T('知识来源', 'Sources'),
-          sources.length,
+          read('sources', sources.length),
           '',
           sources.length ? `<span class="sr-only">${esc(sources.join(T('、', ', ')))}</span>` : '',
         ),
-        gauge(T('索引方式', 'Index'), UPDATE_SHORT(c.update)),
+        gauge(T('索引方式', 'Index'), read('index', UPDATE_SHORT(c.update))),
       ]
     : [`<li class="pb-gauge muted">${T('还没有试点设置', 'No pilot settings yet')}</li>`];
   gauges.push(
@@ -1906,11 +1977,17 @@ function priorityQuestion(a) {
         'Everything on my plate is done. What should I find out next, and why?',
       );
 }
+// An empty lane says what it is for; the starting tasks all wait in "Up next" for you to rank.
+const LANE_HINT = {
+  first: () => T('把上线前必须做的拖到这里', 'Drag here what must happen before launch'),
+  later: () => T('能等的先放这里', 'Park what can wait'),
+};
 function column(a, p) {
   const list = a.tasks.filter((t) => t.priority === p);
+  const hint = LANE_HINT[p] ? ` data-empty-hint="${esc(LANE_HINT[p]())}"` : '';
   return `<div class="col col-${p}" data-lane="${p}">
     <header class="col-head">${priMark(p)}<span class="col-name">${PRI(p)}</span><span class="col-count">${list.length}</span></header>
-    <ol class="cards" role="list">${L.nativeWorkspace(a) ? '' : list.map((t) => taskCard(a, t)).join('')}${!L.nativeWorkspace(a) && !list.length ? `<li class="col-empty">${T('拖到这里', 'Drop here')}</li>` : ''}</ol>
+    <ol class="cards" role="list" data-board-lane="${p}"${hint}>${L.nativeWorkspace(a) ? '' : list.map((t) => taskCard(a, t)).join('')}${!L.nativeWorkspace(a) && !list.length ? `<li class="col-empty">${T('拖到这里', 'Drop here')}</li>` : ''}</ol>
   </div>`;
 }
 function taskCard(a, t) {
@@ -1934,22 +2011,37 @@ function taskCard(a, t) {
 }
 const WHO = { supervisor: 'manager', business_lead: 'business', tech_lead: 'technical' };
 const whoHas = (m) => (m.visible_to || []).map((r) => WHO[r]).filter(Boolean);
+// Materials the learner's work cites, so their row can say "Cited".
+const citedMaterials = (a) =>
+  new Set(
+    works(a).flatMap((x) =>
+      (shown(x).evidence || []).filter((ev) => ev.type === 'material').map((ev) => ev.id),
+    ),
+  );
 function docGrid(a) {
   const list = E.getMaterials(a);
-  if (!list.length)
-    return `<p class="empty-line">${snap().connected ? T('正在取资料…', 'Loading documents…') : T('连上后端后显示资料', 'Documents appear once connected')}</p>`;
   const read = readSet(a);
-  return `<div class="doc-grid">${list
-    .map((m) => {
-      const fresh = m.version > 1 && !(a.acks || []).includes('read-' + m.id + '-v' + m.version);
-      const who = whoHas(m);
-      return `<button type="button" class="doc-card ${read.has(m.id) ? 'read' : 'unread'}" data-action="open-doc" data-id="${esc(m.id)}">
-      <span class="dc-top">${icon('doc', 'i-sm')}<span class="dc-ver">v${m.version}</span>${fresh ? `<span class="tag new">${T('有新版本', 'New version')}</span>` : read.has(m.id) ? '' : `<span class="unread-dot" title="${esc(T('未读', 'Unread'))}"><span class="sr-only">${T('未读', 'Unread')}</span></span>`}</span>
-      <span class="dc-title">${esc(materialTitle(m))}</span>
-      ${who.length ? `<span class="dc-who" title="${esc(who.map((r) => PEOPLE[r].name).join(T('、', ', ')) + T(' 也有这份资料', ' have this too'))}"><span class="dc-ask">${T('可以问', 'Ask')}</span>${who.map((r) => avatar(r, 'xs')).join('')}</span>` : ''}
-    </button>`;
-    })
-    .join('')}</div>`;
+  const cited = citedMaterials(a);
+  const rows = list.map((m) => {
+    const fresh = m.version > 1 && !(a.acks || []).includes('read-' + m.id + '-v' + m.version);
+    const state = fresh
+      ? 'new'
+      : Board.agentReading(m.id)
+        ? 'agent'
+        : !read.has(m.id) && !(a.acks || []).includes('read-' + m.id + '-v' + m.version)
+          ? 'unread'
+          : cited.has(m.id)
+            ? 'cited'
+            : 'read';
+    return { id: m.id, title: materialTitle(m), version: m.version, state };
+  });
+  const html = Board.documentsSection(rows, {
+    all: Board.docsAll(a.id),
+    loading: snap().connected
+      ? T('正在取资料…', 'Loading documents…')
+      : T('连上后端后显示资料', 'Documents appear once connected'),
+  });
+  return html;
 }
 
 /* a task's workbench */
@@ -2564,8 +2656,28 @@ function bench(a, t) {
   return `<div class="${t ? 'obj-pad' : ''} lab">
     <section class="console ${stale ? 'is-stale' : ''}">
       <header class="console-head">${assistantMark('lg')}<div class="grow">
-        <h2 class="console-name">${T('知识助手', 'Knowledge assistant')}<span class="stamp">${configured ? (use ? T('已保存 v', 'Saved v') : T('配置 v', 'Config v')) + a.configVersion : T('未设置', 'Not set up')}</span></h2>
-        ${configured ? `<ul class="console-state"><li>${icon('seats', 'i-sm')}${T(c.participants + ' 人', c.participants + ' users')}</li><li>${icon('layers', 'i-sm')}${c.domains.map(DOMAIN).join(' + ') || T('未开放知识', 'No knowledge')}</li><li>${icon('sync', 'i-sm')}${UPDATE(c.update)}</li><li class="${stale ? 'warn' : ''}">${icon(stale ? 'stale' : 'doc', 'i-sm')}${T('政策源 v' + a.world.policyVersion + '，索引 v' + a.world.indexVersion, 'Policy v' + a.world.policyVersion + ', index v' + a.world.indexVersion)}</li></ul>` : `<p class="console-hint">${T('先定试点范围，助手才能回答。', 'Set the pilot scope before the assistant can answer.')}</p>`}
+        <h2 class="console-name">${T('知识助手', 'Knowledge assistant')}<span class="console-role">${T('你要决定能否试点的产品', 'The product you are deciding on')}</span></h2>
+        ${
+          configured
+            ? `<ul class="bench-state">${[
+                [use ? T('已保存', 'Saved') : T('配置', 'Config'), `v${a.configVersion}`],
+                [T('开放人数', 'Users'), c.participants],
+                [
+                  T('知识来源', 'Sources'),
+                  `${c.domains.length}<span class="sr-only">${esc(c.domains.map(DOMAIN).join(T('、', ', ')))}</span>`,
+                ],
+                [T('索引方式', 'Index'), UPDATE_SHORT(c.update)],
+                [T('政策', 'Policy'), `v${a.world.policyVersion}`],
+                [
+                  T('索引基于', 'Index built on'),
+                  stale ? `${icon('stale', 'i-xs')}${T(`v${a.world.indexVersion}，落后`, `v${a.world.indexVersion}, behind`)}` : `v${a.world.indexVersion}`,
+                  stale ? 'warn' : '',
+                ],
+              ]
+                .map(([k, v, cls = '']) => `<li class="pb-gauge ${cls}"><span class="pb-k">${k}</span> <span class="pb-v">${v}</span></li>`)
+                .join('')}</ul>`
+            : `<p class="console-hint">${T('先定试点范围，助手才能回答。', 'Set the pilot scope before the assistant can answer.')}</p>`
+        }
         ${configUseLine(use)}
       </div><div class="console-tools">${L.nativeWorkspace(a) && ENGINEER_CASES.includes(a.scenarioId) && a.tests.length ? btn(icon('branch', 'i-sm') + T('交给工程', 'Hand to engineering'), 'engineer-handover', 'small quiet') : ''}${stale && configured ? btn(icon('refresh', 'i-sm') + T('刷新索引', 'Refresh index'), 'refresh-index', 'small quiet') : ''}${btn(icon('gear', 'i-sm') + T('试点设置', 'Pilot settings'), 'config', configured ? 'small quiet' : 'small primary')}</div></header>
       <form class="console-compose" data-form="run-test">
@@ -2632,55 +2744,54 @@ function runGroup(a, runs) {
   </article>`;
 }
 
-/* the rail: talk, feedback, my agent, activity */
+/* the rail: people, and what needs you. A chat pushes in where the people were. */
 function wsRail(a) {
-  const tabs = [
-    ['team', T('讨论', 'Talk')],
-    ['feedback', T('反馈', 'Feedback')],
-    ['agent', 'Agent'],
-    ['activity', T('动态', 'Activity')],
-  ];
-  const badge = {
-    team: ROLES.reduce((n, r) => n + unread(a, r), 0) + (ui.notesCache || []).length,
-    agent: a.artifacts.filter((x) => !x.removedAt && x.source !== 'user' && !x.adopted).length,
-  };
-  const t = routeTask(a);
-  const scope =
-    t && ['feedback', 'activity'].includes(ui.railTab)
-      ? `<div class="scope"><div class="segmented" role="group" aria-label="${esc(T('范围', 'Scope'))}"><span class="thumb"></span><button type="button" aria-pressed="${!ui.scopeAll}" data-action="scope" data-all="0">${T('这件事', 'This task')}</button><button type="button" aria-pressed="${!!ui.scopeAll}" data-action="scope" data-all="1">${T('整件工作', 'Whole job')}</button></div></div>`
-      : '';
+  // Until the agent and result lines take them over, their panels open in place of the people.
   const body =
     ui.railTab === 'feedback'
-      ? railFeedback(a, t)
+      ? railFeedback(a, routeTask(a))
       : ui.railTab === 'agent'
-        ? railAgent(a, t)
-        : ui.railTab === 'activity'
-          ? railActivity(a, t)
-          : ui.rail === 'chat' && ui.chatRole
-            ? railChat(a, ui.chatRole)
-            : railTeam(a, t);
-  return `<div class="rail-top"><div class="segmented rail-tabs" role="tablist" aria-label="${esc(T('侧栏内容', 'Rail content'))}"><span class="thumb"></span>${tabs.map(([k, l]) => `<button type="button" role="tab" aria-selected="${ui.railTab === k}" aria-pressed="${ui.railTab === k}" data-action="rail-tab" data-tab="${k}">${l}${badge[k] ? `<span class="tab-badge">${badge[k]}</span>` : ''}</button>`).join('')}</div>${btn(icon('x'), 'close-panels', 'icon quiet small rail-close', `aria-label="${esc(T('关闭', 'Close'))}"`)}</div>
-    <div class="rail-body">${scope}${body}</div>`;
+        ? railAgent(a, routeTask(a))
+        : ui.rail === 'chat' && ui.chatRole
+          ? railChat(a, ui.chatRole)
+          : railTeam(a, routeTask(a));
+  const back =
+    ui.railTab === 'feedback' || ui.railTab === 'agent'
+      ? `<div class="rail-top">${btn(icon('back'), 'rail-tab', 'icon quiet small', `data-tab="team" aria-label="${esc(T('返回', 'Back'))}"`)}<span class="grow"></span>${btn(icon('x'), 'close-panels', 'icon quiet small rail-close', `aria-label="${esc(T('关闭', 'Close'))}"`)}</div>`
+      : `<div class="rail-top rail-top-min">${btn(icon('x'), 'close-panels', 'icon quiet small rail-close', `aria-label="${esc(T('关闭', 'Close'))}"`)}</div>`;
+  return `${back}<div class="rail-body ${Board.takeRailPush()}">${body}</div>`;
 }
+// Where the rail is a drawer, what needs you shows as one line on the desk (B3): how many,
+// who first; it opens the rail at "Needs you".
+function needsStrip(a) {
+  const list = Board.collectSignals(a).slice(0, 3);
+  if (!list.length) return '';
+  const first = list[0];
+  const who =
+    first.source === 'person' && first.person ? avatar(first.person, 'xs') : agentMark('xs');
+  return `<button type="button" class="needs-strip" data-action="board-needs-open">${who}<span class="needs-strip-label">${T('需要你回应', 'Needs you')}</span><span class="needs-strip-n">${list.length}</span><span class="needs-strip-text">${esc(first.text)}</span>${icon('chev', 'i-sm')}</button>`;
+}
+const signalPeople = () =>
+  Object.fromEntries(ROLES.map((r) => [r, { name: PEOPLE[r].name, title: ROLE_TITLE(r) }]));
 function railTeam(a, t) {
   const typing = typingRole(a);
   const replying = replyingRoles(a);
-  const notes = (ui.notesCache || []).filter(
-    (n) => !t || ui.scopeAll || !n.taskId || n.taskId === t.id,
-  );
-  return `<div class="rail-pad">
-    ${notes.length ? `<section class="notes-list"><h3 class="mini-title">${T('同事的提醒', 'Reminders')}</h3>${notes.map(marginNote).join('')}</section>` : ''}
-    <ul class="people">${ROLES.map((r) => {
+  const signals = Board.collectSignals(a);
+  const needs = Board.needsYou(signals, signalPeople(), Board.freshSignals(signals.map((x) => x.id)));
+  return `<div class="rail-board">
+    ${needs}
+    <section aria-labelledby="people-h"><h3 class="mini-title" id="people-h">${T('同事', 'Colleagues')}</h3><ul class="people">${ROLES.map((r) => {
       const last = (a.conversations[r] || []).filter((m) => m.role !== 'user').at(-1);
       const n = unread(a, r);
       const waits = typing === r || replying.has(r);
       const line = waits
         ? `<span class="person-replying">${T('正在回复…', 'Replying…')}</span>`
-        : (last && teamLine(last.text)) || esc(KNOWS(r));
-      return `<li><button type="button" class="person ${n ? 'unread' : ''}" data-action="chat" data-role="${r}">${avatar(r, 'md', { typing: waits })}<span class="grow"><span class="person-name">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span><span class="person-line">${line}</span></span>${n ? `<span class="count-badge" aria-label="${esc(T(`${n} 条新消息`, n === 1 ? '1 new message' : `${n} new messages`))}">${n}</span>` : ''}</button></li>`;
+        : (last && teamLine(last.text)) || esc(Board.roleLine(r));
+      return `<li><button type="button" class="person ${n ? 'unread' : ''}" data-action="chat" data-role="${r}">${avatar(r, 'md', { typing: waits })}<span class="grow"><span class="person-name">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span><span class="person-line">${line}</span></span>${n ? `<span class="unread-mark"><span class="sr-only">${esc(T(`${n} 条新消息`, n === 1 ? '1 new message' : `${n} new messages`))}</span></span>` : ''}</button></li>`;
     }).join('')}
-      <li><button type="button" class="person mine" data-action="rail-tab" data-tab="agent">${agentMark('md')}<span class="grow"><span class="person-name">${T('我的 Agent', 'My agent')}<small>${T('你自己的工具', 'Your own tool')}</small></span><span class="person-line">${esc(agentLine(a))}</span></span></button></li>
-    </ul>
+      <li class="people-sep" role="separator"></li>
+      <li><button type="button" class="person mine" data-action="board-my-agent">${agentMark('md')}<span class="grow"><span class="person-name">${T('我的 Agent', 'My agent')}<small>${T('你自己的工具', 'Your own tool')}</small></span><span class="person-line">${esc(agentLine(a))}</span></span></button></li>
+    </ul></section>
   </div>`;
 }
 // The first sentence of the last reply, without Markdown, source tags or the local reference's
@@ -3031,9 +3142,63 @@ function activity(a, taskId) {
     )
     .reverse();
 }
-function railActivity(a, t) {
-  const list = activity(a, t && !ui.scopeAll ? t.id : null).slice(0, 40);
-  return `<div class="rail-pad">${list.length ? `<ol class="activity">${list.map((e) => `<li class="act-item ${e.tone || ''}">${e.open ? `<button type="button" class="act-open" data-action="${e.open.action}" ${e.open.id ? `data-id="${esc(e.open.id)}"` : ''} ${e.open.role ? `data-role="${e.open.role}"` : ''} ${e.open.tab ? `data-tab="${e.open.tab}"` : ''} ${e.open.compare ? 'data-compare="1"' : ''}>` : '<div class="act-open">'}${icon(e.icon, 'i-sm')}<span class="grow"${zhAttr(e.text)}>${esc(e.text)}</span>${e.at ? `<time>${when(e.at)}</time>` : ''}${e.open ? '</button>' : '</div>'}</li>`).join('')}</ol>` : `<p class="feed-empty">${T('发生的事会按时间记在这里。', 'What happens is recorded here, in order.')}</p>`}</div>`;
+// The record drawer, from the topbar's ⏱: what was the Activity tab, as a sheet over the rail.
+function recordsDrawer() {
+  return islandSlot('board-records');
+}
+function keepRecords(a) {
+  keepIsland(
+    'board-records',
+    Board.RecordsSheet,
+    {
+      open: Board.recordsShown(),
+      title: T('记录', 'Record'),
+      close: T('关闭记录', 'Close the record'),
+      body: Board.recordsShown()
+        ? Board.recordsBody(
+            activity(a, null)
+              .slice(0, 80)
+              .map((e) => ({ ...e, zh: locale() === 'en' && isChinese(e.text) })),
+          )
+        : '',
+      onClose: Board.closeRecords,
+    },
+    { persist: true },
+  );
+}
+// The document over the board: the layer covers the desk column; the sheet is an island in it.
+function docLayer() {
+  return `<div class="mat-layer" data-mat-layer>${islandSlot('board-doc')}</div>`;
+}
+function docSheetData(a) {
+  const id = ui.docSheet;
+  const m = id && E.getMaterials(a).find((x) => x.id === id);
+  if (!m) return null;
+  const prev = ui.previous[m.id];
+  const hasPrev = prev && prev.version < m.version;
+  const zhOnly = locale() === 'en' && isChinese(m.content);
+  const owner = whoHas(m)[0] || Board.docOwner(m.id);
+  const showV1 = ui.compare && hasPrev;
+  const meta = `<span>v${m.version}</span>${m.id === 'policy' ? `<span class="${a.world.indexVersion < m.version ? 'warn' : ''}">${T('知识助手索引 v' + a.world.indexVersion, 'Assistant index v' + a.world.indexVersion)}</span>` : ''}${zhOnly ? '<span class="lang-tag">Chinese source</span>' : ''}${hasPrev && !showV1 && Board.wordingChanged(prev.content, m.content) ? `<span class="mat-reworded">${T('措辞也有改动', 'Wording changed too')}</span>` : ''}${hasPrev ? `<button type="button" class="mat-compare" role="switch" aria-checked="${!!showV1}" data-action="toggle-compare"><span class="track" aria-hidden="true"></span>${T(`对照 v${prev.version}`, `Compare with v${prev.version}`)}</button>` : ''}`;
+  const lang = zhOnly ? ' lang="zh-CN"' : '';
+  const body = showV1
+    ? `<p class="mat-was">${T(`v${prev.version} 原文，已被 v${m.version} 取代`, `v${prev.version} as it was, replaced by v${m.version}`)}</p><div class="prose serif"${lang}>${md(prev.content, { dropTitle: true })}</div>`
+    : !String(m.content || '').trim()
+      ? `<div class="mat-loading" role="status" aria-label="${esc(T('正在取资料', 'Loading the document'))}"><i></i><i></i><i></i><i></i><i></i><i></i></div>`
+      : `<div class="prose serif"${lang}>${hasPrev ? Board.markChangedFigures(md(m.content, { dropTitle: true }), prev.content, m.content) : md(m.content, { dropTitle: true })}</div>`;
+  const foot = `${btn(icon('quote', 'i-sm') + T('引用到作品', 'Cite in my work'), 'cite-material', 'small', `data-id="${esc(m.id)}"`)}${owner ? btn(avatar(owner, 'xs') + T(`问${PEOPLE[owner].name}这份资料`, `Ask ${PEOPLE[owner].ref} about this`), 'discuss-material', 'small quiet', `data-id="${esc(m.id)}" data-role="${owner}"`) : ''}`;
+  return { id: m.id, title: materialTitle(m), titleLang: zhOnly ? 'zh-CN' : undefined, meta, body, foot };
+}
+function keepDocSheet(a) {
+  keepIsland('board-doc', Board.DocSheet, {
+    sheet: a ? docSheetData(a) : null,
+    container: document.querySelector('[data-mat-layer]'),
+    labels: {
+      close: T('关闭资料', 'Close the document'),
+      dim: T('关闭资料，回到工作板', 'Close the document and return to the board'),
+    },
+    onClose: Board.closeDoc,
+  });
 }
 
 /* ---------- 4. review ---------- */
@@ -3265,11 +3430,13 @@ function practiceNote(a, v) {
   };
 }
 // Work saved without a task (for example, returned by an Agent over MCP) stays visible on the board.
+// Work not filed under any task sits after the board, folded into one line.
 function unfiledWorks(a) {
   const list = (a.artifacts || []).filter((w) => !w.taskId && !w.removedAt);
   if (!list.length) return '';
-  return `<section class="work-sec" aria-labelledby="unfiled-h"><header class="sec-head"><h2 id="unfiled-h">${T('不在事项里的作品', 'Work outside any task')}</h2><span class="sec-hint">${T('先查看确切版本，再决定是否采用', 'Check which version it is before you adopt it')}</span></header>
-    <div class="unfiled-list">${list.map((w) => `<button type="button" class="next-row" data-action="preview-work" data-id="${esc(w.id)}">${icon(w.source === 'external-agent' ? 'spark' : 'note', 'i-sm row-icon')}<span class="grow"><span class="row-title">${esc(w.title || T('未命名', 'Untitled'))}</span><span class="row-sub">${esc(purposeLabel(w.purpose))} · ${workVersion(w.revision)} · ${w.adopted ? T('已采用', 'Adopted') : T('待你检查', 'Awaiting your check')}${w.source === 'external-agent' ? T(' · 来自我的 Agent', ' · from my Agent') : ''}</span></span>${icon('chev', 'i-sm')}</button>`).join('')}</div></section>`;
+  return `<details class="work-sec unfiled-fold" data-flip="unfiled"><summary>${icon('chev', 'i-sm')}<span>${T('不在事项里的作品', 'Work outside any task')}</span><span class="sec-count">${list.length}</span></summary>
+    <p class="sec-hint">${T('先查看确切版本，再决定是否采用', 'Check which version it is before you adopt it')}</p>
+    <div class="unfiled-list">${list.map((w) => `<button type="button" class="next-row" data-action="preview-work" data-id="${esc(w.id)}">${icon(w.source === 'external-agent' ? 'spark' : 'note', 'i-sm row-icon')}<span class="grow"><span class="row-title">${esc(w.title || T('未命名', 'Untitled'))}</span><span class="row-sub">${esc(purposeLabel(w.purpose))} · ${workVersion(w.revision)} · ${w.adopted ? T('已采用', 'Adopted') : T('待你检查', 'Awaiting your check')}${w.source === 'external-agent' ? T(' · 来自我的 Agent', ' · from my Agent') : ''}</span></span>${icon('chev', 'i-sm')}</button>`).join('')}</div></details>`;
 }
 function previewWork(a, id) {
   const w = a.artifacts.find((x) => x.id === id && !x.removedAt);
@@ -3666,6 +3833,12 @@ function sheetConfig() {
     `${btn(icon('hand', 'i-sm') + T('申请资源', 'Request resources'), 'resources', 'quiet')}<span class="spacer"></span><button type="submit" form="config-form" class="btn primary">${T('保存设置', 'Save settings')}</button>`,
     '',
   );
+  // The title takes the first focus (no ring); a field shows focus only when the learner enters it.
+  const title = document.getElementById('sheet-title');
+  if (title) {
+    title.tabIndex = -1;
+    title.focus({ preventScroll: true });
+  }
 }
 function sheetResources() {
   const a = current();
@@ -4089,6 +4262,11 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
     ui.investigationRefreshQueued = true;
     parts = parts.filter((p) => p !== 'stage');
   }
+  // Under an open document the board stays as it is (B1); it catches up when the sheet closes.
+  if (parts.includes('stage') && ui.docSheet && WS.includes(ui.route) && !routeTask(a)) {
+    ui.stageStale = true;
+    parts = parts.filter((p) => p !== 'stage');
+  }
   if (parts.includes('stage') && dirty) flush();
   ui.notesCache = Coach.notes(a, E);
   const key = focusKey();
@@ -4108,9 +4286,21 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
     }
   }
   if (parts.includes('stage')) {
+    // The native board draws its cards a moment after this markup; until then the page would be
+    // shorter and the scroll position clamped. Hold the old height until the cards are back.
+    const held = document.getElementById('ws-stage')?.offsetHeight || 0;
     document.getElementById('ws-stage').outerHTML =
       `<div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${wsStage(a)}</div>`;
+    const next = document.getElementById('ws-stage');
+    if (next && held) {
+      next.style.minHeight = held + 'px';
+      const release = () => next.isConnected && (next.style.minHeight = '');
+      (document.querySelector('.kanban') ? Board.tasksDrawn(1, 1500) : Promise.resolve()).then(() =>
+        requestAnimationFrame(release),
+      );
+    }
     if (stage) stage.scrollTop = y;
+    ui.stageStale = false;
   }
   if (parts.includes('rail')) {
     const rb = document.querySelector('#ws-rail .rail-body');
@@ -4123,6 +4313,21 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
   ws.dataset.status = statusOf(a);
   afterRender();
   restoreFocus(key);
+  boardSettle();
+}
+// After the board is drawn: a newly opened document slides in, an arriving change hangs its
+// amber marks one after another.
+function boardSettle() {
+  const a = current();
+  if (a && document.querySelector('.ws')) {
+    keepDocSheet(a);
+    keepRecords(a);
+  }
+  Board.playReadings();
+  if (ui.amberArriving != null) {
+    Board.staggerAmber(ui.amberArriving);
+    ui.amberArriving = null;
+  }
 }
 const narrowRail = () => window.matchMedia('(max-width: 1279px)').matches;
 function syncPanels() {
@@ -4274,9 +4479,16 @@ async function openMaterial(id, compare = false) {
     ui.obj = { task: t.id, type: 'doc', id };
     persist();
     refreshWS(['stage', 'toolbar']);
-  } else {
+  } else if (ui.route === 'doc' || !WS.includes(ui.route)) {
     persist();
     go('doc', { id });
+  } else {
+    persist();
+    if (ui.docSheet !== id) Board.willOpen(id);
+    ui.docSheet = id;
+    // Over the board a new version marks its change in place; v1 is one switch away.
+    ui.compare = false;
+    refreshWS(['overlay', 'toolbar']);
   }
   // Reading is a counted business action on the server; record the first read of each version only.
   const readKey = id + '@' + (m ? m.version : 0);
@@ -4292,10 +4504,12 @@ async function openMaterial(id, compare = false) {
   }
   if (m && m.version > 1 && !ui.previous[id]) {
     try {
-      const hist = await L.history(a, 0);
-      const prev = hist.find((x) => x.id === id && x.version < m.version);
-      if (prev) {
-        ui.previous[id] = { version: prev.version, content: prev.content };
+      // The version before, read without recording a read (as the change band does).
+      const prev = L.nativeWorkspace(a)
+        ? await L.materialVersion(a, id, m.version - 1)
+        : (await L.history(a, 0)).find((x) => x.id === id && x.version < m.version);
+      if (prev?.content) {
+        ui.previous[id] = { version: prev.version || m.version - 1, content: String(prev.content) };
         refreshWS(['stage']);
       }
     } catch (_) {
@@ -5566,6 +5780,7 @@ async function act(el, ev = new Event('rc-action')) {
       refreshWS(['toolbar']);
       break;
     case 'rail':
+      if (ui.rail === 'chat' && el.dataset.rail === 'team') Board.railPush('back');
       ui.railTab = 'team';
       ui.rail = el.dataset.rail;
       if (narrowRail()) ui.railOpen = true;
@@ -5805,6 +6020,7 @@ async function act(el, ev = new Event('rc-action')) {
       sheetResources();
       break;
     case 'chat':
+      if (ui.rail !== 'chat' || ui.railTab !== 'team') Board.railPush('in');
       openChat(el.dataset.role);
       break;
     case 'preview-work':
@@ -5869,7 +6085,8 @@ async function act(el, ev = new Event('rc-action')) {
     }
     case 'discuss-material': {
       const m = E.getMaterials(a).find((x) => x.id === id);
-      const role = el.dataset.role || whoHas(m)[0] || 'business';
+      const role = el.dataset.role || whoHas(m)[0] || Board.docOwner(m.id);
+      Board.railPush('in');
       openChat(
         role,
         T(
@@ -7002,6 +7219,53 @@ if (!hasStage('engineer'))
       { id: 'sign', label: ['签字', 'Sign off'], state: 'todo' },
     ],
   }));
+// The board line (screens/board): what it needs from this file to redraw and to open things.
+Board.installBoard({
+  current,
+  refresh: (parts) => {
+    if (current() && WS.includes(ui.route)) refreshWS(parts);
+  },
+  notes: (a) => (a === current() ? ui.notesCache || [] : Coach.notes(a, E)),
+  replyLabel: () => T('回应', 'Reply'),
+  closeDoc: () => {
+    const a = current();
+    const was = ui.docSheet;
+    ui.docSheet = null;
+    ui.compare = false;
+    // Closing the brief the first time rolls it into one line; the board below follows.
+    const rolls = was === 'brief' && a && document.querySelector('.brief-band:not(.is-rolled)');
+    if (rolls) {
+      Board.noteBriefRead(a.id);
+      Board.captureBoard();
+    }
+    refreshWS(['overlay', 'stage']);
+    if (rolls) Board.playBoard();
+  },
+  openRecords: () => boardSettle(),
+  reload: async () => {
+    const a = current();
+    if (!a) return;
+    await L.refresh(a);
+    if (current() === a && WS.includes(ui.route)) refreshWS(['stage', 'toolbar']);
+  },
+  openNeeds: () => {
+    ui.railTab = 'team';
+    ui.rail = 'team';
+    ui.railOpen = true;
+    refreshWS(['rail', 'toolbar']);
+    document.getElementById('needs-h')?.scrollIntoView({ block: 'start' });
+    document.querySelector('#ws-rail .needs-you button')?.focus({ preventScroll: true });
+  },
+  myAgent: () => {
+    if (isRegisteredRoute('agent')) go('agent', { transition: true });
+    else {
+      ui.railTab = 'agent';
+      ui.rail = 'team';
+      if (narrowRail()) ui.railOpen = true;
+      refreshWS(['rail', 'toolbar']);
+    }
+  },
+});
 // The product manager's stage: no draft yet → Investigate; a draft → Decide; submitted → Delivered.
 registerStage('pm', (a) =>
   pmStage({
