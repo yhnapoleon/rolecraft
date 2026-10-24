@@ -837,9 +837,11 @@ export function mountNativeFeedback(
               ? T('规则确定：', 'Rule finding: ') +
                   (labels[item.rule_bound.lower] ?? item.rule_bound.lower)
               : T('规则已核实范围：', 'Verified rule interval: ') +
-                  (labels[item.rule_bound.lower] ?? item.rule_bound.lower) +
-                  '—' +
-                  (labels[item.rule_bound.upper] ?? item.rule_bound.upper) +
+                  // Said the way the rule lines say it (N7): "between A and B", not "A—B".
+                  T(
+                    `介于${labels[item.rule_bound.lower] ?? item.rule_bound.lower}和${labels[item.rule_bound.upper] ?? item.rule_bound.upper}之间`,
+                    `between ${(labels[item.rule_bound.lower] ?? item.rule_bound.lower).toLowerCase()} and ${(labels[item.rule_bound.upper] ?? item.rule_bound.upper).toLowerCase()}`,
+                  ) +
                   T(
                     '；范围内的具体判断仍待核验。',
                     '; the exact judgment within this interval remains unverified.',

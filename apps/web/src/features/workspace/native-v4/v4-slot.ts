@@ -22,7 +22,7 @@ import { recipientShares, rememberRequest } from '../../roles-native/v4-data';
 import { agentMark, avatar, icon, PEOPLE, priMark, statusMark } from '../../../app/art.js';
 import { workFolderMarkup } from '../../../app/work-folder.js';
 import { personLabel } from '../../../app/people.js';
-import { PRI, STATUS, purposeLabel } from '../../../app/vocab.js';
+import { PRI, STATUS, purposeLabel, workVersion } from '../../../app/vocab.js';
 import { cardPeople, taskCardFacts, taskProgress } from './card-facts';
 
 const PRIORITY_KEYS = ['first', 'next', 'later'] as const;
@@ -998,7 +998,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
     compare.hidden = !d;
     compareCaption.textContent = T('比较已保存的内容', 'Compare saved content');
     serverContent.textContent = p
-      ? T('第 ' + p.version + ' 版 · ', 'v' + p.version + ' · ') +
+      ? `${workVersion(p.version)} · ` +
         (p.title ?? '') +
         '\n' +
         (p.content ?? '')
@@ -1018,16 +1018,14 @@ export function mount(context: V4SlotContext): V4SlotHandle {
             'Product removed. Restoring it does not reactivate previous shares.',
           )
         : p.visibility === 'shared'
-          ? T('当前第 ' + p.version + ' 版已有同事可见。', 'Current v' + p.version + ' is shared.')
+          ? T(`当前第 ${p.version} 版已有同事可见。`, `Current version ${p.version} is shared.`)
           : p.visibility === 'private'
             ? T(
                 '当前第 ' +
                   p.version +
                   ' 版仅自己可见。' +
                   (earlier ? '此前分享的旧版仍有效。' : ''),
-                'Current v' +
-                  p.version +
-                  ' is private.' +
+                `Current version ${p.version} is private.` +
                   (earlier ? ' Previously shared versions remain visible.' : ''),
               )
             : T(
@@ -1036,8 +1034,8 @@ export function mount(context: V4SlotContext): V4SlotHandle {
               );
     shareVersion.textContent = p
       ? T(
-          '只分享已保存的第 ' + p.version + ' 版；之后修改不会自动分享。',
-          'Share only saved v' + p.version + '. Later changes are not shared automatically.',
+          `只分享已保存的第 ${p.version} 版；之后修改不会自动分享。`,
+          `Share only saved version ${p.version}. Later changes are not shared automatically.`,
         )
       : '';
     recipient.setAttribute('aria-label', T('分享给同事', 'Share with colleague'));
@@ -1081,7 +1079,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       ...history.map((v) => {
         const row = el('details');
         row.append(
-          el('summary', 'v' + v.version + ' · ' + v.title),
+          el('summary', `${workVersion(v.version)} · ${v.title}`),
           el('pre', v.content, 'w03-slot-text'),
           button('打开这个版本', 'Open this version', () => host.openReference(productRef(v))),
         );

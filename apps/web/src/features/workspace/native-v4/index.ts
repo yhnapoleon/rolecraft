@@ -457,8 +457,8 @@ export function mountNativeWorkspace(
       ? ''
       : product.visibility === 'shared'
         ? T(
-            '当前第 ' + product.version + ' 版已有同事可见。',
-            'Current v' + product.version + ' is shared with colleagues.',
+            `当前第 ${product.version} 版已有同事可见。`,
+            `Current version ${product.version} is shared with colleagues.`,
           )
         : product.visibility === 'private'
           ? T(
@@ -466,9 +466,7 @@ export function mountNativeWorkspace(
                 product.version +
                 ' 版仅自己可见。' +
                 (earlier ? '此前分享仍有效，见下方具体版本。' : ''),
-              'Current v' +
-                product.version +
-                ' is private.' +
+              `Current version ${product.version} is private.` +
                 (earlier ? ' Earlier shares are still active; see the versions below.' : ''),
             )
           : T(
