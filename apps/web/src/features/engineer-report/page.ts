@@ -1,16 +1,16 @@
-/** #/engineer-report: two real regression reports (public/engineer/*.json, produced by the
- * engineer CLI against a local practice; see public/engineer/README.md), read-only.
+/** #/engineer-report: two real signed reviews (public/engineer/*.json, as the engineer API reads
+ * them back; see public/engineer/README.md), read-only.
  * The page is built once and kept: a host re-render re-attaches the same sheet, so the chosen
  * sample and the open "查看依据" survive; only a language change rebuilds it. */
 import { copyText, type CopyTable, type Language } from '../results-native/localization';
 import { renderEngineerReport } from './render';
-import type { EngineerPublicReport } from './types';
+import type { EngineerReviewRecord } from './types';
 import { engineerReportView } from './view';
 import './page.css';
 
 const SAMPLES = [
-  { id: 'fixed', file: 'sample-target-fixed', label: 'fixed' },
-  { id: 'not-fixed', file: 'sample-target-not-fixed', label: 'notFixed' },
+  { id: 'root-cause', file: 'sample-root-cause', label: 'rootCause' },
+  { id: 'overreach', file: 'sample-overreach', label: 'overreach' },
 ] as const;
 type SampleId = (typeof SAMPLES)[number]['id'];
 
@@ -18,8 +18,8 @@ const zh = {
   title: '知识助手配置的回归报告',
   sample: '样例',
   choose: '选择样例',
-  fixed: '目标已修好',
-  notFixed: '目标没修好',
+  rootCause: '根因修法',
+  overreach: '改得太宽',
   loading: '正在读取…',
   failed: '读不到这份样例，刷新页面再试。',
   retrieval: '规则版检索',
@@ -31,8 +31,8 @@ const COPY: CopyTable<Key> = {
     title: 'Regression reports for the assistant configuration',
     sample: 'Sample',
     choose: 'Choose a sample',
-    fixed: 'Target fixed',
-    notFixed: 'Target not fixed',
+    rootCause: 'Root-cause fix',
+    overreach: 'Too broad a change',
     loading: 'Loading…',
     failed: "Couldn't load this sample. Reload the page to try again.",
     retrieval: 'Rule-based retrieval',
@@ -43,13 +43,24 @@ const COPY: CopyTable<Key> = {
 export const sampleUrl = (sample: SampleId, language: Language) =>
   `/engineer/${SAMPLES.find((s) => s.id === sample)?.file}.${language}.json`;
 
-const reports = new Map<string, Promise<EngineerPublicReport>>();
-function load(url: string): Promise<EngineerPublicReport> {
+/** Report options from a signed review: its report, its rubric conclusions, and the retrieval
+ * wording. A known retrieval mode gets its short name; otherwise the API's own sentence. */
+export function reviewViewOptions(record: EngineerReviewRecord, language: Language) {
+  const retrieval = record.retrieval;
+  const retrievalNote =
+    retrieval?.mode === 'rule_based'
+      ? copyText(COPY, language, 'retrieval')
+      : retrieval?.note?.trim() || undefined;
+  return { language, evaluation: record.evaluation ?? null, retrievalNote };
+}
+
+const reports = new Map<string, Promise<EngineerReviewRecord>>();
+function load(url: string): Promise<EngineerReviewRecord> {
   let pending = reports.get(url);
   if (!pending) {
     pending = fetch(url).then((response) => {
       if (!response.ok) throw new Error(String(response.status));
-      return response.json() as Promise<EngineerPublicReport>;
+      return response.json() as Promise<EngineerReviewRecord>;
     });
     pending.catch(() => reports.delete(url));
     reports.set(url, pending);
@@ -58,8 +69,8 @@ function load(url: string): Promise<EngineerPublicReport> {
 }
 
 const state: { sample: SampleId; basisOpen: Record<SampleId, boolean> } = {
-  sample: 'fixed',
-  basisOpen: { fixed: false, 'not-fixed': false },
+  sample: 'root-cause',
+  basisOpen: { 'root-cause': false, overreach: false },
 };
 let kept: { language: Language; element: HTMLElement } | null = null;
 
@@ -130,9 +141,9 @@ function buildPage(doc: Document, language: Language): HTMLElement {
     const mine = ++token;
     const sample = state.sample;
     sheet.setAttribute('aria-busy', 'true');
-    let report: EngineerPublicReport;
+    let record: EngineerReviewRecord;
     try {
-      report = await load(sampleUrl(sample, language));
+      record = await load(sampleUrl(sample, language));
     } catch {
       if (mine === token) {
         sheet.replaceChildren(el('p', 'er-page__note', t('failed')));
@@ -143,7 +154,7 @@ function buildPage(doc: Document, language: Language): HTMLElement {
     if (mine !== token) return;
     const drawn = renderEngineerReport(
       doc,
-      engineerReportView(report, { language, retrievalNote: t('retrieval') }),
+      engineerReportView(record.report, reviewViewOptions(record, language)),
       {
         basisOpen: state.basisOpen[sample],
         onBasisToggle: (open) => {

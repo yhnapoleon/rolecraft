@@ -1,13 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import fixedEn from '../../../public/engineer/sample-target-fixed.en.json';
-import fixedZh from '../../../public/engineer/sample-target-fixed.zh.json';
-import notFixedEn from '../../../public/engineer/sample-target-not-fixed.en.json';
-import notFixedZh from '../../../public/engineer/sample-target-not-fixed.zh.json';
+import overreachEn from '../../../public/engineer/sample-overreach.en.json';
+import overreachZh from '../../../public/engineer/sample-overreach.zh.json';
+import rootCauseEn from '../../../public/engineer/sample-root-cause.en.json';
+import rootCauseZh from '../../../public/engineer/sample-root-cause.zh.json';
 import { ENGINEER_REPORT_COPY } from './copy';
+// Earlier review outputs kept as UI-state fixtures (failing rows, new failures, a mismatched
+// self-report): their probe results are not regression conclusions.
+import fixedEn from './fixtures/earlier-target-fixed.en.json';
+import fixedZh from './fixtures/earlier-target-fixed.zh.json';
+import notFixedEn from './fixtures/earlier-target-not-fixed.en.json';
+import notFixedZh from './fixtures/earlier-target-not-fixed.zh.json';
+import { reviewViewOptions } from './page';
 import type {
   EngineerCriterionConclusion,
   EngineerFinding,
   EngineerPublicReport,
+  EngineerReviewRecord,
   EngineerRuleEvaluation,
 } from './types';
 import { engineerReportView, ruleFindingText, type EngineerReportView } from './view';
@@ -17,6 +25,12 @@ const FIXED_ZH = sample(fixedZh);
 const NOT_FIXED_ZH = sample(notFixedZh);
 const FIXED_EN = sample(fixedEn);
 const NOT_FIXED_EN = sample(notFixedEn);
+/** The real signed reviews the sample page shows (engineer API read-back). */
+const record = (raw: unknown) => raw as EngineerReviewRecord;
+const ROOT_ZH = record(rootCauseZh);
+const ROOT_EN = record(rootCauseEn);
+const OVER_ZH = record(overreachZh);
+const OVER_EN = record(overreachEn);
 const SG = 'Asia/Singapore';
 
 /** Identity and state fields the renderer uses as attributes, never as visible text. */
@@ -155,21 +169,55 @@ describe('engineer regression report · real samples', () => {
   });
 
   it('ER-03 English samples read in English, with the same facts', () => {
-    const fixed = engineerReportView(FIXED_EN, { language: 'en', timeZone: SG });
-    expect(fixed.verdict?.title).toBe('Target fixed');
-    expect(fixed.verdict?.targets).toEqual(['I forgot my account password. How do I reset it?']);
-    expect(fixed.publicSection.rows[0].diff).toBe(
-      'Expected an answer with a warning, got a direct answer; cites the travel policy v1 (now v2)',
-    );
-    expect(fixed.publicSection.rows[0].tags.map((t) => t.text)).toEqual(['Also failed before']);
-    expect(fixed.hiddenSection.note).toBe('Hidden probes report counts only.');
-    expect(fixed.advice.text).toBe('Model advice: waiting for model integration');
-    const notFixed = engineerReportView(NOT_FIXED_EN, { language: 'en', timeZone: SG });
-    expect(notFixed.verdict?.detail).toBe(
-      'Still failing: expected an answer with a warning, got no answer.',
-    );
-    expect(notFixed.checks.lines[0].status).toBe('New failures in public probes: 2');
-    expect(notFixed.checks.lines[1].status).toBe('Self-report does not match the actual results');
+    const root = engineerReportView(ROOT_EN.report, {
+      ...reviewViewOptions(ROOT_EN, 'en'),
+      timeZone: SG,
+    });
+    expect(root.verdict).toMatchObject({
+      title: 'Target fixed',
+      detail: 'Passes the frozen expectation.',
+      targets: ['What is the hotel reimbursement limit per night?'],
+    });
+    expect(root.publicSection.rows.map((r) => [r.id, r.resultText])).toEqual([
+      ['F01', 'Passed'],
+      ['F04', 'Passed'],
+      ['F05', 'Passed'],
+      ['F12', 'Passed'],
+    ]);
+    expect(root.hiddenSection.note).toBe('Hidden probes report counts only.');
+    expect(root.checks.lines.map((l) => l.status)).toEqual([
+      'No new failures in public or hidden probes',
+      'Self-report matches the actual results',
+    ]);
+    expect(root.advice.text).toBe('Model advice: waiting for model integration');
+    expect(root.retrievalNote).toBe('Rule-based retrieval');
+    const over = engineerReportView(OVER_EN.report, reviewViewOptions(OVER_EN, 'en'));
+    expect(over.checks.lines[0]).toMatchObject({
+      tone: 'warn',
+      status: 'New failures: 1 (0 public · 1 hidden)',
+    });
+    expect(over.evaluation?.rows.map((r) => [r.title, r.labelText, r.reason, r.hidden])).toEqual([
+      [
+        'Target failures repaired',
+        'Met',
+        'Target failures now pass the frozen expectation.',
+        undefined,
+      ],
+      ['No regressions', 'Not met', 'New failures appeared.', '1 hidden'],
+      [
+        'Change explanation matches configuration diff',
+        'Met',
+        'The change explanation matches the configuration diff.',
+        undefined,
+      ],
+      ['Report reproducible', 'Met', 'The self-report matches the rerun.', undefined],
+      [
+        'Unresolved items explained',
+        'Awaiting model verification',
+        'The semantic part will be checked once a model is connected.',
+        undefined,
+      ],
+    ]);
   });
 
   it.each([
@@ -185,12 +233,15 @@ describe('engineer regression report · real samples', () => {
   });
 
   it('ER-05 marks a probe question as source text when the report language differs from the page', () => {
-    expect(engineerReportView(FIXED_ZH, { language: 'en' }).publicSection.sourceNote).toBe(
+    expect(engineerReportView(ROOT_ZH.report, { language: 'en' }).publicSection.sourceNote).toBe(
       'Chinese source',
     );
-    expect(engineerReportView(FIXED_EN, { language: 'zh' }).publicSection.sourceNote).toBe(
+    expect(engineerReportView(ROOT_EN.report, { language: 'zh' }).publicSection.sourceNote).toBe(
       '英文原文',
     );
+    expect(
+      engineerReportView(ROOT_ZH.report, { language: 'zh' }).publicSection.sourceNote,
+    ).toBeUndefined();
   });
 });
 
@@ -695,9 +746,7 @@ describe('engineer regression report · target line and rubric conclusions', () 
         }),
       ]),
     });
-    expect(en.evaluation?.rows[0].precheck).toBe(
-      '0 public and 2 hidden failures still unexplained',
-    );
+    expect(en.evaluation?.rows[0].precheck).toBe('Failures still unexplained: 0 public, 2 hidden');
     const explained = engineerReportView(FIXED_ZH, {
       language: 'zh',
       evaluation: evaluation([
@@ -829,6 +878,121 @@ describe('engineer regression report · target line and rubric conclusions', () 
     expect(view.verdict).toMatchObject({ state: 'not_fixed', tone: 'ink' });
     const tones = strings(view);
     expect(tones).toContain('新增失败');
+  });
+});
+
+describe('engineer regression report · signed review samples', () => {
+  it('ER-38 root-cause sample (zh): target fixed, no new failures anywhere, every conclusion met', () => {
+    const view = engineerReportView(ROOT_ZH.report, {
+      ...reviewViewOptions(ROOT_ZH, 'zh'),
+      timeZone: SG,
+    });
+    expect(view.meta).toEqual(['2026-10-24 15:37', '复核完成']);
+    expect(view.verdict).toMatchObject({
+      source: 'public',
+      state: 'fixed',
+      tone: 'good',
+      title: '目标问题已修好',
+      detail: '按冻结预期通过。',
+      targets: ['住宿报销上限是多少？'],
+    });
+    expect(view.publicSection.tally).toBe('通过 4 · 未通过 0');
+    expect(view.publicSection.rows.map((r) => [r.id, r.tone, r.tags.map((t) => t.text)])).toEqual([
+      ['F01', 'good', ['目标']],
+      ['F04', 'good', []],
+      ['F05', 'good', []],
+      ['F12', 'good', []],
+    ]);
+    expect(view.hiddenSection.counts.map((c) => `${c.label} ${c.value}`)).toEqual([
+      '通过 9',
+      '未通过 0',
+      '出错 0',
+    ]);
+    expect(view.hiddenSection.comparison?.map((c) => [c.label, c.value, c.tone])).toEqual([
+      ['新增失败', 0, 'ink'],
+      ['修好', 2, 'good'],
+      ['仍未通过', 0, 'ink'],
+      ['未核实', 0, 'ink'],
+    ]);
+    expect(view.checks.lines.map((l) => [l.tone, l.status])).toEqual([
+      ['good', '公开与隐藏探针都没有新增失败'],
+      ['good', '自报结果与实际一致'],
+    ]);
+    expect(view.evaluation?.rows.map((r) => [r.title, r.labelText, r.tone, r.reason])).toEqual([
+      ['目标失败已修复', '满足', 'good', '目标失败都已按冻结预期通过。'],
+      ['无回归', '满足', 'good', '没有新增失败。'],
+      ['修改说明与配置差异一致', '满足', 'good', '修改说明与实际配置差异一致。'],
+      ['报告可复现', '满足', 'good', '自报结果与重跑一致。'],
+      ['对未修复项有说明', '等待模型核验', 'unknown', '这一项的语义部分等模型接入后核验。'],
+    ]);
+    expect(
+      view.evaluation?.rows[2].fieldChecks?.rows.map((r) => `${r.field}：${r.status}`),
+    ).toEqual(['过期资料保护：一致']);
+    expect(view.evaluation?.rows[4].precheck).toBeUndefined();
+    expect(view.retrievalNote).toBe('规则版检索');
+  });
+
+  it('ER-39 hidden comparison with one new failure shows an amber count (overreach sample)', () => {
+    const view = engineerReportView(OVER_ZH.report, reviewViewOptions(OVER_ZH, 'zh'));
+    expect(view.verdict).toMatchObject({ state: 'fixed', title: '目标问题已修好' });
+    expect(view.hiddenSection.counts.map((c) => c.value)).toEqual([8, 1, 0]);
+    expect(view.hiddenSection.comparison?.map((c) => [c.label, c.value, c.tone])).toEqual([
+      ['新增失败', 1, 'warn'],
+      ['修好', 2, 'good'],
+      ['仍未通过', 0, 'ink'],
+      ['未核实', 0, 'ink'],
+    ]);
+    expect(view.checks.lines[0]).toMatchObject({
+      tone: 'warn',
+      status: '新增失败 1 条（公开 0 · 隐藏 1）',
+    });
+    const e2 = view.evaluation?.rows[1];
+    expect([e2?.labelText, e2?.tone, e2?.reason, e2?.hidden]).toEqual([
+      '未满足',
+      'warn',
+      '出现了新增失败。',
+      '隐藏 1 条',
+    ]);
+    expect(view.evaluation?.rows[2].fieldChecks?.rows.map((r) => r.field)).toEqual([
+      '最低相关度',
+      '过期资料保护',
+    ]);
+    expect(view.evaluation?.rows[4].precheck).toBe('还有 0 条公开、1 条隐藏的失败没有解释');
+  });
+
+  it.each([
+    ['root-cause zh', ROOT_ZH],
+    ['root-cause en', ROOT_EN],
+    ['overreach zh', OVER_ZH],
+    ['overreach en', OVER_EN],
+  ])(
+    'ER-40 rule copy matches the reviewer’s authored text in the signed review (%s)',
+    (_name, review) => {
+      for (const f of review.report.findings)
+        expect(
+          ruleFindingText(f.kind, f.status, review.report.work_language, f.probe_ids.length > 0),
+        ).toBe(f.description);
+    },
+  );
+
+  it('ER-41 a signed review maps to report options: conclusions, and the retrieval mode by its short name', () => {
+    expect(reviewViewOptions(ROOT_ZH, 'zh')).toEqual({
+      language: 'zh',
+      evaluation: ROOT_ZH.evaluation,
+      retrievalNote: '规则版检索',
+    });
+    expect(reviewViewOptions(ROOT_EN, 'en').retrievalNote).toBe('Rule-based retrieval');
+    const other = { ...ROOT_EN, retrieval: { mode: 'hybrid', note: 'Uses the hybrid retriever.' } };
+    expect(reviewViewOptions(other, 'en').retrievalNote).toBe('Uses the hybrid retriever.');
+    const none = { ...ROOT_EN, retrieval: null, evaluation: null };
+    expect(reviewViewOptions(none, 'en')).toEqual({
+      language: 'en',
+      evaluation: null,
+      retrievalNote: undefined,
+    });
+    // The submitter's own note never reaches the report.
+    const view = engineerReportView(ROOT_EN.report, reviewViewOptions(ROOT_EN, 'en'));
+    expect(strings(view).some((s) => s.includes(ROOT_EN.impact_note ?? '~'))).toBe(false);
   });
 });
 

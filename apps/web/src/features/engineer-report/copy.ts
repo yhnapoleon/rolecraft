@@ -253,7 +253,7 @@ export const ENGINEER_REPORT_COPY: CopyTable<EngineerReportKey> = {
     reasonJoin: '; ',
     reasonEnd: '.',
     hiddenInvolved: '{n} hidden',
-    precheckUnexplained: '{p} public and {h} hidden failures still unexplained',
+    precheckUnexplained: 'Failures still unexplained: {p} public, {h} hidden',
     fieldChecks: 'Field checks · {n}',
     fieldMatched: 'Matches',
     fieldOmitted: 'Not in the explanation',
