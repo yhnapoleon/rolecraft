@@ -124,7 +124,11 @@ export interface PurposePrompt {
   readonly submit: (purpose: PurposeChoice) => void;
 }
 
-function promptElement(doc: Document, language: FeedbackLanguage, prompt: PurposePrompt) {
+export function purposePromptElement(
+  doc: Document,
+  language: FeedbackLanguage,
+  prompt: PurposePrompt,
+) {
   const T = (k: Parameters<typeof feedbackCopy>[1]) => feedbackCopy(language, k);
   const fieldset = doc.createElement('fieldset');
   fieldset.className = 'short-result__prompt';
@@ -213,7 +217,7 @@ export function feedbackShortResult(doc: Document, input: FeedbackShortInput): S
     unknown && input.review ? laterPurpose(input.review, input.reviews ?? []) : undefined;
   const actions: Node[] = [];
   if (input.lines) actions.push(input.lines);
-  if (unknown && !later && input.prompt) actions.push(promptElement(doc, language, input.prompt));
+  if (unknown && !later && input.prompt) actions.push(purposePromptElement(doc, language, input.prompt));
   actions.push(input.semantic);
   const lead = later
     ? feedbackCopy(language, 'purposeChosen', { purpose: feedbackCopy(language, later) })

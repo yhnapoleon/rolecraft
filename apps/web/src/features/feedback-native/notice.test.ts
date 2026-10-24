@@ -23,9 +23,8 @@ describe('status line after a submission', () => {
     expect(feedbackNotice(submitted({ awaitingFeedback: true }), 'en')).toBe(
       'Submission saved. Feedback is being generated…',
     );
-    expect(feedbackNotice(submitted({ reports: [earlier, latest] }), 'zh')).toBe(
-      '本次提交已保存，可以看反馈、提出异议或开始修订。',
-    );
+    // With its feedback in, the results cover says what was delivered (195): no sentence.
+    expect(feedbackNotice(submitted({ reports: [earlier, latest] }), 'zh')).toBe('');
   });
   it('does not claim generation when the feedback job failed', () => {
     expect(feedbackNotice(submitted({ failedFeedback: true }), 'zh')).toBe(

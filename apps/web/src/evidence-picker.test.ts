@@ -343,11 +343,11 @@ describe('evidenceSummary', () => {
   ];
   it('counts the chosen evidence by kind', () => {
     expect(evidenceSummary(refs)).toBe('已选依据：2 段资料 · 1 次测试 · 1 份作品');
-    expect(evidenceSummary([])).toBe('还没有选择依据');
+    expect(evidenceSummary([])).toBe('还没选依据');
     setPreference('en');
     expect(evidenceSummary(refs)).toBe(
       'Selected evidence: 2 passages · 1 test run · 1 work version',
     );
-    expect(evidenceSummary([])).toBe('No evidence selected');
+    expect(evidenceSummary([])).toBe('Nothing chosen yet');
   });
 });

@@ -171,10 +171,8 @@ const decidedBy = (formal) =>
 async function submissionFacts(browser, count) {
   await browser.ev(`document.querySelector('#sheet')?.close()`);
   await browser.goto(`${base}#/review`);
-  await waitFor(browser, `!!document.querySelector('[data-short-result="feedback"]')`, 60000);
-  await browser.ev(
-    `document.querySelector('[data-short-result="feedback"] > details').open = true`,
-  );
+  // Item by item (195): each unmet row carries its "at submission" line in its basis.
+  await waitFor(browser, `!!document.querySelector('[data-feedback-items]')`, 60000);
   await waitFor(browser, `document.querySelectorAll('[data-rule-fact]').length >= ${count}`, 30000);
   return browser.ev(
     `[...document.querySelectorAll('[data-rule-fact]')].map((n) => [n.dataset.ruleFact, n.textContent])`,
@@ -207,7 +205,7 @@ async function runLanguage(language) {
       ],
     ]);
     await browser.ev(
-      `document.querySelector('[data-rule-fact="R4.functional_tests"]').closest('section').scrollIntoView({block: 'start'})`,
+      `(() => { const row = document.querySelector('[data-rule-fact="R4.functional_tests"]').closest('[data-feedback-item]'); const head = row.querySelector('.fb-item__head'); if (head.getAttribute('aria-expanded') !== 'true') head.click(); row.scrollIntoView({block: 'start'}); })()`,
     );
     await shot('feedback-direct');
 
@@ -371,7 +369,7 @@ async function runLanguage(language) {
       ],
     ]);
     await browser.ev(
-      `document.querySelector('[data-rule-fact="R4.functional_tests"]').closest('section').scrollIntoView({block: 'start'})`,
+      `(() => { const row = document.querySelector('[data-rule-fact="R4.functional_tests"]').closest('[data-feedback-item]'); const head = row.querySelector('.fb-item__head'); if (head.getAttribute('aria-expanded') !== 'true') head.click(); row.scrollIntoView({block: 'start'}); })()`,
     );
     await shot('feedback-fact');
     results.push({

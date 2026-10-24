@@ -317,7 +317,7 @@ export function evidenceSummary(refs: readonly (EvidenceRefV2 | ObjectRef)[]): s
   ].filter(Boolean);
   return parts.length
     ? T('已选依据：', 'Selected evidence: ') + parts.join(' · ')
-    : T('还没有选择依据', 'No evidence selected');
+    : T('还没选依据', 'Nothing chosen yet');
 }
 
 /** The picker dialog in the existing sheet style. */

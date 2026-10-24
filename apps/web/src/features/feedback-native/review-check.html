@@ -9,6 +9,8 @@
       ><p>Controlled component fixture — no real feedback or business session.</p
       ><div id="fixture"></div></main
     ><script type="module">
+    // The workbench's own tokens (colours, radii, motion), as on the real review page.
+    import '../../app/styles.css';
     import { mountNativeFeedback } from './index.ts';
     import { readRegisteredAdvice } from './model-advice.ts';
     const language = new URL(location.href).searchParams.get('lang') || 'zh';

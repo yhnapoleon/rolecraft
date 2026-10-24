@@ -470,7 +470,7 @@ async function snapshotNames(context) {
   assert.doesNotMatch(receipt, RECORD_ID);
   await shot('F13-receipt');
   await openReview(context);
-  const history = text('查看评审与提交历史', 'Review and submission history');
+  const history = text('之前的交付与评审', 'Earlier deliveries and reviews');
   await browser.clickText(history, '.native-feedback summary');
   const rows = await browser.ev(`(() => {
     const summary = [...document.querySelectorAll('.native-feedback summary')]
@@ -532,8 +532,8 @@ async function supplementEcho(context) {
     'dialog[open]:not(#sheet) button',
   );
   const recorded = text(
-    '补证已记录 · 等待核验',
-    'Additional evidence recorded · Awaiting verification',
+    '已记下补充的依据，仍待核验；这份反馈保持原样。',
+    'Your evidence is saved. It still needs checking; this feedback stays as it is.',
   );
   await browser.ev(`${form}.querySelector('[data-response-action="supplement"]').click()`);
   // Read the form and the history in one frame: the echo must arrive with the reset.
@@ -568,7 +568,7 @@ async function supplementNeedsReference(context) {
   const sent = await browser.ev('window.qaWrites.length');
   await browser.ev(`${form}.querySelector('[data-response-action="supplement"]').click()`);
   const message = text(
-    '补证需要先选择至少一处原始引用。',
+    '补充依据需要先选择至少一处原始引用。',
     'Choose at least one original reference before submitting evidence.',
   );
   await waitFor(
@@ -600,7 +600,7 @@ async function deliveryRounds(context) {
     `[...document.querySelectorAll('.native-feedback ${sections} > article')].map((a) => a.querySelector('button').textContent)`,
   );
   assert.deepEqual(labels, text(['第 2 次交付', '第 1 次交付'], ['Delivery 2', 'Delivery 1']));
-  const history = text('查看评审与提交历史', 'Review and submission history');
+  const history = text('之前的交付与评审', 'Earlier deliveries and reviews');
   await browser.clickText(history, '.native-feedback summary');
   const rows = await browser.ev(`(() => {
     const summary = [...document.querySelectorAll('.native-feedback summary')]

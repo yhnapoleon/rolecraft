@@ -17,7 +17,7 @@ for (const language of ['zh', 'en']) {
     );
     assert.equal(await browser.ev('window.fixture.calls.length'), 0);
     await browser.clickText(
-      language === 'en' ? 'Review artifacts while working' : '工作中先评审作品',
+      language === 'en' ? 'Get a review while you work' : '边做边请人评审',
     );
     await browser.click(
       'div[aria-label="' +
@@ -45,7 +45,7 @@ for (const language of ['zh', 'en']) {
     );
     await browser.ev('window.fixture.remount()');
     await browser.clickText(
-      language === 'en' ? 'Review artifacts while working' : '工作中先评审作品',
+      language === 'en' ? 'Get a review while you work' : '边做边请人评审',
     );
     assert.equal(
       await browser.ev('document.querySelector("input[placeholder]").value'),
@@ -63,7 +63,7 @@ for (const language of ['zh', 'en']) {
     assert.equal(calls[0].input.followup_of[0].object_id, 'response');
     assert.equal(await browser.ev('window.fixture.state.status'), 'active');
     await browser.clickText(
-      language === 'en' ? 'Review and submission history' : '查看评审与提交历史',
+      language === 'en' ? 'Earlier deliveries and reviews' : '之前的交付与评审',
     );
     await browser.clickText(language === 'en' ? 'View reviewed artifact' : '查看评审作品');
     assert.equal(await browser.ev('window.fixture.calls.at(-1).ref.version'), 1);
