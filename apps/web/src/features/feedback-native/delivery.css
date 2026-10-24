@@ -249,3 +249,10 @@
   text-align: left;
   white-space: normal;
 }
+@media (max-width: 720px) {
+  /* The delivery button is narrower on a phone (right 16px, about 150px wide), so the text
+     button can take the rest and stay on two lines at most. */
+  #sheet.deliver-sheet .sheet-foot > .btn {
+    max-width: calc(100% - 190px);
+  }
+}

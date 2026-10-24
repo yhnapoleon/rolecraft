@@ -275,22 +275,33 @@
 }
 
 /* Card face (visual D "slip"): the work line and foot sit under the title, past the progress
-   circle; the work's title is paper (serif), its version and purpose small. */
+   circle; the work's title is paper (serif), its version and purpose small. The title comes
+   first: it may take up to two lines before it is cut, and the version and purpose give way
+   to the next line rather than squeeze it. */
 .kanban .card-latest,
 .kanban .card-meta {
   padding-left: 22px;
 }
 .kanban .card-latest {
+  flex-wrap: wrap;
   align-items: baseline;
+  column-gap: 8px;
+  row-gap: 1px;
 }
 .kanban .card-latest.empty {
   color: var(--ink-3);
 }
 .kanban .card-work {
+  display: -webkit-box;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  line-height: 1.35;
   color: var(--ink);
   font-family: var(--serif);
   font-size: 14px;

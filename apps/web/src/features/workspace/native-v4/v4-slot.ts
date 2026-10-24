@@ -844,7 +844,7 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       notes.title = people
         .map((p) => {
           const name = PEOPLE[p.role]?.name ?? '';
-          return p.why === 'asked' ? T(`${name}提的请求`, `Asked by ${name}`) : T(`${name}有提醒`, `${name} left a reminder`);
+          return p.why === 'asked' ? T(`${name} 提的请求`, `Asked by ${name}`) : T(`${name} 有提醒`, `${name} left a reminder`);
         })
         .join(T('；', '; '));
       notes.append(el('span', notes.title, 'sr-only'));

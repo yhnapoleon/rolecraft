@@ -496,8 +496,8 @@ export function mountNativeFeedback(
     el(
       'p',
       T(
-        '提交会保留这些确切版本。反馈后可进入修订，原提交与原反馈继续保留。',
-        'Submission preserves these exact versions. You can revise after feedback; the original submission and feedback remain available.',
+        '交付会锁定所选版本，看完反馈可以修订，原交付和反馈都会留着。',
+        'Submitting locks the versions you choose; you can revise after feedback, and the original stays on record.',
       ),
       'muted',
     ),
@@ -1143,7 +1143,14 @@ export function mountNativeFeedback(
     notice.textContent = feedbackNotice(state, language);
     if (options.surface !== 'submission') renderCoverNow(state);
     // With the cover shown, the status line stays for screen readers only; the cover says it.
-    notice.classList.toggle('sr-only', !!coverHost.firstElementChild);
+    // In the delivery dialog the plain "keep working, choose versions" line is read, not shown:
+    // the dialog opens with one sentence under its heading.
+    const plainDelivery =
+      options.surface === 'submission' &&
+      state.status !== 'submitted' &&
+      !state.busy &&
+      !state.pending;
+    notice.classList.toggle('sr-only', !!coverHost.firstElementChild || plainDelivery);
     restoreChoice(state);
     selection.replaceChildren(
       ...state.products.map((product) => {
