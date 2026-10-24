@@ -1,0 +1,465 @@
+/* Regression report: a test report on paper. Colour keeps one meaning each — green holds,
+   red contradicts the frozen expectation, grey (dashed) is not known, ink is a neutral fact.
+   Status is always written out; marks only support the words. */
+.er-report {
+  display: grid;
+  gap: 30px;
+  max-width: 760px;
+  min-width: 0;
+  margin: 0 auto;
+  padding: 30px 34px 22px;
+  border-radius: 14px;
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.er-report p,
+.er-report dl,
+.er-report dd,
+.er-report ol,
+.er-report ul {
+  margin: 0;
+}
+
+/* Marks: one shape per meaning (✓ green, ✕ red, ◐ ink, dashed ring grey). */
+.er-probe__mark,
+.er-check__mark,
+.er-advice__mark {
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.5;
+}
+:is(.er-probe__mark, .er-check__mark)[data-tone="good"] {
+  color: var(--good);
+}
+:is(.er-probe__mark, .er-check__mark)[data-tone="bad"] {
+  color: var(--bad);
+}
+:is(.er-probe__mark, .er-check__mark)[data-tone="ink"] {
+  color: var(--ink-2);
+}
+:is(.er-probe__mark, .er-check__mark, .er-advice__mark)[data-tone="unknown"]::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 1.5px dashed var(--ink-4);
+  border-radius: 50%;
+  vertical-align: 0.05em;
+}
+
+.er-advice__mark[data-tone="ink"]::before {
+  content: "";
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  vertical-align: 0.1em;
+}
+
+/* Head */
+.er-report__eyebrow {
+  display: flex;
+  flex-wrap: wrap;
+  row-gap: 2px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.er-report__eyebrow > span {
+  white-space: nowrap;
+}
+/* The separator trails its item, so a wrapped line never starts with a dot. */
+.er-report__eyebrow > span:not(:last-child)::after {
+  content: "·";
+  margin-inline: 8px;
+  color: var(--ink-4);
+}
+.er-report__kind {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.er-verdict {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+  margin-top: 18px;
+}
+.er-verdict__mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  margin-top: 1px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  font-size: 17px;
+  line-height: 1;
+}
+.er-verdict__mark[data-tone="good"] {
+  color: var(--good);
+  background: var(--good-tint);
+}
+.er-verdict__mark[data-tone="bad"] {
+  color: var(--bad);
+  background: var(--bad-tint);
+}
+.er-verdict__mark[data-tone="unknown"] {
+  color: var(--ink-4);
+  border-style: dashed;
+}
+.er-verdict__title {
+  margin: 0;
+  font: 600 26px / 1.25 var(--display);
+}
+.er-report:lang(en) .er-verdict__title {
+  letter-spacing: -0.015em;
+}
+/* The target question as the suite wrote it: serif, no added quotes. */
+.er-verdict__target {
+  margin-top: 8px;
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.5;
+}
+.er-verdict__detail {
+  margin-top: 4px;
+  max-width: 72ch;
+  color: var(--ink-2);
+  line-height: 1.55;
+}
+
+/* Sections */
+.er-section {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+.er-section__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 16px;
+}
+.er-section__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.er-section__aside,
+.er-note {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Public probes: list rows with hairlines inside the list only. */
+.er-probes {
+  padding: 0;
+  list-style: none;
+}
+.er-probe {
+  display: grid;
+  grid-template-columns: 16px 2.6em minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: baseline;
+  padding-block: 12px;
+  border-top: 1px solid var(--line);
+}
+.er-probe:first-child {
+  padding-top: 4px;
+  border-top: 0;
+}
+.er-probe__id {
+  color: var(--ink-3);
+  font: 500 12px / 1.5 var(--mono);
+}
+.er-probe__body {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+.er-probe__query {
+  font-family: var(--serif);
+  font-size: 16px;
+  line-height: 1.5;
+}
+.er-probe__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.er-tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 20px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: 11.5px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.er-tag[data-tone="ink"] {
+  background: var(--fill-2);
+  color: var(--ink);
+}
+.er-tag[data-tone="bad"] {
+  background: var(--bad-tint);
+  color: var(--bad);
+}
+.er-tag[data-tone="unknown"] {
+  border-color: var(--line-2);
+  border-style: dashed;
+  background: transparent;
+  color: var(--ink-3);
+}
+.er-probe__diff {
+  max-width: 72ch;
+  color: var(--ink-2);
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+/* Hidden probes: counts as a sentence, not tiles. */
+.er-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 22px;
+  font-size: 14px;
+}
+.er-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.er-count__label {
+  color: var(--ink-3);
+}
+.er-count__value {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.er-counts--comparison .er-count[data-tone="unknown"] .er-count__value {
+  color: var(--ink-2);
+}
+.er-counts--comparison .er-count[data-tone="bad"] .er-count__value {
+  color: var(--bad);
+}
+.er-counts--comparison .er-count[data-tone="good"] .er-count__value {
+  color: var(--good);
+}
+
+/* Rule checks and assessment */
+.er-checks {
+  display: grid;
+  gap: 12px;
+  padding: 0;
+  list-style: none;
+}
+.er-check {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: baseline;
+}
+.er-check__status {
+  font-weight: 500;
+  line-height: 1.5;
+}
+.er-check__rule {
+  margin-top: 1px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+/* A short checklist: keep each label close to its criterion. */
+.er-evaluation {
+  max-width: 480px;
+}
+.er-evaluation .er-check__status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0 16px;
+  font-weight: 400;
+}
+.er-evaluation__label {
+  margin-inline-start: auto;
+  color: var(--ink-2);
+}
+
+/* Foot: quiet advice bar, retrieval wording, basis. */
+.er-report__foot {
+  display: grid;
+  gap: 10px;
+  padding-top: 2px;
+}
+.er-advice {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: start;
+  padding: 9px 14px;
+  border-radius: var(--r-sm, 9px);
+  background: var(--fill);
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.er-advice[data-tone="ink"] {
+  color: var(--ink-2);
+}
+.er-advice__mark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.5em;
+}
+.er-advice__mark[data-tone]::before {
+  vertical-align: 0;
+}
+.er-advice__score::before {
+  content: "·";
+  margin-inline: 8px;
+  color: var(--ink-4);
+}
+.er-advice__body {
+  grid-column: 2;
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+.er-report__basis {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+.er-report__basis > .er-basis {
+  grid-row: 1;
+  grid-column: 1 / -1;
+  min-width: 0;
+}
+.er-note--retrieval {
+  grid-row: 1;
+  grid-column: 2;
+  align-self: start;
+  line-height: 32px;
+  pointer-events: none;
+}
+.er-basis > summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  padding-inline: 2px;
+  color: var(--ink-2);
+  font-size: 13px;
+  cursor: pointer;
+  list-style: none;
+}
+.er-basis > summary::-webkit-details-marker {
+  display: none;
+}
+.er-basis > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-1px) rotate(-45deg);
+  transition: transform var(--fast, 160ms) var(--ease, ease-out);
+}
+.er-basis[open] > summary::before {
+  transform: translateY(-2px) rotate(45deg);
+}
+@media (hover: hover) and (pointer: fine) {
+  .er-basis > summary:hover {
+    color: var(--ink);
+  }
+}
+.er-basis__list {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 5px 22px;
+  margin-top: 6px;
+  padding: 12px 14px;
+  border-radius: var(--r-sm, 9px);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.er-basis__row {
+  display: contents;
+}
+.er-basis__label {
+  color: var(--ink-3);
+}
+.er-basis__value {
+  color: var(--ink-2);
+}
+.er-basis__value--code {
+  font-family: var(--mono);
+  letter-spacing: 0.02em;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .er-basis[open] > .er-basis__list {
+    animation: er-reveal var(--fast, 160ms) var(--ease, ease-out);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .er-basis > summary::before {
+    transition: none;
+  }
+}
+@keyframes er-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+@media (max-width: 720px) {
+  .er-report {
+    gap: 26px;
+    padding: 22px 18px 16px;
+  }
+  .er-verdict {
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .er-verdict__mark {
+    width: 32px;
+    height: 32px;
+    font-size: 15px;
+  }
+  .er-verdict__title {
+    font-size: 22px;
+  }
+  .er-probe {
+    grid-template-columns: 14px minmax(0, 1fr);
+  }
+  .er-probe__id {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .er-probe__body {
+    grid-column: 2;
+  }
+  .er-basis__list {
+    grid-template-columns: minmax(0, max-content) minmax(0, 1fr);
+    column-gap: 14px;
+  }
+}
