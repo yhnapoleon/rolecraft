@@ -70,6 +70,25 @@
 - **测试**：`tests/integration/test_mcp_streamable_http.py`（协议两代、认证、跨会话、浏览器来源、头体校验、限流、日志）、`tests/e2e/test_mcp_http_live.py`（真实 `career-lab serve` 进程，中英）、`scripts/regression/mcp.py` 的 `exercise_http`（完整门禁经前端代理跑中英）、`apps/web/tests/regression/mcp-connection.mjs`（连接卡到回传作品、撤销）。这些都用脚本化 HTTP 客户端，不运行真实的 Claude Code 或 Codex。真实客户端只手工测过：2026-10-15 用 Claude Code 2.1.296（`claude -p` 加 `--mcp-config`）中英各走一轮，新运行时协商 2026-07-28，列工具、读委托与资料、回传作品都通过；另设 `MCP_SDK_GENERATION=v1` 强制 2025-11-25 补走一轮，只核了握手、列工具与 `materials.list`，都通过，读委托与回传作品只在 2026-07-28 下用真实客户端走过；含点号的工具名在客户端显示为下划线（如 `mcp__rolecraft__work_products_create`），调用时换回原名；撤销后在连接阶段报 `AUTH_HEADER_REJECTED`，带 `credential_revoked_or_invalid`。Codex 与其他客户端经这个 HTTP 端点没有实测（stdio 方式的官方 Codex 检查见 [W06](modules/expansion-v3/W06.md#官方codex客户端验证与配置)）。经过见回执「164 真实 Claude Code MCP 往返」（项目本地，见[依据文档](#依据文档)）。
 - **结果体积**：`observation` 与 `tools` 两个工具的结果目前各 12 万字符以上，超过 Claude Code 单次 5 万字符的上限，会被转存成本地文件，Agent 要有读文件或本机命令权限才看得到（见[后续清单](#mcp-结果过大)）。
 
+## 工程师岗位：会话内操作
+
+同一个练习会话里，学员可以戴工程师帽子修助手配置。七个会话内操作装在 `ExtensionRegistry`，经 `v2_routes` 挂到 `/sessions/{session_id}/engineer/...`，走与其他模块操作相同的会话认证、能力与 `allowed_actions` 检查；实现在 `src/career_lab/engineer/session.py`，测试在 `tests/integration/test_engineer_session.py`。路由暂不进冻结 OpenAPI（与识别层读操作同样处理），请求与响应形状见该文件里的模型与各处理函数。
+
+| 操作 | 能力 | 谁能做 | 作用 |
+|---|---|---|---|
+| `engineer.tickets.create` | act | 只限本人 | 开委托：场景自带（`{"from":"seeded"}`）或产品经理交来的测试（`{"from":"tests","test_ids":[...]}`）；同样的输入重复开返回同一委托 |
+| `engineer.tickets.read` | read | 本人与 Agent | 列出本会话委托，或读一个委托的详情 |
+| `engineer.reproduce` | act | 本人与 Agent | 用委托打包时的快照重跑目标测试 |
+| `engineer.trial` | act | 本人与 Agent | 试跑候选设置：目标问题与公开探针，不碰隐藏探针 |
+| `engineer.submissions.draft` | act | 本人与 Agent | 起草提交：候选设置、说明、逐条变更、自报、未修复项 |
+| `engineer.submissions.sign` | submit | 只限本人 | 签字提交复核，必须写「还可能影响哪些问题」；每个委托最多 3 次不同复核 |
+| `engineer.reviews.read` | read | 本人与 Agent | 读公开复核报告 |
+
+- **只改工程师目录，不改业务状态**：五个写操作以服务模式运行（不进业务事务），不写配置版本、测试、作品、提交，也不产生产品经理的测试记录。场景自带委托的目标测试由系统执行者 `engineer-ticket-seed` 在会话当前配置上真实跑一次，只存在工程师目录（委托详情里标「委托附带的复现记录」），不进测试列表、时间线和评价证据。
+- **目录**：根目录取 `CAREER_LAB_ENGINEER_ROOT`，缺省 `runs/local/engineer`（相对 API 的工作目录）。`sessions/<会话>/` 放委托、任务包、试验记录、草稿、签字记录和提交库；`public-reviews/<会话>/` 放公开报告；私有复核库在 `private-reviews/<会话>/`（权限 0700，含隐藏探针题目、预期与原始结果），任何 HTTP 或 MCP 响应都不读它，也不带任何路径。目录本身就是索引，API 重启后照常读回。部署时 API 进程要能写这个目录，换部署时连同数据库一起保留。
+- **规则版检索**：复现、试跑与复核固定用规则版检索（`engineer/execution.py` 显式 `recognize=False`），与是否配置 `CAREER_LAB_RECOGNIZERS` 无关；委托详情与复核结果里写明。
+- **候选设置**：只收助手行为字段（`domains`、`scope_filter`、`update_strategy`、`fallback`、`freshness_guard`、`work_items`、`manual_domains`、`prohibited_topics`、`retrieval_limit`、`chunk_size`、`min_score`），以对委托基线配置的差异（`changes`）给出，按 CLI 提交同一套严格校验；`prohibited_topics` 另拒收网址、路径样式的文字。场景自带委托的文案按场景 ID 与语言放在 `engineer/seeded.py`，已发布场景文件不动。
+
 ## 没有负责方产物时怎样演示模型建议
 
 仓库里没有负责方回传，fixture v2 也不在仓库里。要在正常入口看到「理由与证据的支持关系」下的「合成机制演示」，先用 model-flows 的构造器登记一份合成线性回传（关键词构造的权重，从未训练，scope 为 `synthetic_fixture`），把三个环境变量写进一个文件：

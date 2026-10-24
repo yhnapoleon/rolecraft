@@ -51,6 +51,32 @@ def matches(actual: C.TestResultV2, expected: EngineerProbeExpectation) -> bool:
     )
 
 
+def run_query(
+    module: ScenarioModule,
+    state: ScenarioSnapshot,
+    auth: C.AuthContext,
+    query: str,
+    request_id: str,
+    operation_name: str = "tests.create",
+) -> C.TestResultV2 | None:
+    """One real assistant run on a candidate snapshot; None on an execution fault."""
+    try:
+        return module.assistant.run(
+            state,
+            C.TestRequestV2(query=query, config_version=state.config.config_version),
+            auth,
+            request_id,
+            operation_name=operation_name,
+            # Fixed by the user's decision (2026-10-24): reviews and trials always use the
+            # rule-based retrieval, whether or not CAREER_LAB_RECOGNIZERS is configured, so a
+            # verdict never depends on which recognizers a deployment happens to have.
+            recognize=False,
+        ).result
+    except Exception:
+        # Execution faults do not become a business fail or leak private text.
+        return None
+
+
 def execute_suite(
     module: ScenarioModule,
     snapshot: ScenarioSnapshot,
@@ -58,27 +84,23 @@ def execute_suite(
     candidate: C.AssistantConfig,
     probes: tuple[Probe, ...],
     identity: str,
+    *,
+    operation_name: str = "tests.create",
 ) -> tuple[EngineerProbeResult, ...]:
     state = replace(snapshot, config=candidate)
     resolved = effective_config(module.package, candidate, snapshot.world.resources)
     results: list[EngineerProbeResult] = []
     for probe in probes:
         start = perf_counter()
-        actual = None
+        actual = run_query(
+            module, state, auth, probe.query, identity + "-" + probe.id, operation_name
+        )
         error_code = None
         outcome = "error"
-        try:
-            actual = module.assistant.run(
-                state,
-                C.TestRequestV2(query=probe.query, config_version=candidate.config_version),
-                auth,
-                identity + "-" + probe.id,
-                operation_name="tests.create",
-            ).result
-            outcome = "pass" if matches(actual, probe.expected) else "fail"
-        except Exception:
-            # Execution faults do not become a business fail or leak private text.
+        if actual is None:
             error_code = "engineer_probe_execution_failed"
+        else:
+            outcome = "pass" if matches(actual, probe.expected) else "fail"
         results.append(
             EngineerProbeResult(
                 probe_id=probe.id,

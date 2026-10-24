@@ -52,12 +52,20 @@ def reproduce_test(
     module: ScenarioModule,
     auth: C.AuthContext,
     test: C.TestResultV2,
+    *,
+    operation: str = "tests.create",
 ) -> dict[str, Any]:
     def run(view: TransactionView) -> dict[str, Any]:
         snapshot = module.snapshot(view)
         request = C.TestRequestV2(query=test.query, config_version=test.config_ref.config_version)
         actual = module.assistant.run(
-            snapshot, request, auth, "engineer-" + test.id, operation_name="tests.create"
+            snapshot,
+            request,
+            auth,
+            "engineer-" + test.id,
+            operation_name=operation,
+            # Engineering re-execution is rule-based, as are trials and reviews.
+            recognize=False,
         ).result
         for ref in actual.citations:
             module.check_evidence(view, auth, ref)
@@ -72,7 +80,7 @@ def reproduce_test(
             ),
         }
 
-    return store.query_at(auth, test.as_of, run, operation="tests.create")
+    return store.query_at(auth, test.as_of, run, operation=operation)
 
 
 def execution_summary(results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -127,6 +135,9 @@ def reproduce_pack(
     auth: C.AuthContext,
     root: Path,
     output: Path,
+    *,
+    seeded: Sequence[C.TestResultV2] = (),
+    operation: str | None = None,
 ) -> dict[str, Any]:
     root = Path(root)
     retained = retained_documentation(root)
@@ -144,10 +155,13 @@ def reproduce_pack(
         [test.id for test in tests],
         as_of=index.source.as_of,
         retained=retained,
+        seeded=seeded,
+        operation=operation,
     )
     check_directory(root, files)
-    store.authorize(auth, "act", "tests.create")
-    results = [reproduce_test(store, module, auth, test) for test in tests]
+    name = operation or "tests.create"
+    store.authorize(auth, "act", name)
+    results = [reproduce_test(store, module, auth, test, operation=name) for test in tests]
     matched = all(row["matches_record"] for row in results)
     report = {
         "schema_version": 1,

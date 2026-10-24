@@ -28,6 +28,10 @@ CURRENT_REQUIREMENTS = (
 )
 
 
+# The local CLI reads through the ordinary PM read grants.
+CLI_ACTIONS = frozenset({"tests.list", "objects.read", "materials.list"})
+
+
 def capture(
     store: V2Store,
     module: ScenarioModule,
@@ -36,27 +40,32 @@ def capture(
     *,
     as_of: C.VersionPoint | None = None,
     retained: RetainedDocumentation | None = None,
+    seeded: Sequence[C.TestResultV2] = (),
+    operation: str | None = None,
 ) -> dict[str, bytes]:
-    """One authorized database view; never exports a private snapshot or truth file."""
+    """One authorized database view; never exports a private snapshot or truth file.
+
+    ``seeded`` are records the trusted server kept outside the PM store (a ticket's own
+    reproduction record); they never come from a package or a client. ``operation`` names
+    the session operation that reads, instead of the CLI's ordinary PM read grants.
+    """
     test_ids = sorted(set(test_ids))
     if not test_ids or len(test_ids) > 100:
         raise C.ProtocolError("engineer_test_selection_required")
     if auth.actor_id != "learner":
         raise C.ProtocolError("engineer_learner_required", status=403)
-    if auth.allowed_actions is not None and not {
-        "tests.list",
-        "objects.read",
-        "materials.list",
-    } <= set(auth.allowed_actions):
+    required = {operation} if operation else CLI_ACTIONS
+    if auth.allowed_actions is not None and not required <= set(auth.allowed_actions):
         raise C.ProtocolError("action_forbidden", status=403)
 
     def read(view: TransactionView) -> dict[str, bytes]:
-        return capture_view(view, module, auth, test_ids, retained)
+        return capture_view(view, module, auth, test_ids, retained, seeded)
 
+    name = operation or "tests.list"
     return (
-        store.query(auth, read, operation="tests.list")
+        store.query(auth, read, operation=name)
         if as_of is None
-        else store.query_at(auth, as_of, read, operation="tests.list")
+        else store.query_at(auth, as_of, read, operation=name)
     )
 
 
@@ -66,12 +75,17 @@ def capture_view(
     auth: C.AuthContext,
     test_ids: list[str],
     retained: RetainedDocumentation | None,
+    seeded: Sequence[C.TestResultV2] = (),
 ) -> dict[str, bytes]:
     snapshot = module.snapshot(view)
     tests = {
         row["id"]: C.TestResultV2.model_validate(row)
         for row in module.list_tests(view, C.ResourcePage(), auth).result["tests"]
     }
+    for record in seeded:
+        if record.session_id != auth.session_id or record.id in tests:
+            raise C.ProtocolError("engineer_test_unavailable", status=404)
+        tests[record.id] = record
     if any(key not in tests for key in test_ids):
         raise C.ProtocolError("engineer_test_unavailable", status=404)
     selected = [tests[key] for key in test_ids]

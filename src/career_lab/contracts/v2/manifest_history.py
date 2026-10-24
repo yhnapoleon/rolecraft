@@ -890,4 +890,31 @@ MANIFEST_HISTORY: tuple[dict[str, JsonValue], ...] = (
             "fingerprints: wording is not contract structure.",
         },
     },
+    {
+        "previous_contract_revision": (
+            "expansion-v3-c9c8c776596eb12e41a2c6094719bfc4457ae727b70156ff815e48b61969143b"
+        ),
+        "integration_changes": {
+            "engineer-session-operations": "Seven engineer operations join the public "
+            "operation slots in api/modules.py and are routed by api/v2_routes.py under "
+            "/sessions/{session_id}/engineer/: engineer.tickets.create (act, person only), "
+            "engineer.tickets.read (read), engineer.reproduce, engineer.trial and "
+            "engineer.submissions.draft (act), engineer.submissions.sign (submit, person only) "
+            "and engineer.reviews.read (read). They are served behind the ordinary session "
+            "authentication, capability and allowed_actions checks, and kept out of the frozen "
+            "OpenAPI like the recognition reads, so openapi.json, schemas, examples and "
+            "errors.json are unchanged. The five writing operations run in service mode: "
+            "authorized like any operation, then given the store instead of a locked business "
+            "view, because they write only the engineer directory and never PM business state. "
+            "api/vertical_runtime.py installs them for every running package and selects the "
+            "package by the session binding; the GET endpoints of the two reads also take "
+            "ticket_id or review_id query filters. Their request and response shapes live in "
+            "career_lab.engineer.session, outside this contract. These regenerated source "
+            "fingerprints also record the recognition-layer edits of commit bbe0d2d to "
+            "evaluation_runtime.py, modules.py, v2_routes.py, vertical_runtime.py, cli.py and "
+            "contracts/v2 evaluation.py, extensions.py, recognition.py and world.py, which were "
+            "not re-exported then; regenerating them alone changed only manifest.json and "
+            "revision.txt.",
+        },
+    },
 )

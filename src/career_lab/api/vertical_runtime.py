@@ -140,14 +140,25 @@ def create_runtime_app(
         store_provider=lambda: holder["store"],
         scenario_archive=os.getenv("CAREER_LAB_SCENARIO_ARCHIVE", "runs/local/scenario-archive"),
     )
+    modules = []
+
+    def recorded(*args, **kwargs):
+        built = build_registry(*args, **kwargs)
+        modules.append(built[1])
+        return built
+
     if os.getenv("CAREER_LAB_SCENARIO_CATALOG"):
         from career_lab.api.multilingual_runtime import build_catalog
 
         registry, module = build_catalog(
-            build_registry, os.environ["CAREER_LAB_SCENARIO_CATALOG"], slots, **options
+            recorded, os.environ["CAREER_LAB_SCENARIO_CATALOG"], slots, **options
         )
     else:
-        registry, module = build_registry(root, slots, **options)
+        registry, module = recorded(root, slots, **options)
+    from career_lab.engineer.session import install_engineer_operations
+
+    # Engineer operations of every running package, selected per session by its binding.
+    install_engineer_operations(registry, modules)
     app = create_app(database_url, model=slots.legacy, extensions=registry)
     from career_lab.jobs.worker import NonRetryingHandler
 

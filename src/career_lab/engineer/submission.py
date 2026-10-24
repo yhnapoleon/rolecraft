@@ -1,5 +1,6 @@
 """Authenticated immutable configuration submissions using the frozen file protocol."""
 
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
 
@@ -27,7 +28,13 @@ RESERVED_FILES = {
 
 
 def verified_pack(
-    store: V2Store, module: ScenarioModule, auth: C.AuthContext, root: Path
+    store: V2Store,
+    module: ScenarioModule,
+    auth: C.AuthContext,
+    root: Path,
+    *,
+    seeded: Sequence[C.TestResultV2] = (),
+    operation: str | None = None,
 ) -> tuple[PackIndex, dict[str, bytes]]:
     retained = retained_documentation(root)
     index, pack, _ = retained
@@ -42,9 +49,11 @@ def verified_pack(
         [test.id for test in tests],
         as_of=index.source.as_of,
         retained=retained,
+        seeded=seeded,
+        operation=operation,
     )
     check_directory(root, files)
-    store.authorize(auth, "act", "tests.create")
+    store.authorize(auth, "act", operation or "tests.create")
     return index, files
 
 
@@ -107,8 +116,13 @@ def submit_configuration(
     pack_root: Path,
     source: Path,
     output: Path,
+    *,
+    seeded: Sequence[C.TestResultV2] = (),
+    operation: str | None = None,
 ) -> dict[str, Any]:
-    index, pack_files = verified_pack(store, module, auth, pack_root)
+    index, pack_files = verified_pack(
+        store, module, auth, pack_root, seeded=seeded, operation=operation
+    )
     record, _, files = submission_files(module, auth, index, pack_files, source)
     directory = "submission-" + C.digest(record.id)
     target = output / directory

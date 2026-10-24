@@ -1,5 +1,6 @@
 """Resolve authenticated input once, before reserving a private review attempt."""
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -24,6 +25,7 @@ class ReviewContext:
     snapshot: ScenarioSnapshot
     probes: tuple[Probe, ...]
     targets: tuple[str, ...]
+    operation: str = "tests.create"
 
 
 def fixed_files(
@@ -81,14 +83,20 @@ def prepare_review(
     auth: C.AuthContext,
     pack_root: Path,
     submission_root: Path,
+    *,
+    seeded: Sequence[C.TestResultV2] = (),
+    operation: str | None = None,
 ) -> ReviewContext:
-    index, pack_files = verified_pack(store, module, auth, pack_root)
+    index, pack_files = verified_pack(
+        store, module, auth, pack_root, seeded=seeded, operation=operation
+    )
     record, candidate, files = submission_files(
         module, auth, index, pack_files, submission_root / "submission.json"
     )
     check_directory(submission_root, files)
     validate_staged_submission(submission_root, record)
-    snapshot = store.query_at(auth, index.source.as_of, module.snapshot, operation="tests.create")
+    name = operation or "tests.create"
+    snapshot = store.query_at(auth, index.source.as_of, module.snapshot, operation=name)
     files.update(fixed_files(module, auth, index, snapshot))
     probes = suite_probes(files["probe-suite.json"])
     inputs = freeze_input(
@@ -102,4 +110,4 @@ def prepare_review(
     targets = tuple(
         C.TestResultV2.model_validate_json(pack_files[ref.path]).query for ref in index.tests
     )
-    return ReviewContext(inputs, files, record, snapshot, probes, targets)
+    return ReviewContext(inputs, files, record, snapshot, probes, targets, name)
