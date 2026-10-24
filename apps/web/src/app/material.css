@@ -345,8 +345,9 @@ html.scrolled body:not([data-view="work"]) .topbar {
 }
 
 /* ---------- world light ----------
-   Calm: no light. Policy changed (the event band is on the board): amber from the top of the
-   desk. Handed in: green. The light fades in once and never moves. */
+   Always a steady warm pool from the top of the desk. Policy changed (the event band is on the
+   board): the pool brightens. Handed in: the light stays warm; green lives only on the scale,
+   the band and the stamp. The light changes by fading, never moves. */
 .stage-inner {
   position: relative;
   isolation: isolate;
@@ -358,17 +359,34 @@ html.scrolled body:not([data-view="work"]) .topbar {
   height: 560px;
   z-index: -1;
   pointer-events: none;
-  background: radial-gradient(90% 100% at 50% 0%, var(--world-light, transparent), transparent 72%);
+  background:
+    var(--grain),
+    radial-gradient(
+      90% 100% at 50% 0% in oklab,
+      var(--world-light, var(--light-calm)),
+      transparent 72%
+    );
+  opacity: 1;
+  transition: opacity var(--slow) var(--ease-out);
+}
+/* The brighter pool over the calm one, so the change is an opacity fade. */
+.stage-inner::after {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 560px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(90% 100% at 50% 0% in oklab, var(--light-warn), transparent 72%);
   opacity: 0;
   transition: opacity var(--slow) var(--ease-out);
 }
-.stage-inner:has(.world-event:not(.is-record))::before {
-  --world-light: var(--light-warn);
+.stage-inner:has(.world-event:not(.is-record))::after {
   opacity: 1;
 }
-body:has(.state-chip.submitted) .stage-inner::before {
-  --world-light: var(--light-good);
-  opacity: 1;
+/* Once delivered, an event still on the board is history: it no longer brightens the desk. */
+.stage-inner:has(.stage-banner.is-submitted)::after {
+  opacity: 0;
 }
 
 @media (max-width: 1100px) {
@@ -422,7 +440,8 @@ body:has(.state-chip.submitted) .stage-inner::before {
   .world-event::before {
     animation: none;
   }
-  .stage-inner::before {
+  .stage-inner::before,
+  .stage-inner::after {
     transition: none;
   }
 }

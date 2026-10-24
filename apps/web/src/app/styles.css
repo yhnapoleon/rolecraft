@@ -9,17 +9,20 @@
 
 :root {
   color-scheme: light;
-  --canvas: #e6eae7;
-  --surface: #f1f3f1;
-  --surface-2: #e8ebe9;
-  --surface-3: #dce1dd;
-  --paper: #ffffff;
-  --glass: rgba(241, 243, 241, 0.8);
-  --glass-strong: rgba(243, 245, 243, 0.97);
+  /* A warm stone desk under lamp light; instruments one step lighter; paper warm white. */
+  --canvas: #ebe6dd;
+  --surface: #f5f2ec;
+  --surface-2: #ece7df;
+  --surface-3: #e1dbd0;
+  --paper: #fffdf9;
+  --glass: rgba(245, 242, 236, 0.8);
+  --glass-strong: rgba(246, 243, 238, 0.97);
   --ink: #111715;
-  --ink-2: #434c49;
-  --ink-3: #5a6461;
-  --ink-4: #8a938f;
+  /* Warm greys, of a piece with the stone desk. ink-3 and warn hold 4.5:1 on the warmest spot
+     of the desk (top of the board while an event is up). */
+  --ink-2: #3f3933;
+  --ink-3: #514840;
+  --ink-4: #857b70;
   --line: rgba(17, 23, 21, 0.09);
   --line-2: rgba(17, 23, 21, 0.15);
   --fill: rgba(17, 23, 21, 0.05);
@@ -31,7 +34,7 @@
   --accent: #111715;
   --accent-ink: #111715;
   --accent-tint: rgba(17, 23, 21, 0.07);
-  --warn: #96500a;
+  --warn: #763d04;
   --warn-tint: #f4e5d0;
   --good: #1b7149;
   --good-tint: #dcede2;
@@ -43,12 +46,18 @@
   --p-neutral: #8a938f;
   --p-assistant: #3557d2;
   --p-agent: #343b39;
-  /* The desk has no light of its own; it is lit only while the world has changed
-     (amber) or the work has just been handed in (green). */
-  --amb-a: transparent;
-  --amb-b: transparent;
-  --amb-c: transparent;
-  --light-warn: rgba(222, 146, 58, 0.22);
+  /* The room's light: warm, always on, falling from the top of the window (amb-a, amb-b) with a
+     faint bounce at the far corner (amb-c). The desk carries a steady warm pool (light-calm);
+     when the world changes the pool brightens (light-warn). Green is never a light: delivered
+     shows on the scale, the band and the stamp only. */
+  --amb-a: rgba(236, 152, 62, 0.2);
+  --amb-b: rgba(244, 186, 104, 0.18);
+  --amb-c: rgba(226, 142, 84, 0.1);
+  --light-calm: rgba(230, 150, 66, 0.16);
+  --light-warn: rgba(222, 136, 48, 0.22);
+  /* Fine grain over the light (3%, contrast-stretched noise: about ±4 levels of dither), so the
+     long soft gradients never show steps. */
+  --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='4 0 0 0 -1.5 4 0 0 0 -1.5 4 0 0 0 -1.5 0 0 0 0 0.03'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --light-good: rgba(52, 160, 104, 0.24);
   --shadow-paper:
     0 0 0 0.5px rgba(17, 23, 21, 0.11), 0 1px 0 rgba(17, 23, 21, 0.035),
@@ -132,17 +141,17 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
-    --canvas: #0e1211;
-    --surface: #151a18;
-    --surface-2: #1c2220;
-    --surface-3: #090c0b;
-    --paper: #1c2220;
-    --glass: rgba(21, 26, 24, 0.8);
-    --glass-strong: rgba(22, 27, 25, 0.97);
+    --canvas: #13110e;
+    --surface: #1a1714;
+    --surface-2: #221e1a;
+    --surface-3: #0d0b09;
+    --paper: #221e1a;
+    --glass: rgba(26, 23, 20, 0.8);
+    --glass-strong: rgba(27, 24, 21, 0.97);
     --ink: #e8edea;
-    --ink-2: #b1bab6;
-    --ink-3: #8d9692;
-    --ink-4: #5c6561;
+    --ink-2: #bbb3a9;
+    --ink-3: #979087;
+    --ink-4: #655d54;
     --line: rgba(255, 255, 255, 0.075);
     --line-2: rgba(255, 255, 255, 0.13);
     --fill: rgba(255, 255, 255, 0.06);
@@ -163,10 +172,11 @@
     --p-technical: #3cc2ae;
     --p-assistant: #7f97ff;
     --p-agent: #c9d0cd;
-    --amb-a: transparent;
-    --amb-b: transparent;
-    --amb-c: transparent;
-    --light-warn: rgba(231, 150, 70, 0.16);
+    --amb-a: rgba(236, 150, 70, 0.1);
+    --amb-b: rgba(240, 176, 100, 0.08);
+    --amb-c: rgba(220, 130, 80, 0.05);
+    --light-calm: rgba(231, 150, 70, 0.08);
+    --light-warn: rgba(231, 150, 70, 0.18);
     --light-good: rgba(70, 190, 128, 0.16);
     --shadow-paper:
       0 0 0 0.5px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.035),
@@ -203,9 +213,9 @@ body::before {
   z-index: -1;
   pointer-events: none;
   background:
-    radial-gradient(900px 520px at 6% -8%, var(--amb-a), transparent 70%),
-    radial-gradient(760px 520px at 96% -12%, var(--amb-b), transparent 70%),
-    radial-gradient(900px 600px at 70% 110%, var(--amb-c), transparent 70%);
+    var(--grain), radial-gradient(900px 520px at 6% -8% in oklab, var(--amb-a), transparent 70%),
+    radial-gradient(760px 520px at 96% -12% in oklab, var(--amb-b), transparent 70%),
+    radial-gradient(900px 600px at 70% 110% in oklab, var(--amb-c), transparent 70%);
 }
 button,
 input,
