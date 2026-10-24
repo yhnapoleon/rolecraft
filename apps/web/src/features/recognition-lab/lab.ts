@@ -11,7 +11,7 @@ import type { SessionRecognition } from '../recognition-native/client';
 import type { Language } from '../results-native/localization';
 import { tr } from './copy';
 import { chainFor, RESULT_FILES, results, sessionRecords, type Results } from './data';
-import { type PipelineHandle, pipelineHtml, startPipeline } from './pipeline';
+import { moveChoice, type PipelineHandle, pipelineHtml, startPipeline } from './pipeline';
 import { registerHtml } from './register';
 import { storyHtml } from './story';
 import { st } from './story-copy';
@@ -24,6 +24,15 @@ export interface LabOptions {
   sessionKey: string;
   /** True on entering the route: read this practice's records again. */
   refresh: boolean;
+  /** How many times this practice was submitted, when known: deliveries are numbered only
+   * when their sentence records match the submissions one to one. */
+  submitted?: number | null;
+}
+
+/** Which delivery and sentence the pipeline shows; absent means the default. */
+interface Pick {
+  delivery?: number;
+  unit?: number;
 }
 
 let seq = 0;
@@ -64,14 +73,15 @@ function drawPipeline(
   root: HTMLElement,
   data: SessionRecognition | null,
   l: Language,
-  selected?: number,
+  submitted: number | null,
+  pick: Pick = {},
   autoplay = true,
 ) {
   const box = root.querySelector<HTMLElement>('[data-rc-pipe]');
   const lead = root.querySelector<HTMLElement>('[data-rc-pipe-lead]');
   if (!box) return;
   pipeline?.stop();
-  const chain = chainFor(data, l, selected);
+  const chain = chainFor(data, l, pick.unit, { delivery: pick.delivery, submitted });
   if (lead) lead.textContent = tr(l, chain.example ? 'pipeLeadExample' : 'pipeLead');
   box.dataset.example = String(chain.example);
   box.innerHTML = pipelineHtml(chain, l);
@@ -79,10 +89,31 @@ function drawPipeline(
   const play = box.querySelector<HTMLElement>('[data-rc-play]');
   if (play) play.hidden = reduced;
   pipeline = startPipeline(box, chain, l, { reduced, autoplay });
-  box.querySelector<HTMLSelectElement>('[data-rc-unit]')?.addEventListener('change', (event) => {
-    drawPipeline(root, data, l, Number((event.target as HTMLSelectElement).value));
-    box.querySelector<HTMLSelectElement>('[data-rc-unit]')?.focus();
-  });
+  // A pointer choice walks the new sentence through the stages (as on entry); a keyboard move
+  // shows the final state at once and keeps focus on the choice. The radios are drawn anew.
+  const wire = (group: 'unit' | 'delivery', next: (value: number) => Pick) => {
+    const radios = [...box.querySelectorAll<HTMLButtonElement>(`[data-rc-${group}]`)];
+    const value = (radio: HTMLElement) => Number(radio.dataset[group === 'unit' ? 'rcUnit' : 'rcDelivery']);
+    const go = (to: number, viaKeys: boolean) => {
+      drawPipeline(root, data, l, submitted, next(to), !viaKeys);
+      box.querySelector<HTMLButtonElement>(`[data-rc-${group}][aria-checked="true"]`)?.focus();
+    };
+    radios.forEach((radio, i) => {
+      radio.addEventListener('click', (event) => {
+        if (radio.getAttribute('aria-checked') === 'true') return;
+        // Enter and Space on a focused radio arrive as clicks with no pointer position.
+        go(value(radio), (event as MouseEvent).detail === 0);
+      });
+      radio.addEventListener('keydown', (event) => {
+        const to = moveChoice(event.key, i, radios.length);
+        if (to === null) return;
+        event.preventDefault();
+        go(value(radios[to]), true);
+      });
+    });
+  };
+  wire('unit', (unit) => ({ delivery: chain.deliveryAt, unit }));
+  wire('delivery', (delivery) => ({ delivery }));
 }
 
 function drawStory(root: HTMLElement, loaded: Results, l: Language) {
@@ -114,7 +145,7 @@ export async function mountLab(root: HTMLElement, options: LabOptions) {
     sessionRecords.read(options.sessionKey, options.session, options.refresh),
   ]);
   if (mine !== seq) return;
-  drawPipeline(root, data, l);
+  drawPipeline(root, data, l, options.submitted ?? null);
   const register = root.querySelector<HTMLElement>('[data-rc-register]');
   if (register) register.innerHTML = registerHtml(loaded, l);
   drawStory(root, loaded, l);

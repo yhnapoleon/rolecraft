@@ -3482,6 +3482,13 @@ button.crumb:hover {
   -webkit-backdrop-filter: blur(3px);
   animation: fade 200ms ease;
 }
+/* On a dark desk the light scrim hardly dims anything; darken toward the desk itself so the
+   page behind a dialog or bottom sheet clearly steps back. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sheet::backdrop {
+    background: color-mix(in srgb, var(--canvas) 62%, transparent);
+  }
+}
 @keyframes sheet-in {
   from {
     opacity: 0;
