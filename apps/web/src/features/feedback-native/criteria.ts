@@ -158,3 +158,70 @@ export function criterionChecks(
     ),
   };
 }
+
+/** The responsibility scope the rules state for each criterion (`rubrics/v4/applicability.py` SCOPE),
+ * word for word. The rules put it at the head of a pending explanation; the basis shows it under
+ * “what this item checks”, not as a finding. A test compares every pair with the Python file. */
+export function criterionScopes(
+  language: FeedbackLanguage = document.documentElement.lang?.startsWith('en') ? 'en' : 'zh',
+): Record<string, string> {
+  const T = (zh: string, en: string) => feedbackText(language, zh, en);
+  return {
+    'R1.target': T(
+      '核对这份作品要服务谁、解决什么问题。探索阶段允许继续界定目标。',
+      'Check whom the work serves and what problem it addresses. Exploration may continue to refine the goal.',
+    ),
+    'R1.metrics': T(
+      '核对与本次决定相称的成功、风险或停止标准；计划中的指标不代表已有结果。',
+      'Check success, risk or stopping criteria suited to this decision. Planned metrics are not achieved results.',
+    ),
+    'R2.support': T(
+      '核对判断与当时可知证据的关系；引用存在不代表支持成立。',
+      'Check judgments against evidence available at the time. An existing citation does not establish support.',
+    ),
+    'R2.unknowns': T(
+      '区分已核事实、假设、申请和有效责任；提出尚不可行的设想不等于违约。',
+      'Separate verified facts, assumptions, requests and effective obligations. Exploring an infeasible idea is not itself a breach.',
+    ),
+    'R2.failure_analysis': T(
+      '核对适用的失败案例和解释；普通探索未覆盖失败分析不自动判缺失。',
+      'Review relevant failure cases and explanations. An exploratory note is not automatically deficient for omitting failure analysis.',
+    ),
+    'R3.capacity': T(
+      '按明确承诺的用户范围与有效容量核验；实际超限另看发生时的记录。',
+      'Check the committed user scope against effective capacity; assess actual overuse at the time it occurred.',
+    ),
+    'R3.resources': T(
+      '核对当前有效承诺、获批资源和时限；计划和申请不视为已执行。',
+      'Check effective commitments, approved resources and deadlines; plans and requests are not execution.',
+    ),
+    'R4.functional_tests': T(
+      '核对相关配置的真实测试、已核实类别及验收条件；自报类别不构成覆盖。',
+      'Check actual tests, verified categories and acceptance criteria on the relevant configuration; self-declared categories do not prove coverage.',
+    ),
+    'R4.staleness_test': T(
+      '核对已激活且相关的变更，以及更新后当前配置的最新动态复测；不倒扣历史作品。',
+      'Check activated relevant changes and the latest dynamic retest on the current configuration; do not judge earlier work with later facts.',
+    ),
+    'R5.impact': T(
+      '有相关变更时核对其影响；没有相关事件时本项不适用。',
+      'Assess impact when a relevant change exists; without a relevant event this criterion is inapplicable.',
+    ),
+    'R5.adjustment': T(
+      '区分实际调整、复测和文字建议；缩小范围、暂停或停止可以有合理依据。',
+      'Separate actual adjustment and retesting from a proposal; narrowing scope, pausing or stopping may be justified.',
+    ),
+    'R6.consistency': T(
+      '只比较同一对象、版本和责任范围；不同备选或历史版本的差异不自动算矛盾。',
+      'Compare the same subject, version and responsibility scope; different alternatives or historical versions are not automatically contradictions.',
+    ),
+    'R6.operations': T(
+      '核对与本次决定相称的负责人、观察窗口、退出条件和后续动作；不要求固定表单。',
+      'Check owners, observation windows, exit conditions and follow-up actions appropriate to the decision; no fixed form is required.',
+    ),
+    'R6.alternatives': T(
+      '核对真实的方案比较和取舍；普通文字与方案模板等价，停止也可以是备选。',
+      'Check actual comparison and trade-offs; free text and an options template are equivalent, and stopping may be an alternative.',
+    ),
+  };
+}

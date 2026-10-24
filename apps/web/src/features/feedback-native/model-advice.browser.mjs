@@ -644,8 +644,8 @@ it.each(['zh', 'en'])(
       expect(await visible(browser, '[data-model-advice-provenance]')).toBe(
         T(
           language,
-          '外部提供的模型，质量尚未验证，也不计分。',
-          'Supplied externally; not yet validated, and never scored.',
+          '这条建议来自外部提供的模型，质量尚未验证，也从不计入分数。',
+          'This advice comes from an outside model. It isn’t validated yet and never counts toward your score.',
         ),
       );
       expect(await browser.ev('window.fixture.calls')).toEqual([]);

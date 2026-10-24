@@ -446,7 +446,7 @@ export function renderCover(
   }
   // One line per reason with its count; the names fold into that line's disclosure.
   const unknownRows = [...reasons].map(([reason, items]) => {
-    const li = row('unknown', `${reason} · ${T(`${items.length} 项`, `${items.length} ${items.length === 1 ? 'item' : 'items'}`)}`, '', items.map((item) => item.criterion));
+    const li = row('unknown', `${reason} · ${T(`${items.length}\u00a0项`, `${items.length}\u00a0${items.length === 1 ? 'item' : 'items'}`)}`, '', items.map((item) => item.criterion));
     const names = el('details', '', 'result-cover__names');
     names.append(
       el('summary', T(`展开 ${items.length} 项`, `Show ${items.length === 1 ? 'it' : `all ${items.length}`}`)),
@@ -497,7 +497,7 @@ export function renderCover(
     );
   else if (actions.backToBoard)
     steps.append(button(T('回工作板接着改', 'Back to the board'), null, 'btn small', 'to-board'));
-  if (actions.supplement) steps.append(button(T('补证', 'Add evidence'), actions.supplement));
+  if (actions.supplement) steps.append(button(T('补充依据', 'Add evidence'), actions.supplement));
   if (actions.practise)
     steps.append(button(T('补练', 'Practise'), null, 'btn small quiet', 'review-practice'));
   if (steps.childElementCount) next.append(steps);

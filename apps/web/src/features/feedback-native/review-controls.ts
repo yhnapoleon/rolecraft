@@ -196,7 +196,8 @@ export function mountReviewControls(
     submit,
   );
   const history = el('details');
-  history.append(el('summary', t('之前的交付与评审', 'Earlier deliveries and reviews'), 'fb-disclosure'));
+  // The page lists earlier deliveries one row each; this keeps the full record, snapshots included.
+  history.append(el('summary', t('全部交付与评审记录', 'All deliveries and reviews'), 'fb-disclosure'));
   const rows = el('div');
   history.append(rows);
   element.append(form, status, error, history);

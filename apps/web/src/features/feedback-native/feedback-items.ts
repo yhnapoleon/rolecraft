@@ -8,7 +8,7 @@ import type { SubmissionRuleCheck } from '../../contracts-v2';
 import { copyText } from '../results-native/localization';
 import { modelWaitNode } from '../../app/model-status';
 import { splitRecognitionPrefix } from '../recognition-native/prefix';
-import { criterionChecks, criterionLabels, criterionQuestions } from './criteria';
+import { criterionChecks, criterionLabels, criterionQuestions, criterionScopes } from './criteria';
 import type { Report } from './index';
 import {
   feedbackCopy,
@@ -44,6 +44,9 @@ export interface ItemRow {
   lineWaits?: boolean;
   /** The rubric's own sentence for this criterion. */
   checks?: string;
+  /** The rules' scope sentence when the stored explanation carries it: it says what is checked,
+   * so it sits under "what this item checks", not among the findings. */
+  scope?: string;
   /** The stored explanation, line by line, without a premise already stated for the list. */
   found: string[];
   /** "At submission: …", the versions behind an unmet item (164 F17). */
@@ -97,6 +100,14 @@ export function itemMark(item: Item): ItemMark {
   return 'unknown';
 }
 
+/** The rules' default sentence for an item still pending (`rubrics/v4/rules_v2.py` `pending`),
+ * both languages. Frozen there by the evaluation version, so the basis replaces it with a
+ * plain finding rather than rewording it. */
+const PENDING_DEFAULT = new Set([
+  '证据或语义尚未核实；保留未知，不按作品形式或未见记录判错。',
+  'Evidence or semantics remain unverified; neither format nor absent observations imply failure.',
+]);
+
 const lines = (text: string) =>
   text
     .split('\n')
@@ -111,7 +122,12 @@ export interface ItemsViewInput {
   /** The saved submission checked again at its own point, for the "at submission" facts. */
   readonly atSubmission?: SubmissionRuleCheck | null;
   /** The R2.support row's line when the model said something (model-advice.ts). */
-  readonly adviceLine?: { text: string; tone: 'bad' | 'ink'; waiting?: true };
+  readonly adviceLine?: {
+    text: string;
+    tone: 'bad' | 'ink';
+    waiting?: true;
+    kind?: 'abstained' | 'advised';
+  };
   /** Model advice items of the older protocol that are shown (none while waiting for a model). */
   readonly legacyAdvice?: readonly Item[];
 }
@@ -124,6 +140,7 @@ export function feedbackItemsView(report: Report, input: ItemsViewInput): ItemsV
   const names = criterionLabels(language);
   const questions = criterionQuestions(language);
   const checks = criterionChecks(language);
+  const scopes = criterionScopes(language);
   const name = (item: Item) =>
     names[item.criterion] ?? feedbackText(language, '具体反馈项', 'Feedback criterion');
   // The rules' one-line finding per criterion, without the shared premise.
@@ -165,7 +182,11 @@ export function feedbackItemsView(report: Report, input: ItemsViewInput): ItemsV
         advised++;
     }
     const mark = itemMark(item);
-    const found = lines(itemDetail(item, ruled.premises));
+    // Findings only: the rules' scope sentence moves under "what this item checks", and the
+    // rules' default pending sentence gives way to one plain finding below.
+    const stored = lines(itemDetail(item, ruled.premises));
+    const scope = scopes[item.criterion];
+    const found = stored.filter((text) => text !== scope && !PENDING_DEFAULT.has(text));
     const bound = item.rule_bound;
     const row: ItemRow = {
       criterion: item.criterion,
@@ -175,6 +196,7 @@ export function feedbackItemsView(report: Report, input: ItemsViewInput): ItemsV
       found,
       item,
       ...(checks[item.criterion] ? { checks: checks[item.criterion] } : {}),
+      ...(scope && stored.includes(scope) ? { scope } : {}),
     };
     if (bound)
       row.bound =
@@ -209,6 +231,16 @@ export function feedbackItemsView(report: Report, input: ItemsViewInput): ItemsV
     } else if (mark === 'unknown') {
       const advice = item.criterion === 'R2.support' ? input.adviceLine : undefined;
       row.line = advice?.text ?? questions[item.criterion] ?? found[0] ?? '';
+      if (!found.length)
+        found.push(
+          T(
+            advice?.kind === 'abstained'
+              ? 'foundSupportNone'
+              : advice?.kind === 'advised'
+                ? 'foundSupportAdvice'
+                : 'foundPending',
+          ),
+        );
       if (advice?.tone === 'bad') row.lineTone = 'bad';
       if (advice?.waiting) row.lineWaits = true;
       view.unknown.push(row);
@@ -448,7 +480,14 @@ export function renderItemRow(
     box.append(el('p', T(label), 'fb-basis__label'), ...nodes);
     return box;
   };
-  if (item.checks) basis.append(block('basisChecks', el('p', item.checks, 'fb-basis__text')));
+  if (item.checks || item.scope)
+    basis.append(
+      block(
+        'basisChecks',
+        ...(item.checks ? [el('p', item.checks, 'fb-basis__text')] : []),
+        ...(item.scope ? [el('p', item.scope, 'fb-basis__note')] : []),
+      ),
+    );
   const found: Node[] = item.found.map((text) => el('p', text, 'fb-basis__text rule-detail'));
   if (item.fact) {
     const fact = el('p', item.fact, 'fb-basis__text');

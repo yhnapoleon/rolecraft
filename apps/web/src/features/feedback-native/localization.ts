@@ -78,6 +78,9 @@ const zh = {
   showBasis: '查看依据',
   basisChecks: '这一项看什么',
   basisFound: '查到了什么',
+  foundPending: '还没核验：评审还没确认这一项。',
+  foundSupportNone: '还没核验。模型没能核查你的句子，所以还不知道你的引用能不能支撑你的判断。',
+  foundSupportAdvice: '还没核验。模型对部分句子给了建议（见下方），这只是建议，评审还没确认。',
   basisSources: '依据',
   addEvidence: '补充依据',
   differ: '我有不同看法',
@@ -197,6 +200,11 @@ export const FEEDBACK_COPY: CopyTable<FeedbackCopyKey> = {
     showBasis: 'Show the basis',
     basisChecks: 'What this item checks',
     basisFound: 'What we found',
+    foundPending: 'Not checked yet: the reviewer hasn’t confirmed this item.',
+    foundSupportNone:
+      'Not checked yet. The model couldn’t check your sentences, so we don’t know whether your citations back your judgments.',
+    foundSupportAdvice:
+      'Not checked yet. The model gave advice on some sentences (below); it is only advice, and the reviewer hasn’t confirmed it.',
     basisSources: 'Sources',
     addEvidence: 'Add evidence',
     differ: 'I see it differently',

@@ -78,16 +78,16 @@ function namesList(names: readonly string[]): string {
     : `${quoted.slice(0, -1).join(', ')} and ${quoted[quoted.length - 1]}`;
 }
 
-/** The one line above the cards: "Optional. Both revisit ‘…’." — what every suggestion revisits,
+/** The one line above the cards: "Optional. Both situations check ‘…’ again." — what every suggestion revisits,
  * said once. Empty when nothing is suggested. */
 export function practiceSharedLine(view: PracticeCards): string {
   const n = view.cards.length;
   if (!n) return '';
   if (!view.shared.length) return T('可选。', 'Optional.');
   const list = namesList(view.shared);
-  if (n === 1) return T(`可选。这个情境会再看${list}。`, `Optional. This situation revisits ${list}.`);
-  if (n === 2) return T(`可选。两个情境都会再看${list}。`, `Optional. Both revisit ${list}.`);
-  return T(`可选。这 ${n} 个情境都会再看${list}。`, `Optional. All ${n} revisit ${list}.`);
+  if (n === 1) return T(`可选。这个情境会再看${list}。`, `Optional. This situation checks ${list} again.`);
+  if (n === 2) return T(`可选。两个情境都会再看${list}。`, `Optional. Both situations check ${list} again.`);
+  return T(`可选。这 ${n} 个情境都会再看${list}。`, `Optional. All ${n} situations check ${list} again.`);
 }
 
 /** A changed condition as a sentence of its own, in the language it is written in. */

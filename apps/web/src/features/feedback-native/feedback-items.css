@@ -29,6 +29,10 @@
   line-height: 1.5;
   font-variant-numeric: tabular-nums;
 }
+/* A narrow screen wraps the counts without leaving one or two characters alone on a line. */
+.native-feedback .fb-meta__count {
+  text-wrap: pretty;
+}
 .native-feedback .fb-meta .chip {
   height: 24px;
   margin: 0 2px 0 0;
@@ -174,6 +178,10 @@
   border-radius: var(--r-lg);
   background: var(--paper);
   box-shadow: var(--shadow-paper);
+}
+/* A row brought into view by focus or an opened basis stays clear of the sticky toolbar. */
+.fb-item {
+  scroll-margin-top: 72px;
 }
 .fb-item + .fb-item {
   box-shadow: inset 0 1px 0 var(--line);

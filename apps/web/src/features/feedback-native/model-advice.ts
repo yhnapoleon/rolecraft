@@ -471,23 +471,32 @@ export function adviceRowLine(
   advice: RegisteredAdvice[] | undefined,
   language: FeedbackLanguage,
   fallback: AdviceFallback,
-): { text: string; tone: 'bad' | 'ink'; waiting?: true } | undefined {
+):
+  | { text: string; tone: 'bad' | 'ink'; waiting?: true; kind?: 'abstained' | 'advised' }
+  | undefined {
   const key = titleKey(advice, fallback);
   // Waiting for a model: "模型建议" with the grey mark (frontend-style 3.6).
   if (key === 'titleWaiting') return { text: adviceCopy(language, key), tone: 'ink', waiting: true };
   if (!advice?.length && key === 'titleUnavailable') return undefined;
   const C = (k: ModelAdviceCopyKey, values?: Record<string, string | number>) =>
     adviceCopy(language, k, values);
-  if (key === 'titleAbstained') return { text: C('rowAdvice', { what: C('rowAbstained') }), tone: 'ink' };
+  // `kind` tells the basis what was found: the model judged no sentence, or it advised.
+  if (key === 'titleAbstained')
+    return { text: C('rowAdvice', { what: C('rowAbstained') }), tone: 'ink', kind: 'abstained' };
   if (key !== 'titleCompleted') return { text: C(key), tone: 'ink' };
   const lead = advice?.find((entry) => entry.units) ?? advice?.find((entry) => shownResult(entry));
   const result = lead && shownResult(lead);
   if (result === 'CONTRADICTED') {
     const n = lead?.units?.filter((unit) => unit.label === 'CONTRADICTED').length || 1;
-    return { text: C('rowAdvice', { what: counted(language, 'countContradicted', n) }), tone: 'bad' };
+    return {
+      text: C('rowAdvice', { what: counted(language, 'countContradicted', n) }),
+      tone: 'bad',
+      kind: 'advised',
+    };
   }
-  if (result === 'SUPPORTED') return { text: C('rowAdvice', { what: C('rowSupported') }), tone: 'ink' };
-  return { text: C('rowAdvice', { what: C('rowInsufficient') }), tone: 'ink' };
+  if (result === 'SUPPORTED')
+    return { text: C('rowAdvice', { what: C('rowSupported') }), tone: 'ink', kind: 'advised' };
+  return { text: C('rowAdvice', { what: C('rowInsufficient') }), tone: 'ink', kind: 'advised' };
 }
 
 function failureKey(code: string | null): ModelAdviceCopyKey {

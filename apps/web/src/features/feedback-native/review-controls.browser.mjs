@@ -63,7 +63,7 @@ for (const language of ['zh', 'en']) {
     assert.equal(calls[0].input.followup_of[0].object_id, 'response');
     assert.equal(await browser.ev('window.fixture.state.status'), 'active');
     await browser.clickText(
-      language === 'en' ? 'Earlier deliveries and reviews' : '之前的交付与评审',
+      language === 'en' ? 'All deliveries and reviews' : '全部交付与评审记录',
     );
     await browser.clickText(language === 'en' ? 'View reviewed artifact' : '查看评审作品');
     assert.equal(await browser.ev('window.fixture.calls.at(-1).ref.version'), 1);

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { asFake, fakeDocument, type FakeElement } from '../results-native/fake-dom';
-import { criterionChecks, criterionLabels, criterionQuestions } from './criteria';
+import { criterionChecks, criterionLabels, criterionQuestions, criterionScopes } from './criteria';
 import {
   earlierSummary,
   feedbackItemsView,
@@ -236,6 +236,53 @@ describe('195 feedback item by item: the rows', () => {
   });
 });
 
+describe('195 basis: what we found is findings only (197 E1)', () => {
+  it('moves the rules’ scope under what the item checks and drops their default pending sentence', () => {
+    const view = feedbackItemsView(report(), { language: 'zh', kind: 'submission' });
+    const support = view.unknown.find((row) => row.criterion === 'R2.support');
+    expect(support?.scope).toBe('核对判断与当时可知证据的关系；引用存在不代表支持成立。');
+    expect(support?.found).toEqual(['还没核验：评审还没确认这一项。']);
+    const shown = asFake(renderFeedbackItems(fakeDocument(), view, 'zh', hooks(new Set(['R2.support']))));
+    const [row] = byData(shown, 'feedbackItem', 'R2.support');
+    const text = row.byClass('fb-basis')[0].textContent;
+    expect(text).toContain('这一项看什么关键判断是否由当时可知的证据支持。核对判断与当时可知证据的关系');
+    expect(text).not.toContain('不按作品形式或未见记录判错');
+  });
+
+  it('says what the model managed for R2.support: no sentence checked, or advice to confirm', () => {
+    const none = feedbackItemsView(report(), {
+      language: 'zh',
+      kind: 'submission',
+      adviceLine: { text: '模型建议：一句也没能核查（不计分）', tone: 'ink', kind: 'abstained' },
+    });
+    expect(none.unknown.find((row) => row.criterion === 'R2.support')?.found).toEqual([
+      '还没核验。模型没能核查你的句子，所以还不知道你的引用能不能支撑你的判断。',
+    ]);
+    const advised = feedbackItemsView(report(), {
+      language: 'zh',
+      kind: 'submission',
+      adviceLine: { text: '模型建议：1 句与材料矛盾（不计分）', tone: 'bad', kind: 'advised' },
+    });
+    expect(advised.unknown.find((row) => row.criterion === 'R2.support')?.found).toEqual([
+      '还没核验。模型对部分句子给了建议（见下方），这只是建议，评审还没确认。',
+    ]);
+  });
+
+  it('keeps every scope sentence word for word from the rules', () => {
+    const python = readFileSync(
+      new URL('../../../../../src/career_lab/rubrics/v4/applicability.py', import.meta.url),
+      'utf8',
+    );
+    const table = python.slice(python.indexOf('SCOPE = {'), python.indexOf('\n}\n', python.indexOf('SCOPE = {')));
+    const pairs = [...table.matchAll(/"(R\d\.[a-z_]+)": \(\s*"([^"]+)",\s*"([^"]+)",\s*\)/g)];
+    expect(pairs.length).toBe(14);
+    for (const [, id, zh, en] of pairs) {
+      expect(criterionScopes('zh')[id], id).toBe(zh);
+      expect(criterionScopes('en')[id], id).toBe(en);
+    }
+  });
+});
+
 describe('195 rubric sentences and short questions', () => {
   const rubric = JSON.parse(
     readFileSync(
@@ -355,13 +402,17 @@ describe('195 model advice on the R2.support row', () => {
       'zh',
       'pending',
     );
-    expect(found).toEqual({ text: '模型建议：1 句与材料矛盾（不计分）', tone: 'bad' });
+    expect(found).toEqual({ text: '模型建议：1 句与材料矛盾（不计分）', tone: 'bad', kind: 'advised' });
     const none = adviceRowLine(
       advice([{ label: null, status: 'abstained', reason: 'unit_exceeds_encoder_limit' }]),
       'en',
       'pending',
     );
-    expect(none).toEqual({ text: 'Model advice: couldn’t check any sentence (not scored)', tone: 'ink' });
+    expect(none).toEqual({
+      text: 'Model advice: couldn’t check any sentence (not scored)',
+      tone: 'ink',
+      kind: 'abstained',
+    });
     // While it waits for a model: "模型建议" and the grey mark.
     expect(adviceRowLine(undefined, 'zh', 'waiting')).toEqual({
       text: '模型建议',

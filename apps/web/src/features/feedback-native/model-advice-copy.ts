@@ -16,7 +16,7 @@ const zh = {
   titleUnavailable: '当前模型建议不可读取',
   syntheticNotice: '合成或未训练权重，不是模型判断，不计分。',
   // The one provenance line left in the basis; model and version are in About.
-  externalNotice: '外部提供的模型，质量尚未验证，也不计分。',
+  externalNotice: '这条建议来自外部提供的模型，质量尚未验证，也从不计入分数。',
   // 2026-10-12 decision 5: the work-level wording of the conservative aggregation.
   conclusionCONTRADICTED: '作品整体：存在矛盾',
   conclusionSUPPORTED: '作品整体：全部有支持',
@@ -118,7 +118,7 @@ export const MODEL_ADVICE_COPY: CopyTable<ModelAdviceCopyKey> = {
     titleWaiting: 'Model advice',
     titleUnavailable: 'Model advice is unavailable',
     syntheticNotice: 'Synthetic or untrained weights: not a model judgment, not scored.',
-    externalNotice: 'Supplied externally; not yet validated, and never scored.',
+    externalNotice: 'This advice comes from an outside model. It isn’t validated yet and never counts toward your score.',
     conclusionCONTRADICTED: 'Whole work: contradiction found',
     conclusionSUPPORTED: 'Whole work: every sentence supported',
     conclusionINSUFFICIENT: 'Whole work: some evidence insufficient',

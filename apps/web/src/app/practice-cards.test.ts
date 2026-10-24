@@ -125,7 +125,7 @@ describe('practice card wording', () => {
       changeEn,
     );
     expect(practiceSharedLine(english)).toBe(
-      'Optional. Both revisit ‘Retesting after policy changes’, ‘Actual adjustments and retesting’ and ‘Alternatives and trade-offs’.',
+      'Optional. Both situations check ‘Retesting after policy changes’, ‘Actual adjustments and retesting’ and ‘Alternatives and trade-offs’ again.',
     );
     expect(practiceCardLine(english.cards[0])).toBe(
       'Launch moves from day 7 to day 5. Also checks ‘Resources and timing’.',
@@ -155,7 +155,7 @@ describe('practice card wording', () => {
     );
     setPreference('en');
     const three = practiceCards([urgent, capacity, third], catalog, namesEn, change);
-    expect(practiceSharedLine(three)).toMatch(/^Optional\. All 3 revisit ‘Retesting/);
+    expect(practiceSharedLine(three)).toMatch(/^Optional\. All 3 situations check ‘Retesting/);
   });
 });
 

@@ -470,7 +470,7 @@ async function snapshotNames(context) {
   assert.doesNotMatch(receipt, RECORD_ID);
   await shot('F13-receipt');
   await openReview(context);
-  const history = text('之前的交付与评审', 'Earlier deliveries and reviews');
+  const history = text('全部交付与评审记录', 'All deliveries and reviews');
   await browser.clickText(history, '.native-feedback summary');
   const rows = await browser.ev(`(() => {
     const summary = [...document.querySelectorAll('.native-feedback summary')]
@@ -600,7 +600,7 @@ async function deliveryRounds(context) {
     `[...document.querySelectorAll('.native-feedback ${sections} > article')].map((a) => a.querySelector('button').textContent)`,
   );
   assert.deepEqual(labels, text(['第 2 次交付', '第 1 次交付'], ['Delivery 2', 'Delivery 1']));
-  const history = text('之前的交付与评审', 'Earlier deliveries and reviews');
+  const history = text('全部交付与评审记录', 'All deliveries and reviews');
   await browser.clickText(history, '.native-feedback summary');
   const rows = await browser.ev(`(() => {
     const summary = [...document.querySelectorAll('.native-feedback summary')]
