@@ -73,6 +73,31 @@ ROUTES = {
     ),
     "engineer.reviews.read": Route("GET", "/engineer/reviews"),
 }
+# What each engineer tool expects, carried as its input schema's description (the
+# ToolSchema itself stays frozen).
+ENGINEER_TOOL_NOTES = {
+    "engineer.tickets.read": (
+        "Lists engineer tickets; with ticket_id, one ticket's detail: baseline_config, "
+        "editable_fields (the only settings a trial or draft may change, and their allowed "
+        "values), public probes, trials, drafts and reviews."
+    ),
+    "engineer.reproduce": (
+        "Reruns the ticket's recorded target tests on its baseline configuration; "
+        "it changes no setting."
+    ),
+    "engineer.trial": (
+        "Tries a candidate: payload.changes is {field: new value}, fields taken from the "
+        "ticket detail's editable_fields; unlisted fields keep the baseline."
+    ),
+    "engineer.submissions.draft": (
+        "Drafts a fix: changes is {field: new value}, fields from the ticket detail's "
+        "editable_fields; only the person signs it, on the RoleCraft web page."
+    ),
+    "engineer.reviews.read": (
+        "Reads the reviews run after the person signs a draft; only the person signs, on the "
+        "RoleCraft web page. Pass review_id for the full report."
+    ),
+}
 # The engineer writes run inline with the rule-based retrieval and queue no job.
 ENGINEER_SYNC_OPERATIONS = frozenset(
     {"engineer.reproduce", "engineer.trial", "engineer.submissions.draft"}
@@ -125,8 +150,10 @@ class Binding:
         else:
             content = {"query": payload}
             required = ["session_id"]
+        note = ENGINEER_TOOL_NOTES.get(self.name)
         return {
             "$schema": "https://json-schema.org/draft/2020-12/schema",
+            **({"description": note} if note else {}),
             "type": "object",
             "properties": {"session_id": {"type": "string", "minLength": 1}, **content},
             "required": required,

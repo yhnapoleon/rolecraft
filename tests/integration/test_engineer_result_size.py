@@ -27,6 +27,7 @@ from career_lab.engineer.session import (
     DRAFT_TEXT_LIMIT,
     HANDOVER_LIMIT,
     PAGE_LIMIT,
+    REVIEW_PAGE_LIMIT,
     UNRESOLVED_LIMIT,
 )
 from career_lab.scenarios.v2.module import ref_for
@@ -217,12 +218,15 @@ def test_worst_case_results_stay_within_the_limit(busy: tuple[Eng, TestClient]) 
         size, _ = text_of(agent, "engineer.reviews.read", {"query": {"review_id": review_id}})
         sizes["review"] = max(sizes.get("review", 0), size)
     eng.seeded()  # a page may mix both ticket sources; the seeded title is the longer one
-    for name, key in (("engineer.reviews.read", "reviews"), ("engineer.tickets.read", "tickets")):
+    for name, key, limit in (
+        ("engineer.reviews.read", "reviews", REVIEW_PAGE_LIMIT),
+        ("engineer.tickets.read", "tickets", PAGE_LIMIT),
+    ):
         size, listed = text_of(agent, name, {"query": {}})
         rows = listed[key]
         # Summaries have a fixed shape: pad the page to its limit with the largest one.
         largest = max(len(json.dumps(r, ensure_ascii=False, separators=(",", ":"))) for r in rows)
-        sizes[key + "_page"] = size + (PAGE_LIMIT - len(rows)) * (largest + 1)
+        sizes[key + "_page"] = size + (limit - len(rows)) * (largest + 1)
     assert max(sizes.values()) <= LIMIT, sizes
     ticket_view = detail["ticket"]
     # The person signing can read the latest draft in full; older ones are summarized.
