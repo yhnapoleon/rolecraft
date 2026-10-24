@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import fixedZh from '../../../public/engineer/target-fixed-no-new-failures.zh.json';
-import notFixedEn from '../../../public/engineer/target-not-fixed-new-failures.en.json';
+import fixedZh from '../../../public/engineer/sample-target-fixed.zh.json';
+import notFixedEn from '../../../public/engineer/sample-target-not-fixed.en.json';
 import { asFake, fakeDocument, type FakeElement } from '../results-native/fake-dom';
 import { renderEngineerReport } from './render';
 import type { EngineerPublicReport } from './types';
@@ -54,10 +54,32 @@ describe('engineer regression report · DOM', () => {
     };
     const view = engineerReportView(report, {
       language: 'en',
-      evaluation: [
-        { id: 'E1.target_fixed', label: 'NOT_MET', basis: 'rule' },
-        { id: 'E5.remaining_explanation', label: null, basis: 'rule', status: 'waiting_model' },
-      ],
+      evaluation: {
+        rubric_revision: 'engineer-rubric-v1-final-20261009',
+        review_id: NOT_FIXED_EN.id,
+        submission_hash: NOT_FIXED_EN.submission.sha256,
+        affects_score: false,
+        criteria: [
+          {
+            criterion: 'E1.target_fixed',
+            status: 'concluded',
+            basis: 'rule',
+            label: 'NOT_MET',
+            reason_codes: [],
+            probe_ids: ['F01'],
+            hidden_probes: 0,
+          },
+          {
+            criterion: 'E5.remaining_explanation',
+            status: 'waiting_model',
+            basis: 'semantic_advice',
+            label: null,
+            reason_codes: [],
+            probe_ids: [],
+            hidden_probes: 0,
+          },
+        ],
+      },
     });
     const root = asFake(renderEngineerReport(doc, view, { headingLevel: 3 }));
     expect(headings(root)).toEqual([
@@ -74,9 +96,9 @@ describe('engineer regression report · DOM', () => {
       ['Still failing3', 'unknown'],
       ['Unverified0', 'unknown'],
     ]);
-    const evaluation = root.byClass('er-evaluation')[0].byClass('er-check');
+    const evaluation = root.byClass('er-evaluation')[0].byClass('er-criterion');
     expect(evaluation.map((r) => [r.textContent, r.dataset.mark])).toEqual([
-      ['✕Target failures repairedNot met', 'not_met'],
+      ['✕Target failures repairedNot metF01', 'not_met'],
       ['Unresolved items explainedAwaiting model verification', 'waiting'],
     ]);
     expect(root.byClass('er-tag').map((t) => t.textContent)).toEqual([
@@ -117,5 +139,59 @@ describe('engineer regression report · DOM', () => {
     expect(query.textContent).toBe('<img src=x onerror=alert(1)>');
     expect(query.children).toHaveLength(0);
     expect(root.byTag('img')).toHaveLength(0);
+  });
+
+  it('ER-32 without a target line the sheet starts at the public probes and is named by its kind', () => {
+    const report = {
+      ...FIXED_ZH,
+      findings: FIXED_ZH.findings.filter((f) => f.kind !== 'target_fix'),
+    };
+    const root = asFake(
+      renderEngineerReport(fakeDocument(), engineerReportView(report, { language: 'zh' })),
+    );
+    expect(root.byClass('er-verdict')).toHaveLength(0);
+    expect(headings(root)[0]).toBe('h3 公开探针 · 4 条');
+    const kind = root.byClass('er-report__kind')[0];
+    expect(root.getAttribute('aria-labelledby')).toBe(kind.getAttribute('id'));
+  });
+
+  it('ER-33 E3 field checks sit behind their own disclosure inside the assessment row', () => {
+    const view = engineerReportView(FIXED_ZH, {
+      language: 'zh',
+      evaluation: {
+        rubric_revision: 'engineer-rubric-v1-final-20261009',
+        review_id: FIXED_ZH.id,
+        submission_hash: FIXED_ZH.submission.sha256,
+        affects_score: false,
+        criteria: [
+          {
+            criterion: 'E3.change_consistency',
+            status: 'concluded',
+            basis: 'rule',
+            label: 'PARTIAL',
+            reason_codes: ['changes_omitted'],
+            probe_ids: [],
+            hidden_probes: 0,
+            field_checks: [
+              { field: 'domains', status: 'matched' },
+              { field: 'custom_knob', status: 'omitted' },
+            ],
+          },
+        ],
+      },
+    });
+    const root = asFake(renderEngineerReport(fakeDocument(), view));
+    const fields = root.byClass('er-criterion__fields')[0];
+    expect(fields.tagName).toBe('details');
+    expect(fields.open).toBe(false);
+    expect(fields.byTag('summary')[0].textContent).toBe('逐项核对 · 2 项');
+    expect(fields.byClass('er-field').map((f) => [f.textContent, f.dataset.tone])).toEqual([
+      ['✓开放的知识一致', 'good'],
+      ['◐custom_knob说明里没写', 'ink'],
+    ]);
+    expect(fields.byClass('er-field__name--code').map((f) => f.textContent)).toEqual([
+      'custom_knob',
+    ]);
+    expect(root.byTag('details')).toHaveLength(2);
   });
 });

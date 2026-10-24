@@ -12,14 +12,16 @@ export {
   type EngineerCheckView,
   type EngineerCountView,
   type EngineerEvaluationRowView,
+  type EngineerFieldCheckView,
   type EngineerProbeRowView,
   type EngineerReportOptions,
   type EngineerReportView,
   type EngineerTagView,
   type EngineerTone,
+  type EngineerVerdictState,
 } from './view';
 export { renderEngineerReport, type EngineerReportRenderOptions } from './render';
-export { ENGINEER_REPORT_COPY, MATERIAL_NAMES, type EngineerReportKey } from './copy';
+export { ENGINEER_REPORT_COPY, FIELD_NAMES, MATERIAL_NAMES, type EngineerReportKey } from './copy';
 
 /** Replace root's content with the report; returns the drawn sheet. */
 export function mountEngineerReport(

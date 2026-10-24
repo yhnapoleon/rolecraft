@@ -1,17 +1,21 @@
 # 工程师回归报告样例
 
-这里的四个 JSON 是可信复核器真跑出来的公开回归报告（`EngineerPublicReport`，契约 `engineer-review-v1`），供前端样例页 `#/engineer-report` 和回归报告组件 `src/features/engineer-report/` 使用。每种情形中英各一份，业务事实相同。
+这里的四个 JSON 是现行可信复核器在本机真跑出来的公开报告（`EngineerPublicReport`，契约 `engineer-review-v1`），用来演示回归报告组件 `src/features/engineer-report/` 和样例页 `#/engineer-report` 的样子。它们是界面样例，不是回归结论。每种情形中英各一份，业务事实相同。
 
-| 文件 | 情形 | `status` / `claim_check` | 公开 4 条 | 隐藏 9 条 |
+## 这批样例的局限
+
+- 场景里的 13 条探针各自带前置条件（先应用某份配置、刷新索引或调整设置，再提问）。场景作者的探针运行器会先套前置条件再跑；现行工程师复核把 13 条都放在同一份候选配置下跑，没有套各条的前置条件。
+- 所以报告里的通过与未通过，尤其是隐藏探针的计数，可能含这种复核方式带来的假象，不能据此判断候选配置修好或弄坏了什么。
+- 191 会另配一套「单一配置下前后一致」的回归探针。落地后按下面「怎样重跑」的步骤重跑，替换这四个文件。
+
+| 文件 | 样例页标签 | `status` / `claim_check` | 公开 4 条（复核器原样输出） | 隐藏 9 条 |
 |---|---|---|---|---|
-| `target-fixed-no-new-failures.{zh,en}.json` | 目标修好，无新增失败，自报一致 | `verified` / `matched` | F12（目标）修好；F01 改前也未通过；F04、F05 通过 | 通过 5 · 未通过 4 · 出错 0 |
-| `target-not-fixed-new-failures.{zh,en}.json` | 目标没修好，有新增失败，自报不符 | `report_mismatch` / `mismatch` | F01（目标）仍未通过；F04、F05 新增失败；F12 通过 | 通过 4 · 未通过 5 · 出错 0 |
-
-私有复核库里的隐藏探针对比（公开报告目前没有这个字段，`hidden_comparison` 上线后可拿来核对）：修好那份是新增失败 0 · 修好 1 · 仍未通过 4 · 未核实 0；没修好那份是新增失败 2 · 修好 1 · 仍未通过 3 · 未核实 0。
+| `sample-target-fixed.{zh,en}.json` | 目标已修好 | `verified` / `matched` | F12（目标）通过；F01 改前改后都未通过；F04、F05 通过 | 通过 5 · 未通过 4 · 出错 0 |
+| `sample-target-not-fixed.{zh,en}.json` | 目标没修好 | `report_mismatch` / `mismatch` | F01（目标）未通过；F04、F05 改前通过、改后未通过；F12 通过 | 通过 4 · 未通过 5 · 出错 0 |
 
 ## 生成条件
 
-- 2026-10-24，代码基点 `4b069b2`，`--provider local`，新 SQLite 库；没有设 `CAREER_LAB_RECOGNIZERS`（识别层关闭），复核器是规则版检索（`reviewer.json` 的 `mode` 为 `local-extractive`），不调用任何模型，`advice` 为 `waiting_model`。
+- 2026-10-24，代码基点 `4b069b2`，`--provider local`，新 SQLite 库；复核在同一份候选配置下跑全部 13 条探针（见上文局限）；没有设 `CAREER_LAB_RECOGNIZERS`（识别层关闭），复核器是规则版检索（`reviewer.json` 的 `mode` 为 `local-extractive`），不调用任何模型，`advice` 为 `waiting_model`。
 - 中文用默认安装场景；英文另起一套服务，`CAREER_LAB_SCENARIO_V2` 指向英文场景。
 - 公开报告由复核器自己投影：只有公开探针逐条、隐藏探针计数和规则文案。逐份核过：不含令牌、文件路径、提交说明或其他自由文字。报告里的 `session_id`（引用）与 `reviewer.id` 来自这次本机一次性库，单独拿到没有任何权限；令牌只在 `runs/` 下权限 0600 的 `credentials.json` 里。
 
@@ -44,7 +48,7 @@ base() { jq -n --arg sid "$(jq -r .session_id "$1/credentials.json")" --argjson 
   '{base:{schema_version:2, session_id:$sid, kind:"config", object_id:"pilot", version:$v, config_version:$cv}, settings:$s}'; }
 ```
 
-**情形一：目标修好、无新增失败。** 产品经理把知识范围收窄到政策类（漏掉稳定办公知识），「账号密码忘了怎么重置？」被判为超出范围；工程师把范围改回来。
+**情形一：目标已修好。** 产品经理把知识范围收窄到政策类（漏掉稳定办公知识），「账号密码忘了怎么重置？」被判为超出范围；工程师把范围改回来。
 
 ```sh
 A=$R/fixed; session $A
@@ -57,7 +61,7 @@ CHANGES='{"domains":["stable_faq","onboarding","policy_travel","policy_meal","po
 CLAIM='[{"probe_id":"F01","result":"fail"},{"probe_id":"F04","result":"pass"},{"probe_id":"F05","result":"pass"},{"probe_id":"F12","result":"pass"}]'
 ```
 
-**情形二：目标没修好、有新增失败、自报不符。** 政策更新后索引落后，住宿上限问题照旧答 500 元、没有提醒；工程师把新鲜度保护设成「转人工」又关掉了人工兜底，并自报四条全过。
+**情形二：目标没修好，自报不符。** 政策更新后索引落后，住宿上限问题照旧答 500 元、没有提醒；工程师把新鲜度保护设成「转人工」又关掉了人工兜底，并自报四条全过。
 
 ```sh
 B=$R/not-fixed; session $B

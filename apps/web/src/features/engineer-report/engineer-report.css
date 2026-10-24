@@ -108,6 +108,10 @@
   color: var(--bad);
   background: var(--bad-tint);
 }
+.er-verdict__mark[data-tone="ink"] {
+  color: var(--ink-2);
+  background: var(--fill);
+}
 .er-verdict__mark[data-tone="unknown"] {
   color: var(--ink-4);
   border-style: dashed;
@@ -284,7 +288,45 @@
 }
 /* A short checklist: keep each label close to its criterion. */
 .er-evaluation {
-  max-width: 480px;
+  max-width: 560px;
+}
+.er-criterion__body {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+.er-criterion__refs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+.er-criterion__hidden {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.er-fields {
+  display: grid;
+  gap: 4px;
+  margin-top: 2px;
+  padding: 10px 12px;
+  border-radius: var(--r-sm, 9px);
+  background: var(--surface-2);
+  list-style: none;
+}
+.er-field {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  column-gap: 10px;
+  align-items: baseline;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.er-field__name--code {
+  font: 12px / 1.5 var(--mono);
+}
+.er-field__status {
+  color: var(--ink-2);
 }
 .er-evaluation .er-check__status {
   display: flex;
@@ -357,7 +399,7 @@
   line-height: 32px;
   pointer-events: none;
 }
-.er-basis > summary {
+:is(.er-basis, .er-criterion__fields) > summary {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -368,10 +410,10 @@
   cursor: pointer;
   list-style: none;
 }
-.er-basis > summary::-webkit-details-marker {
+:is(.er-basis, .er-criterion__fields) > summary::-webkit-details-marker {
   display: none;
 }
-.er-basis > summary::before {
+:is(.er-basis, .er-criterion__fields) > summary::before {
   content: "";
   width: 6px;
   height: 6px;
@@ -380,13 +422,18 @@
   transform: translateY(-1px) rotate(-45deg);
   transition: transform var(--fast, 160ms) var(--ease, ease-out);
 }
-.er-basis[open] > summary::before {
+:is(.er-basis, .er-criterion__fields)[open] > summary::before {
   transform: translateY(-2px) rotate(45deg);
 }
 @media (hover: hover) and (pointer: fine) {
-  .er-basis > summary:hover {
+  :is(.er-basis, .er-criterion__fields) > summary:hover {
     color: var(--ink);
   }
+}
+/* The field checks inside an assessment row use a smaller disclosure. */
+.er-criterion__fields > summary {
+  min-height: 28px;
+  font-size: 12.5px;
 }
 .er-basis__list {
   display: grid;
@@ -414,12 +461,13 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .er-basis[open] > .er-basis__list {
+  .er-basis[open] > .er-basis__list,
+  .er-criterion__fields[open] > .er-fields {
     animation: er-reveal var(--fast, 160ms) var(--ease, ease-out);
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .er-basis > summary::before {
+  :is(.er-basis, .er-criterion__fields) > summary::before {
     transition: none;
   }
 }

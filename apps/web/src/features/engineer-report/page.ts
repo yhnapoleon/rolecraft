@@ -9,8 +9,8 @@ import { engineerReportView } from './view';
 import './page.css';
 
 const SAMPLES = [
-  { id: 'fixed', file: 'target-fixed-no-new-failures', label: 'fixed' },
-  { id: 'not-fixed', file: 'target-not-fixed-new-failures', label: 'notFixed' },
+  { id: 'fixed', file: 'sample-target-fixed', label: 'fixed' },
+  { id: 'not-fixed', file: 'sample-target-not-fixed', label: 'notFixed' },
 ] as const;
 type SampleId = (typeof SAMPLES)[number]['id'];
 
@@ -18,8 +18,8 @@ const zh = {
   title: '知识助手配置的回归报告',
   sample: '样例',
   choose: '选择样例',
-  fixed: '已修好，无新增失败',
-  notFixed: '没修好，有新增失败',
+  fixed: '目标已修好',
+  notFixed: '目标没修好',
   loading: '正在读取…',
   failed: '读不到这份样例，刷新页面再试。',
   retrieval: '规则版检索',
@@ -31,8 +31,8 @@ const COPY: CopyTable<Key> = {
     title: 'Regression reports for the assistant configuration',
     sample: 'Sample',
     choose: 'Choose a sample',
-    fixed: 'Fixed, no new failures',
-    notFixed: 'Not fixed, new failures',
+    fixed: 'Target fixed',
+    notFixed: 'Target not fixed',
     loading: 'Loading…',
     failed: "Couldn't load this sample. Reload the page to try again.",
     retrieval: 'Rule-based retrieval',

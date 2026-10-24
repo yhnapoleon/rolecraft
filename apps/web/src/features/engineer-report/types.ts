@@ -143,19 +143,62 @@ export interface EngineerPublicReport {
   readonly schema_version?: 2;
 }
 
-/** One engineer rubric conclusion (E1–E5), returned beside the report by the engineer API. */
+/** Engineer rubric conclusions (E1–E5), returned beside the report by the engineer API
+ * (`EngineerRuleEvaluation`). E1–E4 are rule conclusions; E5 waits for a model. Hidden probes
+ * appear only as counts; probe IDs are public ones. */
 export type EngineerEvaluationLabel =
   | 'MET'
   | 'PARTIAL'
   | 'NOT_MET'
   | 'INSUFFICIENT'
   | 'NOT_APPLICABLE';
-export interface EngineerEvaluationItem {
-  /** e.g. 'E1.target_fixed'; known IDs get their rubric title, never shown raw. */
-  readonly id: string;
+export type EngineerCriterionId =
+  | 'E1.target_fixed'
+  | 'E2.no_regressions'
+  | 'E3.change_consistency'
+  | 'E4.reproducibility'
+  | 'E5.remaining_explanation';
+export type EngineerFieldCheckStatus =
+  | 'matched'
+  | 'omitted'
+  | 'before_mismatch'
+  | 'after_mismatch'
+  | 'values_mismatch'
+  | 'change_not_made'
+  | 'change_denied';
+export interface EngineerFieldCheck {
+  readonly field: string;
+  readonly status: EngineerFieldCheckStatus;
+}
+export interface EngineerExplanationPrecheck {
+  readonly basis: 'rule';
+  /** Failing public probes the submission does not explain. */
+  readonly unexplained_probe_ids: readonly string[];
+  /** Failing hidden probes not explained, as a count. */
+  readonly unexplained_hidden: number;
+}
+export interface EngineerCriterionConclusion {
+  readonly criterion: EngineerCriterionId;
+  readonly status: 'concluded' | 'waiting_model';
+  readonly basis: 'rule' | 'semantic_advice';
+  /** null while waiting for a model (E5). */
   readonly label: EngineerEvaluationLabel | null;
-  readonly basis: 'rule' | string;
-  readonly status?: 'waiting_model' | string;
-  /** Localized rubric title for an ID this component does not know. */
-  readonly title?: string;
+  /** e.g. targets_repaired, new_failures_found; unknown codes are not shown. */
+  readonly reason_codes: readonly string[];
+  /** Public probe IDs only. */
+  readonly probe_ids: readonly string[];
+  /** Hidden probes involved, as a count. For E1 this is the number of hidden targets. */
+  readonly hidden_probes: number;
+  /** E3 only. */
+  readonly field_checks?: readonly EngineerFieldCheck[] | null;
+  /** E5 only. */
+  readonly precheck?: EngineerExplanationPrecheck | null;
+}
+export interface EngineerRuleEvaluation {
+  readonly rubric_revision: string;
+  readonly review_id: string;
+  readonly submission_hash: string;
+  readonly affects_score: false;
+  /** In E1–E5 order. */
+  readonly criteria: readonly EngineerCriterionConclusion[];
 }

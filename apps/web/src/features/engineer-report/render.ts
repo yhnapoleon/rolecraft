@@ -40,29 +40,35 @@ export function renderEngineerReport(
   const root = el('article', 'er-report');
   root.dataset.engineerReport = view.id;
   root.lang = view.language === 'zh' ? 'zh-CN' : 'en';
-  root.setAttribute('aria-labelledby', `${base}-verdict`);
+  root.setAttribute('aria-labelledby', `${base}-${view.verdict ? 'verdict' : 'kind'}`);
+  const queryLang = view.queryLanguage === 'zh' ? 'zh-CN' : 'en';
 
-  // Head: what this document is, then the one conclusion that matters most.
+  // Head: what this document is, then the one conclusion that matters most (when there is one).
   const head = el('header', 'er-report__head');
   const eyebrow = el('p', 'er-report__eyebrow');
-  eyebrow.append(el('span', 'er-report__kind', view.eyebrow));
+  const kind = el('span', 'er-report__kind', view.eyebrow);
+  kind.setAttribute('id', `${base}-kind`);
+  eyebrow.append(kind);
   for (const item of view.meta) eyebrow.append(el('span', 'er-report__meta', item));
-  const verdict = el('div', 'er-verdict');
-  verdict.dataset.tone = view.verdict.tone;
-  verdict.dataset.state = view.verdict.state;
-  const verdictBody = el('div', 'er-verdict__body');
-  const title = heading(0, 'er-verdict__title', view.verdict.title);
-  title.setAttribute('id', `${base}-verdict`);
-  verdictBody.append(title);
-  const queryLang = view.queryLanguage === 'zh' ? 'zh-CN' : 'en';
-  for (const query of view.verdict.targets) {
-    const target = el('p', 'er-verdict__target', query);
-    target.lang = queryLang;
-    verdictBody.append(target);
+  head.append(eyebrow);
+  if (view.verdict) {
+    const verdict = el('div', 'er-verdict');
+    verdict.dataset.tone = view.verdict.tone;
+    verdict.dataset.state = view.verdict.state;
+    verdict.dataset.source = view.verdict.source;
+    const verdictBody = el('div', 'er-verdict__body');
+    const title = heading(0, 'er-verdict__title', view.verdict.title);
+    title.setAttribute('id', `${base}-verdict`);
+    verdictBody.append(title);
+    for (const query of view.verdict.targets) {
+      const target = el('p', 'er-verdict__target', query);
+      target.lang = queryLang;
+      verdictBody.append(target);
+    }
+    if (view.verdict.detail) verdictBody.append(el('p', 'er-verdict__detail', view.verdict.detail));
+    verdict.append(mark(view.verdict.tone, 'er-verdict__mark'), verdictBody);
+    head.append(verdict);
   }
-  verdictBody.append(el('p', 'er-verdict__detail', view.verdict.detail));
-  verdict.append(mark(view.verdict.tone, 'er-verdict__mark'), verdictBody);
-  head.append(eyebrow, verdict);
   root.append(head);
 
   const section = (name: string, titleText: string, aside?: string) => {
@@ -150,20 +156,52 @@ export function renderEngineerReport(
   root.append(checks);
 
   if (view.evaluation) {
-    const evaluation = section('evaluation', view.evaluation.title);
+    const evaluation = section('evaluation', view.evaluation.title, view.evaluation.aside);
     const list = el('ul', 'er-checks er-evaluation');
     for (const row of view.evaluation.rows) {
-      const item = el('li', 'er-check');
+      const item = el('li', 'er-check er-criterion');
       item.dataset.tone = row.tone;
       item.dataset.mark = row.mark;
+      item.dataset.criterion = row.id;
       const glyph =
         row.mark === 'not_applicable' ? '–' : row.mark === 'partial' ? '◐' : MARK[row.tone];
+      const body = el('div', 'er-criterion__body');
       const words = el('p', 'er-check__status');
       words.append(
         el('span', 'er-evaluation__title', row.title),
         el('span', 'er-evaluation__label', row.labelText),
       );
-      item.append(mark(row.tone, 'er-check__mark', glyph), words);
+      body.append(words);
+      if (row.reason) body.append(el('p', 'er-check__rule', row.reason));
+      if (row.precheck) body.append(el('p', 'er-check__rule', row.precheck));
+      if (row.probeIds.length || row.hidden) {
+        const refs = el('p', 'er-criterion__refs');
+        for (const id of row.probeIds) refs.append(el('span', 'er-probe__id', id));
+        if (row.hidden) refs.append(el('span', 'er-criterion__hidden', row.hidden));
+        body.append(refs);
+      }
+      if (row.fieldChecks) {
+        const fields = el('details', 'er-criterion__fields');
+        fields.append(el('summary', '', row.fieldChecks.label));
+        const checks = el('ul', 'er-fields');
+        for (const check of row.fieldChecks.rows) {
+          const line = el('li', 'er-field');
+          line.dataset.tone = check.tone;
+          line.append(
+            mark(check.tone, 'er-check__mark'),
+            el(
+              'span',
+              check.code ? 'er-field__name er-field__name--code' : 'er-field__name',
+              check.field,
+            ),
+            el('span', 'er-field__status', check.status),
+          );
+          checks.append(line);
+        }
+        fields.append(checks);
+        body.append(fields);
+      }
+      item.append(mark(row.tone, 'er-check__mark', glyph), body);
       list.append(item);
     }
     evaluation.append(list);

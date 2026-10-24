@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import fixedEn from '../../../public/engineer/target-fixed-no-new-failures.en.json';
-import fixedZh from '../../../public/engineer/target-fixed-no-new-failures.zh.json';
-import notFixedEn from '../../../public/engineer/target-not-fixed-new-failures.en.json';
-import notFixedZh from '../../../public/engineer/target-not-fixed-new-failures.zh.json';
+import fixedEn from '../../../public/engineer/sample-target-fixed.en.json';
+import fixedZh from '../../../public/engineer/sample-target-fixed.zh.json';
+import notFixedEn from '../../../public/engineer/sample-target-not-fixed.en.json';
+import notFixedZh from '../../../public/engineer/sample-target-not-fixed.zh.json';
 import { ENGINEER_REPORT_COPY } from './copy';
-import type { EngineerFinding, EngineerPublicReport } from './types';
+import type {
+  EngineerCriterionConclusion,
+  EngineerFinding,
+  EngineerPublicReport,
+  EngineerRuleEvaluation,
+} from './types';
 import { engineerReportView, ruleFindingText, type EngineerReportView } from './view';
 
 const sample = (raw: unknown) => raw as EngineerPublicReport;
@@ -50,6 +55,28 @@ const finding = (
   visibility: 'public',
   description: ruleFindingText(kind, status, 'zh', probe_ids.length > 0),
 });
+const criterion = (
+  c: Partial<EngineerCriterionConclusion> & Pick<EngineerCriterionConclusion, 'criterion'>,
+): EngineerCriterionConclusion => ({
+  status: 'concluded',
+  basis: 'rule',
+  label: 'MET',
+  reason_codes: [],
+  probe_ids: [],
+  hidden_probes: 0,
+  ...c,
+});
+const evaluation = (criteria: EngineerCriterionConclusion[]): EngineerRuleEvaluation => ({
+  rubric_revision: 'engineer-rubric-v1-final-20261009',
+  review_id: `review-${'c0ffee12'.padEnd(64, '0')}`,
+  submission_hash: 'abad1dea'.padEnd(64, '0'),
+  affects_score: false,
+  criteria,
+});
+const e1 = (
+  label: EngineerCriterionConclusion['label'],
+  more: Partial<EngineerCriterionConclusion> = {},
+) => evaluation([criterion({ criterion: 'E1.target_fixed', label, ...more })]);
 const withReport = (changes: Partial<EngineerPublicReport>) =>
   ({ ...FIXED_ZH, ...changes }) as EngineerPublicReport;
 
@@ -129,8 +156,8 @@ describe('engineer regression report · real samples', () => {
 
   it('ER-03 English samples read in English, with the same facts', () => {
     const fixed = engineerReportView(FIXED_EN, { language: 'en', timeZone: SG });
-    expect(fixed.verdict.title).toBe('Target fixed');
-    expect(fixed.verdict.targets).toEqual(['I forgot my account password. How do I reset it?']);
+    expect(fixed.verdict?.title).toBe('Target fixed');
+    expect(fixed.verdict?.targets).toEqual(['I forgot my account password. How do I reset it?']);
     expect(fixed.publicSection.rows[0].diff).toBe(
       'Expected an answer with a warning, got a direct answer; cites the travel policy v1 (now v2)',
     );
@@ -138,7 +165,7 @@ describe('engineer regression report · real samples', () => {
     expect(fixed.hiddenSection.note).toBe('Hidden probes report counts only.');
     expect(fixed.advice.text).toBe('Model advice: waiting for model integration');
     const notFixed = engineerReportView(NOT_FIXED_EN, { language: 'en', timeZone: SG });
-    expect(notFixed.verdict.detail).toBe(
+    expect(notFixed.verdict?.detail).toBe(
       'Still failing: expected an answer with a warning, got no answer.',
     );
     expect(notFixed.checks.lines[0].status).toBe('New failures in public probes: 2');
@@ -169,27 +196,26 @@ describe('engineer regression report · real samples', () => {
 
 describe('engineer regression report · states', () => {
   it('ER-06 target not yet verified when the public report carries no target result', () => {
+    // No public target finding and no rubric E1: no target line at all.
     const none = engineerReportView(
       withReport({ findings: FIXED_ZH.findings.filter((f) => f.kind !== 'target_fix') }),
       { language: 'zh' },
     );
-    expect(none.verdict).toMatchObject({
-      state: 'unknown',
-      tone: 'unknown',
-      title: '目标问题待核',
-      detail: '这份公开报告里没有目标问题的核验结果。',
-      targets: [],
-    });
+    expect(none.verdict).toBeUndefined();
+    // A public target finding that could not be verified still decides, in grey.
     const unmatched = engineerReportView(
       withReport({ findings: [finding('target_fix', 'unverified')] }),
       {
         language: 'en',
       },
     );
-    expect(unmatched.verdict.title).toBe('Target not yet verified');
-    expect(unmatched.verdict.detail).toBe(
-      'Some target tests have no matching trusted suite expectation.',
-    );
+    expect(unmatched.verdict).toMatchObject({
+      source: 'public',
+      state: 'unknown',
+      tone: 'unknown',
+      title: 'Not known yet whether the target is fixed',
+      detail: 'Some target tests have no matching trusted suite expectation.',
+    });
   });
 
   it('ER-07 several targets: one still failing means not fixed, with a count', () => {
@@ -199,8 +225,8 @@ describe('engineer regression report · states', () => {
       }),
       { language: 'zh' },
     );
-    expect(view.verdict.state).toBe('not_fixed');
-    expect(view.verdict.detail).toBe('2 个目标里 1 个还没修好。');
+    expect(view.verdict?.state).toBe('not_fixed');
+    expect(view.verdict?.detail).toBe('2 个目标里 1 个还没修好。');
   });
 
   it('ER-08 execution errors are grey and say what failed', () => {
@@ -356,20 +382,29 @@ describe('engineer regression report · states', () => {
   it('ER-13 assessment section only when conclusions are supplied, labels in words', () => {
     expect(engineerReportView(FIXED_ZH, { language: 'zh' }).evaluation).toBeUndefined();
     expect(
-      engineerReportView(FIXED_ZH, { language: 'zh', evaluation: [] }).evaluation,
+      engineerReportView(FIXED_ZH, { language: 'zh', evaluation: evaluation([]) }).evaluation,
     ).toBeUndefined();
     const view = engineerReportView(FIXED_ZH, {
       language: 'zh',
-      evaluation: [
-        { id: 'E1.target_fixed', label: 'MET', basis: 'rule' },
-        { id: 'E2.no_regressions', label: 'NOT_MET', basis: 'rule' },
-        { id: 'E3.change_consistency', label: 'PARTIAL', basis: 'rule' },
-        { id: 'E4.reproducibility', label: 'INSUFFICIENT', basis: 'rule' },
-        { id: 'E5.remaining_explanation', label: null, basis: 'rule', status: 'waiting_model' },
-        { id: 'E9.unknown_code', label: 'NOT_APPLICABLE', basis: 'rule' },
-      ],
+      evaluation: evaluation([
+        criterion({ criterion: 'E1.target_fixed', label: 'MET' }),
+        criterion({ criterion: 'E2.no_regressions', label: 'NOT_MET' }),
+        criterion({ criterion: 'E3.change_consistency', label: 'PARTIAL' }),
+        criterion({ criterion: 'E4.reproducibility', label: 'INSUFFICIENT' }),
+        criterion({
+          criterion: 'E5.remaining_explanation',
+          label: null,
+          status: 'waiting_model',
+          basis: 'semantic_advice',
+        }),
+        criterion({
+          criterion: 'E9.unknown_code' as EngineerCriterionConclusion['criterion'],
+          label: 'NOT_APPLICABLE',
+        }),
+      ]),
     });
     expect(view.evaluation?.title).toBe('评价结论');
+    expect(view.evaluation?.aside).toBe('不计分');
     expect(view.evaluation?.rows.map((r) => [r.title, r.labelText, r.tone, r.mark])).toEqual([
       ['目标失败已修复', '满足', 'good', 'met'],
       ['无回归', '未满足', 'bad', 'not_met'],
@@ -381,9 +416,9 @@ describe('engineer regression report · states', () => {
     expect(strings(view)).not.toContain('E9.unknown_code');
     const en = engineerReportView(FIXED_ZH, {
       language: 'en',
-      evaluation: [
-        { id: 'E5.remaining_explanation', label: null, basis: 'rule', status: 'waiting_model' },
-      ],
+      evaluation: evaluation([
+        criterion({ criterion: 'E5.remaining_explanation', label: null, status: 'waiting_model' }),
+      ]),
     });
     expect(en.evaluation?.rows[0]).toMatchObject({
       title: 'Unresolved items explained',
@@ -454,6 +489,237 @@ describe('engineer regression report · states', () => {
       materialName: (id) => (id === 'tech_private' ? '诊断底稿' : undefined),
     });
     expect(named.publicSection.rows[0].diff).toContain('引用诊断底稿 v1');
+  });
+});
+
+describe('engineer regression report · target line and rubric conclusions', () => {
+  const NO_TARGET = withReport({
+    findings: FIXED_ZH.findings.filter((f) => f.kind !== 'target_fix'),
+  });
+
+  it('ER-24 a public target finding decides the target line even when E1 disagrees', () => {
+    const view = engineerReportView(FIXED_ZH, {
+      language: 'zh',
+      evaluation: e1('NOT_MET', { hidden_probes: 2 }),
+    });
+    expect(view.verdict).toMatchObject({
+      source: 'public',
+      state: 'fixed',
+      title: '目标问题已修好',
+      detail: '按冻结预期通过。',
+      targets: ['账号密码忘了怎么重置？'],
+    });
+  });
+
+  it.each([
+    ['MET', 'fixed', 'good', '目标问题已修好'],
+    ['NOT_MET', 'not_fixed', 'bad', '目标问题没修好'],
+    ['PARTIAL', 'partial', 'ink', '目标问题部分修好'],
+    ['INSUFFICIENT', 'unknown', 'unknown', '还不知道目标是否修好'],
+    [null, 'unknown', 'unknown', '还不知道目标是否修好'],
+  ] as const)(
+    'ER-25 without a public target finding, E1 %s sets the target line',
+    (label, state, tone, title) => {
+      const view = engineerReportView(NO_TARGET, { language: 'zh', evaluation: e1(label) });
+      expect(view.verdict).toEqual({
+        source: 'evaluation',
+        state,
+        tone,
+        title,
+        detail: '',
+        targets: [],
+      });
+    },
+  );
+
+  it('ER-26 E1 waiting for a model reads as waiting, in grey; not-applicable E1 shows no target line', () => {
+    const waiting = engineerReportView(NO_TARGET, {
+      language: 'en',
+      evaluation: e1(null, { status: 'waiting_model' }),
+    });
+    expect(waiting.verdict).toMatchObject({
+      state: 'waiting',
+      tone: 'unknown',
+      title: 'Target awaiting model verification',
+    });
+    expect(
+      engineerReportView(NO_TARGET, { language: 'zh', evaluation: e1('NOT_APPLICABLE') }).verdict,
+    ).toBeUndefined();
+  });
+
+  it('ER-27 E1 hidden targets appear as a count only', () => {
+    const many = engineerReportView(NO_TARGET, {
+      language: 'zh',
+      evaluation: e1('NOT_MET', { hidden_probes: 2 }),
+    });
+    expect(many.verdict?.detail).toBe('目标在 2 条隐藏探针上');
+    expect(many.verdict?.targets).toEqual([]);
+    const one = engineerReportView(NO_TARGET, {
+      language: 'en',
+      evaluation: e1('MET', { hidden_probes: 1 }),
+    });
+    expect(one.verdict?.detail).toBe('Target is covered by 1 hidden probe');
+    const several = engineerReportView(NO_TARGET, {
+      language: 'en',
+      evaluation: e1('MET', { hidden_probes: 3 }),
+    });
+    expect(several.verdict?.detail).toBe('Target is covered by 3 hidden probes');
+    expect(
+      engineerReportView(NO_TARGET, { language: 'zh', evaluation: e1('MET') }).verdict?.detail,
+    ).toBe('');
+  });
+
+  it('ER-28 reason codes read as one sentence; unknown codes show nothing raw', () => {
+    const view = engineerReportView(FIXED_ZH, {
+      language: 'zh',
+      evaluation: evaluation([
+        criterion({
+          criterion: 'E1.target_fixed',
+          reason_codes: ['targets_repaired'],
+          probe_ids: ['F12'],
+        }),
+        criterion({
+          criterion: 'E2.no_regressions',
+          label: 'NOT_MET',
+          reason_codes: ['new_failures_found', 'secret_internal_code'],
+          probe_ids: ['F04', 'F05'],
+          hidden_probes: 2,
+        }),
+        criterion({
+          criterion: 'E4.reproducibility',
+          label: 'INSUFFICIENT',
+          reason_codes: ['mystery_code'],
+        }),
+      ]),
+    });
+    const rows = view.evaluation?.rows ?? [];
+    expect(rows.map((r) => [r.reason, r.probeIds, r.hidden])).toEqual([
+      ['目标失败都已按冻结预期通过。', ['F12'], undefined],
+      ['出现了新增失败。', ['F04', 'F05'], '隐藏 2 条'],
+      [undefined, [], undefined],
+    ]);
+    expect(strings(view).some((s) => /secret_internal_code|mystery_code/.test(s))).toBe(false);
+    const en = engineerReportView(FIXED_ZH, {
+      language: 'en',
+      evaluation: evaluation([
+        criterion({
+          criterion: 'E4.reproducibility',
+          label: 'INSUFFICIENT',
+          reason_codes: ['claim_not_provided', 'verification_incomplete'],
+        }),
+      ]),
+    });
+    expect(en.evaluation?.rows[0].reason).toBe(
+      'No self-report attached; some probes errored, so verification is incomplete.',
+    );
+  });
+
+  it('ER-29 E3 field checks name each setting in words, unknown settings stay raw', () => {
+    const view = engineerReportView(FIXED_ZH, {
+      language: 'zh',
+      evaluation: evaluation([
+        criterion({
+          criterion: 'E3.change_consistency',
+          label: 'NOT_MET',
+          reason_codes: ['changes_omitted'],
+          field_checks: [
+            { field: 'freshness_guard', status: 'matched' },
+            { field: 'fallback', status: 'omitted' },
+            { field: 'domains', status: 'before_mismatch' },
+            { field: 'retrieval_limit', status: 'change_not_made' },
+            { field: 'custom_knob', status: 'change_denied' },
+          ],
+        }),
+      ]),
+    });
+    const row = view.evaluation?.rows[0];
+    expect(row?.reason).toBe('修改说明漏了部分配置差异。');
+    expect(row?.fieldChecks?.label).toBe('逐项核对 · 5 项');
+    expect(row?.fieldChecks?.rows.map((r) => [r.field, r.code, r.status, r.tone])).toEqual([
+      ['过期资料保护', false, '一致', 'good'],
+      ['答不了或不确定时', false, '说明里没写', 'ink'],
+      ['开放的知识', false, '改前的值不符', 'bad'],
+      ['检索条数', false, '说改了，实际没改', 'bad'],
+      ['custom_knob', true, '说没改，实际改了', 'bad'],
+    ]);
+    const en = engineerReportView(FIXED_ZH, {
+      language: 'en',
+      evaluation: evaluation([
+        criterion({
+          criterion: 'E3.change_consistency',
+          field_checks: [
+            { field: 'after', status: 'values_mismatch' },
+            { field: 'min_score', status: 'after_mismatch' },
+          ],
+        }),
+      ]),
+    });
+    expect(en.evaluation?.rows[0].fieldChecks?.rows.map((r) => `${r.field}: ${r.status}`)).toEqual([
+      'after: Both values differ',
+      'Minimum relevance: After value differs',
+    ]);
+    expect(
+      engineerReportView(FIXED_ZH, { language: 'zh', evaluation: e1('MET') }).evaluation?.rows[0]
+        .fieldChecks,
+    ).toBeUndefined();
+  });
+
+  it('ER-30 E5 waits for a model; its precheck counts unexplained failures and names public ones', () => {
+    const view = engineerReportView(FIXED_ZH, {
+      language: 'zh',
+      evaluation: evaluation([
+        criterion({
+          criterion: 'E5.remaining_explanation',
+          status: 'waiting_model',
+          basis: 'semantic_advice',
+          label: null,
+          precheck: { basis: 'rule', unexplained_probe_ids: ['F01'], unexplained_hidden: 3 },
+        }),
+      ]),
+    });
+    expect(view.evaluation?.rows[0]).toMatchObject({
+      labelText: '等待模型核验',
+      mark: 'waiting',
+      tone: 'unknown',
+      precheck: '还有 1 条公开、3 条隐藏的失败没有解释',
+      probeIds: ['F01'],
+    });
+    const en = engineerReportView(FIXED_ZH, {
+      language: 'en',
+      evaluation: evaluation([
+        criterion({
+          criterion: 'E5.remaining_explanation',
+          status: 'waiting_model',
+          label: null,
+          precheck: { basis: 'rule', unexplained_probe_ids: [], unexplained_hidden: 2 },
+        }),
+      ]),
+    });
+    expect(en.evaluation?.rows[0].precheck).toBe(
+      '0 public and 2 hidden failures still unexplained',
+    );
+    const explained = engineerReportView(FIXED_ZH, {
+      language: 'zh',
+      evaluation: evaluation([
+        criterion({
+          criterion: 'E5.remaining_explanation',
+          status: 'waiting_model',
+          label: null,
+          precheck: { basis: 'rule', unexplained_probe_ids: [], unexplained_hidden: 0 },
+        }),
+      ]),
+    });
+    expect(explained.evaluation?.rows[0].precheck).toBeUndefined();
+  });
+
+  it('ER-31 the assessment identities go under the basis as short prefixes', () => {
+    const view = engineerReportView(FIXED_ZH, { language: 'zh', evaluation: e1('MET') });
+    expect(view.basis.rows.slice(-3)).toEqual([
+      { label: '评分标准', value: 'engineer-rubric-v1-final-20261009', code: true },
+      { label: '评价对应的复核', value: 'c0ffee12', code: true },
+      { label: '评价对应的提交', value: 'abad1dea', code: true },
+    ]);
+    expect(strings(view).some((s) => /[0-9a-f]{9,}/.test(s))).toBe(false);
   });
 });
 

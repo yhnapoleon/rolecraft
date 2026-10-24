@@ -3,9 +3,11 @@
  * Free text never passes through: finding descriptions are replaced by the authored rule copy,
  * advice text appears only on success. Probe questions are suite text and stay as written. */
 import { copyText, type Language } from '../results-native/localization';
-import { ENGINEER_REPORT_COPY, MATERIAL_NAMES, type EngineerReportKey } from './copy';
+import { ENGINEER_REPORT_COPY, FIELD_NAMES, MATERIAL_NAMES, type EngineerReportKey } from './copy';
 import type {
-  EngineerEvaluationItem,
+  EngineerCriterionConclusion,
+  EngineerFieldCheckStatus,
+  EngineerRuleEvaluation,
   EngineerFinding,
   EngineerFindingKind,
   EngineerFindingStatus,
@@ -21,8 +23,8 @@ export type EngineerTone = 'good' | 'bad' | 'unknown' | 'ink';
 
 export interface EngineerReportOptions {
   readonly language: Language;
-  /** Rubric conclusions from the engineer API; omitted → no section. */
-  readonly evaluation?: readonly EngineerEvaluationItem[] | null;
+  /** Rubric conclusions (E1–E5) from the engineer API; omitted → no section, no E1 target line. */
+  readonly evaluation?: EngineerRuleEvaluation | null;
   /** Wording supplied by the API, e.g. "规则版检索"; omitted → no line. Never inferred here. */
   readonly retrievalNote?: string | null;
   /** Human name of a cited material; unknown IDs fall back to the built-in names, then "资料". */
@@ -66,12 +68,33 @@ export interface EngineerCheckView {
   /** Authored rule copy for this finding kind. */
   readonly rule: string;
 }
+export interface EngineerFieldCheckView {
+  /** Human name of the setting, or the raw field name when unknown (then `code` is true). */
+  readonly field: string;
+  readonly code: boolean;
+  readonly status: string;
+  readonly tone: EngineerTone;
+}
 export interface EngineerEvaluationRowView {
+  /** The criterion, e.g. 'E1.target_fixed' (an attribute, never shown). */
   readonly id: string;
   readonly title: string;
   readonly labelText: string;
   readonly tone: EngineerTone;
   readonly mark: 'met' | 'partial' | 'not_met' | 'unknown' | 'not_applicable' | 'waiting';
+  /** One sentence from the known reason codes; unknown codes add nothing. */
+  readonly reason?: string;
+  /** Public probe IDs, shown as case numbers. */
+  readonly probeIds: readonly string[];
+  /** e.g. "隐藏 2 条"; absent when no hidden probe is involved. */
+  readonly hidden?: string;
+  /** E5: failures still unexplained, by count. */
+  readonly precheck?: string;
+  /** E3: per-setting checks, behind a disclosure. */
+  readonly fieldChecks?: {
+    readonly label: string;
+    readonly rows: readonly EngineerFieldCheckView[];
+  };
 }
 export interface EngineerBasisRow {
   readonly label: string;
@@ -79,6 +102,7 @@ export interface EngineerBasisRow {
   /** True for hash prefixes (shown in monospace). */
   readonly code: boolean;
 }
+export type EngineerVerdictState = 'fixed' | 'not_fixed' | 'partial' | 'unknown' | 'waiting';
 export interface EngineerReportView {
   readonly language: Language;
   readonly id: string;
@@ -86,12 +110,16 @@ export interface EngineerReportView {
   readonly meta: readonly string[];
   /** Language the probe questions are written in (the work language of the review). */
   readonly queryLanguage: Language;
-  readonly verdict: {
+  /** The target line. Absent when neither a public target finding nor rubric E1 is available. */
+  readonly verdict?: {
     readonly tone: EngineerTone;
-    readonly state: 'fixed' | 'not_fixed' | 'unknown';
+    readonly state: EngineerVerdictState;
+    /** The reviewer's public target finding wins; otherwise rubric E1 (hidden targets). */
+    readonly source: 'public' | 'evaluation';
     readonly title: string;
+    /** One sentence under the title; empty when there is nothing to add. */
     readonly detail: string;
-    /** Target questions as written in the suite. */
+    /** Public target questions as written in the suite; never hidden ones. */
     readonly targets: readonly string[];
   };
   readonly publicSection: {
@@ -110,6 +138,8 @@ export interface EngineerReportView {
   readonly checks: { readonly title: string; readonly lines: readonly EngineerCheckView[] };
   readonly evaluation?: {
     readonly title: string;
+    /** "不计分" when the API marks the conclusions as not scored. */
+    readonly aside?: string;
     readonly rows: readonly EngineerEvaluationRowView[];
   };
   readonly advice: {
@@ -150,6 +180,22 @@ const ERROR_KEY: Record<string, EngineerReportKey> = {
   engineer_baseline_execution_failed: 'errorBaseline',
   engineer_review_interrupted: 'errorInterrupted',
   engineer_verification_failed: 'errorVerification',
+};
+const REASON_KEY: Record<string, EngineerReportKey> = {
+  targets_repaired: 'reasonTargetsRepaired',
+  new_failures_found: 'reasonNewFailures',
+  claim_not_provided: 'reasonClaimMissing',
+  verification_incomplete: 'reasonIncomplete',
+  changes_omitted: 'reasonChangesOmitted',
+};
+const FIELD_STATUS: Record<EngineerFieldCheckStatus, [EngineerReportKey, EngineerTone]> = {
+  matched: ['fieldMatched', 'good'],
+  omitted: ['fieldOmitted', 'ink'],
+  before_mismatch: ['fieldBeforeMismatch', 'bad'],
+  after_mismatch: ['fieldAfterMismatch', 'bad'],
+  values_mismatch: ['fieldValuesMismatch', 'bad'],
+  change_not_made: ['fieldChangeNotMade', 'bad'],
+  change_denied: ['fieldChangeDenied', 'bad'],
 };
 const EVALUATION_KEY: Record<string, EngineerReportKey> = {
   E1: 'evalE1',
@@ -247,33 +293,79 @@ export function engineerReportView(
     };
   });
 
-  // Target: every target finding must pass; any fail is "not fixed"; otherwise not known.
+  // Target line. A public target_fix finding wins: every one must pass; any fail is "not fixed";
+  // otherwise not known. Without one, rubric E1 decides (it may cover hidden targets, by count
+  // only). With neither, there is no target line.
   const byId = new Map((report.public_results ?? []).map((row) => [row.probe_id, row]));
   const targetRows = [...targetIds].map((id) => byId.get(id)).filter((r) => r !== undefined);
   const failedTargets = targets.filter((f) => f.status === 'fail');
-  const state: EngineerReportView['verdict']['state'] =
-    targets.length && targets.every((f) => f.status === 'pass')
+  const verdictTone: Record<EngineerVerdictState, EngineerTone> = {
+    fixed: 'good',
+    not_fixed: 'bad',
+    partial: 'ink',
+    unknown: 'unknown',
+    waiting: 'unknown',
+  };
+  const verdictTitle: Record<EngineerVerdictState, EngineerReportKey> = {
+    fixed: 'verdictFixed',
+    not_fixed: 'verdictNotFixed',
+    partial: 'verdictPartial',
+    unknown: 'verdictUnknown',
+    waiting: 'verdictWaiting',
+  };
+  const e1 = options.evaluation?.criteria?.find((c) => c.criterion === 'E1.target_fixed');
+  let verdict: EngineerReportView['verdict'];
+  if (targets.length) {
+    const state: EngineerVerdictState = targets.every((f) => f.status === 'pass')
       ? 'fixed'
       : failedTargets.length
         ? 'not_fixed'
         : 'unknown';
-  let detail: string;
-  if (state === 'fixed') detail = t('targetPassed');
-  else if (state === 'not_fixed') {
-    const firstFailed = byId.get(failedTargets[0].probe_ids[0] ?? '');
-    detail =
-      targetIds.size > 1
-        ? t('targetsPartial', {
-            n: targetIds.size,
-            k: new Set(failedTargets.flatMap((f) => f.probe_ids)).size,
-          })
-        : firstFailed
-          ? t('targetFailed', { diff: diffOf(firstFailed) })
-          : t('targetFailedPlain');
-  } else if (targets.some((f) => !f.probe_ids.length))
-    detail = ruleFindingText('target_fix', 'unverified', language, false);
-  else if (targetRows.some((r) => r.result === 'error')) detail = t('targetErrored');
-  else detail = t('targetMissing');
+    let detail = '';
+    if (state === 'fixed') detail = t('targetPassed');
+    else if (state === 'not_fixed') {
+      const firstFailed = byId.get(failedTargets[0].probe_ids[0] ?? '');
+      detail =
+        targetIds.size > 1
+          ? t('targetsPartial', {
+              n: targetIds.size,
+              k: new Set(failedTargets.flatMap((f) => f.probe_ids)).size,
+            })
+          : firstFailed
+            ? t('targetFailed', { diff: diffOf(firstFailed) })
+            : t('targetFailedPlain');
+    } else if (targets.some((f) => !f.probe_ids.length))
+      detail = ruleFindingText('target_fix', 'unverified', language, false);
+    else if (targetRows.some((r) => r.result === 'error')) detail = t('targetErrored');
+    verdict = {
+      source: 'public',
+      state,
+      tone: verdictTone[state],
+      title: t(verdictTitle[state]),
+      detail,
+      targets: targetRows.map((r) => r.query),
+    };
+  } else if (e1 && e1.label !== 'NOT_APPLICABLE') {
+    const state: EngineerVerdictState =
+      e1.status === 'waiting_model'
+        ? 'waiting'
+        : e1.label === 'MET'
+          ? 'fixed'
+          : e1.label === 'NOT_MET'
+            ? 'not_fixed'
+            : e1.label === 'PARTIAL'
+              ? 'partial'
+              : 'unknown';
+    const hidden = nonNegative(e1.hidden_probes);
+    verdict = {
+      source: 'evaluation',
+      state,
+      tone: verdictTone[state],
+      title: t(verdictTitle[state]),
+      detail: hidden > 0 ? t(hidden === 1 ? 'targetHiddenOne' : 'targetHidden', { n: hidden }) : '',
+      targets: [],
+    };
+  }
 
   const publicRows = report.public_results ?? [];
   const tally = (p: number, f: number, e: number) =>
@@ -357,32 +449,79 @@ export function engineerReportView(
     rule: ruleFindingText('claim_consistency', 'pass', language),
   };
 
-  const evaluation = options.evaluation?.length
+  const criteria = options.evaluation?.criteria ?? [];
+  const evaluation = criteria.length
     ? {
         title: t('evaluationTitle'),
-        rows: options.evaluation.map((item): EngineerEvaluationRowView => {
-          const key = EVALUATION_KEY[item.id.split('.')[0]];
-          const title = key ? t(key) : item.title?.trim() || t('evalGeneric');
-          if (item.label === null && item.status === 'waiting_model')
-            return {
-              id: item.id,
-              title,
-              labelText: t('labelWaiting'),
-              tone: 'unknown',
-              mark: 'waiting',
-            };
-          const label = {
-            MET: ['labelMet', 'good', 'met'],
-            PARTIAL: ['labelPartial', 'ink', 'partial'],
-            NOT_MET: ['labelNotMet', 'bad', 'not_met'],
-            INSUFFICIENT: ['labelUnknown', 'unknown', 'unknown'],
-            NOT_APPLICABLE: ['labelNotApplicable', 'unknown', 'not_applicable'],
-          } as const;
-          const [labelKey, tone, mark] = item.label ? label[item.label] : label.INSUFFICIENT;
-          return { id: item.id, title, labelText: t(labelKey), tone, mark };
-        }),
+        aside: options.evaluation?.affects_score === false ? t('notScored') : undefined,
+        rows: criteria.map((item) => criterionRow(item)),
       }
     : undefined;
+  function criterionRow(item: EngineerCriterionConclusion): EngineerEvaluationRowView {
+    const key = EVALUATION_KEY[String(item.criterion).split('.')[0]];
+    const label = {
+      MET: ['labelMet', 'good', 'met'],
+      PARTIAL: ['labelPartial', 'ink', 'partial'],
+      NOT_MET: ['labelNotMet', 'bad', 'not_met'],
+      INSUFFICIENT: ['labelUnknown', 'unknown', 'unknown'],
+      NOT_APPLICABLE: ['labelNotApplicable', 'unknown', 'not_applicable'],
+    } as const;
+    const [labelKey, tone, mark] =
+      item.status === 'waiting_model'
+        ? (['labelWaiting', 'unknown', 'waiting'] as const)
+        : item.label
+          ? label[item.label]
+          : label.INSUFFICIENT;
+    const reasons = (item.reason_codes ?? [])
+      .map((code) => REASON_KEY[code])
+      .filter((k): k is EngineerReportKey => !!k)
+      .map((k) => t(k));
+    const hidden = nonNegative(item.hidden_probes);
+    const pre = item.precheck;
+    const preCount = pre
+      ? (pre.unexplained_probe_ids?.length ?? 0) + nonNegative(pre.unexplained_hidden)
+      : 0;
+    const checks = item.field_checks ?? [];
+    return {
+      id: item.criterion,
+      title: key ? t(key) : t('evalGeneric'),
+      labelText: t(labelKey),
+      tone,
+      mark,
+      reason: reasons.length
+        ? capitalize(reasons.join(t('reasonJoin')), language) + t('reasonEnd')
+        : undefined,
+      probeIds: [...(item.probe_ids ?? []), ...(pre?.unexplained_probe_ids ?? [])].filter(
+        (id, i, all) => all.indexOf(id) === i,
+      ),
+      hidden: hidden > 0 ? t('hiddenInvolved', { n: hidden }) : undefined,
+      precheck:
+        preCount > 0
+          ? t('precheckUnexplained', {
+              p: pre?.unexplained_probe_ids?.length ?? 0,
+              h: nonNegative(pre?.unexplained_hidden),
+            })
+          : undefined,
+      fieldChecks: checks.length
+        ? {
+            label: t('fieldChecks', { n: checks.length }),
+            rows: checks.map((check) => {
+              const name = FIELD_NAMES[language][check.field];
+              const [statusKey, statusTone] = FIELD_STATUS[check.status] ?? [
+                'fieldUnknown',
+                'unknown',
+              ];
+              return {
+                field: name ?? check.field,
+                code: !name,
+                status: t(statusKey),
+                tone: statusTone,
+              };
+            }),
+          }
+        : undefined,
+    };
+  }
 
   const advice = report.advice;
   const adviceView: EngineerReportView['advice'] =
@@ -433,6 +572,14 @@ export function engineerReportView(
     code('basisInput', report.input_hash),
   ];
   if (advice?.model) basisRows.push(code('basisModel', advice.model.sha256));
+  if (options.evaluation) {
+    const ev = options.evaluation;
+    if (ev.rubric_revision)
+      basisRows.push({ label: t('basisRubric'), value: ev.rubric_revision, code: true });
+    if (ev.review_id)
+      basisRows.push(code('basisEvaluatedReview', ev.review_id.replace(/^review-/, '')));
+    if (ev.submission_hash) basisRows.push(code('basisEvaluatedSubmission', ev.submission_hash));
+  }
 
   const retrievalNote = options.retrievalNote?.trim();
   return {
@@ -450,19 +597,7 @@ export function engineerReportView(
             : 'statusIncomplete',
       ),
     ].filter(Boolean),
-    verdict: {
-      state,
-      tone: state === 'fixed' ? 'good' : state === 'not_fixed' ? 'bad' : 'unknown',
-      title: t(
-        state === 'fixed'
-          ? 'verdictFixed'
-          : state === 'not_fixed'
-            ? 'verdictNotFixed'
-            : 'verdictUnknown',
-      ),
-      detail,
-      targets: targetRows.map((r) => r.query),
-    },
+    verdict,
     publicSection: {
       title: t('publicTitle', { n: publicRows.length }),
       tally: tally(
