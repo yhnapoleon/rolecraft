@@ -1,27 +1,33 @@
 import { describe, expect, it } from 'vitest';
-import fixedZh from '../../../public/engineer/sample-target-fixed.zh.json';
-import notFixedEn from '../../../public/engineer/sample-target-not-fixed.en.json';
+import overreachEn from '../../../public/engineer/sample-overreach.en.json';
+import rootCauseZh from '../../../public/engineer/sample-root-cause.zh.json';
 import { asFake, fakeDocument, type FakeElement } from '../results-native/fake-dom';
+// Earlier review outputs kept as UI-state fixtures; see view.test.ts.
+import fixedZh from './fixtures/earlier-target-fixed.zh.json';
+import notFixedEn from './fixtures/earlier-target-not-fixed.en.json';
+import { reviewViewOptions } from './page';
 import { renderEngineerReport } from './render';
-import type { EngineerPublicReport } from './types';
+import type { EngineerPublicReport, EngineerReviewRecord } from './types';
 import { engineerReportView } from './view';
 
 const FIXED_ZH = fixedZh as unknown as EngineerPublicReport;
 const NOT_FIXED_EN = notFixedEn as unknown as EngineerPublicReport;
+const ROOT_ZH = rootCauseZh as unknown as EngineerReviewRecord;
+const OVER_EN = overreachEn as unknown as EngineerReviewRecord;
 const headings = (root: FakeElement) =>
   ['h2', 'h3', 'h4', 'h5'].flatMap((tag) => root.byTag(tag).map((h) => `${tag} ${h.textContent}`));
 
 describe('engineer regression report · DOM', () => {
   it('ER-20 one paper sheet: verdict first, then public, hidden, checks; basis closed', () => {
     const doc = fakeDocument();
-    const view = engineerReportView(FIXED_ZH, {
-      language: 'zh',
-      retrievalNote: '规则版检索',
+    const view = engineerReportView(ROOT_ZH.report, {
+      ...reviewViewOptions(ROOT_ZH, 'zh'),
+      evaluation: null,
       timeZone: 'UTC',
     });
     const root = asFake(renderEngineerReport(doc, view));
     expect(root.tagName).toBe('article');
-    expect(root.dataset.engineerReport).toBe(FIXED_ZH.id);
+    expect(root.dataset.engineerReport).toBe(ROOT_ZH.report.id);
     expect(headings(root)).toEqual([
       'h2 目标问题已修好',
       'h3 公开探针 · 4 条',
@@ -29,14 +35,14 @@ describe('engineer regression report · DOM', () => {
       'h3 规则核对',
     ]);
     expect(root.byClass('er-verdict')[0].dataset.tone).toBe('good');
-    expect(root.byClass('er-verdict__target')[0].textContent).toBe('账号密码忘了怎么重置？');
+    expect(root.byClass('er-verdict__target')[0].textContent).toBe('住宿报销上限是多少？');
     const rows = root.byClass('er-probe');
-    expect(rows.map((r) => r.dataset.result)).toEqual(['fail', 'pass', 'pass', 'pass']);
+    expect(rows.map((r) => r.dataset.result)).toEqual(['pass', 'pass', 'pass', 'pass']);
     // The result is spoken before the case number; the mark itself is hidden from readers.
-    expect(rows[0].byClass('er-probe__id')[0].textContent).toBe('未通过：F01');
+    expect(rows[0].byClass('er-probe__id')[0].textContent).toBe('通过：F01');
     expect(rows[0].byClass('er-probe__mark')[0].getAttribute('aria-hidden')).toBe('true');
-    expect(rows[3].dataset.target).toBe('');
-    expect(root.byClass('er-counts--comparison')).toHaveLength(0);
+    expect(rows[0].dataset.target).toBe('');
+    expect(root.byClass('er-counts--comparison')).toHaveLength(1);
     expect(root.byClass('er-advice')[0].textContent).toBe('模型建议：等待模型接入不计分');
     expect(root.byClass('er-note--retrieval')[0].textContent).toBe('规则版检索');
     const details = root.byTag('details');
@@ -227,6 +233,28 @@ describe('engineer regression report · DOM', () => {
     expect(checks).toEqual([
       ['↓', 'warn'],
       ['✕', 'bad'],
+    ]);
+  });
+
+  it('ER-42 overreach sample draws its one hidden new failure as an amber count', () => {
+    const view = engineerReportView(OVER_EN.report, reviewViewOptions(OVER_EN, 'en'));
+    const root = asFake(renderEngineerReport(fakeDocument(), view));
+    const counts = root.byClass('er-counts--comparison')[0].byClass('er-count');
+    expect(counts.map((c) => [c.dataset.key, c.textContent, c.dataset.tone])).toEqual([
+      ['new_failures', 'New failures1', 'warn'],
+      ['fixed', 'Fixed2', 'good'],
+      ['still_failing', 'Still failing0', 'ink'],
+      ['unverified', 'Unverified0', 'ink'],
+    ]);
+    const regression = root.byClass('er-checks')[0].byClass('er-check')[0];
+    expect([regression.dataset.tone, regression.byClass('er-check__mark')[0].textContent]).toEqual([
+      'warn',
+      '↓',
+    ]);
+    const e2 = root.byClass('er-evaluation')[0].byClass('er-criterion')[1];
+    expect([e2.dataset.tone, e2.byClass('er-criterion__hidden')[0].textContent]).toEqual([
+      'warn',
+      '1 hidden',
     ]);
   });
 });

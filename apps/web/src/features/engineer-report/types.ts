@@ -85,6 +85,7 @@ export interface EngineerHiddenComparison {
   readonly fixed: number;
   readonly still_failing: number;
   readonly unverified: number;
+  readonly schema_version?: 2;
 }
 
 export interface EngineerFinding {
@@ -169,6 +170,7 @@ export type EngineerFieldCheckStatus =
 export interface EngineerFieldCheck {
   readonly field: string;
   readonly status: EngineerFieldCheckStatus;
+  readonly schema_version?: 2;
 }
 export interface EngineerExplanationPrecheck {
   readonly basis: 'rule';
@@ -176,6 +178,7 @@ export interface EngineerExplanationPrecheck {
   readonly unexplained_probe_ids: readonly string[];
   /** Failing hidden probes not explained, as a count. */
   readonly unexplained_hidden: number;
+  readonly schema_version?: 2;
 }
 export interface EngineerCriterionConclusion {
   readonly criterion: EngineerCriterionId;
@@ -193,6 +196,7 @@ export interface EngineerCriterionConclusion {
   readonly field_checks?: readonly EngineerFieldCheck[] | null;
   /** E5 only. */
   readonly precheck?: EngineerExplanationPrecheck | null;
+  readonly schema_version?: 2;
 }
 export interface EngineerRuleEvaluation {
   readonly rubric_revision: string;
@@ -201,4 +205,29 @@ export interface EngineerRuleEvaluation {
   readonly affects_score: false;
   /** In E1–E5 order. */
   readonly criteria: readonly EngineerCriterionConclusion[];
+  readonly schema_version?: 2;
+}
+
+/** How trials and reviews retrieve sources, as the engineer API states it. */
+export interface EngineerRetrieval {
+  /** e.g. 'rule_based'. */
+  readonly mode: string;
+  /** A sentence for people, in the work language. */
+  readonly note?: string | null;
+}
+
+/** One signed review as `GET /engineer/reviews/{review_id}` returns it (`engineer.reviews.read`):
+ * the public report and the rubric conclusions sit inside. */
+export interface EngineerReviewRecord {
+  readonly review_id: string;
+  readonly status: EngineerReviewStatus;
+  readonly signed_at: string;
+  readonly signed_by: EngineerExecutor;
+  readonly draft_id: string;
+  readonly ticket_id: string;
+  /** The submitter's own note; not shown by the report. */
+  readonly impact_note?: string | null;
+  readonly retrieval?: EngineerRetrieval | null;
+  readonly report: EngineerPublicReport;
+  readonly evaluation?: EngineerRuleEvaluation | null;
 }

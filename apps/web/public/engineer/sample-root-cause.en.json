@@ -1,0 +1,331 @@
+{
+  "review_id": "review-88a6a027a6418116827f0041de570ba1755ef812302ffcf58e4e60fd682540ea",
+  "status": "verified",
+  "signed_at": "2026-10-24T07:37:00.504474+00:00",
+  "signed_by": {
+    "id": "human:68583e36351748b695cceecf775a2d5a",
+    "kind": "human"
+  },
+  "draft_id": "draft-b729961b2621e117dfedbf0310a41b82b7a5413f307ae864fa9053b14c14ef92",
+  "ticket_id": "ticket-5b641caca7511e9b4c6804cf35702d81b6e974643ab4bbda267ac94354337e08",
+  "impact_note": "Other answers from older sources may now carry a warning; the lower threshold may answer more questions.",
+  "retrieval": {
+    "mode": "rule_based",
+    "note": "Trials and reviews always use the rule-based retrieval, whether or not recognizers are configured."
+  },
+  "report": {
+    "schema_version": 2,
+    "contract_version": "engineer-review-v1",
+    "id": "review-88a6a027a6418116827f0041de570ba1755ef812302ffcf58e4e60fd682540ea",
+    "submission": {
+      "schema_version": 2,
+      "kind": "submission",
+      "sha256": "2f56d83876cc85196ff93dd94a86b63ff5132b00d1fc33820bae2b555459cce4"
+    },
+    "input_hash": "88a6a027a6418116827f0041de570ba1755ef812302ffcf58e4e60fd682540ea",
+    "reviewer": {
+      "schema_version": 2,
+      "id": "human:68583e36351748b695cceecf775a2d5a",
+      "kind": "human",
+      "delegation_id": null
+    },
+    "created_at": "2026-10-24T07:37:00.501135Z",
+    "work_language": "en",
+    "status": "verified",
+    "claim_check": "matched",
+    "applicability": {
+      "schema_version": 2,
+      "scenario": {
+        "schema_version": 2,
+        "kind": "scenario",
+        "sha256": "420afb709e140b148ab280f0211041a4e7b2f51834ef4bbce3621575962e5586"
+      },
+      "config": {
+        "schema_version": 2,
+        "kind": "configuration",
+        "sha256": "5a669abbb3615a09bbca3415948fa286a61982d8134432e11468d025a08df533"
+      },
+      "base_config_hash": "c3e778fe846b273b18160686001cc2ee596bc320491205995e770f447f72c5e0",
+      "probe_suite_hash": "de940a98eab17cb0041a56306b483198ac27d4d7ffd607b1ed05befeb348aed3",
+      "reviewer_version_hash": "d1014d851b66640209434d542ebf80758cf33a33b25db6a6979d811e8b931535",
+      "effective_config_hash": "b5b5b5f53f11c326d74854cc6d40e5b46d5b2f5148019fff19607fe113ed387b",
+      "effective_settings_hash": "64a29b4666f51e36efd00847a3332283fb75e869d7d90e94645f76d4937fd0d1",
+      "source_versions_hash": "6c77b8532e24bbdfbc0d9429fa53f27b385086c800ac2c9bb34fbcfc41935d8b",
+      "indexed_versions_hash": "0f6fbf41fe2bc1610b9176e9e4185efb50eb4e7c5b714caf5cca4d00f24ac433",
+      "source_as_of": {
+        "schema_version": 2,
+        "business_seq": 2,
+        "workspace_revision": 1,
+        "storage_revision": 1
+      }
+    },
+    "public_results": [
+      {
+        "schema_version": 2,
+        "probe_id": "F01",
+        "visibility": "public",
+        "query": "What is the hotel reimbursement limit per night?",
+        "expected_status": "answered_with_warning",
+        "actual_status": "answered_with_warning",
+        "result": "pass",
+        "config_hash": "b5b5b5f53f11c326d74854cc6d40e5b46d5b2f5148019fff19607fe113ed387b",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "68583e36351748b695cceecf775a2d5a",
+            "kind": "material",
+            "object_id": "policy",
+            "version": 1,
+            "config_version": null
+          }
+        ],
+        "source_versions": {
+          "policy": 2
+        },
+        "indexed_versions": {
+          "policy": 1
+        },
+        "elapsed_seconds": 0.0007575000054202974,
+        "error_code": null
+      },
+      {
+        "schema_version": 2,
+        "probe_id": "F04",
+        "visibility": "public",
+        "query": "What is the weather on Mars?",
+        "expected_status": "fallback",
+        "actual_status": "fallback",
+        "result": "pass",
+        "config_hash": "b5b5b5f53f11c326d74854cc6d40e5b46d5b2f5148019fff19607fe113ed387b",
+        "citations": [],
+        "source_versions": {},
+        "indexed_versions": {},
+        "elapsed_seconds": 0.0007547090062871575,
+        "error_code": null
+      },
+      {
+        "schema_version": 2,
+        "probe_id": "F05",
+        "visibility": "public",
+        "query": "What is another employee's personal salary?",
+        "expected_status": "fallback",
+        "actual_status": "fallback",
+        "result": "pass",
+        "config_hash": "b5b5b5f53f11c326d74854cc6d40e5b46d5b2f5148019fff19607fe113ed387b",
+        "citations": [],
+        "source_versions": {},
+        "indexed_versions": {},
+        "elapsed_seconds": 0.0008164589962689206,
+        "error_code": null
+      },
+      {
+        "schema_version": 2,
+        "probe_id": "F12",
+        "visibility": "public",
+        "query": "I forgot my account password. How do I reset it?",
+        "expected_status": "answered",
+        "actual_status": "answered",
+        "result": "pass",
+        "config_hash": "b5b5b5f53f11c326d74854cc6d40e5b46d5b2f5148019fff19607fe113ed387b",
+        "citations": [
+          {
+            "schema_version": 2,
+            "session_id": "68583e36351748b695cceecf775a2d5a",
+            "kind": "material",
+            "object_id": "faq",
+            "version": 1,
+            "config_version": null
+          }
+        ],
+        "source_versions": {
+          "faq": 1
+        },
+        "indexed_versions": {
+          "faq": 1
+        },
+        "elapsed_seconds": 0.0006754169953637756,
+        "error_code": null
+      }
+    ],
+    "hidden": {
+      "schema_version": 2,
+      "passed": 9,
+      "failed": 0,
+      "errors": 0
+    },
+    "findings": [
+      {
+        "schema_version": 2,
+        "kind": "claim_consistency",
+        "status": "pass",
+        "visibility": "public",
+        "description": "Self-report compared with actual public probe results.",
+        "probe_ids": []
+      },
+      {
+        "schema_version": 2,
+        "kind": "new_regression",
+        "status": "pass",
+        "visibility": "public",
+        "description": "Compared with the baseline under the same fixed conditions.",
+        "probe_ids": [
+          "F01"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "kind": "target_fix",
+        "status": "pass",
+        "visibility": "public",
+        "description": "Target checked against the frozen suite expectation.",
+        "probe_ids": [
+          "F01"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "kind": "new_regression",
+        "status": "pass",
+        "visibility": "public",
+        "description": "Compared with the baseline under the same fixed conditions.",
+        "probe_ids": [
+          "F04"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "kind": "new_regression",
+        "status": "pass",
+        "visibility": "public",
+        "description": "Compared with the baseline under the same fixed conditions.",
+        "probe_ids": [
+          "F05"
+        ]
+      },
+      {
+        "schema_version": 2,
+        "kind": "new_regression",
+        "status": "pass",
+        "visibility": "public",
+        "description": "Compared with the baseline under the same fixed conditions.",
+        "probe_ids": [
+          "F12"
+        ]
+      }
+    ],
+    "unresolved": [],
+    "advice": {
+      "schema_version": 2,
+      "status": "waiting_model",
+      "text": null,
+      "model": null,
+      "affects_score": false,
+      "visibility": "public"
+    },
+    "affects_score": false,
+    "hidden_comparison": {
+      "schema_version": 2,
+      "new_failures": 0,
+      "fixed": 2,
+      "still_failing": 0,
+      "unverified": 0
+    }
+  },
+  "evaluation": {
+    "schema_version": 2,
+    "rubric_revision": "engineer-rubric-v1-final-20261009",
+    "review_id": "review-88a6a027a6418116827f0041de570ba1755ef812302ffcf58e4e60fd682540ea",
+    "submission_hash": "2f56d83876cc85196ff93dd94a86b63ff5132b00d1fc33820bae2b555459cce4",
+    "criteria": [
+      {
+        "schema_version": 2,
+        "criterion": "E1.target_fixed",
+        "status": "concluded",
+        "basis": "rule",
+        "label": "MET",
+        "reason_codes": [
+          "targets_repaired"
+        ],
+        "probe_ids": [
+          "F01"
+        ],
+        "hidden_probes": 0,
+        "field_checks": [],
+        "precheck": null
+      },
+      {
+        "schema_version": 2,
+        "criterion": "E2.no_regressions",
+        "status": "concluded",
+        "basis": "rule",
+        "label": "MET",
+        "reason_codes": [
+          "no_new_failures"
+        ],
+        "probe_ids": [],
+        "hidden_probes": 0,
+        "field_checks": [],
+        "precheck": null
+      },
+      {
+        "schema_version": 2,
+        "criterion": "E3.change_consistency",
+        "status": "concluded",
+        "basis": "rule",
+        "label": "MET",
+        "reason_codes": [
+          "changes_match_diff"
+        ],
+        "probe_ids": [],
+        "hidden_probes": 0,
+        "field_checks": [
+          {
+            "schema_version": 2,
+            "field": "freshness_guard",
+            "status": "matched"
+          }
+        ],
+        "precheck": null
+      },
+      {
+        "schema_version": 2,
+        "criterion": "E4.reproducibility",
+        "status": "concluded",
+        "basis": "rule",
+        "label": "MET",
+        "reason_codes": [
+          "claim_reproduced"
+        ],
+        "probe_ids": [
+          "F01",
+          "F04",
+          "F05",
+          "F12"
+        ],
+        "hidden_probes": 0,
+        "field_checks": [],
+        "precheck": null
+      },
+      {
+        "schema_version": 2,
+        "criterion": "E5.remaining_explanation",
+        "status": "waiting_model",
+        "basis": "semantic_advice",
+        "label": null,
+        "reason_codes": [
+          "waiting_model"
+        ],
+        "probe_ids": [],
+        "hidden_probes": 0,
+        "field_checks": [],
+        "precheck": {
+          "schema_version": 2,
+          "basis": "rule",
+          "unexplained_probe_ids": [],
+          "unexplained_hidden": 0
+        }
+      }
+    ],
+    "affects_score": false
+  }
+}
