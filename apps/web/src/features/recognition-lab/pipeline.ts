@@ -20,6 +20,16 @@ const f2 = (v: number) => v.toFixed(2);
 const f3 = (v: number) => (v < 0.1 ? v.toFixed(3) : v.toFixed(2));
 
 export const STAGES = ['sense', 'prep', 'repr', 'recog', 'decide', 'gen'] as const;
+
+/** How far the claim has travelled (`state`) and which station is chosen (`halo`): the halo
+ * marks the chosen station only, so it follows a click, a key or the head of the walk. */
+export function stationMarks(reached: number, selected: number, total: number) {
+  return Array.from({ length: total }, (_, index) => ({
+    index,
+    state: index < reached ? 'reached' : index === reached ? 'current' : 'ahead',
+    halo: index === selected,
+  }));
+}
 type Stage = (typeof STAGES)[number];
 const STAGE_NAME: Record<Stage, Key> = {
   sense: 'st_sense',
@@ -73,9 +83,14 @@ export function moveChoice(key: string, at: number, count: number): number | nul
   }
 }
 
+/** At most `max` characters; text with spaces (English) is cut at the last whole word. */
 function short(text: string, max: number) {
   const chars = [...text];
-  return chars.length > max ? `${chars.slice(0, max).join('')}…` : text;
+  if (chars.length <= max) return text;
+  let cut = chars.slice(0, max).join('');
+  const space = cut.lastIndexOf(' ');
+  if (space > max * 0.5) cut = cut.slice(0, space);
+  return `${cut.replace(/[\s,;:·]+$/, '')}…`;
 }
 
 function verdict(l: Language, label: string) {
@@ -140,13 +155,31 @@ function families(stage: Stage, c: Chain, l: Language): string[] {
   }
 }
 
+/** A stage's course families as pills ('' when it has none): the station and its detail
+ * draw the same ones. */
+function familyPills(stage: Stage, c: Chain, l: Language) {
+  // A narrow station may wrap a long label; it breaks only after “·” (“Supervised ·” /
+  // “deep learning”), never inside a family name.
+  const unbroken = (label: string) =>
+    label
+      .split(' · ')
+      .map((part) => part.replace(/ /g, '\u00a0'))
+      .join('\u00a0· ');
+  return families(stage, c, l)
+    .map(
+      (x) =>
+        `<span class="rc-family"${c.fallback && stage === 'recog' ? ' data-extra' : ''}>${esc(unbroken(x))}</span>`,
+    )
+    .join('');
+}
+
 /** One stage's detail: what it does (left) and its figure (right), as panel HTML. */
 export function stageDetail(stage: Stage, c: Chain, l: Language) {
   const t = (k: Key, v: Record<string, string | number> = {}) => esc(tr(l, k, v));
   const label = tr(l, LABEL[c.label]);
-  const tags = families(stage, c, l);
-  const head = tags.length
-    ? `<p class="rc-families" aria-label="${t('catLabel')}">${tags.map((x) => `<span class="rc-family"${c.fallback && stage === 'recog' ? ' data-extra' : ''}>${esc(x)}</span>`).join('')}</p>`
+  const tags = familyPills(stage, c, l);
+  const head = tags
+    ? `<p class="rc-families" aria-label="${t('catLabel')}">${tags}</p>`
     : '';
   let text = '';
   let figure = '';
@@ -240,7 +273,7 @@ export function stageDetail(stage: Stage, c: Chain, l: Language) {
         {
           i: c.index + 1,
           label,
-          k: c.evidence,
+          evidence: tr(l, c.evidence === 1 ? 'evidence_one' : 'evidence_other', { k: c.evidence }),
           decision: tr(l, c.decision === 'defer' ? 'dec_defer' : 'dec_decide'),
         },
       )} ${arbiter}</dd></div></dl>`;
@@ -316,7 +349,10 @@ export function pipelineHtml(c: Chain, l: Language) {
   const current = toneOf({ label: c.label, decision: c.decision });
   const stations = STAGES.map(
     (s, i) =>
-      `<li class="rc-station" data-state="ahead" role="presentation"><button type="button" role="tab" id="rc-st-${i}" class="rc-st" aria-selected="false" aria-controls="rc-st-panel" tabindex="-1" data-rc-stage="${i}"><span class="rc-node" aria-hidden="true"></span><span class="rc-st-num" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span><span class="rc-st-name">${t(STAGE_NAME[s])}</span><span class="rc-st-note">${esc(brief[s])}</span></button>${i < STAGES.length - 1 ? '<span class="rc-seg" aria-hidden="true"><i class="rc-seg-fill"></i></span>' : ''}</li>`,
+      `<li class="rc-station" data-state="ahead" role="presentation"><button type="button" role="tab" id="rc-st-${i}" class="rc-st" aria-selected="false" aria-controls="rc-st-panel" tabindex="-1" data-rc-stage="${i}"><span class="rc-node" aria-hidden="true"></span><span class="rc-st-num" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span><span class="rc-st-name">${t(STAGE_NAME[s])}</span>${(() => {
+        const tags = familyPills(s, c, l);
+        return tags ? `<span class="rc-st-fams" aria-hidden="true">${tags}</span>` : '';
+      })()}<span class="rc-st-note">${esc(brief[s])}</span></button>${i < STAGES.length - 1 ? '<span class="rc-seg" aria-hidden="true"><i class="rc-seg-fill"></i></span>' : ''}</li>`,
   ).join('');
   return `<div class="rc-claim">
       ${switcher || units ? `<div class="rc-claim-bar">${switcher}${units}</div>` : ''}
@@ -347,8 +383,9 @@ export function startPipeline(
   let timer: ReturnType<typeof setTimeout> | null = null;
 
   const paint = (selected: number, animate: boolean) => {
-    items.forEach((item, i) => {
-      item.dataset.state = i < reached ? 'reached' : i === reached ? 'current' : 'ahead';
+    stationMarks(reached, selected, items.length).forEach((mark, i) => {
+      items[i].dataset.state = mark.state;
+      items[i].toggleAttribute('data-halo', mark.halo);
     });
     tabs.forEach((tab, i) => {
       tab.setAttribute('aria-selected', String(i === selected));

@@ -73,7 +73,9 @@ const zh = {
   gen_short_conservative: '仲裁：取更保守的{final}',
   gen_short_undecided: '仲裁：保留评审的标签',
   gen_short_none: '摘要进入评审输入',
-  gen_summary: '进入评审输入的识别摘要：第 {i} 句 · {label} · 证据 {k} 条 · {decision}。',
+  gen_summary: '进入评审输入的识别摘要：第 {i} 句 · {label} · {evidence} · {decision}。',
+  evidence_one: '证据 {k} 条',
+  evidence_other: '证据 {k} 条',
   gen_agree: '评分项「{criterion}」：评审给「{judge}」，与识别器一致。',
   gen_conservative:
     '评分项「{criterion}」：评审给「{judge}」，识别器给「{rec}」，两者不一致，在规则界内取更保守的「{final}」。',
@@ -249,7 +251,7 @@ const en: Record<Key, string> = {
   repr_detail:
     'BM25 scores word overlap, e5 vectors score meaning, and RRF fuses the two rankings. The top candidates for this sentence:',
   repr_scores: 'BM25 {bm25} · e5 {dense}',
-  recog_short: 'Judged {label}',
+  recog_short: 'Judged: {label}',
   recog_detail:
     'An XLM-R cross-encoder reads each sentence–candidate pair and is stacked with TF-IDF + logistic regression; when the materials hold a comparable number or limit, a rule is fused in at α = 0.4.',
   recog_rule: 'The rule took part here: {rule}.',
@@ -259,8 +261,8 @@ const en: Record<Key, string> = {
   rule_exceeds: 'the number exceeds the stated limit ({claim}, limit {limit})',
   rule_different:
     'the number differs from the materials ({claim} written, {stated} in the materials)',
-  decide_short_decide: 'Decides itself',
-  decide_short_defer: 'Sends to a person',
+  decide_short_decide: 'Decided directly',
+  decide_short_defer: 'Sent to a person',
   decide_detail_decide:
     'Deciding costs {cost} in expectation, below the {defer} of sending it to a person, so the recogniser gives “{label}” itself.',
   decide_detail_defer:
@@ -271,8 +273,9 @@ const en: Record<Key, string> = {
   gen_short_conservative: 'Arbiter: the more cautious {final}',
   gen_short_undecided: 'Arbiter keeps the reviewer’s label',
   gen_short_none: 'Summary goes to the reviewer',
-  gen_summary:
-    'What enters the reviewer’s input: sentence {i} · {label} · evidence units {k} · {decision}.',
+  gen_summary: 'What enters the reviewer’s input: sentence {i} · {label} · {evidence} · {decision}.',
+  evidence_one: '{k} piece of evidence',
+  evidence_other: '{k} pieces of evidence',
   gen_agree: 'Criterion “{criterion}”: the reviewer gave “{judge}”, the same as the recogniser.',
   gen_conservative:
     'Criterion “{criterion}”: the reviewer gave “{judge}” and the recogniser “{rec}”. They disagree, so the more cautious “{final}” within the rule bounds stands.',
@@ -287,11 +290,11 @@ const en: Record<Key, string> = {
   generator_roles: 'Colleagues',
   generator_assistant: 'Knowledge assistant',
 
-  lab_supported: 'supported',
+  lab_supported: 'matches the materials',
   lab_contradicted: 'contradicts the materials',
   lab_insufficient: 'insufficient evidence',
-  dec_decide: 'decided',
-  dec_defer: 'to a person',
+  dec_decide: 'decided directly',
+  dec_defer: 'sent to a person',
   verdict_MET: 'Met',
   verdict_PARTIAL: 'Partially met',
   verdict_NOT_MET: 'Not met',

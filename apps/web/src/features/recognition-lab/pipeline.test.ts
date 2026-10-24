@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { chainFor, type Chain } from './data';
-import { moveChoice, pipelineHtml, stageDetail } from './pipeline';
+import { moveChoice, pipelineHtml, STAGES, stageDetail, stationMarks } from './pipeline';
 
 const unit = (index: number, label: string, decision = 'decide') => ({
   index,
@@ -103,11 +103,79 @@ describe('choosing a sentence on the system profile', () => {
 
   it('labels the recognition stages with their course family, and the rule fallback honestly', () => {
     const chain = chainFor(practice, 'zh', 1, { submitted: 2 });
-    expect(stageDetail('repr', chain, 'zh')).toContain('>混合<');
-    expect(stageDetail('recog', chain, 'zh')).toContain('监督 · 深度学习');
-    expect(stageDetail('decide', chain, 'zh')).toContain('统计决策 · 混合');
+    const plain = (html: string) => html.replace(/\u00a0/g, ' ');
+    expect(plain(stageDetail('repr', chain, 'zh'))).toContain('>混合<');
+    expect(plain(stageDetail('recog', chain, 'zh'))).toContain('监督 · 深度学习');
+    expect(plain(stageDetail('decide', chain, 'zh'))).toContain('统计决策 · 混合');
     const fallback = stageDetail('recog', { ...chain, fallback: true }, 'zh');
     expect(fallback).not.toContain('深度学习');
     expect(fallback).toContain('规则回退');
   });
 });
+
+/** The course-family pills in a piece of HTML, in order. */
+const pills = (html: string) =>
+  [...html.matchAll(/<span class="rc-family"[^>]*>([^<]*)<\/span>/g)].map(([, x]) => x.replace(/\u00a0/g, ' '));
+/** The station of stage i as drawn on the track. */
+const station = (html: string, i: number) =>
+  html.match(new RegExp(`<li class="rc-station"[^>]*><button[^>]*data-rc-stage="${i}"[\\s\\S]*?</li>`))?.[0] ?? '';
+
+describe('the six stations on the system profile', () => {
+  it('puts the halo on the chosen station, wherever the walk has got to', () => {
+    // Walk finished, the reviewer picks Represent: one halo, on Represent.
+    const done = stationMarks(5, 2, 6);
+    expect(done.filter((m) => m.halo).map((m) => m.index)).toEqual([2]);
+    expect(done.map((m) => m.state)).toEqual(['reached', 'reached', 'reached', 'reached', 'reached', 'current']);
+    // While the claim travels, the halo is the head of the walk.
+    const walking = stationMarks(3, 3, 6);
+    expect(walking.filter((m) => m.halo).map((m) => m.index)).toEqual([3]);
+    expect(walking.map((m) => m.state)).toEqual(['reached', 'reached', 'reached', 'current', 'ahead', 'ahead']);
+  });
+
+  it('shows each station’s course families under its name, from the same data as its detail', () => {
+    const chain = chainFor(practice, 'zh', 1, { submitted: 2 });
+    const html = pipelineHtml(chain, 'zh');
+    STAGES.forEach((stage, i) => {
+      expect(pills(station(html, i)), stage).toEqual(pills(stageDetail(stage, chain, 'zh')));
+    });
+    expect(pills(station(html, 2))).toEqual(['混合']);
+    expect(pills(station(html, 3))).toEqual(['监督 · 深度学习', '集成 · 混合']);
+    // Reading in and splitting are not the course's “sensing”: no pill, no empty row.
+    expect(station(html, 0)).not.toContain('rc-st-fams');
+    expect(station(html, 1)).not.toContain('rc-st-fams');
+    // The name comes before the pills, the pills before the result.
+    const represent = station(html, 2);
+    expect(represent.indexOf('rc-st-name')).toBeLessThan(represent.indexOf('rc-st-fams'));
+    expect(represent.indexOf('rc-st-fams')).toBeLessThan(represent.indexOf('rc-st-note'));
+    const fallback = pipelineHtml({ ...chain, fallback: true }, 'zh');
+    expect(pills(station(fallback, 3))).toEqual(['规则回退']);
+  });
+
+  it('says the decision and the reviewer summary in plain English, with the right plural', () => {
+    const one = chainFor(practice, 'en', 1, { submitted: 2 });
+    const html = pipelineHtml(one, 'en');
+    expect(html).toContain('Decided directly');
+    expect(html).not.toContain('Decides itself');
+    const summary = stageDetail('gen', one, 'en');
+    expect(summary).toContain('sentence 2 · matches the materials · 1 piece of evidence · decided directly');
+    expect(summary).not.toMatch(/evidence units|· supported ·/);
+    const two = { ...one, evidence: 2 };
+    expect(stageDetail('gen', two, 'en')).toContain('2 pieces of evidence');
+    const none = { ...one, evidence: 0, decision: 'defer' as const };
+    expect(stageDetail('gen', none, 'en')).toContain('0 pieces of evidence · sent to a person');
+    // Chinese stays as it was.
+    expect(stageDetail('gen', chainFor(practice, 'zh', 1, { submitted: 2 }), 'zh')).toContain(
+      '第 2 句 · 与材料一致 · 证据 1 条 · 直接判定',
+    );
+  });
+
+  it('cuts an English quote on a word boundary', () => {
+    // The example's top hit is “Expense-management notice: the hotel reimbursement cap …”.
+    const note = pipelineHtml(chainFor(null, 'en'), 'en').match(/Retrieved: ([^<]*)/)?.[1];
+    expect(note).toBe('Expense-management notice: the…');
+    // Chinese has no spaces: cut by characters as before.
+    const zh = pipelineHtml(chainFor(null, 'zh'), 'zh').match(/检索到：([^<]*)/)?.[1];
+    expect(zh).toBe('费用管理通知：国内出差住宿报销上限改…');
+  });
+});
+
