@@ -364,11 +364,31 @@
 }
 .rc-st-fams {
   grid-row: 4;
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
   align-content: start;
-  gap: 4px;
+  gap: 3px;
   margin-top: 6px;
+}
+/* A course family on the track: plain text with a small square, one per line; a long one
+   wraps by words under its own text. */
+.rc-st-fam {
+  display: grid;
+  grid-template-columns: 4px minmax(0, 1fr);
+  column-gap: 6px;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.4;
+}
+.rc-st-fam::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  margin-top: calc((1.4em - 4px) / 2);
+  background: var(--ink-3);
+}
+.rc-st-fam[data-extra]::before {
+  background: none;
+  box-shadow: inset 0 0 0 1px var(--ink-3);
 }
 .rc-st-note {
   grid-row: 5;
@@ -705,16 +725,6 @@
 .rc-family[data-extra] {
   border-style: dashed;
   color: var(--ink-3);
-}
-/* On the track, under each station's name: the same pills, quieter. A label wider than the
-   station wraps after its “·” inside the pill (soft corners instead of a capsule then). */
-.rc-st-fams .rc-family {
-  max-width: 100%;
-  padding: 0 7px 1px;
-  border-radius: 10px;
-  color: var(--ink-3);
-  line-height: 1.4;
-  white-space: normal;
 }
 .rc-rec-what {
   color: var(--ink);
