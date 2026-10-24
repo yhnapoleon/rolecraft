@@ -7,7 +7,7 @@
   width: 0.78em;
   height: 0.78em;
   margin-inline: 0.3em;
-  border: 1.5px dashed var(--ink-3, #7b818d);
+  border: 1.5px dashed var(--ink-3);
   border-radius: 50%;
   vertical-align: -0.08em;
   box-sizing: border-box;
@@ -43,7 +43,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--good, #16794a);
+  background: var(--good);
 }
 .model-wrap .model-pop {
   left: auto;
