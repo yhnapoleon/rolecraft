@@ -13,6 +13,7 @@ from pathlib import Path
 import httpx
 
 from career_lab.mcp.protocol import CAPABILITIES, LEGACY, MODERN, VERSION
+from career_lab.mcp.results import RESULT_LIMIT
 from scripts.regression.published import ROOT
 
 CLIENT_INFO = {
@@ -43,6 +44,21 @@ def rpc(
         return {"isError": True}
     assert "error" not in value
     return value["result"]
+
+
+def result_characters(name: str, result: dict[str, object]) -> int:
+    """Characters one tool result puts in the Agent's context; over RESULT_LIMIT fails the gate.
+
+    Claude Code moves results over 50,000 characters into a local file the Agent may not open.
+    """
+    assert result.get("isError") is False, (name, result)
+    content = result["content"]
+    assert isinstance(content, list)
+    structured = json.dumps(result["structuredContent"], ensure_ascii=False, separators=(",", ":"))
+    size = max(len(content[0]["text"]), len(structured))
+    if size > RESULT_LIMIT:
+        raise AssertionError(f"MCP {name} result has {size} characters; limit {RESULT_LIMIT}")
+    return size
 
 
 def exercise(api: str, language: str) -> dict[str, object]:
@@ -113,6 +129,18 @@ def exercise(api: str, language: str) -> dict[str, object]:
                     process.stdin.flush()
                     listed = rpc(process, 2, "tools/list", {})
                     assert any(tool["name"] == "work_products.create" for tool in listed["tools"])
+                    sizes = {
+                        name: result_characters(
+                            name,
+                            rpc(
+                                process,
+                                identifier,
+                                "tools/call",
+                                {"name": name, "arguments": {"session_id": sid}},
+                            ),
+                        )
+                        for identifier, name in ((21, "observation"), (22, "tools"))
+                    }
                     arguments = {
                         "name": "work_products.create",
                         "arguments": {
@@ -158,6 +186,7 @@ def exercise(api: str, language: str) -> dict[str, object]:
                         "product": ref,
                         "replayed": True,
                         "revoked_read_denied": True,
+                        "result_characters": sizes,
                     }
                 finally:
                     process.terminate()
@@ -210,8 +239,12 @@ class McpHttp:
         assert "error" not in value, value
         return value["result"]
 
+    def call_result(self, name: str, arguments: dict[str, object]) -> dict[str, object]:
+        """The whole tool result, as the Agent's context receives it."""
+        return self.modern("tools/call", {"name": name, "arguments": arguments})
+
     def call(self, name: str, arguments: dict[str, object]) -> dict[str, object]:
-        result = self.modern("tools/call", {"name": name, "arguments": arguments})
+        result = self.call_result(name, arguments)
         assert result["isError"] is False, result
         return result["structuredContent"]
 
@@ -299,6 +332,10 @@ def exercise_http(
             listed = {tool["name"]: tool for tool in agent.modern("tools/list")["tools"]}
             schema = listed["work_products.create"]["inputSchema"]
             assert "session_id" not in schema.get("required", [])
+            sizes = {
+                name: result_characters(name, agent.call_result(name, {}))
+                for name in ("observation", "tools")
+            }
             seen = agent.call("observation", {})["result"]["as_of"]
             returned = {
                 "schema_version": 2,
@@ -336,4 +373,5 @@ def exercise_http(
         "replayed": True,
         "legacy_handshake": True,
         "revoked_status": 401,
+        "result_characters": sizes,
     }
