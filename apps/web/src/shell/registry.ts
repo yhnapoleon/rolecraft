@@ -14,6 +14,13 @@ export function registerActions(map: Record<string, ActionHandler>): void {
   for (const [name, fn] of Object.entries(map)) actions.set(name, fn);
 }
 
+/**
+ * The handler a line registered for this name, or null. ui.js checks this synchronously so an
+ * action nobody registered runs without waiting a microtask (motion that starts on the click
+ * itself, like the document flight, depends on it).
+ */
+export const registeredAction = (name: string): ActionHandler | null => actions.get(name) ?? null;
+
 /** Runs a registered handler; false when no line registered this name (ui.js then handles it). */
 export async function dispatchRegistered(
   name: string,

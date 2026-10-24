@@ -16,7 +16,7 @@ export const segmentClass = (on: boolean, size: 'sm' | 'md') =>
     'tw:relative tw:z-0 tw:inline-flex tw:items-center tw:justify-center tw:border-0 tw:bg-transparent',
     'tw:font-sans tw:font-semibold tw:whitespace-nowrap tw:cursor-pointer tw:rounded-[6px]',
     'tw:transition-[color,scale] tw:duration-160 tw:ease-out tw:active:scale-[0.97]',
-    'tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-ink',
+    'tw:focus-visible:outline-solid tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-ink',
     size === 'sm' ? 'tw:h-6 tw:px-2.5 tw:text-[12px]' : 'tw:h-7 tw:px-3 tw:text-[13px]',
     on ? 'tw:text-on-primary' : 'tw:text-ink-2 tw:hover:text-ink',
   );

@@ -131,11 +131,11 @@ import {
 import {
   afterShellRender,
   dismissToasts,
-  dispatchRegistered,
   installShell,
   isRegisteredRoute,
   onRouteRegistered,
   pmStage,
+  registeredAction,
   registeredRoute,
   registeredRouteNames,
   registerStage,
@@ -4354,7 +4354,12 @@ async function act(el, ev = new Event('rc-action')) {
     if (WS.includes(ui.route)) refreshWS(['toolbar', 'stage']);
     else render();
   }
-  if (await dispatchRegistered(action, el, ev)) return;
+  // A line's registered handler wins; without one, carry on in the same tick (no await).
+  const registered = registeredAction(action);
+  if (registered) {
+    await registered(el, ev);
+    return;
+  }
   if (nativeCiteAction(nativeCiteHost, a, action, el.dataset)) return;
   switch (action) {
     case 'investigate-run':

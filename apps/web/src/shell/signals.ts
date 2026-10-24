@@ -13,6 +13,8 @@ export type Signal = {
   action?: { label: string; action: string; id?: string };
   dismissible?: boolean;
   at: string;
+  /** Optional: how it reads. None is neutral ink; good a green tick; warn amber with a warning mark. */
+  tone?: 'good' | 'warn';
 };
 
 type Provider = (attempt: Attempt) => Signal[];

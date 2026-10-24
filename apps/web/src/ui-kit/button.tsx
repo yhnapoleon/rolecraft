@@ -10,10 +10,10 @@ export const buttonVariants = cva(
   [
     'tw:relative tw:inline-flex tw:items-center tw:justify-center tw:gap-1.5 tw:whitespace-nowrap',
     'tw:font-sans tw:text-[13.5px] tw:font-semibold tw:leading-none tw:select-none',
-    'tw:border-0 tw:cursor-pointer tw:outline-none',
+    'tw:border-0 tw:cursor-pointer',
     'tw:transition-[background-color,box-shadow,scale,opacity] tw:duration-160 tw:ease-out',
     'tw:active:scale-[0.97]',
-    'tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-ink',
+    'tw:focus-visible:outline-solid tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-ink',
     'tw:disabled:opacity-40 tw:disabled:cursor-default tw:disabled:active:scale-100',
     'tw:aria-busy:cursor-progress',
   ],

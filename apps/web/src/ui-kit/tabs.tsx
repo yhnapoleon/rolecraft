@@ -67,7 +67,7 @@ export function TabPanel({
     <Radix.Content
       value={value}
       className={cn(
-        'tw:outline-none tw:focus-visible:outline-2 tw:focus-visible:outline-ink',
+        'tw:outline-none tw:focus-visible:outline-solid tw:focus-visible:outline-2 tw:focus-visible:outline-ink',
         className,
       )}
       {...props}
