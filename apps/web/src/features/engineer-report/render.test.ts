@@ -205,14 +205,15 @@ describe('engineer regression report · DOM', () => {
     const root = asFake(
       renderEngineerReport(fakeDocument(), engineerReportView(NOT_FIXED_EN, { language: 'en' })),
     );
-    // New failures put an amber ↓ on the headline; the target still failing keeps its open circle.
+    // New failures put an amber ↓ on the headline; the target still failing is a known result,
+    // so its line carries the ink ✕ of a failed probe (the open circle means not known yet).
     const verdictMark = root.byClass('er-verdict__mark')[0];
     expect([verdictMark.dataset.tone, verdictMark.textContent]).toEqual(['warn', '↓']);
     const targetMark = root.byClass('er-verdict__line')[0].byClass('er-verdict__line-mark')[0];
     expect([targetMark.dataset.tone, targetMark.dataset.shape, targetMark.textContent]).toEqual([
       'ink',
-      'open',
-      '',
+      undefined,
+      '✕',
     ]);
     const marks = root.byClass('er-probe__mark').map((m) => [m.textContent, m.dataset.tone]);
     expect(marks).toEqual([
@@ -267,6 +268,39 @@ describe('engineer regression report · DOM', () => {
     ]);
     expect(verdict.byClass('er-verdict__target')).toHaveLength(0);
     expect(verdict.byClass('er-verdict__detail')).toHaveLength(0);
+  });
+
+  it('ER-47 not fixed and new failures: the target line carries the ink ✕, singular when one', () => {
+    const report = notFixedEn as unknown as EngineerPublicReport;
+    const lineMarks = (r: EngineerPublicReport) => {
+      const root = asFake(renderEngineerReport(fakeDocument(), engineerReportView(r, { language: 'en' })));
+      const verdict = root.byClass('er-verdict')[0];
+      return {
+        title: verdict.byClass('er-verdict__title')[0].textContent,
+        marks: verdict.byClass('er-verdict__line').map((line) => {
+          const m = line.byClass('er-verdict__line-mark')[0];
+          return [m.dataset.tone, m.textContent, m.dataset.shape ?? null];
+        }),
+      };
+    };
+    expect(lineMarks(report)).toEqual({
+      title: 'Target not fixed, and 2 new failures',
+      marks: [
+        ['ink', '✕', null],
+        ['warn', '↓', null],
+      ],
+    });
+    // Only one new failure left: the turn is singular.
+    let flipped = false;
+    const one = {
+      ...report,
+      findings: report.findings.map((f) => {
+        if (flipped || f.kind !== 'new_regression' || f.status !== 'fail') return f;
+        flipped = true;
+        return { ...f, status: 'pass' as const };
+      }),
+    };
+    expect(lineMarks(one).title).toBe('Target not fixed, and 1 new failure');
   });
 
   it('ER-42 overreach sample draws its one hidden new failure as an amber count', () => {

@@ -90,7 +90,9 @@ export function renderEngineerReport(
         const item = el('li', 'er-verdict__line');
         item.dataset.tone = line.tone;
         item.append(
-          mark(line.tone, 'er-verdict__line-mark', line.tone === 'ink' ? OPEN : MARK[line.tone]),
+          // A target still failing is a known result: the ink ✕ a failed probe row uses, never
+          // the open circle (which elsewhere means not known yet).
+          mark(line.tone, 'er-verdict__line-mark', line.tone === 'ink' ? '✕' : MARK[line.tone]),
           el('span', 'er-verdict__line-text', line.text),
         );
         lines.append(item);
