@@ -1,7 +1,18 @@
 // The one Sonner toaster: instrument surface, floating shadow, 12px radius, bottom centre.
+import { useSyncExternalStore } from 'react';
 import { Toaster } from 'sonner';
+import { locale, onLocaleChange, T } from '../app/i18n';
+
+const subscribe = (cb: () => void) => {
+  const off = onLocaleChange(cb);
+  return () => {
+    off();
+  };
+};
 
 export function ShellToaster() {
+  // The region's spoken name follows the interface language like every other label.
+  useSyncExternalStore(subscribe, locale);
   return (
     <Toaster
       position="bottom-center"
@@ -9,7 +20,7 @@ export function ShellToaster() {
       gap={8}
       offset={{ bottom: 24 }}
       mobileOffset={{ bottom: 16, left: 16, right: 16 }}
-      containerAriaLabel="Notifications"
+      containerAriaLabel={T('通知', 'Notifications')}
       className="rc-toaster rc-portal"
       toastOptions={{
         unstyled: true,

@@ -1,0 +1,43 @@
+/* Inside a practice the language menu explains instead of switching (one practice, one
+   language). A small instrument panel under the globe, the same place the switch was. */
+.menu.lang-note {
+  width: 300px;
+  padding: 14px 16px 14px;
+  display: grid;
+  gap: 8px;
+  justify-items: start;
+}
+.lang-note__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13.5px;
+  color: var(--ink);
+}
+.lang-note__body {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+.lang-note .btn {
+  margin-top: 2px;
+}
+
+/* The ⋯ row's lock: the language is fixed for this practice (a fact, not a setting to change). */
+.lang-lock {
+  color: var(--ink-3);
+  margin-left: 2px;
+}
+
+/* A config key a colleague quoted, read in the settings panel's words; the key is in the title. */
+.cfg-term {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--line-2);
+  text-underline-offset: 3px;
+  cursor: help;
+}
+.menu .menu-value:has(+ .lang-lock) {
+  white-space: nowrap;
+}

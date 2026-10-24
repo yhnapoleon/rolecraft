@@ -118,7 +118,8 @@ async function toolbarHoldsStill(context) {
   await browser.send('Input.dispatchMouseEvent', { type: 'mousePressed', ...press });
   await delay(1800);
   await browser.send('Input.dispatchMouseEvent', { type: 'mouseReleased', ...press });
-  const open = `!!document.querySelector('#ws-toolbar .menu [data-action="set-lang"]')`;
+  // Inside a practice the language menu is a note (one practice, one language), not a switch.
+  const open = `!!document.querySelector('#ws-toolbar .menu.lang-note')`;
   await waitFor(browser, open, 3000);
   await browser.ev(`window.regressionToolbar = document.getElementById('ws-toolbar')`);
   await delay(4500);
