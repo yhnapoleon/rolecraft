@@ -107,7 +107,7 @@ import { copyBlockedText, returnPlacement, unmatchedReturnText } from './agent-r
 import { workFolderMarkup, installWorkFolders } from './work-folder.js';
 import './work-folder.css';
 import { createConnectionKeeper, renderAgentConnection } from './agent-connection';
-import { provideAgentPage, syncAgentFeed } from '../features/agent-page';
+import { feedStore, provideAgentPage, syncAgentFeed } from '../features/agent-page';
 import './agent-connection.css';
 import { installV4References } from '../v4-references';
 import {
@@ -162,6 +162,7 @@ import {
 } from '../shell';
 import { HatScale, PrimaryKey } from '../shell/bar';
 import '../shell/bar.css';
+import { agentLine } from '../screens/board/agent-line';
 import * as Board from '../screens/board';
 import { dossierHtml, installDossier } from '../screens/investigate';
 import { islandSlot, keepIsland } from '../islands/mount';
@@ -2978,7 +2979,7 @@ function railTeam(a) {
       return `<li><button type="button" class="person ${n ? 'unread' : ''}" data-action="chat" data-role="${r}">${avatar(r, 'md', { typing: waits })}<span class="grow"><span class="person-name">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span><span class="person-line">${line}</span></span>${n ? `<span class="unread-mark"><span class="sr-only">${esc(T(`${n} 条新消息`, n === 1 ? '1 new message' : `${n} new messages`))}</span></span>` : ''}</button></li>`;
     }).join('')}
       <li class="people-sep" role="separator"></li>
-      <li><button type="button" class="person mine" data-action="board-my-agent">${agentMark('md')}<span class="grow"><span class="person-name">${T('我的 Agent', 'My agent')}<small>${T('你自己的工具', 'Your own tool')}</small></span><span class="person-line">${esc(agentLine(a))}</span></span></button></li>
+      <li><button type="button" class="person mine" data-action="board-my-agent">${agentMark('md')}<span class="grow"><span class="person-name">${T('我的 Agent', 'My agent')}<small>${T('你自己的工具', 'Your own tool')}</small></span><span class="person-line">${esc(agentLine(a, hatOf(a.id), agentConnection(), feedStore.snapshot().events))}</span></span></button></li>
     </ul></section>
   </div>`;
 }
@@ -3003,12 +3004,6 @@ function replyingRoles(a) {
   } catch (_) {
     return new Set();
   }
-}
-function agentLine(a) {
-  const exp = (a.exports || []).length;
-  const back = a.artifacts.filter((x) => !x.removedAt && x.source !== 'user').length;
-  if (!exp && !back) return T('还没交出任务', 'Nothing handed over yet');
-  return T(`交出 ${exp} 次，带回 ${back} 份`, `${exp} handed over, ${back} returned`);
 }
 function railChat(a, role) {
   const msgs = a.conversations[role] || [];
@@ -7497,7 +7492,7 @@ installEngineer({
 onAgentEvent(pulseLamp);
 onAgentConnection(() => {
   if (inPractice()) {
-    if (WS.includes(ui.route)) refreshWS(['toolbar']);
+    if (WS.includes(ui.route)) refreshWS(['toolbar', 'rail']);
     else {
       const lamp = document.querySelector('.agent-lamp');
       if (lamp) lamp.dataset.state = agentConnection().state;
