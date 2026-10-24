@@ -3,6 +3,7 @@ import '@fontsource-variable/instrument-sans/wdth.css';
 import '@fontsource-variable/newsreader/opsz.css';
 import '@fontsource-variable/newsreader/opsz-italic.css';
 import './app/styles.css';
+import './app/material.css';
 import { initLocale } from './app/i18n';
 import { LiveWorkbench } from './workbench-live';
 declare global {

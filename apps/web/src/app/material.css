@@ -1,0 +1,293 @@
+/* Instrument and paper.
+   The desk is a calibrated instrument; whatever arrives from the world (the brief, a document,
+   a task slip, a test console) is paper. Depth comes from lightness steps, recess < desk <
+   instrument < paper, so sections lie on the desk and are separated by hairlines; only paper
+   lifts. The desk is lit only while the world has changed (amber) or the work has just been
+   handed in (green). Colours come from the tokens in styles.css; this file only sets shapes,
+   surfaces and the light. Pills stay for status; keys are 8px. */
+
+/* ---------- keys ---------- */
+.btn {
+  border-radius: var(--r-key);
+}
+
+/* ---------- paper ---------- */
+.paper,
+.reference-reader,
+.console,
+.doc-card,
+.card,
+.card-open {
+  border-radius: var(--r-paper);
+}
+.card,
+.doc-card {
+  box-shadow: var(--shadow-paper);
+}
+
+/* ---------- instrument faces: one step lighter than the desk, no outline of their own ---------- */
+.career,
+.case-hero,
+.variant,
+.intake,
+.list,
+.product-bar,
+.run,
+.criterion,
+.fb,
+.review-art,
+.review-wait,
+.outline,
+.task-head,
+.side-hints,
+.agent-conn,
+.mb-card,
+.mb-side {
+  border-radius: var(--r-panel);
+}
+.product-bar {
+  background: var(--surface);
+}
+.ws-toolbar {
+  background: var(--surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+.rail {
+  background: var(--surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+/* ---------- recesses ---------- */
+.col {
+  border-radius: var(--r-panel);
+  background: var(--surface-3);
+}
+
+/* ---------- the brief: the manager's memo is paper, the conditions are read off the desk ---------- */
+.brief-band {
+  grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr);
+  gap: 48px;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.brief-band .band-letter {
+  padding: 28px 32px 24px;
+  border-radius: var(--r-paper);
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+}
+.brief-band .conds {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 26px 32px;
+  align-self: center;
+}
+.brief-band .cond {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 0 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.brief-band .cond-label {
+  order: -1;
+  font-size: 12.5px;
+}
+/* The whole value reads in the narrow instrument face; once the value is split into a number
+   and its unit, the number grows and the unit drops to body size beside it. */
+.brief-band .cond-val {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font: 500 34px / 1 var(--sans);
+  font-stretch: 78%;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums lining-nums;
+  color: var(--ink);
+}
+.brief-band .cond-num {
+  font-size: 44px;
+}
+.brief-band .cond-unit {
+  font: 400 13px / 1 var(--sans);
+  font-stretch: 100%;
+  letter-spacing: 0;
+  color: var(--ink-2);
+}
+.brief-band .cond.changed {
+  background: none;
+  box-shadow: inset 0 2px 0 var(--good);
+}
+.brief-band .cond.changed .cond-val,
+.brief-band .cond.changed .cond-unit {
+  color: var(--good);
+}
+
+/* ---------- colleague notes are slips of paper ---------- */
+.note {
+  border-radius: var(--r-paper);
+  box-shadow: var(--shadow-paper);
+}
+.note-actions {
+  gap: 4px;
+  margin-top: 2px;
+}
+.note-actions .link {
+  display: inline-flex;
+  align-items: center;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--r-key);
+  font-size: 12.5px;
+  font-weight: 500;
+  text-decoration: none;
+  transition:
+    background var(--fast) ease,
+    transform var(--fast) var(--ease);
+}
+.note-actions .link:active {
+  transform: scale(0.97);
+}
+.note-actions .link:not(.quiet) {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.note-actions .link.quiet {
+  padding: 0 8px;
+  color: var(--ink-2);
+}
+@media (hover: hover) and (pointer: fine) {
+  .note-actions .link.quiet:hover {
+    background: var(--fill);
+  }
+}
+
+/* ---------- the job preview on the home page: empty lanes are just recesses ---------- */
+.mb-col {
+  background: var(--surface-3);
+}
+.mb-empty {
+  border: 0;
+}
+
+/* ---------- handed in: a band with a green line, not a box ---------- */
+body:has(.state-chip.submitted) .stage-banner {
+  border-radius: 0;
+  background: color-mix(in oklab, var(--canvas), transparent 8%);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow:
+    inset 0 2px 0 var(--good),
+    inset 0 -1px 0 color-mix(in oklab, var(--good), transparent 78%);
+}
+body:has(.state-chip.submitted) .stage-banner > .i {
+  color: var(--good);
+}
+
+/* ---------- the event lives in the light ----------
+   A policy change is not boxed: an amber line runs across the top of the band and the words
+   sit on the lit desk. */
+.world-event {
+  position: relative;
+  padding: 18px 2px 16px;
+  border-radius: 0;
+  background: none;
+  box-shadow: inset 0 -1px 0 color-mix(in oklab, var(--warn), transparent 78%);
+  animation: none;
+}
+.world-event::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: var(--warn);
+  transform-origin: 0 50%;
+  animation: event-line var(--slow) var(--ease-out) both;
+}
+@keyframes event-line {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+.we-icon {
+  width: auto;
+  height: auto;
+  border-radius: 0;
+  background: none;
+  align-self: flex-start;
+  margin-top: 1px;
+}
+.we-title {
+  font-size: 17px;
+}
+.world-event .btn.primary {
+  background: var(--warn);
+  color: var(--on-primary);
+}
+.world-event .btn.primary:hover {
+  background: color-mix(in oklab, var(--warn), var(--canvas) 12%);
+}
+
+/* ---------- world light ----------
+   Calm: no light. Policy changed (the event band is on the board): amber from the top of the
+   desk. Handed in: green. The light fades in once and never moves. */
+.stage-inner {
+  position: relative;
+  isolation: isolate;
+}
+.stage-inner::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 560px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(90% 100% at 50% 0%, var(--world-light, transparent), transparent 72%);
+  opacity: 0;
+  transition: opacity var(--slow) var(--ease-out);
+}
+.stage-inner:has(.world-event)::before {
+  --world-light: var(--light-warn);
+  opacity: 1;
+}
+body:has(.state-chip.submitted) .stage-inner::before {
+  --world-light: var(--light-good);
+  opacity: 1;
+}
+
+@media (max-width: 1100px) {
+  .brief-band {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+}
+@media (max-width: 720px) {
+  .brief-band .band-letter {
+    padding: 20px 20px 18px;
+  }
+  .brief-band .conds {
+    gap: 18px 20px;
+  }
+  .brief-band .cond-val {
+    font-size: 26px;
+  }
+  .brief-band .cond-num {
+    font-size: 34px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .world-event::before {
+    animation: none;
+  }
+  .stage-inner::before {
+    transition: none;
+  }
+}
