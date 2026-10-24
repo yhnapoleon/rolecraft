@@ -142,3 +142,8 @@
     animation: none;
   }
 }
+
+.rc-sheet-scrim {
+  -webkit-backdrop-filter: var(--scrim-filter);
+  backdrop-filter: var(--scrim-filter);
+}

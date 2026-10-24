@@ -97,9 +97,10 @@
 }
 @media (max-width: 720px) {
   #sheet.deliver-sheet {
-    width: 100vw;
-    height: 100dvh;
-    border-radius: 0;
+    width: calc(100vw - 2 * var(--sheet-inset));
+    height: calc(100dvh - 2 * var(--sheet-inset));
+    margin: var(--sheet-inset);
+    border-radius: var(--r-dialog);
   }
   .delivery-reading__paper {
     padding: 20px 18px 22px;

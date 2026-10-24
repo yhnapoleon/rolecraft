@@ -1,10 +1,6 @@
-/* Instrument and paper.
-   The desk is a calibrated instrument; whatever arrives from the world (the brief, a document,
-   a task slip, a test console) is paper. Depth comes from lightness steps, recess < desk <
-   instrument < paper, so sections lie on the desk and are separated by hairlines; only paper
-   lifts. The desk is lit only while the world has changed (amber) or the work has just been
-   handed in (green). Colours come from the tokens in styles.css; this file only sets shapes,
-   surfaces and the light. Pills stay for status; keys are 8px. */
+/* Desk, solid instruments, opaque paper, and the material around/above them.
+   Warm light stays on; a policy change brightens the pool. Colours and fallback tokens
+   live in styles.css. Filtering belongs only to the window frame and floating surfaces. */
 
 /* ---------- keys ---------- */
 .btn {
@@ -114,26 +110,39 @@
   margin: 0;
   padding-left: 50px;
 }
-/* Page bars sit on the desk itself, so nothing shows through them even before the scroll class lands;
-   once the page scrolls under them they become a surface with a hairline. */
+/* The home bar is clear at the top, material when content scrolls beneath it. */
 .topbar {
-  background: var(--canvas);
+  background: transparent;
 }
 html.scrolled body:not([data-view="work"]) .topbar {
-  background: var(--surface);
-  backdrop-filter: none;
+  background: transparent;
   -webkit-backdrop-filter: none;
-  box-shadow: 0 1px 0 var(--line);
+  backdrop-filter: none;
+  box-shadow: none;
 }
 .ws-toolbar {
-  background: var(--surface);
-  backdrop-filter: none;
+  background: transparent;
   -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+.topbar:not(.shell-bar)::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+html.scrolled body:not([data-view="work"]) .topbar:not(.shell-bar)::before,
+.ws-toolbar:not(.shell-bar)::before {
+  background: var(--bar-bg);
+  -webkit-backdrop-filter: var(--bar-filter);
+  backdrop-filter: var(--bar-filter);
+  box-shadow: inset 0 -0.5px 0 var(--line-2);
 }
 .rail {
-  background: var(--surface);
-  backdrop-filter: none;
+  background: var(--rail-bg);
   -webkit-backdrop-filter: none;
+  backdrop-filter: none;
 }
 
 /* ---------- recesses ---------- */
@@ -261,8 +270,8 @@ html.scrolled body:not([data-view="work"]) .topbar {
   padding: 14px 0 0;
   border-radius: 0;
   background: none;
-  backdrop-filter: none;
   -webkit-backdrop-filter: none;
+  backdrop-filter: none;
   box-shadow: inset 0 2px 0 var(--good);
 }
 .stage-banner.is-submitted > .i {

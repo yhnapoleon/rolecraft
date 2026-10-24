@@ -596,23 +596,22 @@
   inset: 0;
   border: 0;
   padding: 0;
-  background: var(--dim, rgba(17, 23, 21, 0.22));
+  background: var(--scrim-b);
+  -webkit-backdrop-filter: var(--scrim-filter);
+  backdrop-filter: var(--scrim-filter);
   pointer-events: auto;
   cursor: default;
 }
-:root[data-theme="dark"] .mat-dim {
-  background: rgba(0, 0, 0, 0.42);
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .mat-dim {
-    background: rgba(0, 0, 0, 0.42);
-  }
-}
 .mat-layer .mat-sheet {
-  top: 0;
-  bottom: 0;
-  width: min(720px, calc(100% - 48px));
-  border-radius: var(--r-paper) 0 0 var(--r-paper);
+  top: var(--sheet-inset);
+  bottom: var(--sheet-inset);
+  right: var(--sheet-inset);
+  width: min(720px, calc(100% - 2 * var(--sheet-inset)));
+  border-radius: var(--r-dialog);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
   pointer-events: auto;
 }
 .mat-dim[data-state="open"] {
@@ -627,6 +626,7 @@
   }
 }
 .mat-head {
+  grid-area: 1 / 1;
   display: flex;
   align-items: flex-start;
   gap: 12px;
@@ -664,22 +664,27 @@
   color: var(--warn);
 }
 .mat-body {
-  flex: 1;
+  grid-area: 2 / 1;
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 6px 40px 40px;
+  padding: 6px 40px 110px;
 }
 .mat-body .prose {
   max-width: 62ch;
 }
 .mat-foot {
+  grid-area: 2 / 1;
+  align-self: end;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
   padding: 12px 24px 14px 40px;
-  background: var(--paper);
-  box-shadow: inset 0 1px 0 var(--line);
+  background: var(--sheet-foot-bg);
+  -webkit-backdrop-filter: var(--sheet-foot-filter);
+  backdrop-filter: var(--sheet-foot-filter);
+  box-shadow: inset 0 0.5px 0 var(--line-2);
 }
 /* Compare with v1: a quiet switch at the top of the sheet. */
 .mat-compare {
@@ -755,7 +760,7 @@
 }
 @media (max-width: 1279px) {
   .mat-layer .mat-sheet {
-    width: min(720px, 100%);
+    width: min(720px, calc(100% - 2 * var(--sheet-inset)));
   }
 }
 @media (max-width: 720px) {
@@ -766,7 +771,7 @@
     font-size: 21px;
   }
   .mat-body {
-    padding: 4px 18px 32px;
+    padding: 4px 18px 110px;
   }
   .mat-foot {
     padding: 10px 12px 12px 18px;
@@ -775,10 +780,10 @@
 
 /* ---------- the rail: people and what needs you ---------- */
 .ws .rail {
-  background: var(--surface);
-  backdrop-filter: none;
+  background: var(--rail-bg);
   -webkit-backdrop-filter: none;
-  box-shadow: inset 1px 0 0 var(--line);
+  backdrop-filter: none;
+  box-shadow: inset 0.5px 0 0 var(--line-2);
 }
 .rail-board {
   height: 100%;
@@ -1063,10 +1068,10 @@
 /* ---------- the record drawer, opened from the topbar's ⏱ ---------- */
 /* The ui-kit sheet, placed over the rail: under the topbar, the rail's width. */
 .rc-sheet.records-drawer {
-  top: var(--toolbar-h);
-  bottom: 0;
+  top: calc(var(--toolbar-h) + var(--sheet-inset));
+  bottom: var(--sheet-inset);
   width: 368px;
-  max-width: 100%;
+  max-width: calc(100% - 2 * var(--sheet-inset));
   z-index: 60;
 }
 .records-head {
@@ -1364,5 +1369,13 @@ button.rec-open {
   .mat-compare .track,
   .mat-compare .track::after {
     transition: none;
+  }
+}
+
+/* The phone rail covers text, unlike the desktop rail over ambient light. Keep it
+   translucent without blur, but provide enough backing for 4.5:1 labels over that text. */
+@media (max-width: 1279px) {
+  .ws.rail-open .rail {
+    background: var(--rail-drawer-bg);
   }
 }
