@@ -23,6 +23,24 @@ const fmt = (value: unknown) =>
 
 const num = (value: unknown) => (typeof value === 'number' ? value : 0);
 
+const COMPARABLE = new Set(['MET', 'PARTIAL', 'NOT_MET']);
+
+/** Which of the three arbiter outcomes a record is (recognition/judge.py ``_arbitrate``):
+ * the recognizers and the reviewer agree; they disagree and the more conservative label inside
+ * the rule bound was kept; or the reviewer gave no comparable label (INSUFFICIENT or pending,
+ * recorded as ``judge_undecided``) and its finding stands. The record label decides; older
+ * records without it fall back to comparing the outputs. */
+export function arbiterOutcome(
+  record: Pick<RecognitionRecord, 'label' | 'outputs'>,
+): 'agree' | 'conservative' | 'undecided' {
+  const out = record.outputs ?? {};
+  if (record.label === 'judge_undecided') return 'undecided';
+  if (record.label === 'agree' || out.agreement === true) return 'agree';
+  if (record.label === 'conservative') return 'conservative';
+  const judge = String(out.judge_label ?? '');
+  return !COMPARABLE.has(judge) || out.final === out.judge_label ? 'undecided' : 'conservative';
+}
+
 /** The signature's two parts: the recognizer's task name and its finding. */
 export function describe(record: RecognitionRecord, language: Language) {
   const out = record.outputs ?? {};
@@ -116,12 +134,7 @@ export function describe(record: RecognitionRecord, language: Language) {
       break;
     }
     case 'arbiter':
-      detail = out.agreement
-        ? t(language, 'arbiter_agree')
-        : t(language, 'arbiter_conservative', {
-            recognizer: String(out.recognizer_label ?? '–'),
-            judge: String(out.judge_label ?? '–'),
-          });
+      detail = t(language, `arbiter_${arbiterOutcome(record)}` as BadgeKey);
       break;
     case 'behavior':
       detail = t(language, 'behavior_nearest', { strategy: String(record.label ?? '–') });

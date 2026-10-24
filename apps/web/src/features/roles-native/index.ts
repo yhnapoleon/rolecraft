@@ -9,7 +9,9 @@ import { renderShortResult } from '../results-native/short-result';
 import { hasMarkdownStructure, markdownNodes } from '../../app/markdown';
 /** Native v4 colleague slot. The injected client owns API calls, journals and jobs. */
 import { T, locale, onLocaleChange } from '../../app/i18n';
-import { type RecognitionRecord, renderBadges } from '../recognition-native/badge';
+import type { RecognitionRecord } from '../recognition-native/badge';
+import { lensOn, onLensChange } from '../recognition-native/lens';
+import { renderSignals } from '../recognition-native/signals';
 import './roles.css';
 
 export type RoleId = 'supervisor' | 'business_lead' | 'tech_lead';
@@ -458,9 +460,12 @@ export function mount(
           },
         });
         item.append(short.element);
-        if (turn.recognition?.length) {
-          item.append(renderBadges(doc, turn.recognition, locale()));
-        }
+        // Question intent and grounding check: nothing by default, chips in the recognition lens.
+        const signals = renderSignals(doc, turn.recognition, locale(), {
+          context: 'reply',
+          lens: lensOn(),
+        });
+        if (signals) item.append(signals);
         if (displayObserver && turn.canRecordDisplay !== false && !turn.displayRecorded) {
           // A reply counts as displayed only when its complete text is painted.
           const visibleText = presentation.partial || !short.lead ? reply : short.lead;
@@ -626,6 +631,7 @@ export function mount(
     void refresh();
   });
   const unlocale = onLocaleChange(render);
+  const unlens = onLensChange(render);
   render();
   void refresh();
   return {
@@ -636,6 +642,7 @@ export function mount(
       ++loadTicket;
       unsubscribe?.();
       unlocale();
+      unlens();
       displayObserver?.disconnect();
       visibleReplies.clear();
       doc.removeEventListener('visibilitychange', onVisibility);

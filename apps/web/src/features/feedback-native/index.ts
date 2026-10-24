@@ -25,13 +25,22 @@ import { criterionWeightText } from './score-range';
 import { sealReadOnly } from './read-only-notice';
 import { criterionLabels } from './criteria';
 import { exactRefKey } from './exact-ref';
-import { mountPresubmitCard, PRESUBMIT_STYLE, submissionFactLine } from './presubmit';
+import {
+  mountPresubmitCard,
+  PRESUBMIT_STYLE,
+  submissionFactLine,
+  type SentenceResult,
+} from './presubmit';
 import { snapshotHeading } from './delivery';
 import type { ObjectRef, EvidenceRefV2, WorkProductVersion } from '../workspace/contract-types';
 import { readCatalog, referenceLabel, type ReferenceCatalog } from '../../reference-catalog';
 import type { EvidencePick } from '../../v4-host';
 import { EVIDENCE_KINDS, evidenceSummary } from '../../evidence-picker';
-import { type RecognitionRecord, renderBadges } from '../recognition-native/badge';
+import type { RecognitionRecord } from '../recognition-native/badge';
+import { lensOn, onLensChange } from '../recognition-native/lens';
+import { splitRecognitionPrefix } from '../recognition-native/prefix';
+import { renderSentenceLens } from '../recognition-native/sentences';
+import { renderExplanationTag, renderSignals } from '../recognition-native/signals';
 
 export type SelectedProduct = Pick<
   WorkProductVersion,
@@ -145,6 +154,9 @@ export interface FeedbackNativeAdapter {
   submit(input: SubmitChoice): Promise<unknown>;
   /** Read-only: the rule items submitting this choice now would give. Nothing is saved. */
   previewSubmission?(input: SubmitChoice): Promise<SubmissionRuleCheck>;
+  /** Read-only, recognition layer: the sentence labels of the same choice, computed after the
+   * rule check (slower; nothing when the layer is off). */
+  previewRecognition?(input: SubmitChoice): Promise<SentenceResult>;
   /** Read-only: a saved submission checked again at its own point. */
   submissionRuleCheck?(submission: ObjectRef): Promise<SubmissionRuleCheck>;
   canPreview?: boolean;
@@ -251,6 +263,9 @@ export function mountNativeFeedback(
   const draftResponses = new Map<string, { text: string; evidence: EvidenceRefV2[] }>();
   // Presentation only: disclosure and purpose choice survive re-renders, not reloads.
   const openResults = new Set<string>();
+  // Open recognition chains per report, kept across redraws (lens toggles, refreshes).
+  const lensChains = new Map<string, Set<number>>();
+  let playReading = false;
   const purposeChoices = new Map<string, PurposeChoice>();
   let savedDrafts: Promise<void> = Promise.resolve();
   let draftError: unknown;
@@ -376,7 +391,11 @@ export function mountNativeFeedback(
   // Pre-submission preview (2026-10-14): read-only, right above the submit button.
   const load =
     options.surface !== 'feedback' ? adapter.previewSubmission?.bind(adapter) : undefined;
-  const preview = load ? mountPresubmitCard(doc, language, load) : undefined;
+  const preview = load
+    ? mountPresubmitCard(doc, language, load, {
+        recognize: adapter.previewRecognition?.bind(adapter),
+      })
+    : undefined;
   let restoring = preview ? adapter.rememberedChoice?.() : undefined;
   /** Put back the choice made before the panel was last closed, once its versions are listed. */
   function restoreChoice(state: FeedbackNativeState) {
@@ -723,10 +742,14 @@ export function mountNativeFeedback(
             : T('等待核验', 'Awaiting verification'),
           'muted',
         ),
-        el('p', itemDetail(item, lines.premises), 'rule-detail'),
+        el('p', splitRecognitionPrefix(itemDetail(item, lines.premises)).text, 'rule-detail'),
       );
-      const signed = criterionRecords(report, item.criterion);
-      if (signed.length) section.append(renderBadges(doc, signed, language));
+      // Recognition signals of this criterion: nothing by default, chips in the lens.
+      const signed = renderSignals(doc, criterionRecords(report, item.criterion), language, {
+        context: 'criterion',
+        lens: lensOn(),
+      });
+      if (signed) section.append(signed);
       // 164 F17: the versions behind an unmet item, from the same rules at submission.
       const fact = submissionFactLine(item, atSubmission, report.rule_items, language);
       if (fact) {
@@ -788,8 +811,31 @@ export function mountNativeFeedback(
       el('h3', T('理由与证据的支持关系', 'Support between reasoning and evidence')),
       evaluationModelLine(doc, report.provenance, language),
     );
-    const general = (report.recognition ?? []).filter((record) => !recordCriterion(record));
-    if (general.length) semantic.append(renderBadges(doc, general, language));
+    // With the recognition lens open: this feedback's recognizer signals and the work sentence
+    // by sentence, from the records stored with it. Closed: nothing.
+    if (lensOn()) {
+      const general = (report.recognition ?? []).filter((record) => !recordCriterion(record));
+      // The sentence block below already counts the relation labels; no second chip for them.
+      const chips = renderSignals(
+        doc,
+        general.filter((record) => !(record.task === 'relation' && Array.isArray(record.outputs?.units))),
+        language,
+        { context: 'feedback', lens: true },
+      );
+      if (chips) semantic.append(chips);
+      if (general.some((record) => record.task === 'relation' && Array.isArray(record.outputs?.units))) {
+        const key = `${report.id}:${report.version}`;
+        if (!lensChains.has(key)) lensChains.set(key, new Set());
+        semantic.append(
+          renderSentenceLens(doc, {
+            records: report.recognition ?? [],
+            language,
+            open: lensChains.get(key),
+            play: playReading,
+          }),
+        );
+      }
+    }
     const { advice } = feedbackSemanticPresentation(report, adapter.snapshot());
     if (!advice.length || report.model_advice !== undefined) {
       const block = el('div');
@@ -805,7 +851,13 @@ export function mountNativeFeedback(
       );
     }
     for (const item of advice) {
-      semantic.append(el('p', T('模型建议 · ', 'Model advice · ') + item.explanation));
+      // The reviewer's recognition prefix is never shown as text; the lens shows it as a tag.
+      const split = splitRecognitionPrefix(item.explanation);
+      if (lensOn()) {
+        const tag = renderExplanationTag(doc, split, language);
+        if (tag) semantic.append(tag);
+      }
+      semantic.append(el('p', T('模型建议 · ', 'Model advice · ') + split.text));
       refs(semantic, item.citations);
       semantic.append(responseForm(report, item.criterion, 'model_advice'));
     }
@@ -1059,12 +1111,19 @@ export function mountNativeFeedback(
     syncPreview();
   }
   const unsubscribe = adapter.subscribe(render);
+  // Opening the lens plays the reading once; later redraws (reads, polls) show it at rest.
+  const unlens = onLensChange((on) => {
+    playReading = on;
+    render();
+    playReading = false;
+  });
   render();
   return {
     refresh: () => act(() => adapter.refresh()),
     destroy: () => {
       destroyed = true;
       unsubscribe();
+      unlens();
       reviewControls?.destroy();
       preview?.destroy();
       root.remove();

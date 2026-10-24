@@ -45,3 +45,30 @@
   color: var(--ink-2);
   font-weight: 600;
 }
+/* Review page: lens-only summary line and the way into the system profile (#/lab). */
+.rc-hero:empty {
+  display: none;
+}
+.rc-hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 14px;
+  margin-top: 6px;
+}
+.rc-hero .rc-summary {
+  margin: 0;
+}
+.rc-hero .rc-lab-link {
+  color: var(--ink-2);
+  font-size: 12px;
+  text-decoration: underline;
+  text-decoration-color: var(--line-2);
+  text-underline-offset: 3px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .rc-hero .rc-lab-link:hover {
+    color: var(--ink);
+    text-decoration-color: currentColor;
+  }
+}

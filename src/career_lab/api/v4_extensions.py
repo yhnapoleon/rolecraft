@@ -452,6 +452,17 @@ def mount_v4_extensions(app: FastAPI) -> None:
         checks = _rule_checks(gateway.registry, store, auth)
         return {"schema_version": 2, "result": checks.draft(store, auth, body)}
 
+    # Recognition layer (demo edition): the slower sentence step of the same draft check,
+    # served outside the frozen OpenAPI like the other recognition reads.
+    @app.post("/sessions/{session_id}/submission-rule-check/recognition", include_in_schema=False)
+    def submission_rule_check_recognition(
+        session_id: str, body: C.SubmissionRuleCheckRequest, credentials: Credentials
+    ):
+        auth = _context(store, session_id, credentials)
+        _human(auth)
+        checks = _rule_checks(gateway.registry, store, auth)
+        return {"schema_version": 2, "result": checks.draft_recognition(store, auth, body)}
+
     @app.get(
         "/sessions/{session_id}/submission-rule-check",
         response_model=C.SubmissionRuleCheckResponse,

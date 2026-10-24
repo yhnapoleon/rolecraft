@@ -10,6 +10,10 @@ import type { SubmitChoice } from './index';
 import type { FeedbackLanguage } from './localization';
 import { PRESUBMIT_COPY, type PresubmitKey } from './presubmit-copy';
 import { type Counted, feedbackClass, feedbackCounts } from './short-summary';
+import type { PreviewRecognition } from '../recognition-native/chain';
+import { LENS_COPY } from '../recognition-native/lens-copy';
+import { lensOn, onLensChange } from '../recognition-native/lens';
+import { previewQuiet, renderSentenceLens } from '../recognition-native/sentences';
 
 type Facts = _RuleCheckFacts;
 type Tone = 'good' | 'bad' | 'warn' | 'ink';
@@ -29,32 +33,15 @@ export type PresubmitLine = {
   tone: Tone;
   action: { action: Tool; label: string } | null;
 };
-/** One sentence of the work as the recognizers labelled it (C2 + C1 + C6). */
-export type PresubmitSentence = {
-  index: number;
-  quote: string;
-  /** supported / contradicted / insufficient, or deferred when C6 sends it to a person. */
-  tone: 'supported' | 'contradicted' | 'insufficient' | 'deferred';
-  label: string;
-  confidence: number;
-  evidence: string | null;
-};
-export type PresubmitRecognition = {
-  title: string;
-  counts: string;
-  by: string;
-  fallback: string | null;
-  note: string;
-  evidenceLabel: string;
-  sentences: PresubmitSentence[];
-};
-type RecognitionPreview = {
-  recognizer?: string;
-  fallback?: boolean;
-  duration_ms?: number;
-  counts?: { supported?: number; contradicted?: number; insufficient?: number; deferred?: number };
-  units?: { index: number; quote: string; label: string; confidence: number; decision: string; evidence: string | null }[];
-};
+/** The second, slower step of the preview: C2 + C1 + C6 sentence labels of the work, computed by
+ * the server only when the recognition layer is on. The rule check marks it `{status:
+ * 'pending'}`; `recognize` then returns the labels. Older servers carry them inline. */
+export type SentenceResult = { enabled: boolean; recognition: PreviewRecognition | null };
+export type SentencePass =
+  | { kind: 'idle' }
+  | { kind: 'running'; startedAt: number }
+  | { kind: 'ready'; preview: PreviewRecognition }
+  | { kind: 'failed' };
 
 export type PresubmitView = {
   title: string;
@@ -62,7 +49,6 @@ export type PresubmitView = {
   empty: string | null;
   lines: PresubmitLine[];
   waiting: string | null;
-  recognition: PresubmitRecognition | null;
   details: {
     label: string;
     note: string;
@@ -215,47 +201,6 @@ const FINDINGS: Readonly<Record<string, PresubmitKey>> = {
   NOT_MET: 'notMet',
 };
 
-const SENTENCE_LABELS: Readonly<Record<PresubmitSentence['tone'], PresubmitKey>> = {
-  supported: 'recSupported',
-  contradicted: 'recContradicted',
-  insufficient: 'recInsufficient',
-  deferred: 'recDeferred',
-};
-
-/** The recognizers' sentence labels for the writing area, when the check carries them. */
-export function recognitionView(
-  raw: RecognitionPreview | null | undefined,
-  language: FeedbackLanguage,
-): PresubmitRecognition | null {
-  if (!raw || !Array.isArray(raw.units) || !raw.units.length) return null;
-  const t = (key: PresubmitKey, values?: Values) => say(language, key, values);
-  const c = raw.counts ?? {};
-  return {
-    title: t('recTitle'),
-    counts: t('recCounts', {
-      s: c.supported ?? 0,
-      c: c.contradicted ?? 0,
-      i: c.insufficient ?? 0,
-      d: c.deferred ?? 0,
-    }),
-    by: t('recBy', { name: raw.recognizer ?? '–', ms: Math.round(raw.duration_ms ?? 0) }),
-    fallback: raw.fallback ? t('recFallback') : null,
-    note: t('recNote'),
-    evidenceLabel: t('recEvidence'),
-    sentences: raw.units.map((u) => {
-      const tone = (u.decision === 'defer' ? 'deferred' : u.label) as PresubmitSentence['tone'];
-      return {
-        index: u.index,
-        quote: u.quote,
-        tone: SENTENCE_LABELS[tone] ? tone : 'insufficient',
-        label: t(SENTENCE_LABELS[tone] ?? 'recInsufficient'),
-        confidence: u.confidence,
-        evidence: tone === 'supported' || tone === 'contradicted' ? u.evidence : null,
-      };
-    }),
-  };
-}
-
 /** The card's content: rule-decided items counted and phrased; the rest summarised by count. */
 export function presubmitView(
   check: SubmissionRuleCheck,
@@ -297,10 +242,6 @@ export function presubmitView(
         : t('emptyNone'),
     lines,
     waiting: counts.pending ? t('waiting', { n: counts.pending }) : null,
-    recognition: recognitionView(
-      (check as SubmissionRuleCheck & { recognition?: RecognitionPreview | null }).recognition,
-      language,
-    ),
     details: {
       label: t('basis'),
       note: t('readOnly'),
@@ -432,9 +373,57 @@ export function createPresubmitSchedule(options: {
   };
 }
 
+const carried = (check: SubmissionRuleCheck) =>
+  (check as SubmissionRuleCheck & { recognition?: (PreviewRecognition & { status?: string }) | null })
+    .recognition ?? null;
+
+/** Runs the sentence step for the check on screen: nothing when the recognition layer is off,
+ * otherwise one request per check, a running state with its start time, and only the answer for
+ * the check still shown. */
+export function createSentencePass(options: {
+  recognize?: (choice: SubmitChoice) => Promise<SentenceResult>;
+  show: (pass: SentencePass) => void;
+  now?: () => number;
+}) {
+  const now = options.now ?? (() => Date.now());
+  const results = new WeakMap<SubmissionRuleCheck, SentencePass>();
+  let current: SubmissionRuleCheck | null = null;
+  const settle = (check: SubmissionRuleCheck, pass: SentencePass) => {
+    results.set(check, pass);
+    if (check === current) options.show(pass);
+  };
+  return {
+    start(check: SubmissionRuleCheck | null, choice: SubmitChoice | null) {
+      current = check;
+      const body = check ? carried(check) : null;
+      if (!check || !body) return options.show({ kind: 'idle' });
+      if (Array.isArray(body.units) && body.units.length) return options.show({ kind: 'ready', preview: body });
+      if (body.status !== 'pending' || !options.recognize || !choice) return options.show({ kind: 'idle' });
+      const known = results.get(check);
+      if (known) return options.show(known);
+      const running: SentencePass = { kind: 'running', startedAt: now() };
+      results.set(check, running);
+      options.show(running);
+      options.recognize(choice).then(
+        (found) =>
+          settle(
+            check,
+            found.enabled && found.recognition?.units?.length
+              ? { kind: 'ready', preview: found.recognition }
+              : { kind: 'idle' },
+          ),
+        () => {
+          results.delete(check);
+          if (check === current) options.show({ kind: 'failed' });
+        },
+      );
+    },
+  };
+}
+
 export const PRESUBMIT_STYLE =
   '.presubmit{margin:14px 0;padding:14px 16px;border:1px solid var(--line-2);border-radius:var(--r-md,12px);background:var(--surface-2);display:grid;gap:8px}.presubmit p,.presubmit ul{margin:0}.presubmit__title{margin:0;font-size:15px;font-weight:600}.presubmit[aria-busy="true"] .presubmit__result{opacity:.55}.presubmit__meter{display:flex;align-items:center;gap:10px}.presubmit__bar{flex:1;max-width:220px;height:6px;border-radius:999px;background:var(--line-2);overflow:hidden}.presubmit__fill{display:block;height:100%;background:var(--good)}.presubmit__count{font-size:13.5px;font-weight:600;font-variant-numeric:tabular-nums}.presubmit__items{list-style:none;padding:0;display:grid;gap:6px}.presubmit__items li{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}.presubmit__mark{flex:none;width:1.1em;font-weight:700;color:var(--ink-2)}.presubmit__items [data-tone="good"] .presubmit__mark{color:var(--good)}.presubmit__items [data-tone="bad"] .presubmit__mark{color:var(--bad)}.presubmit__items [data-tone="warn"] .presubmit__mark{color:var(--warn)}.presubmit__text{flex:1 1 14em;min-width:0}.presubmit .btn.small{min-height:28px;margin:0}.presubmit__muted,.presubmit__waiting{color:var(--ink-3);font-size:13px}.presubmit details{font-size:13px;color:var(--ink-2)}.presubmit details p{margin-block:6px}' +
-  '.presubmit__rec{display:grid;gap:6px;padding-top:8px;border-top:1px dashed var(--line-2)}.presubmit__rec-head{font-size:13.5px}.presubmit__sentences{list-style:none;padding:0;margin:0;display:grid;gap:6px}.presubmit__sentences li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 10px;border-left:3px solid var(--line-2);border-radius:6px;background:var(--surface-1,transparent);font-size:13.5px}.presubmit__sentences [data-tone="supported"]{border-left-color:var(--good)}.presubmit__sentences [data-tone="contradicted"]{border-left-color:var(--bad)}.presubmit__sentences [data-tone="insufficient"]{border-left-color:var(--warn)}.presubmit__sentences [data-tone="deferred"]{border-left-color:var(--ink-3);border-left-style:dashed}.presubmit__tag{font-size:12px;color:var(--ink-2);font-variant-numeric:tabular-nums;white-space:nowrap}.presubmit__sentences [data-tone="supported"] .presubmit__tag{color:var(--good)}.presubmit__sentences [data-tone="contradicted"] .presubmit__tag{color:var(--bad)}.presubmit__sentences [data-tone="insufficient"] .presubmit__tag{color:var(--warn)}.presubmit__evidence{grid-column:1/-1;color:var(--ink-3);font-size:12px}.presubmit__rec [data-fallback]{color:var(--ink-3)}';
+  '.presubmit[data-frame="flat"]{padding:0;border:0;border-radius:0;background:none}@media (max-width:560px){.presubmit:not([data-frame="flat"]){padding:12px 10px}}.presubmit__rec{display:grid;gap:4px;padding-top:8px;border-top:1px dashed var(--line-2)}.presubmit__rec:empty{display:none}.presubmit__stage{display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;font-size:13px;color:var(--ink-2)}.presubmit__stage-done{color:var(--ink-3)}.presubmit__stage-done b{color:var(--good);font-weight:600;margin-inline-end:3px}.presubmit__elapsed{color:var(--ink-3);font-variant-numeric:tabular-nums}';
 
 /** The card above the submit button. update() takes the current choice, or null when the person
  * has not chosen both a decision and at least one version. */
@@ -442,11 +431,18 @@ export function mountPresubmitCard(
   doc: Document,
   language: FeedbackLanguage,
   load: (choice: SubmitChoice) => Promise<SubmissionRuleCheck>,
+  options: {
+    recognize?: (choice: SubmitChoice) => Promise<SentenceResult>;
+    /** 'panel' (default): the grey preview panel. 'flat': no panel frame, so the work's
+     * sentences sit as paper directly in the host (spec 197 §8, submission dialog). */
+    frame?: 'panel' | 'flat';
+  } = {},
 ) {
   const t = (key: PresubmitKey, values?: Values) => say(language, key, values);
   const root = doc.createElement('section');
   root.className = 'presubmit';
   root.dataset.presubmit = '';
+  root.dataset.frame = options.frame ?? 'panel';
   const title = doc.createElement('h3');
   title.className = 'presubmit__title';
   title.id = `presubmit-${Math.random().toString(36).slice(2)}`;
@@ -508,28 +504,7 @@ export function mountPresubmitCard(
       nodes.push(list);
     }
     if (view.waiting) nodes.push(el('p', view.waiting, 'presubmit__waiting'));
-    if (view.recognition) {
-      const rec = view.recognition;
-      const box = el('div', '', 'presubmit__rec');
-      box.dataset.presubmitRecognition = '';
-      const head = el('p', '', 'presubmit__rec-head');
-      head.append(el('b', rec.title), doc.createTextNode(` ${rec.counts}`));
-      const by = el('p', rec.fallback ? `${rec.by} · ${rec.fallback}` : rec.by, 'presubmit__muted');
-      if (rec.fallback) by.dataset.fallback = '';
-      const list = el('ol', '', 'presubmit__sentences');
-      for (const s of rec.sentences) {
-        const item = el('li');
-        item.dataset.tone = s.tone;
-        item.title = `${s.label} · ${s.confidence.toFixed(2)}`;
-        const quote = el('span', s.quote, 'presubmit__quote');
-        const tag = el('span', `${s.label} ${s.confidence.toFixed(2)}`, 'presubmit__tag');
-        item.append(quote, tag);
-        if (s.evidence) item.append(el('small', `${rec.evidenceLabel}${s.evidence}`, 'presubmit__evidence'));
-        list.append(item);
-      }
-      box.append(head, by, list, el('p', rec.note, 'presubmit__muted'));
-      nodes.push(box);
-    }
+    nodes.push(rec);
     const details = el('details');
     details.append(el('summary', view.details.label));
     for (const row of view.details.basis) {
@@ -544,6 +519,72 @@ export function mountPresubmitCard(
     nodes.push(details);
     return nodes;
   }
+  // The sentence step under the rules: a real stage name and seconds while it runs, then one
+  // quiet line, or the work sentence by sentence when the recognition lens is open.
+  const rec = el('div', '', 'presubmit__rec');
+  rec.dataset.presubmitRecognition = '';
+  const lens = (key: keyof typeof LENS_COPY.zh, values?: Values) =>
+    copyText(LENS_COPY, language, key, values);
+  const chains = new Set<number>();
+  let sentences: SentencePass = { kind: 'idle' };
+  let ticker: ReturnType<typeof setInterval> | undefined;
+  // The reading plays when the sentences arrive with the lens open, or when the lens opens.
+  let playNext = false;
+  function drawSentences() {
+    clearInterval(ticker);
+    ticker = undefined;
+    const pass = sentences;
+    if (pass.kind === 'running') {
+      const stage = el('p', '', 'presubmit__stage');
+      const done = el('span', '', 'presubmit__stage-done');
+      done.append(el('b', '✓'), doc.createTextNode(lens('stage_rules')));
+      const elapsed = el('span', '', 'presubmit__elapsed');
+      elapsed.setAttribute('aria-hidden', 'true');
+      const tick = () => {
+        elapsed.textContent = lens('stage_elapsed', { s: Math.max(0, Math.floor((Date.now() - pass.startedAt) / 1000)) });
+      };
+      tick();
+      ticker = setInterval(tick, 1000);
+      stage.append(done, el('span', '→', 'presubmit__muted'), el('span', `${lens('stage_sentences')}…`), elapsed);
+      rec.replaceChildren(stage, el('p', lens('stage_keepWriting'), 'presubmit__muted'));
+    } else if (pass.kind === 'ready') {
+      const quiet = previewQuiet(pass.preview, language);
+      rec.replaceChildren(
+        lensOn()
+          ? renderSentenceLens(doc, {
+              preview: pass.preview,
+              language,
+              open: chains,
+              play: playNext,
+              // The submission dialog shows Replay in its header, beside the lens switch.
+              replay: false,
+            })
+          : el('p', quiet ?? '', 'presubmit__muted'),
+      );
+      playNext = false;
+    } else if (pass.kind === 'failed') rec.replaceChildren(el('p', lens('stage_failed'), 'presubmit__muted'));
+    else rec.replaceChildren();
+  }
+  const pass = createSentencePass({
+    recognize: options.recognize,
+    show: (next) => {
+      if (next.kind === 'ready' && sentences.kind !== 'ready') playNext = true;
+      sentences = next;
+      if (next.kind !== 'ready') chains.clear();
+      drawSentences();
+    },
+  });
+  const unlens = onLensChange((on) => {
+    playNext = on;
+    drawSentences();
+  });
+  // Which choice produced each check, so the sentence step asks about the same one.
+  const asked = new WeakMap<SubmissionRuleCheck, SubmitChoice>();
+  const loadChoice = async (choice: SubmitChoice) => {
+    const check = await load(choice);
+    if (check && typeof check === 'object') asked.set(check, choice);
+    return check;
+  };
   let open = false;
   root.addEventListener(
     'toggle',
@@ -563,8 +604,17 @@ export function mountPresubmitCard(
     status.textContent = view ? (view.count?.text ?? view.empty ?? '') : note;
     const details = body.querySelector('details');
     if (details) details.open = open;
+    pass.start(state.kind === 'ready' ? state.check : null, state.kind === 'ready' ? (asked.get(state.check) ?? null) : null);
   }
-  const schedule = createPresubmitSchedule({ load, show });
+  const schedule = createPresubmitSchedule({ load: loadChoice, show });
   show({ kind: 'idle' });
-  return { element: root, update: schedule.request, destroy: schedule.destroy };
+  return {
+    element: root,
+    update: schedule.request,
+    destroy: () => {
+      schedule.destroy();
+      clearInterval(ticker);
+      unlens();
+    },
+  };
 }

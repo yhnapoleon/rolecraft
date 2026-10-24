@@ -383,6 +383,39 @@ class SubmissionRuleChecks:
         submission = unsaved_submission(store, auth, reader, request)
         return self._check(auth, source, reader, submission, "draft")
 
+    def draft_recognition(self, store, auth, request: C.SubmissionRuleCheckRequest) -> dict:
+        """The slower sentence step of a draft check (recognition layer, demo edition): the
+        C2 + C1 + C6 labels of the work this input would submit, or ``enabled: False`` when the
+        layer is off. Read-only, like the check; the rule check itself stays fast."""
+        from career_lab.api.recognition_signal import recognition_enabled, sentence_preview
+
+        if not recognition_enabled():
+            return {"session_id": auth.session_id, "enabled": False, "recognition": None}
+
+        source = ScenarioEvidencePort(store, self.module)
+        reader = self._reader(store, auth, source, source.draft_submission_rules)
+        submission = unsaved_submission(store, auth, reader, request)
+        evaluator = SubmissionEvaluator(
+            FixedWindowReads(reader), work_language=self.module.work_language
+        )
+        _, packages = evaluator.rule_items(auth, submission)
+
+        def title_of(ref):
+            if ref.kind != "material":
+                return None
+            try:
+                return self.module.package.material(ref.object_id, ref.version).title
+            except Exception:  # noqa: BLE001 - a title is a courtesy; the sentence stands without it
+                return None
+
+        return {
+            "session_id": auth.session_id,
+            "enabled": True,
+            "recognition": sentence_preview(packages, self.module.work_language, title_of)
+            if packages
+            else None,
+        }
+
     def saved(self, store, auth, submission_id: str) -> C.SubmissionRuleCheck:
         source = ScenarioEvidencePort(store, self.module)
         reader = self._reader(store, auth, source, source.submission_rules)
@@ -405,7 +438,7 @@ class SubmissionRuleChecks:
         )
         rule_items, packages = evaluator.rule_items(auth, submission)
         runs = source.test_runs(auth, submission.as_of) if packages else ()
-        from career_lab.recognition.judge import preview
+        from career_lab.api.recognition_signal import recognition_enabled
 
         return C.SubmissionRuleCheck(
             basis=basis,
@@ -419,10 +452,11 @@ class SubmissionRuleChecks:
             work_language=self.module.work_language,
             rule_items=rule_items,
             facts=rule_check_facts(packages, runs),
-            # Only the writing-area preview shows sentence labels; a saved submission's check
-            # (feedback page) skips the C1 pass, which costs seconds on CPU.
-            recognition=preview(packages, self.module.work_language)
-            if packages and basis == "draft"
+            # Only the writing-area preview shows sentence labels, and only with the recognition
+            # layer on. The C1 pass costs seconds on CPU, so the check says it is pending and the
+            # sentence step (draft_recognition) computes it after the rule items are on screen.
+            recognition={"status": "pending"}
+            if packages and basis == "draft" and recognition_enabled()
             else None,
         )
 
