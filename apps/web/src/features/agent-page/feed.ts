@@ -35,6 +35,23 @@ const LIST_KINDS: Record<string, NonNullable<AgentEvent['object']>['kind']> = {
   'work_products.list': 'work_product',
 };
 
+/** An engineer's experiment or draft is named by its ticket (as read earlier), a review plainly. */
+function engineerTitle(kind: string, objects: readonly { kind: string; title?: string | null }[]) {
+  const en = locale() === 'en';
+  if (kind === 'experiment' || kind === 'draft' || kind === 'ticket')
+    return (
+      objects.find((o) => o.kind === 'ticket' && o.title)?.title ?? (en ? 'the ticket' : '工单')
+    );
+  if (kind === 'review') return en ? 'the review' : '复核';
+  return undefined;
+}
+
+/** A ticket's title starts with "委托：" / "Ticket: "; in a row the verb already says what it is. */
+function ticketName(kind: string, title: string | undefined) {
+  if (!title || !['ticket', 'experiment', 'draft'].includes(kind)) return title;
+  return title.replace(/^(委托[：:]\s*|Ticket:\s*)/i, '') || title;
+}
+
 export function toEvent(row: AgentActivity): AgentEvent {
   if (row.kind === 'connected') {
     return {
@@ -59,7 +76,7 @@ export function toEvent(row: AgentActivity): AgentEvent {
       kind: KINDS[first.kind] ?? 'other',
       id: first.id,
       version: first.version ?? undefined,
-      title: first.title ?? undefined,
+      title: ticketName(first.kind, first.title ?? engineerTitle(first.kind, row.objects ?? [])),
     };
   return {
     id: String(row.seq),

@@ -134,6 +134,12 @@ def touched(name, arguments, structured):
     material = payload.get("material") if isinstance(payload.get("material"), dict) else None
     if material:
         add(material.get("kind"), material.get("object_id"), material.get("version"))
+    # Reading tickets gives their titles; later rows on the same ticket borrow them.
+    if name == "engineer.tickets.read":
+        rows = page.get("tickets") if isinstance(page.get("tickets"), list) else []
+        for ticket in [*rows, page.get("ticket")]:
+            if isinstance(ticket, dict):
+                add("ticket", ticket.get("id"), title=ticket.get("title"))
     # Engineer writes answer with the experiment or draft they recorded.
     for key, kind in (("reproduction", "experiment"), ("trial", "experiment"), ("draft", "draft")):
         record = page.get(key)

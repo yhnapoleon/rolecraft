@@ -107,6 +107,26 @@ describe('agent activity feed', () => {
       }),
     );
     expect(trial).toMatchObject({ direction: 'to_workspace', object: { kind: 'other', id: 'x7' } });
+    // Without a ticket title read yet, the row still names what it worked on.
+    expect(trial.object?.title).toBe('工单');
+    const titled = toEvent(
+      row(6, {
+        tool: 'engineer.submissions.draft',
+        capability: 'act',
+        objects: [
+          { kind: 'draft', id: 'd1', version: null, title: null },
+          { kind: 'ticket', id: 't1', version: null, title: '委托：住宿报销上限的回答需要排查' },
+        ],
+      }),
+    );
+    expect(titled.object?.title).toBe('住宿报销上限的回答需要排查');
+    const review = toEvent(
+      row(7, {
+        tool: 'engineer.reviews.read',
+        objects: [{ kind: 'review', id: 'r1', version: null, title: null }],
+      }),
+    );
+    expect(review.object?.title).toBe('复核');
     expect([toEvent(row(4)), trial].filter(engineerCall).map((e) => e.tool)).toEqual([
       'engineer.trial',
     ]);
