@@ -166,6 +166,135 @@ html.scrolled body:not([data-view="work"]) .shell-bar {
     color: var(--ink);
   }
 }
+/* The step being looked at, when it is not the current step's own screen (204): a thin ink
+ * outline and the word "Viewing"; the current step keeps its ink stretch of track. */
+/* The step being looked at (204, 208 F6): an eye, the small word "Viewing" and the step's
+ * name; no frame, no ground. The current step keeps its ink underline: the two differ by
+ * "has the underline" and "has the eye". */
+.rc-scale__step[data-viewing] {
+  color: var(--ink);
+  font-weight: 500;
+}
+.rc-scale__viewing {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+.rc-scale__back {
+  flex: none;
+  margin-left: -8px;
+  gap: 5px;
+  white-space: nowrap;
+}
+/* Where the scale is folded, the way back keeps its icon and its name for assistive tech. */
+.shell-bar.fold-scale .rc-scale__back .rc-scale__back-label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+@media (max-width: 1100px) {
+  .rc-scale__back .rc-scale__back-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+/* At phone width the bar's own ‹ back and the page's "Back to …" carry the way back; the
+ * ghost key would push the primary key off the row. */
+@media (max-width: 720px) {
+  .rc-scale__back {
+    display: none;
+  }
+}
+.rc-scale__back-i {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rc-scale__tick {
+  color: var(--good);
+}
+/* The narrow scale's steps, a short list under "2/3". */
+.rc-scale__list {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 50;
+  min-width: 180px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  border-radius: var(--r-panel);
+  background: var(--surface);
+  box-shadow: var(--shadow-float);
+}
+.rc-scale__list-step {
+  appearance: none;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--ink-2);
+  font: 500 14px / 1 var(--sans);
+  text-align: left;
+  cursor: pointer;
+}
+.rc-scale__list-step[data-state="done"] {
+  color: var(--ink-2);
+}
+/* The current step: ink, with a short ink stroke on its left (the wide scale's stretch of track). */
+.rc-scale__list-step[aria-current="step"] {
+  position: relative;
+  color: var(--ink);
+  font-weight: 600;
+}
+.rc-scale__list-step[aria-current="step"]::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 11px;
+  bottom: 11px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--ink);
+}
+.rc-scale__list-step[data-delivered][data-last] {
+  color: var(--good);
+}
+.rc-scale__list-step[data-delivered][data-last]::before {
+  background: var(--good);
+}
+.rc-scale__list-step[data-delivered] .rc-scale__list-step .rc-scale__viewing {
+  margin-left: auto;
+  font-size: 12px;
+}
+.rc-scale__list-n {
+  width: 18px;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+@media (hover: hover) and (pointer: fine) {
+  .rc-scale__list-step:hover {
+    background: var(--fill);
+  }
+}
 .rc-scale__tick {
   width: 12px;
   height: 12px;
@@ -208,7 +337,14 @@ html.scrolled body:not([data-view="work"]) .shell-bar {
   border-radius: inherit;
   background: var(--good);
 }
+.rc-scale__compact-wrap {
+  display: contents;
+}
 .rc-scale__compact {
+  appearance: none;
+  border: 0;
+  background: none;
+  cursor: pointer;
   position: relative;
   display: none;
   padding: 6px 8px 7px;
