@@ -2,10 +2,11 @@
  * Both languages carry the same keys (checked by tsc and copy.test.ts). Figures are
  * never written here: `{name}` placeholders are filled from the published results. */
 import { copyText, type CopyTable, type Language } from '../results-native/localization';
+import { PRODUCT_NAME } from '../../app/product.js';
 
 const zh = {
   title: '系统剖面',
-  docTitle: '系统剖面 · Practice',
+  docTitle: `系统剖面 · ${PRODUCT_NAME}`,
   lead: '给评审看：系统从学员的工作里识别什么、怎样识别，以及哪些实验支撑这些做法。',
   navLabel: '本页内容',
   navPipeline: '一句话走完全链',
@@ -193,7 +194,7 @@ export type Key = keyof typeof zh;
 
 const en: Record<Key, string> = {
   title: 'System profile',
-  docTitle: 'System profile · Practice',
+  docTitle: `System profile · ${PRODUCT_NAME}`,
   lead: 'For reviewers: what the system recognises in a learner’s work, how it does it, and the experiments behind each choice.',
   navLabel: 'On this page',
   navPipeline: 'One sentence, end to end',

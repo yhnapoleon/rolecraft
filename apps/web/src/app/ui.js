@@ -687,7 +687,7 @@ function mountLabPage() {
   const a = current();
   const sessionKey = a && L.nativeWorkspace(a) ? a.id : '';
   const key = `${locale()}|${sessionKey}`;
-  document.title = T('系统剖面 · Practice', 'System profile · Practice');
+  document.title = T(`系统剖面 · ${PRODUCT_NAME}`, `System profile · ${PRODUCT_NAME}`);
   const skip = document.querySelector('.skip-link');
   if (skip) skip.textContent = T('跳到主要内容', 'Skip to content');
   if (labView?.key === key) {
