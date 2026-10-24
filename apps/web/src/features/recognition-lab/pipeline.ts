@@ -125,7 +125,7 @@ function detail(stage: Stage, c: Chain, l: Language) {
         })
         .join('');
       const rule = ruleSentence(l, c.reason);
-      return `<ul class="rc-probs" aria-label="${t('st_recog')}">${rows}</ul><p>${t('recog_detail')}</p><p>${rule ? t('recog_rule', { rule }) : t('recog_pairs')}</p>${
+      return `<ul class="rc-lab-probs" aria-label="${t('st_recog')}">${rows}</ul><p>${t('recog_detail')}</p><p>${rule ? t('recog_rule', { rule }) : t('recog_pairs')}</p>${
         c.fallback ? `<p class="rc-fallback">${t('fallbackNote')}</p>` : ''
       }`;
     }

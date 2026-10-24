@@ -1061,14 +1061,14 @@ function entryHtml(e: Entry, ctx: Ctx) {
   const steps = (['q', 'how', 'found', 'use'] as const)
     .map(
       (step) =>
-        `<div class="rc-step" data-step="${step}"><dt>${t(step)}</dt><dd>${rich(STORY_COPY[ctx.l][key(step)], values)}</dd></div>`,
+        `<div class="rc-lab-step" data-step="${step}"><dt>${t(step)}</dt><dd>${rich(STORY_COPY[ctx.l][key(step)], values)}</dd></div>`,
     )
     .join('');
   const charts = e.charts
     .map((chart) => chart(ctx))
     .filter((html): html is string => !!html)
     .join('');
-  return `<article class="rc-story-entry" id="rc-${e.id}" data-tag="${e.tag ?? ''}">${head}<div class="rc-story-body"><dl class="rc-steps">${steps}</dl><div class="rc-story-charts">${charts}</div></div></article>`;
+  return `<article class="rc-story-entry" id="rc-${e.id}" data-tag="${e.tag ?? ''}">${head}<div class="rc-story-body"><dl class="rc-lab-steps">${steps}</dl><div class="rc-story-charts">${charts}</div></div></article>`;
 }
 
 export function storyHtml(results: Results, language: Language, width: number) {

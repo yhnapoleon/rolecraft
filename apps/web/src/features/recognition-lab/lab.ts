@@ -43,7 +43,7 @@ function skeleton(l: Language) {
     `<button type="button" class="rc-toc-link" data-rc-jump="${target}">${label}</button>`;
   return `<header class="rc-head">
       <h1 class="title-xl">${t('title')}</h1>
-      <p class="rc-lead">${t('lead')}</p>
+      <p class="rc-lab-lead">${t('lead')}</p>
       <nav class="rc-toc" aria-label="${t('navLabel')}">${jump('rc-pipe', t('navPipeline'))}${jump('rc-register', t('navRegister'))}${jump('rc-story', t('navStory'))}</nav>
     </header>
     <section class="rc-section" id="rc-pipe" aria-labelledby="rc-pipe-title">

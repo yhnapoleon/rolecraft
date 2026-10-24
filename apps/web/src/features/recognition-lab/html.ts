@@ -8,6 +8,6 @@ export const esc = (v: string) =>
 /** Escaped copy with each `{figure}` set in tabular weight. */
 export function rich(template: string, values: Record<string, string>) {
   return esc(template).replace(/\{(\w+)\}/g, (_, name: string) =>
-    values[name] == null ? '' : `<b class="rc-num">${esc(values[name])}</b>`,
+    values[name] == null ? '' : `<b class="rc-lab-num">${esc(values[name])}</b>`,
   );
 }
