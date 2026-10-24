@@ -164,8 +164,8 @@ const memoryOf = (key: string) => {
 };
 /** A redraw of the rail remounts the thread; within this long it is the same look continuing. */
 const RESUME_MS = 4000;
-/** Space left above a long reply when following lands on its start: a sliver of the question. */
-const FOLLOW_GAP = 24;
+/** Space under the header when following lands on a long reply's question (or the reply). */
+const FOLLOW_GAP = 16;
 
 const reducedMotion = (doc: Document) =>
   !!doc.defaultView?.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
@@ -416,16 +416,21 @@ export function mount(
   >();
   const scroller = () => (historyOnly ? (root.parentElement ?? root) : (list as HTMLElement));
   /** Where following the conversation lands: the end, or, when the latest reply is taller than
-   * the view, that reply's start just under the header, so the question and the first sentence
-   * are what you see. */
+   * the view, its question in full just under the header with the reply's start below it. A
+   * question taller than a third of the view gives way to the reply's start, scrolled fully out
+   * of sight rather than left as a sliver. */
   const followTop = (box: HTMLElement) => {
     const last = list.lastElementChild;
     const reply = last?.querySelector<HTMLElement>('.rc-msg--them');
     if (!reply || last?.querySelector('.rc-typing')) return box.scrollHeight;
-    const top = box.scrollTop + reply.getBoundingClientRect().top - box.getBoundingClientRect().top;
-    return reply.offsetHeight > box.clientHeight - 2 * FOLLOW_GAP
-      ? Math.max(0, top - FOLLOW_GAP)
-      : box.scrollHeight;
+    if (reply.offsetHeight <= box.clientHeight - 2 * FOLLOW_GAP) return box.scrollHeight;
+    const boxTop = box.getBoundingClientRect().top;
+    const at = (node: HTMLElement) => box.scrollTop + node.getBoundingClientRect().top - boxTop;
+    const question = last?.querySelector<HTMLElement>('.rc-msg--mine');
+    if (question && question.offsetHeight <= box.clientHeight / 3)
+      return Math.max(0, at(question) - FOLLOW_GAP);
+    const questionEnd = question ? at(question) + question.offsetHeight : 0;
+    return Math.max(0, questionEnd, at(reply) - FOLLOW_GAP);
   };
   /** Scrolls made here, so the scroll listener does not mistake them for your own reading. */
   let placingUntil = 0;
