@@ -53,8 +53,9 @@ for (const language of ['zh', 'en']) {
         `document.querySelectorAll('.rc-roles__reply').length > ${count}`,
         60000,
       );
+      // Each reply quoted by rules says so in its bubble (the grey mark follows the words).
       assert.ok(
-        await browser.ev(`document.querySelectorAll('.rc-roles__details').length > ${count}`),
+        await browser.ev(`document.querySelectorAll('.rc-roles__status').length > ${count}`),
       );
       const marker = language === 'zh' ? '等待模型接入' : 'Awaiting model connection';
       assert.ok(
@@ -149,11 +150,9 @@ for (const language of ['zh', 'en']) {
     await browser.click('[data-action="open-rail"]');
     await waitFor(
       browser,
-      `!!document.querySelector('.rc-roles__details summary') && document.querySelector('.rc-roles__details summary').offsetParent !== null`,
+      `!!document.querySelector('.rc-roles__more') && document.querySelector('.rc-roles__more').offsetParent !== null`,
     );
-    await browser.ev(
-      `Array.from(document.querySelectorAll('.rc-roles__details summary')).at(-1).focus()`,
-    );
+    await browser.ev(`Array.from(document.querySelectorAll('.rc-roles__more')).at(-1).focus()`);
     await browser.send('Input.dispatchKeyEvent', {
       type: 'keyDown',
       text: '\r',
@@ -171,7 +170,9 @@ for (const language of ['zh', 'en']) {
       nativeVirtualKeyCode: 13,
     });
     await delay(200);
-    assert.ok(await browser.ev(`!!document.querySelector('.rc-roles__details[open]')`));
+    assert.ok(
+      await browser.ev(`!!document.querySelector('.rc-roles__more[aria-expanded="true"]')`),
+    );
     assert.equal(
       await browser.ev(
         'document.documentElement.scrollWidth > document.documentElement.clientWidth',
@@ -180,8 +181,8 @@ for (const language of ['zh', 'en']) {
     );
     await waitFor(browser, `(${displayCount}).then(count => count === 1)`, 15000);
     assert.equal(
-      await browser.ev('document.activeElement.tagName'),
-      'SUMMARY',
+      await browser.ev(`document.activeElement?.classList.contains('rc-roles__more')`),
+      true,
       'Disclosure updates retain keyboard focus',
     );
     await browser.shot(`${out}/${language}-narrow-expanded.jpg`);

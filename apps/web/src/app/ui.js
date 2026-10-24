@@ -62,7 +62,8 @@ import {
   caseShown,
 } from './vocab.js';
 import { modelChipHtml, modelPartsHtml, modelStatus, modelWaitHtml } from './model-status';
-import { presentReply } from '../features/roles-native/reply-presentation';
+import { awaitingRoles, isLocalReply, previewLine } from '../features/roles-native/chat-model';
+import { requestRefs } from '../features/roles-native/v4-data';
 import { aboutFacts } from './about-facts';
 import { canonicalPurpose } from '../features/workspace/native-v4/form-values';
 import { workspaceActionMessage } from '../features/workspace/native-v4/messages';
@@ -742,8 +743,9 @@ function afterRender() {
   document.querySelectorAll('.segmented').forEach(layoutSegmented);
   const body = document.getElementById('editor-body');
   if (body) autoGrow(body);
+  // A native thread keeps its own place (it follows new messages only while you are at the end).
   document.querySelectorAll('.thread').forEach((t) => {
-    t.scrollTop = t.scrollHeight;
+    if (!t.closest('[data-v4-region]')) t.scrollTop = t.scrollHeight;
   });
   updateSave();
   syncPanels();
@@ -1148,6 +1150,7 @@ function wsToolbar(a) {
       ? `<button type="button" class="conn warn" data-action="live-retry" title="${esc(T('上一个操作没有得到确认，点击用原请求重试', 'The last action was not confirmed. Retry the same request.'))}">${icon('refresh', 'i-sm')}${T('待确认', 'Unconfirmed')}</button>`
       : '';
   const typing = typingRole(a);
+  const replying = replyingRoles(a);
   const noteRoles = new Set((ui.notesCache || []).map((x) => x.role));
   const back =
     ui.route === 'work'
@@ -1169,7 +1172,7 @@ function wsToolbar(a) {
     ${st !== 'active' ? `<span class="state-chip ${st}">${sessionOf(a)?.v2ReadOnly ? T('旧版 · 只读', 'Earlier version · Read-only') : st === 'paused' ? T('已暂停', 'Paused') : T('已交付', 'Submitted')}</span>` : ''}
     ${conn}
     <div class="spacer"></div>
-    <button type="button" class="team-btn" data-action="open-rail" aria-label="${esc(T('团队', 'Team'))}">${ROLES.map((r) => avatar(r, 'sm', { typing: typing === r, dot: unread(a, r) > 0 || noteRoles.has(r) })).join('')}</button>
+    <button type="button" class="team-btn" data-action="open-rail" aria-label="${esc(T('团队', 'Team'))}">${ROLES.map((r) => avatar(r, 'sm', { typing: typing === r || replying.has(r), dot: unread(a, r) > 0 || noteRoles.has(r) })).join('')}</button>
     ${modelChip(a)}
     ${langControl()}
     <div class="menu-wrap">${btn(icon('more'), 'menu', 'icon quiet', `data-menu="more" aria-haspopup="menu" aria-expanded="${ui.menu === 'more'}" aria-label="${esc(T('更多', 'More'))}"`)}${ui.menu === 'more' ? moreMenu(a) : ''}</div>
@@ -2221,9 +2224,7 @@ function wsRail(a) {
 }
 function railTeam(a, t) {
   const typing = typingRole(a);
-  // Colleagues answer from local sources until a model is connected: a grey mark, not words.
-  const roles = modelStatusOf(a)?.parts.find((part) => part.key === 'roles');
-  const waiting = !!roles && roles.state !== 'model';
+  const replying = replyingRoles(a);
   const notes = (ui.notesCache || []).filter(
     (n) => !t || ui.scopeAll || !n.taskId || n.taskId === t.id,
   );
@@ -2232,24 +2233,37 @@ function railTeam(a, t) {
     <ul class="people">${ROLES.map((r) => {
       const last = (a.conversations[r] || []).filter((m) => m.role !== 'user').at(-1);
       const n = unread(a, r);
-      const line =
-        typing === r
-          ? `<span class="typing">${T('正在输入', 'typing')}<i></i><i></i><i></i></span>`
-          : last
-            ? teamLine(last.text, waiting)
-            : esc(KNOWS(r));
-      return `<li><button type="button" class="person ${n ? 'unread' : ''}" data-action="chat" data-role="${r}">${avatar(r, 'md', { typing: typing === r })}<span class="grow"><span class="person-name">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span><span class="person-line">${line}</span></span>${n ? `<span class="count-badge">${n}</span>` : ''}</button></li>`;
+      const waits = typing === r || replying.has(r);
+      const line = waits
+        ? `<span class="person-replying">${T('正在回复…', 'Replying…')}</span>`
+        : (last && teamLine(last.text)) || esc(KNOWS(r));
+      return `<li><button type="button" class="person ${n ? 'unread' : ''}" data-action="chat" data-role="${r}">${avatar(r, 'md', { typing: waits })}<span class="grow"><span class="person-name">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span><span class="person-line">${line}</span></span>${n ? `<span class="count-badge" aria-label="${esc(T(`${n} 条新消息`, n === 1 ? '1 new message' : `${n} new messages`))}">${n}</span>` : ''}</button></li>`;
     }).join('')}
       <li><button type="button" class="person mine" data-action="rail-tab" data-tab="agent">${agentMark('md')}<span class="grow"><span class="person-name">${T('我的 Agent', 'My agent')}<small>${T('你自己的工具', 'Your own tool')}</small></span><span class="person-line">${esc(agentLine(a))}</span></span></button></li>
     </ul>
   </div>`;
 }
-// The last reply as its first screen shows it (a quoted fact, not the local reference's preamble),
-// after the grey mark when colleagues wait for a model.
-function teamLine(text, waiting) {
-  const shown = presentReply(text, waiting ? { generationMode: 'local' } : {});
-  const line = shown.summary.replace(/^\s*(?:#{1,6}|[-*+]|\d+\.)\s+/gm, '').replace(/\s+/g, ' ');
-  return `${waiting ? modelWaitHtml(shown.waitingNote) : ''}<span${zhAttr(line)}>${esc(line)}</span>`;
+// The first sentence of the last reply, without Markdown, source tags or the local reference's
+// lines about itself; a reply quoted by rules keeps the grey mark. Empty when nothing fits.
+function teamLine(text) {
+  const line = previewLine(text);
+  if (!line) return '';
+  return `${isLocalReply(text) ? modelWaitHtml() : ''}<span${zhAttr(line)}>${esc(line)}</span>`;
+}
+// Colleagues still answering a question sent from this browser (native practices): the request
+// is pending on the server and its reply is not in the conversation yet.
+function replyingRoles(a) {
+  const host = L.v4Host(a);
+  if (!host?.pendingRequests) return new Set();
+  try {
+    const replied = new Set(
+      ROLES.flatMap((r) => (a.conversations[r] || []).map((m) => m.traceId).filter(Boolean)),
+    );
+    const ids = awaitingRoles(host.pendingRequests(), requestRefs(host, 'roles'), replied);
+    return new Set([...ids].map((id) => ROLE_OF[id]).filter(Boolean));
+  } catch (_) {
+    return new Set();
+  }
 }
 function agentLine(a) {
   const exp = (a.exports || []).length;
@@ -2270,17 +2284,18 @@ function railChat(a, role) {
       '')
     : s?.inputs.messages[ROLE_ID[role]] || '';
   const failed = s?.failedTurn && ROLE_OF[s.failedTurn.body.role_id] === role;
+  const quote = ui.chatQuotes[quoteKey(a, role)];
+  // What travels with the next message sits on the composer as a card you can take off again.
+  const attached = quote
+    ? `<div class="chat-quote" data-quote="${esc(quote)}">${icon('flask', 'i-sm chat-quote-i')}<span class="chat-quote-body"><span class="chat-quote-label">${T('测试记录 · 随这条消息发出', 'Test run · sent with your message')}</span><span class="chat-quote-text">${esc(quote)}</span></span><button type="button" class="btn icon quiet small" data-action="drop-quote" aria-label="${esc(T('移除这段引用', 'Remove this quote'))}">${icon('x', 'i-xs')}</button></div>`
+    : '';
+  const tools = `${a.tests.length ? `<button type="button" class="composer-tool${quote ? ' on' : ''}" data-action="prefill-run" aria-label="${esc(T('附上最近一次测试', 'Attach the latest test run'))}" title="${esc(T('附上最近一次测试', 'Attach the latest test run'))}">${icon('flask', 'i-sm')}</button>` : ''}${x ? `<button type="button" class="composer-tool" data-action="prefill-artifact" aria-label="${esc(T('分享这份作品', 'Share this work'))}" title="${esc(T('分享这份作品', 'Share this work'))}">${icon('doc', 'i-sm')}</button>` : ''}`;
   return `<div class="chat who-${role}" ${native ? 'data-v4-region="roles"' : ''}>
-    <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}${PEOPLE[role].titled ? '' : `<small>${ROLE_TITLE(role)}</small>`}</p><p class="chat-knows">${esc(KNOWS(role))}</p></div></header>
+    <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}</p><p class="chat-knows">${esc(`${ROLE_TITLE(role)} · ${KNOWS(role)}`)}</p></div></header>
     <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${native ? '' : `${msgs.length ? msgs.map((m) => msgHtml(a, role, m)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(`${PEOPLE[role].name}正在输入`, `${PEOPLE[role].subject} is typing`))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}`}</div>
-    <div class="chat-context">${t ? `<span class="ctx" title="${esc(T('这条对话会记在这件事下', 'This conversation is filed under this task'))}">${icon('note', 'i-xs')}<span>${esc(taskTitle(t))}</span></span>` : ''}${x ? `<button type="button" class="ctx add" data-action="prefill-artifact">${icon('plus', 'i-xs')}${T('附上作品', 'Attach work')}</button>` : ''}${a.tests.length ? `<button type="button" class="ctx add" data-action="prefill-run">${icon('plus', 'i-xs')}${T('附上测试', 'Attach a test')}</button>` : ''}</div>
-    ${(() => {
-      const q = ui.chatQuotes[quoteKey(a, role)];
-      return q
-        ? `<div class="chat-quote" data-quote="${esc(q)}"><span class="chat-quote-label">${icon('quote', 'i-xs')}${T('一起发送的测试引用', 'Test quote sent with your message')}</span><p class="chat-quote-text">${esc(q)}</p><button type="button" class="btn icon quiet small" data-action="drop-quote" aria-label="${esc(T('移除这段引用', 'Remove this quote'))}">${icon('x', 'i-xs')}</button></div>`
-        : '';
-    })()}
-    <form class="composer" data-form="chat"><label class="sr-only" for="chat-input">${esc(T(`给 ${PEOPLE[role].name} 的消息`, `Message to ${PEOPLE[role].ref}`))}</label><textarea id="chat-input" name="text" rows="2" maxlength="4000" required placeholder="${esc(ui.chatQuotes[quoteKey(a, role)] ? T('你想就这次测试确认什么？', 'What do you want to check about this test?') : T(`写给 ${PEOPLE[role].name}…`, `Message ${PEOPLE[role].ref}…`))}">${esc(question)}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></form>
+    ${t ? `<div class="chat-context"><span class="ctx" title="${esc(T('这条对话会记在这件事下', 'This conversation is filed under this task'))}">${icon('note', 'i-xs')}<span>${esc(taskTitle(t))}</span></span></div>` : ''}
+    <form class="composer" data-form="chat">${attached}<div class="composer-line">${tools ? `<span class="composer-tools">${tools}</span>` : ''}<label class="sr-only" for="chat-input">${esc(T(`给 ${PEOPLE[role].name} 的消息`, `Message to ${PEOPLE[role].ref}`))}</label><textarea id="chat-input" name="text" rows="1" maxlength="4000" required enterkeyhint="send" aria-describedby="chat-hint" placeholder="${esc(quote ? T('你想就这次测试确认什么？', 'What do you want to check about this test?') : T(`写给 ${PEOPLE[role].name}…`, `Message ${PEOPLE[role].ref}…`))}">${esc(question)}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></div></form>
+    <p class="composer-hint" id="chat-hint">${T('回车发送 · Shift+回车换行', 'Enter to send · Shift+Enter for a new line')}</p>
   </div>`;
 }
 // The server's local provider answers with a fact list, not a reply. Label it so nobody mistakes it for the colleague.
@@ -4655,8 +4670,8 @@ async function act(el) {
         sharing?.querySelector('select,button')?.focus();
         notify(
           T(
-            '请在作品下方选择确切版本和接收同事后分享。',
-            'Choose an exact version and colleague below the work to share it.',
+            '在作品下方选好版本和同事后分享，对方看到的是这一确切版本。',
+            'Choose a version and colleague below the work to share it. They will see this exact version.',
           ),
         );
         break;
@@ -6006,6 +6021,17 @@ document.addEventListener('keydown', (e) => {
   ) {
     e.preventDefault();
     e.target.form.requestSubmit();
+  } else if (
+    e.target.id === 'chat-input' &&
+    e.key === 'Enter' &&
+    !e.shiftKey &&
+    !e.altKey &&
+    // Choosing a word in an input method also presses Enter; it never sends.
+    !e.isComposing &&
+    e.keyCode !== 229
+  ) {
+    e.preventDefault();
+    if (e.target.value.trim()) e.target.form.requestSubmit();
   }
   if (
     (e.metaKey || e.ctrlKey) &&
