@@ -132,6 +132,8 @@ import {
   afterShellRender,
   dismissToasts,
   dispatchRegistered,
+  everEngineer,
+  hatOf,
   installShell,
   isRegisteredRoute,
   onRouteRegistered,
@@ -139,8 +141,19 @@ import {
   registeredRoute,
   registeredRouteNames,
   registerStage,
+  setHat,
   showToast,
+  stageOf,
 } from '../shell';
+import {
+  entryHtml,
+  fadeIn,
+  homeHtml,
+  leaveForBrief,
+  resetSeedOrder,
+  seedOrder,
+  walkIn,
+} from '../screens/home/home';
 
 const L = window.PracticeLive;
 const E = L.engine;
@@ -218,6 +231,8 @@ const ui = {
   compare: false,
   previous: {},
   arriving: false,
+  // "Take this on" pressed, the practice opening: the brief holds (screens/home walk-in).
+  walkIn: false,
   landing: false,
   editPending: null,
   previewWorkId: null,
@@ -976,47 +991,45 @@ function priPick(id, p, title, change = 'priority') {
 }
 
 /* ---------- 1. jobs ---------- */
+// Home: the manager's first sentence, the desk, two rows of jobs (screens/home). A practice
+// under way shows first, as a continue slip with the hat on and its stage.
 function renderCareers() {
   // A practice in a hidden situation (reopened with a continue code) is not offered here.
   const a = current() && caseShown(current().scenarioId) ? current() : null;
-  const t = a && a.tasks.find((x) => x.id === a.selectedTaskId);
-  const resume = a
-    ? `<section class="resume"><span class="resume-icon">${icon('note')}</span><div class="grow"><p class="resume-title">${esc(CASE(a.scenarioId).title)}</p><p class="resume-sub">${statusOf(a) === 'submitted' ? T('已交付，可以看结果', 'Submitted. The result is ready to read.') : t ? esc(T(`停在「${taskTitle(t)}」`, `Stopped at “${taskTitle(t)}”`)) : T('还没开始具体的事', 'Nothing started yet')}</p></div>${btn(statusOf(a) === 'submitted' ? T('看结果', 'See the result') : T('继续', 'Continue'), statusOf(a) === 'submitted' ? 'review-attempt' : 'resume', 'primary', `data-id="${a.id}"`)}</section>`
-    : '';
-  const preview = `<div class="mini-board" aria-hidden="true">
-    <div class="mb-cols">${[
-      ['first', []],
-      ['next', SEED_KEYS],
-      ['later', []],
-    ]
-      .map(
-        ([p, keys]) =>
-          `<div class="mb-col"><p class="mb-head">${priMark(p)}${PRI(p)}</p>${keys.map((k) => `<div class="mb-card"><span class="mb-status">${statusMark('open')}</span><span>${esc(seedText(k))}</span></div>`).join('') || '<div class="mb-empty"></div>'}</div>`,
-      )
-      .join('')}</div>
-    <div class="mb-side"><p class="mb-head">${T('团队', 'Team')}</p>${ROLES.map((r) => `<div class="mb-person">${avatar(r, 'xs')}<span>${PEOPLE[r].name}</span>${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</div>`).join('')}<div class="mb-person">${agentMark('xs')}<span>${T('我的 Agent', 'My agent')}</span></div></div>
-  </div>`;
-  return `${topbar(wordmark())}
-    <main id="main" class="page careers" tabindex="-1">
-      <header class="hero">
-        <h1 class="display">${T('你想先练哪份工作？', 'Which job do you want to practise?')}</h1>
-        <p class="lede">${T('接手一件真实的工作。可以犯错，可以求助，也可以重来。', 'Take on a real piece of work. Get it wrong, ask for help, try again.')}</p>
-        ${recovery.homeLink()}
-      </header>
-      ${resume}
-      <div class="career-grid">
-        <article class="career open">
-          <div class="career-art">${preview}</div>
-          <div class="career-body">
-            <h2 class="career-name"><span style="view-transition-name: career-pm">${T('AI 产品经理', 'AI Product Manager')}</span></h2>
-            <p>${T('判断一个 AI 功能该不该上线、先给谁用、怎样保障，并为这个决定负责。', 'Decide whether an AI feature should launch, who gets it first and how it stays safe, then own the call.')}</p>
-            <p class="meta">${T('3 个情境，每次 15–30 分钟。上面是你会用到的工作板：三件起始事项和三位同事。', '3 situations, 15–30 min each. Above is the board you will work on: three starting tasks and three colleagues.')}</p>
-            <div class="career-cta">${btn(a ? T('看看所有工作', 'See all work') : T('开始', 'Start'), 'open-career', a ? '' : 'primary large')}</div>
-          </div>
-        </article>
-        ${engineerCareerCard()}
-      </div>
-    </main>`;
+  return homeHtml({
+    topbar: topbar(wordmark()),
+    quote: CASE('pilot').quote,
+    capacity: worldOf('pilot').capacity,
+    seeds: SEED_KEYS.map(seedText),
+    resume: a ? continueInfo(a) : null,
+    engineerRow: engineerCareerCard(),
+    continueCode: recovery.homeLink(),
+  });
+}
+// The continue slip's words: the hat this practice is worn with and, for each hat worn, the step
+// its scale is on (shell stage.ts; the engineer's scale is 201's).
+const STEP_STATUS = {
+  investigate: ['调查中', 'Investigating'],
+  decide: ['决定中', 'Deciding'],
+  delivered: ['已交付', 'Delivered'],
+};
+function stepWords(hat, a) {
+  const steps = stageOf(hat, a)?.steps || [];
+  const at = steps.find((x) => x.state === 'current') || steps.filter((x) => x.state === 'done').at(-1);
+  const words = at && (STEP_STATUS[at.id] || at.label);
+  if (words) return T(words[0], words[1]);
+  return hat === 'engineer' ? T('委托进行中', 'Ticket in progress') : '';
+}
+function continueInfo(a) {
+  const submitted = statusOf(a) === 'submitted';
+  return {
+    id: a.id,
+    title: CASE(a.scenarioId).title,
+    hat: hatOf(a.id),
+    stage: submitted ? T('已交付', 'Delivered') : stepWords('pm', a),
+    submitted,
+    engineer: everEngineer(a.id) ? { stage: stepWords('engineer', a) } : null,
+  };
 }
 
 /* The engineer job, open: start a new practice with the engineer's hat on, or take the ticket in
@@ -1033,67 +1046,68 @@ function engineerCareerCard() {
 }
 
 /* ---------- 2. PM entry ---------- */
+// The job page: one brief on paper (readouts, the three starting tasks, Take this on), the
+// variants in one line under it, then your own business, continue codes and past practice.
 function renderEntry() {
   const last = (id) => state.attempts.filter((a) => a.scenarioId === id).at(-1);
+  const open = (x) => (x && statusOf(x) !== 'submitted' ? x.id : null);
   const attempts = state.attempts.filter((x) => caseShown(x.scenarioId)).reverse();
-  return `${topbar(backBtn('home', T('岗位', 'Jobs')))}
-    <main id="main" class="page entry" tabindex="-1">
-      <header class="entry-head">
-        <h1 class="title-xl"><span style="view-transition-name: career-pm">${T('AI 产品经理', 'AI Product Manager')}</span></h1>
-        <p class="lede">${T('你负责判断一个 AI 功能能不能上线、先给谁用、怎样保障，并为这个决定负责。', 'You decide whether an AI feature is ready, who gets it first and how it stays safe, and you own that call.')}</p>
-      </header>
-      ${caseHero('pilot', last('pilot'))}
-      <section class="block">
-        <h2 class="section-title">${T('同样的责任，换一个条件', 'Same job, one condition changed')}</h2>
-        <div class="variants">${['urgent', 'capacity'].map((id) => variantCard(id, last(id))).join('')}</div>
-      </section>
-      <section class="block">${intakeBlock()}</section>
-      ${recovery.entry()}
-      ${attempts.length ? practiceList(attempts) : ''}
-    </main>`;
+  const c = CASE('pilot');
+  const base = worldOf('pilot');
+  return entryHtml({
+    topbar: topbar(backBtn('home', T('岗位', 'Jobs'))),
+    caseId: 'pilot',
+    title: c.title,
+    quote: c.quote,
+    minutes: c.minutes,
+    readouts: caseReadouts('pilot'),
+    seeds: SEED_KEYS.map(seedText),
+    existingId: open(last('pilot')),
+    holding: ui.walkIn,
+    variants: [
+      {
+        id: 'urgent',
+        label: T('上线提前到第', 'Launch moves up to day'),
+        value: worldOf('urgent').deadline,
+        was: String(base.deadline),
+        openId: open(last('urgent')),
+      },
+      {
+        id: 'capacity',
+        label: T('容量只剩', 'Seats drop to'),
+        value: worldOf('capacity').capacity,
+        was: String(base.capacity),
+        openId: open(last('capacity')),
+      },
+    ].filter((v) => caseShown(v.id)),
+    after: `<section class="block">${intakeBlock()}</section>${recovery.entry()}${attempts.length ? practiceList(attempts) : ''}`,
+  });
 }
 const worldOf = (id) => {
   const s = scen(id);
   return { capacity: s.capacity, devDays: 3, deadline: s.deadline };
 };
 // What the situation asks for, as numbers with names. A variant marks the one that changed.
-function caseConditions(id) {
+function caseReadouts(id) {
   const w = worldOf(id);
   const base = worldOf('pilot');
-  const item = (value, label, was) =>
-    `<div class="cond ${was ? 'changed' : ''}"><span class="cond-val">${value}</span><span class="cond-label">${label}</span>${was ? `<span class="cond-was">${T('通常是', 'usually')} ${was}</span>` : ''}</div>`;
-  return `<div class="conds big">
-    ${item(T(w.capacity + ' 人', w.capacity + ' seats'), T('试点容量', 'Capacity'), w.capacity !== base.capacity ? T(base.capacity + ' 人', String(base.capacity)) : '')}
-    ${item(T(w.devDays + ' 人日', w.devDays + ' person-days'), T('可用开发', 'Engineering'))}
-    ${item(T('第 ' + w.deadline + ' 天', 'Day ' + w.deadline), T('期望上线', 'Launch target'), w.deadline !== base.deadline ? T('第 ' + base.deadline + ' 天', 'day ' + base.deadline) : '')}
-    ${item(T(`${INDEX_DELAY_HOURS} 小时`, `${INDEX_DELAY_HOURS} h`), T('索引最长滞后', 'Max index lag'))}
-  </div>`;
-}
-function caseHero(id, existing) {
-  const c = CASE(id);
-  const go1 = existing && statusOf(existing) !== 'submitted';
-  return `<article class="case-hero" style="view-transition-name: case-surface">
-    <div class="case-main">
-      <h2 class="case-title"><span style="view-transition-name: case-title">${esc(c.title)}</span></h2>
-      ${letter('manager', c.quote)}
-      ${caseConditions(id)}
-      <div class="seeds"><p class="seeds-cap">${T('你会接手这三件事，可以先排个优先级', 'You will pick up these three tasks; rank them now if you like')}</p>${SEED_KEYS.map((k, i) => `<div class="seed" style="view-transition-name: seed-${i}">${priPick(id + '-' + i, 'next', seedText(k), 'triage')}<span>${esc(seedText(k))}</span></div>`).join('')}</div>
-      <footer class="case-foot"><span class="meta">${T(c.minutes + '，没有倒计时，可随时暂停', c.minutes + ', no countdown, pause any time')}</span><span class="spacer"></span>${go1 ? btn(T('重新开始一次', 'Start over'), 'take-case', 'quiet', `data-case="${id}"`) + btn(T('继续', 'Continue'), 'resume-attempt', 'primary', `data-id="${existing.id}"`) : btn(T('接手这件工作', 'Take this on'), 'take-case', 'primary', `data-case="${id}"`)}</footer>
-    </div>
-  </article>`;
-}
-function variantCard(id, existing) {
-  const c = CASE(id);
-  const open = existing && statusOf(existing) !== 'submitted';
-  return `<article class="variant">
-    <div class="variant-body">
-      <p class="variant-change">${icon('bolt', 'i-sm')}${esc(c.change)}</p>
-      <h3>${esc(c.title)}</h3>
-      <figure class="variant-quote">${avatar('manager', 'xs')}<blockquote>${esc(c.quote)}</blockquote></figure>
-      ${caseConditions(id)}
-      <div class="variant-foot">${open ? btn(T('继续', 'Continue'), 'resume-attempt', 'small', `data-id="${existing.id}"`) : ''}${btn(open ? T('再开一次', 'New attempt') : T('开始', 'Start'), 'take-case', open ? 'small quiet' : 'small', `data-case="${id}"`)}</div>
-    </div>
-  </article>`;
+  return [
+    {
+      label: T('试点容量', 'Capacity'),
+      value: w.capacity,
+      unit: T('人', 'seats'),
+      was: w.capacity !== base.capacity ? String(base.capacity) : '',
+    },
+    { label: T('可用开发', 'Engineering'), value: w.devDays, unit: T('人日', 'person-days') },
+    {
+      label: T('期望上线', 'Launch target'),
+      pre: T('第', 'Day'),
+      value: w.deadline,
+      unit: T('天', ''),
+      was: w.deadline !== base.deadline ? String(base.deadline) : '',
+    },
+    { label: T('索引最长滞后', 'Max index lag'), value: INDEX_DELAY_HOURS, unit: T('小时', 'h') },
+  ];
 }
 function matchIntake(text) {
   const raw = String(text || '').trim();
@@ -4205,16 +4219,10 @@ function resetAttemptUi() {
     practice: {},
   });
 }
-/** The starting order the person set for a situation. A button outside the situation's own card
- * (for example "practise the knowledge assistant launch instead" under "Practise with your own
- * business") uses the order set on that situation's card on the same page. */
-function startingOrder(caseId, el) {
-  const card =
-    el.closest('.case-hero, .variant') ||
-    [...document.querySelectorAll('.case-hero, .variant')].find(
-      (node) => node.querySelector('[data-action="take-case"]')?.dataset.case === caseId,
-    );
-  return card ? [...card.querySelectorAll('select[data-change="triage"]')].map((x) => x.value) : [];
+/** The starting order the person set on the brief (screens/home keeps it). Only the knowledge
+ * assistant brief carries the three pickers; a variant starts with all three up next. */
+function startingOrder(caseId) {
+  return caseId === 'pilot' ? seedOrder() : [];
 }
 async function startAttempt(caseId, opts) {
   if (!caseShown(caseId))
@@ -4238,16 +4246,41 @@ function freshAttemptUi(a) {
   persist();
   return a;
 }
-async function enterWork(fn) {
-  await fn();
-  withTransition(() => {
+// Into the board. Taking on the brief walks in (screens/home walk-in: the slips lift, the key
+// waits, then they fly to their cards); any other way in swaps the page with the view transition,
+// or fades it in when motion is reduced.
+async function enterWork(fn, trigger) {
+  const show = () => {
     if (sheet.open) closeSheet(true);
     ui.route = 'work';
     ui.routeId = null;
     history.pushState(null, '', hashOf('work'));
     render();
     window.scrollTo(0, 0);
-  });
+  };
+  if (trigger) {
+    if (ui.walkIn) return;
+    await walkIn({
+      trigger,
+      hold: (on) => {
+        ui.walkIn = on;
+        if (ui.route === 'pm') render();
+      },
+      open: async () => {
+        await fn();
+        // The walk-in is the entrance; the board's own arrival would play under it.
+        ui.arriving = false;
+        resetSeedOrder();
+      },
+      show,
+    });
+    return;
+  }
+  await fn();
+  if (reduceMotion.matches) {
+    show();
+    fadeIn();
+  } else withTransition(show);
 }
 async function runQuestion(question, expectation) {
   if (ui.busy) return;
@@ -4689,8 +4722,10 @@ async function act(el, ev = new Event('rc-action')) {
     case 'home':
       go('', { transition: true });
       break;
+    // Home to the brief: the page fades out, the brief rises in (screens/home).
     case 'open-career':
-      go('pm', { transition: true });
+      await leaveForBrief();
+      go('pm');
       break;
     // The engineer card: a new practice with the engineer's hat on, starting from its ticket.
     case 'engineer-start': {
@@ -4699,6 +4734,7 @@ async function act(el, ev = new Event('rc-action')) {
       try {
         const na = await startAttempt('pilot', {});
         const ticket = await openEngineerTicket(L.gatewayTransport(na), na.id, { from: 'seeded' });
+        setHat(na.id, 'engineer');
         go('engineer', { id: ticket.id, transition: true });
       } finally {
         if (el.isConnected) {
@@ -4713,6 +4749,7 @@ async function act(el, ev = new Event('rc-action')) {
       el.disabled = true;
       try {
         const ticket = await openEngineerTicket(L.gatewayTransport(a), a.id, { from: 'seeded' });
+        setHat(a.id, 'engineer');
         go('engineer', { id: ticket.id, transition: true });
       } finally {
         if (el.isConnected) el.disabled = false;
@@ -4741,7 +4778,7 @@ async function act(el, ev = new Event('rc-action')) {
       await enterWork(() =>
         startAttempt('pilot', {
           intake: { text: r.text, fits: r.fits, gaps: r.gaps },
-          priorities: startingOrder('pilot', el),
+          priorities: startingOrder('pilot'),
         }),
       );
       break;
@@ -5170,7 +5207,7 @@ async function act(el, ev = new Event('rc-action')) {
     }
     case 'take-case': {
       const caseId = el.dataset.case;
-      const triage = startingOrder(caseId, el);
+      const triage = startingOrder(caseId);
       await enterWork(async () => {
         const na = await startAttempt(caseId, { priorities: triage });
         if (!L.nativeWorkspace(na))
@@ -5181,7 +5218,7 @@ async function act(el, ev = new Event('rc-action')) {
         const order = { first: 0, next: 1, later: 2 };
         na.tasks.sort((x, y) => order[x.priority] - order[y.priority]);
         persist();
-      });
+      }, el.closest('.hm-brief') ? el : null);
       break;
     }
     case 'menu': {
@@ -6060,7 +6097,8 @@ document.addEventListener('change', (e) => {
       updateTestChrome();
       return;
     }
-    if (el.dataset.change === 'triage') {
+    // The brief's own pickers (screens/home) keep their order themselves.
+    if (el.dataset.change === 'triage' && el.closest('.pri-pick')) {
       const pick = el.closest('.pri-pick');
       const focused = document.activeElement === el;
       // The task's own name; the seed's text would also read out every option.
