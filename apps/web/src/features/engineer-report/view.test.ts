@@ -133,7 +133,7 @@ describe('engineer regression report · real samples', () => {
     expect(view.meta[1]).toBe('复核完成，自报不符');
     expect(view.verdict).toMatchObject({
       state: 'not_fixed',
-      tone: 'bad',
+      tone: 'ink',
       title: '目标问题没修好',
       detail: '仍未通过：期望带提醒回答，实际没有给出回答。',
       targets: ['住宿报销上限是多少？'],
@@ -142,14 +142,14 @@ describe('engineer regression report · real samples', () => {
     expect(
       view.publicSection.rows.map((r) => [r.id, r.tone, r.tags.map((t) => t.text), r.diff]),
     ).toEqual([
-      ['F01', 'bad', ['目标', '改前也未通过'], '期望带提醒回答，实际没有给出回答'],
-      ['F04', 'bad', ['新增失败'], '期望转人工，实际没有给出回答'],
-      ['F05', 'bad', ['新增失败'], '期望转人工，实际没有给出回答'],
+      ['F01', 'ink', ['目标', '改前也未通过'], '期望带提醒回答，实际没有给出回答'],
+      ['F04', 'ink', ['新增失败'], '期望转人工，实际没有给出回答'],
+      ['F05', 'ink', ['新增失败'], '期望转人工，实际没有给出回答'],
       ['F12', 'good', [], undefined],
     ]);
     expect(view.hiddenSection.counts.map((c) => c.value)).toEqual([4, 5, 0]);
     expect(view.checks.lines.map((l) => [l.tone, l.status])).toEqual([
-      ['bad', '公开探针新增失败 2 条'],
+      ['warn', '公开探针新增失败 2 条'],
       ['bad', '自报结果与实际不符'],
     ]);
   });
@@ -272,13 +272,13 @@ describe('engineer regression report · states', () => {
       { language: 'zh' },
     );
     expect(view.hiddenSection.comparison?.map((c) => [c.label, c.value, c.tone])).toEqual([
-      ['新增失败', 1, 'bad'],
+      ['新增失败', 1, 'warn'],
       ['修好', 2, 'good'],
-      ['仍未通过', 3, 'unknown'],
-      ['未核实', 0, 'unknown'],
+      ['仍未通过', 3, 'ink'],
+      ['未核实', 0, 'ink'],
     ]);
     expect(view.checks.lines[0]).toMatchObject({
-      tone: 'bad',
+      tone: 'warn',
       status: '新增失败 1 条（公开 0 · 隐藏 1）',
     });
     const clean = engineerReportView(
@@ -288,10 +288,10 @@ describe('engineer regression report · states', () => {
       { language: 'en' },
     );
     expect(clean.hiddenSection.comparison?.map((c) => c.tone)).toEqual([
-      'unknown',
-      'unknown',
-      'unknown',
-      'unknown',
+      'ink',
+      'ink',
+      'ink',
+      'ink',
     ]);
     expect(clean.checks.lines[0]).toMatchObject({
       tone: 'good',
@@ -407,11 +407,11 @@ describe('engineer regression report · states', () => {
     expect(view.evaluation?.aside).toBe('不计分');
     expect(view.evaluation?.rows.map((r) => [r.title, r.labelText, r.tone, r.mark])).toEqual([
       ['目标失败已修复', '满足', 'good', 'met'],
-      ['无回归', '未满足', 'bad', 'not_met'],
+      ['无回归', '未满足', 'warn', 'not_met'],
       ['修改说明与配置差异一致', '部分满足', 'ink', 'partial'],
       ['报告可复现', '还不知道', 'unknown', 'unknown'],
       ['对未修复项有说明', '等待模型核验', 'unknown', 'waiting'],
-      ['评价项', '不适用', 'unknown', 'not_applicable'],
+      ['评价项', '不适用', 'ink', 'not_applicable'],
     ]);
     expect(strings(view)).not.toContain('E9.unknown_code');
     const en = engineerReportView(FIXED_ZH, {
@@ -513,7 +513,7 @@ describe('engineer regression report · target line and rubric conclusions', () 
 
   it.each([
     ['MET', 'fixed', 'good', '目标问题已修好'],
-    ['NOT_MET', 'not_fixed', 'bad', '目标问题没修好'],
+    ['NOT_MET', 'not_fixed', 'ink', '目标问题没修好'],
     ['PARTIAL', 'partial', 'ink', '目标问题部分修好'],
     ['INSUFFICIENT', 'unknown', 'unknown', '还不知道目标是否修好'],
     [null, 'unknown', 'unknown', '还不知道目标是否修好'],
@@ -720,6 +720,115 @@ describe('engineer regression report · target line and rubric conclusions', () 
       { label: '评价对应的提交', value: 'abad1dea', code: true },
     ]);
     expect(strings(view).some((s) => /[0-9a-f]{9,}/.test(s))).toBe(false);
+  });
+
+  it.each([
+    'targets_repaired',
+    'targets_partially_repaired',
+    'targets_not_repaired',
+    'target_without_trusted_probe',
+    'target_verification_incomplete',
+    'target_baseline_not_failing',
+    'no_targets',
+    'new_failures_found',
+    'no_new_failures',
+    'regression_coverage_incomplete',
+    'changes_match_diff',
+    'changes_omitted',
+    'change_claims_contradicted',
+    'change_claims_not_provided',
+    'claim_reproduced',
+    'claim_contradicts_rerun',
+    'claim_outside_public_suite',
+    'claim_scope_partial',
+    'claim_not_provided',
+    'verification_incomplete',
+    'waiting_model',
+  ])('ER-34 reason code %s reads as an authored sentence in both languages', (code) => {
+    for (const language of ['zh', 'en'] as const) {
+      const view = engineerReportView(FIXED_ZH, {
+        language,
+        evaluation: evaluation([
+          criterion({ criterion: 'E4.reproducibility', reason_codes: [code] }),
+        ]),
+      });
+      const reason = view.evaluation?.rows[0].reason;
+      expect(reason, `${code} (${language})`).toBeTruthy();
+      expect(reason).not.toContain(code);
+      expect(reason).toMatch(language === 'zh' ? /[\u4e00-\u9fff]。$/ : /^[A-Z].*\.$/);
+    }
+  });
+
+  it('ER-35 not met is red only for a contradiction, amber for new failures, ink otherwise', () => {
+    const view = engineerReportView(FIXED_ZH, {
+      language: 'zh',
+      evaluation: evaluation([
+        criterion({
+          criterion: 'E1.target_fixed',
+          label: 'NOT_MET',
+          reason_codes: ['targets_not_repaired'],
+        }),
+        criterion({
+          criterion: 'E2.no_regressions',
+          label: 'NOT_MET',
+          reason_codes: ['new_failures_found'],
+        }),
+        criterion({
+          criterion: 'E3.change_consistency',
+          label: 'NOT_MET',
+          reason_codes: ['change_claims_contradicted'],
+        }),
+        criterion({
+          criterion: 'E4.reproducibility',
+          label: 'NOT_MET',
+          reason_codes: ['claim_contradicts_rerun'],
+        }),
+        criterion({
+          criterion: 'E4.reproducibility',
+          label: 'NOT_MET',
+          reason_codes: ['claim_scope_partial'],
+        }),
+        criterion({
+          criterion: 'E2.no_regressions',
+          label: 'MET',
+          reason_codes: ['no_new_failures'],
+        }),
+      ]),
+    });
+    expect(view.evaluation?.rows.map((r) => r.tone)).toEqual([
+      'ink',
+      'warn',
+      'bad',
+      'bad',
+      'ink',
+      'good',
+    ]);
+  });
+
+  it('ER-36 public probes: did not pass is ink, newly failing is amber, failing before is a quiet fact', () => {
+    const view = engineerReportView(NOT_FIXED_ZH, { language: 'zh' });
+    expect(
+      view.publicSection.rows.map((r) => [
+        r.id,
+        r.tone,
+        r.tags.map((t) => [t.text, t.tone, !!t.quiet]),
+      ]),
+    ).toEqual([
+      [
+        'F01',
+        'ink',
+        [
+          ['目标', 'ink', false],
+          ['改前也未通过', 'ink', true],
+        ],
+      ],
+      ['F04', 'ink', [['新增失败', 'warn', false]]],
+      ['F05', 'ink', [['新增失败', 'warn', false]]],
+      ['F12', 'good', []],
+    ]);
+    expect(view.verdict).toMatchObject({ state: 'not_fixed', tone: 'ink' });
+    const tones = strings(view);
+    expect(tones).toContain('新增失败');
   });
 });
 

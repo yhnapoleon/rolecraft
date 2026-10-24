@@ -7,6 +7,7 @@ import type { EngineerPublicReport } from './types';
 export * from './types';
 export {
   engineerReportView,
+  REASON_KEY,
   ruleFindingText,
   type EngineerBasisRow,
   type EngineerCheckView,

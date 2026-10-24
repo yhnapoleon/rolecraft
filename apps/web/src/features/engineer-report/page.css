@@ -18,13 +18,13 @@
   margin: 0;
   font: 600 17px / 1.4 var(--display);
 }
-/* "Sample" is an honesty label: grey, dashed like everything not part of real work. */
+/* "Sample" is an honesty label: a neutral outline (dashed grey is reserved for "not known"). */
 .er-page__sample {
   display: inline-flex;
   align-items: center;
   min-height: 22px;
   padding: 0 9px;
-  border: 1px dashed var(--line-2);
+  border: 1px solid var(--line-2);
   border-radius: 999px;
   color: var(--ink-3);
   font-size: 12px;

@@ -17,9 +17,10 @@ import type {
   EngineerPublicReport,
 } from './types';
 
-/** good = holds (green), bad = over a limit / contradicts (red), unknown = not known (grey,
- * dashed), ink = neutral fact. No other colours. */
-export type EngineerTone = 'good' | 'bad' | 'unknown' | 'ink';
+/** Colour by meaning (design §2.3): good = holds (green); bad = contradicts / over a limit (red);
+ * warn = changed: passed before, fails now (amber); unknown = not known yet (grey, dashed);
+ * ink = a fact, or yours to act on. No other colours. */
+export type EngineerTone = 'good' | 'bad' | 'warn' | 'unknown' | 'ink';
 
 export interface EngineerReportOptions {
   readonly language: Language;
@@ -36,6 +37,8 @@ export interface EngineerReportOptions {
 export interface EngineerTagView {
   readonly text: string;
   readonly tone: EngineerTone;
+  /** A secondary fact, drawn lighter than the tone's usual chip. */
+  readonly quiet?: boolean;
 }
 export interface EngineerProbeRowView {
   readonly id: string;
@@ -181,13 +184,32 @@ const ERROR_KEY: Record<string, EngineerReportKey> = {
   engineer_review_interrupted: 'errorInterrupted',
   engineer_verification_failed: 'errorVerification',
 };
-const REASON_KEY: Record<string, EngineerReportKey> = {
+/** Rubric reason codes (engineer evaluation), each with an authored sentence. */
+export const REASON_KEY: Readonly<Record<string, EngineerReportKey>> = {
   targets_repaired: 'reasonTargetsRepaired',
+  targets_partially_repaired: 'reasonTargetsPartial',
+  targets_not_repaired: 'reasonTargetsNotRepaired',
+  target_without_trusted_probe: 'reasonTargetNoProbe',
+  target_verification_incomplete: 'reasonTargetIncomplete',
+  target_baseline_not_failing: 'reasonTargetBaselinePassing',
+  no_targets: 'reasonNoTargets',
   new_failures_found: 'reasonNewFailures',
+  no_new_failures: 'reasonNoNewFailures',
+  regression_coverage_incomplete: 'reasonRegressionIncomplete',
+  changes_match_diff: 'reasonChangesMatch',
+  changes_omitted: 'reasonChangesOmitted',
+  change_claims_contradicted: 'reasonChangesContradicted',
+  change_claims_not_provided: 'reasonChangesMissing',
+  claim_reproduced: 'reasonClaimReproduced',
+  claim_contradicts_rerun: 'reasonClaimContradicts',
+  claim_outside_public_suite: 'reasonClaimOutside',
+  claim_scope_partial: 'reasonClaimPartial',
   claim_not_provided: 'reasonClaimMissing',
   verification_incomplete: 'reasonIncomplete',
-  changes_omitted: 'reasonChangesOmitted',
+  waiting_model: 'reasonWaitingModel',
 };
+/** Reason codes that mean a statement contradicts what actually happened (red). */
+const CONTRADICTION_CODES = new Set(['change_claims_contradicted', 'claim_contradicts_rerun']);
 const FIELD_STATUS: Record<EngineerFieldCheckStatus, [EngineerReportKey, EngineerTone]> = {
   matched: ['fieldMatched', 'good'],
   omitted: ['fieldOmitted', 'ink'],
@@ -276,9 +298,10 @@ export function engineerReportView(
     const tags: EngineerTagView[] = [];
     const target = targetIds.has(row.probe_id);
     if (target) tags.push({ text: t('tagTarget'), tone: 'ink' });
-    if (row.result === 'fail' && isNew) tags.push({ text: t('tagNewFailure'), tone: 'bad' });
+    // Passed before, fails now: the world changed (amber). Failing on both sides is a plain fact.
+    if (row.result === 'fail' && isNew) tags.push({ text: t('tagNewFailure'), tone: 'warn' });
     else if (row.result === 'fail' && regression.some((f) => f.status === 'pass'))
-      tags.push({ text: t('tagPreexisting'), tone: 'unknown' });
+      tags.push({ text: t('tagPreexisting'), tone: 'ink', quiet: true });
     return {
       id: row.probe_id,
       query: row.query,
@@ -286,7 +309,8 @@ export function engineerReportView(
       resultText: t(
         row.result === 'pass' ? 'resultPass' : row.result === 'fail' ? 'resultFail' : 'resultError',
       ),
-      tone: row.result === 'pass' ? 'good' : row.result === 'fail' ? 'bad' : 'unknown',
+      // A failing probe is a known result to work on (ink ✕), not a limit being exceeded.
+      tone: row.result === 'pass' ? 'good' : row.result === 'fail' ? 'ink' : 'unknown',
       target,
       tags,
       diff: row.result === 'pass' ? undefined : capitalize(diffOf(row), language),
@@ -301,7 +325,8 @@ export function engineerReportView(
   const failedTargets = targets.filter((f) => f.status === 'fail');
   const verdictTone: Record<EngineerVerdictState, EngineerTone> = {
     fixed: 'good',
-    not_fixed: 'bad',
+    // Not fixed is a known fact and still yours to do: ink, drawn as an open progress circle.
+    not_fixed: 'ink',
     partial: 'ink',
     unknown: 'unknown',
     waiting: 'unknown',
@@ -403,7 +428,7 @@ export function engineerReportView(
   if (publicNew + hiddenNew > 0)
     regression = {
       kind: 'new_regression',
-      tone: 'bad',
+      tone: 'warn',
       status: comparison
         ? t('regressionSomeAll', { n: publicNew + hiddenNew, p: publicNew, h: hiddenNew })
         : t('regressionSome', { n: publicNew }),
@@ -462,17 +487,27 @@ export function engineerReportView(
     const label = {
       MET: ['labelMet', 'good', 'met'],
       PARTIAL: ['labelPartial', 'ink', 'partial'],
-      NOT_MET: ['labelNotMet', 'bad', 'not_met'],
+      NOT_MET: ['labelNotMet', 'ink', 'not_met'],
       INSUFFICIENT: ['labelUnknown', 'unknown', 'unknown'],
-      NOT_APPLICABLE: ['labelNotApplicable', 'unknown', 'not_applicable'],
+      NOT_APPLICABLE: ['labelNotApplicable', 'ink', 'not_applicable'],
     } as const;
-    const [labelKey, tone, mark] =
+    const [labelKey, plainTone, mark] =
       item.status === 'waiting_model'
         ? (['labelWaiting', 'unknown', 'waiting'] as const)
         : item.label
           ? label[item.label]
           : label.INSUFFICIENT;
-    const reasons = (item.reason_codes ?? [])
+    // Not met: red only for a contradiction, amber for new failures, otherwise a fact (ink).
+    const codes = item.reason_codes ?? [];
+    const tone: EngineerTone =
+      mark !== 'not_met'
+        ? plainTone
+        : codes.some((code) => CONTRADICTION_CODES.has(code))
+          ? 'bad'
+          : item.criterion === 'E2.no_regressions' || codes.includes('new_failures_found')
+            ? 'warn'
+            : 'ink';
+    const reasons = codes
       .map((code) => REASON_KEY[code])
       .filter((k): k is EngineerReportKey => !!k)
       .map((k) => t(k));
@@ -622,11 +657,16 @@ export function engineerReportView(
               'new_failures',
               'newFailures',
               comparison.new_failures,
-              comparison.new_failures > 0 ? 'bad' : 'unknown',
+              comparison.new_failures > 0 ? 'warn' : 'ink',
             ),
-            count('fixed', 'fixed', comparison.fixed, comparison.fixed > 0 ? 'good' : 'unknown'),
-            count('still_failing', 'stillFailing', comparison.still_failing, 'unknown'),
-            count('unverified', 'unverified', comparison.unverified, 'unknown'),
+            count('fixed', 'fixed', comparison.fixed, comparison.fixed > 0 ? 'good' : 'ink'),
+            count('still_failing', 'stillFailing', comparison.still_failing, 'ink'),
+            count(
+              'unverified',
+              'unverified',
+              comparison.unverified,
+              comparison.unverified > 0 ? 'unknown' : 'ink',
+            ),
           ]
         : undefined,
       note: t('hiddenNote'),

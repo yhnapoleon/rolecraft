@@ -22,7 +22,8 @@
   margin: 0;
 }
 
-/* Marks: one shape per meaning (✓ green, ✕ red, ◐ ink, dashed ring grey). */
+/* Marks: one shape per meaning — ✓ green holds, ✕ red contradicts, ✕ ink did not pass,
+   ↓ amber newly failing, ◐ ink partly, open circle ink still to do, dashed circle grey unknown. */
 .er-probe__mark,
 .er-check__mark,
 .er-advice__mark {
@@ -36,8 +37,20 @@
 :is(.er-probe__mark, .er-check__mark)[data-tone="bad"] {
   color: var(--bad);
 }
+:is(.er-probe__mark, .er-check__mark)[data-tone="warn"] {
+  color: var(--warn);
+}
 :is(.er-probe__mark, .er-check__mark)[data-tone="ink"] {
   color: var(--ink-2);
+}
+:is(.er-probe__mark, .er-check__mark)[data-shape="open"]::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid currentColor;
+  border-radius: 50%;
+  vertical-align: 0.05em;
 }
 :is(.er-probe__mark, .er-check__mark, .er-advice__mark)[data-tone="unknown"]::before {
   content: "";
@@ -104,13 +117,8 @@
   color: var(--good);
   background: var(--good-tint);
 }
-.er-verdict__mark[data-tone="bad"] {
-  color: var(--bad);
-  background: var(--bad-tint);
-}
 .er-verdict__mark[data-tone="ink"] {
   color: var(--ink-2);
-  background: var(--fill);
 }
 .er-verdict__mark[data-tone="unknown"] {
   color: var(--ink-4);
@@ -217,15 +225,13 @@
   background: var(--fill-2);
   color: var(--ink);
 }
-.er-tag[data-tone="bad"] {
-  background: var(--bad-tint);
-  color: var(--bad);
+.er-tag[data-tone="warn"] {
+  background: var(--warn-tint);
+  color: var(--warn);
 }
-.er-tag[data-tone="unknown"] {
-  border-color: var(--line-2);
-  border-style: dashed;
-  background: transparent;
-  color: var(--ink-3);
+.er-tag[data-tone="ink"][data-quiet] {
+  background: var(--fill);
+  color: var(--ink-2);
 }
 .er-probe__diff {
   max-width: 72ch;
@@ -254,10 +260,10 @@
   font-variant-numeric: tabular-nums;
 }
 .er-counts--comparison .er-count[data-tone="unknown"] .er-count__value {
-  color: var(--ink-2);
+  color: var(--ink-3);
 }
-.er-counts--comparison .er-count[data-tone="bad"] .er-count__value {
-  color: var(--bad);
+.er-counts--comparison .er-count[data-tone="warn"] .er-count__value {
+  color: var(--warn);
 }
 .er-counts--comparison .er-count[data-tone="good"] .er-count__value {
   color: var(--good);

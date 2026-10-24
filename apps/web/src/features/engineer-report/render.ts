@@ -11,7 +11,17 @@ export interface EngineerReportRenderOptions {
   readonly onBasisToggle?: (open: boolean) => void;
 }
 
-const MARK: Record<EngineerTone, string> = { good: '✓', bad: '✕', unknown: '', ink: '◐' };
+/** One shape per meaning: ✓ holds, ✕ contradicts (red) or did not pass (ink), ↓ newly failing,
+ * ◐ partly, an open circle still to do, a dashed circle not known yet (drawn in CSS). */
+const MARK: Record<EngineerTone, string> = {
+  good: '✓',
+  bad: '✕',
+  warn: '↓',
+  unknown: '',
+  ink: '◐',
+};
+/** An empty mark that CSS draws as an open (solid-outline) progress circle. */
+const OPEN = 'open';
 const SR_SEPARATOR: Record<'zh' | 'en', string> = { zh: '：', en: ': ' };
 
 export function renderEngineerReport(
@@ -29,8 +39,9 @@ export function renderEngineerReport(
   const heading = (offset: number, className: string, text: string) =>
     el(`h${Math.min(level + offset, 6)}` as 'h2', className, text);
   const mark = (tone: EngineerTone, className: string, glyph = MARK[tone]) => {
-    const node = el('span', className, glyph);
+    const node = el('span', className, glyph === OPEN ? '' : glyph);
     node.dataset.tone = tone;
+    if (glyph === OPEN) node.dataset.shape = OPEN;
     node.setAttribute('aria-hidden', 'true');
     return node;
   };
@@ -66,7 +77,10 @@ export function renderEngineerReport(
       verdictBody.append(target);
     }
     if (view.verdict.detail) verdictBody.append(el('p', 'er-verdict__detail', view.verdict.detail));
-    verdict.append(mark(view.verdict.tone, 'er-verdict__mark'), verdictBody);
+    const state = view.verdict.state;
+    const verdictGlyph =
+      state === 'not_fixed' ? OPEN : state === 'partial' ? '◐' : MARK[view.verdict.tone];
+    verdict.append(mark(view.verdict.tone, 'er-verdict__mark', verdictGlyph), verdictBody);
     head.append(verdict);
   }
   root.append(head);
@@ -106,12 +120,14 @@ export function renderEngineerReport(
         for (const tag of row.tags) {
           const chip = el('span', 'er-tag', tag.text);
           chip.dataset.tone = tag.tone;
+          if (tag.quiet) chip.dataset.quiet = '';
           tags.append(chip);
         }
         body.append(tags);
       }
       if (row.diff) body.append(el('p', 'er-probe__diff', row.diff));
-      item.append(mark(row.tone, 'er-probe__mark'), id, body);
+      const rowGlyph = row.result === 'fail' ? '✕' : MARK[row.tone];
+      item.append(mark(row.tone, 'er-probe__mark', rowGlyph), id, body);
       list.append(item);
     }
     pub.append(list);
@@ -164,7 +180,13 @@ export function renderEngineerReport(
       item.dataset.mark = row.mark;
       item.dataset.criterion = row.id;
       const glyph =
-        row.mark === 'not_applicable' ? '–' : row.mark === 'partial' ? '◐' : MARK[row.tone];
+        row.mark === 'not_applicable'
+          ? '–'
+          : row.mark === 'partial'
+            ? '◐'
+            : row.mark === 'not_met' && row.tone === 'ink'
+              ? OPEN
+              : MARK[row.tone];
       const body = el('div', 'er-criterion__body');
       const words = el('p', 'er-check__status');
       words.append(

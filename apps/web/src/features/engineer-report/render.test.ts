@@ -91,14 +91,14 @@ describe('engineer regression report · DOM', () => {
     ]);
     const comparison = root.byClass('er-counts--comparison')[0];
     expect(comparison.byClass('er-count').map((c) => [c.textContent, c.dataset.tone])).toEqual([
-      ['New failures2', 'bad'],
+      ['New failures2', 'warn'],
       ['Fixed1', 'good'],
-      ['Still failing3', 'unknown'],
-      ['Unverified0', 'unknown'],
+      ['Still failing3', 'ink'],
+      ['Unverified0', 'ink'],
     ]);
     const evaluation = root.byClass('er-evaluation')[0].byClass('er-criterion');
     expect(evaluation.map((r) => [r.textContent, r.dataset.mark])).toEqual([
-      ['✕Target failures repairedNot metF01', 'not_met'],
+      ['Target failures repairedNot metF01', 'not_met'],
       ['Unresolved items explainedAwaiting model verification', 'waiting'],
     ]);
     expect(root.byClass('er-tag').map((t) => t.textContent)).toEqual([
@@ -193,5 +193,40 @@ describe('engineer regression report · DOM', () => {
       'custom_knob',
     ]);
     expect(root.byTag('details')).toHaveLength(2);
+  });
+
+  it('ER-37 shapes carry meaning: open circle for not fixed, ink ✕ for not passed, amber chip for new', () => {
+    const root = asFake(
+      renderEngineerReport(fakeDocument(), engineerReportView(NOT_FIXED_EN, { language: 'en' })),
+    );
+    const verdictMark = root.byClass('er-verdict__mark')[0];
+    expect([verdictMark.dataset.tone, verdictMark.dataset.shape, verdictMark.textContent]).toEqual([
+      'ink',
+      'open',
+      '',
+    ]);
+    const marks = root.byClass('er-probe__mark').map((m) => [m.textContent, m.dataset.tone]);
+    expect(marks).toEqual([
+      ['✕', 'ink'],
+      ['✕', 'ink'],
+      ['✕', 'ink'],
+      ['✓', 'good'],
+    ]);
+    expect(
+      root.byClass('er-tag').map((t) => [t.textContent, t.dataset.tone, t.dataset.quiet ?? null]),
+    ).toEqual([
+      ['Target', 'ink', null],
+      ['Also failed before', 'ink', ''],
+      ['New failure', 'warn', null],
+      ['New failure', 'warn', null],
+    ]);
+    const checks = root
+      .byClass('er-checks')[0]
+      .byClass('er-check__mark')
+      .map((m) => [m.textContent, m.dataset.tone]);
+    expect(checks).toEqual([
+      ['↓', 'warn'],
+      ['✕', 'bad'],
+    ]);
   });
 });
