@@ -1,13 +1,11 @@
 /* The result page (206; plan §4.4, decisions 21–22): the stamped result sheet takes over the
-   desk under a faint green light, three large readings answer "did anything fail?", the detail
+   desk under the room's warm light, three large readings answer "did anything fail?", the detail
    below reads by status or by colleague. Paper is 3px and near square; tools are instrument
    surface. Motion lives in motion.ts; here only press feedback and the waiting shimmer. */
 
-/* ---------- the desk ---------- */
-.ws.view-review .stage-inner::before {
-  --world-light: var(--light-good);
-  opacity: 1;
-}
+/* ---------- the desk ----------
+   The result page keeps the room's warm light; the verdict's green is on the stamp and the
+   readings, not on the desk. */
 .result-desk {
   display: grid;
   gap: 32px;
