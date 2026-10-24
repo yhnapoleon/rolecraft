@@ -1,6 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
 import { setPreference } from './i18n';
-import { practiceCardLine, practiceCards, practiceSharedLine } from './practice-cards';
+import {
+  changeSentence,
+  practiceCardLine,
+  practiceCards,
+  practiceSharedLine,
+} from './practice-cards';
 
 const names: Record<string, string> = {
   'R3.capacity': '人数与容量',
@@ -39,6 +44,17 @@ const catalog = [
 ];
 const change = (id: string) =>
   id.startsWith('pm_pilot_urgent') ? '上线从第 7 天提前到第 5 天' : '容量从 30 人降到 15 人';
+const namesEn: Record<string, string> = {
+  'R3.capacity': 'Participants and capacity',
+  'R3.resources': 'Resources and timing',
+  'R4.staleness_test': 'Retesting after policy changes',
+  'R5.adjustment': 'Actual adjustments and retesting',
+  'R6.alternatives': 'Alternatives and trade-offs',
+};
+const changeEn = (id: string) =>
+  id.startsWith('pm_pilot_urgent')
+    ? 'Launch moves from day 7 to day 5'
+    : 'Capacity drops from 30 to 15 seats';
 
 describe('optional practice cards', () => {
   it('states the findings both situations revisit once and gives each card its own reason', () => {
@@ -89,21 +105,30 @@ describe('practice card wording', () => {
   it('says what all suggested situations revisit, then why each one is worth practising', () => {
     const view = practiceCards([urgent, capacity], catalog, names, change);
     expect(practiceSharedLine(view)).toBe(
-      '这些情境都会再核对：政策更新后的复测、实际调整与复测、替代方案与取舍',
+      '可选。两个情境都会再看「政策更新后的复测」、「实际调整与复测」、「替代方案与取舍」。',
     );
     expect(view.cards.map(practiceCardLine)).toEqual([
-      '改变的条件：上线从第 7 天提前到第 5 天 · 另外核对：资源与时间',
-      '改变的条件：容量从 30 人降到 15 人 · 另外核对：人数与容量',
+      '上线从第 7 天提前到第 5 天。也会看「资源与时间」。',
+      '容量从 30 人降到 15 人。也会看「人数与容量」。',
     ]);
     expect(practiceSharedLine(practiceCards([urgent], catalog, names, change))).toBe(
-      '这个情境会再核对：政策更新后的复测、实际调整与复测、替代方案与取舍',
+      '可选。这个情境会再看「政策更新后的复测」、「实际调整与复测」、「替代方案与取舍」。',
     );
     setPreference('en');
-    expect(practiceSharedLine(view)).toBe(
-      'Each of these situations revisits: 政策更新后的复测, 实际调整与复测, 替代方案与取舍',
+    const english = practiceCards(
+      [
+        { ...urgent, work_language: 'en' },
+        { ...capacity, work_language: 'en' },
+      ],
+      catalog,
+      namesEn,
+      changeEn,
     );
-    expect(practiceCardLine(view.cards[0])).toBe(
-      'What changes: 上线从第 7 天提前到第 5 天 · Also checks: 资源与时间',
+    expect(practiceSharedLine(english)).toBe(
+      'Optional. Both revisit ‘Retesting after policy changes’, ‘Actual adjustments and retesting’ and ‘Alternatives and trade-offs’.',
+    );
+    expect(practiceCardLine(english.cards[0])).toBe(
+      'Launch moves from day 7 to day 5. Also checks ‘Resources and timing’.',
     );
   });
 
@@ -117,6 +142,54 @@ describe('practice card wording', () => {
       names,
       change,
     );
-    expect(practiceSharedLine(view)).toBe('');
+    // Only that it is optional; each card then says what it checks.
+    expect(practiceSharedLine(view)).toBe('可选。');
+    expect(practiceSharedLine(practiceCards([], catalog, names, change))).toBe('');
+  });
+
+  it('counts three or more suggestions in the shared line', () => {
+    const third = { ...capacity, id: 'pm_pilot_third-zh' };
+    const view = practiceCards([urgent, capacity, third], catalog, names, change);
+    expect(practiceSharedLine(view)).toBe(
+      '可选。这 3 个情境都会再看「政策更新后的复测」、「实际调整与复测」、「替代方案与取舍」。',
+    );
+    setPreference('en');
+    const three = practiceCards([urgent, capacity, third], catalog, namesEn, change);
+    expect(practiceSharedLine(three)).toMatch(/^Optional\. All 3 revisit ‘Retesting/);
+  });
+});
+
+describe('practice cards and the work language', () => {
+  afterEach(() => setPreference('zh'));
+  it('tells the changed condition in the suggested practice’s work language', () => {
+    const asked: [string, string | null][] = [];
+    const view = practiceCards(
+      [{ ...urgent, id: 'pm_pilot_urgent-en', work_language: 'en' }],
+      catalog,
+      names,
+      (id, language) => {
+        asked.push([id, language]);
+        return language === 'en' ? 'Launch moves from day 7 to day 5' : '上线从第 7 天提前到第 5 天';
+      },
+    );
+    expect(asked).toEqual([['pm_pilot_urgent-en', 'en']]);
+    expect(view.cards[0].language).toBe('en');
+    // An English practice seen in the Chinese interface: the world sentence stays English, the
+    // label is Chinese, and the two are set apart by a space.
+    expect(practiceCardLine({ ...view.cards[0], focus: ['资源与时间'] })).toBe(
+      'Launch moves from day 7 to day 5. 也会看「资源与时间」。',
+    );
+  });
+
+  it('keeps a Chinese practice’s condition in Chinese in the English interface', () => {
+    setPreference('en');
+    const view = practiceCards([{ ...urgent, work_language: 'zh' }], catalog, namesEn, change);
+    expect(practiceCardLine(view.cards[0])).toBe(
+      '上线从第 7 天提前到第 5 天。 Also checks ‘Resources and timing’.',
+    );
+    expect(changeSentence('Capacity drops from 30 to 15 seats', 'en')).toBe(
+      'Capacity drops from 30 to 15 seats.',
+    );
+    expect(changeSentence('', 'zh')).toBe('');
   });
 });

@@ -5927,6 +5927,19 @@ ol.later-list li::marker {
     display: none;
   }
 }
+/* A text button with a shorter label for phone widths (the delivery sheet's "View feedback"):
+   only the shown label exists for a screen reader, since the other is display: none. */
+.when-narrow {
+  display: none;
+}
+@media (max-width: 720px) {
+  .when-wide {
+    display: none;
+  }
+  .when-narrow {
+    display: inline;
+  }
+}
 @media (hover: none) {
   .sec-hint {
     display: none;
