@@ -341,6 +341,312 @@
         "title": "Adoption",
         "type": "object"
       },
+      "AgentActivity": {
+        "additionalProperties": false,
+        "description": "One MCP connection or tool call by the person's own Agent. No arguments or bodies.",
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "capability": {
+            "anyOf": [
+              {
+                "enum": [
+                  "read",
+                  "act",
+                  "submit"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Capability"
+          },
+          "client": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AgentClient"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null
+          },
+          "count": {
+            "anyOf": [
+              {
+                "minimum": 0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Count"
+          },
+          "delegation_id": {
+            "title": "Delegation Id",
+            "type": "string"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Error Code"
+          },
+          "kind": {
+            "enum": [
+              "connected",
+              "tool_call"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "objects": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/AgentActivityObject"
+            },
+            "title": "Objects",
+            "type": "array"
+          },
+          "seq": {
+            "exclusiveMinimum": 0,
+            "title": "Seq",
+            "type": "integer"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "error"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tool": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Tool"
+          }
+        },
+        "required": [
+          "seq",
+          "at",
+          "delegation_id",
+          "kind",
+          "status"
+        ],
+        "title": "AgentActivity",
+        "type": "object"
+      },
+      "AgentActivityObject": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Title"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Version"
+          }
+        },
+        "required": [
+          "kind",
+          "id"
+        ],
+        "title": "AgentActivityObject",
+        "type": "object"
+      },
+      "AgentActivityPage": {
+        "additionalProperties": false,
+        "properties": {
+          "checked_at": {
+            "format": "date-time",
+            "title": "Checked At",
+            "type": "string"
+          },
+          "complete": {
+            "title": "Complete",
+            "type": "boolean"
+          },
+          "connection": {
+            "$ref": "#/components/schemas/AgentConnection"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AgentActivity"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "next_cursor": {
+            "minimum": 0,
+            "title": "Next Cursor",
+            "type": "integer"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor",
+          "complete",
+          "connection",
+          "checked_at"
+        ],
+        "title": "AgentActivityPage",
+        "type": "object"
+      },
+      "AgentActivityResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/AgentActivityResult"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "AgentActivityResponse",
+        "type": "object"
+      },
+      "AgentActivityResult": {
+        "additionalProperties": false,
+        "properties": {
+          "result": {
+            "$ref": "#/components/schemas/AgentActivityPage"
+          },
+          "schema_version": {
+            "const": 2,
+            "default": 2,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "result"
+        ],
+        "title": "AgentActivityResult",
+        "type": "object"
+      },
+      "AgentClient": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "version"
+        ],
+        "title": "AgentClient",
+        "type": "object"
+      },
+      "AgentConnection": {
+        "additionalProperties": false,
+        "properties": {
+          "client": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Client"
+          },
+          "last_seen": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Last Seen"
+          },
+          "state": {
+            "enum": [
+              "none",
+              "connected",
+              "idle"
+            ],
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "state"
+        ],
+        "title": "AgentConnection",
+        "type": "object"
+      },
       "AnnotationDecision": {
         "additionalProperties": false,
         "properties": {
@@ -15873,6 +16179,61 @@
           }
         ],
         "summary": "Action"
+      }
+    },
+    "/sessions/{session_id}/agent-activity": {
+      "get": {
+        "operationId": "agent_activity_sessions__session_id__agent_activity_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "session_id",
+            "required": true,
+            "schema": {
+              "title": "Session Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "After",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentActivityResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "summary": "Agent Activity"
       }
     },
     "/sessions/{session_id}/approvals/resolve": {

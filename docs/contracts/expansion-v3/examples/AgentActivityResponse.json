@@ -1,0 +1,18 @@
+{
+  "result": {
+    "result": {
+      "checked_at": "2026-10-06T12:00:00Z",
+      "complete": false,
+      "connection": {
+        "client": null,
+        "last_seen": null,
+        "state": "none"
+      },
+      "items": [],
+      "next_cursor": 1,
+      "schema_version": 2
+    },
+    "schema_version": 2
+  },
+  "schema_version": 2
+}

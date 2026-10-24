@@ -1,0 +1,12 @@
+{
+ "examples": {
+  "AgentActivity": "4f5f591d623698f3f87183b136c1bf77e6bd60557719433cac496ee9a800d188",
+  "AgentActivityObject": "8a6358d60db7059b0f6a254cd8f98091c5f1446048644e47d2c6fe64f0319d78",
+  "AgentActivityPage": "e1deff38fde77dadc6e5a2230ff42e1c3ae737ee457a84b1b8a4c0162d9fd3b6",
+  "AgentActivityResponse": "1e8f5da0fda48febff52e7efecdf907794930abd243b1d3431490310a7db66b8",
+  "AgentActivityResult": "c79113f09a4d0ca38a425618fe6c8bdb064ca1e8569fff9f22967807247bd1d1",
+  "AgentClient": "2fb8fddd70f4a2941d500b8f281b07a437fbbfc748db3af754b8644feb2c8e31",
+  "AgentConnection": "6932ed51c019edaaf4d2b7afee00396a4eb67d95e9b61fc81fa447a012b2757b"
+ },
+ "source": "Public models added after claude/192-preview fb08bdf by the agent-activity change, at the example bytes that change first exported"
+}

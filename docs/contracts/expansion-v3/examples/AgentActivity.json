@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-06T12:00:00Z",
+  "capability": null,
+  "client": null,
+  "count": null,
+  "delegation_id": "example",
+  "error_code": null,
+  "kind": "connected",
+  "objects": [],
+  "seq": 1,
+  "status": "ok",
+  "tool": null
+}

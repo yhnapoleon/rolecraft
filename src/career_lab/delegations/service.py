@@ -16,7 +16,7 @@ def require_learner(auth: C.AuthContext) -> None:
         raise C.ProtocolError("public_actor_required", status=403)
 
 
-def issue(store, payload, auth, request_id, *, max_ttl_seconds=3600):
+def issue(store, payload, auth, request_id, *, max_ttl_seconds=86400):
     require_learner(auth)
     if auth.executor.kind != "human":
         raise C.ProtocolError("human_delegation_required", status=403)

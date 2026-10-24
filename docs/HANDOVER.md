@@ -253,7 +253,7 @@ $PY -m scripts.regression.release_identity --check            # 0 problems
 | 换继续码时让其他设备退出 | 换码只作废旧码；用旧码打开过的浏览器和它们排队中的任务照常 | 换码时能让凭继续码打开过的浏览器退出（收回派生用途为 `continue-code` 的本人凭据），并定下它们排队中的任务怎么办：收回后这些任务会失败且无法重试 |
 | 继续码找回的限流来源 | `career-lab serve` 固定 `proxy_headers=False`，按直连对端计数；放在反向代理后，所有人共用代理那一个计数 | 只信任该代理地址的转发头（uvicorn 的 `proxy_headers=True` 加 `forwarded_allow_ips=<代理地址>`）。`cli.py` 在契约指纹内，改它要重导出契约 |
 | 远程 MCP 的 Host 校验与 HTTPS | 只接受 Host 为 127.0.0.1、localhost、[::1] 的请求（`mcp/streamable_http.py` 的 `LOOPBACK_HOSTS`），全程 HTTP；限流计数在单个 API 进程内 | Host 校验换成真实域名，全程 HTTPS；多进程部署时决定限流要不要改成共享计数 |
-| 令牌交到 Agent 手里的方式 | 连接卡把令牌放进复制的命令或下载的配置文件，会留在 Agent 配置和命令历史里，最长 60 分钟后失效 | 重新评估令牌怎样交付与保存 |
+| 令牌交到 Agent 手里的方式 | 连接卡把令牌放进复制的命令或下载的配置文件，会留在 Agent 配置和命令历史里，最长 24 小时后失效 | 重新评估令牌怎样交付与保存 |
 
 ### MCP 结果过大
 
