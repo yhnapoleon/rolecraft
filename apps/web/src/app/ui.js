@@ -1795,16 +1795,20 @@ function boardTray(a) {
   const html = Board.agentTray({ connected: Board.agentConnected() || drafts.length > 0, drafts });
   return html ? `<div data-flip="tray">${html}</div>` : '';
 }
+const canWriteBoard = (a) => canWrite(a) && !sealedSession(a);
 function boardView(a) {
+  const writable = canWriteBoard(a);
+  const blocked = writable ? '' : 'disabled aria-describedby="tasks-write-reason"';
   return `<div class="board">
     ${boardBrief(a)}
     ${practiceOriginNote(a)}
     <div data-flip="product">${productBar(a)}</div>
     ${boardTray(a)}
     <section class="work-sec" aria-labelledby="tasks-h" data-flip="tasks" data-board-tasks>
-      <header class="sec-head"><h2 id="tasks-h">${T('事项', 'Tasks')}</h2><span class="sec-hint"><span class="hint-drag">${T('拖动卡片调整优先级', 'Drag to reprioritise')}</span><span class="hint-keys">${T('，或按住 Option 用方向键', ', or hold Option and use the arrow keys')}</span></span><span class="spacer"></span>
-        <div class="menu-wrap">${btn(icon('bubble', 'i-sm') + T('问问怎么排', 'Ask how to prioritise'), 'menu', 'small quiet', `data-menu="rank" aria-haspopup="menu" aria-expanded="${ui.menu === 'rank'}"`)}${ui.menu === 'rank' ? rankMenu() : ''}</div>
-        ${btn(icon('plus', 'i-sm') + T('新事项', 'New task'), 'new-task', 'small')}</header>
+      <header class="sec-head"><h2 id="tasks-h">${T('事项', 'Tasks')}</h2><span class="sec-hint" ${writable ? '' : 'hidden'}><span class="hint-drag">${T('拖动卡片调整优先级', 'Drag to reprioritise')}</span><span class="hint-keys">${T('，或按住 Option 用方向键', ', or hold Option and use the arrow keys')}</span></span><span class="spacer"></span>
+        <div class="menu-wrap">${btn(icon('bubble', 'i-sm') + T('问问怎么排', 'Ask how to prioritise'), 'menu', 'small quiet', `data-menu="rank" aria-haspopup="menu" aria-expanded="${writable && ui.menu === 'rank'}" ${blocked}`)}${writable && ui.menu === 'rank' ? rankMenu() : ''}</div>
+        ${btn(icon('plus', 'i-sm') + T('新事项', 'New task'), 'new-task', 'small', blocked)}</header>
+      ${writable ? '' : `<p id="tasks-write-reason" class="meta">${statusOf(a) === 'submitted' ? T('这一局已只读，开始修订后可以继续。', 'This practice is read-only. Start a revision to continue.') : T('当前不能更改事项或提问。', 'Tasks and questions cannot be changed right now.')}</p>`}
       ${revisionNote(a)}
       <p id="move-help" class="sr-only">${T('按住 ⌥ Option 或 Alt：← → 改优先级，↑ ↓ 调顺序。', 'Hold ⌥ Option or Alt, then ← → to change priority and ↑ ↓ to reorder.')}</p>
       <div class="kanban">${['first', 'next', 'later'].map((p) => column(a, p)).join('')}</div>
@@ -5440,6 +5444,7 @@ async function act(el, ev = new Event('rc-action')) {
       break;
     }
     case 'new-task':
+      if (!canWriteBoard(a)) break;
       sheetTask();
       break;
     case 'edit-task':
@@ -5799,6 +5804,7 @@ async function act(el, ev = new Event('rc-action')) {
     }
     case 'menu': {
       const m = el.dataset.menu;
+      if (m === 'rank' && !canWriteBoard(a)) break;
       // On the result page ⋯ opens in place (a redraw would remount the feedback): its
       // language and model rows swap the menu for their panel there too.
       const inPlace = el.closest('[data-review-menu]');
@@ -6062,6 +6068,7 @@ async function act(el, ev = new Event('rc-action')) {
       break;
     }
     case 'ask-priority':
+      if (!canWriteBoard(a)) break;
       openChat(el.dataset.role, priorityQuestion(a));
       break;
     case 'situation-task': {
