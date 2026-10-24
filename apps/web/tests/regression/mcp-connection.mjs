@@ -3,7 +3,7 @@
 // returns work, and the page shows the call stream, the returned paper and the connection state
 // until the grant is revoked. No real agent or model is involved.
 import assert from 'node:assert/strict';
-import { clickReady, waitFor } from './browser-support.mjs';
+import { waitFor } from './browser-support.mjs';
 
 const MODERN = '2026-07-28';
 const LEGACY = '2025-11-25';

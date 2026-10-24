@@ -196,7 +196,10 @@ class Protocol:
                         "name": t.name,
                         "description": "Authorized RoleCraft "
                         + t.capability
-                        + " operation. Existing server permissions and business rules apply. Preserve exact citation kind, object_id and version. config_version belongs only on kind=config references; omit it on material/test/product references. "
+                        + " operation. Existing server permissions and business rules apply. "
+                        "Preserve exact citation kind, object_id and version. config_version "
+                        "belongs only on kind=config references; omit it on material/test/product "
+                        "references. "
                         + (ENGINEER_RECOVER if t.name.startswith("engineer.") else RECOVER),
                         "inputSchema": session_view(t.parameters, bound),
                         "annotations": {
@@ -255,7 +258,9 @@ class Protocol:
                                 "requests.read does not list engineer operations. Re-execution "
                                 "requires an explicit user decision."
                                 if name.startswith("engineer.")
-                                else "Recover the original request read-only. Re-execution requires an explicit user decision; never mint a new request_id to replace an unknown result."
+                                else "Recover the original request read-only. Re-execution "
+                                "requires an explicit user decision; never mint a new "
+                                "request_id to replace an unknown result."
                             ),
                         },
                         "isError": True,

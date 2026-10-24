@@ -175,10 +175,6 @@
   font-weight: 500;
   color: var(--ink);
 }
-.ag-caption-text.is-error,
-.ag-caption-text.is-error b {
-  color: var(--bad);
-}
 @keyframes ag-caption {
   from {
     opacity: 0;
@@ -822,6 +818,10 @@
 .ag-fallback > summary b {
   font-weight: 600;
   color: var(--ink);
+}
+.ag-caption-text.is-error,
+.ag-caption-text.is-error b {
+  color: var(--bad);
 }
 .ag-fallback > summary:focus-visible {
   outline: 2px solid var(--ink);

@@ -39,9 +39,6 @@ html.scrolled body:not([data-view="work"]) .shell-bar {
   font-weight: 600;
   color: var(--ink);
 }
-.shell-bar p.ws-title .title-btn {
-  cursor: default;
-}
 /* The title changes with the hat; a fixed width keeps the hat switch and the scale in place. */
 @media (min-width: 1280px) {
   /* A set width, so the hat switch does not move when the title changes with the hat; it still
@@ -82,34 +79,6 @@ html.scrolled body:not([data-view="work"]) .shell-bar {
 .shell-bar .ws-title,
 .shell-bar .ws-title .title-btn {
   min-width: 0;
-}
-/* Folds, set by fitShellBar() only when the row would otherwise overflow. */
-.shell-bar.fold-words .lamp-label,
-.shell-bar.fold-words .rc-primary__reason {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-.shell-bar.fold-scale .rc-scale__wide,
-.shell-bar.fold-scale .sep.before-scale {
-  display: none;
-}
-.shell-bar.fold-scale .rc-scale__compact {
-  display: inline-block;
-}
-.shell-bar.fold-hat .rc-hatscale .rc-hat-wrap,
-.shell-bar.fold-hat .sep.before-hat {
-  display: none;
-}
-.shell-bar.fold-hat ~ * .menu .phone-item,
-.shell-bar.fold-hat .menu .phone-item {
-  display: contents;
-}
-.shell-bar p.ws-title .title-btn:hover {
-  background: none;
 }
 .shell-bar .wordmark .wordmark-text {
   display: none;
@@ -189,9 +158,6 @@ html.scrolled body:not([data-view="work"]) .shell-bar {
 .rc-scale[data-delivered="true"] .rc-scale__step[data-last] {
   color: var(--good);
 }
-.rc-scale[data-delivered="true"] .rc-scale__tick {
-  color: var(--good);
-}
 .rc-scale__step:active {
   transform: scale(0.97);
 }
@@ -208,6 +174,9 @@ html.scrolled body:not([data-view="work"]) .shell-bar {
   stroke-width: 2;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+.rc-scale[data-delivered="true"] .rc-scale__tick {
+  color: var(--good);
 }
 /* The hairline track under all steps, and the solid stretch under the current one. */
 .rc-scale__track {
@@ -552,4 +521,37 @@ html.scrolled body:not([data-view="work"]) .shell-bar {
   .shell-bar .crumbbar {
     min-width: 0;
   }
+}
+/* After the base rules they override (lint: no descending specificity); a static title
+ * is plain text. */
+.shell-bar p.ws-title .title-btn {
+  cursor: default;
+}
+.shell-bar p.ws-title .title-btn:hover {
+  background: none;
+}
+/* Folds, set by fitShellBar() only when the row would otherwise overflow. */
+.shell-bar.fold-words .lamp-label,
+.shell-bar.fold-words .rc-primary__reason {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.shell-bar.fold-scale .rc-scale__wide,
+.shell-bar.fold-scale .sep.before-scale {
+  display: none;
+}
+.shell-bar.fold-scale .rc-scale__compact {
+  display: inline-block;
+}
+.shell-bar.fold-hat .rc-hatscale .rc-hat-wrap,
+.shell-bar.fold-hat .sep.before-hat {
+  display: none;
+}
+.shell-bar.fold-hat ~ * .menu .phone-item,
+.shell-bar.fold-hat .menu .phone-item {
+  display: contents;
 }

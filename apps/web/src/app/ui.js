@@ -136,7 +136,6 @@ import {
   agentConnection,
   dismissToasts,
   hasStage,
-  dispatchRegistered,
   everEngineer,
   hatOf,
   installShell,
@@ -332,11 +331,6 @@ const startWorking = (a, t) => {
   if (!L.nativeWorkspace(a) && t && t.status === 'open')
     E.updateTask(a, t.id, { status: 'working' });
 };
-const hasDecision = (a) =>
-  works(a).some((w) => {
-    const v = shown(w);
-    return E.intentOf(v.purpose) === 'commit' && v.body.trim();
-  });
 const scen = (id) => E.scenarios.find((s) => s.id === id) || E.scenarios[0];
 const statusOf = (a) => (a && a.backend && a.backend.status) || 'active';
 const canWrite = (a) => {
@@ -1517,9 +1511,6 @@ function lensMenuItems() {
 }
 /** The review page has no workbench toolbar; its "⋯" carries the lens items and "About". It
  * opens and closes in place: redrawing the review page would remount the feedback. */
-function reviewMenu() {
-  return `<div class="menu-wrap" data-review-menu>${btn(icon('more'), 'review-menu', 'icon quiet', `aria-haspopup="menu" aria-expanded="false" aria-label="${esc(T('更多', 'More'))}"`)}</div>`;
-}
 function toggleReviewMenu(open) {
   const wrap = document.querySelector('[data-review-menu]');
   if (!wrap) return;
@@ -2044,7 +2035,7 @@ function docGrid(a) {
       ? 'new'
       : Board.agentReading(m.id)
         ? 'agent'
-        : !read.has(m.id) && !(a.acks || []).includes('read-' + m.id + '-v' + m.version)
+        : !read.has(m.id) && !(a.acks || []).includes(`read-${m.id}-v${m.version}`)
           ? 'unread'
           : cited.has(m.id)
             ? 'cited'
@@ -2767,10 +2758,10 @@ function wsRail(a) {
     ui.railTab === 'feedback'
       ? railFeedback(a, routeTask(a))
       : ui.railTab === 'agent'
-        ? railAgent(a, routeTask(a))
+        ? railAgent()
         : ui.rail === 'chat' && ui.chatRole
           ? railChat(a, ui.chatRole)
-          : railTeam(a, routeTask(a));
+          : railTeam(a);
   const back =
     ui.railTab === 'feedback' || ui.railTab === 'agent'
       ? `<div class="rail-top">${btn(icon('back'), 'rail-tab', 'icon quiet small', `data-tab="team" aria-label="${esc(T('返回', 'Back'))}"`)}<span class="grow"></span>${btn(icon('x'), 'close-panels', 'icon quiet small rail-close', `aria-label="${esc(T('关闭', 'Close'))}"`)}</div>`
@@ -2789,7 +2780,7 @@ function needsStrip(a) {
 }
 const signalPeople = () =>
   Object.fromEntries(ROLES.map((r) => [r, { name: PEOPLE[r].name, title: ROLE_TITLE(r) }]));
-function railTeam(a, t) {
+function railTeam(a) {
   const typing = typingRole(a);
   const replying = replyingRoles(a);
   const signals = Board.collectSignals(a);
@@ -2943,7 +2934,7 @@ function refreshAgentIssued() {
   });
 }
 // The agent has its own page (#/agent); the rail only points there until its tab goes.
-function railAgent(a) {
+function railAgent() {
   return `<div class="rail-pad agent-panel"><section class="agent-conn"><div class="conn-row">${agentMark('md')}<div class="grow"><p class="agent-name">${T('我的 Agent', 'My agent')}</p><p class="meta">${T('连接、传输和交回的作品都在它自己的页面。', 'Connecting, transmission and returned work live on its own page.')}</p></div></div><div class="row-actions">${btn(T('打开我的 Agent', 'Open My agent'), 'open-agent', 'small')}</div></section></div>`;
 }
 // "No MCP? Hand over a package": the manual way, kept at the foot of the My agent page.
@@ -3162,7 +3153,7 @@ function docSheetData(a) {
   const zhOnly = locale() === 'en' && isChinese(m.content);
   const owner = whoHas(m)[0] || Board.docOwner(m.id);
   const showV1 = ui.compare && hasPrev;
-  const meta = `<span>v${m.version}</span>${m.id === 'policy' ? `<span class="${a.world.indexVersion < m.version ? 'warn' : ''}">${T('知识助手索引 v' + a.world.indexVersion, 'Assistant index v' + a.world.indexVersion)}</span>` : ''}${zhOnly ? '<span class="lang-tag">Chinese source</span>' : ''}${hasPrev && !showV1 && Board.wordingChanged(prev.content, m.content) ? `<span class="mat-reworded">${T('措辞也有改动', 'Wording changed too')}</span>` : ''}${hasPrev ? `<button type="button" class="mat-compare" role="switch" aria-checked="${!!showV1}" data-action="toggle-compare"><span class="track" aria-hidden="true"></span>${T(`对照 v${prev.version}`, `Compare with v${prev.version}`)}</button>` : ''}`;
+  const meta = `<span>v${m.version}</span>${m.id === 'policy' ? `<span class="${a.world.indexVersion < m.version ? 'warn' : ''}">${T(`知识助手索引 v${a.world.indexVersion}`, `Assistant index v${a.world.indexVersion}`)}</span>` : ''}${zhOnly ? '<span class="lang-tag">Chinese source</span>' : ''}${hasPrev && !showV1 && Board.wordingChanged(prev.content, m.content) ? `<span class="mat-reworded">${T('措辞也有改动', 'Wording changed too')}</span>` : ''}${hasPrev ? `<button type="button" class="mat-compare" role="switch" aria-checked="${!!showV1}" data-action="toggle-compare"><span class="track" aria-hidden="true"></span>${T(`对照 v${prev.version}`, `Compare with v${prev.version}`)}</button>` : ''}`;
   const lang = zhOnly ? ' lang="zh-CN"' : '';
   const body = showV1
     ? `<p class="mat-was">${T(`v${prev.version} 原文，已被 v${m.version} 取代`, `v${prev.version} as it was, replaced by v${m.version}`)}</p><div class="prose serif"${lang}>${md(prev.content, { dropTitle: true })}</div>`
@@ -4274,8 +4265,10 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
       `<div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${wsStage(a)}</div>`;
     const next = document.getElementById('ws-stage');
     if (next && held) {
-      next.style.minHeight = held + 'px';
-      const release = () => next.isConnected && (next.style.minHeight = '');
+      next.style.minHeight = `${held}px`;
+      const release = () => {
+        if (next.isConnected) next.style.minHeight = '';
+      };
       (document.querySelector('.kanban') ? Board.tasksDrawn(1, 1500) : Promise.resolve()).then(() =>
         requestAnimationFrame(release),
       );
@@ -7252,7 +7245,7 @@ provideAgentPage({
         return {
           id: w.id,
           title: v.title || T('未命名', 'Untitled'),
-          excerpt: body.length > 220 ? body.slice(0, 219) + '…' : body,
+          excerpt: body.length > 220 ? `${body.slice(0, 219)}…` : body,
           version: Number(w.revision) || 1,
           adopted: !!w.adopted,
           removed: !!w.removedAt,
