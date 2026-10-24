@@ -19,6 +19,7 @@ export {
   type EngineerReportView,
   type EngineerTagView,
   type EngineerTone,
+  type EngineerVerdictLine,
   type EngineerVerdictState,
 } from './view';
 export { renderEngineerReport, type EngineerReportRenderOptions } from './render';

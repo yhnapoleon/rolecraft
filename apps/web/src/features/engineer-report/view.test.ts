@@ -103,7 +103,7 @@ describe('engineer regression report · real samples', () => {
       state: 'fixed',
       tone: 'good',
       title: '目标问题已修好',
-      detail: '按冻结预期通过。',
+      detail: '现在给出了委托记录的预期答案。',
       targets: ['账号密码忘了怎么重置？'],
     });
     expect(view.publicSection.title).toBe('公开探针 · 4 条');
@@ -145,12 +145,15 @@ describe('engineer regression report · real samples', () => {
   it('ER-02 not-fixed sample (zh): target still failing, two public probes newly failing, self-report differs', () => {
     const view = engineerReportView(NOT_FIXED_ZH, { language: 'zh', timeZone: SG });
     expect(view.meta[1]).toBe('复核完成，自报不符');
+    // Two public probes newly fail, so the headline names both facts (ER-44).
     expect(view.verdict).toMatchObject({
       state: 'not_fixed',
-      tone: 'ink',
-      title: '目标问题没修好',
-      detail: '仍未通过：期望带提醒回答，实际没有给出回答。',
-      targets: ['住宿报销上限是多少？'],
+      tone: 'warn',
+      title: '目标没修好，另有 2 处新增失败',
+      lines: [
+        { tone: 'ink', text: 'F01 仍未通过：期望带提醒回答，实际没有给出回答' },
+        { tone: 'warn', text: '2 个原来通过的公开探针现在失败' },
+      ],
     });
     expect(view.publicSection.tally).toBe('通过 1 · 未通过 3');
     expect(
@@ -175,7 +178,7 @@ describe('engineer regression report · real samples', () => {
     });
     expect(root.verdict).toMatchObject({
       title: 'Target fixed',
-      detail: 'Passes the frozen expectation.',
+      detail: 'Now gives the expected answer recorded with the ticket.',
       targets: ['What is the hotel reimbursement limit per night?'],
     });
     expect(root.publicSection.rows.map((r) => [r.id, r.resultText])).toEqual([
@@ -200,7 +203,7 @@ describe('engineer regression report · real samples', () => {
       [
         'Target failures repaired',
         'Met',
-        'Target failures now pass the frozen expectation.',
+        'Target failures now give the expected answer recorded with the ticket.',
         undefined,
       ],
       ['No regressions', 'Not met', 'New failures appeared.', '1 hidden'],
@@ -557,7 +560,7 @@ describe('engineer regression report · target line and rubric conclusions', () 
       source: 'public',
       state: 'fixed',
       title: '目标问题已修好',
-      detail: '按冻结预期通过。',
+      detail: '现在给出了委托记录的预期答案。',
       targets: ['账号密码忘了怎么重置？'],
     });
   });
@@ -645,7 +648,7 @@ describe('engineer regression report · target line and rubric conclusions', () 
     });
     const rows = view.evaluation?.rows ?? [];
     expect(rows.map((r) => [r.reason, r.probeIds, r.hidden])).toEqual([
-      ['目标失败都已按冻结预期通过。', ['F12'], undefined],
+      ['目标失败都已给出委托记录的预期答案。', ['F12'], undefined],
       ['出现了新增失败。', ['F04', 'F05'], '隐藏 2 条'],
       [undefined, [], undefined],
     ]);
@@ -875,7 +878,8 @@ describe('engineer regression report · target line and rubric conclusions', () 
       ['F05', 'ink', [['新增失败', 'warn', false]]],
       ['F12', 'good', []],
     ]);
-    expect(view.verdict).toMatchObject({ state: 'not_fixed', tone: 'ink' });
+    expect(view.verdict).toMatchObject({ state: 'not_fixed', tone: 'warn' });
+    expect(view.verdict?.lines?.[0].tone).toBe('ink');
     const tones = strings(view);
     expect(tones).toContain('新增失败');
   });
@@ -893,7 +897,7 @@ describe('engineer regression report · signed review samples', () => {
       state: 'fixed',
       tone: 'good',
       title: '目标问题已修好',
-      detail: '按冻结预期通过。',
+      detail: '现在给出了委托记录的预期答案。',
       targets: ['住宿报销上限是多少？'],
     });
     expect(view.publicSection.tally).toBe('通过 4 · 未通过 0');
@@ -919,7 +923,7 @@ describe('engineer regression report · signed review samples', () => {
       ['good', '自报结果与实际一致'],
     ]);
     expect(view.evaluation?.rows.map((r) => [r.title, r.labelText, r.tone, r.reason])).toEqual([
-      ['目标失败已修复', '满足', 'good', '目标失败都已按冻结预期通过。'],
+      ['目标失败已修复', '满足', 'good', '目标失败都已给出委托记录的预期答案。'],
       ['无回归', '满足', 'good', '没有新增失败。'],
       ['修改说明与配置差异一致', '满足', 'good', '修改说明与实际配置差异一致。'],
       ['报告可复现', '满足', 'good', '自报结果与重跑一致。'],
@@ -934,7 +938,7 @@ describe('engineer regression report · signed review samples', () => {
 
   it('ER-39 hidden comparison with one new failure shows an amber count (overreach sample)', () => {
     const view = engineerReportView(OVER_ZH.report, reviewViewOptions(OVER_ZH, 'zh'));
-    expect(view.verdict).toMatchObject({ state: 'fixed', title: '目标问题已修好' });
+    expect(view.verdict).toMatchObject({ state: 'fixed', title: '目标修好了，但新增 1 处失败' });
     expect(view.hiddenSection.counts.map((c) => c.value)).toEqual([8, 1, 0]);
     expect(view.hiddenSection.comparison?.map((c) => [c.label, c.value, c.tone])).toEqual([
       ['新增失败', 1, 'warn'],
@@ -958,6 +962,74 @@ describe('engineer regression report · signed review samples', () => {
       '过期资料保护',
     ]);
     expect(view.evaluation?.rows[4].precheck).toBe('还有 0 条公开、1 条隐藏的失败没有解释');
+  });
+
+  it('ER-43 fixed one, broke one: the headline says both, the turn and its line in amber (overreach)', () => {
+    const zh = engineerReportView(OVER_ZH.report, reviewViewOptions(OVER_ZH, 'zh'));
+    expect(zh.verdict).toMatchObject({
+      source: 'public',
+      state: 'fixed',
+      tone: 'warn',
+      title: '目标修好了，但新增 1 处失败',
+      turn: '但新增 1 处失败',
+      detail: '',
+      targets: [],
+      lines: [
+        { tone: 'good', text: 'F01 现在给出了委托记录的预期答案' },
+        { tone: 'warn', text: '1 个原来通过的隐藏探针现在失败' },
+      ],
+    });
+    const en = engineerReportView(OVER_EN.report, reviewViewOptions(OVER_EN, 'en'));
+    expect(en.verdict).toMatchObject({
+      state: 'fixed',
+      tone: 'warn',
+      title: 'Target fixed, but 1 new failure',
+      turn: 'but 1 new failure',
+      lines: [
+        { tone: 'good', text: 'F01 now gives the expected answer recorded with the ticket.' },
+        { tone: 'warn', text: '1 hidden probe that passed before now fails.' },
+      ],
+    });
+  });
+
+  it('ER-44 not fixed and new failures: the headline names both; the target line stays ink', () => {
+    const zh = engineerReportView(NOT_FIXED_ZH, { language: 'zh' });
+    expect(zh.verdict).toMatchObject({
+      state: 'not_fixed',
+      tone: 'warn',
+      title: '目标没修好，另有 2 处新增失败',
+      turn: '另有 2 处新增失败',
+      lines: [
+        { tone: 'ink', text: 'F01 仍未通过：期望带提醒回答，实际没有给出回答' },
+        { tone: 'warn', text: '2 个原来通过的公开探针现在失败' },
+      ],
+    });
+    const en = engineerReportView(NOT_FIXED_EN, { language: 'en' });
+    expect(en.verdict).toMatchObject({
+      title: 'Target not fixed, and 2 new failures',
+      turn: 'and 2 new failures',
+      lines: [
+        { tone: 'ink', text: 'F01 still fails: expected an answer with a warning, got no answer.' },
+        { tone: 'warn', text: '2 public probes that passed before now fail.' },
+      ],
+    });
+    const both = engineerReportView(
+      { ...NOT_FIXED_ZH, hidden_comparison: { new_failures: 1, fixed: 0, still_failing: 0, unverified: 0 } },
+      { language: 'zh' },
+    );
+    expect(both.verdict?.lines?.[1].text).toBe('3 个原来通过的探针现在失败（公开 2 · 隐藏 1）');
+  });
+
+  it('ER-45 nothing broken: a plain headline, no amber turn, no lines, and no jargon', () => {
+    const view = engineerReportView(ROOT_EN.report, reviewViewOptions(ROOT_EN, 'en'));
+    expect(view.verdict?.tone).toBe('good');
+    expect(view.verdict?.turn).toBeUndefined();
+    expect(view.verdict?.lines).toBeUndefined();
+    for (const language of ['zh', 'en'] as const)
+      for (const value of Object.values(ENGINEER_REPORT_COPY[language]).filter(
+        (v) => !/suite expectation|探针预期/.test(v),
+      ))
+        expect(value).not.toMatch(/frozen|冻结/);
   });
 
   it.each([

@@ -128,6 +128,23 @@ export function describeServerEvent(
     }
     case 'config_applied': {
       const version = count(data.config_version);
+      // The engineer card's system go-live (engineer/golive.py): the system put the pilot live so
+      // the ticket's failure exists; it is not the learner's action. Its own note is in the work
+      // language only, so the line is written here in both.
+      if (data.origin === 'engineer_ticket_setup')
+        return {
+          text:
+            (version === undefined
+              ? say(['试点配置已上线', 'Pilot configuration went live'])
+              : say(['试点配置已上线为 v', 'Pilot configuration went live as v']) + version) +
+            say([
+              '：系统为工程委托准备的起始状态，不是你的操作',
+              ': set up by the system for the engineering ticket, not by you',
+            ]),
+          icon: 'gear',
+          world: true,
+          subject: { kind: 'settings' },
+        };
       return {
         text:
           version === undefined

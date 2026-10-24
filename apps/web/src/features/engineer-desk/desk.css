@@ -1,0 +1,1286 @@
+/* The sign-off desk (#/engineer) and the report screen (#/engineer-review).
+   The engineer's own work objects on the same instrument-and-paper desk: the ticket arrives as a
+   paper slip, the candidate settings are an instrument face, the trial log is a tape in the
+   recess, and the sign sheet is paper ending on one signature line. Colour keeps its one meaning
+   each (ink: you and your agent; amber: changed or out of date; green: holds; red: over a limit;
+   dashed grey: not known yet). Only tokens from styles.css and material.css. */
+
+.ed {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding-top: 4px;
+}
+/* Whatever the page scrolls or moves focus to (the sign sheet, the impact note, a new trial line,
+   an error, a report section) stops below the sticky top bar instead of under it. */
+.ed,
+.ed * {
+  scroll-margin-top: calc(var(--toolbar-h) + 16px);
+}
+.ed p,
+.ed h1,
+.ed h2,
+.ed h3,
+.ed ol,
+.ed ul,
+.ed figure,
+.ed blockquote {
+  margin: 0;
+}
+.ed ol,
+.ed ul {
+  padding: 0;
+  list-style: none;
+}
+.ed-loading {
+  padding: 48px 0;
+  color: var(--ink-3);
+}
+.ed-empty-state {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  padding: 40px 0;
+}
+.ed-icon {
+  display: inline-flex;
+  flex: none;
+}
+.ed-agent-mark {
+  display: inline-flex;
+  flex: none;
+}
+.ed-arrow {
+  color: var(--ink-4);
+}
+.ed-id {
+  color: var(--ink-3);
+  font: 500 11.5px / 1.4 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.ed-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+/* A refusal from the server, said once: ink with weight, not a colour (red is only for limits). */
+.ed-error {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+.ed-sec {
+  font: 600 17px / 1.35 var(--display);
+  letter-spacing: -0.005em;
+}
+.ed-sub {
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+/* ---------- head: which hat, which ticket ---------- */
+.ed-head {
+  display: grid;
+  gap: 9px;
+  max-width: 820px;
+}
+.ed-hat {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+/* The hat you are wearing: yours, so ink. */
+.ed-hat__role {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: 12px;
+  font-weight: 600;
+}
+.ed-title {
+  font: 600 26px / 1.3 var(--display);
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+}
+.ed-title:lang(zh-CN) {
+  letter-spacing: 0;
+}
+.ed-title:focus {
+  outline: none;
+}
+.ed-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ed-fact {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: var(--r-xs);
+  background: var(--fill);
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.ed-setup {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  max-width: 72ch;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.ed-setup .ed-icon {
+  margin-top: 3px;
+}
+
+/* ---------- layout ---------- */
+.ed-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  align-items: start;
+  gap: 28px;
+}
+.ed-main,
+.ed-side {
+  display: grid;
+  align-content: start;
+  gap: 26px;
+  min-width: 0;
+}
+
+/* ---------- the ticket slip (paper) ---------- */
+.ed-slip__paper {
+  display: grid;
+  gap: 18px;
+  padding: 24px 28px 20px;
+}
+.ed-target {
+  display: grid;
+  gap: 12px;
+}
+.ed-target + .ed-target {
+  padding-top: 18px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+/* The question as the employee asked it: the world speaking, so serif. */
+.ed-target__q {
+  font: 500 21px / 1.4 var(--serif);
+  text-wrap: pretty;
+}
+.ed-target__a {
+  display: grid;
+  gap: 4px;
+}
+.ed-target__a figcaption {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.ed-target__a blockquote {
+  max-width: 68ch;
+  padding-left: 12px;
+  box-shadow: inset 2px 0 0 var(--line-2);
+  color: var(--ink-2);
+  font: 16px / 1.62 var(--serif);
+}
+.ed-target__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.ed-target__facts li {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ed-target__facts .is-stale {
+  color: var(--warn);
+  font-weight: 500;
+}
+.ed-slip__foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding-top: 14px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+
+/* ---------- beside the work: the Agent, the probes, the reviews ---------- */
+.ed-agent {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: var(--r-panel);
+  background: var(--surface);
+}
+.ed-agent__line span {
+  text-wrap: pretty;
+}
+.ed-agent__line {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.ed-agent__keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ed-agent__card:empty {
+  display: none;
+}
+.ed-agent__card .agent-connection {
+  margin: 0;
+}
+.ed-probes,
+.ed-reviews {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.ed-probe-list {
+  display: grid;
+  gap: 2px;
+}
+.ed-probe-list li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 0;
+}
+.ed-probe-list__q {
+  font: 14.5px / 1.45 var(--serif);
+}
+.ed-review-list {
+  display: grid;
+  gap: 2px;
+}
+.ed-review-list__open {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 38px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--r-key);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--fast) ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ed-review-list__open:not([disabled]):hover {
+    background: var(--fill);
+  }
+}
+.ed-review-list__open[disabled] {
+  cursor: default;
+  background: var(--fill);
+}
+.ed-review-list__n {
+  font-weight: 600;
+}
+.ed-review-list__s {
+  color: var(--ink-2);
+}
+.ed-review-list time {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ed-review-list__here {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+/* ---------- candidate settings (instrument face) ---------- */
+.ed-bench {
+  display: grid;
+  gap: 16px;
+  padding: 20px 22px;
+  border-radius: var(--r-panel);
+  background: var(--surface);
+}
+.ed-bench__head {
+  display: grid;
+  gap: 4px;
+}
+.ed-form {
+  display: grid;
+  gap: 18px;
+}
+.ed-form__main {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 22px 28px;
+}
+/* Scope and engineering work, folded under one line that says how many it changed. */
+.ed-more > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style: none;
+}
+.ed-more > summary::-webkit-details-marker {
+  display: none;
+}
+.ed-more > summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: rotate(-45deg);
+  transition: transform var(--fast) var(--ease-out);
+}
+.ed-more[open] > summary::before {
+  transform: rotate(45deg);
+}
+.ed-more[open] > summary {
+  margin-bottom: 14px;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+.ed-more__count {
+  color: var(--ink);
+  font-weight: 500;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ed-more > summary::before {
+    transition: none;
+  }
+}
+.ed-group {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.ed-group__title {
+  display: block;
+  width: 100%;
+  padding: 0 0 6px;
+  box-shadow: inset 0 -1px 0 var(--line);
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+/* A setting you changed carries an ink tick, and says what the baseline was. */
+.ed-field {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 10px;
+  box-shadow: inset 2px 0 0 transparent;
+  transition: box-shadow var(--fast) ease;
+}
+.ed-field.is-changed {
+  box-shadow: inset 2px 0 0 var(--ink);
+}
+.ed-field__label {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+}
+.ed-field.is-changed .ed-field__name {
+  color: var(--ink);
+}
+/* The setting's own name, as the Agent says it: a code identifier, so monospace, and one click
+   selects it whole for copying. Only on the sign-off desk. */
+.ed-key {
+  color: var(--ink-3);
+  font: 12px / 1.4 var(--mono);
+  white-space: nowrap;
+  -webkit-user-select: all;
+  user-select: all;
+}
+.ed-field__was {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.ed-field__error {
+  color: var(--bad);
+  font-size: 12px;
+}
+.ed-field.has-error .input,
+.ed-field.has-error .textarea {
+  border-color: var(--bad);
+}
+.ed-num {
+  max-width: 168px;
+  font-variant-numeric: tabular-nums;
+}
+.ed-topics {
+  min-height: 58px;
+}
+.ed-choices {
+  gap: 5px;
+}
+.ed-choices .choice > span {
+  min-height: 30px;
+  padding: 0 11px;
+  font-size: 12.5px;
+}
+.ed-diff {
+  padding-top: 12px;
+  box-shadow: inset 0 1px 0 var(--line);
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.ed-diff b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.ed-diff__lead,
+.ed-diff__same {
+  color: var(--ink-3);
+}
+.ed-diff__item {
+  font-variant-numeric: tabular-nums;
+}
+.ed-bench__keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ed-bench__budget {
+  margin-left: auto;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- the trial log: a tape in the recess ---------- */
+.ed-log {
+  display: grid;
+  gap: 10px;
+}
+.ed-log__head {
+  display: grid;
+  gap: 2px;
+}
+.ed-tape {
+  display: grid;
+  gap: 2px;
+  padding: 6px;
+  border-radius: var(--r-panel);
+  background: var(--surface-3);
+}
+.ed-tape--empty {
+  padding: 18px 16px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+.ed-line {
+  border-radius: var(--r-key);
+  transition: background var(--fast) ease;
+}
+.ed-line:has(> .ed-line__head[aria-expanded="true"]) {
+  background: var(--surface);
+}
+.ed-line__head {
+  display: grid;
+  grid-template-columns: 44px auto auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 42px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--r-key);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform var(--fast) var(--ease);
+}
+@media (hover: hover) and (pointer: fine) {
+  .ed-line__head:hover {
+    background: var(--fill);
+  }
+}
+.ed-line__head:active {
+  transform: scale(0.995);
+}
+.ed-line__time {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ed-line__who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ed-line__verb {
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.ed-line__fields {
+  overflow: hidden;
+  color: var(--ink-2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ed-line__tally {
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.ed-line__tally[data-tone="good"] {
+  color: var(--good);
+}
+.ed-line__tally[data-tone="warn"] {
+  color: var(--warn);
+}
+.ed-line__tally[data-tone="unknown"] {
+  color: var(--ink-3);
+}
+/* One pip per public probe (or per reproduced test): green holds, ink did not pass,
+   amber differs from the record, dashed grey not known. */
+.ed-pips {
+  display: inline-flex;
+  gap: 3px;
+}
+.ed-pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--ink-4);
+}
+.ed-pip[data-mark="good"] {
+  background: var(--good);
+}
+.ed-pip[data-mark="ink"] {
+  background: var(--ink);
+}
+.ed-pip[data-mark="warn"] {
+  background: var(--warn);
+}
+.ed-pip[data-mark="unknown"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--ink-4);
+  outline: 1px dashed var(--ink-4);
+  outline-offset: -1px;
+}
+.ed-line__rows {
+  padding: 2px 12px 12px 68px;
+}
+.ed-rows-note,
+.ed-rows-config {
+  padding: 6px 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.ed-rows-config b {
+  color: var(--ink-2);
+  font-weight: 600;
+}
+.ed-rows {
+  display: grid;
+}
+.ed-row {
+  display: grid;
+  grid-template-columns: 14px 40px minmax(0, 1fr) auto;
+  gap: 2px 10px;
+  align-items: baseline;
+  padding: 8px 0;
+  box-shadow: inset 0 -1px 0 var(--line);
+}
+.ed-row:last-child {
+  box-shadow: none;
+}
+.ed-row__mark {
+  grid-column: 1;
+  grid-row: 1;
+  font-weight: 700;
+  line-height: 1;
+  text-align: center;
+}
+.ed-row__mark::before {
+  content: "";
+}
+.ed-row[data-mark="good"] .ed-row__mark::before {
+  content: "✓";
+  color: var(--good);
+}
+.ed-row[data-mark="ink"] .ed-row__mark::before {
+  content: "✕";
+  color: var(--ink-2);
+}
+.ed-row[data-mark="warn"] .ed-row__mark::before {
+  content: "≠";
+  color: var(--warn);
+}
+.ed-row[data-mark="unknown"] .ed-row__mark::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border: 1.5px dashed var(--ink-4);
+  border-radius: 50%;
+}
+.ed-row__id {
+  grid-column: 2;
+  grid-row: 1;
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px;
+  color: var(--ink-3);
+  font: 500 11.5px / 1.4 var(--mono);
+}
+.ed-row__q {
+  grid-column: 3;
+  grid-row: 1;
+  font: 14.5px / 1.5 var(--serif);
+}
+.ed-row__q .ed-tag {
+  margin-left: 8px;
+  font-family: var(--sans);
+  vertical-align: 0.1em;
+}
+.ed-row__verdict {
+  grid-column: 4;
+  grid-row: 1;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ed-row__verdict[data-mark="good"] {
+  color: var(--good);
+}
+.ed-row__verdict[data-mark="warn"] {
+  color: var(--warn);
+}
+.ed-row__verdict[data-mark="unknown"] {
+  color: var(--ink-3);
+  font-weight: 500;
+}
+.ed-row__io,
+.ed-row__answer {
+  grid-column: 3 / -1;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+.ed-row__answer {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  font-size: 12.5px;
+}
+
+/* ---------- the sign sheet (paper) ---------- */
+.ed-sheet__paper {
+  display: grid;
+  gap: 18px;
+  padding: 24px 28px 22px;
+}
+.ed-sheet__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ed-sheet__empty {
+  color: var(--ink-3);
+  font-size: 13.5px;
+}
+.ed-sheet__body {
+  display: grid;
+  gap: 18px;
+}
+.ed-sheet__byline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+/* Side by side and each in its own order: what changed, and what the draft says changed.
+   Whether they agree is the review's to judge. */
+.ed-compare {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.ed-compare__col {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  min-width: 0;
+}
+.ed-compare__col + .ed-compare__col {
+  padding-left: 24px;
+  margin-left: 24px;
+  box-shadow: inset 1px 0 0 var(--line);
+}
+.ed-compare__list {
+  display: grid;
+  gap: 10px;
+}
+.ed-compare__list li {
+  display: grid;
+  gap: 3px;
+}
+.ed-change {
+  display: grid;
+  gap: 1px;
+}
+.ed-change b {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.ed-change__values {
+  color: var(--ink-2);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+.ed-change__reason,
+.ed-explain__text {
+  color: var(--ink-2);
+  font: 14.5px / 1.6 var(--serif);
+}
+.ed-explain,
+.ed-claims,
+.ed-unresolved {
+  display: grid;
+  gap: 6px;
+}
+.ed-explain__text {
+  max-width: 68ch;
+  color: var(--ink);
+  font-size: 15.5px;
+  white-space: pre-wrap;
+}
+.ed-claims__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 13px;
+}
+.ed-claims__list li,
+.ed-unresolved li {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+.ed-unresolved ul {
+  display: grid;
+  gap: 4px;
+  font-size: 13.5px;
+}
+.ed-impact {
+  display: grid;
+  gap: 8px;
+  padding-top: 16px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.ed-impact__label {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.ed-impact__meta {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: -4px;
+}
+.ed-impact__count {
+  color: var(--ink-4);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+.ed-impact__count[data-over="true"] {
+  color: var(--bad);
+}
+/* The signature line: an empty space ruled off, captioned with who signs and how many reviews
+   remain; the one ink key beside it. */
+.ed-sign {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px 20px;
+  padding-top: 6px;
+}
+.ed-sign__line {
+  display: grid;
+  flex: 1 1 240px;
+  gap: 6px;
+  min-width: 0;
+}
+.ed-sign__line::before {
+  content: "";
+  display: block;
+  height: 30px;
+  border-bottom: 1px solid var(--ink-3);
+}
+.ed-sign__who {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.ed-sign__note {
+  color: var(--ink-2);
+  font-size: 12.5px;
+}
+.ed-sign__keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ---------- drafting by hand ---------- */
+.ed-compose {
+  display: grid;
+  gap: 14px;
+}
+.ed-compose__from {
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.ed-compose__label {
+  font-size: 13px;
+  font-weight: 600;
+}
+.ed-compose__block {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding-top: 12px;
+  box-shadow: inset 0 1px 0 var(--line);
+}
+.ed-compose__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ed-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ed-check input,
+.ed-handover__item input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--primary);
+}
+.ed-compose__block > :is(.ed-st-list, .ed-un-list, .ed-claim-picks, .ed-compose__row) {
+  justify-self: stretch;
+}
+.ed-st-list,
+.ed-un-list {
+  display: grid;
+  gap: 8px;
+}
+.ed-st {
+  display: grid;
+  grid-template-columns: minmax(96px, 140px) auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+.ed-st__name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.ed-st__values {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.ed-st__value {
+  width: auto;
+  min-width: 0;
+  max-width: 132px;
+  padding: 6px 9px;
+  font-size: 13px;
+}
+.ed-st__fixed {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.ed-claim-picks {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px 14px;
+}
+.ed-claim-picks li {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+}
+.ed-claim-picks .select {
+  padding: 6px 9px;
+  font-size: 13px;
+}
+.ed-un {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 8px;
+}
+.ed-un__probes .choice > span {
+  min-height: 28px;
+  padding: 0 9px;
+  font: 500 11.5px var(--mono);
+}
+.ed-compose__errors {
+  display: grid;
+  gap: 2px;
+  padding-left: 1.1em;
+  list-style: disc;
+}
+.ed-compose__keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+.ed-compose__count {
+  margin-right: auto;
+  color: var(--ink-4);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+.ed-compose__count[data-over="true"] {
+  color: var(--bad);
+}
+
+/* ---------- report screen ---------- */
+.ed-review {
+  max-width: 820px;
+}
+.ed-review__bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+.ed-review__keys {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.ed-review__sheet {
+  min-width: 0;
+}
+.ed-review__sheet .er-report {
+  max-width: none;
+}
+
+/* ---------- hand to engineering (bench dialog) ---------- */
+/* The title holds the first focus only to place the reader; it is not a control. */
+.ed-handover .sheet-head h2:focus {
+  outline: none;
+}
+.ed-handover__lead {
+  margin: 0 0 12px;
+  color: var(--ink-2);
+  font-size: 13.5px;
+}
+.ed-handover__list {
+  display: grid;
+  gap: 2px;
+  max-height: min(52vh, 460px);
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  list-style: none;
+}
+.ed-handover__item {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  align-items: start;
+  gap: 12px;
+  padding: 10px 10px;
+  border-radius: var(--r-key);
+  cursor: pointer;
+}
+.ed-handover__item input {
+  margin-top: 2px;
+}
+@media (hover: hover) and (pointer: fine) {
+  .ed-handover__item:hover {
+    background: var(--fill);
+  }
+}
+.ed-handover__item:has(input:disabled) {
+  cursor: default;
+  opacity: 0.55;
+}
+.ed-handover__text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.ed-handover__q {
+  font-size: 14px;
+  font-weight: 500;
+}
+.ed-handover__flag {
+  color: var(--warn);
+  font-size: 12px;
+  font-weight: 500;
+}
+.ed-handover__a {
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.ed-handover__count {
+  margin: 12px 0 0;
+  color: var(--ink-3);
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.ed-handover__count[data-full="true"] {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+/* ---------- motion: answers to the person's action, and new runs arriving ---------- */
+@media (prefers-reduced-motion: no-preference) {
+  .ed-line.is-new {
+    animation: ed-line-in var(--mid) var(--ease-out) both;
+  }
+  .ed-line.is-new .ed-pip {
+    animation: ed-pip-in var(--fast) var(--ease-out) both;
+    animation-delay: calc(120ms + var(--i, 0) * 40ms);
+  }
+  .ed-review__enter {
+    animation: ed-sheet-in var(--mid) var(--spring) both;
+  }
+}
+@keyframes ed-line-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+@keyframes ed-pip-in {
+  from {
+    opacity: 0;
+    transform: scale(0.6);
+  }
+}
+@keyframes ed-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* ---------- narrower desks ---------- */
+@media (max-width: 1100px) {
+  .ed-grid {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 24px;
+  }
+  .ed-main,
+  .ed-side {
+    display: contents;
+  }
+  .ed-slip {
+    order: 1;
+  }
+  .ed-agent {
+    order: 2;
+  }
+  .ed-bench {
+    order: 3;
+  }
+  .ed-probes {
+    order: 4;
+  }
+  .ed-log {
+    order: 5;
+  }
+  .ed-sheet {
+    order: 6;
+  }
+  .ed-reviews {
+    order: 7;
+  }
+}
+@media (max-width: 720px) {
+  .ed {
+    gap: 18px;
+  }
+  .ed-title {
+    font-size: 22px;
+  }
+  .ed-slip__paper,
+  .ed-sheet__paper {
+    padding: 20px 18px 18px;
+  }
+  .ed-target__q {
+    font-size: 18px;
+  }
+  .ed-target__a blockquote {
+    font-size: 15px;
+  }
+  .ed-bench {
+    padding: 18px 16px;
+  }
+  .ed-form__main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .ed-bench__budget {
+    flex-basis: 100%;
+    margin-left: 0;
+  }
+  .ed-line__head {
+    grid-template-columns: auto auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      "time who verb tally"
+      "fields fields fields pips";
+    row-gap: 4px;
+    padding: 8px 10px;
+  }
+  .ed-line__time {
+    grid-area: time;
+  }
+  .ed-line__who {
+    grid-area: who;
+  }
+  .ed-line__verb {
+    grid-area: verb;
+  }
+  .ed-line__fields {
+    grid-area: fields;
+    white-space: normal;
+  }
+  .ed-pips {
+    grid-area: pips;
+    justify-self: end;
+  }
+  .ed-line__tally {
+    grid-area: tally;
+  }
+  .ed-line__rows {
+    padding: 2px 10px 10px;
+  }
+  .ed-row {
+    grid-template-columns: 14px minmax(0, 1fr) auto;
+  }
+  .ed-row__id {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .ed-row__q {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+  .ed-row__verdict {
+    grid-column: 3;
+    grid-row: 1;
+  }
+  .ed-row__io,
+  .ed-row__answer {
+    grid-column: 2 / -1;
+  }
+  .ed-compare {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .ed-compare__col + .ed-compare__col {
+    margin-left: 0;
+    padding-left: 0;
+    padding-top: 14px;
+    box-shadow: inset 0 1px 0 var(--line);
+  }
+  .ed-st {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ed-st__values,
+  .ed-st > .input {
+    grid-column: 1 / -1;
+  }
+  .ed-st__name {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  .ed-st > .btn {
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .ed-un {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .ed-un__probes {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+  .ed-sign__keys {
+    width: 100%;
+  }
+  .ed-sign__key {
+    flex: 1;
+  }
+}

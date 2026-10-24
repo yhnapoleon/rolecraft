@@ -119,6 +119,15 @@ import {
 } from '../features/feedback-native/read-only-notice';
 import { afterPracticeRead } from '../features/feedback-native/practice-read';
 import { provideTaskCardFacts, testFacts } from '../features/workspace/native-v4/card-facts';
+import {
+  ENGINEER_CASES,
+  ENGINEER_ROUTES,
+  engineerBackHref,
+  engineerCareerCardHtml,
+  mountEngineerRoute,
+  openEngineerHandover,
+  openEngineerTicket,
+} from '../features/engineer-desk/entry';
 
 const L = window.PracticeLive;
 const E = L.engine;
@@ -581,6 +590,8 @@ function parseRoute() {
   if (['pm', 'work', 'bench', 'review', 'lab', 'engineer-report'].includes(r))
     return { r, id: null };
   if ((r === 'task' || r === 'doc') && id) return { r, id: decodeURIComponent(id) };
+  // The engineer's desk (#/engineer/<ticket>) and a review's report (#/engineer-review/<review>).
+  if (ENGINEER_ROUTES.includes(r)) return { r, id: id ? decodeURIComponent(id) : null };
   return { r: '', id: null };
 }
 const hashOf = (r, id) => '#/' + r + (id ? '/' + encodeURIComponent(id) : '');
@@ -685,6 +696,8 @@ function render() {
   else if (r === 'review' && current()) app.innerHTML = banner + renderReview();
   else if (r === 'lab') app.innerHTML = banner + renderLab();
   else if (r === 'engineer-report') app.innerHTML = banner + renderEngineerReport();
+  else if (ENGINEER_ROUTES.includes(r) && current() && L.nativeWorkspace(current()))
+    app.innerHTML = banner + renderEngineer();
   else app.innerHTML = banner + renderCareers();
   afterRender();
   restoreFocus(key);
@@ -746,6 +759,33 @@ function mountEngineerReportRoute() {
       if (root.isConnected) m.mountEngineerReportPage(root, { language: locale() });
     });
 }
+// The engineer's screens: back goes up one level (report -> desk -> product board); the screens
+// themselves live in features/engineer-desk and keep their element across redraws.
+function renderEngineer() {
+  const back =
+    ui.route === 'engineer'
+      ? `<a class="btn quiet back" href="#/work" aria-label="${esc(T('回到产品经理工作板', 'Back to the product board'))}">${icon('back')}<span>${esc(T('产品经理工作板', 'Product board'))}</span></a>`
+      : `<a class="btn quiet back" href="${esc(engineerBackHref(ui.routeId))}" data-engineer-back>${icon('back')}<span>${esc(T('签字台', 'Sign-off desk'))}</span></a>`;
+  return `${topbar(back)}<main id="main" class="page" data-engineer-screen tabindex="-1"></main>`;
+}
+function mountEngineer() {
+  const a = current();
+  const root = document.querySelector('[data-engineer-screen]');
+  if (!a || !root) return;
+  document.title = `${ui.route === 'engineer' ? T('签字台', 'Sign-off desk') : T('复核报告', 'Review report')} · ${PRODUCT_NAME}`;
+  mountEngineerRoute(
+    root,
+    { route: ui.route, id: ui.routeId, sessionId: a.id, language: locale() },
+    () => ({
+      caseTitle: CASE(a.scenarioId).title,
+      transport: L.gatewayTransport(a),
+      agentHost: L.v4Host(a),
+      navigate: (route, id) => go(route, { id, transition: true }),
+      notify,
+      download,
+    }),
+  );
+}
 function afterRender() {
   refreshAgentIssued();
   if (ui.route !== 'lab') labView = null;
@@ -759,6 +799,10 @@ function afterRender() {
   }
   if (ui.route === 'engineer-report') {
     mountEngineerReportRoute();
+    return;
+  }
+  if (ENGINEER_ROUTES.includes(ui.route)) {
+    mountEngineer();
     return;
   }
   mountNativeSlots();
@@ -960,20 +1004,17 @@ function renderCareers() {
     </main>`;
 }
 
-/* The engineer job, still locked. Opening the engineer role later changes only this card. */
+/* The engineer job, open: start a new practice with the engineer's hat on, or take the ticket in
+ * the practice already under way (the same practice, two hats). */
 function engineerCareerCard() {
-  const steps = [
-    T('复现 AIPM 记录的失败', 'Reproduce the failure the AIPM recorded'),
-    T('只调受支持的配置', 'Change only supported settings'),
-    T('用真实回归证明', 'Prove it with a real regression run'),
-  ];
-  return `<article class="career later" aria-disabled="true" data-career="engineer">
-          <div class="career-art later-art"><span class="soon">${icon('lock', 'i-sm')}${T('稍后开放', 'Coming later')}</span><ol class="later-list" aria-label="${esc(T('这份工作的三步', 'The three steps of this job'))}">${steps.map((step) => `<li>${esc(step)}</li>`).join('')}</ol></div>
-          <div class="career-body">
-            <h2 class="career-name">${T('AI 应用工程师', 'AI Application Engineer')}</h2>
-            <p>${T('排在 AI 产品经理之后开放。', 'Opens after AI Product Manager.')}</p>
-          </div>
-        </article>`;
+  const a = current();
+  const practice = !!(
+    a &&
+    caseShown(a.scenarioId) &&
+    L.nativeWorkspace(a) &&
+    ENGINEER_CASES.includes(a.scenarioId)
+  );
+  return engineerCareerCardHtml({ practice });
 }
 
 /* ---------- 2. PM entry ---------- */
@@ -2293,7 +2334,7 @@ function bench(a, t) {
         <h2 class="console-name">${T('知识助手', 'Knowledge assistant')}<span class="stamp">${configured ? (use ? T('已保存 v', 'Saved v') : T('配置 v', 'Config v')) + a.configVersion : T('未设置', 'Not set up')}</span></h2>
         ${configured ? `<ul class="console-state"><li>${icon('seats', 'i-sm')}${T(c.participants + ' 人', c.participants + ' users')}</li><li>${icon('layers', 'i-sm')}${c.domains.map(DOMAIN).join(' + ') || T('未开放知识', 'No knowledge')}</li><li>${icon('sync', 'i-sm')}${UPDATE(c.update)}</li><li class="${stale ? 'warn' : ''}">${icon(stale ? 'stale' : 'doc', 'i-sm')}${T('政策源 v' + a.world.policyVersion + '，索引 v' + a.world.indexVersion, 'Policy v' + a.world.policyVersion + ', index v' + a.world.indexVersion)}</li></ul>` : `<p class="console-hint">${T('先定试点范围，助手才能回答。', 'Set the pilot scope before the assistant can answer.')}</p>`}
         ${configUseLine(use)}
-      </div><div class="console-tools">${stale && configured ? btn(icon('refresh', 'i-sm') + T('刷新索引', 'Refresh index'), 'refresh-index', 'small quiet') : ''}${btn(icon('gear', 'i-sm') + T('试点设置', 'Pilot settings'), 'config', configured ? 'small quiet' : 'small primary')}</div></header>
+      </div><div class="console-tools">${L.nativeWorkspace(a) && ENGINEER_CASES.includes(a.scenarioId) && a.tests.length ? btn(icon('branch', 'i-sm') + T('交给工程', 'Hand to engineering'), 'engineer-handover', 'small quiet') : ''}${stale && configured ? btn(icon('refresh', 'i-sm') + T('刷新索引', 'Refresh index'), 'refresh-index', 'small quiet') : ''}${btn(icon('gear', 'i-sm') + T('试点设置', 'Pilot settings'), 'config', configured ? 'small quiet' : 'small primary')}</div></header>
       <form class="console-compose" data-form="run-test">
         <label class="sr-only" for="lab-q">${T('你想问助手什么', 'Your question for the assistant')}</label>
         <textarea id="lab-q" name="question" class="console-q" rows="2" required maxlength="4000" placeholder="${esc(T('像员工那样问它一个问题…', 'Ask what an employee would ask…'))}">${esc(s?.inputs.question || ui.labPrefill)}</textarea>
@@ -2540,7 +2581,10 @@ const connectionKeeper = createConnectionKeeper(() => refreshAgentIssued());
 function refreshAgentIssued() {
   const a = current();
   // The token is offered only while its practice is on screen; leaving or switching withdraws it.
-  const onPractice = a && L.nativeWorkspace(a) && (WS.includes(ui.route) || ui.route === 'review');
+  const onPractice =
+    a &&
+    L.nativeWorkspace(a) &&
+    (WS.includes(ui.route) || ui.route === 'review' || ENGINEER_ROUTES.includes(ui.route));
   connectionKeeper.track(onPractice ? L.v4Host(a) : null);
   const target = document.querySelector('[data-agent-issued]');
   if (!a || !target) return;
@@ -4629,6 +4673,45 @@ async function act(el) {
       break;
     case 'open-career':
       go('pm', { transition: true });
+      break;
+    // The engineer card: a new practice with the engineer's hat on, starting from its ticket.
+    case 'engineer-start': {
+      el.disabled = true;
+      el.textContent = T('正在准备委托…', 'Preparing the ticket…');
+      try {
+        const na = await startAttempt('pilot', {});
+        const ticket = await openEngineerTicket(L.gatewayTransport(na), na.id, { from: 'seeded' });
+        go('engineer', { id: ticket.id, transition: true });
+      } finally {
+        if (el.isConnected) {
+          el.disabled = false;
+          el.textContent = T('开始', 'Start');
+        }
+      }
+      break;
+    }
+    // The same practice, the other hat: the ticket that comes with the situation.
+    case 'engineer-take': {
+      el.disabled = true;
+      try {
+        const ticket = await openEngineerTicket(L.gatewayTransport(a), a.id, { from: 'seeded' });
+        go('engineer', { id: ticket.id, transition: true });
+      } finally {
+        if (el.isConnected) el.disabled = false;
+      }
+      break;
+    }
+    // The test bench: hand chosen tests to engineering and put on the engineer's hat.
+    case 'engineer-handover':
+      await openEngineerHandover({
+        transport: L.gatewayTransport(a),
+        sessionId: a.id,
+        tests: a.tests
+          .slice()
+          .reverse()
+          .map((t) => ({ id: t.id, question: t.question, answer: t.answer, stale: !!t.stale })),
+        open: (ticketId) => go('engineer', { id: ticketId, transition: true }),
+      });
       break;
     case 'set-lang':
       ui.menu = null;

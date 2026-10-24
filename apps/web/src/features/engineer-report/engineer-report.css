@@ -1,5 +1,6 @@
 /* Regression report: a test report on paper. Colour keeps one meaning each — green holds,
-   red contradicts the frozen expectation, grey (dashed) is not known, ink is a neutral fact.
+   amber changed (passed before, fails now), red contradicts, grey (dashed) is not known,
+   ink is a neutral fact.
    Status is always written out; marks only support the words. */
 .er-report {
   display: grid;
@@ -26,24 +27,25 @@
    ↓ amber newly failing, ◐ ink partly, open circle ink still to do, dashed circle grey unknown. */
 .er-probe__mark,
 .er-check__mark,
+.er-verdict__line-mark,
 .er-advice__mark {
   font-weight: 700;
   text-align: center;
   line-height: 1.5;
 }
-:is(.er-probe__mark, .er-check__mark)[data-tone="good"] {
+:is(.er-probe__mark, .er-check__mark, .er-verdict__line-mark)[data-tone="good"] {
   color: var(--good);
 }
-:is(.er-probe__mark, .er-check__mark)[data-tone="bad"] {
+:is(.er-probe__mark, .er-check__mark, .er-verdict__line-mark)[data-tone="bad"] {
   color: var(--bad);
 }
-:is(.er-probe__mark, .er-check__mark)[data-tone="warn"] {
+:is(.er-probe__mark, .er-check__mark, .er-verdict__line-mark)[data-tone="warn"] {
   color: var(--warn);
 }
-:is(.er-probe__mark, .er-check__mark)[data-tone="ink"] {
+:is(.er-probe__mark, .er-check__mark, .er-verdict__line-mark)[data-tone="ink"] {
   color: var(--ink-2);
 }
-:is(.er-probe__mark, .er-check__mark)[data-shape="open"]::before {
+:is(.er-probe__mark, .er-check__mark, .er-verdict__line-mark)[data-shape="open"]::before {
   content: "";
   display: inline-block;
   width: 9px;
@@ -52,7 +54,7 @@
   border-radius: 50%;
   vertical-align: 0.05em;
 }
-:is(.er-probe__mark, .er-check__mark, .er-advice__mark)[data-tone="unknown"]::before {
+:is(.er-probe__mark, .er-check__mark, .er-verdict__line-mark, .er-advice__mark)[data-tone="unknown"]::before {
   content: "";
   display: inline-block;
   width: 9px;
@@ -117,6 +119,10 @@
   color: var(--good);
   background: var(--good-tint);
 }
+/* Something that passed before fails now: an amber outline (no fill), the arrow inside. */
+.er-verdict__mark[data-tone="warn"] {
+  color: var(--warn);
+}
 .er-verdict__mark[data-tone="ink"] {
   color: var(--ink-2);
 }
@@ -127,9 +133,34 @@
 .er-verdict__title {
   margin: 0;
   font: 600 26px / 1.25 var(--display);
+  text-wrap: pretty;
 }
 .er-report:lang(en) .er-verdict__title {
   letter-spacing: -0.015em;
+}
+/* The turn of a split headline ("but 1 new failure"): the one amber phrase in the heading. */
+.er-verdict__turn {
+  color: var(--warn);
+  white-space: nowrap;
+}
+/* The two facts behind a split headline, each with its own mark. */
+.er-report .er-verdict__lines {
+  display: grid;
+  gap: 4px;
+  margin-top: 10px;
+  padding: 0;
+  list-style: none;
+}
+.er-verdict__line {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr);
+  column-gap: 10px;
+  align-items: baseline;
+  max-width: 72ch;
+  color: var(--ink-2);
+  font-size: 14.5px;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
 }
 /* The target question as the suite wrote it: serif, no added quotes. */
 .er-verdict__target {
@@ -291,10 +322,6 @@
   color: var(--ink-3);
   font-size: 12.5px;
   line-height: 1.5;
-}
-/* A short checklist: keep each label close to its criterion. */
-.er-evaluation {
-  max-width: 560px;
 }
 .er-criterion__body {
   display: grid;

@@ -7,6 +7,11 @@
   margin: 0 auto;
   padding-top: 12px;
 }
+/* Jump targets stop below the sticky top bar. */
+.er-page,
+.er-page * {
+  scroll-margin-top: calc(var(--toolbar-h) + 16px);
+}
 .er-page__head {
   display: flex;
   flex-wrap: wrap;
