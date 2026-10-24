@@ -2,10 +2,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FeedbackItem, SubmissionRuleCheck } from '../../contracts-v2';
 import {
   createPresubmitSchedule,
+  createSentencePass,
   presubmitView,
   ruleFact,
   submissionFactLine,
   type PresubmitState,
+  type SentencePass,
+  type SentenceResult,
 } from './presubmit';
 
 type Label = FeedbackItem['label'];
@@ -468,5 +471,78 @@ describe('fact lines only where the rules decided an item is not met', () => {
         'zh',
       ),
     ).toBeNull();
+  });
+});
+
+describe('sentence recognition after the rule check', () => {
+  const units = [
+    { index: 0, quote: '首批 20 人。', label: 'supported', confidence: 0.9, decision: 'decide', evidence: '容量 30 人。' },
+    { index: 1, quote: '可开放 80 人。', label: 'contradicted', confidence: 0.82, decision: 'decide', evidence: '上限 60 人。' },
+  ];
+  const preview = { recognizer: 'relation-rule-v1@rule-fallback', fallback: true, counts: { supported: 1, contradicted: 1 }, units };
+  const withRecognition = (recognition: unknown) => ({ ...f17, recognition }) as SubmissionRuleCheck;
+  const choice = { decision: 'launch_narrow' as const, products: [ref('product', 'p', 2)] };
+  function pass() {
+    const shown: SentencePass[] = [];
+    const calls: { resolve: (value: SentenceResult) => void; reject: (error: Error) => void }[] = [];
+    const control = createSentencePass({
+      recognize: () => new Promise<SentenceResult>((resolve, reject) => calls.push({ resolve, reject })),
+      show: (state) => shown.push(state),
+      now: () => 1000,
+    });
+    return { control, shown, calls };
+  }
+
+  it('leaves the card to the rules when the recognition layer is off', () => {
+    const { control, shown, calls } = pass();
+    control.start(f17, choice);
+    expect(calls).toHaveLength(0);
+    expect(shown.at(-1)).toEqual({ kind: 'idle' });
+  });
+
+  it('shows the rules first, then the sentences once recognised', async () => {
+    const { control, shown, calls } = pass();
+    const check = withRecognition({ status: 'pending' });
+    control.start(check, choice);
+    expect(shown.at(-1)).toEqual({ kind: 'running', startedAt: 1000 });
+    calls[0].resolve({ enabled: true, recognition: preview as SentenceResult['recognition'] });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(shown.at(-1)).toEqual({ kind: 'ready', preview });
+    // The same check again (a redraw, a reopened panel) reuses the result.
+    control.start(check, choice);
+    expect(calls).toHaveLength(1);
+    expect(shown.at(-1)).toEqual({ kind: 'ready', preview });
+  });
+
+  it('drops a late answer for a check that is no longer shown', async () => {
+    const { control, shown, calls } = pass();
+    control.start(withRecognition({ status: 'pending' }), choice);
+    control.start(f17, choice);
+    calls[0].resolve({ enabled: true, recognition: preview as SentenceResult['recognition'] });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(shown.at(-1)).toEqual({ kind: 'idle' });
+  });
+
+  it('says so when the pass fails, and shows nothing when the layer turned out off', async () => {
+    const { control, shown, calls } = pass();
+    control.start(withRecognition({ status: 'pending' }), choice);
+    calls[0].reject(Error('timeout'));
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(shown.at(-1)).toEqual({ kind: 'failed' });
+    control.start(withRecognition({ status: 'pending' }), choice);
+    calls[1].resolve({ enabled: false, recognition: null });
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(shown.at(-1)).toEqual({ kind: 'idle' });
+  });
+
+  it('uses sentences already carried by the check without a second request', () => {
+    const { control, shown, calls } = pass();
+    control.start(withRecognition(preview), choice);
+    expect(calls).toHaveLength(0);
+    expect(shown.at(-1)).toEqual({ kind: 'ready', preview });
   });
 });

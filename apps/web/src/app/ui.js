@@ -23,7 +23,9 @@ import {
   assistantMark,
 } from './art.js';
 import * as Coach from './coach.js';
-import { badgesHtml, summaryText } from '../features/recognition-native/badge';
+import { summaryText } from '../features/recognition-native/badge';
+import { lensOn, onLensChange, setLens } from '../features/recognition-native/lens';
+import { signalsHtml } from '../features/recognition-native/signals';
 import { behaviorHtml } from '../features/behavior-native/view';
 import {
   PRI,
@@ -1103,8 +1105,90 @@ function moreMenu(a) {
   const st = statusOf(a);
   const item = (action, label, ic, attrs = '') =>
     `<button type="button" role="menuitem" data-action="${action}" ${attrs}>${icon(ic, 'i-sm')}<span class="grow">${label}</span></button>`;
-  return `<div class="menu right" role="menu">${st !== 'submitted' && !sessionOf(a)?.v2ReadOnly ? item('live-session', st === 'paused' ? T('恢复练习', 'Resume practice') : T('暂停练习', 'Pause practice'), st === 'paused' ? 'play' : 'pause') : ''}${sessionOf(a)?.protocol === 2 ? item('continue-code', recovery.menuLabel(), 'sync') : ''}${item('live-timeline', T('后端过程记录', 'Server log'), 'history')}${item('export', T('导出本地笔记', 'Export local notes'), 'download')}${item('about', T('关于这个工作台', 'About this workspace'), 'info')}${item('to-entry', T('离开工作台', 'Leave the workspace'), 'back')}</div>`;
+  return `<div class="menu right" role="menu">${st !== 'submitted' && !sessionOf(a)?.v2ReadOnly ? item('live-session', st === 'paused' ? T('恢复练习', 'Resume practice') : T('暂停练习', 'Pause practice'), st === 'paused' ? 'play' : 'pause') : ''}${sessionOf(a)?.protocol === 2 ? item('continue-code', recovery.menuLabel(), 'sync') : ''}${item('live-timeline', T('后端过程记录', 'Server log'), 'history')}${item('export', T('导出本地笔记', 'Export local notes'), 'download')}${lensMenuItems(a)}${item('about', T('关于这个工作台', 'About this workspace'), 'info')}${item('to-entry', T('离开工作台', 'Leave the workspace'), 'back')}</div>`;
 }
+/* Recognition lens: a per-viewer switch in "⋯", plus the way into the system profile
+ * (#/lab). Both items live here so the menu takes them in one line. */
+function lensMenuItems() {
+  const on = lensOn();
+  return `<button type="button" role="menuitemcheckbox" aria-checked="${on}" data-action="lens-toggle">${icon('eye', 'i-sm')}<span class="grow">${T('识别透镜', 'Recognition lens')}</span>${on ? icon('check', 'i-sm') : ''}</button><button type="button" role="menuitem" data-action="open-lab">${icon('layers', 'i-sm')}<span class="grow">${T('系统剖面', 'System profile')}</span></button>`;
+}
+/** The review page has no workbench toolbar; its "⋯" carries the lens items and "About". It
+ * opens and closes in place: redrawing the review page would remount the feedback. */
+function reviewMenu() {
+  return `<div class="menu-wrap" data-review-menu>${btn(icon('more'), 'review-menu', 'icon quiet', `aria-haspopup="menu" aria-expanded="false" aria-label="${esc(T('更多', 'More'))}"`)}</div>`;
+}
+function toggleReviewMenu(open) {
+  const wrap = document.querySelector('[data-review-menu]');
+  if (!wrap) return;
+  const menu = wrap.querySelector('.menu');
+  const trigger = wrap.querySelector('[data-action="review-menu"]');
+  const show = open ?? !menu;
+  if (!show) {
+    menu?.remove();
+    trigger?.setAttribute('aria-expanded', 'false');
+    return;
+  }
+  if (menu) return;
+  wrap.insertAdjacentHTML(
+    'beforeend',
+    `<div class="menu right" role="menu">${lensMenuItems()}<button type="button" role="menuitem" data-action="about">${icon('info', 'i-sm')}<span class="grow">${T('关于这个工作台', 'About this workspace')}</span></button></div>`,
+  );
+  trigger?.setAttribute('aria-expanded', 'true');
+  if (ui.kbd) wrap.querySelector('.menu button')?.focus();
+}
+document.addEventListener('click', (e) => {
+  if (!e.target.closest?.('[data-review-menu]')) toggleReviewMenu(false);
+});
+document.addEventListener('keydown', (e) => {
+  const wrap = document.querySelector('[data-review-menu]');
+  if (e.key !== 'Escape' || !wrap?.querySelector('.menu')) return;
+  toggleReviewMenu(false);
+  wrap.querySelector('[data-action="review-menu"]')?.focus();
+});
+/** The lens switch in the submission dialog's header, before its close button. */
+function mountLensSwitch(head) {
+  const close = head?.querySelector('[data-action="close"]');
+  if (!close || head.querySelector('[data-lens-switch]')) return;
+  close.insertAdjacentHTML(
+    'beforebegin',
+    `<button type="button" class="rc-switch" role="switch" aria-checked="${lensOn()}" data-action="lens-switch" data-lens-switch><span class="rc-switch__track" aria-hidden="true"></span><span class="rc-switch__long">${T('识别透镜', 'Recognition lens')}</span><span class="rc-switch__short">${T('透镜', 'Lens')}</span></button>`,
+  );
+}
+/** Close an open menu without redrawing the page (inputs and scroll stay as they are). */
+function closeMenuInPlace() {
+  ui.menu = null;
+  for (const menu of document.querySelectorAll('.menu-wrap > .menu')) menu.remove();
+  const trigger = document.querySelector('[data-menu="more"], [data-action="review-menu"]');
+  trigger?.setAttribute('aria-expanded', 'false');
+  if (WS.includes(ui.route)) toolbarShown = { node: null, html: '' };
+  trigger?.focus({ preventScroll: true });
+}
+const materialNameOf = (a) => (id) => {
+  const m = a && E.getMaterials(a).find((x) => x.id === id);
+  return m ? materialTitle(m) : id;
+};
+/** A test run's recognition signals: quiet facts by default, chips in the lens. */
+function runSignals(a, x) {
+  return `<div data-rc-run="${esc(x.id)}">${signalsHtml(x.recognition, locale(), { context: 'test', lens: lensOn(), materialName: materialNameOf(a) })}</div>`;
+}
+/** Redraw only the recognition parts of the current page when the lens opens or closes. */
+onLensChange((on) => {
+  for (const toggle of document.querySelectorAll('[data-lens-switch]'))
+    toggle.setAttribute('aria-checked', String(on));
+  const a = current();
+  if (!a) return;
+  document.querySelectorAll('[data-rc-run]').forEach((node) => {
+    const run = (a.tests || []).find((t) => t.id === node.dataset.rcRun);
+    node.innerHTML = run
+      ? signalsHtml(run.recognition, locale(), { context: 'test', lens: lensOn(), materialName: materialNameOf(a) })
+      : '';
+  });
+  const hero = document.querySelector('[data-rc-hero]');
+  if (hero) hero.innerHTML = recognitionHeroInner(a);
+  const behavior = document.querySelector('[data-rc-behavior]');
+  if (behavior) fillBehavior(behavior, a);
+});
 function briefPopover(a) {
   const c = CASE(a.scenarioId);
   return `<div class="popover brief-pop" role="dialog" aria-label="${esc(T('委托与条件', 'Brief and conditions'))}">
@@ -1945,7 +2029,7 @@ function runGroup(a, runs) {
           i,
         ) => `<div class="run-col">${runs.length > 1 ? `<p class="col-cap">${i === 0 ? T('最新', 'Latest') : T('上一次', 'Previous')}</p>` : ''}
       <div class="answer ${x.fallback ? 'handoff' : ''}">${assistantMark('sm')}<div class="answer-body"${zhAttr(x.answer)}>${answerModeLine(x)}${md(x.answer, { dropTitle: true })}${zhTag(x.answer) ? `<p class="answer-tag">${zhTag(x.answer)}</p>` : ''}</div></div>
-      <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div>${badgesHtml(x.recognition, locale())}</div>`,
+      <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div>${runSignals(a, x)}</div>`,
       )
       .join('')}</div>
     ${old(r) ? `<p class="flag">${icon('warn', 'i-sm')}${T('这次回答引用的版本已经不是最新。', 'This answer cites a version that is no longer current.')}</p>` : ''}
@@ -2335,9 +2419,9 @@ function railActivity(a, t) {
 /* ---------- 4. review ---------- */
 function renderReview() {
   if (current() && L.nativeWorkspace(current()))
-    return `${topbar(backBtn('to-board', T('工作板', 'Board')))}
+    return `${topbar(backBtn('to-board', T('工作板', 'Board')), reviewMenu())}
     <main id="main" class="page review" tabindex="-1">
-      <header class="review-hero"><div class="review-title"><p class="meta">${esc(CASE(current().scenarioId).title)}</p><h1 class="title-xl">${T('交付与反馈', 'Submission and feedback')}</h1>${recognitionSummary(current())}<a class="rc-lab-link" href="#/lab">${T('识别实验室：看每一步识别的中间结果 →', 'Recognition lab: see every recognition step →')}</a></div></header>
+      <header class="review-hero"><div class="review-title"><p class="meta">${esc(CASE(current().scenarioId).title)}</p><h1 class="title-xl">${T('交付与反馈', 'Submission and feedback')}</h1>${recognitionHero(current())}</div></header>
       <div class="review-grid">
         <div class="review-main" data-v4-feedback data-v4-region="feedback"></div>
         <aside class="review-side">
@@ -2349,7 +2433,7 @@ function renderReview() {
           <section class="review-practice" data-v4-practice aria-live="polite">
             ${practiceSection(current())}
           </section>
-          <section class="rc-behavior" data-rc-behavior aria-live="polite">${behaviorHtml(ui.behavior?.[current().id], locale())}</section>
+          ${behaviorSection(current())}
         </aside>
       </div>
     </main>`;
@@ -2578,11 +2662,28 @@ function practiceOriginNote(a) {
   const source = state.attempts.find((x) => x.id === o.sourceAttemptId);
   return `<p class="practice-origin">${icon('branch', 'i-sm')}<span class="grow">${esc((o.choice === 'choose_other' ? T('这是看过上一轮反馈后自选的练习：', 'Practice you picked after earlier feedback: ') : T('这是按上一轮反馈建议开始的补练：', 'Practice suggested by earlier feedback: ')) + (o.title || ''))}${o.criteria && o.criteria.length ? `<span class="meta"> · ${esc(o.criteria.map((c) => criterionLabels(locale())[c] || c).join(T('、', ', ')))}</span>` : ''}</span>${source ? btn(T('看原反馈', 'Original feedback'), 'review-attempt', 'small quiet', `data-id="${esc(source.id)}"`) : ''}</p>`;
 }
-/* recognition layer: one-line session summary on the review page */
+/* recognition layer on the review page: a lens-only summary line with the way into the system
+ * profile (#/lab), and the behaviour section; neither appears when the layer is off. */
 const recognitionReads = new Map();
-function recognitionSummary(a) {
-  const counts = ui.recognition?.[a?.id];
-  return `<p class="rc-summary" data-rc-summary>${counts ? esc(summaryText(counts, locale())) : ''}</p>`;
+function recognitionHeroInner(a) {
+  const read = ui.recognition?.[a?.id];
+  if (!lensOn() || !read || read.enabled === false) return '';
+  return `<p class="rc-summary">${esc(summaryText(read.counts, locale()))}</p><a class="rc-lab-link" href="#/lab">${T('系统剖面：看每一步识别的中间结果 →', 'System profile: see every recognition step →')}</a>`;
+}
+function recognitionHero(a) {
+  return `<div class="rc-hero" data-rc-hero>${recognitionHeroInner(a)}</div>`;
+}
+function behaviorInner(a) {
+  return behaviorHtml(ui.behavior?.[a?.id], locale(), { lens: lensOn(), materialName: materialNameOf(a) });
+}
+function behaviorSection(a) {
+  const html = behaviorInner(a);
+  return `<section class="rc-behavior" data-rc-behavior aria-live="polite"${html ? '' : ' hidden'}>${html}</section>`;
+}
+function fillBehavior(box, a) {
+  const html = behaviorInner(a);
+  box.innerHTML = html;
+  box.hidden = !html;
 }
 async function loadRecognitionSummary(a) {
   const last = recognitionReads.get(a.id) ?? 0;
@@ -2591,9 +2692,9 @@ async function loadRecognitionSummary(a) {
   try {
     const read = await L.recognition(a);
     ui.recognition ||= {};
-    ui.recognition[a.id] = read.counts;
-    const box = document.querySelector('[data-rc-summary]');
-    if (box && current()?.id === a.id) box.textContent = summaryText(read.counts, locale());
+    ui.recognition[a.id] = { counts: read.counts, enabled: read.enabled !== false };
+    const box = document.querySelector('[data-rc-hero]');
+    if (box && current()?.id === a.id) box.innerHTML = recognitionHeroInner(a);
   } catch {
     // The summary is an annotation; a failed read leaves the page as it was.
   }
@@ -2602,9 +2703,9 @@ async function loadRecognitionSummary(a) {
     ui.behavior ||= {};
     ui.behavior[a.id] = behavior;
     const box = document.querySelector('[data-rc-behavior]');
-    if (box && current()?.id === a.id) box.innerHTML = behaviorHtml(behavior, locale());
+    if (box && current()?.id === a.id) fillBehavior(box, a);
   } catch {
-    // Same: the behaviour section stays empty when the read fails.
+    // Same: the behaviour section stays hidden when the read fails.
   }
 }
 const practiceReads = new Set();
@@ -2991,6 +3092,7 @@ function sheetDeliver(readOnly = false) {
       btn(T('查看提交与反馈', 'View submission and feedback'), 'v4-feedback', 'quiet'),
       'wide doc',
     );
+    mountLensSwitch(sheet.querySelector('.sheet-head'));
     return;
   }
   if (s.world.status === 'submitted' && !readOnly) {
@@ -4087,6 +4189,19 @@ async function act(el) {
       break;
     case 'about':
       sheetAbout();
+      break;
+    case 'review-menu':
+      toggleReviewMenu();
+      break;
+    case 'lens-toggle':
+      closeMenuInPlace();
+      setLens(!lensOn());
+      break;
+    case 'lens-switch':
+      setLens(!lensOn());
+      break;
+    case 'open-lab':
+      go('lab', { transition: true });
       break;
     case 'continue-code':
       await recovery.open(a);

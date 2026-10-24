@@ -73,6 +73,12 @@ export interface V4Queries {
   'submissions.list': { input: PageInput; output: Page<C.SubmissionV2> };
   /** Read-only: the rule items submitting this input now would give. Nothing is saved. */
   'submissions.rule_check': { input: C.SubmitInput; output: C.SubmissionRuleCheck };
+  /** Read-only, recognition layer (demo edition, outside the contract): the sentence labels of
+   * the work this input would submit; `enabled` is false when the layer is off. */
+  'submissions.rule_check.recognition': {
+    input: C.SubmitInput;
+    output: { session_id: string; enabled: boolean; recognition: { [key: string]: unknown } | null };
+  };
   /** Read-only: a saved submission checked again at its own point. */
   'submissions.rule_check.read': {
     input: { submission_id: string };

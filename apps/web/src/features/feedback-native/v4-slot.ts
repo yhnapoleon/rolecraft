@@ -12,6 +12,7 @@ import type {
 import type { SubmissionRuleCheck } from '../../contracts-v2';
 import type { ObjectRef } from '../workspace/contract-types';
 import { exactRefKey } from './exact-ref';
+import type { SentenceResult } from './presubmit';
 import { readCatalog } from '../../reference-catalog';
 import {
   mountNativeFeedback,
@@ -656,6 +657,16 @@ export function createV4FeedbackAdapter(host: V4HostAdapter) {
       valid();
       if (!answers(checked, id, 'draft', sent)) throw Error(unavailable());
       return checked;
+    },
+    previewRecognition: async (input) => {
+      const id = checkable();
+      for (const ref of input.products) reference(ref, id);
+      const found = await host.query('submissions.rule_check.recognition', submitInput(input));
+      valid();
+      return {
+        enabled: found.enabled,
+        recognition: (found.recognition ?? null) as SentenceResult['recognition'],
+      };
     },
     submissionRuleCheck: async (submission) => {
       const id = checkable();

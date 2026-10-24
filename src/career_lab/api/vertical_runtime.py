@@ -105,6 +105,9 @@ def build_registry(
     from career_lab.recognition.provenance import install_recognition_reads
 
     install_recognition_reads(registry, scenario_resolver=catalog.resolve)
+    from career_lab.api.recognition_signal import signal_recognition_reads
+
+    signal_recognition_reads(registry)
     return registry, module
 
 
