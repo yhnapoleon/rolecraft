@@ -1,3 +1,7 @@
+// Typefaces ship with the app (SIL OFL 1.1), so a demo runs offline.
+import '@fontsource-variable/instrument-sans/wdth.css';
+import '@fontsource-variable/newsreader/opsz.css';
+import '@fontsource-variable/newsreader/opsz-italic.css';
 import './app/styles.css';
 import { initLocale } from './app/i18n';
 import { LiveWorkbench } from './workbench-live';
