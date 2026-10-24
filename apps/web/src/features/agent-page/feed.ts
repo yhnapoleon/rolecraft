@@ -87,6 +87,10 @@ export function toEvent(row: AgentActivity): AgentEvent {
       version: first.version ?? undefined,
       title: ticketName(first.kind, first.title ?? engineerTitle(first.kind, row.objects ?? [])),
     };
+  if (!object && tool.startsWith('engineer.')) {
+    const kind = tool === 'engineer.reviews.read' ? 'review' : 'ticket';
+    object = { kind, title: ticketName(kind, undefined) };
+  }
   return {
     id: String(row.seq),
     at: row.at,
