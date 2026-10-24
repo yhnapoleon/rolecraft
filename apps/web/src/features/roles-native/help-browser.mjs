@@ -56,7 +56,7 @@ for (const language of ['zh', 'en']) {
       assert.ok(
         await browser.ev(`document.querySelectorAll('.rc-roles__details').length > ${count}`),
       );
-      const marker = language === 'zh' ? '等待模型接入' : 'waiting for model connection';
+      const marker = language === 'zh' ? '等待模型接入' : 'Awaiting model connection';
       assert.ok(
         await browser.ev(
           `document.querySelector('.rc-roles__turn:last-child').innerText.includes(${JSON.stringify(marker)})`,

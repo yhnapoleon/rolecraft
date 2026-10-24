@@ -1,6 +1,7 @@
 /** Knowledge-assistant answer modes and the generator setting, from saved records only.
  * Each answer carries the mode recorded for it; the deployment state never relabels history. */
 import { locale } from './i18n';
+import { modelWaitHtml } from './model-status';
 import './assistant-mode.css';
 
 export type AnswerMode = 'extractive' | 'llm' | 'unavailable' | 'failed';
@@ -8,7 +9,8 @@ export type Generator = 'extractive' | 'llm';
 export type AssistantDeployment = 'model' | 'waiting_model' | 'unavailable';
 
 const ZH = {
-  assistant_mode_waiting: '等待模型接入（当前为原文检索结果）',
+  // The hover sentence of the grey mark beside an extractive answer on a deployment without a model.
+  assistant_mode_waiting: '生成式回答要等模型接入',
   assistant_mode_extractive: '原文抽取',
   assistant_mode_extractive_hint: '回答是检索到的原文片段，可回到出处核对。',
   assistant_mode_llm: '模型生成 · 回答待核验',
@@ -38,7 +40,7 @@ const ZH = {
 type CopyKey = keyof typeof ZH;
 
 const EN: Record<CopyKey, string> = {
-  assistant_mode_waiting: 'Awaiting model connection (showing extractive result)',
+  assistant_mode_waiting: 'Model-written answers need a model',
   assistant_mode_extractive: 'Extractive',
   assistant_mode_extractive_hint:
     'The answer is the retrieved source passage; open the source to check it.',
@@ -96,24 +98,34 @@ export interface ModeLabel {
   mode: AnswerMode | 'unknown';
   text: string;
   hint: string;
+  /** An extractive answer on a deployment without a model: shown with the grey mark. */
+  waiting: boolean;
 }
 
-/** One label per answer. An extractive answer on a deployment without a model says so once. */
+/** One label per answer. An extractive answer on a deployment without a model carries the grey
+ * "awaiting model" mark once; the words stay those of its saved mode. */
 export function answerModeLabel(run: { mode?: string; assistant?: string | null }): ModeLabel {
   const mode = Object.hasOwn(RECORDED, run.mode ?? '') ? (run.mode as AnswerMode) : 'unknown';
-  if (mode === 'unknown') return { mode, text: assistantText('assistant_mode_unknown'), hint: '' };
-  const [label, hint] =
-    mode === 'extractive' && run.assistant === 'waiting_model'
-      ? (['assistant_mode_waiting', 'assistant_mode_extractive_hint'] as const)
-      : RECORDED[mode];
-  return { mode, text: assistantText(label), hint: assistantText(hint) };
+  if (mode === 'unknown')
+    return { mode, text: assistantText('assistant_mode_unknown'), hint: '', waiting: false };
+  const [label, hint] = RECORDED[mode];
+  return {
+    mode,
+    text: assistantText(label),
+    hint: assistantText(hint),
+    waiting: mode === 'extractive' && run.assistant === 'waiting_model',
+  };
 }
+
+/** The grey mark of a waiting label, or nothing. */
+export const answerWaitMark = (label: ModeLabel) =>
+  label.waiting ? modelWaitHtml(assistantText('assistant_mode_waiting')) : '';
 
 /** Compact mode line for a saved answer; empty for records without a v2 mode. */
 export function answerModeLine(run: { mode?: string; assistant?: string | null }): string {
   if (!run.assistant) return '';
   const label = answerModeLabel(run);
-  return `<p class="answer-mode" data-answer-mode="${esc(label.mode)}"${label.hint ? ` title="${esc(label.hint)}"` : ''}>${esc(label.text)}</p>`;
+  return `<p class="answer-mode" data-answer-mode="${esc(label.mode)}"${label.hint ? ` title="${esc(label.hint)}"` : ''}>${esc(label.text)}${answerWaitMark(label)}</p>`;
 }
 
 /** Answer text quoted into work evidence or a colleague message; generated text keeps its marker. */

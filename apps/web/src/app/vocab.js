@@ -3,6 +3,28 @@
 import { T, locale } from './i18n';
 import { documentName } from '../reference-catalog';
 
+// The words this product uses for the same thing everywhere; the table is in
+// docs/design/frontend-style.md, section 3.8 "统一词汇".
+export { PRODUCT_NAME } from './product.js';
+
+/** A work's version: "第 N 版" / "version N". Documents and settings keep "vN" (政策 v2, 配置 v3). */
+export const workVersion = (n) => T(`第 ${n} 版`, `version ${n}`);
+
+/** The four submission decisions, worded as the delivery panel words them. */
+export const DECISION = (k) =>
+  ({
+    launch: T('按方案推进', 'Proceed with the proposal'),
+    launch_narrow: T('缩小范围推进', 'Proceed with a limited scope'),
+    defer_with_conditions: T('满足条件后再推进', 'Defer until conditions are met'),
+    no_go: T('停止这项方案', 'Do not proceed with this proposal'),
+  })[k] || k;
+
+/** Situations this build offers to start. The IT service-desk domain stays hidden (user decision
+ * 2026-10-24): no card, list, suggestion or other entry starts or reopens it. */
+export const HIDDEN_CASES = new Set(['itticket']);
+export const HIDDEN_SCENARIOS = new Set(['it_ticket_pilot']);
+export const caseShown = (id) => !HIDDEN_CASES.has(id) && !HIDDEN_SCENARIOS.has(id);
+
 export const PRI = (p) =>
   ({ first: T('先做', 'Do first'), next: T('随后', 'Up next'), later: T('暂放', 'Later') })[p] || p;
 export const STATUS = (s) =>

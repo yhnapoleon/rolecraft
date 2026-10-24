@@ -22,12 +22,16 @@ export interface ReplyPresentation {
   /** Distinct `[title · vN]` citations in the full reply. */
   sourceCount: number;
   status?: string;
+  /** A local reply: what waits for a model, said once in the reply's details. */
+  waitingNote?: string;
   versionNote?: string;
   omissionNote?: string;
 }
 
 const zh = {
-  statusLocal: '本地来源：规则核实 · 判断等待模型接入',
+  // A local reply's status; the grey "awaiting model" mark follows it.
+  statusLocal: '规则核实',
+  waitingNote: '这条回复引用本地资料，来源与权限由规则核实；需要同事判断的部分等模型接入。',
   statusModel: '模型建议（不计分） · 保留原回复',
   versionNote: '仅依据已分享的确切版本；新版需要重新分享。',
   omissionNote: '部分资料因授权或上下文限额未纳入本次回复。',
@@ -46,7 +50,9 @@ const zh = {
 const COPY: CopyTable<keyof typeof zh> = {
   zh,
   en: {
-    statusLocal: 'Sources checked by rules · judgment waiting for model connection',
+    statusLocal: 'Rule-checked',
+    waitingNote:
+      'This reply quotes local sources, checked by rules for source and access; colleague judgment waits for a model.',
     statusModel: 'Model advice (not scored) · original reply retained',
     versionNote: 'Only exact shared versions are available; share a new version explicitly.',
     omissionNote: 'Some sources were omitted because of access or context limits.',
@@ -178,6 +184,7 @@ export function presentReply(reply: string, context: ReplyPresentationContext): 
     versionNote: context.receivedVersionsOnly ? text('versionNote') : undefined,
     omissionNote:
       context.omissionCount && context.omissionCount > 0 ? text('omissionNote') : undefined,
+    waitingNote: context.generationMode === 'local' ? text('waitingNote') : undefined,
     status:
       context.generationMode === 'local'
         ? text('statusLocal')
@@ -197,7 +204,8 @@ export function replyDisclosure(presentation: Pick<ReplyPresentation, 'sourceCou
 
 /** Panel configuration is independent of the generator recorded on each reply. */
 export function currentModeNotice(mode: RoleMode): string {
-  if (mode === 'local_reference') return text('modeLocal');
+  // Local mode is told once by the toolbar's model status and each reply's grey mark.
+  if (mode === 'local_reference') return '';
   if (mode === 'unavailable') return text('modeUnavailable');
   return text('modeModel');
 }

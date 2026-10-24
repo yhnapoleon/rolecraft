@@ -79,10 +79,14 @@ export function ruleLines(
               : bound.lower === 'NOT_MET'
                 ? 'not_met'
                 : 'partial',
+        // A range is read out as words: "between partially met and met", never "A—B".
         conclusion:
           bound.lower === bound.upper
             ? (labels[bound.lower] ?? bound.lower)
-            : `${labels[bound.lower] ?? bound.lower}—${labels[bound.upper] ?? bound.upper}`,
+            : T(
+                `介于${labels[bound.lower] ?? bound.lower}和${labels[bound.upper] ?? bound.upper}之间`,
+                `Between ${(labels[bound.lower] ?? bound.lower).toLowerCase()} and ${(labels[bound.upper] ?? bound.upper).toLowerCase()}`,
+              ),
         fact: factOf(item) ?? lines[1] ?? lines[0] ?? '',
       });
     }

@@ -128,9 +128,9 @@ async function runLanguage(language) {
       await waitFor(browser, `${block}?.dataset.outcomePreview === 'current'`, 20000);
       const state = await browser.ev(blockState);
       states.saved = state;
-      assert.equal(state.badge, text('当前预览', 'Current preview'));
+      assert.equal(state.badge, text('当前', 'Current'));
       assert.deepEqual(state.kinds, ['fact', 'conditional_prediction', 'pending_verification']);
-      assert.ok(state.meta.includes(text('按第 1 版计算', 'Computed for v1')));
+      assert.ok(state.meta.includes(text('按第 1 版计算', 'Computed for version 1')));
       assert.ok(state.meta.includes(text('等待模型接入', 'Awaiting model connection')));
       assert.equal(state.question.length, 1);
       assert.ok(task && state.question[0].includes(task), 'The question names the current task');
@@ -165,15 +165,15 @@ async function runLanguage(language) {
       await waitFor(browser, `${blockState}.actual.length >= 2`, 20000);
       const state = await browser.ev(blockState);
       states.stale = state;
-      assert.equal(state.badge, text('旧预览，条件已变', 'Earlier preview, conditions changed'));
-      assert.ok(
-        state.changes.includes(text('试点配置第 0 版 → 第 1 版', 'Pilot configuration v0 → v1')),
-      );
+      assert.equal(state.badge, text('条件已变', 'Conditions changed'));
+      assert.ok(state.changes.includes(text('试点配置 v0 → v1', 'Pilot configuration v0 → v1')));
       assert.ok(
         state.changes.some((line) => line.includes(text('有新版本 v', 'has a new version: v'))),
         'The changed material is named',
       );
-      assert.ok(state.actual.some((line) => line.includes(text('已应用第 1 版', 'v1 applied'))));
+      assert.ok(
+        state.actual.some((line) => line.includes(text('已应用试点配置 v1', 'v1 applied'))),
+      );
       assert.ok(
         state.actual.some((line) => line.includes(text('已运行测试 1 次', 'Test runs: 1'))),
       );
@@ -193,17 +193,14 @@ async function runLanguage(language) {
       await browser.clickText(text('保存这版', 'Save this version'));
       await waitFor(
         browser,
-        `${blockState}?.meta.includes(${JSON.stringify(text('第 2 版', 'v2'))})`,
+        `${blockState}?.meta.includes(${JSON.stringify(text('第 2 版', 'version 2'))})`,
         20000,
       );
       const state = await browser.ev(blockState);
       states.revised = state;
       assert.equal(state.status, 'current');
       assert.deepEqual(state.earlier, [
-        text(
-          '第 1 版的预览 · 旧预览，条件已变',
-          'Preview of v1 · Earlier preview, conditions changed',
-        ),
+        text('第 1 版的可能结果 · 条件已变', 'Possible outcome of version 1 · Conditions changed'),
       ]);
       assert.ok(state.lines.some((line) => line.includes(text('第 1 版配置', 'configuration v1'))));
       // Open the earlier preview so the record shows it kept, unchanged and marked old.
@@ -216,8 +213,8 @@ async function runLanguage(language) {
       assert.ok(
         earlier.includes(
           text(
-            '这份作品已保存第 2 版（预览按第 1 版）',
-            'This work now has v2 (the preview was for v1)',
+            '这份作品已保存第 2 版（推演按第 1 版）',
+            'This work now has version 2 (this was worked out for version 1)',
           ),
         ),
       );

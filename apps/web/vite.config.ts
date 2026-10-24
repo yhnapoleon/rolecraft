@@ -1,6 +1,7 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { fileURLToPath } from 'node:url';
+import { PRODUCT_NAME } from './src/app/product.js';
 
 // Development/preview forwarding only. Existing backend routes stay unchanged.
 const proxy = {
@@ -10,8 +11,13 @@ const proxy = {
     rewrite: (path: string) => path.replace(/^\/api(?=\/)/, ''),
   },
 };
+// index.html names the product through %PRODUCT_NAME%, from the same constant the workbench uses.
+const productName = {
+  name: 'rolecraft-product-name',
+  transformIndexHtml: (html: string) => html.replaceAll('%PRODUCT_NAME%', PRODUCT_NAME),
+};
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), productName],
   build: {
     rolldownOptions: {
       input: {

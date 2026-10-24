@@ -18,6 +18,8 @@ export type EvidenceChip = {
   version: string;
   /** Screen-reader and hover text, including a cited passage. */
   description: string;
+  /** The cited passage itself, shown under the chips so the basis can be read in place. */
+  quote?: string;
 };
 
 const sameChoice = (a: readonly EvidenceRefV2[], b: readonly EvidenceRefV2[]) => {
@@ -41,7 +43,9 @@ export async function chooseWorkEvidence(
   return sameChoice(chosen, current) ? null : [...chosen];
 }
 
-const versionText = (version: number) => T(`第 ${version} 版`, `v${version}`);
+// A work's version is "第 N 版" / "version N"; documents keep "vN".
+const versionText = (version: number) => T(`第 ${version} 版`, `version ${version}`);
+const documentVersion = (version: number) => `v${version}`;
 
 export function evidenceChips(
   refs: readonly EvidenceRefV2[],
@@ -51,7 +55,7 @@ export function evidenceChips(
     const key = evidenceKey(ref);
     if (ref.kind === 'material') {
       const label = names.material(ref.object_id, ref.version) ?? T('资料', 'Document');
-      const version = versionText(ref.version);
+      const version = documentVersion(ref.version);
       const quote = ref.quote ? T('：', ': ') + ref.quote : '';
       return {
         key,
@@ -59,6 +63,7 @@ export function evidenceChips(
         label,
         version,
         description: `${label} · ${version}${quote}`,
+        ...(ref.quote ? { quote: ref.quote } : {}),
       };
     }
     if (ref.kind === 'test') {

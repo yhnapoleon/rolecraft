@@ -36,8 +36,8 @@ export function returnPlacement(
 
 export const unmatchedReturnText = () =>
   T(
-    '找不到对应的任务包：这份回传的 requestId 没有对应已交出的任务包（只“查看”不算交出）。请核对 requestId，或去掉它后作为未关联回传导入。',
-    'No matching task package: this return’s requestId matches no package you handed over (viewing a package does not hand it over). Check the requestId, or remove it to import the return unlinked.',
+    '找不到对应的任务包：这份回传的 requestId 没有对应已交出的任务包（只在“关于”里查看不算交出）。请核对 requestId，或去掉它后作为未关联回传导入。',
+    'No matching task package: this return’s requestId matches no package you handed over (viewing a package in About does not hand it over). Check the requestId, or remove it to import the return unlinked.',
   );
 
 /** A blocked copy hands nothing over, and viewing does not either: point to Download. */

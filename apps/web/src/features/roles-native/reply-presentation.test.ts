@@ -20,11 +20,7 @@ it.each(['zh', 'en'] as const)(
       omissionCount: 2,
     });
     expect(shown.summary).toBe(text);
-    expect(shown.status).toBe(
-      language === 'zh'
-        ? '本地来源：规则核实 · 判断等待模型接入'
-        : 'Sources checked by rules · judgment waiting for model connection',
-    );
+    expect(shown.status).toBe(language === 'zh' ? '规则核实' : 'Rule-checked');
     expect(shown.versionNote).toBe(
       language === 'zh'
         ? '仅依据已分享的确切版本；新版需要重新分享。'
@@ -45,10 +41,7 @@ for (const language of ['zh', 'en'] as const) {
       (receivedVersionsOnly) => {
         setPreference(language);
         const status = {
-          local:
-            language === 'zh'
-              ? '本地来源：规则核实 · 判断等待模型接入'
-              : 'Sources checked by rules · judgment waiting for model connection',
+          local: language === 'zh' ? '规则核实' : 'Rule-checked',
           model:
             language === 'zh'
               ? '模型建议（不计分） · 保留原回复'
@@ -149,7 +142,8 @@ describe.each(['zh', 'en'] as const)('first screen from the reply structure (%s)
     );
     expect(shown.summary).not.toBe(OLD_META[language]);
     expect(shown).toMatchObject({ partial: true, derived: false, sourceCount: 3 });
-    expect(shown.status).toContain(language === 'zh' ? '等待模型接入' : 'waiting for model');
+    // The status says what rules checked; what waits for a model is the grey mark's note.
+    expect(shown.waitingNote).toContain(language === 'zh' ? '等模型接入' : 'waits for a model');
     expect(replyDisclosure(shown)).toEqual({
       label: language === 'zh' ? '展开原文' : 'Show full reply',
       meta: language === 'zh' ? '引用 3 份资料' : 'Sources cited: 3',

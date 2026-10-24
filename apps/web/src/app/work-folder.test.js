@@ -56,7 +56,7 @@ describe('readable real-work folder tray', () => {
       summary: 'pending 这是实际作品的正文。',
     });
     expect(html).toContain('待检查');
-    expect(html).toContain('v7');
+    expect(html).toContain('第 7 版');
     expect(works).toEqual(snapshot);
   });
   it('keeps full long titles and escapes source and Agent content', () => {

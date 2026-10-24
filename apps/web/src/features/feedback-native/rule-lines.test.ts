@@ -60,7 +60,12 @@ describe('feedback first screen', () => {
         '未满足',
         '完整记录内没有政策更新后、当前配置的相关动态复测。',
       ],
-      ['partial', '实际调整与复测', '未满足—部分满足', '已有相关配置调整；调整质量仍需核验。'],
+      [
+        'partial',
+        '实际调整与复测',
+        '介于未满足和部分满足之间',
+        '已有相关配置调整；调整质量仍需核验。',
+      ],
     ]);
     expect(view.waiting).toEqual(['替代方案与取舍', '指标与验收口径']);
   });
@@ -133,7 +138,7 @@ describe('feedback first screen', () => {
     expect(view.lines.map((line) => [line.name, line.conclusion])).toEqual([
       ['Participants and capacity', 'Met'],
       ['Retesting after policy changes', 'Not met'],
-      ['Actual adjustments and retesting', 'Not met—Partially met'],
+      ['Actual adjustments and retesting', 'Between not met and partially met'],
     ]);
   });
 });
@@ -151,7 +156,7 @@ describe('rendered first screen', () => {
     expect(root.byTag('li').map((row) => row.textContent)).toEqual([
       '✓满足：人数与容量 · 按评价时点核对：固定配置人数20，有效容量30。',
       '✗未满足：政策更新后的复测 · 完整记录内没有政策更新后、当前配置的相关动态复测。',
-      '◐未满足—部分满足：实际调整与复测 · 已有相关配置调整；调整质量仍需核验。',
+      '◐介于未满足和部分满足之间：实际调整与复测 · 已有相关配置调整；调整质量仍需核验。',
     ]);
     // The status row above already counts the inapplicable items; they are not repeated here.
     expect(root.byTag('p').map((row) => row.textContent)).toEqual([

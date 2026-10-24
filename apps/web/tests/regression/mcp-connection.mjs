@@ -206,7 +206,30 @@ export async function connectAgentOverMcp(context) {
   const agent = new McpHttpClient(endpoint, token);
   const discovered = await agent.modern('server/discover');
   assert.ok(discovered.body.result.supportedVersions.includes(MODERN));
-  const seen = (await agent.call('observation', {})).result.as_of;
+  const sessionId = await browser.ev('window.PracticeLive.store.active().id');
+  let seen = (await agent.call('observation', {})).result.as_of;
+  // M3: the agent cites a passage it read; the returned work shows that passage.
+  const read = await agent.call('read_material', {
+    command: {
+      schema_version: 2,
+      request_id: crypto.randomUUID(),
+      operation: 'read_material',
+      payload: {
+        tool: 'read_material',
+        material: {
+          schema_version: 2,
+          session_id: sessionId,
+          kind: 'material',
+          object_id: 'brief',
+          version: 1,
+        },
+      },
+      expected_version: seen.business_seq,
+      expected_workspace_revision: seen.workspace_revision,
+    },
+  });
+  const cited = (read.result?.fragments ?? read.fragments).find((part) => part.ref?.quote).ref;
+  seen = (await agent.call('observation', {})).result.as_of;
   await agent.call('work_products.create', {
     command: {
       schema_version: 2,
@@ -217,6 +240,7 @@ export async function connectAgentOverMcp(context) {
         purpose: 'exploration',
         title,
         content: text('先核对容量和索引更新。', 'Check capacity and index updates first.'),
+        evidence_refs: [cited],
       },
       expected_version: seen.business_seq,
       expected_workspace_revision: seen.workspace_revision,
@@ -231,6 +255,23 @@ export async function connectAgentOverMcp(context) {
       row.innerText.includes(${JSON.stringify(title)}) && row.innerText.includes(${JSON.stringify(awaiting)}))`,
   );
   await shot('mcp-returned');
+  // Opening the returned work shows the cited passage in its own words.
+  await browser.ev(`(() => {
+    const row = [...document.querySelectorAll('.agent-v4-work-row')]
+      .find((line) => line.innerText.includes(${JSON.stringify(title)}));
+    [...row.querySelectorAll('button')]
+      .find((button) => button.textContent === ${JSON.stringify(text('打开原作', 'Open work'))})
+      .click();
+    return true;
+  })()`);
+  await waitFor(browser, `!!document.querySelector('#sheet[open] .evidence-quotes blockquote')`);
+  assert.equal(
+    await browser.ev(`document.querySelector('#sheet .evidence-quotes blockquote').textContent`),
+    cited.quote,
+  );
+  await shot('mcp-returned-passage');
+  await browser.ev(`document.querySelector('#sheet [data-action="close"]').click()`);
+  await waitFor(browser, `!document.querySelector('#sheet').open`);
   await browser.click('[data-connection-action="done"]');
   await waitFor(browser, `!document.querySelector('[data-connection-card]')`);
   // Leaving the practice withdraws a card that was still open: back again, nothing to copy.
@@ -264,6 +305,17 @@ export async function connectAgentOverMcp(context) {
     browser,
     `[...document.querySelectorAll('.agent-v4-access-row')].some((line) =>
       line.innerText.includes(${JSON.stringify(agentName)}) && line.innerText.includes(${JSON.stringify(revoked)}))`,
+  );
+  // M4: once the records are read, the panel says what they show instead of "reading".
+  await waitFor(
+    browser,
+    `document.querySelector('[data-v4-region="agent"]').innerText.includes(${JSON.stringify(text('授权已撤销。', 'Access revoked.'))})`,
+  );
+  assert.equal(
+    await browser.ev(
+      `document.querySelector('[data-v4-region="agent"]').innerText.includes(${JSON.stringify(text('正在读取实际记录', 'Reading the actual records'))})`,
+    ),
+    false,
   );
   const denied = await agent.modern('tools/list');
   assert.equal(denied.status, 401);

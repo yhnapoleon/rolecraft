@@ -1990,6 +1990,28 @@ button.crumb:hover {
   padding-top: 14px;
   margin-top: 6px;
 }
+/* Cited passages under the evidence chips: the world's words in serif, the source beneath. */
+.evidence-quotes {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.evidence-quote {
+  margin: 0;
+  padding-left: 12px;
+  box-shadow: inset 2px 0 0 var(--line-2);
+  color: var(--ink-2);
+  font-family: var(--serif);
+  font-size: 15px;
+  line-height: 1.6;
+  max-width: 72ch;
+}
+.evidence-quote-src {
+  margin-left: 12px;
+  font-size: 12px;
+}
 .agent-strip {
   display: flex;
   align-items: center;
@@ -5363,6 +5385,14 @@ button.act-open:hover {
   list-style: disc;
   padding-left: 1.2em;
 }
+/* The engineer job's three steps read in order: quiet numbers, not bullets. */
+ol.later-list {
+  list-style: decimal;
+}
+ol.later-list li::marker {
+  color: var(--ink-4);
+  font-variant-numeric: tabular-nums;
+}
 .career.later .career-art {
   opacity: 1;
   filter: none;
@@ -5585,6 +5615,41 @@ button.act-open:hover {
 }
 .sw-shape {
   gap: 5px;
+}
+/* About this workspace: three quiet sections, then the records kept out of the working view. */
+.about-sec {
+  display: grid;
+  gap: 10px;
+  margin-top: 20px;
+}
+.about-sec .mini-title {
+  margin: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+}
+.about .legend,
+.about .model-pop__parts {
+  padding-left: 0;
+  list-style: none;
+}
+.about-sec .legend {
+  margin: 0;
+}
+.about-sec .model-pop__parts {
+  gap: 8px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+.about-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.legend .sw-shape .model-wait {
+  width: 14px;
+  height: 14px;
+  margin: 0;
 }
 .answer-tag {
   margin-top: 8px;

@@ -2,6 +2,7 @@
 import type { ObjectRef } from '../workspace/contract-types';
 import type { FeedbackLanguage } from './localization';
 import { adviceCopy, type ModelAdviceCopyKey } from './model-advice-copy';
+import { modelWaitNode } from '../../app/model-status';
 
 type Status = 'completed' | 'failed' | 'unavailable' | 'synthetic_mechanism_only';
 type Relation = 'SUPPORTED' | 'CONTRADICTED' | 'INSUFFICIENT';
@@ -612,9 +613,14 @@ export function updateRegisteredAdvice(
     doc.activeElement instanceof HTMLElement
       ? doc.activeElement.dataset.modelReferenceKey
       : undefined;
-  const headline: HTMLElement[] = [
-    marked('span', registeredAdviceSummary(advice, language, fallback), 'data-model-advice-title'),
-  ];
+  const title = marked(
+    'span',
+    registeredAdviceSummary(advice, language, fallback),
+    'data-model-advice-title',
+  );
+  // Waiting for a model is the grey mark beside "Model advice"; the body says what is shown now.
+  if (titleKey(advice, fallback) === 'titleWaiting') title.append(modelWaitNode(doc, '', language));
+  const headline: HTMLElement[] = [title];
   if (advice?.some((entry) => entry.registration?.scope === 'synthetic_fixture'))
     headline.push(marked('span', C('syntheticNotice'), 'data-model-advice-notice'));
   // 2026-10-12 decision 5: sentences first; the work-level conclusion follows, quieter.

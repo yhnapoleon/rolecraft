@@ -195,7 +195,7 @@ async function run(language, reduced, width, flow) {
       await waitFor(
         browser,
         `document.querySelector('.w03-outcome-meta')?.textContent.includes(${JSON.stringify(
-          text('按第 3 版计算', 'Computed for v3'),
+          text('按第 3 版计算', 'Computed for version 3'),
         )}) && !(${mainQuestion})`,
         20000,
       );

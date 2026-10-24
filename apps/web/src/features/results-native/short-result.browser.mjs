@@ -138,7 +138,7 @@ for (const language of ['zh', 'en']) {
     assert.ok(fact.lead && !OLD_META.includes(fact.lead), 'first screen shows the reply itself');
     assert.equal(fact.derived, false, 'first screen quotes the reply, not a tool sentence');
     assert.ok(fact.source, 'the quoted fact names its source on the first screen');
-    assert.ok(fact.status.includes(t('等待模型接入', 'waiting for model connection')));
+    assert.ok(fact.status.includes(t('等待模型接入', 'Awaiting model connection')));
     assert.equal(fact.open, false);
     assert.ok(fact.summary.startsWith(t('展开原文', 'Show full reply')));
     assert.deepEqual(
