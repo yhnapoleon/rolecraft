@@ -812,7 +812,7 @@
     width 200ms var(--ease-out);
 }
 .rc-switch[aria-checked="true"] .rc-switch__track {
-  background: var(--primary);
+  background: var(--switch-on);
   box-shadow: none;
 }
 .rc-switch[aria-checked="true"] .rc-switch__track::after {

@@ -724,7 +724,7 @@
     width 200ms var(--ease-out);
 }
 .mat-compare[aria-checked="true"] .track {
-  background: var(--primary);
+  background: var(--switch-on);
   box-shadow: none;
 }
 .mat-compare[aria-checked="true"] .track::after {

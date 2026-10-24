@@ -6196,6 +6196,7 @@ ol.later-list li::marker {
   --thumb-filter: drop-shadow(0 0 0.5px rgba(0, 0, 0, 0.05))
     drop-shadow(0 3px 8px rgba(40, 30, 20, 0.1)) drop-shadow(0 3px 1px rgba(40, 30, 20, 0.03));
   --thumb-highlight: none;
+  --switch-on: var(--primary);
   --switch-width: 32px;
   --switch-height: 19px;
   --switch-knob: 15px;
@@ -6207,6 +6208,7 @@ ol.later-list li::marker {
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --input-bg: #26221e;
+    --switch-on: #8c857b;
     --input-focus: 0 0 0 0.5px rgba(243, 241, 238, 0.5), 0 0 0 4px rgba(243, 241, 238, 0.14);
     --thumb-filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
     /* Clip starts 2px in: the visible part of this inset is the reference 0.5px highlight. */
