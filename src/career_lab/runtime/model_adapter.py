@@ -20,6 +20,8 @@ class ModelReply(Contract):
     text: str = ""
     tool_calls: tuple[ToolCall, ...] = ()
     usage: dict = Field(default_factory=dict)
+    # Provider's reason the text ended ("stop", "length", ...); absent when not reported.
+    finish_reason: str | None = Field(default=None, exclude_if=lambda value: value is None)
 
 
 class ModelTransportTimeout(RuntimeError):
@@ -131,7 +133,8 @@ class OpenAICompatibleModel:
                         continue
                     raise RuntimeError(f"model provider HTTP {response.status_code}")
                 data = response.json()
-                message = data["choices"][0]["message"]
+                choice = data["choices"][0]
+                message = choice["message"]
                 calls = tuple(
                     ToolCall(
                         id=c["id"],
@@ -140,8 +143,12 @@ class OpenAICompatibleModel:
                     )
                     for c in message.get("tool_calls", [])
                 )
+                reason = choice.get("finish_reason")
                 return ModelReply(
-                    text=message.get("content") or "", tool_calls=calls, usage=data.get("usage", {})
+                    text=message.get("content") or "",
+                    tool_calls=calls,
+                    usage=data.get("usage", {}),
+                    finish_reason=reason if isinstance(reason, str) else None,
                 )
             except httpx.TransportError as error:
                 if attempt == self.retries:
