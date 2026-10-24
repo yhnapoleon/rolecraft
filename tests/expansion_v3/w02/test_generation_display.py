@@ -34,7 +34,9 @@ try {
       assert.ok(html.includes(labels[i]), mode + ':' + language);
       assert.ok(html.includes('data-generation-mode="' + mode + '"'));
       assert.ok(html.includes('Travel policy v1'));
-      assert.ok(html.includes('daily'));
+      // The effective configuration reads in the settings panel's words, not raw JSON.
+      assert.ok(html.includes(language === 'zh' ? '每日索引' : 'Daily index'));
+      assert.ok(!html.includes('update_strategy') && !html.includes('"generator"'));
       const configLabel = language === 'zh'
         ? '本次有效配置' : 'Effective configuration for this run';
       assert.ok(html.includes(configLabel));
