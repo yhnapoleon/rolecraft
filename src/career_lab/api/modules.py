@@ -108,6 +108,23 @@ PUBLIC_OPERATIONS = {
     # Recognition layer reads (demo edition, contract not re-exported).
     "recognition.read",
     "behavior.read",
+    # Engineer session operations (career_lab.engineer.session).
+    "engineer.tickets.create",
+    "engineer.tickets.read",
+    "engineer.reproduce",
+    "engineer.trial",
+    "engineer.submissions.draft",
+    "engineer.submissions.sign",
+    "engineer.reviews.read",
+}
+# They write only the engineer store, never the business transaction, so they run in
+# service mode: authorized like any operation, then handed the store, not a locked view.
+ENGINEER_SERVICE_OPERATIONS = {
+    "engineer.tickets.create",
+    "engineer.reproduce",
+    "engineer.trial",
+    "engineer.submissions.draft",
+    "engineer.submissions.sign",
 }
 
 
@@ -172,6 +189,7 @@ class ExtensionRegistry:
         if operation.service_mode and operation.name not in {
             "delegations.create",
             "delegations.revoke",
+            *ENGINEER_SERVICE_OPERATIONS,
         }:
             raise ValueError("service mode reserved for auth control plane")
         actions = self.operation_actions(operation)
