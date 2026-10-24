@@ -12,7 +12,7 @@
 .rc-head {
   padding: 28px 0 8px;
 }
-.rc-lead {
+.rc-lab-lead {
   max-width: 62ch;
   margin-top: 12px;
   color: var(--ink-2);
@@ -78,7 +78,7 @@
   font-size: 13.5px;
   line-height: 1.55;
 }
-.rc-num {
+.rc-lab-num {
   color: var(--ink);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -384,7 +384,7 @@
   font-size: 11.5px;
   white-space: nowrap;
 }
-.rc-probs,
+.rc-lab-probs,
 .rc-costs {
   display: grid;
   gap: 8px;
@@ -393,7 +393,7 @@
   padding: 0;
   list-style: none;
 }
-.rc-probs li,
+.rc-lab-probs li,
 .rc-costs li {
   display: grid;
   grid-template-columns: minmax(96px, 9.5em) minmax(0, 1fr) 3.4em;
@@ -403,7 +403,7 @@
   font-size: 13px;
   font-variant-numeric: tabular-nums;
 }
-.rc-probs li[data-chosen],
+.rc-lab-probs li[data-chosen],
 .rc-costs li[data-chosen] {
   color: var(--ink);
   font-weight: 600;
@@ -425,13 +425,13 @@
 .rc-costs li[data-chosen] .rc-bar-fill {
   background: var(--ink);
 }
-.rc-probs li[data-chosen][data-rel="supported"] .rc-bar-fill {
+.rc-lab-probs li[data-chosen][data-rel="supported"] .rc-bar-fill {
   background: var(--good);
 }
-.rc-probs li[data-chosen][data-rel="contradicted"] .rc-bar-fill {
+.rc-lab-probs li[data-chosen][data-rel="contradicted"] .rc-bar-fill {
   background: var(--bad);
 }
-.rc-probs li[data-chosen][data-rel="insufficient"] .rc-bar-fill {
+.rc-lab-probs li[data-chosen][data-rel="insufficient"] .rc-bar-fill {
   background: repeating-linear-gradient(90deg, var(--ink-3) 0 5px, transparent 5px 8px);
 }
 .rc-pval {
@@ -604,7 +604,7 @@
   font-size: 12.5px;
   line-height: 1.45;
 }
-.rc-metric-label .rc-num {
+.rc-metric-label .rc-lab-num {
   color: inherit;
   font-weight: 500;
 }
@@ -613,7 +613,7 @@
   font-size: 13px;
   line-height: 1.5;
 }
-.rc-metric-text .rc-num {
+.rc-metric-text .rc-lab-num {
   font-size: 16px;
 }
 .rc-metric-set {
@@ -703,24 +703,24 @@
   gap: 20px 40px;
   margin-top: 16px;
 }
-.rc-steps {
+.rc-lab-steps {
   display: grid;
   gap: 12px;
   margin: 0;
   align-content: start;
 }
-.rc-step dt {
+.rc-lab-step dt {
   color: var(--ink-3);
   font-size: 12px;
 }
-.rc-step dd {
+.rc-lab-step dd {
   margin: 2px 0 0;
   color: var(--ink-2);
   font-size: 14px;
   line-height: 1.62;
 }
-.rc-step[data-step="found"] dd,
-.rc-step[data-step="use"] dd {
+.rc-lab-step[data-step="found"] dd,
+.rc-lab-step[data-step="use"] dd {
   color: var(--ink);
 }
 .rc-story-charts {
@@ -755,12 +755,12 @@
   font-size: 10px;
   font-variant-numeric: tabular-nums;
 }
-.rc-cat,
+.rc-lab-cat,
 .rc-direct {
   fill: var(--ink-2);
   font-size: 10.5px;
 }
-.rc-cell {
+.rc-lab-cell {
   font-size: 11px;
   font-variant-numeric: tabular-nums;
 }

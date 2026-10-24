@@ -252,7 +252,7 @@ export function registerHtml(results: Results, language: Language) {
       ? `<ol class="rc-chainsteps" aria-label="${t('c1_chain')}">${r.steps
           .map((s, i) => {
             const v = fill(results, { zh: s.zh, en: s.en });
-            const cls = i === (r.steps?.length ?? 0) - 1 ? 'rc-num' : 'rc-num-soft';
+            const cls = i === (r.steps?.length ?? 0) - 1 ? 'rc-lab-num' : 'rc-num-soft';
             return `<li><span class="rc-chainstep-name">${t(s.label)}</span><span class="rc-chainstep-val">${v ? `<b class="${cls}">${esc(v.zh)}</b> / <b class="${cls}">${esc(v.en)}</b>` : '–'}</span></li>`;
           })
           .join('')}</ol>`

@@ -108,7 +108,7 @@ export function groupedBars(
   const bars = categories
     .map((cat, ci) => {
       const y0 = ci * groupH + 4;
-      const label = `<text class="rc-cat" x="${left - 8}" y="${y0 + (series.length * (barH + gap)) / 2 + 3}" text-anchor="end">${esc(clipText(cat, left - 12))}<title>${esc(cat)}</title></text>`;
+      const label = `<text class="rc-lab-cat" x="${left - 8}" y="${y0 + (series.length * (barH + gap)) / 2 + 3}" text-anchor="end">${esc(clipText(cat, left - 12))}<title>${esc(cat)}</title></text>`;
       const marks = series
         .map((s, si) => {
           const v = s.values[ci];
@@ -202,7 +202,7 @@ export function heatmap(
             ? `color-mix(in srgb, var(--ink) ${10 + level * 16}%, var(--paper))`
             : 'var(--fill)';
           const ink = !v ? 'var(--ink-3)' : level >= 3 ? 'var(--paper)' : 'var(--ink)';
-          return `<g><rect x="${left + c * cell + 1}" y="${top + r * cell + 1}" width="${cell - 2}" height="${cell - 2}" rx="3" style="fill:${shade}"><title>${esc(`${labels[r]} → ${labels[c]}: ${v} (${Math.round(share * 100)}%)`)}</title></rect><text x="${left + c * cell + cell / 2}" y="${top + r * cell + cell / 2 + 4}" text-anchor="middle" class="rc-cell" style="fill:${ink}">${v}</text></g>`;
+          return `<g><rect x="${left + c * cell + 1}" y="${top + r * cell + 1}" width="${cell - 2}" height="${cell - 2}" rx="3" style="fill:${shade}"><title>${esc(`${labels[r]} → ${labels[c]}: ${v} (${Math.round(share * 100)}%)`)}</title></rect><text x="${left + c * cell + cell / 2}" y="${top + r * cell + cell / 2 + 4}" text-anchor="middle" class="rc-lab-cell" style="fill:${ink}">${v}</text></g>`;
         })
         .join('');
     })
@@ -210,7 +210,7 @@ export function heatmap(
   const rowsLab = labels
     .map(
       (l, i) =>
-        `<text class="rc-cat" x="${left - 6}" y="${top + i * cell + cell / 2 + 3}" text-anchor="end">${esc(clipText(l, left - 10))}<title>${esc(l)}</title></text>`,
+        `<text class="rc-lab-cat" x="${left - 6}" y="${top + i * cell + cell / 2 + 3}" text-anchor="end">${esc(clipText(l, left - 10))}<title>${esc(l)}</title></text>`,
     )
     .join('');
   const colsLab = columns
