@@ -114,6 +114,17 @@
   margin: 0;
   padding-left: 50px;
 }
+/* Page bars sit on the desk itself, so nothing shows through them even before the scroll class lands;
+   once the page scrolls under them they become a surface with a hairline. */
+.topbar {
+  background: var(--canvas);
+}
+html.scrolled body:not([data-view="work"]) .topbar {
+  background: var(--surface);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: 0 1px 0 var(--line);
+}
 .ws-toolbar {
   background: var(--surface);
   backdrop-filter: none;
