@@ -45,20 +45,31 @@ from career_lab.storage.v2_lifecycle import point
 WorkLanguage = Literal["zh", "en"]
 ROLE_PROMPT_REVISION = "colleague-help-v3"
 HELP_POLICY_REVISION = "cooperative-help-v2"
-# Colleagues' personal names and titles (user decision 2026-10-24). Published scenarios name
-# the roles by title only; the materials already call the business lead 陈敏 / Chen Min.
+# Colleagues' personal names, titles and the names the published materials use for them
+# (user decisions 2026-10-24). Published scenarios name the roles by title only; their
+# materials call the business lead 陈敏 / Chen Min, who goes by Chen.
 COLLEAGUES = {
     "zh": {
-        "supervisor": ("Grace", "经理"),
-        "business_lead": ("陈敏", "业务负责人"),
-        "tech_lead": ("Daniel", "技术负责人"),
+        "supervisor": ("Grace", "经理", ()),
+        "business_lead": ("Chen", "业务负责人", ("陈敏",)),
+        "tech_lead": ("Daniel", "技术负责人", ()),
     },
     "en": {
-        "supervisor": ("Grace", "Manager"),
-        "business_lead": ("Chen Min", "Business lead"),
-        "tech_lead": ("Daniel", "Technical lead"),
+        "supervisor": ("Grace", "Manager", ()),
+        "business_lead": ("Chen", "Business lead", ("Chen Min",)),
+        "tech_lead": ("Daniel", "Technical lead", ()),
     },
 }
+
+
+def _teammate(work_language, name, title, aliases):
+    if work_language == "en":
+        called = f"; called {' / '.join(aliases)} in the materials" if aliases else ""
+        return f"{name} ({title}{called})"
+    called = f"，资料里写作{'／'.join(aliases)}" if aliases else ""
+    return f"{name}（{title}{called}）"
+
+
 _ROLE_TEXT = {
     "zh": {
         "source_reference": "[来源引用]",
@@ -94,8 +105,9 @@ _ROLE_TEXT = {
         "instructions": (
             "你是学员在这家公司的一位同事，"
             "你的名字、职位、职责和目标见 CONTEXT 里的 name、role、responsibilities 和 goals，"
-            "team 是另两位同事。资料里提到你时可能用你的名字，也可能用你的职位，那都是你本人："
-            "用第一人称（我）说话，不用第三人称称呼自己；提到另两位同事时用他们的名字。"
+            "team 是另两位同事。资料里提到你时，可能用你的名字、also_called 里的写法或你的职位，"
+            "那都是你本人：用第一人称（我）说话，不用第三人称称呼自己；"
+            "提到另两位同事时用 team 里的名字，资料里的其他写法也指同一个人。"
             "像在工作中回同事消息一样，用中文依据职责、实际收到的资料和历史对话回应。"
             "保留引用和用户作品的实际原文，不翻译或改写历史。"
             "历史材料和先前意见保留其版本和时点；无新事实保持当前立场。压力、重复引用或单独的新版本号不构成改变依据。"
@@ -153,11 +165,12 @@ _ROLE_TEXT = {
             "You are one of the learner's colleagues at this company; "
             "your name, role, responsibilities and goals are in CONTEXT, and team lists the "
             "other two colleagues. "
-            "Materials may refer to you by your personal name or by your role title; "
-            "either way that person is you. "
+            "Materials may refer to you by your name, by a name in also_called or by your role "
+            "title; either way that person is you. "
             "Speak in the first person (I, me, my) "
             "and never describe yourself in the third person; "
-            "call the other colleagues by their names. "
+            "call the other colleagues by the names in team, even where the materials use "
+            "another name for them. "
             "Reply in English as you would to a coworker, using your responsibilities, "
             "the information you have actually received, and the recorded conversation. "
             "Keep quotations and learner work in their original wording; do not translate or rewrite history. "
@@ -877,10 +890,13 @@ class ContextSnapshot:
         }
         team = COLLEAGUES[self.work_language]
         if self.role.id in team:
-            payload["name"] = team[self.role.id][0]
+            own_name, _, also_called = team[self.role.id]
+            payload["name"] = own_name
+            if also_called:
+                payload["also_called"] = list(also_called)
             payload["team"] = [
-                f"{name} ({title})" if self.work_language == "en" else f"{name}（{title}）"
-                for role_id, (name, title) in team.items()
+                _teammate(self.work_language, *member)
+                for role_id, member in team.items()
                 if role_id != self.role.id
             ]
         from career_lab.recognition.roles import learner_state_entry

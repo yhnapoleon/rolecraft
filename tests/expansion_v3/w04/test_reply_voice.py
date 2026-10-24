@@ -84,19 +84,32 @@ def test_colleague_prompt_asks_for_a_short_first_person_reply(language, first_pe
     assert role_text(language, "instructions") + role_text(language, "help_policy") in system
 
 
+CHEN_EN = "Chen (Business lead; called Chen Min in the materials)"
+CHEN_ZH = "Chen（业务负责人，资料里写作陈敏）"
+
+
 @pytest.mark.parametrize(
-    ("language", "role_id", "name", "team"),
+    ("language", "role_id", "name", "also_called", "team"),
     [
-        ("en", "supervisor", "Grace", ["Chen Min (Business lead)", "Daniel (Technical lead)"]),
-        ("en", "business_lead", "Chen Min", ["Grace (Manager)", "Daniel (Technical lead)"]),
-        ("en", "tech_lead", "Daniel", ["Grace (Manager)", "Chen Min (Business lead)"]),
-        ("zh", "supervisor", "Grace", ["陈敏（业务负责人）", "Daniel（技术负责人）"]),
-        ("zh", "business_lead", "陈敏", ["Grace（经理）", "Daniel（技术负责人）"]),
-        ("zh", "tech_lead", "Daniel", ["Grace（经理）", "陈敏（业务负责人）"]),
+        ("en", "supervisor", "Grace", None, [CHEN_EN, "Daniel (Technical lead)"]),
+        (
+            "en",
+            "business_lead",
+            "Chen",
+            ["Chen Min"],
+            ["Grace (Manager)", "Daniel (Technical lead)"],
+        ),
+        ("en", "tech_lead", "Daniel", None, ["Grace (Manager)", CHEN_EN]),
+        ("zh", "supervisor", "Grace", None, [CHEN_ZH, "Daniel（技术负责人）"]),
+        ("zh", "business_lead", "Chen", ["陈敏"], ["Grace（经理）", "Daniel（技术负责人）"]),
+        ("zh", "tech_lead", "Daniel", None, ["Grace（经理）", CHEN_ZH]),
     ],
 )
-def test_each_colleague_knows_its_own_name_and_the_other_two(language, role_id, name, team):
+def test_each_colleague_knows_its_own_name_and_the_other_two(
+    language, role_id, name, also_called, team
+):
     c, f, _, _ = bilingual_fixture(language, role_id=role_id)
     system = assemble_context(c, f).messages(owner())[0][0]["content"]
     context = json.loads(system.split("\nCONTEXT\n", 1)[1])
     assert context["name"] == name and context["team"] == team
+    assert context.get("also_called") == also_called
