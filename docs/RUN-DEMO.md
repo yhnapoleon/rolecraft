@@ -84,6 +84,8 @@ Without the recogniser weights and a model key, the system runs as a **replay**.
    - 所以每次进结果页都要等加载完再拍，剪辑时剪掉等待。
 2. **自动录制用真实指针点击。** 用 Playwright 的 `page.mouse` 或 `locator.click()`；程序化的 `element.click()` 会让右栏标签出现粗焦点圈。
 3. **要显示识别过程，就加 `?lens=1`。**
+4. **先在录制用的浏览器里把每一局打开一次。** 用继续码找回后，页面底部会弹出恢复提示：中文是「已找回。只在原浏览器里的草稿、测试归属和笔记不会跟过来。」，英文是「Restored. Drafts, test filing and notes kept only in the other browser stay there.」。等它消失再开拍，否则会被录进视频。
+5. **系统剖面页用默认的第 5 句。** 第 6 句在「表示」这一站检索到的第一条不对题，这是识别层的数据造成的。
 
 录前跑一次 `scripts/demo/check.sh`。它的「录制前」一栏会核对系统剖面和回归样例的数据能否取到，列出这三个地址，并再提醒一次预热。页面有没有预热过，自检看不出来。
 
@@ -218,6 +220,7 @@ RoleCraft 录前自检 · 2026-10-24 16:36 · runs/demo-stack
 - 反馈页「理由与证据的支持关系」一栏仍显示「评价模型：deepseek · deepseek-chat」，因为演示包登记的是真实评价模型。这一处待修。
 - 资料标题里的「陈敏」来自已发布场景的原文，按约定不改。同事的显示名是 Grace、Chen、Daniel。
 - 模型槽为 local 时，同事、评审和知识助手都显示「等待模型接入」。
+- 同事回复已改成短句、第一人称，但要接上真实模型才看得到效果。演示包里存的是旧提示词生成的回复。
 
 ## 常见问题
 
