@@ -17,23 +17,22 @@
   --paper: #fffdf9;
   --glass: rgba(245, 242, 236, 0.8);
   --glass-strong: rgba(246, 243, 238, 0.97);
-  --ink: #111715;
-  /* Warm greys, of a piece with the stone desk. ink-3 and warn hold 4.5:1 on the warmest spot
-     of the desk (top of the board while an event is up). */
-  --ink-2: #3f3933;
-  --ink-3: #514840;
-  --ink-4: #857b70;
-  --line: rgba(17, 23, 21, 0.09);
-  --line-2: rgba(17, 23, 21, 0.15);
-  --fill: rgba(17, 23, 21, 0.05);
-  --fill-2: rgba(17, 23, 21, 0.08);
-  --primary: #111715;
-  --on-primary: #f6f7f6;
+  --ink: #1d1d1f;
+  /* Neutral ink follows the surface beneath it. ink-4 is decoration/disabled only. */
+  --ink-2: rgba(29, 29, 31, 0.8);
+  --ink-3: rgba(29, 29, 31, 0.72);
+  --ink-4: rgba(29, 29, 31, 0.38);
+  --line: rgba(29, 29, 31, 0.1);
+  --line-2: rgba(29, 29, 31, 0.16);
+  --fill: rgba(29, 29, 31, 0.055);
+  --fill-2: rgba(29, 29, 31, 0.09);
+  --primary: #1d1d1f;
+  --on-primary: #fbfaf8;
   /* Colour has one meaning each. Ink: you and what you can do. Amber: the world changed or is out of date.
      Green: holds / done. Red: over a limit. Grey: not known yet. Hues name people (see --p-*). */
-  --accent: #111715;
-  --accent-ink: #111715;
-  --accent-tint: rgba(17, 23, 21, 0.07);
+  --accent: var(--primary);
+  --accent-ink: var(--primary);
+  --accent-tint: rgba(29, 29, 31, 0.07);
   --warn: #763d04;
   --warn-tint: #f4e5d0;
   --good: #1b7149;
@@ -43,7 +42,7 @@
   --p-manager: #6550d0;
   --p-business: #ad3f88;
   --p-technical: #0e7e70;
-  --p-neutral: #8a938f;
+  --p-neutral: var(--ink-3);
   --p-assistant: #3557d2;
   --p-agent: #343b39;
   /* The room's light: warm, always on, falling from the top of the window (amb-a, amb-b) with a
@@ -60,22 +59,22 @@
   --grain: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='4 0 0 0 -1.5 4 0 0 0 -1.5 4 0 0 0 -1.5 0 0 0 0 0.03'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   --light-good: rgba(52, 160, 104, 0.24);
   --shadow-paper:
-    0 0 0 0.5px rgba(17, 23, 21, 0.11), 0 1px 0 rgba(17, 23, 21, 0.035),
-    0 14px 30px -20px rgba(17, 23, 21, 0.42);
-  --shadow-card: 0 0 0 0.5px rgba(17, 23, 21, 0.11), 0 1px 1px rgba(17, 23, 21, 0.05);
+    0 0 0 0.5px rgba(60, 45, 25, 0.1), 0 1px 1px rgba(60, 45, 25, 0.04),
+    0 16px 34px -22px rgba(60, 40, 20, 0.38);
+  --shadow-card: 0 0 0 0.5px rgba(60, 45, 25, 0.1), 0 1px 2px rgba(60, 45, 25, 0.05);
   --shadow-float:
-    0 0 0 0.5px rgba(17, 23, 21, 0.14), 0 2px 4px rgba(17, 23, 21, 0.04),
-    0 24px 48px -20px rgba(17, 23, 21, 0.38);
+    0 0 0 0.5px rgba(60, 45, 25, 0.1), 0 10px 30px -10px rgba(60, 40, 20, 0.2),
+    0 30px 70px -24px rgba(60, 40, 20, 0.26);
   --r-xs: 6px;
   --r-sm: 9px;
   --r-md: 12px;
   --r-lg: 16px;
   --r-xl: 22px;
-  /* Paper sheets are near-square, instrument keys are 8px, pills are kept for status. */
+  /* Concentric control radii; paper stays 3px. Pills are kept for status. */
   --r-paper: 3px;
-  --r-key: 8px;
-  --r-panel: 12px;
-  --r-dialog: 16px;
+  --r-key: 9px;
+  --r-panel: 14px;
+  --r-dialog: 18px;
   /* Scrim behind a sheet that covers the main screen. */
   --dim: rgba(17, 23, 21, 0.16);
   --sans:
@@ -137,6 +136,21 @@
   --fast: 160ms;
   --mid: 280ms;
   --slow: 520ms;
+  --r-seg: 9px;
+  --r-thumb: 7px;
+  --r-row: 7px;
+  --key-bg: #fffefb;
+  --shadow-key: 0 0 0 0.5px rgba(29, 29, 31, 0.14), 0 0.5px 1.5px rgba(29, 29, 31, 0.1);
+  --shadow-primary:
+    inset 0 0.5px 0 rgba(255, 255, 255, 0.16), 0 0.5px 1px rgba(0, 0, 0, 0.22),
+    0 2px 6px -2px rgba(0, 0, 0, 0.18);
+  --seg-track: rgba(29, 29, 31, 0.065);
+  --seg-thumb: #fffefb;
+  --shadow-thumb:
+    0 0 0 0.5px rgba(0, 0, 0, 0.05), 0 3px 8px rgba(40, 30, 20, 0.1),
+    0 3px 1px rgba(40, 30, 20, 0.03);
+  --seg-on: var(--ink);
+  --focus-ring: 0 0 0 1px rgba(29, 29, 31, 0.5), 0 0 0 4px rgba(29, 29, 31, 0.14);
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
@@ -145,22 +159,22 @@
     --surface: #1a1714;
     --surface-2: #221e1a;
     --surface-3: #0d0b09;
-    --paper: #221e1a;
+    --paper: #26221e;
     --glass: rgba(26, 23, 20, 0.8);
     --glass-strong: rgba(27, 24, 21, 0.97);
-    --ink: #e8edea;
-    --ink-2: #bbb3a9;
-    --ink-3: #979087;
-    --ink-4: #655d54;
-    --line: rgba(255, 255, 255, 0.075);
-    --line-2: rgba(255, 255, 255, 0.13);
-    --fill: rgba(255, 255, 255, 0.06);
-    --fill-2: rgba(255, 255, 255, 0.1);
-    --primary: #e8edea;
-    --on-primary: #0e1211;
-    --accent: #e8edea;
-    --accent-ink: #e8edea;
-    --accent-tint: rgba(255, 255, 255, 0.1);
+    --ink: #f3f1ee;
+    --ink-2: rgba(243, 241, 238, 0.78);
+    --ink-3: rgba(243, 241, 238, 0.62);
+    --ink-4: rgba(243, 241, 238, 0.32);
+    --line: rgba(255, 248, 236, 0.08);
+    --line-2: rgba(255, 248, 236, 0.14);
+    --fill: rgba(255, 248, 236, 0.06);
+    --fill-2: rgba(255, 248, 236, 0.1);
+    --primary: #f3f1ee;
+    --on-primary: #1a1714;
+    --accent: var(--primary);
+    --accent-ink: var(--primary);
+    --accent-tint: rgba(243, 241, 238, 0.1);
     --warn: #e7a15a;
     --warn-tint: rgba(231, 161, 90, 0.12);
     --good: #5bc28e;
@@ -179,11 +193,22 @@
     --light-warn: rgba(231, 150, 70, 0.18);
     --light-good: rgba(70, 190, 128, 0.16);
     --shadow-paper:
-      0 0 0 0.5px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.035),
+      0 0 0 0.5px rgba(255, 255, 255, 0.07), inset 0 0.5px 0 rgba(255, 255, 255, 0.04),
       0 18px 36px -22px rgba(0, 0, 0, 0.85);
-    --shadow-card: 0 0 0 0.5px rgba(255, 255, 255, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.03);
-    --shadow-float: 0 0 0 0.5px rgba(255, 255, 255, 0.1), 0 28px 60px -20px rgba(0, 0, 0, 0.85);
+    --shadow-card: 0 0 0 0.5px rgba(255, 255, 255, 0.07), inset 0 0.5px 0 rgba(255, 255, 255, 0.04);
+    --shadow-float:
+      0 0 0 0.5px rgba(255, 255, 255, 0.09), inset 0 0.5px 0 rgba(255, 255, 255, 0.05),
+      0 30px 70px -20px rgba(0, 0, 0, 0.8);
     --dim: rgba(0, 0, 0, 0.42);
+    --key-bg: #2c2824;
+    --shadow-key:
+      0 0 0 0.5px rgba(255, 255, 255, 0.07), inset 0 0.5px 0 rgba(255, 255, 255, 0.07),
+      0 1px 2px rgba(0, 0, 0, 0.35);
+    --shadow-primary: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --seg-track: rgba(255, 248, 236, 0.07);
+    --seg-thumb: #3a352f;
+    --shadow-thumb: inset 0 0.5px 0 rgba(255, 255, 255, 0.08), 0 2px 6px rgba(0, 0, 0, 0.35);
+    --focus-ring: 0 0 0 1px rgba(243, 241, 238, 0.6), 0 0 0 4px rgba(243, 241, 238, 0.16);
   }
 }
 
@@ -306,7 +331,7 @@ html:not([data-input="keyboard"]) [tabindex="-1"]:focus {
   height: 18px;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.7;
+  stroke-width: 1.6;
   stroke-linecap: round;
   stroke-linejoin: round;
   flex: none;
@@ -318,7 +343,7 @@ html:not([data-input="keyboard"]) [tabindex="-1"]:focus {
 .i.i-xs {
   width: 13px;
   height: 13px;
-  stroke-width: 1.9;
+  stroke-width: 1.6;
 }
 .i .i-fill {
   fill: currentColor;
@@ -340,8 +365,8 @@ html:not([data-input="keyboard"]) [tabindex="-1"]:focus {
   padding: 0 14px;
   border: 0;
   border-radius: var(--r-key);
-  background: var(--surface-2);
-  box-shadow: inset 0 0 0 0.5px var(--line-2);
+  background: var(--key-bg);
+  box-shadow: var(--shadow-key);
   color: var(--ink);
   font-size: 13.5px;
   font-weight: 500;
@@ -357,7 +382,7 @@ html:not([data-input="keyboard"]) [tabindex="-1"]:focus {
 .btn.primary {
   background: var(--primary);
   color: var(--on-primary);
-  box-shadow: none;
+  box-shadow: var(--shadow-primary);
   font-weight: 600;
 }
 .btn.quiet {
@@ -367,15 +392,18 @@ html:not([data-input="keyboard"]) [tabindex="-1"]:focus {
 }
 @media (hover: hover) and (pointer: fine) {
   .btn:hover {
-    background: color-mix(in oklab, var(--surface-2) 82%, var(--ink) 6%);
+    background: color-mix(in oklab, var(--key-bg) 94%, var(--ink) 6%);
   }
   .btn.primary:hover {
-    background: color-mix(in oklab, var(--primary), var(--canvas) 14%);
+    background: var(--primary);
   }
   .btn.quiet:hover {
     background: var(--fill);
     color: var(--ink);
   }
+}
+.btn:not(.quiet):not(.primary):active {
+  background: color-mix(in oklab, var(--key-bg) 90%, var(--ink) 10%);
 }
 .btn.small {
   height: 30px;
@@ -446,9 +474,10 @@ html:not([data-input="keyboard"]) [tabindex="-1"]:focus {
 .select,
 .textarea {
   width: 100%;
-  border: 1px solid var(--line-2);
-  border-radius: var(--r-sm);
-  background: var(--surface);
+  border: 0;
+  border-radius: var(--r-key);
+  background: var(--input-bg);
+  box-shadow: var(--shadow-input);
   padding: 9px 12px;
   font-size: 14px;
   line-height: 1.5;
@@ -467,8 +496,7 @@ html:not([data-input="keyboard"]) [tabindex="-1"]:focus {
 .select:focus,
 .textarea:focus {
   outline: none;
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-tint);
+  box-shadow: var(--input-focus);
 }
 .chip {
   display: inline-flex;
@@ -709,7 +737,7 @@ html:not([data-input="keyboard"]) [tabindex="-1"]:focus {
   flex: none;
   fill: none;
   stroke: currentColor;
-  stroke-width: 1.7;
+  stroke-width: 1.6;
   color: var(--ink-4);
 }
 .status-mark.working {
@@ -764,8 +792,8 @@ html:not([data-input="keyboard"]) [tabindex="-1"]:focus {
 }
 html.scrolled body:not([data-view="work"]) .topbar {
   background: var(--glass);
-  backdrop-filter: saturate(1.6) blur(20px);
   -webkit-backdrop-filter: saturate(1.6) blur(20px);
+  backdrop-filter: saturate(1.6) blur(20px);
   box-shadow: 0 1px 0 var(--line);
 }
 .wordmark {
@@ -816,12 +844,12 @@ html.scrolled body:not([data-view="work"]) .topbar {
   right: 0;
   z-index: 50;
   min-width: 200px;
-  padding: 6px;
-  border-radius: var(--r-panel);
-  background: var(--glass-strong);
-  backdrop-filter: blur(24px) saturate(1.6);
-  -webkit-backdrop-filter: blur(24px) saturate(1.6);
-  box-shadow: var(--shadow-float);
+  padding: 5px;
+  border-radius: 12px;
+  background: var(--pop-bg);
+  -webkit-backdrop-filter: var(--pop-filter);
+  backdrop-filter: var(--pop-filter);
+  box-shadow: var(--pop-hi), var(--shadow-float);
   animation: pop var(--mid) var(--spring-snappy);
 }
 .menu.right {
@@ -839,7 +867,7 @@ html.scrolled body:not([data-view="work"]) .topbar {
   min-height: 36px;
   padding: 6px 10px;
   border: 0;
-  border-radius: 9px;
+  border-radius: 7px;
   background: none;
   text-align: left;
   font-size: 13.5px;
@@ -1309,8 +1337,8 @@ body[data-view="work"] {
   gap: 4px;
   padding: 0 12px;
   background: var(--glass);
-  backdrop-filter: saturate(1.6) blur(22px);
   -webkit-backdrop-filter: saturate(1.6) blur(22px);
+  backdrop-filter: saturate(1.6) blur(22px);
   box-shadow: 0 1px 0 var(--line);
 }
 .nav-toggle {
@@ -1421,10 +1449,10 @@ body[data-view="work"] {
   width: min(440px, 92vw);
   padding: 18px;
   border-radius: var(--r-panel);
-  background: var(--glass-strong);
-  backdrop-filter: blur(26px) saturate(1.6);
-  -webkit-backdrop-filter: blur(26px) saturate(1.6);
-  box-shadow: var(--shadow-float);
+  background: var(--pop-bg);
+  -webkit-backdrop-filter: var(--pop-filter);
+  backdrop-filter: var(--pop-filter);
+  box-shadow: var(--pop-hi), var(--shadow-float);
   animation: pop var(--mid) var(--spring-snappy);
 }
 .pop-actions {
@@ -1445,10 +1473,10 @@ body[data-view="work"] {
   grid-column: 1;
   grid-row: 2;
   min-height: 0;
-  background: var(--glass);
-  backdrop-filter: saturate(1.5) blur(20px);
-  -webkit-backdrop-filter: saturate(1.5) blur(20px);
-  box-shadow: 1px 0 0 var(--line);
+  background: var(--pop-bg);
+  -webkit-backdrop-filter: var(--pop-filter);
+  backdrop-filter: var(--pop-filter);
+  box-shadow: var(--pop-hi), var(--shadow-float);
 }
 .nav-scroll {
   height: 100%;
@@ -1541,11 +1569,11 @@ body[data-view="work"] {
   font-weight: 500;
 }
 .lane-label .count {
-  color: var(--ink-4);
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
 .lane.vacant .lane-label {
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .lane-drop {
   display: none;
@@ -1677,11 +1705,11 @@ body[data-view="work"] {
   color: var(--ink);
 }
 .doc-row:hover {
-  background: var(--fill);
+  background: var(--fill-2);
 }
 .doc-row.on {
-  background: var(--surface);
-  box-shadow: var(--shadow-card);
+  background: var(--fill-2);
+  box-shadow: none;
 }
 .doc-row .grow {
   color: var(--ink-2);
@@ -1754,8 +1782,8 @@ body[data-view="work"] {
   padding: 10px 14px;
   border-radius: 12px;
   background: var(--glass-strong);
-  backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
   box-shadow: var(--shadow-card);
   font-size: 13.5px;
 }
@@ -1902,17 +1930,17 @@ button.crumb:hover {
   position: relative;
   display: inline-flex;
   padding: 2px;
-  border-radius: 10px;
-  background: var(--fill);
+  border-radius: var(--r-seg);
+  background: var(--seg-track);
 }
 .segmented .thumb {
   position: absolute;
   top: 2px;
   bottom: 2px;
   left: 2px;
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: 0 1px 2px rgba(16, 18, 24, 0.12);
+  border-radius: var(--r-thumb);
+  background: var(--seg-thumb);
+  box-shadow: var(--shadow-thumb);
   transition:
     transform var(--mid) var(--spring-snappy),
     width var(--mid) var(--spring-snappy);
@@ -1926,14 +1954,15 @@ button.crumb:hover {
   height: 28px;
   padding: 0 10px;
   border: 0;
-  border-radius: 8px;
+  border-radius: var(--r-thumb);
   background: none;
   color: var(--ink-2);
   font-size: 12.5px;
   font-weight: 500;
 }
 .segmented button[aria-pressed="true"] {
-  color: var(--ink);
+  color: var(--seg-on);
+  font-weight: 600;
 }
 .status-seg .status-mark {
   width: 13px;
@@ -2057,7 +2086,7 @@ button.crumb:hover {
   }
 }
 .editor-body::placeholder {
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .evidence-row,
 .crit-evidence,
@@ -2532,8 +2561,8 @@ button.crumb:hover {
   display: flex;
   flex-direction: column;
   background: var(--glass);
-  backdrop-filter: saturate(1.5) blur(20px);
   -webkit-backdrop-filter: saturate(1.5) blur(20px);
+  backdrop-filter: saturate(1.5) blur(20px);
   box-shadow: -1px 0 0 var(--line);
 }
 .rail-pad {
@@ -2575,7 +2604,7 @@ button.crumb:hover {
   transition: background var(--fast) ease;
 }
 .person:hover {
-  background: var(--fill);
+  background: var(--fill-2);
 }
 .person-name {
   display: flex;
@@ -2667,7 +2696,7 @@ button.crumb:hover {
   padding: 0 8px;
 }
 .feed-empty {
-  color: var(--ink-4);
+  color: var(--ink-3);
   font-size: 12.5px;
 }
 .feed-list {
@@ -2696,7 +2725,7 @@ button.crumb:hover {
   color: var(--good);
 }
 .feed-item time {
-  color: var(--ink-4);
+  color: var(--ink-3);
   font-size: 11.5px;
   white-space: nowrap;
 }
@@ -2820,7 +2849,7 @@ button.crumb:hover {
 .msg time {
   margin-top: 3px;
   padding: 0 4px;
-  color: var(--ink-4);
+  color: var(--ink-3);
   font-size: 11px;
 }
 .msg.is-typing {
@@ -2998,15 +3027,13 @@ button.crumb:hover {
   gap: 5px;
   margin: 2px 12px 0;
   padding: 5px;
-  border-radius: var(--r-panel);
-  background: var(--paper);
-  box-shadow: var(--shadow-card);
+  border-radius: var(--r-key);
+  background: var(--input-bg);
+  box-shadow: var(--shadow-input);
   transition: box-shadow var(--fast) ease;
 }
 .composer:focus-within {
-  box-shadow:
-    var(--shadow-card),
-    0 0 0 1.5px color-mix(in oklab, var(--ink) 22%, transparent);
+  box-shadow: var(--input-focus);
 }
 .composer-line {
   display: flex;
@@ -3346,7 +3373,7 @@ button.crumb:hover {
   margin-bottom: 10px;
 }
 .group-title .count {
-  color: var(--ink-4);
+  color: var(--ink-3);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -3680,16 +3707,16 @@ button.crumb:hover {
   width: min(880px, calc(100vw - 32px));
 }
 .sheet::backdrop {
-  background: rgba(10, 12, 16, 0.32);
-  backdrop-filter: blur(3px);
-  -webkit-backdrop-filter: blur(3px);
+  background: var(--scrim-b);
+  -webkit-backdrop-filter: var(--scrim-filter);
+  backdrop-filter: var(--scrim-filter);
   animation: fade 200ms ease;
 }
 /* On a dark desk the light scrim hardly dims anything; darken toward the desk itself so the
    page behind a dialog or bottom sheet clearly steps back. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .sheet::backdrop {
-    background: color-mix(in srgb, var(--canvas) 62%, transparent);
+    background: var(--scrim-b);
   }
 }
 @keyframes sheet-in {
@@ -3941,7 +3968,7 @@ textarea.doc-input[name="rationale"] {
   padding-left: 10px;
 }
 .doc-input::placeholder {
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .deliver-side {
   position: sticky;
@@ -3970,10 +3997,12 @@ textarea.doc-input[name="rationale"] {
   margin-inline: auto;
   padding: 10px 12px 10px 16px;
   border-radius: var(--r-panel);
-  background: var(--primary);
-  color: var(--on-primary);
+  background: var(--pop-bg);
+  -webkit-backdrop-filter: var(--pop-filter);
+  backdrop-filter: var(--pop-filter);
+  color: var(--ink);
   font-size: 13.5px;
-  box-shadow: var(--shadow-float);
+  box-shadow: var(--pop-hi), var(--shadow-float);
   transform: translateY(20px);
   opacity: 0;
   visibility: hidden;
@@ -4002,7 +4031,7 @@ textarea.doc-input[name="rationale"] {
   width: 24px;
   height: 24px;
   border-radius: 7px;
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--fill);
 }
 .toast-text {
   min-width: 0;
@@ -4013,13 +4042,13 @@ textarea.doc-input[name="rationale"] {
   padding: 0 12px;
   border: 0;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--fill);
   color: inherit;
   font-weight: 600;
   font-size: 13px;
 }
 .toast-act:hover {
-  background: rgba(255, 255, 255, 0.26);
+  background: var(--fill-2);
 }
 .storage-alert {
   display: flex;
@@ -4127,8 +4156,8 @@ textarea.doc-input[name="rationale"] {
     bottom: 0;
     width: min(380px, 92vw);
     background: var(--surface);
-    backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     box-shadow: var(--shadow-float);
     transform: translateX(104%);
     visibility: hidden;
@@ -4175,8 +4204,8 @@ textarea.doc-input[name="rationale"] {
     bottom: 0;
     width: min(320px, 88vw);
     background: var(--surface);
-    backdrop-filter: none;
     -webkit-backdrop-filter: none;
+    backdrop-filter: none;
     box-shadow: var(--shadow-float);
     transform: translateX(-104%);
     visibility: hidden;
@@ -4331,12 +4360,11 @@ textarea.doc-input[name="rationale"] {
     grid-template-columns: 1fr;
   }
   .sheet {
-    width: 100vw;
-    /* A bottom sheet that fills the width: the UA keeps modal dialogs 2em + 6px narrower. */
-    max-width: 100vw;
+    width: calc(100vw - 2 * var(--sheet-inset));
+    max-width: calc(100vw - 2 * var(--sheet-inset));
     max-height: 92dvh;
-    margin: auto 0 0;
-    border-radius: var(--r-dialog) var(--r-dialog) 0 0;
+    margin: auto var(--sheet-inset) var(--sheet-inset);
+    border-radius: var(--r-dialog);
   }
   .sheet[open] {
     animation: sheet-up var(--slow) var(--spring);
@@ -4704,7 +4732,7 @@ textarea.doc-input[name="rationale"] {
   min-height: 64px;
   border: 1.5px dashed var(--line-2);
   border-radius: 12px;
-  color: var(--ink-4);
+  color: var(--ink-3);
   font-size: 12.5px;
 }
 .kanban.is-dragging .col {
@@ -4784,7 +4812,7 @@ textarea.doc-input[name="rationale"] {
   color: var(--ink-3);
 }
 .card-latest.empty {
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .card-meta {
   display: flex;
@@ -5036,7 +5064,7 @@ textarea.doc-input[name="rationale"] {
 }
 .ol-empty {
   padding: 4px 8px 6px;
-  color: var(--ink-4);
+  color: var(--ink-3);
   font-size: 12px;
   line-height: 1.45;
 }
@@ -5437,7 +5465,7 @@ textarea.doc-input[name="rationale"] {
   color: var(--ink-3);
 }
 .log-item time {
-  color: var(--ink-4);
+  color: var(--ink-3);
   font-size: 11px;
   white-space: nowrap;
 }
@@ -5491,7 +5519,7 @@ button.act-open:hover {
   color: var(--ink-3);
 }
 .act-open time {
-  color: var(--ink-4);
+  color: var(--ink-3);
   font-size: 11px;
   white-space: nowrap;
 }
@@ -5605,7 +5633,7 @@ ol.later-list {
   list-style: decimal;
 }
 ol.later-list li::marker {
-  color: var(--ink-4);
+  color: var(--ink-3);
   font-variant-numeric: tabular-nums;
 }
 .career.later .career-art {
@@ -6090,14 +6118,13 @@ ol.later-list li::marker {
   max-width: 72ch;
 }
 
-/* Phone-width sheets fill the width as bottom sheets (every width variant) and keep 16px
-   gutters on both sides. */
+/* Phone sheets keep the same 8px floating inset for every width variant. */
 @media (max-width: 720px) {
   .sheet,
   .sheet.wide,
   .sheet.narrow {
-    width: 100vw;
-    max-width: 100vw;
+    width: calc(100vw - 2 * var(--sheet-inset));
+    max-width: calc(100vw - 2 * var(--sheet-inset));
   }
   .sheet-head {
     padding: 16px 12px 10px 16px;
@@ -6159,4 +6186,164 @@ ol.later-list li::marker {
 /* The behaviour card waits for its reading; an empty one leaves no blank strip. */
 .review-side .rc-behavior:empty {
   display: none;
+}
+
+/* Apple B, step A: controls only. Materials and world light stay unchanged. */
+:root {
+  --input-bg: #fffefb;
+  --shadow-input: 0 0 0 0.5px rgba(29, 29, 31, 0.16), inset 0 0.5px 1px rgba(29, 29, 31, 0.08);
+  --input-focus: 0 0 0 0.5px rgba(29, 29, 31, 0.45), 0 0 0 4px rgba(29, 29, 31, 0.12);
+  --thumb-filter: drop-shadow(0 0 0.5px rgba(0, 0, 0, 0.05))
+    drop-shadow(0 3px 8px rgba(40, 30, 20, 0.1)) drop-shadow(0 3px 1px rgba(40, 30, 20, 0.03));
+  --thumb-highlight: none;
+  --switch-on: var(--primary);
+  --switch-width: 32px;
+  --switch-height: 19px;
+  --switch-knob: 15px;
+  --switch-travel: 13px;
+  --switch-pressed: 19px;
+  --switch-pressed-travel: 9px;
+  --switch-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.04), 0 1.5px 3px rgba(0, 0, 0, 0.22);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --input-bg: #26221e;
+    --switch-on: #8c857b;
+    --input-focus: 0 0 0 0.5px rgba(243, 241, 238, 0.5), 0 0 0 4px rgba(243, 241, 238, 0.14);
+    --thumb-filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.35));
+    /* Clip starts 2px in: the visible part of this inset is the reference 0.5px highlight. */
+    --thumb-highlight: inset 0 2.5px 0 rgba(255, 255, 255, 0.08);
+  }
+}
+:where(.i, .lucide) {
+  stroke-width: 1.6;
+}
+:is(.btn.primary, .btn.amber, .world-event .btn.primary, .rc-primary) :is(.i, .lucide) {
+  stroke-width: 1.9;
+}
+:where(.input, .textarea)::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+@supports (corner-shape: squircle) {
+  :root {
+    --r-key: 11px;
+    --r-panel: 19px;
+    --r-dialog: 24px;
+    --r-seg: 12px;
+    --r-thumb: 10px;
+    --r-row: 9px;
+  }
+  :where(
+    .btn,
+    .segmented,
+    .segmented .thumb,
+    .input,
+    .select,
+    .textarea,
+    .menu,
+    .popover,
+    .sheet,
+    .rc-sheet,
+    .lane,
+    .ag-rig,
+    .product-bar,
+    .note-actions .link,
+    [data-slot="button"],
+    .rc-segmented,
+    .rc-primary__key
+  ) {
+    corner-shape: squircle;
+  }
+}
+
+/* Apple B materials. Opaque is the default: a browser without backdrop-filter never gets
+   a translucent surface. Opt in below, then honour reduced transparency last. */
+:root {
+  --bar-bg: var(--surface);
+  --bar-filter: none;
+  --rail-bg: var(--surface);
+  --rail-drawer-bg: var(--surface);
+  --pop-bg: var(--surface);
+  --pop-filter: none;
+  --pop-hi: inset 0 0.5px 0 rgba(255, 255, 255, 0.7);
+  --sheet-foot-bg: var(--surface);
+  --sheet-foot-filter: none;
+  --sheet-inset: 8px;
+  --scrim-b: rgba(40, 28, 14, 0.18);
+  --scrim-filter: none;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --pop-hi: inset 0 0.5px 0 rgba(255, 255, 255, 0.09);
+    --scrim-b: rgba(0, 0, 0, 0.42);
+  }
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  :root {
+    --bar-bg: rgba(245, 242, 236, 0.6);
+    --bar-filter: blur(24px) saturate(170%);
+    --rail-bg: rgba(245, 242, 236, 0.5);
+    --rail-drawer-bg: rgba(245, 242, 236, 0.9);
+    --pop-bg: rgba(250, 247, 242, 0.72);
+    --pop-filter: blur(30px) saturate(180%);
+    --sheet-foot-bg: color-mix(in oklab, var(--paper) 62%, transparent);
+    --sheet-foot-filter: blur(20px) saturate(170%);
+    --scrim-filter: blur(1.5px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bar-bg: rgba(26, 23, 20, 0.6);
+      --bar-filter: blur(24px) saturate(150%);
+      --rail-bg: rgba(26, 23, 20, 0.5);
+      --rail-drawer-bg: rgba(26, 23, 20, 0.9);
+      --pop-bg: rgba(44, 40, 35, 0.68);
+      --pop-filter: blur(30px) saturate(150%);
+    }
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root,
+  :root:not([data-theme="light"]) {
+    --bar-bg: var(--surface);
+    --bar-filter: none;
+    --rail-bg: var(--surface);
+    --rail-drawer-bg: var(--surface);
+    --pop-bg: var(--surface);
+    --pop-filter: none;
+    --sheet-foot-bg: var(--surface);
+    --sheet-foot-filter: none;
+    --scrim-filter: none;
+  }
+}
+.menu button[aria-checked="true"],
+.menu button[aria-current="page"] {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+.menu button[aria-checked="true"] small {
+  color: inherit;
+}
+/* The footer overlays the scroll row, so content actually passes under the material.
+   Reserved bottom space covers the wrapped two-line phone footer as well. */
+.sheet[open]:has(> .sheet-foot) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+}
+.sheet:has(> .sheet-foot) > .sheet-head {
+  grid-area: 1 / 1;
+}
+.sheet:has(> .sheet-foot) > .sheet-body {
+  grid-area: 2 / 1;
+  padding-bottom: 110px;
+}
+.sheet > .sheet-foot {
+  grid-area: 2 / 1;
+  align-self: end;
+  z-index: 1;
+  background: var(--sheet-foot-bg);
+  -webkit-backdrop-filter: var(--sheet-foot-filter);
+  backdrop-filter: var(--sheet-foot-filter);
+  box-shadow: inset 0 0.5px 0 var(--line-2);
 }

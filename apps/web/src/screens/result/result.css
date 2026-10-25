@@ -1,3 +1,6 @@
+:where(.result-main) .fb-item__head {
+  border-radius: var(--r-row);
+}
 /* The result page (206; plan §4.4, decisions 21–22): the stamped result sheet takes over the
    desk under the room's warm light, three large readings answer "did anything fail?", the detail
    below reads by status or by colleague. Paper is 3px and near square; tools are instrument
@@ -641,5 +644,26 @@ html.rc-handover::view-transition-old(root) {
   to {
     opacity: 0;
     filter: blur(2px);
+  }
+}
+
+.result-main .fb-item {
+  position: relative;
+}
+.result-main .fb-item + .fb-item {
+  box-shadow: none;
+}
+.result-main .fb-item + .fb-item::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 40px;
+  right: 14px;
+  height: 0.5px;
+  background: var(--line);
+}
+@media (hover: hover) and (pointer: fine) {
+  .result-main .fb-item__head:hover {
+    background: var(--fill-2);
   }
 }

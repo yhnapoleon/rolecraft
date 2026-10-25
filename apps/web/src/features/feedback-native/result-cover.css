@@ -216,7 +216,7 @@
   font-size: 12.5px;
 }
 .result-cover__stage {
-  color: var(--ink-4);
+  color: var(--ink-3);
 }
 .result-cover__stage[data-state="done"] {
   color: var(--ink-3);

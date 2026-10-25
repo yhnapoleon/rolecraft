@@ -1,6 +1,7 @@
 // Button, from shadcn/ui (MIT), in our four levels and seven states (implementation plan §2.4).
 // The native side uses the same look through the .k classes in ui-kit/keys.css.
 import { cva, type VariantProps } from 'class-variance-authority';
+import { Check, LoaderCircle } from 'lucide-react';
 import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import { Slot } from 'radix-ui';
 import type * as React from 'react';
@@ -12,7 +13,7 @@ export const buttonVariants = cva(
     'tw:font-sans tw:text-[13.5px] tw:font-semibold tw:leading-none tw:select-none',
     'tw:border-0 tw:cursor-pointer',
     'tw:transition-[background-color,box-shadow,scale,opacity] tw:duration-160 tw:ease-out',
-    'tw:active:scale-[0.97]',
+    'tw:active:scale-[0.97] tw:motion-reduce:active:scale-100',
     'tw:focus-visible:outline-solid tw:focus-visible:outline-2 tw:focus-visible:outline-offset-2 tw:focus-visible:outline-ink',
     'tw:disabled:opacity-40 tw:disabled:cursor-default tw:disabled:active:scale-100',
     'tw:aria-busy:cursor-progress',
@@ -21,9 +22,9 @@ export const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          'tw:h-9 tw:px-4 tw:rounded-key tw:bg-primary tw:text-on-primary tw:hover:opacity-90',
+          'tw:h-9 tw:px-4 tw:rounded-key tw:bg-primary tw:text-on-primary tw:shadow-primary tw:[&_.lucide]:stroke-[1.9]',
         secondary:
-          'tw:h-9 tw:px-3.5 tw:rounded-key tw:bg-inst tw:text-ink tw:shadow-[inset_0_0_0_0.5px_var(--line-2)] tw:hover:bg-inst-2',
+          'tw:h-9 tw:px-3.5 tw:rounded-key tw:bg-key tw:text-ink tw:shadow-key tw:hover:bg-[color-mix(in_oklab,var(--key-bg)_94%,var(--ink)_6%)] tw:active:bg-[color-mix(in_oklab,var(--key-bg)_90%,var(--ink)_10%)]',
         ghost:
           'tw:h-9 tw:px-2.5 tw:rounded-key tw:bg-transparent tw:text-ink-2 tw:hover:bg-fill tw:hover:text-ink',
         icon: 'tw:size-8 tw:rounded-key tw:bg-transparent tw:text-ink-2 tw:hover:bg-fill tw:hover:text-ink',
@@ -45,39 +46,6 @@ export type ButtonProps = React.ComponentProps<'button'> &
     reason?: React.ReactNode;
   };
 
-const Spinner = () => (
-  <svg viewBox="0 0 16 16" className="tw:size-3.5 tw:animate-spin" aria-hidden="true">
-    <circle
-      cx="8"
-      cy="8"
-      r="6"
-      fill="none"
-      stroke="currentColor"
-      strokeOpacity=".25"
-      strokeWidth="2"
-    />
-    <path
-      d="M14 8a6 6 0 0 0-6-6"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-    />
-  </svg>
-);
-const Check = () => (
-  <svg viewBox="0 0 16 16" className="tw:size-3.5" aria-hidden="true">
-    <path
-      d="m3.5 8.5 3 3 6-7"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
-
 export function Button({
   className,
   variant,
@@ -91,7 +59,14 @@ export function Button({
 }: ButtonProps) {
   const reduce = useReducedMotion();
   const Comp = asChild ? Slot.Root : 'button';
-  const glyph = state === 'loading' ? <Spinner /> : state === 'done' ? <Check /> : icon;
+  const glyph =
+    state === 'loading' ? (
+      <LoaderCircle className="tw:size-3.5 tw:animate-spin" aria-hidden="true" />
+    ) : state === 'done' ? (
+      <Check className="tw:size-3.5" aria-hidden="true" />
+    ) : (
+      icon
+    );
   // Done: the icon cross-fades through blur(2px) into a check (the caller resets after 1.6s).
   const lead = glyph ? (
     <span className="tw:inline-grid tw:size-3.5 tw:place-items-center" aria-hidden="true">

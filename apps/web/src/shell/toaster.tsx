@@ -1,4 +1,4 @@
-// The one Sonner toaster: instrument surface, floating shadow, 12px radius, bottom centre.
+// The one Sonner toaster: translucent material with a top highlight, bottom centre.
 import { useSyncExternalStore } from 'react';
 import { Toaster } from 'sonner';
 import { locale, onLocaleChange, T } from '../app/i18n';
@@ -26,7 +26,7 @@ export function ShellToaster() {
         unstyled: true,
         classNames: {
           toast:
-            'rc-toast tw:flex tw:items-center tw:gap-3 tw:min-h-11 tw:w-[min(440px,calc(100vw-32px))] tw:py-2.5 tw:pl-4 tw:pr-2.5 tw:rounded-panel tw:bg-inst tw:text-ink tw:shadow-float tw:font-sans tw:text-[13.5px] tw:leading-snug',
+            'rc-toast tw:flex tw:items-center tw:gap-3 tw:min-h-11 tw:w-[min(440px,calc(100vw-32px))] tw:py-2.5 tw:pl-4 tw:pr-2.5 tw:rounded-panel tw:text-ink tw:font-sans tw:text-[13.5px] tw:leading-snug',
           content: 'tw:flex-1 tw:min-w-0',
           title: 'tw:font-normal',
           icon: 'tw:flex tw:shrink-0 tw:items-center',
