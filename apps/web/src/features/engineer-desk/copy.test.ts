@@ -69,15 +69,16 @@ describe('engineer desk · setting values in words', () => {
 });
 
 describe('engineer desk · the home row', () => {
-  it('ED-44 names the product manager, not the internal "AIPM", and says one practice, two hats', () => {
+  // Phase 2: one role per practice; the card says who takes the product side (Grace).
+  it('ED-44 names the product manager, not the internal "AIPM", and says Grace takes the product side', () => {
     const zh = engineerCareerCardHtml({ practice: false });
     expect(zh).toContain('修好产品经理测出的问题');
-    expect(zh).toContain('一局、两顶帽子');
+    expect(zh).toContain('Grace（AI 同事，产品侧）');
     expect(zh).not.toContain('engineer-take');
     setPreference('en');
     const en = engineerCareerCardHtml({ practice: true });
     expect(en).toContain('Fix what the product manager found');
-    expect(en).toContain('One practice, two hats');
+    expect(en).toContain('Grace (AI colleague, product side)');
     expect(en).toContain('data-action="engineer-take"');
     expect(zh + en).not.toMatch(/AIPM/);
   });

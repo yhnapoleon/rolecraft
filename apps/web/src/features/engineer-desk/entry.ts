@@ -17,9 +17,10 @@ export {
 import { PRODUCT_NAME } from '../../app/product.js';
 import type { GatewayTransport } from '../../gateway-transport';
 import { registerRoute } from '../../shell';
-import type { TicketSource } from './api';
+import { engineerApi, failureText, type LearnerRole, type TicketSource } from './api';
+import './grace-signal';
 import type { AgentHost } from './desk';
-import type { HandoverTest } from './model';
+import type { HandoverTest, TicketDetail } from './model';
 import { practiceFacts } from './need';
 import type { ScreenContext, ScreenKey } from './screens';
 import { setEngineerNavigator, setEngineerPorts } from './wire';
@@ -184,6 +185,40 @@ export async function openEngineerHandover(options: {
   sessionId: string;
   tests: readonly HandoverTest[];
   open(ticketId: string): void;
+  colleague?: { taskId: string | null; done(ticket: TicketDetail): void };
 }) {
   return (await screens()).openTestHandover(options);
+}
+
+/* ---------- one role per practice (phase 2) ---------- */
+export async function colleagueReported(
+  ...args: Parameters<typeof import('./colleague').colleagueReported>
+) {
+  return (await import('./colleague')).colleagueReported(...args);
+}
+export async function handToGrace(...args: Parameters<typeof import('./colleague').handToGrace>) {
+  return (await import('./colleague')).handToGrace(...args);
+}
+/** Writes the practice's role on the server, retrying a dropped request twice. */
+export async function writeLearnerRole(
+  transport: GatewayTransport,
+  sessionId: string,
+  role: LearnerRole,
+): Promise<void> {
+  let last: unknown;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      await engineerApi(transport, sessionId).setRole(role);
+      return;
+    } catch (error) {
+      last = error;
+    }
+  }
+  throw new Error(failureText(last));
+}
+export async function readLearnerRole(
+  transport: GatewayTransport,
+  sessionId: string,
+): Promise<LearnerRole | null> {
+  return engineerApi(transport, sessionId).learnerRole();
 }

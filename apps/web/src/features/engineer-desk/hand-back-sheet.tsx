@@ -39,11 +39,83 @@ export interface HandBackView {
   readonly conflict: boolean;
   readonly reloading: boolean;
   readonly appliedVersion: number | null;
+  /** Daniel signed it (a product manager's practice): his run, shown as the log of what he did. */
+  readonly colleague: ColleagueRun | null;
+  /** The person's own decision on it, recorded on the server ('' until one). */
+  readonly decided: string;
+  onAsk(): void;
+  onReturn(): void;
   onOpenChange(open: boolean): void;
   onConfirmChange(open: boolean): void;
   onApply(): void;
   onReload(): void;
   onRetry(): void;
+}
+
+export interface ColleagueRun {
+  readonly name: string;
+  /** Why the chosen change, in the rule's own words. */
+  readonly why: string;
+  /** Each candidate he tried, with its changes and the public checks it passed. */
+  readonly tried: readonly { label: string; changes: string; passed: number; total: number; chosen: boolean }[];
+  /** Candidates the rule table offered that could not be used here, and why. */
+  readonly skipped: readonly string[];
+  readonly reviewStatus: string;
+  readonly budget: { readonly used: number; readonly limit: number };
+}
+
+/** Daniel's run, after the fact: reproduced, then each candidate tried, then signed and reviewed.
+ * A completed log, not a live animation: the request already finished. */
+function RunLog({ run }: { run: ColleagueRun }) {
+  const row = 'tw:grid tw:grid-cols-[18px_1fr] tw:gap-x-2 tw:items-baseline tw:text-[13px] tw:leading-snug';
+  const tick = <span className="tw:text-ink-3 tw:font-mono tw:text-[12px]">✓</span>;
+  return (
+    <section className="tw:grid tw:gap-2 tw:p-4 tw:rounded-panel tw:bg-fill">
+      <h3 className="tw:m-0 tw:text-[12.5px] tw:font-semibold tw:text-ink-2">
+        {T(`${run.name} 的处理记录 · 规则编排`, `What ${run.name} did · rule orchestration`)}
+      </h3>
+      <ol className="tw:m-0 tw:p-0 tw:list-none tw:grid tw:gap-1.5">
+        <li className={row}>
+          {tick}
+          <span>{T('在原快照上复现了交来的测试', 'Reproduced the handed-over tests on their original snapshot')}</span>
+        </li>
+        {run.tried.map((t) => (
+          <li key={t.label} className={row}>
+            <span className={t.chosen ? 'tw:text-ink tw:font-mono tw:text-[12px]' : 'tw:text-ink-3 tw:font-mono tw:text-[12px]'}>
+              {t.chosen ? '●' : '○'}
+            </span>
+            <span>
+              {T(`试了「${t.label}」`, `Tried “${t.label}”`)}
+              <span className="tw:text-ink-3"> · {t.changes} · </span>
+              <span className="tw:tabular-nums">
+                {T(`公开检查 ${t.passed}/${t.total} 通过`, `public checks ${t.passed}/${t.total} passed`)}
+              </span>
+              {t.chosen && <b className="tw:font-semibold">{T(' · 选这个', ' · chosen')}</b>}
+            </span>
+          </li>
+        ))}
+        {run.skipped.map((s) => (
+          <li key={s} className={row}>
+            <span className="tw:text-ink-3 tw:font-mono tw:text-[12px]">–</span>
+            <span className="tw:text-ink-3">{s}</span>
+          </li>
+        ))}
+        <li className={row}>
+          {tick}
+          <span>
+            {T('起草并以 Daniel 的名义签字，交给同一个可信复核', 'Drafted and signed as Daniel, reviewed by the same trusted review')}
+            <span className="tw:text-ink-3 tw:tabular-nums">
+              {T(` · 复核 ${run.budget.used}/${run.budget.limit} 次`, ` · review ${run.budget.used} of ${run.budget.limit}`)}
+            </span>
+          </span>
+        </li>
+      </ol>
+      <p className="tw:m-0 tw:text-[13px] tw:text-ink-2">
+        <span className="tw:text-ink-3">{T('为什么选这个改动：', 'Why this change: ')}</span>
+        {run.why}
+      </p>
+    </section>
+  );
 }
 
 const Mark = ({ clean }: { clean: boolean }) => (
@@ -93,10 +165,15 @@ export function HandBackSheet(v: HandBackView) {
         <div className="tw:grid tw:gap-6 tw:p-8 tw:max-sm:p-5">
           <header className="tw:grid tw:gap-1">
             <SheetDescription className="tw:m-0 tw:text-[12px] tw:text-ink-3">
-              {T(
-                `工程复核报告 · 签字人：你（工程师）${v.fromAgent ? ' · 草稿来自你的 Agent' : ''} · ${v.signedAt}`,
-                `Engineering review · signed by you (engineer)${v.fromAgent ? ' · draft from your agent' : ''} · ${v.signedAt}`,
-              )}
+              {v.colleague
+                ? T(
+                    `工程复核报告 · 签字人：${v.colleague.name}（技术负责人 · AI 同事 · 规则编排）· ${v.signedAt}`,
+                    `Engineering review · signed by ${v.colleague.name} (technical lead · AI colleague · rule orchestration) · ${v.signedAt}`,
+                  )
+                : T(
+                    `工程复核报告 · 签字人：你（工程师）${v.fromAgent ? ' · 草稿来自你的 Agent' : ''} · ${v.signedAt}`,
+                    `Engineering review · signed by you (engineer)${v.fromAgent ? ' · draft from your agent' : ''} · ${v.signedAt}`,
+                  )}
             </SheetDescription>
             <div className="tw:flex tw:items-start tw:gap-3.5 tw:mt-2">
               <Mark clean={v.clean} />
@@ -116,6 +193,7 @@ export function HandBackSheet(v: HandBackView) {
             </div>
           ) : (
             <>
+              {v.colleague && <RunLog run={v.colleague} />}
               <section className="tw:grid tw:gap-2">
                 <h3 className="tw:m-0 tw:text-[12.5px] tw:font-semibold tw:text-ink-2">
                   {T('改动', 'The change')}
@@ -160,9 +238,20 @@ export function HandBackSheet(v: HandBackView) {
                     >
                       {T('按这份改动更新试点设置', 'Update pilot settings from this review')}
                     </Button>
-                    <Button variant="ghost" onClick={() => v.onOpenChange(false)}>
-                      {T('先不更新', 'Not now')}
-                    </Button>
+                    {v.colleague ? (
+                      <>
+                        <Button variant="secondary" onClick={v.onAsk}>
+                          {T('追问 Daniel', 'Ask Daniel')}
+                        </Button>
+                        <Button variant="ghost" disabled={v.decided === 'return'} onClick={v.onReturn}>
+                          {v.decided === 'return' ? T('已退回', 'Returned') : T('退回', 'Return it')}
+                        </Button>
+                      </>
+                    ) : (
+                      <Button variant="ghost" onClick={() => v.onOpenChange(false)}>
+                        {T('先不更新', 'Not now')}
+                      </Button>
+                    )}
                   </>
                 )}
               </footer>

@@ -41,7 +41,7 @@ import { Signature, sheetBody } from './steps/sign';
 import { failedRow, pendingRow, tapeRow } from './steps/tape';
 import { ticketPaper, ticketTask } from './steps/ticket';
 import type { StepId } from './stage';
-import { setLastTicket } from '../../shell';
+import { setLastTicket, roleOf } from '../../shell';
 import { reviewResult } from './hand-back';
 import { attachDesk, deskStage, detachDesk, publishDesk, publishReview, reviewFacts } from './wire';
 
@@ -432,7 +432,11 @@ export class EngineerDesk {
     const t = this.ticket as TicketDetail;
     const task = ticketTask(t);
     this.ctx.title(engineerHatTitle(t));
-    const { paper, leftNode } = ticketPaper(doc, t);
+    const { paper, leftNode } = ticketPaper(
+      doc,
+      t,
+      roleOf(this.ctx.sessionId) === 'engineer' ? 'manager' : 'technical',
+    );
     this.parts.left = leftNode;
     const head = el(
       doc,

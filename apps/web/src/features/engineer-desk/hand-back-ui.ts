@@ -6,7 +6,7 @@
 import { T } from '../../app/i18n';
 import type { GatewayTransport } from '../../gateway-transport';
 import { mountIsland } from '../../islands/mount';
-import { signalsChanged, toast } from '../../shell';
+import { runAction, signalsChanged, toast } from '../../shell';
 import { engineerApi, failureText } from './api';
 import {
   applyFailure,
@@ -18,7 +18,16 @@ import {
   reviewResult,
   revisionReason,
 } from './hand-back';
-import { HandBackSheet, type HandBackView } from './hand-back-sheet';
+import { type ColleagueRun, HandBackSheet, type HandBackView } from './hand-back-sheet';
+import { fieldName, valueText } from './copy';
+
+const RULES: Record<string, [string, string]> = {
+  freshness_warn: ['索引落后时提醒', 'Warn when the index lags'],
+  realtime_index: ['源文件一变就重建索引', 'Rebuild the index on every source change'],
+  freshness_fallback: ['索引落后时转人工', 'Hand over when the index lags'],
+  lower_min_score: ['降低最低相关分', 'Lower the minimum relevance score'],
+};
+const ruleName = (id: string) => (RULES[id] ? T(RULES[id][0], RULES[id][1]) : id);
 import { engineerLocal, recordHandBack } from './local-state';
 import { clock, settingsDiff, type Change } from './model';
 
@@ -47,6 +56,8 @@ export function openHandBackSheet(options: {
   // biome-ignore lint/suspicious/noExplicitAny: the pilot configuration as the server sends it
   let pilot: any = null;
   let changes: Record<string, Change> = {};
+  // Daniel's ticket (a product manager's practice): decisions are recorded on it.
+  let colleagueTicket: string | null = null;
   const set = (patch: Partial<HandBackView>) => {
     view = { ...view, ...patch };
     island?.update(view);
@@ -69,6 +80,32 @@ export function openHandBackSheet(options: {
       changes = (draft?.changes ?? {}) as Record<string, Change>;
       pilot = await api.pilotConfig();
       const status = await api.status();
+      colleagueTicket = ticket.assignee === 'colleague' ? ticket.id : null;
+      const h = ticket.handover;
+      const said = (c: Record<string, { before: unknown; after: unknown }>) =>
+        Object.entries(c)
+          .map(([k, v]) => `${fieldName(k)} ${valueText(k, v.before)} → ${valueText(k, v.after)}`)
+          .join('；');
+      const colleague: ColleagueRun | null =
+        colleagueTicket && h
+          ? {
+              name: h.actor?.name ?? 'Daniel',
+              why: h.rule?.why ?? '',
+              tried: (h.tried ?? []).map((t) => ({
+                label: ruleName(t.rule),
+                changes: said(t.changes),
+                passed: t.counts.passed,
+                total: t.counts.passed + t.counts.failed + t.counts.errors + t.counts.unchecked,
+                chosen: t.rule === h.rule?.id,
+              })),
+              skipped: (h.skipped ?? []).map((x) =>
+                T(`跳过「${ruleName(x.rule)}」：这个场景不允许`, `Skipped “${ruleName(x.rule)}”: not allowed here`),
+              ),
+              reviewStatus: h.review_status ?? '',
+              budget: ticket.review_budget,
+            }
+          : null;
+      const last = [...(h?.decisions ?? [])].reverse().find((d) => typeof d.decision === 'string');
       const results = record.report.public_results;
       const hidden = record.report.hidden;
       const comparison = record.report.hidden_comparison;
@@ -93,6 +130,8 @@ export function openHandBackSheet(options: {
         submitted: status === 'submitted',
         appliedVersion:
           engineerLocal(options.sessionId).handedBack?.[options.reviewId]?.appliedVersion ?? null,
+        colleague,
+        decided: String(last?.decision ?? ''),
       });
     } catch (error) {
       set({ loading: false, error: failureText(error) });
@@ -136,6 +175,18 @@ export function openHandBackSheet(options: {
       const sent = handBackCommand(pilot, view.rows);
       const result = await api.applyConfig(sent);
       const version = result.config.config_version ?? (fromVersion ?? 1) + 1;
+      // Daniel's report: the person's own apply is recorded on his ticket, checked on the server
+      // against the report's change (a configuration that does not carry it is refused).
+      if (colleagueTicket) {
+        const recorded = await api.decide(colleagueTicket, 'apply', { config_version: version });
+        if (recorded.decision.result === 'applied_with_changes')
+          toast(
+            T(
+              '已记下：按报告应用，另外还改了其他设置。',
+              'Recorded: applied from the report, with other settings changed too.',
+            ),
+          );
+      }
       const back = engineerLocal(options.sessionId).handedBack?.[options.reviewId];
       if (back)
         recordHandBack(options.sessionId, options.reviewId, { ...back, appliedVersion: version });
@@ -183,6 +234,25 @@ export function openHandBackSheet(options: {
     conflict: false,
     reloading: false,
     appliedVersion: null,
+    colleague: null,
+    decided: '',
+    onAsk: () => {
+      close();
+      // The rail's conversation with Daniel, as the people list opens it.
+      void runAction('chat', undefined, { role: 'technical' });
+    },
+    onReturn: () => {
+      if (!colleagueTicket) return;
+      void api
+        .decide(colleagueTicket, 'return', {
+          note: T('先不采用这份改动', 'Not taking this change for now'),
+        })
+        .then(() => {
+          set({ decided: 'return' });
+          toast(T('已退回给 Daniel', 'Returned to Daniel'));
+        })
+        .catch((error) => set({ applyError: failureText(error) }));
+    },
     onOpenChange: (open) => (open ? set({ open }) : close()),
     onConfirmChange: (confirm) => set({ confirm, applyError: '' }),
     onApply: () => void apply(),

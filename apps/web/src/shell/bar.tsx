@@ -23,8 +23,11 @@ export type HatScaleProps = {
   hat: Hat;
   /** Labels already in the interface language. */
   hats: { pm: string; engineer: string; label: string; busy: string };
-  /** False where only one hat can be worn (no practice, an old local one). */
+  /** False where only one hat can be worn (no practice, an old local one, a fixed role). */
   canSwitch: boolean;
+  /** The practice's one role, already in the interface language ("Product manager · you"):
+   * drawn as a plate in the switch's place, never as something to press (phase 2). */
+  fixed?: string;
   steps: { id: string; label: string; state: Stage['steps'][number]['state'] }[];
   scaleLabel: string;
   /** "Step 1 of 3: Investigate", for the compact scale's screen-reader name. */
@@ -47,6 +50,7 @@ export function HatScale({
   hat,
   hats,
   canSwitch,
+  fixed,
   steps,
   scaleLabel,
   stepName,
@@ -88,6 +92,11 @@ export function HatScale({
   };
   return (
     <div className="rc-hatscale">
+      {!canSwitch && fixed && (
+        <span className="rc-role" data-role={hat}>
+          {fixed}
+        </span>
+      )}
       {canSwitch && (
         <span className="rc-hat-wrap" aria-busy={busy || undefined}>
           <Segmented<Hat>

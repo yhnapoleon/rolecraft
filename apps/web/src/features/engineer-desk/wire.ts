@@ -9,6 +9,7 @@ import {
   registerActions,
   registerSignals,
   registerStage,
+  roleOf,
   setHat,
   signalsChanged,
   toast,
@@ -16,6 +17,8 @@ import {
   type Stage,
 } from '../../shell';
 import type { GatewayTransport } from '../../gateway-transport';
+import { handToGrace } from './colleague';
+import { handedToGrace } from './grace-signal';
 import { engineerHatTitlePair } from './copy';
 import { handBackSignal, outcomeClean, type ReviewResult } from './hand-back';
 import { engineerLocal, recordHandBack, updateEngineerLocal, type HatOrigin } from './local-state';
@@ -132,7 +135,23 @@ export function go(route: 'engineer' | 'engineer-review' | 'work', id?: string) 
 export function deskStage(sessionId: string): Stage {
   const state = live.get(sessionId);
   if (!state) return deskScale(undefined);
-  return { ...deskScale(state), title: engineerHatTitlePair(state.ticket) };
+  const stage = deskScale(state);
+  // An engineer's practice: the clean report goes to Grace, the product side (phase 2).
+  const handed =
+    stage.primary?.id && roleOf(sessionId) === 'engineer'
+      ? handedToGrace(sessionId, stage.primary.id)
+      : null;
+  const primary =
+    stage.primary?.action === 'engineer.hand-back' && roleOf(sessionId) === 'engineer'
+      ? handed?.result === 'applied'
+        ? {
+            ...stage.primary,
+            label: ['已交回 Grace', 'Handed to Grace'] as Pair,
+            disabledReason: ['Grace 已经按这份报告应用了', 'Grace applied this report'] as Pair,
+          }
+        : { ...stage.primary, label: ['交回 Grace', 'Hand to Grace'] as Pair }
+      : stage.primary;
+  return { ...stage, primary, title: engineerHatTitlePair(state.ticket) };
 }
 
 /** While the sheet is in view its own ink key ("hold to sign") is the one: the shell's key has no
@@ -167,6 +186,10 @@ function deskScale(state: DeskLive | undefined): Stage {
 /** Hand a review back to the product manager: noted here (no server call), the hat changes, and the
  * product board shows the signal. */
 export function handBack(sessionId: string, reviewId: string) {
+  if (roleOf(sessionId) === 'engineer') {
+    void graceDecides(sessionId, reviewId);
+    return;
+  }
   const facts = outcomes.get(reviewId);
   const ticket = live.get(sessionId)?.ticket;
   const ticketId = facts?.ticketId ?? ticket?.id ?? '';
@@ -184,6 +207,22 @@ export function handBack(sessionId: string, reviewId: string) {
   setHat(sessionId, 'pm');
   signalsChanged();
   go('work');
+}
+
+/** An engineer's practice: the signed report goes to Grace, who decides by rule on the server.
+ * Her reply comes back in her words (a toast now, her note in Needs you); the person stays on the
+ * desk, still an engineer. */
+async function graceDecides(sessionId: string, reviewId: string) {
+  const a = practiceNow();
+  const transport = a?.id === sessionId ? transportOf(a) : lastSession?.transport;
+  const ticketId = outcomes.get(reviewId)?.ticketId ?? live.get(sessionId)?.ticket.id;
+  if (!transport || !ticketId) return;
+  try {
+    const decision = await handToGrace(transport, sessionId, ticketId, reviewId);
+    toast(decision.reply || T('已交回 Grace', 'Handed to Grace'));
+  } catch (error) {
+    toast(error instanceof Error ? error.message : String(error));
+  }
 }
 
 /** The intro for a delivered practice: it opens a revision before taking the ticket. */

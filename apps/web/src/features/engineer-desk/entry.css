@@ -15,3 +15,34 @@
     text-align: left;
   }
 }
+
+/* "Hand to Daniel": while his run is one request, a neutral line only (no fake progress). */
+.ed-handover__waiting {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.ed-handover__waiting[hidden] {
+  display: none;
+}
+.ed-handover__spin {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--line-2);
+  border-top-color: var(--ink-2);
+  animation: ed-spin 0.9s linear infinite;
+}
+@keyframes ed-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ed-handover__spin {
+    animation: none;
+  }
+}

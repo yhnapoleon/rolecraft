@@ -136,7 +136,10 @@ import {
   navigateStage,
   openEngineerHandover,
   openEngineerTicket,
+  colleagueReported,
+  readLearnerRole,
   takeInPractice,
+  writeLearnerRole,
 } from '../features/engineer-desk/entry';
 import {
   afterShellRender,
@@ -145,6 +148,8 @@ import {
   hasStage,
   everEngineer,
   hatOf,
+  rememberRole,
+  roleOf,
   installShell,
   lastTicket,
   onAgentConnection,
@@ -715,6 +720,18 @@ function render() {
   // onLocaleChange, so this pass stops here.
   if (setPracticeLocale(practiceUiLocale())) return;
   const r = ui.route;
+  // One practice, one role: the other role's screens are not this practice's (phase 2). A
+  // practice from before roles has none and keeps both.
+  const role = current() && inPractice() ? roleOf(current().id) : null;
+  if (role === 'pm' && ENGINEER_ROUTES.includes(r)) {
+    go('work');
+    return;
+  }
+  if (role === 'engineer' && ['work', 'task', 'doc', 'bench', 'investigate', 'review'].includes(r)) {
+    const ticket = lastTicket(current().id);
+    go('engineer', ticket ? { id: ticket } : {});
+    return;
+  }
   if (r === 'task' && current() && !current().tasks.some((t) => t.id === ui.routeId)) {
     ui.route = 'work';
     ui.routeId = null;
@@ -820,6 +837,7 @@ function mountEngineerReportRoute() {
 }
 function afterRender() {
   afterShellRender();
+  discoverRole(current());
   syncHat();
   mountShellBar();
   refreshAgentIssued();
@@ -1073,7 +1091,9 @@ function engineerCareerCard() {
     a &&
     caseShown(a.scenarioId) &&
     L.nativeWorkspace(a) &&
-    ENGINEER_CASES.includes(a.scenarioId)
+    ENGINEER_CASES.includes(a.scenarioId) &&
+    // Taking the ticket inside a practice is the old two-hat way: only for one without a role.
+    !roleOf(a.id)
   );
   return engineerCareerCardHtml({ practice });
 }
@@ -1409,7 +1429,13 @@ function mountShellBar() {
       label: T('帽子', 'Hat'),
       busy: T('正在换帽子', 'Switching hats'),
     },
-    canSwitch: !!L.nativeWorkspace(a) && !sessionOf(a)?.v2ReadOnly,
+    canSwitch: !!L.nativeWorkspace(a) && !sessionOf(a)?.v2ReadOnly && !roleOf(a.id),
+    // The practice's one role, said once in the bar (phase 2); the switch is gone.
+    fixed: roleOf(a.id)
+      ? roleOf(a.id) === 'pm'
+        ? T('产品经理 · 本人', 'Product manager · you')
+        : T('工程师 · 本人', 'Engineer · you')
+      : undefined,
     // The product manager's place is the problem ruler at the top of the stage (mountProgress);
     // the bar keeps only the engineer's sign-off steps.
     steps: hat === 'pm' ? [] : steps,
@@ -1438,6 +1464,46 @@ function mountShellBar() {
       icon: p.action === 'submit' ? 'stamp' : 'none',
     });
 }
+/* ---------- one role per practice (phase 2, step 3) ---------- */
+// Written once on the server right after the practice starts (engineer store, learner_role).
+// If it cannot be written the practice is not quietly taken as a product manager's: the page
+// says so and offers to try again.
+async function keepRole(a, role) {
+  rememberRole(a.id, role);
+  try {
+    await writeLearnerRole(L.gatewayTransport(a), a.id, role);
+    if (ui.roleUnsaved?.id === a.id) ui.roleUnsaved = null;
+  } catch (err) {
+    ui.roleUnsaved = { id: a.id, role };
+    notify(
+      T(
+        `这一局的岗位没记到服务器上：${err?.message || err}`,
+        `This practice’s role did not reach the server: ${err?.message || err}`,
+      ),
+      { action: { label: T('重试', 'Try again'), run: () => keepRole(a, role) } },
+    );
+  }
+  if (WS.includes(ui.route) || ENGINEER_ROUTES.includes(ui.route)) refreshWS(['toolbar', 'stage']);
+}
+// A practice opened here that this browser has no role for: ask the server once. One started
+// before roles answers null and keeps both hats.
+const roleAsked = new Set();
+function discoverRole(a) {
+  if (!a || !L.nativeWorkspace(a) || roleOf(a.id) || roleAsked.has(a.id)) return;
+  roleAsked.add(a.id);
+  readLearnerRole(L.gatewayTransport(a), a.id)
+    .then((role) => {
+      if (!role || current()?.id !== a.id) return;
+      rememberRole(a.id, role);
+      render();
+    })
+    .catch(() => roleAsked.delete(a.id));
+}
+const roleBanner = (a) =>
+  ui.roleUnsaved?.id === a.id
+    ? `<div class="stage-banner is-warn" role="alert"><span class="grow">${T('这一局的岗位还没记到服务器上，先重试一次再继续。', 'This practice’s role is not on the server yet. Try again before you go on.')}</span>${btn(T('重试', 'Try again'), 'role-retry', 'small')}</div>`
+    : '';
+
 /* ---------- the problem ruler (phase 2, step 1) ---------- */
 // What the six layers are read from: the person's own records only (shell/progress.ts).
 const ROLE_OF_TURN = { manager: 'manager', business: 'business', technical: 'technical' };
@@ -1804,7 +1870,7 @@ function moreMenu(a) {
       ? `<button type="button" role="menuitem" data-action="menu" data-menu="model">${icon('circle', 'i-sm')}<span class="grow">${T('模型', 'Model')}</span><span class="menu-value">${esc(modelStatusOf(a).short)}</span></button>`
       : '',
     `<span class="narrow-item">${menuItem('open-rail', T('团队与信号', 'Team and signals'), 'team')}</span>`,
-    L.nativeWorkspace(a)
+    L.nativeWorkspace(a) && !roleOf(a.id)
       ? `<span class="phone-item">${menuItem('hat-switch', hatHere(a) === 'pm' ? T('换成工程师', 'Switch to Engineer') : T('换成产品经理', 'Switch to Product manager'), 'sync', `data-hat="${hatHere(a) === 'pm' ? 'engineer' : 'pm'}"`)}</span>`
       : '',
     hatHere(a) === 'pm' && L.nativeWorkspace(a)
@@ -1941,13 +2007,14 @@ function conditions(a, cls = '') {
 }
 function wsStage(a) {
   const st = statusOf(a);
-  const lock = sessionOf(a)?.v2ReadOnly
+  let lock = sessionOf(a)?.v2ReadOnly
     ? `<div class="stage-banner" role="status"><span class="grow">${T('这个练习使用旧版场景，原记录可以只读查看。要继续练习，请开始新的工作。', 'This practice uses an earlier scenario. View its original records read-only, or start new work to continue practising.')}</span>${btn(T('开始新的练习', 'Start a new practice'), 'v4-new-practice', 'small')}</div>`
     : st === 'paused'
       ? `<div class="stage-banner">${icon('pause', 'i-sm')}<span class="grow">${T('练习已暂停。资料可以看，操作要先恢复。', 'Paused. You can read; resume to act.')}</span>${btn(T('恢复', 'Resume'), 'live-session', 'small')}</div>`
       : st === 'submitted'
         ? `<div class="stage-banner is-submitted">${icon('stamp', 'i-sm')}${handedIn(a)}</div>`
         : '';
+  lock = roleBanner(a) + lock;
   const registered = registeredRoute(ui.route);
   if (registered) return lock + registered.render(ui.routeId);
   const t = routeTask(a);
@@ -3136,7 +3203,7 @@ function bench(a, t) {
             : `<p class="console-hint">${T('先定试点范围，助手才能回答。', 'Set the pilot scope before the assistant can answer.')}</p>`
         }
         ${configUseLine(use)}
-      </div><div class="console-tools">${L.nativeWorkspace(a) && ENGINEER_CASES.includes(a.scenarioId) && a.tests.length ? btn(icon('branch', 'i-sm') + T('交给工程', 'Hand to engineering'), 'engineer-handover', 'small quiet') : ''}${stale && configured ? btn(icon('refresh', 'i-sm') + T('刷新索引', 'Refresh index'), 'refresh-index', 'small quiet') : ''}${btn(icon('gear', 'i-sm') + T('试点设置', 'Pilot settings'), 'config', configured ? 'small quiet' : 'small primary')}</div></header>
+      </div><div class="console-tools">${L.nativeWorkspace(a) && ENGINEER_CASES.includes(a.scenarioId) && a.tests.length ? btn(icon('branch', 'i-sm') + (roleOf(a.id) === 'pm' ? T('交给 Daniel', 'Hand to Daniel') : T('交给工程', 'Hand to engineering')), 'engineer-handover', 'small quiet') : ''}${stale && configured ? btn(icon('refresh', 'i-sm') + T('刷新索引', 'Refresh index'), 'refresh-index', 'small quiet') : ''}${btn(icon('gear', 'i-sm') + T('试点设置', 'Pilot settings'), 'config', configured ? 'small quiet' : 'small primary')}</div></header>
       <form class="console-compose" data-form="run-test">
         <label class="sr-only" for="lab-q">${T('你想问助手什么', 'Your question for the assistant')}</label>
         <textarea id="lab-q" name="question" class="console-q" rows="2" required maxlength="4000" placeholder="${esc(T('像员工那样问它一个问题…', 'Ask what an employee would ask…'))}">${esc(s?.inputs.question || ui.labPrefill)}</textarea>
@@ -5577,6 +5644,7 @@ async function act(el, ev = new Event('rc-action')) {
       el.textContent = T('正在准备委托…', 'Preparing the ticket…');
       try {
         const na = await startAttempt('pilot', {});
+        await keepRole(na, 'engineer');
         const ticket = await openEngineerTicket(L.gatewayTransport(na), na.id, { from: 'seeded' });
         setHat(na.id, 'engineer');
         go('engineer', { id: engineerEntryId(na.id, ticket.id, 'new'), transition: true });
@@ -5602,6 +5670,29 @@ async function act(el, ev = new Event('rc-action')) {
     }
     // The test bench: hand chosen tests to engineering and put on the engineer's hat.
     case 'engineer-handover':
+      if (roleOf(a.id) === 'pm') {
+        // A product manager's practice: Daniel takes the tests; his report comes back here.
+        await openEngineerHandover({
+          transport: L.gatewayTransport(a),
+          sessionId: a.id,
+          tests: a.tests
+            .slice()
+            .reverse()
+            .map((t) => ({ id: t.id, question: t.question, answer: t.answer, stale: !!t.stale })),
+          open: () => {},
+          colleague: {
+            taskId: routeTask(a)?.id ?? null,
+            done: async (ticket) => {
+              const failed = await colleagueReported(L.gatewayTransport(a), a.id, ticket, () =>
+                L.load(a),
+              ).catch((e) => e?.message || String(e));
+              if (failed) notify(failed);
+              refreshWS(['rail']);
+            },
+          },
+        });
+        break;
+      }
       await openEngineerHandover({
         transport: L.gatewayTransport(a),
         sessionId: a.id,
@@ -5611,6 +5702,10 @@ async function act(el, ev = new Event('rc-action')) {
           .map((t) => ({ id: t.id, question: t.question, answer: t.answer, stale: !!t.stale })),
         open: (ticketId) => navigateStage('engineer', engineerEntryId(a.id, ticketId, 'handover')),
       });
+      break;
+    // The practice's role did not reach the server: write it again (nothing else waits on it).
+    case 'role-retry':
+      if (a && ui.roleUnsaved?.id === a.id) await keepRole(a, ui.roleUnsaved.role);
       break;
     case 'set-lang':
       ui.menu = null;
@@ -6055,6 +6150,7 @@ async function act(el, ev = new Event('rc-action')) {
       const triage = startingOrder(caseId);
       await enterWork(async () => {
         const na = await startAttempt(caseId, { priorities: triage });
+        if (L.nativeWorkspace(na)) await keepRole(na, 'pm');
         if (!L.nativeWorkspace(na))
           triage.forEach((p, i) => {
             if (na.tasks[i] && p !== na.tasks[i].priority)
@@ -7728,7 +7824,11 @@ provideAgentPage({
       return [
         {
           key: 'ticket',
-          label: [`${PEOPLE.technical.name} 的工单`, `${PEOPLE.technical.ref}’s ticket`],
+          // An engineer's practice: the ticket is Grace's (the product side, phase 2).
+          label:
+            roleOf(a.id) === 'engineer'
+              ? [`${PEOPLE.manager.name} 的委托`, `${PEOPLE.manager.ref}’s ticket`]
+              : [`${PEOPLE.technical.name} 的工单`, `${PEOPLE.technical.ref}’s ticket`],
           value: T('进行中', 'Open'),
         },
         ...rows.filter((r) => r.key !== 'brief' && r.key !== 'tasks'),

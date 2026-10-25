@@ -72,21 +72,27 @@ export function brokenLine(test: TargetTest): { stale: string; detail: string } 
 }
 
 /** The ticket paper. `left` is the reviews-left number (rolls when it changes). */
-export function ticketPaper(doc: Document, ticket: TicketDetail) {
+export function ticketPaper(
+  doc: Document,
+  ticket: TicketDetail,
+  // Who sends it: Daniel in a practice from before roles; Grace, the product side, in an
+  // engineer's practice (phase 2).
+  sender: 'technical' | 'manager' = 'technical',
+) {
   const lang = workLang(ticket.work_language);
   const left = Math.max(0, ticket.review_budget.limit - ticket.review_budget.used);
   const leftNode = countNode(doc, left, 'ed-count');
   const from = el(doc, 'p', { class: 'ed-ticket__from' });
-  from.insertAdjacentHTML('afterbegin', avatar('technical', 'sm'));
+  from.insertAdjacentHTML('afterbegin', avatar(sender, 'sm'));
   from.append(
-    el(doc, 'b', { class: 'ed-ticket__name' }, personName('technical')),
+    el(doc, 'b', { class: 'ed-ticket__name' }, personName(sender)),
     el(
       doc,
       'span',
       { class: 'ed-ticket__role' },
       T(
-        `${personTitle('technical', 'zh')} · ${clock(ticket.created_at)} 交给你`,
-        `${personTitle('technical', 'en')} · handed to you ${clock(ticket.created_at)}`,
+        `${personTitle(sender, 'zh')} · ${clock(ticket.created_at)} 交给你`,
+        `${personTitle(sender, 'en')} · handed to you ${clock(ticket.created_at)}`,
       ),
     ),
   );

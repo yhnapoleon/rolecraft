@@ -6,7 +6,7 @@ import { T } from '../../app/i18n';
 import { failureText, type EngineerApi } from './api';
 import { chip, key, setBusy } from './bits';
 import { el, iconNode, workLang } from './dom';
-import { setHat, setLastTicket } from '../../shell';
+import { setHat, setLastTicket, roleOf } from '../../shell';
 import { engineerLocal, updateEngineerLocal, type HatOrigin } from './local-state';
 import type { TicketDetail } from './model';
 import { arrive, drawLine, move, spring } from './motion';
@@ -110,25 +110,32 @@ export class IntroScreen {
 
   private draw(ticket: TicketDetail | null, error: string) {
     const doc = this.ctx.doc;
-    const lead = this.revise
+    // An engineer's practice (phase 2): Grace sends the ticket and receives the signed report.
+    const role = roleOf(this.ctx.sessionId) === 'engineer';
+    const lead = role
       ? T(
-          '这一局已经交付。要接手工程委托，先开一轮修订：你的交付记录和反馈都会保留，修好以后可以带着复核报告重新交付。',
-          'This practice is delivered. To take the engineering ticket, open a revision first: your delivery and feedback stay. Once it’s fixed you can deliver again with the review report.',
+          'Grace（经理，这一局产品侧的 AI 同事）在决定知识助手能不能试点，测试时发现了一个问题，交给你来修：只改支持的设置，改好由你签字，再交回她。她按复核结果决定是否应用。',
+          'Grace (manager, the AI colleague on the product side in this practice) is deciding whether the knowledge assistant is ready for a pilot. Testing turned up a problem, and it’s yours to fix: change only supported settings, sign it yourself, then hand it back to her. She decides from the review whether to apply it.',
         )
-      : {
-          handover: T(
-            '刚才你是产品经理，测出知识助手答错了。现在换你来修：只改支持的设置，改好由你签字，再交回产品经理。两边的进度都在，顶栏随时切回去。',
-            'A moment ago you were the product manager and caught the assistant answering wrong. Now you fix it: change only supported settings, sign it yourself, then hand it back to product. Both sides keep their progress; switch back any time in the top bar.',
-          ),
-          new: T(
-            '这一局里，产品经理正在决定知识助手能不能试点，测试时发现了一个问题，交给你来修。你也可以随时在顶栏切到产品经理那边看看。',
-            'In this practice, the product manager is deciding whether the knowledge assistant is ready for a pilot. Testing turned up a problem, and it’s yours to fix. You can switch to the product manager’s side in the top bar any time.',
-          ),
-          same: T(
-            '产品经理那边的进度都在。现在换你来修：只改支持的设置，改好由你签字，再交回产品经理。顶栏随时切回去。',
-            'Your product-manager progress is all still there. Now you fix it: change only supported settings, sign it yourself, then hand it back to product. Switch back any time in the top bar.',
-          ),
-        }[this.origin];
+      : this.revise
+        ? T(
+            '这一局已经交付。要接手工程委托，先开一轮修订：你的交付记录和反馈都会保留，修好以后可以带着复核报告重新交付。',
+            'This practice is delivered. To take the engineering ticket, open a revision first: your delivery and feedback stay. Once it’s fixed you can deliver again with the review report.',
+          )
+        : {
+            handover: T(
+              '刚才你是产品经理，测出知识助手答错了。现在换你来修：只改支持的设置，改好由你签字，再交回产品经理。两边的进度都在，顶栏随时切回去。',
+              'A moment ago you were the product manager and caught the assistant answering wrong. Now you fix it: change only supported settings, sign it yourself, then hand it back to product. Both sides keep their progress; switch back any time in the top bar.',
+            ),
+            new: T(
+              '这一局里，产品经理正在决定知识助手能不能试点，测试时发现了一个问题，交给你来修。你也可以随时在顶栏切到产品经理那边看看。',
+              'In this practice, the product manager is deciding whether the knowledge assistant is ready for a pilot. Testing turned up a problem, and it’s yours to fix. You can switch to the product manager’s side in the top bar any time.',
+            ),
+            same: T(
+              '产品经理那边的进度都在。现在换你来修：只改支持的设置，改好由你签字，再交回产品经理。顶栏随时切回去。',
+              'Your product-manager progress is all still there. Now you fix it: change only supported settings, sign it yourself, then hand it back to product. Switch back any time in the top bar.',
+            ),
+          }[this.origin];
     // One structure for every way in (G12): question · the assistant's recorded answer · what is
     // wrong with it · the amber tag when the index lags. Skeleton while the ticket is read.
     const pending = !ticket && !this.revise;
@@ -247,7 +254,7 @@ export class IntroScreen {
     });
     const back = this.revise
       ? key(doc, T('留在产品经理', 'Stay as product manager'), 'ghost', { id: 'ed-intro-back' })
-      : this.origin !== 'new'
+      : this.origin !== 'new' && roleOf(this.ctx.sessionId) !== 'engineer'
         ? key(doc, T('先回产品经理', 'Back to product for now'), 'ghost', { id: 'ed-intro-back' })
         : null;
     back?.addEventListener('click', () => this.ctx.backToProduct());
@@ -259,13 +266,17 @@ export class IntroScreen {
         doc,
         'p',
         { class: 'ed-eyebrow' },
-        T('同一局练习，换一顶帽子', 'Same practice, second hat'),
+        role
+          ? T('Grace 发来的委托', 'A ticket from Grace')
+          : T('同一局练习，换一顶帽子', 'Same practice, second hat'),
       ),
       el(
         doc,
         'h1',
         { class: 'ed-intro__title', id: 'ed-title', tabindex: '-1' },
-        T('你现在是工程师', 'You’re the engineer now'),
+        role
+          ? T('你是这一局的工程师', 'You’re the engineer here')
+          : T('你现在是工程师', 'You’re the engineer now'),
       ),
       el(doc, 'p', { class: 'ed-intro__lead' }, lead),
       target,

@@ -718,3 +718,22 @@ html.scrolled body:not([data-view="work"]) .shell-bar {
     justify-content: flex-start;
   }
 }
+
+/* The practice's one role in the switch's place (phase 2): a quiet plate, not a key. */
+.rc-role {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: var(--r-seg);
+  background: var(--seg-track);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+@media (max-width: 720px) {
+  .rc-role {
+    display: none;
+  }
+}

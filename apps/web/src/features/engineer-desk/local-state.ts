@@ -18,6 +18,8 @@ export interface HandedBack {
   };
   /** Set once the product manager updated the pilot from this review. */
   readonly appliedVersion?: number;
+  /** The AI colleague who signed it (Daniel, in a product manager's practice); absent: the person. */
+  readonly colleague?: string;
 }
 export interface EngineerLocal {
   origin?: HatOrigin;

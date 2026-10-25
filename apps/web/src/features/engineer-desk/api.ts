@@ -17,7 +17,33 @@ import type {
 } from './model';
 import type { EngineerReviewRecord } from '../engineer-report';
 
-export type TicketSource = { from: 'seeded' } | { from: 'tests'; test_ids: readonly string[] };
+export type TicketSource =
+  | { from: 'seeded' }
+  | {
+      from: 'tests';
+      test_ids: readonly string[];
+      /** 'colleague': Daniel takes it (a product manager's practice only). */
+      assignee?: 'self' | 'colleague';
+      task_id?: string | null;
+    };
+/** The one role a practice is played as (written once, right after it starts). */
+export type LearnerRole = 'pm' | 'engineer';
+/** What happens to a colleague's report (see engineer/session.py TicketDecision). */
+export type TicketDecision = 'ask' | 'return' | 'apply' | 'handover';
+export interface DecisionResult {
+  readonly ticket: TicketDetail;
+  readonly decision: {
+    readonly decision?: TicketDecision;
+    readonly result?: 'applied' | 'applied_with_changes' | 'returned';
+    readonly reasons?: readonly string[];
+    readonly probe_ids?: readonly string[];
+    readonly hidden_probes?: number;
+    readonly reply?: string;
+    readonly from_version?: number;
+    readonly to_version?: number;
+    readonly other_changes?: Readonly<Record<string, unknown>>;
+  };
+}
 export interface SignResult {
   readonly signoff: { readonly review_id: string; readonly already_signed: boolean };
   readonly review: EngineerReviewRecord;
@@ -54,6 +80,28 @@ export function engineerApi(transport: GatewayTransport, sessionId: string) {
         'engineer.tickets.create',
         source,
       ),
+    /** Writes the practice's role; the same role again is fine, a different one is refused. */
+    setRole: (role: LearnerRole) =>
+      command<{ learner_role: LearnerRole; created: boolean }>(
+        `${base}/engineer/tickets`,
+        'engineer.tickets.create',
+        { from: 'role', role },
+      ),
+    /** The practice's role as the server keeps it; null for one started before roles existed. */
+    learnerRole: async () =>
+      (await read<{ learner_role: LearnerRole | null }>(`${base}/engineer/tickets`)).learner_role ??
+      null,
+    decide: (
+      ticketId: string,
+      decision: TicketDecision,
+      extra: { note?: string; config_version?: number } = {},
+    ) =>
+      command<DecisionResult>(`${base}/engineer/tickets`, 'engineer.tickets.create', {
+        from: 'decision',
+        ticket_id: ticketId,
+        decision,
+        ...extra,
+      }),
     tickets: async () =>
       (
         await read<{

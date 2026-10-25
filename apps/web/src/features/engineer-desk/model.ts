@@ -160,6 +160,53 @@ export interface TicketDetail {
   readonly drafts: readonly DraftSummary[];
   readonly latest_draft: DraftView | null;
   readonly reviews: readonly ReviewSummary[];
+  /** 'colleague' when Daniel took the ticket (a product manager's practice). */
+  readonly assignee?: 'self' | 'colleague';
+  readonly origin?: {
+    readonly task_id: string | null;
+    readonly test_ids: readonly string[];
+  } | null;
+  readonly handover?: Handover;
+}
+/** A colleague's run and what became of its report (engineer/session.py run_daniel, decide). */
+export interface Handover {
+  readonly state:
+    | 'queued'
+    | 'reproducing'
+    | 'trying'
+    | 'signing'
+    | 'reported'
+    | 'failed'
+    | 'applied'
+    | 'applied_with_changes'
+    | 'returned';
+  readonly actor?: {
+    readonly name: string;
+    readonly role_id: string;
+    readonly orchestration: string;
+  };
+  readonly rule?: {
+    readonly id: string;
+    readonly why: string;
+    readonly changes: Readonly<Record<string, { before: unknown; after: unknown }>>;
+  };
+  readonly tried?: readonly {
+    readonly rule: string;
+    readonly trial_id: string;
+    readonly changes: Readonly<Record<string, { before: unknown; after: unknown }>>;
+    readonly counts: {
+      readonly passed: number;
+      readonly failed: number;
+      readonly errors: number;
+      readonly unchecked: number;
+      readonly total: number;
+    };
+  }[];
+  readonly skipped?: readonly { readonly rule: string; readonly code: string }[];
+  readonly review_id?: string;
+  readonly review_status?: string;
+  readonly failed_reason?: string;
+  readonly decisions?: readonly Record<string, unknown>[];
 }
 /** What a draft sends (POST …/drafts), less the ticket ID. */
 export interface DraftInput {

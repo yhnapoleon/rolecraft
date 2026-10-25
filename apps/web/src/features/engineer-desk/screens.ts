@@ -229,10 +229,12 @@ export function openTestHandover(options: {
   sessionId: string;
   tests: readonly HandoverTest[];
   open(ticketId: string): void;
+  colleague?: { taskId: string | null; done(ticket: TicketDetail): void };
 }) {
   return openHandover({
     api: engineerApi(options.transport, options.sessionId),
     tests: options.tests,
     open: options.open,
+    colleague: options.colleague,
   });
 }

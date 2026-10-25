@@ -19,7 +19,7 @@ export function engineerCareerCardHtml(options: { practice: boolean }): string {
     <div class="career-body">
       <h2 class="career-name">${esc(T('AI 应用工程师', 'AI Application Engineer'))}</h2>
       <p>${esc(T('修好产品经理测出的问题，并亲自为改动签字。你的 Agent 可以帮忙，不能替你签。', 'Fix what the product manager found and sign the change yourself. Your agent can help; it can’t sign.'))}</p>
-      <p class="meta">${esc(T('一局、两顶帽子：和产品经理是同一局，在顶栏切换。', 'One practice, two hats: the product manager’s practice, switched from the top bar.'))}</p>
+      <p class="meta">${esc(T('委托由 Grace（AI 同事，产品侧）发出；你签字后交回她，由她按规则决定是否应用。', 'Grace (AI colleague, product side) sends the ticket; once you sign, it goes back to her and she decides by rule whether to apply it.'))}</p>
       <div class="career-cta eng-career__cta">
         <button type="button" class="btn" data-action="engineer-start">${esc(T('开始', 'Start'))}</button>
         ${options.practice ? `<button type="button" class="btn quiet" data-action="engineer-take">${esc(T('在当前练习里接手', 'Take it in this practice'))}</button>` : ''}

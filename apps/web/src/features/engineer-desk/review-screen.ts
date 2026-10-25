@@ -4,6 +4,7 @@
  * all clear → back to the product manager (ink), otherwise fix it again (ink), with the other
  * offered too. Below, this ticket's reviews in order. */
 import { T } from '../../app/i18n';
+import { roleOf } from '../../shell';
 import {
   engineerReportView,
   renderEngineerReport,
@@ -173,9 +174,12 @@ export class EngineerReviewScreen {
     );
     const back = key(
       doc,
-      now.clean
-        ? T('交回产品经理', 'Back to the product manager')
-        : T('先交回产品经理', 'Hand back anyway'),
+      // An engineer's practice hands the report to Grace (phase 2); she may return it.
+      roleOf(this.ctx.sessionId) === 'engineer'
+        ? T('交回 Grace', 'Hand to Grace')
+        : now.clean
+          ? T('交回产品经理', 'Back to the product manager')
+          : T('先交回产品经理', 'Hand back anyway'),
       now.clean ? lead : 'secondary',
       { id: 'ed-hand-back' },
     );
@@ -187,6 +191,16 @@ export class EngineerReviewScreen {
         'Handing back…',
       );
       handBack(this.ctx.sessionId, review.review_id);
+      // Grace answers by rule in the same request; the key comes back for another try.
+      if (roleOf(this.ctx.sessionId) === 'engineer')
+        setTimeout(() => {
+          setBusy(back, false);
+          back.disabled = false;
+          (back.querySelector('.ed-k__label') as HTMLElement).textContent = T(
+            '交回 Grace',
+            'Hand to Grace',
+          );
+        }, 1500);
     });
     const sheetKey = key(doc, T('看签字单', 'See the sign-off sheet'), 'ghost', {
       id: 'ed-see-sheet',

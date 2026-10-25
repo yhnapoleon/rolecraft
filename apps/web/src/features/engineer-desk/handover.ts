@@ -5,17 +5,26 @@ import { T } from '../../app/i18n';
 import { sheetDialog } from '../../sheet-dialog';
 import { failureText, type EngineerApi } from './api';
 import { el, button } from './dom';
-import { handoverChoices, HANDOVER_LIMIT, type HandoverTest } from './model';
+import { handoverChoices, HANDOVER_LIMIT, type HandoverTest, type TicketDetail } from './model';
 
 export interface HandoverContext {
   readonly api: EngineerApi;
   readonly tests: readonly HandoverTest[];
   /** Put on the engineer's hat at this ticket. */
   open(ticketId: string): void;
+  /** A product manager's practice: Daniel takes the tests instead (phase 2). */
+  readonly colleague?: {
+    readonly taskId: string | null;
+    done(ticket: TicketDetail): void;
+  };
 }
 
 export function openHandover(ctx: HandoverContext): HTMLDialogElement {
-  const dialog = sheetDialog(T('交给工程', 'Hand to engineering'), { className: 'ed-handover' });
+  const daniel = ctx.colleague;
+  const dialog = sheetDialog(
+    daniel ? T('交给 Daniel', 'Hand to Daniel') : T('交给工程', 'Hand to engineering'),
+    { className: 'ed-handover' },
+  );
   const doc = dialog.element.ownerDocument;
   const choices = handoverChoices(ctx.tests);
   const chosen = new Set(choices.filter((c) => c.chosen).map((c) => c.id));
@@ -75,16 +84,47 @@ export function openHandover(ctx: HandoverContext): HTMLDialogElement {
       : T(`已选 ${n} 条，最多 ${HANDOVER_LIMIT} 条。`, `${n} chosen, up to ${HANDOVER_LIMIT}.`);
     count.dataset.full = String(full);
     submit.disabled = n === 0;
-    submit.textContent = n
-      ? T(`交给工程（${n} 条）`, `Hand over ${n} ${n === 1 ? 'test' : 'tests'}`)
-      : T('交给工程', 'Hand to engineering');
+    submit.textContent = daniel
+      ? n
+        ? T(`交给 Daniel（${n} 条）`, `Hand ${n} ${n === 1 ? 'test' : 'tests'} to Daniel`)
+        : T('交给 Daniel', 'Hand to Daniel')
+      : n
+        ? T(`交给工程（${n} 条）`, `Hand over ${n} ${n === 1 ? 'test' : 'tests'}`)
+        : T('交给工程', 'Hand to engineering');
   }
   submit.addEventListener('click', async () => {
     if (!chosen.size || chosen.size > HANDOVER_LIMIT) return;
     submit.disabled = true;
     error.hidden = true;
+    const ids = choices.filter((c) => chosen.has(c.id)).map((c) => c.id);
+    if (daniel) {
+      // One request runs his whole orchestration; until it answers the page says only that he is
+      // on it. No step-by-step animation: the steps are shown afterwards from what he did.
+      list.hidden = true;
+      count.hidden = true;
+      cancel.disabled = true;
+      waiting.hidden = false;
+      try {
+        const { ticket } = await ctx.api.createTicket({
+          from: 'tests',
+          test_ids: ids,
+          assignee: 'colleague',
+          task_id: daniel.taskId,
+        });
+        dialog.element.close();
+        daniel.done(ticket);
+      } catch (failure) {
+        waiting.hidden = true;
+        list.hidden = false;
+        count.hidden = false;
+        cancel.disabled = false;
+        error.textContent = failureText(failure);
+        error.hidden = false;
+        sync();
+      }
+      return;
+    }
     try {
-      const ids = choices.filter((c) => chosen.has(c.id)).map((c) => c.id);
       const { ticket } = await ctx.api.createTicket({ from: 'tests', test_ids: ids });
       dialog.element.close();
       ctx.open(ticket.id);
@@ -94,18 +134,31 @@ export function openHandover(ctx: HandoverContext): HTMLDialogElement {
       sync();
     }
   });
+  const waiting = el(
+    doc,
+    'p',
+    { class: 'ed-handover__waiting', role: 'status', hidden: true },
+    el(doc, 'span', { class: 'ed-handover__spin', 'aria-hidden': 'true' }),
+    T('Daniel 正在处理（规则编排）', 'Daniel is working on it (rule orchestration)'),
+  );
   dialog.body.append(
     el(
       doc,
       'p',
       { class: 'ed-handover__lead' },
-      T(
-        '选要修的测试，引用过期版本的已经选上。',
-        'Choose the tests to fix; those citing an out-of-date version are already chosen.',
-      ),
+      daniel
+        ? T(
+            '选要修的测试，引用过期版本的已经选上。Daniel（技术负责人，AI 同事）按规则复现、试修并签字复核，报告交回这件事；用不用由你决定。',
+            'Choose the tests to fix; those citing an out-of-date version are already chosen. Daniel (technical lead, AI colleague) reproduces, tries fixes and signs a review by rule; the report comes back to this item, and you decide whether to use it.',
+          )
+        : T(
+            '选要修的测试，引用过期版本的已经选上。',
+            'Choose the tests to fix; those citing an out-of-date version are already chosen.',
+          ),
     ),
     list,
     count,
+    waiting,
     error,
   );
   dialog.foot.append(cancel, submit);

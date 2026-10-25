@@ -96,7 +96,12 @@ export function handBackSignal(back: HandedBack): {
   text: string;
   tone: 'good' | 'warn';
 } {
-  const kicker = T('工程复核 · 你签的', 'Engineering review · signed by you');
+  const kicker = back.colleague
+    ? T(
+        `工程复核 · ${back.colleague}（AI 同事）签的`,
+        `Engineering review · signed by ${back.colleague} (AI colleague)`,
+      )
+    : T('工程复核 · 你签的', 'Engineering review · signed by you');
   if (back.appliedVersion)
     return {
       kicker,
