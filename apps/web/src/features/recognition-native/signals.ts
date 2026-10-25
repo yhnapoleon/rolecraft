@@ -6,7 +6,8 @@ import { copyText, type Language } from '../results-native/localization';
 import { strategyName } from '../behavior-native/view';
 import { arbiterOutcome, type RecognitionRecord } from './badge';
 import { LENS_COPY, type LensKey } from './lens-copy';
-import { type CardOptions, cardHtml } from './profile-card';
+import { actualMethod } from './actual-method';
+import { type CardOptions, cardHtml, cardProvenance } from './profile-card';
 import type { SplitExplanation } from './prefix';
 import './signals.css';
 import './reading.css';
@@ -47,60 +48,8 @@ function thresholdMeter(score: unknown, threshold: unknown, label: string): Mete
   return { value: clamp(score / (threshold * 1.5)), tick: 1 / 1.5, label };
 }
 
-const isStack = (record: RecognitionRecord) => /stack/.test(record.recognizer_id);
-
-export function categoryOf(record: RecognitionRecord, language: Language): string {
-  const key: LensKey = (() => {
-    switch (record.task) {
-      case 'relation':
-        return isStack(record) ? 'cat_ensemble' : 'cat_supervised_deep';
-      case 'retrieval':
-        return 'cat_hybrid';
-      case 'scope':
-      case 'drift':
-        return 'cat_unsupervised';
-      case 'behavior':
-        return 'cat_behavior';
-      case 'decision':
-      case 'arbiter':
-        return 'cat_decision';
-      case 'reply_check':
-        return 'cat_supervised';
-      case 'intent':
-        return 'cat_supervised_classic';
-      default:
-        return 'cat_hybrid';
-    }
-  })();
-  return t(language, key);
-}
-
-function methodOf(record: RecognitionRecord, language: Language): string {
-  const out = record.outputs ?? {};
-  switch (record.task) {
-    case 'relation':
-      if (out.mode === 'support_check') return t(language, 'm_support');
-      return t(language, record.fallback ? 'm_relation_rule' : isStack(record) ? 'm_relation_stack' : 'm_relation');
-    case 'retrieval':
-      return t(language, out.method === 'dense' ? 'm_retrieval_dense' : 'm_retrieval');
-    case 'scope':
-      return t(language, 'm_scope');
-    case 'drift':
-      return t(language, 'm_drift');
-    case 'behavior':
-      return t(language, 'm_behavior');
-    case 'decision':
-      return t(language, 'm_decision');
-    case 'arbiter':
-      return t(language, 'm_arbiter');
-    case 'reply_check':
-      return t(language, 'm_reply');
-    case 'intent':
-      return t(language, 'm_intent');
-    default:
-      return '';
-  }
-}
+export const categoryOf = (record: RecognitionRecord, language: Language) => actualMethod(record, language).category;
+const methodOf = (record: RecognitionRecord, language: Language) => actualMethod(record, language).method;
 
 const INTENTS = new Set(['ask_limit', 'ask_resource', 'ask_process', 'seek_approval', 'other']);
 
@@ -238,8 +187,8 @@ export function meterHtml(meter: Meter) {
 
 /** A chip that opens its card: the same label as a button, with the method shown after the
  * family (method · family is the one tech label every moment uses). */
-export function cardChipHtml(signal: LensSignal, language: Language, cardId: string) {
-  const family = [signal.category, signal.method, signal.fallback ? t(language, 'fallback') : '']
+export function cardChipHtml(signal: LensSignal, language: Language, cardId: string, provenance = '') {
+  const family = [signal.category, signal.method, signal.fallback ? t(language, 'fallback') : '', provenance]
     .filter(Boolean)
     .join(' · ');
   return `<button type="button" class="rc-sig rc-sig--key" data-task="${esc(signal.task)}" data-tone="${signal.tone}"${signal.fallback ? ' data-fallback=""' : ''} aria-expanded="false" aria-controls="${cardId}" data-rc-card="${cardId}"><span class="rc-sig__text">${esc(signal.text)}</span>${signal.meter ? meterHtml(signal.meter) : ''}<span class="rc-cat">${esc(family)}</span><svg class="rc-sig__chev" viewBox="0 0 16 16" aria-hidden="true"><path d="m5 6.5 3 3 3-3"/></svg></button>`;
@@ -248,14 +197,15 @@ export function cardChipHtml(signal: LensSignal, language: Language, cardId: str
 let cardSeq = 0;
 /** Chips that open cards, and the cards (hidden until opened) right under the row. */
 export function cardsHtml(records: RecognitionRecord[], language: Language, options: SignalOptions) {
+  const cardOptions = { source: options.context === 'feedback' || options.context === 'criterion' ? 'delivery' as const : 'saved' as const, ...options.cards };
   const ids = records.map(() => `rc-card-${++cardSeq}`);
   const chips = records
-    .map((r, i) => cardChipHtml(lensSignal(r, language, options.materialName), language, ids[i]))
+    .map((r, i) => cardChipHtml(lensSignal(r, language, options.materialName), language, ids[i], cardProvenance(language, cardOptions)))
     .join('');
   const cards = records
     .map(
       (r, i) =>
-        `<div class="rc-card-slot" id="${ids[i]}" hidden>${cardHtml(r, language, { materialName: options.materialName, ...options.cards })}</div>`,
+        `<div class="rc-card-slot" id="${ids[i]}" hidden>${cardHtml(r, language, { materialName: options.materialName, ...cardOptions })}</div>`,
     )
     .join('');
   return `<div class="rc-sigs-wrap"><p class="rc-sigs">${chips}</p>${cards}</div>`;

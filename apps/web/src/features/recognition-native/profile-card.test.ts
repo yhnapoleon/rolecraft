@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { RecognitionRecord } from './badge';
 import { cardHtml, runMode, TASK_ROW } from './profile-card';
-import { cardsHtml } from './signals';
+import { cardsHtml, lensSignal } from './signals';
 
 const scope: RecognitionRecord = {
   recognizer_id: 'scope-mahalanobis-v1',
@@ -86,4 +86,28 @@ describe('profile card', () => {
     expect(html).toContain('aria-expanded="false"');
     expect(html).toContain('马氏距离单类');
   });
+});
+
+describe('actual method labels', () => {
+ it.each(['zh','en'] as const)('separates dense, RRF and BM25 fallback in %s', language => {
+  for (const method of ['dense','rrf','bm25']) {
+   const record = {...dense, fallback: method === 'bm25', outputs: {method}};
+   const signal = lensSignal(record, language);
+   expect(signal.method.toLowerCase()).toContain(method === 'dense' ? 'e5' : method);
+   if(method === 'bm25') {expect(signal.method).not.toContain('RRF');expect(signal.category).not.toMatch(/混合|Hybrid/);}
+  }
+ });
+ it('does not call deterministic decisions neural inference', () => {
+  expect(cardHtml({...scope,task:'decision',fallback:false},'en')).toContain('Rule calculation');
+  expect(cardHtml({...scope,task:'decision',fallback:false},'en')).not.toContain('Real inference');
+ });
+ it('labels fallback scope and intent methods as the rules actually run', () => {
+  expect(lensSignal(ruleScope,'en').method).not.toContain('Mahalanobis');
+  expect(lensSignal({...ruleScope,task:'intent',outputs:{rule:'keywords'}},'en').method).toContain('Keyword');
+ });
+});
+
+it('puts delivery-record provenance on the closed summary and keeps current recomputation separate',()=>{
+ expect(cardsHtml([scope],'en',{context:'feedback',lens:true,cards:{}}).split('rc-card-slot')[0]).toContain('Record at delivery');
+ expect(cardHtml(scope,'en',{source:'current'})).toContain('Recomputed locally now');
 });

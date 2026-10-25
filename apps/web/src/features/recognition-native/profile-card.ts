@@ -4,8 +4,8 @@
  * the score against its threshold, the probabilities, the per-sentence labels), how it works
  * (method and course category, from the system profile's register), and the published figures
  * on the same measure (`public/lab/*.json`, read through the register; nothing typed in). The
- * run mode comes from the record: real inference, or the rule fallback; a practice opened with
- * a continue code shows saved records being replayed. A figure the record does not carry is
+ * run mode comes from the record: inference, rule calculation, fallback or unknown. The
+ * carrier identifies saved action records versus delivery snapshots and current computation. A figure the record does not carry is
  * not drawn: no invented point, no invented share of a branch.
  */
 import { COPY as LAB, type Key as LabKey } from '../recognition-lab/copy';
@@ -14,6 +14,7 @@ import { REGISTER, rowMetricsHtml } from '../recognition-lab/register';
 import type { Language } from '../results-native/localization';
 import { arbiterOutcome, type RecognitionRecord } from './badge';
 import './profile-card.css';
+import { actualMethod } from './actual-method';
 
 /** Which register row (system profile section) explains each task. */
 export const TASK_ROW: Record<string, string> = {
@@ -31,21 +32,21 @@ export const TASK_ROW: Record<string, string> = {
 const W = {
   zh: {
     thisTime: '这一次',
-    how: '怎样做到的',
-    published: '同口径的实验结果',
+    how: '方法家族与备选方案',
+    published: '离线实验 · 同口径结果',
     open: '打开系统剖面',
     real: '真实推理',
     fallback: '规则回退',
     replay: '记录回放',
     replayNote: '这局是用继续码打开的：看到的是当时保存的识别记录，不是现在重算。',
-    fallbackNote: '这次没有加载模型权重，按产品原有规则处理；下面的实验结果说明模型本身，不代表这一次。',
+    fallbackNote: '本次记录标记了回退；实际使用的方法见上方。离线实验不代表这次执行。',
     threshold: '阈值',
     score: '这次',
     inside: '在范围内',
     outside: '超出范围',
     scopeLine: '离当前知识范围的距离 {score}，阈值 {thr}：{side}。',
     scopeRule: '这次没有数值，按规则判断：{rule}。',
-    driftLine: '和上一次同题测试的回答相比，余弦距离 {score}，阈值 {thr}。',
+    driftLine: '和记录指定的同题基准相比，余弦距离 {score}，阈值 {thr}。',
     driftNumbers: '回答里的数字从 {before} 变成 {after}。',
     driftRule: '这次没有向量距离，按文字是否变化判断。',
     retrievalLine: '实际用的检索：{method}。按名次排的前 {n} 段：',
@@ -70,25 +71,25 @@ const W = {
     noFile: '实验结果文件暂时读不到。',
     deferCost: '「暂不判断」的代价：{cost}',
     driftByRule: '整体意思几乎没变（距离低于阈值），是数字校验规则抓到了这处改动：向量看语义，规则看数字，两者合用。',
-    denseNote: '知识助手实际用 e5 向量（dense）；关系链和同事来源排序才用 RRF 融合。下面「改写过的提问」一行就是两者的对照。',
+    denseNote: '知识助手默认请求 e5 向量（dense）；关系链和同事来源排序才用 RRF 融合。下面「改写过的提问」一行就是两者的对照。',
   },
   en: {
     thisTime: 'This time',
-    how: 'How it works',
-    published: 'Published results on the same measure',
+    how: 'Method family and alternatives',
+    published: 'Offline experiments · same measure',
     open: 'Open the system profile',
     real: 'Real inference',
     fallback: 'Rule fallback',
     replay: 'Record replay',
     replayNote: 'This practice was opened with a continue code: these are the records saved at the time, not computed again now.',
-    fallbackNote: 'No model weights were loaded this time, so the product’s own rules applied. The results below describe the model, not this call.',
+    fallbackNote: 'This record marks a fallback; the actual method is shown above. Offline results describe the method, not this call.',
     threshold: 'threshold',
     score: 'this time',
     inside: 'inside the scope',
     outside: 'outside the scope',
     scopeLine: 'Distance from the current knowledge scope {score}, threshold {thr}: {side}.',
     scopeRule: 'No score this time; a rule decided: {rule}.',
-    driftLine: 'Against the previous answer to the same question: cosine distance {score}, threshold {thr}.',
+    driftLine: 'Against the recorded baseline for the same question: cosine distance {score}, threshold {thr}.',
     driftNumbers: 'The numbers in the answer went from {before} to {after}.',
     driftRule: 'No vector distance this time; it checked whether the text changed.',
     retrievalLine: 'Retrieval actually used: {method}. Top {n} passages by rank:',
@@ -113,7 +114,7 @@ const W = {
     noFile: 'The result files cannot be read right now.',
     deferCost: 'Cost of deferring: {cost}',
     driftByRule: 'The meaning barely moved (distance under the threshold); the number check caught the change. Vectors read meaning, the rule reads numbers, and the two are used together.',
-    denseNote: 'The knowledge assistant actually uses e5 vectors (dense); RRF fusion is used by the relation chain and colleague source ranking. The “paraphrased questions” line below compares the two.',
+    denseNote: 'The knowledge assistant requests e5 vectors (dense) by default; RRF fusion is used by the relation chain and colleague source ranking. The “paraphrased questions” line below compares the two.',
   },
 } as const;
 type Words = Record<keyof (typeof W)["zh"], string>;
@@ -137,19 +138,28 @@ const isNum = (x: unknown): x is number => typeof x === 'number' && Number.isFin
 const lab = (language: Language, key: string) => LAB[language][key as LabKey] ?? '';
 
 export type CardOptions = {
+  source?: 'delivery' | 'saved' | 'current';
   materialName?: (id: string) => string;
   /** The practice was opened with a continue code: its records are replayed, not recomputed. */
   replay?: boolean;
 };
 
-// Practice-wide options the page sets once (whether its records are replayed).
-let defaults: () => CardOptions = () => ({});
-export function setCardDefaults(fn: () => CardOptions) {
-  defaults = fn;
+export type RunMode = 'real' | 'fallback' | 'rule' | 'unknown';
+export const runMode = (record: RecognitionRecord): RunMode => actualMethod(record, 'en').mode;
+export function cardProvenance(language: Language, o: CardOptions = {}) {
+  const zh = language === 'zh';
+  return o.source === 'current'
+    ? zh
+      ? '现在在本地重新计算'
+      : 'Recomputed locally now'
+    : o.source === 'delivery'
+      ? zh
+        ? '交付时的记录'
+        : 'Record at delivery'
+      : zh
+        ? '本次操作保存的记录'
+        : 'Record saved by this action';
 }
-
-export type RunMode = 'real' | 'fallback';
-export const runMode = (record: RecognitionRecord): RunMode => (record.fallback ? 'fallback' : 'real');
 
 /**
  * Where a score falls against its threshold, on one axis from 0 to a little past the larger of
@@ -201,7 +211,7 @@ function thisTime(record: RecognitionRecord, language: Language, o: CardOptions)
     case 'scope':
       if (isNum(record.score) && isNum(record.threshold))
         return `<p>${esc(fill(w.scopeLine, { score: n2(record.score), thr: n2(record.threshold), side: record.label === 'out' ? w.outside : w.inside }))}</p>${axis(record.score, record.threshold, w)}`;
-      return `<p>${esc(fill(w.scopeRule, { rule: String(out.rule ?? out.rule_hit ?? record.label ?? '') }))}</p>`;
+      return `<p>${esc(fill(w.scopeRule, { rule: language === 'zh' ? (out.rule === 'no_retrieval_hit' ? '有无相关检索命中' : '记录中的范围规则') : (out.rule === 'no_retrieval_hit' ? 'whether retrieval found a relevant hit' : 'the recorded scope rule') }))}</p>`;
     case 'drift': {
       const before = ((out.numbers_before ?? []) as string[]).join('/');
       const after = ((out.numbers_after ?? []) as string[]).join('/');
@@ -216,9 +226,7 @@ function thisTime(record: RecognitionRecord, language: Language, o: CardOptions)
     }
     case 'retrieval': {
       const top = Array.isArray(out.top) ? (out.top as Record<string, unknown>[]).slice(0, 3) : [];
-      const method = String(out.method ?? '');
-      const methodName =
-        method === 'dense' ? 'e5 dense' : method === 'rrf' ? 'BM25 + e5 → RRF' : method || '–';
+      const methodName = actualMethod(record, language).method;
       if (!top.length && Array.isArray(out.per_sentence_top))
         return `<p>${esc(fill(w.retrievalLine, { method: methodName, n: (out.per_sentence_top as unknown[]).length }))}</p>`;
       return `<p>${esc(fill(w.retrievalLine, { method: methodName, n: top.length }))}</p><ol class="rc-hits">${top
@@ -299,26 +307,27 @@ function thisTime(record: RecognitionRecord, language: Language, o: CardOptions)
 
 /** The card's markup; its published figures are filled in by `fillCardMetrics` once read. */
 export function cardHtml(record: RecognitionRecord, language: Language, given: CardOptions = {}) {
-  const o = { ...defaults(), ...given };
+  const o = given;
   const w = W[language];
   const rowId = TASK_ROW[record.task];
   const row = REGISTER.find((r) => r.id === rowId);
   const mode = runMode(record);
+  const actual = actualMethod(record, language);
+  const modeText = mode === 'fallback' ? w.fallback : mode === 'rule' ? (language === 'zh' ? '规则计算' : 'Rule calculation') : mode === 'unknown' ? (language === 'zh' ? '实际方法未记录' : 'Actual method not recorded') : w.real;
   const cats = row
     ? [...row.cats, ...(row.extraCat ? [row.extraCat] : [])].map((c) => `<span class="rc-family">${esc(lab(language, c))}</span>`).join('')
     : '';
   return `<section class="rc-card" data-task="${esc(record.task)}" data-mode="${mode}">
     <header class="rc-card__head">
       <h4 class="rc-card__name">${esc(row ? lab(language, `${row.id}_name`) : record.task)}</h4>
-      <p class="rc-card__tags">${cats}<span class="rc-mode" data-mode="${mode}">${esc(mode === 'fallback' ? w.fallback : w.real)}</span>${o.replay ? `<span class="rc-mode" data-mode="replay">${esc(w.replay)}</span>` : ''}</p>
+      <p class="rc-card__tags"><span class="rc-family">${esc(actual.category)} · ${esc(actual.method)}</span><span class="rc-mode" data-mode="${mode}">${esc(modeText)}</span>${o.replay ? `<span class="rc-mode" data-mode="replay">${esc(w.replay)}</span>` : ''}</p>
     </header>
     <div class="rc-card__cols">
-      <div class="rc-card__now"><p class="rc-card__eyebrow">${esc(w.thisTime)}</p>${thisTime(record, language, o)}
+      <div class="rc-card__now"><p class="rc-card__eyebrow">${esc(w.thisTime)} · ${esc(cardProvenance(language, o))}</p><p class="rc-card__actual">${esc(actual.method)} · ${esc(modeText)}</p>${thisTime(record, language, o)}
         ${mode === 'fallback' ? `<p class="rc-card__note">${esc(w.fallbackNote)}</p>` : ''}
         ${o.replay ? `<p class="rc-card__note">${esc(w.replayNote)}</p>` : ''}
-        <p class="rc-card__rev">${esc(record.recognizer_id)}${record.revision ? ` · ${esc(record.revision)}` : ''}</p>
       </div>
-      <div class="rc-card__how"><p class="rc-card__eyebrow">${esc(w.how)}</p>
+      <div class="rc-card__how">${cats}<p class="rc-card__eyebrow">${esc(w.how)}</p>
         ${row ? `<p class="rc-card__method">${esc(lab(language, `${row.id}_method`))}</p>` : ''}
         ${record.task === 'retrieval' && (record.outputs as Record<string, unknown> | undefined)?.method === 'dense' ? `<p class="rc-card__note">${esc(w.denseNote)}</p>` : ''}
         <p class="rc-card__eyebrow">${esc(w.published)}</p>

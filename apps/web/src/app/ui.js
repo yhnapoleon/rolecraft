@@ -32,7 +32,7 @@ import { openLensForDelivery } from '../screens/result/deliver-lens';
 import { registerResultScreen } from '../screens/result';
 import { playReading } from '../features/recognition-native/sentences';
 import { signalsHtml } from '../features/recognition-native/signals';
-import { installCardToggles, setCardDefaults } from '../features/recognition-native/profile-card';
+import { installCardToggles } from '../features/recognition-native/profile-card';
 // The system profile page (#/lab) loads its code on demand, its styles with the main bundle.
 import '../features/recognition-lab/lab.css';
 import './practice-language.css';
@@ -7731,10 +7731,8 @@ const workFolders = installWorkFolders(document, {
   },
 });
 installV4References(() => L.v4Host(current()));
-// Lens chips open their profile card in place; a practice opened with a continue code says its
-// records are replayed, not recomputed.
+// Lens chips open saved records in place. Each carrier names its own provenance.
 installCardToggles(locale);
-setCardDefaults(() => ({ replay: !!sessionOf(current())?.recovered }));
 // Board cards drawn by the native workspace read tests, reminders and the revision start here.
 provideTaskCardFacts((taskId) => {
   const a = current();
