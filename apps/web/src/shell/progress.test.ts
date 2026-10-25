@@ -129,8 +129,14 @@ describe('progressOf', () => {
   it('the distillation repeats only what the records show', () => {
     const f = base({ tests: [test('t1', { noted: true })], pendingRequests: 1 });
     const d = distillation(progressOf(f), 'understand');
-    expect(d?.confirmed.map((t) => t[1])).toContain('Your judgement on 1 test');
+    expect(d?.confirmed.map((t) => t[1])).toContain('Expectations or diagnoses are recorded; you still judge the match');
     expect(d?.kept.some((t) => /waiting/.test(t[1]))).toBe(true);
     expect(distillation(progressOf(f), 'decide')).toBeNull();
   });
+});
+
+it('distills actual indexed answers without treating inherited expectations as independent judgements', () => {
+ const tests=[test('old',{answer:'cap 500',indexVersion:1}),test('near',{answer:'cap 400',indexVersion:2}),test('now',{answer:'cap 400',indexVersion:2,previousTestId:'old',noted:true})];
+ const facts=progressOf(base({tests})).layers.find(l=>l.id==='understand')?.confirmed.map(t=>t[1]).join(' ');
+ expect(facts).toContain('Index v1 answered “cap 500”');expect(facts).toContain('Index v2 answered “cap 400”');expect(facts).not.toContain('Your judgement on 3');
 });

@@ -21,6 +21,10 @@ export type ProgressFacts = {
   accepted?: boolean;
   tests: {
     id: string;
+    question?: string;
+    answer?: string;
+    indexVersion?: number;
+    previousTestId?: string;
     /** The policy source version the test ran against. */
     policyVersion: number;
     configVersion: number;
@@ -141,22 +145,17 @@ export function progressOf(f: ProgressFacts): Progress {
   const understand = {
     done: f.tests.length > 0 && (noted.length > 0 || cited.length > 0),
     confirmed: [
-      ...(f.tests.length
-        ? [
-            T(
-              `${f.tests.length} 次测试有记录`,
-              `${f.tests.length} test${f.tests.length > 1 ? 's' : ''} on record`,
-            ),
-          ]
-        : []),
-      ...(noted.length
-        ? [
-            T(
-              `${noted.length} 次测试写了你的判断`,
-              `Your judgement on ${noted.length} test${noted.length > 1 ? 's' : ''}`,
-            ),
-          ]
-        : []),
+      ...(() => {
+        const last = f.tests.at(-1);
+        if (!last?.answer) return f.tests.length ? [T('测试结果已记录；结论待核对', 'Test results saved; conclusions need checking')] : [];
+        const before = last.previousTestId ? f.tests.find(t => t.id === last.previousTestId) : undefined;
+        return [before, last].flatMap(t => {
+          if (!t?.answer) return [];
+          const quote = t.answer.replace(/^#+\s*/, '').replace(/\*\*|__/g, '').trim().split(/[。；;\n]/)[0].slice(0, 90);
+          return [T(`索引 v${t.indexVersion ?? '—'} 回答「${quote}」`, `Index v${t.indexVersion ?? '—'} answered “${quote}”`)];
+        });
+      })(),
+      ...(noted.length ? [T('记录含期望或诊断；是否符合仍由你核对', 'Expectations or diagnoses are recorded; you still judge the match')] : []),
       ...(cited.length
         ? [
             T(

@@ -1515,6 +1515,10 @@ function progressFacts(a) {
     accepted: Board.walkInAccepted(a.id),
     tests: tests.map((t) => ({
       id: t.id,
+      answer: t.answer,
+      question: t.question,
+      indexVersion: t.indexVersion,
+      previousTestId: t.recognition?.find((r) => r.task === 'drift')?.outputs?.previous_test_id,
       policyVersion: Number(t.policyVersion) || 1,
       configVersion: Number(t.configVersion) || 0,
       noted: !!(String(t.expectation || '').trim() || String(t.diagnosis || '').trim()),
@@ -1603,10 +1607,9 @@ function mountProgress(a) {
     current: p.current,
     carried: carried(p).map(tx),
     arrived,
-    // Open by default on the board, the overview; one line on the pages where the work itself is
-    // done (an item, a document, the bench) and at phone width. Each keeps its own choice.
+    // The current summary stays visible; the six-layer overview opens on request.
     folded: readJson(PROGRESS_FOLD, {})[foldKey()] ?? null,
-    foldedByDefault: ui.route !== 'work',
+    foldedByDefault: true,
     routeViewing: routeLayer,
     back: routeLayer ? stageBack(a) : undefined,
     actions: {
@@ -1648,7 +1651,7 @@ function mountProgress(a) {
     }),
     words: {
       label: T('这一局走到哪了', 'Where this practice stands'),
-      now: T('现在', 'Now'),
+      now: T('当前问题', 'Current question'),
       missing: T('还差', 'Still missing'),
       nothingMissing: T('这一层的依据都在了', 'This layer has what it needs'),
       confirmed: T('已确认', 'Confirmed'),
@@ -1660,8 +1663,8 @@ function mountProgress(a) {
         'Progress reads only your records: tests, the judgements you wrote, work that cites evidence, applied settings and what you submitted. Clicks, chat turns and pages read do not count, and a draft on its own passes nothing. A policy change reopens only the layer it affects.',
       ),
       map: T('工作地图', 'Work map'),
-      fold: T('收起摘要', 'Fold the summary'),
-      unfold: T('展开摘要', 'Show the summary'),
+      fold: T('收起六层', 'Hide layers'),
+      unfold: T('展开六层', 'Show six layers'),
       viewing: T('正在看', 'Viewing'),
       backToNow: T('回到当前这一层', 'Back to where you are'),
       distilled: T('本层提炼', 'Layer summary'),

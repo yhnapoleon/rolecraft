@@ -127,6 +127,17 @@ export function ProgressBand(props: ProgressBandProps) {
       removeEventListener('resize', soon);
     };
   }, []);
+  // Scroll targets account for the actual dock height, including narrow/translated layouts.
+  useLayoutEffect(() => {
+    const root = self.current?.closest<HTMLElement>('#main');
+    const bar = root?.querySelector<HTMLElement>('.rc-prog-dock__bar');
+    if (!root || !bar) return;
+    const resize = () => root.style.setProperty('--progress-dock-height', docked ? `${bar.getBoundingClientRect().height + 20}px` : '0px');
+    resize();
+    const observer = new ResizeObserver(resize);
+    observer.observe(bar);
+    return () => { observer.disconnect(); root.style.removeProperty('--progress-dock-height'); };
+  }, [docked]);
   // A redraw can move the band (another page under it) without a scroll.
   useEffect(() => {
     const el = self.current;
@@ -141,16 +152,88 @@ export function ProgressBand(props: ProgressBandProps) {
     p.layers.findIndex((l) => l.id === p.current),
   );
   const looking = viewing ?? (p.routeViewing !== p.current ? p.routeViewing : undefined) ?? null;
-  const shown = p.layers.find((l) => l.id === (looking ?? p.current)) ?? p.layers[at];
-  const isNow = shown.id === p.current;
-  const open = p.actions?.[shown.id];
+  const current = p.layers[at];
+  const shown = p.layers.find((l) => l.id === looking) ?? current;
+  const openViewed = p.actions?.[shown.id];
+  const isNow = shown.id === current.id;
   const after = p.layers.slice(at + 1, at + 3);
   const arrived = p.arrived ? p.layers.find((l) => l.id === p.arrived) : undefined;
-  const slide = reduce
-    ? { duration: 0 }
-    : { type: 'spring' as const, duration: 0.42, bounce: 0.12 };
-  const fill = (at + (p.layers[at]?.state === 'current' ? 0.5 : 0)) / (p.layers.length - 1);
-  const missing = isNow ? [...shown.missing, ...p.carried] : shown.missing;
+  const missing = [...new Set([...current.missing, ...p.carried])];
+  const confirmed = current.confirmed.length
+    ? current.confirmed
+    : p.layers
+        .slice(0, at)
+        .flatMap((l) => l.confirmed)
+        .slice(-1);
+  const summary = (dock = false) => (
+    <div className="rc-prog__summary" data-progress-current={current.id}>
+      <div className="rc-prog__focus">
+        <p className="rc-prog__eyebrow">
+          {p.words.now} · {current.n} / {p.layers.length}
+        </p>
+        <h2 className="rc-prog__title">
+          <span className="rc-prog__n">{num(current.n)}</span>
+          {current.label}
+        </h2>
+        <p className="rc-prog__goal">{current.goal}</p>
+      </div>
+      <dl className="rc-prog__facts">
+        <div>
+          <dt>{p.words.confirmed}</dt>
+          <dd>
+            {confirmed.length
+              ? confirmed.join(p.lang === 'en' ? '; ' : '；')
+              : p.lang === 'en'
+                ? 'No conclusion recorded yet'
+                : '尚无已记录的结论'}
+          </dd>
+        </div>
+        <div>
+          <dt>{p.words.missing}</dt>
+          <dd>
+            {missing.length ? missing.join(p.lang === 'en' ? '; ' : '；') : p.words.nothingMissing}
+          </dd>
+        </div>
+      </dl>
+      <div className="rc-prog__future">
+        {after.map((l, i) => (
+          <p key={l.id}>
+            <span>{i ? p.words.after : p.words.next}</span>
+            <b>
+              {num(l.n)} {l.label}
+            </b>
+          </p>
+        ))}
+        {!after.length && (
+          <p>
+            <span>{p.words.ending.title}</span>
+            <b>{p.words.ending.items.join(p.lang === 'en' ? '; ' : '；')}</b>
+          </p>
+        )}
+      </div>
+      {!isNow && (
+        <p className="rc-prog__viewing">
+          {p.words.viewing} · {num(shown.n)} {shown.label}
+          <button
+            type="button"
+            className="btn quiet small"
+            onClick={() => (viewing ? setViewing(null) : p.back && run(p.back))}
+          >
+            {p.words.backToNow}
+          </button>
+        </p>
+      )}
+      {dock && (
+        <button
+          type="button"
+          className="btn quiet small rc-prog__summary-link"
+          onClick={() => setMapOpen(true)}
+        >
+          {p.words.map} · {p.words.distilled}
+        </button>
+      )}
+    </div>
+  );
   return (
     <>
       <div
@@ -159,35 +242,7 @@ export function ProgressBand(props: ProgressBandProps) {
         aria-hidden={!docked || undefined}
       >
         <div className="rc-prog-dock__bar" inert={!docked || undefined}>
-          <ol className="rc-prog-dock__dots">
-            {p.layers.map((l) => (
-              <li
-                key={l.id}
-                data-state={l.state}
-                title={`${num(l.n)} ${l.label} · ${p.words.states[l.state]}`}
-              />
-            ))}
-          </ol>
-          <b className="rc-prog-dock__now">
-            <span className="rc-prog__n">{num(p.layers[at].n)}</span>
-            {p.layers[at].label}
-          </b>
-          <span className="rc-prog-dock__part">
-            {p.words.missing} ·{' '}
-            {[...p.layers[at].missing, ...p.carried][0] ?? p.words.nothingMissing}
-          </span>
-          {p.layers[at + 1] && (
-            <span className="rc-prog-dock__part rc-prog-dock__next">
-              {p.words.next} · {num(p.layers[at + 1].n)} {p.layers[at + 1].label}
-            </span>
-          )}
-          <button
-            type="button"
-            className="btn quiet small rc-prog-dock__map"
-            onClick={() => setMapOpen(true)}
-          >
-            {p.words.map}
-          </button>
+          {summary(true)}
         </div>
       </div>
       <section
@@ -197,232 +252,97 @@ export function ProgressBand(props: ProgressBandProps) {
         data-folded={p.folded || undefined}
         data-viewing={!isNow || undefined}
       >
-        <div className="rc-prog__top">
-          <LayoutGroup id={gid}>
-            <ol className="rc-prog__track" style={{ ['--fill' as string]: String(fill) }}>
-              <span className="rc-prog__line" aria-hidden="true">
-                <motion.i
-                  className="rc-prog__walked"
-                  initial={false}
-                  animate={{ scaleX: fill }}
-                  transition={reduce ? { duration: 0 } : { duration: 0.52, ease: EASE_OUT }}
-                />
-              </span>
-              {p.layers.map((l) => (
-                <li key={l.id} className="rc-prog__stop" data-state={l.state}>
-                  <button
-                    type="button"
-                    className="rc-prog__key"
-                    aria-current={l.id === p.current ? 'step' : undefined}
-                    aria-pressed={looking ? looking === l.id : undefined}
-                    aria-label={`${p.words.stepOf(l.n, p.layers.length, l.label)} · ${p.words.states[l.state]}`}
-                    onClick={() => setViewing(l.id === p.current ? null : l.id)}
-                  >
-                    <span className="rc-prog__dot" aria-hidden="true">
-                      {l.id === p.current && (
-                        <motion.span
-                          layoutId="now"
-                          className="rc-prog__now-disc"
-                          transition={slide}
-                        />
-                      )}
-                      <span className="rc-prog__glyph">
-                        {l.state === 'done' ? (
-                          <svg viewBox="0 0 16 16" aria-hidden="true">
-                            <path d="m3.5 8.5 3 3 6-7" />
-                          </svg>
-                        ) : (
-                          num(l.n)
-                        )}
-                      </span>
-                    </span>
-                    <span className="rc-prog__name">{l.label}</span>
-                    {l.id === (looking ?? '') && (
-                      <motion.span
-                        layoutId="viewing"
-                        className="rc-prog__look"
-                        transition={slide}
-                      />
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ol>
-          </LayoutGroup>
-          <div className="rc-prog__tools">
-            <span className="rc-prog__basis" title={p.words.basisHint}>
-              {p.words.basis}
-            </span>
-            <button type="button" className="btn quiet small" onClick={() => setMapOpen(true)}>
-              <svg viewBox="0 0 16 16" className="rc-prog__i" aria-hidden="true">
-                <path d="M2.5 12.5c2-1 2.5-4 5-4.5s3.5 1.5 6-3M2.5 12.5h0M13.5 5h0" />
-                <circle cx="2.5" cy="12.5" r="1.3" />
-                <circle cx="13.5" cy="5" r="1.3" />
-              </svg>
-              {p.words.map}
-            </button>
-            <button
-              type="button"
-              className="btn quiet icon small rc-prog__fold"
-              aria-expanded={!p.folded}
-              aria-label={p.folded ? p.words.unfold : p.words.fold}
-              title={p.folded ? p.words.unfold : p.words.fold}
-              onClick={() => p.onFold(!p.folded)}
-            >
-              <svg viewBox="0 0 16 16" className="rc-prog__i" aria-hidden="true">
-                <path d={p.folded ? 'm4 6 4 4 4-4' : 'm4 10 4-4 4 4'} />
-              </svg>
-            </button>
-          </div>
+        {summary()}
+        <div className="rc-prog__tools">
+          <span className="rc-prog__basis" title={p.words.basisHint}>
+            {p.words.basis}
+          </span>
+          <button type="button" className="btn quiet small" onClick={() => setMapOpen(true)}>
+            {p.words.map} · {p.words.distilled}
+          </button>
+          <button
+            type="button"
+            className="btn quiet small rc-prog__fold"
+            aria-expanded={!p.folded}
+            onClick={() => p.onFold(!p.folded)}
+          >
+            {p.folded ? p.words.unfold : p.words.fold}
+          </button>
         </div>
-        {p.folded && (
-          // Folded, one line still says the five things: where, what is missing, what is next.
-          <p className="rc-prog__brief" aria-live="polite">
-            <b>
-              <span className="rc-prog__n">{num(shown.n)}</span>
-              {shown.label}
-            </b>
-            <span className="rc-prog__brief-part">
-              {p.words.missing} · {missing[0] ?? p.words.nothingMissing}
-            </span>
-            {after[0] && (
-              <span className="rc-prog__brief-part">
-                {p.words.next} · {num(after[0].n)} {after[0].label}
-              </span>
-            )}
-          </p>
-        )}
-        <AnimatePresence initial={false}>
-          {!p.folded && (
-            <motion.div
-              key="body"
-              className="rc-prog__body"
-              initial={reduce ? { opacity: 0 } : { opacity: 0, height: 0 }}
-              animate={reduce ? { opacity: 1 } : { opacity: 1, height: 'auto' }}
-              exit={reduce ? { opacity: 0 } : { opacity: 0, height: 0 }}
-              transition={{ duration: reduce ? 0.16 : 0.28, ease: EASE_OUT }}
-            >
-              <div className="rc-prog__cols" aria-live="polite">
-                <div className="rc-prog__col rc-prog__col--now">
-                  <p className="rc-prog__eyebrow">
-                    {isNow ? p.words.now : `${p.words.viewing} · ${p.words.states[shown.state]}`}
-                  </p>
-                  <h2 className="rc-prog__title">
-                    <span className="rc-prog__n">{num(shown.n)}</span>
-                    {shown.label}
-                  </h2>
-                  <p className="rc-prog__goal">{shown.goal}</p>
-                  <span className="rc-prog__keys">
-                    {open && (
-                      <button
-                        type="button"
-                        className="btn small rc-prog__open"
-                        onClick={() => run(open)}
-                      >
-                        {open.label}
-                      </button>
-                    )}
-                    {!isNow && (
-                      <button
-                        type="button"
-                        className="btn quiet small rc-prog__back"
-                        onClick={() =>
-                          viewing ? setViewing(null) : p.back ? run(p.back) : setViewing(null)
-                        }
-                      >
-                        {viewing ? p.words.backToNow : (p.back?.label ?? p.words.backToNow)}
-                      </button>
-                    )}
-                  </span>
-                </div>
-                <div className="rc-prog__col">
-                  {shown.confirmed.length > 0 && (
-                    <>
-                      <p className="rc-prog__eyebrow">{p.words.confirmed}</p>
-                      <ul className="rc-prog__list rc-prog__list--good">
-                        {shown.confirmed.slice(0, 3).map((t) => (
-                          <li key={t}>{t}</li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                  <p className="rc-prog__eyebrow">{p.words.missing}</p>
-                  {missing.length ? (
-                    <ul className="rc-prog__list">
-                      {missing.slice(0, 3).map((t) => (
-                        <li key={t} data-carried={p.carried.includes(t) || undefined}>
-                          {t}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="rc-prog__quiet">{p.words.nothingMissing}</p>
-                  )}
-                  {shown.reopened && <p className="rc-prog__reopened">{shown.reopened}</p>}
-                </div>
-                <div className="rc-prog__col rc-prog__col--next">
-                  {after.length === 0 && (
-                    <div className="rc-prog__ahead">
-                      <p className="rc-prog__eyebrow">{p.words.ending.title}</p>
-                      <ul className="rc-prog__list">
-                        {p.words.ending.items.map((t) => (
-                          <li key={t}>{t}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {after.map((l, i) => (
-                    <div key={l.id} className="rc-prog__ahead">
-                      <p className="rc-prog__eyebrow">{i === 0 ? p.words.next : p.words.after}</p>
-                      <p className="rc-prog__ahead-name">
-                        <span className="rc-prog__n">{num(l.n)}</span>
-                        {l.label}
-                      </p>
-                      <p className="rc-prog__ahead-goal">{l.goal}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <AnimatePresence>
-                {arrived?.distilled && (
-                  <motion.div
-                    key={arrived.id}
-                    className="rc-prog__distil"
-                    role="status"
-                    initial={reduce ? { opacity: 0 } : { opacity: 0, y: -4 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: reduce ? 0.16 : 0.28, ease: EASE_OUT }}
-                  >
-                    <svg
-                      viewBox="0 0 16 16"
-                      className="rc-prog__i rc-prog__distil-i"
-                      aria-hidden="true"
-                    >
-                      <path d="m3.5 8.5 3 3 6-7" />
-                    </svg>
-                    <p>
-                      <b>
-                        {num(arrived.n)} {arrived.label} · {p.words.distilled}
-                      </b>
-                      {arrived.distilled.confirmed.join('；')}
-                      {arrived.distilled.kept.length > 0 && (
-                        <span className="rc-prog__kept">
-                          {p.words.kept}
-                          {arrived.distilled.kept.join('；')}
-                        </span>
-                      )}
-                    </p>
+        {!p.folded && (
+          <div className="rc-prog__detail">
+            <LayoutGroup id={gid}>
+              <ol className="rc-prog__track">
+                {p.layers.map((l) => (
+                  <li key={l.id} className="rc-prog__stop" data-state={l.state}>
                     <button
                       type="button"
-                      className="btn quiet small"
-                      onClick={() => p.onArrivedSeen(arrived.id)}
+                      className="rc-prog__key"
+                      aria-current={l.id === p.current ? 'step' : undefined}
+                      aria-pressed={looking === l.id}
+                      aria-label={`${p.words.stepOf(l.n, p.layers.length, l.label)} · ${p.words.states[l.state]}`}
+                      onClick={() => setViewing(l.id === p.current ? null : l.id)}
                     >
-                      {p.words.gotIt}
+                      <span className="rc-prog__dot">
+                        <span className="rc-prog__glyph">{num(l.n)}</span>
+                      </span>
+                      <span className="rc-prog__name">{l.label}</span>
+                      {l.id === looking && <span className="rc-prog__look" />}
                     </button>
-                  </motion.div>
+                  </li>
+                ))}
+              </ol>
+            </LayoutGroup>
+            {!isNow && (
+              <div className="rc-prog__reading">
+                <b>
+                  {p.words.viewing} · {num(shown.n)} {shown.label}
+                </b>
+                <p>{shown.goal}</p>
+                <p>
+                  {p.words.confirmed} · {shown.confirmed.join(p.lang === 'en' ? '; ' : '；') || '—'}
+                </p>
+                <p>
+                  {p.words.missing} ·{' '}
+                  {shown.missing.join(p.lang === 'en' ? '; ' : '；') || p.words.nothingMissing}
+                </p>
+                {openViewed && (
+                  <button type="button" className="btn small" onClick={() => run(openViewed)}>
+                    {openViewed.label}
+                  </button>
                 )}
-              </AnimatePresence>
+              </div>
+            )}
+          </div>
+        )}
+        <AnimatePresence>
+          {arrived?.distilled && (
+            <motion.div
+              className="rc-prog__distil"
+              role="status"
+              initial={reduce ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              <p>
+                <b>
+                  {num(arrived.n)} {arrived.label} · {p.words.distilled}
+                </b>
+                {arrived.distilled.confirmed.join(p.lang === 'en' ? '; ' : '；')}
+                {arrived.distilled.kept.length > 0 && (
+                  <span className="rc-prog__kept">
+                    {p.words.kept}
+                    {arrived.distilled.kept.join(p.lang === 'en' ? '; ' : '；')}
+                  </span>
+                )}
+              </p>
+              <button
+                type="button"
+                className="btn quiet small"
+                onClick={() => p.onArrivedSeen(arrived.id)}
+              >
+                {p.words.gotIt}
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
@@ -493,11 +413,7 @@ function WorkMap(p: ProgressBandProps & { onClose: () => void }) {
     return () => ro.disconnect();
   }, [at]);
   return (
-    <dialog
-      ref={ref}
-      className="rc-map rc-portal"
-      aria-labelledby="rc-map-title"
-    >
+    <dialog ref={ref} className="rc-map rc-portal" aria-labelledby="rc-map-title">
       <header className="rc-map__head">
         <div>
           <h2 id="rc-map-title">{p.words.mapTitle}</h2>
