@@ -445,6 +445,12 @@
 .rc-card[data-task='drift'] .rc-card__cols { grid-template-columns: 1fr; }
 @media (max-width: 720px) { .rc-compare__pair { grid-template-columns: 1fr; } }
 
+.rc-report-facts { margin: 0; display: grid; gap: 12px; }
+.rc-report-facts > div { display: grid; grid-template-columns: 100px 1fr; gap: 12px; font-size: 13px; }
+.rc-report-facts dt { color: var(--ink-2); }
+.rc-report-facts dd { margin: 0; }
+@media (max-width: 720px) { .rc-report-facts > div { grid-template-columns: 1fr; gap: 3px; } }
+
 .run-lens { margin: 12px 0; }
 .run-baseline-signals { margin-top: 8px; font-size: 12px; color: var(--ink-2); }
 .run-baseline-signals summary { cursor: pointer; }

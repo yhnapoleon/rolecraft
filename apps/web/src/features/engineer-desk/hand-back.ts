@@ -78,6 +78,7 @@ export function outcomeCaution(r: ReviewResult): string {
       `这份复核有 ${r.newFailures} 处新增失败，更新后它会带进试点。`,
       `This review has ${r.newFailures} new ${failures(r.newFailures)}; updating brings it into the pilot.`,
     );
+  if (r.target === 'unknown') return T('目标是否修好仍未决；更新设置不能证明目标已修复。', 'The target is still unverified; applying settings does not prove it is fixed.');
   if (r.target !== 'fixed')
     return T(
       '这份复核里目标没修好，更新试点也修不好它。',
@@ -134,8 +135,10 @@ export function handBackSignal(back: HandedBack): {
           : '';
   let text: string;
   if (n > 0 && state) text = `${state} · ${news}`;
-  else if (!r.compared || !state)
-    text = T(`${subject}：复核没跑完`, `${subject}: the review didn’t finish`);
+  else if (!state)
+    text = T(`${subject}：目标是否修好仍未决`, `${subject}: target still unverified`);
+  else if (!r.compared)
+    text = T(`${state} · 回归比较未完成`, `${state} · regression comparison incomplete`);
   else if (r.target === 'fixed')
     text = T(`${state} · 没有新增失败`, `${state} · nothing new fails`);
   else text = state;
@@ -209,4 +212,56 @@ export function handBackCommand(pilot: Pilot, rows: readonly HandBackRow[]): Set
     },
     settings: Object.fromEntries(rows.map((r) => [r.field, r.value])) as SettingsInput['settings'],
   };
+}
+
+/** Read the target and two regression scopes independently; a missing comparison is not zero. */
+export function reviewDetails(record: EngineerReviewRecord, language: 'zh' | 'en') {
+  const t = (zh: string, en: string) => (language === 'zh' ? zh : en);
+  const result = reviewResult(record, language);
+  const rows = record.report.public_results;
+  const publicNew = new Set(
+    record.report.findings
+      .filter((f) => f.kind === 'new_regression' && f.status === 'fail')
+      .flatMap((f) => f.probe_ids),
+  ).size;
+  const hidden = record.report.hidden_comparison;
+  const target = {
+    fixed: t('已修好', 'Fixed'),
+    partial: t('部分修好', 'Partly fixed'),
+    not_fixed: t('未修好', 'Not fixed'),
+    unknown: t('未决；现有复核不能确认', 'Unverified by this review'),
+  }[result.target];
+  return [
+    { label: t('目标核验', 'Target verification'), text: target },
+    {
+      label: t('公开回归', 'Public regression'),
+      text: t(
+        `${rows.filter((r) => r.result === 'pass').length}/${rows.length} 通过；已记录新增失败 ${publicNew} 条`,
+        `${rows.filter((r) => r.result === 'pass').length}/${rows.length} passed; ${publicNew} recorded new failures`,
+      ),
+    },
+    {
+      label: t('隐藏回归', 'Hidden regression'),
+      text: hidden
+        ? t(
+            `新增失败 ${hidden.new_failures}；另修好 ${hidden.fixed}；未核验 ${hidden.unverified}`,
+            `${hidden.new_failures} new failures; ${hidden.fixed} also fixed; ${hidden.unverified} unverified`,
+          )
+        : t('比较结果未提供', 'Comparison not provided'),
+    },
+    {
+      label: t('是否采用', 'Adoption'),
+      text: outcomeClean(result)
+        ? t(
+            '复核支持采用；仍由你确认更新设置',
+            'Review supports adoption; you still confirm the settings update',
+          )
+        : t('暂不建议采用：', 'Adoption not recommended yet: ') +
+          (result.target !== 'fixed'
+            ? target
+            : result.newFailures > 0
+              ? t('存在新增失败', 'new regressions exist')
+              : t('回归比较未完成', 'regression comparison incomplete')),
+    },
+  ];
 }

@@ -16,6 +16,7 @@ import {
   outcomeClean,
   outcomeSentence,
   reviewResult,
+  reviewDetails,
   revisionReason,
 } from './hand-back';
 import { type ColleagueRun, HandBackSheet, type HandBackView } from './hand-back-sheet';
@@ -119,6 +120,7 @@ export function openHandBackSheet(options: {
         clean: outcomeClean(result),
         title: outcomeSentence(result),
         caution: outcomeCaution(result),
+        details: reviewDetails(record, T('zh', 'en') as 'zh' | 'en'),
         newFailures: result.newFailures,
         fixed: comparison?.fixed ?? 0,
         publicPassed: results.filter((r) => r.result === 'pass').length,
@@ -219,6 +221,7 @@ export function openHandBackSheet(options: {
     clean: true,
     title: '',
     caution: '',
+    details: [],
     newFailures: 0,
     fixed: 0,
     publicPassed: 0,

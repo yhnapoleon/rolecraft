@@ -22,6 +22,7 @@ export interface HandBackView {
   readonly title: string;
   /** What comes with updating from a review that is not clean ('' when clean). */
   readonly caution: string;
+  readonly details?: readonly {label: string; text: string}[];
   readonly newFailures: number;
   readonly fixed: number;
   readonly publicPassed: number;
@@ -200,20 +201,9 @@ export function HandBackSheet(v: HandBackView) {
                 </h3>
                 <Diff rows={v.diff} />
               </section>
-              <p className="tw:m-0 tw:flex tw:flex-wrap tw:gap-x-5 tw:gap-y-1 tw:text-[13px] tw:text-ink-2 tw:tabular-nums">
-                <span>
-                  {T(
-                    `公开 ${v.publicPassed}/${v.publicTotal} 通过`,
-                    `Public ${v.publicPassed}/${v.publicTotal} passed`,
-                  )}
-                </span>
-                <span>
-                  {T(
-                    `隐藏 ${v.hidden} 条：新增失败 ${v.newFailures} · 另修好 ${v.fixed}`,
-                    `Hidden ${v.hidden}: ${v.newFailures} new failures · ${v.fixed} also fixed`,
-                  )}
-                </span>
-              </p>
+              <dl className="rc-report-facts">
+                {(v.details ?? []).map(row => <div key={row.label}><dt>{row.label}</dt><dd>{row.text}</dd></div>)}
+              </dl>
               <footer className="tw:flex tw:flex-wrap tw:items-center tw:gap-2 tw:pt-2 tw:border-0 tw:border-t tw:border-solid tw:border-line">
                 {v.appliedVersion !== null ? (
                   <p className="tw:m-0 tw:text-good tw:text-[14px] tw:font-medium">

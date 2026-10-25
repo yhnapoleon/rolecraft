@@ -16,6 +16,7 @@ import {
   outcomeClean,
   outcomeSentence,
   reviewResult,
+  reviewDetails,
 } from './hand-back';
 
 afterEach(() => setPreference('zh'));
@@ -188,7 +189,7 @@ describe('engineer hand-back · what the review came to, in one sentence', () =>
     );
     expect(seeded({ target: 'fixed', newFailures: 0, compared: false })).toEqual({
       kicker,
-      text: '住宿上限：复核没跑完',
+      text: '住宿上限已修好 · 回归比较未完成',
       tone: 'warn',
     });
     // A tests ticket: its own subject, also after a reload.
@@ -241,4 +242,20 @@ describe('engineer hand-back · the revision the product manager opens (G13)', (
     setPreference('en');
     expect(revisionReason()).toBe('put the engineering fix into the pilot');
   });
+});
+
+it('keeps an unknown target distinct from failed or incomplete regression', () => {
+ setPreference('en');
+ const r = {target:'unknown' as const,compared:true,newFailures:0};
+ expect(outcomeCaution(r)).toContain('still unverified');
+ expect(outcomeCaution(r)).not.toContain('not fixed');
+ expect(handBackSignal({at:'now',ticketId:'t',title:'tests',clean:false,newFailures:0,result:r}).text).toContain('target still unverified');
+});
+
+it('keeps public new failures out of the hidden regression count', () => {
+ const ROOT = rootCauseEn as unknown as EngineerReviewRecord;
+ const record = {...ROOT,report:{...ROOT.report,findings:ROOT.report.findings.map(f=>f.kind==='new_regression'?{...f,status:'fail' as const,probe_ids:['F01','F02']}:f),hidden_comparison:{new_failures:0,fixed:0,still_failing:0,unverified:0}}};
+ const rows=reviewDetails(record,'en');
+ expect(rows.find(r=>r.label==='Public regression')?.text).toContain('2 recorded new failures');
+ expect(rows.find(r=>r.label==='Hidden regression')?.text).toContain('0 new failures');
 });
