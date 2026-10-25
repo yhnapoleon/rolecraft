@@ -223,8 +223,15 @@ def main() -> None:
         # Every published flow emulates reduced motion; one more round keeps the default.
         # The pre-submission card and the feedback page's "at submission" lines, same services.
         # Continue codes need browser profiles of their own, so they run as one more round.
+        # A colleague reply must also arrive while a second tab hides the page.
         rounds = (
-            [args.suite, "default-motion", "presubmit-flows", "practice-recovery"]
+            [
+                args.suite,
+                "default-motion",
+                "presubmit-flows",
+                "practice-recovery",
+                "colleague-polling",
+            ]
             if args.suite == "published-flows"
             else [args.suite]
         )

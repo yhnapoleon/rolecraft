@@ -83,7 +83,7 @@ function polledPractice(extra: Partial<LocalSession> = {}) {
   const host = {
     ensureFeedbackPointer: async () => {},
     query: (operation: string) => read(operation),
-    pendingRequests: () => [],
+    pendingRequests: (): { requestId: string }[] => [],
     recover: vi.fn(),
   };
   vi.spyOn(data, 'host').mockReturnValue(host as unknown as ReturnType<V4LiveData['host']>);
@@ -140,6 +140,17 @@ describe('background polling of a v2 practice', () => {
     await practice.store.poll();
     expect(Object.keys(practice.store.active()?.queuedTestRuns ?? {})).toEqual(['r-1']);
     expect(practice.store.getSnapshot().error).toBe('');
+  });
+  it('waits, so a hidden page keeps polling, only while a reply or a queued test is unsettled', () => {
+    const practice = polledPractice();
+    expect(practice.store.awaiting()).toBe(false);
+    let pending = [{ requestId: 'turn-1' }];
+    practice.host.pendingRequests = () => pending;
+    expect(practice.store.awaiting()).toBe(true);
+    pending = [];
+    expect(practice.store.awaiting()).toBe(false);
+    const queued = { requestId: 'r-1' } as LocalTestRun;
+    expect(polledPractice({ queuedTestRuns: { 'r-1': queued } }).store.awaiting()).toBe(true);
   });
   it('an idle poll that reads unchanged data does not notify the workbench', async () => {
     const practice = polledPractice();
