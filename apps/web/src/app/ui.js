@@ -169,6 +169,7 @@ import { HatScale, PrimaryKey } from '../shell/bar';
 import '../shell/bar.css';
 import { carried, distillation, progressOf } from '../shell/progress';
 import { comparisonFor } from '../features/recognition-native/test-comparison';
+import { testMomentHtml, testAgeText, retrievalHit } from '../features/recognition-native/test-moment';
 import * as Greetings from '../features/colleague-greetings';
 import { messageRows, noteKey } from '../features/colleague-greetings/unread';
 import { engineerApi } from '../features/engineer-desk/api';
@@ -1999,7 +2000,7 @@ const materialNameOf = (a) => (id) => {
 };
 /** A test run's recognition signals: quiet facts by default, chips in the lens. */
 function runSignals(a, x) {
-  return `<div data-rc-run="${esc(x.id)}">${signalsHtml(x.recognition, locale(), { context: 'test', lens: lensOn(), materialName: materialNameOf(a), cards: { comparison: { current: x, tests: a.tests || [] } } })}</div>`;
+  return `<div data-rc-run="${esc(x.id)}">${lensOn() ? signalsHtml(x.recognition, locale(), { context: 'test', lens: true, materialName: materialNameOf(a), cards: { comparison: { current: x, tests: a.tests || [] } } }) : ''}</div>`;
 }
 /** Redraw only the recognition parts of the current page when the lens opens or closes. */
 onLensChange((on) => {
@@ -2010,7 +2011,7 @@ onLensChange((on) => {
   if (!a) return;
   document.querySelectorAll('[data-rc-run]').forEach((node) => {
     const run = (a.tests || []).find((t) => t.id === node.dataset.rcRun);
-    node.innerHTML = run
+    node.innerHTML = run && on
       ? signalsHtml(run.recognition, locale(), {
           context: 'test',
           lens: lensOn(),
@@ -3312,6 +3313,7 @@ function runGroup(a, runs) {
   return `<article class="run ${r.id === ui.lastRun ? 'fresh' : ''}" id="run-${esc(r.id)}">
     <header class="run-q"><span class="run-asker">${T('你问', 'You asked')}</span><h3${zhAttr(r.question)}>${esc(r.question)}</h3>${runs.length > 1 ? `<span class="meta">${T(runs.length + ' 次', runs.length + ' runs')}</span>` : ''}${tk && ui.route !== 'task' ? `<button type="button" class="run-task" data-action="open-task" data-id="${tk.id}">${icon('note', 'i-xs')}${esc(taskTitle(tk))}</button>` : ''}</header>
     ${r.expectation ? `<p class="run-expect">${icon('eye', 'i-xs')}<span${zhAttr(r.expectation)}>${esc(r.expectation)}</span></p>` : ''}
+    ${testAgeText(r, a.world.policyVersion, locale()) ? `<p class="rc-test-age">${esc(testAgeText(r, a.world.policyVersion, locale()))}</p>` : ''}
     <div class="run-cols ${paired.length > 1 ? 'two' : ''}">${paired
       .map(
         (
@@ -3322,6 +3324,7 @@ function runGroup(a, runs) {
       <div class="run-meta"><span class="stamp">${T('配置 v', 'Config v')}${x.configVersion}</span><span class="stamp ${old(x) ? 'warn' : ''}">${old(x) ? icon('stale', 'i-xs') : ''}${T(`政策源 v${x.policyVersion} · 索引 v${x.indexVersion}`, `Policy v${x.policyVersion} · index v${x.indexVersion}`)}</span>${x.citations.map((c) => `<button type="button" class="chip" data-action="run-source" data-run="${esc(x.id)}">${icon('doc', 'i-xs')}<span>${esc(materialTitle({ id: c.id, title: c.title }))}</span><span class="ver">v${c.version}</span></button>`).join('')}</div></div>`,
       )
       .join('')}</div>
+    ${testMomentHtml(r, a.tests, locale(), materialNameOf(a))}
     <div class="run-lens">${runSignals(a, r)}${paired[1] ? `<details class="run-baseline-signals"><summary>${T('比较对象的识别记录', 'Recognition records of the comparison run')}</summary>${runSignals(a, paired[1])}</details>` : ''}</div>
     ${comparison.referenced && !comparison.previous ? `<p class="meta">${T('识别记录指定的比较对象未载入；没有用上一次测试代替。', 'The recorded comparison baseline is not loaded; the previous run has not been substituted.')}</p>` : ''}
     ${old(r) ? `<p class="flag">${icon('warn', 'i-sm')}${T('这次回答引用的版本已经不是最新。', 'This answer cites a version that is no longer current.')}</p>` : ''}
@@ -5964,6 +5967,24 @@ async function act(el, ev = new Event('rc-action')) {
       );
       break;
     }
+    case 'run-hit': {
+      const r = a.tests.find((x) => x.id === id);
+      const hit = r && retrievalHit(r);
+      if (!hit?.citation) break;
+      const c = hit.citation;
+      const result = await L.citationSource(a, r.id, c.id);
+      const m = result?.material;
+      const text = String(m?.content || '');
+      const at = text.indexOf(hit.quote);
+      const passage = at >= 0
+        ? `${md(text.slice(0, at), { dropTitle: true })}<mark data-hit-target>${esc(hit.quote)}</mark>${md(text.slice(at + hit.quote.length), { dropTitle: true })}`
+        : `${m ? md(text, { dropTitle: true }) : `<p>${T('这个引用版本的正文暂未取得。', 'The exact cited version is unavailable.')}</p>`}`;
+      openSheet(T('本次检索原文', 'Retrieved passage'),
+        `<div class="rc-hit"><p class="rc-hit-title">${esc(c.title || materialNameOf(a)(c.id))} · v${c.version}</p><blockquote>${esc(hit.quote)}</blockquote></div><div class="prose serif">${passage}</div>`,
+        btn(T('返回测试', 'Back to the test'), 'close', 'primary'), 'wide');
+      sheet.querySelector('[data-hit-target]')?.scrollIntoView({ block: 'center' });
+      break;
+    }
     case 'rerun': {
       const r = a.tests.find((x) => x.id === id);
       if (r) await runQuestion(r.question, r.expectation);
@@ -6617,6 +6638,13 @@ async function act(el, ev = new Event('rc-action')) {
     case 'cite-material': {
       const m = E.getMaterials(a).find((x) => x.id === id);
       if (m) cite({ id: m.id, title: m.title, version: m.version, body: m.body, type: 'material' });
+      refreshWS(['stage']);
+      break;
+    }
+    case 'cite-hit': {
+      const r = a.tests.find((x) => x.id === id);
+      const hit = r && retrievalHit(r);
+      if (hit?.citation) cite({ id: hit.citation.id, title: hit.citation.title, version: hit.citation.version, body: hit.quote, type: 'material' });
       refreshWS(['stage']);
       break;
     }
