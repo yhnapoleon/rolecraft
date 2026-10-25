@@ -6,6 +6,7 @@ import { copyText, type Language } from '../results-native/localization';
 import { strategyName } from '../behavior-native/view';
 import { arbiterOutcome, type RecognitionRecord } from './badge';
 import { LENS_COPY, type LensKey } from './lens-copy';
+import { type CardOptions, cardHtml } from './profile-card';
 import type { SplitExplanation } from './prefix';
 import './signals.css';
 import './reading.css';
@@ -16,6 +17,9 @@ export type SignalOptions = {
   lens: boolean;
   /** Material titles for retrieval hits; identifiers are never shown. */
   materialName?: (id: string) => string;
+  /** Lens chips open their profile card in place (phase 2): this call's own numbers, its
+   * method and course family, the published figures. Without it the chips are plain labels. */
+  cards?: CardOptions;
 };
 export type Meter = { value: number; tick?: number; label: string };
 export type LensSignal = {
@@ -232,6 +236,31 @@ export function meterHtml(meter: Meter) {
   return `<span class="rc-meter" role="img" aria-label="${esc(meter.label)}" title="${esc(meter.label)}"><i style="inline-size:${pct(meter.value)}"></i>${meter.tick != null ? `<b style="inset-inline-start:${pct(meter.tick)}"></b>` : ''}</span>`;
 }
 
+/** A chip that opens its card: the same label as a button, with the method shown after the
+ * family (method · family is the one tech label every moment uses). */
+export function cardChipHtml(signal: LensSignal, language: Language, cardId: string) {
+  const family = [signal.category, signal.method, signal.fallback ? t(language, 'fallback') : '']
+    .filter(Boolean)
+    .join(' · ');
+  return `<button type="button" class="rc-sig rc-sig--key" data-task="${esc(signal.task)}" data-tone="${signal.tone}"${signal.fallback ? ' data-fallback=""' : ''} aria-expanded="false" aria-controls="${cardId}" data-rc-card="${cardId}"><span class="rc-sig__text">${esc(signal.text)}</span>${signal.meter ? meterHtml(signal.meter) : ''}<span class="rc-cat">${esc(family)}</span><svg class="rc-sig__chev" viewBox="0 0 16 16" aria-hidden="true"><path d="m5 6.5 3 3 3-3"/></svg></button>`;
+}
+
+let cardSeq = 0;
+/** Chips that open cards, and the cards (hidden until opened) right under the row. */
+export function cardsHtml(records: RecognitionRecord[], language: Language, options: SignalOptions) {
+  const ids = records.map(() => `rc-card-${++cardSeq}`);
+  const chips = records
+    .map((r, i) => cardChipHtml(lensSignal(r, language, options.materialName), language, ids[i]))
+    .join('');
+  const cards = records
+    .map(
+      (r, i) =>
+        `<div class="rc-card-slot" id="${ids[i]}" hidden>${cardHtml(r, language, { materialName: options.materialName, ...options.cards })}</div>`,
+    )
+    .join('');
+  return `<div class="rc-sigs-wrap"><p class="rc-sigs">${chips}</p>${cards}</div>`;
+}
+
 export function chipHtml(signal: LensSignal, language: Language) {
   return `<span class="rc-sig" data-task="${esc(signal.task)}" data-tone="${signal.tone}"${signal.fallback ? ' data-fallback=""' : ''} title="${esc(signal.method)}"><span class="rc-sig__text">${esc(signal.text)}</span>${signal.meter ? meterHtml(signal.meter) : ''}<span class="rc-cat">${esc(signal.fallback ? `${signal.category} · ${t(language, 'fallback')}` : signal.category)}</span></span>`;
 }
@@ -243,6 +272,7 @@ export function signalsHtml(
   options: SignalOptions,
 ) {
   if (!records?.length) return '';
+  if (options.lens && options.cards) return cardsHtml(records, language, options);
   if (options.lens)
     return `<p class="rc-sigs">${records.map((r) => chipHtml(lensSignal(r, language, options.materialName), language)).join('')}</p>`;
   const lines = quietLines(records, language, options.context);
@@ -293,6 +323,11 @@ export function renderSignals(
   options: SignalOptions,
 ): HTMLElement | null {
   if (!records?.length) return null;
+  if (options.lens && options.cards) {
+    const box = doc.createElement('div');
+    box.innerHTML = cardsHtml(records, language, options);
+    return (box.firstElementChild as HTMLElement | null) ?? box;
+  }
   if (options.lens) {
     const row = doc.createElement('p');
     row.className = 'rc-sigs';

@@ -1247,3 +1247,26 @@
     animation: none;
   }
 }
+
+/* Arrived from a lens card (#/lab/<row>): the entry is marked once, briefly. */
+.rc-rec[data-jumped] {
+  animation: rc-jumped 1.6s var(--ease-out);
+}
+.rc-rec:focus {
+  outline: none;
+}
+@keyframes rc-jumped {
+  0%,
+  40% {
+    box-shadow: inset 3px 0 0 var(--ink);
+  }
+  100% {
+    box-shadow: inset 3px 0 0 transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-rec[data-jumped] {
+    animation: none;
+    box-shadow: inset 3px 0 0 var(--ink);
+  }
+}

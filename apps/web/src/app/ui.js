@@ -32,6 +32,7 @@ import { openLensForDelivery } from '../screens/result/deliver-lens';
 import { registerResultScreen } from '../screens/result';
 import { playReading } from '../features/recognition-native/sentences';
 import { signalsHtml } from '../features/recognition-native/signals';
+import { installCardToggles, setCardDefaults } from '../features/recognition-native/profile-card';
 // The system profile page (#/lab) loads its code on demand, its styles with the main bundle.
 import '../features/recognition-lab/lab.css';
 import './practice-language.css';
@@ -632,8 +633,9 @@ WS.push(...registeredRouteNames());
 onRouteRegistered((name) => WS.push(name));
 function parseRoute() {
   const [r, id] = location.hash.replace(/^#\/?/, '').split('/');
-  if (['pm', 'work', 'bench', 'review', 'lab', 'engineer-report'].includes(r))
-    return { r, id: null };
+  if (['pm', 'work', 'bench', 'review', 'engineer-report'].includes(r)) return { r, id: null };
+  // #/lab/<row>: the system profile, scrolled to one recognizer (a lens card's way in).
+  if (r === 'lab') return { r, id: id ? decodeURIComponent(id) : null };
   if ((r === 'task' || r === 'doc') && id) return { r, id: decodeURIComponent(id) };
   if (isRegisteredRoute(r)) return { r, id: id ? decodeURIComponent(id) : null };
   // The engineer's desk (#/engineer/<ticket>) and a review's report (#/engineer-review/<review>).
@@ -770,6 +772,7 @@ function mountLabPage() {
   if (skip) skip.textContent = T('跳到主要内容', 'Skip to content');
   if (labView?.key === key) {
     slot.replaceWith(labView.el);
+    labJump(ui.routeId);
     return;
   }
   const refresh = !labView;
@@ -787,8 +790,17 @@ function mountLabPage() {
       sessionKey,
       refresh,
       submitted,
-    }),
+    }).then(() => labJump(ui.routeId)),
   );
+}
+// Opened from a lens card (#/lab/<row>): its recognizer's entry in the register, focused.
+function labJump(row) {
+  const entry = row && document.getElementById(`rc-${row}`);
+  if (!entry) return;
+  entry.scrollIntoView({ block: 'start', behavior: reduceMotion.matches ? 'auto' : 'smooth' });
+  entry.setAttribute('tabindex', '-1');
+  entry.focus({ preventScroll: true });
+  entry.dataset.jumped = '';
 }
 // #/engineer-report: read-only sample regression reports; the page keeps itself across re-renders.
 function renderEngineerReport() {
@@ -1865,7 +1877,7 @@ const materialNameOf = (a) => (id) => {
 };
 /** A test run's recognition signals: quiet facts by default, chips in the lens. */
 function runSignals(a, x) {
-  return `<div data-rc-run="${esc(x.id)}">${signalsHtml(x.recognition, locale(), { context: 'test', lens: lensOn(), materialName: materialNameOf(a) })}</div>`;
+  return `<div data-rc-run="${esc(x.id)}">${signalsHtml(x.recognition, locale(), { context: 'test', lens: lensOn(), materialName: materialNameOf(a), cards: {} })}</div>`;
 }
 /** Redraw only the recognition parts of the current page when the lens opens or closes. */
 onLensChange((on) => {
@@ -1881,6 +1893,7 @@ onLensChange((on) => {
           context: 'test',
           lens: lensOn(),
           materialName: materialNameOf(a),
+          cards: {},
         })
       : '';
   });
@@ -7617,6 +7630,10 @@ const workFolders = installWorkFolders(document, {
   },
 });
 installV4References(() => L.v4Host(current()));
+// Lens chips open their profile card in place; a practice opened with a continue code says its
+// records are replayed, not recomputed.
+installCardToggles(locale);
+setCardDefaults(() => ({ replay: !!sessionOf(current())?.recovered }));
 // Board cards drawn by the native workspace read tests, reminders and the revision start here.
 provideTaskCardFacts((taskId) => {
   const a = current();

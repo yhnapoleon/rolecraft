@@ -692,6 +692,7 @@ export function mount(
     const signals = renderSignals(doc, turn.recognition, locale(), {
       context: 'reply',
       lens: lensOn(),
+      cards: {},
     });
     if (signals) extra.append(signals);
     them.append(avatarNode(doc, selected), body);

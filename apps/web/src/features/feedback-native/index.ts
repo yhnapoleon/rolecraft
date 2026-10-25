@@ -923,7 +923,7 @@ export function mountNativeFeedback(
           (record) => !(record.task === 'relation' && Array.isArray(record.outputs?.units)),
         ),
         language,
-        { context: 'feedback', lens: true },
+        { context: 'feedback', lens: true, cards: {} },
       );
       if (lensChips) box.append(lensChips);
       if (general.some((record) => record.task === 'relation' && Array.isArray(record.outputs?.units))) {
@@ -985,6 +985,7 @@ export function mountNativeFeedback(
         const signed = renderSignals(doc, criterionRecords(report, row.criterion), language, {
           context: 'criterion',
           lens,
+          cards: {},
         });
         if (signed) nodes.push(signed);
         if (!readOnly) {
