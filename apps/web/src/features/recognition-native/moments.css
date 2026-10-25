@@ -9,11 +9,11 @@
 .rc-signature:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: var(--r-xs); }
 @media (hover: hover) and (pointer: fine) { .rc-signature:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; } }
 .rc-test-moment { margin: 16px 0 4px; padding-block-start: 12px; border-block-start: 1px solid var(--line); min-width: 0; }
-.rc-hit { margin-block-end: 8px; padding: 12px 16px; border-inline-start: 2px solid var(--line-2); background: var(--paper); border-radius: var(--r-paper); }
-.rc-hit-title, .rc-moment-note { margin: 0 0 7px; font-size: 12px; line-height: 1.55; color: var(--ink-3); overflow-wrap: anywhere; }
-.rc-hit blockquote { margin: 6px 0 10px; color: var(--ink-2); font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; }
+.rc-moment-hit { margin-block-end: 8px; padding: 12px 16px; border-inline-start: 2px solid var(--line-2); background: var(--paper); border-radius: var(--r-paper); }
+.rc-moment-hit-title, .rc-moment-note { margin: 0 0 7px; font-size: 12px; line-height: 1.55; color: var(--ink-3); overflow-wrap: anywhere; }
+.rc-moment-hit blockquote { margin: 6px 0 10px; color: var(--ink-2); font-size: 15px; line-height: 1.65; overflow-wrap: anywhere; }
 .rc-moment-change { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 15px; color: var(--ink-2); font-variant-numeric: tabular-nums; margin: 0 0 8px; }
 .rc-moment-change strong { color: var(--warn); font-size: 23px; font-weight: 600; }
 .rc-test-age { color: var(--warn); font-size: 12px; line-height: 1.5; margin: 10px 0; }
-.rc-hit mark { background: var(--warn-tint); color: var(--ink); }
-@media (max-width: 720px) { .rc-hit { padding: 10px 12px; } .rc-signature { min-height: 32px; } }
+.rc-moment-hit mark { background: var(--warn-tint); color: var(--ink); }
+@media (max-width: 720px) { .rc-moment-hit { padding: 10px 12px; } .rc-signature { min-height: 32px; } }

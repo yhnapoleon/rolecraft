@@ -32,7 +32,7 @@ import { openLensForDelivery } from '../screens/result/deliver-lens';
 import { registerResultScreen } from '../screens/result';
 import { playReading } from '../features/recognition-native/sentences';
 import { signalsHtml } from '../features/recognition-native/signals';
-import { installCardToggles } from '../features/recognition-native/profile-card';
+import { installCardToggles, fillCardMetrics } from '../features/recognition-native/profile-card';
 // The system profile page (#/lab) loads its code on demand, its styles with the main bundle.
 import '../features/recognition-lab/lab.css';
 import './practice-language.css';
@@ -4852,6 +4852,7 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
   }
   const stage = document.getElementById('main');
   const y = stage ? stage.scrollTop : 0;
+  const openMomentCards = [...(stage?.querySelectorAll('.rc-test-moment [data-rc-card][aria-expanded="true"]') || [])].map((key) => key.dataset.rcCard);
   if (parts.includes('toolbar')) {
     const tb = document.getElementById('ws-toolbar');
     const html = wsToolbar(a);
@@ -4877,6 +4878,11 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
       );
     }
     if (stage) stage.scrollTop = y;
+    for (const id of openMomentCards) {
+      const card = document.getElementById(id);
+      const key = next?.querySelector(`[data-rc-card="${CSS.escape(id)}"]`);
+      if (card && key) { card.hidden = false; key.setAttribute('aria-expanded', 'true'); void fillCardMetrics(card, locale()); }
+    }
     ui.stageStale = false;
   }
   if (parts.includes('rail')) {
@@ -5980,7 +5986,7 @@ async function act(el, ev = new Event('rc-action')) {
         ? `${md(text.slice(0, at), { dropTitle: true })}<mark data-hit-target>${esc(hit.quote)}</mark>${md(text.slice(at + hit.quote.length), { dropTitle: true })}`
         : `${m ? md(text, { dropTitle: true }) : `<p>${T('这个引用版本的正文暂未取得。', 'The exact cited version is unavailable.')}</p>`}`;
       openSheet(T('本次检索原文', 'Retrieved passage'),
-        `<div class="rc-hit"><p class="rc-hit-title">${esc(c.title || materialNameOf(a)(c.id))} · v${c.version}</p><blockquote>${esc(hit.quote)}</blockquote></div><div class="prose serif">${passage}</div>`,
+        `<div class="rc-moment-hit"><p class="rc-moment-hit-title">${esc(c.title || materialNameOf(a)(c.id))} · v${c.version}</p><blockquote>${esc(hit.quote)}</blockquote></div><div class="prose serif">${passage}</div>`,
         btn(T('返回测试', 'Back to the test'), 'close', 'primary'), 'wide');
       sheet.querySelector('[data-hit-target]')?.scrollIntoView({ block: 'center' });
       break;

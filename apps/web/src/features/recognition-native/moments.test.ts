@@ -44,6 +44,11 @@ describe('normal working moments', () => {
     expect(html).toContain('400');
     expect(testMomentHtml(fresh, [fresh], 'en', x => x)).not.toContain('not index-only');
   });
+  it('keeps disclosure identifiers stable across redraws and distinct between runs', () => {
+    const r = run.recognition[0];
+    expect(signatureHtml(r, 'en', {}, 'a')).toBe(signatureHtml(r, 'en', {}, 'a'));
+    expect(signatureHtml(r, 'en', {}, 'a')).not.toBe(signatureHtml(r, 'en', {}, 'b'));
+  });
   it('uses the existing accessible technical-card disclosure in both languages', () => {
     for (const lang of ['zh', 'en'] as const) {
       const html = signatureHtml(run.recognition[0], lang);

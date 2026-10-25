@@ -32,10 +32,14 @@ export function signatureText(record: RecognitionRecord, language: Language) {
     default: return rule ? t('规则判定', 'Rule check') : actual.method;
   }
 }
-let sequence = 0;
+function recordKey(record: RecognitionRecord, identity: string) {
+  let hash = 2166136261;
+  for (const char of JSON.stringify([identity, record])) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
+  return (hash >>> 0).toString(36);
+}
 /** Same technical card and disclosure behavior as the existing lens. */
-export function signatureHtml(record: RecognitionRecord, language: Language, options: CardOptions = {}) {
-  const id = `rc-moment-card-${++sequence}`;
+export function signatureHtml(record: RecognitionRecord, language: Language, options: CardOptions = {}, identity = '') {
+  const id = `rc-moment-card-${recordKey(record, identity)}`;
   const actual = actualMethod(record, language);
   return `<div class="rc-signature-wrap"><button type="button" class="rc-signature" data-rc-card="${id}" aria-controls="${id}" aria-expanded="false" title="${escapeMoment(actual.method)}" data-recognition-method="${actual.mode}">${escapeMoment(signatureText(record, language))}<span aria-hidden="true"> ›</span></button><div id="${id}" class="rc-card-slot" hidden>${cardHtml(record, language, options)}</div></div>`;
 }
