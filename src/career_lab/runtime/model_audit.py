@@ -71,7 +71,9 @@ class ModelCallAudit:
             a, b = tokens(usage, "prompt_tokens"), tokens(usage, "completion_tokens")
             reason = getattr(reply, "finish_reason", None)
             attempt = ModelAttemptUsage(
-                request_id=(_scope.get() or {}).get("request_id", self.identity["call_id"]),
+                request_id=self.identity.get(
+                    "request_id", (_scope.get() or {}).get("request_id", self.identity["call_id"])
+                ),
                 attempt_id=self.identity["call_id"],
                 expected_provider=getattr(model, "provider", None),
                 expected_model_revision=model.revision,

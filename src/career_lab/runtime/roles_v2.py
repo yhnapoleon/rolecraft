@@ -1141,7 +1141,7 @@ class ModelStanceProducer:
         return result
 
 
-def _review_once(model, request, messages, record_attempt):
+def _review_once(model, request, messages, record_attempt, *, audit=None):
     """One transport call including malformed/timeout outcomes; never a repair call."""
     import json
 
@@ -1152,7 +1152,11 @@ def _review_once(model, request, messages, record_attempt):
     error = None
     value = None
     try:
-        raw = model.complete(messages, [])
+        raw = (
+            audit.complete(model, messages, [])
+            if audit is not None
+            else model.complete(messages, [])
+        )
         response = ModelReply.model_validate(
             raw.model_dump(mode="json") if isinstance(raw, ModelReply) else raw
         )
@@ -1581,11 +1585,29 @@ class CooperativeHelpVerifier:
             },
             {"role": "user", "content": json.dumps(inputs, ensure_ascii=False)},
         ]
-        answer = _review_once(self.model, request, review_messages, record_attempt)
+        from career_lab.runtime.model_audit import ModelCallAudit
+
+        audit = ModelCallAudit(
+            "ROLES_HELP",
+            session_id=request.session_id,
+            request_id=request.id,
+            role_id=request.input.role_id,
+        )
+        try:
+            answer = _review_once(self.model, request, review_messages, record_attempt, audit=audit)
+        except ProtocolError as error:
+            audit.validation("technical_failure", error.code)
+            raise
         try:
             review = HelpAssessment.model_validate(answer)
         except ValidationError:
+            audit.validation("technical_failure", "role_help_review_invalid")
             raise ProtocolError("role_help_review_invalid", status=409) from None
+        audit.validation(
+            "permitted" if review.permits_publication(relaxed) else "withheld",
+            assessment=review.model_dump(mode="json"),
+            failed_checks=[key for key, value in review.model_dump().items() if value is False],
+        )
         if not review.permits_publication(relaxed):
             raise ProtocolError("role_help_unverified", status=409)
         if not relaxed and "fact" in review.request_kinds and not citations:
