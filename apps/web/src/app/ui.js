@@ -6650,6 +6650,14 @@ async function act(el, ev = new Event('rc-action')) {
     case 'cite-hit': {
       const r = a.tests.find((x) => x.id === id);
       const hit = r && retrievalHit(r);
+      if (hit?.citation && L.nativeWorkspace(a)) {
+        const work = nativeCiteHost.open() || nativeCiteHost.newest(a);
+        if (!work) { notify(T('先在这件事里写一份作品，再引用依据。', 'Write a piece of work for this task first, then cite evidence.')); break; }
+        const c = hit.citation;
+        const accepted = await nativeCiteHost.cite(a, work, { session_id: a.id, kind: 'material', object_id: c.id, version: c.version });
+        if (accepted) { nativeCiteHost.show(work); notify(T('依据已加入草稿，保存这版后生效。', 'Evidence added to your draft. Save this version to keep it.')); }
+        break;
+      }
       if (hit?.citation) cite({ id: hit.citation.id, title: hit.citation.title, version: hit.citation.version, body: hit.quote, type: 'material' });
       refreshWS(['stage']);
       break;
