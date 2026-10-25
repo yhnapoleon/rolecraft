@@ -89,7 +89,7 @@ export function introduction(job: Job, person: Person, language: Language) {
   return { name, title, hello, body, questions };
 }
 const KEY = 'rolecraft.colleague-greetings.v1';
-type Entry = { job: Job; entered: boolean };
+type Entry = { job: Job; entered: boolean; startedAt?: number; story?: boolean };
 type StoragePort = Pick<Storage, 'getItem' | 'setItem'>;
 /** Only an explicit new-practice action enrols a session. Recovery and old sessions never do. */
 export function greetingStore(storage?: StoragePort) {
@@ -113,11 +113,32 @@ export function greetingStore(storage?: StoragePort) {
   return {
     prepare(id: string, job: Job) {
       const all = read();
-      if (!all[id]) save({ ...all, [id]: { job, entered: false } });
+      if (!all[id]) save({ ...all, [id]: { job, entered: false, story: true } });
     },
     job(id: string): Job | null {
       const value = read()[id]?.job;
       return value === 'pm' || value === 'engineer' ? value : null;
+    },
+    story(id: string): boolean {
+      return read()[id]?.story === true;
+    },
+    start(id: string, now = Date.now()): number | null {
+      const all = read(),
+        entry = all[id];
+      if (!entry) return null;
+      if (entry.startedAt !== undefined) return entry.startedAt;
+      // Old greeting entries have already arrived. Do not replay their delivery.
+      const startedAt = entry.entered ? 0 : now;
+      save({ ...all, [id]: { ...entry, entered: true, startedAt } });
+      return startedAt;
+    },
+    complete(id: string) {
+      const all = read(),
+        entry = all[id];
+      if (entry) save({ ...all, [id]: { ...entry, entered: true, startedAt: 0 } });
+    },
+    started(id: string): number | null {
+      return read()[id]?.startedAt ?? null;
     },
     claim(id: string): Job | null {
       const all = read(),

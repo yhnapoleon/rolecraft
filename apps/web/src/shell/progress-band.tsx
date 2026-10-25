@@ -28,6 +28,7 @@ export type BandLayer = {
 
 export type ProgressBandProps = {
   layers: BandLayer[];
+  suggestion?: { label: string; text: string };
   current: string;
   /** Missing pieces carried into the current layer from reopened ones. */
   carried: string[];
@@ -146,12 +147,12 @@ export function ProgressBand(props: ProgressBandProps) {
   const isNow = shown.id === current.id;
   const after = p.layers.slice(at + 1, at + 3);
   const arrived = p.arrived ? p.layers.find((l) => l.id === p.arrived) : undefined;
-  const missing = [...new Set([...(narrow ? current.compactMissing ?? current.missing : current.missing), ...p.carried])];
+  const missing = [...new Set([...(narrow ? (current.compactMissing ?? current.missing) : current.missing), ...p.carried])];
   const confirmed = current.confirmed.length
-    ? narrow ? current.compactConfirmed ?? current.confirmed.slice(0, 1) : current.confirmed
+    ? narrow ? (current.compactConfirmed ?? current.confirmed.slice(0, 1)) : current.confirmed
     : p.layers
         .slice(0, at)
-        .flatMap((l) => narrow ? l.compactConfirmed ?? l.confirmed.slice(0, 1) : l.confirmed)
+        .flatMap((l) => (narrow ? (l.compactConfirmed ?? l.confirmed.slice(0, 1)) : l.confirmed))
         .slice(-1);
   const summary = (dock = false) => (
     <div className="rc-prog__summary" data-progress-current={current.id}>
@@ -164,6 +165,11 @@ export function ProgressBand(props: ProgressBandProps) {
           {current.label}
         </h2>
         <p className="rc-prog__goal">{current.goal}</p>
+        {p.suggestion && (
+          <p className="rc-prog__suggestion">
+            <b>{p.suggestion.label}</b> · {p.suggestion.text}
+          </p>
+        )}
       </div>
       <dl className="rc-prog__facts">
         <div>
