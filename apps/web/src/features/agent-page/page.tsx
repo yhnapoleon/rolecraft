@@ -5,7 +5,7 @@ import { Plug } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { onAgentEvent } from '../../shell/agent-bus';
 import { Button } from '../../ui-kit';
-import { ConnectPanel } from './connect';
+import { ConnectPanel, connectionLabel } from './connect';
 import type { AgentEvent } from './feed';
 import { AccessUnconfirmed, canConnect, ensureAccess } from './grant';
 import { type AgentPageProps, feedStore } from './index';
@@ -39,6 +39,11 @@ export function AgentPage(props: AgentPageProps) {
     () => canConnect(host),
   );
   const ready = feed.loaded && hostReady;
+
+  // Connected setup stays available as a compact summary; hand-backs take the focus.
+  useEffect(() => {
+    if (phase === 'connected') setReveal(false);
+  }, [phase]);
 
   // While someone waits for the first connection, poll fast.
   useEffect(() => {
@@ -140,11 +145,19 @@ export function AgentPage(props: AgentPageProps) {
     ) : null;
 
   return (
-    <div className="ag-root" data-lang={lang}>
+    <div className="ag-root" data-lang={lang} data-connection={phase}>
       <header className="ag-head">
-        <h1 id="ag-title" className="ag-title">
-          {t(lang, '我的 Agent', 'My agent')}
-        </h1>
+        <div className="ag-headline">
+          <h1 id="ag-title" className="ag-title">
+            {t(lang, '我的 Agent', 'My agent')}
+          </h1>
+          <span className="ag-head-status">
+            <span className="rc-agent-light" data-state={phase} aria-hidden="true" />
+            {phase === 'none'
+              ? t(lang, '还没连接', 'Not connected')
+              : connectionLabel(feed.connection, lang)}
+          </span>
+        </div>
         <p className="ag-lede">
           {props.hat === 'engineer'
             ? t(
@@ -206,6 +219,19 @@ export function AgentPage(props: AgentPageProps) {
           ) : null)}
       </Rig>
 
+      {(phase === 'connected' || phase === 'idle') && host ? (
+        <div className="ag-connection-summary">
+          <span className="ag-connect-status" role="status">
+            <span className="rc-agent-light" data-state={phase} aria-hidden="true" />
+            {connectionLabel(feed.connection, lang)}
+          </span>
+          <Button variant="ghost" onClick={() => setReveal(!reveal)} aria-expanded={showConnect}>
+            {showConnect
+              ? t(lang, '收起连接设置', 'Hide connection setup')
+              : t(lang, '再看一次连接命令', 'Show the command again')}
+          </Button>
+        </div>
+      ) : null}
       {showConnect && host ? (
         <ConnectPanel
           lang={lang}
@@ -222,15 +248,11 @@ export function AgentPage(props: AgentPageProps) {
           <header className="ag-tx-head">
             <h2 id="ag-tx-title">{t(lang, '传输', 'Transmission')}</h2>
             <span className="ag-grow" />
-            {phase !== 'waiting' && !showConnect ? (
-              <Button variant="ghost" onClick={() => setReveal(true)}>
-                {t(lang, '再看一次连接命令', 'Show the command again')}
-              </Button>
-            ) : null}
           </header>
           <TransmissionStream
             events={feed.events}
             variant="full"
+            spotlight
             lang={lang}
             liveFrom={feed.liveFrom}
             work={(id) => works.get(id) ?? null}

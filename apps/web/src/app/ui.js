@@ -152,7 +152,6 @@ import {
   installShell,
   lastTicket,
   onAgentConnection,
-  onAgentEvent,
   setHat,
   setLastTicket,
   stageOf,
@@ -1418,7 +1417,7 @@ function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief
     c.state === 'idle' && c.lastSeen
       ? T(`我的 Agent · 上次 ${when(c.lastSeen)}`, `My agent · Last seen ${when(c.lastSeen)}`)
       : T('我的 Agent', 'My agent');
-  const lamp = `<button type="button" class="agent-lamp" data-action="open-agent" data-state="${c.state}" title="${esc(lampTitle)}" aria-label="${esc(`${lampTitle}: ${lampLabel}`)}"><span class="lamp" aria-hidden="true"><span class="lamp-ring"></span></span><span class="lamp-label">${esc(lampLabel)}</span></button>`;
+  const lamp = `<button type="button" class="agent-lamp" data-action="open-agent" data-state="${c.state}" title="${esc(lampTitle)}" aria-label="${esc(`${lampTitle}: ${lampLabel}`)}"><span class="lamp rc-agent-light" data-state="${c.state}" aria-hidden="true"><span class="lamp-ring"></span></span><span class="lamp-label">${esc(lampLabel)}</span></button>`;
   const record = `<button type="button" class="btn quiet icon icon-key record-btn" data-action="records" aria-label="${esc(T('记录', 'Record'))}" title="${esc(T('记录', 'Record'))}">${icon('hours', 'i-sm')}</button>`;
   const moreWrap =
     more ||
@@ -1898,20 +1897,6 @@ function fitShellBar() {
     }
 }
 window.addEventListener('resize', () => requestAnimationFrame(fitShellBar));
-// A real agent call: the lamp's ring grows to 2.2x and fades, once (520ms).
-function pulseLamp() {
-  const ring = document.querySelector('.agent-lamp .lamp-ring');
-  if (!ring?.animate) return;
-  ring.animate(
-    reduceMotion.matches
-      ? [{ opacity: 0.6 }, { opacity: 0 }]
-      : [
-          { opacity: 0.7, transform: 'scale(1)' },
-          { opacity: 0, transform: 'scale(2.2)' },
-        ],
-    { duration: reduceMotion.matches ? 160 : 520, easing: 'cubic-bezier(.23,1,.32,1)' },
-  );
-}
 /** The practice's one model status, once the server has read it; null for legacy practice. */
 function modelStatusOf(a) {
   const host = a && L.nativeWorkspace(a) ? L.v4Host(a) : null;
@@ -3392,7 +3377,7 @@ function railTeam(a) {
       },
     ).join('')}
       <li class="people-sep" role="separator"></li>
-      <li><button type="button" class="person mine" data-action="board-my-agent">${agentMark('md')}<span class="grow"><span class="person-name">${T('我的 Agent', 'My agent')}<small>${T('你自己的工具', 'Your own tool')}</small></span><span class="person-line">${esc(agentLine(a, hatOf(a.id), agentConnection(), feedStore.snapshot().events))}</span></span></button></li>
+      <li><button type="button" class="person mine" data-action="board-my-agent">${agentMark('md')}<span class="grow"><span class="person-name">${T('我的 Agent', 'My agent')}<span class="rc-agent-light" data-state="${agentConnection().state}" role="img" aria-label="${esc(agentConnection().state === 'connected' ? T('已连接', 'Connected') : T('未连接或空闲', 'Not connected or idle'))}"></span><small>${T('你自己的工具', 'Your own tool')}</small></span><span class="person-line">${esc(agentLine(a, hatOf(a.id), agentConnection(), feedStore.snapshot().events))}</span></span></button></li>
     </ul></section>
   </div>`;
 }
@@ -8120,13 +8105,25 @@ installEngineer({
   notify,
   download,
 });
-onAgentEvent(pulseLamp);
 onAgentConnection(() => {
   if (inPractice()) {
     if (WS.includes(ui.route)) refreshWS(['toolbar', 'rail']);
     else {
+      const c = agentConnection();
       const lamp = document.querySelector('.agent-lamp');
-      if (lamp) lamp.dataset.state = agentConnection().state;
+      const label = c.state === 'none' ? T('连接 Agent', 'Connect agent') : c.state === 'waiting' ? T('等待 Agent', 'Waiting for agent') : c.client || T('我的 Agent', 'My agent');
+      const title = c.state === 'idle' && c.lastSeen ? T(`我的 Agent · 上次 ${when(c.lastSeen)}`, `My agent · Last seen ${when(c.lastSeen)}`) : T('我的 Agent', 'My agent');
+      if (lamp) {
+        lamp.dataset.state = c.state;
+        lamp.title = title;
+        lamp.setAttribute('aria-label', `${title}: ${label}`);
+        const text = lamp.querySelector('.lamp-label');
+        if (text) text.textContent = label;
+      }
+      for (const light of document.querySelectorAll('.agent-lamp .rc-agent-light, .person.mine .rc-agent-light')) {
+        light.dataset.state = c.state;
+        if (light.getAttribute('role') === 'img') light.setAttribute('aria-label', c.state === 'connected' ? T('已连接', 'Connected') : T('未连接或空闲', 'Not connected or idle'));
+      }
     }
   }
 });

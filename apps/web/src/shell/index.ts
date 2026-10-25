@@ -4,6 +4,7 @@ import { keepIsland, sweepIslands } from '../islands/mount';
 import { setActionRunner } from './registry';
 import { ShellToaster } from './toaster';
 import './shell.css';
+import './agent-light.css';
 
 export * from './registry';
 export * from './signals';

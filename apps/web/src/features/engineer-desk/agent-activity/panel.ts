@@ -262,7 +262,11 @@ export class AgentPanel {
   /** The head says what the agent bus says (connected, idle since, waiting, not connected). */
   private drawStatus() {
     const status = agentStatus(agentConnection());
-    this.status.textContent = status.text;
+    const light = this.ctx.doc.createElement('span');
+    light.className = 'rc-agent-light';
+    light.dataset.state = status.state;
+    light.setAttribute('aria-hidden', 'true');
+    this.status.replaceChildren(light, this.ctx.doc.createTextNode(` ${status.text}`));
     this.element.dataset.connection = status.state;
   }
 

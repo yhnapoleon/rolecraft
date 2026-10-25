@@ -1,6 +1,6 @@
 // Desktop and terminal setup share persistent client configuration. Secrets are fetched only
 // for an explicit copy/download; connection status comes from the server's activity feed.
-import { Check, Copy, Download } from 'lucide-react';
+import { Copy, Download } from 'lucide-react';
 import { useState } from 'react';
 import {
   accessDuration,
@@ -136,7 +136,11 @@ export function ConnectPanel({
       <header className="ag-connect-head">
         <h2>{t(lang, '选择你用的工具', 'Choose your tool')}</h2>
         <p className="ag-connect-status" role="status" data-connected={connected}>
-          {connected ? <Check size={14} aria-hidden="true" /> : <span className="ag-status-dot" />}
+          <span
+            className="ag-status-dot rc-agent-light"
+            data-state={connection?.state ?? 'none'}
+            aria-hidden="true"
+          />
           {connectionLabel(connection, lang)}
         </p>
       </header>

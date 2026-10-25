@@ -13,12 +13,14 @@ import {
   resetAgentBus,
   type Signal,
   setAgentConnection,
+  showConnectionToast,
   signalsChanged,
 } from '../../shell';
 import { type AgentFeed, createAgentFeed, type FeedSnapshot } from './feed';
 import type { GrantHost } from './grant';
 import { AgentPage } from './page';
 import './agent-page.css';
+import { createConnectionNotice } from './connection-notice';
 
 // biome-ignore lint/suspicious/noExplicitAny: the engine's attempt is untyped JavaScript
 type Attempt = any;
@@ -92,11 +94,20 @@ export function syncAgentFeed() {
   }
   if (!key || !host || !ports) return;
   const p = ports;
+  let storage: Storage | undefined;
+  try {
+    storage = localStorage;
+  } catch {
+    /* browser storage may be disabled */
+  }
+  const notice = createConnectionNotice(key, showConnectionToast, p.language, storage);
   const feed = createAgentFeed({
     read: async (after) => (await host.query('agent_activity', { after })) as never,
     emit: emitAgentEvent,
     changed: () => {
+      if (active?.feed !== feed) return;
       setAgentConnection(connection(feed, host));
+      notice(feed.snapshot());
       signalsChanged();
       changed();
     },

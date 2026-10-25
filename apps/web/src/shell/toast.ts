@@ -4,6 +4,7 @@
 import { createElement } from 'react';
 import { toast as sonner } from 'sonner';
 import { runAction } from './registry';
+import { ConnectionToast } from './status-toast';
 
 const SHORT = 3200;
 const LONG = 6500;
@@ -94,7 +95,25 @@ export function showToast(
 
 /** Withdraws the toast on screen (an undo belongs to the page it was offered on). */
 export function dismissToasts(): void {
-  sonner.dismiss();
+  for (const item of sonner.getToasts()) if (item.id !== connectionNotice) sonner.dismiss(item.id);
   last = null;
   mirror()?.classList.remove('visible');
+}
+
+// Connection feedback survives route changes and ordinary notifications for its five seconds.
+let connectionNotice: string | number | null = null;
+export function showConnectionToast(text: string): void {
+  if (connectionNotice !== null) sonner.dismiss(connectionNotice);
+  const id = `agent-connected-${Date.now()}`;
+  connectionNotice = id;
+  const close = () => {
+    sonner.dismiss(id);
+    if (connectionNotice === id) connectionNotice = null;
+  };
+  sonner.custom(() => createElement(ConnectionToast, { text, close }), {
+    id,
+    duration: Infinity,
+    testId: 'agent-connected',
+    onDismiss: close,
+  });
 }
