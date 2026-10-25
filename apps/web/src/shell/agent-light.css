@@ -1,0 +1,55 @@
+/* User-approved connection light: the only use of Apple green is actual MCP presence. */
+:root {
+  --agent-connected: #34c759;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --agent-connected: #30d158;
+  }
+}
+:root[data-theme="dark"] {
+  --agent-connected: #30d158;
+}
+.rc-agent-light[data-state] {
+  display: inline-block;
+  position: relative;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--ink-4);
+  box-shadow: none;
+  vertical-align: middle;
+  animation: none;
+}
+.rc-agent-light[data-state="connected"] {
+  background: var(--agent-connected);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--agent-connected) 12%, transparent);
+  animation: rc-agent-breathe 2.4s ease-in-out infinite;
+}
+.rc-agent-light[data-state="connected"]::before {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--agent-connected) 14%, transparent);
+}
+@keyframes rc-agent-breathe {
+  0%,
+  100% {
+    opacity: 0.65;
+    transform: scale(0.94);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-agent-light[data-state="connected"] {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}

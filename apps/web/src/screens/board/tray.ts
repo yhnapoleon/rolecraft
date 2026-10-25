@@ -3,6 +3,7 @@
 // Review and Dismiss. Dismiss only takes it off the tray; the work itself stays where it is.
 import { icon } from '../../app/art.js';
 import { T, when } from '../../app/i18n';
+import { agentConnection } from '../../shell/agent-bus';
 
 export type TrayDraft = {
   id: string;
@@ -36,7 +37,7 @@ export function agentTray(o: { connected: boolean; drafts: TrayDraft[] }) {
   const list = trayDrafts(o.drafts);
   const land = landing;
   landing = null;
-  const head = `<header class="tray-head"><span class="tray-mark" aria-hidden="true"></span><h2 id="tray-h">${T('来自你的 Agent', 'From your agent')}</h2>${list.length ? `<span class="sec-count">${list.length}</span>` : ''}</header>`;
+  const head = `<header class="tray-head"><span class="tray-mark rc-agent-light" data-state="${agentConnection().state}" aria-hidden="true"></span><h2 id="tray-h">${T('来自你的 Agent', 'From your agent')}</h2>${list.length ? `<span class="sec-count">${list.length}</span>` : ''}</header>`;
   if (!list.length)
     return `<section class="agent-tray is-empty" aria-labelledby="tray-h">${head}<div class="tray-slot">${T('你的 Agent 交回的草稿会落在这里', "Your agent's drafts land here")}</div></section>`;
   return `<section class="agent-tray" aria-labelledby="tray-h">${head}<ul class="tray-list" role="list">${list

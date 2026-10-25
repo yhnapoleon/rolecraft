@@ -37,6 +37,8 @@ export type TransmissionStreamProps = {
   hat?: 'pm' | 'engineer';
   /** Any further narrowing, applied after hat. */
   filter?: (e: AgentEvent) => boolean;
+  /** My agent gives the latest returned work its own focal paper. */
+  spotlight?: boolean;
 };
 
 export const engineerCall = (e: AgentEvent) => e.tool.startsWith('engineer.');
@@ -265,6 +267,7 @@ export function TransmissionStream({
   empty,
   hat = 'pm',
   filter,
+  spotlight = false,
 }: TransmissionStreamProps) {
   const reduce = useReducedMotion();
   const [all, setAll] = useState(false);
@@ -278,7 +281,9 @@ export function TransmissionStream({
       ),
     [events, hat, filter],
   );
-  const shown = compact ? rows.slice(0, 3) : all ? rows : rows.slice(0, limit);
+  const featured = spotlight && !compact ? rows.find((row) => isReturn(row.event)) : undefined;
+  const timeline = featured ? rows.filter((row) => row !== featured) : rows;
+  const shown = compact ? timeline.slice(0, 3) : all ? timeline : timeline.slice(0, limit);
   if (!rows.length) return empty ? <div className="ag-stream-empty">{empty}</div> : null;
   // New rows press in from the top (FLIP for the rest); history appears without motion.
   // A new row never shares a frame with the row it pushes down: the rows below slide first
@@ -297,6 +302,21 @@ export function TransmissionStream({
       };
   return (
     <div className={`ag-stream${compact ? ' is-compact' : ''}`}>
+      {featured ? (
+        <section className="ag-recent" aria-label={t(lang, '最近交回', 'Latest hand-back')}>
+          <p className="ag-section-label">{t(lang, '最近交回', 'Latest hand-back')}</p>
+          <Paper
+            row={featured}
+            lang={lang}
+            work={featured.event.object?.id && work ? work(featured.event.object.id) : null}
+            onOpen={onOpen}
+            onAdopt={onAdopt}
+          />
+        </section>
+      ) : null}
+      {spotlight && timeline.length ? (
+        <p className="ag-section-label ag-history-label">{t(lang, '活动记录', 'Activity')}</p>
+      ) : null}
       <ol className="ag-rows">
         <AnimatePresence initial={false}>
           {shown.map((row) => {
@@ -326,12 +346,12 @@ export function TransmissionStream({
           })}
         </AnimatePresence>
       </ol>
-      {!compact && rows.length > shown.length ? (
+      {!compact && timeline.length > shown.length ? (
         <Button variant="ghost" className="ag-more" onClick={() => setAll(true)}>
           {t(
             lang,
-            `显示更早的 ${rows.length - shown.length} 条`,
-            `Show ${rows.length - shown.length} earlier`,
+            `显示更早的 ${timeline.length - shown.length} 条`,
+            `Show ${timeline.length - shown.length} earlier`,
           )}
         </Button>
       ) : null}

@@ -2,7 +2,7 @@
 // ★ Signature moment (the third of three): the conduit is drawn once, the moment the agent
 // connects, and every real tool call sends one short ink pulse along it in the direction the
 // content travels (reading: workspace → agent; handing back: agent → workspace). It never loops.
-// The workspace row the call touched lights up; the agent's lamp rings once.
+// The workspace row the call touched lights up; the shared presence lamp breathes while connected.
 // Technique after Magic UI Animated Beam (MIT): one straight line, no gradient colours.
 // Motion exceptions (allowed for the signature only): the pulse travels 520ms with the strong
 // ease-in-out, the draw is a 520ms scaleX; both fall back to a 160ms fade with reduced motion.
@@ -136,7 +136,7 @@ export function Rig({
       const stamp = Date.now();
       setHit((h) => ({ ...h, ...Object.fromEntries(touched.map((k) => [k, stamp])) }));
       setNow((n) => ({ e, n: (n?.n ?? 0) + 1 }));
-      ring(lamp.current);
+
       if (!el || !track) return;
       const down = axis.current;
       el.dataset.dir = down ? (toAgent ? 'down' : 'up') : toAgent ? 'right' : 'left';
@@ -275,7 +275,7 @@ export function Rig({
           <div className="ag-agent-text">
             <p className="ag-agent-name">{agentName}</p>
             <p className="ag-agent-state">
-              <span className="ag-lamp" ref={lamp} aria-hidden="true" />
+              <span className="ag-lamp rc-agent-light" data-state={phase} ref={lamp} aria-hidden="true" />
               <span>{state}</span>
             </p>
           </div>
@@ -289,8 +289,8 @@ export function Rig({
               )
             : t(
                 lang,
-                '能读整个工作区，能交回草稿、跑测试。这一局一直有效。',
-                'Reads the whole workspace, hands back drafts and runs tests. Stays connected for this practice.',
+                '能读整个工作区，能交回草稿、跑测试。',
+                'Reads the whole workspace, hands back drafts and runs tests.',
               )}
         </p>
       </div>

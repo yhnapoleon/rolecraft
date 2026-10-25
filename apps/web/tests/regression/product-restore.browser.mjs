@@ -58,8 +58,8 @@ async function run(language, adoptWork, fault = null) {
       `localStorage.clear(); localStorage.setItem('rolecraft.locale', ${JSON.stringify(language)});`,
     );
     await browser.goto(process.env.BASE);
-    await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
-    await browser.click('[data-action="open-career"]');
+    await waitFor(browser, `!!document.querySelector('.home-roles [data-role="pm"] [data-action="open-career"]')`);
+    await browser.click('.home-roles [data-role="pm"] [data-action="open-career"]');
     await browser.click('.case-hero [data-action="take-case"]');
     await waitFor(browser, `!!document.querySelector('.card-open')`);
     await browser.click('.card-open');

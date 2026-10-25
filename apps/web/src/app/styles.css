@@ -2755,18 +2755,19 @@ button.crumb:hover {
 }
 .chat-head {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 12px 12px 8px;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 20px 18px 18px;
   box-shadow: 0 1px 0 var(--line);
 }
 .chat-name {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  font-size: 15px;
+  gap: 5px 10px;
+  font-size: 17px;
   font-weight: 600;
   line-height: 1.25;
+  flex-wrap: wrap;
 }
 .chat-name small {
   color: var(--ink-3);
@@ -2779,10 +2780,10 @@ button.crumb:hover {
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-top: 1px;
+  margin-top: 8px;
   color: var(--ink-3);
-  font-size: 12.5px;
-  line-height: 1.35;
+  font-size: 12px;
+  line-height: 1.6;
   text-wrap: pretty;
 }
 .thread {
@@ -2791,8 +2792,9 @@ button.crumb:hover {
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 18px;
   padding: 16px 14px;
+  padding-inline: 18px;
 }
 /* A native thread follows new messages itself; opening a long reply grows it in place, so the
    browser must not shift the view to keep something else still. */
@@ -6362,3 +6364,9 @@ ol.later-list li::marker {
 .run-meta > .chip > span:not(.ver) { min-width: 0; white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
 .run-meta > .chip > .ver { flex-shrink: 0; }
 .run-meta > .stamp { max-width: 100%; white-space: normal; overflow-wrap: anywhere; }
+
+@media (max-width: 720px) {
+  .chat-head {
+    padding: 16px;
+  }
+}

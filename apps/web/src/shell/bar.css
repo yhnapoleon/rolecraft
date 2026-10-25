@@ -426,18 +426,6 @@ html.scrolled body:not([data-view="work"]) .shell-bar {
   flex: none;
   box-shadow: inset 0 0 0 1.5px var(--ink-4);
 }
-.agent-lamp[data-state="waiting"] .lamp {
-  box-shadow: none;
-  border: 1.5px dashed var(--ink-3);
-}
-.agent-lamp[data-state="connected"] .lamp {
-  background: var(--ink);
-  box-shadow: none;
-}
-.agent-lamp[data-state="idle"] .lamp {
-  background: var(--ink-4);
-  box-shadow: none;
-}
 /* One pulse per real call: a ring grows to 2.2x while fading, 520ms. Never loops. */
 .lamp-ring {
   position: absolute;

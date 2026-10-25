@@ -666,6 +666,10 @@
   z-index: 3;
   margin-top: 20px;
   margin-bottom: 0;
+  padding: 24px 26px 16px;
+  box-shadow: none;
+  border-radius: var(--r-panel);
+  border: 1px solid var(--line);
 }
 @media (max-width: 720px) {
   .rc-prog-wrap .rc-prog,
@@ -721,4 +725,104 @@
   .rc-prog__facts > div + div { margin-top: 5px; }
   .rc-prog__viewing .btn { padding-block: 2px; }
   .rc-prog__tools { margin-top: 5px; }
+}
+
+.rc-prog .rc-prog__summary {
+  grid-template-columns: 1.25fr 1.2fr 0.7fr;
+  gap: 24px;
+}
+.rc-prog .rc-prog__focus {
+  border-left: 2px solid var(--ink);
+  padding-left: 16px;
+}
+.rc-prog .rc-prog__title {
+  font-size: 24px;
+  line-height: 1.35;
+  font-weight: 550;
+  margin: 8px 0 10px;
+}
+.rc-prog .rc-prog__title .rc-prog__n {
+  display: none;
+}
+.rc-prog .rc-prog__goal {
+  font-size: 13px;
+  line-height: 1.7;
+}
+.rc-prog .rc-prog__suggestion {
+  line-height: 1.65;
+  margin-top: 10px;
+}
+.rc-prog .rc-prog__facts {
+  font-size: 13px;
+  line-height: 1.65;
+}
+.rc-prog .rc-prog__facts > div + div {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+.rc-prog .rc-prog__facts dt {
+  font-size: 11px;
+  color: var(--ink-3);
+  margin-bottom: 4px;
+}
+.rc-prog .rc-prog__future {
+  padding-left: 18px;
+  border-left: 1px solid var(--line);
+}
+.rc-prog .rc-prog__future p {
+  margin-bottom: 18px;
+  gap: 5px;
+}
+.rc-prog .rc-prog__summary-link {
+  border-top: 1px solid var(--line);
+  justify-self: stretch;
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 10px;
+}
+@media (max-width: 1100px) and (min-width: 721px) {
+  .rc-prog .rc-prog__summary {
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+  }
+  .rc-prog .rc-prog__future {
+    grid-column: 1 / -1;
+    display: flex;
+    gap: 24px;
+    padding: 12px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .rc-prog .rc-prog__future p {
+    margin: 0;
+  }
+}
+@media (max-width: 720px) {
+  .rc-prog-wrap .rc-prog {
+    padding: 16px;
+  }
+  .rc-prog .rc-prog__summary {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+  .rc-prog .rc-prog__title {
+    font-size: 21px;
+    margin: 5px 0 7px;
+  }
+  .rc-prog .rc-prog__focus {
+    padding-left: 12px;
+  }
+  .rc-prog .rc-prog__facts > div + div {
+    margin-top: 8px;
+    padding-top: 8px;
+  }
+  .rc-prog .rc-prog__future {
+    padding: 12px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .rc-prog .rc-prog__future p {
+    margin: 0;
+  }
 }

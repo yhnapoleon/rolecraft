@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  accessDuration,
   claudeCodeCommand,
   codexCommand,
   connectionText,
@@ -10,10 +11,14 @@ import {
 
 const TOKEN = 'a'.repeat(64);
 const HINT =
-  '令牌会写进你的 Agent 配置和命令历史，最长 60 分钟失效，可随时撤销；点“完成”或离开练习后，这里不再提供。';
+  '令牌会写进你的 Agent 配置和命令历史，授权时长为 23 小时 55 分钟，可随时撤销；点“完成”或离开练习后，这里不再提供。';
 const ENDPOINT = 'http://127.0.0.1:20020/api/sessions/s1/mcp';
 
 describe('agent connection commands', () => {
+  it('derives the displayed lifetime from the issued access duration', () => {
+    expect(accessDuration('zh')).toBe('23 小时 55 分钟');
+    expect(accessDuration('en')).toBe('23 h 55 min');
+  });
   it('builds the endpoint on the page origin through the API proxy', () => {
     expect(mcpEndpoint('http://127.0.0.1:20020', 's1')).toBe(ENDPOINT);
     expect(mcpEndpoint('http://localhost:18560/', 'a/b')).toBe(
@@ -22,13 +27,16 @@ describe('agent connection commands', () => {
   });
   it('gives Claude Code a local-scope HTTP server with the token in its header', () => {
     expect(claudeCodeCommand(ENDPOINT, TOKEN)).toBe(
-      `claude mcp remove rolecraft -s local >/dev/null 2>&1; claude mcp add -s local --transport http rolecraft '${ENDPOINT}' --header 'Authorization: Bearer ${TOKEN}'`,
+      `claude mcp remove rolecraft -s user >/dev/null 2>&1; claude mcp add -s user --transport http rolecraft '${ENDPOINT}' --header 'Authorization: Bearer ${TOKEN}'`,
     );
   });
   it('starts Codex connected, with the token only in its environment', () => {
-    expect(codexCommand(ENDPOINT, TOKEN)).toBe(
-      `ROLECRAFT_MCP_TOKEN='${TOKEN}' codex -c 'mcp_servers.rolecraft={ url = "${ENDPOINT}", bearer_token_env_var = "ROLECRAFT_MCP_TOKEN" }'`,
-    );
+    const command = codexCommand(ENDPOINT, TOKEN);
+    expect(command).toContain('config.toml.rolecraft-backup-');
+    expect(command).toContain('http_headers');
+    expect(command).toContain(`'${ENDPOINT}' '${TOKEN}'`);
+    expect(command).not.toContain('bearer_token_env_var');
+    expect(command).not.toContain('codex -c');
   });
   it('quotes values for the shell so a quote cannot end the argument', () => {
     expect(claudeCodeCommand("http://h/it's", "to'ken")).toContain(

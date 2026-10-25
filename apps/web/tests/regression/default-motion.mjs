@@ -168,8 +168,8 @@ async function runLanguage(language) {
         await browser.ev(`matchMedia('(prefers-reduced-motion: reduce)').matches`),
         false,
       );
-      await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
-      await browser.click('[data-action="open-career"]');
+      await waitFor(browser, `!!document.querySelector('.home-roles [data-role="pm"] [data-action="open-career"]')`);
+      await browser.click('.home-roles [data-role="pm"] [data-action="open-career"]');
       await browser.click('.case-hero [data-action="take-case"]');
       await acceptEntryStory(browser);
       await waitFor(

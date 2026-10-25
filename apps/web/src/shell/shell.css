@@ -46,3 +46,38 @@
   backdrop-filter: var(--pop-filter);
   box-shadow: var(--pop-hi), var(--shadow-float);
 }
+
+.rc-connection-toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+.rc-connection-toast__text {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.rc-connection-toast button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-key);
+  background: transparent;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.rc-connection-toast button:hover {
+  background: var(--fill);
+}
+.rc-connection-toast button:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+.person-name > .rc-agent-light {
+  margin-inline: 8px;
+}

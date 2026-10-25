@@ -1,23 +1,36 @@
-// "Connect your agent": one press issues access and shows one command per client. Copy, paste in
-// a terminal, and the agent starts already connected with its first request. The token is only in
-// what is copied; the command on screen is masked. Command block after the AI Elements Snippet
-// (Apache-2.0): the copy key crossfades to a check through a 2px blur and comes back after 1.6s.
-import { Copy } from 'lucide-react';
+// Desktop and terminal setup share persistent client configuration. Secrets are fetched only
+// for an explicit copy/download; connection status comes from the server's activity feed.
+import { Copy, Download } from 'lucide-react';
 import { useState } from 'react';
-import { claudeCodeCommand, codexCommand, mcpEndpoint } from '../../app/agent-connection';
-import { Button, type ButtonState, Segmented } from '../../ui-kit';
+import {
+  accessDuration,
+  claudeCodeCommand,
+  codexCommand,
+  mcpEndpoint,
+} from '../../app/agent-connection';
+import type { AgentConnection } from '../../contracts-v2';
+import { Button, type ButtonState } from '../../ui-kit';
 import type { Pair } from './index';
+import { clientName } from './verbs';
 
-export type Client = 'claude' | 'codex' | 'other';
+export type Client = 'claude-desktop' | 'codex-desktop' | 'claude' | 'codex' | 'other';
 const t = (lang: 'zh' | 'en', zh: string, en: string) => (lang === 'en' ? en : zh);
 const shell = (value: string) => `'${value.replaceAll("'", `'\\''`)}'`;
 const MASK = '••••••••';
+export const CLIENTS: [Client, Pair][] = [
+  ['claude-desktop', ['Claude 桌面 App（Code）', 'Claude desktop app (Code)']],
+  ['codex-desktop', ['Codex 桌面 App', 'Codex desktop app']],
+  ['claude', ['Claude Code 命令行', 'Claude Code CLI']],
+  ['codex', ['Codex 命令行', 'Codex CLI']],
+  ['other', ['其他 · 配置文件', 'Other · config file']],
+];
 
-/** The exact text a client needs. `token` is the secret, or the mask for display. */
 export function commandFor(client: Client, endpoint: string, token: string, opener: string) {
+  if (client === 'claude-desktop') return claudeCodeCommand(endpoint, token);
+  if (client === 'codex-desktop') return codexCommand(endpoint, token);
   if (client === 'claude')
     return `${claudeCodeCommand(endpoint, token)} && claude ${shell(opener)}`;
-  if (client === 'codex') return `${codexCommand(endpoint, token)} ${shell(opener)}`;
+  if (client === 'codex') return `${codexCommand(endpoint, token)} && codex ${shell(opener)}`;
   return JSON.stringify(
     {
       mcpServers: {
@@ -27,6 +40,18 @@ export function commandFor(client: Client, endpoint: string, token: string, open
     null,
     2,
   );
+}
+
+export function connectionLabel(connection: AgentConnection | undefined, lang: 'zh' | 'en') {
+  if (connection?.state === 'connected') {
+    const name = connection.client?.trim();
+    return name
+      ? t(lang, `已连接 · 来自 ${clientName(name)}`, `Connected · from ${clientName(name)}`)
+      : t(lang, '已连接', 'Connected');
+  }
+  if (connection?.state === 'idle')
+    return t(lang, '已连接过 · 当前空闲', 'Previously connected · idle');
+  return t(lang, '等待首次调用', 'Waiting for the first call');
 }
 
 export function CopyKey({
@@ -52,22 +77,25 @@ export function CopyKey({
       disabled={state === 'loading'}
       onClick={async () => {
         setState('loading');
-        const text = await getText();
-        if (!text) {
-          setState('idle');
-          return;
-        }
+        let text: string | null = null;
         try {
+          text = await getText();
+          if (!text) {
+            setState('idle');
+            return;
+          }
           await navigator.clipboard.writeText(text);
           setState('done');
           setTimeout(() => setState('idle'), 1600);
         } catch {
           setState('idle');
-          onFail?.(text);
+          if (text) onFail?.(text);
         }
       }}
     >
-      <span className="ag-sr">{state === 'done' ? t(lang, '已复制', 'Copied') : ''}</span>
+      <span className="ag-sr" aria-live="polite">
+        {state === 'done' ? t(lang, '已复制', 'Copied') : ''}
+      </span>
     </Button>
   );
 }
@@ -78,92 +106,142 @@ export function ConnectPanel({
   origin,
   opener,
   secret,
+  connection,
 }: {
   lang: 'zh' | 'en';
   sessionId: string;
   origin: string;
   opener: Pair;
-  /** Issues access if needed and returns the token for one copy. */
   secret: () => Promise<string | null>;
+  connection?: AgentConnection;
 }) {
-  const [client, setClient] = useState<Client>('claude');
+  const [client, setClient] = useState<Client>('claude-desktop');
   const [manual, setManual] = useState<string | null>(null);
+  const [downloaded, setDownloaded] = useState(false);
   const endpoint = mcpEndpoint(origin, sessionId);
   const ask = opener[lang === 'en' ? 1 : 0];
-  // Agents read English best; the opener follows the interface language.
-  // On screen only: flags keep their hyphens on one line (the copy is the real command).
-  const shown = commandFor(client, endpoint, MASK, ask).replace(
-    /(^|\s)(--?)(?=\w)/g,
-    (_, a, d) => a + d.replaceAll('-', '\u2011'),
-  );
-  const tabs: [Client, string][] = [
-    ['claude', 'Claude Code'],
-    ['codex', 'Codex'],
-    ['other', t(lang, '其他 MCP 客户端', 'Other MCP client')],
-  ];
-  const hint =
-    client === 'claude'
-      ? t(
-          lang,
-          '粘贴到终端：加上 RoleCraft，再带着第一句请求启动 Claude Code。',
-          'Paste in a terminal. It adds RoleCraft and starts Claude Code with its first request.',
-        )
-      : client === 'codex'
-        ? t(
-            lang,
-            '粘贴到终端：直接启动已连好的 Codex，不改它的配置。',
-            'Paste in a terminal. It starts Codex already connected, without touching its config.',
-          )
-        : t(
-            lang,
-            '放进客户端的 MCP 配置（Streamable HTTP）。',
-            'Put this in your client’s MCP config (Streamable HTTP).',
-          );
+  const isCodex = client === 'codex' || client === 'codex-desktop';
+  const desktop = client === 'claude-desktop' || client === 'codex-desktop';
+  const other = client === 'other';
+  const shown = isCodex
+    ? `[mcp_servers.rolecraft]\nurl = ${JSON.stringify(endpoint)}\nhttp_headers = { Authorization = "Bearer ${MASK}" }`
+    : commandFor(client, endpoint, MASK, ask);
+  const textToCopy = async () => {
+    const token = await secret();
+    return token ? commandFor(client, endpoint, token, ask) : null;
+  };
+  const connected = connection?.state === 'connected';
   return (
     <section className="ag-connect" aria-label={t(lang, '连接你的 Agent', 'Connect your agent')}>
-      <Segmented
-        className="ag-seg"
-        label={t(lang, '客户端', 'Client')}
-        value={client}
-        onChange={(key) => {
-          setClient(key);
-          setManual(null);
-        }}
-        items={tabs.map(([value, label]) => ({ value, label }))}
-      />
-      <ol className="ag-steps">
+      <header className="ag-connect-head">
+        <h2>{t(lang, '选择你用的工具', 'Choose your tool')}</h2>
+        <p className="ag-connect-status" role="status" data-connected={connected}>
+          <span
+            className="ag-status-dot rc-agent-light"
+            data-state={connection?.state ?? 'none'}
+            aria-hidden="true"
+          />
+          {connectionLabel(connection, lang)}
+        </p>
+      </header>
+      <fieldset className="ag-client-options" aria-label={t(lang, '客户端', 'Client')}>
+        {CLIENTS.map(([key, label]) => (
+          <Button
+            key={key}
+            variant="ghost"
+            data-client={key}
+            aria-pressed={client === key}
+            onClick={() => {
+              setClient(key);
+              setManual(null);
+              setDownloaded(false);
+            }}
+          >
+            {label[lang === 'en' ? 1 : 0]}
+          </Button>
+        ))}
+      </fieldset>
+      <ol className="ag-steps" key={client}>
         <li>
           <p className="ag-step-title">
             <span className="ag-step-n">1</span>
-            {client === 'other'
-              ? t(lang, '配置', 'Configure')
-              : t(lang, '粘贴到终端', 'Paste in your terminal')}
+            {other
+              ? t(lang, '导入连接配置', 'Import the connection config')
+              : t(lang, '复制并在终端执行', 'Copy and run in Terminal')}
           </p>
+          {isCodex ? (
+            <p className="ag-step-hint">
+              {t(
+                lang,
+                '将保存以下配置；右侧按钮复制完整连接命令。',
+                'This config will be saved; the button copies the full setup command.',
+              )}
+            </p>
+          ) : null}
           <div className="ag-cmd">
-            <pre
-              title={
-                client === 'other'
-                  ? t(lang, '配置，令牌已隐藏', 'Config, token hidden')
-                  : t(lang, '命令，令牌已隐藏', 'Command, token hidden')
-              }
-            >
+            <pre title={t(lang, '连接配置，令牌已隐藏', 'Connection config, token hidden')}>
               <code>{shown}</code>
             </pre>
             <CopyKey
               lang={lang}
               label={
-                client === 'other'
-                  ? t(lang, '复制配置', 'Copy config')
-                  : t(lang, '复制命令', 'Copy command')
+                other ? t(lang, '复制配置', 'Copy config') : t(lang, '复制命令', 'Copy command')
               }
-              getText={async () => {
-                const token = await secret();
-                return token ? commandFor(client, endpoint, token, ask) : null;
-              }}
+              getText={textToCopy}
               onFail={setManual}
             />
           </div>
-          <p className="ag-step-hint">{hint}</p>
+          {other ? (
+            <Button
+              variant="ghost"
+              className="ag-download"
+              icon={<Download size={14} />}
+              onClick={async () => {
+                const text = await textToCopy();
+                if (!text) return;
+                const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }));
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'rolecraft-mcp.json';
+                link.click();
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                setDownloaded(true);
+              }}
+            >
+              {downloaded
+                ? t(lang, '已下载配置', 'Config downloaded')
+                : t(lang, '下载配置文件', 'Download config file')}
+            </Button>
+          ) : null}
+          <p className="ag-step-hint">
+            {other
+              ? t(
+                  lang,
+                  '下载或复制后，导入客户端的 MCP 设置；使用 Streamable HTTP。',
+                  'Download or copy, then import into your client’s MCP settings using Streamable HTTP.',
+                )
+              : isCodex
+                ? t(
+                    lang,
+                    '在这台 Mac 的终端粘贴并执行；需已安装 Codex 命令行和 Python 3。先备份，再更新 ~/.codex/config.toml，桌面与命令行共用。',
+                    'Paste and run in Terminal on this Mac; requires the Codex CLI and Python 3. Backs up and updates ~/.codex/config.toml for both desktop and CLI.',
+                  )
+                : t(
+                    lang,
+                    '在这台 Mac 的终端粘贴并执行；需已安装 Claude Code 命令行。替换用户级连接，任何文件夹都可用。',
+                    'Paste and run in Terminal on this Mac; requires the Claude Code CLI. Replaces the user-level connection, available in every folder.',
+                  )}
+          </p>
+          {isCodex ? (
+            <details className="ag-command-details">
+              <summary>
+                {t(lang, '查看完整命令（令牌已隐藏）', 'View full command (token hidden)')}
+              </summary>
+              <pre>
+                <code>{commandFor(client, endpoint, MASK, ask)}</code>
+              </pre>
+            </details>
+          ) : null}
           {manual ? (
             <textarea
               className="ag-manual"
@@ -182,9 +260,44 @@ export function ConnectPanel({
         <li>
           <p className="ag-step-title">
             <span className="ag-step-n">2</span>
-            {client === 'other'
-              ? t(lang, '然后对它说', 'Then tell your agent')
-              : t(lang, '它会从这句话开始', 'It starts with this request')}
+            {desktop
+              ? t(lang, '新开一个对话', 'Open a new conversation')
+              : other
+                ? t(lang, '打开你的 Agent', 'Open your agent')
+                : t(lang, '接着使用命令行', 'Continue in the CLI')}
+          </p>
+          <p className="ag-step-hint">
+            {client === 'claude-desktop'
+              ? t(
+                  lang,
+                  '在 Claude 桌面 App 的 Code 标签页选择本机文件夹，新开会话；Chat 标签页不使用这份配置。未出现时完全退出并重开 App。',
+                  'In the Claude desktop app’s Code tab, choose a local folder and start a new session. The Chat tab does not use this config. If missing, fully quit and reopen the app.',
+                )
+              : client === 'codex-desktop'
+                ? t(
+                    lang,
+                    '在 Codex 桌面 App 新开对话；若还没有 RoleCraft，完全退出 App，重新打开后再新开对话。',
+                    'Start a new conversation in the Codex desktop app. If RoleCraft is missing, fully quit and reopen the app, then start another conversation.',
+                  )
+                : other
+                  ? t(
+                      lang,
+                      '保存配置后新开会话，让客户端读取连接。',
+                      'Save the config and start a new session so your client loads it.',
+                    )
+                  : t(
+                      lang,
+                      '命令会启动 Agent 并带上下面的请求；以后直接启动命令行即可。',
+                      'The command starts your agent with the request below. Start the CLI normally next time.',
+                    )}
+          </p>
+        </li>
+        <li>
+          <p className="ag-step-title">
+            <span className="ag-step-n">3</span>
+            {desktop || other
+              ? t(lang, '把这句话发给它', 'Send it this request')
+              : t(lang, '看看它的第一次调用', 'Watch for its first call')}
           </p>
           <div className="ag-cmd is-ask">
             <p className="ag-ask">{ask}</p>
@@ -192,22 +305,24 @@ export function ConnectPanel({
               lang={lang}
               label={t(lang, '复制这句话', 'Copy the request')}
               getText={async () => ask}
+              onFail={setManual}
             />
           </div>
+          <p className="ag-step-hint">
+            {t(
+              lang,
+              '收到真实调用后，上方会显示“已连接”，下方会留下传输记录。',
+              'After a real call arrives, the status above changes to Connected and the activity appears below.',
+            )}
+          </p>
         </li>
       </ol>
       <p className="ag-fine">
-        {client === 'other'
-          ? t(
-              lang,
-              '这段配置带着这一局的钥匙，到明天这个时候都有效。只放进你自己的客户端。',
-              'This config carries a key to this practice and works until this time tomorrow. Put it only in your own client.',
-            )
-          : t(
-              lang,
-              '命令里带着这局练习的钥匙，到明天这个时候都有效。只粘贴到你自己的终端。',
-              'The command carries a key to this practice and works until this time tomorrow. Paste it only into your own terminal.',
-            )}
+        {t(
+          lang,
+          `令牌在页面上隐藏，复制或下载时才带上；每次授权有效 ${accessDuration('zh')}。复制时会核对并按需续发，到期或换一局后需重新执行连接命令。`,
+          `The token stays hidden until you copy or download. Each grant lasts ${accessDuration('en')}. Copying checks and renews access when needed; run setup again after expiry or when switching practices.`,
+        )}
       </p>
     </section>
   );

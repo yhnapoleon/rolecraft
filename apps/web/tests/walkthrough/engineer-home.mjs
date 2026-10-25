@@ -1,6 +1,5 @@
-// Home's list of jobs (199 decisions 5, 6): the engineer's row beside the product manager's.
-// One shot of a fresh home, and (CODE=<continue code>) one with a practice under way, where the
-// row adds "take it in this practice".
+// Role-selection home: both work scenes, then the existing practice resume strip.
+// CODE restores a practice before capturing its resume entry.
 //
 // BASE=http://127.0.0.1:18760 OUT=<dir> LANG_UI=zh|en [CODE=…] [THEME=dark] [WIDTH=390]
 //   CHROME_BIN=… node apps/web/tests/walkthrough/engineer-home.mjs
@@ -25,7 +24,9 @@ async function waitFor(expression, ms = 60000) {
   throw new Error(`Timed out: ${expression}`);
 }
 async function shotRow(name) {
-  await browser.ev(`document.querySelector('.hm-jobs').scrollIntoView({ block: 'center' }); true`);
+  await browser.ev(
+    `document.querySelector('.home-roles').scrollIntoView({ block: 'center' }); true`,
+  );
   await delay(700);
   const path = `${out}/after-${name}-${tag}.png`;
   const r = await browser.send('Page.captureScreenshot', { format: 'png' });
@@ -39,10 +40,13 @@ try {
   );
   await browser.goto(`${base}/?load=1#/`);
   await waitFor(
-    `!!document.querySelector('[data-job-slot="engineer"] [data-action="engineer-start"]')`,
+    `!!document.querySelector('[data-role="engineer"] [data-action="engineer-start"]')`,
   );
-  const row = await browser.ev(`document.querySelector('[data-job-slot="engineer"]').innerText`);
-  assert.match(row, language === 'zh' ? /一局、两顶帽子/ : /One practice, two hats/);
+  const row = await browser.ev(`document.querySelector('[data-role="engineer"]').innerText`);
+  assert.match(
+    row,
+    language === 'zh' ? /Grace（AI 同事，产品侧）/ : /Grace \(AI colleague, product side\)/,
+  );
   await shotRow('home-jobs');
   if (code) {
     await browser.goto(`${base}/?load=2#/pm`);
@@ -56,7 +60,7 @@ try {
     await delay(6000);
     await browser.ev(`localStorage.setItem('rolecraft.locale', ${JSON.stringify(language)}); true`);
     await browser.goto(`${base}/?load=3#/`);
-    await waitFor(`!!document.querySelector('[data-action="engineer-take"]')`);
+    await waitFor(`!!document.querySelector('.hm-cont')`);
     await shotRow('home-jobs-practice');
   }
 } finally {

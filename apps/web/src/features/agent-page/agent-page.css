@@ -386,18 +386,6 @@
   box-shadow: inset 0 0 0 1.5px var(--ink-4);
   transition: background-color 280ms ease;
 }
-.ag-rig[data-phase="waiting"] .ag-lamp {
-  box-shadow: none;
-  border: 1.5px dashed var(--ink-3);
-}
-.ag-rig[data-phase="connected"] .ag-lamp {
-  background: var(--ink);
-  box-shadow: none;
-}
-.ag-rig[data-phase="idle"] .ag-lamp {
-  background: var(--ink-4);
-  box-shadow: none;
-}
 .ag-agent-scope {
   margin: 0;
   font-size: 12.5px;
@@ -434,6 +422,7 @@
 
 /* ---------- connecting ---------- */
 .ag-connect {
+  scroll-margin-top: calc(var(--progress-dock-height, 0px) + 16px);
   display: grid;
   gap: 18px;
   padding: 20px 22px 18px;
@@ -457,7 +446,11 @@
   padding: 0;
   display: grid;
   grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+  grid-template-rows: min-content 1fr;
   gap: 20px;
+}
+.ag-steps > li:first-child {
+  grid-row: span 2;
 }
 .ag-steps > li {
   display: grid;
@@ -884,6 +877,9 @@
     width: 30px;
     height: 30px;
   }
+  .ag-steps > li:first-child {
+    grid-row: auto;
+  }
   .ag-steps,
   .ag-fallback-body {
     grid-template-columns: minmax(0, 1fr);
@@ -1119,4 +1115,312 @@
   right: 8px;
   height: 0.5px;
   background: var(--line);
+}
+
+/* Desktop setup: one tool choice, bounded command preview, genuine activity status. */
+.ag-connect-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px 20px;
+}
+.ag-connect-head h2 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+}
+.ag-connect-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--ink-3);
+  overflow-wrap: anywhere;
+}
+.ag-connect-status[data-connected="true"] {
+  color: var(--good);
+}
+.ag-status-dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border: 1px dashed var(--ink-3);
+  border-radius: 50%;
+}
+.ag-client-options {
+  min-width: 0;
+  margin: 0;
+  padding: 0 0 16px;
+  border: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.ag-client-options button {
+  min-height: 38px;
+  white-space: normal;
+  text-align: start;
+}
+.ag-client-options button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--on-primary);
+}
+.ag-command-details {
+  min-width: 0;
+}
+.ag-command-details summary {
+  cursor: pointer;
+  font-size: 12.5px;
+  color: var(--ink-2);
+}
+.ag-command-details pre {
+  max-height: 240px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 12px / 1.6 var(--mono);
+  color: var(--ink-2);
+}
+.ag-connect .ag-cmd code {
+  overflow-wrap: anywhere;
+}
+.ag-connect .ag-step-n {
+  flex: none;
+}
+.ag-download {
+  justify-self: start;
+}
+@media (max-width: 720px) {
+  .ag-client-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .ag-client-options button {
+    justify-content: flex-start;
+    min-height: 44px;
+  }
+}
+
+/* 239: a compact instrument above the work, with the latest hand-back as the focal paper. */
+.ag-root {
+  gap: 22px;
+}
+.ag-head {
+  max-width: none;
+  gap: 10px;
+}
+.ag-headline {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  justify-content: space-between;
+}
+.ag-head-status {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--ink-3);
+  font-size: 12.5px;
+}
+.ag-lede {
+  max-width: 68ch;
+  font-size: 14px;
+}
+.ag-rig {
+  grid-template-columns: 200px minmax(0, 1fr) 204px;
+  min-height: 190px;
+  box-shadow: none;
+}
+.ag-side {
+  padding: 16px;
+  gap: 10px;
+}
+.ag-ws-row {
+  padding-block: 4px;
+}
+.ag-conduit-slot {
+  min-height: 68px;
+  padding: 10px 18px 14px;
+}
+.ag-caption {
+  padding: 0 18px 10px;
+}
+.ag-readouts {
+  gap: 22px;
+}
+.ag-connect {
+  box-shadow: none;
+  padding: 24px;
+  border-radius: var(--r-panel);
+}
+.ag-connect-status[data-connected="true"] {
+  color: var(--ink-2);
+}
+.ag-connection-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding: 4px 0;
+}
+.ag-connection-summary > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+.ag-transmission {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+  gap: 12px;
+}
+.ag-tx-head h2 {
+  font-size: 17px;
+}
+.ag-recent {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.ag-section-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-3);
+}
+.ag-history-label {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-2);
+}
+.ag-recent .ag-paper {
+  padding: 22px 24px 18px;
+  gap: 10px;
+  border-radius: var(--r-paper);
+}
+.ag-recent .ag-paper-title {
+  font-size: 26px;
+  line-height: 1.25;
+  text-wrap: pretty;
+}
+.ag-recent .ag-paper-excerpt {
+  font-size: 15px;
+  line-height: 1.65;
+  -webkit-line-clamp: 3;
+}
+.ag-recent .ag-paper-foot {
+  border-top: 1px solid var(--line);
+  padding-top: 14px;
+  margin-top: 4px;
+}
+.ag-stream > .ag-rows .ag-line {
+  padding-block: 13px;
+}
+.ag-stream-empty {
+  border-top: 1px solid var(--line);
+}
+.ag-stream-empty p {
+  padding-block: 18px;
+}
+/* Before connection, use the quiet line as a short divider rather than an empty room. */
+.ag-rig:is([data-phase="none"], [data-phase="waiting"]) {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.ag-rig:is([data-phase="none"], [data-phase="waiting"]) .ag-conduit {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  grid-template-rows: auto auto auto;
+}
+.ag-rig:is([data-phase="none"], [data-phase="waiting"]) .ag-caption {
+  padding: 10px 16px 2px;
+  min-height: 0;
+}
+.ag-rig:is([data-phase="none"], [data-phase="waiting"]) .ag-track {
+  margin: 4px 20px;
+}
+.ag-rig[data-phase="waiting"] .ag-conduit-slot {
+  display: none;
+}
+.ag-rig:is([data-phase="none"], [data-phase="waiting"]) .ag-ws-rows {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 2px 12px;
+}
+.ag-rig:is([data-phase="none"], [data-phase="waiting"]) .ag-ws-row {
+  box-shadow: none;
+}
+@media (max-width: 760px) {
+  .ag-root {
+    gap: 18px;
+  }
+  .ag-headline {
+    align-items: flex-start;
+    gap: 10px;
+  }
+  .ag-head-status {
+    width: 100%;
+  }
+  .ag-connect {
+    padding: 18px 14px;
+  }
+  .ag-rig,
+  .ag-rig:is([data-phase="none"], [data-phase="waiting"]) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "agent" "ws" "conduit";
+  }
+  .ag-rig:is([data-phase="none"], [data-phase="waiting"]) .ag-conduit {
+    grid-row: auto;
+  }
+  .ag-ws-rows {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 2px 12px;
+  }
+  .ag-ws-row {
+    box-shadow: none;
+  }
+  .ag-agent {
+    box-shadow: inset 0 -1px 0 var(--line);
+  }
+  .ag-agent-scope {
+    display: none;
+  }
+  .ag-rig.is-vertical .ag-conduit {
+    min-height: 80px;
+  }
+  .ag-rig.is-vertical .ag-caption {
+    padding-top: 10px;
+  }
+  .ag-rig:is([data-phase="none"], [data-phase="waiting"]).is-vertical .ag-track {
+    margin: 0;
+    grid-column: 1;
+    grid-row: 1 / span 2;
+  }
+  .ag-recent .ag-paper {
+    padding: 18px 16px 16px;
+  }
+  .ag-recent .ag-paper-title {
+    font-size: 23px;
+  }
+  .ag-recent .ag-paper-meta .ag-tool {
+    overflow-wrap: anywhere;
+    white-space: normal;
+  }
+  .ag-connection-summary {
+    align-items: flex-start;
+  }
+  .ag-connection-summary > span {
+    overflow-wrap: anywhere;
+  }
 }

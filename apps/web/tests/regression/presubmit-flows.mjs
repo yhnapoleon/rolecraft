@@ -125,8 +125,8 @@ async function startPractice(browser, language, t) {
   await browser.goto(base);
   await browser.ev(`localStorage.clear(); localStorage.setItem('rolecraft.locale', '${language}')`);
   await browser.goto(base);
-  await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
-  await browser.click('[data-action="open-career"]');
+  await waitFor(browser, `!!document.querySelector('.home-roles [data-role="pm"] [data-action="open-career"]')`);
+  await browser.click('.home-roles [data-role="pm"] [data-action="open-career"]');
   await browser.click('.case-hero [data-action="take-case"]');
   await acceptEntryStory(browser);
   await waitFor(browser, `location.hash === '#/work' && !!document.querySelector('.card-open')`);

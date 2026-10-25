@@ -158,7 +158,7 @@ export async function connectAgentOverMcp(context) {
   await waitFor(browser, `!!document.querySelector('.ag-connect .ag-cmd .ag-copy')`);
   assert.ok(
     (await browser.ev(`document.querySelector('.ag-connect').innerText`)).includes(
-      text('到明天这个时候都有效', 'works until this time tomorrow'),
+      text('每次授权有效', 'Each grant lasts'),
     ),
   );
   const firstGrant = await issuedId(browser);
@@ -167,14 +167,20 @@ export async function connectAgentOverMcp(context) {
   const token = command.match(/Bearer ([^']+)'/)?.[1];
   assert.ok(endpoint?.startsWith(`${new URL(await browser.ev('location.href')).origin}/api/`));
   assert.ok(token && token.length >= 32);
-  // The command starts Claude Code with its first request.
-  assert.ok(command.includes(text('读 RoleCraft 里的委托', 'Read the brief in RoleCraft')));
+  // Desktop setup persists user scope; the first request is offered separately.
+  assert.ok(command.includes('-s user'));
+  assert.ok(!command.includes(' && claude '));
+  assert.ok(
+    (await browser.ev(`document.querySelector('.ag-ask').innerText`)).includes(
+      text('读 RoleCraft 里的委托', 'Read the brief in RoleCraft'),
+    ),
+  );
   // Other clients get the same endpoint and header as a config.
-  await browser.click('.ag-connect .ag-seg button', 2);
+  await browser.click('.ag-connect [data-client="other"]');
   const config = JSON.parse(await copied(browser, '.ag-connect .ag-cmd .ag-copy'));
   assert.equal(config.mcpServers.rolecraft.url, endpoint);
   assert.equal(config.mcpServers.rolecraft.headers.Authorization, `Bearer ${token}`);
-  await browser.click('.ag-connect .ag-seg button', 0);
+  await browser.click('.ag-connect [data-client="claude-desktop"]');
   // Copying fetched the token; it is still nowhere in the page or its storage.
   assert.equal(
     await browser.ev(`document.documentElement.outerHTML.includes(${JSON.stringify(token)})`),
@@ -232,6 +238,11 @@ export async function connectAgentOverMcp(context) {
   // The page saw it connect, read and hand back: the stream lists the calls by their real
   // tool names and the returned work arrives as a paper waiting for review.
   await phase(browser, 'connected');
+  assert.ok(
+    (await browser.ev(`document.querySelector('.ag-connect-status').innerText`)).includes(
+      text('已连接 · 来自', 'Connected · from'),
+    ),
+  );
   await waitFor(browser, `!!document.querySelector('.ag-line[data-tool="read_material"]')`);
   const awaiting = text('等你检查', 'Waiting for your check');
   await waitFor(

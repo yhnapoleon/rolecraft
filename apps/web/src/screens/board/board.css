@@ -8,15 +8,14 @@
 .ws .board {
   max-width: 1180px;
   padding: 32px 40px 96px;
-  gap: 36px;
-  /* The board redraws in place many times (a reply, an agent call, a poll); it fades in only
-     when the page is entered, which the view transition already does. */
+  gap: 42px;
+  /* Redraws preserve the board; only route entry plays the existing transition. */
   animation: none;
 }
 @media (max-width: 720px) {
   .ws .board {
     padding: 20px 16px 96px;
-    gap: 28px;
+    gap: 42px;
   }
 }
 
@@ -606,7 +605,7 @@
   top: var(--sheet-inset);
   bottom: var(--sheet-inset);
   right: var(--sheet-inset);
-  width: min(720px, calc(100% - 2 * var(--sheet-inset)));
+  width: min(760px, calc(100% - 2 * var(--sheet-inset)));
   border-radius: var(--r-dialog);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -630,7 +629,8 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  padding: 26px 24px 14px 40px;
+  padding: 36px 32px 24px 48px;
+  border-bottom: 1px solid var(--line);
 }
 .mat-head > .grow {
   flex: 1;
@@ -642,6 +642,10 @@
   letter-spacing: -0.01em;
   color: var(--ink);
   outline: none;
+  font-size: 32px;
+  line-height: 1.35;
+  max-width: 22em;
+  text-wrap: balance;
 }
 :lang(zh) .mat-title {
   letter-spacing: 0;
@@ -655,8 +659,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 12px;
-  margin-top: 8px;
+  gap: 8px 16px;
+  margin-top: 14px;
   color: var(--ink-3);
   font-size: 12.5px;
 }
@@ -668,19 +672,37 @@
   min-height: 0;
   overflow-y: auto;
   overscroll-behavior: contain;
-  padding: 6px 40px 110px;
+  padding: 28px 48px 130px;
 }
 .mat-body .prose {
-  max-width: 62ch;
+  max-width: 56ch;
+  font-size: 17px;
+  line-height: 1.85;
 }
+.mat-body .prose > p + p {
+  margin-top: 1em;
+}
+
+.mat-body .prose :where(h2, h3) {
+  margin-top: 1.8em;
+  margin-bottom: 0.8em;
+  line-height: 1.4;
+}
+
+.mat-body .prose li + li {
+  margin-top: 0.5em;
+}
+
+
+
 .mat-foot {
   grid-area: 2 / 1;
   align-self: end;
   z-index: 1;
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  padding: 12px 24px 14px 40px;
+  gap: 10px;
+  padding: 16px 32px 18px 48px;
   background: var(--sheet-foot-bg);
   -webkit-backdrop-filter: var(--sheet-foot-filter);
   backdrop-filter: var(--sheet-foot-filter);
@@ -1377,5 +1399,24 @@ button.rec-open {
 @media (max-width: 1279px) {
   .ws.rail-open .rail {
     background: var(--rail-drawer-bg);
+  }
+}
+
+@media (max-width: 720px) {
+  .mat-head {
+    padding: 24px 20px 18px;
+  }
+  .mat-title {
+    font-size: 25px;
+  }
+  .mat-body {
+    padding: 22px 22px 130px;
+  }
+  .mat-body .prose {
+    font-size: 16px;
+    line-height: 1.8;
+  }
+  .mat-foot {
+    padding: 14px 20px 18px;
   }
 }

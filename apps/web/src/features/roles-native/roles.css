@@ -847,3 +847,16 @@ button.rc-tag:active {
     opacity: 0.75;
   }
 }
+
+.chat .rc-bubble {
+  line-height: 1.75;
+  padding: 12px 15px;
+}
+.chat .rc-bubble--them {
+  background: var(--paper);
+  box-shadow: var(--shadow-paper);
+  border-radius: 3px 12px 12px;
+}
+.chat .rc-roles__composer {
+  padding-top: 12px;
+}
