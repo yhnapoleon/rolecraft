@@ -2,6 +2,7 @@
  * of jobs) and the job page (one brief on paper). Pure HTML builders; ui.js supplies the data and
  * keeps the actions. Shapes follow D「仪器与纸」(197-visual-d.md); decisions 5–7 of 199. */
 import './home.css';
+import { exploreHome, homeDirection } from './explore';
 import { agentMark, avatar, icon, PEOPLE } from '../../app/art.js';
 import { locale, T } from '../../app/i18n';
 import { PRI } from '../../app/vocab.js';
@@ -125,6 +126,9 @@ export function homeHtml(o: {
   engineerRow: string;
   continueCode: string;
 }): string {
+  const direction = homeDirection();
+  if (direction)
+    return exploreHome({ ...o, resumeHtml: o.resume ? continueSlip(o.resume) : '' }, direction);
   // In Chinese the closing quote follows the sentence directly; a full stop before it leaves a gap.
   const first = firstSentence(o.quote).replace(/。$/u, '');
   const rest = o.quote.slice(firstSentence(o.quote).length).trim();

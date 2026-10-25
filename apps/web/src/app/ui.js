@@ -36,6 +36,7 @@ import { installCardToggles } from '../features/recognition-native/profile-card'
 // The system profile page (#/lab) loads its code on demand, its styles with the main bundle.
 import '../features/recognition-lab/lab.css';
 import './practice-language.css';
+import './polish';
 import { behaviorHtml } from '../features/behavior-native/view';
 import {
   PRI,
