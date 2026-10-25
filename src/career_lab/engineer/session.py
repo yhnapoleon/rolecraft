@@ -1084,8 +1084,9 @@ class EngineerService:
             "status": row["review_status"],
             "signed_at": row["signed_at"],
             "signed_by": row["signed_by"],
-            # An AI colleague who signed under its own executor (Daniel); absent for the person.
-            "actor": row.get("actor"),
+            # An AI colleague who signed under its own executor (Daniel); absent for the person,
+            # whose review keeps its shape.
+            **({"actor": row["actor"]} if row.get("actor") else {}),
             "draft_id": row["draft_id"],
             # Who wrote the draft the person signed: the person or their Agent.
             "draft_executor": row["draft_executor"],
@@ -1572,7 +1573,7 @@ class EngineerService:
                 "ticket_id": record["ticket_id"],
                 "draft_id": record["draft_id"],
                 "signed_by": record["signed_by"],
-                "actor": record.get("actor"),
+                **({"actor": record["actor"]} if record.get("actor") else {}),
                 "role": record["role"],
                 "impact_note": record["impact_note"],
                 "signed_at": record["signed_at"],
