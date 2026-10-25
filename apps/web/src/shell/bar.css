@@ -726,3 +726,29 @@ html.scrolled body:not([data-view="work"]) .shell-bar {
     display: none;
   }
 }
+
+/* Reserve the connection slot beside the agent lamp: outages do not move the hat. */
+.shell-connection {
+  display: inline-flex;
+  flex: 0 0 100px;
+  justify-content: flex-end;
+}
+.shell-connection .conn {
+  color: var(--ink-2);
+  background: none;
+  border: 0;
+  border-radius: var(--r-xs);
+  white-space: nowrap;
+  padding: 4px;
+}
+.shell-connection .conn-dot {
+  background: var(--ink-3);
+}
+@media (max-width: 719px) {
+  .shell-connection {
+    flex-basis: 24px;
+  }
+  .shell-connection .conn-label {
+    display: none;
+  }
+}

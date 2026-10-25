@@ -73,7 +73,7 @@ export function AgentPage(props: AgentPageProps) {
     try {
       const token = (await ensureAccess(host))?.token ?? null;
       if (!token)
-        setFailed(t(lang, '没能开通连接，请再试一次。', 'Access could not be issued. Try again.'));
+        setFailed(t(lang, '没能连接你的 Agent，请再试一次。', "Couldn't connect your agent. Try again."));
       return token;
     } catch (error) {
       setFailed(
@@ -83,7 +83,7 @@ export function AgentPage(props: AgentPageProps) {
               '还没收到开通的结果。再按一次会核对原来的请求，不会多开一份。',
               'The answer did not arrive. Press again to check the original request; it will not open a second one.',
             )
-          : t(lang, '没能开通连接，请再试一次。', 'Access could not be issued. Try again.'),
+          : t(lang, '没能连接你的 Agent，请再试一次。', "Couldn't connect your agent. Try again."),
       );
       return null;
     }

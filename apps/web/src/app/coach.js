@@ -102,7 +102,7 @@ export function notes(a, E) {
       ),
     );
   const stale = f.tests.filter((t) => t.stale).at(-1);
-  if (stale)
+  if (stale && a.world.indexVersion < a.world.policyVersion)
     add(
       'technical',
       'correct',

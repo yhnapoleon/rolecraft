@@ -231,7 +231,7 @@ function phaseRuns(data: Behavior, l: Language) {
 export function behaviorView(
   data: Behavior | { enabled: false } | null | undefined,
   l: Language,
-  options: { lens?: boolean; materialName?: (id: string) => string } = {},
+  options: { lens?: boolean; materialName?: (id: string) => string; stepsOpen?: boolean } = {},
 ): BehaviorView | null {
   if (!data || data.enabled === false || !('sequence' in data)) return null;
   const lens = !!options.lens;
@@ -283,7 +283,7 @@ export function behaviorView(
 export function behaviorHtml(
   data: Behavior | { enabled: false } | null | undefined,
   l: Language,
-  options: { lens?: boolean; materialName?: (id: string) => string } = {},
+  options: { lens?: boolean; materialName?: (id: string) => string; stepsOpen?: boolean } = {},
 ) {
   const view = behaviorView(data, l, options);
   if (!view) return '';
@@ -319,8 +319,8 @@ export function behaviorHtml(
     <p class="rc-align-label">${esc(view.phasesLabel)}</p>
     <div class="rc-phasebar" aria-hidden="true">${bar}</div>
     ${legend}
-    <p class="rc-align-label">${esc(view.stepsLabel)}</p>
-    <ol class="rc-steps-row">${view.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol>
+    <details class="rc-behavior__steps"${options.stepsOpen ? ' open' : ''}><summary>${esc(view.stepsLabel)} · ${view.steps.length}</summary>
+    <ol class="rc-steps-row">${view.steps.map((s) => `<li>${esc(s)}</li>`).join('')}</ol></details>
     ${strategy}${alignment}
     <p class="rc-align-label">${esc(view.orderLabel)}</p>${order}
     <p class="meta">${esc(view.executor)}</p>`;

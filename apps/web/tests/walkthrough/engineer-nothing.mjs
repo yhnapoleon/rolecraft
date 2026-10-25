@@ -93,6 +93,7 @@ try {
     'in the main screen',
   );
   assert.ok(await browser.ev(`!!document.querySelector('#ws-rail')`), 'the rail stays');
+  assert.equal(await browser.ev(`document.querySelectorAll('.rc-scale').length`), 0, 'no ticket has no sign-off steps');
   await shot('nothing-home');
 
   // 2. The board's hat switch: the same sheet.

@@ -4,7 +4,7 @@ import { locale } from './i18n';
 import { modelWaitHtml } from './model-status';
 import './assistant-mode.css';
 
-export type AnswerMode = 'extractive' | 'llm' | 'unavailable' | 'failed';
+export type AnswerMode = 'extractive' | 'llm' | 'unavailable' | 'failed' | 'gate';
 export type Generator = 'extractive' | 'llm';
 export type AssistantDeployment = 'model' | 'waiting_model' | 'unavailable';
 
@@ -20,6 +20,8 @@ const ZH = {
     '这次测试选择了模型生成，但当时部署没有接入模型，没有生成回答。',
   assistant_generation_failed: '生成失败',
   assistant_generation_failed_hint: '模型调用或结果校验没有通过，问题与配置已保留，没有自动重试。',
+  assistant_mode_gate: '范围／资料提示',
+  assistant_mode_gate_hint: '这次测试被范围或资料检查拦下，没有抽取或生成业务答案。',
   assistant_mode_unknown: '模式信息暂不可用',
   assistant_quote_generated: '（模型生成 · 待核验）',
   assistant_mode_effective_config: '本次有效配置',
@@ -53,6 +55,8 @@ const EN: Record<CopyKey, string> = {
   assistant_generation_failed: 'Generation failed',
   assistant_generation_failed_hint:
     'The model call or its validation failed. The question and settings are saved; nothing was retried.',
+  assistant_mode_gate: 'Scope / source notice',
+  assistant_mode_gate_hint: 'Scope or source checks stopped this test before an answer was extracted or generated.',
   assistant_mode_unknown: 'Mode information unavailable',
   assistant_quote_generated: '(Model-generated · awaiting verification)',
   assistant_mode_effective_config: 'Effective configuration for this run',
@@ -87,6 +91,7 @@ const esc = (value: unknown) =>
   );
 
 const RECORDED: Record<AnswerMode, [CopyKey, CopyKey]> = {
+  gate: ['assistant_mode_gate', 'assistant_mode_gate_hint'],
   extractive: ['assistant_mode_extractive', 'assistant_mode_extractive_hint'],
   llm: ['assistant_mode_llm', 'assistant_mode_llm_hint'],
   unavailable: ['assistant_model_unavailable', 'assistant_model_unavailable_hint'],

@@ -30,7 +30,7 @@ function stateMark(s: DocState) {
   if (s === 'unread') return `<span class="doc-unread">${T('未读', 'Unread')}</span>`;
   if (s === 'cited')
     return `<span class="doc-cited">${icon('quote', 'i-xs')}${T('已引用', 'Cited')}</span>`;
-  return '';
+  return `<span class="doc-read">${T('已读', 'Read')}</span>`;
 }
 
 /** One document row, the same wherever a document is listed (the board, the findings dossier). */

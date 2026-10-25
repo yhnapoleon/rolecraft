@@ -252,6 +252,7 @@ const ui = {
   benchAll: false,
   reviewFor: null,
   notesCache: [],
+  behaviorStepsOpen: new Set(),
   intake: { text: '', result: null, open: false },
   busy: false,
   lastRun: null,
@@ -1047,7 +1048,7 @@ function practiceUiLocale() {
 }
 // Inside a practice the language is the practice's: say so instead of offering a half switch.
 function practiceLangNote() {
-  return `<div class="menu right lang-note" role="dialog" aria-label="${esc(T('界面语言', 'Language'))}"><p class="lang-note__head">${icon('globe', 'i-sm')}<span>${T('这一局是中文的', 'This practice is in English')}</span></p><p class="lang-note__body">${T('界面跟着它走。想用英文练，回首页切到 English 再开一局。', 'The interface follows it. To practise in Chinese, go home, switch to 中文 and start a new practice.')}</p>${btn(T('回首页', 'Go home'), 'home', 'small')}</div>`;
+  return `<div class="menu right lang-note" role="dialog" aria-label="${esc(T('界面语言', 'Language'))}"><p class="lang-note__head">${icon('globe', 'i-sm')}<span>${T('这一局是中文的', 'This practice is in English')}</span></p><p class="lang-note__body">${T('想用英文练，回首页切换语言，再开一局。', 'To practise in Chinese, change the language on the home page and start a new practice.')}</p>${btn(T('回首页', 'Go home'), 'home', 'small')}</div>`;
 }
 // Inside a practice every screen (board, result, sign-off desk, registered screens) shares one
 // shell bar; elsewhere (home, job page, lab) the light topbar stays.
@@ -1387,7 +1388,7 @@ function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief
   const n = snap();
   const s = sessionOf(a);
   const conn = !n.connected
-    ? `<button type="button" class="conn bad" data-action="live-refresh" title="${esc(T('连接不上后端，点击重试', 'Cannot reach the server. Click to retry.'))}"><span class="conn-dot"></span>${T('离线', 'Offline')}</button>`
+    ? `<button type="button" class="conn" data-action="live-refresh" aria-label="${esc(T('离线，重试连接', 'Offline, retry connection'))}" title="${esc(T('连接不上后端，点击重试', 'Cannot reach the server. Click to retry.'))}"><span class="conn-dot"></span><span class="conn-label">${T('离线 · 重试', 'Offline · Retry')}</span></button>`
     : s?.pending && !s.pending.jobId && !n.busy
       ? `<button type="button" class="conn warn" data-action="live-retry" title="${esc(T('上一个操作没有得到确认，点击用原请求重试', 'The last action was not confirmed. Retry the same request.'))}">${icon('refresh', 'i-sm')}${T('待确认', 'Unconfirmed')}</button>`
       : '';
@@ -1430,12 +1431,11 @@ function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief
     <nav class="crumbbar" aria-label="${esc(T('位置', 'Location'))}">${title}${here}</nav>
     ${/* Delivered is the scale's to say; the chip stays only for states the scale does not show. */ ''}
     ${st !== 'active' && (st !== 'submitted' || s?.v2ReadOnly) ? `<span class="state-chip ${st}">${s?.v2ReadOnly ? T('旧版 · 只读', 'Earlier version · Read-only') : T('已暂停', 'Paused')}</span>` : ''}
-    ${conn}
     <span class="sep before-hat" aria-hidden="true"></span>
     ${islandSlot('shell-hatscale')}
     <div class="spacer"></div>
     <button type="button" class="team-btn" data-action="open-rail" aria-label="${esc(T('团队', 'Team'))}">${ROLES.map((r) => avatar(r, 'sm', { typing: typing === r || replying.has(r), dot: true })).join('')}<span class="team-compact">${icon('team', 'i-sm')}${unreadBadge(ROLES.reduce((n, r) => n + unread(a, r), 0))}</span></button>
-    ${lamp}${record}${moreWrap}
+    <span class="shell-connection">${conn}</span>${lamp}${record}${moreWrap}
     ${islandSlot('shell-primary')}
   </header>`;
 }
@@ -1481,7 +1481,7 @@ function mountShellBar() {
       : undefined,
     // The product manager's place is the problem ruler at the top of the stage (mountProgress);
     // the bar keeps only the engineer's sign-off steps.
-    steps: hat === 'pm' ? [] : steps,
+    steps: hat === 'pm' || (ui.route === 'engineer' && String(ui.routeId || '').includes('?nothing')) ? [] : steps,
     scaleLabel: T('签字的步骤', 'Sign-off steps'),
     stepName,
     delivered,
@@ -2337,9 +2337,8 @@ function situationBanner(a) {
       : '',
   ].filter(Boolean);
   const what = `<p class="we-what"${langOf(a)}><strong>${esc(title)}</strong> ${esc(after.join(' '))}</p>`;
-  // Handed in, the board only reads: the event stays as a record of what changed.
-  if (statusOf(a) === 'submitted')
-    return `<section class="world-event is-record" role="status"><span class="we-when">${esc(changedAt(a))}</span>${what}<div class="we-actions">${btn(T('看哪里变了', 'See what changed'), 'open-doc', 'small quiet', 'data-id="policy" data-compare="1"')}</div></section>`;
+  // The submitted board is a record; policy history remains in documents and the record drawer.
+  if (statusOf(a) === 'submitted') return '';
   // A change that lands while a dialog is open arrives when the dialog has gone.
   const covered = sheetCovers(a);
   const age = covered ? null : Board.arrivalAge(a.id, `policy-v${v}`);
@@ -3440,7 +3439,7 @@ function railTeam(a) {
   const needs = Board.needsYou(signals, signalPeople(), Board.freshSignals(signals.map((x) => x.id)));
   return `<div class="rail-board">
     ${needs}
-    <section aria-labelledby="people-h"><h3 class="mini-title" id="people-h">${T('同事', 'Colleagues')}</h3><ul class="people">${ROLES.map(
+    <section aria-labelledby="people-h"><h3 class="mini-title" id="people-h">${T('同事', 'Colleagues')}</h3><ul class="people">${(hatHere(a) === 'engineer' ? ['technical', 'manager', 'business'] : ROLES).map(
       (r) => {
         const last = (a.conversations[r] || []).filter((m) => m.role !== 'user').at(-1);
         const n = unread(a, r);
@@ -4109,6 +4108,7 @@ function behaviorInner(a) {
   return behaviorHtml(ui.behavior?.[a?.id], locale(), {
     lens: lensOn(),
     materialName: materialNameOf(a),
+    stepsOpen: ui.behaviorStepsOpen.has(a?.id),
   });
 }
 function behaviorSection(a) {
@@ -7275,6 +7275,10 @@ document.addEventListener(
   'toggle',
   (e) => {
     const d = e.target;
+    if (d.isConnected && d.matches?.('.rc-behavior__steps') && current()) {
+      if (d.open) ui.behaviorStepsOpen.add(current().id);
+      else ui.behaviorStepsOpen.delete(current().id);
+    }
     if (d.matches?.('details[data-intake]')) ui.intake.open = d.open;
     if (d.matches?.('details[data-continue-code]')) recovery.toggle(d.open);
     if (d.isConnected && d.matches?.('.investigation-work details[data-key]')) {

@@ -1945,7 +1945,7 @@
 .ed-nothing__keys {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 10px;
   margin-top: 16px;
   padding-top: 24px;

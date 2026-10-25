@@ -151,6 +151,12 @@ html.scrolled body:not([data-view="work"]) .topbar:not(.shell-bar)::before,
   background: var(--surface-3);
 }
 
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .col {
+    background: color-mix(in oklab, var(--surface-2) 75%, var(--canvas));
+  }
+}
+
 /* ---------- the brief: the manager's memo is paper, the conditions are read off the desk ---------- */
 .brief-band {
   grid-template-columns: minmax(0, 1.22fr) minmax(0, 1fr);
