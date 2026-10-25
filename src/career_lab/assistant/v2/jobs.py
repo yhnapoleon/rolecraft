@@ -141,7 +141,7 @@ def saved_modes(objects: Iterable[StoredObject]) -> dict[str, dict[str, JsonValu
 def saved_mode(
     test: dict[str, JsonValue], record: dict[str, JsonValue] | None
 ) -> dict[str, JsonValue]:
-    # A rule guard under an llm configuration made no call and kept the extractive answer.
+    # Project this record only. A fallback gate is not an extract from a source.
     attempts = test["execution"].get("attempts") or []
     if record is not None and (record["mode"] != "failed" or attempts):
         mode = record["mode"]
@@ -149,13 +149,28 @@ def saved_mode(
         mode = "llm" if attempts[0]["status"] == "success" else "failed"
     elif test.get("error_code") == "assistant_model_unavailable":
         mode = "unavailable"
+    elif test.get("status") in {"fallback", "failed"} and test.get("error_code") in {
+        "outside_scope",
+        "outside_scope_ood",
+        "no_retrieval_hit",
+        "prohibited_topic",
+        "stale_source_guard",
+        "manual_verification_required",
+    }:
+        mode = "gate"
+    elif test.get("status") == "failed":
+        mode = "failed"
+    elif test.get("config", {}).get("effective", {}).get("generator", "extractive") == "llm":
+        mode = "unknown"
     else:
         mode = "extractive"
     source = record if record is not None else (attempts[0] if attempts else {})
     return {
         "mode": mode,
-        "provider": None if mode == "extractive" else source.get("provider"),
-        "model_revision": None if mode == "extractive" else source.get("model_revision"),
+        "provider": None if mode in {"extractive", "gate", "unknown"} else source.get("provider"),
+        "model_revision": None
+        if mode in {"extractive", "gate", "unknown"}
+        else source.get("model_revision"),
         "config_version": test["config_ref"]["config_version"],
     }
 
