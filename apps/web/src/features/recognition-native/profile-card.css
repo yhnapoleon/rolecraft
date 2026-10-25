@@ -26,7 +26,7 @@
 }
 .rc-sig--key[aria-expanded='true'] .rc-cat {
   color: inherit;
-  opacity: 0.78;
+  opacity: 1;
   border-color: currentColor;
 }
 .rc-sig__chev {
@@ -426,3 +426,10 @@
     animation: none;
   }
 }
+
+/* No translucent text on a translucent ancestor. Expanded fallback chips use the same
+   explicit ink/on-primary pair as the other expanded chips. */
+.rc-sig.rc-sig--key { color: var(--ink); }
+.rc-sig.rc-sig--key .rc-cat { color: var(--ink); opacity: 1; white-space: normal; }
+.rc-sig.rc-sig--key[aria-expanded='true'] { background: var(--ink); color: var(--on-primary); }
+.rc-sig.rc-sig--key[aria-expanded='true'] .rc-cat { color: var(--on-primary); opacity: 1; }
