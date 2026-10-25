@@ -1,29 +1,25 @@
-// The first minute of a practice (story board P02, direction A). Grace's note arrives in "Needs
-// you"; taking it on lands it on the policy item on the board (the card says "Grace handed you
-// this"), and a three-step walk-through points at the test bench, the full brief and the
-// colleagues. Every step can be skipped; "⋯ → Walk me through again" replays it. A practice that
-// already has records, or one this browser has walked before, gets none of it: a returning person
-// just carries on. Kept per practice in this browser; taking it on is a local mark, and the
-// progress ruler counts it only as "took on the brief" (shell/progress.ts).
+// One entry story: Grace’s brief, four real-interface stops, then the current item.
 import { avatar } from '../../app/art.js';
 import { T } from '../../app/i18n';
-import { type Attempt, registerActions, registerSignals, type Signal } from '../../shell';
+import { type Attempt, registerActions } from '../../shell';
 import './walk-through.css';
 
 const KEY = 'rolecraft.walkthrough.v1';
+let fallback: Record<string, Walk> = {};
 type Walk = { taken?: string; tour?: 'done' | 'skipped'; at?: string };
 
 function all(): Record<string, Walk> {
   try {
     const v = JSON.parse(localStorage.getItem(KEY) || '{}');
-    return v && typeof v === 'object' ? v : {};
+    return v && typeof v === 'object' ? { ...fallback, ...v } : fallback;
   } catch {
-    return {};
+    return fallback;
   }
 }
 function save(id: string, patch: Walk) {
   const v = all();
   v[id] = { ...v[id], ...patch };
+  fallback = v;
   try {
     localStorage.setItem(KEY, JSON.stringify(v));
   } catch {
@@ -39,6 +35,10 @@ export type WalkHost = {
   current(): Attempt | null;
   /** A product manager's native practice with no records yet: the walk-in applies. */
   fresh(a: Attempt): boolean;
+  job(a: Attempt): 'pm' | 'engineer';
+  prepareTour(): void;
+  finish(id: string): void;
+  openTicket?(): Promise<void>;
   /** The seeded policy item, where the first try lands. */
   policyTask(a: Attempt): string | null;
   refresh(parts: string[]): void;
@@ -50,125 +50,94 @@ export function installWalkThrough(h: WalkHost) {
   host = h;
 }
 
-const NOTE_ID = 'walk:grace';
-registerSignals((a): Signal[] => {
-  if (!host || !a || all()[a.id] || !host.fresh(a)) return [];
-  return [
-    {
-      id: NOTE_ID,
-      source: 'person',
-      person: 'manager',
-      text: host.text(
-        '你来判断这个助手能不能试点、怎样试点。先在测试台问一次政策问题，看看它凭什么回答——这件事落在「回应政策问答的开放请求」上。',
-        'You decide whether, and how, this assistant goes to pilot. Start by asking it one policy question on the test bench and see what it bases the answer on. That is the “Respond to the policy Q&A request” item.',
-        a,
-      ),
-      action: { label: T('接手', 'Take it on'), action: 'walk-accept' },
-      at: '9999',
-    },
-  ];
-});
+export const entryPending = (a: Attempt) =>
+  !!host && host.fresh(a) && !all()[a.id]?.taken && !all()[a.id]?.tour;
+export function entryStory(a: Attempt) {
+  if (!entryPending(a) || !host) return '';
+  const engineer = host.job(a) === 'engineer';
+  return `<section class="rc-entry-story" aria-labelledby="entry-title">
+    <p class="rc-entry-from">${avatar('manager', 'md')}<span>Grace · ${T('经理', 'Manager')}</span></p>
+    <p class="rc-entry-role">${engineer ? T('你的岗位 · AI 应用工程师', 'Your role · AI Application Engineer') : T('你的岗位 · AI 产品经理', 'Your role · AI Product Manager')}</p>
+    <h1 id="entry-title">${engineer ? T('把这个问题修好，再告诉我能否采用。', 'Fix this issue, then tell me whether we can adopt the change.') : T('这个知识助手，可以开始试点了吗？', 'Is this knowledge assistant ready for a pilot?')}</h1>
+    <p class="rc-entry-body">${engineer ? T('由你复现问题、验证改动，最后交回亲自签字的修复报告。现在先看委托里的失败，再复现一次。', 'Reproduce the issue, verify your change and hand back a repair report you have signed. Start with the failure in the ticket and reproduce it.') : T('由你决定先服务谁、开放什么、需要哪些保障，并交回有依据的试点决定。现在先试一个员工会问的问题。', 'Decide whom to serve, what to offer and which safeguards are needed, then hand back a pilot recommendation with evidence. Start with a question an employee would ask.')}</p>
+    <details class="rc-entry-brief"><summary>${T('看完整委托', 'Read the full brief')}</summary><p>${engineer ? T('核对原问题和当时回答，只改允许的设置；用公开测试检查改动，再说明可能受影响的问题。签字后会进行复核，报告交回 Grace。', 'Check the original question and answer, change only supported settings, test the change and explain what else it may affect. Signing starts the review; hand the report back to Grace.') : T('结合委托里的资源、期限与业务资料，调查知识助手是否适合试点；你可以自由安排事项、向同事求助、测试和修订，最终说明推进范围、保障与暂停条件。', 'Use the resources, timing and business material in the brief to investigate a pilot. Organise the work, ask colleagues, test and revise freely, then explain the scope, safeguards and stopping conditions.')}</p><button type="button" class="btn quiet small" data-action="${engineer ? 'walk-ticket' : 'open-doc'}" data-id="brief">${T('打开委托原文', 'Open the original brief')}</button></details>
+    <button type="button" class="btn primary" data-action="walk-accept">${T('开始', 'Start')}</button>
+  </section>`;
+}
 
 const reduced = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 const EASE = 'cubic-bezier(0.23, 1, 0.32, 1)';
 const frame = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
-const cardOf = (taskId: string) =>
-  document.querySelector<HTMLElement>(`.kanban .card-open[data-id="${CSS.escape(taskId)}"]`);
-
-/**
- * The note flies from the rail to its card: a still copy of it shrinks into the card's box and
- * fades as the card takes a ring (520ms; the one move here that travels, because it says where
- * the brief went). Reduced motion: no flight, the ring fades in and out.
- */
-async function land(copy: HTMLElement | null, from: DOMRect | null, taskId: string) {
-  const card = cardOf(taskId);
-  if (!card) return;
-  card.scrollIntoView({ block: 'center' });
-  await frame();
-  const to = card.getBoundingClientRect();
-  if (copy && from && !reduced()) {
-    const ghost = copy;
-    ghost.removeAttribute('data-signal-id');
-    for (const n of ghost.querySelectorAll('button')) n.remove();
-    Object.assign(ghost.style, {
-      position: 'fixed',
-      left: `${from.left}px`,
-      top: `${from.top}px`,
-      width: `${from.width}px`,
-      margin: '0',
-      zIndex: '60',
-      pointerEvents: 'none',
-      transformOrigin: 'top left',
-    });
-    document.body.appendChild(ghost);
-    const sx = to.width / from.width;
-    const sy = Math.min(sx, to.height / Math.max(1, ghost.offsetHeight));
-    await ghost
-      .animate(
-        [
-          { transform: 'none', opacity: 1 },
-          {
-            transform: `translate(${to.left - from.left}px, ${to.top - from.top}px) scale(${sx}, ${sy})`,
-            opacity: 0.15,
-          },
-        ],
-        { duration: 520, easing: EASE, fill: 'forwards' },
-      )
-      .finished.catch(() => {});
-    ghost.remove();
-  }
-  const ring = cardOf(taskId);
-  ring?.animate(
-    [
-      { boxShadow: '0 0 0 0 var(--p-manager)' },
-      { boxShadow: '0 0 0 3px var(--p-manager)', offset: 0.3 },
-      { boxShadow: '0 0 0 0 transparent' },
-    ],
-    { duration: reduced() ? 900 : 1100, easing: 'ease-out' },
-  );
-}
-
-/* ---------- the three-step walk-through ---------- */
-
 type Step = { target: () => HTMLElement | null; title: string; body: string };
 const visible = (el: HTMLElement | null) =>
   el && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden' ? el : null;
-const steps = (): Step[] => [
-  {
-    target: () => visible(document.querySelector('[data-action="open-bench"]')),
-    title: T('先试一下助手', 'Try the assistant first'),
-    body: T(
-      '在测试台问一个政策问题，比如住宿报销上限。看它答了什么、引用的是哪一版资料。每次测试都会留下记录。',
-      'On the test bench, ask it a policy question, such as the hotel reimbursement cap. See what it answers and which version it cites. Every test is kept on record.',
-    ),
-  },
-  {
-    target: () =>
-      visible(document.querySelector('.brief-line-read')) ||
-      visible(document.querySelector('.ws-title .title-btn')),
-    title: T('需要时再看完整委托', 'Read the full brief when you need it'),
-    body: T(
-      '期限、容量和 Grace 要你交回什么都写在里面。不用一开始读完所有资料，用到哪份再翻哪份。',
-      'Deadline, capacity and what Grace wants back are all in it. No need to read every document up front; open each one when you need it.',
-    ),
-  },
-  {
-    target: () =>
-      visible(document.querySelector('#ws-rail .people')) ||
-      visible(document.querySelector('.team-btn')),
-    title: T('卡住了就问同事', 'Ask a colleague when you are stuck'),
-    body: T(
-      'Chen 管首批用户和业务流程，Daniel 管系统限制和测试证据，Grace 管目标和资源。他们只看得到你分享的东西。',
-      'Chen knows the first users and the workflow, Daniel the system limits and test evidence, Grace the goals and resources. They see only what you share.',
-    ),
-  },
-];
+const currentItem = () => {
+  const a = host?.current();
+  if (a && host?.job(a) === 'engineer')
+    return document.querySelector<HTMLElement>('[data-step="reproduce"]');
+  const id = a && host?.policyTask(a);
+  return (
+    (id
+      ? document.querySelector<HTMLElement>(`.kanban .card-open[data-id="${CSS.escape(id)}"]`)
+      : null) || document.querySelector<HTMLElement>('.kanban .card-open')
+  );
+};
+const steps = (): Step[] => {
+  const a = host?.current();
+  const engineer = !!a && host?.job(a) === 'engineer';
+  const find = (selector: string) => visible(document.querySelector(selector));
+  return [
+    {
+      target: () => find(engineer ? '.rc-scale' : '.rc-prog'),
+      title: T('当前在哪一层', 'Where you are'),
+      body: T(
+        '问题航段尺告诉你当前的问题、已有依据和还没解决的事。',
+        'The progress ruler shows the current question, the evidence you have and what remains unresolved.',
+      ),
+    },
+    {
+      target: () => visible(currentItem()),
+      title: T('当前事项', 'Your current work'),
+      body: engineer
+        ? T(
+            '先复现委托里的问题，再改设置、试跑，最后签字。',
+            'Reproduce the issue in the ticket, change settings and test, then sign your report.',
+          )
+        : T(
+            '从这件事开始，之后可以自己调整事项和先后顺序。',
+            'Start with this item; you can arrange the work and its priorities as you go.',
+          ),
+    },
+    {
+      target: () => find('#ws-rail .people') || find('.team-btn'),
+      title: T('同事在这里', 'Your colleagues are here'),
+      body: T(
+        '红点表示有未读消息；点开一位同事看介绍、直接提问，或自由继续聊。',
+        'A red dot means unread messages; open a colleague to read their introduction, choose a question or chat freely.',
+      ),
+    },
+    {
+      target: () => find(engineer ? '[data-step="reproduce"]' : '[data-action="open-bench"]'),
+      title: T('用测试和资料拿证据', 'Find evidence in tests and documents'),
+      body: engineer
+        ? T(
+            '复现和试跑会保留记录；对照委托里的原问题和资料，检查修复是否有效。',
+            'Reproduction and trials keep a record; compare them with the ticket and source material to check your repair.',
+          )
+        : T(
+            '在测试台问一个员工的问题，再打开回答引用的资料，核对原文和版本。',
+            'Ask an employee’s question on the test bench, then open the cited document to check its wording and version.',
+          ),
+    },
+  ];
+};
 
 let open: { close(how: 'done' | 'skipped'): void } | null = null;
 
 /** Opens the walk-through at step 1 (replay included). */
 export function startTour(id: string) {
   open?.close('skipped');
+  host?.prepareTour();
   const list = steps();
   let i = 0;
   const ring = document.createElement('div');
@@ -207,7 +176,10 @@ export function startTour(id: string) {
     card.style.left = `${left}px`;
     card.style.top = `${below ? r.bottom + 14 : Math.max(8, r.top - 14 - h)}px`;
     card.dataset.side = below ? 'below' : 'above';
-    card.style.setProperty('--arrow', `${Math.min(Math.max(18, r.left + r.width / 2 - left), w - 18)}px`);
+    card.style.setProperty(
+      '--arrow',
+      `${Math.min(Math.max(18, r.left + r.width / 2 - left), w - 18)}px`,
+    );
   };
   const draw = () => {
     const s = list[i];
@@ -226,27 +198,49 @@ export function startTour(id: string) {
     requestAnimationFrame(() => {
       place();
       if (!reduced()) {
-        card.animate([{ opacity: 0, transform: 'translateY(4px)' }, { opacity: 1, transform: 'none' }], {
-          duration: 160,
-          easing: EASE,
-        });
+        card.animate(
+          [
+            { opacity: 0, transform: 'translateY(4px)' },
+            { opacity: 1, transform: 'none' },
+          ],
+          {
+            duration: 160,
+            easing: EASE,
+          },
+        );
       }
       card.querySelector<HTMLElement>('[data-tour="next"]')?.focus({ preventScroll: true });
     });
   };
+  const onRoute = () => close('skipped');
   const onKey = (e: KeyboardEvent) => {
     if (e.key === 'Escape') close('skipped');
   };
   const onMove = () => requestAnimationFrame(place);
+  const surfaces = new MutationObserver(() => {
+    if (!target?.isConnected) onMove();
+  });
+  surfaces.observe(document.getElementById('app') || document.body, {
+    childList: true,
+    subtree: true,
+  });
   const close = (how: 'done' | 'skipped') => {
     save(id, { tour: how });
+    surfaces.disconnect();
     ring.remove();
     card.remove();
     document.removeEventListener('keydown', onKey, true);
     removeEventListener('resize', onMove);
     document.removeEventListener('scroll', onMove, true);
+    removeEventListener('hashchange', onRoute);
     open = null;
-    if (before?.isConnected) before.focus({ preventScroll: true });
+    if (host?.current()?.id === id) host.finish(id);
+    const landing = currentItem();
+    if (landing) {
+      landing.scrollIntoView({ block: 'center' });
+      landing.setAttribute('tabindex', '-1');
+      landing.focus({ preventScroll: true });
+    } else if (before?.isConnected) before.focus({ preventScroll: true });
   };
   card.addEventListener('click', (e) => {
     const k = (e.target as HTMLElement).closest<HTMLElement>('[data-tour]')?.dataset.tour;
@@ -262,6 +256,7 @@ export function startTour(id: string) {
       }
     }
   });
+  addEventListener('hashchange', onRoute);
   document.addEventListener('keydown', onKey, true);
   addEventListener('resize', onMove);
   document.addEventListener('scroll', onMove, true);
@@ -270,23 +265,26 @@ export function startTour(id: string) {
 }
 
 registerActions({
-  // Take the brief on: it lands on the policy item, then the walk-through starts.
-  'walk-accept': async (el) => {
+  'walk-accept': async () => {
     const a = host?.current();
     if (!a || !host) return;
-    const note = (el.closest?.('[data-signal-id]') as HTMLElement | null) ?? null;
-    const task = host.policyTask(a);
-    save(a.id, { taken: task ?? 'brief', at: new Date().toISOString() });
-    // The note's copy and place are taken before the rail redraws without it.
-    const copy = (note?.cloneNode(true) as HTMLElement | undefined) ?? null;
-    const from = note?.getBoundingClientRect() ?? null;
-    host.refresh(['rail', 'stage']);
+    save(a.id, {
+      taken: host.policyTask(a) ?? 'brief',
+      at: new Date().toISOString(),
+    });
+    host.refresh(['toolbar', 'rail', 'stage']);
     await frame();
-    if (task) await land(copy, from, task);
     startTour(a.id);
   },
-  'walk-tour': () => {
+  'walk-ticket': async () => {
+    await host?.openTicket?.();
+  },
+  'walk-tour': async () => {
     const a = host?.current();
-    if (a) startTour(a.id);
+    if (!a || !host) return;
+    save(a.id, { taken: all()[a.id]?.taken ?? 'brief' });
+    host.prepareTour();
+    await frame();
+    startTour(a.id);
   },
 });

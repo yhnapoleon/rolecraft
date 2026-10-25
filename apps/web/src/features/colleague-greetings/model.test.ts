@@ -67,3 +67,27 @@ describe('preset colleague greetings', () => {
     expect(introduction('pm', 'manager', 'en').body).toContain('recommendation and evidence');
   });
 });
+
+it('resumes staggered delivery after reload and persists completion of the introduction tour', () => {
+  const disk = storage(),
+    first = greetingStore(disk);
+  first.prepare('s', 'engineer');
+  expect(first.start('s', 1000)).toBe(1000);
+  const next = greetingStore(disk);
+  expect(next.start('s', 2000)).toBe(1000);
+  next.complete('s');
+  expect(greetingStore(disk).started('s')).toBe(0);
+  expect(next.start('not-enrolled')).toBeNull();
+});
+
+it('does not enrol an earlier greeting record into the new entry story', () => {
+  const disk = storage();
+  disk.setItem(
+    'rolecraft.colleague-greetings.v1',
+    JSON.stringify({ old: { job: 'pm', entered: true } }),
+  );
+  const book = greetingStore(disk);
+  expect(book.story('old')).toBe(false);
+  book.prepare('new', 'pm');
+  expect(book.story('new')).toBe(true);
+});

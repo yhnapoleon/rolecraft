@@ -11,7 +11,7 @@
   box-shadow: var(--shadow-float);
 }
 .rc-tour::before {
-  content: '';
+  content: "";
   position: absolute;
   left: calc(var(--arrow, 50%) - 7px);
   width: 14px;
@@ -20,15 +20,15 @@
   transform: rotate(45deg);
   border-radius: 2px;
 }
-.rc-tour[data-side='below']::before {
+.rc-tour[data-side="below"]::before {
   top: -6px;
   box-shadow: -1px -1px 0 0 var(--line);
 }
-.rc-tour[data-side='above']::before {
+.rc-tour[data-side="above"]::before {
   bottom: -6px;
   box-shadow: 1px 1px 0 0 var(--line);
 }
-.rc-tour[data-side='none']::before {
+.rc-tour[data-side="none"]::before {
   display: none;
 }
 .rc-tour__count {
@@ -41,7 +41,7 @@
 }
 .rc-tour__title {
   margin: 0 0 4px;
-  font: 600 16px/1.3 var(--display);
+  font: 600 16px / 1.3 var(--display);
   letter-spacing: -0.01em;
 }
 .rc-tour__body {
@@ -121,4 +121,96 @@
     flex: 1 1 100%;
     max-width: none;
   }
+}
+
+/* Grace’s commission is the single first-screen action. */
+.rc-entry-story {
+  max-width: 660px;
+  margin: clamp(24px, 7vh, 76px) auto;
+  padding: 32px;
+  background: var(--paper);
+  border-radius: var(--r-panel);
+  box-shadow: var(--shadow-paper);
+}
+.rc-entry-from {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink-2);
+  font-size: 13px;
+  margin: 0 0 32px;
+}
+.rc-entry-role {
+  color: var(--ink-3);
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+.rc-entry-story h1 {
+  font: 500 clamp(26px, 3vw, 36px) / 1.25 var(--serif);
+  margin: 0 0 20px;
+  text-wrap: balance;
+}
+.rc-entry-body {
+  font-size: 16px;
+  line-height: 1.75;
+  color: var(--ink-2);
+  margin: 0 0 24px;
+}
+.rc-entry-brief {
+  font-size: 13px;
+  color: var(--ink-2);
+  line-height: 1.65;
+  margin-bottom: 28px;
+}
+.rc-entry-brief summary {
+  cursor: pointer;
+  width: fit-content;
+}
+.ws:has(.rc-entry-story) .rc-primary {
+  display: none;
+}
+.rc-entry-next {
+  display: flex;
+  gap: 10px;
+  margin: 0 40px 16px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.rc-entry-next b {
+  flex: none;
+  color: var(--ink);
+}
+.rc-tour__title:lang(zh) {
+  letter-spacing: normal;
+}
+@media (max-width: 720px) {
+  .rc-entry-story {
+    margin: 20px 14px;
+    padding: 24px 20px;
+  }
+  .rc-entry-from {
+    margin-bottom: 24px;
+  }
+  .rc-entry-next {
+    margin: 0 14px 14px;
+  }
+}
+
+.rc-prog__suggestion {
+  margin: 8px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.rc-prog__suggestion b {
+  font-weight: 600;
+  color: var(--ink);
+}
+.view-engineer .rc-entry-next {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  padding: 12px 0;
+  background: var(--surface);
 }

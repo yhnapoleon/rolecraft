@@ -172,6 +172,7 @@ import '../shell/bar.css';
 import { carried, distillation, progressOf } from '../shell/progress';
 import { comparisonFor } from '../features/recognition-native/test-comparison';
 import * as Greetings from '../features/colleague-greetings';
+import { engineerApi } from '../features/engineer-desk/api';
 import { ProgressBand } from '../shell/progress-band';
 import '../shell/progress.css';
 import { agentLine } from '../screens/board/agent-line';
@@ -185,7 +186,6 @@ import {
   leaveForBrief,
   resetSeedOrder,
   seedOrder,
-  walkIn,
 } from '../screens/home/home';
 
 const L = window.PracticeLive;
@@ -370,10 +370,57 @@ const readSet = (a) =>
       .filter((e) => e.server && e.type === 'material_read')
       .map((e) => e.detail && e.detail.materialId),
   );
-const unread = (a, role) => {
-  const n = (a.conversations[role] || []).filter((m) => m.role !== 'user').length;
-  return Math.max(0, n - ((a.readTurns || {})[role] ?? n));
-};
+const replyIds = (a, role) =>
+  (a.conversations[role] || [])
+    .filter((m) => m.role !== 'user')
+    .map((m, i) => m.traceId || `legacy-${i}`);
+const unread = (a, role) =>
+  Greetings.receipts.count(a.id, role, [
+    ...replyIds(a, role),
+    ...(Greetings.hasArrived(a.id, role) ? [Greetings.greetingId] : []),
+  ]);
+const unreadLabel = (n) => T(`${n} 条未读消息`, `${n} unread message${n === 1 ? '' : 's'}`);
+const unreadBadge = (n) =>
+  `<span class="unread-mark" ${n ? '' : 'hidden'}><span class="sr-only">${esc(unreadLabel(n))}</span></span>`;
+function paintUnread() {
+  const a = current();
+  if (!a) return;
+  for (const role of ROLES) {
+    const n = unread(a, role);
+    const person = document.querySelector(`[data-action="chat"][data-role="${role}"]`);
+    person?.classList.toggle('unread', n > 0);
+    const badge = person?.querySelector('.unread-mark');
+    if (badge) {
+      badge.hidden = !n;
+      badge.firstElementChild.textContent = unreadLabel(n);
+    }
+    const dot = document.querySelector(`.team-btn .who-${role} .av-dot`);
+    if (dot) dot.hidden = !n;
+  }
+  const total = ROLES.reduce((n, r) => n + unread(a, r), 0);
+  const summary = document.querySelector('.team-compact .unread-mark');
+  if (summary) { summary.hidden = !total; summary.firstElementChild.textContent = unreadLabel(total); }
+  document
+    .querySelector('.team-btn')
+    ?.setAttribute('aria-label', T('团队', 'Team') + (total ? ` · ${unreadLabel(total)}` : ''));
+}
+function refreshGreeting() {
+  const a = current(),
+    slot = document.querySelector('[data-chat-greeting]');
+  if (a && slot && !slot.firstElementChild && Greetings.hasArrived(a.id, ui.chatRole))
+    slot.innerHTML = Greetings.introductionHtml(
+      a.id,
+      hatHere(a) === 'engineer' ? 'engineer' : 'pm',
+      ui.chatRole,
+      locale(),
+      true,
+      canWrite(a),
+    );
+  const next = document.querySelector('[data-entry-next]');
+  if (a && next && hatHere(a) === 'engineer') next.outerHTML = nextStep(a);
+  paintUnread();
+}
+document.addEventListener('rolecraft:greetings', refreshGreeting);
 const btn = (label, action, cls = '', attrs = '') =>
   `<button type="button" class="btn ${cls}" data-action="${action}" ${attrs}>${label}</button>`;
 // Continue codes: the ⋯ dialog of a practice and the entry on the job page. Codes are never stored.
@@ -776,7 +823,7 @@ function mountNativeSlots() {
   });
 }
 function renderLab() {
-  const back = `<a class="btn quiet back" href="${current() ? (ui.labReturn || (hatHere(current()) === 'engineer' ? '#/engineer' : '#/work')) : '#/'}">${icon('back')}<span>${esc(current() ? T('返回工作区', 'Back to your work') : T('首页', 'Home'))}</span></a>`;
+  const back = `<a class="btn quiet back" href="${current() ? ui.labReturn || (hatHere(current()) === 'engineer' ? '#/engineer' : '#/work') : '#/'}">${icon('back')}<span>${esc(current() ? T('返回工作区', 'Back to your work') : T('首页', 'Home'))}</span></a>`;
   return `${topbar(back)}<main id="main" class="page rc-lab" data-rc-lab tabindex="-1"></main>`;
 }
 // The lab keeps its element across redraws: mounted once per entry into the route, and
@@ -841,7 +888,14 @@ function mountEngineerReportRoute() {
 }
 function afterRender() {
   afterShellRender();
-  Greetings.mountGreetings(['work', 'engineer'].includes(ui.route) && current() && statusOf(current()) === 'active' ? current().id : null, locale());
+  Greetings.mountGreetings(
+    (WS.includes(ui.route) || ENGINEER_ROUTES.includes(ui.route) || isRegisteredRoute(ui.route)) &&
+      current() &&
+      statusOf(current()) === 'active'
+      ? current().id
+      : null,
+    locale(),
+  );
   discoverRole(current());
   syncHat();
   mountShellBar();
@@ -878,6 +932,7 @@ function afterRender() {
   updateSave();
   syncPanels();
   markRead();
+  refreshGreeting();
   const a = current();
   const activeWork = a && ui.obj?.type === 'work' ? artifact() : null;
   if (activeWork?.kind === 'investigation') loadInvestigationSources(a, shown(activeWork));
@@ -1354,7 +1409,6 @@ function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief
       : '';
   const typing = typingRole(a);
   const replying = replyingRoles(a);
-  const noteRoles = new Set((ui.notesCache || []).map((x) => x.role));
   // The title is what this hat is working on: the case's question for the product manager, the
   // ticket for the engineer (its line registers it as Stage.title; until then a neutral name).
   const hat = hatHere(a);
@@ -1396,7 +1450,7 @@ function shellBar(a, { back = '', here = '', more = '', id = '', cls = '', brief
     <span class="sep before-hat" aria-hidden="true"></span>
     ${islandSlot('shell-hatscale')}
     <div class="spacer"></div>
-    <button type="button" class="team-btn" data-action="open-rail" aria-label="${esc(T('团队', 'Team'))}">${ROLES.map((r) => avatar(r, 'sm', { typing: typing === r || replying.has(r), dot: unread(a, r) > 0 || noteRoles.has(r) })).join('')}</button>
+    <button type="button" class="team-btn" data-action="open-rail" aria-label="${esc(T('团队', 'Team'))}">${ROLES.map((r) => avatar(r, 'sm', { typing: typing === r || replying.has(r), dot: true })).join('')}<span class="team-compact">${icon('team', 'i-sm')}${unreadBadge(ROLES.reduce((n, r) => n + unread(a, r), 0))}</span></button>
     ${lamp}${record}${moreWrap}
     ${islandSlot('shell-primary')}
   </header>`;
@@ -1598,8 +1652,31 @@ function passedNow(a, p) {
 // The ruler sits at the top of the stage, in the same light and gutters as the board, on every
 // product manager's screen of the practice.
 const progressSlot = (a) =>
-  (hatHere(a) === 'pm' ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>` : '') +
-  (['work', 'engineer'].includes(ui.route) ? Greetings.greetSlot(a.id) : '');
+  ['work', 'engineer'].includes(ui.route) && Board.entryPending(a)
+    ? ''
+    : (hatHere(a) === 'pm'
+        ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>`
+        : '') + (['work', 'engineer'].includes(ui.route) ? nextStep(a) : '');
+function nextSuggestion(a) {
+  if (!(a.tests || []).length)
+    return T('先试一个员工会问的问题。', 'Try a question an employee would ask.');
+  const p = progressOf(progressFacts(a)),
+    layer = p.layers.find((l) => l.id === p.current);
+  return layer?.missing.length
+    ? T(layer.missing[0][0], layer.missing[0][1])
+    : T(
+        '整理已有证据，形成你的试点决定。',
+        'Bring the evidence together in your pilot recommendation.',
+      );
+}
+function nextStep(a) {
+  if (statusOf(a) !== 'active' || hatHere(a) !== 'engineer') return '';
+  const stage = stageOf('engineer', a),
+    step = stage?.steps.find((s) => s.state === 'current');
+  const next = stage?.primary?.label;
+  const label = step?.label;
+  return `<p class="rc-entry-next" data-entry-next><b>${label ? esc(T(label[0], label[1])) : T('复现', 'Reproduce')}</b><span>${T('下一步：', 'Next: ')}${next ? esc(T(next[0], next[1])) : T('先复现委托里的问题。', 'Reproduce the issue in the ticket.')}</span></p>`;
+}
 function mountProgress(a) {
   if (!document.querySelector('[data-island="shell-progress"]')) return;
   const p = progressOf(progressFacts(a));
@@ -1610,6 +1687,7 @@ function mountProgress(a) {
     ui.route === 'investigate' ? 'understand' : ui.route === 'review' ? 'reflect' : undefined;
   keepIsland('shell-progress', ProgressBand, {
     lang: locale(),
+    suggestion: { label: T('下一步', 'Next step'), text: nextSuggestion(a) },
     current: p.current,
     carried: carried(p).map(tx),
     arrived,
@@ -1884,7 +1962,7 @@ function moreMenu(a) {
     L.nativeWorkspace(a) && !roleOf(a.id)
       ? `<span class="phone-item">${menuItem('hat-switch', hatHere(a) === 'pm' ? T('换成工程师', 'Switch to Engineer') : T('换成产品经理', 'Switch to Product manager'), 'sync', `data-hat="${hatHere(a) === 'pm' ? 'engineer' : 'pm'}"`)}</span>`
       : '',
-    hatHere(a) === 'pm' && L.nativeWorkspace(a)
+    L.nativeWorkspace(a)
       ? menuItem('walk-tour', T('重看入门引导', 'Walk me through again'), 'question')
       : '',
     menuItem('about', T('关于这个工作台', 'About this workspace'), 'info'),
@@ -2017,6 +2095,7 @@ function conditions(a, cls = '') {
   </div>`;
 }
 function wsStage(a) {
+  if (['work', 'engineer'].includes(ui.route) && Board.entryPending(a)) return Board.entryStory(a);
   const st = statusOf(a);
   let lock = sessionOf(a)?.v2ReadOnly
     ? `<div class="stage-banner" role="status"><span class="grow">${T('这个练习使用旧版场景，原记录可以只读查看。要继续练习，请开始新的工作。', 'This practice uses an earlier scenario. View its original records read-only, or start new work to continue practising.')}</span>${btn(T('开始新的练习', 'Start a new practice'), 'v4-new-practice', 'small')}</div>`
@@ -3319,15 +3398,17 @@ function railTeam(a) {
   const needs = Board.needsYou(signals, signalPeople(), Board.freshSignals(signals.map((x) => x.id)));
   return `<div class="rail-board">
     ${needs}
-    <section aria-labelledby="people-h"><h3 class="mini-title" id="people-h">${T('同事', 'Colleagues')}</h3><ul class="people">${ROLES.map((r) => {
-      const last = (a.conversations[r] || []).filter((m) => m.role !== 'user').at(-1);
-      const n = unread(a, r);
-      const waits = typing === r || replying.has(r);
-      const line = waits
-        ? `<span class="person-replying">${T('正在回复…', 'Replying…')}</span>`
-        : (last && teamLine(last.text)) || esc(Board.roleLine(r));
-      return `<li class="person-row"><button type="button" class="person ${n ? 'unread' : ''}" data-action="chat" data-role="${r}">${avatar(r, 'md', { typing: waits })}<span class="grow"><span class="person-name">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span><span class="person-line">${line}</span></span>${n ? `<span class="unread-mark"><span class="sr-only">${esc(T(`${n} 条新消息`, n === 1 ? '1 new message' : `${n} new messages`))}</span></span>` : ''}</button><button type="button" class="btn quiet small rc-greet-recall" data-action="greet-chat" data-role="${r}" aria-label="${esc(T(`回看 ${PEOPLE[r].name} 的介绍`, `Read ${PEOPLE[r].name}’s introduction`))}">${T('介绍', 'Intro')}</button></li>`;
-    }).join('')}
+    <section aria-labelledby="people-h"><h3 class="mini-title" id="people-h">${T('同事', 'Colleagues')}</h3><ul class="people">${ROLES.map(
+      (r) => {
+        const last = (a.conversations[r] || []).filter((m) => m.role !== 'user').at(-1);
+        const n = unread(a, r);
+        const waits = typing === r || replying.has(r);
+        const line = waits
+          ? `<span class="person-replying">${T('正在回复…', 'Replying…')}</span>`
+          : (last && teamLine(last.text)) || esc(Board.roleLine(r));
+        return `<li class="person-row"><button type="button" class="person ${n ? 'unread' : ''}" data-action="chat" data-role="${r}">${avatar(r, 'md', { typing: waits })}<span class="grow"><span class="person-name">${PEOPLE[r].name}${PEOPLE[r].titled ? '' : `<small>${ROLE_TITLE(r)}</small>`}</span><span class="person-line">${line}</span></span>${unreadBadge(n)}</button><button type="button" class="btn quiet small rc-greet-recall" data-action="greet-chat" data-role="${r}" aria-label="${esc(T(`回看 ${PEOPLE[r].name} 的介绍`, `Read ${PEOPLE[r].name}’s introduction`))}">${T('介绍', 'Intro')}</button></li>`;
+      },
+    ).join('')}
       <li class="people-sep" role="separator"></li>
       <li><button type="button" class="person mine" data-action="board-my-agent">${agentMark('md')}<span class="grow"><span class="person-name">${T('我的 Agent', 'My agent')}<small>${T('你自己的工具', 'Your own tool')}</small></span><span class="person-line">${esc(agentLine(a, hatOf(a.id), agentConnection(), feedStore.snapshot().events))}</span></span></button></li>
     </ul></section>
@@ -3376,7 +3457,7 @@ function railChat(a, role) {
   const tools = `${a.tests.length ? `<button type="button" class="composer-tool${quote ? ' on' : ''}" data-action="prefill-run" aria-label="${esc(T('附上最近一次测试', 'Attach the latest test run'))}" title="${esc(T('附上最近一次测试', 'Attach the latest test run'))}">${icon('flask', 'i-sm')}</button>` : ''}${x ? `<button type="button" class="composer-tool" data-action="prefill-artifact" aria-label="${esc(T('分享这份作品', 'Share this work'))}" title="${esc(T('分享这份作品', 'Share this work'))}">${icon('doc', 'i-sm')}</button>` : ''}`;
   return `<div class="chat who-${role}" ${native ? 'data-v4-region="roles"' : ''}>
     <header class="chat-head">${btn(icon('back'), 'rail', 'icon quiet small', `data-rail="team" aria-label="${esc(T('返回团队', 'Back to team'))}"`)}${avatar(role, 'md', { typing })}<div class="grow"><p class="chat-name">${PEOPLE[role].name}</p><p class="chat-knows">${esc(`${ROLE_TITLE(role)} · ${KNOWS(role)}`)}</p></div></header>
-    ${Greetings.introductionHtml(a.id, hatHere(a) === 'engineer' ? 'engineer' : 'pm', role, locale(), true, canWrite(a))}
+    <div data-chat-greeting>${Greetings.hasArrived(a.id, role) ? Greetings.introductionHtml(a.id, hatHere(a) === 'engineer' ? 'engineer' : 'pm', role, locale(), true, canWrite(a)) : ''}</div>
     <div class="thread" data-role-id="${ROLE_ID[role]}" role="log" aria-live="polite">${native ? '' : `${msgs.length ? msgs.map((m) => msgHtml(a, role, m)).join('') : `<div class="chat-empty">${avatar(role, 'xl')}<p>${esc(OPENER(role))}</p></div>`}${typing ? `<div class="msg them is-typing" aria-label="${esc(T(`${PEOPLE[role].name}正在输入`, `${PEOPLE[role].subject} is typing`))}"><span class="typing"><i></i><i></i><i></i></span></div>` : ''}${failed ? `<div class="msg-fail">${icon('warn', 'i-sm')}<span class="grow">${T('上一条没有得到回复。', 'Your last message got no reply.')}</span>${btn(T('再发一次', 'Send again'), 'resend-turn', 'small quiet')}</div>` : ''}`}</div>
     ${t ? `<div class="chat-context"><span class="ctx" title="${esc(T('这条对话会记在这件事下', 'This conversation is filed under this task'))}">${icon('note', 'i-xs')}<span>${esc(taskTitle(t))}</span></span></div>` : ''}
     <form class="composer" data-form="chat">${attached}<div class="composer-line">${tools ? `<span class="composer-tools">${tools}</span>` : ''}<label class="sr-only" for="chat-input">${esc(T(`给 ${PEOPLE[role].name} 的消息`, `Message to ${PEOPLE[role].ref}`))}</label><textarea id="chat-input" name="text" rows="1" maxlength="4000" required enterkeyhint="send" aria-describedby="chat-hint" placeholder="${esc(quote ? T('你想就这次测试确认什么？', 'What do you want to check about this test?') : T(`写给 ${PEOPLE[role].name}…`, `Message ${PEOPLE[role].ref}…`))}">${esc(question)}</textarea><button type="submit" class="btn icon primary send" aria-label="${esc(T('发送', 'Send'))}" ${canWrite(a) ? '' : 'disabled'}>${icon('send')}</button></div></form>
@@ -3405,7 +3486,7 @@ function msgHtml(a, role, m) {
     (local
       ? `<span class="msg-local" title="${esc(T('后端以本地模式运行，没有接模型：这里列出的是这位同事掌握的事实，并没有读你的问题。', 'The server runs in local mode with no model: this lists facts the colleague holds and does not read your question.'))}">${T('本地模式', 'Local mode')}</span>`
       : '');
-  return `<div class="msg ${mine ? 'me' : 'them'}${local ? ' local' : ''}"><div class="bubble"${zhAttr(m.text)}>${mine ? esc(text) : md(text)}</div>${time || tag || (mine && tk) ? `<span class="msg-foot">${tag}${mine && tk ? (task ? `<button type="button" class="msg-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : `<span class="msg-task" title="${esc(tk)}">${esc(T('关联事项：', 'Linked task: ') + Array.from(String(tk)).slice(0, 8).join('') + (Array.from(String(tk)).length > 8 ? '…' : ''))}</span>`) : ''}${time ? `<time title="${esc(time)}">${when(time)}</time>` : ''}</span>` : ''}</div>`;
+  return `<div ${mine ? '' : `data-message-id="${esc(m.traceId || '')}"`} class="msg ${mine ? 'me' : 'them'}${local ? ' local' : ''}"><div class="bubble"${zhAttr(m.text)}>${mine ? esc(text) : md(text)}</div>${time || tag || (mine && tk) ? `<span class="msg-foot">${tag}${mine && tk ? (task ? `<button type="button" class="msg-task" data-action="open-task" data-id="${task.id}">${icon('note', 'i-xs')}${esc(taskTitle(task))}</button>` : `<span class="msg-task" title="${esc(tk)}">${esc(T('关联事项：', 'Linked task: ') + Array.from(String(tk)).slice(0, 8).join('') + (Array.from(String(tk)).length > 8 ? '…' : ''))}</span>`) : ''}${time ? `<time title="${esc(time)}">${when(time)}</time>` : ''}</span>` : ''}</div>`;
 }
 // The rail no longer carries the result (it lives on the result page, the main screen). Until
 // the board line drops this tab, it holds one line and the way there.
@@ -4639,6 +4720,11 @@ function noticeArrivals() {
   let dirtyRecord = false;
   for (const r of ROLES) {
     const msgs = (a.conversations[r] || []).filter((m) => m.role !== 'user');
+    Greetings.receipts.seed(
+      a.id,
+      r,
+      replyIds(a, r).slice(0, a.readTurns[r] ?? (history ? msgs.length : 0)),
+    );
     if (a.readTurns[r] === undefined) {
       a.readTurns[r] = msgs.length;
       dirtyRecord = true;
@@ -4728,23 +4814,29 @@ function noticeArrivals() {
   if (dirtyRecord) persist();
 }
 const railVisible = () => window.matchMedia('(min-width: 1280px)').matches || ui.railOpen;
+let readRoot = null;
+let stopReading = () => {};
 function markRead() {
-  const a = current();
-  if (
-    !a ||
-    !WS.includes(ui.route) ||
-    ui.railTab !== 'team' ||
-    ui.rail !== 'chat' ||
-    !ui.chatRole ||
-    !railVisible()
-  )
-    return;
-  const n = (a.conversations[ui.chatRole] || []).filter((m) => m.role !== 'user').length;
-  a.readTurns = a.readTurns || {};
-  if (a.readTurns[ui.chatRole] !== n) {
-    a.readTurns[ui.chatRole] = n;
-    persist();
-  }
+  const a = current(),
+    root = document.querySelector('#ws-rail .chat');
+  if (root === readRoot) return;
+  stopReading();
+  readRoot = root;
+  if (!a || !root || !ui.chatRole) return;
+  const role = ui.chatRole;
+  stopReading = Greetings.watchMessages(
+    root,
+    (id) => {
+      if (Greetings.receipts.read(a.id, role, id)) paintUnread();
+    },
+    () =>
+      current()?.id === a.id &&
+      ui.rail === 'chat' &&
+      ui.chatRole === role &&
+      railVisible() &&
+      !sheet.open &&
+      !document.querySelector('.rc-tour'),
+  );
 }
 
 /* ---------- workspace refresh ---------- */
@@ -5168,9 +5260,7 @@ function freshAttemptUi(a) {
   persist();
   return a;
 }
-// Into the board. Taking on the brief walks in (screens/home walk-in: the slips lift, the key
-// waits, then they fly to their cards); any other way in swaps the page with the view transition,
-// or fades it in when motion is reduced.
+// A new practice lands on Grace’s commission. Cards arrive only after the person starts.
 async function enterWork(fn, trigger) {
   const show = () => {
     if (sheet.open) closeSheet(true);
@@ -5182,20 +5272,16 @@ async function enterWork(fn, trigger) {
   };
   if (trigger) {
     if (ui.walkIn) return;
-    await walkIn({
-      trigger,
-      hold: (on) => {
-        ui.walkIn = on;
-        if (ui.route === 'pm') render();
-      },
-      open: async () => {
-        await fn();
-        // The walk-in is the entrance; the board's own arrival would play under it.
-        ui.arriving = false;
-        resetSeedOrder();
-      },
-      show,
-    });
+    ui.walkIn = true;
+    if (ui.route === 'pm') render();
+    try {
+      await fn();
+      ui.arriving = false;
+      resetSeedOrder();
+      show();
+    } finally {
+      ui.walkIn = false;
+    }
     return;
   }
   await fn();
@@ -5664,7 +5750,10 @@ async function act(el, ev = new Event('rc-action')) {
         await keepRole(na, 'engineer');
         const ticket = await openEngineerTicket(L.gatewayTransport(na), na.id, { from: 'seeded' });
         setHat(na.id, 'engineer');
-        go('engineer', { id: engineerEntryId(na.id, ticket.id, 'new'), transition: true });
+        go('engineer', {
+          id: ticket.id,
+          transition: true,
+        });
       } finally {
         if (el.isConnected) {
           el.disabled = false;
@@ -6309,8 +6398,9 @@ async function act(el, ev = new Event('rc-action')) {
         if (statusOf(a) === 'submitted') {
           keepBoardPlace();
           go('review', { transition: true });
-        } else
-          // What to do next, by where the practice stands.
+        }
+        // What to do next, by where the practice stands.
+        else
           notify(
             pmCurrent(a) === 'decide'
               ? T(
@@ -6613,66 +6703,120 @@ async function act(el, ev = new Event('rc-action')) {
     case 'greet-chat':
       Greetings.showIntroduction(a.id, el.dataset.role);
       openChat(el.dataset.role);
+      {
+        const slot = document.querySelector('[data-chat-greeting]');
+        if (slot)
+          slot.innerHTML = Greetings.introductionHtml(
+            a.id,
+            hatHere(a) === 'engineer' ? 'engineer' : 'pm',
+            el.dataset.role,
+            locale(),
+            true,
+            canWrite(a),
+          );
+      }
       break;
     case 'greet-ask': {
       const person = el.dataset.role;
       const attemptId = a.id;
-      await Greetings.askGreeting(a.id, hatHere(a) === 'engineer' ? 'engineer' : 'pm', person, Number(el.dataset.question), locale(), async (question) => {
-        openChat(person);
-        // Let the existing native slot bind its permissions and composer. It owns submission,
-        // pending requests, retries and the eventual real reply; no alternate send API is added.
-        for (let i = 0; i < 100; i += 1) {
-          if (current()?.id !== attemptId || ui.chatRole !== person) return false;
-          const form = document.querySelector('.composer');
-          const input = document.getElementById('chat-input');
-          const send = form?.querySelector('button[type="submit"]');
-          if (form && input && send && !send.disabled && form.dataset.rolesBound === ROLE_ID[person]) {
-            if (input.value.trim() || ui.chatQuotes[quoteKey(a, person)]) {
-              notify(T('你的草稿和引用已保留。先处理它们，再点建议问题。', 'Your draft and attachment are safe. Send or clear them before choosing a suggested question.'));
-              return false;
-            }
-            // Submit synchronously through the bound owner. Its send method saves the draft;
-            // a synthetic input event here could remount the form before submit.
-            input.value = question;
-            return await new Promise((resolve) => {
-              const token = crypto.randomUUID();
-              let revised = false;
-              const changed = (event) => {
-                if (current()?.id === attemptId && ui.chatRole === person && event.target.id === 'chat-input') revised = true;
-              };
-              const cleanup = () => {
-                clearTimeout(timeout);
-                document.removeEventListener('input', changed, true);
-                form.removeEventListener('rolecraft:greeting-result', settled);
-              };
-              const settled = async (event) => {
-                if (event.detail?.token !== token) return;
-                clearTimeout(timeout);
-                form.removeEventListener('rolecraft:greeting-result', settled);
-                try {
-                  if (event.detail.accepted && !revised) {
-                    const host = L.v4Host(a);
-                    const key = `question:${ROLE_ID[person]}`;
-                    if (host?.draft('roles', key) === question) await host.keepDraft('roles', key, '');
-                    const liveInput = document.getElementById('chat-input');
-                    if (!revised && current()?.id === attemptId && ui.chatRole === person && liveInput?.value === question) liveInput.value = '';
+      await Greetings.askGreeting(
+        a.id,
+        hatHere(a) === 'engineer' ? 'engineer' : 'pm',
+        person,
+        Number(el.dataset.question),
+        locale(),
+        async (question) => {
+          openChat(person);
+          // Let the existing native slot bind its permissions and composer. It owns submission,
+          // pending requests, retries and the eventual real reply; no alternate send API is added.
+          for (let i = 0; i < 100; i += 1) {
+            if (current()?.id !== attemptId || ui.chatRole !== person) return false;
+            const form = document.querySelector('.composer');
+            const input = document.getElementById('chat-input');
+            const send = form?.querySelector('button[type="submit"]');
+            if (
+              form &&
+              input &&
+              send &&
+              !send.disabled &&
+              form.dataset.rolesBound === ROLE_ID[person]
+            ) {
+              if (input.value.trim() || ui.chatQuotes[quoteKey(a, person)]) {
+                notify(
+                  T(
+                    '你的草稿和引用已保留。先处理它们，再点建议问题。',
+                    'Your draft and attachment are safe. Send or clear them before choosing a suggested question.',
+                  ),
+                );
+                return false;
+              }
+              // Submit synchronously through the bound owner. Its send method saves the draft;
+              // a synthetic input event here could remount the form before submit.
+              input.value = question;
+              return await new Promise((resolve) => {
+                const token = crypto.randomUUID();
+                let revised = false;
+                const changed = (event) => {
+                  if (
+                    current()?.id === attemptId &&
+                    ui.chatRole === person &&
+                    event.target.id === 'chat-input'
+                  )
+                    revised = true;
+                };
+                const cleanup = () => {
+                  clearTimeout(timeout);
+                  document.removeEventListener('input', changed, true);
+                  form.removeEventListener('rolecraft:greeting-result', settled);
+                };
+                const settled = async (event) => {
+                  if (event.detail?.token !== token) return;
+                  clearTimeout(timeout);
+                  form.removeEventListener('rolecraft:greeting-result', settled);
+                  try {
+                    if (event.detail.accepted && !revised) {
+                      const host = L.v4Host(a);
+                      const key = `question:${ROLE_ID[person]}`;
+                      if (host?.draft('roles', key) === question)
+                        await host.keepDraft('roles', key, '');
+                      const liveInput = document.getElementById('chat-input');
+                      if (
+                        !revised &&
+                        current()?.id === attemptId &&
+                        ui.chatRole === person &&
+                        liveInput?.value === question
+                      )
+                        liveInput.value = '';
+                    }
+                    resolve(!!event.detail.accepted);
+                  } catch (error) {
+                    notify(errText(error));
+                    resolve(false);
+                  } finally {
+                    cleanup();
                   }
-                  resolve(!!event.detail.accepted);
-                } catch (error) { notify(errText(error)); resolve(false); }
-                finally { cleanup(); }
-              };
-              const timeout = setTimeout(() => { cleanup(); resolve(false); }, 25000);
-              document.addEventListener('input', changed, true);
-              form.addEventListener('rolecraft:greeting-result', settled);
-              form.dataset.greetingRequest = token;
-              form.requestSubmit(send);
-            });
+                };
+                const timeout = setTimeout(() => {
+                  cleanup();
+                  resolve(false);
+                }, 25000);
+                document.addEventListener('input', changed, true);
+                form.addEventListener('rolecraft:greeting-result', settled);
+                form.dataset.greetingRequest = token;
+                form.requestSubmit(send);
+              });
+            }
+            await new Promise((resolve) => setTimeout(resolve, 100));
           }
-          await new Promise((resolve) => setTimeout(resolve, 100));
-        }
-        notify(T('对话还没就绪，请稍后再点这个问题。', 'The conversation is not ready yet. Try the question again shortly.'));
-        return false;
-      });
+          notify(
+            T(
+              '对话还没就绪，请稍后再点这个问题。',
+              'The conversation is not ready yet. Try the question again shortly.',
+            ),
+          );
+          return false;
+        },
+      );
       break;
     }
     case 'chat':
@@ -7838,14 +7982,26 @@ Board.installWalkThrough({
   fresh: (a) =>
     !!a &&
     L.nativeWorkspace(a) &&
-    hatHere(a) === 'pm' &&
     statusOf(a) === 'active' &&
     !sessionOf(a)?.v2ReadOnly &&
-    (Greetings.hasGreetingEntry(a.id) || (
-      !(a.tests || []).length &&
-      !(sessionOf(a)?.v2Workspace?.products || []).length &&
-      !Object.values(a.conversations || {}).some((l) => (l || []).some((m) => m.role === 'user'))
-    )),
+    Greetings.hasEntryStory(a.id),
+  job: (a) => (hatHere(a) === 'engineer' ? 'engineer' : 'pm'),
+  prepareTour: () => {
+    ui.menu = null;
+    ui.rail = 'team';
+    ui.railTab = 'team';
+    if (hatHere(current()) === 'pm' && ui.route !== 'work') go('work');
+    else refreshWS(['toolbar', 'rail', 'stage']);
+  },
+  finish: (id) => Greetings.finishArrivals(id),
+  openTicket: async () => {
+    const a = current(), id = ui.routeId?.split('?')[0];
+    if (!a || !id) return;
+    const ticket = await engineerApi(L.gatewayTransport(a), a.id).ticket(id);
+    if (current()?.id !== a.id) return;
+    openSheet(esc(T('Grace 的工程委托', 'Grace’s engineering ticket')),
+      `<h3>${esc(ticket.title)}</h3>${ticket.target_tests.map(t => `<section><h4>${esc(t.query)}</h4><blockquote>${esc(t.answer_summary)}</blockquote></section>`).join('')}<p>${T('只改允许的设置，复现并试跑后，由你亲自签字交回复核。', 'Change only supported settings, reproduce and test the issue, then sign the report yourself and hand it back for review.')}</p>`);
+  },
   policyTask: (a) =>
     (a.tasks || []).find((t) => t.title === SEEDS.policy.zh[0] || t.title === SEEDS.policy.en[0])
       ?.id ?? null,
