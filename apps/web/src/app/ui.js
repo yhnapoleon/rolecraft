@@ -163,6 +163,9 @@ import {
 } from '../shell';
 import { HatScale, PrimaryKey } from '../shell/bar';
 import '../shell/bar.css';
+import { carried, distillation, progressOf } from '../shell/progress';
+import { ProgressBand } from '../shell/progress-band';
+import '../shell/progress.css';
 import { agentLine } from '../screens/board/agent-line';
 import * as Board from '../screens/board';
 import { dossierHtml, installDossier } from '../screens/investigate';
@@ -1244,7 +1247,7 @@ function renderWorkspace() {
   ui.notesCache = Coach.notes(a, E);
   const html = `<div class="ws view-${ui.route} ${arriving ? 'arriving' : ''} ${ui.railOpen ? 'rail-open' : ''}" data-status="${statusOf(a)}">
     ${wsToolbar(a)}
-    <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${wsStage(a)}</div></main>
+    <main id="main" class="stage" tabindex="-1"><div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${progressSlot(a)}${wsStage(a)}</div></main>
     ${docLayer()}
     <aside class="rail" id="ws-rail" aria-label="${esc(T('同事与需要你回应的事', 'Colleagues and what needs you'))}">${wsRail(a)}</aside>
     <button type="button" class="scrim" data-action="close-panels" aria-label="${esc(T('关闭面板', 'Close panel'))}" tabindex="-1"></button>
@@ -1395,15 +1398,15 @@ function mountShellBar() {
       busy: T('正在换帽子', 'Switching hats'),
     },
     canSwitch: !!L.nativeWorkspace(a) && !sessionOf(a)?.v2ReadOnly,
-    steps,
-    scaleLabel: hat === 'pm' ? T('这一局的阶段', 'Stage') : T('签字的步骤', 'Sign-off steps'),
+    // The product manager's place is the problem ruler at the top of the stage (mountProgress);
+    // the bar keeps only the engineer's sign-off steps.
+    steps: hat === 'pm' ? [] : steps,
+    scaleLabel: T('签字的步骤', 'Sign-off steps'),
     stepName,
     delivered,
     lang: locale(),
-    ...(hat === 'pm' && pmViewing(a)
-      ? { viewing: pmViewing(a), viewingWord: T('在看', 'Viewing'), back: stageBack(a) }
-      : {}),
   });
+  if (hat === 'pm') mountProgress(a);
   const p = stage?.primary;
   if (p)
     keepIsland('shell-primary', PrimaryKey, {
@@ -1422,6 +1425,207 @@ function mountShellBar() {
           : undefined,
       icon: p.action === 'submit' ? 'stamp' : 'none',
     });
+}
+/* ---------- the problem ruler (phase 2, step 1) ---------- */
+// What the six layers are read from: the person's own records only (shell/progress.ts).
+const ROLE_OF_TURN = { manager: 'manager', business: 'business', technical: 'technical' };
+function progressFacts(a) {
+  const tests = a.tests || [];
+  const list = works(a).filter((w) => !w.removedAt);
+  const s = sessionOf(a);
+  return {
+    accepted: Board.walkInAccepted(a.id),
+    tests: tests.map((t) => ({
+      id: t.id,
+      policyVersion: Number(t.policyVersion) || 1,
+      configVersion: Number(t.configVersion) || 0,
+      noted: !!(String(t.expectation || '').trim() || String(t.diagnosis || '').trim()),
+    })),
+    asked: Object.keys(ROLE_OF_TURN).filter((r) =>
+      (a.conversations?.[r] || []).some((m) => m.role === 'user'),
+    ),
+    works: list.map((w) => ({
+      id: w.id,
+      decision: E.intentOf(w.purpose) === 'commit',
+      hasBody:
+        !!String(w.body || '').trim() ||
+        (w.cases || []).length > 0 ||
+        (w.blocks || []).some((b) => String(b.text || b.body || '').trim() || b.testId),
+      evidence: [
+        ...(w.evidence || []).map((e) => ({
+          kind: e.type === 'test' ? 'test' : 'material',
+          id: e.id,
+        })),
+        ...(w.blocks || [])
+          .flatMap((b) => [b.testId, ...(b.testIds || [])])
+          .filter(Boolean)
+          .map((id) => ({ kind: 'test', id })),
+        ...(w.cases || []).flatMap((c) =>
+          (c.refs || []).map((r) => ({ kind: 'material', id: r.id })),
+        ),
+      ],
+    })),
+    policyVersion: Number(a.world?.policyVersion) || 1,
+    configVersion: Number(a.configVersion) || 0,
+    baseConfigVersion: 0,
+    pendingRequests: (a.requests || []).filter((r) => r.status === 'pending').length,
+    approvedRequests: (a.events || []).filter(
+      (e) => e.server && ['approve_request', 'resource_grant_committed'].includes(e.type),
+    ).length,
+    delivered: statusOf(a) === 'submitted',
+    feedback: !!(s?.feedback || a.feedback),
+  };
+}
+const PROGRESS_FOLD = 'rolecraft.progress.folded.v2';
+const foldKey = () => (ui.route === 'work' ? 'board' : 'page');
+const PROGRESS_SEEN = 'rolecraft.progress.passed.v1';
+const readJson = (k, d) => {
+  try {
+    return JSON.parse(localStorage.getItem(k) || '') ?? d;
+  } catch {
+    return d;
+  }
+};
+const writeJson = (k, v) => {
+  try {
+    localStorage.setItem(k, JSON.stringify(v));
+  } catch {
+    /* this page only */
+  }
+};
+// The layers this practice had passed when last shown here. A layer passing since arrives once
+// with its distillation; the first time a practice is shown, what it already passed is taken as
+// seen (a returning person is not shown a burst of old summaries).
+function passedNow(a, p) {
+  const all = readJson(PROGRESS_SEEN, {});
+  const done = p.layers
+    .filter((l) => l.state === 'done' || l.state === 'reopened')
+    .map((l) => l.id);
+  if (!all[a.id]) {
+    all[a.id] = done;
+    writeJson(PROGRESS_SEEN, all);
+  }
+  const seen = new Set(all[a.id]);
+  return { arrived: done.filter((id) => !seen.has(id)).at(-1), all };
+}
+// The ruler sits at the top of the stage, in the same light and gutters as the board, on every
+// product manager's screen of the practice.
+const progressSlot = (a) =>
+  hatHere(a) === 'pm' ? `<div class="rc-prog-wrap">${islandSlot('shell-progress')}</div>` : '';
+function mountProgress(a) {
+  if (!document.querySelector('[data-island="shell-progress"]')) return;
+  const p = progressOf(progressFacts(a));
+  const tx = (t) => T(t[0], t[1]);
+  const { arrived } = passedNow(a, p);
+  const now = pmCurrent(a);
+  const routeLayer =
+    ui.route === 'investigate' ? 'understand' : ui.route === 'review' ? 'reflect' : undefined;
+  keepIsland('shell-progress', ProgressBand, {
+    lang: locale(),
+    current: p.current,
+    carried: carried(p).map(tx),
+    arrived,
+    // Open by default on the board, the overview; one line on the pages where the work itself is
+    // done (an item, a document, the bench) and at phone width. Each keeps its own choice.
+    folded: readJson(PROGRESS_FOLD, {})[foldKey()] ?? null,
+    foldedByDefault: ui.route !== 'work',
+    routeViewing: routeLayer,
+    back: routeLayer ? stageBack(a) : undefined,
+    actions: {
+      // The dossier of findings, once there is something in it.
+      understand:
+        ui.route === 'investigate' || !(a.tests || []).length
+          ? undefined
+          : {
+              label: T('看调查记录', 'See what you found'),
+              action: 'stage-pm',
+              data: { step: 'investigate' },
+            },
+      ...(statusOf(a) === 'submitted' && ui.route !== 'review'
+        ? {
+            reflect: {
+              label: T('看结果', 'See the result'),
+              action: 'stage-pm',
+              data: { step: 'delivered' },
+            },
+          }
+        : {}),
+      ...(now !== 'delivered' && ui.route !== 'work'
+        ? { [p.current]: { label: T('回到工作板', 'Back to the board'), action: 'to-board' } }
+        : {}),
+    },
+    layers: p.layers.map((l) => {
+      const d = distillation(p, l.id);
+      return {
+        id: l.id,
+        n: l.n,
+        label: tx(l.label),
+        goal: tx(l.goal),
+        state: l.state,
+        confirmed: l.confirmed.map(tx),
+        missing: l.missing.map(tx),
+        ...(l.reopened ? { reopened: tx(l.reopened) } : {}),
+        ...(d ? { distilled: { confirmed: d.confirmed.map(tx), kept: d.kept.map(tx) } } : {}),
+      };
+    }),
+    words: {
+      label: T('这一局走到哪了', 'Where this practice stands'),
+      now: T('现在', 'Now'),
+      missing: T('还差', 'Still missing'),
+      nothingMissing: T('这一层的依据都在了', 'This layer has what it needs'),
+      confirmed: T('已确认', 'Confirmed'),
+      next: T('下一层', 'Next'),
+      after: T('再下一层', 'After that'),
+      basis: T('依据：你的记录', 'Based on your records'),
+      basisHint: T(
+        '进度只看你的记录：测试、你写下的判断、引用了依据的作品、应用的设置和交付。点击次数、聊天轮数和读了多少资料都不算；一篇草稿本身也不算过关。政策变了，只重新打开受影响的那一层。',
+        'Progress reads only your records: tests, the judgements you wrote, work that cites evidence, applied settings and what you submitted. Clicks, chat turns and pages read do not count, and a draft on its own passes nothing. A policy change reopens only the layer it affects.',
+      ),
+      map: T('工作地图', 'Work map'),
+      fold: T('收起摘要', 'Fold the summary'),
+      unfold: T('展开摘要', 'Show the summary'),
+      viewing: T('正在看', 'Viewing'),
+      backToNow: T('回到当前这一层', 'Back to where you are'),
+      distilled: T('本层提炼', 'Layer summary'),
+      kept: T('仍保留：', 'Still open: '),
+      gotIt: T('知道了', 'Got it'),
+      close: T('关闭', 'Close'),
+      mapTitle: T('整件工作的地图', 'The whole piece of work'),
+      mapLead: T(
+        '六层是常见的顺序，不是关卡：随时可以回看、提前提方案或有依据地延期。每一层写着已确认的、还差的，以及仍要带着走的事。',
+        'Six layers in the usual order, not gates: look back, propose early or defer with reasons at any time. Each says what is confirmed, what is missing and what you still carry forward.',
+      ),
+      states: {
+        done: T('已完成', 'Done'),
+        current: T('当前', 'Current'),
+        reopened: T('需要再看', 'Needs another look'),
+        todo: T('还没到', 'Ahead'),
+        uncovered: T('这局没覆盖', 'Not covered this time'),
+      },
+      ending: {
+        title: T('接下来可以', 'What can follow'),
+        items: [
+          T('修订作品，关联到原来的交付', 'Revise the work, linked to what you submitted'),
+          T(
+            '换一个条件再练：期限提前或容量收紧',
+            'Practise again under new conditions: an earlier deadline or less capacity',
+          ),
+        ],
+      },
+      stepOf: (n, total, label) =>
+        T(`第 ${n} 层，共 ${total} 层：${label}`, `Layer ${n} of ${total}: ${label}`),
+    },
+    onFold: (v) => {
+      writeJson(PROGRESS_FOLD, { ...readJson(PROGRESS_FOLD, {}), [foldKey()]: v });
+      mountProgress(current());
+    },
+    onArrivedSeen: (id) => {
+      const all = readJson(PROGRESS_SEEN, {});
+      all[a.id] = [...new Set([...(all[a.id] || []), id])];
+      writeJson(PROGRESS_SEEN, all);
+      mountProgress(current());
+    },
+  });
 }
 // The product manager's steps and their screens: Investigate → the findings dossier; Decide → the
 // board; Delivered → the result. The board is also where the Investigate step is worked, so it
@@ -1455,38 +1659,44 @@ function stageBack(a) {
 // Between the board and the dossier the old page leaves first (160ms, fading and blurring a
 // little), then the new one rises 10px into place (280ms): two pages of text never overlap.
 // Reduced motion: the new page fades in over 160ms.
+// The problem ruler stays put while the page under it changes.
+const stageBody = (el) => [...el.children].filter((c) => !c.classList.contains('rc-prog-wrap'));
 function switchStage(run) {
   const old = document.getElementById('ws-stage');
   const arrive = () => {
     const next = document.getElementById('ws-stage');
     if (!next) return;
-    next.animate(
-      reduceMotion.matches
-        ? [{ opacity: 0 }, { opacity: 1 }]
-        : [
-            { opacity: 0, transform: 'translateY(10px)' },
-            { opacity: 1, transform: 'none' },
-          ],
-      { duration: reduceMotion.matches ? 160 : 280, easing: 'cubic-bezier(.23,1,.32,1)' },
-    );
+    for (const part of stageBody(next))
+      part.animate(
+        reduceMotion.matches
+          ? [{ opacity: 0 }, { opacity: 1 }]
+          : [
+              { opacity: 0, transform: 'translateY(10px)' },
+              { opacity: 1, transform: 'none' },
+            ],
+        { duration: reduceMotion.matches ? 160 : 280, easing: 'cubic-bezier(.23,1,.32,1)' },
+      );
   };
   if (!old || reduceMotion.matches) {
     run();
     arrive();
     return;
   }
-  old
-    .animate(
-      [
-        { opacity: 1, filter: 'blur(0)' },
-        { opacity: 0, filter: 'blur(2px)' },
-      ],
-      { duration: 160, easing: 'ease-out', fill: 'forwards' },
-    )
-    .finished.then(() => {
-      run();
-      arrive();
-    });
+  Promise.all(
+    stageBody(old).map(
+      (part) =>
+        part.animate(
+          [
+            { opacity: 1, filter: 'blur(0)' },
+            { opacity: 0, filter: 'blur(2px)' },
+          ],
+          { duration: 160, easing: 'ease-out', fill: 'forwards' },
+        ).finished,
+    ),
+  ).then(() => {
+    run();
+    arrive();
+  });
 }
 // Going back to the board puts it where it was left.
 function goBoard() {
@@ -1584,6 +1794,9 @@ function moreMenu(a) {
     `<span class="narrow-item">${menuItem('open-rail', T('团队与信号', 'Team and signals'), 'team')}</span>`,
     L.nativeWorkspace(a)
       ? `<span class="phone-item">${menuItem('hat-switch', hatHere(a) === 'pm' ? T('换成工程师', 'Switch to Engineer') : T('换成产品经理', 'Switch to Product manager'), 'sync', `data-hat="${hatHere(a) === 'pm' ? 'engineer' : 'pm'}"`)}</span>`
+      : '',
+    hatHere(a) === 'pm' && L.nativeWorkspace(a)
+      ? menuItem('walk-tour', T('重看入门引导', 'Walk me through again'), 'question')
       : '',
     menuItem('about', T('关于这个工作台', 'About this workspace'), 'info'),
     menuItem('to-entry', T('离开工作台', 'Leave the workspace'), 'back'),
@@ -2244,12 +2457,71 @@ function taskView(a, t) {
       <div class="th-row">${priPick(t.id, t.priority, taskTitle(t))}<h2 class="th-title">${esc(taskTitle(t))}</h2><span class="spacer"></span>
         <div class="segmented status-seg" role="group" aria-label="${esc(T('进展', 'Progress'))}"><span class="thumb"></span>${['open', 'working', 'done'].map((k) => `<button type="button" aria-pressed="${t.status === k}" data-action="set-status" data-status="${k}" data-id="${t.id}">${statusMark(k)}<span>${STATUS(k)}</span></button>`).join('')}</div>${btn(icon('more'), 'edit-task', 'icon quiet small', `data-id="${t.id}" aria-label="${esc(T('编辑事项', 'Edit task'))}"`)}</div>
       ${taskNote(t) ? `<p class="th-note">${esc(taskNote(t))}</p>` : ''}
+      ${itemBrief(a, t)}
     </header>
     <div class="task-body">
       <nav class="outline" aria-label="${esc(T('这件事的内容', 'What this task holds'))}">${outline(a, t)}</nav>
       <section class="object" id="ws-object">${objectView(a, t)}</section>
     </div>
   </div>`;
+}
+// Under the item's title (story board P07): where its thinking stands, from its own records
+// only. Current lean (the latest decision or comparison, else the latest work), evidence (its
+// tests and the documents its work cites), open conditions (tests that predate the policy, a
+// decision citing nothing, requests still waiting) and the latest change. Empty parts are left
+// out; with nothing to say, there is no line at all.
+function itemBrief(a, t) {
+  const list = taskWorks(a, t.id).map(shown);
+  const tests = (a.tests || []).filter((r) => r.taskId === t.id);
+  const lean =
+    list.filter((w) => ['commit', 'option'].includes(E.intentOf(w.purpose))).at(-1) || list.at(-1);
+  const firstLine = (txt) =>
+    String(txt || '')
+      .split('\n')
+      .map((x) => x.replace(/^#+\s*|^[-*]\s*/, '').trim())
+      .find(Boolean) || '';
+  const leanText = lean ? firstLine(lean.body) || lean.title : '';
+  const docs = new Set(
+    list.flatMap((w) => (w.evidence || []).filter((e) => e.type === 'material').map((e) => e.id)),
+  );
+  const evidence = [
+    tests.length ? T(`${tests.length} 次测试`, `${tests.length} test${tests.length > 1 ? 's' : ''}`) : '',
+    docs.size ? T(`${docs.size} 份资料`, `${docs.size} document${docs.size > 1 ? 's' : ''}`) : '',
+  ].filter(Boolean);
+  const v = a.world.policyVersion;
+  const stale = tests.length > 0 && tests.every((r) => r.policyVersion < v);
+  const decision = list.find((w) => E.intentOf(w.purpose) === 'commit' && String(w.body || '').trim());
+  const waiting = (a.requests || []).filter((r) => r.status === 'pending').length;
+  const open = [
+    stale ? T(`测试都早于政策 v${v}`, `Every test predates policy v${v}`) : '',
+    decision && !(decision.evidence || []).length
+      ? T('决定还没引用依据', 'The decision cites nothing yet')
+      : '',
+    waiting ? T(`${waiting} 项申请等批复`, `${waiting} request${waiting > 1 ? 's' : ''} waiting`) : '',
+  ].filter(Boolean);
+  const lastTest = tests.slice().sort((x, y) => String(x.createdAt).localeCompare(String(y.createdAt))).at(-1);
+  const lastWork = list
+    .slice()
+    .sort((x, y) => String(x.updatedAt || '').localeCompare(String(y.updatedAt || '')))
+    .at(-1);
+  const change =
+    stale
+      ? T(`差旅政策更新到 v${v}`, `Travel policy moved to v${v}`)
+      : lastTest && (!lastWork || String(lastTest.createdAt) >= String(lastWork.updatedAt || ''))
+        ? T(`测了「${lastTest.question}」· ${when(lastTest.createdAt)}`, `Tested “${lastTest.question}” · ${when(lastTest.createdAt)}`)
+        : lastWork?.updatedAt
+          ? T(`《${lastWork.title}》第 ${lastWork.revision || 1} 版 · ${when(lastWork.updatedAt)}`, `“${lastWork.title}” v${lastWork.revision || 1} · ${when(lastWork.updatedAt)}`)
+          : '';
+  const cells = [
+    leanText ? [T('当前倾向', 'Leaning'), leanText] : null,
+    evidence.length ? [T('已有依据', 'Evidence'), evidence.join(T('、', ', '))] : null,
+    open.length ? [T('未决条件', 'Still open'), open.join(T('；', '; ')), 'warn'] : null,
+    change ? [T('最近变化', 'Latest change'), change] : null,
+  ].filter(Boolean);
+  if (!cells.length) return '';
+  return `<dl class="th-brief">${cells
+    .map(([k, val, tone]) => `<div class="th-brief__cell${tone ? ` is-${tone}` : ''}"><dt>${k}</dt><dd>${esc(val)}</dd></div>`)
+    .join('')}</dl>`;
 }
 function outline(a, t) {
   const removed = a.artifacts.filter((x) => x.taskId === t.id && x.removedAt);
@@ -4421,7 +4693,7 @@ function refreshWS(parts = ['toolbar', 'stage', 'rail']) {
     // shorter and the scroll position clamped. Hold the old height until the cards are back.
     const held = document.getElementById('ws-stage')?.offsetHeight || 0;
     document.getElementById('ws-stage').outerHTML =
-      `<div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${wsStage(a)}</div>`;
+      `<div id="ws-stage" class="stage-inner" ${L.nativeWorkspace(a) ? 'data-v4-region="workspace"' : ''}>${progressSlot(a)}${wsStage(a)}</div>`;
     const next = document.getElementById('ws-stage');
     if (next && held) {
       next.style.minHeight = `${held}px`;
@@ -7361,7 +7633,26 @@ provideTaskCardFacts((taskId) => {
     ],
     reviseHere: revisionTaskIds(a).has(taskId),
     policyVersion: a.world.policyVersion,
+    handedBy: Board.handedTask(a.id) === taskId ? 'manager' : undefined,
   };
+});
+// The walk-in: Grace's note, the brief landing on the policy item, the three-step walk-through.
+Board.installWalkThrough({
+  current,
+  fresh: (a) =>
+    !!a &&
+    L.nativeWorkspace(a) &&
+    hatHere(a) === 'pm' &&
+    statusOf(a) === 'active' &&
+    !sessionOf(a)?.v2ReadOnly &&
+    !(a.tests || []).length &&
+    !(sessionOf(a)?.v2Workspace?.products || []).length &&
+    !Object.values(a.conversations || {}).some((l) => (l || []).some((m) => m.role === 'user')),
+  policyTask: (a) =>
+    (a.tasks || []).find((t) => t.title === SEEDS.policy.zh[0] || t.title === SEEDS.policy.en[0])
+      ?.id ?? null,
+  refresh: (parts) => refreshWS(parts),
+  text: (zh, en, a) => worldText(a)(zh, en),
 });
 L.attach(state, onLive);
 // Like a poll: a read dropped while the page loads only marks the connection lost.

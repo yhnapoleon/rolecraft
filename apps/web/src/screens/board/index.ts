@@ -28,6 +28,7 @@ export * from './needs-you';
 export * from './records';
 export * from './sheets';
 export * from './tray';
+export * from './walk-through';
 export { collectSignals } from '../../shell';
 
 export type BoardNote = {

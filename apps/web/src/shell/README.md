@@ -95,6 +95,17 @@ the situation's name, never the product manager's question. An action's error ma
 manager's stage is the shell's (`pm-stage.ts`): Investigate (no draft) → Decide (a draft) →
 Delivered (submitted); primary Submit → See the result → Revise. 201 registers the engineer's.
 
+## The problem ruler — `progress.ts`, `progress-band.tsx`, `progress.css`
+
+The product manager's place in a practice is six layers (take it on → understand → decide → verify
+→ deliver → review), drawn at the top of `#ws-stage` on every product manager's screen; the topbar
+keeps only the engineer's sign-off steps. `progressOf(facts)` is pure and reads only records
+(tests and notes on them, cited work, applied settings, requests, the submission); a draft alone
+passes nothing, and a policy change reopens only the layer it affects (the frontier stays).
+`ui.js` builds the facts (`progressFacts`) and mounts the band (`mountProgress`). The band's
+"viewing" (a layer picked on the track, or the dossier / result route) never moves progress.
+Once the band scrolls out of `#main` a slim copy docks at its top; "Work map" opens the overview.
+
 ## Agent bus — `agent-bus.ts`
 
 ```ts

@@ -1,0 +1,682 @@
+/* The problem ruler (shell/progress-band.tsx). Instrument material: it reports, it is not paper
+   to write on. Six stops on one hairline; the walked part of the line is ink, the current stop a
+   solid ink disc that slides; a stop that needs another look carries an amber ring. Under it,
+   three columns answer: now (layer and goal), confirmed / missing, next and after. */
+.rc-prog {
+  position: relative;
+  margin: 0 0 18px;
+  padding: 14px 18px 12px;
+  border-radius: var(--r-panel);
+  background: var(--glass);
+  backdrop-filter: saturate(1.6) blur(18px);
+  -webkit-backdrop-filter: saturate(1.6) blur(18px);
+  box-shadow: var(--shadow-card);
+  color: var(--ink);
+}
+.rc-prog__top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.rc-prog__track {
+  --dot: 26px;
+  position: relative;
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* The line runs from the first dot's centre to the last one's. */
+.rc-prog__line {
+  position: absolute;
+  top: calc(var(--dot) / 2 + 4px);
+  left: calc(100% / 12);
+  right: calc(100% / 12);
+  height: 1.5px;
+  border-radius: 1px;
+  background: var(--line-2);
+}
+.rc-prog__walked {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--ink);
+  transform-origin: left center;
+}
+.rc-prog__stop {
+  display: flex;
+  justify-content: center;
+  min-width: 0;
+}
+.rc-prog__key {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 4px 6px 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+.rc-prog__key:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.rc-prog__dot {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: var(--dot);
+  height: var(--dot);
+  border-radius: 50%;
+  background: var(--key-bg);
+  box-shadow: inset 0 0 0 1.5px var(--line-2);
+  transition: box-shadow var(--fast) var(--ease-out);
+}
+.rc-prog__key:hover .rc-prog__dot {
+  box-shadow: 0 0 0 4px var(--fill);
+}
+.rc-prog__glyph {
+  position: relative;
+  z-index: 1;
+  font: 600 11px / 1 var(--mono);
+  letter-spacing: 0.02em;
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+.rc-prog__glyph svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.rc-prog__now-disc {
+  position: absolute;
+  inset: -3px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow:
+    0 0 0 4px var(--accent-tint),
+    0 2px 8px rgba(29, 29, 31, 0.18);
+}
+.rc-prog__name {
+  max-width: 100%;
+  font-size: 13px;
+  line-height: 1.25;
+  color: var(--ink-3);
+  text-align: center;
+  text-wrap: balance;
+}
+.rc-prog__look {
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ink-2);
+}
+/* States: walked stops tick in ink; the current one is solid ink with its name in ink 600. */
+.rc-prog__stop[data-state="done"] .rc-prog__dot {
+  box-shadow: inset 0 0 0 1.5px var(--ink);
+}
+.rc-prog__stop[data-state="done"] .rc-prog__glyph,
+.rc-prog__stop[data-state="done"] .rc-prog__name {
+  color: var(--ink-2);
+}
+.rc-prog__stop[data-state="current"] .rc-prog__glyph {
+  color: var(--on-primary);
+}
+.rc-prog__stop[data-state="current"] .rc-prog__name {
+  color: var(--ink);
+  font-weight: 600;
+}
+.rc-prog__stop[data-state="reopened"] .rc-prog__dot {
+  box-shadow:
+    inset 0 0 0 1.5px var(--warn),
+    0 0 0 3px var(--warn-tint);
+}
+.rc-prog__stop[data-state="reopened"] .rc-prog__glyph,
+.rc-prog__stop[data-state="reopened"] .rc-prog__name {
+  color: var(--warn);
+}
+.rc-prog__stop[data-state="uncovered"] .rc-prog__dot {
+  background: transparent;
+  box-shadow: none;
+  outline: 1.5px dashed var(--ink-4);
+  outline-offset: -1.5px;
+}
+.rc-prog__stop[data-state="todo"] .rc-prog__glyph,
+.rc-prog__stop[data-state="uncovered"] .rc-prog__glyph {
+  color: var(--ink-3);
+}
+
+.rc-prog__tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  align-self: flex-start;
+}
+.rc-prog__basis {
+  margin-right: 6px;
+  font-size: 12px;
+  color: var(--ink-3);
+  white-space: nowrap;
+  cursor: help;
+}
+.rc-prog__i {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.rc-prog__body {
+  overflow: hidden;
+}
+.rc-prog__cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1.25fr) minmax(0, 1fr);
+  gap: 0 28px;
+  margin-top: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+.rc-prog__col + .rc-prog__col {
+  padding-left: 28px;
+  border-left: 1px solid var(--line);
+  margin-left: -28px;
+}
+.rc-prog__eyebrow {
+  margin: 0 0 4px;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--ink-3);
+}
+.rc-prog__title {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 4px;
+  font: 600 19px / 1.25 var(--display);
+  letter-spacing: -0.01em;
+}
+.rc-prog__n {
+  font: 600 12px / 1 var(--mono);
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+  margin-right: 6px;
+}
+.rc-prog__title .rc-prog__n {
+  margin-right: 0;
+  font-size: 13px;
+}
+.rc-prog__goal {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.rc-prog__back {
+  margin-top: 6px;
+}
+.rc-prog__list {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.rc-prog__list li {
+  position: relative;
+  padding-left: 14px;
+}
+.rc-prog__list li::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 0.62em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.25px var(--ink-3);
+}
+.rc-prog__list--good li::before {
+  background: var(--good);
+  box-shadow: none;
+}
+.rc-prog__list li[data-carried] {
+  color: var(--warn);
+}
+.rc-prog__list li[data-carried]::before {
+  box-shadow: inset 0 0 0 1.25px var(--warn);
+}
+.rc-prog__quiet {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--ink-3);
+}
+.rc-prog__reopened {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--warn);
+}
+.rc-prog__ahead + .rc-prog__ahead {
+  margin-top: 8px;
+}
+.rc-prog__ahead-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+.rc-prog__ahead + .rc-prog__ahead .rc-prog__ahead-name {
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.rc-prog__ahead-goal {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+.rc-prog__distil {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 9px 12px;
+  border-radius: var(--r-sm);
+  background: var(--good-tint);
+  color: var(--ink);
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+.rc-prog__distil p {
+  flex: 1;
+  margin: 0;
+}
+.rc-prog__distil b {
+  margin-right: 8px;
+  font-weight: 600;
+}
+.rc-prog__distil-i {
+  flex: none;
+  margin-top: 2px;
+  color: var(--good);
+}
+.rc-prog__kept {
+  display: block;
+  color: var(--warn);
+}
+
+/* Folded: the track alone, still saying where you are. */
+.rc-prog[data-folded] {
+  padding-bottom: 8px;
+}
+
+/* ---------- the work map ---------- */
+.rc-map {
+  width: min(1040px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-dialog);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-float);
+  overflow: auto;
+}
+.rc-map::backdrop {
+  background: var(--dim);
+  backdrop-filter: blur(2px);
+}
+.rc-map__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 22px 24px 8px;
+}
+.rc-map__head h2 {
+  margin: 0;
+  font: 600 22px / 1.2 var(--display);
+  letter-spacing: -0.015em;
+}
+.rc-map__head p {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--ink-3);
+  max-width: 60ch;
+}
+.rc-map__field {
+  position: relative;
+  padding: 8px 24px 4px;
+}
+.rc-map__stops,
+.rc-map__stop {
+  z-index: 1;
+}
+.rc-map__path {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: visible;
+}
+.rc-map__path path {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.rc-map__path-ahead {
+  stroke: var(--line-2);
+  stroke-dasharray: 2 5;
+}
+.rc-map__path-walked {
+  stroke: var(--ink);
+}
+.rc-map__stops {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  align-items: start;
+}
+.rc-map__stop {
+  position: relative;
+  margin-top: calc(var(--rise) + 14px);
+  padding: 14px 12px 10px;
+  border-radius: var(--r-md);
+  background: var(--paper);
+  box-shadow: var(--shadow-card);
+}
+.rc-map__stop[data-state="current"] {
+  box-shadow:
+    0 0 0 1.5px var(--ink),
+    var(--shadow-card);
+}
+.rc-map__stop[data-state="reopened"] {
+  box-shadow:
+    0 0 0 1.5px var(--warn),
+    var(--shadow-card);
+}
+.rc-map__stop[data-state="todo"],
+.rc-map__stop[data-state="uncovered"] {
+  background: var(--surface-2);
+  box-shadow: none;
+}
+.rc-map__node {
+  position: absolute;
+  top: -5px;
+  left: 16px;
+  z-index: 1;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1.5px var(--ink-4);
+}
+.rc-map__stop[data-state='done'] .rc-map__node {
+  background: var(--ink);
+  box-shadow: none;
+}
+.rc-map__stop[data-state='current'] .rc-map__node {
+  background: var(--primary);
+  box-shadow: 0 0 0 4px var(--accent-tint);
+}
+.rc-map__stop[data-state='reopened'] .rc-map__node {
+  box-shadow: inset 0 0 0 2px var(--warn);
+}
+.rc-map__state {
+  margin: 0 0 4px;
+  font-size: 12px;
+  color: var(--ink-3);
+}
+.rc-map__stop h3 {
+  margin: 0 0 4px;
+  font-size: 15px;
+  line-height: 1.3;
+}
+.rc-map__goal {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--ink-3);
+}
+.rc-map__distil {
+  margin: 6px 0 0;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.rc-map__distil b {
+  margin-right: 6px;
+}
+.rc-map__foot {
+  margin: 0;
+  padding: 12px 24px 20px;
+  font-size: 12.5px;
+  color: var(--ink-3);
+}
+
+/* Phone width: six numbered dots, the current name beside the summary; columns stack. */
+@media (max-width: 720px) {
+  .rc-prog {
+    margin: 0 0 12px;
+    padding: 10px 12px 10px;
+    border-radius: var(--r-md);
+  }
+  .rc-prog__track {
+    --dot: 24px;
+  }
+  .rc-prog__name {
+    display: none;
+  }
+  .rc-prog__basis,
+  .rc-prog__tools .btn:not(.icon) span {
+    display: none;
+  }
+  .rc-prog__cols {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .rc-prog__col + .rc-prog__col {
+    padding: 10px 0 0;
+    margin: 0;
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  .rc-prog__col--next {
+    display: flex;
+    gap: 16px;
+  }
+  .rc-prog__ahead + .rc-prog__ahead {
+    margin-top: 0;
+  }
+  .rc-prog__ahead-goal {
+    display: none;
+  }
+  .rc-map__stops {
+    grid-template-columns: 1fr;
+  }
+  .rc-map__stop {
+    margin-top: 0;
+  }
+  .rc-map__path,
+  .rc-map__node {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-prog__dot {
+    transition: none;
+  }
+}
+
+.rc-prog__keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+.rc-prog__keys:empty {
+  display: none;
+}
+.rc-prog__brief {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 18px;
+  margin: 6px 0 0;
+  padding: 8px 2px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+.rc-prog__brief b {
+  font-weight: 600;
+  color: var(--ink);
+}
+.rc-prog__brief-part {
+  color: var(--ink-3);
+}
+
+/* The docked copy: zero height in the flow, sticky at the top of #main; its bar shows only while
+   the full band is scrolled out of view. Opacity and a 4px rise, 160ms. */
+.rc-prog-dock {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  height: 0;
+}
+.rc-prog-dock__bar {
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 42px;
+  padding: 6px 8px 6px 14px;
+  border-radius: var(--r-md);
+  background: var(--glass-strong);
+  backdrop-filter: saturate(1.6) blur(18px);
+  -webkit-backdrop-filter: saturate(1.6) blur(18px);
+  box-shadow: var(--shadow-float);
+  font-size: 13.5px;
+  opacity: 0;
+  transform: translateY(-4px);
+  pointer-events: none;
+  transition:
+    opacity var(--fast) var(--ease-out),
+    transform var(--fast) var(--ease-out);
+}
+.rc-prog-dock[data-on] .rc-prog-dock__bar {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+.rc-prog-dock__dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex: none;
+}
+.rc-prog-dock__dots li {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.25px var(--ink-4);
+}
+.rc-prog-dock__dots li[data-state="done"] {
+  background: var(--ink-2);
+  box-shadow: none;
+}
+.rc-prog-dock__dots li[data-state="current"] {
+  width: 18px;
+  border-radius: 4px;
+  background: var(--primary);
+  box-shadow: none;
+}
+.rc-prog-dock__dots li[data-state="reopened"] {
+  box-shadow: inset 0 0 0 1.5px var(--warn);
+}
+.rc-prog-dock__now {
+  flex: none;
+  font-weight: 600;
+}
+.rc-prog-dock__part {
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--ink-3);
+}
+.rc-prog-dock__map {
+  margin-left: auto;
+  flex: none;
+}
+@media (max-width: 720px) {
+  .rc-prog-dock__next {
+    display: none;
+  }
+  .rc-prog-dock__bar {
+    gap: 10px;
+    top: 6px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rc-prog-dock__bar {
+    transform: none;
+  }
+}
+
+/* In the stage, in the same gutters as the board (1180px wide, 40px sides). The wrapper adds no
+   box, so the docked copy is sticky against the whole stage, not just the band. */
+.rc-prog-wrap {
+  display: contents;
+}
+.rc-prog-wrap .rc-prog,
+.rc-prog-dock {
+  width: calc(100% - 80px);
+  max-width: 1100px;
+  margin-inline: auto;
+}
+.rc-prog-wrap .rc-prog {
+  z-index: 3;
+  margin-top: 20px;
+  margin-bottom: 0;
+}
+@media (max-width: 720px) {
+  .rc-prog-wrap .rc-prog,
+  .rc-prog-dock {
+    width: calc(100% - 28px);
+  }
+  .rc-prog-wrap .rc-prog {
+    margin-top: 12px;
+  }
+}

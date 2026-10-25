@@ -830,6 +830,14 @@ export function mount(context: V4SlotContext): V4SlotHandle {
       chip.append(T(`${toCheck} 份回传待检查`, `${toCheck} agent return(s) to check`));
       meta.append(chip);
     }
+    // Where Grace's brief landed when it was taken on: the first thing to try.
+    if (facts?.handedBy) {
+      const chip = markup('flag-chip handed', avatar(facts.handedBy, 'xs'));
+      chip.dataset.handed = '';
+      const name = PEOPLE[facts.handedBy]?.name ?? '';
+      chip.append(T(`${name} 交给你的`, `From ${name}`));
+      meta.append(chip);
+    }
     if (task.status === 'paused') meta.append(el('span', T('已暂停', 'Paused'), 'flag-chip'));
     if (facts?.reviseHere) {
       const chip = markup('flag-chip revise', icon('edit', 'i-xs'));
