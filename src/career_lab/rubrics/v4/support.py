@@ -5,14 +5,15 @@ Missing/invalid/unavailable verification stays unverified. No network calls occu
 unless a caller explicitly supplies a configured model adapter.
 """
 
-from dataclasses import dataclass
 import json
+from dataclasses import dataclass
 
-from career_lab.evidence.v2.localization import message, validate_language
 from career_lab.contracts.v2.core import canonical, digest
+from career_lab.evidence.v2.localization import message, validate_language
 
 # Moved to the shared model-input projection; kept importable for existing callers.
 from career_lab.models.v3.projection import relation_input as registered_relation_input
+from career_lab.runtime.model_audit import audited, complete
 
 __all__ = ["EvidenceSupportVerifier", "SupportResult", "registered_relation_input"]
 
@@ -26,6 +27,7 @@ class SupportResult:
     output_hash: str | None = None
     reason: str = ""
     spans: tuple[dict, ...] = ()
+    code: str | None = None
 
 
 class EvidenceSupportVerifier:
@@ -43,6 +45,7 @@ class EvidenceSupportVerifier:
     def __call__(self, package, advice):
         return self.verify(package, advice).verdict
 
+    @audited("SUPPORT")
     def verify(self, package, advice, *, work_language="zh"):
         validate_language(work_language)
 
@@ -109,14 +112,15 @@ class EvidenceSupportVerifier:
         input_hash = digest(messages)
         if len(encoded) > self.input_bytes:
             return result("unverified", "input_overflow", input_hash=input_hash)
+        reply = None
         try:
-            reply = self.model.complete(messages, [])
+            reply = complete(self.model, messages, [])
             if reply.tool_calls or len(reply.text.encode()) > self.output_bytes:
                 return result("unverified", "invalid_response", input_hash=input_hash)
             output_hash = digest(reply.text)
             body = json.loads(reply.text)
             if not isinstance(body, dict) or set(body) != {"relation", "reason", "spans"}:
-                raise ValueError()
+                raise ValueError("response_shape_invalid")
             relation = body["relation"]
             reason = body["reason"]
             spans = body["spans"]
@@ -126,28 +130,28 @@ class EvidenceSupportVerifier:
                 or not reason.strip()
                 or len(reason) > 3000
             ):
-                raise ValueError()
+                raise ValueError("relation_or_reason_invalid")
             if not isinstance(spans, list) or len(spans) > 32:
-                raise ValueError()
+                raise ValueError("spans_invalid")
             checked = []
             for span in spans:
                 if not isinstance(span, dict) or set(span) != {"id", "quote"}:
-                    raise ValueError()
+                    raise ValueError("span_shape_invalid")
                 cid = span["id"]
                 quote = span["quote"]
                 if cid not in candidates or not isinstance(quote, str) or not quote.strip():
-                    raise ValueError()
+                    raise ValueError("span_id_or_quote_invalid")
                 text = candidates[cid].text
                 if text.count(quote) != 1:
-                    raise ValueError()
+                    raise ValueError("quote_not_unique_in_candidate")
                 start = text.index(quote)
                 checked.append(
                     {"id": cid, "start": start, "end": start + len(quote), "quote": quote}
                 )
             if relation == "SUPPORTED" and not set(ids) <= {span["id"] for span in checked}:
-                raise ValueError()
+                raise ValueError("cited_span_missing")
             if relation == "CONTRADICTED" and not checked:
-                raise ValueError()
+                raise ValueError("counterevidence_required")
             return result(
                 {
                     "SUPPORTED": "supported",
@@ -160,6 +164,27 @@ class EvidenceSupportVerifier:
                 reason=reason,
                 spans=tuple(checked),
             )
-        except Exception:
-            # Never return provider exception text or credentials to callers.
-            return result("unverified", "invalid_or_failed_verification", input_hash=input_hash)
+        except Exception as error:
+            # Persist only known validation codes, never a provider's exception body.
+            allowed = {
+                "response_shape_invalid",
+                "relation_or_reason_invalid",
+                "spans_invalid",
+                "span_shape_invalid",
+                "span_id_or_quote_invalid",
+                "quote_not_unique_in_candidate",
+                "cited_span_missing",
+                "counterevidence_required",
+            }
+            code = (
+                "output_truncated"
+                if getattr(reply, "finish_reason", None) == "length"
+                else str(error)
+                if type(error) is ValueError and str(error) in allowed
+                else "json_invalid"
+                if isinstance(error, json.JSONDecodeError)
+                else "verification_failed"
+            )
+            return result(
+                "unverified", "invalid_or_failed_verification", input_hash=input_hash, code=code
+            )

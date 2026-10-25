@@ -493,3 +493,37 @@ def test_help_acknowledgements_use_structured_review_for_equivalent_requests(
             assert answer not in json.dumps(dialogue.history(), ensure_ascii=False)
     finally:
         dialogue.close()
+
+
+@pytest.mark.parametrize(
+    "failure", [None, "within_knowledge", "no_resource_approval", "no_complete_solution"]
+)
+def test_help_audit_distinguishes_normal_multi_part_facts_and_unsafe_replies(
+    tmp_path, monkeypatch, failure
+):
+    ledger = tmp_path / "model-audit.jsonl"
+    monkeypatch.setenv("CAREER_LAB_MODEL_AUDIT_PATH", str(ledger))
+    answer = "[经理委托：内部知识助手试点 · v1] 当前容量30人，开发3人日，期限第7天。"
+    model = ScriptedModel(
+        [ModelReply(text=answer), assessment(**({failure: False} if failure else {}))]
+    )
+    dialogue = Dialogue(tmp_path, "zh", model)
+    try:
+        job = dialogue.ask("容量是多少，开发有多少人日，什么时候到期？")
+        assert job["status"] == ("failed" if failure else "completed")
+        if failure:
+            assert job["error"] == "role_help_unverified"
+            assert answer not in json.dumps(dialogue.history(), ensure_ascii=False)
+        else:
+            assert answer in json.dumps(dialogue.reply(), ensure_ascii=False)
+        rows = [json.loads(line) for line in ledger.read_text().splitlines()]
+        result = next(row for row in rows if row["event"] == "model_validation")
+        assert result["failed_checks"] == ([failure] if failure else [])
+        assert result["request_id"].startswith("turn-")
+        assert result["status"] == ("withheld" if failure else "permitted")
+        finished = next(row for row in rows if row["event"] == "model_call_finished")
+        assert finished["usage"]["request_id"] == result["request_id"]
+        assert "reply" not in result and "sources" not in result
+        assert len(model.calls) == 2
+    finally:
+        dialogue.close()

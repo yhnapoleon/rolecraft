@@ -36,6 +36,8 @@ class ScenarioEvidencePort:
 
         self.store, self.module = store, module
         self._window_cache = {}
+        self._record_cache = {}
+        self._reference_cache = set()
         adapter = ScenarioFactAdapter(
             module,
             authorize=lambda auth: store.authorize(auth, "read"),
@@ -158,14 +160,28 @@ class ScenarioEvidencePort:
     def record(self, auth, ref, at):
         if at is None:
             return self.store.query(auth, lambda view: view.get(ref))
-        return self.store.query_at(auth, at, lambda view: view.get(ref))
+        # Exact historical values are immutable inside this one evaluator. Keep live
+        # credential/object checks, but do not decode the same full window per criterion.
+        self.store.authorize(auth, "read", object_ids=(ref.object_id,))
+        key = C.digest(
+            [auth.model_dump(mode="json"), ref.model_dump(mode="json"), at.model_dump(mode="json")]
+        )
+        if key not in self._record_cache:
+            self._record_cache[key] = self.store.query_at(auth, at, lambda view: view.get(ref))
+        return self._record_cache[key]
 
     def reference(self, auth, ref, at):
         def read(view):
             if view.reference_allowed is None or not view.reference_allowed(ref):
                 raise C.ProtocolError("object_not_found", status=404)
 
-        return self.store.query_at(auth, at, read)
+        self.store.authorize(auth, "read", object_ids=(ref.object_id,))
+        key = C.digest(
+            [auth.model_dump(mode="json"), ref.model_dump(mode="json"), at.model_dump(mode="json")]
+        )
+        if key not in self._reference_cache:
+            self.store.query_at(auth, at, read)
+            self._reference_cache.add(key)
 
 
 class OncePerInputModel:
@@ -175,6 +191,7 @@ class OncePerInputModel:
 
     def __init__(self, model):
         self.model, self.revision, self.seen = model, model.revision, set()
+        self.provider = getattr(model, "provider", None)
 
     def complete(self, messages, tools):
         key = C.digest(messages[:2])
@@ -349,7 +366,14 @@ def create_feedback_handler(
         )
         return traced(review_feedback_plan(view, envelope.command, auth, prepared), reader, engine)
 
-    return run
+    def audited_run(store, view, envelope, auth):
+        from career_lab.runtime.model_audit import audit_scope, phase
+
+        with audit_scope(session_id=auth.session_id, request_id=envelope.command.request_id):
+            with phase("feedback_handler"):
+                return run(store, view, envelope, auth)
+
+    return audited_run
 
 
 def installed_evaluation(module):

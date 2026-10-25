@@ -118,9 +118,9 @@ LISTED_TRIALS = 10
 LISTED_DRAFTS = 10
 DETAIL_BUDGET = 19_500
 RETRIEVAL_NOTE = {
-    "zh": "试跑与复核固定使用规则版检索，与是否配置识别器无关。",
-    "en": "Trials and reviews always use the rule-based retrieval, whether or not "
-    "recognizers are configured.",
+    "zh": "复现、试跑与复核固定使用规则版检索与原文抽取，保留原配置记录；不重放模型生成。",
+    "en": "Reproduction, trials and reviews use rule-based retrieval and extraction. "
+    "Original configurations are retained; model generation is not replayed.",
 }
 
 

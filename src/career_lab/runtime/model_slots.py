@@ -15,7 +15,9 @@ never a mix, so a key is only ever sent to the endpoint it was configured with:
 
 Identity variables on a slot without its own provider refuse to start. Budgets
 (``_MAX_TOKENS``, ``_TIMEOUT``, JUDGE/SUPPORT ``_INPUT_BYTES``) are per slot; SUPPORT
-without its own provider takes JUDGE's budget for values it does not set. With no slot
+without its own provider takes JUDGE's budget for values it does not set. Dedicated
+JUDGE/SUPPORT identities default to 2048 output tokens for structured citations;
+ROLES/ASSISTANT and the legacy shared layer retain 512. Explicit budgets always win. With no slot
 variable set, every model, request and provenance matches the single shared
 configuration. ``openai_compatible`` may omit a key only on a loopback host, and then
 sends no Authorization header. Real adapters never retry; keys are read here only and are
@@ -48,6 +50,7 @@ PROVIDER_DEFAULTS: dict[str, tuple[str, str, str]] = {
 IDENTITY_VARIABLES = ("KEY_FILE", "BASE_URL", "MODEL")
 LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 DEFAULT_MAX_TOKENS = 512
+DEFAULT_EVALUATION_MAX_TOKENS = 2048
 DEFAULT_TIMEOUT = 45.0
 DEFAULT_INPUT_BYTES = 64000
 
@@ -233,9 +236,14 @@ def slot_config(
             "shared",
         )
     inherited = judge if inherits else None
+    default_tokens = (
+        DEFAULT_EVALUATION_MAX_TOKENS
+        if identity.source == "slot" and slot in {"JUDGE", "SUPPORT"}
+        else DEFAULT_MAX_TOKENS
+    )
     max_tokens = _number(
         _variable(environ, slot + "_MAX_TOKENS"),
-        inherited.max_tokens if inherited else DEFAULT_MAX_TOKENS,
+        inherited.max_tokens if inherited else default_tokens,
         int,
         1,
         32768,

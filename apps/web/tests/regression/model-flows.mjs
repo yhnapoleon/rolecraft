@@ -152,8 +152,14 @@ async function submitWork(browser, language) {
   await browser.click('[data-action="to-board"]');
   await waitFor(browser, `!!document.querySelector('.ws-toolbar [data-action="submit"]')`);
   await browser.click('.ws-toolbar [data-action="submit"]');
-  await waitFor(browser, `!!document.querySelector('#sheet .native-feedback input[type="checkbox"]')`);
-  await browser.click('#sheet .native-feedback input[type="checkbox"]');
+  const attachment = '#sheet .native-feedback .delivery-attachment input[type="checkbox"]';
+  await waitFor(browser, `!!document.querySelector(${JSON.stringify(attachment)})`);
+  // The delivery panel defaults to the latest work. Preserve that selection instead of
+  // toggling it off, and still require the actual version to be selected before submitting.
+  if (!(await browser.ev(`document.querySelector(${JSON.stringify(attachment)}).checked`))) {
+    await browser.click(attachment);
+  }
+  assert.equal(await browser.ev(`document.querySelector(${JSON.stringify(attachment)}).checked`), true);
   await browser.select('#sheet .native-feedback select', 'defer_with_conditions');
   await submitDelivery(browser);
   await waitFor(browser, `window.PracticeLive.store.active().world.status === 'submitted'`, 60000);
