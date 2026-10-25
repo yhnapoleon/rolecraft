@@ -16,11 +16,6 @@ const esc = (v: unknown) =>
 const key = (label: string, action: string, cls = '', attrs = '') =>
   `<button type="button" class="btn ${cls}" data-action="${action}" ${attrs}>${label}</button>`;
 const JOB_PM = () => T('AI 产品经理', 'AI Product Manager');
-const TWO_HATS = () =>
-  T(
-    '一局只演一个岗位。另一边的工作由 AI 同事承担：你做产品经理，工程修复由 Daniel 负责；你做工程师，产品侧由 Grace 接收。',
-    'One practice, one role. An AI colleague takes the other side: as product manager, Daniel handles the engineering fix; as engineer, Grace receives it for the product side.',
-  );
 const reduced = () =>
   typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -67,7 +62,6 @@ function continueSlip(c: ContinueInfo): string {
       <p class="hm-cont__row">${pmLine}${eng ? `<span class="hm-cont__sep" aria-hidden="true"></span>${eng}` : ''}${c.lang && c.lang !== locale() ? `<span class="hm-cont__lang">${c.lang === 'zh' ? T('', 'This practice is in Chinese') : T('这一局用英文', '')}</span>` : ''}</p>
     </div>
     <div class="hm-cont__go">${main}</div>
-    <p class="hm-cont__note">${TWO_HATS()}</p>
   </section>`;
 }
 
