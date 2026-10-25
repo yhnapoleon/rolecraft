@@ -95,10 +95,11 @@ class Database:
         metadata.create_all(self.engine)
 
     @contextmanager
-    def transaction(self):
+    def transaction(self, *, write: bool = True):
+        """Keep a consistent snapshot; reserve SQLite's writer only for mutations."""
         with self.engine.connect() as connection:
             if self.engine.dialect.name == "sqlite":
-                connection.exec_driver_sql("BEGIN IMMEDIATE")
+                connection.exec_driver_sql("BEGIN IMMEDIATE" if write else "BEGIN")
             else:
                 connection.begin()
             try:

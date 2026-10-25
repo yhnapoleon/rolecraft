@@ -21,6 +21,8 @@ from career_lab.contracts.v2 import (
     Executor,
     JsonValue,
     ScenarioStateV2,
+    SessionBindings,
+    VersionPoint,
     WorldStateV2,
     canonical,
     digest,
@@ -1125,9 +1127,24 @@ class V2Store(JobStoreMixin):
 
         return replace(view, public_history=history)
 
+    def session_metadata(self, auth):
+        """Authorized binding and version only, without projecting all saved bodies."""
+        with self.db.transaction(write=False) as c:
+            self._auth(c, auth, "read")
+            row = self._row(c, auth.session_id)
+            state = WorldStateV2.model_validate_json(row["state"])
+            return (
+                SessionBindings.model_validate_json(row["bindings"]),
+                VersionPoint(
+                    business_seq=state.business_seq,
+                    workspace_revision=state.workspace_revision,
+                    storage_revision=state.storage_revision,
+                ),
+            )
+
     def query(self, auth, reader, *, operation=None):
         """Execute a pure read against an authorized operation-local view."""
-        with self.db.transaction() as c:
+        with self.db.transaction(write=False) as c:
             self._auth(c, auth, "read", operation)
             row = self._row(c, auth.session_id)
             view = self._operation_view(
@@ -1145,7 +1162,7 @@ class V2Store(JobStoreMixin):
         Historical metadata is never a credential, and no public route exposes
         this internal scenario view. The original bindings stay unchanged.
         """
-        with self.db.transaction() as c:
+        with self.db.transaction(write=False) as c:
             self._auth(c, auth, "read", operation)
             row = self._row(c, auth.session_id)
             raw = c.execute(
@@ -1898,7 +1915,7 @@ class V2Store(JobStoreMixin):
         Contextual resolvers receive only authoritative scenario state at a real
         persisted window. No resolver calls the database or caches session state.
         """
-        with self.db.transaction() as c:
+        with self.db.transaction(write=False) as c:
             self._auth(c, auth, "read", object_ids=(ref.object_id,))
             row = self._row(c, auth.session_id)
             state = WorldStateV2.model_validate_json(row["state"])
@@ -1919,7 +1936,7 @@ class V2Store(JobStoreMixin):
             )
 
     def can_reference(self, auth, ref: ObjectRef):
-        with self.db.transaction() as c:
+        with self.db.transaction(write=False) as c:
             self._auth(c, auth, "read", object_ids=(ref.object_id,))
             if ref.session_id != auth.session_id:
                 raise ProtocolError("object_not_found", status=404)
@@ -1956,7 +1973,7 @@ class V2Store(JobStoreMixin):
         self.authorize(auth, "read", object_ids=(ref.object_id,))
         if ref.session_id != auth.session_id:
             raise ProtocolError("object_not_found", status=404)
-        with self.db.transaction() as c:
+        with self.db.transaction(write=False) as c:
             self._auth(c, auth, "read", object_ids=(ref.object_id,))
             # A revoked credential or share cannot regain access by requesting the past.
             records = self._records(c, auth.session_id, storage_revision)
