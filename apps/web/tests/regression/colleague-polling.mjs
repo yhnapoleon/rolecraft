@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { launch } from '../walkthrough/cdp.mjs';
-import { waitFor } from './browser-support.mjs';
+import { acceptEntryStory, waitFor } from './browser-support.mjs';
 
 export async function replyArrivesWhileHidden(base, output, language) {
   const target = `${output}/colleague-polling`;
@@ -25,6 +25,7 @@ export async function replyArrivesWhileHidden(base, output, language) {
     await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
     await browser.click('[data-action="open-career"]');
     await browser.click('.case-hero [data-action="take-case"]');
+    await acceptEntryStory(browser);
     await waitFor(browser, `location.hash === '#/work' && !!document.querySelector('.card-open')`);
     await browser.click('.card-open');
     await browser.type('#new-title', text('后台分享回归', 'Background sharing regression'));

@@ -12,7 +12,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { launch } from '../walkthrough/cdp.mjs';
-import { waitFor } from './browser-support.mjs';
+import { acceptEntryStory, waitFor } from './browser-support.mjs';
 
 const base = process.env.BASE;
 const output = process.env.OUT;
@@ -105,6 +105,7 @@ async function round(language, reduced) {
     browsers.push(a);
     await a.click('[data-action="open-career"]');
     await a.click('.case-hero [data-action="take-case"]');
+    await acceptEntryStory(a);
     await waitFor(a, `location.hash === '#/work' && !!document.querySelector('.card-open')`);
     await a.click('.card-open');
     await waitFor(a, `!!document.querySelector('[data-action="chat"][data-role="technical"]')`);

@@ -11,7 +11,7 @@
 import assert from 'node:assert/strict';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { delay, launch } from '../walkthrough/cdp.mjs';
-import { waitFor } from './browser-support.mjs';
+import { acceptEntryStory, waitFor } from './browser-support.mjs';
 
 const base = process.env.BASE;
 const output = process.env.OUT;
@@ -171,6 +171,7 @@ async function runLanguage(language) {
       await waitFor(browser, `!!document.querySelector('[data-action="open-career"]')`);
       await browser.click('[data-action="open-career"]');
       await browser.click('.case-hero [data-action="take-case"]');
+      await acceptEntryStory(browser);
       await waitFor(
         browser,
         `location.hash === '#/work' && document.querySelectorAll('[data-doc-row]').length > 2`,
